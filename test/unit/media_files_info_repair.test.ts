@@ -286,9 +286,8 @@ describe('the files_info reconcile — create / refresh / nothing / missing', ()
 		// no files — reachable read-only, no planting needed.
 		const sectionId = await scratchRecord();
 		const response = await driveSyncFiles(sectionId);
-		// The client checks `response.result === true` — a boolean, never the array.
-		expect(response.result).toBe(true);
-		expect(response.files_info).toEqual([]);
+		expect(response.ok).toBe(true);
+		expect((response.data as { files_info: unknown }).files_info).toEqual([]);
 		expect(await readStoredMediaItems(SCRATCH_SECTION, sectionId, MEDIA_COMPONENT)).toEqual([]);
 	});
 
@@ -309,8 +308,8 @@ describe('the files_info reconcile — create / refresh / nothing / missing', ()
 		expect(await readStoredMediaItems(SCRATCH_SECTION, sectionId, MEDIA_COMPONENT)).toEqual([]);
 
 		const response = await driveSyncFiles(sectionId);
-		expect(response.result).toBe(true);
-		expect(String(response.msg)).toContain('Recorded');
+		expect(response.ok).toBe(true);
+		expect(String((response.data as { summary: unknown }).summary)).toContain('Recorded');
 
 		const items = await readStoredMediaItems(SCRATCH_SECTION, sectionId, MEDIA_COMPONENT);
 		expect(items).toHaveLength(1);
@@ -322,7 +321,7 @@ describe('the files_info reconcile — create / refresh / nothing / missing', ()
 		// Idempotent: a second press refreshes the item it already has and does NOT
 		// append a second one.
 		const again = await driveSyncFiles(sectionId);
-		expect(again.result).toBe(true);
+		expect(again.ok).toBe(true);
 		expect(await readStoredMediaItems(SCRATCH_SECTION, sectionId, MEDIA_COMPONENT)).toHaveLength(1);
 	});
 

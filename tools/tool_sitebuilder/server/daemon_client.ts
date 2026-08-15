@@ -4,9 +4,9 @@
  * It attaches the shared bearer token (from config), the acting user's identity (so the
  * daemon can record who did what — the engine is the trusted identity injector; the
  * browser never reaches the daemon), and a timeout on the control calls. It maps every
- * transport failure and daemon problem+json onto a stable SiteBuilderError code
- * (wire.ts), and it never lets the token or the daemon URL leak into a message the engine
- * relays to a browser.
+ * transport failure and daemon problem+json onto a registered `site_builder.*` code
+ * (wire.ts), and it never lets the token, the daemon URL or the daemon's own prose leak
+ * into a message the engine relays to a browser.
  *
  * Two shapes: `daemonJson` for the ordinary control calls (parsed JSON, timeout), and
  * `daemonStream` for the SSE event pass-through (no overall timeout — a turn streams for
@@ -14,7 +14,8 @@
  */
 
 import { config } from '../../../src/config/config.ts';
-import { capDetail, type DaemonProblem, SiteBuilderError } from './wire.ts';
+import type { DedaloError } from '../../../src/core/errors/index.ts';
+import { capDetail, codeForProblem, type DaemonProblem, siteBuilderFailure } from './wire.ts';
 
 export interface Actor {
 	user_id: number;
@@ -28,8 +29,8 @@ export function isConfigured(): boolean {
 function requireConfig(): { url: string; token: string; timeoutMs: number } {
 	const { url, token, timeoutMs } = config.siteBuilder;
 	if (typeof url !== 'string' || typeof token !== 'string') {
-		throw new SiteBuilderError(
-			'site_builder_unconfigured',
+		throw siteBuilderFailure(
+			'site_builder.unconfigured',
 			'The site builder is not configured on this server.',
 		);
 	}
@@ -74,8 +75,8 @@ export async function daemonJson(
 	} catch (error) {
 		// Network failure or timeout — log the real cause server-side, surface nothing.
 		console.error('[tool_sitebuilder] daemon unreachable:', error);
-		throw new SiteBuilderError(
-			'site_builder_unreachable',
+		throw siteBuilderFailure(
+			'site_builder.unreachable',
 			'The site builder service is not reachable.',
 		);
 	}
@@ -102,8 +103,8 @@ export async function daemonStream(
 		});
 	} catch (error) {
 		console.error('[tool_sitebuilder] daemon stream unreachable:', error);
-		throw new SiteBuilderError(
-			'site_builder_unreachable',
+		throw siteBuilderFailure(
+			'site_builder.unreachable',
 			'The site builder service is not reachable.',
 		);
 	}
@@ -111,14 +112,20 @@ export async function daemonStream(
 	return res;
 }
 
-async function mapError(res: Response): Promise<SiteBuilderError> {
+/**
+ * A non-2xx daemon response → the registered refusal. The daemon's problem `type`/`reason`
+ * chooses the code; its `detail` is LOG-ONLY prose (wire.ts), so nothing the daemon writes
+ * can become the browser's error text.
+ */
+async function mapError(res: Response): Promise<DedaloError> {
 	// Auth failures are an operator problem (our token is wrong), not the user's — generic
 	// message, loud server log.
 	if (res.status === 401 || res.status === 403) {
 		console.error(`[tool_sitebuilder] daemon rejected our token (${res.status})`);
-		return new SiteBuilderError(
-			'site_builder_auth',
+		return siteBuilderFailure(
+			'site_builder.auth',
 			'The site builder rejected this server. Check its configuration.',
+			{ status: res.status },
 		);
 	}
 	let problem: DaemonProblem = {};
@@ -127,13 +134,10 @@ async function mapError(res: Response): Promise<SiteBuilderError> {
 	} catch {
 		// non-JSON error body
 	}
-	if (res.status >= 400 && res.status < 500) {
-		// A 4xx carries a reason the user should see (bad slug, conflict, over quota).
-		return new SiteBuilderError(
-			'site_builder_rejected',
-			capDetail(problem.detail, 'The site builder rejected the request.'),
-		);
-	}
-	console.error(`[tool_sitebuilder] daemon error ${res.status}:`, problem.detail ?? '');
-	return new SiteBuilderError('site_builder_failed', 'The site builder reported an error.');
+	const fallback =
+		res.status >= 400 && res.status < 500 ? 'site_builder.rejected' : 'site_builder.failed';
+	const code = codeForProblem(problem, fallback);
+	const detail = capDetail(problem.detail, 'The site builder reported an error.');
+	console.error(`[tool_sitebuilder] daemon error ${res.status} (${code}):`, problem.detail ?? '');
+	return siteBuilderFailure(code, detail, { status: res.status });
 }

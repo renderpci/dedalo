@@ -58,6 +58,7 @@ import {
 	recordTimeMachine,
 	type TimeMachineRow,
 } from '../../../src/core/db/time_machine.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -66,7 +67,11 @@ import {
 import { persistRecordColumns, persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
 import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import {
 	applyDataframeRestore,
@@ -91,18 +96,20 @@ async function restoreSection(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
-): Promise<ToolResponse> {
+): Promise<void> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		return {
-			result: false,
-			msg: `Error. No matrix table for '${sectionTipo}'`,
-			errors: ['invalid model'],
-		};
+		throw new DedaloError('request.invalid_model', {
+			coordinates: { section_tipo: sectionTipo },
+			message: `No matrix table for '${sectionTipo}'`,
+		});
 	}
 	const snapshot = tmRow.data;
 	if (snapshot === null || typeof snapshot !== 'object') {
-		return { result: false, msg: 'Error. TM section snapshot is empty', errors: ['not_found'] };
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId, tm_id: tmRow.id },
+			message: 'The TM section snapshot is empty',
+		});
 	}
 	const columns: Partial<Record<MatrixJsonbColumn, unknown>> = {};
 	for (const [column, value] of Object.entries(snapshot as Record<string, unknown>)) {
@@ -117,10 +124,8 @@ async function restoreSection(
 	// restores CONVERGE on the canonical form instead of undoing the sweep.
 	await normalizeRestoredSectionIds(columns);
 	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
-
 	// LEDGERED (no TS twin / no fixture): deleted-media relink, session-SQO
 	// reset, and consuming (deleting) the restored TM row.
-	return { result: true, msg: 'OK. Request done successfully', errors: [] };
 }
 
 /**
@@ -158,23 +163,20 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	const matrixId = options.matrix_id;
 
 	if (sectionTipo === '' || tipo === '' || matrixId === null || matrixId === undefined) {
-		return {
-			result: false,
-			msg: 'Error. Missing required parameters: section_tipo, tipo, matrix_id',
-			errors: ['invalid_request'],
-		};
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'section_tipo, tipo and matrix_id are required',
+		});
 	}
 
 	const model = await getModelByTipo(tipo);
 	if (model === null) {
-		return { result: false, msg: `Error. Unknown tipo: ${tipo}`, errors: ['invalid model'] };
+		throw new DedaloError('request.invalid_tipo', { coordinates: { tipo } });
 	}
 	if (model !== 'section' && !model.startsWith('component_')) {
-		return {
-			result: false,
-			msg: `Error. apply_value for model '${model}' is not restorable`,
-			errors: ['invalid model'],
-		};
+		throw new DedaloError('request.invalid_model', {
+			coordinates: { tipo, model },
+			message: `apply_value for model '${model}' is not restorable`,
+		});
 	}
 	// SEC-024 §9.4 — PER-RECORD scope. The declarative module gate ('tipo',
 	// level 2) authorizes the (section_tipo, tipo) SCHEMA pair; it says nothing
@@ -188,67 +190,67 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		sectionId > 0 &&
 		!(await principalCanAccessRecord(sectionTipo, sectionId, context.principal))
 	) {
-		return {
-			result: false,
-			msg: 'Error. Record is out of the user scope',
-			errors: ['unauthorized'],
-		};
+		throw new DedaloError('perm.out_of_scope', {
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	if (options.caller_dataframe !== null && options.caller_dataframe !== undefined) {
 		// Dataframe SLOT restore is uncovered scope (no fixture to gate it).
-		return {
-			result: false,
-			msg: 'Error. apply_value with caller_dataframe is uncovered scope on this server (ledgered)',
-			errors: ['uncovered_scope'],
-		};
+		throw new DedaloError('engine.uncovered_scope', {
+			coordinates: { tipo, section_tipo: sectionTipo },
+			message: 'apply_value with caller_dataframe is uncovered scope on this server (ledgered)',
+		});
 	}
 
 	// TM row lookup — matrix_id is the PK of matrix_time_machine (shared reader).
 	const tmRow = await readTimeMachineRow(Number(matrixId));
 	if (tmRow === null) {
-		return { result: false, msg: `Error. TM row not found: ${matrixId}`, errors: ['not_found'] };
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { tm_id: String(matrixId) },
+			message: `TM row not found: ${String(matrixId)}`,
+		});
 	}
 	// The snapshot must belong to the requested target — a mismatched matrix_id
 	// would restore another record's history into this one.
 	if (tmRow.section_tipo !== sectionTipo || tmRow.section_id !== sectionId || tmRow.tipo !== tipo) {
-		return {
-			result: false,
-			msg: 'Error. TM row does not match the requested target',
-			errors: ['invalid_request'],
-		};
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'matrix_id does not belong to the requested target',
+			coordinates: { tm_id: String(matrixId), section_tipo: sectionTipo, tipo },
+		});
 	}
 
 	// SECTION restore: overwrite the whole record from the snapshot columns.
 	if (model === 'section') {
-		const outcome = await restoreSection(tmRow, sectionTipo, sectionId, userId);
-		if (outcome.result === true) {
-			await logRecoverActivity(
-				context,
-				'RECOVER SECTION',
-				{
-					msg: 'Recovered section record from time machine',
-					section_id: sectionId,
-					section_tipo: sectionTipo,
-					top_id: sectionId,
-					top_tipo: sectionTipo,
-					table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
-					tm_id: matrixId,
-				},
-				sectionTipo,
-			);
-		}
-		return outcome;
+		// Throws on refusal (the dispatch catch converts), so the activity row is
+		// appended only for a restore that actually landed.
+		await restoreSection(tmRow, sectionTipo, sectionId, userId);
+		await logRecoverActivity(
+			context,
+			'RECOVER SECTION',
+			{
+				msg: 'Recovered section record from time machine',
+				section_id: sectionId,
+				section_tipo: sectionTipo,
+				top_id: sectionId,
+				top_tipo: sectionTipo,
+				table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
+				tm_id: matrixId,
+			},
+			sectionTipo,
+		);
+		return ok(true, { requestId: toolRequestId(context) });
 	}
 
 	// COMPONENT restore.
 	if (model === 'component_dataframe') {
 		// See the header: the shared preview/restore strip empties a slot's own
 		// snapshot, so restoring it would silently delete the slot.
-		return {
-			result: false,
-			msg: `Error. apply_value on a component_dataframe slot ('${tipo}') is uncovered scope on this server: the shared time-machine strip would write an empty slot (ledgered)`,
-			errors: ['uncovered_scope'],
-		};
+		throw new DedaloError('engine.uncovered_scope', {
+			coordinates: { tipo, model },
+			message:
+				`apply_value on a component_dataframe slot ('${tipo}') is uncovered scope on this ` +
+				'server: the shared time-machine strip would write an empty slot (ledgered)',
+		});
 	}
 
 	// int-canonical convergence on the WHOLE snapshot (D6.2 — see restoreSection),
@@ -269,11 +271,10 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	const column = getColumnNameByModel(model);
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (column === null || table === null) {
-		return {
-			result: false,
-			msg: `Error. No matrix column/table for '${model}' / '${sectionTipo}'`,
-			errors: ['invalid model'],
-		};
+		throw new DedaloError('request.invalid_model', {
+			coordinates: { model, section_tipo: sectionTipo },
+			message: `No matrix column/table for '${model}' / '${sectionTipo}'`,
+		});
 	}
 	const writeTarget = { table, sectionTipo, sectionId };
 
@@ -289,7 +290,13 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		);
 	} catch (error) {
 		if (error instanceof DataframeRestoreError) {
-			return { result: false, msg: `Error. ${error.message}`, errors: ['uncovered_scope'] };
+			// The refusal sentence names slot tipos — LOG-only (the code's
+			// disclosure is 'operator'), never echoed on the wire.
+			throw new DedaloError('engine.uncovered_scope', {
+				cause: error,
+				coordinates: { tipo, section_tipo: sectionTipo },
+				message: error.message,
+			});
 		}
 		throw error;
 	}
@@ -300,7 +307,10 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// Refuse before a single write, never "restore most of it".
 	const framelessRefusal = await refuseFramelessWipe(writeTarget, tipo, framePlan);
 	if (framelessRefusal !== null) {
-		return { result: false, msg: `Error. ${framelessRefusal}`, errors: ['uncovered_scope'] };
+		throw new DedaloError('engine.uncovered_scope', {
+			coordinates: { tipo, section_tipo: sectionTipo, section_id: sectionId },
+			message: framelessRefusal,
+		});
 	}
 
 	// Pre-restore main value — the observer cascade needs the locators this
@@ -370,5 +380,5 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		sectionTipo,
 	);
 
-	return { result: true, msg: 'OK. Request done successfully', errors: [] };
+	return ok(true, { requestId: toolRequestId(context) });
 }

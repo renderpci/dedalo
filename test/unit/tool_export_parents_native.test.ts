@@ -33,6 +33,7 @@ import {
 	toolExportComponentsWithParent,
 	toolExportGetExportGrid,
 } from '../../tools/tool_export/server/tool_export.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SECTION = 'test3';
 const PORTAL = 'test80'; // component_portal → test3 (compact WC-008 cell)
@@ -143,7 +144,7 @@ const runExport = async (
 	options: Record<string, unknown>,
 ): Promise<{ columns: ProtocolLine[]; rows: ProtocolLine[] }> => {
 	const response: ToolResponse = await toolExportGetExportGrid(contextOf(options));
-	const result = response.result as { columns: ProtocolLine[]; rows: ProtocolLine[] };
+	const result = response.data as { columns: ProtocolLine[]; rows: ProtocolLine[] };
 	expect(Array.isArray(result?.columns)).toBe(true);
 	return result;
 };
@@ -250,14 +251,13 @@ describe('tool_export.components_with_parent (client checkbox gate)', () => {
 				],
 			}),
 		);
-		expect(response.result).toEqual({ [PORTAL]: true, [LITERAL]: false });
+		expect(response.data).toEqual({ [PORTAL]: true, [LITERAL]: false });
 	});
 
-	test('empty/invalid input → invalid_request error envelope', async () => {
-		const response = await toolExportComponentsWithParent(
-			contextOf({ section_tipo: SECTION, components: [] }),
+	test('empty/invalid input is REFUSED with a registered code', async () => {
+		const refusal = await refusalOf(
+			toolExportComponentsWithParent(contextOf({ section_tipo: SECTION, components: [] })),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('invalid_request');
+		expect(refusal.code).toBe('request.invalid_options');
 	});
 });

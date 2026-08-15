@@ -26,6 +26,7 @@ import { saveComponentData } from '../../src/core/section/record/save_component.
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SECTION = 'numisdata4';
 /**
@@ -95,8 +96,8 @@ describe('tool_update_cache module', () => {
 			background: false,
 			options: { ar_section_tipo: SECTION, context_type: 'simple', use_real_sections: true },
 		});
-		expect(res.result).not.toBe(false);
-		const list = res.result as Record<string, unknown>[];
+		expect(res.ok).toBe(true);
+		const list = res.data as Record<string, unknown>[];
 		expect(Array.isArray(list)).toBe(true);
 		expect(list.length).toBeGreaterThan(0);
 		// The list is the PHP shape: the section row + its groupers + the components,
@@ -146,8 +147,8 @@ describe('tool_update_cache module', () => {
 				ar_components_exclude: [],
 			},
 		);
-		expect(Array.isArray(res.result)).toBe(true);
-		expect((res.result as unknown[]).length).toBeGreaterThan(0);
+		expect(Array.isArray(res.data)).toBe(true);
+		expect((res.data as unknown[]).length).toBeGreaterThan(0);
 		// 20s: the first dispatchToolRequest warms the tool registry + user-tools
 		// caches (~10s cold) — the default 5s test timeout flakes on it.
 	}, 20000);
@@ -155,14 +156,16 @@ describe('tool_update_cache module', () => {
 	test('update_cache rejects missing inputs (no bulk run on empty selection)', async () => {
 		const loaded = await getLoadedTool('tool_update_cache');
 		const principal = await resolvePrincipal(-1);
-		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
-			principal,
-			userId: -1,
-			background: true,
-			options: { section_tipo: SECTION, components_selection: [] },
-		});
-		expect(res.result).toBe(false);
-		expect(res.errors).toContain('invalid_request');
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
+				principal,
+				userId: -1,
+				background: true,
+				options: { section_tipo: SECTION, components_selection: [] },
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('components_selection');
 	});
 
 	test('update_cache FAILS CLOSED without an sqo (no whole-section default, WC-043)', async () => {
@@ -170,15 +173,16 @@ describe('tool_update_cache module', () => {
 		// section while the client displayed "Records: 1". The scope is now REQUIRED.
 		const loaded = await getLoadedTool('tool_update_cache');
 		const principal = await resolvePrincipal(-1);
-		const res = await mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
-			principal,
-			userId: -1,
-			background: true,
-			options: { section_tipo: SECTION, components_selection: [{ tipo: 'numisdata79' }] },
-		});
-		expect(res.result).toBe(false);
-		expect(res.errors).toContain('invalid_request');
-		expect(String(res.msg)).toContain('sqo');
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.update_cache, 'update_cache').handler({
+				principal,
+				userId: -1,
+				background: true,
+				options: { section_tipo: SECTION, components_selection: [{ tipo: 'numisdata79' }] },
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(String(refusal.publicMessage)).toContain('sqo');
 	});
 
 	test('update_cache honors an aborted signal: cooperative cancellation, zero processed', async () => {
@@ -197,14 +201,20 @@ describe('tool_update_cache module', () => {
 				sqo: { section_tipo: [SCRATCH_SECTION] },
 			},
 		});
-		// No silent skip: the handler must reach the loop and stop there. (This used
-		// to be `if (res.result === false) return`, which would have hidden the stale
-		// section_tipo that made the run throw instead of abort.)
-		if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
-		expect(res.result).toBe(true);
-		expect(res.stopped).toBe(true);
-		expect(res.processed).toBe(0);
-		expect(res.regenerated).toBe(0);
+		// No silent skip: the handler must reach the loop and stop there. (A refusal
+		// would THROW now, so a plain success here also proves it never bailed on
+		// the stale section_tipo that used to make the run throw instead of abort.)
+		expect(res.ok).toBe(true);
+		const aborted = res.data as {
+			stopped: boolean;
+			processed: number;
+			regenerated: number;
+			bulk_process_id?: unknown;
+		};
+		if (typeof aborted.bulk_process_id === 'number') bulkIds.push(aborted.bulk_process_id);
+		expect(aborted.stopped).toBe(true);
+		expect(aborted.processed).toBe(0);
+		expect(aborted.regenerated).toBe(0);
 	});
 
 	test('update_cache regenerates a component (scratch-twin, real DB)', async () => {
@@ -267,14 +277,20 @@ describe('tool_update_cache module', () => {
 				},
 			},
 		});
-		expect(res.result).toBe(true);
-		if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
-		expect(res.regenerated as number).toBeGreaterThanOrEqual(1);
+		expect(res.ok).toBe(true);
+		const run = res.data as {
+			regenerated: number;
+			records: number;
+			processed: number;
+			bulk_process_id?: unknown;
+		};
+		if (typeof run.bulk_process_id === 'number') bulkIds.push(run.bulk_process_id);
+		expect(run.regenerated).toBeGreaterThanOrEqual(1);
 		// The sqo scoped the run to EXACTLY the one filtered record (WC-043).
-		expect(res.records).toBe(1);
-		expect(res.processed).toBe(1);
+		expect(run.records).toBe(1);
+		expect(run.processed).toBe(1);
 		// v6 parity: the run minted a dd800 bulk-process record and wrote no TM rows.
-		expect(typeof res.bulk_process_id).toBe('number');
+		expect(typeof run.bulk_process_id).toBe('number');
 		expect(await tmCount()).toBe(tmBefore);
 		// Progress frames: the client-rendered contract (counter/total), final
 		// frame terminal with counter === total.
@@ -406,9 +422,10 @@ describe('tool_update_cache module', () => {
 					},
 				},
 			});
-			expect(res.result).toBe(true);
-			if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
-			expect(res.regenerated as number).toBeGreaterThanOrEqual(1);
+			expect(res.ok).toBe(true);
+			const mediaRun = res.data as { regenerated: number; bulk_process_id?: unknown };
+			if (typeof mediaRun.bulk_process_id === 'number') bulkIds.push(mediaRun.bulk_process_id);
+			expect(mediaRun.regenerated).toBeGreaterThanOrEqual(1);
 
 			const repaired = readComponentItems(
 				(await readMatrixRecord(table, MEDIA_SECTION, MEDIA_ID))!,

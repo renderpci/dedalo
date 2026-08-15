@@ -159,7 +159,7 @@ describe('generate_virtual_section', () => {
 			}),
 		);
 
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		// THE regression: the teardown must not delete the record it provisions from.
 		expect(await scratchRecordExists()).toBe(true);
 		expect(await nodeRecordIds()).toEqual([1, 2]);

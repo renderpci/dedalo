@@ -22,12 +22,14 @@
  */
 
 import { isMediaModel } from '../../../src/core/concepts/media.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import { buildSectionElementsContext } from '../../../src/core/resolve/section_elements_context.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
 /**
@@ -44,28 +46,32 @@ function regenerateOptionsFor(model: string): Record<string, unknown>[] | null {
 }
 
 /** get_component_list: the section's components + their regenerate_options. */
+/**
+ * A caller fault. `message` AND `publicMessage`: update_cache is
+ * backgroundRunnable, and the executor records `error.message` on the job.
+ */
+function invalidRequest(message: string): DedaloError {
+	return new DedaloError('request.invalid_options', { message, publicMessage: message });
+}
+
 async function getComponentList(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const elements = await buildSectionElementsContext(ctx.principal, {
-			ar_section_tipo: ctx.options.ar_section_tipo as string | string[] | undefined,
-			context_type: 'simple',
-			use_real_sections: Boolean(ctx.options.use_real_sections),
-			ar_components_exclude: ctx.options.ar_components_exclude as string[] | undefined,
-		});
-		// Keep the section + grouper (section_group/section_tab) rows PHP emits, in
-		// ontology order: the client's render_components_list switches on model to
-		// build the named .ul_regular group headers. Dropping them (component-only)
-		// left every row ungrouped. regenerate_options is a COMPONENT concern, so it
-		// is stamped only on components (PHP omits the key on groupers/section).
-		const rows = elements.map((entry) =>
-			entry.type === 'component'
-				? { ...entry, regenerate_options: regenerateOptionsFor(String(entry.model)) }
-				: entry,
-		);
-		return { result: rows, msg: 'OK. Request done', errors: [] };
-	} catch (error) {
-		return { result: false, msg: (error as Error).message, errors: [(error as Error).message] };
-	}
+	const elements = await buildSectionElementsContext(ctx.principal, {
+		ar_section_tipo: ctx.options.ar_section_tipo as string | string[] | undefined,
+		context_type: 'simple',
+		use_real_sections: Boolean(ctx.options.use_real_sections),
+		ar_components_exclude: ctx.options.ar_components_exclude as string[] | undefined,
+	});
+	// Keep the section + grouper (section_group/section_tab) rows PHP emits, in
+	// ontology order: the client's render_components_list switches on model to
+	// build the named .ul_regular group headers. Dropping them (component-only)
+	// left every row ungrouped. regenerate_options is a COMPONENT concern, so it
+	// is stamped only on components (PHP omits the key on groupers/section).
+	const rows = elements.map((entry) =>
+		entry.type === 'component'
+			? { ...entry, regenerate_options: regenerateOptionsFor(String(entry.model)) }
+			: entry,
+	);
+	return ok(rows, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -83,11 +89,7 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		regenerate_options?: unknown;
 	}[];
 	if (sectionTipo === '' || !Array.isArray(selection) || selection.length === 0) {
-		return {
-			result: false,
-			msg: 'Error. section_tipo and a non-empty components_selection are required',
-			errors: ['invalid_request'],
-		};
+		throw invalidRequest('section_tipo and a non-empty components_selection are required');
 	}
 	const { sanitizeClientSqo } = await import('../../../src/core/concepts/sqo.ts');
 	const { buildSearchSql } = await import('../../../src/core/search/sql_assembler.ts');
@@ -112,11 +114,9 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 	// pass { section_tipo: ['…'] } themselves.
 	const sqoRaw = ctx.options.sqo as Record<string, unknown> | undefined;
 	if (sqoRaw === null || typeof sqoRaw !== 'object' || Array.isArray(sqoRaw)) {
-		return {
-			result: false,
-			msg: 'Error. sqo is required (the scope to act on — no whole-section default; WC-043)',
-			errors: ['invalid_request'],
-		};
+		throw invalidRequest(
+			'sqo is required (the scope to act on — no whole-section default; WC-043)',
+		);
 	}
 	const sqo = sanitizeClientSqo(structuredClone(sqoRaw));
 	(sqo as { limit?: unknown; offset?: unknown }).limit = null;
@@ -293,18 +293,23 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 		total: rows.length,
 		n_components: selection.length,
 	});
-	return {
-		result: true,
-		msg,
-		errors: mediaErrors,
-		regenerated,
-		records: rows.length,
-		processed,
-		stopped,
-		bulk_process_id: bulkProcessId,
-		media_errors: mediaErrors.length,
-		media_held: mediaHeld,
-	};
+	// A media derivative that could not be rebuilt does NOT fail the run (the
+	// cache really was regenerated): it is payload, beside the summary the client
+	// renders from the final frame.
+	return ok(
+		{
+			summary: msg,
+			errors: mediaErrors,
+			regenerated,
+			records: rows.length,
+			processed,
+			stopped,
+			bulk_process_id: bulkProcessId,
+			media_errors: mediaErrors.length,
+			media_held: mediaHeld,
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /**

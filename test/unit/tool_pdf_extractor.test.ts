@@ -17,6 +17,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
@@ -53,52 +54,56 @@ describe('tool_pdf_extractor module surface', () => {
 describe('tool_pdf_extractor gates', () => {
 	test('a caller without READ on the (section, component) pair is refused', async () => {
 		const run = await handler();
-		const response = await run(
-			contextOf(
-				{ tipo: PDF_TIPO, section_tipo: PDF_SECTION, section_id: 1, method: 'text' },
-				NO_ACCESS,
+		const refusal = await refusalOf(
+			run(
+				contextOf(
+					{ tipo: PDF_TIPO, section_tipo: PDF_SECTION, section_id: 1, method: 'text' },
+					NO_ACCESS,
+				),
 			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized');
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('an unknown method is refused before any filesystem access', async () => {
 		const run = await handler();
 		for (const method of ['xml', '', undefined, 'TEXT']) {
-			const response = await run(
-				contextOf({ tipo: PDF_TIPO, section_tipo: PDF_SECTION, section_id: 1, method }),
+			const refusal = await refusalOf(
+				run(contextOf({ tipo: PDF_TIPO, section_tipo: PDF_SECTION, section_id: 1, method })),
 			);
-			expect(response.result).toBe(false);
-			expect(response.errors).toContain('bad method');
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(refusal.publicMessage).toContain("method must be 'text' or 'html'");
 		}
 	});
 
-	test('a non-media component is refused with an envelope, not a throw', async () => {
+	test('a non-media component is refused, never answered with empty text', async () => {
 		const run = await handler();
-		const response = await run(
-			contextOf({
-				tipo: 'numisdata16',
-				section_tipo: 'test2',
-				section_id: 1,
-				method: 'text',
-			}),
-		);
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('is not a media component');
+		// The media-context resolve still refuses with an UNTYPED engine throw
+		// (tool_support.ts is a different sweep); it reaches the chokepoint as
+		// internal.unexpected rather than a body the handler dresses up.
+		expect(
+			run(
+				contextOf({
+					tipo: 'numisdata16',
+					section_tipo: 'test2',
+					section_id: 1,
+					method: 'text',
+				}),
+			),
+		).rejects.toThrow(/is not a media component/);
 	});
 
 	test('a missing default-quality file is reported, never returned as empty text', async () => {
 		const run = await handler();
-		const response = await run(
-			contextOf({
-				tipo: PDF_TIPO,
-				section_tipo: PDF_SECTION,
-				section_id: 999999,
-				method: 'text',
-			}),
-		);
-		expect(response.result).toBe(false);
-		expect(String(response.msg).length).toBeGreaterThan(0);
+		expect(
+			run(
+				contextOf({
+					tipo: PDF_TIPO,
+					section_tipo: PDF_SECTION,
+					section_id: 999999,
+					method: 'text',
+				}),
+			),
+		).rejects.toThrow();
 	});
 });

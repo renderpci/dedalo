@@ -320,17 +320,18 @@ describe.if(hasDb)('tool_import_files surfaces a derivative failure per file', (
 
 		// IMPORTED: the original landed and was indexed. Pre-fix this was 0 with
 		// nothing persisted anywhere.
-		expect(response.imported).toBe(1);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		const report = response.data as { imported: number; errors: string[] };
+		expect(report.imported).toBe(1);
 		// …and the operator is told, per file, in the ONE channel the panel renders
 		// (render_tool_import_files.js reads sse_response.data.errors and nothing
 		// else — a `warnings` field would be dropped on the floor).
-		const errors = response.errors as string[];
+		const errors = report.errors;
 		expect(errors.some((line) => /imported, but a derivative could not be built/.test(line))).toBe(
 			true,
 		);
 		expect(errors.some((line) => line.startsWith('broken2.jpg:'))).toBe(true);
-		expect('warnings' in response).toBe(false);
+		expect('warnings' in (response.data as object)).toBe(false);
 
 		// The record KNOWS ITS FILE: this is the damage the whole change exists to
 		// prevent — matrix.media NULL against an original sitting on disk.

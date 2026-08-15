@@ -26,27 +26,31 @@
  * calls through `tool_request` exists in `apiActions` below.
  */
 
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import { ok } from '../../../src/core/errors/index.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
 /** null-spec action: listed but gated inside the handler (here: always open). */
-async function status(): Promise<ToolResponse> {
-	return { result: { ok: true, tool: 'tool_dev_template' }, msg: 'OK', errors: [] };
+async function status(context: ToolActionContext): Promise<ToolResponse> {
+	// THE SUCCESS SHAPE (engineering/ERRORS_SPEC.md §4): the payload goes in
+	// `data`; a failure is a THROWN DedaloError, never a body.
+	return ok({ tool: 'tool_dev_template' }, { requestId: toolRequestId(context) });
 }
 
 /** 'tipo' gate demo: level >= 1 on (section_tipo, tipo) was already asserted. */
-async function readDemo(context: { options: Record<string, unknown> }): Promise<ToolResponse> {
+async function readDemo(context: ToolActionContext): Promise<ToolResponse> {
 	const { section_tipo, tipo } = context.options;
-	return { result: { section_tipo, tipo, read: true }, msg: 'OK', errors: [] };
+	return ok({ section_tipo, tipo, read: true }, { requestId: toolRequestId(context) });
 }
 
 /** 'record' gate demo: section write perm + record-in-scope already asserted. */
-async function writeDemo(context: { options: Record<string, unknown> }): Promise<ToolResponse> {
+async function writeDemo(context: ToolActionContext): Promise<ToolResponse> {
 	const { section_tipo, section_id } = context.options;
-	return { result: { section_tipo, section_id, written: true }, msg: 'OK', errors: [] };
+	return ok({ section_tipo, section_id, written: true }, { requestId: toolRequestId(context) });
 }
 
 /**
@@ -59,15 +63,12 @@ async function writeDemo(context: { options: Record<string, unknown> }): Promise
  * explicitly denied write on that one component would still pass. The component
  * key is `tipo`, with `component_tipo` accepted as its alias.
  */
-async function componentWriteDemo(context: {
-	options: Record<string, unknown>;
-}): Promise<ToolResponse> {
+async function componentWriteDemo(context: ToolActionContext): Promise<ToolResponse> {
 	const { section_tipo, tipo, section_id } = context.options;
-	return {
-		result: { section_tipo, tipo, section_id, component_written: true },
-		msg: 'OK',
-		errors: [],
-	};
+	return ok(
+		{ section_tipo, tipo, section_id, component_written: true },
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 /**
@@ -78,12 +79,12 @@ async function componentWriteDemo(context: {
  */
 async function batchDemo(context: ToolActionContext): Promise<ToolResponse> {
 	const items = Array.isArray(context.options.items) ? context.options.items : [];
-	return { result: { batch: items.length, gated: true }, msg: 'OK', errors: [] };
+	return ok({ batch: items.length, gated: true }, { requestId: toolRequestId(context) });
 }
 
 /** 'developer' gate demo: caller is a developer; no section target is asserted. */
-async function developerDemo(): Promise<ToolResponse> {
-	return { result: { developer: true }, msg: 'OK', errors: [] };
+async function developerDemo(context: ToolActionContext): Promise<ToolResponse> {
+	return ok({ developer: true }, { requestId: toolRequestId(context) });
 }
 
 /**
@@ -109,16 +110,15 @@ async function longJob(context: ToolActionContext): Promise<ToolResponse> {
 		done = step;
 		context.publishProgress?.({ step, total, label: `step ${step}/${total}` });
 	}
-	return {
-		result: {
+	return ok(
+		{
 			started: true,
 			ran_in_background: context.background,
 			steps_done: done,
 			aborted: context.signal?.aborted === true,
 		},
-		msg: 'OK',
-		errors: [],
-	};
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 export const tool: ToolServerModule = {

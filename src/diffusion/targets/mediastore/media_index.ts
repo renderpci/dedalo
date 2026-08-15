@@ -399,6 +399,18 @@ async function fetchPublishedSectionIds(
  * deny-everything window), removes per-table dirs no longer present in the
  * ontology targets, then reconciles pub/.
  */
+/**
+ * The rebuild outcome — an INTERNAL report handed to the diffusion bridge, not
+ * a wire body: `ok` + a human `message`, never the envelope-shaped
+ * `{result,msg}` pair the P1 error sweep retires.
+ */
+export interface MediaIndexRebuildReport {
+	ok: boolean;
+	message: string;
+	markers: number;
+	errors?: string[];
+}
+
 export async function rebuildMediaIndexStore(
 	targets: RebuildTarget[],
 	/** Test seam: replaces the MariaDB SELECT (temp-dir tests, no target DB). */
@@ -406,12 +418,12 @@ export async function rebuildMediaIndexStore(
 		databaseName: string,
 		tableName: string,
 	) => Promise<(string | number)[]> = fetchPublishedSectionIds,
-): Promise<{ result: boolean; msg: string; markers: number; errors?: string[] }> {
+): Promise<MediaIndexRebuildReport> {
 	const base = markerStoreBase();
 	if (base === null) {
 		return {
-			result: false,
-			msg: 'DEDALO_MEDIA_PATH is not configured in the diffusion engine environment',
+			ok: false,
+			message: 'DEDALO_MEDIA_PATH is not configured in the diffusion engine environment',
 			markers: 0,
 		};
 	}
@@ -495,8 +507,8 @@ export async function rebuildMediaIndexStore(
 	await reconcileMediaIndex();
 
 	return {
-		result: errors.length === 0,
-		msg:
+		ok: errors.length === 0,
+		message:
 			errors.length === 0
 				? `OK. Media index rebuilt (${markers} published record(s))`
 				: `Partial failure. ${errors.length} target(s) failed`,

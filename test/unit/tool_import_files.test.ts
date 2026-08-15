@@ -37,6 +37,7 @@ import {
 	setComponentsData,
 } from '../../tools/tool_import_files/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // ── scratch twins (collection-time probe → visible SKIP when DB absent) ──
 // The twins live in the test3 PLAYGROUND, which every suite DB carries. They
@@ -254,7 +255,7 @@ describe('tool_import_files module', () => {
 						: { custom_target_quality: customTargetQuality }),
 				},
 			});
-			return (response.errors as string[]) ?? [];
+			return (response.data as { errors?: string[] }).errors ?? [];
 		};
 
 		expect((await call('not_a_tier')).join(' ')).toContain("Unknown media quality 'not_a_tier'");
@@ -303,51 +304,57 @@ describe('tool_import_files module', () => {
 	test('file_processor fails closed for an unregistered name', async () => {
 		const loaded = await getLoadedTool('tool_import_files');
 		const principal = await resolvePrincipal(-1);
-		const res = await mustGet(loaded!.module.apiActions.file_processor, 'file_processor').handler({
-			principal,
-			userId: -1,
-			background: false,
-			options: { file_processor: 'crop_50' },
-		});
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('not a registered processor');
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.file_processor, 'file_processor').handler({
+				principal,
+				userId: -1,
+				background: false,
+				options: { file_processor: 'crop_50' },
+			}),
+		);
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(refusal.publicMessage).toContain('not a registered processor');
 	});
 
 	test('import_files rejects missing required params (no run without a media component)', async () => {
 		const loaded = await getLoadedTool('tool_import_files');
 		const principal = await resolvePrincipal(-1);
 		// Missing section_tipo/tipo/files_data → clean validation failure (all modes).
-		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
-			principal,
-			userId: -1,
-			background: true,
-			options: {
-				tool_config: { import_file_name_mode: 'match' },
-				section_tipo: '',
-				tipo: '',
-				files_data: [],
-			},
-		});
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('Missing');
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+				principal,
+				userId: -1,
+				background: true,
+				options: {
+					tool_config: { import_file_name_mode: 'match' },
+					section_tipo: '',
+					tipo: '',
+					files_data: [],
+				},
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('Missing');
 	});
 
 	testIfDb('import_files with a ddo_map requires the target_component role', async () => {
 		const loaded = await getLoadedTool('tool_import_files');
 		const principal = await resolvePrincipal(-1);
-		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
-			principal,
-			userId: -1,
-			background: true,
-			options: {
-				tool_config: { ddo_map: [{ role: 'target_filename', tipo: 'rsc398' }] },
-				section_tipo: 'oh1',
-				tipo: 'rsc29',
-				files_data: [{ name: 'a.jpg' }],
-			},
-		});
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('target_component');
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+				principal,
+				userId: -1,
+				background: true,
+				options: {
+					tool_config: { ddo_map: [{ role: 'target_filename', tipo: 'rsc398' }] },
+					section_tipo: 'oh1',
+					tipo: 'rsc29',
+					files_data: [{ name: 'a.jpg' }],
+				},
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('target_component');
 	});
 
 	testIfDb('a translatable input_component no longer refuses the batch (WC-078)', async () => {
@@ -384,11 +391,13 @@ describe('tool_import_files module', () => {
 				files_data: [{ name: 'a.jpg' }],
 			},
 		});
-		expect(res.msg).not.toContain('translatable input_component');
 		// It got PAST the pre-flight and into the per-file loop, where the
-		// unstaged file is reported per-file instead of aborting the batch.
-		expect(res.result).toBe(true);
-		expect((res as { errors?: string[] }).errors?.join(' ')).toContain('a.jpg');
+		// unstaged file is reported per-file instead of aborting the batch (the old
+		// refusal would have THROWN before any file was touched).
+		expect(res.ok).toBe(true);
+		const report = res.data as { summary: string; errors: string[] };
+		expect(report.summary).not.toContain('translatable input_component');
+		expect(report.errors.join(' ')).toContain('a.jpg');
 	});
 });
 
@@ -743,8 +752,8 @@ describe.if(hasDb)('get_media_section_match (SQO component-value filter, scratch
 				target_filename: { tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			},
 		});
-		expect(res.errors).toEqual([]);
-		return res.result;
+		expect(res.ok).toBe(true);
+		return res.data;
 	}
 
 	test('finds the exact-basename record across an extension change; near-names excluded', async () => {

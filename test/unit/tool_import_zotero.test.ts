@@ -22,6 +22,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolResponse } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SCRATCH_USER = 987663;
 
@@ -53,25 +54,29 @@ describe('tool_import_zotero module', () => {
 	});
 
 	test('refuses a batch with no field-map (the guard every real config trips)', async () => {
-		const res = await runImport({
-			section_tipo: 'test3',
-			tool_config: { config: { map: [{ name: 'title', ddo_map: [{ tipo: 'test52' }] }] } },
-			files_data: [{ name: 'zotero.json' }],
-			key_dir: 'zotero_scratch',
-		});
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('Missing Zotero field-map');
+		const refusal = await refusalOf(
+			runImport({
+				section_tipo: 'test3',
+				tool_config: { config: { map: [{ name: 'title', ddo_map: [{ tipo: 'test52' }] }] } },
+				files_data: [{ name: 'zotero.json' }],
+				key_dir: 'zotero_scratch',
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('Missing Zotero field-map');
 	});
 
 	test('a traversing key_dir is REFUSED (never reaches another users staging dir)', async () => {
-		const res = await runImport({
-			section_tipo: 'test3',
-			tool_config: CURRENT_MAP_SHAPE,
-			files_data: [{ name: 'zotero.json' }],
-			key_dir: `../${SCRATCH_USER}/zotero_scratch`,
-		});
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('Unsafe path segment');
+		// stagingDir still refuses with an UNTYPED engine throw (add_file.ts is a
+		// different sweep); it reaches the chokepoint as internal.unexpected.
+		expect(
+			runImport({
+				section_tipo: 'test3',
+				tool_config: CURRENT_MAP_SHAPE,
+				files_data: [{ name: 'zotero.json' }],
+				key_dir: `../${SCRATCH_USER}/zotero_scratch`,
+			}),
+		).rejects.toThrow(/Unsafe path segment/);
 	});
 
 	test('non-.json entries are skipped and a missing export is a per-file error', async () => {
@@ -82,13 +87,15 @@ describe('tool_import_zotero module', () => {
 			files_data: [{ name: 'attachment.pdf' }, { name: 'absent.json' }],
 			key_dir: 'zotero_scratch',
 		});
-		expect(res.result).toBe(true);
-		expect(res.errors).toEqual(['absent.json: staged file not found']);
+		expect(res.ok).toBe(true);
+		expect((res.data as { errors: string[] }).errors).toEqual([
+			'absent.json: staged file not found',
+		]);
 	});
 
 	test('an empty batch is refused before any filesystem work', async () => {
-		const res = await runImport({ section_tipo: 'test3', files_data: [] });
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('Missing section_tipo or files_data');
+		const refusal = await refusalOf(runImport({ section_tipo: 'test3', files_data: [] }));
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('Missing section_tipo or files_data');
 	});
 });

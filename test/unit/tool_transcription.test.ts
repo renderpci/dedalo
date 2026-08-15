@@ -49,6 +49,7 @@ import {
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_transcription_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -171,14 +172,15 @@ describe('tool_transcription module', () => {
 		// to disk — an operator act. The refusal must run before any catalog read.
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.download_model!.handler;
-		const response = await handler({
-			principal: stubPrincipal, // not an admin
-			userId: 7,
-			options: { model: 'onnx-community/whisper-large-v3-turbo' },
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('administrator');
+		const refusal = await refusalOf(
+			handler({
+				principal: stubPrincipal, // not an admin
+				userId: 7,
+				options: { model: 'onnx-community/whisper-large-v3-turbo' },
+				background: false,
+			}),
+		);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('download_model refuses a model that is not in the catalog', async () => {
@@ -187,14 +189,16 @@ describe('tool_transcription module', () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.download_model!.handler;
 		const admin: Principal = { userId: 1, isGlobalAdmin: true, isDeveloper: false };
-		const response = await handler({
-			principal: admin,
-			userId: 1,
-			options: { model: '../../evil/path' },
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('not in the transcriber catalog');
+		const refusal = await refusalOf(
+			handler({
+				principal: admin,
+				userId: 1,
+				options: { model: '../../evil/path' },
+				background: false,
+			}),
+		);
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(refusal.publicMessage).toContain('not in the transcriber catalog');
 	});
 });
 
@@ -216,11 +220,17 @@ function liveFailureEnvelope(): { result: unknown; msg: string; errors: string[]
 	const script = [
 		"const {getLoadedTool}=await import('./src/core/tools/loader.ts');",
 		"const t=await getLoadedTool('tool_transcription');",
+		"const {toErrorEnvelope}=await import('./src/core/errors/index.ts');",
+		'try{',
 		'const r=await t.module.apiActions.check_server_transcriber_status.handler({',
 		'principal:{userId:-1,isGlobalAdmin:true,isDeveloper:true},userId:-1,background:false,',
 		"options:{media_ddo:{component_tipo:'rsc35',section_tipo:'rsc167',section_id:1},",
 		"transcriber_engine:'babel_transcriber',pid:4321}});",
 		'console.log(JSON.stringify(r));',
+		// The handler REFUSES BY THROWING now (ERRORS_SPEC §4); the wire body the
+		// browser reads is what the chokepoint's converter makes of it, so the
+		// probe converts it exactly the same way.
+		"}catch(e){console.log(JSON.stringify(toErrorEnvelope(e,{requestId:'probe'}).body));}",
 	].join('');
 	const probe = Bun.spawnSync(
 		['bun', '--preload', './test/preload/component_registry.ts', '-e', script],
@@ -242,31 +252,35 @@ describe('check_server_transcriber_status handler', () => {
 	test('denies fail-closed on an invalid media_ddo record target (READ gate)', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
-		const response = await handler({
-			principal: stubPrincipal,
-			userId: 7,
-			options: {
-				media_ddo: { component_tipo: 'rsc439', section_tipo: 'bad tipo!', section_id: 1 },
-				transcriber_engine: 'babel_transcriber',
-				pid: 123,
-			},
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid record target');
+		const refusal = await refusalOf(
+			handler({
+				principal: stubPrincipal,
+				userId: 7,
+				options: {
+					media_ddo: { component_tipo: 'rsc439', section_tipo: 'bad tipo!', section_id: 1 },
+					transcriber_engine: 'babel_transcriber',
+					pid: 123,
+				},
+				background: false,
+			}),
+		);
+		// security.ts answers an unusable record target with the `invalid_request`
+		// token, which LEGACY_TOKEN_MAP resolves to request.invalid.
+		expect(refusal.code).toBe('request.invalid');
+		expect(refusal.message).toContain('invalid record target');
 	});
 
 	test('reports the missing required parameters (PHP message shape)', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
-		const response = await handler({
-			principal: stubPrincipal,
-			userId: 7,
-			options: {},
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Missing required parameters: media_ddo, transcriber_engine, pid');
+		const refusal = await refusalOf(
+			handler({ principal: stubPrincipal, userId: 7, options: {}, background: false }),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		// A public-disclosure code, so the sentence still reaches the wire.
+		expect(refusal.publicMessage).toBe(
+			'Missing required parameters: media_ddo, transcriber_engine, pid',
+		);
 	});
 });
 
@@ -314,29 +328,30 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 	test('never transcodes, and never reports a failed poll as OK', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
-		const response = await handler({
-			principal: adminPrincipal,
-			userId: -1,
-			options: {
-				media_ddo: { component_tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 },
-				transcriber_engine: 'babel_transcriber',
-				pid: 4321,
-			},
-			background: false,
-		});
-		// It got PAST the config lookup (regression 1).
-		expect(response.msg).not.toContain('Transcriber config');
-		// It never asked for the audio quality to be BUILT (regression 2):
-		// 'AV original file not found' is ensureAudioQuality's error and can only
-		// surface here if the read path tries to transcode.
-		expect(response.msg).not.toContain('AV original file not found');
+		const refusal = await refusalOf(
+			handler({
+				principal: adminPrincipal,
+				userId: -1,
+				options: {
+					media_ddo: { component_tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 },
+					transcriber_engine: 'babel_transcriber',
+					pid: 4321,
+				},
+				background: false,
+			}),
+		);
+		// It got PAST the config lookup (regression 1) and never asked for the
+		// audio quality to be BUILT (regression 2): 'AV original file not found'
+		// is ensureAudioQuality's error and can only surface here if the read path
+		// tries to transcode. `message` is the LOG sentence the throw carried.
+		expect(refusal.message).not.toContain('Transcriber config');
+		expect(refusal.message).not.toContain('AV original file not found');
 		// And it did not dress a failure up as a success (regression 3): the
 		// loopback uri is refused by the SSRF guard (or, when
 		// DEDALO_MEDIA_EXPORT_BASE is unset, the URL builder refuses first) —
-		// either way this call cannot succeed, so it must not say 'OK.'.
-		expect(response.result).toBe(false);
-		expect(String(response.msg).startsWith('OK.')).toBe(false);
-		expect((response.errors ?? []).length).toBeGreaterThan(0);
+		// either way this call cannot succeed, and a REFUSAL is a throw now, not a
+		// body that could be mistaken for one.
+		expect(refusal.code).toBe('tool.dependency_unavailable');
 	});
 
 	/**
@@ -348,9 +363,11 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 	 */
 	test('a provider failure is reported as a failure, never as OK', () => {
 		const response = liveFailureEnvelope();
+		// Envelope v2 + the compat mirror: `ok:false` is the fact, `errors[0]` the
+		// registered code (the raw 'invalid transcriber URL' sentence is now
+		// LOG-only — the code's disclosure is 'operator').
 		expect(response.result).toBe(false);
-		expect(response.msg).toBe('invalid transcriber URL');
-		expect(response.errors).toEqual(['invalid transcriber URL']);
+		expect(response.errors).toEqual(['tool.dependency_unavailable']);
 	});
 });
 
@@ -961,32 +978,37 @@ describe('model actions are admin-gated and catalog-bound', () => {
 	const nonAdmin = { isGlobalAdmin: false } as unknown as ToolActionContext['principal'];
 
 	test('repair_model refuses a non-admin', async () => {
-		const response = await tool.apiActions.repair_model!.handler({
-			options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
-			principal: nonAdmin,
-			userId: 1,
-		} as unknown as ToolActionContext);
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('administrator');
+		const refusal = await refusalOf(
+			tool.apiActions.repair_model!.handler({
+				options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
+				principal: nonAdmin,
+				userId: 1,
+			} as unknown as ToolActionContext),
+		);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('repair_model refuses a model outside the catalog', async () => {
-		const response = await tool.apiActions.repair_model!.handler({
-			options: { model: 'evil/not-in-catalog' },
-			principal: { isGlobalAdmin: true },
-			userId: 1,
-		} as unknown as ToolActionContext);
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('not in the transcriber catalog');
+		const refusal = await refusalOf(
+			tool.apiActions.repair_model!.handler({
+				options: { model: 'evil/not-in-catalog' },
+				principal: { isGlobalAdmin: true },
+				userId: 1,
+			} as unknown as ToolActionContext),
+		);
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(String(refusal.publicMessage)).toContain('not in the transcriber catalog');
 	});
 
 	test('verify_model refuses a non-admin', async () => {
-		const response = await tool.apiActions.verify_model!.handler({
-			options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
-			principal: nonAdmin,
-			userId: 1,
-		} as unknown as ToolActionContext);
-		expect(response.result).toBe(false);
+		const refusal = await refusalOf(
+			tool.apiActions.verify_model!.handler({
+				options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
+				principal: nonAdmin,
+				userId: 1,
+			} as unknown as ToolActionContext),
+		);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	// A REAL name from the register default catalog (tools/tool_transcription/
@@ -1015,18 +1037,20 @@ describe('model actions are admin-gated and catalog-bound', () => {
 				principal: admin,
 				userId: 1,
 			} as unknown as ToolActionContext);
-			// Distinct from the catalog-refusal message: the gate let it through.
-			expect(accepted.result).toBe(true);
-			expect(String(accepted.msg)).toContain('OK. Verified');
-			expect(String(accepted.msg)).not.toContain('not in the transcriber catalog');
+			// Distinct from the catalog refusal: the gate let it through, and the
+			// verdict is DATA now (`state`), not a sentence inside a msg string.
+			expect(accepted.ok).toBe(true);
+			expect((accepted.data as { state?: string }).state).toBeString();
 
-			const refused = await tool.apiActions.verify_model!.handler({
-				options: { model: 'evil/not-in-catalog' },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext);
-			expect(refused.result).toBe(false);
-			expect(String(refused.msg)).toContain('not in the transcriber catalog');
+			const refusal = await refusalOf(
+				tool.apiActions.verify_model!.handler({
+					options: { model: 'evil/not-in-catalog' },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext),
+			);
+			expect(refusal.code).toBe('tool.unsupported_target');
+			expect(String(refusal.publicMessage)).toContain('not in the transcriber catalog');
 		} finally {
 			if (prior === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
 			else process.env.DEDALO_AI_MODEL_STORE = prior;
@@ -1053,21 +1077,23 @@ describe('model actions are admin-gated and catalog-bound', () => {
 			} as unknown as ToolActionContext,
 			stubSchedule,
 		);
-		expect(accepted.result).toBe(true);
+		expect(accepted.ok).toBe(true);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]?.[1]).toBe('background_repair_model');
 		expect((calls[0]?.[3] as { model?: string } | undefined)?.model).toBe(KNOWN_CATALOG_MODEL);
 
-		const refused = await repairModelAction(
-			{
-				options: { model: 'evil/not-in-catalog' },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext,
-			stubSchedule,
+		const refusal = await refusalOf(
+			repairModelAction(
+				{
+					options: { model: 'evil/not-in-catalog' },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext,
+				stubSchedule,
+			),
 		);
-		expect(refused.result).toBe(false);
-		expect(String(refused.msg)).toContain('not in the transcriber catalog');
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(String(refusal.publicMessage)).toContain('not in the transcriber catalog');
 		// The refusal never reached scheduling: still just the one call above.
 		expect(calls).toHaveLength(1);
 		// The stub never runs the job, so the in-flight guard this accept path set
@@ -1192,7 +1218,7 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 			download,
 		});
 
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		// EXACTLY the failing file: not the decoder, not the config, not a common file.
 		expect(asked).toEqual([['onnx/encoder_model_q4.onnx']]);
 		// The healthy weight was never touched.
@@ -1216,9 +1242,11 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 			download,
 		});
 
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(asked).toEqual([['tokenizer.json']]);
-		expect(String(response.msg)).toContain('common file');
+		// The repaired count is DATA now; the "weights, config and N common file(s)"
+		// sentence stays in the server log, where the operator reads it.
+		expect((response.data as { repaired?: number }).repaired).toBe(1);
 	});
 
 	test('a healthy model reports nothing to repair and deletes nothing', async () => {
@@ -1227,8 +1255,8 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
 			download,
 		});
-		expect(response.result).toBe(true);
-		expect(String(response.msg)).toContain('Nothing to repair');
+		expect(response.ok).toBe(true);
+		expect((response.data as { repaired?: number }).repaired).toBe(0);
 		expect(asked).toEqual([]);
 		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
 	});
@@ -1244,11 +1272,13 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		});
 
 		const { asked, download } = recordingDownload();
-		const response = await backgroundRepairModel(ctx({ model: MODEL, kind: 'asr' }), { download });
+		const refusal = await refusalOf(
+			backgroundRepairModel(ctx({ model: MODEL, kind: 'asr' }), { download }),
+		);
 
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('Repair refused');
-		expect(String(response.msg)).toContain('cannot be named to fetch back');
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(String(refusal.publicMessage)).toContain('Repair refused');
+		expect(String(refusal.publicMessage)).toContain('cannot be named to fetch back');
 		// Nothing was deleted and nothing was downloaded.
 		expect(asked).toEqual([]);
 		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
@@ -1260,12 +1290,13 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		seed(files);
 
 		const { download } = recordingDownload({ ok: false });
-		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
-			download,
-		});
-
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('download failed');
+		// A BACKGROUND job's failure is a THROW: the executor records it on the job
+		// (status 'error' + `error`), which is what get_background_job_status serves.
+		const refusal = await refusalOf(
+			backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), { download }),
+		);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain('download failed');
 	});
 
 	test('a second concurrent repair is refused SERVER-side', async () => {
@@ -1286,11 +1317,11 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 
 		try {
 			const first = await request();
-			expect(first.result).toBe(true);
+			expect(first.ok).toBe(true);
 
-			const second = await request();
-			expect(second.result).toBe(false);
-			expect(String(second.msg)).toContain('already running');
+			const second = await refusalOf(request());
+			expect(second.code).toBe('resource.conflict');
+			expect(second.message).toContain('already running');
 			// The refusal never reached scheduling.
 			expect(calls).toHaveLength(1);
 		} finally {
@@ -1376,14 +1407,16 @@ describe('model sources report a real state, and a download cannot claim a broke
 		writeFileSync(`${dir}/encoder_model.onnx`, '<!doctype html><h1>502</h1>');
 		writeFileSync(`${dir}/decoder_model_merged.onnx`, '<!doctype html><h1>502</h1>');
 		try {
-			const response = await tool.apiActions.download_model!.handler({
-				options: { model: KNOWN_CATALOG_MODEL },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext);
-			expect(response.result).toBe(false);
-			expect(String(response.msg)).toContain('repair it instead');
-			expect(String(response.msg)).not.toContain('already installed');
+			const refusal = await refusalOf(
+				tool.apiActions.download_model!.handler({
+					options: { model: KNOWN_CATALOG_MODEL },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext),
+			);
+			expect(refusal.code).toBe('tool.unsupported_target');
+			expect(String(refusal.publicMessage)).toContain('repair it instead');
+			expect(String(refusal.publicMessage)).not.toContain('already installed');
 		} finally {
 			rmSync(`${SOURCES_STORE}/${KNOWN_CATALOG_MODEL}`, { recursive: true, force: true });
 		}
@@ -1470,15 +1503,15 @@ describe('a cancelled repair job does not lock the model out', () => {
 			);
 
 		try {
-			expect((await request()).result).toBe(true);
+			expect((await request()).ok).toBe(true);
 			// The job never ran, and never will: it is 'stopped'.
 			expect(mediaJobs.status(record.id)?.status).toBe('stopped');
 
 			// The model is repairable again — the claim was released by the job's
-			// own death, not by anybody remembering to clear a flag.
+			// own death, not by anybody remembering to clear a flag (a second
+			// refusal would THROW resource.conflict, so a plain success proves it).
 			const second = await request();
-			expect(second.result).toBe(true);
-			expect(String(second.msg)).not.toContain('already running');
+			expect(second.ok).toBe(true);
 		} finally {
 			releaseModelRepairLock(KNOWN);
 		}
@@ -1506,23 +1539,31 @@ describe('a cancelled repair job does not lock the model out', () => {
 				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
 				schedule,
 			);
-			expect(first.result).toBe(true);
+			expect(first.ok).toBe(true);
 
-			const second = await repairModelAction(
-				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
-				schedule,
+			const second = await refusalOf(
+				repairModelAction(
+					{
+						options: { model: KNOWN },
+						principal: admin,
+						userId: 1,
+					} as unknown as ToolActionContext,
+					schedule,
+				),
 			);
-			expect(second.result).toBe(false);
-			expect(String(second.msg)).toContain('already running');
+			expect(second.code).toBe('resource.conflict');
+			expect(second.message).toContain('already running');
 
 			// download_model is the OTHER writer of the same files: same guard.
-			const download = await tool.apiActions.download_model!.handler({
-				options: { model: KNOWN },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext);
-			expect(download.result).toBe(false);
-			expect(String(download.msg)).toContain('already running');
+			const download = await refusalOf(
+				tool.apiActions.download_model!.handler({
+					options: { model: KNOWN },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext),
+			);
+			expect(download.code).toBe('resource.conflict');
+			expect(download.message).toContain('already running');
 		} finally {
 			if (release !== null) (release as () => void)();
 			mediaJobs.stop(record.id);

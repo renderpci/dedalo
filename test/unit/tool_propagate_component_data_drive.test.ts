@@ -23,6 +23,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION_TIPO = 'test2';
@@ -105,9 +106,10 @@ describe('propagate_component_data — gates', () => {
 	test('the imperative tipo-pair gate refuses a non-admin and writes NOTHING', async () => {
 		const before = await liveValues();
 		const run = await handler();
-		const response = await run(contextOf(optionsFor(), { principal: NO_ACCESS, userId: 999999 }));
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized');
+		const refusal = await refusalOf(
+			run(contextOf(optionsFor(), { principal: NO_ACCESS, userId: 999999 })),
+		);
+		expect(refusal.code).toBe('perm.denied');
 		expect(await liveValues()).toEqual(before);
 	});
 
@@ -118,9 +120,8 @@ describe('propagate_component_data — gates', () => {
 			optionsFor({ component_tipo: '' }),
 			{ ...optionsFor(), sqo: undefined },
 		]) {
-			const response = await run(contextOf(bad));
-			expect(response.result).toBe(false);
-			expect(response.errors).toContain('invalid_request');
+			const refusal = await refusalOf(run(contextOf(bad)));
+			expect(refusal.code).toBe('request.invalid_options');
 		}
 	});
 
@@ -134,17 +135,19 @@ describe('propagate_component_data — gates', () => {
 		`) as { tipo: string }[];
 		const tipo = monoTipo[0]?.tipo;
 		expect(typeof tipo).toBe('string');
-		const response = await run(contextOf(optionsFor({ component_tipo: tipo, action: 'add' })));
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('invalid_request');
+		const refusal = await refusalOf(
+			run(contextOf(optionsFor({ component_tipo: tipo, action: 'add' }))),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('mono-value');
 	});
 
 	test('count drift (live wider than the client total) aborts and writes NOTHING', async () => {
 		const before = await liveValues();
 		const run = await handler();
-		const response = await run(contextOf(optionsFor({ total: 1 })));
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('count_drift');
+		const refusal = await refusalOf(run(contextOf(optionsFor({ total: 1 }))));
+		expect(refusal.code).toBe('resource.conflict');
+		expect(refusal.message).toContain('count drift');
 		expect(await liveValues()).toEqual(before);
 	});
 });
@@ -153,9 +156,10 @@ describe('propagate_component_data — the write', () => {
 	test('replace writes every matched record + a bulk-tagged TM row each', async () => {
 		const run = await handler();
 		const response = await run(contextOf(optionsFor()));
-		expect(response.result).toBe(true);
-		expect(response.counter).toBe(IDS.length);
-		const bulkId = response.bulk_process_id as number | null;
+		expect(response.ok).toBe(true);
+		const data = response.data as { counter: number; bulk_process_id: number | null };
+		expect(data.counter).toBe(IDS.length);
+		const bulkId = data.bulk_process_id;
 		if (typeof bulkId === 'number') mintedBulkIds.push(bulkId);
 
 		const values = await liveValues();
@@ -182,10 +186,9 @@ describe('propagate_component_data — the write', () => {
 			[SECTION_TIPO, COMPONENT_TIPO],
 		)) as { c: number }[];
 		const response = await run(contextOf(optionsFor()));
-		expect(response.result).toBe(true);
-		if (typeof response.bulk_process_id === 'number') {
-			mintedBulkIds.push(response.bulk_process_id);
-		}
+		expect(response.ok).toBe(true);
+		const bulkProcessId = (response.data as { bulk_process_id?: unknown }).bulk_process_id;
+		if (typeof bulkProcessId === 'number') mintedBulkIds.push(bulkProcessId);
 		const tmAfter = (await sql.unsafe(
 			`SELECT count(*)::int AS c FROM matrix_time_machine
 			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})`,
@@ -208,10 +211,9 @@ describe('propagate_component_data — background wire', () => {
 				},
 			}),
 		);
-		expect(response.result).toBe(true);
-		if (typeof response.bulk_process_id === 'number') {
-			mintedBulkIds.push(response.bulk_process_id);
-		}
+		expect(response.ok).toBe(true);
+		const progressBulkId = (response.data as { bulk_process_id?: unknown }).bulk_process_id;
+		if (typeof progressBulkId === 'number') mintedBulkIds.push(progressBulkId);
 		// The fields render_tool_propagate_component_data.js compound_msg reads.
 		expect(frames.length).toBeGreaterThan(1);
 		const last = frames[frames.length - 1] as Record<string, unknown>;
@@ -237,11 +239,16 @@ describe('propagate_component_data — background wire', () => {
 				},
 			}),
 		);
-		expect(response.result).toBe(true);
-		expect(response.stopped).toBe(true);
-		expect(response.counter).toBe(1);
-		if (typeof response.bulk_process_id === 'number') {
-			mintedBulkIds.push(response.bulk_process_id);
+		expect(response.ok).toBe(true);
+		const stoppedData = response.data as {
+			stopped: boolean;
+			counter: number;
+			bulk_process_id?: unknown;
+		};
+		expect(stoppedData.stopped).toBe(true);
+		expect(stoppedData.counter).toBe(1);
+		if (typeof stoppedData.bulk_process_id === 'number') {
+			mintedBulkIds.push(stoppedData.bulk_process_id);
 		}
 		const values = await liveValues();
 		expect(values[IDS[0] as number]).toEqual([{ lang: LANG, value: 'ABORTED-RUN' }]);

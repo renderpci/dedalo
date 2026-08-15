@@ -17,6 +17,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION = 'test3';
@@ -83,7 +84,7 @@ describe('apply_value SECTION restore', () => {
 				matrix_id: tmRowId,
 			}),
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 
 		const row = await readMatrixRecord(TABLE, SECTION, recordId);
 		// The mutated value is gone; the ORIGINAL snapshot value is back.
@@ -94,31 +95,33 @@ describe('apply_value SECTION restore', () => {
 	});
 
 	test('refuses a matrix_id that does not match the requested target', async () => {
-		const response = await toolTimeMachineApplyValue(
-			await context({
-				section_tipo: SECTION,
-				section_id: recordId + 999999, // wrong id
-				tipo: SECTION,
-				lang: 'lg-nolan',
-				matrix_id: tmRowId,
-			}),
+		const refusal = await refusalOf(
+			toolTimeMachineApplyValue(
+				await context({
+					section_tipo: SECTION,
+					section_id: recordId + 999999, // wrong id
+					tipo: SECTION,
+					lang: 'lg-nolan',
+					matrix_id: tmRowId,
+				}),
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('invalid_request');
+		expect(refusal.code).toBe('request.invalid_options');
 	});
 
 	test('denies a caller_dataframe request (ledgered uncovered scope)', async () => {
-		const response = await toolTimeMachineApplyValue(
-			await context({
-				section_tipo: SECTION,
-				section_id: recordId,
-				tipo: SECTION,
-				lang: 'lg-nolan',
-				matrix_id: tmRowId,
-				caller_dataframe: { main_component_tipo: 'test52' },
-			}),
+		const refusal = await refusalOf(
+			toolTimeMachineApplyValue(
+				await context({
+					section_tipo: SECTION,
+					section_id: recordId,
+					tipo: SECTION,
+					lang: 'lg-nolan',
+					matrix_id: tmRowId,
+					caller_dataframe: { main_component_tipo: 'test52' },
+				}),
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('uncovered_scope');
+		expect(refusal.code).toBe('engine.uncovered_scope');
 	});
 });

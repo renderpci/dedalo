@@ -23,6 +23,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext, ToolActionSpec } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const DEVELOPER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const PLAIN_USER: Principal = { userId: 99, isGlobalAdmin: false, isDeveloper: false };
@@ -64,18 +65,17 @@ describe('tool_ontology_parser module', () => {
 		// framework gate, the in-handler check is the second lock. Two of these
 		// actions WRITE the runtime ontology, so both locks must hold on their own.
 		for (const name of ACTIONS) {
-			const res = await (await action(name)).handler(
-				ctx(PLAIN_USER, { selected_ontologies: ['test'] }),
+			const refusal = await refusalOf(
+				(await action(name)).handler(ctx(PLAIN_USER, { selected_ontologies: ['test'] })),
 			);
-			expect(res.result).toBe(false);
-			expect(res.errors).toContain('unauthorized');
+			expect(refusal.code).toBe('perm.developer_required');
 		}
 	});
 
 	test('get_ontologies emits EXACTLY the five UI metadata fields', async () => {
 		const res = await (await action('get_ontologies')).handler(ctx(DEVELOPER));
-		expect(res.result).not.toBe(false);
-		const list = res.result as Record<string, unknown>[];
+		expect(res.ok).toBe(true);
+		const list = (res.data as { ontologies: Record<string, unknown>[] }).ontologies;
 		expect(Array.isArray(list)).toBe(true);
 		expect(list.length).toBeGreaterThan(0);
 		for (const entry of list) {
@@ -97,8 +97,8 @@ describe('tool_ontology_parser module', () => {
 		const res = await (await action('inspect_ontologies')).handler(
 			ctx(DEVELOPER, { selected_ontologies: ['test', 'dd'] }),
 		);
-		expect(res.result).toBe(true);
-		const states = res.states as Record<string, unknown>[];
+		expect(res.ok).toBe(true);
+		const states = (res.data as { states: Record<string, unknown>[] }).states;
 		expect(Array.isArray(states)).toBe(true);
 		expect(states.length).toBe(2);
 		// The exact keys render_tool_ontology_parser.js reads off each state.
@@ -131,8 +131,8 @@ describe('tool_ontology_parser module', () => {
 		const res = await (await action('inspect_ontologies')).handler(
 			ctx(DEVELOPER, { selected_ontologies: ['9x', 'DD;DROP'] }),
 		);
-		expect(res.result).toBe(true);
-		const states = res.states as Record<string, unknown>[];
+		expect(res.ok).toBe(true);
+		const states = (res.data as { states: Record<string, unknown>[] }).states;
 		expect(states.length).toBe(2);
 		for (const state of states) {
 			expect(state.tld).toBeNull();
@@ -143,15 +143,17 @@ describe('tool_ontology_parser module', () => {
 
 	test('inspect_ontologies with no selection is an empty read, not a whole-install sweep', async () => {
 		const res = await (await action('inspect_ontologies')).handler(ctx(DEVELOPER, {}));
-		expect(res.result).toBe(true);
-		expect(res.states).toEqual([]);
+		expect(res.ok).toBe(true);
+		expect((res.data as { states: unknown }).states).toEqual([]);
 	});
 
 	test('export_ontologies refuses an absent or empty selection (PHP parity)', async () => {
 		for (const options of [{}, { selected_ontologies: [] }, { selected_ontologies: null }]) {
-			const res = await (await action('export_ontologies')).handler(ctx(DEVELOPER, options));
-			expect(res.result).toBe(false);
-			expect(res.errors).toContain('selected_ontologies must be a non-empty array');
+			const refusal = await refusalOf(
+				(await action('export_ontologies')).handler(ctx(DEVELOPER, options)),
+			);
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(refusal.publicMessage).toBe('selected_ontologies must be a non-empty array');
 		}
 	});
 

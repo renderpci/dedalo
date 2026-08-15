@@ -27,6 +27,7 @@ import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_posterframe_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -423,25 +424,26 @@ describe('create_identifying_image per-record scope gate', () => {
 			loaded!.module.apiActions.create_identifying_image,
 			'create_identifying_image',
 		).handler;
-		const response = await handler({
-			principal: scopedPrincipal,
-			userId: -1,
-			background: false,
-			options: {
-				tipo: 'rsc36', // component_text_area — never reached once the gate fires
-				section_tipo: 'rsc167',
-				section_id: 1,
-				current_time: '00:00:01',
-				item_value: {
-					component_portal: 'rsc254',
-					component_image: 'rsc29',
+		const refusal = await refusalOf(
+			handler({
+				principal: scopedPrincipal,
+				userId: -1,
+				background: false,
+				options: {
+					tipo: 'rsc36', // component_text_area — never reached once the gate fires
 					section_tipo: 'rsc167',
-					section_id: 99999999, // no such record — cannot be in any scope
+					section_id: 1,
+					current_time: '00:00:01',
+					item_value: {
+						component_portal: 'rsc254',
+						component_image: 'rsc29',
+						section_tipo: 'rsc167',
+						section_id: 99999999, // no such record — cannot be in any scope
+					},
 				},
-			},
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('record is out of the user scope');
+			}),
+		);
+		expect(refusal.code).toBe('perm.out_of_scope');
 	});
 });
 

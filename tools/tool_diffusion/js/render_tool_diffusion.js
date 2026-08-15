@@ -618,12 +618,15 @@ export const render_publication_items = function(self) {
 								class_name		: 'label',
 								parent			: publication_items_grid
 							})
-							const class_status = node.connection_status.result===true
+							// WC-2026-08-15-diffusion-connection-status-ok-message: the
+							// verdict is `{ok, code?, message}` (never the retired
+							// `{result,msg}` pair).
+							const class_status = node.connection_status.ok===true
 								? 'success'
 								: 'fail'
 							ui.create_dom_element({
 								element_type	: 'div',
-								text_content	: node.connection_status.msg,
+								text_content	: node.connection_status.message,
 								class_name		: 'value ' + class_status,
 								parent			: publication_items_grid
 							})

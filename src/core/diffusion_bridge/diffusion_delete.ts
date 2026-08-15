@@ -161,12 +161,12 @@ export interface NativeMediaIndexOps {
 	/**
 	 * The FOREIGN shape of src/diffusion/targets/mediastore/media_index.ts
 	 * (`rebuildMediaIndexStore`) — declared here as the seam contract, owned
-	 * there. Its `result` flag is that module's field name, not a wire body:
+	 * there. Its `ok` flag is that module's field name, not a wire body:
 	 * `rebuildMediaIndex` below turns a false one into a typed throw.
 	 */
 	rebuild(
 		targets: { database_name: string; table_name: string; section_tipo: string }[],
-	): Promise<{ result: boolean; msg: string; markers: number; errors?: string[] }>;
+	): Promise<{ ok: boolean; message: string; markers: number; errors?: string[] }>;
 	getStatus(): Promise<{
 		enabled: boolean;
 		base: string | null;
@@ -774,7 +774,7 @@ export async function rebuildMediaIndex(): Promise<RebuildMediaIndexReport> {
 		});
 	}
 	const errors = native.errors ?? [];
-	if (native.result !== true) {
+	if (native.ok !== true) {
 		// The store's own sentence is engine-authored (never caller data), so it
 		// is the one worth showing the operator; the per-target findings go to
 		// the log, which is the only place that keeps them all.
@@ -782,9 +782,9 @@ export async function rebuildMediaIndex(): Promise<RebuildMediaIndexReport> {
 			console.error('[media_index] rebuild reported errors:', errors);
 		}
 		throw new DedaloError('media.operation_failed', {
-			publicMessage: native.msg,
+			publicMessage: native.message,
 			coordinates: { operation: 'rebuild_media_index', targets: targets.length },
 		});
 	}
-	return { msg: native.msg, errors, markers: native.markers, targets: targets.length };
+	return { msg: native.message, errors, markers: native.markers, targets: targets.length };
 }
