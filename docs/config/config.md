@@ -3063,7 +3063,7 @@ data may not leave the building.
 With the default `false`, an external conversation still works: the model can use the
 discovery tools that describe the ontology (section names, field maps, relational paths),
 and it can answer general questions — but **every tool call that would return record content
-is refused** with an `egress_restricted` message, and the user is steered to a local model,
+is refused** with an `mcp.egress_restricted` error, and the user is steered to a local model,
 which is never gated. Set it to `true` to let external conversations read record content,
 minus whatever you list in `DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS`.
 

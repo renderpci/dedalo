@@ -30,7 +30,7 @@ The JSON-RPC 2.0 bridge to the MCP tool registry (the legacy `mcp_client.js` con
 
 ### Returns
 
-The JSON-RPC result wrapped in the Dédalo envelope. `initialize` mints a stateless `mcp_session_id`; a stale/missing id on any other method returns the literal `{ result: false, msg: "No valid MCP session ID provided" }` the client's auto-recovery keys on. A disallowed method returns a JSON-RPC `-32601` error; an unknown tool a `-32602`.
+The JSON-RPC result as the envelope's `data` (`{ ok: true, request_id, data: <json-rpc> }`). `initialize` mints a stateless `mcp_session_id`, carried as a top-level extension key beside `data`; a stale/missing id on any other method is the failure envelope `{ ok: false, error: { code: "mcp.session_invalid", message: "No valid MCP session ID provided", … } }` (HTTP 401) — the message is the literal the client's auto-recovery keys on. A JSON-RPC-level failure keeps the JSON-RPC numeric code and carries the envelope error body in `error.data`: a disallowed method is `-32601`, an unknown tool `-32602` (`error.data.code` = `request.invalid`, with `message`, `label_key`, `retryable`). A tool call's own outcome is the MCP structured envelope inside the JSON-RPC result: `{ ok: true, data, pagination? }` or `{ ok: false, error: { code, message, hint?, details? }, …extension keys }` where `code` is a registry error code (`request.invalid`, `resource.not_found`, `perm.denied`, `perm.out_of_scope`, `perm.section_not_writable`, `mcp.write_disabled`, `mcp.label_ambiguous`, `mcp.ambiguous_match`, `mcp.media_too_large`, `mcp.media_path_disabled`, `mcp.plan_hash_mismatch`, `mcp.egress_restricted`, `request.invalid_tipo`, …) and `hint` the registry's model-facing next move; a tool payload the model needs (`candidates`) rides beside `error`.
 
 ### Example Request
 
@@ -108,7 +108,7 @@ The SSE twin of `agent_chat` — the new `tool_assistant` chat surface.
 
 ### Returns
 
-An `text/event-stream` of `start` / `thinking` / `text` / `tool_use` / `tool_result` / `iteration` / `final` / `error` frames plus `: ping` heartbeats. Validation failures **before** the stream opens return the normal JSON `denied()` (the client branches on content-type). A client abort stops delivery, not the in-flight loop (documented v1 limitation).
+An `text/event-stream` of `start` / `thinking` / `text` / `tool_use` / `tool_result` / `iteration` / `final` / `error` frames plus `: ping` heartbeats. Validation failures **before** the stream opens are the normal JSON failure envelope (`{ ok: false, error: { code, … } }`, HTTP status from the code — `request.invalid` 400 for a malformed option, `ai.model_unknown` / `ai.model_no_vision` 400 and `ai.models_unconfigured` / `ai.model_catalog_invalid` 503 for catalog refusals, `request.unknown_action` 400 with the master switch off; the client branches on content-type). The terminal `error` frame's data is the envelope error body itself — `{ code, category, message, label_key, retryable, details?, hint? }` — a provider/transport failure mid-run is `ai.provider_failed` (its text never reaches the wire). A client abort stops delivery, not the in-flight loop (documented v1 limitation).
 
 ### Example Request
 
@@ -134,7 +134,7 @@ Execute a human-confirmed change plan (the plan the confirm card commits into).
 
 ### Returns
 
-`{ result: bool, msg: string, data: <envelope> }`. The plan is hash-rechecked and every gate re-validated before any write; `plan` or `plan_hash` missing returns a 400 `denied()`.
+`{ ok: true, request_id, data: { ok: true, data: <apply report> } }` — the report (`applied`, `skipped`, `created`, `failed?`) wrapped as the MCP structured envelope. The plan is hash-rechecked and every gate re-validated before any write; a plan refused as a whole is the failure envelope with its code (`request.invalid` 400 for a missing `plan`/`plan_hash` or a malformed plan, `mcp.write_disabled` 403, `mcp.plan_hash_mismatch` 409, `perm.denied` / `perm.section_not_writable` / `perm.out_of_scope` 403); a plan that ran and stopped on an op is a `data.data.failed` entry, not a failure envelope.
 
 ### Example Request
 

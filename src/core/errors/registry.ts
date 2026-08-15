@@ -163,13 +163,16 @@ export const ERROR_REGISTRY = {
 	},
 
 	// ── request (caller shape) ──────────────────────────────────────────────
+	// Disclosure public: the refusing site states WHAT was invalid as
+	// `publicMessage` (a tool argument, a plan op) — the caller's own input
+	// echoed back is the whole value of a 400 (same reasoning as resource.conflict).
 	'request.invalid': {
 		category: 'caller',
 		status: 400,
 		label_key: 'error_request_invalid',
 		message: 'Invalid request',
 		severity: 'warn',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint: 'The input did not match the tool schema. Review the parameters and retry.',
 	},
@@ -254,13 +257,15 @@ export const ERROR_REGISTRY = {
 	},
 
 	// ── generic not found ───────────────────────────────────────────────────
+	// Disclosure public for the same reason as request.invalid: "No section
+	// matches 'x'" is the caller's own reference — the sentence IS the 404.
 	'resource.not_found': {
 		category: 'not_found',
 		status: 404,
 		label_key: 'error_resource_not_found',
 		message: 'Not found',
 		severity: 'info',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint: 'Nothing matches. Verify the tipo/id via discovery tools before retrying.',
 	},
@@ -468,13 +473,16 @@ export const ERROR_REGISTRY = {
 	},
 
 	// ── MCP / agent ─────────────────────────────────────────────────────────
+	// The `mcp.*` refusals are MODEL-FACING: the tool authors the sentence FOR
+	// the model (which record matched, which op is wrong) — disclosure public,
+	// the tool's `publicMessage` is the message. `hint` is the registry's next move.
 	'mcp.label_ambiguous': {
 		category: 'caller',
 		status: 400,
 		label_key: 'error_mcp_label_ambiguous',
 		message: 'More than one field matches that label',
 		severity: 'info',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint:
 			'More than one field matches that label. Pick one of the returned ' +
@@ -486,7 +494,7 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_mcp_ambiguous_match',
 		message: 'More than one record matches',
 		severity: 'info',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint:
 			'More than one record matches. Refine the match fields or pick one of ' +
@@ -498,7 +506,7 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_mcp_media_path_disabled',
 		message: 'File-path media sources are disabled on this install',
 		severity: 'warn',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint:
 			'File-path media sources are disabled (DEDALO_MCP_MEDIA_IMPORT_DIR is not set). ' +
@@ -510,7 +518,7 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_mcp_media_too_large',
 		message: 'The file exceeds the configured media size limit',
 		severity: 'warn',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		details_keys: ['max_bytes'],
 		hint: 'The file exceeds DEDALO_MCP_MEDIA_MAX_BYTES. Reduce it or raise the limit.',
@@ -533,7 +541,7 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_mcp_plan_hash_mismatch',
 		message: 'The change plan differs from what was confirmed',
 		severity: 'warn',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint:
 			'The change plan differs from what was confirmed. Re-propose the plan and ' +
@@ -545,12 +553,27 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_mcp_egress_restricted',
 		message: 'This content is restricted from external model providers',
 		severity: 'info',
-		disclosure: 'operator',
+		disclosure: 'public',
 		retryable: false,
 		hint:
 			'This content is restricted from external model providers and was not included. ' +
 			'Answer without it, or suggest the user switch this conversation to a model ' +
 			'marked "local" in the model picker to include restricted records.',
+	},
+
+	// A write tool called on a surface whose write opt-in is off — a deployment
+	// posture, not the user's profile (that is perm.denied).
+	'mcp.write_disabled': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_mcp_write_disabled',
+		message: 'Write tools are not enabled on this surface',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		hint:
+			'This surface is read-only (DEDALO_MCP_ALLOW_WRITE / DEDALO_AGENT_ALLOW_WRITE is off). ' +
+			'Answer without writing, or ask the deployer to enable write mode.',
 	},
 
 	// ── external services (one code per ExternalErrorKind) ──────────────────
@@ -970,6 +993,95 @@ export const ERROR_REGISTRY = {
 		severity: 'info',
 		disclosure: 'operator',
 		retryable: false,
+	},
+
+	// A diffusion runner failure the run itself did not type (the persisted job
+	// `result` + the follow stream frame carry it; the cause is log-only —
+	// engineering/ERRORS_SPEC.md §5).
+	'diffusion.run_failed': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_diffusion_run_failed',
+		message: 'An unexpected error stopped the diffusion run',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// The scheduler claimed the job but the runner process never started (a
+	// deployment fault: interpreter path, cwd) — failed, never re-queued.
+	'diffusion.runner_spawn_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_diffusion_runner_spawn_failed',
+		message: 'The diffusion runner process could not be started',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// The element's diffusion config does not compile (PlanCompileError). The
+	// operator authored that config; the compiler's per-cause list is the
+	// `publicMessage` — public, because the report's cause list IS the fix.
+	'diffusion.plan_compile_failed': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_diffusion_plan_compile_failed',
+		message: 'The diffusion plan could not be compiled',
+		severity: 'error',
+		disclosure: 'public',
+		retryable: false,
+	},
+
+	// ── ai (agent model catalog / provider) ─────────────────────────────────
+	// Catalog refusals are deliberate OPERATOR feedback (a misconfigured
+	// DEDALO_AGENT_MODELS, an unknown id, images on a non-vision model):
+	// disclosure public so the catalog's own sentence reaches the wire.
+	'ai.model_catalog_invalid': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ai_model_catalog_invalid',
+		message: 'The assistant model catalog is invalid (assistant disabled)',
+		severity: 'error',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'ai.models_unconfigured': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ai_models_unconfigured',
+		message: 'No assistant models configured',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'ai.model_unknown': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_ai_model_unknown',
+		message: 'Unknown assistant model',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'ai.model_no_vision': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_ai_model_no_vision',
+		message: 'The selected model does not accept images',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// A provider/transport failure during an agent run. Its text carries config
+	// internals (env key names, upstream bodies) — never echoed; log-only cause.
+	'ai.provider_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ai_provider_failed',
+		message: 'The assistant is not available right now (see server logs)',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+		hint: 'Retry; if it persists, check the server model configuration.',
 	},
 
 	// ── install wizard ──────────────────────────────────────────────────────

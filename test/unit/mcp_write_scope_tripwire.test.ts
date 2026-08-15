@@ -118,7 +118,7 @@ describe('MCP write-scope tripwire (AI-01, mechanical)', () => {
 			// touches the DB. A tool that returns ok here NEVER called the gate.
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
-				expect(result.error.code).toBe('out_of_scope');
+				expect(result.error.code).toBe('perm.out_of_scope');
 			}
 			checked.push(spec.name);
 		}

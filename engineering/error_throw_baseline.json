@@ -5,9 +5,6 @@
 		"src/ai/agent/anthropic_provider.ts": 1,
 		"src/ai/agent/openai_compat_provider.ts": 3,
 		"src/ai/mcp/server.ts": 3,
-		"src/ai/mcp/tools/fields_write.ts": 2,
-		"src/ai/mcp/tools/media.ts": 2,
-		"src/ai/mcp/tools/records_write.ts": 2,
 		"src/ai/rag/cli/rag_drain.ts": 1,
 		"src/ai/rag/llm_provider.ts": 2,
 		"src/ai/rag/multimodal_config.ts": 1,
@@ -92,7 +89,6 @@
 		"src/core/search/builders/builder_relation_children.ts": 2,
 		"src/core/search/builders/builder_relation_index.ts": 1,
 		"src/core/search/conform.ts": 13,
-		"src/core/search/identifier_gate.ts": 4,
 		"src/core/search/search_related.ts": 7,
 		"src/core/search/search_store.ts": 1,
 		"src/core/search/sql_assembler.ts": 4,
@@ -149,7 +145,7 @@
 		"tools/tool_transcription/server/index.ts": 1
 	},
 	"summary": {
-		"files": 145,
-		"total": 430
+		"files": 141,
+		"total": 420
 	}
 }

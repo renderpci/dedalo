@@ -11,7 +11,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { HINTS } from '../../src/ai/mcp/envelope.ts';
 import {
 	EXTERNAL_STATE_LABEL_KEY,
 	EXTERNAL_STATE_RETRYABLE,
@@ -158,14 +157,31 @@ describe('error registry — vocabulary fold-ins', () => {
 		}
 	});
 
+	// The former src/ai/mcp/envelope.ts HINTS keys (the table is deleted; the
+	// registry `hint` is the one home). Frozen here so the fold-in cannot lose one.
+	const FORMER_MCP_HINT_KEYS = [
+		'invalid_tipo',
+		'permission_denied',
+		'out_of_scope',
+		'section_not_writable',
+		'label_ambiguous',
+		'ambiguous_match',
+		'not_found',
+		'invalid_request',
+		'media_path_disabled',
+		'media_too_large',
+		'plan_hash_mismatch',
+		'egress_restricted',
+	];
+
 	test('every former MCP HINTS key is mapped and its code carries a hint', () => {
-		for (const key of Object.keys(HINTS)) {
+		for (const key of FORMER_MCP_HINT_KEYS) {
 			const code = MCP_HINT_CODES[key];
 			expect(code, `HINTS.${key} unmapped`).toBeDefined();
 			expect((TABLE[code as string] as ErrorSpec).hint, `${code} hint`).toBeDefined();
 			expect(LEGACY_TOKEN_MAP[key], `LEGACY_TOKEN_MAP.${key}`).toBe(code as ErrorCode);
 		}
-		expect(Object.keys(MCP_HINT_CODES).sort()).toEqual(Object.keys(HINTS).sort());
+		expect(Object.keys(MCP_HINT_CODES).sort()).toEqual([...FORMER_MCP_HINT_KEYS].sort());
 	});
 
 	test('LEGACY_TOKEN_MAP values are all registered codes', () => {

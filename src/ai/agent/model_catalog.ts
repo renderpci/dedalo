@@ -25,6 +25,7 @@
 
 import { z } from 'zod';
 import { readEnv } from '../../config/env.ts';
+import { DedaloError, type ErrorCode } from '../../core/errors/index.ts';
 import { AnthropicProvider, defaultMaxTokens } from './anthropic_provider.ts';
 import type { AgentLlmProvider } from './llm_provider.ts';
 import { OpenAiCompatProvider } from './openai_compat_provider.ts';
@@ -70,8 +71,25 @@ export interface CatalogModel {
 	timeout_s?: number;
 }
 
-/** Thrown for any catalog/config problem; handlers surface message verbatim. */
-export class ModelCatalogError extends Error {}
+/** The catalog's registry codes — all public-disclosure: the sentence IS the operator feedback. */
+export type ModelCatalogCode =
+	| 'ai.model_catalog_invalid'
+	| 'ai.models_unconfigured'
+	| 'ai.model_unknown'
+	| 'ai.model_no_vision';
+
+/**
+ * Thrown for any catalog/config problem. A DedaloError whose code is one of
+ * the public `ai.*` codes, so every surface (HTTP envelope, agent stream
+ * frame, identify decline) renders the operator's own sentence — the
+ * converter honours `publicMessage` for public-disclosure codes.
+ */
+export class ModelCatalogError extends DedaloError {
+	constructor(code: ModelCatalogCode, message: string) {
+		super(code satisfies ErrorCode, { publicMessage: message, message });
+		this.name = 'ModelCatalogError';
+	}
+}
 
 type Env = Record<string, string | undefined>;
 
@@ -98,10 +116,16 @@ export function agentModelCatalog(env: Env = defaultAgentEnv()): CatalogModel[] 
 	try {
 		decoded = JSON.parse(raw);
 	} catch {
-		throw new ModelCatalogError('DEDALO_AGENT_MODELS is not valid JSON (assistant disabled)');
+		throw new ModelCatalogError(
+			'ai.model_catalog_invalid',
+			'DEDALO_AGENT_MODELS is not valid JSON (assistant disabled)',
+		);
 	}
 	if (!Array.isArray(decoded)) {
-		throw new ModelCatalogError('DEDALO_AGENT_MODELS must be a JSON array');
+		throw new ModelCatalogError(
+			'ai.model_catalog_invalid',
+			'DEDALO_AGENT_MODELS must be a JSON array',
+		);
 	}
 	const models: CatalogModel[] = [];
 	const seen = new Set<string>();
@@ -110,17 +134,22 @@ export function agentModelCatalog(env: Env = defaultAgentEnv()): CatalogModel[] 
 		if (!parsed.success) {
 			const issue = parsed.error.issues[0];
 			throw new ModelCatalogError(
+				'ai.model_catalog_invalid',
 				`DEDALO_AGENT_MODELS[${index}]: ${issue?.path.join('.') ?? ''} ${issue?.message ?? 'invalid'}`,
 			);
 		}
 		const value = parsed.data;
 		if (seen.has(value.id)) {
-			throw new ModelCatalogError(`DEDALO_AGENT_MODELS[${index}]: duplicate id "${value.id}"`);
+			throw new ModelCatalogError(
+				'ai.model_catalog_invalid',
+				`DEDALO_AGENT_MODELS[${index}]: duplicate id "${value.id}"`,
+			);
 		}
 		seen.add(value.id);
 		if (value.provider === 'anthropic') {
 			if (value.egress === 'local') {
 				throw new ModelCatalogError(
+					'ai.model_catalog_invalid',
 					`DEDALO_AGENT_MODELS[${index}]: an anthropic entry cannot be egress "local" — API calls leave the host`,
 				);
 			}
@@ -130,11 +159,13 @@ export function agentModelCatalog(env: Env = defaultAgentEnv()): CatalogModel[] 
 		// openai_compatible
 		if (value.endpoint === undefined) {
 			throw new ModelCatalogError(
+				'ai.model_catalog_invalid',
 				`DEDALO_AGENT_MODELS[${index}]: openai_compatible requires "endpoint"`,
 			);
 		}
 		if (value.egress === undefined) {
 			throw new ModelCatalogError(
+				'ai.model_catalog_invalid',
 				`DEDALO_AGENT_MODELS[${index}]: openai_compatible requires an explicit "egress" ("local" or "external")`,
 			);
 		}
@@ -189,12 +220,16 @@ export function resolveProvider(
 	const catalog = agentModelCatalog(env);
 	if (catalog.length === 0) {
 		throw new ModelCatalogError(
+			'ai.models_unconfigured',
 			'No assistant models configured (set DEDALO_AGENT_MODELS or ANTHROPIC_API_KEY)',
 		);
 	}
 	const model = modelId === undefined ? catalog[0] : catalog.find((m) => m.id === modelId);
 	if (model === undefined) {
-		throw new ModelCatalogError(`Unknown model "${modelId}" — pick one from agent_models`);
+		throw new ModelCatalogError(
+			'ai.model_unknown',
+			`Unknown model "${modelId}" — pick one from agent_models`,
+		);
 	}
 	if (model.provider === 'anthropic') {
 		return {

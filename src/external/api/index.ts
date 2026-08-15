@@ -40,6 +40,7 @@ export {
 	ExternalSearchUnsupportedError,
 	ExternalServiceError,
 	ExternalServiceNotRegisteredError,
+	logExternalError,
 } from '../errors.ts';
 export { mapRowToEntries, parseFieldsMap, remoteFieldsOf } from '../fields_map.ts';
 export {
