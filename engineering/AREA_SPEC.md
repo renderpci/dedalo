@@ -96,10 +96,102 @@ In order: **ontology + global-admin → add unconditionally** (`:147-150` — th
 `search_thesaurus(sqo)` `:551` — run the SQO, then walk each hit's ancestor chain via `component_relation_parent::get_parents_recursive` (memoized `:587-592`), building a **flat ts_object map keyed `'section_tipo:section_id'`** (`:570`) of hit + sibling + ancestor nodes (`:619-713`). Return `{result: ts_object_data[], msg, errors, total, found:[{section_tipo,section_id}]}` (`:716-724`). `get_hierarchy_terms_sqo(hierarchy_terms)` `:764` — OR-of-AND filter over path `hierarchy22`/`component_section_id` (`:779-787`), sqo id `'thesaurus'`, limit 100 (`:826-830`). The client hands `ts_search.result/found` to `ts_object.parse_search_result` (`render_area_thesaurus.js:137-155`) and totals from `found.length` (`area_thesaurus.js:806-818`).
 
 ### 5.5 RQO source add-ons & the dd_ts_api boundary
-The client folds tree params into `rqo.source` (`area_thesaurus.js:497-527,:593-603`): `build_options:{terms_are_model}` (model view), `hierarchy_sections`, `hierarchy_terms`, `thesaurus_mode`, plus `sqo.limit ?? 30`. Ontology deep-link (`:336-341,:369-444,:512-520`): URL `search_tipos` → `sqo.filter` over `ontology7`(tld)/`ontology2`(id), `sqo.section_tipo = tlds.map(tld+'0')`, `source.search_action='search'`. **Everything after boot — node expand (`get_children_data`), move (`save_parent`), add (`add_child`), order (`save_order`) — goes to `dd_ts_api`** (`ts_object.js:521,:634,:1183,:1407,:2651`); the tree *search* uses the generic read API (`:1059-1060`). The area rebuild stops at the boot payload + ts_search; ledger the rest against the ts_object port.
+The client folds into `rqo.source`, in `area_thesaurus.generate_rqo` (awaited BEFORE `build_autoload`, so it rides the one read a boot page performs): `build_options:{terms_are_model}` (model view), `source.caller` when the area was opened as a picker (§5.7), plus `sqo.limit ?? 30`. Ontology deep-link: URL `search_tipos` → `sqo.filter` over `ontology7`(tld)/`ontology2`(id), `sqo.section_tipo = tlds.map(tld+'0')`, `source.search_action='search'`.
+
+**`hierarchy_sections` / `hierarchy_terms` / `thesaurus_mode` are NOT a client channel** (2026-08-14, `engineering/wire_contract/WC-2026-08-14-thesaurus-picker-caller-declared.md`). The retired engine let the client declare all three as URL variables and filtered on them; this engine DERIVES every one of them and reads none of them from a request. The post-response fold that still writes them onto the follow-up rqo of a refresh/search read is the server's own answers travelling back to it, never a declaration — a client-declared mode would open relation mode over any thesaurus with no caller that ever declared `view:'tree'`, which is the objection `src/core/area/read.ts` already makes about `source.model`. Gate: `test/unit/thesaurus_picker_tripwire.test.ts` (the mode's writers are a census; nobody mints a mode literal client-side).
+
+**Everything after boot — node expand (`get_children_data`), move (`save_parent`), add (`add_child`), order (`save_order`) — goes to `dd_ts_api`** (`ts_object.js:521,:634,:1183,:1407,:2651`); the tree *search* uses the generic read API (`:1059-1060`). The area rebuild stops at the boot payload + ts_search; ledger the rest against the ts_object port.
 
 ### 5.6 TS status & rebuild orders
-`readAreaHierarchyData` (`src/core/resolve/area_hierarchy.ts:92`) is byte-parity-gated for BOTH areas (37 thesaurus + 80 ontology entries, `area_hierarchy_differential.test.ts`). It re-derives the projection with direct SQL rather than the engine's own search path — acceptable, pinned. Relocate into `src/core/area/`, lift the hardcoded tipos (`hierarchy4/5/9/45/48/53/125`, `hierarchy13/16/106`, `ontology35/14`, `'14'`, `dd64`) into the contract module with names, give `childrenTipoCache` a clear hook. **Ledgered-uncovered to close in Phase C**: per-hierarchy/root-term permission pruning (the current harness runs admin — the non-admin differential is mandatory), `ts_search` (both trigger paths), `terms_are_model`/`thesaurus_mode` variants, the ontology `search_tipos` deep-link, the context `section_tipo` overwrite + `thesaurus_mode` stamp.
+`readAreaHierarchyData` (`src/core/area/tree.ts`) is byte-parity-gated for BOTH areas (37 thesaurus + 80 ontology entries, `area_hierarchy_differential.test.ts`). It re-derives the projection with direct SQL rather than the engine's own search path — acceptable, pinned. Remaining relocation work: lift the hardcoded tipos (`hierarchy4/5/9/45/48/53/125`, `hierarchy13/16/106`, `ontology35/14`, `'14'`, `dd64`) into the contract module with names, give `childrenTipoCache` a clear hook.
+
+**Ledgered-uncovered to close in Phase C**: per-hierarchy/root-term permission pruning (the current harness runs admin — the non-admin differential is mandatory), `ts_search` (both trigger paths), `terms_are_model` variants, the ontology `search_tipos` deep-link, the context `section_tipo` overwrite.
+
+**CLOSED 2026-08-14 — the `thesaurus_mode` variants and the mode stamp.** They are no longer an uncovered variant of the area property: the mode is DERIVED per read (§5.7), so the two values are two distinct code paths with their own gates. `test/unit/area_picker_mode_native.test.ts` covers the grant (all three conditions, and each one alone denying), the `relation`-mode emissions and the two refusal codes; `test/unit/thesaurus_picker_tripwire.test.ts` covers the single derivation site and the absence of any client mint; the four frozen differentials (`area_hierarchy`, `areas`, `area_security`, `ts_search`) pin the `default`-mode shape byte-for-byte. Wire: `WC-2026-08-14-thesaurus-picker-caller-declared`.
+
+### 5.7 The TERM PICKER — one contract, defined here (2026-08-14)
+
+A relation component whose ontology declares `properties.view: "tree"` opens its target
+thesaurus as a **picker**: the same tree read, rendering a link affordance per term instead
+of navigating. It is a capability of the RELATION family served by the AREA read, so the
+contract lives here and the component docs link to it — never restate it. Wire ledger:
+`WC-2026-08-14-thesaurus-picker-caller-declared` (the read),
+`WC-2026-08-14-relation-insert-target-validation` and
+`WC-2026-08-14-relation-insert-accepts-batch` (the write).
+
+**1. The request declares a CALLER; the server derives everything else.**
+`rqo.source.caller = {section_tipo, section_id, tipo}` (the `section_id` may be the
+URL-shaped string; the server canonicalizes it). A present-but-malformed caller, a caller
+naming an element the ontology does not define, and a caller whose section holds no records
+each get their own named 400 — the four message constants live in `src/core/concepts/area.ts`
+so engine and gate cannot disagree about them. An ABSENT caller is an ordinary browse read,
+byte-unchanged. Nothing else about the picker travels in the request: a client conclusion
+(`thesaurus_mode`, a target list) would be authority the client does not have (§5.5).
+
+**2. The mode is GRANTED, on three conditions, all server-resolved.** Relation mode requires
+the caller's resolved `context.view === 'tree'` (a `ddo_map`-injected view counts — it is the
+resolved view, not the node property), a model that stores in the relation column, and
+`getPermissions >= 2` (edit) on the caller. Otherwise the read proceeds in `'default'` mode:
+the intent is simply not granted. On a caller-declared read the AREA NODE's own
+`properties.thesaurus_mode` no longer decides anything — it is the install default for
+ordinary browse reads and must not be able to hand a picker request a mode the caller did
+not earn.
+
+**3. ONE resolver answers "what may this caller link", for both paths.**
+`src/core/relations/picker_constraint.ts` derives `{selection_limit, remaining, targets}`:
+
+- `selection_limit` = the caller's `properties.data_limit`. ABSENT → `null` = uncapped; a
+  literal `0` is a real answer ("none may be linked") and is honoured as such.
+- `remaining` = `selection_limit − (locators the caller already holds)`. **This, never the
+  raw limit, is what a picker session may add**, and it is deliberately not clamped at 0 —
+  "over capacity by 2" is information an operator needs.
+- `targets` = the caller's resolved sqo sections, kept as DECLARED — deliberately NOT
+  collapsed through `getSectionRealTipo`. Every thesaurus is a virtual section over the
+  same real node (`es1`, `ad1`, `fr1` … all resolve to `hierarchy20`), so real-resolving
+  the declared side would make a caller naming ONE thesaurus indistinguishable from one
+  naming all ~150 — the constraint would stop constraining. The virtual/real
+  reconciliation happens in the COMPARISON (`isTargetAllowed`), asymmetrically: a declared
+  target matches when it equals the incoming section, or when EITHER side is the other's
+  real section, never real-vs-real;
+  the comparison law (`isTargetAllowed`) resolves BOTH sides, so a virtual target matches a
+  hierarchy whose target is the real section and vice versa.
+
+The READ calls it for the affordances; the WRITE calls it again before it persists. Two call
+sites, one answer — which is what makes a rendered affordance stop being an authorization
+and a forged client cap stop mattering.
+
+**4. What the request_config does and does NOT constrain.** The `sqo` names the target
+section(s) and nothing more. The tree's CONTENTS are the thesaurus's; it is not paged
+(`sqo_config.limit` is the autocomplete's dropdown size, a different surface); its nodes are
+rendered by `ts_object`, not by the caller's `ddo_map` (which governs how a LINKED value is
+displayed back in the caller). The only count field that binds a picker is `data_limit`.
+
+**5. Selectability is the TERM's own answer.** `isIndexable` (`src/core/ts_object/`) is the
+relation-mode rule and always was: `hierarchy*`/`ontology*` tipos are structural and never
+selectable; otherwise the section's `section_map.thesaurus.is_indexable` names a component
+tipo whose value on the TERM's own record decides. So a curator marks, term by term, inside
+the thesaurus, what may be linked. A non-selectable term stays **visible and navigable** —
+they are the levels one passes through to reach a leaf — and simply carries no link
+affordance: never hidden, never a dead click.
+
+**6. Emissions, relation mode only.** `context[0].thesaurus_mode = 'relation'`,
+`context[0].picker = {selection_limit, remaining, targets}` (the constraint verbatim), and
+per hierarchy item `root_terms_selectable: [{section_tipo, section_id, selectable}]`,
+addressed by locator rather than by position. Default mode emits none of them, which is what
+keeps the frozen differentials byte-identical.
+
+**7. The two empty trees are two different facts.** Every candidate dropped by a permission
+check → `notAuthorized()` (403) with the GENERIC message, naming no section (`response.ts`
+refuses a `denied(403, …)` for exactly this reason). Dropped by the data-driven skips (no
+active hierarchy, or none of them among the caller's targets) → `409 read: no active
+hierarchy is configured for this component target`, which the client renders as "this picker
+has no thesaurus" rather than as a permission error. The two causes are counted separately at
+each drop site and never inferred from an empty result.
+
+**8. The client is a renderer.** One module publishes the pick (`link_terms_<linker_id>`, an
+ARRAY, one per pick — picking is ONE STEP), one module writes the mode onto the context, one writer
+composes a portal's toolbar per view, and the relation `type` is the server's to fill.
+Enforced by `test/unit/thesaurus_picker_tripwire.test.ts`.
 
 ## 6. area_tool & section_tool — a tool's face on a section's data
 
@@ -182,7 +274,7 @@ Existing gates to keep green: `areas_differential.test.ts` (12-model element-con
 
 1. **Standing suite green, zero fixture/normalization changes** throughout the strangler migration — sole exception: the sanctioned dd917→dd5 correction, which lands WITH its quirk/strengthening pins (§9).
 2. **Dashboard parity.** For every dashboard-behavior area in §11: full `{context, data:[{tipo, section_tipo, section_id:null, dashboard}]}` read byte-equal vs live PHP (admin AND non-admin — the per-section permission null-out is invisible to the admin harness), including `sections` order, `recent_7d`, `color` (crc32 parity), day-filled `activity_30d`; `get_activity_metric` action parity for every range key; `properties.dashboard.disabled/metrics` honored. End-to-end: drive the real client in Chrome against the TS server and see the dashboard render (the project's client-fix precedent).
-3. **Tree areas complete.** Boot parity relocated intact; the §5.6 ledger closed: non-admin permission-pruning differential (hierarchies skipped, root_terms pruned), ts_search both trigger paths, `terms_are_model`/`thesaurus_mode`, the ontology `search_tipos` deep-link, context `section_tipo` overwrite + `thesaurus_mode` stamp. dd_ts_api remains explicitly ledgered.
+3. **Tree areas complete.** Boot parity relocated intact; the §5.6 ledger closed: non-admin permission-pruning differential (hierarchies skipped, root_terms pruned), ts_search both trigger paths, `terms_are_model`, the ontology `search_tipos` deep-link, context `section_tipo` overwrite. dd_ts_api remains explicitly ledgered. ✅ 2026-08-14 for the mode half — `thesaurus_mode` is no longer an uncovered variant but a derived, gated decision (§5.7): `area_picker_mode_native` covers the grant and both refusal codes, `thesaurus_picker_tripwire` the single derivation site, and the four frozen differentials the `default`-mode shape.
 4. **area_ontology superuser-only, fail-closed**: global admin refused, dd774 self-keyed profile refused, superuser passes; dd5 absent from every non-superuser menu; divergence-from-PHP pinned.
 5. **section_tool page-context reroute** parity (oh81 + one numisdata exemplar): rewritten section context carrying `tool_context`, unauthorized-tool refusal matching the menu drop. ✅ 2026-07-10 — `section_tool_start_differential` (oh81 + numisdata201/670 byte-pinned; note START semantics differ from the menu: an unauthorized tool ships the rerouted context WITHOUT tool_context, PHP :410-418 — only the MENU drops the item).
 6. **Structure.** `src/core/area/` + `concepts/area.ts` exist; ONE canonical model list consumed by menu, dispatch, contexts, and tests (area_publication present, area_graph absent); the `dispatch.ts` area branches and `structure_context.ts` `startsWith('area')` sites are decomposed into the module; `childrenTipoCache`/`labelCache` get clear hooks registered with the maintenance cache-clear path; area writes refused (§9).
