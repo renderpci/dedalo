@@ -554,7 +554,7 @@ export const render_stream = function(options) {
 							// mid-job must reach the relogin overlay, not a dead line
 							// of text. Every other code is already stated inline, so
 							// the policy's toast would only repeat it.
-							if (api_error.code.startsWith('auth.') || api_error.code==='not_logged') {
+							if (api_error.code.startsWith('auth.')) {
 								handle_api_error(api_error)
 							}
 						}

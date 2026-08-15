@@ -15,9 +15,12 @@
  * DEDALO_DEBUG_API_ERRORS=true, and the literal `debug` lives in this file
  * alone. `internal.*` never echoes the wrapped exception outside `debug`.
  *
- * ERROR_ENVELOPE_COMPAT is the bounded compat block (`result`/`msg`/`errors`)
- * — applied here and nowhere else; deleted when
- * client_error_contract_tripwire's client-read census reaches zero.
+ * The bounded compat block (`result` mirroring `data`,
+ * `result:false`/`msg`/`errors:[code]` on failure) was DELETED on 2026-08-16
+ * when the client compat-read census reached 0
+ * (WC-2026-08-16-error-envelope-compat-removal). The converter never writes a
+ * top-level `result` key; the schema refuses one
+ * (schema.ts ENVELOPE_FORBIDDEN_KEYS) and error_taxonomy_tripwire A2 pins it.
  *
  * Every function here stays at cyclomatic ≤ 7 (crap_complexity_ratchet rule 3).
  */
@@ -148,19 +151,6 @@ export function toErrorBody(error: DedaloError): ApiErrorBody {
 	};
 }
 
-/**
- * THE COMPAT BLOCK — the only place `result`/`msg`/`errors` are ever written.
- * Removal condition: client_error_contract_tripwire compat-read census = 0.
- */
-export const ERROR_ENVELOPE_COMPAT = {
-	failure(body: ApiErrorBody): { result: false; msg: string; errors: [string] } {
-		return { result: false, msg: body.message, errors: [body.code] };
-	},
-	success<T>(data: T): { result: T } {
-		return { result: data };
-	},
-} as const;
-
 export interface ErrorEnvelopeResult {
 	readonly status: number;
 	readonly body: ErrEnvelope;
@@ -180,7 +170,6 @@ export function toErrorEnvelope(error: unknown, ctx: ErrorEnvelopeContext): Erro
 		ok: false,
 		request_id: ctx.requestId,
 		error: body,
-		...ERROR_ENVELOPE_COMPAT.failure(body),
 	};
 	return typed.retryAfterMs === undefined
 		? { status: typed.spec.status, body: envelope, error: typed }
@@ -188,8 +177,8 @@ export function toErrorEnvelope(error: unknown, ctx: ErrorEnvelopeContext): Erro
 }
 
 /**
- * The ok:true envelope (`result` mirrors `data` during the compat window).
- * `ctx.extend` = the handler's extension keys (see EnvelopeExtension).
+ * The ok:true envelope. `ctx.extend` = the handler's extension keys (see
+ * EnvelopeExtension); the payload lives in `data` and nowhere else.
  */
 export function ok<T>(data: T, ctx: OkEnvelopeContext): OkEnvelope {
 	return {
@@ -198,7 +187,6 @@ export function ok<T>(data: T, ctx: OkEnvelopeContext): OkEnvelope {
 		request_id: ctx.requestId,
 		data,
 		...(ctx.notices === undefined ? {} : { notices: [...ctx.notices] }),
-		...ERROR_ENVELOPE_COMPAT.success(data),
 	};
 }
 

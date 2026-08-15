@@ -193,3 +193,16 @@ today: the transform reports `matched:true` (the totality assertion holds) with
 `php_fault.not_reproduced` and `envelope.not_an_envelope` as NAMED rows with
 their `reason` field, precisely so this exemption is written down rather than
 implied.
+
+## Addendum 2026-08-16 — the compat block is REMOVED
+
+The removal condition above was met on 2026-08-16 (client compat-read census
+0 / 648 files) and the block was deleted the same day:
+`WC-2026-08-16-error-envelope-compat-removal`. `ERROR_ENVELOPE_COMPAT` no
+longer exists, the schema tolerates no `result` / `msg` / `errors` compat
+fields, `result` is a FORBIDDEN top-level name (`ENVELOPE_FORBIDDEN_KEYS`),
+and `ENVELOPE_RESERVED_KEYS` is exactly `ok`, `request_id`, `data`, `notices`,
+`error` — `msg` / `errors` are handler-owned extension keys, never
+converter-made. The gate reconciliation table above stands unchanged: the
+fixture-side transform is now pinned as fixture-side ONLY (a TS body is
+refused).

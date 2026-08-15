@@ -267,9 +267,13 @@ export function fromEnvelope(envelope: ApiEnvelope): WidgetResponse {
 	};
 }
 
-/** The envelope's non-reserved keys as the widget `extend` (absent when there are none). */
+/**
+ * The envelope's non-reserved keys as the widget `extend` (absent when there
+ * are none). `msg` / `errors` are extension keys the caller has ALREADY lifted
+ * to their widget fields, so they are skipped here rather than doubled.
+ */
 function envelopeExtension(envelope: ApiEnvelope): Pick<WidgetResponse, 'extend'> {
-	const reserved = new Set(ENVELOPE_RESERVED_KEYS);
+	const reserved = new Set([...ENVELOPE_RESERVED_KEYS, 'msg', 'errors']);
 	const extend: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(envelope)) {
 		if (!reserved.has(key)) extend[key] = value;

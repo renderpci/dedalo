@@ -35,7 +35,7 @@ Every request passes through the gates in `dispatchRqo`, in this order:
 
 1. **Allowlist** — the `(dd_api, action)` pair must be explicitly registered in `ACTION_REGISTRY`; otherwise the request is refused with *"Undefined or unauthorized method (action)"*.
 2. **Authentication** — a session is required unless the action is in `NO_LOGIN_ACTIONS` (`login`, `get_environment`, `start`, `get_login_context`, plus the machine-to-machine intake and ontology/code master-server actions).
-3. **CSRF** — authenticated, non-exempt actions must present a valid CSRF token (constant-time compare). The exemptions are listed in `CSRF_EXEMPT_ACTIONS`. A CSRF failure returns the exact shape the client's transparent retry keys on: `errors: ['csrf_failed']` plus the session's current `csrf_token`.
+3. **CSRF** — authenticated, non-exempt actions must present a valid CSRF token (constant-time compare). The exemptions are listed in `CSRF_EXEMPT_ACTIONS`. A CSRF failure answers `error.code: 'auth.csrf_failed'` (401) plus the session's current `csrf_token` — the shape the client's transparent retry keys on.
 4. **Request-scoped language** — the handler runs inside a language context (`AsyncLocalStorage`, `src/core/resolve/request_lang.ts`) seeded from the session, so a user's language choice takes effect on the next request without a caller passing it explicitly, and one caller's language never bleeds into another's request.
 5. **Per-action permission gates** — each handler resolves the caller's `Principal` and checks section/component permission levels before any DB work (read requires level ≥ 1, write ≥ 2).
 
@@ -210,7 +210,9 @@ Every JSON body is one of exactly two shapes, discriminated by the boolean `ok`:
   something about the answer is worth saying.
 - **Extension keys** may sit at top level beside the envelope keys when the
   client reads them by name (`total`, `job_id`, `pid`, `environment`,
-  `source_status`, …). They can never override an envelope key.
+  `source_status`, and the maintenance widgets' `msg` / `errors`, …). They can
+  never override an envelope key, and one name is refused outright: `result`
+  (the retired mirror of `data`, see below).
 - **`csrf_token`** is appended by the dispatcher to every response of a session,
   success and failure alike, for the client's transparent-retry logic.
 
@@ -234,13 +236,16 @@ error code's category:
 BODY on any status: a non-2xx response is still a well-formed envelope, and it is
 where the reason lives.
 
-### Compat window
+### There is no other shape
 
-Until the browser client's last legacy reader is removed, every body ALSO carries
-the previous shape's three keys: `result` (a mirror of `data`, or `false` on a
-failure), `msg` (the error message) and `errors` (a one-element array holding the
-error code). They are mirrors, never a second source of truth — read `ok`,
-`data` and `error`.
+The envelope above is the whole answer. The previous shape's three keys —
+`result` (the payload, or `false` on a failure), `msg` and `errors` — were
+mirrored beside `ok` / `data` / `error` for one day (2026-08-15) while the last
+browser reader of them was rewritten; the mirror was removed on 2026-08-16 and a
+body carrying a top-level `result` now fails the envelope schema. Read `ok`,
+`data` and `error`; a `msg` or `errors` at top level is a handler's own
+extension key (a maintenance widget's report, a tool's per-item detail), never
+the error channel.
 
 ## Where to look in the code
 

@@ -206,7 +206,7 @@ export const render_error_panel = (api_error) => {
 		})
 
 	// affordance
-		if (code.startsWith('auth.') || code==='not_logged') {
+		if (code.startsWith('auth.')) {
 			// a forced reload re-initiates the authentication handshake
 			const link = ui.create_dom_element({
 				element_type	: 'a',
@@ -230,7 +230,7 @@ export const render_error_panel = (api_error) => {
 			link_home.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
-			if (code.startsWith('perm.') || code==='not_authorized') {
+			if (code.startsWith('perm.')) {
 				error_container.classList.add('no_access_error')
 			}
 		}

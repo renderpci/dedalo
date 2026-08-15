@@ -14,8 +14,11 @@
  *        `notLogged(` / `failed(` (the P1 shells and the tool `failed()` helper
  *        are DELETED — a caller of one is a fossil that would not compile, and
  *        a NEW helper of that name is a body builder in disguise);
- *     A2 no `result: false` literal in code (the PHP wire fossil) outside
- *        src/core/errors/ (the compat block writes it, nowhere else);
+ *     A2 no `result: false` literal in code (the PHP wire fossil) ANYWHERE —
+ *        src/core/errors/ included since the compat block's removal
+ *        (2026-08-16, WC-2026-08-16-error-envelope-compat-removal) — and
+ *        convert.ts writes no top-level `result:` key at all (the retired
+ *        mirror of `data`; schema.ts ENVELOPE_FORBIDDEN_KEYS refuses it);
  *     A3 the literal `debug:` body key is written by convert.ts alone (schema.ts
  *        DECLARES it in the zod shape — the two are named; a third file is a leak
  *        of the debug block outside the DEDALO_DEBUG_API_ERRORS door);
@@ -154,6 +157,9 @@ const countBuilderCalls = (tokens: string): number => (tokens.match(BUILDER_CALL
 /** A2 — the PHP wire fossil as a literal. */
 const RESULT_FALSE = /\bresult\s*:\s*false\b/g;
 const countResultFalse = (tokens: string): number => (tokens.match(RESULT_FALSE) ?? []).length;
+/** A2 (converter) — a `result:` object key or `{ result }` shorthand written by convert.ts. */
+const RESULT_KEY = /(?<![\w$.])result\s*[:}]/g;
+const countResultKeys = (tokens: string): number => (tokens.match(RESULT_KEY) ?? []).length;
 
 /** A3 — the debug key written (`{ debug }` shorthand or `debug:`) or declared as an object key. */
 const DEBUG_KEY = /(?<![\w$.])debug\s*[:}]/g;
@@ -399,9 +405,22 @@ describe('A. source laws (zero)', () => {
 		);
 	});
 
-	test('A2 — no `result: false` literal outside src/core/errors/', () => {
+	test('A2 — no `result: false` literal anywhere; convert.ts writes no `result:` key', () => {
 		const hits = measure((file) => countResultFalse(file.tokens));
-		expect(hits, 'the compat mirror is written by ERROR_ENVELOPE_COMPAT alone').toEqual({});
+		expect(hits, 'the PHP wire fossil: throw a DedaloError instead').toEqual({});
+		// src/core/errors/ is skipped by measure(): check it by name — the compat
+		// block used to live there and must not come back.
+		const errorsDir = CORPUS.filter((file) => inErrorsDir(file.path));
+		expect(errorsDir.length).toBeGreaterThan(3);
+		for (const file of errorsDir) {
+			expect(countResultFalse(file.tokens), `${file.path}: result:false is the retired compat mirror`).toBe(0);
+		}
+		const convert = CORPUS.find((file) => file.path === 'src/core/errors/convert.ts');
+		expect(convert).toBeDefined();
+		expect(
+			countResultKeys(convert?.tokens ?? 'result:'),
+			'convert.ts writes a top-level `result` key — the compat mirror was removed 2026-08-16',
+		).toBe(0);
 	});
 
 	test('A3 — the `debug:` body key lives in convert.ts (writer) + schema.ts (declaration) only', () => {
@@ -608,6 +627,10 @@ describe('E. anti-vacuity — every matcher fires on a synthetic offender', () =
 	test('A2 result:false', () => {
 		expect(countResultFalse('return { result: false, msg: "x" };')).toBe(1);
 		expect(countResultFalse('return { result: data };')).toBe(0);
+		expect(countResultKeys('return { ...x, result: data };')).toBe(1);
+		expect(countResultKeys('const { result } = outcome; return { result };')).toBe(2);
+		expect(countResultKeys('return outcome.result;')).toBe(0);
+		expect(countResultKeys('const result_options = 1;')).toBe(0);
 	});
 	test('A3 debug key', () => {
 		expect(countDebugKeys('const body = { debug: { stack } };')).toBe(1);

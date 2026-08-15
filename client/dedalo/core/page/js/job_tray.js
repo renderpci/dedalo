@@ -77,7 +77,7 @@ export const render_job_tray = function() {
 
 	// NOBODY IS LOGGED IN → NO TRAY, AND ABOVE ALL NO READ. render_page runs for
 	// the LOGIN element too, and this tray's first act is get_activity, which the
-	// session gate answers with 401 errors:['not_logged'] — correctly, the caller
+	// session gate answers with 401 error.code 'auth.not_logged' — correctly, the caller
 	// is anonymous. page.js turns that token into render_relogin(), so the tray
 	// used to raise the re-login OVERLAY on top of the boot login form: the user
 	// saw the login panel twice and had to type the credentials a second time.

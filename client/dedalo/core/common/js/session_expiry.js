@@ -14,7 +14,7 @@
 * server-side rule: the session dies at whichever comes first.
 *
 * Recovery AFTER expiry is not this module's job — the server answers 401 with
-* `errors:['not_logged']` and the client already raises the re-login modal on that
+* `error.code 'auth.not_logged'` and the client already raises the re-login modal on that
 * token (page.js), with components retrying on `login_successful`.
 *
 * @see src/core/resolve/environment.ts buildPageGlobals — the three page_globals keys

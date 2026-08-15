@@ -104,14 +104,15 @@ error }` where `error` is an `ApiError` (`core/common/js/api_error.js`) —
 the one payload accessor, and every consumer dispatches on `error.code`, never
 on HTTP status or message text.
 
-!!! note "The compat mirror is not read any more"
-    The server still MIRRORS the legacy fields (`result`, `msg`,
-    `errors:[code]`) beside the v2 ones, but no client file reads them: the
-    `client_error_contract_tripwire` census over `client/**` is 0, the
-    normaliser understands v2 only, and `response_data` reads `data`. A
-    handler-owned top-level field (`msg` on the maintenance/install surfaces,
-    `in_use` on the lock surface, …) is an EXTENSION KEY, read on a SUCCESS
-    only through `response_extension(api_response, key)` — never the mirror.
+!!! note "There is no compat mirror"
+    The legacy fields (`result`, `msg`, `errors:[code]`) are not on the wire
+    any more: the server stopped mirroring them on 2026-08-16, once no client
+    file read them (`client_error_contract_tripwire` counts those reads and
+    holds them at zero). The normaliser understands v2 only and
+    `response_data` reads `data`. A handler-owned top-level field (`msg` on the
+    maintenance/install surfaces, `in_use` on the lock surface, …) is an
+    EXTENSION KEY, read on a SUCCESS only through
+    `response_extension(api_response, key)` — it is never the error channel.
 
 ## Key concepts
 

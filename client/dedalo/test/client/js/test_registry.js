@@ -37,10 +37,10 @@ export const generic_suites_green = [
 	'test_components_data_changes', // green after save-response DataItem-shape fix (dispatch.ts)
 	'test_no_logged_error',
 	'test_unknown_error',
-	'test_api_error',                 // THE client error model + transport (envelope v2 / COMPAT v1 / transport class → ApiError code; fetch_api retry keyed on retryable + Retry-After; data_manager.request failure contract). Backend-free: window.fetch stubbed and restored.
-	'test_error_policy',              // the pure code → action table (exact → domain.* → *), COMPAT aliases on the same action, additive registration that refuses core overrides; handle_api_error surfaces without a backend (relogin asserted NOT to open when not logged in).
+	'test_api_error',                 // THE client error model + transport (envelope v2 / transport class → ApiError code; the v1 mirror is never read; fetch_api retry keyed on retryable + Retry-After; data_manager.request failure contract). Backend-free: window.fetch stubbed and restored.
+	'test_error_policy',              // the pure code → action table (exact → domain.* → *), bare v1 tokens are no longer aliases, additive registration that refuses core overrides; handle_api_error surfaces without a backend (relogin asserted NOT to open when not logged in).
 	'test_render_api_error',          // the one renderer: label → ${param}/%s → message → code; XSS — every surface renders '<img onerror>' as TEXT; the panel always carries request_id; debug suffix only under SHOW_DEBUG.
-	'test_error_stream',              // streams reject with an ApiError (server code on a non-2xx envelope, client.* otherwise); read_stream's unparseable frame carries client.bad_response under `error`; normalize_stream_error on v2 and COMPAT frames. Backend-free.
+	'test_error_stream',              // streams reject with an ApiError (server code on a non-2xx envelope, client.* otherwise); read_stream's unparseable frame carries client.bad_response under `error`; normalize_stream_error on v2 frames (the v1 frame shape is not read). Backend-free.
 	'test_page',
 	'test_ts_object',
 	'test_ts_object_extended',

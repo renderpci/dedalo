@@ -175,8 +175,8 @@ describe('RENDER_API_ERROR — surfaces render text, never HTML', function() {
 		assert.isNull(auth.querySelector('a.link.home'))
 		assert.equal(auth.querySelector('.request_id').textContent, 'request_id: -', 'no server answer → still a line')
 
-		const compat = render_error_panel(new ApiError({code: 'not_logged'}))
-		assert.ok(compat.querySelector('a.link.reload'), 'COMPAT token gets the same affordance')
+		const bare = render_error_panel(new ApiError({code: 'not_logged'}))
+		assert.isNull(bare.querySelector('a.link.reload'), 'the bare v1 token is not a code any more (compat removed 2026-08-16)')
 	})
 
 	it('render_error_modal: text-only body with the request_id, closes cleanly', function() {

@@ -29,10 +29,11 @@
 * client dispatches on `api_error.code` ONLY. `message` is the registry's
 * English (logs, curl); the browser renders `label_key` (render_api_error.js).
 *
-* The v1 compat window is CLOSED on this side (P4): nothing here reads the
-* mirror keys `result` / `msg` / `errors` any more. A failure is `ok:false` +
-* a coded `error`, a success is `data` — read through `response_data()` — and
-* a handler-owned top-level field through `response_extension()`.
+* The v1 compat mirror (`result` / `msg` / `errors` beside `data` / `error`)
+* is GONE on both ends (removed 2026-08-16,
+* WC-2026-08-16-error-envelope-compat-removal): a failure is `ok:false` + a
+* coded `error`, a success is `data` — read through `response_data()` — and a
+* handler-owned top-level field through `response_extension()`.
 */
 
 
@@ -390,11 +391,13 @@ export const response_data = (api_response) => api_response?.data
 * reads by name — `msg` / `errors` on the maintenance-widget and installer
 * surfaces, `in_use` on the lock surface, `environment` on `start`, …
 *
-* SUCCESS ONLY, and that is the whole point: the compat mirror ALSO writes
-* `msg` and `errors` onto a FAILURE body, so a bare `api_response.msg` reads
-* the mirror's prose whenever the call failed. Through here it cannot: a
-* failure has ONE channel, `api_response.error` (error_text / handle_api_error),
-* and this returns undefined for it.
+* SUCCESS ONLY, and that is the whole point: a failure has ONE channel,
+* `api_response.error` (error_text / handle_api_error) — an extension key on a
+* failure is exceptional and named (ERRORS_SPEC §3.0: `start`'s `environment`,
+* the CSRF gate's `action`, tool_hierarchy / tool_ontology_parser `errors`),
+* and those readers go through `api_response.<key>` on the failure branch
+* deliberately. This returns undefined for a failure so a `msg` / `errors`
+* extension can never be mistaken for the error text.
 * @param {Object} api_response
 * @param {string} key - the extension key the handler owns
 * @return *

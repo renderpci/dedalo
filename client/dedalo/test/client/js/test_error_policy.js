@@ -11,9 +11,9 @@
 * WHY THESE ASSERTIONS. The table is what turns a CODE into what the user sees;
 * the wrong row is a session loss shown as a toast, or a validation message
 * shown as a full-page panel. So: exact → `<domain>.*` → `'*'` resolution is
-* asserted per row the plan names, the COMPAT v1 aliases are asserted to land
-* on the SAME action as their v2 code (so the window can close without a
-* behaviour change), and the additive registration is asserted to refuse core
+* asserted per row the plan names, the bare v1 tokens are asserted NOT to be
+* codes any more (the compat aliases went with the server mirror on
+* 2026-08-16), and the additive registration is asserted to refuse core
 * overrides — a tool that softens `auth.not_logged` is a bug, not a feature.
 *
 * handle_api_error is exercised without a backend: the page-level actions only
@@ -71,10 +71,10 @@ describe('ERROR_POLICY — resolution', function() {
 		assert.equal(resolve_error_policy('client.network').severity, 'warning')
 	})
 
-	it('COMPAT v1 aliases land on the same action as their v2 code', function() {
-		assert.equal(resolve_error_policy('not_logged').action, resolve_error_policy('auth.not_logged').action)
-		assert.equal(resolve_error_policy('csrf_failed').action, resolve_error_policy('auth.csrf_failed').action)
-		assert.equal(resolve_error_policy('not_authorized').action, resolve_error_policy('perm.denied').action)
+	it('the bare v1 tokens are NOT aliases any more (compat removed 2026-08-16): they fall to *', function() {
+		assert.equal(resolve_error_policy('not_logged').matched, '*')
+		assert.equal(resolve_error_policy('csrf_failed').matched, '*')
+		assert.equal(resolve_error_policy('not_authorized').matched, '*')
 	})
 
 	it('falls through exact → <domain>.* → *', function() {
@@ -233,7 +233,6 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		try {
 			page_globals.is_logged = false
 			assert.deepEqual(await handle_api_error(new ApiError({code: 'auth.not_logged'})), {recovered: false, action: 'relogin'})
-			assert.deepEqual(await handle_api_error(new ApiError({code: 'not_logged'})), {recovered: false, action: 'relogin'}, 'COMPAT alias')
 			assert.isNull(document.querySelector('.login .overlay'), 'no overlay was appended')
 		} finally {
 			page_globals.is_logged = original

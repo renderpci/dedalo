@@ -30,7 +30,8 @@ one registered code, and the registry (`src/core/errors/registry.ts`,
   A code needing another status is another code, or a named row in
   `STATUS_EXEMPTIONS` (empty today) with its reason next to it.
 - **one code per failure** — never a token array, never prose in the machine
-  channel. `errors:[…]` survives only as the compat mirror (§3).
+  channel. `errors:[…]` on an envelope is a HANDLER extension key only (§3.0),
+  never converter-made (the compat mirror was removed 2026-08-16, §3.1).
 - **totality is mechanical**: `error.code` on the wire is `z.enum(ERROR_CODES)`;
   every code has a `master.json` label; label placeholders ≡ `details_keys`;
   the `external.<kind>` family is total over `ExternalErrorKind` and agrees
@@ -140,7 +141,21 @@ the keys the client already reads by name (PHP parity). Rules:
 - passed as `extend` (`ok(data, {…, extend})`; on a failure as the throw's
   `DedaloError.extend` or the chokepoint's `ctx.extend`); the converter spreads
   it FIRST, so a reserved key (`ENVELOPE_RESERVED_KEYS`: `ok`, `request_id`,
-  `data`, `notices`, `error`, and the compat trio) can never be overridden;
+  `data`, `notices`, `error`) can never be overridden;
+- `msg` and `errors` are HANDLER-OWNED extension keys, never converter-made:
+  the maintenance widgets (`msg` / `errors` beside `data:true`), the install
+  probes, the lock surface write them on SUCCESS, and two tools carry a named
+  `errors` on a FAILURE (`tool_hierarchy` `extend:{state, errors}`,
+  `tool_ontology_parser` `extend:{errors, ar_msg}` — the per-check detail
+  behind the one sentence). The client core reads them ON SUCCESS ONLY through
+  `response_extension(api_response, 'msg'|'errors')`
+  (`client/dedalo/core/common/js/api_error.js`); the two failure readers read
+  `api_response.errors` by name on the failure branch, deliberately. The
+  converter writes neither (§3.1);
+- `result` is FORBIDDEN as a top-level name on both shapes
+  (`ENVELOPE_FORBIDDEN_KEYS = ['result']`, a `superRefine` on both schemas):
+  it was the compat mirror of `data` (§3.1) and a body carrying it is a
+  converter regression, refused at parse time by every schema-parsing gate;
 - `csrf_token` is appended by the dispatch chokepoint to EVERY response of a
   session (success and failure) — a handler never sets it (login excepted:
   no session yet on the context);
@@ -151,19 +166,29 @@ the keys the client already reads by name (PHP parity). Rules:
 - payload data belongs in `data`, never in an extension key: the keys above
   are the closed legacy set, and the P1-exit gate freezes it.
 
-### 3.1 The compat block (bounded, ratchet-removed)
+### 3.1 The compat block — REMOVED 2026-08-16
 
-During the compat window the converter ALSO emits, from ONE named export
-`ERROR_ENVELOPE_COMPAT` in `convert.ts` and nowhere else:
-
-- success: `result` = mirror of `data`;
-- failure: `result:false`, `msg` = `error.message` (string), `errors:[code]`.
-
-The schema tolerates these three keys as optional passthrough. **Removal
-condition:** `client_error_contract_tripwire`'s census of client reads of
-`.result` / `.msg` / `.errors` reaches 0 → delete `ERROR_ENVELOPE_COMPAT`, the
-schema passthrough, and the client compat branches in the same commit (P4),
-with a WC entry.
+During the compat window (2026-08-15 → 2026-08-16) the converter ALSO emitted,
+from ONE named export `ERROR_ENVELOPE_COMPAT` in `convert.ts`: on success
+`result` = a mirror of `data`; on failure `result:false`, `msg` =
+`error.message`, `errors:[code]`. The schema tolerated the three keys as
+optional passthrough. The stated removal condition — the
+`client_error_contract_tripwire` census of client reads of `.result` / `.msg` /
+`.errors` reaches 0 — was met on 2026-08-16: **0 compat reads across 648
+scanned files** (`client/dedalo/**/*.js` minus the browser test harness +
+`tools/*/js/**/*.js`; one counter, `scripts/lib/client_compat_census.ts`,
+comments and strings blanked, the named non-envelope shapes excused one
+expression at a time in `NON_ENVELOPE_READS` with a reason; the core sweep
+`2f8ad44f03`, the tools sweep `505ad279de`). The block, the schema
+passthrough and the client compat branches (bare `not_logged` /
+`csrf_failed` / `not_authorized` policy rows, the `auth.`/`perm.` renderer
+aliases) were deleted the same day — `WC-2026-08-16-error-envelope-compat-removal`.
+What remains is the negative: `result` is a forbidden key (§3.0), the converter
+writes no `result:` (`error_taxonomy_tripwire` A2), the census is asserted at
+ZERO (no baseline file — a ratchet frozen at 0 is a second copy of a
+constant), and `test/parity/normalize.ts adoptErrorEnvelopeV2` refuses a
+TS-shaped body (`ok` present) so it can only ever project the frozen PHP
+fixtures (§6).
 
 ## 4. Converter law & chokepoints (P1 — landed 2026-08-15)
 
@@ -345,16 +370,26 @@ Gates: `test/unit/mcp_registry.test.ts`, `mcp_fields_write.test.ts`,
 - **`dd_external_api::search` degradation** (`searchDegraded`): `ok:true`,
   `data:{context:[], data:[]}`, ONE notice `{code:'external.<kind>', label_key,
   retryable, details:{service, reason?}}` — the source is degraded, the request
-  was not wrong (§3: degradation is never an error). During the compat window
-  the same `source_status` object the record path emits rides as an extension
-  key (the autocomplete chip renders from it today); removal condition: the
-  widget reads `notices[]`. Supersedes WC-2026-08-06's failure shape by WC
+  was not wrong (§3: degradation is never an error). The same `source_status`
+  object the record path emits ALSO rides as an extension key (the autocomplete
+  chip renders from it today) — an open item independent of the envelope
+  compat mirror (§3.1): it retires when the widget reads `notices[]`. Supersedes WC-2026-08-06's failure shape by WC
   entry.
 
-## 6. Compat window & fixture reconciliation (P1/P4)
+## 6. Fixture reconciliation (P1) & the closed compat window (P4)
 
-(P1) — `test/parity/normalize.ts adoptErrorEnvelopeV2` total table; (P4) compat
-removal.
+The frozen PHP store is never re-harvested: `test/parity/normalize.ts
+adoptErrorEnvelopeV2` projects a frozen PHP body onto the v2 fields a gate may
+compare (TOP-LEVEL only; a TOTAL table `FROZEN_ERROR_BODIES` keyed by the exact
+`(msg, errors)` bytes; an unlisted `result:false` body throws; every caller
+asserts `matched === true`). Since 2026-08-16 it is FIXTURE-SIDE ONLY: a body
+carrying `ok` (a TS body — or a TS body on which the compat mirror came back)
+is refused with `kind:'ts_body_refused'`, `matched:false`, so a gate that fed
+it the TS side reddens and a converter regression to `result:false` prose can
+never be quietly adopted. `test/parity/error_envelope_transform.test.ts` pins
+the table against the store AND the refusal. Parity gates read `ts.body.data`
+on the TS side and the frozen `.result` on the PHP side. Compat removal: §3.1,
+`WC-2026-08-16-error-envelope-compat-removal`.
 
 ## 7. Enforcement — the gates (P1 exit, 2026-08-15)
 
@@ -364,19 +399,19 @@ tripwired or deleted"). Rows in `engineering/TRIPWIRES.md` + `scripts/verify.ts`
 | gate | what it holds |
 |---|---|
 | `test/unit/error_registry_native.test.ts` | the REGISTRY is coherent: grammar, every code has a `master.json` label, label `{params}` ≡ `details_keys`, status↔category (named exemptions), `external.<kind>` totality + retryable/label agreement with the component state map, every former MCP HINT key mapped and hinted, LEGACY_TOKEN_MAP targets exist |
-| `test/unit/error_envelope_native.test.ts`, `error_converter_native.test.ts` | the envelope shapes and the converter's disclosure ladder (publicMessage only for `public`, details filtered to `details_keys`, `debug` only under the flag, poison latch inside `toDedaloError`) |
+| `test/unit/error_envelope_native.test.ts`, `error_converter_native.test.ts` | the envelope shapes and the converter's disclosure ladder (publicMessage only for `public`, details filtered to `details_keys`, `debug` only under the flag, poison latch inside `toDedaloError`); a failure body is exactly `{ok, request_id, error}`, `result` refused on both shapes (`ENVELOPE_FORBIDDEN_KEYS`), a `msg`/`errors` extension on success parses, `extend:{result}` cannot smuggle it in |
 | `test/unit/dispatch_error_native.test.ts` | the chokepoint: registry status, `ok:false ⇒ non-2xx`, Retry-After, csrf_token on both outcomes, Gate 1 ≡ Gate 1c-disabled, a NON-envelope handler body refused as `internal.unexpected`, server.ts's three doors |
-| `test/unit/error_taxonomy_tripwire.test.ts` | the TREE only speaks through the registry: (A) zero builder calls / `result:false` literals / stray `debug` keys / builtin `instanceof` outside convert.ts+process_health.ts / raw exception text on a wire key in the 8 former passthrough files; (B) shrink-only ratchets on hand-built `ok:false` failure literals and prose `errors:[…]`; (C) every code referenced or `reason`ed, every client code string resolves; (D) runtime: every registered `(class,action)` converts a throw; (E) anti-vacuity |
-| `test/unit/error_throw_ratchet.test.ts` | untyped `throw new Error(` per file may only shrink (`engineering/error_throw_baseline.json`); ZERO_TIER dirs must reach 0 at P3 exit (`ZERO_TIER_ENFORCED`, still `false` — the zero-tier count is not 0 yet) |
-| `test/unit/client_error_contract_tripwire.test.ts` | the client half: one transport (`api_transport.fetch_api`, no status allowlist), no fourth fetch wrapper, the compat-read census (`engineering/client_compat_read_baseline.json`, shrink-only) — flips to "compat ABSENT" when the census reaches 0 (P4) |
+| `test/unit/error_taxonomy_tripwire.test.ts` | the TREE only speaks through the registry: (A) zero builder calls / `result:false` literals ANYWHERE (src/core/errors/ included) and no `result:` key written by convert.ts / stray `debug` keys / builtin `instanceof` outside convert.ts+process_health.ts / raw exception text on a wire key in the 8 former passthrough files; (B) shrink-only ratchets on hand-built `ok:false` failure literals and prose `errors:[…]`; (C) every code referenced or `reason`ed, every client code string resolves; (D) runtime: every registered `(class,action)` converts a throw; (E) anti-vacuity |
+| `test/unit/error_throw_ratchet.test.ts` | untyped `throw new Error(` per file may only shrink (`engineering/error_throw_baseline.json`); ZERO_TIER dirs are at 0 (`ZERO_TIER_ENFORCED = true`, P3 exit) |
+| `test/unit/client_error_contract_tripwire.test.ts` | the client half: one transport (`api_transport.fetch_api`, no status allowlist), no fourth fetch wrapper, the compat-read census at ZERO (no baseline — `scripts/lib/client_compat_census.ts` + `NON_ENVELOPE_READS` exemptions, each live and reasoned), and the server compat block ABSENT (no `ERROR_ENVELOPE_COMPAT`, no `result:` written by convert.ts, `result` in `ENVELOPE_FORBIDDEN_KEYS`) — P4 landed 2026-08-16 |
+| `test/parity/error_envelope_transform.test.ts` | the fixture-side transform: total over the 8 frozen `result:false` bodies, and it REFUSES a TS-shaped body (`ok` present) — fixture-side only |
 | `test/unit/authorization_denial_native.test.ts`, `session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`, `security_fail_closed.test.ts`, `install_gate.test.ts` | the named refusals (`perm.denied` + environment extension on `start`, `auth.not_logged`, `auth.csrf_failed` + fresh token, install window) — and response.ts's export set (`streamResult` only) |
 | `test/unit/labels_tripwire.test.ts` | every `label_key` ships in `master.json` (the code and its label land in one commit) |
 | `test/unit/tools_dispatch.test.ts`, `dd_mcp_api.test.ts`, `agent_stream_protocol.test.ts`, `diffusion_queue_stream_tripwire.test.ts`, `external_search_action_native.test.ts` | the non-envelope surfaces (§5) — tool responses ARE the envelope, MCP structured errors, SSE frames, external degradation as notices |
 
-Left for later phases, on record: `ZERO_TIER_ENFORCED` (P3 exit, when every
-zero-tier prefix is at 0 — the write path and DB layer are, §8), the compat
-block + census flip (P4). `matrix_write_failure_native` /
-`save_component_failure_native` landed with §8.
+Nothing is left for a later phase: `ZERO_TIER_ENFORCED` flipped at P3 exit
+(`00d6ec198d`), the compat block + census flip landed at P4 (2026-08-16, §3.1).
+`matrix_write_failure_native` / `save_component_failure_native` landed with §8.
 
 ## 8. Write-path propagation (P3 — landed 2026-08-15)
 

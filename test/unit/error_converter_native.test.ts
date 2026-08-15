@@ -123,7 +123,6 @@ describe('toErrorEnvelope — disclosure', () => {
 			CTX,
 		).body;
 		expect(pub.error.message).toBe('A site name is required.');
-		expect(pub.msg).toBe('A site name is required.');
 		expect(ERROR_REGISTRY['perm.denied'].disclosure).toBe('operator');
 		const op = toErrorEnvelope(
 			new DedaloError('perm.denied', { publicMessage: 'you cannot read /etc/passwd' }),

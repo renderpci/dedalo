@@ -67,14 +67,7 @@ import { readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { Glob } from 'bun';
 import {
-	BASELINE_PATH,
-	CORPUS_FLOOR,
-	computeDrift,
-	FIX_COMMAND,
-	formatDrift,
-	loadBaseline,
-} from '../../scripts/client_compat_baseline.ts';
-import {
+	byPath,
 	COMPAT_READ,
 	census,
 	countCompatReads,
@@ -301,86 +294,46 @@ describe('client error contract — rule 2: worker_cache/sw import the transport
 });
 
 // ---------------------------------------------------------------------------
-// Rule 3 — the compat-read census (ratchet, then "absent").
+// Rule 3 — the compat-read census is ZERO and the server compat block is GONE.
 // ---------------------------------------------------------------------------
 
 const RESULTS = census();
-const BASELINE = loadBaseline();
-const DRIFT = computeDrift(RESULTS, BASELINE);
 const TOTALS = summarize(RESULTS);
-const COMPAT_LIVE = BASELINE.summary.total > 0;
+/** Far below the measured corpus (~650 files); proves the glob saw a tree, not a stub. */
+const CORPUS_FLOOR = 300;
+const FIX_COMMAND = 'bun run scripts/client_compat_census.ts';
 
-const WHY =
-	'The compat mirror (`result`/`msg`/`errors` beside `data`/`error`) exists ONLY while a client reads those names (ERRORS_SPEC §3.1); every read moved to `data` / `error.code` / `error.label_key` brings its deletion closer.';
-
-describe(`client error contract — rule 3: compat-read census (baseline total ${BASELINE.summary.total} → ${COMPAT_LIVE ? 'ratchet' : 'compat must be ABSENT'})`, () => {
-	test.if(COMPAT_LIVE)(
-		'no file exceeds its frozen compat-read count (unlisted files are capped at 0)',
-		() => {
-			expect(
-				DRIFT.regressions,
-				`COMPAT READS GREW past the frozen baseline. ${WHY}\n${formatDrift({ ...DRIFT, stale: [], summary: [], vacuity: [] })}\nRead the envelope-v2 fields instead, or RAISE the entry DELIBERATELY with \`${FIX_COMMAND} --allow-regression\` (a plain \`${FIX_COMMAND}\` refuses) and say why in the commit message.`,
-			).toEqual([]);
-			expect(
-				DRIFT.summary,
-				`FROZEN DEBT MISMATCH: ${BASELINE_PATH} summary disagrees with the measurement.\n${formatDrift({ ...DRIFT, regressions: [], stale: [], vacuity: [] })}\nIf it GREW, a new compat read was added — rewrite it. If it FELL, re-freeze with \`${FIX_COMMAND}\`.`,
-			).toEqual([]);
-		},
-	);
-
-	test.if(COMPAT_LIVE)(
-		'ratchet stays honest — no stale entries above reality, none for files that are gone',
-		() => {
-			expect(
-				DRIFT.stale,
-				`STALE BASELINE ENTRIES in ${BASELINE_PATH} — a too-high entry silently loosens the ratchet.\n${formatDrift({ ...DRIFT, regressions: [], summary: [], vacuity: [] })}\nThe one fix: \`${FIX_COMMAND}\`, committed with the change that improved the client.`,
-			).toEqual([]);
-		},
-	);
-
-	test.if(COMPAT_LIVE)('a file absent from the baseline holds ZERO compat reads', () => {
-		const born = RESULTS.filter(
-			(result) => BASELINE.files[result.file] === undefined && result.reads > 0,
-		).map((result) => `${result.file}: ${result.reads}`);
+describe('client error contract — rule 3: compat-read census is 0 and the compat block is ABSENT (P4, 2026-08-16)', () => {
+	test('no client file reads `.msg` / `.errors` / `.result` off an API body', () => {
+		const offenders = RESULTS.filter((result) => result.reads > 0)
+			.sort((a, b) => b.reads - a.reads || byPath(a, b))
+			.map((result) => `${result.file}: ${result.reads} (msg ${result.byKey.msg}, errors ${result.byKey.errors}, result ${result.byKey.result})`);
 		expect(
-			born,
-			`A file with NO baseline entry reads compat keys. Frozen debt is a legacy fact; new debt is a choice. ${WHY}\nOffenders: ${born.join(', ')}`,
+			offenders,
+			`COMPAT READS in the client. The server stopped emitting \`result\`/\`msg\`/\`errors\` on the envelope on 2026-08-16 (WC-2026-08-16-error-envelope-compat-removal): such a read is undefined at runtime. Read \`data\` / \`error.code\` / \`error.label_key\` — or, for a NON-envelope shape (browser API, server stream frame, payload key, named failure extension key), add a NON_ENVELOPE_READS entry WITH ITS REASON in scripts/lib/client_compat_census.ts. Report: \`${FIX_COMMAND}\`.\n  ${offenders.join('\n  ')}`,
 		).toEqual([]);
+		expect(TOTALS.total).toBe(0);
 	});
 
-	test.if(COMPAT_LIVE)(
-		'while the compat window is open the server still emits the block (the two ends agree)',
-		() => {
-			// The mirror is what the counted reads consume: deleting it before the
-			// census reaches 0 would break every one of those reads silently.
-			expect(codeOf(CONVERT_TS)).toMatch(/\bERROR_ENVELOPE_COMPAT\b/);
-			expect(codeOf(SCHEMA_TS)).toMatch(/\bcompatFields\b/);
-		},
-	);
-
-	// ── THE FLIP (P4): total 0 ⇒ the block must be GONE. Runs only then. ──
-	test.if(!COMPAT_LIVE)(
-		'census is 0 ⇒ ERROR_ENVELOPE_COMPAT and compatFields are DELETED (P4 exit)',
-		() => {
-			expect(TOTALS.total, 'the baseline says 0 but the tree still reads compat keys').toBe(0);
-			expect(
-				codeOf(CONVERT_TS),
-				`${CONVERT_TS} still carries ERROR_ENVELOPE_COMPAT although no client reads the compat keys — delete the block (ERRORS_SPEC §3.1 removal condition met), the schema passthrough, and record the WC entry.`,
-			).not.toMatch(/\bERROR_ENVELOPE_COMPAT\b/);
-			expect(codeOf(SCHEMA_TS)).not.toMatch(/\bcompatFields\b/);
-			expect(codeOf(SCHEMA_TS)).not.toMatch(/\b(msg|errors):\s*z\./);
-		},
-	);
+	test('the server compat block is DELETED: no ERROR_ENVELOPE_COMPAT, no compatFields, no `result:` written by convert.ts', () => {
+		expect(
+			codeOf(CONVERT_TS),
+			`${CONVERT_TS} carries ERROR_ENVELOPE_COMPAT again — the compat block was removed on 2026-08-16 (ERRORS_SPEC §3.1) and no client reads the keys.`,
+		).not.toMatch(/\bERROR_ENVELOPE_COMPAT\b/);
+		// no top-level `result` key written by the converter (`result:` or `{ result }` shorthand)
+		expect(codeOf(CONVERT_TS)).not.toMatch(/(?<![\w$.])result\s*[:}]/);
+		expect(codeOf(SCHEMA_TS)).not.toMatch(/\bcompatFields\b/);
+		expect(codeOf(SCHEMA_TS)).not.toMatch(/\b(msg|errors|result):\s*z\./);
+		// the schema names `result` as FORBIDDEN (a converter regression fails every parse) — raw
+		// source: codeOf() blanks string contents
+		expect(read(SCHEMA_TS)).toMatch(/ENVELOPE_FORBIDDEN_KEYS[^=]*=\s*\[\s*'result'\s*\]/);
+	});
 
 	test('the scan is not vacuous', () => {
 		expect(
 			TOTALS.scanned,
 			`Vacuous scan: only ${TOTALS.scanned} client files scanned (floor ${CORPUS_FLOOR}). Fix the scanner, never the floor.`,
 		).toBeGreaterThanOrEqual(CORPUS_FLOOR);
-		expect(
-			DRIFT.vacuity,
-			formatDrift({ ...DRIFT, regressions: [], stale: [], summary: [] }),
-		).toEqual([]);
 		// the pinned transport consumers are in the census (the glob reaches them)
 		const seen = new Set(RESULTS.map((result) => result.file));
 		for (const file of TRANSPORT_CONSUMERS)

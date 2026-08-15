@@ -67,17 +67,19 @@ And the standard response envelope:
 
 ```json
 {
-	"result" : { "...action specific..." : "context/data, records, count, etc." },
-	"msg"    : "OK. Request done successfully",
-	"errors" : [],
-	"debug"  : { "real_execution_time": "123 ms" }
+	"ok"         : true,
+	"request_id" : "…",
+	"data"       : { "...action specific..." : "context/data, records, count, etc." },
+	"notices"    : [],
+	"csrf_token" : "…"
 }
 ```
 
-- `result` — the action's payload (`false` on failure). Shape depends on the action: `read` returns `{context, data}`, `count` returns a number, etc.
-- `msg` — human-readable outcome string.
-- `errors` — array of issue strings; empty on success. Server exceptions reach the client through this channel.
-- `debug` / `dedalo_last_error` — added under `SHOW_DEBUG` / when server errors were logged.
+- `ok` — the boolean discriminator: `true` with `data`, `false` with `error`.
+- `data` — the action's payload. Shape depends on the action: `read` returns `{context, data}`, `count` returns `{total}`, etc.
+- `error` — on failure only: `{code, category, message, label_key, retryable, details?}`; `code` is a registry code (`src/core/errors/registry.ts`) and the HTTP status is its category's (`engineering/ERRORS_SPEC.md` §3). There is no `result` / `msg` / `errors` mirror (removed 2026-08-16).
+- `notices` — optional non-fatal coded facts on a success (`{code, label_key, retryable, details?}`).
+- `request_id` — top level on both outcomes; the join key to the access-log line.
 
 !!! note "One RQO per HTTP call"
 	The API endpoint decodes **a single RQO object** per request (`src/server.ts` → `dispatchRqo(rqo)`, `src/core/api/dispatch.ts`). Batching several operations is done with several `fetch` calls (the client `data_manager` runs them concurrently), not by sending an array of RQOs.
@@ -105,7 +107,7 @@ Step by step:
 3. **Gate** (`src/server.ts`) — the whole decoded JSON body is validated in one pass by `rqoSchema.safeParse()` (`src/core/concepts/rqo.ts`) — malformed JSON or a body that fails the schema is rejected with HTTP 400 *before* any dispatch gate runs. Because `rqoSchema`'s `show`/`search`/`choose` blocks are typed through `ddoMapSchema` (`src/core/concepts/ddo.ts`), a **strict whitelist** (zod's default `.strip()` drops any key not listed), the ddo-whitelist scrub happens as a side effect of schema validation rather than as a separate function call. `rqo.sqo` is additionally run through `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`) once the handler needs it, stripping server-only SQO fields, forcing `parsed=false`, and clamping `limit` to `CLIENT_MAX_LIMIT`. The file-upload endpoint is a separate route (`handleMediaUpload`).
 4. **Dispatch** (`dispatchRqo()`, `src/core/api/dispatch.ts`) — runs its gates in order: (1) `ACTION_REGISTRY[dd_api]?.[action]` lookup — undefined action **or** unregistered `(dd_api, action)` pair is rejected identically; (1b) an install-surface action additionally requires the server to be unsealed and the caller's IP allowed; (1c) an error-report-intake action additionally requires the receiver to be enabled and the caller's IP allowed; (2) auth — session required unless `action` is in `NO_LOGIN_ACTIONS`; (3) CSRF — required for authenticated actions not in `CSRF_EXEMPT_ACTIONS` (constant-time `verifyCsrf`), returning the fresh token so the client's one-shot retry can succeed; (4) the handler runs inside `runWithRequestLangs()`, seeding the request-scoped application/data language from the session (`src/core/resolve/request_lang.ts`, `AsyncLocalStorage`-scoped). There is no separate maintenance-area permission pre-gate step — `dd_area_maintenance_api` handlers check it themselves.
 5. **Execute** — the registered handler runs the action directly: for data actions it resolves permissions for `source`, then calls the section/relations/search engines directly, resolving `show`/`search`/`choose` ddo_maps into context+data via `src/core/resolve/structure_context.ts` and `src/core/section/read.ts`.
-6. **Respond** — the standard envelope goes back as JSON; every response from an authenticated session gets a fresh `csrf_token` appended. An unhandled handler exception is caught at the very top of `dispatchRqo()` and degrades to `{result:false, errors:[...]}` at HTTP 200 — deliberately **not** a raw 500, because the client only reads `api_response.result`.
+6. **Respond** — the standard envelope goes back as JSON; every response from an authenticated session gets a fresh `csrf_token` appended. An unhandled handler exception is caught at the very top of `dispatchRqo()` and converted (`src/core/errors/convert.ts`) into `{ok:false, request_id, error:{code:'internal.unexpected', …}}` at HTTP 500 — the body, not the status, is what the client reads (`api_response.error.code`), and the underlying exception text never reaches the wire.
 
 The layout maps resolved along the way are `show`, `search` and `choose`. `hide` is **not** an RQO wire field (see the [`hide` note](#hide-is-a-request_config-only-block) below).
 
@@ -529,9 +531,9 @@ Resolves authoritative section_map term labels for up to 1000 locators in one ca
 
 ## Response shapes by action
 
-The envelope is always `{result, msg, errors, action, csrf_token}`; only the **shape of `result`** varies. Quick reference (full detail in the action table above):
+The envelope is always `{ok, request_id, data | error, notices?, csrf_token}`; only the **shape of `data`** varies. Quick reference (full detail in the action table above):
 
-| Action | `result` on success |
+| Action | `data` on success |
 |--------|---------------------|
 | `read` (`search`/`get_data`/...) | `{context: [...], data: [...]}` |
 | `read` (`get_value`) | the plain rendered component value |
@@ -548,8 +550,8 @@ The envelope is always `{result, msg, errors, action, csrf_token}`; only the **s
 On failure the body is the envelope v2 failure shape (`engineering/ERRORS_SPEC.md`
 §3): `ok:false`, `request_id`, and `error: {code, category, message, label_key,
 retryable, details?}` — the HTTP status is the code's registry status (never
-2xx). During the compat window the converter also mirrors `result:false`,
-`msg` (= `error.message`) and `errors:[code]`.
+2xx). Nothing else is on the body: the previous `result:false` / `msg` /
+`errors` mirror was removed on 2026-08-16.
 
 !!! warning "`error.code` is the machine channel; `message` is the prose"
     Two codes are load-bearing, and for the same reason:

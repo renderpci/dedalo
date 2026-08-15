@@ -587,7 +587,7 @@ export const init_events_subscription = function(self) {
 *  5. On success: update self.data + self.db_data from the server response, run
 *     the success animation, and reset the before-unload warning.
 *     On error: restore 'modified' (data is still unsaved) and set 'error'.
-*  6. On auth failure ('not_logged'): subscribe to 'login_successful' and
+*  6. On auth failure ('auth.not_logged'): subscribe to 'login_successful' and
 *     retry the save automatically when the user logs back in.
 *  7. Always publish 'save' (general) and 'save_' + self.id_base (component-specific)
 *     events with { instance, api_response } payload.

@@ -6,7 +6,6 @@
 
 export {
 	type EnvelopeExtension,
-	ERROR_ENVELOPE_COMPAT,
 	type ErrorEnvelopeContext,
 	type ErrorEnvelopeResult,
 	type ErrorSurface,
@@ -55,6 +54,7 @@ export {
 	type ApiErrorBody,
 	type ApiNotice,
 	apiEnvelopeSchema,
+	ENVELOPE_FORBIDDEN_KEYS,
 	ENVELOPE_RESERVED_KEYS,
 	type ErrEnvelope,
 	errEnvelopeSchema,

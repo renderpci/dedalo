@@ -108,3 +108,12 @@ the eight oracle-era bodies listed in `WC-2026-08-15-error-envelope-v2`, and
 `adoptErrorEnvelopeV2` is what reconciles those. Tool fixtures that carry a
 SUCCESS body are projected by the same transform's `ok` branch
 (`result` → `data`), so they diff unchanged.
+
+## Addendum 2026-08-16 — no compat `errors` to collide with any more
+
+`WC-2026-08-16-error-envelope-compat-removal`: the converter no longer writes
+`errors` (or `msg` / `result`) at all, so `tool_hierarchy`'s and
+`tool_ontology_parser`'s `errors` extension keys are the ONLY `errors` a body
+can carry — handler-owned, spread first, never overwritten. `msg` / `errors`
+are therefore no longer in `ENVELOPE_RESERVED_KEYS`; `result` is FORBIDDEN
+(`ENVELOPE_FORBIDDEN_KEYS`).

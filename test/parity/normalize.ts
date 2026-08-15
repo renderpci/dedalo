@@ -180,8 +180,22 @@ export function normalizeSectionIdTypes<T>(value: T): T {
  * Every caller MUST assert `matched === true` (the get_widget_data
  * `stripStateTotalItems` anti-vacuity pattern) — a transform that no-ops is
  * how a divergence becomes a regression the day the shape moves.
+ *
+ * FIXTURE-SIDE ONLY (P4, 2026-08-16 — the compat mirror is gone from the TS
+ * wire, WC-2026-08-16-error-envelope-compat-removal): this transform is applied
+ * to FROZEN PHP bodies and never to a TS body. A TS body carries `ok` and no
+ * `result`; handed one, the transform REFUSES it (`kind:'ts_body_refused'`,
+ * matched:false) instead of projecting — so a server regression back to the
+ * `result:false` prose (which would make a TS body look adoptable) reddens the
+ * gate that fed it, and a gate that mistakenly projects the TS side reddens
+ * on `matched`. test/parity/error_envelope_transform.test.ts pins both.
  */
-export type ErrorEnvelopeKind = 'error' | 'ok' | 'not_an_envelope' | 'php_fault_not_reproduced';
+export type ErrorEnvelopeKind =
+	| 'error'
+	| 'ok'
+	| 'not_an_envelope'
+	| 'php_fault_not_reproduced'
+	| 'ts_body_refused';
 
 export interface AdoptedErrorEnvelope {
 	matched: boolean;
@@ -324,7 +338,16 @@ const FROZEN_ERROR_BODY_INDEX: ReadonlyMap<string, FrozenErrorBodyEntry> = (() =
 })();
 
 export function adoptErrorEnvelopeV2(body: unknown): AdoptedErrorEnvelope {
-	if (body === null || typeof body !== 'object' || Array.isArray(body) || !('result' in body)) {
+	if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+		return { matched: false, kind: 'not_an_envelope', projection: null };
+	}
+	// A TS envelope v2 body (`ok` present) is never adopted: the transform is
+	// fixture-side only. A body carrying BOTH `ok` and `result` is a converter
+	// regression (the compat mirror came back) — refused the same way.
+	if ('ok' in body) {
+		return { matched: false, kind: 'ts_body_refused', projection: null };
+	}
+	if (!('result' in body)) {
 		return { matched: false, kind: 'not_an_envelope', projection: null };
 	}
 	const envelope = body as { result: unknown; msg?: unknown; errors?: unknown };

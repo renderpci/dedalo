@@ -93,3 +93,10 @@ Points 1 and 3 (the media cookie bound to the session, the three TS-only
 `page_globals` keys) are unchanged. Gate: `session_not_logged_contract.test.ts`
 keeps asserting the token over real HTTP and that every client branch still
 names it.
+
+## Addendum 2026-08-16 — the compat `errors:['auth.not_logged']` mirror is gone
+
+`WC-2026-08-16-error-envelope-compat-removal`: the 401 body is
+`{ok:false, request_id, error:{code:'auth.not_logged', …}, csrf_token?}` and
+nothing else — no `result:false`, no `msg`, no `errors`. The client keys on
+`error.code` only (`error_policy.js` has no bare `not_logged` row).

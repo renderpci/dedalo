@@ -1,13 +1,14 @@
 /**
  * ENVELOPE v2 — every registered code round-trips converter → schema, and
  * the wire invariants hold: ok:false ⇒ status ∉ 2xx; internal never leaks
- * the wrapped cause; request_id present; the compat block is byte-exact.
+ * the wrapped cause; request_id present; the retired compat mirror
+ * (`result`/`msg`/`errors` — removed 2026-08-16,
+ * WC-2026-08-16-error-envelope-compat-removal) is ABSENT and REFUSED.
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { resetProcessPoisonForTests } from '../../src/core/api/process_health.ts';
 import {
-	ERROR_ENVELOPE_COMPAT,
 	ok,
 	toErrorEnvelope,
 	toStreamFrame,
@@ -17,6 +18,8 @@ import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { ERROR_CODES, ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
 import {
 	apiEnvelopeSchema,
+	ENVELOPE_FORBIDDEN_KEYS,
+	ENVELOPE_RESERVED_KEYS,
 	errEnvelopeSchema,
 	okEnvelopeSchema,
 } from '../../src/core/errors/schema.ts';
@@ -60,16 +63,33 @@ describe('envelope v2 — round trip over the whole registry', () => {
 		}
 	});
 
-	test('the compat block is exact: result:false, msg = message, errors = [code]', () => {
+	test('the compat mirror is gone: a failure body is exactly {ok, request_id, error}', () => {
 		const { body } = toErrorEnvelope(new DedaloError('perm.denied'), CTX);
-		expect(body.result).toBe(false);
-		expect(body.msg).toBe('Insufficient permissions');
-		expect(body.errors).toEqual(['perm.denied']);
-		expect(ERROR_ENVELOPE_COMPAT.failure(body.error)).toEqual({
-			result: false,
-			msg: 'Insufficient permissions',
-			errors: ['perm.denied'],
-		});
+		expect(Object.keys(body).sort()).toEqual(['error', 'ok', 'request_id']);
+		expect('result' in body).toBe(false);
+		expect('msg' in body).toBe(false);
+		expect('errors' in body).toBe(false);
+	});
+
+	test('`result` is a FORBIDDEN top-level key on both shapes; `msg`/`errors` are handler extension keys', () => {
+		expect(ENVELOPE_FORBIDDEN_KEYS).toEqual(['result']);
+		expect(ENVELOPE_RESERVED_KEYS).not.toContain('msg');
+		expect(ENVELOPE_RESERVED_KEYS).not.toContain('errors');
+		const failure = toErrorEnvelope(new DedaloError('perm.denied'), CTX).body;
+		expect(errEnvelopeSchema.safeParse({ ...failure, result: false }).success).toBe(false);
+		expect(apiEnvelopeSchema.safeParse({ ...failure, result: false }).success).toBe(false);
+		const success = ok({ rows: [1] }, { requestId: 'r1' });
+		expect(okEnvelopeSchema.safeParse({ ...success, result: { rows: [1] } }).success).toBe(false);
+		expect(apiEnvelopeSchema.safeParse({ ...success, result: { rows: [1] } }).success).toBe(false);
+		// a handler-owned `msg` / `errors` extension key on SUCCESS still parses
+		// (maintenance widgets, install probes — ERRORS_SPEC §3.0)
+		const extended = ok(true, { requestId: 'r1', extend: { msg: 'done', errors: ['x'] } });
+		expect(okEnvelopeSchema.safeParse(extended).success).toBe(true);
+		expect(apiEnvelopeSchema.safeParse(extended).success).toBe(true);
+		// …and an extension can never smuggle `result` in through `extend`
+		expect(
+			apiEnvelopeSchema.safeParse(ok(true, { requestId: 'r1', extend: { result: 1 } })).success,
+		).toBe(false);
 	});
 
 	test('the schema rejects an unregistered code', () => {
@@ -85,17 +105,15 @@ describe('envelope v2 — round trip over the whole registry', () => {
 		expect(JSON.stringify(body)).not.toContain(secret);
 		expect(body.error.code).toBe('internal.unexpected');
 		expect(body.error.message).toBe('An unexpected error occurred');
-		expect(body.msg).toBe('An unexpected error occurred');
 	});
 
-	test('ok(): ok:true + request_id + data, result mirrors data, notices optional', () => {
+	test('ok(): ok:true + request_id + data (no mirror), notices optional', () => {
 		const envelope = ok({ rows: [1] }, { requestId: 'r1' });
 		expect(okEnvelopeSchema.safeParse(envelope).success).toBe(true);
 		expect(envelope).toEqual({
 			ok: true,
 			request_id: 'r1',
 			data: { rows: [1] },
-			result: { rows: [1] },
 		});
 		const withNotices = ok(null, {
 			requestId: 'r2',

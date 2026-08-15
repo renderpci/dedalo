@@ -650,11 +650,11 @@ page.prototype.build = async function(autoload=false) {
 				// errors check
 				// AUTHORIZATION refusal (WC-2026-08-12-authorization-denial-token).
 				// The server answers a page the user holds no grant for with HTTP 403
-				// + `errors:['not_authorized']`. It is a normal answer, not a
+				// + `error.code:'perm.denied'`. It is a normal answer, not a
 				// malfunction: it gets its own error type so the renderer can say so
 				// in the user's language, instead of the generic "check your server
 				// log" panel that used to read "Not retry-able HTTP error 403".
-					if (request_failed(api_response) && (api_response.error.code==='perm.denied' || api_response.error.code==='not_authorized')) {
+					if (request_failed(api_response) && api_response.error.code==='perm.denied') {
 
 						// The refusal carries the environment (start is the first call —
 						// without it there is no get_label and the message could only be

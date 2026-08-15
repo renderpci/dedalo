@@ -121,9 +121,10 @@ describe('registry status + envelope on the dispatch surface', () => {
 			expect(body.ok).toBe(false);
 			expect(body.error?.code).toBe(code);
 			expect(body.request_id).toBe(REQUEST_ID);
-			// compat mirror during the window
-			expect(body.result).toBe(false);
-			expect(body.errors).toEqual([code]);
+			// the compat mirror is gone (removed 2026-08-16): no result/msg/errors
+			expect('result' in body).toBe(false);
+			expect('msg' in body).toBe(false);
+			expect('errors' in body).toBe(false);
 		}
 	});
 
@@ -231,7 +232,7 @@ describe('the one-producer law at the dispatcher (legacy_body_adapter DELETED)',
 		expect(body.error?.code).toBe('internal.unexpected');
 		// the fossil body never reaches the wire, translated or otherwise
 		expect(JSON.stringify(body)).not.toContain('no way');
-		expect(body.errors).toEqual(['internal.unexpected']);
+		expect('errors' in body).toBe(false);
 		expect(apiEnvelopeSchema.safeParse(body).success).toBe(true);
 	});
 

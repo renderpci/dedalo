@@ -24,9 +24,10 @@
 *   inline         message inside the caller's own wrapper (validation)
 *   silent         nothing to show (caller aborts, lock-state chatter)
 *
-* COMPAT: the bare v1 tokens (`not_logged`, `csrf_failed`, `not_authorized`)
-* alias their v2 codes for the window in which the server still emits them.
-* REMOVAL CONDITION: client_error_contract_tripwire census = 0.
+* Codes are registry codes ONLY (src/core/errors/registry.ts). The bare v1
+* tokens (`not_logged`, `csrf_failed`, `not_authorized`) were aliases for the
+* compat window; the server stopped emitting them and the aliases were removed
+* on 2026-08-16 (WC-2026-08-16-error-envelope-compat-removal).
 */
 
 export const ERROR_ACTIONS = Object.freeze([
@@ -40,12 +41,9 @@ export const ERROR_ACTIONS = Object.freeze([
 export const CORE_POLICY = Object.freeze({
 	// session
 	'auth.not_logged'			: {action:'relogin'},
-	'not_logged'				: {action:'relogin'},			// COMPAT v1 alias
 	'auth.csrf_failed'			: {action:'csrf_retry'},
-	'csrf_failed'				: {action:'csrf_retry'},		// COMPAT v1 alias
 	// permission
 	'perm.denied'				: {action:'no_access_page', label:'no_access_page'},
-	'not_authorized'			: {action:'no_access_page', label:'no_access_page'},	// COMPAT v1 alias
 	'perm.*'					: {action:'no_access_page', label:'no_access_page'},
 	// the page cannot be built
 	'request.invalid_tipo'		: {action:'page_panel'},
