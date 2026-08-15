@@ -27,6 +27,7 @@ import { join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { encodeForJsonb } from '../db/json_codec.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 import {
 	getMatchedDescriptor,
 	getUpdateVersion,
@@ -184,9 +185,10 @@ export async function updateVersion(
 					if (!isChecked(`components_update_${index}`)) continue;
 					// LEDGERED (rewrite/LEDGER.md): the per-record component hook
 					// machinery ships with its first real consumer — never silent.
-					throw new Error(
-						`components_update steps are not supported by the TS engine yet (model '${models[index]}') — implement the component updateDataVersion facet with the first 7.x descriptor that needs it`,
-					);
+					throw new DedaloError('engine.uncovered_scope', {
+						message: `components_update steps are not supported by the TS engine yet (model '${models[index]}') — implement the component updateDataVersion facet with the first 7.x descriptor that needs it`,
+						coordinates: { model: String(models[index]) },
+					});
 				}
 				break;
 			}

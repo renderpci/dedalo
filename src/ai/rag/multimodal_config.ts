@@ -1,4 +1,5 @@
 import { envSnapshot } from '../../config/env.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import {
 	DEFAULT_MULTIMODAL_MODEL,
 	DeterministicMultimodalProvider,
@@ -189,9 +190,10 @@ function assertEgressAllowed(cfg: MultimodalRuntimeConfig): void {
 	const reason = addressLocal
 		? `provider '${cfg.provider}' is declared external`
 		: `endpoint '${cfg.endpoint}' is not on this host or its private network`;
-	throw new Error(
-		`Multimodal image embedding would send object images off this host (${reason}), but DEDALO_RAG_IMAGE_EGRESS_POLICY is 'local_only'. Set it to allow_external to permit it, or point the image layer at a provider you run yourself.`,
-	);
+	throw new DedaloError('rag.media_disabled', {
+		message: `Multimodal image embedding would send object images off this host (${reason}), but DEDALO_RAG_IMAGE_EGRESS_POLICY is 'local_only'. Set it to allow_external to permit it, or point the image layer at a provider you run yourself.`,
+		coordinates: { reason },
+	});
 }
 
 /**

@@ -17,6 +17,7 @@
  *  - `finish_reason: "stop"` on turns that DID emit tool calls.
  */
 
+import { DedaloError } from '../../core/errors/index.ts';
 import type {
 	AgentAssistantTurn,
 	AgentImage,
@@ -84,7 +85,10 @@ export class OpenAiCompatProvider implements AgentLlmProvider {
 			});
 			if (!response.ok) {
 				const detail = await response.text().catch(() => '');
-				throw new Error(`agent_llm_http_${response.status}: ${detail.slice(0, 300)}`);
+				throw new DedaloError('ai.provider_failed', {
+					message: `agent_llm_http_${response.status}: ${detail.slice(0, 300)}`,
+					coordinates: { status: response.status },
+				});
 			}
 			if (onDelta !== undefined && response.body !== null) {
 				return await this.consumeStream(response.body, onDelta, touch);
@@ -220,11 +224,17 @@ export function buildChatCompletionsRequest(params: {
 	return body;
 }
 
+function badAgentResponse(): DedaloError {
+	// The provider answered something that is not a chat completion. Registry
+	// English on the wire; the token stays the LOG/`Error.message` grammar.
+	return new DedaloError('ai.provider_failed', { message: 'agent_llm_bad_response' });
+}
+
 /** Parse a NON-streaming chat-completions response into an agent turn. */
 export function parseChatCompletion(decoded: unknown): AgentAssistantTurn {
-	if (!isObject(decoded)) throw new Error('agent_llm_bad_response');
+	if (!isObject(decoded)) throw badAgentResponse();
 	const choice = firstChoice(decoded);
-	if (choice === null) throw new Error('agent_llm_bad_response');
+	if (choice === null) throw badAgentResponse();
 	const message = isObject(choice.message) ? choice.message : {};
 	const text = typeof message.content === 'string' ? message.content : '';
 	const acc = new ToolCallAccumulator();

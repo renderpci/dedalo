@@ -81,7 +81,9 @@ export async function downloadReleaseArchive(options: {
 				]);
 				if (chunk.done) break;
 				total += chunk.value.byteLength;
-				if (total > MAX_CODE_ARCHIVE_BYTES) throw new Error('download exceeds the size cap');
+				if (total > MAX_CODE_ARCHIVE_BYTES) {
+					refuseUpdate('update.refused', 'Error. Release archive exceeds the size cap');
+				}
 				if (!sink.write(chunk.value)) {
 					await new Promise<void>((resolveDrain) => sink.once('drain', () => resolveDrain()));
 				}

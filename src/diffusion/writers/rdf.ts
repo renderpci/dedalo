@@ -59,6 +59,7 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { DedaloError } from '../../core/errors/index.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import { atomicWriteFile, createZip, formatTargetDir, planColumnNames } from './files.ts';
@@ -84,12 +85,16 @@ import type {
 export const CONSOLIDATED_MERGED_PREFIX = 'consolidated_merged:';
 export const CONSOLIDATED_ZIP_PREFIX = 'consolidated_zip:';
 
-/** Loud open() gate: rdf/xml publish to a service-named files target only. */
-export class InvalidFileTargetError extends Error {
+/**
+ * Loud open() gate: rdf/xml publish to a service-named files target only. A
+ * thin DedaloError family with a fixed code; the plan id stays log-only.
+ */
+export class InvalidFileTargetError extends DedaloError {
 	constructor(format: string, plan: PublicationPlan) {
-		super(
-			`${format} writer: plan '${plan.planId}' targets kind '${plan.target.kind}' — rdf/xml publish to {kind:'files', serviceName} only (check the element properties->diffusion->service_name).`,
-		);
+		super('diffusion.invalid_target', {
+			message: `${format} writer: plan '${plan.planId}' targets kind '${plan.target.kind}' — rdf/xml publish to {kind:'files', serviceName} only (check the element properties->diffusion->service_name).`,
+			coordinates: { format, plan_id: plan.planId, target_kind: plan.target.kind },
+		});
 		this.name = 'InvalidFileTargetError';
 	}
 }

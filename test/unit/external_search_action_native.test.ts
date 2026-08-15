@@ -34,6 +34,7 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { toErrorEnvelope } from '../../src/core/errors/convert.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import type { FieldsMapEntry } from '../../src/external/api/index.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -183,33 +184,39 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 	});
 
 	test('all fields_maps empty → a loud refusal naming the caller', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			hydrateExternalSearchDdos(
 				'test61',
 				'zenon1',
 				[ddoRef('zenon3', 'zenon1'), ddoRef('zenon4', 'zenon1')],
 				loaderFrom({}),
 			),
-		).rejects.toThrow(/component test61 .*no external field with a fields_map/);
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/component test61 .*no external field with a fields_map/);
 	});
 
 	test('no ddo on the target section at all → the same refusal, never an empty search', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			hydrateExternalSearchDdos(
 				'rsc1285',
 				'zenon1',
 				[ddoRef('rsc368', 'rsc332')],
 				loaderFrom({ rsc368: dato('title') }),
 			),
-		).rejects.toThrow(
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toBe(
 			'component rsc1285 external config shows no external field with a fields_map',
 		);
 	});
 
 	test('an empty ddo list refuses rather than searching for nothing', async () => {
-		await expect(hydrateExternalSearchDdos('test61', 'zenon1', [], loaderFrom({}))).rejects.toThrow(
-			'no external field with a fields_map',
+		const refusal = await refusalOf(
+			hydrateExternalSearchDdos('test61', 'zenon1', [], loaderFrom({})),
 		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/no external field with a fields_map/);
 	});
 });
 

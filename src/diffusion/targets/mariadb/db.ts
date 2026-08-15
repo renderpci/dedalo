@@ -32,7 +32,7 @@
 import { SQL } from 'bun';
 import { readEnv } from '../../../config/env.ts';
 import { readString } from '../../../config/readers.ts';
-import type { ErrorCode } from '../../../core/errors/index.ts';
+import { DedaloError, type ErrorCode } from '../../../core/errors/index.ts';
 
 /** Rows/mutation results from `.unsafe()` carry MySQL metadata on the array. */
 export interface MariadbExecResult {
@@ -68,7 +68,7 @@ export function isMissingTableError(error: unknown): boolean {
  * CONFIGURATION failure (databases are pre-created by the deployment), never
  * something the engine works around. Surfaced by the writer's open() probe.
  */
-export class MissingTargetDatabaseError extends Error {
+export class MissingTargetDatabaseError extends DedaloError {
 	readonly database: string;
 	readonly errno: number | undefined;
 
@@ -78,9 +78,13 @@ export class MissingTargetDatabaseError extends Error {
 		const posture =
 			'Target databases must be pre-created and granted to the diffusion user ' +
 			'(DEDALO_DIFFUSION_DB_USER) — the engine never auto-creates them.';
-		super(
-			`Diffusion target database '${database}' is not reachable (errno ${errno ?? 'unknown'}): ${detail}. ${posture}`,
-		);
+		// A thin DedaloError family: the registered code IS the identity, the
+		// database name and the driver detail stay log-only (message/coordinates).
+		super('diffusion.connection_failed', {
+			message: `Diffusion target database '${database}' is not reachable (errno ${errno ?? 'unknown'}): ${detail}. ${posture}`,
+			coordinates: { database, errno: errno ?? 'unknown' },
+			cause,
+		});
 		this.name = 'MissingTargetDatabaseError';
 		this.database = database;
 		this.errno = errno;

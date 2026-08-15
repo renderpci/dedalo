@@ -1664,6 +1664,76 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+
+	// --- periphery (P3) -----------------------------------------------------
+	// The codes the P3 burn-down of the PERIPHERY needed (api handlers, the SSRF
+	// guard, the tools layer, update/install, the diffusion writers/resolver).
+	// Two families, both deliberately small:
+	//
+	//  - `security.*` — the shared outbound-fetch guard (core/security/ssrf_guard.ts).
+	//    Disclosure OPERATOR on purpose: the refusal must never echo the URL, the
+	//    resolved address or the protocol back to the caller (that is what turns a
+	//    blocked fetch into an internal-network oracle). Which condition fired,
+	//    and against which host, rides as LOG-ONLY `coordinates`.
+	//  - `diffusion.*` — the four typed diffusion classes folded in here
+	//    (UnsupportedRewriterError, MissingDiffusionFilesRootError,
+	//    UnknownDiffusionFormatError, InvalidFileTargetError; the fifth,
+	//    MissingTargetDatabaseError, reuses `diffusion.connection_failed`),
+	//    plus the resolver/writer sites that state the SAME facts inline.
+	'security.ssrf_blocked': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_security_ssrf_blocked',
+		message: 'The requested outbound address is refused',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'security.outbound_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_security_outbound_failed',
+		message: 'The outbound request could not be completed',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	'diffusion.unported_fn': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_diffusion_unported_fn',
+		message: 'The publication uses an ontology function this engine does not implement yet',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'diffusion.files_root_missing': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_diffusion_files_root_missing',
+		message: 'No diffusion files root is configured on this server',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'diffusion.unknown_format': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_diffusion_unknown_format',
+		message: 'No diffusion writer serves that publication format',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'diffusion.invalid_target': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_diffusion_invalid_target',
+		message: 'The publication target does not match the writer',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;

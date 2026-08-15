@@ -97,6 +97,17 @@ function relayRefusal(reason: string): DedaloError {
 	});
 }
 
+/**
+ * A relay condition detected INSIDE the try: logged with its own specific
+ * reason, then refused with the shared `relay_failed` refusal — exactly what
+ * the catch below does for a transport throw, so a bad HTTP status and a dead
+ * socket stay one wire fact and one log grammar.
+ */
+function relayFault(reason: string): DedaloError {
+	console.warn('[tool_error_report] relay failed', reason);
+	return relayRefusal('relay_failed');
+}
+
 /** https-only, except loopback http for the two-server dev flow. */
 export function masterUrlAllowed(rawUrl: string): boolean {
 	let parsed: URL;
@@ -179,12 +190,12 @@ export function buildSendReportHandler(deps: SendReportDeps = defaultDeps) {
 					signal: controller.signal,
 				});
 				if (!response.ok) {
-					throw new Error(`relay_http_${response.status}`);
+					throw relayFault(`relay_http_${response.status}`);
 				}
 				// The master answers an envelope v2 (`ok`), never the compat `result` mirror.
 				const body = (await response.json()) as { ok?: unknown; report_id?: unknown };
 				if (body.ok !== true) {
-					throw new Error('relay_rejected');
+					throw relayFault('relay_rejected');
 				}
 				return ok({ delivered: true, via: 'master' }, { requestId: toolRequestId(context) });
 			} catch (error) {

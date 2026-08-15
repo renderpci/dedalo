@@ -13,6 +13,7 @@
  */
 
 import type { Rqo } from '../concepts/rqo.ts';
+import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
 import type { Session } from '../security/session_store.ts';
 import type { ApiResult } from './response.ts';
@@ -54,9 +55,10 @@ export type ActionHandler = (rqo: Rqo, context: ApiRequestContext) => Promise<Ap
  */
 export function requirePrincipal(context: ApiRequestContext): Principal {
 	if (context.principal === undefined) {
-		throw new Error(
-			'requirePrincipal: no authenticated principal on request context (unauthenticated action?)',
-		);
+		throw new DedaloError('internal.invariant', {
+			message:
+				'requirePrincipal: no authenticated principal on request context (unauthenticated action?)',
+		});
 	}
 	return context.principal;
 }

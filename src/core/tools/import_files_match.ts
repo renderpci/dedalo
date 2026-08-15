@@ -8,6 +8,8 @@
  * tool module.
  */
 
+import { DedaloError } from '../errors/index.ts';
+
 /** PHP pathinfo($path)['filename']: strip directory AND the final extension. */
 export function fileBasename(path: string): string {
 	const noDir = path.replace(/^.*[\\/]/, '');
@@ -36,7 +38,9 @@ const FILE_PROCESSORS = new Map<string, FileProcessor>();
 /** Register a named processor (name must match ^[A-Za-z_][A-Za-z0-9_]{0,63}$). */
 export function registerFileProcessor(name: string, fn: FileProcessor): void {
 	if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(name)) {
-		throw new Error(`invalid processor name: ${name}`);
+		throw new DedaloError('internal.invariant', {
+			message: `invalid processor name: ${name}`,
+		});
 	}
 	FILE_PROCESSORS.set(name, fn);
 }

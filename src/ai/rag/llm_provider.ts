@@ -13,6 +13,8 @@
  * render). Usage is discovered from the response, never hard-coded.
  */
 
+import { DedaloError } from '../../core/errors/index.ts';
+
 /** One grounding passage handed to the LLM (provenance + the text to cite). */
 export interface LlmPassage {
 	sectionTipo: string;
@@ -139,10 +141,17 @@ export class HttpLlmProvider implements LlmProvider {
 			clearTimeout(timeout);
 		}
 
-		if (!response.ok) throw new Error(`llm_http_${response.status}`);
+		if (!response.ok) {
+			throw new DedaloError('rag.generation_failed', {
+				message: `llm_http_${response.status}`,
+				coordinates: { status: response.status },
+			});
+		}
 		const decoded = (await response.json()) as unknown;
 		const answer = extractOpenAiAnswer(decoded);
-		if (answer === null) throw new Error('llm_bad_response');
+		if (answer === null) {
+			throw new DedaloError('rag.generation_failed', { message: 'llm_bad_response' });
+		}
 
 		const usage = extractUsage(decoded);
 		return {

@@ -33,6 +33,7 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 
 /** Session cookie name — TS-native, distinct from any PHP cookie. */
 export const SESSION_COOKIE = 'dedalo_ts_session';
@@ -565,9 +566,9 @@ export function resetSessionStoreForTests(): void {
 		resolve(sessionDbPath) !== resolve(override) ||
 		resolve(sessionDbPath) === resolve(LIVE_SESSION_DB_PATH)
 	) {
-		throw new Error(
-			`resetSessionStoreForTests refused: the open session store ('${sessionDbPath}') is not the DEDALO_SESSION_DB_PATH test override — wiping it would destroy live sessions (S1-18). Run under the bunfig [test] preload.`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `resetSessionStoreForTests refused: the open session store ('${sessionDbPath}') is not the DEDALO_SESSION_DB_PATH test override — wiping it would destroy live sessions (S1-18). Run under the bunfig [test] preload.`,
+		});
 	}
 	database.exec('DELETE FROM sessions; DELETE FROM login_attempts; DELETE FROM password_resets;');
 }

@@ -48,6 +48,7 @@ import {
 	installAclIdentityFixture,
 	removeAclIdentityFixture,
 } from '../helpers/acl_identity_fixture.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -410,25 +411,29 @@ describe('readRaw — guards', () => {
 	 * (and indistinguishable, at the client, from "this record has nothing").
 	 */
 	test('an unknown type THROWS rather than returning an empty result', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			readRaw(
 				{ sectionTipo: SECTION, tipo: TEXT_TIPO, type: 'not_a_type', sqo: scratchSqo() },
 				admin,
 			),
-		).rejects.toThrow(/type 'not_a_type' not implemented/);
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.message).toMatch(/type 'not_a_type' not implemented/);
 	});
 
 	test('an unresolvable model THROWS naming the tipo', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			readRaw(
 				{ sectionTipo: SECTION, tipo: 'test999999', type: 'component', sqo: scratchSqo() },
 				admin,
 			),
-		).rejects.toThrow(/cannot resolve model for tipo 'test999999'/);
+		);
+		expect(refusal.code).toBe('request.invalid_tipo');
+		expect(refusal.message).toMatch(/cannot resolve model for tipo 'test999999'/);
 	});
 
 	test('a model with no jsonb column THROWS naming the model', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			readRaw(
 				{
 					sectionTipo: SECTION,
@@ -439,7 +444,9 @@ describe('readRaw — guards', () => {
 				},
 				admin,
 			),
-		).rejects.toThrow(/cannot resolve data column from model 'diffusion_element'/);
+		);
+		expect(refusal.code).toBe('request.invalid_model');
+		expect(refusal.message).toMatch(/cannot resolve data column from model 'diffusion_element'/);
 	});
 });
 

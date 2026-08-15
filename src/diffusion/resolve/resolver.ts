@@ -43,6 +43,7 @@ import { resolveIriTitles } from '../../core/components/component_iri/resolve_ti
 import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import {
 	findFirstDescendantTipoByModel,
 	getColumnNameByModel,
@@ -742,10 +743,12 @@ export async function resolveComponentFnAtoms(
 			return v5ReferencesHtmlAtoms(record, step, meta);
 
 		default:
-			throw new Error(
-				`unported ddo fn '${step.fn}' on component '${step.tipo}' — refusing to publish an ` +
+			throw new DedaloError('diffusion.unported_fn', {
+				message:
+					`unported ddo fn '${step.fn}' on component '${step.tipo}' — refusing to publish an ` +
 					'empty value that would read as success (port the fn or fix the ontology)',
-			);
+				coordinates: { fn: String(step.fn), tipo: String(step.tipo ?? '') },
+			});
 	}
 }
 
@@ -1463,9 +1466,10 @@ async function resolveFieldAtoms(
 	recordPublishable: boolean,
 ): Promise<MetaValueIR[]> {
 	if (prepared.unsupportedHopFns.length > 0) {
-		throw new Error(
-			`unported relation-hop fn(s) ${prepared.unsupportedHopFns.join(', ')} — field skipped (ledgered)`,
-		);
+		throw new DedaloError('diffusion.unported_fn', {
+			message: `unported relation-hop fn(s) ${prepared.unsupportedHopFns.join(', ')} — field skipped (ledgered)`,
+			coordinates: { fns: prepared.unsupportedHopFns.join(', ') },
+		});
 	}
 	return walkChainLevel(ctx, prepared, primary, level, recordPublishable, '', []);
 }

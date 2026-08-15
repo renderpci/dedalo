@@ -25,6 +25,7 @@
  *   (never a silent wrong value; ledgered in the run report).
  */
 
+import { DedaloError } from '../../core/errors/index.ts';
 import type { MetaValueIR } from '../parsers/types.ts';
 import type { ResolvedLink, ValueIR } from './record_ir.ts';
 import type { ExtraStepFn } from './transform.ts';
@@ -37,10 +38,18 @@ export interface RewriterEnv {
 	runStartedAt: number;
 }
 
-/** Rewriter fns that would need typology data we do not resolve yet. */
-export class UnsupportedRewriterError extends Error {
+/**
+ * Rewriter fns that would need typology data we do not resolve yet. A thin
+ * DedaloError family (ERRORS_SPEC §2.1): the code is FIXED, the old sentence
+ * stays `Error.message` for the log, and `instanceof` catch sites — plus
+ * `isErrorInDomain(e, 'diffusion')` — keep working unchanged.
+ */
+export class UnsupportedRewriterError extends DedaloError {
 	constructor(fn: string, detail: string) {
-		super(`diffusion rewriter '${fn}': ${detail} — not ported yet (ledgered, fails loud)`);
+		super('diffusion.unported_fn', {
+			message: `diffusion rewriter '${fn}': ${detail} — not ported yet (ledgered, fails loud)`,
+			coordinates: { fn },
+		});
 		this.name = 'UnsupportedRewriterError';
 	}
 }
