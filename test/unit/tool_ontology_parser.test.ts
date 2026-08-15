@@ -75,8 +75,11 @@ describe('tool_ontology_parser module', () => {
 	test('get_ontologies emits EXACTLY the five UI metadata fields', async () => {
 		const res = await (await action('get_ontologies')).handler(ctx(DEVELOPER));
 		expect(res.ok).toBe(true);
-		const list = (res.data as { ontologies: Record<string, unknown>[] }).ontologies;
+		// `data` IS the flat census (the client `.find`s on response_data); the
+		// per-ontology notes ride as the `errors` EXTENSION key (ERRORS_SPEC §3.0).
+		const list = res.data as Record<string, unknown>[];
 		expect(Array.isArray(list)).toBe(true);
+		expect(Array.isArray((res as { errors?: unknown }).errors)).toBe(true);
 		expect(list.length).toBeGreaterThan(0);
 		for (const entry of list) {
 			expect(Object.keys(entry).sort()).toEqual([

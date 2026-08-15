@@ -221,7 +221,8 @@ tool_ontology_parser.prototype.build = async function(autoload=false) {
 * The server iterates all main_ontology records and extracts, per record:
 *   { target_section_tipo, tld, name, typology_id, typology_name }
 * Records missing `target_section_tipo` or `tld` are skipped server-side and their
-* errors appear in `response.errors`.
+* notes ride as the handler-owned `errors` EXTENSION key beside `data` (read it via
+* `response_extension(api_response, 'errors')` — ERRORS_SPEC §3.0).
 *
 * The `create_source` helper encodes the tool identity so the server dispatcher
 * can route the request to the correct PHP class and method:

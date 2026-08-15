@@ -55,9 +55,9 @@ beforeAll(async () => {
 		GET_ONTOLOGIES_RQO.source,
 		GET_ONTOLOGIES_RQO.options,
 	);
-	// Envelope v2: the descriptor list is `data.ontologies`.
-	captured.ts = ((tsResponse.data as { ontologies?: OntologyDescriptor[] })?.ontologies ??
-		[]) as OntologyDescriptor[];
+	// Envelope v2: `data` IS the flat descriptor array (the census notes ride
+	// beside it as the `errors` extension key).
+	captured.ts = (Array.isArray(tsResponse.data) ? tsResponse.data : []) as OntologyDescriptor[];
 }, 60000);
 
 describe.if(hasPhpCredentials())('get_ontologies differential', () => {
@@ -119,8 +119,9 @@ describe.if(hasPhpCredentials())('developer security gates', () => {
 		if (!hasPhpCredentials()) return;
 		const principal = await resolvePrincipal(-1);
 		const response = await dispatchToolRequest(principal, -1, GET_ONTOLOGIES_RQO.source, {});
-		// Envelope v2: the list lives in `data.ontologies` (the census notes ride
-		// beside it as `data.errors`).
-		expect(Array.isArray((response.data as { ontologies?: unknown }).ontologies)).toBe(true);
+		// Envelope v2: `data` IS the flat list (the census notes ride beside it as
+		// the `errors` extension key, never nested in `data`).
+		expect(Array.isArray(response.data)).toBe(true);
+		expect(Array.isArray((response as { errors?: unknown }).errors)).toBe(true);
 	});
 });

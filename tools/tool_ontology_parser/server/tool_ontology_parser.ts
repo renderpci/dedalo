@@ -125,9 +125,16 @@ export async function toolOntologyParserGetOntologies(
 		typology_name: entry.typology_name,
 	}));
 
-	// `census.errors` are per-ontology notes on an otherwise successful read —
-	// payload, never the envelope's failure channel.
-	return ok({ ontologies, errors: census.errors }, { requestId: toolRequestId(context) });
+	// Wire shape (ledgered, WC-2026-08-15-tool-response-envelope-v2): `data` IS the
+	// flat census array — the client does `self.ontologies = response_data(...)` and
+	// `.find`s on it. `census.errors` are per-ontology notes on an otherwise
+	// successful read: a handler-owned EXTENSION key on success (ERRORS_SPEC §3.0),
+	// read through `response_extension(api_response, 'errors')`, never the
+	// envelope's failure channel and never nested inside `data`.
+	return ok(ontologies, {
+		requestId: toolRequestId(context),
+		extend: { errors: census.errors },
+	});
 }
 
 /**
