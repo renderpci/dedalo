@@ -385,16 +385,24 @@ describe('buildLlmMap shape (PHP export_llm_map)', () => {
 				label: { 'lg-eng': 'Things', 'lg-spa': 'Cosas' },
 				fields: [
 					{ tipo: 'zz4', label: { 'lg-eng': 'Title' }, type: 'text' },
-					// link field: simplified type 'link' + best-effort SINGLE target
-					{ tipo: 'zz5', label: { 'lg-eng': 'Informant' }, type: 'link', target: 'rsc197' },
+					// link field: simplified type 'link' + EVERY declared target.
+					// Not the first one: a multi-target link truncated to [0] reads as a
+					// single-target node and is wrong for every node that declares more
+					// than one (picker plan §13.1).
+					{
+						tipo: 'zz5',
+						label: { 'lg-eng': 'Informant' },
+						type: 'link',
+						target_sections: ['rsc197', 'rsc176'],
+					},
 					{ tipo: 'zz6', label: { 'lg-eng': 'Date' }, type: 'date' },
 				],
 			},
 		]);
 		// scalar fields must NOT carry a target key at all (PHP omits it)
-		expect(Object.hasOwn((map[0] as { fields: object[] }).fields[0] as object, 'target')).toBe(
-			false,
-		);
+		expect(
+			Object.hasOwn((map[0] as { fields: object[] }).fields[0] as object, 'target_sections'),
+		).toBe(false);
 	});
 
 	test('a failing section is skipped and collected; the rest still build', async () => {

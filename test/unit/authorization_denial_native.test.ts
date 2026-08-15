@@ -88,15 +88,20 @@ describe('the ratchet: no authorization refusal may go back to denied(403)', () 
 describe('the client reads the refusal instead of throwing it away', () => {
 	const dataManager = 'client/dedalo/core/common/js/data_manager.js';
 
-	test('both fetch layers exempt 403, exactly as they exempt 401', () => {
+	test('both fetch layers exempt every ANSWERED status, not only 401', () => {
 		const source = read(dataManager);
 		// handle_errors: the response is returned unparsed so the caller's
 		// .json() sees the envelope and api_response_errors publishes.
 		expect(source).toContain('response.status === 401 || response.status === 403');
-		// the retry/timeout layer: a refusal is an ANSWER, never a transport error
-		expect(source).toContain(
-			'!response?.ok && response?.status !== 401 && response?.status !== 403',
-		);
+		// The retry/timeout layer: an ANSWER about the request's subject is never a
+		// transport error. 401 (re-login) and 403 (authorization,
+		// WC-2026-08-12-authorization-denial-token) were the first two; 409 joined
+		// them for the picker's named "no active hierarchy is configured for this
+		// component target" — thrown here it never reached .json(), so the reason
+		// the server took care to state was replaced by a generic red transport
+		// error. Retrying any of the three is meaningless.
+		expect(source).toContain('const answered_statuses = [401, 403, 409]');
+		expect(source).toContain('!response?.ok && !answered_statuses.includes(response?.status)');
 		// and nothing may reintroduce the old blanket throw
 		expect(source).not.toContain('!response?.ok && response?.status !== 401)');
 	});
