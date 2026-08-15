@@ -48,6 +48,12 @@ import { dbTimestamp } from '../db/db_timestamp.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
 import type { Principal } from '../security/permissions.ts';
+import {
+	isTargetAllowed,
+	isTermSelectable,
+	type PickerConstraint,
+	resolvePickerConstraint,
+} from './picker_constraint.ts';
 
 export interface SortDataChange {
 	value: Record<string, unknown> | null;
@@ -452,26 +458,271 @@ export async function maintainRelationSearchIndex(
  * no such exclusion (component_dataframe::set_data delegates to
  * parent::set_data → validate_data_element like every other relation); it only
  * OVERRIDES the dedup key, which `pairing` reproduces here.
+ *
+ * THIS IS THE LENGTH-1 DOOR. The list above is `normalizeRelationInsert`;
+ * everything else — the target, read-grant, selectability and selection-cap
+ * constraints — is `validateRelationInserts`, the array door this delegates to.
+ * The signature and the null-means-dropped contract are unchanged, so every
+ * caller keeps working; what a single call CANNOT carry is the refusal reason,
+ * so the new constraint refusals are logged here instead (see the branch).
  */
 export async function validateRelationInsert(
 	rawValue: Record<string, unknown>,
-	context: {
-		componentTipo: string;
-		model: string;
-		hostSectionTipo: string;
-		hostSectionId: number | string;
-		translatable: boolean;
-		lang: string;
-		existingItems: unknown[];
-		/**
-		 * Frame pairing context — present ONLY for a component_dataframe save.
-		 * Switches on the two dataframe particularities: the persisted-frame
-		 * normalizer (forced dd490 + server-authoritative pairing fields) and
-		 * the test_equal_properties dedup key.
-		 */
-		pairing?: DataframePairing | null;
-	},
+	context: RelationInsertContext,
 ): Promise<Record<string, unknown> | null> {
+	const { outcomes } = await validateRelationInserts([rawValue], context);
+	const outcome = outcomes[0];
+	if (outcome === undefined || outcome.status === 'refused') {
+		// The four CONSTRAINT refusals are new facts this door has no channel
+		// for: it answers null, which every caller reads as PHP's "ignored", so
+		// the operator would see an unchanged pagination.total and no reason.
+		// Logged loudly (CONVENTIONS §1) until every caller uses the batch door
+		// below, which carries the reason per locator. The PHP-era drops
+		// (bad_form / autoreference / duplicate) are NOT logged: they are the
+		// designed contract of this door and logging them would bury the rest.
+		if (outcome !== undefined && outcome.code !== undefined && !PHP_ERA_DROPS.has(outcome.code)) {
+			console.error(
+				`validateRelationInsert: refused (${outcome.code}) ${context.componentTipo} @ ${context.hostSectionTipo}/${String(context.hostSectionId)} — ${String(outcome.reason)}`,
+			);
+		}
+		return null;
+	}
+	return outcome.value ?? null;
+}
+
+/** The caller context both insert doors share. */
+export interface RelationInsertContext {
+	componentTipo: string;
+	model: string;
+	hostSectionTipo: string;
+	hostSectionId: number | string;
+	translatable: boolean;
+	lang: string;
+	/**
+	 * The locators the component ALREADY holds in the scope of this save — the
+	 * dedup set, and the baseline the selection cap counts from. For a dataframe
+	 * save this is the CALLER's frame subset (save_component narrows it with
+	 * filterCallerEntries), which is deliberate: the caller's frames are what the
+	 * dedup, the client's own counter and the cap all reason about.
+	 */
+	existingItems: unknown[];
+	/**
+	 * The locators the component held BEFORE this save — the RE-PERSIST
+	 * baseline, and it is a data-integrity control, not an optimisation.
+	 *
+	 * A `set_data` replays the WHOLE stored array through this door (the CSV
+	 * import and the raw-export round trip both do exactly that). The
+	 * constraint gates police GROWTH: a locator that is merely being written
+	 * back must never be re-judged, because the facts they test are not
+	 * stable over a record's life — a target hierarchy can be deactivated, a
+	 * principal can lack read on a section a colleague linked years ago, a
+	 * term's `is_indexable` flag can be cleared. Re-judging on an unrelated
+	 * save turns any of those into SILENT DELETION of stored heritage data,
+	 * with the save still reporting success. Refusing a new pick is a
+	 * refusal; dropping a stored link is data loss.
+	 *
+	 * Absent (undefined) on the doors that only ever add — insert/update —
+	 * where every value IS net-new and the baseline would be noise.
+	 */
+	storedItems?: unknown[];
+	/**
+	 * Frame pairing context — present ONLY for a component_dataframe save.
+	 * Switches on the two dataframe particularities: the persisted-frame
+	 * normalizer (forced dd490 + server-authoritative pairing fields) and
+	 * the test_equal_properties dedup key.
+	 */
+	pairing?: DataframePairing | null;
+}
+
+/**
+ * WHY an insert was refused — a machine-readable code beside the human reason,
+ * so the picker can title a refused chip with a repo-owned catalog label
+ * instead of re-parsing English (labels are the picker's own step; this is the
+ * key it maps on).
+ *
+ * The first three are the PHP-era drops this door has always made silently
+ * (validate_data_element returning false); the last four are the constraint
+ * refusals PHP never made.
+ */
+export type RelationInsertRefusalCode =
+	| 'bad_form'
+	| 'autoreference'
+	| 'duplicate'
+	| 'off_target'
+	| 'target_not_readable'
+	| 'term_not_selectable'
+	| 'selection_limit';
+
+/** The drops that predate the constraint gates — see validateRelationInsert. */
+const PHP_ERA_DROPS: ReadonlySet<RelationInsertRefusalCode> = new Set<RelationInsertRefusalCode>([
+	'bad_form',
+	'autoreference',
+	'duplicate',
+]);
+
+/** One locator's answer. `value` (the normalized locator) rides an acceptance. */
+export interface RelationInsertOutcome {
+	/** The locator AS SENT — so a refusal names the entry the client can see. */
+	locator: Record<string, unknown>;
+	status: 'accepted' | 'refused';
+	value?: Record<string, unknown>;
+	code?: RelationInsertRefusalCode;
+	reason?: string;
+}
+
+export interface RelationInsertBatchResult {
+	/** One entry per submitted locator, in submission order. Never shorter. */
+	outcomes: RelationInsertOutcome[];
+	/**
+	 * The size of the resulting row set — `existingItems` plus the accepted
+	 * locators. Server-authoritative, exactly as the single-locator path's
+	 * pagination total already is (component_portal reads it as the truth about
+	 * what landed, which is what makes the client's duplicate check work).
+	 */
+	total: number;
+}
+
+/**
+ * THE RELATION INSERT CHOKEPOINT — an ARRAY in, a per-locator outcome out.
+ *
+ * A single locator is the length-1 case (`validateRelationInsert` above is
+ * exactly that call), so no existing caller changes shape. The array form
+ * exists because three of the checks below are properties of the SET, not of
+ * one locator: N picks each individually under `data_limit` collectively break
+ * it, and a batch validated one-request-at-a-time cannot see that. Evaluating
+ * the whole array here — inside the caller's transaction, against a row set
+ * that grows as entries are accepted — is what makes the cap an invariant
+ * rather than a race.
+ *
+ * A PARTIALLY REFUSED BATCH IS NOT AN ERROR. The accepted locators are returned
+ * for the caller to persist and the refused ones are NAMED, per entry. Dropping
+ * an entry with no outcome row would be a silent scope narrowing; refusing the
+ * whole batch because one term was off-target would throw away a curator's
+ * other nine picks.
+ *
+ * FOUR CONSTRAINTS, ALL SERVER-RESOLVED (picker plan §2). None of them reads
+ * anything the request carries — the caller ddo names itself and
+ * `relations/picker_constraint.ts` derives the rest, which is the SAME resolver
+ * the picker read calls for its affordances. Two call sites, one answer: a
+ * stale or forged client cap changes nothing here.
+ *
+ *  1. TARGET — the locator's section must be one the caller declares (virtual
+ *     resolved on both sides, `isTargetAllowed`). A caller that declares NO
+ *     target is exempt, and that exemption is the `reason` on the branch, not a
+ *     silent pass.
+ *  2. READ GRANT — an operator must not persist a locator into a section they
+ *     cannot see.
+ *  3. SELECTABILITY — the term's own answer (`isTermSelectable`). The tree
+ *     renders it, but a rendered affordance is not an authorization, so it is
+ *     re-asked here. Scoped honestly: a target section that declares no
+ *     `is_indexable` component has no selectability contract at all.
+ *  4. THE SELECTION CAP — `properties.data_limit`, re-resolved server-side.
+ *
+ * The constraint is resolved ONCE for the whole batch: it is a property of the
+ * caller ddo and the host record, neither of which varies across the array.
+ */
+export async function validateRelationInserts(
+	rawValues: Record<string, unknown>[],
+	context: RelationInsertContext,
+): Promise<RelationInsertBatchResult> {
+	const outcomes: RelationInsertOutcome[] = [];
+	if (rawValues.length === 0) {
+		return { outcomes, total: context.existingItems.length };
+	}
+
+	// Resolved LAZILY, on the first locator that actually needs judging, and
+	// then reused for the rest of the call. It is a property of the caller ddo
+	// and the host record, so it cannot vary across the array.
+	//
+	// WHY LAZY. The length-1 door is what production uses, so a `set_data` of N
+	// locators enters here N times; resolving eagerly cost N `readMatrixRecord`s
+	// of the same (growing) host row inside the caller's row lock — O(N^2) bytes
+	// read on exactly the door a CSV import drives hardest. A re-persist needs no
+	// constraint at all (every value is already stored), so the common bulk path
+	// now resolves it ZERO times.
+	let constraint: PickerConstraint | null = null;
+	const constraintFor = async (): Promise<PickerConstraint> => {
+		constraint ??= await resolvePickerConstraint(
+			context.componentTipo,
+			context.hostSectionTipo,
+			context.hostSectionId,
+		);
+		return constraint;
+	};
+	// Request identity is ALS-scoped and read HERE, per call — never captured at
+	// module level. UNDEFINED (no request scope: imports, background jobs, unit
+	// harnesses) applies NO grant filter, the same posture `ddoIsAuthorized`
+	// takes for the read side: a production request always carries a principal,
+	// and refusing internal resolutions would break every credless door.
+	const { currentPrincipal } = await import('../security/request_context.ts');
+	const actor = currentPrincipal();
+
+	const accepted: Record<string, unknown>[] = [];
+	for (const rawValue of rawValues) {
+		const normalized = await normalizeRelationInsert(rawValue, context, accepted);
+		if (normalized.value === undefined) {
+			outcomes.push({
+				locator: rawValue,
+				status: 'refused',
+				code: normalized.code,
+				reason: normalized.reason,
+			});
+			continue;
+		}
+		// RE-PERSIST short-circuit, before the constraint is even resolved: a
+		// locator the component already holds is being written back, not
+		// introduced, and none of the gates apply to it (see
+		// refuseByPickerConstraint gate 0 for the full reasoning).
+		if (isAlreadyStored(normalized.value, context)) {
+			accepted.push(normalized.value);
+			outcomes.push({ locator: rawValue, status: 'accepted', value: normalized.value });
+			continue;
+		}
+		const refusal = await refuseByPickerConstraint(
+			normalized.value,
+			context,
+			await constraintFor(),
+			actor,
+			// The size the CAP SCOPE would reach if this locator lands: the
+			// component's own baseline for THIS save plus everything accepted
+			// before it in the batch, narrowed to the scope the cap is declared
+			// in (the slot, or the main item for a frame). On an `update` the
+			// caller's baseline excludes the item being rewritten, so this lands
+			// back on the same count — an update never grows the set and never
+			// trips the cap.
+			resultingCountInCapScope([...context.existingItems, ...accepted], context),
+		);
+		if (refusal !== null) {
+			outcomes.push({ locator: rawValue, status: 'refused', ...refusal });
+			continue;
+		}
+		accepted.push(normalized.value);
+		outcomes.push({ locator: rawValue, status: 'accepted', value: normalized.value });
+	}
+
+	return { outcomes, total: context.existingItems.length + accepted.length };
+}
+
+/**
+ * PHP validate_data_element proper — normalization + the three drops that
+ * predate the constraint gates. Byte-identical to what this module has always
+ * done; the split exists so the batch door can run the set-scoped constraints
+ * AFTER the dedup, on the row set that actually results.
+ *
+ * `batchAccepted` are the locators accepted EARLIER IN THE SAME BATCH: they are
+ * part of the dedup scope (PHP resets its lookup map once per set_data call,
+ * not once per element), so two identical picks in one submission collapse into
+ * one exactly as two successive single saves would.
+ */
+async function normalizeRelationInsert(
+	rawValue: Record<string, unknown>,
+	context: RelationInsertContext,
+	batchAccepted: readonly Record<string, unknown>[],
+): Promise<{ value?: Record<string, unknown>; code?: RelationInsertRefusalCode; reason?: string }> {
+	const existingItems =
+		batchAccepted.length === 0
+			? context.existingItems
+			: [...context.existingItems, ...batchAccepted];
 	const value: Record<string, unknown> = { ...rawValue };
 	if (
 		value.section_id === undefined ||
@@ -479,7 +730,8 @@ export async function validateRelationInsert(
 		value.section_tipo === undefined ||
 		value.section_tipo === null
 	) {
-		return null; // bad-formed locator — ignored
+		// bad-formed locator — ignored
+		return { code: 'bad_form', reason: 'the locator carries no section_tipo + section_id' };
 	}
 	if (
 		compareLocators(
@@ -488,7 +740,8 @@ export async function validateRelationInsert(
 			['section_tipo', 'section_id'],
 		)
 	) {
-		return null; // autoreference — avoid the infinite loop (locator law: loose section_id)
+		// autoreference — avoid the infinite loop (locator law: loose section_id)
+		return { code: 'autoreference', reason: 'a record cannot link to itself' };
 	}
 	if (value.type === undefined || value.type === null || value.type === '') {
 		value.type = await getRelationTypeByTipo(context.componentTipo);
@@ -516,10 +769,13 @@ export async function validateRelationInsert(
 	// frame twice is dropped.
 	if (context.pairing !== undefined && context.pairing !== null) {
 		const normalized = normalizeDataframeEntry(value, context.pairing);
-		for (const item of context.existingItems) {
-			if (dataframeEntriesEqual(item, normalized)) return null; // already framed — ignored
+		for (const item of existingItems) {
+			if (dataframeEntriesEqual(item, normalized)) {
+				// already framed — ignored
+				return { code: 'duplicate', reason: 'this record is already framed from that item' };
+			}
 		}
-		return normalized;
+		return { value: normalized };
 	}
 
 	/**
@@ -542,10 +798,13 @@ export async function validateRelationInsert(
 	 * what makes a raw export round trip.
 	 */
 	if (isDataframeEntry(value)) {
-		for (const item of context.existingItems) {
-			if (dataframeEntriesEqual(item, value)) return null; // the same frame twice — ignored
+		for (const item of existingItems) {
+			if (dataframeEntriesEqual(item, value)) {
+				// the same frame twice — ignored
+				return { code: 'duplicate', reason: 'the same frame is already stored' };
+			}
 		}
-		return value;
+		return { value };
 	}
 
 	// Duplicate rejection (hash-key equality like PHP build_locator_lookup_key;
@@ -561,10 +820,278 @@ export async function validateRelationInsert(
 			})
 			.join('|');
 	const valueKey = lookupKey(value);
-	for (const item of context.existingItems) {
-		if (lookupKey(item) === valueKey) return null; // already linked — ignored
+	for (const item of existingItems) {
+		if (lookupKey(item) === valueKey) {
+			// already linked — ignored
+			return { code: 'duplicate', reason: 'that record is already linked here' };
+		}
 	}
-	return value;
+	return { value };
+}
+
+/**
+ * THE FOUR CONSTRAINT GATES (picker plan §2.1-§2.3) — run on the NORMALIZED
+ * locator, AFTER the dedup, so a duplicate is dropped exactly as it always was
+ * and never counts against the cap. Returns the named refusal, or null to
+ * accept.
+ *
+ * Every answer comes from `relations/picker_constraint.ts`, the resolver the
+ * picker READ also calls. That is the whole point: the affordance the tree
+ * offers and the persistence this door grants are the same computation, so they
+ * cannot drift into "the UI let me pick it and the save silently dropped it".
+ */
+async function refuseByPickerConstraint(
+	value: Record<string, unknown>,
+	context: RelationInsertContext,
+	constraint: PickerConstraint,
+	actor: Principal | undefined,
+	resultingCount: number,
+): Promise<{ code: RelationInsertRefusalCode; reason: string } | null> {
+	const targetSectionTipo = String(value.section_tipo);
+
+	// 0. RE-PERSIST. This locator is already stored: the save is writing it
+	// back, not introducing it. EVERY gate below is skipped, because every one
+	// of them tests a fact that can change under a record after the link was
+	// legitimately made — the target hierarchy deactivated, the saving
+	// principal's read grant, the term's `is_indexable` flag, the declared cap
+	// lowered. Judging a stored locator against today's answer would delete
+	// heritage data on an unrelated save and report success (a `set_data`
+	// replays the whole array through here — that is the CSV-import and
+	// raw-export round trip). Gate 3 already carried this reasoning for its own
+	// case; it is the same argument for all four, so it is made once, here.
+	//
+	// The gates keep their full force on NET-NEW locators, which is what they
+	// exist to police.
+	if (isAlreadyStored(value, context)) {
+		return null;
+	}
+
+	// 1. TARGET. `isTargetAllowed` resolves BOTH sides through
+	// getSectionRealTipo, so a virtual target (rsc170) and its real section
+	// (rsc2) name the same thing in either direction.
+	//
+	// DECLARED EXEMPTION — `constraint.targets` is empty. The caller declares no
+	// target section at all (component_relation_children projections, callers
+	// whose request_config resolves to nothing on this install), and "no
+	// declaration" is not "nothing is permitted": there is simply no target
+	// constraint to enforce. Stated here rather than left as a fallthrough,
+	// because it is the one escape this gate has and it must stay visible.
+	// isTargetAllowed owns that branch so the read path cannot re-decide it.
+	if (!(await isTargetAllowed(constraint.targets, targetSectionTipo))) {
+		return {
+			code: 'off_target',
+			reason:
+				`'${targetSectionTipo}' is not a target of '${context.componentTipo}' ` +
+				`(declared: ${constraint.targets.join(', ')})`,
+		};
+	}
+
+	// 2. READ GRANT on the linked section. An operator must not be able to
+	// persist a locator into a section they cannot see — the write twin of the
+	// read path's ddo filter. NO principal = no request scope (import, CLI,
+	// background job, unit harness): no filter, the same posture
+	// `permissions.ddoIsAuthorized` documents for the read side, because those
+	// doors carry no session and refusing them would break every internal
+	// resolution. Section-level, like deletePortalLocator's own gate.
+	if (actor !== undefined) {
+		const { getSectionPermissions } = await import('../security/permissions.ts');
+		if ((await getSectionPermissions(actor, targetSectionTipo)) < 1) {
+			return {
+				code: 'target_not_readable',
+				// Names the SECTION, never the record: the actor already named the
+				// section in the payload, so nothing is disclosed by repeating it.
+				reason: `no read grant on the linked section '${targetSectionTipo}'`,
+			};
+		}
+	}
+
+	// 3. SELECTABILITY — the term's own answer, re-asked because a rendered
+	// affordance is not an authorization (picker plan §2a).
+	//
+	// TWO DECLARED EXEMPTIONS, both derived on the SERVER (no client assertion
+	// selects a code path here), because the plan scopes this gate to "inserts
+	// arriving from a thesaurus-target picker" and both halves of that phrase
+	// have to be true:
+	//
+	//  a. THE CALLER IS NOT A TREE PICKER. Relation-mode selectability is the
+	//     tree's rule: the caller declares `properties.view: 'tree'` and the
+	//     picker renders per-term affordances from `isIndexable`. An ordinary
+	//     portal or autocomplete linking into the same thesaurus has NEVER
+	//     consulted the flag — tool_indexation's tree was the only surface that
+	//     did — so enforcing it there would not tighten an existing rule, it
+	//     would invent one. And it would be destructive rather than strict: a
+	//     `set_data` re-persists the WHOLE array through this door, so any
+	//     stored term predating its section's `is_indexable` flag would be
+	//     dropped from the save. Refusing a new pick is a refusal; deleting
+	//     stored links on an unrelated save is data loss, and the premise
+	//     reserves conservatism for exactly that.
+	//  b. THE TARGET DECLARES NO CONTRACT. The section_map names the component
+	//     carrying the flag; a target with no such declaration has no rule to
+	//     check, and `isTermSelectable` cannot tell "no contract" from "not
+	//     selectable" (false for both), so the scope is decided BEFORE asking.
+	//     Reading section_map here is the exemption's SCOPE, never a second
+	//     copy of the rule — the rule stays in ts_object.isIndexable, behind
+	//     isTermSelectable.
+	if (
+		(await callerDeclaresTreePicker(context.componentTipo)) &&
+		(await targetDeclaresSelectability(targetSectionTipo))
+	) {
+		const targetSectionId = Math.trunc(Number(value.section_id));
+		if (!Number.isFinite(targetSectionId)) {
+			return {
+				code: 'term_not_selectable',
+				reason: `'${targetSectionTipo}' declares selectable terms, but '${String(value.section_id)}' is not a record address`,
+			};
+		}
+		if (!(await isTermSelectable(targetSectionTipo, targetSectionId))) {
+			return {
+				code: 'term_not_selectable',
+				reason: `the term ${targetSectionTipo}/${targetSectionId} is not marked selectable in its thesaurus`,
+			};
+		}
+	}
+
+	// 4. THE SELECTION CAP — `properties.data_limit`, re-resolved server-side
+	// and never read off the request. Enforced on the RESULTING row set inside
+	// the caller's transaction, so N concurrent picks each individually under
+	// the limit cannot collectively exceed it.
+	//
+	// THE SECOND CLAUSE IS NOT SLACK. A save is refused only when it would
+	// leave the component holding more than its limit AND MORE THAN IT ALREADY
+	// HELD. Live components exist over their declared cap (dd560 declares
+	// data_limit 1 and holds 5 frames), and a bare `> limit` test would lock
+	// their operators out of editing what is already there — a data-integrity
+	// hazard, not a stricter rule. What the cap forbids is GROWTH past the
+	// limit; an over-capacity component can be edited and shrunk, never grown.
+	//
+	// THE COUNT IS PER CAP SCOPE, NOT PER SLOT. `data_limit` on a dataframe is
+	// declared per MAIN ITEM — one slot tipo stores the frames of every item of
+	// the main component on the record (filterCallerEntries is the read twin of
+	// this). Counting the slot would make a `data_limit:1` frame slot accept the
+	// first item's frame and refuse every sibling item's, which on a whole-array
+	// re-import silently truncates the record. The caller computes the scoped
+	// count and hands it in; this gate only compares.
+	if (constraint.selection_limit !== null && constraint.remaining !== null) {
+		const held = constraint.selection_limit - constraint.remaining;
+		if (resultingCount > constraint.selection_limit && resultingCount > held) {
+			return {
+				code: 'selection_limit',
+				reason: `'${context.componentTipo}' accepts at most ${constraint.selection_limit} linked record(s)`,
+			};
+		}
+	}
+
+	return null;
+}
+
+/**
+ * How many rows would the CAP SCOPE hold if this locator lands?
+ *
+ * The scope is the slot for an ordinary relation component, and the MAIN ITEM
+ * for a dataframe frame — because that is the unit `data_limit` is declared in
+ * (one slot tipo carries the frames of every main item on the record). Counting
+ * the slot for a frame turns a `data_limit:1` label slot into "one frame per
+ * RECORD" instead of "one frame per item", which silently truncates any
+ * whole-array re-persist of a multi-item record.
+ *
+ * @param baseline items already in the set for this save (stored or accepted).
+ * @param context  carries the pairing that defines the scope, when there is one.
+ */
+function resultingCountInCapScope(
+	baseline: readonly unknown[],
+	context: RelationInsertContext,
+): number {
+	const pairing = context.pairing ?? null;
+	if (pairing === null) {
+		return baseline.length + 1;
+	}
+	const inScope = baseline.filter((item) => {
+		if (item === null || typeof item !== 'object') return false;
+		const entry = item as Record<string, unknown>;
+		return (
+			String(entry.main_component_tipo) === String(pairing.mainComponentTipo) &&
+			String(entry.id_key) === String(pairing.idKey)
+		);
+	});
+	return inScope.length + 1;
+}
+
+/**
+ * Is this locator ALREADY STORED on the component — i.e. is this save writing
+ * it back rather than introducing it?
+ *
+ * Compared on the ADDRESS ONLY (`section_tipo` + `section_id`), deliberately.
+ * A re-persist legitimately rewrites the mutable fields of a stored link — the
+ * server re-derives `type`, `from_component_tipo`, and for a frame the whole
+ * pairing block — so a full-shape equality would answer "new" for a locator
+ * that is plainly the same link, and hand it back to the gates this exists to
+ * keep it away from. Identity here is "does the component already point at this
+ * record"; the dedup key (which DOES include `type` and `tag_id`) is a
+ * different question, asked by `normalizeRelationInsert`, and stays untouched.
+ *
+ * A frame additionally has to match its MAIN ITEM: one slot tipo stores frames
+ * for every item of the main component, so "already stored" for a frame means
+ * "already stored against this same main item".
+ */
+function isAlreadyStored(
+	value: Record<string, unknown>,
+	context: RelationInsertContext,
+): boolean {
+	const stored = context.storedItems;
+	if (stored === undefined || stored.length === 0) return false;
+
+	// The ADDRESS properties, and for a frame the main-item pairing too. Compared
+	// through `isLocatorInArray` — the locator law — never inline: the law's
+	// section_id match is LOOSE-NUMERIC (a stored '05' IS the same record as 5),
+	// and a strict String() comparison would read such a locator as net-new and
+	// hand it to the gates this function exists to keep it away from.
+	const properties =
+		context.pairing === null || context.pairing === undefined
+			? ['section_tipo', 'section_id']
+			: ['section_tipo', 'section_id', 'main_component_tipo', 'id_key'];
+
+	const candidates = stored.filter(
+		(item): item is Record<string, unknown> => item !== null && typeof item === 'object',
+	);
+
+	return isLocatorInArray(value as never, candidates as never[], properties);
+}
+
+/**
+ * Is this caller a TREE PICKER? The SCOPE of gate 3's exemption (a), and only
+ * that.
+ *
+ * The caller's own ontology `properties.view` — the same declaration the read
+ * path resolves into `context.view === 'tree'` to grant picker mode, so the
+ * write path's scope is derived from the identical fact and no client string
+ * chooses it. A ddo_map-level `view` is deliberately NOT consulted: it is a
+ * per-caller-context display choice that this door has no caller context for,
+ * and guessing one would be the second, unvalidatable authority the picker
+ * design exists to remove.
+ */
+async function callerDeclaresTreePicker(componentTipo: string): Promise<boolean> {
+	const { getNode } = await import('../ontology/resolver.ts');
+	return (
+		((await getNode(componentTipo))?.properties as { view?: unknown } | null | undefined)?.view ===
+		'tree'
+	);
+}
+
+/**
+ * Does this target section declare a per-term selectability contract? The SCOPE
+ * of gate 3's exemption (b), and only that.
+ *
+ * The predicate is `isIndexable`'s own precondition (ts_object.ts): the
+ * section_map's `thesaurus.is_indexable` must name a component tipo — a string.
+ * `false`, `null` and absent all mean "this section has no selectable-term
+ * flag", which is the ordinary case for every non-thesaurus target.
+ */
+async function targetDeclaresSelectability(sectionTipo: string): Promise<boolean> {
+	const { getSectionMap } = await import('../ontology/section_map.ts');
+	const declared = (
+		(await getSectionMap(sectionTipo))?.thesaurus as { is_indexable?: unknown } | undefined
+	)?.is_indexable;
+	return typeof declared === 'string' && declared !== '';
 }
 
 /**
