@@ -37,6 +37,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone} from '../../../core/common/js/utils/index.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -563,7 +564,8 @@ const fetch_relation_locators = async function(self, source_st, portal_tipo, mai
 			options	: { section_tipo: source_st, tipo: related_st, type: 'target_section' },
 			sqo		: { section_tipo: [source_st], limit: 'ALL', filter_by_locators: [{ section_tipo: source_st, section_id: main_id }] }
 		} })
-		const raw = Array.isArray(resp?.result) ? resp.result : []
+		const rows = response_data(resp)
+		const raw = Array.isArray(rows) ? rows : []
 		return raw
 			.filter(l => l && l.from_component_tipo===portal_tipo)
 			.map(l => ({ section_id: l.section_id, section_tipo: l.section_tipo }))
@@ -621,8 +623,9 @@ const fetch_related_datum = async function(self, related_st, entries, cols, lang
 	}
 	try {
 		const resp = await data_manager.request({ body: rqo })
-		if (resp?.result && Array.isArray(resp.result.data)) {
-			return { context: resp.result.context || [], data: resp.result.data }
+		const read_data = response_data(resp)
+		if (read_data && Array.isArray(read_data.data)) {
+			return { context: read_data.context || [], data: read_data.data }
 		}
 	} catch (e) {
 		console.warn('tool_print fetch_related_datum error:', e)

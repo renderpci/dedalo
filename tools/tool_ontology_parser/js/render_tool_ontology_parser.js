@@ -98,9 +98,13 @@ const paint_status = async function(self, container) {
 
 	let states
 	try {
-		const api_response = await self.inspect_ontologies()
-		states = api_response && Array.isArray(api_response.states) ? api_response.states : null
-		if (!states) throw new Error(api_response && api_response.msg ? api_response.msg : 'no states')
+		// envelope v2: `{states:[…]}` is the PAYLOAD (toolOntologyParserInspect
+		// returns ok({states})), and a failure carries the coded error instead.
+		const api_response	= await self.inspect_ontologies()
+		const failed		= request_failed(api_response)
+		const inspect_data	= failed ? null : response_data(api_response)
+		states = Array.isArray(inspect_data?.states) ? inspect_data.states : null
+		if (!states) throw new Error(failed ? error_text(api_response.error) : 'no states')
 	} catch (err) {
 		container.replaceChildren() // clear the loading line before the error
 		ui.create_dom_element({
@@ -595,8 +599,9 @@ const get_content_data = async function(self) {
 				messages_container.classList.toggle('error', failed)
 
 				// errors: only a failure has them (extension key)
-				const process_errors = failed && Array.isArray(api_response.errors)
-					? api_response.errors
+				const batch_errors = api_response.errors
+				const process_errors = failed && Array.isArray(batch_errors)
+					? batch_errors
 					: []
 				if (process_errors.length) {
 					_render_msg_lines(process_error_container, process_errors)

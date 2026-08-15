@@ -11,6 +11,7 @@
 	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
 	import {request_failed} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 
 
 
@@ -242,15 +243,15 @@ const get_content_data = async function(self) {
 				// with { result, pid, pfile } — the actual work is tracked via SSE.
 				const api_response = await self.update_cache()
 
-			// response failed case
-				if (request_failed(api_response) || api_response.result===false) {
+			// response failed case. Envelope v2: a refusal carries the coded error
+			// (rendered by the ONE renderer, in the user's language); a success has
+			// no prose at all, and the run's account arrives on the stream.
+				if (request_failed(api_response)) {
 					button_apply.classList.remove('loading')
 					button_apply.classList.remove('button_spinner')
 					// text, never innerHTML: this is server text
-					response_message.textContent = api_response.msg || 'Unknown error. Perhaps a timeout occurred'
-					if (request_failed(api_response)) {
-						handle_api_error(api_response.error, {wrapper: response_message.parentNode});
-					}
+					response_message.textContent = error_text(api_response.error)
+					handle_api_error(api_response.error, {wrapper: response_message.parentNode});
 					return
 				}
 
@@ -867,10 +868,8 @@ const update_process_status = (options) => {
 				// Choose message text: use compound_msg when the process has
 				// reported a meaningful msg (length > 5), otherwise fall back to a
 				// generic "running" or "completed" string.
-				const msg = sse_response
-							&& sse_response.data
-							&& sse_response.data.msg
-							&& sse_response.data.msg.length>5
+				const frame_line = sse_response && sse_response.data && sse_response.data.msg
+				const msg = (typeof frame_line==='string' && frame_line.length>5)
 					? compound_msg(sse_response)
 					: is_running
 						? 'Process running... please wait'

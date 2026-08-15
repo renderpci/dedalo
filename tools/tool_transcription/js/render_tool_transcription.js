@@ -30,6 +30,8 @@
 // imports
 	import { event_manager } from '../../../core/common/js/event_manager.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
+	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { when_in_viewport } from '../../../core/common/js/events.js'
 	import { ui } from '../../../core/common/js/ui.js'
 	import { ua } from '../../../core/common/js/ua.js'
@@ -485,15 +487,17 @@ const get_content_data_edit = function(self) {
 							subtitles_block.classList.add('loading')
 
 							// call server API
+							// envelope v2: `data===true` on success, with the `url`
+							// extension key; a refusal carries the coded error.
 							const response = await self.build_subtitles_file()
-							if (!response.result) {
+							if (request_failed(response) || response_data(response)!==true) {
 								// error case. Reported in the tool's one panel: a
 								// blocking modal dialog freezes the tab and is gone
 								// the moment it is dismissed.
 								tool_report(self, {
 									phase		: 'done',
 									severity	: 'error',
-									message		: response.msg
+									message		: (request_failed(response) ? error_text(response.error) : '')
 										|| self.get_tool_label('subtitles_build_failed')
 										|| 'The subtitles file could not be built'
 								// an install with no transcriber_engine has no panel:
@@ -1173,19 +1177,20 @@ const get_server_status = function (options) {
 
 		// outage honesty (audit 2026-07-28)
 		// The transcriber is an EXTERNAL server: an unreachable host, an HTTP error,
-		// a blocked (SSRF) uri, a missing config or a denied gate all come back as
-		// {result:false, msg} — never as a status code. Falling through to the
-		// switch below landed on 'default:', which reads 'Process done' AND deletes
-		// the stored pid: the transcriptionist was told that a transcription that
-		// never ran had finished, and the only handle on the job was destroyed.
-		// So: report the real message, STOP polling, and KEEP the pid (a reload
-		// re-polls it, so a job that IS running can still be recovered).
-		const status_result = (response && typeof response.result === 'object')
-			? response.result
+		// a blocked (SSRF) uri, a missing config or a denied gate all come back as a
+		// REFUSED envelope (`tool.dependency_unavailable`) — never as a status code.
+		// Falling through to the switch below landed on 'default:', which reads
+		// 'Process done' AND deletes the stored pid: the transcriptionist was told
+		// that a transcription that never ran had finished, and the only handle on
+		// the job was destroyed. So: report the real message, STOP polling, and KEEP
+		// the pid (a reload re-polls it, so a job that IS running can be recovered).
+		const status_data	= request_failed(response) ? null : response_data(response)
+		const status_result	= (status_data && typeof status_data === 'object')
+			? status_data
 			: null
 		if (!status_result) {
-			const error_msg = (response && response.msg)
-				? response.msg
+			const error_msg = request_failed(response)
+				? error_text(response.error)
 				: 'Transcriber server did not answer'
 			// SEC-XSS-006: every panel field is a text node.
 			nodes.status_panel.report({
@@ -1459,22 +1464,25 @@ const render_automatic_transcription = function (options) {
 					// return a Promise to be resolved by the API response of the server
 					self.automatic_transcription_server(automatic_transcription_options)
 					.then((response)=>{
-						// user messages
-						const msg_type = (response.result===false) ? 'error' : 'ok'
-						ui.show_message(automatic_transcription_container, response.msg, msg_type)
+						// user messages. Envelope v2: a refusal carries the coded,
+						// translated error; a success carries the job handle only.
+						const submit_failed = request_failed(response)
+						if (submit_failed) {
+							ui.show_message(automatic_transcription_container, error_text(response.error), 'error')
+						}
 
 						// A REFUSED request never starts the status poll, and the poll
 						// is what would otherwise give the button back — so before this,
 						// a rejected server run left the trigger dead and spinning with
 						// no way to try again short of reopening the tool.
-						if(response.result===false){
+						if(submit_failed){
 							button_automatic_transcription.classList.remove('disable')
 							ui.set_button_busy( button_automatic_transcription, false )
 						}
 
-						if(response.result!==false){
+						if(!submit_failed){
 
-							const pid = response.result.pid
+							const pid = response_data(response)?.pid
 
 							// derive the same stable status key used by get_server_status()
 							const server_process_id = 'transcriber_process_'+self.media_component.section_tipo+'_'+self.media_component.section_id
@@ -2002,8 +2010,9 @@ const render_automatic_transcription = function (options) {
 
 				// Ask the server which models are usable, once, while the rest renders.
 				self.get_model_sources().then(function(response){
-					if (response && response.result) {
-						apply_installed_models( response.result.installed, response.result.models )
+					const sources_data = response_data(response)
+					if (sources_data) {
+						apply_installed_models( sources_data.installed, sources_data.models )
 					}
 				})
 
@@ -2071,9 +2080,10 @@ const render_automatic_transcription = function (options) {
 						// Re-apply both restrictions: a SAVED choice may be a model the
 						// current device cannot run, or one that is no longer installed.
 						apply_device_limits()
-						const sources = await self.get_model_sources()
-						if (sources && sources.result) {
-							apply_installed_models( sources.result.installed, sources.result.models )
+						const sources		= await self.get_model_sources()
+						const sources_data	= response_data(sources)
+						if (sources_data) {
+							apply_installed_models( sources_data.installed, sources_data.models )
 						}
 						// The saved choice landed AFTER the first readiness line was
 						// computed, and setting `.value` fires no 'change' event: the
@@ -2227,12 +2237,12 @@ const render_automatic_transcription = function (options) {
 				}
 				Promise.all( wanted.map(name => self.download_model(name)) ).then(function(responses){
 					button_download_speaker_model.classList.remove('disable')
-					const failed = responses.find(r => !r || r.result===false)
+					const failed = responses.find(r => !r || request_failed(r))
 					if (failed!==undefined) {
 						nodes.status_panel.report({
 							phase		: 'model',
 							severity	: 'error',
-							message		: (failed && failed.msg)
+							message		: (failed && request_failed(failed) ? error_text(failed.error) : '')
 								|| self.get_tool_label('download_failed')
 								|| 'The model could not be downloaded'
 						})
@@ -2254,8 +2264,9 @@ const render_automatic_transcription = function (options) {
 			// Ask once for the block's own state (the quality block's calls also
 			// re-apply it when they land — see apply_installed_models' callers).
 			self.get_model_sources().then(function(response){
-				if (response && response.result) {
-					apply_diarization( response.result.diarization )
+				const sources_data = response_data(response)
+				if (sources_data) {
+					apply_diarization( sources_data.diarization )
 				}
 			})
 
@@ -2298,11 +2309,11 @@ const render_automatic_transcription = function (options) {
 			case 'action_repair_model':
 				if (!target) break;
 				self.repair_model( target ).then(function(response){
-					if (!response || response.result===false) {
+					if (!response || request_failed(response)) {
 						status_panel.report({
 							phase		: 'model',
 							severity	: 'error',
-							message		: (response && response.msg)
+							message		: (response && request_failed(response) ? error_text(response.error) : '')
 								|| self.get_tool_label('repair_failed')
 								|| 'The model could not be repaired',
 							detail		: `model: ${target}`
@@ -2321,11 +2332,11 @@ const render_automatic_transcription = function (options) {
 			case 'action_download_model':
 				if (!target) break;
 				self.download_model( target ).then(function(response){
-					if (!response || response.result===false) {
+					if (!response || request_failed(response)) {
 						status_panel.report({
 							phase		: 'model',
 							severity	: 'error',
-							message		: (response && response.msg)
+							message		: (response && request_failed(response) ? error_text(response.error) : '')
 								|| self.get_tool_label('download_failed')
 								|| 'The model could not be downloaded',
 							detail		: `model: ${target}`
@@ -2345,7 +2356,7 @@ const render_automatic_transcription = function (options) {
 			case 'action_verify_model':
 				if (!target) break;
 				self.verify_model( target ).then(function(response){
-					if (!response || response.result===false) {
+					if (!response || request_failed(response)) {
 						// The server allows only a global administrator to verify. The
 						// button is offered to everyone on purpose — the refusal is the
 						// only thing that tells a cataloguer who to ask, and hiding it
@@ -2353,7 +2364,7 @@ const render_automatic_transcription = function (options) {
 						status_panel.report({
 							phase		: 'model',
 							severity	: 'error',
-							message		: (response && response.msg)
+							message		: (response && request_failed(response) ? error_text(response.error) : '')
 								|| self.get_tool_label('verify_failed')
 								|| 'The model could not be verified',
 							detail		: `model: ${target}`
@@ -2469,7 +2480,7 @@ const render_automatic_transcription = function (options) {
 
 			const lines		= []
 			const sources	= await self.get_model_sources()
-			const result	= (sources && sources.result) ? sources.result : null
+			const result	= response_data(sources) || null
 			// ABSENT IS NOT EMPTY. A server that could not read its catalog omits
 			// `models` entirely; an empty array would be the real answer "nothing is
 			// installed". Absent means only that this server cannot tell — and a
@@ -2790,7 +2801,7 @@ const render_automatic_transcription = function (options) {
 						detail		: `model: ${model}`
 					})
 					const late = await self.get_model_sources()
-					settle_model_state( late && late.result )
+					settle_model_state( response_data(late) )
 					return
 				}
 
@@ -2800,7 +2811,7 @@ const render_automatic_transcription = function (options) {
 					const job		= (status && status.job) ? status.job : null
 					const failed	= job && (
 						job.status==='error'
-						|| (job.status==='done' && job.response && job.response.result===false)
+						|| (job.status==='done' && job.response && job.response.ok===false)
 					)
 					if (failed) {
 						stop( poll )
@@ -2809,18 +2820,21 @@ const render_automatic_transcription = function (options) {
 							severity	: 'error',
 							message		: self.get_tool_label('model_job_failed')
 								|| 'The model job did not finish successfully',
-							cause		: (job.response && job.response.msg) || job.error || '',
+							// `job.response` is the finished job's CAPTURED envelope (a plain
+							// object inside the payload, not a transport answer), so its
+							// failure is read from `ok`/`error` directly.
+							cause		: (job.response && job.response.ok===false ? error_text(job.response.error) : '') || job.error || '',
 							detail		: `model: ${model}`
 						})
 						const after = await self.get_model_sources()
-						settle_model_state( after && after.result )
+						settle_model_state( response_data(after) )
 						return
 					}
 				}
 
 				// 2) Is it runnable yet?
 				const sources	= await self.get_model_sources()
-				const result	= (sources && sources.result) ? sources.result : null
+				const result	= response_data(sources) || null
 				const state		= model_state_in( result, model )
 				const info		= state ? MODEL_STATES[state] : null
 				if (info && info.usable===true) {

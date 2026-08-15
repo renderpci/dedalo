@@ -7,6 +7,8 @@
 // imports
 	import { when_in_viewport } from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 
 
 
@@ -458,14 +460,19 @@ const get_content_data = function(self) {
 			response_node.classList.remove('error','success')
 			response_node.textContent		= self.get_tool_label('sending') || 'Sending…'
 			try {
-				const response = await self.send_report(description)
-				if (response && response.result && response.result!==false) {
+				// envelope v2: the payload is `{delivered, via, report_id?}` and a
+				// refusal carries the coded, translated error — no prose on success.
+				const response		= await self.send_report(description)
+				const report_data	= (response && !request_failed(response)) ? response_data(response) : null
+				if (report_data && report_data.delivered===true) {
 					response_node.classList.add('success')
-					response_node.textContent = response.msg || (self.get_tool_label('sent_ok') || 'Report sent.')
+					response_node.textContent = self.get_tool_label('sent_ok') || 'Report sent.'
 					description_input.value = ''
 				} else {
 					response_node.classList.add('error')
-					response_node.textContent = (response && response.msg) || (self.get_tool_label('send_failed') || 'The report could not be sent.')
+					response_node.textContent = (response && request_failed(response))
+						? error_text(response.error)
+						: (self.get_tool_label('send_failed') || 'The report could not be sent.')
 					send_button.disabled = false
 				}
 			} catch (error) {

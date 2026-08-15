@@ -728,7 +728,8 @@ tool_media_versions.prototype.get_record_jobs = async function() {
 			if(SHOW_DEVELOPER===true) {
 				dd_console("-> get_record_jobs API response:",'DEBUG',response);
 			}
-			resolve((response && response.result===true && Array.isArray(response.jobs))
+			// envelope v2: `data===true` with the owned top-level `jobs` extension key
+			resolve((response && response_data(response)===true && Array.isArray(response.jobs))
 				? response.jobs
 				: [])
 		})

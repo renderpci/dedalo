@@ -70,6 +70,8 @@
 // import
 	import { dd_console, get_json_langs } from '../../../core/common/js/utils/index.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
+	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { common, create_source, rebuild_component_in_lang } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../../core/tools_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
@@ -356,7 +358,7 @@ tool_transcription.prototype.load_relation_list = async function() {
 			body : rqo
 		})
 
-	const datum = api_response.result
+	const datum = response_data(api_response)
 
 
 	return datum
@@ -409,7 +411,7 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 					dd_console("[tool_transcription.get_user_tools] api_response:",'DEBUG',api_response);
 				}
 
-				const result = api_response.result // array of objects
+				const result = response_data(api_response) // array of objects
 
 				resolve(result)
 			})
@@ -808,9 +810,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		if(SHOW_DEVELOPER===true) {
 			dd_console("-> transcription_component API response:",'DEBUG',response);
 		}
-		if (!response?.result) {
+		// envelope v2: the payload is the media URL of the prepared WAV; a refusal
+		// carries the coded, translated error and no payload at all.
+		const audio_url = request_failed(response) ? null : response_data(response)
+		if (!audio_url) {
 			set_message(
-				response?.msg
+				(request_failed(response) ? error_text(response.error) : '')
 					|| self.get_tool_label('error_audio_conversion')
 					|| 'The recording could not be prepared for transcription',
 				{ phase: 'audio' }
@@ -839,9 +844,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	// store actually holds anything. Without that last fact a missing model fails
 	// as an opaque 404 from inside the ONNX runtime.
 		const sources_response	= await self.get_model_sources()
-		const sources			= (sources_response && sources_response.result)
-			? sources_response.result
-			: { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true }
+		const sources			= response_data(sources_response)
+			|| { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true }
 
 		// Refuse EARLY and specifically when the chosen model cannot run.
 		// Left to the runtime, this fails as "Could not locate file: …/config.json"
@@ -1134,7 +1138,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		try {
 			// Decode to exactly 16 kHz mono — Whisper's only accepted input rate.
 			// AudioContext is unavailable inside a Worker, so this must happen here.
-			const audio_buffer	= await fetch_audio( response.result );
+			const audio_buffer	= await fetch_audio( audio_url );
 			const audio_ctx		= new AudioContext({ sampleRate: 16000 });
 			let audio_data
 			try {

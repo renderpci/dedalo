@@ -11,8 +11,8 @@
 * Provides the `edit` render view for tool_import_rdf: a UI panel that lets
 * the user select an IRI value stored in a component_iri field, choose the
 * target import language, and trigger the server-side RDF-to-Dédalo mapping
-* (via `self.get_rdf_data`). The server response HTML dump is shown in a
-* dedicated result area below the form.
+* (via `self.get_rdf_data`). The parsed RDF subjects the server returns are
+* shown in a dedicated result area below the form.
 *
 * Exports: render_tool_import_rdf (constructor, prototype.edit assigned by
 * tool_import_rdf.js to its own prototype chain).
@@ -29,6 +29,8 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {render_error_inline} from '../../../core/common/js/render_api_error.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
 	import {get_caller_by_model} from '../../../core/common/js/utils/index.js'
 
@@ -226,25 +228,53 @@ const get_content_data_edit = async function(self) {
 						spinner.remove()
 						components_container.classList.remove('loading')
 
-					// check results
-						if (!response || !response.result || response.result.length<1) {
+					// check results. Envelope v2: the payload is `{rdf:[{uri,subjects}],
+					// errors:[per-URI refusals]}` (tools/tool_import_rdf/server/index.ts
+					// getRdfData) — a failed CALL has no payload at all and carries the
+					// coded error instead.
+						if (request_failed(response)) {
+							view_rdf_data_wrapper.innerHTML = ''
+							render_error_inline(view_rdf_data_wrapper, response.error)
+							return
+						}
+						const rdf_payload	= response_data(response) || {}
+						const ar_rdf		= Array.isArray(rdf_payload.rdf) ? rdf_payload.rdf : []
+						if (ar_rdf.length<1) {
 							view_rdf_data_wrapper.innerHTML = 'Empty results';
 							return
 						}
 
-					// Render the EasyRdf HTML dump for each imported URI.
-					// response.result[i].ar_rdf_html is the raw HTML produced by
-					// EasyRdf\Graph::dump('html') on the server side. Each iteration
-					// overwrites the previous innerHTML, so only the last result is visible
-					// when ar_values contains more than one URI. This is a known limitation.
-						const response_result_len = response.result.length
-						for (let i = 0; i < response_result_len; i++) {
+					// Render the parsed graph of each imported URI. The server returns the
+					// PARSED subjects (mapped through the tool's class-map when it has
+					// one), never an HTML dump — so the readout is the data itself, one
+					// block per URI instead of the previous single overwrite.
+						view_rdf_data_wrapper.innerHTML = ''
+						for (let i = 0; i < ar_rdf.length; i++) {
 
-							// const current_data = ar_values[i]
-							view_rdf_data_wrapper.innerHTML = response.result[i].ar_rdf_html
+							const entry = ar_rdf[i]
+							ui.create_dom_element({
+								element_type	: 'h4',
+								text_content	: entry.uri || '',
+								parent			: view_rdf_data_wrapper
+							})
+							ui.create_dom_element({
+								element_type	: 'pre',
+								class_name		: 'rdf_subjects',
+								text_content	: JSON.stringify(entry.subjects, null, 2),
+								parent			: view_rdf_data_wrapper
+							})
+						}
 
-							// const node = self.render_dd_data(response.rdf_data[i].dd_obj, 'root')
-							// view_dd_data_wrapper.appendChild(node)
+					// per-URI refusals: payload facts (one bad URI never fails the batch)
+						const uri_failures	= rdf_payload.errors
+						const ar_uri_errors	= Array.isArray(uri_failures) ? uri_failures : []
+						if (ar_uri_errors.length>0) {
+							ui.create_dom_element({
+								element_type	: 'pre',
+								class_name		: 'error',
+								text_content	: ar_uri_errors.join('\n'),
+								parent			: view_rdf_data_wrapper
+							})
 						}
 
 					// update list

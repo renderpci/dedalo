@@ -43,6 +43,7 @@
 */
 
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 
 	// monotonic counter → unique id_variant for fresh (uncached) layout-list reads
@@ -291,8 +292,8 @@ export const create_new_layout = async function(options) {
 		layout.owner_user_id		= '' + page_globals.user_id
 		layout.visibility			= layout.visibility || 'user'
 
-	// create the section record. The API returns the new section_id as
-	// api_response.result (a positive integer on success, 0 or falsy on failure).
+	// create the section record. The API answers the new section_id as the
+	// envelope payload (a positive integer on success).
 		const rqo = {
 			action	: 'create',
 			source	: {
@@ -304,12 +305,11 @@ export const create_new_layout = async function(options) {
 			use_worker	: true
 		})
 
-		if (!api_response.result || api_response.result <= 0) {
+		const new_section_id = response_data(api_response)
+		if (!new_section_id || new_section_id <= 0) {
 			console.error('Error on create new print layout section. api_response:', api_response);
 			return false
 		}
-
-		const new_section_id = api_response.result
 
 	// save ONLY the layout blob (dd625) — it carries all metadata.
 	// Unlike create_new_export_preset, there are no parallel component saves
@@ -389,7 +389,7 @@ export const save_layout = async function(options) {
 			use_worker	: true
 		})
 
-		if (!api_response.result) {
+		if (request_failed(api_response) || !response_data(api_response)) {
 			console.error(`Error on save print layout (${section_id}). api_response:`, api_response);
 			return false
 		}

@@ -423,7 +423,7 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 					dd_console("-> create_identifying_image API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
+				const result = response_data(response) // array of objects
 
 				resolve(result)
 			})

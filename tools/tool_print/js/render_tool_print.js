@@ -47,6 +47,7 @@
 */
 
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {
@@ -1319,9 +1320,9 @@ const do_new = function(self) {
 * rather than a native prompt(), because prompt() is silently blocked in the
 * tool window context on some browsers.
 *
-* Save result detection: the core API response shape varies slightly — success
-* is inferred by the absence of non-empty errors rather than a strict .result
-* check (mirrors how tool_export presets detect success).
+* Save result detection: envelope v2 — the save succeeded unless the call
+* answered with an ApiError (`request_failed`); `save_layout` answers `false`
+* when it refused before the request left the browser.
 * @param {Object} self - tool_print instance
 * @returns {Promise<void>}
 */
@@ -1333,7 +1334,7 @@ const do_save = async function(self) {
 	let ok = false
 	if (self.current_template_id) {
 		const res = await save_layout({ section_id: self.current_template_id, layout: serialize_layout(self) })
-		ok = !!(res && (res.result || res.errors===undefined || (res.errors && !res.errors.length)))
+		ok = !!(res && !request_failed(res))
 	} else {
 		const new_id = await create_new_layout({ self, name: self.layout.name, layout: serialize_layout(self) })
 		if (new_id) {

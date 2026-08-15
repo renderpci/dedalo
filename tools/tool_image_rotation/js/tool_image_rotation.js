@@ -7,6 +7,7 @@
 // import needed modules
 	import { clone, dd_console } from '../../../core/common/js/utils/index.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
 	import { common, create_source } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../../core/tools_common/js/tool_common.js'
 	import { render_tool_image_rotation } from './render_tool_image_rotation.js' // self tool rendered (called from render common)
@@ -462,7 +463,10 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 				max_size_bytes		: image_blob.size
 			})
 
-			if (!api_response.result) {
+			// envelope v2: a successful upload answers `data===true` with the staged
+			// `file_data` extension key; every failure path (validation, transport,
+			// server refusal) answers with an ApiError under `error`.
+			if (request_failed(api_response) || response_data(api_response)!==true) {
 				console.error("Error on upload api_response:", api_response);
 				return false
 			}

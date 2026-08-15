@@ -8,7 +8,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
-	import {request_failed, ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
+	import {request_failed, response_data, ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
@@ -295,11 +295,14 @@ const get_content_data = async function(self) {
 					return false
 				}
 
-				// API response msg. Server text: TEXT only, never an HTML sink (DS-1)
-				response_msg.textContent = extracted_data_response.msg || ''
+				// Envelope v2 carries no prose on a success — the extraction speaks for
+				// itself, so the message line is cleared instead of echoing a sentence
+				// the server no longer sends.
+				response_msg.textContent = ''
 
-			// process_pdf_data. Apply result to target component value
-				const raw_pdf_string	= extracted_data_response.result
+			// process_pdf_data. Apply the extracted text (the payload) to the target
+			// component value
+				const raw_pdf_string	= response_data(extracted_data_response)
 				const pdf_data			= await self.process_pdf_data(raw_pdf_string)
 				// debug
 					if(SHOW_DEBUG===true) {

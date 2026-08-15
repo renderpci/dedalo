@@ -73,6 +73,7 @@
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback, when_in_viewport} from '../../../core/common/js/events.js'
 	import {downloadZip} from './lib/client-zip/index.js'
@@ -1046,7 +1047,8 @@ const render_presets_ui = function(self, parent) {
 				section_tipo	: presets_section_tipo
 			})
 			.then(function(response){
-				if (response && response.result) {
+				// save_export_preset answers the envelope (or false when it refused)
+				if (response && !request_failed(response)) {
 					button_save_preset.classList.add('hide')
 				}
 			})
@@ -1291,7 +1293,7 @@ render_tool_export.prototype.component_has_parent_targets = async function(ddo) 
 			}]
 		}
 	})
-	.then(response => response?.result?.[ddo.tipo]===true)
+	.then(response => response_data(response)?.[ddo.tipo]===true)
 	.catch(() => false)
 
 	self.components_with_parent.set(ddo.tipo, request_promise)
@@ -1627,12 +1629,13 @@ export const render_download_modal = (self) => {
 						section_tipo	: 'rsc170'
 					})
 					.then(function(api_response){
-						if(!api_response.result) {
+						const context_data = response_data(api_response)
+						if(!context_data) {
 							console.error('Failed component image context request:', api_response);
 							return
 						}
 
-						const ar_quality = api_response.result?.[0].features?.ar_quality || []
+						const ar_quality = context_data?.[0].features?.ar_quality || []
 
 						// Set quality_parse defaults: both source and target start as the
 						// system default quality; the user's change_handler updates target.

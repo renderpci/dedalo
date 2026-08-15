@@ -41,6 +41,12 @@
  *    strings blanked, `page_globals` lines skipped): a write `.msg = …` counts,
  *    a computed `obj['msg']` does not; `client/dedalo/test/**` and `-min.js`
  *    twins are ungated by design.
+ *  - The three words are also the names of non-envelope shapes the client MUST
+ *    keep reading (FileReader.result, server job STREAM FRAMES, payload
+ *    diagnostic lists, named failure extension keys). Those are excused one
+ *    expression at a time by `READ_EXCLUSIONS` (census, data + reason) — the
+ *    gate PRINTS that allowlist and fails on an entry that matches nothing, so
+ *    an excuse cannot outlive the read it covers.
  *  - Rule 2 finds a wrapper by NAME (`request` / `fetch_api`) — a differently
  *    named raw `fetch('/dedalo/core/api/…')` is outside it (a policy the
  *    client agent owns; see the api_transport header).
@@ -64,9 +70,12 @@ import {
 	loadBaseline,
 } from '../../scripts/client_compat_baseline.ts';
 import {
+	applyExclusions,
 	COMPAT_READ,
 	census,
 	countCompatReads,
+	exclusionsFor,
+	READ_EXCLUSIONS,
 	REPO_ROOT,
 	summarize,
 } from '../../scripts/lib/client_compat_census.ts';
@@ -373,6 +382,49 @@ describe(`client error contract — rule 3: compat-read census (baseline total $
 		const seen = new Set(RESULTS.map((result) => result.file));
 		for (const file of TRANSPORT_CONSUMERS)
 			expect(seen.has(file), `${file} not in the census`).toBe(true);
+	});
+
+	test('the non-envelope allowlist is honest: every entry still matches its file', () => {
+		const stale: string[] = [];
+		const table: string[] = [];
+		for (const file of new Set(READ_EXCLUSIONS.map((entry) => entry.file))) {
+			const entries = exclusionsFor(file);
+			const { hits } = applyExclusions(read(file), entries);
+			entries.forEach((entry, index) => {
+				table.push(`${file} · ${entry.expression} ×${hits[index]} — ${entry.reason}`);
+				if (hits[index] === 0) stale.push(`${file}: '${entry.expression}' matches nothing`);
+			});
+		}
+		// The allowlist is DATA and is printed, so a reviewer sees every excuse.
+		console.info(
+			`non-envelope read allowlist (${READ_EXCLUSIONS.length}):\n  ${table.join('\n  ')}`,
+		);
+		expect(
+			stale,
+			`STALE ENTRIES in READ_EXCLUSIONS (scripts/lib/client_compat_census.ts): the expression is gone from the file, so the excuse now hides nothing — and would silently excuse a future read of the same name. Delete it.\n  ${stale.join('\n  ')}`,
+		).toEqual([]);
+		// every entry names a MEASURED file (a path typo would excuse nothing)
+		const measured = new Set(RESULTS.map((result) => result.file));
+		const unknown = READ_EXCLUSIONS.filter((entry) => !measured.has(entry.file)).map(
+			(entry) => entry.file,
+		);
+		expect(
+			unknown,
+			`READ_EXCLUSIONS names files outside the census: ${unknown.join(', ')}`,
+		).toEqual([]);
+	});
+
+	test('anti-vacuity: an allowlisted expression is the ONLY thing it blanks', () => {
+		const entries = [
+			{ file: 'x.js', expression: 'sse.result', reason: 'test' },
+			{ file: 'x.js', expression: 'frame.errors', reason: 'test' },
+		];
+		const source = 'const a = sse.result; const b = frame.errors; const c = api_response.result;';
+		const { source: scrubbed, hits } = applyExclusions(source, entries);
+		expect(hits).toEqual([1, 1]);
+		// the neighbouring ENVELOPE read survives and is still counted
+		expect(countCompatReads(scrubbed).reads).toBe(1);
+		expect(countCompatReads(source).reads).toBe(3);
 	});
 
 	test('the counter is exact on the shapes it must and must not count (self-test)', () => {

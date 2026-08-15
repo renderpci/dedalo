@@ -24,7 +24,7 @@
 * Key instance properties (set by build())
 * -----------------------------------------
 * - diffusion_info  {Object}  - Server-side config: section_diffusion_nodes[], resolve_levels, skip_publication_state_check.
-* - bun_status      {Object}  - Bun engine health: { result: bool, msg: string, ... }.
+* - bun_status      {Object}  - Bun engine health: { ready: bool, label: string, checks }.
 * - active_processes {Array}  - List of running or recently finished diffusion processes.
 * - resolve_levels  {number}  - Resolved from diffusion_info; defaults to 1.
 * - skip_publication_state_check {number} - Whether to bypass the publication-state guard; from diffusion_info.
@@ -176,9 +176,11 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 		// engine advisory gate (auto-recovers for admins; clean JSON even when engine down)
 			const advisory = await self.get_engine_advisory({})
 			self.engine_advisory = advisory
+			// client-built badge state (never a wire shape): is the engine usable,
+			// and the one line to print beside it
 			self.bun_status = {
-				result : advisory.state === 'ok',
-				msg    : advisory.state === 'ok' ? 'Ready' : (advisory.title || 'Unavailable'),
+				ready  : advisory.state === 'ok',
+				label  : advisory.state === 'ok' ? 'Ready' : (advisory.title || 'Unavailable'),
 				checks : advisory.checks || null
 			}
 

@@ -14,7 +14,10 @@
  * or a label mentioning `.msg` is not a read). `\b` after the key already
  * excludes `.result_options` / `.result_id` (`_` is a word char), and a line
  * that mentions `page_globals` is skipped (page_globals is the client's own
- * state object, never a wire envelope). It is a TOKEN count, deliberately: a
+ * state object, never a wire envelope), and the READ_EXCLUSIONS allowlist below
+ * blanks the named NON-ENVELOPE expressions (browser APIs, server stream
+ * frames, payload keys, failure extension keys), each with its reason.
+ * It is a TOKEN count, deliberately: a
  * write `.msg = …` counts too — a client that still WRITES the compat name is
  * still living on it, and the removal condition is "the name is gone".
  *
@@ -64,6 +67,244 @@ export const COMPAT_READ = /\.(msg|errors|result)\b/g;
 
 /** A line naming the client's own state object is never a wire read. */
 const LINE_EXCLUSION = /page_globals/;
+
+/**
+ * ── THE NON-ENVELOPE ALLOWLIST ───────────────────────────────────────────────
+ * `.msg` / `.errors` / `.result` are compat keys ONLY on an API envelope. The
+ * same three words are also, legitimately and permanently, the names of:
+ *
+ *   - browser API members (`FileReader.result`);
+ *   - SERVER-OWNED STREAM FRAMES, which are not envelopes (ERRORS_SPEC §5):
+ *     the media/tool job frame `{pid, pfile, is_running, data:{msg,…}, errors,
+ *     total_time}` and the diffusion progress chunk `{data:{msg,…}, errors,
+ *     result:<the persisted job RECORD>}`;
+ *   - PAYLOAD keys inside `data` — a per-file/per-record diagnostic list a
+ *     handler returns beside its summary (`ok({summary, errors})`), which is a
+ *     successful answer, not a failure;
+ *   - NAMED FAILURE EXTENSION KEYS (ERRORS_SPEC §3.0), thrown as a
+ *     `DedaloError`'s `extend` — the per-check detail behind the one sentence
+ *     the dispatcher prints.
+ *
+ * Those reads must SURVIVE the compat block's deletion, so counting them would
+ * pin the census above zero forever and the gate could never flip. Each entry
+ * below names one file, the EXACT source expression it excuses (matched
+ * literally, so it cannot silently widen), and WHY that expression is not an
+ * envelope read. Entries are data, printed by the tripwire; an entry that
+ * matches nothing is a GATE FAILURE (see the tripwire's staleness test), so a
+ * conversion cannot leave a stale excuse behind.
+ */
+export interface ReadExclusion {
+	/** Repo-relative path, forward slashes. */
+	readonly file: string;
+	/** The exact expression, matched as a literal substring of the code. */
+	readonly expression: string;
+	/** One line: what this shape IS, if not an envelope compat read. */
+	readonly reason: string;
+}
+
+/** The stream-frame reason, shared by every job-progress reader. */
+const FRAME_REASON =
+	'server-owned job STREAM FRAME (src/core/media/jobs.ts / src/diffusion/jobs/sse.ts), not an API envelope';
+/** The payload reason, shared by every handler that returns a diagnostic list beside its summary. */
+const PAYLOAD_REASON = 'PAYLOAD key inside `data` (a diagnostic list on a SUCCESSFUL answer)';
+
+export const READ_EXCLUSIONS: readonly ReadExclusion[] = [
+	// ── browser APIs ──────────────────────────────────────────────────────────
+	{
+		file: 'tools/tool_assistant/js/assistant_controller.js',
+		expression: 'reader.result',
+		reason: 'FileReader.result — a browser API member',
+	},
+	{
+		file: 'tools/tool_error_report/js/render_tool_error_report.js',
+		expression: 'reader.result',
+		reason: 'FileReader.result — a browser API member',
+	},
+	// ── the browser's own captured-error buffer (a REQUEST field, never a response) ──
+	{
+		file: 'tools/tool_error_report/js/render_tool_error_report.js',
+		expression: 'item.msg',
+		reason:
+			'window.dedalo_js_errors entry (the browser error buffer this tool SENDS; src/core/error_report/store.ts js_errors)',
+	},
+	{
+		file: 'tools/tool_error_report/js/tool_error_report.js',
+		expression: 'el.msg',
+		reason:
+			'window.dedalo_js_errors entry (the browser error buffer this tool SENDS; src/core/error_report/store.ts js_errors)',
+	},
+	// ── the diffusion progress chunk + its persisted job RECORD (WC-2026-08-15-diffusion-job-result-record) ──
+	{
+		file: 'tools/tool_diffusion/js/report_model.js',
+		expression: 'sse.result',
+		reason:
+			'the persisted diffusion job RECORD carried by the SSE chunk (`{ok, error?, msg?, errors?…}`), not an envelope',
+	},
+	{
+		file: 'tools/tool_diffusion/js/report_model.js',
+		expression: 'record.msg',
+		reason: "the job RECORD's own headline (WC-2026-08-15-diffusion-job-result-record)",
+	},
+	{
+		file: 'tools/tool_diffusion/js/report_model.js',
+		expression: 'record.errors',
+		reason:
+			"the job RECORD's per-record diagnostic lines — a COMPLETED run collects them (ok:true + errors ⇒ 'partial')",
+	},
+	{
+		file: 'tools/tool_diffusion/js/report_model.js',
+		expression: 'sse.data.msg',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_diffusion/js/report_model.js',
+		expression: 'sse.errors',
+		reason: `${FRAME_REASON} — the JOB-level error list`,
+	},
+	{
+		file: 'tools/tool_diffusion/js/render_tool_diffusion.js',
+		expression: 'sse_response?.data?.msg',
+		reason: FRAME_REASON,
+	},
+	// ── media / background job frames ─────────────────────────────────────────
+	{
+		file: 'tools/tool_media_versions/js/render_tool_media_versions.js',
+		expression: 'frame.errors',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js',
+		expression: 'sse_response.errors',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_import_files/js/render_tool_import_files.js',
+		expression: 'sse_response.errors',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_import_files/js/render_tool_import_files.js',
+		expression: 'sse_response.data.msg',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_import_files/js/render_tool_import_files.js',
+		expression: 'data.msg',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_propagate_component_data/js/render_tool_propagate_component_data.js',
+		expression: 'sse_response.errors',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_propagate_component_data/js/render_tool_propagate_component_data.js',
+		expression: 'sse_response.data.msg',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_propagate_component_data/js/render_tool_propagate_component_data.js',
+		expression: 'data.msg',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_update_cache/js/render_tool_update_cache.js',
+		expression: 'sse_response.data.msg',
+		reason: FRAME_REASON,
+	},
+	{
+		file: 'tools/tool_update_cache/js/render_tool_update_cache.js',
+		expression: 'data.msg',
+		reason: FRAME_REASON,
+	},
+	// ── payload keys (a diagnostic list beside the summary) ───────────────────
+	{
+		file: 'tools/tool_hierarchy/js/render_tool_hierarchy.js',
+		expression: 'api_response_data.errors',
+		reason: PAYLOAD_REASON,
+	},
+	{
+		file: 'tools/tool_image_rotation/js/render_tool_image_rotation.js',
+		expression: 'rotation_data.errors',
+		reason: `${PAYLOAD_REASON} — the per-tier rotation failures (tools/tool_image_rotation/server/index.ts)`,
+	},
+	{
+		file: 'tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js',
+		expression: 'report.errors',
+		reason: `${PAYLOAD_REASON} — one file's read/import problems in the batch report`,
+	},
+	{
+		file: 'tools/tool_import_dedalo_csv/js/render_tool_import_dedalo_csv.js',
+		expression: 'issue.msg',
+		reason:
+			'a per-row import ISSUE record inside the report payload (src/core/tools/import_conform.ts)',
+	},
+	{
+		file: 'tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js',
+		expression: 'files_data?.errors',
+		reason: `${PAYLOAD_REASON} — the per-file CSV read problems (tools/tool_import_dedalo_csv/server/index.ts getCsvFiles)`,
+	},
+	{
+		file: 'tools/tool_import_files/js/render_tool_import_files.js',
+		expression: 'report.errors',
+		reason: `${PAYLOAD_REASON} — the per-file import failures`,
+	},
+	{
+		file: 'tools/tool_import_rdf/js/render_tool_import_rdf.js',
+		expression: 'rdf_payload.errors',
+		reason: `${PAYLOAD_REASON} — the per-URI refusals (tools/tool_import_rdf/server/index.ts getRdfData)`,
+	},
+	{
+		file: 'tools/tool_media_versions/js/render_tool_media_versions.js',
+		expression: 'data.errors',
+		reason: `${PAYLOAD_REASON} — what a mutating media action reports beside what it did`,
+	},
+	{
+		file: 'tools/tool_ontology/js/render_tool_ontology.js',
+		expression: 'ontology_data.errors',
+		reason: `${PAYLOAD_REASON} — the per-record notes of an ontology write`,
+	},
+	{
+		file: 'tools/tool_propagate_component_data/js/render_tool_propagate_component_data.js',
+		expression: 'report.errors',
+		reason: `${PAYLOAD_REASON} — the per-record propagation failures`,
+	},
+	// ── named FAILURE extension keys (ERRORS_SPEC §3.0) ───────────────────────
+	{
+		file: 'tools/tool_hierarchy/js/render_tool_hierarchy.js',
+		expression: 'api_response.errors',
+		reason:
+			'NAMED failure extension key (tools/tool_hierarchy/server/tool_hierarchy.ts throws `extend:{state, errors}`) — the per-check detail',
+	},
+	{
+		file: 'tools/tool_ontology_parser/js/render_tool_ontology_parser.js',
+		expression: 'api_response.errors',
+		reason:
+			'NAMED failure extension key (tools/tool_ontology_parser/server/tool_ontology_parser.ts batchFailed `extend:{errors, ar_msg}`) — the per-TLD detail',
+	},
+];
+
+/** The exclusions declared for one file (repo-relative path). */
+export function exclusionsFor(file: string): readonly ReadExclusion[] {
+	return READ_EXCLUSIONS.filter((entry) => entry.file === file);
+}
+
+/**
+ * Blank every allowlisted expression in `source` so the token scan cannot see
+ * it, and report how many times each entry matched (0 ⇒ a stale excuse).
+ */
+export function applyExclusions(
+	source: string,
+	exclusions: readonly ReadExclusion[],
+): { source: string; hits: number[] } {
+	let scrubbed = source;
+	const hits = exclusions.map((entry) => {
+		const parts = scrubbed.split(entry.expression);
+		scrubbed = parts.join(' '.repeat(entry.expression.length));
+		return parts.length - 1;
+	});
+	return { source: scrubbed, hits };
+}
 
 export interface FileCompatReads {
 	/** Repo-relative, forward slashes. */
@@ -139,7 +380,11 @@ export function discoverFiles(): string[] {
 export function census(): FileCompatReads[] {
 	return discoverFiles().map((file) => {
 		const source = readFileSync(join(REPO_ROOT, file), 'utf8');
-		return { file, ...countCompatReads(source) };
+		// The allowlisted non-envelope expressions are blanked FIRST (data +
+		// reason, above): they are permanent reads that must outlive the compat
+		// block, so counting them would freeze the census above zero.
+		const scrubbed = applyExclusions(source, exclusionsFor(file)).source;
+		return { file, ...countCompatReads(scrubbed) };
 	});
 }
 

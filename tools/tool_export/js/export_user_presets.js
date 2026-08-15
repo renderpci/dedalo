@@ -39,6 +39,7 @@
 
 // import
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 
 
@@ -539,12 +540,12 @@ export const create_new_export_preset = async function(options) {
 			use_worker	: true
 		})
 
-		if (!api_response.result || api_response.result <= 0) {
+		// envelope v2: `create` answers with the new section_id as the payload
+		const new_section_id = response_data(api_response)
+		if (!new_section_id || new_section_id <= 0) {
 			console.error('Error on create new export preset section. api_response:', api_response);
 			return false
 		}
-
-		const new_section_id = api_response.result
 
 	// save the preset components in parallel
 		const save_promises = []
@@ -679,7 +680,7 @@ export const save_export_preset = async function(options) {
 		})
 
 	// error check
-		if (!api_response.result) {
+		if (request_failed(api_response) || !response_data(api_response)) {
 			console.error(`Error on save export preset (${section_tipo} - ${section_id}). api_response:`, api_response);
 			return false
 		}

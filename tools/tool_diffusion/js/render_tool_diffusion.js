@@ -15,7 +15,7 @@
 	// normalize_stream_error and routed by the shared dispatcher — the report
 	// panel below keeps rendering the per-record error list, which is a RESULT,
 	// not the failure that stopped the job.
-	import {is_api_error, normalize_stream_error, request_failed} from '../../../core/common/js/api_error.js'
+	import {is_api_error, normalize_stream_error, request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	// The ONE error text resolver: label_key → English message → code. Used for
 	// the coded `connection_status` verdict below (a payload, not an envelope).
@@ -163,7 +163,7 @@ const get_content_data = async function(self) {
 
 	// bun_status
 		const bun_status = self.bun_status || {}
-		const bun_status_class = bun_status.result === true ? 'bun_status ready' : 'bun_status fail'
+		const bun_status_class = bun_status.ready === true ? 'bun_status ready' : 'bun_status fail'
 		const bun_status_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: bun_status_class,
@@ -178,7 +178,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
+			text_content	: bun_status.label || (bun_status.ready === true ? 'Ready' : 'Unavailable'),
 			parent			: bun_status_node
 		})
 
@@ -213,7 +213,8 @@ const get_content_data = async function(self) {
 		const refresh_pending_deletions = function() {
 			self.retry_pending_deletions({count_only: true})
 			.then(function(response){
-				const pending = response.result?.pending ?? 0
+				// envelope v2 payload: `{summary, total, retried, remaining}`
+				const pending = response_data(response)?.remaining ?? 0
 				if (pending > 0) {
 					pending_deletions_value.textContent = pending
 					pending_deletions_node.classList.remove('hide')
@@ -229,8 +230,13 @@ const get_content_data = async function(self) {
 			self.retry_pending_deletions({})
 			.then(function(response){
 				pending_deletions_button.disabled = false
-				if (response.msg) {
-					pending_deletions_value.textContent = response.msg
+				// the run's own sentence is the payload's `summary`; a refusal
+				// carries the coded, translated error instead
+				const retry_line = request_failed(response)
+					? error_text(response.error)
+					: response_data(response)?.summary
+				if (retry_line) {
+					pending_deletions_value.textContent = retry_line
 				}
 				refresh_pending_deletions()
 			})
@@ -1317,8 +1323,9 @@ const build_stream_handlers = function(options) {
 				// that helper is insertAdjacentHTML (ui.js:2035), and data.msg
 				// carries server exception text and file paths straight from the
 				// engine. This is the XSS fix for both former call sites.
-				const line = (sse_response?.data?.msg)
-					? String(sse_response.data.msg)
+				const frame_msg = sse_response?.data?.msg
+				const line = frame_msg
+					? String(frame_msg)
 					: (is_running
 						? 'Process running… please wait'
 						: 'Process completed in ' + (sse_response?.total_time ?? ''))
@@ -1420,7 +1427,7 @@ const render_run_report = function(options) {
 		severity: model.severity,
 		tables	: model.tables.rows.length,
 		nonzero	: model.tables.nonzero_count,
-		errors	: model.errors.total,
+		errors	: model.issues.total,
 		files	: model.files.entries.length,
 		causes	: model.causes.list.length
 	})
@@ -1597,8 +1604,9 @@ const render_run_report = function(options) {
 
 	// ── errors ───────────────────────────────────────────────────────────────
 	{
-		const zone = build_zone(panel, 'zone_errors', tl('errors_title', model.errors.total), null)
-		if (model.errors.total === 0) {
+		const issues = model.issues
+		const zone = build_zone(panel, 'zone_errors', tl('errors_title', issues.total), null)
+		if (issues.total === 0) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_empty',
@@ -1606,15 +1614,15 @@ const render_run_report = function(options) {
 				parent			: zone
 			})
 		} else {
-			if (model.errors.capped) {
+			if (issues.capped) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'dd_note state_warning errors_capped',
-					text_content	: tl('errors_capped_note', model.errors.total),
+					text_content	: tl('errors_capped_note', issues.total),
 					parent			: zone
 				})
 			}
-			model.errors.groups.forEach((group) => {
+			issues.groups.forEach((group) => {
 				const group_node = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'error_group',
@@ -1662,13 +1670,13 @@ const render_run_report = function(options) {
 			const raw_toggle = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'run_toggle toggle_raw_errors',
-				text_content	: tl('show_raw_errors', model.errors.raw.length),
+				text_content	: tl('show_raw_errors', issues.raw.length),
 				parent			: zone
 			})
 			const raw_errors = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'run_console raw_errors hide',
-				text_content	: model.errors.raw.join('\n'),
+				text_content	: issues.raw.join('\n'),
 				parent			: zone
 			})
 			add_toggle(raw_toggle, raw_errors, 'collapsed_tool_diffusion_report_errors_raw', false)

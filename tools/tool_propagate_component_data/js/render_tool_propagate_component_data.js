@@ -632,9 +632,11 @@ const update_process_status = (options) => {
 					// per-record failures. Also the frame's OWN `errors`: when the
 					// handler throws outright there is no report at all, and the job
 					// manager records the exception there (src/core/media/jobs.ts:630).
-					const report_errors = [
-						...(Array.isArray(report.errors) ? report.errors : []),
-						...(Array.isArray(sse_response.errors) ? sse_response.errors : [])
+					const report_failures	= report.errors
+					const frame_failures	= sse_response.errors
+					const report_errors		= [
+						...(Array.isArray(report_failures) ? report_failures : []),
+						...(Array.isArray(frame_failures) ? frame_failures : [])
 					]
 					if (report_errors.length>0) {
 						// TEXT nodes + real <br> elements: server text (record ids,
@@ -675,10 +677,8 @@ const update_process_status = (options) => {
 
 				// Choose the best available message: compound when the server sends a
 				// real msg; a generic wait/done string otherwise.
-				const msg = sse_response
-							&& sse_response.data
-							&& sse_response.data.msg
-							&& sse_response.data.msg.length>5
+				const frame_line = sse_response && sse_response.data && sse_response.data.msg
+				const msg = (typeof frame_line==='string' && frame_line.length>5)
 					? compound_msg(sse_response)
 					: is_running
 						? 'Process running... please wait'
