@@ -72,6 +72,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
+	import {attach_picker} from '../../../core/area_thesaurus/js/thesaurus_picker.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
 	import {tag_note} from './tag_note.js'
 
@@ -374,9 +375,9 @@ tool_indexation.prototype.init = async function(options) {
 *      `people_section.linker = self.indexing_component` so that clicking a person in
 *      the left viewer creates an index relation via the indexing_component.
 *
-*   5. **area_thesaurus** — Locates the thesaurus area; sets
-*      `context.thesaurus_mode = 'relation'`, `caller = self`, and
-*      `linker = self.indexing_component` so term selections create index locators.
+*   5. **area_thesaurus** — Locates the thesaurus area and wires it as a term picker
+*      for the indexing_component through `attach_picker` (thesaurus_picker.js), which
+*      owns the mode, the caller and the linker so term selections create index locators.
 *
 *   6. **status_user_component / status_admin_component** — Located by role; rendered
 *      later as mini workflow-state controls in the toolbar.
@@ -512,11 +513,17 @@ tool_indexation.prototype.build = async function(autoload=false) {
 				console.error('error:', self.error);
 				return true
 			}
-			// set instance in thesaurus mode 'relation'
-			// 'relation' mode causes term clicks to create locators rather than navigate the tree.
-			self.area_thesaurus.context.thesaurus_mode	= 'relation';
-			self.area_thesaurus.caller					= self;
-			self.area_thesaurus.linker					= self.indexing_component;
+			// picker. THE one wiring of "this thesaurus picks terms for that component"
+			// (mode + caller + linker), replacing the three assignments made here before.
+			// 'relation' mode causes term clicks to select terms rather than navigate the tree.
+			// (!) This tool's area read carries no picker_caller — it opens the thesaurus as
+			// its own indexing surface and has no caller ddo for the server to derive a mode
+			// from — so attach_picker applies the documented tool-declared exemption and sets
+			// relation mode itself. Behaviour is identical to the assignments it replaces.
+			attach_picker(self.area_thesaurus, {
+				linker	: self.indexing_component,
+				caller	: self
+			})
 
 		// status_user. control the tool status process for users
 			const status_user_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_user_component");

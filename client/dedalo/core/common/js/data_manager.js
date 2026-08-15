@@ -599,7 +599,16 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 			// 403 rides the same exemption for the same reason
 			// (WC-2026-08-12-authorization-denial-token): an authorization refusal is
 			// an ANSWER, not a transport failure, and retrying it is meaningless.
-			if (!response?.ok && response?.status !== 401 && response?.status !== 403) {
+			// 409 rides it too, and for the third time the same reason: a CONFLICT is
+			// the server's ANSWER about the request's subject, not a transport
+			// failure. The picker's "no active hierarchy is configured for this
+			// component target" is a 409; thrown here it never reached `.json()`, so
+			// the named reason the server took care to state was replaced by a
+			// generic red transport error and the operator was told nothing.
+			// Retrying it is meaningless — the configuration will not change between
+			// attempts.
+			const answered_statuses = [401, 403, 409]
+			if (!response?.ok && !answered_statuses.includes(response?.status)) {
 				throw new HttpError(response.status, response.statusText, response);
 			}
 

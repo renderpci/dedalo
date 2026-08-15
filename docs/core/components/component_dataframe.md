@@ -298,10 +298,9 @@ The frame stays attached to portal row `id:1` even if that locator is later re-p
 
 A `component_dataframe` is created as an ontology node whose `model` is `component_dataframe`. Its `parent` is normally the **main component** it extends; its portal `request_config` points at the frame **target section** (the section whose records hold the frame fields). Like the portal model it shares, it is non-translatable, so its language is `lg-nolan`.
 
-Node definition (shape):
-
 Node definition of the live slot `oh115` (the role frame of the `oh24` portal,
-in section `oh1`):
+in section `oh1`) — its `properties` block is shown in full immediately below,
+so it is omitted here rather than shown empty:
 
 ```json
 {
@@ -311,17 +310,19 @@ in section `oh1`):
     "section_tipo" : "oh1",
     "lg-eng"       : "Role",
     "lg-spa"       : "Rol",
-    "translatable" : false,
-    "properties"   : { }
+    "translatable" : false
 }
 ```
 
 Its live `properties` block — a portal `source` whose `sqo.section_tipo` is the
-frame target. Here the target is resolved dynamically from
-`hierarchy_types: 4` (which expands to the role/uncertainty hierarchy sections
-`ds1`, `roleusr1`, `rolejob1`, `rolepos1`, `uncertainty1`) rather than named
-literally; a fixed target uses `{"value": ["<section>"], "source": "section"}`
-instead, as `numisdata1447` does with `rsc1242` further below.
+frame target. Here the target is resolved dynamically from `hierarchy_types: 4`
+rather than named literally: that expands to **all ACTIVE hierarchies of
+typology 4 on this installation**, which on `monedaiberica` are the five
+sections `ds1`, `roleusr1`, `rolejob1`, `rolepos1` and `uncertainty1` (measured;
+another installation registering fewer of them, or having deactivated some,
+resolves fewer — one archive here resolves `ds1` alone). A fixed target uses
+`{"value": ["<section>"], "source": "section"}` instead, as `numisdata1447` does
+with `rsc1242` further below.
 
 ```json
 {
@@ -562,6 +563,18 @@ The dataframe surface is intentionally minimal: a small button per value item. V
 | `default` | yes | yes | Round `button.activate` showing `properties.label` (or `?`). With no frame yet, first interaction reveals a `button.add` (the `+`) that creates the target record; with a frame, it opens the target section in a modal. |
 | `mini` | yes | yes | Same button rendered inside a `component_dataframe_mini` wrapper for tight spaces (e.g. inline next to a value). No add/modal chrome beyond the button. |
 | `line` | yes | yes | Inline variant; used by `component_iri`, where the dataframe button sits inside a `column_component_dataframe` next to the IRI's input. |
+| `tree` | yes | — | Inherited from the portal, not declared here: the client module **is** [component_portal](component_portal.md), so `properties.view: "tree"` in edit mode routes to the portal's [term picker](component_portal.md#tree-view-the-term-picker) and the frame's target thesaurus opens for picking. `oh115` is the live example (its target is resolved from `hierarchy_types`). |
+
+!!! warning "`view: "tree"` in **list** mode has no renderer"
+    The list dispatcher prefixes a dataframe's view with `dataframe_`, so a node
+    declaring `mode: "list", view: "tree"` asks for a `dataframe_tree` route — and there
+    is no such case. It falls through to the **default portal** list view, so the cell
+    renders something, just not what the declaration asked for. It is declared live on
+    `monedaiberica`: the `section_list` nodes `rsc1442`, `rsc1443` and `rsc1444` (all on
+    section `rsc197`) each carry a `ddo_map` entry with `"mode": "list", "view": "tree"`
+    for the dataframe slots `rsc1433`, `rsc1434` and `rsc1057`. The capability they
+    anticipate is editing a frame from the list without opening the record, which is not
+    implemented. Declare `mode: "edit"` for the picker.
 
 Modes:
 

@@ -131,8 +131,73 @@ onto it:
 
 - `section_tipo` is set to the **area tipo**, so the search panel can store
   per-area presets against it;
-- `thesaurus_mode` is set from the area node's `properties.thesaurus_mode`,
-  defaulting to `'default'`.
+- `thesaurus_mode` says whether this read is an ordinary browse (`default`) or a
+  term **picker** (`relation`). It is **derived by the server** — see below.
+
+### `thesaurus_mode` is server-derived, not requested
+
+The mode is never taken from the request. A read that names no caller is a browse
+and is stamped from the area node's own `properties.thesaurus_mode` (defaulting to
+`default`), which is the **install default** for that area page. A read that names a
+caller is stamped with the mode the server derived from that caller, and the area
+property does not enter into it: a picker request cannot be handed a mode its caller
+did not earn.
+
+!!! warning "A mode the client declares is a mode anyone can declare"
+    Accepting `thesaurus_mode` from the request would let any read open relation mode
+    over any thesaurus, with no component that ever asked to pick terms. The request
+    names an address (the caller) that the server re-resolves; it never names a
+    conclusion the server adopts.
+
+## The term picker (relation mode)
+
+A relation component whose ontology declares `properties.view: "tree"` opens its
+target thesaurus as a **picker**: the same tree read, rendering a link affordance per
+term instead of navigating to it. The picker is not a second area — it is this read,
+with a caller.
+
+**The request declares the caller.** `source.caller` carries
+`{section_tipo, section_id, tipo}` — the record and component the picked terms will be
+linked into. A malformed caller, a caller naming an element the ontology does not
+define, and a caller whose section holds no records are each refused with their own
+named `400`.
+
+**The server derives the rest**, and grants relation mode only when all three hold:
+the caller's resolved view is `tree`, its model stores relations, and the user has
+edit permission on it. Otherwise the read proceeds in `default` mode.
+
+In relation mode the response carries three extra facts, all absent from a browse read:
+
+| Field | Where | What |
+| --- | --- | --- |
+| `thesaurus_mode` | `context[0]` | `"relation"` |
+| `picker` | `context[0]` | `{selection_limit, remaining, targets}` — the caller's cap and the sections it may link into |
+| `root_terms_selectable` | each hierarchy item in `data[0].value` | `[{section_tipo, section_id, selectable}]`, one entry per root term |
+
+- **`selection_limit`** is the caller's `data_limit`: `null` means uncapped, and a
+  literal `0` means nothing may be linked.
+- **`remaining`** is that limit minus the locators the caller already holds. It — not
+  the limit — is what one picker session may add: a component with `data_limit: 2`
+  already holding one term accepts exactly one more pick. When it reaches `0` the tree
+  still browses, and says why, instead of offering a link that would be refused.
+- **`targets`** narrows the hierarchies the read returns to the caller's own target
+  sections (virtual and real sections are matched against each other, so a virtual
+  target still finds its hierarchy).
+- **`selectable`** is the **term's own** answer, the same flag the indexation tool has
+  always used: a term is linkable when the thesaurus says so, term by term. A term that
+  is not selectable stays visible and navigable — those are the levels one passes
+  through to reach a leaf — and simply carries no link affordance.
+
+Two empty pickers are two different facts, and the read distinguishes them: everything
+refused by permissions answers `403` with a message that names nothing (naming what you
+may not see is itself a leak), while a target that declares no active hierarchy — or
+none among this caller's targets — answers `409 read: no active hierarchy is configured
+for this component target`, which is a configuration problem, not a permission one.
+
+!!! note "The affordance is not the authorization"
+    The same cap and the same target set are resolved again when the pick is saved, by
+    the same module. What the tree offers and what the save accepts are literally the
+    same value, so a stale or altered client cap changes nothing.
 
 !!! warning "The context must never be empty"
     An area read that returns an empty `context` makes the client render the area

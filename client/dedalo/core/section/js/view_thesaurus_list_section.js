@@ -15,6 +15,11 @@
 	} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
+	import {
+		get_picker,
+		render_term_pick_control,
+		term_selectability
+	} from '../../area_thesaurus/js/thesaurus_picker.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
 	// // import {
@@ -31,9 +36,10 @@
 * that display thesaurus terms. It differs from the generic list view in two
 * main ways:
 *
-*   1. It injects its own render_column_id callback that handles the term-linking
-*      workflow used by tool_indexation and the DS (Document Server) window opener,
-*      rather than the standard edit/navigate buttons of the generic list.
+*   1. It injects its own render_column_id callback that offers the term-picking
+*      affordance (built by the shared thesaurus_picker module) instead of the
+*      standard edit/navigate buttons of the generic list. This is what makes a
+*      SEARCH RESULT pickable — the primary way into a large thesaurus.
 *
 *   2. rebuild_columns_map is a module-private function (not a method on the
 *      exported namespace), so callers cannot override it. This keeps the thesaurus
@@ -48,7 +54,7 @@
 *   rebuild_columns_map — prepends the thesaurus section_id column to columns_map
 *   get_buttons         — builds the toolbar (search toggle only)
 *   render_column_id    — builds the id-column fragment for a single row;
-*                         handles the tool_indexation link-term workflow
+*                         renders the picker's term control when a picker is attached
 *
 * DOM structure produced by render():
 *   <section id="{self.id}" class="wrapper_section …">
@@ -478,25 +484,25 @@ const get_buttons = function(self) {
 *
 * This is the thesaurus-specific variant of render_column_id. Unlike the
 * generic version in render_list_section.js it only handles a single use-case:
-* linking a thesaurus term to a portal via the tool_indexation workflow.
+* picking a thesaurus term for the caller component that opened this thesaurus.
 *
 * Behaviour by context:
 *
-*   tool_indexation initiator (self.initiator contains 'tool_indexation_'):
-*     A link button is rendered next to the section_id span. Clicking it
-*     publishes the 'link_term_{linker_id}' event_manager channel, passing
-*     { section_tipo, section_id, label }. The event is published on:
-*       - window.opener.event_manager  when self.caller.area_thesaurus.linker.caller
-*         is null (DS window-opener scenario — the thesaurus was opened in a new
-*         browser window by a Document Server page).
-*       - window.event_manager         in the standard indexation case (thesaurus
-*         rendered inside an iframe whose parent page owns the linker component).
-*     The linker is resolved from self.caller.area_thesaurus.linker, where
-*     self.caller is the area_thesaurus instance. It is expected to be a
-*     component_portal (or equivalent) that subscribes to the 'link_term_' event.
+*   A picker is attached (self.caller.area_thesaurus carries a linker stamped by
+*     attach_picker): the picker's term control is rendered around the section_id
+*     span, exactly the control the tree rows offer. Clicking it toggles the term in
+*     the picker's selection; the pick reaches the caller through the ONE publisher
+*     in thesaurus_picker.js, which also owns the window resolution this file used to
+*     duplicate. A term the server refuses (or has not answered for) renders disabled
+*     and titled with the reason — visible, never hidden.
 *
-*   No other cases: the function returns an empty fragment when self.initiator
-*     does not match 'tool_indexation_*'. (No edit/navigate buttons are added.)
+*   No picker: an empty fragment, as before (a browsed thesaurus list offers no
+*     edit/navigate buttons here).
+*
+* (!) The gate used to be `self.initiator.indexOf('tool_indexation_')!==-1`, but a
+* picker's initiator is the CALLER COMPONENT's id, not a tool name — so searching,
+* the primary way into a large thesaurus, could never pick. The gate is now "a picker
+* is attached", which is the fact the affordance actually depends on.
 *
 * Font-size adaptation:
 *   get_font_fit_size() computes a scaled font size so that long section IDs fit
@@ -508,10 +514,10 @@ const get_buttons = function(self) {
 *   When SHOW_DEBUG is true, the section_id span's title attribute is set to the
 *   paginated_key so developers can verify SQO offset arithmetic.
 *
-* (!) If linker is undefined when the link button is clicked, a console.warn is
-* emitted and the handler returns false without publishing the event. This guard
-* exists because the linker is set asynchronously during area_thesaurus.init()
-* and may not be available if the button is clicked before init completes.
+* (!) The picker is resolved once, at row build time. It is stamped on the linker by
+* attach_picker, which runs after the area is built, so a row rendered before the
+* wiring simply gets no control (and the row re-renders with one when the list is
+* refreshed) — no half-wired button that fails on click.
 *
 * @param {Object} options               - Row render options supplied by section_record.
 * @param {Object} options.caller        - The section or portal instance that owns
@@ -521,7 +527,7 @@ const get_buttons = function(self) {
 * @param {number} options.paginated_key       - Zero-based position of this row in the
 *                                              full result set; used as a debug hint.
 * @returns {DocumentFragment} Fragment containing the rendered id-column nodes.
-*   May be empty if no matching case fires in the switch.
+*   Empty when no picker is attached to this thesaurus.
 */
 const render_column_id = function(options) {
 
@@ -531,21 +537,22 @@ const render_column_id = function(options) {
 		const section_tipo	= options.section_tipo
 		const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
 
-	// permissions
-		const permissions = self.permissions
-
-	// show_interface
-		const show_interface = self.show_interface || {}
+	// (!) Neither self.permissions nor self.show_interface is read here. They were
+	// unused locals before the picker landed too, and reading them would suggest this
+	// column decides an authorization it does not: the picker's affordance follows the
+	// server's per-term answer, and the write path refuses whatever it should refuse.
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
-	// linker
-		// linker is set on the area_thesaurus instance during init() when an 'initiator'
-		// URL variable is present. The chain is: self (section) → self.caller (area_thesaurus)
-		// → self.caller.area_thesaurus.linker. When linker.caller is null the thesaurus
-		// was opened in a new window (DS scenario), so the event must target window.opener.
-		const linker = self.caller?.area_thesaurus?.linker
+	// picker
+		// The affordance depends on ONE fact: this thesaurus was opened as a picker,
+		// i.e. attach_picker stamped the picker on the linker component. The chain is
+		// self (section) → self.caller (area_thesaurus) → its linker; get_picker does
+		// that one hop and no caller-chain walk. The window resolution the retired
+		// publisher carried here lives in thesaurus_picker.publish_link_terms now.
+		const picker = get_picker(self.caller?.area_thesaurus)
+
 	// section_id
 		const section_id_node = ui.create_dom_element({
 			element_type	: 'span',
@@ -563,51 +570,46 @@ const render_column_id = function(options) {
 			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
 		}
 
-	// buttons
-		switch(true){
+	// term control. Rendered only when this thesaurus is a picker
+		if (picker) {
 
-			// initiator. is a url var used in iframe containing section list to link to opener portal
-			case (self.initiator && self.initiator.indexOf('tool_indexation_')!==-1): {
-
-				// link_button. component portal caller (link)
-					const link_button = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'link_button',
-						parent			: fragment
-					})
-					link_button.addEventListener('click', function(e) {
-						e.stopPropagation()
-
-						// publish event link_term
-						if (!linker) {
-							console.warn(`Error. self.linker is not defined.
-								Please set ts_object linker property with desired target component portal:`, self);
-							return false
-						}
-						// linker id. A component_portal instance is expected as linker
-						const linker_id = linker?.id
-						// source_window.event_manager.publish('link_term_' + linker_id,
-						// Determine which window owns the target event_manager:
-						// - window.opener: DS scenario (thesaurus opened in a new window)
-						// - window:        standard indexation (thesaurus in an iframe, same origin)
-						const window_base = !linker?.caller
-							? window.opener // case DS opening new window
-							: window // default case (indexation)
-						window_base.event_manager.publish('link_term_' + linker_id, {
-							section_tipo	: section_tipo,
-							section_id		: section_id,
-							label			: self.label ? self.label : ''
-						})
-
-					})
-					link_button.appendChild(section_id_node)
-					// link_icon
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button arrow_link icon',
-						parent			: link_button
-					})
-				break;
+			// (!) SELECTABILITY OF A LIST ROW — AND THE KNOWN GAP.
+			// term_selectability reads the server's answer and computes none:
+			// root_terms_selectable (the area read) or the node's own is_indexable (the
+			// tree node reads). A list row is NEITHER — the section list read emits no
+			// per-row selectability today — so the answer is UNKNOWN and no control is
+			// rendered. An affordance is never offered on a guess.
+			// CONSEQUENCE, stated plainly: list-row picking is INACTIVE until the
+			// section list read emits the same isIndexable answer the tree paths already
+			// carry. Until then the row still renders its section id (see the else
+			// branch below); what it does not render is a link arrow.
+			const control = render_term_pick_control({
+				picker		: picker,
+				term		: {
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					label			: self.label ? self.label : ''
+				},
+				selectable	: term_selectability(picker, {
+					section_tipo	: section_tipo,
+					section_id		: section_id
+				}),
+				parent		: fragment
+			})
+			if (control) {
+				// list grid styling. `.column.column_section_id > .link_button` (list.less)
+				// sizes this cell; the picker's own classes carry the states.
+				control.classList.add('link_button')
+				// the id number reads first, the arrow icon after it (as before)
+				control.insertBefore(section_id_node, control.firstChild)
+			} else {
+				// (!) NO CONTROL IS NOT NO CELL. The row is not selectable (or the server
+				// answered nothing for it), so it gets no link arrow — but the SECTION ID
+				// still has to render. Appending it only inside the branch above left the
+				// id column completely empty for every list row, which is a worse
+				// regression than the missing arrow: the operator loses the record number
+				// they navigate by.
+				fragment.appendChild(section_id_node)
 			}
 		}
 

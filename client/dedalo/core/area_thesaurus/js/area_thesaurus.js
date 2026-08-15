@@ -24,13 +24,23 @@
 *  - self.context {Object}  Single context entry for self.tipo.
 *  - self.data    {Array}   Data entries for self.tipo (ts_search / typologies / value).
 *  - self.filter  {Object}  Keyed `search` instance that drives the collapsible search panel.
-*  - self.rqo     {Object}  Request query object forwarded to the API; augmented in build()
-*                           with hierarchy_sections, hierarchy_terms, thesaurus_mode, and
-*                           an optional SQO filter when search_tipos is active.
+*  - self.rqo     {Object}  Request query object forwarded to the API; carries source.caller
+*                           when this area was opened as a picker (see picker_caller), and is
+*                           augmented in build() with hierarchy_sections, hierarchy_terms,
+*                           thesaurus_mode, and an optional SQO filter when search_tipos is
+*                           active.
+*
+* Picker reads:
+*  When a relation component opens this area to pick terms, the request declares its
+*  CALLER (`rqo.source.caller`) and nothing else — the server derives the picker mode
+*  (`context.thesaurus_mode`), the hierarchy narrowing and the per-term selectability from
+*  it. This area only carries the declaration; the wiring of the picker itself belongs to
+*  the one shared module (`thesaurus_picker.js` attach_picker) and its hosts.
 *
 * Prototype chain:
 *  Constructor             → area_thesaurus (this file)
-*  Lifecycle / utilities   → common (common.prototype.refresh / destroy / build_rqo_show)
+*  Lifecycle / utilities   → common (common.prototype.refresh / build_rqo_show; destroy is
+*                            wrapped here to release this instance's keydown listener)
 *  Initialization          → area_common.prototype.init (id, mode, lang, events_tokens setup)
 *  Rendering               → render_area_thesaurus.prototype.list (assigned to both .edit and .list)
 *
@@ -39,8 +49,8 @@
 *  - Subscribes to  'render_<id>'               (restores search-panel open state on re-render).
 *  - Publishes      'render_instance'            after each render() call.
 *  - Registers a global 'keydown' listener (Ctrl+M) via dd_request_idle_callback so it
-*    runs only after the initial paint. (!) The listener is never removed — callers that
-*    destroy the area should be aware of this persistent handler.
+*    runs only after the initial paint. The handler is stored on the instance
+*    (self.keydown_handler_show_models) and removed by destroy().
 */
 
 
@@ -137,6 +147,29 @@ export const area_thesaurus = function() {
 	/** @var {string|null} thesaurus_view_mode - View mode controlling whether model nodes are editable: 'model' | 'default' | null. Sourced from options.config or URL param. */
 	this.thesaurus_view_mode
 
+	// picker_caller: the ddo that opened this area as a term picker
+	/**
+	* @var {Object|null} picker_caller
+	* {section_tipo, section_id, tipo} of the relation component that opened this area to
+	* pick terms. Set in init() from options.config (in-page host) or the URL param (picker
+	* window reload); folded into rqo.source.caller by build()'s generate_rqo so it rides the
+	* FIRST read. Null on an ordinary browse.
+	*/
+	this.picker_caller = null
+
+	/**
+	* @var {Object|null} picker
+	* The picker wired onto this area by thesaurus_picker.js attach_picker (set by the host,
+	* not here). Read in render() only to report a granted-but-unwired picker.
+	*/
+	this.picker = null
+
+	/** @var {boolean} picker_missing_reported - True once render() reported a granted picker read with no picker attached (reported once per instance). */
+	this.picker_missing_reported = false
+
+	/** @var {Function|null} keydown_handler_show_models - Document keydown listener (Ctrl+M) installed by init(); removed by destroy(). */
+	this.keydown_handler_show_models = null
+
 	// // model_value_is_hide : bool default false. Used to store the Ontology model_value hidden status
 	// // An event to keydown Ctr + m fires the changes in this property and is read by ts_object when render
 	// // the ts_line (list_thesaurus_element model_value div node)
@@ -154,8 +187,9 @@ export const area_thesaurus = function() {
 * COMMON FUNCTIONS
 * Prototype assignments that wire shared lifecycle and render methods onto area_thesaurus.
 *
-* refresh / destroy / build_rqo_show  — delegated to common so all areas share the same
-*   implementation (session handling, dependency teardown, rqo construction).
+* refresh / build_rqo_show  — delegated to common so all areas share the same
+*   implementation (session handling, rqo construction). destroy is NOT delegated here: it
+*   is wrapped below so the instance releases the document listener it installed itself.
 * edit / list / relation — all point to render_area_thesaurus.prototype.list because the
 *   thesaurus area only has a single view mode (the paginated tree list); there is no
 *   separate 'edit' layout distinct from 'list'.
@@ -176,11 +210,77 @@ export const area_thesaurus = function() {
 */
 // prototypes assign
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
-	area_thesaurus.prototype.destroy		= common.prototype.destroy
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	area_thesaurus.prototype.edit			= render_area_thesaurus.prototype.list
 	area_thesaurus.prototype.list			= render_area_thesaurus.prototype.list
 	area_thesaurus.prototype.relation		= render_area_thesaurus.prototype.list
+
+
+
+/**
+* DESTROY
+* Lifecycle teardown. Releases the document-level Ctrl+M listener this instance installed
+* in init() and then delegates to the shared common implementation (dependency cascade,
+* self removal, DOM removal).
+*
+* The listener is the instance's own: init() adds it to `document`, so nothing else can
+* reach it once the instance is gone. Every picker open/close cycle used to leave one
+* behind, and accumulated identical handlers cancel each other out (Ctrl+M stops working
+* page-wide).
+*
+* (!) It is released ONLY when delete_self is true. build() calls destroy(false, true,
+* false) on every rebuild to reclaim the previous tree while this area keeps running —
+* dropping the listener there would break Ctrl+M after the first search or refresh.
+*
+* @param {boolean} [delete_self=true] - Destroy this instance itself.
+* @param {boolean} [delete_dependencies=false] - Destroy the registered dependent instances.
+* @param {boolean} [remove_dom=false] - Remove the wrapper node from the DOM.
+* @returns {Promise<Object>} The common.prototype.destroy result object.
+*/
+area_thesaurus.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// keydown listener (Ctrl+M, show_models toggle) installed by init
+		if (delete_self===true && self.keydown_handler_show_models) {
+			document.removeEventListener('keydown', self.keydown_handler_show_models)
+			self.keydown_handler_show_models = null
+		}
+
+	return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+}//end destroy
+
+
+
+/**
+* PARSE_PICKER_CALLER
+* Decode the JSON-encoded `picker_caller` URL param into the caller object the request
+* declares (`rqo.source.caller`).
+*
+* The decoded object is forwarded VERBATIM, without a shape check: the server
+* shape-validates the caller and refuses a malformed one with a named 400. A second,
+* client-side validator would be a second authority able to disagree with it — and a
+* client that silently dropped a caller it did not like would turn a picker into an
+* ordinary browse with no explanation.
+*
+* Only an undecodable param is dropped here (there is nothing to forward), and loudly.
+*
+* @param {string|Array|undefined} raw - Raw URL param value.
+* @returns {Object|null} The decoded caller, or null when the param is absent/undecodable.
+*/
+const parse_picker_caller = function(raw) {
+
+	if (!raw) {
+		return null
+	}
+
+	try {
+		return JSON.parse(raw)
+	} catch (error) {
+		console.error('(!) Ignored malformed picker_caller URL param (not valid JSON):', raw, error);
+		return null
+	}
+}//end parse_picker_caller
 
 
 
@@ -204,13 +304,14 @@ export const area_thesaurus = function() {
 *  - Reads/migrates the 'show_models' preference (localStorage → local DB).
 *  - Installs a global 'keydown' listener that toggles '.model_value' visibility
 *    and persists the change to the local DB 'status' table.
-*  - (!) The keydown listener is attached to document and is never removed on
-*    instance destroy. Multiple area instantiations on the same page will
-*    accumulate listeners.
+*  - The listener is kept in self.keydown_handler_show_models so destroy() can
+*    remove it; see destroy() for why it is released only on a full destroy.
 *
 * URL params consumed (via url_vars_to_object):
 *  - initiator      {string} JSON-encoded caller id. Sets self.linker for DS (DataService) deep-links.
 *  - thesaurus_view_mode  {string} 'model'|'default'|null.
+*  - picker_caller  {string} JSON-encoded {section_tipo, section_id, tipo} of the component
+*                   that opened this area as a term picker. See self.picker_caller.
 *  - search_tipos   {string} Comma-separated tipo list (area_ontology only).
 *
 * @param {Object} options - Initialization options forwarded from the area page bootstrap.
@@ -322,7 +423,16 @@ area_thesaurus.prototype.init = async function(options) {
 							}
 						}
 					}
-					document.addEventListener('keydown', keydown_handler)
+					// The idle callback can fire after a fast open/close cycle (a picker host
+					// builds and destroys the area within one frame). Installing on a
+					// destroyed instance would leave a listener nothing can remove.
+					if (self.status==='destroyed') {
+						return
+					}
+					// keep the reference on the instance: it is the only way destroy()
+					// can take this listener off document again (see destroy).
+					self.keydown_handler_show_models = keydown_handler
+					document.addEventListener('keydown', self.keydown_handler_show_models)
 				}
 			)
 
@@ -343,6 +453,20 @@ area_thesaurus.prototype.init = async function(options) {
 		// Priority: programmatic options (e.g. tool open) → URL param (page reload) → null.
 		self.thesaurus_view_mode = options.config?.thesaurus_view_mode // init options case
 			|| url_vars.thesaurus_view_mode // page reload case
+			|| null
+
+	// picker_caller: {section_tipo, section_id, tipo}|null
+		// The caller ddo that opened this area as a term picker. It is the ONLY thing a
+		// picker request declares: the server derives the picker mode
+		// (context.thesaurus_mode), the hierarchy narrowing and the per-term selectability
+		// from this caller. The client declares no conclusion of its own.
+		// Priority: programmatic options (the in-page picker host) → URL param (picker
+		// window reload) → null (ordinary browse).
+		// (!) Read here, at init, because generate_rqo must fold it into the request BEFORE
+		// build_autoload: a boot page performs exactly one read, and a caller that arrives
+		// after it changes nothing.
+		self.picker_caller = options.config?.picker_caller // init options case
+			|| parse_picker_caller(url_vars.picker_caller) // page reload case
 			|| null
 
 	// search tipos
@@ -469,6 +593,9 @@ const parse_search_tipos_filter = function (search_tipos) {
 *  1. generate_rqo() is called before the API fetch so the request is ready.
 *     At this point context may not yet be loaded, so request_config_object falls
 *     back to an empty object and build_rqo_show creates a minimal rqo.
+*     The picker caller (self.picker_caller) is folded in this first pass — it is
+*     an instance field, not a context value, precisely so it rides the only read
+*     a boot page performs.
 *  2. After api_response is processed and context is available, generate_rqo() is
 *     called again so that hierarchy_sections / hierarchy_terms / thesaurus_mode —
 *     values that live in context — are correctly folded into rqo.source.
@@ -540,6 +667,16 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			self.rqo.source.build_options = {
 				terms_are_model : (self.thesaurus_view_mode==='model')
 			}
+
+			// picker caller. The one declaration a picker request makes (@see init picker_caller).
+			// Folded HERE, inside generate_rqo, because generate_rqo is awaited before
+			// build_autoload: a boot page performs exactly one read, so the caller has to ride
+			// that first request or the server derives nothing from it.
+			// Only set when declared: adding the key unconditionally would change the request
+			// shape of every ordinary thesaurus read.
+			if (self.picker_caller) {
+				self.rqo.source.caller = self.picker_caller
+			}
 		}
 		await generate_rqo()
 
@@ -605,8 +742,13 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
 			// rqo config
-			// Augment rqo with tree-structure params from context so the server
-			// knows which sections form the hierarchy and which display mode to use.
+			// Echo the tree-structure params the server answered with back onto the rqo of
+			// the follow-up reads (refresh / search).
+			// (!) These three are the server's OWN answers travelling back to it, never a
+			// client declaration: hierarchy_sections / hierarchy_terms / thesaurus_mode are
+			// derived server-side (from the area node's properties, and from source.caller
+			// on a picker read). The picker mode in particular is granted by the server and
+			// is never asserted from here.
 				if(self.context.hierarchy_sections){
 					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
 				}
@@ -701,6 +843,13 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 * self.mode. After the node is in the DOM, publishes 'render_instance' so the
 * page menu and any other listeners can update their section labels.
 *
+* Picker check: a read that declared a caller AND was granted relation mode by the server
+* must have a picker wired onto it before it paints — the tree rows reach the picker
+* through the linker they already carry (render_area_thesaurus passes self.linker to every
+* ts_object). Wiring is the host's job (thesaurus_picker.js attach_picker); this area never
+* builds one. A granted read that renders without a picker would paint a tree whose picks
+* can never be published, so it is reported once, loudly, instead of browsing silently.
+*
 * @param {Object} [options={}] - Render options forwarded to common.prototype.render.
 *   render_level {string} 'full' (rebuild wrapper + content) | 'content' (update content only).
 * @returns {Promise<HTMLElement>} The first DOM node stored in self.node.
@@ -708,6 +857,21 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 area_thesaurus.prototype.render = async function(options={}) {
 
 	const self = this
+
+	// picker check. Granted by the server, but nothing wired it
+		if (self.picker_caller
+			&& self.context?.thesaurus_mode==='relation'
+			&& !self.picker
+			&& self.picker_missing_reported===false) {
+			self.picker_missing_reported = true
+			console.error(
+				'(!) [area_thesaurus] the server granted picker (relation) mode for the declared'
+				+ ' caller, but no picker is wired onto this area. Whatever mounted it must call'
+				+ ' attach_picker (core/area_thesaurus/js/thesaurus_picker.js) before render.'
+				+ ' Caller:',
+				self.picker_caller
+			);
+		}
 
 	// call generic common render
 		const result_node = await common.prototype.render.call(this, options)

@@ -20,10 +20,10 @@
 *   When that expectation is violated (e.g. the user lacks delete permission and the
 *   `remove` column is absent), the CSS grid template is recomputed dynamically via
 *   `set_element_css` so the layout still fits.
-* - The toolbar disables `button_add`, `button_link`, `button_list`, and
-*   `button_fullscreen` unconditionally (all set to `false` in `show_interface`), leaving
-*   only `button_tree` active.  The tree selector is the canonical way to attach new terms
-*   in this view.
+* - The toolbar leaves only `button_tree` active (the tree picker is the canonical way to
+*   attach new terms in this view). It is DECLARED on the view's registration entry in
+*   `component_portal.js` and composed once by `component_portal.prototype.build`; this
+*   module writes no `show_interface` flag, so there is exactly one writer per view.
 * - `get_section_records` is called in `'list'` mode (not `'tree'` mode) so the child
 *   section records use their own list render, not a further recursive tree render.
 * - Like other portal views, a `render_level='content'` early return lets callers
@@ -79,8 +79,8 @@ export const view_tree_edit_portal = function() {
 * Two execution paths are controlled by `options.render_level`:
 *
 * - `'full'` (default): constructs the full wrapper with toolbar, grid layout, and
-*   section records.  The `show_interface` flags are set here to suppress all toolbar
-*   buttons except `button_tree`, which is the canonical interaction for this view.
+*   section records.  The `show_interface` flags are NOT written here — they are declared
+*   on the view registration and composed by `component_portal.prototype.build`.
 *   When the effective column count differs from the expected value of 2
 *   (content columns + remove), the CSS grid-template-columns is overridden via
 *   `set_element_css` so the layout adapts (e.g. when permissions < 2 and the remove
@@ -94,7 +94,6 @@ export const view_tree_edit_portal = function() {
 *   - Populates `self.columns_map` with the rebuilt column descriptor array (once per
 *     render; subsequent calls return immediately via `self.fixed_columns_map`).
 *   - Pushes all section_record instances onto `self.ar_instances` for lifecycle cleanup.
-*   - Sets `self.show_interface` flags (unconditional — overwrites any previous values).
 *   - May inject a dynamic CSS rule via `set_element_css` when column count ≠ 2.
 *
 * @param {Object} self - The `component_portal` instance.
@@ -127,16 +126,19 @@ view_tree_edit_portal.render = async function(self, options) {
 			return content_data
 		}
 
-	// show interface
-		// (!) All toolbar buttons are forced off here except button_tree.
-		// The tree selector is the only supported way to add terms in this view.
-		self.show_interface.button_tree			= true
-		self.show_interface.button_add			= false
-		self.show_interface.button_link			= false
-		self.show_interface.button_list			= false
-		self.show_interface.button_fullscreen	= false
-
 	// buttons
+		// (!) THE TOOLBAR IS NOT WRITTEN HERE. This view used to overwrite
+		// button_tree/add/link/list/fullscreen at this point — AFTER
+		// component_portal.prototype.build's tool-caller switch had already composed
+		// show_interface — so which of the two won was last-writer-wins by accident.
+		// The toolbar is DECLARED as data on the view's registration entry
+		// (component_portal.js render_views, the {view:'tree', mode:'edit'} entry) and
+		// build() composes it ONCE, with the tool-caller and source.mode constraints
+		// still applying. One writer per view; a comment is not a gate, the declaration is.
+		// (!) show_autocomplete is deliberately NOT part of that declaration: a picker
+		// view ADDS an input path and removes none, so the autocomplete input a portal
+		// declares (e.g. properties.source.mode 'autocomplete') survives. That was
+		// incidental while this block existed; with the declared toolbar it is intentional.
 		const buttons = (self.permissions > 1)
 			? get_buttons(self)
 			: null
@@ -150,6 +152,18 @@ view_tree_edit_portal.render = async function(self, options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+
+	// thesaurus_pane. THE picker surface: the thesaurus rendered INLINE, in this
+	// component's own wrapper, beside the terms it feeds — the layout tool_indexation
+	// uses (its left pane), not a modal that covers the component being filled in.
+	// Built empty and hidden; component_portal.toggle_thesaurus_pane mounts the area
+	// instance on first open, through the standard instance machinery.
+		const thesaurus_pane = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'thesaurus_pane hide',
+			parent			: wrapper
+		})
+		wrapper.thesaurus_pane = thesaurus_pane
 
 		// size from style
 		// if expected number of columns (2) change, updates the columns CSS

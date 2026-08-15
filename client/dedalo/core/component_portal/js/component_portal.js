@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DD_TIPOS, DEDALO_CORE_URL */
+/* global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL */
 /* eslint no-undef: "error" */
 
 
@@ -29,7 +29,11 @@
 * Event bus tokens used by this module (all stored in `self.events_tokens` for cleanup):
 *   `initiator_link_<id>`    — user selects a record from the picker modal.
 *   `initiator_unlink_<id>`  — user removes a linked record from the picker modal.
-*   `link_term_<id>`         — thesaurus tree link button click (tree/indexation views).
+*   `link_terms_<id>`        — the term picker's confirmed selection, an ARRAY of terms
+*                              (tree/indexation views). The channel name is never composed
+*                              here: it is `PICKER_LINK_CHANNEL_PREFIX + self.id`, owned by
+*                              the ONE picker module. The retired singular `link_term_<id>`
+*                              channel carried one locator per click and is gone.
 *   `deactivate_component`   — portal loses focus; destroys any live autocomplete service.
 *   `paginator_goto_<pid>`   — paginator emits a new offset.
 *   `paginator_show_all_<pid>` — show-all button resets limit to 0.
@@ -61,6 +65,9 @@
 	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
 	import {render_search_component_portal} from '../../component_portal/js/render_search_component_portal.js'
+	// the ONE picker module: its channel prefix and its wiring call. Nothing about the
+	// picker (mode, channel name, publisher, selection cap) is re-declared here.
+	import {PICKER_LINK_CHANNEL_PREFIX, attach_picker} from '../../area_thesaurus/js/thesaurus_picker.js'
 
 
 
@@ -221,9 +228,11 @@ export const component_portal = function() {
 * Event subscriptions registered here:
 *   `initiator_link_<id>`   — user confirms selection in picker; calls `link_record`.
 *   `initiator_unlink_<id>` — user removes a record from picker; calls `unlink_record`.
-*   `link_term_<id>`        — thesaurus tree or indexation view link button; enriches
-*                             the locator with tag_id / tag_component_tipo / top_locator
-*                             before delegating to `link_record`.
+*   `link_terms_<id>`       — the term picker's confirmed selection (an ARRAY); completes
+*                             every locator with the view's own metadata
+*                             (tag_id / tag_component_tipo / top_locator in indexation view,
+*                             nothing at all in tree view) before delegating to
+*                             `link_records` — ONE save for the whole selection.
 *   `deactivate_component`  — any component blur; tears down the live autocomplete
 *                             service when this portal loses focus.
 *
@@ -312,23 +321,40 @@ component_portal.prototype.init = async function(options) {
 				event_manager.subscribe('initiator_unlink_' + self.id, initiator_unlink_handler)
 			)
 
-		// link_term. Observes thesaurus tree link index button click
-		// Published by area_thesaurus / tool_indexation when the user clicks a term's link button.
-		// The handler enriches the incoming locator with view-specific metadata before
-		// delegating to link_record().
-			const link_term_handler = async (locator) => {
+		// link_terms. Observes the term picker's CONFIRMED selection
+		// Published by the ONE publisher (thesaurus_picker.publish_link_terms) on
+		// `PICKER_LINK_CHANNEL_PREFIX + self.id`, always with an ARRAY payload — a single
+		// pick is the length-1 case, so there is no second code path for it.
+		// The handler completes every locator with the view's own metadata and hands the
+		// whole selection to link_records(): ONE save, so the server evaluates dedup and
+		// the selection cap over the batch instead of over N independent requests.
+			const link_terms_handler = async (terms) => {
+
+				// payload. Always a non-empty array
+					if (!Array.isArray(terms) || terms.length<1) {
+						console.error(
+							'(!) [component_portal.link_terms] refused: the pick payload must be a non-empty ARRAY.'
+							+ ' A publisher still sending the retired singular locator must be migrated to'
+							+ ' thesaurus_picker.publish_link_terms. Received:',
+							terms
+						);
+						return
+					}
+					// never mutate the publisher's payload: the picker keeps its selection
+					// objects alive (chips, already-linked marks) after the confirm
+					const locators = terms.map(term => clone(term))
 
 				switch (self.view) {
 					case 'indexation': {
+						// The tag decision is taken ONCE for the whole selection: it describes
+						// where the terms are being indexed, not which term was clicked.
+
 						// empty tag_id is allowed too
 						// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
 							const tag_id = self.active_tag && self.active_tag.tag
 								? self.active_tag.tag.tag_id || null
 								: null
-							if (tag_id) {
-								// overwrite/set tag_id
-								locator.tag_id	= tag_id
-							}else{
+							if (!tag_id) {
 								// No tag is selected yet; confirm whether to index the whole record
 								// (i.e. tag the relation at record level rather than at an inline tag).
 								if (!confirm(get_label.no_tag_selected ||
@@ -341,9 +367,7 @@ component_portal.prototype.init = async function(options) {
 						// Mandatory for indexation portals: identifies which text component
 						// carries the inline tag.  Defined in properties->config_relation.
 							const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
-							if (tag_component_tipo) {
-								locator.tag_component_tipo = tag_component_tipo
-							}else{
+							if (!tag_component_tipo) {
 								console.error('tag_component_tipo is not defined into component properties->config_relation . This is mandatory in v6', self.context.properties);
 								return
 							}
@@ -357,36 +381,102 @@ component_portal.prototype.init = async function(options) {
 								alert("Error. No top_locator exists");
 								return
 							}
-							Object.assign(locator, top_locator)
+
+						// apply the same decision to every picked term
+							for (const locator of locators) {
+								if (tag_id) {
+									// overwrite/set tag_id
+									locator.tag_id = tag_id
+								}
+								locator.tag_component_tipo = tag_component_tipo
+								Object.assign(locator, top_locator)
+							}
 						break;
 					}
 					case 'tree':
-						// set relation type standard portal (dd151)
-						// Tree view always uses the generic link type; no tag metadata needed.
-						locator.type = DD_TIPOS.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
+						// (!) NO `type` IS STAMPED HERE, deliberately.
+						// The server owns the relation type: save.ts fills it only when absent,
+						// from properties.config_relation.relation_type and otherwise from the
+						// MODEL's descriptor default — which is not dd151 for the models this
+						// view serves (children dd48, parent dd47, index dd96, related dd89,
+						// model dd98, dataframe dd490). The old client-side dd151 stamp wrote
+						// wrong-typed rows for every one of them and broke the server's dedup
+						// key [section_id, section_tipo, type, tag_id] against correctly-typed
+						// existing rows. A tree pick carries the address and nothing else.
 						break;
 
-					default:
-						console.warn('Warning: this view do not have custom manager', self.view);
-						break;
+					default: {
+						// NAMED REFUSAL. Only the two views that know how to complete a picked
+						// locator may link one. Everything else used to console.warn and link an
+						// untyped, unenriched locator anyway — a silent scope widening: an
+						// indexation locator without tag_component_tipo/top_locator persists as a
+						// relation nothing can read back. A view that wants to accept picks
+						// declares its own case here.
+						console.error(
+							`(!) [component_portal.link_terms] refused: view "${self.view}" declares no term-pick`
+							+ ` handler, so the selection cannot be completed. component: ${self.tipo}`,
+							locators
+						);
+						// the user clicked; the refusal is told to them too, never a dead click.
+						// (!) No English fallback literal: a missing catalog key renders AS the key
+						// (greppable, obviously wrong) instead of outliving the catalog entry.
+						event_manager.publish('notification', {
+							msg			: get_label.picker_view_not_supported || 'picker_view_not_supported',
+							type		: 'error',
+							remove_time	: 10000
+						})
+						return
+					}
 				}
 
 				// debug
 					if(SHOW_DEBUG===true) {
-						console.log("-->> fn_link_term. Set locator to add:", locator);
+						console.log("-->> link_terms_handler. Locators to add:", locators);
 					}
 
-				// add locator selected
-					const result = await self.link_record(locator)
-					if (result===false) {
-						// (!) alert() used here deliberately to notify the user of a duplicate.
-						// The duplicate check in link_record() already logged to console (level 1).
-						alert("Value already exists! "+ JSON.stringify(locator));
-						return
+				// REPLACE, for a single-valued caller. `data_limit:1` means "one value", so a
+				// new pick supersedes the stored one instead of being refused by the write
+				// path's cap. This belongs HERE and not in the picker: the component owns its
+				// value; the picker only reports what the operator chose.
+					const data_limit = self.context.properties?.data_limit
+					if (data_limit===1) {
+						// `self.data` is an OBJECT and `entries` is the locator array
+						// (see :659, :695, :1231) — NOT `data[0].value`, which is
+						// undefined on every real component and made this branch a
+						// silent no-op: the delete never ran and the server then
+						// refused the pick as over-cap, so a single-valued picker
+						// could never change its value.
+						const current = self.data?.entries
+						if (Array.isArray(current) && current.length>0) {
+							for (const locator of current) {
+								await self.delete_locator(locator)
+							}
+						}
+					}
+
+				// add the pick(s) in ONE save
+					const outcome = await self.link_records(locators, {
+						// (!) the client data_limit guard is NOT applied to a picker selection.
+						// The picker was bounded by the server-resolved `remaining` before the
+						// user could even select, and the write path re-resolves the cap inside
+						// its transaction. Alerting here would make the client a second, weaker
+						// authority over the same rule.
+						enforce_client_data_limit : false
+					})
+					if (outcome.refused.length>0) {
+						// (!) alert() kept from the single-pick path: the user committed to these
+						// picks and must be told which ones did not land, and why.
+						alert(
+							(get_label.error || 'Error') + ':\n'
+							+ outcome.refused.map(item => item.locator
+								? `${item.reason} — ${item.locator.section_tipo}_${item.locator.section_id} ${item.locator.label || ''}`
+								: item.reason
+							).join('\n')
+						);
 					}
 			}
 			self.events_tokens.push(
-				event_manager.subscribe('link_term_' + self.id, link_term_handler)
+				event_manager.subscribe(PICKER_LINK_CHANNEL_PREFIX + self.id, link_terms_handler)
 			)
 
 		// deactivate_component. Observes current component deactivation event
@@ -430,6 +520,11 @@ component_portal.prototype.init = async function(options) {
 	// 		render	: 'view_default_edit_portal'
 	// 		path 	: './view_default_edit_portal.js'
 	// }
+	// An entry may also DECLARE the toolbar the view needs, as data:
+	// 		show_interface : { button_tree : true, button_add : false }
+	// build() composes it (see compose_show_interface); the view module itself must not
+	// write self.show_interface at render time — that is how the two writers used to
+	// resolve by accident, whichever ran last.
 		self.render_views = [
 			{
 				view	: 'text',
@@ -444,7 +539,22 @@ component_portal.prototype.init = async function(options) {
 			{
 				view	: 'tree',
 				mode	: 'edit',
-				render	: 'view_tree_edit_portal'
+				render	: 'view_tree_edit_portal',
+				// The tree view's toolbar, DECLARED (it was written inside
+				// view_tree_edit_portal.render, after build had already composed
+				// show_interface). The term picker is the way to attach terms in this
+				// view, so it is the one button turned on.
+				// (!) `show_autocomplete` is absent ON PURPOSE: a picker view ADDS an
+				// input path and removes none, so a portal that declares an autocomplete
+				// (e.g. oh115's properties.source.mode 'autocomplete') keeps it.
+				// compose_show_interface REFUSES a view that tries to declare it.
+				show_interface : {
+					button_tree			: true,
+					button_add			: false,
+					button_link			: false,
+					button_list			: false,
+					button_fullscreen	: false
+				}
 			},
 			{
 				view	: 'mosaic',
@@ -522,7 +632,9 @@ component_portal.prototype.init = async function(options) {
 *  - `init_events_subscription()` wires observe/observable hooks (idempotent; only
 *    fires once per instance).
 *  - Paginator is created (edit/tm mode only) or updated if already exists.
-*  - `show_interface` flags are adjusted for multi-target sections and external mode.
+*  - `show_interface` is composed ONCE by `compose_show_interface()` — multi-target
+*    constraints, then the render_views entry's declared toolbar, then the
+*    source.mode / tool-caller constraints. No view module writes it afterwards.
 *  - `self.add_component_info` is set from the ddo_map `value_with_parents` marker, used
 *    by service_autocomplete to decide whether to request ddinfo for autocomplete entries.
 *
@@ -891,50 +1003,8 @@ component_portal.prototype.build = async function(autoload=false) {
 									|| self.request_config_object?.show.records_separator
 									|| ' | '
 
-	// check if the target section is multiple to remove the add button
-	// Multi-target portals cannot offer the "add new record" button because the server
-	// would not know which target section to create the new record in.
-		self.show_interface.button_add = (Array.isArray(self.target_section) && self.target_section.length > 1)
-			? false
-			: self.show_interface.button_add ?? true
-
-	// check if the target section is multiple to remove the open_section_list
-		self.show_interface.button_list = (Array.isArray(self.target_section) && self.target_section.length > 1)
-			? false
-			: self.show_interface.button_list ?? true
-
-	// self.show_interface is defined in component_common init()
-	// Override show_interface buttons based on source.mode and caller type.
-	// If show.interface is defined in properties it takes precedence; this switch sets
-	// safe defaults when it is not.
-		switch (true) {
-
-			// External mode: portal data is computed server-side (inverse / dependent relations).
-			// The user can view but not add/link/edit — only the external button and list are shown.
-			case (self.context.properties?.source?.mode==='external'):
-				self.show_interface.button_add			= false
-				self.show_interface.button_link			= false
-				self.show_interface.tools				= false
-				self.show_interface.button_external		= true
-				self.show_interface.button_tree			= false
-				self.show_interface.button_list			= self.show_interface.button_list ?? true
-				self.show_interface.show_autocomplete	= self.show_interface.show_autocomplete ?? false
-				break;
-
-			// Tool caller: the portal is embedded inside a tool (e.g. tool_indexation).
-			// Strip all action buttons; the tool controls the interaction itself.
-			case (self.caller && self.caller.type==='tool'):
-				self.show_interface.button_add		= false
-				self.show_interface.button_link		= false
-				self.show_interface.tools			= false
-				self.show_interface.button_external	= false
-				self.show_interface.button_tree		= false
-				self.show_interface.button_list		= false
-				break;
-
-			default:
-				break;
-		}
+	// show_interface. Composed ONCE, here, by the only writer (see compose_show_interface)
+		compose_show_interface(self)
 
 
 	// status update
@@ -947,35 +1017,147 @@ component_portal.prototype.build = async function(autoload=false) {
 
 
 /**
-* LINK_RECORD
-* Inserts a new locator into the portal, persisting the change via the API.
+* VIEW_TOOLBAR_FORBIDDEN_KEYS
+* show_interface keys a render_views entry may NOT declare.
 *
-* Entry points:
+* `show_autocomplete` is an INPUT PATH, not a toolbar button: a view adds ways to put
+* data into the component and removes none. The tree (picker) view is exactly the case —
+* a portal whose properties.source.mode is 'autocomplete' keeps its autocomplete input
+* while gaining the term picker. `read_only` and `permissions` are refused for the same
+* reason from the other side: a view must never widen or narrow what the server granted.
+*
+* This is the mechanical form of the rule; the comment on the tree entry only explains it.
+*/
+const VIEW_TOOLBAR_FORBIDDEN_KEYS = Object.freeze([
+	'show_autocomplete',
+	'read_only',
+	'permissions'
+])
+
+
+
+/**
+* COMPOSE_SHOW_INTERFACE
+* THE single writer of `self.show_interface` for a portal, called once per build.
+*
+* Composition order, and why:
+*  1. `set_context_vars` (component_common → common) has already produced the base:
+*     the ontology's `properties.show_interface` (or `request_config.show.interface`),
+*     with every missing key filled from the client defaults.
+*  2. Multi-target constraints: a portal with more than one target section cannot offer
+*     "add new record" or "open section list" — the server would not know which target
+*     section the action refers to.
+*  3. The VIEW's declared toolbar, read as data from the matching `render_views` entry.
+*     It used to be written by the view module during render() — i.e. AFTER this
+*     composition — so which of the two won was last-writer-wins by accident.
+*  4. The source.mode / tool-caller constraints, applied LAST and deliberately so: an
+*     external portal is server-computed (nothing may be linked into it) and a portal
+*     embedded in a tool is driven by the tool, so neither may be re-opened by a view
+*     declaration. Under the old accidental ordering the view won these two cases.
+*
+* Keys the view may not declare are refused loudly and ignored (see
+* VIEW_TOOLBAR_FORBIDDEN_KEYS): a declaration that removes an input path is a defect in
+* the declaration, not a preference to honour silently.
+*
+* @param {Object} self - The `component_portal` instance (module-private function,
+*                        not a method).
+* @returns {Object} The composed `self.show_interface`.
+*/
+const compose_show_interface = function(self) {
+
+	const show_interface = self.show_interface || {}
+
+	// multi-target constraints
+	// Multi-target portals cannot offer the "add new record" button because the server
+	// would not know which target section to create the new record in.
+		const multiple_target = Array.isArray(self.target_section) && self.target_section.length > 1
+		show_interface.button_add = multiple_target
+			? false
+			: show_interface.button_add ?? true
+
+	// check if the target section is multiple to remove the open_section_list
+		show_interface.button_list = multiple_target
+			? false
+			: show_interface.button_list ?? true
+
+	// view declared toolbar. Data on the render_views entry, never written by the view module
+	// (!) The view is resolved exactly as the render dispatcher resolves it
+	// (render_edit_component_portal.prototype.edit), so the entry composed here is always
+	// the entry that will render.
+		const view = self.view || self.context?.view || null
+		const view_entry = (self.render_views || []).find(item =>
+			item.view===view && item.mode===self.mode
+		)
+		const declared = view_entry?.show_interface
+		if (declared) {
+			for (const [key, value] of Object.entries(declared)) {
+				if (VIEW_TOOLBAR_FORBIDDEN_KEYS.includes(key)) {
+					console.error(
+						`(!) [compose_show_interface] refused: the render_views entry {view:'${view}',`
+						+ ` mode:'${self.mode}'} declares "${key}", which is an input path, not a toolbar`
+						+ ' button. A view ADDS input paths and removes none. Declaration ignored.'
+					);
+					continue;
+				}
+				show_interface[key] = value
+			}
+		}
+
+	// source.mode / caller constraints. Applied last: they describe what the component IS,
+	// which no view declaration may re-open.
+		switch (true) {
+
+			// External mode: portal data is computed server-side (inverse / dependent relations).
+			// The user can view but not add/link/edit — only the external button and list are shown.
+			case (self.context.properties?.source?.mode==='external'):
+				show_interface.button_add			= false
+				show_interface.button_link			= false
+				show_interface.tools				= false
+				show_interface.button_external		= true
+				show_interface.button_tree			= false
+				show_interface.button_list			= show_interface.button_list ?? true
+				show_interface.show_autocomplete	= show_interface.show_autocomplete ?? false
+				break;
+
+			// Tool caller: the portal is embedded inside a tool (e.g. tool_indexation).
+			// Strip all action buttons; the tool controls the interaction itself.
+			case (self.caller && self.caller.type==='tool'):
+				show_interface.button_add		= false
+				show_interface.button_link		= false
+				show_interface.tools			= false
+				show_interface.button_external	= false
+				show_interface.button_tree		= false
+				show_interface.button_list		= false
+				break;
+
+			default:
+				break;
+		}
+
+	self.show_interface = show_interface
+
+
+	return show_interface
+}//end compose_show_interface
+
+
+
+/**
+* LINK_RECORD
+* Inserts ONE new locator into the portal, persisting the change via the API.
+*
+* The length-1 case of `link_records` — same door, same duplicate detection, same
+* refresh — kept as the stable single-pick entry point:
 *  - `service_autocomplete` when the user picks an option from the datalist.
 *  - `initiator_link_<id>` event handler (picker modal confirm).
-*  - `link_term_handler` (thesaurus tree / indexation view link button).
-*
-* Duplicate detection is performed at two levels:
-*  1. Client-side fast path (level 1): scans `current_entries` (the currently loaded
-*     paginated page only) for an entry with the same section_tipo + section_id.
-*  2. Server-side authoritative check (level 2): after `change_value`, compares the
-*     new `total` against `total_before`.  If the server total did not increase, the
-*     locator already existed in the full (non-paginated) dataset.
-*
-* For `component_dataframe` models, the pairing keys (`type`, `id_key` — the main
-* data item id — and `main_component_tipo`) are copied from `self.data` into the
-* locator before the API call so the server can attach the correct dataframe stub.
-*
-* (!) `self.data.pagination.limit` is explicitly set before calling `change_value` so
-* the server uses the paginator's current page size when refreshing the portal data.
-* This is critical for `component_relation_index` portals (e.g. 'rsc860' in Oral History)
-* which have small page limits and would otherwise receive the wrong page slice.
+*  - `component_relation_*` client models, which inherit this method verbatim.
 *
 * @param {Object} value                      - Locator to insert.  Will be mutated:
 *                                             `from_component_tipo` is always added.
 * @param {string} value.section_tipo         - Target section tipo.
 * @param {string|number} value.section_id    - Target record id.
-* @param {string} [value.type]               - Relation type, e.g. 'dd151'.
+* @param {string} [value.type]               - Relation type. Absent for a term pick: the
+*                                              server resolves it from the model.
 * @param {string} [value.tag_id]             - Inline tag id (indexation portals).
 * @param {string} [value.tag_component_tipo] - Component tipo carrying the tag (indexation).
 * @returns {Promise<boolean>} `false` if the locator already exists or the API fails;
@@ -985,62 +1167,147 @@ component_portal.prototype.link_record = async function(value) {
 
 	const self = this
 
+	const outcome = await self.link_records([value])
+
+
+	return outcome.linked.length===1
+}//end link_record
+
+
+
+/**
+* LINK_RECORDS
+* THE insert door of the portal: links a SELECTION of locators in ONE save.
+*
+* One save, not N — a term picker confirms a whole selection, and the properties that
+* decide whether a locator may land (dedup, the selection cap resolved from
+* `properties.data_limit`, the target set) are batch-scoped: N individually-legal picks
+* sent as N requests can collectively break the cap. The server evaluates the array
+* inside one transaction; this door sends it as one.
+*
+* Duplicate detection is performed at two levels:
+*  1. Client-side fast path (level 1): scans `current_entries` (the currently loaded
+*     paginated page only) AND the locators already accepted in this same batch, so two
+*     identical picks in one selection collapse exactly as two successive saves would.
+*  2. Server-side authoritative check (level 2): after `change_value`, compares the new
+*     `total` against `total_before`. The delta is how many locators actually landed.
+*
+* For `component_dataframe` models, the pairing keys (`type`, `id_key` — the main
+* data item id — and `main_component_tipo`) are copied from `self.data` into each
+* locator before the API call so the server can attach the correct dataframe stub.
+*
+* (!) `self.data.pagination.limit` is explicitly set before calling `change_value` so
+* the server uses the paginator's current page size when refreshing the portal data.
+* This is critical for `component_relation_index` portals (e.g. 'rsc860' in Oral History)
+* which have small page limits and would otherwise receive the wrong page slice.
+*
+* NOTHING IS DROPPED SILENTLY: every locator that does not land comes back in `refused`
+* with a named reason. The one case this door cannot name is a server refusal of PART of
+* the batch — the save API answers with a `total`, not yet with the per-locator
+* `{outcomes:[{locator,status,code,reason}]}` the relations write door produces. When the
+* count identifies the missing locators unambiguously they are named; otherwise the
+* refusal is reported as an unidentified one rather than blamed on a locator.
+*
+* @param {Array<Object>} values - Locators to insert, length >= 1. Each is mutated:
+*                                 `from_component_tipo` is always added.
+* @param {Object} [options]
+* @param {boolean} [options.enforce_client_data_limit=true] - When false the client-side
+*        `data_limit` alert is skipped. The term picker passes false: its selection was
+*        already bounded by the server-resolved remaining capacity, and the write path
+*        re-resolves the cap inside its transaction — a client alert there would be a
+*        second, weaker authority over the same rule.
+* @returns {Promise<Object>} `{linked:[locator], refused:[{locator, reason}], total}`.
+*/
+component_portal.prototype.link_records = async function(values, options={}) {
+
+	const self = this
+
+	// refused. Every locator that does not land is named here
+		const refused = []
+
+	// values. Always an array; a single locator is the length-1 case
+		if (!Array.isArray(values) || values.length<1) {
+			console.error('(!) [component_portal.link_records] refused: values must be a non-empty array. Received:', values);
+			return {linked: [], refused: refused, total: self.total ?? null}
+		}
+
+	// options
+		const enforce_client_data_limit = options.enforce_client_data_limit!==false
+
 	// current_value. Get the current_value of the component
 		const current_entries = self.data.entries || []
 
-	// data_limit. Maximum records allowed by this portal
-		if (data_limit_reached(self)) {
-			// alert and stop the process
-			return false
-		}
-
-	// exists. Check if value already exists.
-	// (!) Only the currently loaded paginated page is available for this check; the
-	// server performs the authoritative full-dataset check after the insert (level 2 below).
-		const exists = current_entries.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
-		if (typeof exists!=='undefined') {
-			console.log('[link_record] Value already exists (1) !');
-			if(SHOW_DEBUG===true) {
-				console.log('link_record current_entries:', current_entries);
-				console.log('link_record value:', value);
+	// data_limit. Maximum records allowed by this portal.
+	// (!) Soft client cap for the add paths that have no server-resolved capacity in
+	// hand (autocomplete, picker modal, add_new_element). The term picker opts out.
+		if (enforce_client_data_limit && data_limit_reached(self)) {
+			// alert (raised inside data_limit_reached) and stop the process
+			for (let i = 0; i < values.length; i++) {
+				refused.push({locator: values[i], reason: 'data_limit'})
 			}
-			return false
+			return {linked: [], refused: refused, total: self.total ?? null}
 		}
 
-	// adds its own tipo as 'from_component_tipo' to the new locator
-	// This property is used by the section's relations bag to partition locators
-	// per component.  Without it the server cannot assign the locator to this portal.
-		value.from_component_tipo = self.tipo
+	// accepted. Locators that pass the client-side checks
+		const accepted = []
+		const values_length = values.length
+		for (let i = 0; i < values_length; i++) {
 
-	// dataframe case
-	// Unified contract: the persisted frame carries only the unified pairing key
-	// id_key (the MAIN DATA ITEM id) plus the type marker and main_component_tipo.
-	// id_key is sourced exclusively from self.data.id_key (the item id threaded by
-	// section_record.js); it is NEVER derived from a section_id / section_id_key.
-	// The type marker is the CONSTANT, not whatever the view left on the locator.
-	// `self.data.type` is never sent by the server (the frame item carries no
-	// `type`), so the previous `self.data.type ?? value.type` fell through to
-	// either nothing — a picker-sourced locator has no type — or to 'dd151',
-	// stamped a few lines up by the tree-view branch. Both produce a frame the
-	// server-side reader cannot see. The server now forces dd490 regardless;
-	// this keeps the payload honest at the source.
-		if(self.model === 'component_dataframe'){
-			value.type					= DATAFRAME_TYPE
-			value.id_key				= self.data.id_key
-			value.main_component_tipo	= self.data.main_component_tipo
+			const value = values[i]
+
+			// exists. Check if value already exists.
+			// (!) Only the currently loaded paginated page is available for this check; the
+			// server performs the authoritative full-dataset check after the insert (level 2 below).
+				const exists = current_entries.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
+					|| accepted.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
+				if (typeof exists!=='undefined') {
+					console.log('[link_records] Value already exists (1) !');
+					if(SHOW_DEBUG===true) {
+						console.log('link_records current_entries:', current_entries);
+						console.log('link_records value:', value);
+					}
+					refused.push({locator: value, reason: 'duplicate'})
+					continue;
+				}
+
+			// adds its own tipo as 'from_component_tipo' to the new locator
+			// This property is used by the section's relations bag to partition locators
+			// per component.  Without it the server cannot assign the locator to this portal.
+				value.from_component_tipo = self.tipo
+
+			// dataframe case
+			// Unified contract: the persisted frame carries only the unified pairing key
+			// id_key (the MAIN DATA ITEM id) plus the type marker and main_component_tipo.
+			// id_key is sourced exclusively from self.data.id_key (the item id threaded by
+			// section_record.js); it is NEVER derived from a section_id / section_id_key.
+			// The type marker is the CONSTANT, not whatever the view left on the locator:
+			// a picker-sourced locator carries no type at all (the server resolves it from
+			// the model), and the server forces dd490 for a frame regardless. This keeps
+			// the payload honest at the source.
+				if(self.model === 'component_dataframe'){
+					value.type					= DATAFRAME_TYPE
+					value.id_key				= self.data.id_key
+					value.main_component_tipo	= self.data.main_component_tipo
+				}
+
+			accepted.push(value)
+		}
+		if (accepted.length===0) {
+			return {linked: [], refused: refused, total: self.total ?? null}
 		}
 
 	// changed_data
+	// One 'insert' entry per accepted locator, in ONE save.
 	// Frozen to prevent accidental mutation after this point.
-		const changed_data	= [Object.freeze({
+		const changed_data = accepted.map(value => Object.freeze({
 			action	: 'insert',
 			id		: null,
 			value	: value
-		})]
+		}))
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[component_portal.link_record] value:", value, " - changed_data:", changed_data);
+			console.log("[component_portal.link_records] accepted:", accepted, " - changed_data:", changed_data);
 		}
 
 	// total_before
@@ -1064,8 +1331,11 @@ component_portal.prototype.link_record = async function(value) {
 		})
 
 		if (!api_response || !api_response.result) {
-			console.error('Invalid API response on link_record:', api_response);
-			return false
+			console.error('Invalid API response on link_records:', api_response);
+			for (let i = 0; i < accepted.length; i++) {
+				refused.push({locator: accepted[i], reason: 'api_error'})
+			}
+			return {linked: [], refused: refused, total: self.total ?? null}
 		}
 
 	// total check (after save) — server-authoritative duplicate detection (level 2)
@@ -1073,15 +1343,28 @@ component_portal.prototype.link_record = async function(value) {
 		const total			= current_data?.pagination?.total ?? 0
 		// error on add value case
 		if (total===0) {
-			console.warn("// link_record api_response.result.data (unexpected total):", api_response.result.data);
-			return false
+			console.warn("// link_records api_response.result.data (unexpected total):", api_response.result.data);
+			for (let i = 0; i < accepted.length; i++) {
+				refused.push({locator: accepted[i], reason: 'not_stored'})
+			}
+			return {linked: [], refused: refused, total: 0}
 		}
+		// landed. How many of the accepted locators the server actually stored.
+		// (!) A NaN total_before (an instance built without a server total) is not a
+		// refusal: it carries no information, so the server's own count is taken as is.
+		const total_before_int	= parseInt(total_before)
+		const landed			= Number.isNaN(total_before_int)
+			? accepted.length
+			: (parseInt(total) - total_before_int)
 		// value already exists case. Check if value already exist.
 		// (!) Note that here, the whole portal data has been compared in server
-		if (parseInt(total) <= parseInt(total_before)) {
+		if (landed<=0) {
 			// self.update_pagination_values('remove') // remove added pagination value
-			console.log("[link_record] Value already exists (2) !");
-			return false
+			console.log("[link_records] Value already exists (2) !");
+			for (let i = 0; i < accepted.length; i++) {
+				refused.push({locator: accepted[i], reason: 'duplicate'})
+			}
+			return {linked: [], refused: refused, total: total}
 		}
 
 	// refresh self component
@@ -1092,9 +1375,36 @@ component_portal.prototype.link_record = async function(value) {
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
 
+	// partial refusal. The server stored fewer locators than were sent
+		let linked = accepted
+		if (landed<accepted.length) {
+			// missing. The accepted locators that are absent from the refreshed data.
+			// It is trusted ONLY when it agrees with the server's own count; otherwise
+			// the refreshed page is a partial view (pagination) and naming a locator
+			// from it would be a guess. Per-locator reasons arrive when the save API
+			// answers with the relations door's `{outcomes:[…]}` instead of a total.
+			const refreshed_entries	= self.data.entries || []
+			const missing			= accepted.filter(value =>
+				!refreshed_entries.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
+			)
+			const unnamed = accepted.length - landed
+			if (missing.length===unnamed) {
+				for (let i = 0; i < missing.length; i++) {
+					refused.push({locator: missing[i], reason: 'refused_by_server'})
+				}
+				linked = accepted.filter(value => !missing.includes(value))
+			}else{
+				console.error(
+					`(!) [component_portal.link_records] the server refused ${unnamed} of ${accepted.length}`
+					+ ' locators and the response does not say which. component:', self.tipo, accepted
+				);
+				refused.push({locator: null, reason: `refused_by_server (${unnamed} unidentified)`})
+			}
+		}
+
 	// filter data. check if the caller has tag_id
 	// If the portal is in indexation mode with an active tag, re-apply the tag
-	// filter so the newly-inserted locator appears in the correct tag subset.
+	// filter so the newly-inserted locators appear in the correct tag subset.
 		if(self.active_tag){
 			self.node.classList.add('hide')
 			// filter component data by tag_id and re-render content
@@ -1119,8 +1429,8 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 
-	return true
-}//end link_record
+	return {linked: linked, refused: refused, total: total}
+}//end link_records
 
 
 
@@ -1228,13 +1538,23 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 * Module-private guard that checks whether the portal has reached the maximum
 * number of linked records allowed by `context.properties.data_limit`.
 *
-* Called at the start of `link_record` and `add_new_element` before any API call.
-* If the limit is exceeded, it alerts the user (using the localised `exceeded_limit`
-* label when available) and returns `true` so the caller can bail out early.
+* Called by `link_records` (unless the caller opts out) and by `add_new_element` before
+* any API call. If the limit is exceeded, it alerts the user (using the localised
+* `exceeded_limit` label when available) and returns `true` so the caller can bail out.
 *
 * The check compares `self.data.entries.length` against `data_limit`, so it only
-* counts entries on the **currently loaded page**.  This is a soft client-side cap;
-* a server-side check would be needed for strict enforcement across pages.
+* counts entries on the **currently loaded page**.  This is a soft client-side cap for
+* the add paths that have no server-resolved capacity in hand.
+*
+* (!) IT IS NOT THE TERM PICKER'S AUTHORITY, and must not become one. The picker is
+* opened with the server-resolved constraint `{selection_limit, remaining, targets}`
+* (`context.picker`), bounds its selection tray at `remaining` BEFORE the user commits,
+* and the relations write door re-resolves the same cap inside its transaction. A second
+* client-side cap over the same rule can only disagree with those two — so the picker
+* path calls `link_records(..., {enforce_client_data_limit:false})` and this guard is
+* left to the paths that genuinely have no other answer (autocomplete, picker modal,
+* add_new_element). It also reads `data_limit` raw, not the remaining capacity, which is
+* the wrong arithmetic for a multi-pick selection.
 *
 * @param {Object} self - The component_portal instance (not `this`; called as a
 *                        module-level function, not a method).
@@ -2172,35 +2492,272 @@ component_portal.prototype.focus_first_input = function() {
 
 
 /**
-* OPEN_ONTOLOGY_WINDOW
-* Opens the ontology (area_ontology) or thesaurus (area_thesaurus) picker window and
-* returns a reference to it.
+* PICKER_CALLER
+* The caller declaration the server derives the picker from: `{section_tipo, section_id,
+* tipo}` — the ddo of THIS component, on THIS record.
 *
-* The opened window listens for a `link_term_<caller_id>` event (published by the
-* thesaurus/ontology tree when the user clicks a term's link button); that event is
-* handled by `link_term_handler` registered in `init()`.
+* It replaces the client's own conclusions. The engine resolves the caller ddo, grants
+* relation mode only when that ddo's resolved view is 'tree', the model is
+* relation-family and the principal holds edit on it, and narrows the tree to the
+* caller's own resolved target sections. No client string selects a server code path.
+*
+* (!) A component that names no record — a search-mode filter, a not-yet-saved row —
+* cannot declare a picker: the server needs a caller ddo ON a record to resolve the
+* target set and the selection cap from, and a caller missing `section_id` is refused as
+* malformed (400) rather than degraded. Such a component gets NO declaration and an
+* ordinary browse tree, which is what it had before the picker existed. The absence is
+* reported, never silent.
+*
+* @param {Object} self - The `component_portal` instance (module-private function).
+* @returns {Object|null} {section_tipo, section_id, tipo}, or null when this component
+*                        names no record to declare a picker from.
+*/
+const picker_caller = function(self) {
+
+	if (!self.section_tipo || !self.tipo || self.section_id===null || self.section_id===undefined) {
+		console.warn(
+			'(!) [component_portal] no picker declared: the component names no record'
+			+ ' {section_tipo, section_id, tipo} to derive one from. The tree opens as a plain browse.',
+			{section_tipo: self.section_tipo, section_id: self.section_id, tipo: self.tipo, mode: self.mode}
+		);
+		return null
+	}
+
+	return {
+		section_tipo	: self.section_tipo,
+		section_id		: self.section_id,
+		tipo			: self.tipo
+	}
+}//end picker_caller
+
+
+
+/**
+* TOGGLE_THESAURUS_PANE
+* Show or hide THE picker surface for this portal: the thesaurus rendered INLINE, inside
+* this component's own wrapper, beside the linked terms it feeds.
+*
+* THE MODEL IS tool_indexation's. That tool does not build a thesaurus and does not open
+* a window: its ontology ddo_map declares an area_thesaurus, the standard element
+* machinery builds and renders it into the tool's left pane, and the tool wires it with
+* three assignments. Here the declaration is the component's own `view:'tree'` plus the
+* target its request_config sqo already names, so the instance is obtained through the
+* same machinery and mounted in a pane of this wrapper.
+*
+* Why inline and not a modal: a centred modal covers the very component the operator is
+* filling in, so they cannot see the locator land. Keeping both on screen is what makes
+* one-step picking legible — click a term, watch it appear in the list below.
+*
+* Nothing about the picker is decided here: the area read carries `picker_caller`, the
+* SERVER answers with the mode and the constraint, and the shared picker module renders
+* that answer.
+*
+* @returns {Promise<boolean>} true when the pane is open after the call.
+*/
+component_portal.prototype.toggle_thesaurus_pane = async function() {
+
+	const self = this
+
+	const wrapper = self.node
+	const pane = wrapper
+		? wrapper.querySelector('.thesaurus_pane')
+		: null
+	if (!pane) {
+		// the pane belongs to the tree view; any other view has no picker surface
+		console.error(
+			'(!) [component_portal.toggle_thesaurus_pane] refused: this component has no'
+			+ ' thesaurus pane. Only the tree view builds one. component:', self.tipo
+		);
+		return false
+	}
+
+	// close. The area stays built so re-opening is instant and the tree keeps its state
+		if (!pane.classList.contains('hide')) {
+			pane.classList.add('hide')
+			return false
+		}
+
+	// open.
+	// (!) THE LIVENESS TEST IS THE INSTANCE, NOT A FLAG. The area is registered in
+	// self.ar_instances, so the component's OWN refresh() — which every successful
+	// pick triggers — destroys it through do_delete_dependencies while this pane
+	// node survives. A "built once" boolean then reported a tree that no longer
+	// exists: search, the toggle, Ctrl+M and every area handler were dead for the
+	// rest of the wrapper's life. Asking the instance whether it is still alive is
+	// self-healing whoever destroyed it.
+		pane.classList.remove('hide')
+		const area_alive = self.thesaurus_area
+			&& self.thesaurus_area.status!=='destroyed'
+			&& pane.firstChild!==null
+		if (!area_alive) {
+			// stale remains of a destroyed area, if any
+			pane.replaceChildren()
+			const built = await build_thesaurus_pane(self, pane)
+			if (built!==true) {
+				// (!) THE PANE STAYS OPEN ON FAILURE. build_thesaurus_pane rendered the
+				// named reason into it (403 / 409 / generic); hiding the pane here
+				// would throw that message away and leave the button looking inert,
+				// which is the failure mode the refusal split exists to prevent.
+				return false
+			}
+		} else if (self.picker) {
+			// re-opening a live tree: the caller's locators may have changed underneath
+			self.picker.sync_linked()
+		}
+
+
+	return true
+}//end toggle_thesaurus_pane
+
+
+
+/**
+* BUILD_THESAURUS_PANE
+* Obtain the area_thesaurus instance through the STANDARD instance machinery and mount
+* it in the component's pane, then wire it as this component's picker.
+*
+* `get_instance` is the same door every declared element goes through — it keys, caches
+* and registers the instance, and `self.ar_instances` carries it so the component's own
+* destroy() tears it down. Nothing here manages a lifecycle, sweeps orphans or removes
+* listeners: an earlier attempt did all three, and every one of those chores was the
+* price of building an area OUTSIDE this machinery.
+*
+* `config.picker_caller` rides init → generate_rqo → `rqo.source.caller`, which runs
+* BEFORE the boot read — so the server derives mode and narrowing on the first and only
+* request.
+*
+* @param {Object} self - The `component_portal` instance (module-private function).
+* @param {HTMLElement} pane - The `.thesaurus_pane` node built by the tree view.
+* @returns {Promise<boolean>} true when the pane holds a wired picker.
+*/
+const build_thesaurus_pane = async function(self, pane) {
+
+	// caller declaration. Without it the server cannot grant a picker (it says why)
+		const caller_declaration = picker_caller(self)
+		if (!caller_declaration) {
+			return false
+		}
+
+	// is_ontology. Ontology nodes (section_id '0') browse the ontology tree instead
+		const is_ontology	= get_section_id_from_tipo(self.section_tipo) === '0'
+		const area_tipo		= is_ontology
+			? 'dd5' // ONTOLOGY_TIPO
+			: 'dd100' // THESAURUS_TIPO
+		const area_model	= is_ontology
+			? 'area_ontology'
+			: 'area_thesaurus'
+
+	try {
+
+		// instance. The standard door — same as any declared element
+			const area = await get_instance({
+				model			: area_model,
+				tipo			: area_tipo,
+				section_tipo	: area_tipo,
+				section_id		: null,
+				mode			: 'list',
+				lang			: self.lang,
+				caller			: self,
+				// id_variant keys the area per component, so two tree portals on one
+				// record never share one instance (instances.js key_order carries it)
+				id_variant		: 'picker_' + self.id,
+				config			: {
+					picker_caller : caller_declaration
+				}
+			})
+			await area.build(true)
+
+		// destroy with the component. Kept in ar_instances so the component's own
+		// destroy tears the tree down; toggle_thesaurus_pane tests this pointer's
+		// `status` before reusing it, because refresh() destroys dependencies too.
+			self.ar_instances.push(area)
+			self.thesaurus_area = area
+
+		// wire. The three assignments, through the shared module
+			attach_picker(area, {
+				linker	: self,
+				caller	: self
+			})
+
+		// mount
+			const area_node = await area.render()
+			pane.appendChild(area_node)
+
+	} catch (error) {
+		// THE REFUSAL IS TOLD TO THE OPERATOR, not only to the console. The server
+		// distinguishes "you may not browse these hierarchies" (403, generic by
+		// design — it must not name what the caller cannot reach) from "this
+		// component's target has no active hierarchy configured" (409, named). A
+		// picker that just fails to open teaches nothing; the second case in
+		// particular is an ontology configuration the operator can act on.
+		console.error('Error building the thesaurus pane:', error);
+		// (!) plain DOM, not ui.create_dom_element: `ui` is not imported in this
+		// module, and reaching for it here threw a ReferenceError from inside the
+		// very catch meant to report the failure — turning a named refusal into a
+		// second, uglier crash.
+		const status = error?.status ?? error?.response?.status ?? null
+		const message = document.createElement('div')
+		message.classList.add('thesaurus_pane_error','warning')
+		message.textContent = status===409
+			? (get_label.picker_no_hierarchy || 'picker_no_hierarchy')
+			: status===403
+				? (get_label.picker_not_authorized || 'picker_not_authorized')
+				: (get_label.error || 'Error')
+		pane.append(message)
+		return false
+	}
+
+
+	return true
+}//end build_thesaurus_pane
+
+
+
+/**
+* OPEN_ONTOLOGY_WINDOW
+* Opens the ontology (area_ontology) or thesaurus (area_thesaurus) area in a separate
+* browser window and returns a reference to it.
+*
+* (!) DECLARED FALLBACK, not the canonical picker surface. `open_term_picker` above is.
+* This path survives for the ontology-navigation callers (which open the area to LOOK at
+* a tipo, not to pick a term) and as the escape hatch when the in-page host refuses.
+*
+* The opened window publishes the pick on `link_terms_<caller_id>` through the one
+* publisher (thesaurus_picker.publish_link_terms, which resolves `window.opener` for a
+* linker that lives in another window); that event is handled by `link_terms_handler`
+* registered in `init()`.
 *
 * Routing logic:
 *  - If the portal's `section_tipo` has `section_id === '0'` (i.e. an ontology node),
 *    the ontology area (`tipo: 'dd5'`) is opened with optional `search_tipos` to
 *    highlight specific nodes.
-*  - Otherwise, the thesaurus area (`tipo: 'dd100'`) is opened with:
-*    - `hierarchy_sections` — the target section tipo(s) from `self.rqo.sqo.section_tipo`,
-*      telling the thesaurus which section branches to show.
-*    - `hierarchy_terms` — an optional `fixed_filter` of type `hierarchy_terms` from the
-*      portal's `source.request_config[0].sqo.fixed_filter`, restricting which top-level
-*      thesaurus branches are shown.
+*  - Otherwise, the thesaurus area (`tipo: 'dd100'`) is opened.
+*  - In BOTH cases the window carries `picker_caller` — and nothing else about the
+*    picker.
+*
+* (!) `thesaurus_mode`, `hierarchy_sections` and `hierarchy_terms` are NOT sent, and are
+* not to be re-added. The server derives the mode from the caller ddo and the hierarchy
+* narrowing from that same caller's resolved sqo targets; a second declaration channel
+* would be a fork that can disagree with the write path, and the client's
+* `hierarchy_terms` shape (fixed_filter entries) was never the shape the area read
+* consumes (`HierarchyTerm[]` pinned from the area node's own properties) — it was a var
+* nothing could read. Related fact for anyone tempted to rebuild a target list here:
+* `self.rqo.sqo.section_tipo` is FLATTENED to bare tipo strings by common.js before the
+* rqo exists, so it carries no `matrix_table`; the enriched form lives in
+* `self.context.request_config[…].sqo.section_tipo`.
 *
 * The window name `'tree_window'` is fixed so that re-clicking the button reuses the
 * existing window (browser brings it to front) instead of opening a duplicate.
 *
-* @param {string} thesaurus_mode          - Mode passed as a URL parameter to the opened
-*                                           window (e.g. 'relation', 'search').
+* @param {*} [retired_mode]                - RETIRED and ignored: the picker mode is
+*                                           server-derived. The parameter is kept only
+*                                           because callers still pass it positionally
+*                                           ahead of `search_tipos`; it selects nothing.
 * @param {Array<string>} [search_tipos]   - Array of ontology tipos to highlight/search in
 *                                           area_ontology; ignored in area_thesaurus mode.
 * @returns {Window} The native `Window` object for the opened/reused picker window.
 */
-component_portal.prototype.open_ontology_window = function (thesaurus_mode, search_tipos) {
+component_portal.prototype.open_ontology_window = function (retired_mode, search_tipos) {
 
 	const self = this
 
@@ -2218,43 +2775,25 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 		// menu
 		url_vars.menu = false
 
-		// thesaurus_mode
-		url_vars.thesaurus_mode = thesaurus_mode
+		// picker_caller. The ONE declaration the area read receives from here.
+		// area_thesaurus.init reads it and generate_rqo folds it into
+		// rqo.source.caller BEFORE the boot read, so the server derives mode and
+		// narrowing on the first and only request. Absent when this component names no
+		// record (picker_caller reports why): the area then opens as a plain browse.
+		const caller_declaration = picker_caller(self)
+		if (caller_declaration) {
+			url_vars.picker_caller = JSON.stringify(caller_declaration)
+		}
 
 		if (is_ontology) {
 
 			// only for area_ontology
 
 			url_vars.search_tipos = search_tipos
-
-		}else{
-
-			// only for area_thesaurus
-
-			// hierarchy_sections. Add to url if present
-			// Informs the thesaurus which section tipo branches should be shown as roots.
-			const hierarchy_sections = self.rqo.sqo.section_tipo || null
-			if (hierarchy_sections) {
-				url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
-			}
-
-			// hierarchy_terms optional. Add to url if present
-			// Extracted from properties.source.request_config[0].sqo.fixed_filter items
-			// whose source is 'hierarchy_terms'.  Restricts visible top-level branches.
-			const hierarchy_terms = self.context?.properties?.source
-			&& self.context.properties.source.request_config
-			&& self.context.properties.source.request_config[0]
-			&& self.context.properties.source.request_config[0].sqo
-			&& Array.isArray(self.context.properties.source.request_config[0].sqo.fixed_filter)
-				? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
-				: null
-			if (hierarchy_terms) {
-				url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
-			}
 		}
 
 		// caller_id
-		// Passed to the tree window so it knows which `link_term_<id>` event to publish
+		// Passed to the tree window so it knows which `link_terms_<id>` event to publish
 		// when the user confirms a term selection.
 		const caller_id = self.id || null
 		if(caller_id){

@@ -17,9 +17,12 @@
 *  - ORDER number  — displays virtual_order; clicking opens an inline edit form
 *  - EDIT link     — opens the record editor; shows the numeric section_id
 *
-* When thesaurus_mode is 'relation' (term-linking from a portal/indexation window), all
-* of the above are replaced by a single RELATED button that publishes a 'link_term_*'
-* event to the opener/parent window.
+* When thesaurus_mode is 'relation' (the tree was opened as a term picker for a caller
+* component) all of the above are replaced by the picker's single term control, built by
+* the shared thesaurus_picker module. This file publishes nothing and decides nothing:
+* the pick channel, the selection set and the per-term selectability answer all live in
+* thesaurus_picker.js, so the tree row and the thesaurus list row offer the same
+* affordance and there is one publisher instead of two.
 *
 * Exported functions: render_id_column
 * Module-private functions: render_order_form
@@ -31,6 +34,11 @@
 	import {get_all_instances} from '../../common/js/instances.js'
 	import {render_delete_record_dialog} from './render_ts_dialogs.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
+	import {
+		get_picker,
+		render_term_pick_control,
+		term_selectability
+	} from '../../area_thesaurus/js/thesaurus_picker.js'
 
 
 
@@ -39,7 +47,7 @@
 * Builds and returns the `id_column_content` DOM node for a ts_object row.
 *
 * The rendered markup depends on two axes:
-*   1. `thesaurus_mode` — when 'relation', only a "link term" anchor is produced;
+*   1. `thesaurus_mode` — when 'relation', only the picker's term control is produced;
 *      all other modes fall through to the default set of action controls.
 *   2. Permission levels and node flags — each button is gated individually:
 *        - ADD and DRAG require `permissions_button_new >= 2` and `is_descriptor === true`.
@@ -62,9 +70,10 @@
 * Side effects:
 *   - Stores a reference to the ORDER anchor on `self.order_number_link` so that
 *     `render_order_form` can hide/show it without a DOM query.
-*   - In 'relation' mode, registers a click listener that publishes an event_manager
-*     event on the opener or parent window; the correct window is resolved via
-*     `self.linker.caller` (null → `window.opener`; truthy → `window`).
+*   - In 'relation' mode, delegates the whole term control to
+*     `render_term_pick_control` (thesaurus_picker.js): it subscribes the control to the
+*     picker's selection, repaints it on every change and publishes the pick through the
+*     one publisher. The window resolution this file used to duplicate lives there too.
 *
 * @param {Object} self - ts_object instance providing all required state and methods.
 * @returns {HTMLElement} The fully-populated `id_column_content` div; attach it to the row node.
@@ -75,7 +84,6 @@ export const render_id_column = function(self) {
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
 		const is_descriptor		= self.is_descriptor
-		const is_indexable		= self.is_indexable
 		const mode				= self.mode
 		const virtual_order		= self.virtual_order
 		const is_root_node		= self.is_root_node
@@ -89,69 +97,41 @@ export const render_id_column = function(self) {
 	switch(thesaurus_mode) {
 
 		case 'relation': {
-			// hierarchy_node cannot be used as related  and not index-able too
-			// Non-indexable nodes (e.g. pure grouping/hierarchy terms) must not appear
-			// as selectable related items in the indexation panel.
-			if ( is_indexable===false ) break;
 
-			// link_related
-			// A single arrow-link anchor replaces all default controls in relation mode.
-				const link_related = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'id_column_link ts_object_related',
-					title_label		: 'add',
-					parent			: id_column_content
-				})
-				// Locate the first 'term' element in ar_elements to extract the human-readable label.
-				// ar_elements is a heterogeneous array that may contain items of type 'term',
-				// 'qualifier', 'note', etc.
+			// picker. Resolved from the linker this row already carries (one hop, no
+			// caller-chain walk). A relation-mode tree with no picker attached is a
+			// wiring defect in the host — attach_picker was never called — and it is
+			// named here instead of degrading into an anchor that can publish nothing.
+				const picker = get_picker(self)
+				if (!picker) {
+					console.error(`Error. No picker is attached to this tree.
+						The host must call attach_picker(area_instance, {linker, caller}) before rendering it:`, self);
+					break;
+				}
+
+			// term label. The first 'term' element of ar_elements, which is a
+			// heterogeneous array also carrying 'qualifier', 'note', etc. items.
 				const current_label_term = self.data.ar_elements.find(el => el.type==='term')
-				// Attach payload directly on the anchor node for easy retrieval by external consumers.
-				link_related.data = {
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					label			: current_label_term ? current_label_term.value : ''
-				}
-				// click event
-				const click_handler = (e) => {
-					e.stopPropagation()
 
-					// source window. Could be different than current (like iframe)
-						// const source_window = window.opener || window.parent
-						// if (source_window===null) {
-						// 	console.warn("[link_term] Error on find window.opener / parent")
-						// 	return false
-						// }
-
-					// publish event link_term
-					// (!) self.linker must be set before this panel is opened —
-					// it identifies the component_portal waiting for the selection.
-						if (!self.linker) {
-							console.warn(`Error. self.linker is not defined.
-								Please set ts_object linker property with desired target component portal:`, self);
-							return false
-						}
-						// linker id. A component_portal instance is expected as linker
-						const linker_id = self.linker.id
-						// source_window.event_manager.publish('link_term_' + linker_id,
-						// Window resolution: when the thesaurus was opened via DS (no caller on
-						// the linker), the event_manager lives on the opener window; for normal
-						// inline indexation the current window holds the correct event_manager.
-						const window_base = !self.linker.caller
-							? window.opener // case DS opening new window
-							: window // default case (indexation)
-						window_base.event_manager.publish('link_term_' + linker_id, {
-							section_tipo	: self.section_tipo,
-							section_id		: self.section_id,
-							label			: current_label_term ? current_label_term.value : ''
-						})
-				}
-				link_related.addEventListener('click', click_handler)
-			// related icon
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button arrow_link',
-					parent			: link_related
+			// term control. Built by the shared picker module, so the tree row and the
+			// thesaurus list row offer the exact same affordance and there is ONE
+			// publisher of the pick.
+			// (!) A non-selectable node gets NO control — render_term_pick_control
+			// returns null for it, which is the same outcome as this branch's original
+			// `if (is_indexable===false) break`. The arrow MEANS "this term can be
+			// indexed": drawing a dimmed one on every structural/grouping level would
+			// bury the terms that actually accept a link. Absence is the signal.
+			// Selectability is the SERVER's answer (root_terms_selectable on the area
+			// read, or this node's own is_indexable) and is read, never recomputed here.
+				render_term_pick_control({
+					picker		: picker,
+					term		: {
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						label			: current_label_term ? current_label_term.value : ''
+					},
+					selectable	: term_selectability(picker, self),
+					parent		: id_column_content
 				})
 			break;
 		}

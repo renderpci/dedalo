@@ -9,6 +9,7 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
+	import {attach_picker} from '../../../core/area_thesaurus/js/thesaurus_picker.js'
 	import {render_tool_cataloging} from './render_tool_cataloging.js'
 
 
@@ -30,6 +31,10 @@
 *     `section_tipo` determine which section records are displayed as draggable tiles.
 *   - A ddo entry with role `"area_thesaurus"` drives the right panel; the instance must be
 *     an area component that owns a thesaurus tree.
+*   - A ddo entry with role `"indexing_component"` (same role name tool_indexation uses)
+*     names the component that receives a picked term. It is what makes the thesaurus
+*     panel a term PICKER; without it the tool still catalogues by drag-and-drop, and the
+*     missing role is reported instead of leaving a half-wired tree.
 *   - `tool_config.set_new_thesaurus_value` is an object `{ tipo, section_tipo }` identifying
 *     the component_portal inside the new thesaurus term section that should receive the
 *     dragged locator. This key is mandatory for drag-and-drop to work.
@@ -61,6 +66,10 @@
 *   @var {Object|null}   section_to_cataloging - Section instance for the left panel (loaded in build).
 *   @var {Object|null}   area_thesaurus        - Area/thesaurus instance for the right panel (resolved
 *                                               from ar_instances in build).
+*   @var {Object|null}   indexing_component    - Component that receives a term picked in the
+*                                               thesaurus panel (resolved from the ddo_map role
+*                                               `indexing_component` in build; null when the
+*                                               install does not configure that role).
 */
 export const tool_cataloging = function () {
 
@@ -79,6 +88,7 @@ export const tool_cataloging = function () {
 
 	this.section_to_cataloging	= null // main section to be cataloging
 	this.area_thesaurus			= null
+	this.indexing_component		= null // component that receives a term picked in the thesaurus panel
 }//end tool_cataloging
 
 
@@ -245,12 +255,18 @@ tool_cataloging.prototype.init = async function(options) {
 *      loop. See `load_section` for the options resolution logic.
 *   2. Propagates the CSS class from the ddo entry's `properties.css` onto the section's context
 *      so that the render layer can apply it to the panel container.
-*   3. Resolves `area_thesaurus` from the already-built `ar_instances` array (the thesaurus
-*      area is instantiated by tool_common) and sets cross-pointers:
-*        - `area_thesaurus.caller = self`  — lets the thesaurus dispatch events back to this tool.
-*        - `area_thesaurus.linker = self.indexing_component` — links the component used for
-*          cross-indexation ((!): `self.indexing_component` is assigned by tool_common and may
-*          be undefined if no indexing component is configured in the ontology).
+*   3. Resolves `indexing_component` from the ddo_map role of the same name — the component a
+*      picked term is published to. (!) This resolution is the fix for a long-standing defect:
+*      the tool wired `area_thesaurus.linker = self.indexing_component` while nothing in the
+*      repo ever assigned that property, so the linker was always undefined and the panel
+*      could not pick. It is resolved here exactly as `area_thesaurus` is.
+*   4. Resolves `area_thesaurus` from the already-built `ar_instances` array (the thesaurus
+*      area is instantiated by tool_common) and wires it as a term picker for the
+*      indexing_component through `attach_picker` (thesaurus_picker.js), which owns the
+*      thesaurus mode, the caller pointer and the linker pointer.
+*      When the install configures no `indexing_component` role there is nothing to pick
+*      INTO: the wiring is skipped with a named report and the drag-and-drop cataloging
+*      capability (the `ts_add_child_tool_cataloging` flow) is unaffected.
 *
 * @param {boolean} [autoload=false] - When true, triggers a data load during build.
 * @returns {Promise<boolean>} Resolves to the boolean returned by the common build.
@@ -271,13 +287,36 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 			await self.section_to_cataloging.build(true)
 			self.section_to_cataloging.context.css = section_to_cataloging.properties.css
 
+		// indexing_component. The component a picked term is published to.
+		// (!) Resolved from its own ddo_map role, as tool_indexation does. It was never
+		// assigned anywhere before, so the linker below was always undefined and the
+		// thesaurus panel could not pick a term at all.
+			const indexing_component_ddo = self.tool_config.ddo_map.find(el => el.role==='indexing_component')
+			self.indexing_component = indexing_component_ddo
+				? self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo) || null
+				: null
+
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
 			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
-			// set instance in thesaurus mode 'relation'
-			// self.area_thesaurus.context.thesaurus_mode = 'relation'
-			self.area_thesaurus.caller = self
-			self.area_thesaurus.linker = self.indexing_component
+
+		// picker. Wires the thesaurus panel as a term picker for the indexing_component
+		// (mode + caller + linker), the same one wiring tool_indexation uses. This tool's
+		// area read carries no picker_caller, so attach_picker applies the documented
+		// tool-declared 'relation' exemption.
+		// (!) Named refusal, never a silent skip: without an indexing_component there is
+		// nothing to pick INTO. The tool keeps cataloguing by drag-and-drop (the
+		// ts_add_child_tool_cataloging flow), which does not use the linker.
+			if (!self.indexing_component) {
+				console.warn(`Ignored thesaurus picker: role 'indexing_component' is not defined in tool_config.ddo_map`
+					+ ' (or its instance was not built). The thesaurus panel browses; it cannot pick terms.', indexing_component_ddo);
+				self.area_thesaurus.caller = self
+			} else {
+				attach_picker(self.area_thesaurus, {
+					linker	: self.indexing_component,
+					caller	: self
+				})
+			}
 
 	} catch (error) {
 		self.error = error

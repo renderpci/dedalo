@@ -28,6 +28,7 @@ import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { findFirstDescendantTipoByModel, getMatrixTableFromTipo } from '../ontology/resolver.ts';
+import { isTargetAllowed } from '../relations/picker_constraint.ts';
 import { composeContains, locatorJsonVariants } from '../search/containment.ts';
 
 // Hierarchy/ontology component tipos this resolver reads (kept local — they are
@@ -112,12 +113,25 @@ function langSliceValue(
 	return parts.length > 0 ? parts.join(' | ') : null;
 }
 
-/** The area boot data item {tipo, value, typologies} (see module doc). */
+/**
+ * The area boot data item {tipo, value, typologies} (see module doc).
+ *
+ * `targetSections` is the PICKER narrowing (engineering/AREA_SPEC.md §5): when a read
+ * declares its caller, only the hierarchies whose target IS one of that
+ * caller's declared targets are projected — the PHP twin of
+ * class.area_thesaurus.php:242's `hierarchy_sections` filter, except the list
+ * is derived server-side from the caller instead of accepted from the client.
+ * `null` (the default) is the ordinary browse: no narrowing, byte-identical to
+ * the pre-picker projection. No ordering claim is made against the ACL loop in
+ * read.ts — a pure filter cannot re-admit, so neither position changes the
+ * result.
+ */
 export async function readAreaHierarchyData(
 	model: 'area_thesaurus' | 'area_ontology',
 	areaTipo: string,
 	lang: string,
 	termsAreModel = false,
+	targetSections: readonly string[] | null = null,
 ): Promise<Record<string, unknown>> {
 	const isOntology = model === 'area_ontology';
 	const mainSection = isOntology ? ONTOLOGY_MAIN_SECTION : THESAURUS_MAIN_SECTION;
@@ -172,6 +186,15 @@ export async function readAreaHierarchyData(
 		const target =
 			langSliceValue(row.target_items, 'lg-nolan') ?? langSliceValue(row.target_items, lang);
 		if (target === null || target === '') continue;
+		// Picker narrowing: BOTH sides resolve through getSectionRealTipo, so a
+		// virtual target (rsc170) and the real section a hierarchy points at
+		// (rsc2) name the same thing. The comparison law itself is
+		// relations/picker_constraint.ts — imported, never re-written here, so
+		// the tree the picker renders and the locators the write path accepts
+		// cannot disagree. An EMPTY target list is a caller that declares no
+		// target at all: no constraint, hence no narrowing (the same declared
+		// exemption the write chokepoint carries).
+		if (targetSections !== null && !(await isTargetAllowed(targetSections, target))) continue;
 		const typologyId = row.typology_locators?.[0]?.section_id;
 		if (typologyId === undefined || typologyId === null || typologyId === '') continue;
 		const activeInThesaurus = String(row.active_locators?.[0]?.section_id ?? '') === '1';

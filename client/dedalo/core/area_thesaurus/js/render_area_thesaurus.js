@@ -466,12 +466,19 @@ const render_content_data = function(self) {
 *   - section_tipo / section_id — identify the thesaurus term record.
 *   - children_tipo             — the component_relation_children tipo used when
 *                                 expanding child branches for this hierarchy.
-*   - thesaurus_mode            — 'default' (descriptors) or 'relation' etc.,
-*                                 read from self.context.thesaurus_mode.
+*   - thesaurus_mode            — 'default' (descriptors) or 'relation', read from
+*                                 self.context.thesaurus_mode. The server derives it;
+*                                 on a picker read it is granted from the declared
+*                                 caller (@see area_thesaurus picker_caller).
 *   - ts_parent                 — fixed as 'root' so the instance key is
 *                                 distinct from deeper expansions of the same node.
 *   - linker                    — propagated from the area (set by the DS/portal
-*                                 caller via URL param `initiator`).
+*                                 caller via URL param `initiator`, or replaced by
+*                                 thesaurus_picker.js attach_picker with the linker
+*                                 component itself). This is also how a tree row
+*                                 reaches its picker: attach_picker stamps
+*                                 `linker.picker`, and get_picker(node) is that one
+*                                 hop — nothing here re-derives it.
 *   - is_ontology               — true when model is 'area_ontology'; changes
 *                                 display and operation options in ts_object.
 *
