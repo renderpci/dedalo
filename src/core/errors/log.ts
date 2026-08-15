@@ -1,8 +1,11 @@
 /**
  * logError — the one reporting door for typed failures.
  *
- * Severity comes from the registry: `info`/`warn` → console.warn/info,
- * `error`/`fatal` → console.error. Line grammar (engineering/CONVENTIONS.md §1):
+ * Severity comes from the registry: `info` → console.info (the LINE only —
+ * an expected refusal such as an expired session is traffic, not a fault, and
+ * a stack per 401 would drown the log), `warn` → console.warn, `error`/`fatal`
+ * → console.error, the latter three with the Error object (stack survives).
+ * Line grammar (engineering/CONVENTIONS.md §1):
  *
  *   [<subsystem>] <code> k=v … [req <id>]  + the Error object (stack survives)
  *
@@ -41,7 +44,7 @@ export function logError(error: DedaloError, ctx: LogErrorContext = {}): void {
 	const severity = error.spec.severity;
 	incrementCounter('errors_total');
 	incrementCounter(`error_${error.code.replace('.', '_')}`);
-	if (severity === 'info') console.info(line, error);
+	if (severity === 'info') console.info(line);
 	else if (severity === 'warn') console.warn(line, error);
 	else console.error(line, error);
 }

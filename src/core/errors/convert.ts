@@ -28,14 +28,26 @@ import type { ApiErrorBody, ApiNotice, ErrEnvelope, OkEnvelope } from './schema.
 
 export type ErrorSurface = 'http' | 'tool' | 'mcp' | 'stream';
 
+/**
+ * Handler EXTENSION KEYS (ERRORS_SPEC §3): top-level fields beside the
+ * envelope keys that a handler owns and the client reads by name
+ * (`environment`, `in_use`, `total`, `pid`, `job_id`, `saml_redirect`,
+ * `dedalo_notification`, `action`, …). Spread FIRST, so a reserved envelope
+ * key can never be overridden by one.
+ */
+export type EnvelopeExtension = Readonly<Record<string, unknown>>;
+
 export interface ErrorEnvelopeContext {
 	readonly requestId: string;
 	readonly surface?: ErrorSurface;
+	/** Chokepoint-side extension keys (the CSRF gate's `action`); merged over the throw's own `extend`. */
+	readonly extend?: EnvelopeExtension;
 }
 
 export interface OkEnvelopeContext {
 	readonly requestId: string;
 	readonly notices?: readonly ApiNotice[];
+	readonly extend?: EnvelopeExtension;
 }
 
 /** Longest `cause` chain the converter follows (defensive; real chains are 1-3 deep). */
@@ -151,6 +163,8 @@ export const ERROR_ENVELOPE_COMPAT = {
 export interface ErrorEnvelopeResult {
 	readonly status: number;
 	readonly body: ErrEnvelope;
+	/** The typed error the body was made from — for logError at the chokepoint (one classification, one latch flip). */
+	readonly error: DedaloError;
 	/** Set for limit/unavailable codes when the throw carried one — the chokepoint emits Retry-After. */
 	readonly retryAfterMs?: number;
 }
@@ -160,19 +174,25 @@ export function toErrorEnvelope(error: unknown, ctx: ErrorEnvelopeContext): Erro
 	const typed = toDedaloError(error);
 	const body = toErrorBody(typed);
 	const envelope: ErrEnvelope = {
+		...typed.extend,
+		...ctx.extend,
 		ok: false,
 		request_id: ctx.requestId,
 		error: body,
 		...ERROR_ENVELOPE_COMPAT.failure(body),
 	};
 	return typed.retryAfterMs === undefined
-		? { status: typed.spec.status, body: envelope }
-		: { status: typed.spec.status, body: envelope, retryAfterMs: typed.retryAfterMs };
+		? { status: typed.spec.status, body: envelope, error: typed }
+		: { status: typed.spec.status, body: envelope, error: typed, retryAfterMs: typed.retryAfterMs };
 }
 
-/** The ok:true envelope (`result` mirrors `data` during the compat window). */
+/**
+ * The ok:true envelope (`result` mirrors `data` during the compat window).
+ * `ctx.extend` = the handler's extension keys (see EnvelopeExtension).
+ */
 export function ok<T>(data: T, ctx: OkEnvelopeContext): OkEnvelope {
 	return {
+		...ctx.extend,
 		ok: true,
 		request_id: ctx.requestId,
 		data,

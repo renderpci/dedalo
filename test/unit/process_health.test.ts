@@ -93,8 +93,10 @@ describe('process poison latch (TDZ hardening)', () => {
 	test('dispatch wiring: a TDZ throw in a handler degrades the envelope AND flips the latch', async () => {
 		// The registry objects are mutable — plant a probe action that throws the
 		// exact Bun TDZ shape, dispatch it through the REAL gate chain, and prove
-		// the dispatch.ts catch both degrades to the PHP-shaped envelope and
-		// marks the process poisoned (the incident-reproducing branch).
+		// the dispatch.ts catch both converts it to the `internal.module_poisoned`
+		// envelope (500) and marks the process poisoned — the latch lives INSIDE
+		// toDedaloError (the converter), so it fires for every surface, not only
+		// the API catch (the incident-reproducing branch).
 		const PROBE = '__test_tdz_probe__';
 		utilsApiActions[PROBE] = async () => {
 			throw new ReferenceError("Cannot access 'x' before initialization");
@@ -104,13 +106,17 @@ describe('process poison latch (TDZ hardening)', () => {
 				{ action: PROBE, dd_api: 'dd_utils_api' } as Rqo,
 				authedContext(),
 			);
-			// The client envelope degrades exactly like any handler exception…
-			expect(res.status).toBe(200);
+			// The envelope is converter-made: ok:false, the poison code, 500…
+			expect(res.status).toBe(500);
+			expect(res.body.ok).toBe(false);
+			expect((res.body.error as { code: string }).code).toBe('internal.module_poisoned');
 			expect(res.body.result).toBe(false);
-			// …AND the process-global latch is set, naming the poisoned action.
+			// …AND the process-global latch is set, naming the TDZ shape (the action
+			// is on the logError line + the access log, keyed by request_id).
 			const poison = getProcessPoison();
 			expect(poison.poisoned).toBe(true);
-			expect(poison.reason).toContain(`dd_utils_api::${PROBE}`);
+			expect(poison.reason).toContain('TDZ ReferenceError');
+			expect(poison.reason).toContain("Cannot access 'x' before initialization");
 		} finally {
 			delete utilsApiActions[PROBE];
 		}
@@ -126,7 +132,8 @@ describe('process poison latch (TDZ hardening)', () => {
 				{ action: PROBE, dd_api: 'dd_utils_api' } as Rqo,
 				authedContext(),
 			);
-			expect(res.status).toBe(200);
+			expect(res.status).toBe(500);
+			expect((res.body.error as { code: string }).code).toBe('internal.unexpected');
 			expect(res.body.result).toBe(false);
 			// A routine exception must never trigger a watchdog restart.
 			expect(getProcessPoison().poisoned).toBe(false);

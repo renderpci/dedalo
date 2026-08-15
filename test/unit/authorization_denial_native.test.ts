@@ -1,23 +1,31 @@
 /**
- * THE AUTHORIZATION DENIAL — one shape, one machine token, one message
- * (WC-2026-08-12-authorization-denial-token).
+ * THE AUTHORIZATION DENIAL — one code, one status, converter-made
+ * (WC-2026-08-12-authorization-denial-token, restated on envelope v2 —
+ * engineering/ERRORS_SPEC.md §3-4).
  *
  * A user opening a page they hold no grant for used to be told
- * "Not retry-able HTTP error 403" over a blank panel offering to check the
- * server log. Three things made that the best the client could do:
+ * "Not retry-able HTTP error 403" over a blank panel. Three things made that
+ * the best the client could do: the refusal put the HUMAN sentence in the
+ * machine channel (`denied(403, 'Insufficient permissions to read')`); the
+ * client's fetch layer threw every non-401 status away unparsed; and `start`
+ * is the client's FIRST call, so a refusal there left it without `get_label`.
  *
- *  1. `denied(403, 'Insufficient permissions to read')` put the HUMAN sentence
- *     in `errors`, the machine channel — so nothing could dispatch on it (the
- *     same defect WC-051 fixed for 401);
- *  2. the client's fetch layer classified every non-401 non-ok status as a
- *     transport failure, threw, and never let the envelope reach `.json()`;
- *  3. `start` is the client's FIRST call, so a refusal there left it without
- *     `get_label` — it could not have rendered a localized message even if it
- *     had one.
+ * Envelope v2 makes the fix structural, and this gate has three parts:
  *
- * Each of the three has a gate here. The source scans are the ratchet: the
- * token is worth nothing if the NEXT 403 goes back to putting prose in
- * `errors`, or the next fetch refactor drops the exemption.
+ *  1. THE ENVELOPE — the refusal is `perm.denied` (403, category permission,
+ *     label `no_access_page`), made by the ONE converter: `error.code` is the
+ *     machine channel; the compat mirror is `errors:['perm.denied']`; the
+ *     message names nothing (it is shown to the REFUSED user).
+ *  2. THE SOURCE RATCHET — response.ts BUILDS NO BODY (every helper THROWS),
+ *     and the transitional throwing shells (`denied(`/`notAuthorized(`/
+ *     `notLogged(`) may only DISAPPEAR: the count is frozen at today's
+ *     measurement and the P1-exit gate sets it to 0 and deletes the shells.
+ *  3. THE LIVE REFUSAL — through the real gate chain with real grants: 403 +
+ *     `perm.denied`, and the environment (labels) rides the refusal as an
+ *     extension key, because `start` has no other source of labels.
+ *
+ * The client half (data_manager's body-first parse, the policy table, the
+ * no-access page render) is owned by client_error_contract_tripwire.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -25,7 +33,10 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
-import { denied, notAuthorized } from '../../src/core/api/response.ts';
+import { notAuthorized } from '../../src/core/api/response.ts';
+import { toErrorEnvelope } from '../../src/core/errors/convert.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
+import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import {
@@ -43,82 +54,98 @@ const ADMIN_ONLY_AREA = 'dd88';
 /** The section the non-admin DOES hold a read grant on. */
 const GRANTED_SECTION = 'test3';
 
+/**
+ * THE SHELL RATCHET (shrink-only). Measured 2026-08-15 at the P1 chokepoint
+ * landing, over src/ + tools/ minus response.ts itself, comments and string
+ * contents stripped: `denied(` 60 + `notAuthorized(` 39 + `notLogged(` 7.
+ * The call-site sweep lowers it; the P1-exit gate sets it to 0 and deletes
+ * the shells from response.ts. It may NEVER be raised.
+ */
+const SHELL_CALL_SITES_MAX = 106;
+
 function read(file: string): string {
 	return readFileSync(join(REPO_ROOT, file), 'utf-8');
 }
 
-describe('notAuthorized — the envelope', () => {
-	test('403 + the machine token in errors, the human sentence in msg', () => {
-		const result = notAuthorized('Insufficient permissions to read');
-		expect(result.status).toBe(403);
-		expect(result.body.result).toBe(false);
-		expect(result.body.errors).toEqual(['not_authorized']);
-		expect(result.body.msg).toBe('Insufficient permissions to read');
+function thrownBy(fn: () => never): DedaloError {
+	try {
+		fn();
+	} catch (error) {
+		if (error instanceof DedaloError) return error;
+		throw error;
+	}
+	throw new Error('expected a throw');
+}
+
+describe('perm.denied — the envelope', () => {
+	test('403 + error.code perm.denied; compat mirror errors:[code], result:false', () => {
+		const { status, body } = toErrorEnvelope(new DedaloError('perm.denied'), {
+			requestId: 'zzden',
+		});
+		expect(status).toBe(403);
+		expect(body.ok).toBe(false);
+		expect(body.error.code).toBe('perm.denied');
+		expect(body.error.category).toBe('permission');
+		expect(body.error.label_key).toBe('no_access_page');
+		expect(body.result).toBe(false);
+		expect(body.errors).toEqual(['perm.denied']);
+		expect(body.msg).toBe('Insufficient permissions');
 	});
 
-	test('the default message names nothing — it is shown to the REFUSED user', () => {
-		// Naming the element someone cannot reach tells them it exists.
-		const result = notAuthorized();
-		expect(result.body.msg).toBe('Insufficient permissions');
-		expect(result.body.errors).toEqual(['not_authorized']);
+	test('the message names nothing — it is shown to the REFUSED user (disclosure operator)', () => {
+		// Naming the element someone cannot reach tells them it exists: the
+		// registry says `operator`, so a site's publicMessage never reaches the wire.
+		expect(ERROR_REGISTRY['perm.denied'].disclosure).toBe('operator');
+		const { body } = toErrorEnvelope(
+			new DedaloError('perm.denied', { publicMessage: 'no read on secret_section' }),
+			{ requestId: 'zzden' },
+		);
+		expect(JSON.stringify(body)).not.toContain('secret_section');
+		expect(body.error.message).toBe('Insufficient permissions');
 	});
 
-	test('denied() still puts its message in errors — which is why 403 may not use it', () => {
-		// The contrast that makes the scan below meaningful: `denied` is for
-		// validation refusals, where the sentence IS the machine detail.
-		const result = denied(400, 'bad request');
-		expect(result.body.errors).toEqual(['bad request']);
+	test('the transitional notAuthorized shell THROWS perm.denied (it builds no body)', () => {
+		const error = thrownBy(() => notAuthorized('Insufficient permissions to read'));
+		expect(error.code).toBe('perm.denied');
+		expect(error.publicMessage).toBe('Insufficient permissions to read');
+	});
+
+	test('the label is defined in the master catalog', () => {
+		const master = JSON.parse(read('src/core/labels/master.json')) as Record<string, string>;
+		expect(master.no_access_page).toBe("You don't have permission to access this page");
 	});
 });
 
-describe('the ratchet: no authorization refusal may go back to denied(403)', () => {
-	test('src/ and tools/ contain no denied(403 call', () => {
-		const offenders: string[] = [];
+describe('the ratchet: response.ts builds no body; the shells only disappear', () => {
+	test('response.ts contains no failure-body literal (result:false / errors:) — every helper throws', () => {
+		const source = stripComments(read('src/core/api/response.ts'));
+		expect(source).not.toMatch(/result:\s*false/);
+		expect(source).not.toMatch(/errors:\s*\[/);
+		expect(source).not.toMatch(/msg:/);
+		// and every exported function is typed `never` (a throw, not a builder)
+		for (const match of source.matchAll(/export function (\w+)\([^)]*\):\s*(\w+)/g)) {
+			expect({ helper: match[1], returns: match[2] }).toEqual({
+				helper: match[1],
+				returns: 'never',
+			});
+		}
+	});
+
+	test(`shell call sites in src/ + tools/ ≤ ${SHELL_CALL_SITES_MAX} (shrink-only; P1 exit sets 0)`, () => {
+		let total = 0;
+		const perFile: Record<string, number> = {};
 		for (const dir of ['src', 'tools']) {
 			for (const match of new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, dir) })) {
 				if (match.endsWith('.test.ts')) continue;
 				const file = relative(REPO_ROOT, join(REPO_ROOT, dir, match));
-				if (stripComments(read(file)).includes('denied(403')) offenders.push(file);
+				if (file === 'src/core/api/response.ts') continue;
+				const source = stripComments(read(file), { blankStrings: true });
+				const count = (source.match(/\b(denied|notAuthorized|notLogged)\(/g) ?? []).length;
+				if (count > 0) perFile[file] = count;
+				total += count;
 			}
 		}
-		expect(offenders).toEqual([]);
-	});
-});
-
-describe('the client reads the refusal instead of throwing it away', () => {
-	const dataManager = 'client/dedalo/core/common/js/data_manager.js';
-
-	test('both fetch layers exempt every ANSWERED status, not only 401', () => {
-		const source = read(dataManager);
-		// handle_errors: the response is returned unparsed so the caller's
-		// .json() sees the envelope and api_response_errors publishes.
-		expect(source).toContain('response.status === 401 || response.status === 403');
-		// The retry/timeout layer: an ANSWER about the request's subject is never a
-		// transport error. 401 (re-login) and 403 (authorization,
-		// WC-2026-08-12-authorization-denial-token) were the first two; 409 joined
-		// them for the picker's named "no active hierarchy is configured for this
-		// component target" — thrown here it never reached .json(), so the reason
-		// the server took care to state was replaced by a generic red transport
-		// error. Retrying any of the three is meaningless.
-		expect(source).toContain('const answered_statuses = [401, 403, 409]');
-		expect(source).toContain('!response?.ok && !answered_statuses.includes(response?.status)');
-		// and nothing may reintroduce the old blanket throw
-		expect(source).not.toContain('!response?.ok && response?.status !== 401)');
-	});
-
-	test('the page turns the token into its own error type, and the renderer has that case', () => {
-		expect(read('client/dedalo/core/page/js/page.js')).toContain(
-			"api_response?.errors?.includes('not_authorized')",
-		);
-		expect(read('client/dedalo/core/common/js/render_common.js')).toContain(
-			"case 'not_authorized':",
-		);
-	});
-
-	test('the message is a LABEL, defined in the master catalog', () => {
-		const master = JSON.parse(read('src/core/labels/master.json')) as Record<string, string>;
-		expect(master.no_access_page).toBe("You don't have permission to access this page");
-		expect(read('client/dedalo/core/page/js/page.js')).toContain('get_label.no_access_page');
+		expect(total, JSON.stringify(perFile, null, 1)).toBeLessThanOrEqual(SHELL_CALL_SITES_MAX);
 	});
 });
 
@@ -156,11 +183,13 @@ describe.if(DB_READY)('the live refusal (dispatch, real grants)', () => {
 
 	afterAll(removeAclIdentityFixture);
 
-	test('a refused page start answers 403 + not_authorized', async () => {
+	test('a refused page start answers 403 + perm.denied', async () => {
 		const refused = await dispatchRqo(startRqo(ADMIN_ONLY_AREA) as never, nonAdminContext as never);
 		expect(refused.status).toBe(403);
-		expect(refused.body.errors).toEqual(['not_authorized']);
-		expect(refused.body.msg).toBe('Insufficient permissions to read');
+		expect(refused.body.ok).toBe(false);
+		expect((refused.body.error as { code: string }).code).toBe('perm.denied');
+		expect(refused.body.errors).toEqual(['perm.denied']);
+		expect(refused.body.request_id).toBe('zzden');
 	});
 
 	test('THE LOCALIZATION CONTRACT: the refusal carries the environment (start has no other source of labels)', async () => {
@@ -172,12 +201,14 @@ describe.if(DB_READY)('the live refusal (dispatch, real grants)', () => {
 		// whatever interface language the operator chose.
 		expect(labels?.no_access_page).toBeDefined();
 		// …and it carries no context/data for the element that was refused.
-		expect((refused.body as { result?: unknown }).result).toBe(false);
+		expect(refused.body.result).toBe(false);
+		expect('data' in refused.body).toBe(false);
 	});
 
 	test('the same start for the identity that HOLDS the grant is 200 (non-vacuity)', async () => {
 		const allowed = await dispatchRqo(startRqo(ADMIN_ONLY_AREA) as never, adminContext as never);
 		expect(allowed.status).toBe(200);
+		expect(allowed.body.ok).toBe(true);
 		expect(allowed.body.errors).toBeUndefined();
 	});
 

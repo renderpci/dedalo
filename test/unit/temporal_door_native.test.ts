@@ -355,7 +355,9 @@ describe('WC-059 — add_new_element creates the TARGET, never the host', () => 
 			tsContext as never,
 		);
 		expect(response.status).toBe(400);
-		expect(JSON.stringify(response.body)).toContain('add_new_element');
+		// Envelope v2: a caller refusal (request.invalid) — the temporal door's
+		// named sentence is operator-disclosure until its sweep gives it a code.
+		expect((response.body as { error: { code: string } }).error.code).toBe('request.invalid');
 	});
 
 	test('an empty target section is refused', async () => {

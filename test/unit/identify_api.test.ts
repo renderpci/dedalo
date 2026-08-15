@@ -448,7 +448,7 @@ describe('registration', () => {
 			anonymous,
 		);
 		expect(registered.status).toBe(401);
-		expect(registered.body.errors).toContain('not_logged');
+		expect(registered.body.errors).toContain('auth.not_logged');
 
 		const unregistered = await dispatchRqo(
 			{ action: 'identify_everything', dd_api: 'dd_identify_api', options: {} } as Rqo,

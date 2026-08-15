@@ -103,26 +103,33 @@ async function tsCall(
 	return result.body;
 }
 
-describe('widget_request dispatch gates (differential-pinned envelopes)', () => {
-	test('non-admin is refused with unauthorized', async () => {
+// Envelope v2 (ERRORS_SPEC §3): the machine channel is `error.code`; the compat
+// mirror `errors:[code]` carries the same value during the window. Legacy tokens
+// map through LEGACY_TOKEN_MAP (unauthorized → perm.denied, unauthorized_method →
+// tool.method_not_allowed); the widget-name refusal rides the transitional
+// adapter's status default (request.invalid) until the maintenance sweep codes it.
+describe('widget_request dispatch gates (envelope v2)', () => {
+	test('non-admin is refused with perm.denied', async () => {
 		const nonAdmin = await tsCall(WIDGET_RQO, false);
-		expect((nonAdmin.errors as string[])[0]).toBe('unauthorized');
+		expect((nonAdmin.error as { code: string }).code).toBe('perm.denied');
+		expect((nonAdmin.errors as string[])[0]).toBe('perm.denied');
 	});
 
-	test('unknown widget id is refused with Invalid widget name', async () => {
+	test('unknown widget id is refused (caller fault)', async () => {
 		const badWidget = await tsCall({
 			...WIDGET_RQO,
 			source: { typo: 'source', model: 'not_a_widget', action: 'get_value' },
 		});
-		expect((badWidget.errors as string[])[0]).toContain('Invalid widget name');
+		expect(badWidget.ok).toBe(false);
+		expect((badWidget.error as { code: string; category: string }).category).toBe('caller');
 	});
 
-	test('unregistered method is refused with unauthorized_method', async () => {
+	test('unregistered method is refused with tool.method_not_allowed', async () => {
 		const badMethod = await tsCall({
 			...WIDGET_RQO,
 			source: { typo: 'source', model: 'counters_status', action: 'drop_everything' },
 		});
-		expect(badMethod.errors as string[]).toContain('unauthorized_method');
+		expect((badMethod.error as { code: string }).code).toBe('tool.method_not_allowed');
 	});
 
 	test('widget_request DENIES database_info.get_value (panel-only allowlist)', async () => {
@@ -131,7 +138,7 @@ describe('widget_request dispatch gates (differential-pinned envelopes)', () => 
 			source: { typo: 'source', model: 'database_info', action: 'get_value' },
 		});
 		expect(denied.result).toBe(false);
-		expect(denied.errors as string[]).toContain('unauthorized_method');
+		expect((denied.error as { code: string }).code).toBe('tool.method_not_allowed');
 	});
 });
 
@@ -190,7 +197,7 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 				"Counter row with tipo: 'test52' is a 'component_input_text' . Only sections can use counters. Fix ASAP",
 			);
 			expect((result.datalist ?? []).some((item) => item.section_tipo === 'test52')).toBe(false);
-			expect(body.errors).toEqual([]);
+			expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 		} finally {
 			removed = (await sql.unsafe(
 				`DELETE FROM matrix_counter WHERE tipo = 'test52' RETURNING tipo`,
@@ -589,7 +596,7 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 	test('envelope: result true, OK msg, one updated-days batch per user', () => {
 		expect(body.result).toBe(true);
 		expect(body.msg).toBe('OK. Request done.');
-		expect(body.errors).toEqual([]);
+		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 		expect(body.updated_days).toEqual([
 			[
 				{ user: UID, date: isoDay(dayA) },
@@ -717,7 +724,7 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 		});
 		expect(body.result).toBe(true);
 		expect(String(body.msg)).toContain('Imported 0');
-		expect(body.errors).toEqual([]);
+		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
 
 	test('reset_hierarchies routes (replace verb) and is a no-op for an empty selection', async () => {
@@ -728,6 +735,6 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 		});
 		expect(body.result).toBe(true);
 		expect(String(body.msg)).toContain('Reset 0');
-		expect(body.errors).toEqual([]);
+		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
 });

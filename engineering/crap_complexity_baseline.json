@@ -6,14 +6,14 @@
 	"summary": {
 		"files": 473,
 		"functions": 3824,
-		"functionsOverCap": 698,
+		"functionsOverCap": 697,
 		"filesOverCap": 274
 	},
 	"files": {
 		"src/core/ai/model_store.ts": 10,
 		"src/core/api/access_log.ts": 7,
 		"src/core/api/dedalo_files.ts": 12,
-		"src/core/api/dispatch.ts": 33,
+		"src/core/api/dispatch.ts": 19,
 		"src/core/api/handlers/dd_component_3d_api.ts": 15,
 		"src/core/api/handlers/dd_component_av_api.ts": 11,
 		"src/core/api/handlers/dd_component_info.ts": 12,
@@ -244,7 +244,7 @@
 		"src/core/tools/babel.ts": 11,
 		"src/core/tools/background.ts": 9,
 		"src/core/tools/config.ts": 11,
-		"src/core/tools/dispatch.ts": 18,
+		"src/core/tools/dispatch.ts": 17,
 		"src/core/tools/import_conform.ts": 35,
 		"src/core/tools/import_csv.ts": 12,
 		"src/core/tools/import_csv_execute.ts": 16,

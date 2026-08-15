@@ -22,9 +22,17 @@
  *  8. execute: direct, or (background_running) via the background executor,
  *     which additionally enforces the BACKGROUND_RUNNABLE allowlist.
  *
- * The tool response REPLACES the API envelope wholesale.
+ * The tool response REPLACES the API envelope wholesale — so it IS the API
+ * envelope (envelope v2, engineering/ERRORS_SPEC.md §4): every gate here
+ * REFUSES BY THROWING a registered `tool.*` / `perm.*` / `request.*` code
+ * (converted by the dispatch chokepoint), and a tool action returns
+ * `ok(data, {requestId, extend?})` — or, until the tools sweep lands, a legacy
+ * `{result,msg,errors}` body the dispatcher's legacy_body_adapter brings onto
+ * the envelope (TRANSITIONAL — deleted at P1 exit).
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
+import { LEGACY_TOKEN_MAP } from '../errors/registry.ts';
 import type { Principal } from '../security/permissions.ts';
 import { scheduleBackground } from './background.ts';
 import {
@@ -40,8 +48,28 @@ import { assertActionPermission, resolveAction } from './security.ts';
 
 const TOOL_NAME_PATTERN = /^tool_[a-z0-9_]+$/;
 
-function failed(msg: string, errors: string[]): ToolResponse {
-	return { result: false, msg: `Error. Request failed. ${msg}`, errors };
+/** Gates 3+4: an admin sees every active tool, so for them an unknown name IS an invalid name. */
+function unknownTool(principal: Principal, toolName: string): DedaloError {
+	return new DedaloError(principal.isGlobalAdmin ? 'tool.invalid_name' : 'tool.not_authorized', {
+		coordinates: { tool: toolName },
+	});
+}
+
+/**
+ * Gate 7: security.ts still answers with a legacy token (`unauthorized` →
+ * perm.denied / `invalid_request` → request.invalid); mapped here until its
+ * own sweep makes it throw.
+ */
+function permissionRefusal(
+	permission: { msg: string; errors: string[] },
+	toolName: string,
+	toolMethod: string,
+): DedaloError {
+	const token = permission.errors[0];
+	return new DedaloError(LEGACY_TOKEN_MAP[token ?? ''] ?? 'perm.denied', {
+		publicMessage: permission.msg,
+		coordinates: { tool: toolName, method: toolMethod },
+	});
 }
 
 /**
@@ -57,25 +85,21 @@ export async function dispatchToolRequest(
 ): Promise<ToolResponse> {
 	// Gate 1: options must be an object (PHP rejects non-object overrides).
 	if (options !== undefined && (typeof options !== 'object' || options === null)) {
-		return failed('invalid options', ['Invalid options type']);
+		throw new DedaloError('request.invalid_options', { publicMessage: 'Invalid options type' });
 	}
 	const toolName = typeof source.model === 'string' ? source.model : '';
 	const toolMethod = typeof source.action === 'string' ? source.action : '';
 
 	// Gate 2: strict tool-name shape before ANY lookup (path/injection guard).
 	if (!TOOL_NAME_PATTERN.test(toolName)) {
-		return failed('invalid tool name', [`Invalid tool name: ${toolName}`]);
+		throw new DedaloError('tool.invalid_name', { coordinates: { tool: toolName } });
 	}
 
 	// Gates 3 + 4: ACTIVE in dd1324 AND authorized for the calling user.
 	const userTools = await getUserTools(userId, principal.isGlobalAdmin);
-	if (!userTools.some((tool) => tool.name === toolName)) {
-		return failed('invalid tool', [
-			principal.isGlobalAdmin
-				? `Invalid tool name: ${toolName}`
-				: `Tool not authorized for current user: ${toolName}`,
-		]);
-	}
+	// An admin sees every active tool, so for them an unknown name IS an
+	// invalid name; a non-admin is refused authorization (no existence leak).
+	if (!userTools.some((tool) => tool.name === toolName)) throw unknownTool(principal, toolName);
 
 	// Framework status action (S2-16/DEC-22a): poll a background job started on
 	// this tool. Served here — after the active+authorized gates, before the
@@ -106,20 +130,23 @@ export async function dispatchToolRequest(
 	// Gate 5: the tool must have a loaded server module (PHP class-file resolve).
 	const loaded = await getLoadedTool(toolName);
 	if (loaded === undefined) {
-		return failed(`tool has no server module: ${toolName}`, ['unauthorized_method']);
+		throw new DedaloError('tool.no_server_module', { coordinates: { tool: toolName } });
 	}
 
 	// Gate 6: explicit action registry (the TS API_ACTIONS allowlist).
 	const spec = resolveAction(loaded.module, toolMethod);
 	if (spec === null) {
-		return failed(`tool method not allowed: ${toolMethod}`, ['unauthorized_method']);
+		throw new DedaloError('tool.method_not_allowed', {
+			details: { method: toolMethod },
+			coordinates: { tool: toolName },
+		});
 	}
 
 	// Gate 7: declarative permission gate BEFORE the handler / background fork.
 	const optionRecord = (options ?? {}) as Record<string, unknown>;
 	const permission = await assertActionPermission(spec, optionRecord, principal);
 	if (!permission.ok) {
-		return failed(permission.msg, permission.errors);
+		throw permissionRefusal(permission, toolName, toolMethod);
 	}
 
 	// Gate 8: execute. A background request runs through the executor (which

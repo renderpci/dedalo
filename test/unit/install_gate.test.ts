@@ -79,9 +79,12 @@ describe('install window gate (P1)', () => {
 			{ action: 'install', dd_api: 'dd_utils_api', options: { action: 'to_update' } } as Rqo,
 			anon(),
 		);
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false); // to_update is unsupported by design
-		expect(res.body.msg).toContain('Update path not supported');
+		// to_update is unsupported by design: a refusal (envelope v2 — the legacy
+		// install body rides the transitional adapter until the install sweep
+		// gives it its own code), NOT the 401 the auth gate would answer.
+		expect(res.status).toBe(400);
+		expect(res.body.ok).toBe(false);
+		expect(res.body.result).toBe(false);
 	});
 
 	test('install: SEALED → 404 for every step', async () => {
@@ -147,10 +150,12 @@ describe('install window gate (P1)', () => {
 			} as Rqo,
 			anon(),
 		);
-		expect(res.status).toBe(200);
-		expect(typeof res.body.active).toBe('boolean'); // NOT absent (the {} bug)
+		// A mismatched entity is a refusal (ok:false, non-2xx) that still carries
+		// the wizard's `active` flag as an extension key — NOT absent (the {} bug).
+		expect(res.status).toBe(400);
+		expect(typeof res.body.active).toBe('boolean');
 		expect(res.body.result).toBe(false);
-		expect(typeof res.body.msg).toBe('string');
+		expect(res.body.ok).toBe(false);
 	});
 
 	// Regression (found driving the real browser wizard): after persist_config

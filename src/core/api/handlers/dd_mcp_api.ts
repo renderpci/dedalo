@@ -95,13 +95,16 @@ import {
 	toAgentToolDefinition,
 } from '../../../ai/mcp/registry.ts';
 import { readEnv } from '../../../config/env.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { Session } from '../../security/session_store.ts';
 import type { ActionHandler, ApiRequestContext } from '../handler_context.ts';
 import { requirePrincipal } from '../handler_context.ts';
 import { denied } from '../response.ts';
 
-/** The literal stale-session message js/mcp_client.js matches on. DO NOT EDIT. */
-const NO_SESSION_MSG = 'No valid MCP session ID provided';
+// The literal stale-session message js/mcp_client.js matches on —
+// 'No valid MCP session ID provided' — is the REGISTRY message of
+// `mcp.session_invalid` (src/core/errors/registry.ts; DO NOT EDIT it there;
+// dd_mcp_api.test.ts asserts the literal). The handler throws the code.
 
 /** JSON-RPC methods the bridge serves (the PHP proxy's allowlist, verbatim). */
 const ALLOWED_METHODS: ReadonlySet<string> = new Set([
@@ -402,8 +405,10 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		}
 		const sentId = (rqo as { mcp_session_id?: unknown }).mcp_session_id;
 		if (typeof sentId !== 'string' || sentId !== expectedId) {
-			// The literal message the client's stale-session recovery matches on.
-			return { status: 200, body: { result: false, msg: NO_SESSION_MSG } };
+			// `mcp.session_invalid`: its registry message IS the literal the client's
+			// stale-session recovery matches on — envelope v2, converted at the
+			// dispatch chokepoint.
+			throw new DedaloError('mcp.session_invalid');
 		}
 
 		if (method === 'notifications/initialized') {

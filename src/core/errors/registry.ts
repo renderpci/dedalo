@@ -92,9 +92,13 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// Category `permission` (403), NOT `auth`: the session is valid, the request
+	// lacked proof of origin — HTTP's Forbidden, the status the client's
+	// transparent single retry (auth.csrf_failed + fresh csrf_token) has always
+	// keyed beside. The domain stays `auth` (isErrorInDomain(e, 'auth')).
 	'auth.csrf_failed': {
-		category: 'auth',
-		status: 401,
+		category: 'permission',
+		status: 403,
 		label_key: 'error_auth_csrf_failed',
 		message: 'CSRF validation failed',
 		severity: 'warn',
@@ -259,6 +263,20 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 		hint: 'Nothing matches. Verify the tipo/id via discovery tools before retrying.',
+	},
+
+	// ── generic conflict ────────────────────────────────────────────────────
+	// The state-based refusal with no more specific code (a picker target with
+	// no active hierarchy, …). Disclosure public: the refusing site states the
+	// exact conflict as `publicMessage`, which is the whole value of a 409.
+	'resource.conflict': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_resource_conflict',
+		message: 'The request conflicts with the current state',
+		severity: 'info',
+		disclosure: 'public',
+		retryable: false,
 	},
 
 	// ── engine scope ────────────────────────────────────────────────────────
@@ -496,6 +514,18 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		details_keys: ['max_bytes'],
 		hint: 'The file exceeds DEDALO_MCP_MEDIA_MAX_BYTES. Reduce it or raise the limit.',
+	},
+	// The MCP proxy's stale/missing session id. Category `auth`, message is the
+	// LITERAL an MCP client's stale-session recovery matches on (kept exact).
+	'mcp.session_invalid': {
+		category: 'auth',
+		status: 401,
+		label_key: 'error_mcp_session_invalid',
+		message: 'No valid MCP session ID provided',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: true,
+		hint: 'Re-run initialize to mint a session id and send it as mcp_session_id.',
 	},
 	'mcp.plan_hash_mismatch': {
 		category: 'conflict',
@@ -1093,6 +1123,9 @@ export const EXTERNAL_ERROR_KINDS = [
  */
 export const LEGACY_TOKEN_MAP: Readonly<Record<string, ErrorCode>> = {
 	// HTTP envelope tokens
+	// The Gate-1 sentence itself: dd_error_report_api mimics the unregistered-
+	// action shape by message (WC-017) until P2 restates it as code identity.
+	'Undefined or unauthorized method (action)': 'request.unknown_action',
 	not_logged: 'auth.not_logged',
 	csrf_failed: 'auth.csrf_failed',
 	'CSRF validation failed': 'auth.csrf_failed',

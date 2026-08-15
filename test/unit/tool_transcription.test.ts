@@ -335,7 +335,7 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 		// DEDALO_MEDIA_EXPORT_BASE is unset, the URL builder refuses first) —
 		// either way this call cannot succeed, so it must not say 'OK.'.
 		expect(response.result).toBe(false);
-		expect(response.msg.startsWith('OK.')).toBe(false);
+		expect(String(response.msg).startsWith('OK.')).toBe(false);
 		expect((response.errors ?? []).length).toBeGreaterThan(0);
 	});
 

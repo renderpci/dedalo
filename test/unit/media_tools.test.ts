@@ -460,11 +460,15 @@ describe('media tool handlers reject malformed destructive requests', () => {
 		toolName: string,
 		action: string,
 		options: Record<string, unknown>,
-	): Promise<{ result: unknown; msg: string }> {
+	): Promise<{ result: unknown; msg: string; errors?: string[] }> {
 		const loaded = await getLoadedTool(toolName);
 		const spec = loaded?.module.apiActions[action];
 		if (spec === undefined) throw new Error(`missing action ${toolName}.${action}`);
-		return spec.handler({ principal, userId: -1, options, background: false });
+		return spec.handler({ principal, userId: -1, options, background: false }) as Promise<{
+			result: unknown;
+			msg: string;
+			errors?: string[];
+		}>;
 	}
 
 	test('tool_media_versions: a delete without a quality is refused', async () => {

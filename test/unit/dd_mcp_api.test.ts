@@ -82,8 +82,8 @@ async function initialize(session: Session): Promise<string> {
 		proxyRqo({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }),
 		contextFor(session) as never,
 	);
-	const body = result.body as { result: boolean; mcp_session_id?: string };
-	expect(body.result).toBe(true);
+	const body = result.body as { ok: boolean; mcp_session_id?: string };
+	expect(body.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 	expect(body.mcp_session_id).toBeTruthy();
 	return body.mcp_session_id as string;
 }
@@ -114,7 +114,7 @@ describe('dd_mcp_api gates', () => {
 			contextFor(admin, 'wrong-token') as never,
 		);
 		expect(badCsrf.status).toBe(403);
-		expect((badCsrf.body as { errors?: string[] }).errors).toContain('csrf_failed');
+		expect((badCsrf.body as { errors?: string[] }).errors).toContain('auth.csrf_failed');
 	});
 });
 
@@ -127,10 +127,10 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			contextFor(admin) as never,
 		);
 		const listBody = list.body as {
-			result: boolean;
+			ok: boolean;
 			data: { result: { tools: { name: string; inputSchema: unknown }[] } };
 		};
-		expect(listBody.result).toBe(true);
+		expect(listBody.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 		const toolNames = listBody.data.result.tools.map((tool) => tool.name);
 		expect(toolNames).toContain('dedalo_list_sections');
 		expect(toolNames).toContain('dedalo_search_records');
@@ -153,12 +153,12 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			contextFor(admin) as never,
 		);
 		const callBody = call.body as {
-			result: boolean;
+			ok: boolean;
 			data: {
 				result: { content: { type: string; text: string }[]; structuredContent: unknown };
 			};
 		};
-		expect(callBody.result).toBe(true);
+		expect(callBody.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 		const structured = callBody.data.result.structuredContent as {
 			ok: boolean;
 			data: { model: string };
@@ -173,6 +173,7 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			contextFor(admin) as never,
 		);
 		expect((missing.body as { result: boolean }).result).toBe(false);
+		expect((missing.body as { error: { code: string } }).error.code).toBe('mcp.session_invalid');
 		expect((missing.body as { msg: string }).msg).toBe('No valid MCP session ID provided');
 
 		const stale = await dispatchRqo(
@@ -188,8 +189,8 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			proxyRqo({ jsonrpc: '2.0', id: 9, method: 'resources/list', params: {} }, mcpSessionId),
 			contextFor(admin) as never,
 		);
-		const body = result.body as { result: boolean; data: { error?: { code: number } } };
-		expect(body.result).toBe(true);
+		const body = result.body as { ok: boolean; data: { error?: { code: number } } };
+		expect(body.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 		expect(body.data.error?.code).toBe(-32601);
 	});
 
@@ -291,7 +292,14 @@ describe('agent_apply', () => {
 				contextFor(user) as never,
 			);
 			// user 16 has no write grants: the validation wall answers first.
-			const body = result.body as { result: boolean; data: { error?: { code: string } } };
+			const body = result.body as {
+				ok: boolean;
+				result: unknown;
+				data: { error?: { code: string } };
+			};
+			// Envelope v2 over the (P2-pending) MCP bridge: the refusal is ok:false
+			// and the structured MCP envelope still rides as the `data` extension key.
+			expect(body.ok).toBe(false);
 			expect(body.result).toBe(false);
 			expect(body.data.error?.code).toBe('permission_denied');
 		} finally {

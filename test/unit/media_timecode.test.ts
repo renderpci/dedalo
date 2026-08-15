@@ -62,14 +62,14 @@ describe('tool_tc change_all_timecodes validation', () => {
 
 	async function drive(
 		options: Record<string, unknown>,
-	): Promise<{ result: unknown; msg: string }> {
+	): Promise<{ result: unknown; msg: string; errors?: string[] }> {
 		const loaded = await getLoadedTool('tool_tc');
 		return loaded!.module.apiActions.change_all_timecodes!.handler({
 			principal,
 			userId: -1,
 			options,
 			background: false,
-		});
+		}) as Promise<{ result: unknown; msg: string; errors?: string[] }>;
 	}
 
 	test('the locator triple AND lang are required', async () => {
@@ -195,14 +195,14 @@ describe('tool_tc change_all_timecodes — the write', () => {
 
 	async function drive(
 		options: Record<string, unknown>,
-	): Promise<{ result: unknown; msg: string }> {
+	): Promise<{ result: unknown; msg: string; errors?: string[] }> {
 		const loaded = await getLoadedTool('tool_tc');
 		return loaded!.module.apiActions.change_all_timecodes!.handler({
 			principal,
 			userId: -1,
 			options,
 			background: false,
-		});
+		}) as Promise<{ result: unknown; msg: string; errors?: string[] }>;
 	}
 
 	function optionsFor(overrides: Record<string, unknown> = {}): Record<string, unknown> {

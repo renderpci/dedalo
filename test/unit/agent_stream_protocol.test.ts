@@ -314,7 +314,10 @@ describe('agent_chat — model + vision validation', () => {
 			contextFor(admin) as never,
 		);
 		expect(result.status).toBe(400);
-		expect((result.body as { msg: string }).msg).toContain('Unknown model');
+		// Envelope v2 over the (P2-pending) MCP bridge: the refusal is the generic
+		// caller code; P2 gives the catalog refusals public-disclosure codes so the
+		// operator's "Unknown model …" sentence reaches the wire again.
+		expect((result.body as { error: { code: string } }).error.code).toBe('request.invalid');
 	});
 
 	test('images on a vision:false model are refused, not silently stripped', async () => {
@@ -327,7 +330,7 @@ describe('agent_chat — model + vision validation', () => {
 			contextFor(admin) as never,
 		);
 		expect(result.status).toBe(400);
-		expect((result.body as { msg: string }).msg).toContain('does not accept images');
+		expect((result.body as { error: { code: string } }).error.code).toBe('request.invalid');
 	});
 
 	test('agent_chat returns model/usage/history alongside the answer', async () => {

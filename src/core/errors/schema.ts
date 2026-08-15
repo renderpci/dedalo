@@ -9,6 +9,11 @@
  * The compat passthrough (`result`, `msg`, `errors`) is TOLERATED here so a
  * converter-made body with ERROR_ENVELOPE_COMPAT parses; it is removed with
  * the compat block (client_error_contract_tripwire census = 0).
+ *
+ * Both shapes are `.passthrough()`: handler EXTENSION KEYS (ERRORS_SPEC §3 —
+ * `environment`, `in_use`, `total`, `pid`, `job_id`, `saml_redirect`,
+ * `dedalo_notification`, `action`, …) ride at top level beside the envelope
+ * keys and survive a parse. Reserved keys are exactly the ones named here.
  */
 
 import { z } from 'zod';
@@ -59,23 +64,39 @@ const compatFields = {
 	errors: z.array(z.string()).optional(),
 };
 
-export const okEnvelopeSchema = z.object({
-	ok: z.literal(true),
-	request_id: z.string(),
-	data: z.unknown(),
-	notices: z.array(noticeSchema).optional(),
-	csrf_token: z.string().optional(),
-	...compatFields,
-});
+export const okEnvelopeSchema = z
+	.object({
+		ok: z.literal(true),
+		request_id: z.string(),
+		data: z.unknown(),
+		notices: z.array(noticeSchema).optional(),
+		csrf_token: z.string().optional(),
+		...compatFields,
+	})
+	.passthrough();
 export type OkEnvelope = z.infer<typeof okEnvelopeSchema>;
 
-export const errEnvelopeSchema = z.object({
-	ok: z.literal(false),
-	request_id: z.string(),
-	error: errorBodySchema,
-	csrf_token: z.string().optional(),
-	...compatFields,
-});
+export const errEnvelopeSchema = z
+	.object({
+		ok: z.literal(false),
+		request_id: z.string(),
+		error: errorBodySchema,
+		csrf_token: z.string().optional(),
+		...compatFields,
+	})
+	.passthrough();
+
+/** The keys no extension may override on either shape (the converter spreads `extend` first). */
+export const ENVELOPE_RESERVED_KEYS: readonly string[] = [
+	'ok',
+	'request_id',
+	'data',
+	'notices',
+	'error',
+	'result',
+	'msg',
+	'errors',
+];
 export type ErrEnvelope = z.infer<typeof errEnvelopeSchema>;
 
 export const apiEnvelopeSchema = z.discriminatedUnion('ok', [okEnvelopeSchema, errEnvelopeSchema]);

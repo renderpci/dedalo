@@ -5,6 +5,7 @@
  */
 
 export {
+	type EnvelopeExtension,
 	ERROR_ENVELOPE_COMPAT,
 	type ErrorEnvelopeContext,
 	type ErrorEnvelopeResult,
@@ -52,6 +53,7 @@ export {
 	type ApiErrorBody,
 	type ApiNotice,
 	apiEnvelopeSchema,
+	ENVELOPE_RESERVED_KEYS,
 	type ErrEnvelope,
 	errEnvelopeSchema,
 	errorBodySchema,

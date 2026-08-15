@@ -12,6 +12,11 @@
  *  - `publicMessage` a vetted sentence that may replace `spec.message` on the
  *                   wire, honoured ONLY when `spec.disclosure === 'public'`;
  *  - `retryAfterMs` for limit/unavailable codes (Retry-After);
+ *  - `extend`       wire EXTENSION KEYS the failure envelope carries at top
+ *                   level beside `error` (ERRORS_SPEC §3 — e.g. `start`'s
+ *                   `environment`, the labels the refused client needs to
+ *                   render its no-access page). Reserved envelope keys can
+ *                   never be overridden by it (the converter spreads it first);
  *  - `cause`        the wrapped original — never serialized.
  *
  * Imports ONLY registry.ts (this pair is the leaf every subsystem may reach).
@@ -26,6 +31,8 @@ export interface DedaloErrorFields {
 	readonly coordinates?: Readonly<Record<string, string | number>>;
 	readonly publicMessage?: string;
 	readonly retryAfterMs?: number;
+	/** Top-level extension keys of the failure envelope (never a reserved key). */
+	readonly extend?: Readonly<Record<string, unknown>>;
 	readonly cause?: unknown;
 	/** Overrides the registry message for the LOG/`Error.message` only (never the wire). */
 	readonly message?: string;
@@ -37,6 +44,7 @@ export class DedaloError extends Error {
 	readonly coordinates?: Readonly<Record<string, string | number>>;
 	readonly publicMessage?: string;
 	readonly retryAfterMs?: number;
+	readonly extend?: Readonly<Record<string, unknown>>;
 
 	constructor(code: ErrorCode, fields: DedaloErrorFields = {}) {
 		super(fields.message ?? ERROR_REGISTRY[code].message);
@@ -49,6 +57,7 @@ export class DedaloError extends Error {
 		this.coordinates = fields.coordinates;
 		this.publicMessage = fields.publicMessage;
 		this.retryAfterMs = fields.retryAfterMs;
+		this.extend = fields.extend;
 		this.cause = fields.cause;
 	}
 

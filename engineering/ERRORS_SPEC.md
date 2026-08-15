@@ -1,9 +1,13 @@
 # ERRORS_SPEC — the closed error taxonomy and envelope v2
 
-Status: **P0 landed** (foundation, no wire change; `src/core/errors/` exists,
-nothing under `src/core/api` or `src/server.ts` imports it yet). §4-8 are headed
-stubs filled by P1/P2. Gates: `test/unit/error_registry_native.test.ts`,
-`error_envelope_native.test.ts`, `error_converter_native.test.ts`.
+Status: **P0 landed** (foundation) — **P1 chokepoints landed 2026-08-15**
+(§4: dispatch / response.ts / server.ts / tools dispatch / rqo schema on
+envelope v2; the call-site sweep and the client half land in the same series).
+§5-8 are headed stubs filled by P1-exit/P2. Gates: `test/unit/error_registry_native.test.ts`,
+`error_envelope_native.test.ts`, `error_converter_native.test.ts`,
+`dispatch_error_native.test.ts`, `authorization_denial_native.test.ts`,
+`session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`,
+`tools_dispatch.test.ts`.
 
 ## 1. Taxonomy — and why it is closed
 
@@ -113,11 +117,37 @@ Every JSON API body is one of:
   identify warnings, truncation) — external-service degradation is
   `ok:true + notices`, not an error.
 - Schema: `src/core/errors/schema.ts` (`apiEnvelopeSchema` =
-  `z.discriminatedUnion('ok', …)`, `error.code = z.enum(ERROR_CODES)`).
-- Builders: `ok(data, {requestId, notices?})`, `toErrorEnvelope(error, {requestId})`
-  → `{status, body, retryAfterMs?}`, `toStructuredErr` (MCP
-  `{ok:false, error:{code,message,hint?,details?}}`), `toStreamFrame`
-  (`{is_running:false, error:{…}}` — a frame, not an envelope).
+  `z.discriminatedUnion('ok', …)`, `error.code = z.enum(ERROR_CODES)`; both
+  shapes `.passthrough()` for the extension keys below).
+  `src/core/concepts/rqo.ts` re-exports it as `apiResponseSchema` (live
+  responses); `legacyApiResponseSchema` there is ONLY for the frozen PHP-era
+  fixture store (`test/parity/replay.test.ts`).
+- Builders: `ok(data, {requestId, notices?, extend?})`,
+  `toErrorEnvelope(error, {requestId, extend?})` → `{status, body, error,
+  retryAfterMs?}`, `toStructuredErr` (MCP `{ok:false, error:{code,message,
+  hint?,details?}}`), `toStreamFrame` (`{is_running:false, error:{…}}` — a
+  frame, not an envelope).
+
+### 3.0 Extension keys
+
+A handler may put fields it OWNS at top level beside the envelope keys —
+`environment`, `in_use`, `total`, `pid`, `pfile`, `job_id`, `saml_redirect`,
+`dedalo_notification`, `dedalo_last_error`, `result_options`, `action`, … —
+the keys the client already reads by name (PHP parity). Rules:
+
+- passed as `extend` (`ok(data, {…, extend})`; on a failure as the throw's
+  `DedaloError.extend` or the chokepoint's `ctx.extend`); the converter spreads
+  it FIRST, so a reserved key (`ENVELOPE_RESERVED_KEYS`: `ok`, `request_id`,
+  `data`, `notices`, `error`, and the compat trio) can never be overridden;
+- `csrf_token` is appended by the dispatch chokepoint to EVERY response of a
+  session (success and failure) — a handler never sets it (login excepted:
+  no session yet on the context);
+- an extension key on a FAILURE is exceptional and named: `start`'s
+  `environment` (the labels the refused client needs to render its no-access
+  page — WC-2026-08-12-authorization-denial-token) and the CSRF gate's
+  `action`. Everything else a failure has to say goes in `details`.
+- payload data belongs in `data`, never in an extension key: the keys above
+  are the closed legacy set, and the P1-exit gate freezes it.
 
 ### 3.1 The compat block (bounded, ratchet-removed)
 
@@ -133,17 +163,100 @@ condition:** `client_error_contract_tripwire`'s census of client reads of
 schema passthrough, and the client compat branches in the same commit (P4),
 with a WC entry.
 
-## 4. Converter law & chokepoints (P1)
+## 4. Converter law & chokepoints (P1 — landed 2026-08-15)
 
-(P1) — dispatch / response.ts / server.ts / tools dispatch rewire; `denied()`
-deleted; `ApiResult.body` typed as `ApiEnvelope`; `rqo.ts apiResponseSchema`
-re-exports `errors/schema.ts`.
+**The one-producer law.** A wire failure body is produced by exactly one
+function, `toErrorEnvelope` (`src/core/errors/convert.ts`), and a wire success
+body by exactly one, `ok`. Nothing else may write `ok:`, `error:`, `result:
+false`, `msg:` or `errors:` into a body — not a handler, not a helper, not a
+route. Consequences:
 
-## 5. Non-envelope surfaces (P2)
+- **Handlers THROW to fail and return `ok(data, …)` to succeed.** Gates throw.
+  A helper may exist only if it THROWS (`: never`); no helper may build a body.
+- **`src/core/api/dispatch.ts` is THE catch** for the JSON API: `executeRqo`
+  runs gates + handler inside one `try`; the `catch` calls
+  `toErrorEnvelope(error, {requestId})` (registry status; `ok:false ⇒ status ∉
+  2xx`; `Retry-After` threaded as `ApiResult.retryAfterMs`), then
+  `logError(error, {subsystem: '<class>::<action>', requestId})`; `csrf_token`
+  is appended after (session present). Gate codes: `request.unknown_action`
+  (Gate 1 AND Gate 1c-disabled — the SAME body minus request_id, so a probe
+  cannot learn the intake exists), `install.not_reachable` (404),
+  `install.ip_denied` (403), `auth.not_logged` (401), `auth.maintenance` (401,
+  the client relogin policy keys on both), `auth.csrf_failed` (403, extension
+  `action` + the fresh `csrf_token`), `perm.denied` (report intake IP).
+- **The poison latch lives in `toDedaloError`** (raw error or anywhere in the
+  `cause` chain), not in the catch — tool/MCP/stream conversions latch too.
+- **`src/server.ts`** has one failure door, `jsonFailureResponse(error,
+  requestId)`: malformed JSON → `request.malformed_body`; a body failing
+  `rqoSchema` → `request.invalid_rqo` with `details.issue_paths` (comma-joined
+  zod paths, ≤ 200 chars — never the raw issues); route misses →
+  `resource.not_found`; the Bun.serve `error` catch-all →
+  `internal.unexpected`. Every failure Response is `application/json`;
+  `Retry-After` is emitted from `retryAfterMs`. Non-API routes (static, media)
+  keep their semantics; only their 404 body is converter-made.
+- **`src/core/tools/dispatch.ts`** gates throw `request.invalid_options`,
+  `tool.invalid_name`, `tool.not_authorized`, `tool.no_server_module`,
+  `tool.method_not_allowed` (+`details.method`), and the security.ts
+  permission token mapped through `LEGACY_TOKEN_MAP`; `ToolResponse` IS the
+  envelope (`ApiEnvelope`, extension keys for `pid`/`job_id`/streams).
+- **Access log** (`core/api/access_log.ts`) carries `error_code` /
+  `error_category` on an ok:false outcome.
+- **`logError` severity `info`** prints the line only (no stack): an expected
+  refusal (expired session) is traffic, not a fault.
 
-(P2) — MCP (`wrapError` → `toStructuredErr`, HINTS → registry), agent stream,
-job_status frames, diffusion SSE frames, install wizard, error-report receiver,
-`ExternalServiceError` re-home, identify `decline` → throws.
+**The transitional adapter (DELETED at P1 exit).**
+`src/core/api/legacy_body_adapter.ts` bridges the chokepoint and the handler
+bodies the call-site sweep has not converted yet: a body carrying `ok` passes
+through; a legacy `result === false` body becomes a THROW of
+`LEGACY_TOKEN_MAP[errors[0]]` (a non-2xx legacy status that disagrees with
+the token's status wins — `unauthorized`@401 is `auth.not_logged`; else the
+status default; else `request.invalid`) with the legacy `msg` as
+`publicMessage` (wire only for public-disclosure codes) and the rest of the
+body as extension keys; a legacy success becomes `ok(result | data,
+{extend})`. Every conversion is logged (`[dispatch] LEGACY … sweep pending`).
+The three names in `response.ts` (`denied` / `notAuthorized` / `notLogged`)
+are throwing shells (`: never`) kept only so unswept sites compile;
+`authorization_denial_native.test.ts` freezes their call-site count
+shrink-only, and the P1-exit gate (wire_envelope tripwire) sets it to 0 and
+deletes shells + adapter + `LegacyApiBody` / `LegacyToolResponse` together.
+
+**Pattern for a handler (the sweep target):**
+
+```ts
+// success — data in `data`, owned legacy top-level keys as extension keys
+return { status: 200, body: ok({ context, data: rows }, { requestId: context.requestId, extend: { total } }) };
+// failure — throw; the dispatch catch converts (status from the registry)
+throw new DedaloError('perm.denied', { coordinates: { section_tipo, section_id } });
+// caller fault with a vetted sentence (only public-disclosure codes echo it)
+throw new DedaloError('request.invalid_options', { publicMessage: 'options.limit must be ≤ 100', details: {…} });
+```
+
+**Add-a-code, chokepoint side:** register in `ERROR_REGISTRY` (+ label in
+`master.json`, sorted); if it replaces an old token, add the token to
+`LEGACY_TOKEN_MAP`; throw it. Nothing in dispatch/server changes.
+
+## 5. Non-envelope surfaces (P2 — stub)
+
+Surfaces whose wire is not the JSON envelope, all fed by the SAME converter
+family (`toStructuredErr`, `toStreamFrame`) and untouched by P1 except that
+their bodies now ride the dispatch chokepoint like any other:
+
+- **MCP** (`src/ai/mcp/envelope.ts` `wrapError` → `toStructuredErr`; the regex
+  table over engine prose is deleted; HINTS → registry `hint`).
+  `dd_mcp_api` today: `{result:true, data:<json-rpc>}` bodies ride the legacy
+  adapter (data stays `data`); the stale-session refusal is already the typed
+  `mcp.session_invalid` (its registry message is the literal an MCP client's
+  recovery matches on); the catalog refusals (`Unknown model …`, `does not
+  accept images`) need public-disclosure codes so the operator sentence
+  reaches the wire again.
+- **Streams** (`dd_mcp_api` agent stream, `diffusion/runner.ts`,
+  `jobs/scheduler.ts`, `tools/job_status.ts`): terminal frame
+  `{is_running:false, error:{…}}` via `toStreamFrame` — a frame, not an envelope.
+- **Install wizard**, **error-report receiver** (WC-017 mimicry restated as
+  code identity — today the handler's `denied(400, 'Undefined or unauthorized
+  method (action)')` maps through `LEGACY_TOKEN_MAP` to `request.unknown_action`
+  but without Gate 1's `details.action`), **`ExternalServiceError`** re-home,
+  **identify `decline`** → throws.
 
 ## 6. Compat window & fixture reconciliation (P1/P4)
 

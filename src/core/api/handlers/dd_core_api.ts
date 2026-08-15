@@ -22,6 +22,7 @@ import {
 	type WireSectionId,
 } from '../../concepts/section_id.ts';
 import { getSectionTipos } from '../../concepts/sqo.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
 import { routeSectionRead } from '../../section/read_facade.ts';
 import {
@@ -1165,11 +1166,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			// interface language is. It is the same block the success path builds,
 			// for the same authenticated caller — no permission is implied by it and
 			// nothing about the refused element is in it.
-			const refusal = notAuthorized('Insufficient permissions to read');
-			return {
-				...refusal,
-				body: { ...refusal.body, environment: await buildEnv(context.session, principal) },
-			};
+			throw new DedaloError('perm.denied', {
+				publicMessage: 'Insufficient permissions to read',
+				extend: { environment: await buildEnv(context.session, principal) },
+			});
 		}
 		// PHP start instantiates page elements with DEDALO_DATA_LANG and no
 		// nolan forcing (differentially verified: section + menu contexts

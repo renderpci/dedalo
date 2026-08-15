@@ -2,7 +2,8 @@
  * Structured API access log + request gauges (audit S2-37, WS-E item 4).
  *
  * The minimum viable ops surface: ONE JSON line per API request on stdout —
- * `{ts, request_id, user_id, api, status, ms}` — enabled by DEDALO_ACCESS_LOG
+ * `{ts, request_id, user_id, api, status, ms, error_code?, error_category?}`
+ * (the error identity ONLY on an ok:false outcome) — enabled by DEDALO_ACCESS_LOG
  * (config.ops.accessLog; journald/systemd captures stdout, PRODUCTION.md).
  * Independent of the flag, requests slower than config.ops.slowRequestMs emit
  * a warn line, and every request feeds the in-memory counters the admin
@@ -29,6 +30,10 @@ export interface AccessLogEntry {
 	/** Compact request-shape summary (dispatch summarizeRqo) — printed on the
 	 * slow-request warn so a slow line is diagnosable after the fact. */
 	detail?: string;
+	/** Registered error code of an ok:false outcome (envelope v2); absent on success. */
+	error_code?: string;
+	/** Its category (caller/auth/permission/…); absent on success. */
+	error_category?: string;
 }
 
 /** Log one finished API request (call unconditionally; flags are checked here). */
@@ -47,6 +52,9 @@ export function logApiAccess(entry: AccessLogEntry): void {
 				api,
 				status: entry.status,
 				ms,
+				// undefined on success → JSON.stringify drops the keys (no branch).
+				error_code: entry.error_code,
+				error_category: entry.error_category,
 			}),
 		);
 	}
