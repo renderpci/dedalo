@@ -30,10 +30,23 @@ const UNDEFINED_METHOD = 'Undefined or unauthorized method (action)';
  * Envelope v2: a refused report is the generic caller refusal `request.invalid`
  * — the registry message ("Invalid request"), never a report-specific sentence
  * (the "terse generic envelope" property WC-017 asks for). The mimicry of the
- * Gate-1 shape is asserted on the CODE (`request.unknown_action`) — P2 restates
- * WC-017 as code identity in the handler itself.
+ * Gate-1 shape is asserted on the CODE (`request.unknown_action`) AND, since the
+ * P1 call-site sweep, on the whole refusal body: the handler's own
+ * token-mismatch refusal is BYTE-IDENTICAL to the disabled-receiver gate's,
+ * `details.action` included — WC-017 restated as code identity.
  */
 const INVALID_REPORT = 'Invalid request';
+
+/**
+ * A refusal body reduced to what a PROBE can see: `request_id` is per-request,
+ * and `error.debug` exists only under DEDALO_DEBUG_API_ERRORS (which this suite
+ * runs with) and carries the throw's own stack by construction — neither is part
+ * of the WC-017 identity claim.
+ */
+function comparableRefusal(body: Record<string, unknown>): Record<string, unknown> {
+	const { debug: _debug, ...error } = (body.error ?? {}) as Record<string, unknown>;
+	return { ...body, request_id: null, error };
+}
 
 /** Unique per-run entity so throttle windows never bleed across runs. */
 const ENTITY = `test_er_${process.pid}`;
@@ -223,6 +236,19 @@ describe('error-report intake (WC-017)', () => {
 		const wrong = await post(validWirePayload(), anon('203.0.113.9', 'guess'));
 		expect(wrong.status).toBe(400);
 		expect(wrong.body.msg).toBe(UNDEFINED_METHOD);
+
+		// WC-017 BYTE IDENTITY: the handler's token refusal and the Gate-1c
+		// disabled refusal must be the SAME body (request_id excepted — it is
+		// per-request), `details.action` included. A probe must not be able to
+		// tell "wrong token" from "this endpoint does not exist here".
+		process.env.DEDALO_ERROR_REPORT_RECEIVER = '';
+		const disabled = await post(validWirePayload(), anon('203.0.113.9', 'guess'));
+		process.env.DEDALO_ERROR_REPORT_RECEIVER = 'true';
+		expect(wrong.status).toBe(disabled.status);
+		expect(comparableRefusal(wrong.body)).toEqual(comparableRefusal(disabled.body));
+		expect((wrong.body.error as { details?: unknown }).details).toEqual({
+			action: 'receive_report',
+		});
 
 		const right = await post(validWirePayload(), anon('203.0.113.9', 'fleet-secret'));
 		expect(right.status).toBe(200);

@@ -13,6 +13,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import { installDbFromSeed } from '../../src/core/install/db_restore.ts';
 import { installFinish } from '../../src/core/install/finish.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
@@ -57,7 +58,7 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 			return;
 		}
 		const restored = await installDbFromSeed(scratch);
-		expect(restored.result).toBe(true);
+		expect(restored.ok).toBe(true);
 
 		const users = await runPsql(scratch, ['-tAc', 'SELECT count(*) FROM matrix_users']);
 		expect(Number(users.stdout.trim())).toBeGreaterThanOrEqual(1);
@@ -73,15 +74,20 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 
 	test('a non-empty DB refuses re-restore (never clobbers data)', async () => {
 		if (!available) return;
-		const again = await installDbFromSeed(scratch);
-		expect(again.result).toBe(false);
-		expect(again.msg).toContain('not empty');
+		// P1 sweep: a refusal is a THROWN registered code, never a `result:false` body.
+		const error = await installDbFromSeed(scratch).then(
+			() => null,
+			(caught: unknown) => caught,
+		);
+		expect(isDedaloError(error)).toBe(true);
+		expect((error as { code: string }).code).toBe('install.state_conflict');
+		expect((error as Error).message).toContain('not empty');
 	});
 
 	test('set_root_pw writes an Argon2id hash at section_id -1 that verifies', async () => {
 		if (!available) return;
 		const set = await setRootPassword(ROOT_PW, scratch);
-		expect(set.result).toBe(true);
+		expect(set.ok).toBe(true);
 
 		const read = await runPsql(scratch, [
 			'-tAc',
@@ -94,14 +100,18 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 
 	test('set_root_pw refuses when a password already exists', async () => {
 		if (!available) return;
-		const again = await setRootPassword('Another12345', scratch);
-		expect(again.result).toBe(false);
-		expect(again.msg).toContain('already set');
+		const error = await setRootPassword('Another12345', scratch).then(
+			() => null,
+			(caught: unknown) => caught,
+		);
+		expect(isDedaloError(error)).toBe(true);
+		expect((error as { code: string }).code).toBe('install.state_conflict');
+		expect((error as Error).message).toContain('already set');
 	});
 
 	test('install_finish seals only after root + password exist', async () => {
 		if (!available) return;
 		const finished = await installFinish(scratch);
-		expect(finished.result).toBe(true);
+		expect(finished.ok).toBe(true);
 	});
 });

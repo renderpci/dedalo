@@ -61,10 +61,8 @@ async function updateDataVersionRun(
 	// PHP preconditions (superuser + maintenance mode), refusal bytes verbatim.
 	// backupWarn off: this response is byte-frozen (no warnings channel).
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
-	const preconditions = checkUpdatePreconditions(principal, { backupWarn: false });
-	if (!preconditions.ok && preconditions.refusal !== null) {
-		return preconditions.refusal;
-	}
+	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
+	checkUpdatePreconditions(principal, { backupWarn: false });
 	return {
 		result: false,
 		msg: 'Error. Data migrations are not runnable on this engine: the migration catalog (updates.php) belongs to the PHP install. Run the update from the PHP maintenance dashboard.',
@@ -88,10 +86,8 @@ async function updateDataVersionRunOwned(
 	principal: Principal,
 ): Promise<WidgetResponse> {
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
+	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
 	const preconditions = checkUpdatePreconditions(principal);
-	if (!preconditions.ok && preconditions.refusal !== null) {
-		return preconditions.refusal;
-	}
 	const updatesChecked = (options.updates_checked ?? {}) as Record<string, unknown>;
 	const { updateVersion } = await import('../../update/engine.ts');
 
@@ -115,7 +111,7 @@ async function updateDataVersionRunOwned(
 
 	const outcome = await updateVersion(updatesChecked);
 	return {
-		result: outcome.result,
+		result: outcome.ok,
 		msg: outcome.msg.join('\n'),
 		errors: [...preconditions.warnings, ...outcome.errors],
 	};

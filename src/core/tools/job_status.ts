@@ -28,8 +28,10 @@
  */
 
 import { mayStreamJob } from '../api/job_stream.ts';
+import { DedaloError, ok } from '../errors/index.ts';
 import { mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 import { getBackgroundJob, listBackgroundJobs } from './background.ts';
 import type { ToolActionContext, ToolActionSpec, ToolResponse } from './module.ts';
 
@@ -49,8 +51,18 @@ export const BACKGROUND_JOB_STATUS_ACTION = 'get_background_job_status';
  */
 export const BACKGROUND_JOBS_ACTION = 'get_background_jobs';
 
-function notFound(msg: string): ToolResponse {
-	return { result: false, msg: `Error. Request failed. ${msg}`, errors: ['job_not_found'] };
+/**
+ * The ONE answer for absent / wrong-tool / other-user (no existence oracle).
+ * A refusal is a THROW (ERRORS_SPEC §4); the job id it names is LOG-ONLY
+ * coordinates — echoing it back would confirm the id to a prober.
+ */
+function refuseUnknownJob(jobId: string, kind: string): never {
+	throw new DedaloError('tool.job_not_found', { coordinates: { job: jobId, kind } });
+}
+
+/** The request id of the RQO this frame answers (the dispatch scope is always open here). */
+function frameRequestId(): string {
+	return currentRequestContext()?.requestId ?? '';
 }
 
 /**
@@ -62,11 +74,7 @@ function notFound(msg: string): ToolResponse {
 async function mediaJobStatus(ctx: ToolActionContext): Promise<ToolResponse> {
 	const jobId = typeof ctx.options.job_id === 'string' ? ctx.options.job_id : '';
 	if (jobId === '') {
-		return {
-			result: false,
-			msg: 'Error. Request failed. missing job_id',
-			errors: ['invalid_request'],
-		};
+		throw new DedaloError('request.invalid', { message: 'missing job_id' });
 	}
 	// OWNERSHIP (fail-closed, the same rule get_process_status and get_job_events
 	// apply): ids are DERIVED (kind_pid_counter), so they are guessable. The
@@ -79,20 +87,26 @@ async function mediaJobStatus(ctx: ToolActionContext): Promise<ToolResponse> {
 	const record = mediaJobs.status(jobId);
 	if (record !== null && !mayStreamJob(record, ctx.principal)) {
 		// The same answer a non-existent job gets — no existence oracle.
-		return notFound(`unknown media job: ${jobId}`);
+		refuseUnknownJob(jobId, 'media');
 	}
 	const frame = mediaJobs.frame(jobId);
-	if (frame === null) return notFound(`unknown media job: ${jobId}`);
-	return {
-		result: true,
-		msg: 'ok',
-		pid: frame.pid,
-		pfile: frame.pfile,
-		is_running: frame.is_running,
-		data: frame.data,
-		errors: frame.errors,
-		total_time: frame.total_time,
-	};
+	if (frame === null) refuseUnknownJob(jobId, 'media');
+	// The FRAME fields stay at the TOP level: that is the exact shape the vendored
+	// client's render_common.js status machinery and job_follow.js read, and
+	// `pid`/`pfile`/`is_running` are in the closed legacy set of ERRORS_SPEC §3.0.
+	// `data` is NOT among them — it is a RESERVED envelope key, so the frame's
+	// payload IS the envelope's `data` (an extension key of that name would be
+	// dropped by the converter, which is what would silently blank the client).
+	return ok(frame.data, {
+		requestId: frameRequestId(),
+		extend: {
+			pid: frame.pid,
+			pfile: frame.pfile,
+			is_running: frame.is_running,
+			errors: frame.errors,
+			total_time: frame.total_time,
+		},
+	});
 }
 
 /**
@@ -129,11 +143,7 @@ export function backgroundJobStatusResponse(
 				? options.job_id
 				: '';
 	if (jobId === '') {
-		return {
-			result: false,
-			msg: 'Error. Request failed. missing background_job_id',
-			errors: ['invalid_request'],
-		};
+		throw new DedaloError('request.invalid', { message: 'missing background_job_id' });
 	}
 	const job = getBackgroundJob(jobId);
 	if (
@@ -142,23 +152,21 @@ export function backgroundJobStatusResponse(
 		(!principal.isGlobalAdmin && job.userId !== userId)
 	) {
 		// One answer for absent / wrong-tool / other-user: no existence oracle.
-		return notFound(`unknown background job: ${jobId}`);
+		refuseUnknownJob(jobId, 'background');
 	}
-	return {
-		result: true,
-		msg: 'ok',
-		errors: [],
-		job: {
-			id: job.id,
-			tool: job.tool,
-			action: job.action,
-			status: job.status,
-			error: job.error ?? null,
-			// The captured ToolResponse of a finished job (null while running /
-			// after an error) — the caller's window onto "did my import succeed".
-			response: job.status === 'done' ? (job.result ?? null) : null,
-		},
+	const frame = {
+		id: job.id,
+		tool: job.tool,
+		action: job.action,
+		status: job.status,
+		error: job.error ?? null,
+		// The captured ToolResponse of a finished job (null while running /
+		// after an error) — the caller's window onto "did my import succeed".
+		response: job.status === 'done' ? (job.result ?? null) : null,
 	};
+	// The record IS the payload; it ALSO rides at the top level as `job`, which is
+	// where the poll client reads it (render_tool_transcription.js).
+	return ok(frame, { requestId: frameRequestId(), extend: { job: frame } });
 }
 
 /**
@@ -183,8 +191,8 @@ export function backgroundJobsResponse(
 	const jobs = listBackgroundJobs(toolName, userId, principal.isGlobalAdmin).filter(
 		(job) => action === null || job.action === action,
 	);
-	return {
-		result: jobs.map((job) => ({
+	return ok(
+		jobs.map((job) => ({
 			id: job.id,
 			tool: job.tool,
 			action: job.action,
@@ -192,7 +200,6 @@ export function backgroundJobsResponse(
 			error: job.error ?? null,
 			started_at: job.startedAt ?? null,
 		})),
-		msg: 'ok',
-		errors: [],
-	};
+		{ requestId: frameRequestId() },
+	);
 }

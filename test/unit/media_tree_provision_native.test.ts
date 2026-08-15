@@ -695,7 +695,7 @@ describe('installer wiring', () => {
 			// provisioned, and the installer must show it.
 			writeFileSync(join(root, 'av'), 'not a directory');
 			const report = checkDirectories({ create: true, mediaRoot: root });
-			expect(report.result).toBe(false);
+			expect(report.ok).toBe(false);
 			expect(report.dirs.find((d) => d.label === 'Media tree')?.exists).toBe(false);
 		});
 	});

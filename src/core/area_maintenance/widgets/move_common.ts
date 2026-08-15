@@ -118,7 +118,7 @@ function moveWidgetRun(id: string): WidgetHandler {
 		// The client reads result/msg/errors; the counts/sample/dryRun ride along
 		// as diagnostic fields (the widget renders the envelope generically).
 		return {
-			result: report.result,
+			result: report.ok,
 			msg: report.msg,
 			errors: report.errors,
 			dry_run: report.dryRun,

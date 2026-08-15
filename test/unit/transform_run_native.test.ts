@@ -183,10 +183,10 @@ describe('runTransform dry-run gate (WC-025)', () => {
 
 describe('runTransform files_selected refusal', () => {
 	// The refusal must be a full, well-formed report (the widget renders these
-	// fields blind): a bare {result:false} would crash the client, and a missing
+	// fields blind): a bare {ok:false} would crash the client, and a missing
 	// dryRun would make a refused EXECUTE look like a refused preview.
 	const refusal = {
-		result: false,
+		ok: false,
 		dryRun: true,
 		msg: 'Error. No definition files selected',
 		errors: ['files_selected is required'],
@@ -219,7 +219,7 @@ describe('runTransform files_selected refusal', () => {
 		// in the operator log.
 		const report = await runTransform('move_tld', { dry_run: false }, spyExecutor().executor);
 		expect(report.dryRun).toBe(false);
-		expect(report.result).toBe(false);
+		expect(report.ok).toBe(false);
 	});
 
 	test('rawOptions null/undefined → refusal, no throw', async () => {
@@ -239,7 +239,7 @@ describe('runTransform files_selected refusal', () => {
 		);
 		expect(loadCalls).toEqual(['a.json']);
 		expect(calls.length).toBe(1);
-		expect(report.result).toBe(true);
+		expect(report.ok).toBe(true);
 	});
 });
 
@@ -269,7 +269,7 @@ describe('runTransform definition-file confinement', () => {
 		expect(calls[0]!.items).toEqual([{ old: 'x1', new: 'y1' }]);
 
 		// errors downgrade the report but the run still reports its work
-		expect(report.result).toBe(false);
+		expect(report.ok).toBe(false);
 		expect(report.msg).toContain('Warning');
 		expect(report.msg).toContain('2 error(s)');
 		expect(report.counts).toEqual({ update: 1 });
@@ -292,7 +292,7 @@ describe('runTransform definition-file confinement', () => {
 		expect(report.errors).toEqual(['unparsable definition file: nulldef.json']);
 		expect(calls.length).toBe(1);
 		expect(calls[0]!.items).toEqual([{ old: 'x1', new: 'y1' }]);
-		expect(report.result).toBe(false);
+		expect(report.ok).toBe(false);
 	});
 
 	test('every list/load is scoped to the widget passed in', async () => {
@@ -362,7 +362,7 @@ describe('runTransform executor dispatch', () => {
 		// the file after the throwing one still ran
 		expect(calls.length).toBe(2);
 		expect(report?.counts).toEqual({ update: 1 });
-		expect(report?.result).toBe(false);
+		expect(report?.ok).toBe(false);
 		expect(report?.dryRun).toBe(true);
 	});
 
@@ -373,7 +373,7 @@ describe('runTransform executor dispatch', () => {
 			{ files_selected: ['a.json'] },
 			spyExecutor().executor,
 		);
-		expect(report.result).toBe(true);
+		expect(report.ok).toBe(true);
 		expect(report.errors).toEqual([]);
 		expect(report.msg).toContain('OK.');
 	});
@@ -387,7 +387,7 @@ describe('runTransform executor dispatch', () => {
 		);
 		expect(report.counts).toEqual({});
 		expect(report.sample).toEqual([]);
-		expect(report.result).toBe(true);
+		expect(report.ok).toBe(true);
 		expect(report.msg).toContain('0 change(s)');
 	});
 });

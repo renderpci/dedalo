@@ -39,14 +39,22 @@ const HIERARCHY_TABLE = 'matrix_hierarchy';
 
 export interface HierarchyImportResponse {
 	tld: string;
-	result: boolean;
+	/** Per-tld REPORT flag (the batch's data), never an envelope. */
+	ok: boolean;
 	msg: string;
 	/** True when the tld was already installed and left untouched (skip mode). */
 	skipped?: boolean;
 }
 
+/**
+ * A BATCH REPORT, not a refusal. The import runs per tld and answers what
+ * happened to each one; the router serves it as `ok(<ok>, {extend:{msg, errors,
+ * responses}})` so the wizard keeps reading `result`/`msg`/`errors` through the
+ * compat mirror and still gets the per-tld sentences (a thrown refusal would
+ * replace `errors` with the single failure code and lose them).
+ */
 export interface InstallHierarchiesResult {
-	result: boolean;
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	responses: HierarchyImportResponse[];
@@ -167,7 +175,7 @@ export async function installHierarchies(
 
 	for (const tld of tlds) {
 		if (!safeTld(tld)) {
-			responses.push({ tld, result: false, msg: 'invalid tld' });
+			responses.push({ tld, ok: false, msg: 'invalid tld' });
 			errors.push(`${tld}: invalid tld`);
 			continue;
 		}
@@ -177,13 +185,13 @@ export async function installHierarchies(
 		// violation instead of doing something sensible.
 		const present = await hierarchyRowsPresent(connection, tld);
 		if (present && !replace) {
-			responses.push({ tld, result: true, msg: 'already installed — skipped', skipped: true });
+			responses.push({ tld, ok: true, msg: 'already installed — skipped', skipped: true });
 			continue;
 		}
 		if (present && replace) {
 			const del = await deleteHierarchyRows(connection, tld);
 			if (!del.ok) {
-				responses.push({ tld, result: false, msg: `reset failed: ${del.msg}` });
+				responses.push({ tld, ok: false, msg: `reset failed: ${del.msg}` });
 				errors.push(`${tld}: ${del.msg}`);
 				continue;
 			}
@@ -192,7 +200,7 @@ export async function installHierarchies(
 		// Terms file is required; the model file is optional.
 		const terms = await importCopyFile(connection, `${tld}1.copy.gz`);
 		if (!terms.ok) {
-			responses.push({ tld, result: false, msg: terms.msg });
+			responses.push({ tld, ok: false, msg: terms.msg });
 			errors.push(`${tld}: ${terms.msg}`);
 			continue;
 		}
@@ -206,7 +214,7 @@ export async function installHierarchies(
 		if (!engineOwnsTarget) {
 			responses.push({
 				tld,
-				result: false,
+				ok: false,
 				msg: `imported into '${connection.database}', NOT activated: the engine writes to '${config.db.database}'`,
 			});
 			errors.push(
@@ -222,17 +230,17 @@ export async function installHierarchies(
 		if (meta === null) {
 			responses.push({
 				tld,
-				result: false,
+				ok: false,
 				msg: 'imported, but not registered in hierarchies.json — not activated',
 			});
 			errors.push(`${tld}: not registered in hierarchies.json; activation skipped`);
 			continue;
 		}
 		const activation = await activateHierarchy(meta, userId);
-		if (!activation.result) {
+		if (!activation.ok) {
 			responses.push({
 				tld,
-				result: false,
+				ok: false,
 				msg: `imported, activation failed: ${activation.errors.join('; ')}`,
 			});
 			errors.push(...activation.errors.map((error) => `${tld}: ${error}`));
@@ -240,12 +248,12 @@ export async function installHierarchies(
 		}
 		responses.push({
 			tld,
-			result: true,
+			ok: true,
 			msg: replace ? 'reset and activated' : 'imported and activated',
 		});
 	}
 
-	const imported = responses.filter((r) => r.result && !r.skipped).length;
+	const imported = responses.filter((r) => r.ok && !r.skipped).length;
 	const skipped = responses.filter((r) => r.skipped).length;
 	const verb = replace ? 'Reset' : 'Imported';
 	let msg = `${verb} ${imported} hierarchy(ies)`;
@@ -253,7 +261,7 @@ export async function installHierarchies(
 	if (errors.length > 0) msg = `${errors.length} hierarchy(ies) failed`;
 
 	return {
-		result: errors.length === 0,
+		ok: errors.length === 0,
 		msg,
 		errors,
 		responses,

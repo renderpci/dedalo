@@ -378,7 +378,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 			userId: ctx.userId,
 			entityName: config.entity,
 		});
-		if (result.result === false) return fail(result.msg);
+		if (!result.ok) return fail(result.msg);
 
 		// Detach the completion poll (PHP exec_background_check_transcription).
 		// EVERYTHING the poll needs — principal, user, lang, target ddo, the
@@ -407,7 +407,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 						section_tipo: String(transcriptionDdo.section_tipo ?? ''),
 						section_id: Number(transcriptionDdo.section_id ?? 0),
 					},
-					pid: result.result.pid,
+					pid: result.pid,
 				},
 				ctx.principal,
 				ctx.userId,
@@ -419,7 +419,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 		}
 
 		// WC-007: truthful success msg (PHP leaves its initial error msg on success).
-		return { result: result.result, msg: 'OK. Transcription job submitted', errors: [] };
+		return { result: { pid: result.pid }, msg: 'OK. Transcription job submitted', errors: [] };
 	} catch (error) {
 		return fail((error as Error).message);
 	}
@@ -469,7 +469,7 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 		}
 	}
 
-	return { result: outcome.result, msg: outcome.msg, errors: outcome.result ? [] : [outcome.msg] };
+	return { result: outcome.ok, msg: outcome.msg, errors: outcome.ok ? [] : [outcome.msg] };
 }
 
 /**
@@ -558,13 +558,13 @@ export async function checkServerTranscriberStatus(
 		});
 
 		// The transcriber is EXTERNAL: an unreachable server, an HTTP error or a
-		// blocked (SSRF) URI comes back as the provider's `{result:false, msg}`
-		// envelope, NOT as a thrown error. Report it as a FAILURE — WC-007 rewrites
+		// blocked (SSRF) URI comes back as the provider's `{ok:false, msg}`
+		// outcome, NOT as a thrown error. Report it as a FAILURE — WC-007 rewrites
 		// the msg on the SUCCESS branch only; a down ASR server must never read OK.
 		if (result === null || result === undefined) {
 			return fail('Transcriber server returned no status');
 		}
-		if (typeof result === 'object' && (result as { result?: unknown }).result === false) {
+		if (typeof result === 'object' && (result as { ok?: unknown }).ok === false) {
 			const detail = String((result as { msg?: unknown }).msg ?? 'transcriber request failed');
 			return fail(detail);
 		}

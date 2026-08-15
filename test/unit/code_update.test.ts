@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import { UPDATE_CATALOG } from '../../src/core/update/catalog.ts';
 import { buildCodeUpdateInfo, linearUpgradeTargets } from '../../src/core/update/code_manifest.ts';
 import {
@@ -227,7 +228,9 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 				},
 			);
 
-			expect(out.result).toBe(true);
+			// Envelope v2: `data` names the installed release; `msg` is an extension key.
+			expect(out.ok).toBe(true);
+			expect(out.data).toEqual({ version: '7.0.1', update_mode: 'clean' });
 			expect(out.msg).toContain('Installed Dédalo 7.0.1');
 			expect(restarted).toContain('7.0.1');
 			// the new tree landed (marker + new file), the stale file is gone
@@ -270,15 +273,21 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 					},
 				},
 			}));
-			const out = await updateCode(
+			// P1 sweep: a gate REFUSES BY THROWING, and the refusal keeps its own
+			// code — the catch-all must not launder it into a generic update.failed.
+			const refusal = await updateCode(
 				{
 					file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: 'a'.repeat(64) },
 					update_mode: 'clean',
 				},
 				{ targetRoot, backupRoot: join(base, 'b'), restart: () => {}, supervised: true },
+			).then(
+				() => null,
+				(caught: unknown) => caught,
 			);
-			expect(out.result).toBe(false);
-			expect(out.msg).toContain('checksum mismatch');
+			expect(isDedaloError(refusal)).toBe(true);
+			expect((refusal as { code: string }).code).toBe('update.refused');
+			expect((refusal as Error).message).toContain('checksum mismatch');
 			// the live tree is untouched
 			expect(readFileSync(join(targetRoot, 'package.json'), 'utf8')).toBe('{"name":"old"}');
 		} finally {

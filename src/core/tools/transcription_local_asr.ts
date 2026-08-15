@@ -133,14 +133,14 @@ export interface LocalTranscribeRequest extends TranscribeRequest {
 export async function localAsrProvider(req: LocalTranscribeRequest): Promise<TranscribeResult> {
 	if (!isSafeLocalAsrUrl(req.uri)) {
 		return {
-			result: false,
+			ok: false,
 			msg: privateTranscriberHostsAllowed()
 				? 'invalid transcriber URL'
 				: 'invalid transcriber URL (a private/loopback address needs DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true)',
 		};
 	}
 	if (req.audioPath === undefined || req.audioPath === '') {
-		return { result: false, msg: 'the on-premise transcriber needs the audio file path' };
+		return { ok: false, msg: 'the on-premise transcriber needs the audio file path' };
 	}
 
 	try {
@@ -161,15 +161,15 @@ export async function localAsrProvider(req: LocalTranscribeRequest): Promise<Tra
 			headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
 			body: form,
 		});
-		if (!res.ok) return { result: false, msg: `transcriber HTTP ${res.status}` };
+		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
 
 		const body = (await res.json()) as { id?: string | number };
 		if (body.id === undefined || body.id === null) {
-			return { result: false, msg: 'transcriber returned no job id' };
+			return { ok: false, msg: 'transcriber returned no job id' };
 		}
-		return { result: { pid: body.id }, msg: 'ok' };
+		return { ok: true, pid: body.id, msg: 'ok' };
 	} catch (error) {
-		return { result: false, msg: (error as Error).message };
+		return { ok: false, msg: (error as Error).message };
 	}
 }
 
@@ -187,14 +187,14 @@ export async function localAsrProvider(req: LocalTranscribeRequest): Promise<Tra
 export const localAsrStatusProvider: TranscriberStatusProvider = async (
 	req: TranscriberStatusRequest,
 ) => {
-	if (!isSafeLocalAsrUrl(req.uri)) return { result: false, msg: 'invalid transcriber URL' };
+	if (!isSafeLocalAsrUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
 
 	try {
 		const res = await fetch(endpoint(req.uri, `jobs/${encodeURIComponent(String(req.pid))}`), {
 			method: 'GET',
 			headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
 		});
-		if (!res.ok) return { result: false, msg: `transcriber HTTP ${res.status}` };
+		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
 
 		const body = (await res.json()) as {
 			state?: string;
@@ -211,7 +211,7 @@ export const localAsrStatusProvider: TranscriberStatusProvider = async (
 		}
 		return { status: 1, msg: body.error ?? `unknown transcriber state: ${String(body.state)}` };
 	} catch (error) {
-		return { result: false, msg: (error as Error).message };
+		return { ok: false, msg: (error as Error).message };
 	}
 };
 

@@ -114,7 +114,7 @@ export async function addHierarchyInstall(
 	const installHierarchies = importer ?? (await realImporter());
 	// NO fourth argument on purpose: `replace` stays false, i.e. additive.
 	const r = await installHierarchies(tlds, undefined, principal.userId);
-	return { result: r.result, msg: r.msg, errors: r.errors };
+	return { result: r.ok, msg: r.msg, errors: r.errors };
 }
 
 /**
@@ -131,7 +131,7 @@ export async function addHierarchyReset(
 	const tlds = Array.isArray(options.hierarchies) ? options.hierarchies.map(String) : [];
 	const installHierarchies = importer ?? (await realImporter());
 	const r = await installHierarchies(tlds, undefined, principal.userId, { replace: true });
-	return { result: r.result, msg: r.msg, errors: r.errors };
+	return { result: r.ok, msg: r.msg, errors: r.errors };
 }
 
 export const widget: WidgetModule = {

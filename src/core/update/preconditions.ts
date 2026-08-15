@@ -1,21 +1,23 @@
 /**
  * Shared operator preconditions for update/migration EXECUTEs (UPDATE_PROCESS
  * Phase 0) — the PHP update_data_version gate pair (superuser identity +
- * maintenance mode, refusal bytes verbatim) plus a non-blocking recent-backup
- * warning. PHP does not auto-chain backups before updates and neither do we:
- * a missing/stale backup WARNS, never refuses (the operator can waive it).
+ * maintenance mode) plus a non-blocking recent-backup warning. PHP does not
+ * auto-chain backups before updates and neither do we: a missing/stale backup
+ * WARNS, never refuses (the operator can waive it).
+ *
+ * A REQUIRED check REFUSES BY THROWING (engineering/ERRORS_SPEC.md §4) — the
+ * PHP refusal sentences became the registry messages of `perm.superuser_required`
+ * and `maintenance.mode_required`, so this module builds no body and the caller
+ * has nothing to forward.
  */
 
 import { config } from '../../config/config.ts';
 import { newestBackupMtimeMs } from '../area_maintenance/backup.ts';
-import type { WidgetResponse } from '../area_maintenance/widgets/support.ts';
+import { DedaloError } from '../errors/index.ts';
 import { getServerState } from '../resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 
 export interface UpdatePreconditions {
-	ok: boolean;
-	/** The PHP-byte refusal envelope when a REQUIRED check fails (else null). */
-	refusal: WidgetResponse | null;
 	/** Non-blocking findings (recent-backup); emission is the caller's call. */
 	warnings: string[];
 }
@@ -31,26 +33,10 @@ export function checkUpdatePreconditions(
 	options: { backupWarn?: boolean; backupDir?: string } = {},
 ): UpdatePreconditions {
 	if (principal.userId !== SUPERUSER_ID) {
-		return {
-			ok: false,
-			refusal: {
-				result: false,
-				msg: 'Error. Only Dédalo superuser can do this action',
-				errors: [],
-			},
-			warnings: [],
-		};
+		throw new DedaloError('perm.superuser_required', { coordinates: { user: principal.userId } });
 	}
 	if (getServerState().maintenance_mode !== true) {
-		return {
-			ok: false,
-			refusal: {
-				result: false,
-				msg: 'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
-				errors: [],
-			},
-			warnings: [],
-		};
+		throw new DedaloError('maintenance.mode_required');
 	}
 
 	const warnings: string[] = [];
@@ -67,5 +53,5 @@ export function checkUpdatePreconditions(
 			}
 		}
 	}
-	return { ok: true, refusal: null, warnings };
+	return { warnings };
 }

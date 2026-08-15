@@ -9,9 +9,11 @@
 
 import { setServerState } from '../resolve/server_state.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { refuseInstall } from './refuse.ts';
 
+/** The step's answer on the ONLY path that returns: sealed (every refusal throws). */
 export interface InstallFinishResult {
-	result: boolean;
+	ok: true;
 	msg: string;
 }
 
@@ -27,14 +29,14 @@ export async function installFinish(conn?: DbConnDescriptor): Promise<InstallFin
 		`SELECT coalesce(jsonb_array_length(string->'${PASSWORD_COMPONENT}'), 0) FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
 	]);
 	if (probe.exitCode !== 0 || probe.stdout.trim() === '') {
-		return {
-			result: false,
-			msg: 'Cannot seal: root user not found (run the database install step)',
-		};
+		refuseInstall(
+			'install.state_conflict',
+			'Cannot seal: root user not found (run the database install step)',
+		);
 	}
 	if (Number(probe.stdout.trim()) < 1) {
-		return { result: false, msg: 'Cannot seal: root password is not set' };
+		refuseInstall('install.state_conflict', 'Cannot seal: root password is not set');
 	}
 	setServerState({ install_status: 'sealed' });
-	return { result: true, msg: 'Installation complete' };
+	return { ok: true, msg: 'Installation complete' };
 }

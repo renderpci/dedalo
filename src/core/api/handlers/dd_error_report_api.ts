@@ -28,19 +28,33 @@ import {
 	reportWireSchema,
 } from '../../error_report/schema.ts';
 import { ensureErrorReportsTable, insertErrorReport } from '../../error_report/store.ts';
+import { DedaloError, ok } from '../../errors/index.ts';
 import {
 	buildThrottleKey,
 	isThrottled,
 	recordFailedAttempt,
 } from '../../security/session_store.ts';
 import type { ActionHandler } from '../handler_context.ts';
-import { denied } from '../response.ts';
 
 /** Accepted intake requests per trusted-hop IP, sliding window. */
 const INTAKE_MAX_ATTEMPTS = 30;
 
-/** The exact Gate-1 unregistered-action denial (no existence leak). */
-const UNDEFINED_METHOD = 'Undefined or unauthorized method (action)';
+/**
+ * The exact Gate-1 unregistered-action refusal — BYTE-IDENTICAL to what
+ * dispatch.ts's `unknownAction()` throws, `details.action` included (WC-017:
+ * a wrong token must be indistinguishable from "this endpoint does not exist
+ * on this host", and the disabled-receiver gate answers the same thing).
+ */
+function unknownAction(action: unknown): never {
+	throw new DedaloError('request.unknown_action', {
+		details: { action: typeof action === 'string' ? action : String(action) },
+	});
+}
+
+/** The one terse refusal every intake-discipline failure answers with (no field detail, no echo). */
+function invalidReport(): never {
+	throw new DedaloError('request.invalid', { message: 'Invalid error report' });
+}
 
 /** dd_error_report_api action handlers, keyed by action (registered in dispatch.ts). */
 export const errorReportApiActions: Record<string, ActionHandler> = {
@@ -56,7 +70,7 @@ export const errorReportApiActions: Record<string, ActionHandler> = {
 		// bad tokens, and oversize bodies all spend budget.
 		const throttleKey = buildThrottleKey('error_report', '', context.clientIp);
 		if (isThrottled(throttleKey, INTAKE_MAX_ATTEMPTS)) {
-			return denied(429, 'Too many requests');
+			throw new DedaloError('rate.limited');
 		}
 		recordFailedAttempt(throttleKey);
 
@@ -68,25 +82,25 @@ export const errorReportApiActions: Record<string, ActionHandler> = {
 			context.bodyByteLength !== undefined &&
 			context.bodyByteLength > REPORT_MAX_SERIALIZED_BYTES
 		) {
-			return denied(400, 'Invalid error report');
+			invalidReport();
 		}
 
 		// 3 — optional shared token (constant-time; gate.ts). Wrong/missing when
 		// required answers the unregistered-action shape — same as disabled.
 		if (!reportTokenValid(context.reportTokenCandidate)) {
-			return denied(400, UNDEFINED_METHOD);
+			unknownAction(rqo.action);
 		}
 
 		// 4 — endpoint-scale size clamp (authoritative; a missing/lying
 		// Content-Length still gets caught here).
 		if (reportPayloadTooLarge(options)) {
-			return denied(400, 'Invalid error report');
+			invalidReport();
 		}
 
 		// 4 — strict schema. Terse generic denial: no field detail, no echo.
 		const parsed = reportWireSchema.safeParse(options);
 		if (!parsed.success) {
-			return denied(400, 'Invalid error report');
+			invalidReport();
 		}
 		const report = parsed.data;
 
@@ -115,11 +129,20 @@ export const errorReportApiActions: Record<string, ActionHandler> = {
 					screenshot: report.screenshot ?? null,
 				},
 			});
-			return { status: 200, body: { result: true, msg: 'OK', errors: [], report_id: id } };
+			// `report_id` ALSO rides at the top level: the relaying installation
+			// reads `body.result === true` + `body.report_id`
+			// (tools/tool_error_report/server/index.ts).
+			return {
+				status: 200,
+				body: ok(true, { requestId: context.requestId, extend: { report_id: id } }),
+			};
 		} catch (error) {
 			// Structured, id-less server-side note only — never the report text.
 			console.warn('[error_report] intake store failed', error);
-			return denied(500, 'Error report could not be stored');
+			throw new DedaloError('internal.unexpected', {
+				message: 'error report could not be stored',
+				cause: error,
+			});
 		}
 	},
 };

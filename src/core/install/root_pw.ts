@@ -14,9 +14,11 @@
  */
 
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { refuseInstall } from './refuse.ts';
 
+/** The step's answer on the ONLY path that returns: success (every refusal throws). */
 export interface SetRootPwResult {
-	result: boolean;
+	ok: true;
 	msg: string;
 }
 
@@ -39,7 +41,7 @@ export async function setRootPassword(
 	conn?: DbConnDescriptor,
 ): Promise<SetRootPwResult> {
 	if (password.length < 8) {
-		return { result: false, msg: 'Password must be at least 8 characters' };
+		refuseInstall('install.invalid_input', 'Password must be at least 8 characters');
 	}
 	const connection = conn ?? connFromConfig();
 
@@ -49,13 +51,16 @@ export async function setRootPassword(
 		`SELECT coalesce(jsonb_array_length(string->'${PASSWORD_COMPONENT}'), 0) FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
 	]);
 	if (probe.exitCode !== 0) {
-		return { result: false, msg: `Cannot read root user: ${probe.stderr}` };
+		refuseInstall('install.step_failed', `Cannot read root user: ${probe.stderr}`);
 	}
 	if (probe.stdout.trim() === '') {
-		return { result: false, msg: 'Root user not found — run the database install step first' };
+		refuseInstall(
+			'install.state_conflict',
+			'Root user not found — run the database install step first',
+		);
 	}
 	if (Number(probe.stdout.trim()) > 0) {
-		return { result: false, msg: 'Root password is already set' };
+		refuseInstall('install.state_conflict', 'Root password is already set');
 	}
 
 	// Argon2id hash. The hash charset ($argon2id$v=...$<b64>$<b64>) contains no
@@ -63,7 +68,7 @@ export async function setRootPassword(
 	// is injection-safe; the SQL is piped via stdin (never on argv).
 	const hash = await Bun.password.hash(password, { algorithm: 'argon2id' });
 	if (/['\\]/.test(hash)) {
-		return { result: false, msg: 'Unexpected hash format — aborting for safety' };
+		refuseInstall('install.step_failed', 'Unexpected hash format — aborting for safety');
 	}
 	const updateSql = `UPDATE matrix_users
 		SET string = jsonb_set(
@@ -76,7 +81,7 @@ export async function setRootPassword(
 		stdin: updateSql,
 	});
 	if (applied.exitCode !== 0) {
-		return { result: false, msg: `Failed to set password: ${applied.stderr}` };
+		refuseInstall('install.step_failed', `Failed to set password: ${applied.stderr}`);
 	}
-	return { result: true, msg: 'Root password set — OK' };
+	return { ok: true, msg: 'Root password set — OK' };
 }

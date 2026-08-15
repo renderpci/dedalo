@@ -41,8 +41,12 @@ import {
 import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
+import { ok } from '../errors/index.ts';
+import type { ApiEnvelope } from '../errors/schema.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 import { downloadReleaseArchive } from './code_download.ts';
 import { engineOwnsInstall } from './ownership.ts';
+import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
 
 const ARCHIVE_ROOT_PREFIX = 'dedalo_code/';
@@ -50,10 +54,18 @@ const MAX_ARCHIVE_ENTRIES = 50_000;
 const MAX_EXTRACTED_TOTAL_BYTES = 1024 * 1024 * 1024;
 const PRESERVE_ROOT_ENTRIES: ReadonlySet<string> = new Set(['node_modules', '.git']);
 
-export interface CodeUpdateResponse {
-	result: boolean;
-	msg: string;
-	errors: string[];
+/**
+ * The pipeline's answer IS the wire body (the update_code widget returns it
+ * verbatim), so it is ENVELOPE v2 — `data` is the installed release, `msg` an
+ * extension key. Every gate REFUSES BY THROWING a registered `update.*` /
+ * `request.invalid_options` code (./refuse.ts); nothing here builds a failure
+ * body.
+ */
+export type CodeUpdateResponse = ApiEnvelope;
+
+/** The current RQO's id (the widget dispatcher opens the scope), or '' outside a request. */
+function currentRequestId(): string {
+	return currentRequestContext()?.requestId ?? '';
 }
 
 export interface CodeUpdateSeams {
@@ -228,11 +240,8 @@ export async function updateCode(
 	rawOptions: unknown,
 	seams: CodeUpdateSeams = {},
 ): Promise<CodeUpdateResponse> {
-	const response: CodeUpdateResponse = { result: false, msg: '', errors: [] };
 	if (!engineOwnsInstall()) {
-		response.errors.push('engine does not own the install');
-		response.msg = 'Error. Code update is not runnable on this engine';
-		return response;
+		refuseUpdate('update.refused', 'Error. Code update is not runnable on this engine');
 	}
 	const options = (rawOptions ?? {}) as UpdateCodeOptions;
 	const file = options.file ?? {};
@@ -242,30 +251,31 @@ export async function updateCode(
 	const updateMode =
 		options.update_mode === 'clean' || file.force_update_mode === 'clean' ? 'clean' : 'incremental';
 	if (url === '' || version === '') {
-		response.msg = 'Error. Missing release file/version';
-		response.errors.push('file.url and file.version are required');
-		return response;
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Missing release file/version (file.url and file.version are required)',
+		);
 	}
 	// CMD-06 (2026-07-28 audit): `version` is used downstream as a path segment,
 	// and parseVersionString/compareVersionArrays NaN-short-circuit — so a
 	// traversal value like `../../x` could slip the linear-upgrade gate. Require a
 	// strict numeric-dotted form up front so it can never be a path or an option.
 	if (!/^\d+(\.\d+){1,3}$/.test(version)) {
-		response.msg = 'Error. Malformed release version';
-		response.errors.push('version must be a numeric dotted release (e.g. 7.0.1)');
-		return response;
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Malformed release version (a numeric dotted release is required, e.g. 7.0.1)',
+		);
 	}
 	const target = parseVersionString(version);
 	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, target);
 	if (linear !== null) {
-		response.msg = `Error. ${linear}`;
-		response.errors.push(linear);
-		return response;
+		refuseUpdate('update.refused', `Error. ${linear}`);
 	}
 	if (declaredSha !== '' && !/^[a-f0-9]{64}$/.test(declaredSha)) {
-		response.msg = 'Error. Malformed release checksum';
-		response.errors.push('sha256 must be 64 hex chars');
-		return response;
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Malformed release checksum (sha256 must be 64 hex chars)',
+		);
 	}
 
 	const targetRoot = seams.targetRoot ?? projectRoot;
@@ -273,10 +283,10 @@ export async function updateCode(
 	// Only the LIVE tree needs a supervisor (a self-exit must be respawned);
 	// a seam-driven test swap of a temp tree does not restart the process.
 	if (targetRoot === projectRoot && !supervised) {
-		response.msg =
-			'Error. No supervisor detected; the server would not restart onto the new tree. Set DEDALO_SUPERVISED=true.';
-		response.errors.push('unsupervised');
-		return response;
+		refuseUpdate(
+			'update.refused',
+			'Error. No supervisor detected; the server would not restart onto the new tree. Set DEDALO_SUPERVISED=true.',
+		);
 	}
 	const backupRoot =
 		seams.backupRoot ??
@@ -298,37 +308,28 @@ export async function updateCode(
 			}
 		});
 		if (codeServer === undefined) {
-			response.msg = 'Error. Release URL is not on a configured code server';
-			response.errors.push(`no code server matches ${url}`);
-			return response;
+			refuseUpdate(
+				'request.invalid_options',
+				'Error. Release URL is not on a configured code server',
+			);
 		}
 		const zipPath = join(stagingDir, `${version}.zip`);
-		const downloaded = await downloadReleaseArchive({
+		// A download failure THROWS out of downloadReleaseArchive (typed).
+		await downloadReleaseArchive({
 			url,
 			configuredOrigin: new URL(codeServer.url).origin,
 			targetPath: zipPath,
 		});
-		if (downloaded.result !== true) {
-			response.errors.push(...downloaded.errors);
-			response.msg = downloaded.msg;
-			return response;
-		}
 
 		if (declaredSha !== '' && verifySha(zipPath) !== declaredSha) {
-			response.msg = 'Error. Release checksum mismatch — refusing to install';
-			response.errors.push('sha256 mismatch');
-			return response;
+			refuseUpdate('update.refused', 'Error. Release checksum mismatch — refusing to install');
 		}
 		if (!looksLikeZip(zipPath)) {
-			response.msg = 'Error. Downloaded release is not a ZIP archive';
-			response.errors.push('bad magic bytes');
-			return response;
+			refuseUpdate('update.refused', 'Error. Downloaded release is not a ZIP archive');
 		}
 		const preValidation = await preValidateArchive(zipPath);
 		if (preValidation !== null) {
-			response.msg = `Error. Unsafe release archive: ${preValidation}`;
-			response.errors.push(preValidation);
-			return response;
+			refuseUpdate('update.refused', `Error. Unsafe release archive: ${preValidation}`);
 		}
 
 		const quarantine = join(stagingDir, 'extract');
@@ -347,14 +348,14 @@ export async function updateCode(
 		}
 
 		writePendingResult(backupRoot, { version, updateMode, stamp, ok: true });
-		response.result = true;
-		response.msg = `OK. Installed Dédalo ${version} (${updateMode}). Restarting to load the new code.`;
+		const msg = `OK. Installed Dédalo ${version} (${updateMode}). Restarting to load the new code.`;
 		restart(`code update to ${version}`);
-		return response;
+		return ok(
+			{ version, update_mode: updateMode },
+			{ requestId: currentRequestId(), extend: { msg } },
+		);
 	} catch (error) {
-		response.errors.push((error as Error).message);
-		response.msg = 'Error. Code update failed';
-		return response;
+		rethrowOrRefuseUpdate(error, 'update.failed', 'Error. Code update failed');
 	} finally {
 		rmSync(stagingDir, { recursive: true, force: true });
 	}

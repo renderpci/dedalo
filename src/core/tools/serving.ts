@@ -14,6 +14,7 @@
 
 import { extname } from 'node:path';
 import { staticAssetResponse } from '../api/static_asset.ts';
+import { DedaloError, toErrorEnvelope } from '../errors/index.ts';
 import { resolveToolAssetPath, resolveToolCommonAssetPath } from './paths.ts';
 
 /** URL prefix the tool_common client machinery is served at (a CORE url). */
@@ -45,10 +46,22 @@ const SERVABLE_EXTENSIONS: ReadonlySet<string> = new Set([
 	'.wasm',
 ]);
 
-/** 404 without leaking whether the target exists. */
+/**
+ * 404 without leaking whether the target exists — the SAME converter-made
+ * `resource.not_found` body server.ts serves for every other route miss
+ * (engineering/ERRORS_SPEC.md §4: nothing hand-builds a failure body).
+ *
+ * These two entry points are called from the static-asset branch of server.ts,
+ * which threads no request id (they are not RQO handlers), so the envelope
+ * carries the literal `'static'` — the same posture as server.ts's own
+ * `'unhandled'` catch-all id.
+ */
 function notFound(): Response {
-	return new Response(JSON.stringify({ result: false, msg: 'Not found' }), {
-		status: 404,
+	const converted = toErrorEnvelope(new DedaloError('resource.not_found'), {
+		requestId: 'static',
+	});
+	return new Response(JSON.stringify(converted.body), {
+		status: converted.status,
 		headers: { 'Content-Type': 'application/json' },
 	});
 }
