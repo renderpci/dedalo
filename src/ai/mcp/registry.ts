@@ -16,8 +16,10 @@
  */
 
 import { z } from 'zod';
+import { toStructuredErr } from '../../core/errors/convert.ts';
+import { DedaloError } from '../../core/errors/dedalo_error.ts';
 import type { AgentToolDefinition } from '../agent/llm_provider.ts';
-import { err, ok, Page, type Structured, wrapError } from './envelope.ts';
+import { ok, Page, type Structured } from './envelope.ts';
 import type { ToolSpec } from './tool_spec.ts';
 import { DISCOVERY_SPECS } from './tools/discovery.ts';
 import { FIELDS_WRITE_SPECS } from './tools/fields_write.ts';
@@ -71,38 +73,38 @@ export async function runTool(
 	input: unknown,
 	gates: RegistryGates = {},
 ): Promise<Structured> {
-	const parsed = z.object(spec.inputShape).safeParse(input ?? {});
-	if (!parsed.success) {
-		return err('invalid_request', `Invalid input for ${spec.name}: ${parsed.error.message}`);
-	}
-	if (spec.write) {
-		if (gates.allowWrite !== true) {
-			return err(
-				'permission_denied',
-				`${spec.name} is a write tool and this surface is read-only (DEDALO_MCP_ALLOW_WRITE).`,
-			);
-		}
-		const sectionTipo = (parsed.data as { section_tipo?: unknown }).section_tipo;
-		if (
-			gates.writableSections !== undefined &&
-			gates.writableSections.size > 0 &&
-			typeof sectionTipo === 'string' &&
-			!gates.writableSections.has(sectionTipo)
-		) {
-			return err(
-				'section_not_writable',
-				`MCP write refused: section '${sectionTipo}' is not in the write allowlist (DEDALO_MCP_WRITE_SECTIONS).`,
-			);
-		}
-	}
+	// Every refusal below is a THROW inside the one try: the converter is the
+	// single place a failure becomes the structured error (registry code + hint).
 	try {
+		const parsed = z.object(spec.inputShape).safeParse(input ?? {});
+		if (!parsed.success) {
+			throw new DedaloError('request.invalid', {
+				publicMessage: `Invalid input for ${spec.name}: ${parsed.error.message}`,
+			});
+		}
+		if (spec.write) {
+			if (gates.allowWrite !== true) {
+				throw new DedaloError('mcp.write_disabled', { coordinates: { tool: spec.name } });
+			}
+			const sectionTipo = (parsed.data as { section_tipo?: unknown }).section_tipo;
+			if (
+				gates.writableSections !== undefined &&
+				gates.writableSections.size > 0 &&
+				typeof sectionTipo === 'string' &&
+				!gates.writableSections.has(sectionTipo)
+			) {
+				throw new DedaloError('perm.section_not_writable', {
+					coordinates: { section_tipo: sectionTipo },
+				});
+			}
+		}
 		// Handlers return raw payloads and THROW on refusal; the envelope is
 		// applied here, once (a save outcome's own ok/message stays inside data).
 		// A Page result carries its pagination up to the envelope top level.
 		const result = await spec.handler(principal, parsed.data as Record<string, unknown>);
 		return result instanceof Page ? ok(result.data, result.pagination) : ok(result);
 	} catch (error) {
-		return wrapError(error);
+		return toStructuredErr(error);
 	}
 }
 

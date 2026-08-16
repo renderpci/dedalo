@@ -25,6 +25,7 @@
 
 import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import { resolveStagedName } from '../../../src/core/media/ingest/staged_files.ts';
 import { importMappedRecords, type MappedRecord } from '../../../src/core/tools/import_execute.ts';
@@ -34,14 +35,19 @@ import {
 	type MarcValueSpec,
 	parseMarc,
 } from '../../../src/core/tools/marc21.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: `Error. ${message}`, errors: [message] };
+/**
+ * A caller fault. `message` AND `publicMessage`: import_files is
+ * backgroundRunnable, and the executor records `error.message` on the job.
+ */
+function invalidRequest(message: string): DedaloError {
+	return new DedaloError('request.invalid_options', { message, publicMessage: message });
 }
 
 /** One authored `config.map` entry (sample_config.json / dd996 tool configuration). */
@@ -131,89 +137,91 @@ export function resolveStagedFile(
 }
 
 async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const o = ctx.options;
-		const sectionTipo = String(o.section_tipo ?? '');
-		const filesData = (o.files_data ?? []) as { name?: string; tmp_name?: string | null }[];
-		if (sectionTipo === '' || filesData.length === 0)
-			return fail('Missing section_tipo or files_data');
-		const { entries, idSpec } = readMarcMap(o.tool_config);
-		if (entries.length === 0)
-			// Names the AUTHORING location (sample_config.json / register.json), which is
-			// where an admin actually fixes it — not the flat key getToolConfig resolves to.
-			return fail('Missing marc21_map (tool_config.config.map)');
+	const o = ctx.options;
+	const sectionTipo = String(o.section_tipo ?? '');
+	const filesData = (o.files_data ?? []) as { name?: string; tmp_name?: string | null }[];
+	if (sectionTipo === '' || filesData.length === 0) {
+		throw invalidRequest('Missing section_tipo or files_data');
+	}
+	const { entries, idSpec } = readMarcMap(o.tool_config);
+	if (entries.length === 0) {
+		// Names the AUTHORING location (sample_config.json / register.json), which is
+		// where an admin actually fixes it — not the flat key getToolConfig resolves to.
+		throw invalidRequest('Missing marc21_map (tool_config.config.map)');
+	}
 
-		// key_dir is TOP-LEVEL and server-sanitized; the dir is rebuilt from the
-		// CURRENT user id, so no payload can reach another user's staged uploads.
-		const dir = stagingDir(ctx.userId, String(o.key_dir ?? ''));
+	// key_dir is TOP-LEVEL and server-sanitized; the dir is rebuilt from the
+	// CURRENT user id, so no payload can reach another user's staged uploads.
+	const dir = stagingDir(ctx.userId, String(o.key_dir ?? ''));
 
-		const errors: string[] = [];
-		const mapped: MappedRecord[] = [];
-		for (const file of filesData) {
-			// The client URI-encodes the display name (JSON/HTTP safety); decode
-			// defensively, since a bare '%' is not a valid escape sequence.
-			const rawName = String(file.name ?? '');
-			let name: string;
-			try {
-				name = decodeURIComponent(rawName);
-			} catch {
-				name = rawName;
-			}
-			// PHP filter_marc21_files: .mrc (binary ISO 2709) only; other uploads in
-			// the same dropzone batch are not MARC21 and are silently passed over.
-			if (!name.toLowerCase().endsWith('.mrc')) continue;
-			let staged: string | null;
-			try {
-				// tmp_name is the SERVER-assigned staged name, forwarded per entry by
-				// this tool's client. An entry without one falls back to the legacy
-				// derivation, which refuses (throws) rather than guess.
-				staged = resolveStagedFile(dir, name, file.tmp_name ?? null);
-			} catch (error) {
-				errors.push(`${name}: ${(error as Error).message}`);
-				continue;
-			}
-			if (staged === null) {
-				errors.push(`${name}: invalid file name`);
-				continue;
-			}
-			if (!existsSync(staged)) {
-				errors.push(`${name}: staged file not found`);
-				continue;
-			}
-			const bytes = new Uint8Array(await Bun.file(staged).arrayBuffer());
-			const { records, errors: parseErrors } = parseMarc(bytes);
-			errors.push(...parseErrors.map((e) => `${name}: ${e}`));
-			for (const record of records) mapped.push(applyMarcMap(record, entries, idSpec));
+	const errors: string[] = [];
+	const mapped: MappedRecord[] = [];
+	for (const file of filesData) {
+		// The client URI-encodes the display name (JSON/HTTP safety); decode
+		// defensively, since a bare '%' is not a valid escape sequence.
+		const rawName = String(file.name ?? '');
+		let name: string;
+		try {
+			name = decodeURIComponent(rawName);
+		} catch {
+			name = rawName;
 		}
-
-		const report = await importMappedRecords(mapped, sectionTipo, ctx.userId);
-		// CONSUME the staging form (WC-079). This tool's client builds a
-		// service_tmp_section, so it accumulates scratch rows under its own scope —
-		// clearing here is what stops the next batch inheriting this run's values.
-		// Best effort. Only when something was ACTUALLY created or updated: a run where every
-		// record failed still returns result:true, and clearing on that would wipe
-		// the form after writing nothing.
-		if (report.created + report.updated > 0) {
-			try {
-				const { clearTemporalScratch } = await import(
-					'../../../src/core/section/record/temporal_store.ts'
-				);
-				await clearTemporalScratch(ctx.userId, 'tool_import_marc21');
-			} catch (error) {
-				console.warn('[tool_import_marc21] scratch clear failed:', (error as Error).message);
-			}
+		// PHP filter_marc21_files: .mrc (binary ISO 2709) only; other uploads in
+		// the same dropzone batch are not MARC21 and are silently passed over.
+		if (!name.toLowerCase().endsWith('.mrc')) continue;
+		let staged: string | null;
+		try {
+			// tmp_name is the SERVER-assigned staged name, forwarded per entry by
+			// this tool's client. An entry without one falls back to the legacy
+			// derivation, which refuses (throws) rather than guess.
+			staged = resolveStagedFile(dir, name, file.tmp_name ?? null);
+		} catch (error) {
+			errors.push(`${name}: ${(error as Error).message}`);
+			continue;
 		}
-		return {
-			result: true,
-			msg: `OK. MARC21 import done. Created ${report.created}, updated ${report.updated}${report.failed.length > 0 ? `, ${report.failed.length} failed` : ''}.`,
+		if (staged === null) {
+			errors.push(`${name}: invalid file name`);
+			continue;
+		}
+		if (!existsSync(staged)) {
+			errors.push(`${name}: staged file not found`);
+			continue;
+		}
+		const bytes = new Uint8Array(await Bun.file(staged).arrayBuffer());
+		const { records, errors: parseErrors } = parseMarc(bytes);
+		errors.push(...parseErrors.map((e) => `${name}: ${e}`));
+		for (const record of records) mapped.push(applyMarcMap(record, entries, idSpec));
+	}
+
+	const report = await importMappedRecords(mapped, sectionTipo, ctx.userId);
+	// CONSUME the staging form (WC-079). This tool's client builds a
+	// service_tmp_section, so it accumulates scratch rows under its own scope —
+	// clearing here is what stops the next batch inheriting this run's values.
+	// Best effort. Only when something was ACTUALLY created or updated: a run where every
+	// record failed still returns result:true, and clearing on that would wipe
+	// the form after writing nothing.
+	if (report.created + report.updated > 0) {
+		try {
+			const { clearTemporalScratch } = await import(
+				'../../../src/core/section/record/temporal_store.ts'
+			);
+			await clearTemporalScratch(ctx.userId, 'tool_import_marc21');
+		} catch (error) {
+			console.warn('[tool_import_marc21] scratch clear failed:', (error as Error).message);
+		}
+	}
+	// A per-file failure never fails the batch: the summary and both failure
+	// lists are PAYLOAD.
+	return ok(
+		{
+			summary: `OK. MARC21 import done. Created ${report.created}, updated ${report.updated}${report.failed.length > 0 ? `, ${report.failed.length} failed` : ''}.`,
 			errors,
 			created: report.created,
 			updated: report.updated,
 			failed: report.failed,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 export const tool: ToolServerModule = {

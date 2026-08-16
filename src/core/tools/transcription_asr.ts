@@ -20,6 +20,7 @@
 // The ONE transcript formatter, shared verbatim with the browser engine (plain
 // ESM, no build step — see segmentsToTcText).
 import { segments_to_html as segmentsToHtml } from '../../../tools/tool_transcription/transcribers/lib/paragraphs.js';
+import { DedaloError } from '../errors/index.ts';
 import { localAsrProvider, localAsrStatusProvider } from './transcription_local_asr.ts';
 
 /**
@@ -87,11 +88,14 @@ export interface TranscribeRequest {
 	entityName: string;
 }
 
-export interface TranscribeResult {
-	/** A job handle (async processing) or false on failure. */
-	result: { pid: string | number } | false;
-	msg: string;
-}
+/**
+ * One submit call's outcome — an INTERNAL provider protocol, never a wire body.
+ * Discriminated on `ok` so nothing envelope-shaped can escape a transcriber
+ * (the tool handler turns it into its own response).
+ */
+export type TranscribeResult =
+	| { ok: true /** The transcriber server's job handle. */; pid: string | number; msg: string }
+	| { ok: false; msg: string };
 
 export type TranscriberProvider = (req: TranscribeRequest) => Promise<TranscribeResult>;
 
@@ -101,7 +105,7 @@ export type TranscriberProvider = (req: TranscribeRequest) => Promise<Transcribe
  * babel answers { result: { pid } } (PHP reads $transcriber_response->result->pid).
  */
 export const babelTranscriberProvider: TranscriberProvider = async (req) => {
-	if (!isSafeTranscriberUrl(req.uri)) return { result: false, msg: 'invalid transcriber URL' };
+	if (!isSafeTranscriberUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
 	try {
 		const res = await fetch(req.uri, {
 			method: 'POST',
@@ -116,15 +120,17 @@ export const babelTranscriberProvider: TranscriberProvider = async (req) => {
 				method_name: 'transcribe',
 			}),
 		});
-		if (!res.ok) return { result: false, msg: `transcriber HTTP ${res.status}` };
+		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
+		// `body.result` here is BABEL'S OWN wire shape (an external service's
+		// contract), not a Dédalo envelope — it is read, never produced.
 		const body = (await res.json()) as { result?: { pid?: string | number } | false };
 		const pid = body.result !== false && body.result !== undefined ? body.result.pid : undefined;
 		if (pid === undefined || pid === null) {
-			return { result: false, msg: 'transcriber returned no pid' };
+			return { ok: false, msg: 'transcriber returned no pid' };
 		}
-		return { result: { pid }, msg: 'ok' };
+		return { ok: true, pid, msg: 'ok' };
 	} catch (error) {
-		return { result: false, msg: (error as Error).message };
+		return { ok: false, msg: (error as Error).message };
 	}
 };
 
@@ -225,8 +231,8 @@ export interface TranscriberStatusRequest {
 /**
  * A status provider returns the DECODED INNER `result` of babel's response
  * (PHP check_transcriber_status returns $response->result): typically
- * { status: 1|2|3, transcription_data? }. Failures return { result: false, msg }
- * (the PHP SSRF-guard shape).
+ * { status: 1|2|3, transcription_data? }. A provider-side failure returns
+ * `{ ok:false, msg }` — an INTERNAL shape, never an envelope.
  */
 export type TranscriberStatusProvider = (req: TranscriberStatusRequest) => Promise<unknown>;
 
@@ -279,9 +285,10 @@ export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSe
 		// answered about a job that did not exist and the client polled a handle
 		// that could never complete. Thrown, not enveloped — see
 		// babelTranscriberStatusProvider.
-		throw new Error(
-			`buildTranscriberStatusBody: engine '${req.engine}' keys its job by av_url, but none was supplied — the poll cannot identify the job`,
-		);
+		throw new DedaloError('request.invalid_data', {
+			message: `buildTranscriberStatusBody: engine '${req.engine}' keys its job by av_url, but none was supplied — the poll cannot identify the job`,
+			coordinates: { engine: req.engine },
+		});
 	}
 	// Field ORDER is kept exactly as PHP sent it (key, url, av_url, engine, …).
 	const fields: Record<string, string> = { key: req.key, url: req.uri };
@@ -301,8 +308,8 @@ export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSe
 
 /** Real babel status poll — POSTs check_status, returns the decoded inner result. */
 export const babelTranscriberStatusProvider: TranscriberStatusProvider = async (req) => {
-	if (!isSafeTranscriberUrl(req.uri)) return { result: false, msg: 'invalid transcriber URL' };
-	// The body is built OUTSIDE the try on purpose. `{result:false, msg}` is the
+	if (!isSafeTranscriberUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
+	// The body is built OUTSIDE the try on purpose. `{ok:false, msg}` is the
 	// vocabulary for "the transcriber said no / is unreachable"; a caller that
 	// did not supply the av_url the job is keyed by is a PROGRAMMING error, and
 	// laundering it into that envelope hid the real message behind the poll's
@@ -310,11 +317,12 @@ export const babelTranscriberStatusProvider: TranscriberStatusProvider = async (
 	const requestBody = buildTranscriberStatusBody(req);
 	try {
 		const res = await fetch(req.uri, { method: 'POST', body: requestBody });
-		if (!res.ok) return { result: false, msg: `transcriber HTTP ${res.status}` };
+		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
+		// Babel's own envelope again — decoded, never produced.
 		const body = (await res.json()) as { result?: unknown };
 		return body.result ?? null;
 	} catch (error) {
-		return { result: false, msg: (error as Error).message };
+		return { ok: false, msg: (error as Error).message };
 	}
 };
 
@@ -522,7 +530,7 @@ export interface TranscriptionPollOptions {
 export async function pollTranscriptionCompletion(
 	job: TranscriptionPollJob,
 	opts: TranscriptionPollOptions = {},
-): Promise<{ result: boolean; msg: string }> {
+): Promise<{ ok: boolean; msg: string }> {
 	const resolved = resolveTranscriberStatusProvider(job.status.engine);
 	const provider = opts.provider ?? resolved.provider;
 	if (provider === null || provider === undefined) {
@@ -531,7 +539,7 @@ export async function pollTranscriptionCompletion(
 		const msg =
 			resolved.error ?? `no status provider for transcriber engine '${job.status.engine}'`;
 		console.error(`[tool_transcription] ${msg} (pid ${job.status.pid})`);
-		return { result: false, msg };
+		return { ok: false, msg };
 	}
 	const save = opts.save ?? saveTranscriptionResult;
 	const maxAttempts = opts.maxAttempts ?? 450;
@@ -553,7 +561,7 @@ export async function pollTranscriptionCompletion(
 			continue;
 		}
 		if (statusCode === 1) {
-			return { result: false, msg: 'Babel: no pid, no file to get data (status 1)' };
+			return { ok: false, msg: 'Babel: no pid, no file to get data (status 1)' };
 		}
 		if (statusCode === 3) {
 			const data = (status as { transcription_data?: { segments?: TranscriptionSegment[] } })
@@ -565,20 +573,20 @@ export async function pollTranscriptionCompletion(
 				segments,
 				userId: job.userId,
 			});
-			return { result: outcome.saved, msg: outcome.msg };
+			return { ok: outcome.saved, msg: outcome.msg };
 		}
 		const detail =
 			status !== null && typeof status === 'object'
 				? JSON.stringify(status).slice(0, 256)
 				: String(status);
-		return { result: false, msg: `Error. status not valid: ${detail}` };
+		return { ok: false, msg: `Error. status not valid: ${detail}` };
 	}
 
 	console.error(
 		`[tool_transcription] gave up polling babel pid ${job.status.pid} after ${maxAttempts} attempts (the job may still be running on the transcriber server; the client can keep polling via check_server_transcriber_status)`,
 	);
 	return {
-		result: false,
+		ok: false,
 		msg: `gave up after ${maxAttempts} poll attempts (pid ${job.status.pid})`,
 	};
 }

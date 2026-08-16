@@ -9,6 +9,8 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { replaceTimecodes } from '../../src/core/media/tools/timecode.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import type { ToolResponse } from '../../src/core/tools/module.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 describe('replaceTimecodes (PHP replace_tc_codes)', () => {
@@ -60,9 +62,7 @@ describe('tool_tc module', () => {
 describe('tool_tc change_all_timecodes validation', () => {
 	const principal: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
-	async function drive(
-		options: Record<string, unknown>,
-	): Promise<{ result: unknown; msg: string }> {
+	async function drive(options: Record<string, unknown>): Promise<ToolResponse> {
 		const loaded = await getLoadedTool('tool_tc');
 		return loaded!.module.apiActions.change_all_timecodes!.handler({
 			principal,
@@ -72,62 +72,75 @@ describe('tool_tc change_all_timecodes validation', () => {
 		});
 	}
 
+	/** The refusal's PUBLIC sentence (request.invalid_options has public disclosure). */
+	async function refusalMessage(options: Record<string, unknown>): Promise<string | undefined> {
+		return (await refusalOf(drive(options))).publicMessage;
+	}
+
 	test('the locator triple AND lang are required', async () => {
 		const expected = 'component_tipo, section_tipo, a positive section_id and lang are required';
-		expect((await drive({})).msg).toBe(expected);
-		expect((await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167' })).msg).toBe(expected);
+		expect(await refusalMessage({})).toBe(expected);
+		expect(await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167' })).toBe(
+			expected,
+		);
 		expect(
-			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 0 })).msg,
+			await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 0 }),
 		).toBe(expected);
 		expect(
-			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: -3 })).msg,
+			await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: -3 }),
 		).toBe(expected);
 		// PHP `empty($lang)` — a missing/blank lang is a MALFORMED request, never a
 		// silent lg-nolan default (which would address a slice the caller never named).
 		expect(
-			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 3 })).msg,
+			await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 3 }),
 		).toBe(expected);
 		expect(
-			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 3, lang: '' }))
-				.msg,
+			await refusalMessage({
+				component_tipo: 'rsc36',
+				section_tipo: 'rsc167',
+				section_id: 3,
+				lang: '',
+			}),
 		).toBe(expected);
 	});
 
 	test('a non-numeric offset is refused', async () => {
 		expect(
-			(
-				await drive({
-					component_tipo: 'rsc36',
-					section_tipo: 'rsc167',
-					section_id: 1,
-					lang: 'lg-spa',
-					offset_seconds: 'later',
-				})
-			).msg,
+			await refusalMessage({
+				component_tipo: 'rsc36',
+				section_tipo: 'rsc167',
+				section_id: 1,
+				lang: 'lg-spa',
+				offset_seconds: 'later',
+			}),
 		).toBe('offset_seconds must be a number');
 	});
 
 	test('an unknown component / missing record fails cleanly (no save)', async () => {
-		expect(
-			(
-				await drive({
+		// An unknown component is an invalid TIPO; a missing record is not-found —
+		// two different registered codes where the legacy body had two sentences.
+		const unknownTipo = await refusalOf(
+			Promise.resolve(
+				drive({
 					component_tipo: 'nope999',
 					section_tipo: 'rsc167',
 					section_id: 1,
 					lang: 'lg-spa',
-				})
-			).msg,
-		).toBe('component or section not found');
-		expect(
-			(
-				await drive({
+				}),
+			),
+		);
+		expect(unknownTipo.code).toBe('request.invalid_tipo');
+		const missingRecord = await refusalOf(
+			Promise.resolve(
+				drive({
 					component_tipo: 'rsc36',
 					section_tipo: 'rsc167',
 					section_id: 99999999,
 					lang: 'lg-spa',
-				})
-			).msg,
-		).toBe('record not found');
+				}),
+			),
+		);
+		expect(missingRecord.code).toBe('tool.target_not_found');
 	});
 });
 
@@ -193,9 +206,7 @@ describe('tool_tc change_all_timecodes — the write', () => {
 		return rows[0]?.n ?? 0;
 	}
 
-	async function drive(
-		options: Record<string, unknown>,
-	): Promise<{ result: unknown; msg: string }> {
+	async function drive(options: Record<string, unknown>): Promise<ToolResponse> {
 		const loaded = await getLoadedTool('tool_tc');
 		return loaded!.module.apiActions.change_all_timecodes!.handler({
 			principal,
@@ -229,7 +240,7 @@ describe('tool_tc change_all_timecodes — the write', () => {
 
 		// The audit map is keyed by the LANG-SLICE index (0,1), not by the stored
 		// array index (1,2) — the lg-eng item at position 0 is not in the slice.
-		expect(response.result).toEqual({
+		expect((response.data as { changes: unknown }).changes).toEqual({
 			'0': { '00:01:00.000': '00:01:05.000' },
 			'1': { '00:02:00.000': '00:02:05.000' },
 		});
@@ -249,7 +260,9 @@ describe('tool_tc change_all_timecodes — the write', () => {
 		await seed();
 		const response = await drive(optionsFor({ key: 0 }));
 
-		expect(response.result).toEqual({ '0': { '00:01:00.000': '00:01:05.000' } });
+		expect((response.data as { changes: unknown }).changes).toEqual({
+			'0': { '00:01:00.000': '00:01:05.000' },
+		});
 
 		const items = await storedItems();
 		expect(itemValue(items, 2)).toBe('ES-A [TC_00:01:05.000_TC]');
@@ -267,7 +280,7 @@ describe('tool_tc change_all_timecodes — the write', () => {
 		// lg-fra holds a single mark-free item: PHP still returns $ar_replaced
 		// (one empty entry per processed key).
 		const response = await drive(optionsFor({ lang: 'lg-fra' }));
-		expect(response.result).toEqual({ '0': {} });
+		expect((response.data as { changes: unknown }).changes).toEqual({ '0': {} });
 
 		// …and, unlike PHP, a no-op does NOT rewrite the record: no audit row, no
 		// falsified modified stamp (documented divergence, WC-061).
@@ -279,7 +292,7 @@ describe('tool_tc change_all_timecodes — the write', () => {
 		await seed();
 		const before = await storedItems();
 		const response = await drive(optionsFor({ lang: 'lg-deu' }));
-		expect(response.result).toEqual({});
+		expect((response.data as { changes: unknown }).changes).toEqual({});
 		expect(await storedItems()).toEqual(before);
 	});
 });

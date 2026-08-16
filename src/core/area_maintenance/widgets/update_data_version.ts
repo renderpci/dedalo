@@ -14,7 +14,13 @@
 
 import type { Principal } from '../../security/permissions.ts';
 import { DEDALO_VERSION_TRIPLE } from '../../update/version.ts';
-import { gated, type WidgetModule, type WidgetResponse } from './support.ts';
+import {
+	engineDenied,
+	failAction,
+	gated,
+	type WidgetModule,
+	type WidgetResponse,
+} from './support.ts';
 
 /**
  * update_data_version panel (PHP widgets/update_data_version::get_value):
@@ -38,14 +44,12 @@ async function updateDataVersionGetValue(): Promise<WidgetResponse> {
 	const current = await getCurrentDataVersion();
 	const descriptor = getMatchedDescriptor(current);
 	return {
-		result: {
+		data: {
 			update_version: getUpdateVersion(current),
 			current_version_in_db: current,
 			dedalo_version: DEDALO_VERSION_TRIPLE,
 			updates: descriptor === null ? null : toWireDescriptor(descriptor),
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -55,21 +59,20 @@ async function updateDataVersionGetValue(): Promise<WidgetResponse> {
  * once, on the engine that owns the catalog — the PHP install's updates.php).
  */
 async function updateDataVersionRun(
-	_options: Record<string, unknown>,
+	options: Record<string, unknown>,
 	principal: Principal,
 ): Promise<WidgetResponse> {
-	// PHP preconditions (superuser + maintenance mode), refusal bytes verbatim.
-	// backupWarn off: this response is byte-frozen (no warnings channel).
+	// PHP preconditions (superuser + maintenance mode) — they THROW their own
+	// typed refusal. backupWarn off: this branch carries no warnings channel.
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
-	const preconditions = checkUpdatePreconditions(principal, { backupWarn: false });
-	if (!preconditions.ok && preconditions.refusal !== null) {
-		return preconditions.refusal;
-	}
-	return {
-		result: false,
-		msg: 'Error. Data migrations are not runnable on this engine: the migration catalog (updates.php) belongs to the PHP install. Run the update from the PHP maintenance dashboard.',
-		errors: ['engine_denied: update_data_version'],
-	};
+	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
+	checkUpdatePreconditions(principal, { backupWarn: false });
+	// Then the bespoke denial: migrations must run exactly once, on the engine
+	// that owns the catalog.
+	return engineDenied(
+		'update_data_version.update_data_version',
+		'the migration catalog (updates.php) belongs to the PHP install',
+	)(options, principal);
 }
 
 /**
@@ -88,10 +91,8 @@ async function updateDataVersionRunOwned(
 	principal: Principal,
 ): Promise<WidgetResponse> {
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
+	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
 	const preconditions = checkUpdatePreconditions(principal);
-	if (!preconditions.ok && preconditions.refusal !== null) {
-		return preconditions.refusal;
-	}
 	const updatesChecked = (options.updates_checked ?? {}) as Record<string, unknown>;
 	const { updateVersion } = await import('../../update/engine.ts');
 
@@ -103,21 +104,27 @@ async function updateDataVersionRunOwned(
 			return await updateVersion(updatesChecked);
 		});
 		return {
-			result: true,
+			data: true,
+			msg: `OK. Running publication ${process.pid}`,
 			// In-process job: the server process runs it (PHP returns the
 			// detached CLI's pid; divergence ledgered in the engine header).
-			pid: process.pid,
-			pfile: `${record.id}.json`,
-			msg: `OK. Running publication ${process.pid}`,
-			errors: [],
-		} as unknown as WidgetResponse;
+			extend: { pid: process.pid, pfile: `${record.id}.json` },
+		};
 	}
 
 	const outcome = await updateVersion(updatesChecked);
+	const errors = [...preconditions.warnings, ...outcome.errors];
+	if (!outcome.ok) {
+		failAction(
+			errors.length === 0
+				? outcome.msg.join('\n')
+				: `${outcome.msg.join('\n')} (${errors.join('; ')})`,
+		);
+	}
 	return {
-		result: outcome.result,
+		data: true,
 		msg: outcome.msg.join('\n'),
-		errors: [...preconditions.warnings, ...outcome.errors],
+		...(errors.length === 0 ? {} : { errors }),
 	};
 }
 

@@ -58,15 +58,16 @@
  */
 
 import type { ApiResult } from '../../api/response.ts';
-import { denied } from '../../api/response.ts';
 import type { Rqo, RqoSource } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
+import { DedaloError, ok } from '../../errors/index.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import type { Principal } from '../../security/permissions.ts';
+import { currentRequestId } from '../../security/request_context.ts';
 import {
 	currentChipsFromPayload,
 	mergeRelationChips,
@@ -250,6 +251,61 @@ async function persistTemporalScratch(
 }
 
 /**
+ * The echoed `data` array of a temporal relation save's ok() envelope, and the
+ * entry in it that is the saved component itself (the "main" entry).
+ */
+function temporalEchoMainEntry(
+	echo: ApiResult,
+	componentTipo: string,
+	sectionTipo: string,
+): Record<string, unknown> | undefined {
+	const echoed = ((echo.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
+		string,
+		unknown
+	>[];
+	return echoed.find((entry) => entry.tipo === componentTipo && entry.section_tipo === sectionTipo);
+}
+
+/**
+ * Select-family components re-render from data.datalist (e.g.
+ * component_radio_button get_checked_value_label reads it after a save), and
+ * the persisted door attaches it — so the temporal door must too, or the
+ * post-save render dereferences undefined. It belongs on the RELATION branch,
+ * not the literal one: every SELECT_FAMILY_MODELS member is a relation-column
+ * component, so a datalist attach placed after the `column === 'relation'`
+ * return could never run at all.
+ */
+async function attachTemporalEchoDatalist(
+	echo: ApiResult,
+	args: { model: string; componentTipo: string; sectionTipo: string; lang: string },
+): Promise<void> {
+	const { model, componentTipo, sectionTipo, lang } = args;
+	const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
+	if (!SELECT_FAMILY_MODELS.has(model)) return;
+	const { getDatalist } = await import('../../relations/datalist.ts');
+	const { getNode } = await import('../../ontology/resolver.ts');
+	const node = await getNode(componentTipo);
+	const main = temporalEchoMainEntry(echo, componentTipo, sectionTipo);
+	if (main !== undefined) {
+		main.datalist = await getDatalist(componentTipo, node?.properties ?? null, sectionTipo, lang);
+	}
+}
+
+/**
+ * WC-081: the persisted door stamps the same key — a temporal portal's add
+ * button is the same button, and it must be able to open the same record.
+ * The echo is an ok() envelope: the address rides INSIDE `data` (the payload),
+ * exactly where dd_core_api.ts's persisted save puts it.
+ */
+function stampTemporalEchoCreatedSectionId(echo: ApiResult, createdSectionId: number | null): void {
+	if (createdSectionId === null) return;
+	const echoData = (echo.body as { ok?: boolean; data?: Record<string, unknown> }).data;
+	if (echoData !== undefined && echoData !== null && typeof echoData === 'object') {
+		echoData.created_section_id = createdSectionId;
+	}
+}
+
+/**
  * The temporal SAVE door: normalize the client's value and echo it in the
  * canonical shape the client resolves by. No matrix read of the addressed
  * record, no write to it, no Time Machine row, no modified stamp, no activity row.
@@ -279,13 +335,16 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) {
-		return denied(400, `save: unknown component tipo '${componentTipo}'`);
+		throw new DedaloError('request.invalid_tipo', { coordinates: { tipo: componentTipo } });
 	}
 	const column = getColumnNameByModel(model);
 
 	for (const change of changedData) {
 		if (!TEMPORAL_ACTIONS.has(change.action)) {
-			return denied(400, `action '${change.action}' is not available on a temporal instance`);
+			throw new DedaloError('record.temporal_action_refused', {
+				publicMessage: `action '${change.action}' is not available on a temporal instance`,
+				coordinates: { action: change.action, tipo: componentTipo },
+			});
 		}
 	}
 
@@ -331,7 +390,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			// dd542/dd15 — a 500 where a 400 is the honest answer.
 			const targetSectionTipo = String(change.value ?? '');
 			if (targetSectionTipo === '' || isConsultationOnlySection(targetSectionTipo)) {
-				return denied(400, `add_new_element: invalid target section '${targetSectionTipo}'`);
+				// The target is caller-supplied; it stays LOG-ONLY (echoing it back
+				// would confirm which sections are consultation-only).
+				throw new DedaloError('request.invalid_source', {
+					message: `add_new_element: invalid target section '${targetSectionTipo}'`,
+					coordinates: { target_section_tipo: targetSectionTipo },
+				});
 			}
 			const { applyAddNewElement } = await import('../../relations/save.ts');
 			const outcome = await applyAddNewElement(
@@ -343,7 +407,10 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 				{ skipHostFilterRead: true },
 			);
 			if (outcome === null) {
-				return denied(400, 'add_new_element failed');
+				throw new DedaloError('record.save_failed', {
+					message: 'add_new_element failed',
+					coordinates: { target_section_tipo: targetSectionTipo, tipo: componentTipo },
+				});
 			}
 			picked = outcome.items as Record<string, unknown>[];
 			createdSectionId = outcome.sectionId;
@@ -360,38 +427,8 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			picked,
 			mode: source.mode ?? 'edit',
 		});
-		// Select-family components re-render from data.datalist (e.g.
-		// component_radio_button get_checked_value_label reads it after a save), and
-		// the persisted door attaches it — so this one must too, or the post-save
-		// render dereferences undefined. It belongs HERE, not on the literal branch:
-		// every SELECT_FAMILY_MODELS member is a relation-column component, so a
-		// datalist attach placed after the `column === 'relation'` return could
-		// never run at all.
-		const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
-		if (SELECT_FAMILY_MODELS.has(model)) {
-			const { getDatalist } = await import('../../relations/datalist.ts');
-			const { getNode } = await import('../../ontology/resolver.ts');
-			const node = await getNode(componentTipo);
-			const echoed = ((echo.body as { result?: { data?: unknown[] } }).result?.data ??
-				[]) as Record<string, unknown>[];
-			const main = echoed.find(
-				(entry) => entry.tipo === componentTipo && entry.section_tipo === sectionTipo,
-			);
-			if (main !== undefined) {
-				main.datalist = await getDatalist(
-					componentTipo,
-					node?.properties ?? null,
-					sectionTipo,
-					lang,
-				);
-			}
-		}
-		// WC-081: the persisted door stamps the same key — a temporal portal's add
-		// button is the same button, and it must be able to open the same record.
-		if (createdSectionId !== null) {
-			const echoResult = (echo.body as { result?: Record<string, unknown> }).result;
-			if (echoResult !== undefined) echoResult.created_section_id = createdSectionId;
-		}
+		await attachTemporalEchoDatalist(echo, { model, componentTipo, sectionTipo, lang });
+		stampTemporalEchoCreatedSectionId(echo, createdSectionId);
 		return echo;
 	}
 
@@ -404,7 +441,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		lang,
 	});
 	if (!outcome.ok) {
-		return denied(400, `save failed: ${outcome.message}`);
+		// The applier's own diagnostic is engine detail: it rides the log line, not
+		// the wire (record.save_failed is operator-disclosure).
+		throw new DedaloError('record.save_failed', {
+			message: `save failed: ${outcome.message}`,
+			coordinates: { tipo: componentTipo, section_tipo: sectionTipo },
+		});
 	}
 	// TEMPORAL SCRATCH (WC-079). `outcome.items` is the normalized, lang-stamped,
 	// id-minted array — the same value the client will hold as its next
@@ -420,5 +462,8 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		lang,
 		outcome.items,
 	);
-	return { status: 200, body: { result: { context: [], data: [dataItem] }, msg: 'OK' } };
+	return {
+		status: 200,
+		body: ok({ context: [], data: [dataItem] }, { requestId: currentRequestId() }),
+	};
 }

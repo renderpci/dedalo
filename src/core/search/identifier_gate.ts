@@ -20,6 +20,7 @@
  */
 
 import { isValidLang, isValidTipo } from '../concepts/ontology.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 
 /**
  * Matrix data columns legal in search paths, SELECT projections and ORDER BY.
@@ -58,9 +59,12 @@ export function isValidDataColumn(candidate: string): boolean {
 /** Throw unless a valid ontology tipo (e.g. 'oh62', 'numisdata3'). */
 export function assertValidTipo(candidate: unknown, where: string): string {
 	if (typeof candidate !== 'string' || !isValidTipo(candidate)) {
-		throw new Error(
-			`search identifier gate: invalid tipo in ${where}: ${JSON.stringify(candidate)}`,
-		);
+		// Typed (a caller fault, never internal): the MCP surface maps it to its
+		// registry code + hint; the log line keeps the gate's own sentence.
+		throw new DedaloError('request.invalid_tipo', {
+			message: `search identifier gate: invalid tipo in ${where}: ${JSON.stringify(candidate)}`,
+			coordinates: { where },
+		});
 	}
 	return candidate;
 }
@@ -72,9 +76,12 @@ export function assertValidTipo(candidate: unknown, where: string): string {
  */
 export function assertValidTipoOrColumn(candidate: unknown, where: string): string {
 	if (typeof candidate !== 'string' || (!isValidTipo(candidate) && !isValidDataColumn(candidate))) {
-		throw new Error(
-			`search identifier gate: invalid component_tipo in ${where}: ${JSON.stringify(candidate)}`,
-		);
+		// Typed (a caller fault, never internal): the MCP surface maps it to its
+		// registry code + hint; the log line keeps the gate's own sentence.
+		throw new DedaloError('request.invalid_tipo', {
+			message: `search identifier gate: invalid component_tipo in ${where}: ${JSON.stringify(candidate)}`,
+			coordinates: { where },
+		});
 	}
 	return candidate;
 }
@@ -82,9 +89,12 @@ export function assertValidTipoOrColumn(candidate: unknown, where: string): stri
 /** Throw unless a valid language code ('lg-*' or 'all'). */
 export function assertValidLang(candidate: unknown, where: string): string {
 	if (typeof candidate !== 'string' || !isValidLang(candidate)) {
-		throw new Error(
-			`search identifier gate: invalid lang in ${where}: ${JSON.stringify(candidate)}`,
-		);
+		// Typed (a caller fault, never internal): the MCP surface maps it to its
+		// registry code + hint; the log line keeps the gate's own sentence.
+		throw new DedaloError('request.invalid', {
+			message: `search identifier gate: invalid lang in ${where}: ${JSON.stringify(candidate)}`,
+			coordinates: { where },
+		});
 	}
 	return candidate;
 }
@@ -92,9 +102,12 @@ export function assertValidLang(candidate: unknown, where: string): string {
 /** Throw unless a known matrix data column. */
 export function assertValidDataColumn(candidate: unknown, where: string): string {
 	if (typeof candidate !== 'string' || !isValidDataColumn(candidate)) {
-		throw new Error(
-			`search identifier gate: invalid data column in ${where}: ${JSON.stringify(candidate)}`,
-		);
+		// Typed (a caller fault, never internal): the MCP surface maps it to its
+		// registry code + hint; the log line keeps the gate's own sentence.
+		throw new DedaloError('request.invalid_tipo', {
+			message: `search identifier gate: invalid data column in ${where}: ${JSON.stringify(candidate)}`,
+			coordinates: { where },
+		});
 	}
 	return candidate;
 }

@@ -17,7 +17,7 @@ import { saveComponentData } from '../../src/core/section/record/save_component.
 import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import { dispatchToolRequest } from '../../src/core/tools/dispatch.ts';
-import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 const REAL_RECORD_SCOPE = { ...realRecordScope };
@@ -87,55 +87,56 @@ function applyOptions(overrides: Record<string, unknown> = {}): Record<string, u
 
 describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 	test('gates: unknown tool, unregistered method, non-admin, bad target', async () => {
-		const badTool = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_i_invented', action: 'apply_value' },
-			applyOptions(),
+		// Every gate REFUSES BY THROWING its registered code (ERRORS_SPEC §4).
+		const badTool = await refusalOf(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_i_invented', action: 'apply_value' },
+				applyOptions(),
+			),
 		);
-		expect(badTool.result).toBe(false);
-		expect(mustGet(badTool.errors, 'badTool.errors')[0]).toContain('Invalid tool name');
+		expect(badTool.code).toBe('tool.invalid_name');
 
 		// A REAL registered tool whose methods are not in the TS action registry.
-		const badMethod = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_time_machine', action: 'not_a_method' },
-			applyOptions(),
+		const badMethod = await refusalOf(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_time_machine', action: 'not_a_method' },
+				applyOptions(),
+			),
 		);
-		expect(badMethod.errors).toContain('unauthorized_method');
+		expect(badMethod.code).toBe('tool.method_not_allowed');
 
-		const nonAdmin = await dispatchToolRequest(NO_ACCESS, 999999, APPLY_SOURCE, applyOptions());
-		expect(nonAdmin.result).toBe(false);
-		expect(mustGet(nonAdmin.errors, 'nonAdmin.errors')[0]).toContain('not authorized');
+		const nonAdmin = await refusalOf(
+			dispatchToolRequest(NO_ACCESS, 999999, APPLY_SOURCE, applyOptions()),
+		);
+		expect(nonAdmin.code).toBe('tool.not_authorized');
 
-		const badOptions = await dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, 'not-an-object');
-		expect(badOptions.errors).toContain('Invalid options type');
+		const badOptions = await refusalOf(
+			dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, 'not-an-object'),
+		);
+		expect(badOptions.code).toBe('request.invalid_options');
 	});
 
 	test('apply_value rejects a TM row that does not match the target', async () => {
 		// (!) Assert on the MESSAGE, not just the 'invalid_request' code: the
 		// missing-parameter branch returns the same code, so a code-only
 		// assertion would pass even if the target-match check were deleted.
-		const mismatched = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			APPLY_SOURCE,
-			applyOptions({ section_id: recordId + 1 }),
+		const mismatched = await refusalOf(
+			dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions({ section_id: recordId + 1 })),
 		);
-		expect(mismatched.result).toBe(false);
-		expect(mismatched.msg).toBe('Error. TM row does not match the requested target');
+		expect(mismatched.code).toBe('request.invalid_options');
+		expect(mismatched.publicMessage).toBe('matrix_id does not belong to the requested target');
 
 		// Same section+record, WRONG component tipo: a snapshot of numisdata16
 		// must never be restorable into another component's slot.
-		const otherTipo = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			APPLY_SOURCE,
-			applyOptions({ tipo: 'numisdata17' }),
+		const otherTipo = await refusalOf(
+			dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions({ tipo: 'numisdata17' })),
 		);
-		expect(otherTipo.result).toBe(false);
-		expect(otherTipo.msg).toBe('Error. TM row does not match the requested target');
+		expect(otherTipo.code).toBe('request.invalid_options');
+		expect(otherTipo.publicMessage).toBe('matrix_id does not belong to the requested target');
 
 		// And the live value is still v2 — nothing was restored by either.
 		expect(JSON.stringify(await liveValue())).toContain('TM-RESTORE-V2');
@@ -152,9 +153,10 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 		}));
 		try {
 			const before = await liveValue();
-			const denied = await dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions());
-			expect(denied.result).toBe(false);
-			expect(denied.errors).toContain('unauthorized');
+			const denied = await refusalOf(
+				dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions()),
+			);
+			expect(denied.code).toBe('perm.out_of_scope');
 			expect(await liveValue()).toEqual(before);
 		} finally {
 			mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE);
@@ -166,8 +168,8 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 		expect(JSON.stringify(await liveValue())).toContain('TM-RESTORE-V2');
 
 		const response = await dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions());
-		expect(response.result).toBe(true);
-		expect(response.msg).toBe('OK. Request done successfully');
+		expect(response.ok).toBe(true);
+		expect(response.data).toBe(true);
 
 		// Live value is v1 again — the exact snapshot, id 1 kept, correct lang.
 		const restored = await liveValue();
@@ -211,7 +213,7 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 			APPLY_SOURCE,
 			applyOptions({ matrix_id: inserted[0]?.id }),
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		// Frames NEVER reach the live column — literal mains strip them too.
 		expect(await liveValue()).toEqual([{ id: 1, lang: LANG, value: 'MAIN-ONLY' }]);
 	});

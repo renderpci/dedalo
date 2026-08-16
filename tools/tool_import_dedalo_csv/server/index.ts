@@ -15,13 +15,14 @@
  *   validate_import            — PREFLIGHT: check the column map + dry-run the
  *                                conform over a sample, before anything is written.
  *   import_files (background)  — the run. Publishes ImportProgressFrame ticks and
- *                                returns an ImportBatchReport.
+ *                                returns the per-file report batch.
  */
 
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../src/config/config.ts';
 import { BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { sanitizeSegment } from '../../../src/core/media/ingest/add_file.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
@@ -33,19 +34,31 @@ import {
 	planCsvImport,
 } from '../../../src/core/tools/import_csv.ts';
 import { executeCsvImport } from '../../../src/core/tools/import_csv_execute.ts';
-import type {
-	ImportBatchReport,
-	ImportFileReport,
-	ImportProgressFrame,
-} from '../../../src/core/tools/import_wire.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import type { ImportFileReport, ImportProgressFrame } from '../../../src/core/tools/import_wire.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: `Error. ${message}`, errors: [message] };
+/**
+ * A caller fault. `message` AND `publicMessage`: import_files is
+ * backgroundRunnable, and the executor records `error.message` on the job.
+ */
+function invalidRequest(message: string): DedaloError {
+	return new DedaloError('request.invalid_options', { message, publicMessage: message });
+}
+
+/**
+ * MEDIA_PATH unset. An OPERATOR fact (the import dir hangs off the media root),
+ * not a caller one — registry English on the wire, the sentence in the log.
+ */
+function mediaRootMissing(): DedaloError {
+	return new DedaloError('tool.dependency_unavailable', {
+		coordinates: { tool: 'tool_import_dedalo_csv' },
+		message: 'media root is not configured',
+	});
 }
 
 /**
@@ -91,11 +104,14 @@ function analyzeCsvOffLoop(text: string, delimiter?: string): Promise<CsvAnalysi
 /** The per-user CSV import dir (PHP DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH/<user>). */
 function importDir(userId: number): string {
 	const root = config.media.rootPath;
-	if (root === null || root === '') throw new Error('media root is not configured');
+	if (root === null || root === '') throw mediaRootMissing();
 	const dir = resolve(root, 'import/files', String(userId));
 	const base = resolve(root, 'import/files');
-	if (dir !== base && !dir.startsWith(base + sep))
-		throw new Error('import dir escapes the import root');
+	if (dir !== base && !dir.startsWith(base + sep)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'import dir escapes the import root',
+		});
+	}
 	mkdirSync(dir, { recursive: true, mode: 0o775 });
 	return dir;
 }
@@ -103,7 +119,7 @@ function importDir(userId: number): string {
 /** Confine a user-supplied file name inside the import dir (no traversal). */
 function safeImportFile(dir: string, fileName: string): string {
 	const target = resolve(dir, fileName);
-	if (target !== dir && !target.startsWith(dir + sep)) throw new Error('invalid file name');
+	if (target !== dir && !target.startsWith(dir + sep)) throw invalidRequest('invalid file name');
 	return target;
 }
 
@@ -137,25 +153,21 @@ async function sectionComponentTipos(
 /**
  * get_section_components_list: the section's components as {label,value,model} for
  * the CSV column-mapper dropdown, PLUS a top-level `label` (the section term). The
- * client reads response.result (→ list), response.label, response.msg.
+ * The payload carries the component list and the section's own label.
  */
 async function getSectionComponentsList(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const sectionTipo = String(ctx.options.section_tipo ?? '');
-		if (sectionTipo === '') return fail('Missing section_tipo');
-		const tipos = await sectionComponentTipos(sectionTipo);
-		const components = await Promise.all(
-			tipos.map(async (t) => ({
-				label: await termByTipo(t.tipo, config.menu.applicationLang),
-				value: t.tipo,
-				model: t.model,
-			})),
-		);
-		const label = await termByTipo(sectionTipo, config.menu.applicationLang);
-		return { result: components, label, msg: 'OK. Request done', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+	const sectionTipo = String(ctx.options.section_tipo ?? '');
+	if (sectionTipo === '') throw invalidRequest('Missing section_tipo');
+	const tipos = await sectionComponentTipos(sectionTipo);
+	const components = await Promise.all(
+		tipos.map(async (t) => ({
+			label: await termByTipo(t.tipo, config.menu.applicationLang),
+			value: t.tipo,
+			model: t.model,
+		})),
+	);
+	const label = await termByTipo(sectionTipo, config.menu.applicationLang);
+	return ok({ components, label }, { requestId: toolRequestId(ctx) });
 }
 
 /** One column of the CSV header → its component map ({tipo,label,model}) or null. */
@@ -183,101 +195,89 @@ async function resolveColumnMap(
  * summary; only the ontology column-map lookup (header-sized) stays on-thread.
  */
 async function getCsvFiles(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const dir = importDir(ctx.userId);
-		const filesInfo: Record<string, unknown>[] = [];
-		const errors: string[] = [];
-		for (const name of readdirSync(dir).filter((n) => n.toLowerCase().endsWith('.csv'))) {
-			try {
-				const analysis = await analyzeCsvOffLoop(await Bun.file(resolve(dir, name)).text());
-				if (analysis === null) {
-					errors.push(`error reading file: ${name}`);
-					continue;
-				}
-				const arColumnsMap = await Promise.all(
-					analysis.header.map((cell) => resolveColumnMap(cell)),
-				);
-				filesInfo.push({
-					dir,
-					name,
-					n_records: analysis.n_records,
-					n_columns: analysis.n_columns,
-					file_info: analysis.header,
-					ar_columns_map: arColumnsMap,
-					sample_data: analysis.sample_data,
-					sample_data_errors: analysis.sample_data_errors,
-				});
-			} catch (error) {
-				errors.push(`Error on read file ${name}: ${(error as Error).message}`);
+	const dir = importDir(ctx.userId);
+	const filesInfo: Record<string, unknown>[] = [];
+	const errors: string[] = [];
+	for (const name of readdirSync(dir).filter((n) => n.toLowerCase().endsWith('.csv'))) {
+		try {
+			const analysis = await analyzeCsvOffLoop(await Bun.file(resolve(dir, name)).text());
+			if (analysis === null) {
+				errors.push(`error reading file: ${name}`);
+				continue;
 			}
+			const arColumnsMap = await Promise.all(analysis.header.map((cell) => resolveColumnMap(cell)));
+			filesInfo.push({
+				dir,
+				name,
+				n_records: analysis.n_records,
+				n_columns: analysis.n_columns,
+				file_info: analysis.header,
+				ar_columns_map: arColumnsMap,
+				sample_data: analysis.sample_data,
+				sample_data_errors: analysis.sample_data_errors,
+			});
+		} catch (error) {
+			errors.push(`Error on read file ${name}: ${(error as Error).message}`);
 		}
-		return { result: filesInfo, msg: 'OK. Request done', errors };
-	} catch (error) {
-		return fail((error as Error).message);
 	}
+	// `errors` is the per-file read problem list — payload, not a failed request
+	// (one unreadable CSV must not hide the files that DID parse).
+	return ok({ files: filesInfo, errors }, { requestId: toolRequestId(ctx) });
 }
 
 async function deleteCsvFile(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const fileName = String(ctx.options.file_name ?? '');
-		if (fileName === '') return fail('Missing file_name');
-		const dir = importDir(ctx.userId);
-		const target = safeImportFile(dir, fileName);
-		if (!existsSync(target) || !statSync(target).isFile()) {
-			return fail('This path does not correspond to a file. Ignored delete_csv_file');
-		}
-		const deletedDir = resolve(dir, 'deleted');
-		mkdirSync(deletedDir, { recursive: true, mode: 0o775 });
-		renameSync(target, resolve(deletedDir, `${Date.now()}_${fileName}`));
-		return { result: true, msg: 'OK. File deleted', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
+	const fileName = String(ctx.options.file_name ?? '');
+	if (fileName === '') throw invalidRequest('Missing file_name');
+	const dir = importDir(ctx.userId);
+	const target = safeImportFile(dir, fileName);
+	if (!existsSync(target) || !statSync(target).isFile()) {
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { tool: 'tool_import_dedalo_csv', file: fileName },
+			message: 'This path does not correspond to a file. Ignored delete_csv_file',
+		});
 	}
+	const deletedDir = resolve(dir, 'deleted');
+	mkdirSync(deletedDir, { recursive: true, mode: 0o775 });
+	renameSync(target, resolve(deletedDir, `${Date.now()}_${fileName}`));
+	return ok({ deleted: fileName }, { requestId: toolRequestId(ctx) });
 }
 
 async function processUploadedFile(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const fileData = (ctx.options.file_data ?? {}) as {
-			key_dir?: string;
-			tmp_name?: string;
-			file_name?: string;
-		};
-		const rawKeyDir = String(fileData.key_dir ?? '');
-		const rawTmpName = String(fileData.tmp_name ?? '');
-		if (rawTmpName === '') return fail('Missing staged file (tmp_name)');
-		// SEC (parity with PHP sanitize_key_dir): the staged source is REBUILT
-		// server-side from the staging root + the CURRENT user id + sanitized
-		// segments — never a client-supplied path. Without this, key_dir='../<uid>'
-		// stays inside the shared staging root (so the root-confinement check below
-		// passes) and lets one user claim another's staged upload. key_dir is
-		// optional: empty means "no sub-dir", any non-empty value must sanitize.
-		const keyDir = rawKeyDir === '' ? '' : sanitizeSegment(rawKeyDir);
-		const tmpName = sanitizeSegment(rawTmpName);
-		const fileName = String(fileData.file_name ?? tmpName);
-		const root = config.media.rootPath;
-		if (root === null) throw new Error('media root is not configured');
-		const staged = resolve(
-			root,
-			config.media.upload.tmpSubdir,
-			String(ctx.userId),
-			keyDir,
-			tmpName,
-		);
-		const stagingBase = resolve(root, config.media.upload.tmpSubdir);
-		if (!staged.startsWith(stagingBase + sep))
-			throw new Error('staged path escapes the upload root');
-		if (!existsSync(staged)) return fail('staged file not found');
-		const dir = importDir(ctx.userId);
-		renameSync(staged, safeImportFile(dir, fileName));
-		return {
-			result: true,
-			msg: 'OK. File imported to the CSV folder',
-			errors: [],
-			file_name: fileName,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
+	const fileData = (ctx.options.file_data ?? {}) as {
+		key_dir?: string;
+		tmp_name?: string;
+		file_name?: string;
+	};
+	const rawKeyDir = String(fileData.key_dir ?? '');
+	const rawTmpName = String(fileData.tmp_name ?? '');
+	if (rawTmpName === '') throw invalidRequest('Missing staged file (tmp_name)');
+	// SEC (parity with PHP sanitize_key_dir): the staged source is REBUILT
+	// server-side from the staging root + the CURRENT user id + sanitized
+	// segments — never a client-supplied path. Without this, key_dir='../<uid>'
+	// stays inside the shared staging root (so the root-confinement check below
+	// passes) and lets one user claim another's staged upload. key_dir is
+	// optional: empty means "no sub-dir", any non-empty value must sanitize.
+	const keyDir = rawKeyDir === '' ? '' : sanitizeSegment(rawKeyDir);
+	const tmpName = sanitizeSegment(rawTmpName);
+	const fileName = String(fileData.file_name ?? tmpName);
+	const root = config.media.rootPath;
+	if (root === null) throw mediaRootMissing();
+	const staged = resolve(root, config.media.upload.tmpSubdir, String(ctx.userId), keyDir, tmpName);
+	const stagingBase = resolve(root, config.media.upload.tmpSubdir);
+	if (!staged.startsWith(stagingBase + sep)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'staged path escapes the upload root',
+		});
 	}
+	if (!existsSync(staged)) {
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { tool: 'tool_import_dedalo_csv' },
+			message: 'staged file not found',
+		});
+	}
+	const dir = importDir(ctx.userId);
+	renameSync(staged, safeImportFile(dir, fileName));
+	return ok({ file_name: fileName }, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -405,9 +405,14 @@ async function createBulkProcessRecord(
 /** Read + parse one staged CSV, or throw with a caller-facing message. */
 async function readCsvRows(userId: number, fileName: string): Promise<string[][]> {
 	const target = safeImportFile(importDir(userId), fileName);
-	if (!existsSync(target)) throw new Error(`File not found: ${fileName}`);
+	if (!existsSync(target)) {
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { tool: 'tool_import_dedalo_csv' },
+			message: `File not found: ${fileName}`,
+		});
+	}
 	const rows = await parseCsvOffLoop(await Bun.file(target).text());
-	if (rows[0] === undefined || rows.length < 2) throw new Error('CSV has no data rows');
+	if (rows[0] === undefined || rows.length < 2) throw invalidRequest('CSV has no data rows');
 	return rows;
 }
 
@@ -438,14 +443,15 @@ const VALIDATE_SAMPLE_ROWS = 20;
 
 async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 	const files = Array.isArray(ctx.options.files) ? (ctx.options.files as CsvImportFile[]) : [];
-	if (files.length === 0) return fail('Missing files');
+	if (files.length === 0) throw invalidRequest('Missing files');
 
 	const result: Record<string, unknown>[] = [];
 	for (const current of files) {
 		const fileName = String(current.file ?? '');
 		const sectionTipo = String(current.section_tipo ?? '');
 		try {
-			if (fileName === '' || sectionTipo === '') throw new Error('Missing file or section_tipo');
+			if (fileName === '' || sectionTipo === '')
+				throw invalidRequest('Missing file or section_tipo');
 			const rows = await readCsvRows(ctx.userId, fileName);
 			const header = rows[0] as string[];
 
@@ -510,12 +516,19 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 			});
 		}
 	}
-	const ok = result.every((file) => file.ok === true);
-	return {
-		result,
-		msg: ok ? 'OK. The import is ready to run' : 'The import has problems — see the report',
-		errors: [],
-	};
+	// A validation REPORT is a successful answer whatever it says: `ready` is the
+	// verdict, `files` the per-file detail the panel renders.
+	const ready = result.every((file) => file.ok === true);
+	return ok(
+		{
+			ready,
+			files: result,
+			summary: ready
+				? 'OK. The import is ready to run'
+				: 'The import has problems — see the report',
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /**
@@ -525,12 +538,12 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
  * run in the dispatcher ('section_list' spec below), i.e. BEFORE the background
  * fork, where a denial is still observable to the caller.
  *
- * Returns an ImportBatchReport and publishes ImportProgressFrame ticks while it
+ * Returns the per-file report batch and publishes ImportProgressFrame ticks while it
  * runs (ctx.publishProgress → the job's subscribers → the client's panel).
  */
 async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const files = Array.isArray(ctx.options.files) ? (ctx.options.files as CsvImportFile[]) : [];
-	if (files.length === 0) return fail('Missing files');
+	if (files.length === 0) throw invalidRequest('Missing files');
 	// PHP defaults an absent flag to NO time machine; we default to KEEPING the
 	// audit trail — losing the history of a 10k-row write is not a safe default for
 	// a caller that simply forgot the flag. The client always sends the checkbox.
@@ -542,7 +555,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const fileName = String(current.file ?? '');
 		const sectionTipo = String(current.section_tipo ?? '');
 		try {
-			if (fileName === '' || sectionTipo === '') throw new Error('Missing file or section_tipo');
+			if (fileName === '' || sectionTipo === '')
+				throw invalidRequest('Missing file or section_tipo');
 
 			publish({
 				phase: 'reading',
@@ -568,7 +582,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				: [];
 			const columns = await resolveMappedColumns(header, columnsMap, errors);
 			if (!columns.some((column) => column !== null && column.model !== 'component_section_id')) {
-				throw new Error('No column is mapped for import');
+				throw invalidRequest('No column is mapped for import');
 			}
 
 			const bulkProcessId = await createBulkProcessRecord(
@@ -614,12 +628,18 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const created = report.reduce((sum, file) => sum + file.created.length, 0);
 	const updated = report.reduce((sum, file) => sum + file.updated.length, 0);
 	const failed = report.reduce((sum, file) => sum + file.failed.length, 0);
-	const batch: ImportBatchReport = {
-		result: report,
-		msg: `Import done. Created ${created}, updated ${updated}, failed ${failed}.`,
-		errors: [],
-	};
-	return batch as unknown as ToolResponse;
+	// Per-file failures are PAYLOAD (`files[].errors`): a batch where one file
+	// failed still imported the others, and the panel renders the whole report.
+	return ok(
+		{
+			files: report,
+			summary: `Import done. Created ${created}, updated ${updated}, failed ${failed}.`,
+			created,
+			updated,
+			failed,
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 export const tool: ToolServerModule = {

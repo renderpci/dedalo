@@ -22,6 +22,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const PRINCIPAL: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
@@ -65,10 +66,10 @@ describe('tool_hierarchy module', () => {
 				['inspect_hierarchy', inspect],
 				['generate_virtual_section', generate],
 			] as const) {
-				const res = await action.handler(ctx(options));
-				expect(res.result).toBe(false);
-				expect(res.errors).toContain('Missing section_id or section_tipo.');
-				expect(String(res.msg)).toContain(name);
+				const refusal = await refusalOf(action.handler(ctx(options)));
+				expect(refusal.code).toBe('request.invalid_options');
+				// Which action refused stays legible in the LOG-only message.
+				expect(refusal.message).toContain(name);
 			}
 		}
 	});

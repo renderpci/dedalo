@@ -24,7 +24,7 @@
 * Key instance properties (set by build())
 * -----------------------------------------
 * - diffusion_info  {Object}  - Server-side config: section_diffusion_nodes[], resolve_levels, skip_publication_state_check.
-* - bun_status      {Object}  - Bun engine health: { result: bool, msg: string, ... }.
+* - bun_status      {Object}  - Bun engine health: { ready: bool, label: string, checks }.
 * - active_processes {Array}  - List of running or recently finished diffusion processes.
 * - resolve_levels  {number}  - Resolved from diffusion_info; defaults to 1.
 * - skip_publication_state_check {number} - Whether to bypass the publication-state guard; from diffusion_info.
@@ -38,6 +38,10 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_diffusion} from './render_tool_diffusion.js' // self tool rendered (called from render common)
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	// THE accessor for a successful call's payload (envelope v2 `data`, compat
+	// `result`). Every read below goes through it — never `response.result`.
+	import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -172,9 +176,11 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 		// engine advisory gate (auto-recovers for admins; clean JSON even when engine down)
 			const advisory = await self.get_engine_advisory({})
 			self.engine_advisory = advisory
+			// client-built badge state (never a wire shape): is the engine usable,
+			// and the one line to print beside it
 			self.bun_status = {
-				result : advisory.state === 'ok',
-				msg    : advisory.state === 'ok' ? 'Ready' : (advisory.title || 'Unavailable'),
+				ready  : advisory.state === 'ok',
+				label  : advisory.state === 'ok' ? 'Ready' : (advisory.title || 'Unavailable'),
 				checks : advisory.checks || null
 			}
 
@@ -232,7 +238,8 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 * The resolved value is stored on `self.diffusion_info` in build(); render_tool_diffusion
 * reads `self.diffusion_info` directly.
 *
-* @returns {Promise<Object>} Resolves with the `response.result` object (or null on failure).
+* @returns {Promise<Object>} Resolves with the response PAYLOAD (envelope v2 `data`;
+*   undefined on failure, which build() turns into a loud throw).
 */
 tool_diffusion.prototype.get_diffusion_info = function() {
 
@@ -268,7 +275,9 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 					console.log('-> get_diffusion_info API response:', response);
 				}
 
-				const result = response.result // array of objects
+				// Envelope v2: the payload lives in `data` (the compat `result`
+				// mirror is read by the same accessor, and dies with it).
+				const result = response_data(response)
 
 				resolve(result)
 			})
@@ -378,6 +387,20 @@ tool_diffusion.prototype.export = function(options) {
 			.then(function(stream){
 				resolve(stream)
 			})
+			.catch(function(api_error){
+				// request_stream REJECTS with an ApiError (its @throws) when the run
+				// never opens — a dead socket, or the session that expired between
+				// loading the panel and pressing Publish. Without this handler that
+				// rejection was unhandled AND the promise never settled, so the caller
+				// awaited a stream that could not arrive and the button stayed
+				// 'loading' for the rest of the session. Route it (auth.not_logged
+				// reaches the relogin overlay) and resolve NULL so the caller unlocks.
+				handle_api_error(api_error, {scope:'tool_diffusion'})
+					.catch(function(dispatch_error){
+						console.error('[tool_diffusion] error dispatch failed:', dispatch_error)
+					})
+				resolve(null)
+			})
 		})
 }//end export
 
@@ -460,6 +483,26 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 
 /**
+* UNREACHABLE_ADVISORY
+* The client-side stand-in for an advisory we could not fetch. Same SHAPE the
+* server emits (state/is_admin/title/cause/steps/actions/checks) so the banner
+* renderer needs no second branch — and, like the server's, it carries no
+* `result` key: `state` is the whole verdict.
+* @return object
+*/
+const unreachable_advisory = () => ({
+	state		: 'unreachable',
+	is_admin	: false,
+	title		: 'Diffusion is temporarily unavailable',
+	cause		: '',
+	steps		: [],
+	actions		: ['retry'],
+	checks		: null
+})
+
+
+
+/**
 * GET_ENGINE_ADVISORY
 * Server-side engine health + role-tailored advisory. Returns clean JSON, never
 * a 404.
@@ -493,13 +536,16 @@ tool_diffusion.prototype.get_engine_advisory = function() {
 			if(SHOW_DEBUG===true) {
 				console.log('-> get_engine_advisory response:', response);
 			}
-			resolve(response)
+			// Envelope v2: the advisory is PAYLOAD (`data`), not a set of
+			// top-level body keys, and it carries NO `result` — `state` IS the
+			// verdict (src/diffusion/api/info.ts buildEngineAdvisory). A failed
+			// call has no payload at all, so it degrades to the same unreachable
+			// advisory the transport catch below returns.
+			resolve(response_data(response) || unreachable_advisory())
 		})
 		.catch(function(err){
 			console.error('get_engine_advisory error:', err)
-			resolve({ result:false, state:'unreachable', is_admin:false,
-				title:'Diffusion is temporarily unavailable', cause:'', steps:[], actions:['retry'],
-				checks:null })
+			resolve(unreachable_advisory())
 		})
 	})
 }//end get_engine_advisory

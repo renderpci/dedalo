@@ -53,7 +53,7 @@ async function firstLoadIds(): Promise<number[]> {
 			principal,
 		} as never,
 	);
-	const data = (res.body as { result?: { data?: unknown[] } }).result?.data ?? [];
+	const data = (res.body as { data?: { data?: unknown[] } }).data?.data ?? [];
 	const entries = ((data[0] as { entries?: { section_id?: unknown }[] })?.entries ?? []) as {
 		section_id?: unknown;
 	}[];

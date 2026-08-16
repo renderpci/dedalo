@@ -124,9 +124,9 @@ flowchart TD
     L1 -->|"getPermissions(principal, parent_tipo, tipo)"| TBL["permission table<br/>(profile's component_security_access)"]
     REQ --> L2["Layer 2: per-record scope<br/>buildProjectsFilter() in the search"]
     L2 -->|"getUserProjects(userId)"| PROJ["component_filter ∩ user projects"]
-    L1 -. fail .-> EX["notAuthorized(...)"]
+    L1 -. fail .-> EX["throw new DedaloError('perm.denied')"]
     L2 -. fail .-> EX
-    EX --> RESP["dispatch → uniform error response<br/>(result:false, HTTP 403)"]
+    EX --> RESP["dispatch catch → converter-made envelope<br/>(ok:false, error.code perm.denied, HTTP 403)"]
 ```
 
 **Prose description of the diagram above:** A logged API request carries a
@@ -134,29 +134,33 @@ flowchart TD
 type-level permission, which reads the profile's permission table built from
 `component_security_access`. Layer 2 (`buildProjectsFilter()`) checks per-record
 visibility by intersecting the record's `component_filter` with the user's
-projects from `getUserProjects()`. Either gate that fails produces a uniform
-`notAuthorized(…)` response — a `{result:false}` envelope the client reads.
+projects from `getUserProjects()`. Either gate that fails THROWS the registered
+refusal — `perm.denied` — and the dispatch catch turns it into the one
+converter-made envelope the client reads.
 
 ### The refusal envelope
 
-`notAuthorized(message)` (`src/core/api/response.ts`) is the ONE constructor for
-an authorization refusal. It answers HTTP **403** with the machine token in
-`errors` and the prose in `msg`:
+An authorization refusal is `throw new DedaloError('perm.denied', {…})`
+(`src/core/errors/`; the registry row is the whole identity — see
+`engineering/ERRORS_SPEC.md`). The dispatch catch answers HTTP **403** with the
+machine code in `error.code` and the registry message (the code's disclosure is
+`operator`, so a site's sentence never reaches the wire — a refused user learns
+nothing about what exists):
 
 ```json
-{ "result": false,
-  "msg":    "Insufficient permissions to read",
-  "errors": ["not_authorized"] }
+{ "ok": false,
+  "request_id": "…",
+  "error": { "code": "perm.denied", "category": "permission",
+             "message": "Insufficient permissions", "label_key": "no_access_page",
+             "retryable": false } }
 ```
 
 !!! warning "A 403 is an answer, not a transport failure"
-    The generic `denied(status, message)` helper copies its message into
-    `errors` — fine for a validation refusal, useless for authorization, because
-    the client dispatches on the CODE. `denied(403, …)` is therefore refused
-    mechanically by `test/unit/authorization_denial_native.test.ts`; use
-    `notAuthorized()`. A client must also read the envelope rather than
-    classifying the status as a network error: the client's fetch layer exempts
-    403 exactly as it exempts 401, and retrying a refusal is meaningless.
+    No handler builds a failure body: the former `denied()` / `notAuthorized()`
+    helpers are DELETED, and `test/unit/error_taxonomy_tripwire.test.ts` refuses
+    any builder call. The client dispatches on `error.code` (its `CORE_POLICY`
+    routes `perm.*` to the no-access page) — never on the status number, and
+    retrying a refusal is meaningless.
 
     The default message is deliberately generic — it is shown to the refused
     user, and naming the element they cannot reach tells them it exists.
@@ -225,9 +229,10 @@ actions through the module functions:
 // resolve a permission level (the entry point)
 const perm = await getPermissions(principal, 'rsc197', 'rsc197'); // 0..3
 
-// or, inside a handler, gate an action and relay the uniform failure
+// or, inside a handler, gate an action — a refusal is a THROW; the dispatch
+// catch makes the envelope (403, error.code perm.denied)
 if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 2) {
-    return notAuthorized("You don't have enough permissions to edit this component");
+    throw new DedaloError('perm.denied', { coordinates: { section_tipo: sectionTipo } });
 }
 ```
 
@@ -279,7 +284,7 @@ Each handler gates **inline** and returns the uniform `denied()` envelope:
 1. **API entry (read).** `dd_core_api.read` resolves the read permission on the
    source `(section_tipo, tipo)` and on **every SQO target section**
    (self-keyed) *before* any search/DB work. Anything `< 1` short-circuits to
-   `notAuthorized('Insufficient permissions to read')`.
+   a thrown `perm.denied` (403).
 
 2. **Per-element read filtering + honest context stamps.** Inside the section
    read (`src/core/section/read.ts`), every element the caller holds level `0`
@@ -297,7 +302,7 @@ Each handler gates **inline** and returns the uniform `denied()` envelope:
 
 3. **API entry (create / write).** `create`, `save`, `duplicate` and `delete`
    check `getPermissions(principal, section_tipo, …) < 2` and refuse with a
-   `notAuthorized(…)` "not enough permissions" message.
+   thrown `perm.denied`.
 
 4. **Per-record scope on writes.** `duplicate` and sqo-less `delete` re-run a
    principal-scoped existence search (the same `buildProjectsFilter` clause) and
@@ -315,9 +320,9 @@ flowchart LR
     GP --> TBL["permission table (cached per userId)"]
     API -->|"per-record"| PF["buildProjectsFilter() in the search"]
     PF --> PROJ["getUserProjects(userId)"]
-    GP -. below required .-> DEN["notAuthorized(...)"]
+    GP -. below required .-> DEN["throw new DedaloError('perm.denied')"]
     PF -. out of scope .-> DEN
-    DEN --> RESP["uniform {result:false} response"]
+    DEN --> RESP["converter-made envelope (ok:false, 403)"]
 ```
 
 **Prose description of the diagram above:** A client RQO reaches a dispatch
@@ -326,8 +331,8 @@ handler in `ACTION_REGISTRY`. The handler first applies its inline
 layer-2 per-record scope check against the projects filter). `getPermissions()`
 reads the per-`userId`-cached permission table; the projects filter reads
 `getUserProjects()`. A level below the requirement, or a record outside scope,
-produces a `notAuthorized(…)` — the uniform `{result:false}` response the client
-reads.
+throws `perm.denied` — the dispatch catch converts it into the one envelope
+shape the client reads (`ok:false`, `error.code`).
 
 ## How it fits with the rest of Dédalo
 
@@ -356,9 +361,9 @@ reads.
 
 ```ts
 // Inside a dispatch handler: refuse anything below write on the target section.
-// On failure this returns the uniform notAuthorized(...) response the client reads.
+// A refusal is a THROW — the dispatch catch answers 403 + error.code perm.denied.
 if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 2) {
-    return notAuthorized("You don't have enough permissions to edit this component");
+    throw new DedaloError('perm.denied', { coordinates: { section_tipo: sectionTipo } });
 }
 
 // Resolve a level without gating (the read path):
@@ -381,7 +386,7 @@ if (!principal.isGlobalAdmin) {
     });
     const q = await buildSearchSql(scopeSqo, { principal });
     const visible = await sql.unsafe(q.sql, q.params);
-    if (visible.length === 0) return notAuthorized('Record is out of the user scope');
+    if (visible.length === 0) throw new DedaloError('perm.out_of_scope');
 }
 ```
 

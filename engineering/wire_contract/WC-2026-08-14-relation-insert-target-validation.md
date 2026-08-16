@@ -118,3 +118,49 @@ fixture twin — the frozen store contains no such interaction (measured: no fix
 carries a picker declaration, and the store holds no write of an off-target locator).
 Nothing in the store's replayed bytes changes; there is nothing to re-harvest and, per
 `engineering/ORACLE_HARVEST.md`, no way to.
+
+## Addendum 2026-08-16 — gate 2 scoped and fail-closed; the length-1 door THROWS
+
+Three corrections from the adversarial review of the landing, all in
+`src/core/relations/save.ts`:
+
+1. **`target_not_readable` is SCOPED to tree-picker callers** (the same scope as the
+   selectability gate: the caller declares `properties.view: 'tree'`). As landed, gate 2
+   judged the target section for EVERY caller and refused every non-admin's own
+   component_filter → `dd153` pick — profiles grant the FILTER component (level 2), never
+   the projects SECTION (level 0), and the datalist was built from the user's own
+   authorized projects (measured: all 20 non-admin users of the test DB). The read model
+   for a portal/autocomplete/filter/select is the opposite of that gate: a value reached
+   THROUGH an authorized caller is floored to read (`permissions.inheritSubdatumPermission`),
+   so authorization there IS the caller grant, which dispatch enforces (`>= 2` on the
+   component) before the door is reached. For a tree picker the gate stays: it is the write
+   twin of the picker READ, which prunes hierarchies the principal holds no grant on.
+2. **The "no actor" posture inside that scope is FAIL-CLOSED**, not an exemption: a
+   net-new pick into a tree-picker caller with no principal — neither threaded
+   (`SaveRequest.principal`, passed by dispatch and the MCP write tools) nor ambient
+   (the request-context ALS, now the documented BACKSTOP only) — is refused
+   `target_not_readable`. The table's "No actor" exemption row above is therefore
+   RETIRED for gate 2. Credless doors (import, maintenance) re-persist stored arrays
+   through the `storedItems` baseline (gate 0) and are unaffected.
+3. **Constraint refusals through the length-1 door are THROWN, not dropped.** "What a
+   consumer must expect" item 2 above is superseded: `validateRelationInsert` now throws
+   `relation.insert_refused` (400, `details: {constraint, section_tipo}`) for
+   `off_target` / `term_not_selectable` / `selection_limit`, and the generic `perm.denied`
+   (403, naming nothing) for `target_not_readable`. The save transaction rolls back and the
+   API answers the named refusal; a 200-with-nothing-stored was a silent scope narrowing.
+   The PHP-era drops (`bad_form` / `autoreference` / `duplicate`) keep the null/ignored
+   contract — the client's server-authoritative duplicate check depends on it.
+
+Also in the same pass: the selection cap counts `held` in the CAP SCOPE (per main item for
+a dataframe pairing — `picker_constraint.inCapScope`, one predicate for both sides), and
+the re-persist baseline compares through the locator law (`compareLocators`: section_id
+loose-numeric, tipo strict; frame pairing String()-loose) instead of key-string equality.
+
+Gates: `test/unit/relation_insert_target_native.test.ts` — the READ GRANT describe (tree
+picker refused / non-picker accepted / fail-closed no-actor / threaded principal wins /
+the component_filter non-admin persists a project through the REAL save door), the
+RE-PERSIST baseline describe, the DATAFRAME cap describe, and the save-path describe
+asserting the wire status + code. `test/unit/external_write_refusal_tripwire.test.ts`'s
+"curated write" fixture now names a caller that DECLARES its target (`test80` → test3);
+the previous fixture (`numisdata434`, absent from the suite DB) was green only because the
+door silently dropped it.

@@ -4,23 +4,26 @@
  * gate makes THIS test fail (DEC-12: an invariant with no mechanical gate rots).
  *
  * The chain is the most security-relevant path in the subsystem, so the tests
- * are deliberately DISCRIMINATING rather than merely negative: every case asserts
- * the message of the gate under test, and each message differs from the message
- * the NEXT gate would produce for the same input. A test that only asserted
- * "result:false" would stay green with the gate removed, because a later gate
- * would refuse the same request for a different reason.
+ * are deliberately DISCRIMINATING rather than merely negative: every gate
+ * REFUSES BY THROWING a registered DedaloError (envelope v2, ERRORS_SPEC §4),
+ * and every case asserts the CODE of the gate under test, which differs from
+ * the code the NEXT gate would produce for the same input. A test that only
+ * asserted "it threw" would stay green with the gate removed, because a later
+ * gate would refuse the same request for a different reason.
  *
- *   1. options must be an object            → 'invalid options'
- *   2. tool name matches ^tool_[a-z0-9_]+$  → 'invalid tool name'  (checked with a
- *      NON-ADMIN caller: gates 3+4 would answer 'Tool not authorized for current
- *      user' for the same input, so the two are distinguishable)
- *   3. the tool is ACTIVE in dd1324         → 'invalid tool'       (scratch INACTIVE row)
- *   4. the tool is authorized for the user  → 'Tool not authorized for current user'
- *   5. the tool has a loaded server module  → 'tool has no server module' (scratch ACTIVE row)
- *   6. the method is in apiActions          → 'tool method not allowed'
+ *   1. options must be an object            → request.invalid_options
+ *   2. tool name matches ^tool_[a-z0-9_]+$  → tool.invalid_name  (checked with a
+ *      NON-ADMIN caller: gates 3+4 would answer tool.not_authorized for the same
+ *      input, so the two are distinguishable)
+ *   3. the tool is ACTIVE in dd1324         → tool.invalid_name (admin; scratch INACTIVE row)
+ *   4. the tool is authorized for the user  → tool.not_authorized
+ *   5. the tool has a loaded server module  → tool.no_server_module (scratch ACTIVE row)
+ *   6. the method is in apiActions          → tool.method_not_allowed
  *   7. the permission gate — BEFORE the background fork. THE critical one: a
  *      denial AFTER a fork is invisible to the caller, so a background request
  *      that fails its permission must come back as the DENIAL, never as a job id.
+ *      (security.ts still answers legacy tokens: `invalid_request` →
+ *      request.invalid, `unauthorized` → perm.denied.)
  *   8. execute / backgroundRunnable         → 'background_not_allowed', else a job.
  *
  * DB-backed: gates 3 and 5 need registry rows the loader cannot resolve to a
@@ -47,6 +50,7 @@ const { listBackgroundJobs, resetBackgroundJobs, getBackgroundJob } = await impo
 
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { invalidateAllToolCaches } from '../../src/core/tools/cache.ts';
 import {
@@ -134,35 +138,39 @@ afterAll(async () => {
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
-/** The whole failure envelope as one comparable string (msg + errors). */
-function why(response: { msg: string; errors?: string[] }): string {
-	return `${response.msg} | ${(response.errors ?? []).join(',')}`;
+/** The thrown refusal of a gate — the DedaloError, or a failure if it resolved. */
+async function refusal(pending: Promise<unknown>): Promise<DedaloError> {
+	try {
+		const resolved = await pending;
+		throw new Error(`expected a thrown refusal, got ${JSON.stringify(resolved)}`);
+	} catch (error) {
+		if (error instanceof DedaloError) return error;
+		throw error;
+	}
+}
+
+/** `code | publicMessage` — one comparable string. */
+function why(error: DedaloError): string {
+	return `${error.code} | ${error.publicMessage ?? ''}`;
 }
 
 describe('gate 1 — options must be an object', () => {
 	test('a non-object options is refused before the action ever runs', async () => {
 		// tool_dev_template.status has permission null and returns {ok:true}: with
 		// gate 1 removed this request SUCCEEDS, so the assertion is discriminating.
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'status' },
-			'not-an-object',
+		const error = await refusal(
+			dispatchToolRequest(SUPERUSER, -1, { model: TEMPLATE, action: 'status' }, 'not-an-object'),
 		);
-		expect(response.result).toBe(false);
-		expect(why(response)).toContain('invalid options');
-		expect(response.errors).toContain('Invalid options type');
+		expect(error.code).toBe('request.invalid_options');
+		expect(error.publicMessage).toBe('Invalid options type');
 	});
 
 	test('an array and a number are refused too (typeof null/array traps)', async () => {
 		for (const options of [42, 'x', true] as unknown[]) {
-			const response = await dispatchToolRequest(
-				SUPERUSER,
-				-1,
-				{ model: TEMPLATE, action: 'status' },
-				options,
+			const error = await refusal(
+				dispatchToolRequest(SUPERUSER, -1, { model: TEMPLATE, action: 'status' }, options),
 			);
-			expect(response.errors).toContain('Invalid options type');
+			expect(error.code).toBe('request.invalid_options');
 		}
 		// undefined is the "no options" case and must still pass.
 		const none = await dispatchToolRequest(
@@ -171,7 +179,7 @@ describe('gate 1 — options must be an object', () => {
 			{ model: TEMPLATE, action: 'status' },
 			undefined,
 		);
-		expect(none.result).toEqual({ ok: true, tool: TEMPLATE });
+		expect(none.data).toEqual({ tool: TEMPLATE });
 	});
 });
 
@@ -191,25 +199,18 @@ describe('gate 2 — strict tool-name shape, before ANY lookup', () => {
 		'tool_',
 		'',
 	])('refuses %p at gate 2, not at gates 3+4', async (name) => {
-		const response = await dispatchToolRequest(
-			PLAIN_USER,
-			PLAIN_USER.userId,
-			{ model: name, action: 'status' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(PLAIN_USER, PLAIN_USER.userId, { model: name, action: 'status' }, {}),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid tool name');
-		expect(why(response)).not.toContain('not authorized');
+		expect(error.code).toBe('tool.invalid_name');
+		expect(why(error)).not.toContain('not_authorized');
 	});
 
 	test('a non-string model is refused as an empty name', async () => {
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: { evil: true }, action: 'status' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(SUPERUSER, -1, { model: { evil: true }, action: 'status' }, {}),
 		);
-		expect(response.msg).toContain('invalid tool name');
+		expect(error.code).toBe('tool.invalid_name');
 	});
 });
 
@@ -217,28 +218,20 @@ describe('gate 3 — the tool must be ACTIVE in dd1324', () => {
 	test('an INACTIVE registered tool is refused before the module lookup', async () => {
 		// The scratch rows are identical except for dd1354. The ACTIVE twin reaches
 		// gate 5 ('tool has no server module'); this one must not.
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: SCRATCH_INACTIVE, action: 'status' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(SUPERUSER, -1, { model: SCRATCH_INACTIVE, action: 'status' }, {}),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid tool');
-		expect(why(response)).not.toContain('no server module');
+		expect(error.code).toBe('tool.invalid_name');
+		expect(error.code).not.toBe('tool.no_server_module');
 	});
 });
 
 describe('gate 4 — the tool must be authorized for the caller', () => {
 	test('a user with no profile grant is refused a real, active, loadable tool', async () => {
-		const response = await dispatchToolRequest(
-			PLAIN_USER,
-			PLAIN_USER.userId,
-			{ model: TEMPLATE, action: 'status' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(PLAIN_USER, PLAIN_USER.userId, { model: TEMPLATE, action: 'status' }, {}),
 		);
-		expect(response.result).toBe(false);
-		expect(why(response)).toContain('Tool not authorized for current user');
+		expect(error.code).toBe('tool.not_authorized');
 	});
 
 	test('the same request succeeds for a global admin (the gate is the GRANT, not the tool)', async () => {
@@ -248,42 +241,34 @@ describe('gate 4 — the tool must be authorized for the caller', () => {
 			{ model: TEMPLATE, action: 'status' },
 			{},
 		);
-		expect(response.result).toEqual({ ok: true, tool: TEMPLATE });
+		expect(response.data).toEqual({ tool: TEMPLATE });
 	});
 });
 
 describe('gate 5 — the tool must have a loaded server module', () => {
 	test('an ACTIVE registry row with no package on disk is refused as module-less', async () => {
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: SCRATCH_ACTIVE, action: 'status' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(SUPERUSER, -1, { model: SCRATCH_ACTIVE, action: 'status' }, {}),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('tool has no server module');
-		expect(response.errors).toContain('unauthorized_method');
+		expect(error.code).toBe('tool.no_server_module');
 	});
 });
 
 describe('gate 6 — the method must be in apiActions', () => {
 	test('an unlisted method on a loaded tool is refused', async () => {
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'not_a_method' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(SUPERUSER, -1, { model: TEMPLATE, action: 'not_a_method' }, {}),
 		);
-		expect(response.result).toBe(false);
-		// Distinguishable from gate 5's message, which shares the errors code.
-		expect(response.msg).toContain('tool method not allowed');
-		expect(response.errors).toContain('unauthorized_method');
+		expect(error.code).toBe('tool.method_not_allowed');
+		expect(error.details).toEqual({ method: 'not_a_method' });
 	});
 
 	test('inherited Object properties are not actions', async () => {
 		for (const action of ['toString', 'constructor', 'hasOwnProperty', '__proto__']) {
-			const response = await dispatchToolRequest(SUPERUSER, -1, { model: TEMPLATE, action }, {});
-			expect(response.errors).toContain('unauthorized_method');
+			const error = await refusal(
+				dispatchToolRequest(SUPERUSER, -1, { model: TEMPLATE, action }, {}),
+			);
+			expect(error.code).toBe('tool.method_not_allowed');
 		}
 	});
 });
@@ -297,31 +282,31 @@ describe('gate 6 — the method must be in apiActions', () => {
  */
 describe('gate 7 — the permission gate, BEFORE the background fork', () => {
 	test('a foreground request with an invalid permission target is denied', async () => {
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'long_job' }, // permission 'section', minLevel 2
-			{ section_tipo: 'not-a-tipo' },
+		const error = await refusal(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: TEMPLATE, action: 'long_job' }, // permission 'section', minLevel 2
+				{ section_tipo: 'not-a-tipo' },
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid section target');
-		expect(response.errors).toContain('invalid_request');
+		expect(error.code).toBe('request.invalid');
+		expect(error.publicMessage).toContain('invalid section target');
 	});
 
 	test('a BACKGROUND request that fails its permission comes back as the DENIAL, not a job', async () => {
 		resetBackgroundJobs();
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'long_job' },
-			{ background_running: true, section_tipo: 'not-a-tipo' },
+		const error = await refusal(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: TEMPLATE, action: 'long_job' },
+				{ background_running: true, section_tipo: 'not-a-tipo' },
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid section target');
-		// THE assertion: no handle was minted, so nothing was forked.
-		expect(response.job_id).toBeUndefined();
-		expect(response.background_job_id).toBeUndefined();
-		expect(response.pfile).toBeUndefined();
+		expect(error.publicMessage).toContain('invalid section target');
+		// THE assertion: it THREW — no handle was minted, so nothing was forked.
+		expect(error.extend).toBeUndefined();
 		// …and the job registry never saw it (a fork that ran and then denied
 		// would leave a record here).
 		expect(listBackgroundJobs(TEMPLATE, -1, true)).toHaveLength(0);
@@ -331,15 +316,16 @@ describe('gate 7 — the permission gate, BEFORE the background fork', () => {
 		// read_demo has permission 'tipo' and is NOT in backgroundRunnable. With the
 		// gates in order the answer is the PERMISSION denial; if the permission check
 		// had slipped behind the fork decision it would be 'background_not_allowed'.
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'read_demo' },
-			{ background_running: true, section_tipo: 'test3' }, // no `tipo` → gate 7 denies
+		const error = await refusal(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: TEMPLATE, action: 'read_demo' },
+				{ background_running: true, section_tipo: 'test3' }, // no `tipo` → gate 7 denies
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid permission target');
-		expect(response.errors).not.toContain('background_not_allowed');
+		expect(error.publicMessage).toContain('invalid permission target');
+		expect(error.code).not.toBe('tool.background_not_allowed');
 	});
 
 	test('a permission that PASSES reaches the handler', async () => {
@@ -349,7 +335,7 @@ describe('gate 7 — the permission gate, BEFORE the background fork', () => {
 			{ model: TEMPLATE, action: 'read_demo' },
 			{ section_tipo: 'test3', tipo: 'test65' },
 		);
-		expect(response.result).toEqual({ section_tipo: 'test3', tipo: 'test65', read: true });
+		expect(response.data).toEqual({ section_tipo: 'test3', tipo: 'test65', read: true });
 	});
 });
 
@@ -372,14 +358,13 @@ describe("gate 7 — the 'section_list' batch kind", () => {
 		const response = await dispatchToolRequest(SUPERUSER, -1, BATCH, {
 			items: [{ section_tipo: 'test3' }, { section_tipo: 'test3' }],
 		});
-		expect(response.result).toEqual({ batch: 2, gated: true });
+		expect(response.data).toEqual({ batch: 2, gated: true });
 	});
 
 	test('an EMPTY batch is a denial, not a vacuous pass', async () => {
 		for (const options of [{}, { items: [] }, { items: 'not-an-array' }]) {
-			const response = await dispatchToolRequest(SUPERUSER, -1, BATCH, options);
-			expect(response.result).toBe(false);
-			expect(response.msg).toContain('invalid section target');
+			const error = await refusal(dispatchToolRequest(SUPERUSER, -1, BATCH, options));
+			expect(error.publicMessage).toContain('invalid section target');
 		}
 	});
 
@@ -390,9 +375,8 @@ describe("gate 7 — the 'section_list' batch kind", () => {
 			[{ section_tipo: 'test3' }, { section_tipo: '../../etc/passwd' }],
 			[{ section_tipo: 'test3' }, { section_tipo: null }],
 		]) {
-			const response = await dispatchToolRequest(SUPERUSER, -1, BATCH, { items });
-			expect({ items, ok: response.result }).toEqual({ items, ok: false });
-			expect(response.errors).toContain('invalid_request');
+			const error = await refusal(dispatchToolRequest(SUPERUSER, -1, BATCH, { items }));
+			expect({ items, code: error.code }).toEqual({ items, code: 'request.invalid' });
 		}
 	});
 
@@ -401,13 +385,11 @@ describe("gate 7 — the 'section_list' batch kind", () => {
 		// the PERMISSION failure; 'background_not_allowed' here would mean gate 8
 		// had overtaken gate 7 — and a denial after a fork is invisible to the caller.
 		resetBackgroundJobs();
-		const response = await dispatchToolRequest(SUPERUSER, -1, BATCH, {
-			background_running: true,
-			items: [],
-		});
-		expect(response.msg).toContain('invalid section target');
-		expect(response.errors).not.toContain('background_not_allowed');
-		expect(response.job_id).toBeUndefined();
+		const error = await refusal(
+			dispatchToolRequest(SUPERUSER, -1, BATCH, { background_running: true, items: [] }),
+		);
+		expect(error.publicMessage).toContain('invalid section target');
+		expect(error.code).not.toBe('tool.background_not_allowed');
 		expect(listBackgroundJobs(TEMPLATE, -1, true)).toHaveLength(0);
 	});
 });
@@ -415,14 +397,17 @@ describe("gate 7 — the 'section_list' batch kind", () => {
 describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', () => {
 	test('an action absent from backgroundRunnable is refused a fork', async () => {
 		resetBackgroundJobs();
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'status' }, // permission null → gate 7 passes
-			{ background_running: true },
+		// Envelope v2: the refusal THROWS the registered code (the chokepoint
+		// converts it); the legacy `errors:['background_not_allowed']` token is gone.
+		const error = await refusal(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: TEMPLATE, action: 'status' }, // permission null → gate 7 passes
+				{ background_running: true },
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('background_not_allowed');
+		expect(error.code).toBe('tool.background_not_allowed');
 		expect(listBackgroundJobs(TEMPLATE, -1, true)).toHaveLength(0);
 	});
 
@@ -434,7 +419,8 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 			{ model: TEMPLATE, action: 'long_job' },
 			{ background_running: true, section_tipo: 'test3' },
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		expect(response.data).toBe(true);
 		const jobId = response.job_id as string;
 		expect(typeof jobId).toBe('string');
 		expect(response.background_job_id).toBe(jobId);
@@ -444,7 +430,7 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 		const job = getBackgroundJob(jobId);
 		expect(job?.status).toBe('done');
 		// The handler saw background:true — it really ran under the executor.
-		expect((job?.result?.result as { ran_in_background?: boolean })?.ran_in_background).toBe(true);
+		expect((job?.result?.data as { ran_in_background?: boolean })?.ran_in_background).toBe(true);
 	});
 
 	test('without background_running the same action runs synchronously', async () => {
@@ -454,7 +440,7 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 			{ model: TEMPLATE, action: 'long_job' },
 			{ section_tipo: 'test3' },
 		);
-		expect(response.result).toMatchObject({ started: true, ran_in_background: false });
+		expect(response.data).toMatchObject({ started: true, ran_in_background: false });
 		expect(response.job_id).toBeUndefined();
 	});
 
@@ -466,7 +452,7 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 			{ model: TEMPLATE, action: 'long_job' },
 			{ background_running: 'true', section_tipo: 'test3' },
 		);
-		expect(response.result).toMatchObject({ started: true, ran_in_background: false });
+		expect(response.data).toMatchObject({ started: true, ran_in_background: false });
 		expect(listBackgroundJobs(TEMPLATE, -1, true)).toHaveLength(0);
 	});
 });
@@ -479,13 +465,15 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
  */
 describe('reserved framework actions sit between gate 4 and gate 5', () => {
 	test('an unauthorized caller is still refused them (they are behind gates 3+4)', async () => {
-		const response = await dispatchToolRequest(
-			PLAIN_USER,
-			PLAIN_USER.userId,
-			{ model: TEMPLATE, action: 'get_background_jobs' },
-			{},
+		const error = await refusal(
+			dispatchToolRequest(
+				PLAIN_USER,
+				PLAIN_USER.userId,
+				{ model: TEMPLATE, action: 'get_background_jobs' },
+				{},
+			),
 		);
-		expect(why(response)).toContain('Tool not authorized for current user');
+		expect(error.code).toBe('tool.not_authorized');
 	});
 
 	test('a tool with NO server module still answers them (they precede gate 5)', async () => {
@@ -495,7 +483,9 @@ describe('reserved framework actions sit between gate 4 and gate 5', () => {
 			{ model: SCRATCH_ACTIVE, action: 'get_background_jobs' },
 			{},
 		);
-		expect(response.result).toEqual([]);
-		expect(response.msg).toBe('ok');
+		// Envelope v2 (`ok(data)`): `data` is the job list; `result` is only the
+		// bounded compat mirror and there is no `msg` prose channel.
+		expect(response.ok).toBe(true);
+		expect(response.data).toEqual([]);
 	});
 });

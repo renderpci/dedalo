@@ -150,6 +150,6 @@ export const widget: WidgetModule = {
 		category: 'system',
 		label: { kind: 'literal', text: 'AI models' },
 	},
-	getValue: async () => ({ result: await readAiModels(), msg: 'OK', errors: [] }),
+	getValue: async () => ({ data: await readAiModels() }),
 	eagerValue: () => readAiModels(),
 };

@@ -41,7 +41,7 @@ describe('build_version_from_git_master option mapping', () => {
 			...REAL_BUILD,
 			buildVersionFromGit: async (options: { version: string; ref?: string }) => {
 				calls.push(options);
-				return { result: true, msg: 'OK', errors: [] };
+				return { ok: true, request_id: 'test', data: { built: true } };
 			},
 		}));
 		const { widget } = await widgetModule();
@@ -65,7 +65,7 @@ describe('build_version_from_git_master option mapping', () => {
 			...REAL_BUILD,
 			buildVersionFromGit: async (options: { version: string; ref?: string }) => {
 				calls.push(options);
-				return { result: true, msg: 'OK', errors: [] };
+				return { ok: true, request_id: 'test', data: { built: true } };
 			},
 		}));
 		const { widget } = await widgetModule();
@@ -109,7 +109,7 @@ describe('code-server reachability probe', () => {
 			expect(asked).toEqual([
 				{ url: 'https://m.example/dedalo/core/api/v1/json/', check: 'code_server' },
 			]);
-			const servers = (value?.result as { servers: { response_code: number }[] }).servers;
+			const servers = (value?.data as { servers: { response_code: number }[] }).servers;
 			expect(servers.length).toBe(1);
 			expect(servers[0]?.response_code).toBe(200);
 		} finally {

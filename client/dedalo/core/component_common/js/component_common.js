@@ -54,6 +54,8 @@
 	import { events_subscription } from './events_subscription.js'
 	import { ui } from '../../common/js/ui.js'
 	import { set_element_css } from '../../page/js/css.js'
+	import {request_failed, normalize_transport_error, response_data} from '../../common/js/api_error.js'
+	import { handle_api_error } from '../../common/js/error_dispatch.js'
 
 
 
@@ -387,7 +389,8 @@ const do_build = async (self, autoload) => {
 					return false
 				}
 				// server: bad build component context
-				if(!api_response.result.context?.length){
+				const datum = response_data(api_response)
+				if(!datum.context?.length){
 					console.error("Error!!!!, component without context:", api_response, rqo);
 					return false
 				}
@@ -399,7 +402,7 @@ const do_build = async (self, autoload) => {
 
 			// Context
 				if(!self.context){
-					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+					const context = datum.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
 					}else{
@@ -408,7 +411,7 @@ const do_build = async (self, autoload) => {
 				}
 
 			// data
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
+				const data = datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
 				}
@@ -417,11 +420,11 @@ const do_build = async (self, autoload) => {
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
 					// update shared datum
-					await self.update_datum(api_response.result)
+					await self.update_datum(datum)
 				}else{
 					// set 'private' datum
-					self.datum.context	= api_response.result.context
-					self.datum.data		= api_response.result.data
+					self.datum.context	= datum.context
+					self.datum.data		= datum.data
 				}
 
 			// rqo. build again rqo with updated request_config if exists
@@ -584,7 +587,7 @@ export const init_events_subscription = function(self) {
 *  5. On success: update self.data + self.db_data from the server response, run
 *     the success animation, and reset the before-unload warning.
 *     On error: restore 'modified' (data is still unsaved) and set 'error'.
-*  6. On auth failure ('not_logged'): subscribe to 'login_successful' and
+*  6. On auth failure ('auth.not_logged'): subscribe to 'login_successful' and
 *     retry the save automatically when the user logs back in.
 *  7. Always publish 'save' (general) and 'save_' + self.id_base (component-specific)
 *     events with { instance, api_response } payload.
@@ -700,7 +703,7 @@ component_common.prototype.save = async function(new_changed_data) {
 					// debug
 					if(SHOW_DEBUG===true) {
 						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
-						if (!api_response.result) {
+						if (request_failed(api_response)) {
 							console.error('[component_common.save] api_response ERROR:', api_response);
 						}
 					}
@@ -709,11 +712,13 @@ component_common.prototype.save = async function(new_changed_data) {
 
 			} catch(error) {
 				console.error("+++++++ COMPONENT SAVE ERROR:", error);
-				// Consistent error return structure matches API response format
+				// A rejection here never reached the server (the transport resolves
+				// its own failures into an envelope). Return the SAME failure
+				// envelope shape the transport does, with a typed ApiError.
 				return {
-					result	: false,
-					msg		: error.message,
-					error	: error
+					ok		: false,
+					result	: false, // COMPAT v1 (REMOVAL: census 0)
+					error	: normalize_transport_error(error)
 				}
 			}
 		}
@@ -728,9 +733,13 @@ component_common.prototype.save = async function(new_changed_data) {
 
 
 	// Process Result
-		const result = api_response.result
+	// (!) ONE accessor per flow: this flow — save() here, change_value() below —
+	// reads the payload through response_data() everywhere, so the instance and
+	// the datum always hold the SAME object graph and the next save cannot ship
+	// stale entries.
+		const result = response_data(api_response)
 
-		if (result === false) {
+		if (request_failed(api_response)) {
 
 			// ERROR CASE
 			// restore 'modified': the data is still unsaved, so the orange marker
@@ -740,29 +749,20 @@ component_common.prototype.save = async function(new_changed_data) {
 				self.node.classList.add('error', 'modified')
 			}
 
-			// Determine exact error
-			const error = api_response.error || (api_response.errors ? api_response.errors[0] : null) || 'Unknown error';
+			console.error('component save error:', api_response.error)
 
-			switch (error) {
-				case 'not_logged': {
-					// Handle session expiration: wait for login and retry
-					let token
-					const login_successful_handler = async () => {
-						if (token) event_manager.unsubscribe(token);
-
-						// restore styles
-						self.node?.classList.remove('error')
-
-						// retry save
-						self.save(changed_data)
-					}
-					token = event_manager.subscribe('login_successful', login_successful_handler)
-					break;
-				}
-
-				default:
-					console.error('component save error:', api_response?.error || error)
-					break;
+			// THE handler. `recovered:true` means the cause is gone (the user
+			// re-logged in), so the save is worth repeating; anything else was
+			// already shown to the user by the policy.
+			const {recovered} = await handle_api_error(api_response.error, {wrapper: self.node})
+			if (recovered===true) {
+				// restore styles
+				self.node?.classList.remove('error')
+				// release the concurrency guard BEFORE repeating the call, or the
+				// retry hits the "already saving" short-circuit at the top. The
+				// repeated save publishes its own 'save' event.
+				self.saving = false
+				return self.save(changed_data)
 			}
 
 		} else {
@@ -1313,7 +1313,8 @@ component_common.prototype.change_value = async function(options) {
 			const api_response = await self.save(changed_data)
 
 			// fix instance changed_data
-			if (api_response && api_response.result) {
+			const saved_datum = response_data(api_response)
+			if (saved_datum) {
 
 				// reset component changed_data to empty array
 				self.data.changed_data = []
@@ -1323,7 +1324,7 @@ component_common.prototype.change_value = async function(options) {
 				// containing coordinates value
 				// @see component_geolocation tch244
 				if(!self.standalone){
-					await self.update_datum(api_response.result)
+					await self.update_datum(saved_datum)
 				}
 			}
 

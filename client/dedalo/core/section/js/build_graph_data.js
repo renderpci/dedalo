@@ -49,6 +49,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {get_term_tipos, get_fields_separator} from '../../common/js/section_map.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 
 
 
@@ -567,11 +568,11 @@ export const fetch_section_datum = async function(self, section_tipo, section_id
 				body : rqo
 			})
 
-			if (SHOW_DEBUG===true && api_response?.errors?.length) {
-				console.warn('[build_graph_data.fetch_section_datum] errors:', api_response.errors)
+			if (SHOW_DEBUG===true && request_failed(api_response)) {
+				console.warn('[build_graph_data.fetch_section_datum] failed:', api_response.error)
 			}
 
-		return api_response?.result || null
+		return response_data(api_response) || null
 
 	} catch (error) {
 		console.error('[build_graph_data.fetch_section_datum] error:', error)
@@ -644,11 +645,11 @@ export const fetch_section_terms = async function(self, locators) {
 
 		const api_response = await data_manager.request({ body : rqo })
 
-		if (SHOW_DEBUG===true && api_response?.errors?.length) {
-			console.warn('[build_graph_data.fetch_section_terms] errors:', api_response.errors)
+		if (SHOW_DEBUG===true && request_failed(api_response)) {
+			console.warn('[build_graph_data.fetch_section_terms] failed:', api_response.error)
 		}
 
-		const result = api_response?.result
+		const result = response_data(api_response)
 		return (result && typeof result === 'object') ? result : {}
 
 	} catch (error) {
@@ -1138,7 +1139,7 @@ export const fetch_inverse_relations = async function(self, root_section_tipo, r
 			body : count_rqo
 		})
 
-		const total = count_response?.result?.total ?? 0
+		const total = response_data(count_response)?.total ?? 0
 
 		// data request
 		const rqo = {
@@ -1157,11 +1158,11 @@ export const fetch_inverse_relations = async function(self, root_section_tipo, r
 			body : rqo
 		})
 
-		if (SHOW_DEBUG===true && api_response?.errors?.length) {
-			console.warn('[build_graph_data.fetch_inverse_relations] errors:', api_response.errors)
+		if (SHOW_DEBUG===true && request_failed(api_response)) {
+			console.warn('[build_graph_data.fetch_inverse_relations] failed:', api_response.error)
 		}
 
-		const result = api_response?.result
+		const result = response_data(api_response)
 
 		// relation_list returns an object { context, data } directly
 		if (!result || (!result.context && !result.data)) {

@@ -29,6 +29,7 @@
  */
 
 import { isInTransaction } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
 import { getNode } from './resolver.ts';
@@ -73,25 +74,31 @@ export async function resolveAliasTargetTipo(tipo: string): Promise<string | nul
 	const properties = (node.properties ?? {}) as Record<string, unknown>;
 	for (const retired of RETIRED_ALIAS_KEYS) {
 		if (retired in properties) {
-			throw new Error(
-				`component_alias '${tipo}': retired v5 key '${retired}' present — migrate the node to the v7 shape (WC-020)`,
-			);
+			throw new DedaloError('ontology.invalid_node', {
+				message: `component_alias '${tipo}': retired v5 key '${retired}' present — migrate the node to the v7 shape (WC-020)`,
+				coordinates: { tipo, retired_key: retired },
+			});
 		}
 	}
 	const aliasOf = properties.alias_of;
 	if (typeof aliasOf !== 'string' || aliasOf === '') {
-		throw new Error(
-			`component_alias '${tipo}': properties.alias_of is required (WC-020) — a standalone definition must use its real component model`,
-		);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `component_alias '${tipo}': properties.alias_of is required (WC-020) — a standalone definition must use its real component model`,
+			coordinates: { tipo },
+		});
 	}
 	const target = await getNode(aliasOf);
 	if (target === null) {
-		throw new Error(`component_alias '${tipo}': alias_of target '${aliasOf}' does not exist`);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `component_alias '${tipo}': alias_of target '${aliasOf}' does not exist`,
+			coordinates: { tipo, alias_of: aliasOf },
+		});
 	}
 	if (target.model === 'component_alias') {
-		throw new Error(
-			`component_alias '${tipo}': alias-of-alias refused ('${tipo}' → '${aliasOf}' → …) — single hop only (WC-020)`,
-		);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `component_alias '${tipo}': alias-of-alias refused ('${tipo}' → '${aliasOf}' → …) — single hop only (WC-020)`,
+			coordinates: { tipo, alias_of: aliasOf },
+		});
 	}
 	cacheWrite(aliasTargetCache, tipo, aliasOf);
 	return aliasOf;

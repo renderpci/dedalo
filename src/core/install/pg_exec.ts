@@ -13,6 +13,7 @@
 
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
+import { DedaloError } from '../errors/index.ts';
 import { resolvePgBinary } from './pg_bin.ts';
 
 /** A Postgres connection described explicitly (posted creds or CLI flags). */
@@ -48,10 +49,19 @@ export function connFromConfig(): DbConnDescriptor {
  */
 export function assertSafeConnField(name: string, value: string): void {
 	if (/^-/.test(value)) {
-		throw new Error(`install: refusing ${name} that looks like a command-line option ('${value}')`);
+		// The submitted VALUE stays out of the wire sentence (log-only `message`).
+		throw new DedaloError('install.invalid_input', {
+			message: `install: refusing ${name} that looks like a command-line option ('${value}')`,
+			publicMessage: `The ${name} value looks like a command-line option and was refused`,
+			coordinates: { field: name },
+		});
 	}
 	if (/[\r\n\0]/.test(value)) {
-		throw new Error(`install: refusing ${name} with a control character`);
+		throw new DedaloError('install.invalid_input', {
+			message: `install: refusing ${name} with a control character`,
+			publicMessage: `The ${name} value contains a control character and was refused`,
+			coordinates: { field: name },
+		});
 	}
 }
 

@@ -7,6 +7,9 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
+	import {append_text_lines} from '../../../core/common/js/utils/index.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -266,7 +269,7 @@ const get_content_data = async function(self) {
 			[messages_container].forEach(el => el.classList.remove('error'))
 			// Loading
 			content_data.classList.add('loading')
-			messages_container.innerHTML = ''
+			messages_container.replaceChildren()
 
 			// Add spinner to the button
 			button_generate.classList.add('button_spinner')
@@ -274,40 +277,55 @@ const get_content_data = async function(self) {
 			// Call API to process records in dd_ontology
 			const api_response = await self.set_records_in_dd_ontology()
 
-			// User messages
-			const msg = api_response.msg
-				? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-				: 'Unknown error'
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg',
-				inner_html		: msg,
-				parent			: messages_container
-			})
-
-			// Handle API errors
-			if (api_response.errors && Array.isArray(api_response.errors) && api_response.errors.length > 0) {
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'error',
-					inner_html		: api_response.errors.join('<br>'),
-					parent			: messages_container
-				})
+			// Failure: the ONE error surface. The policy decides what to show and
+			// renders the server text as TEXT (DS-1) — no HTML sink here.
+			if (request_failed(api_response)) {
+				messages_container.classList.add('error')
+				await handle_api_error(api_response.error, {wrapper: messages_container})
+				return
 			}
 
-			// Add error class on result false
-			if (api_response.result === false) {
-				messages_container.classList.add('error')
-			} else {
-				// Handle success case
+			// User messages. Envelope v2 has NO prose on a success: the run sentence
+			// is the payload's `summary` and the non-fatal per-record notes are its
+			// `errors` (tools/tool_ontology/server/tool_ontology.ts
+			// ontologyWriteResponse). Server text (labels, tipos, file paths):
+			// appended as TEXT nodes separated by real <br> elements, never parsed
+			// as HTML.
+			const ontology_data	= response_data(api_response) || {}
+			const summary		= ontology_data.summary
+			const msg_lines		= Array.isArray(summary)
+				? summary
+				: [summary || 'Unknown error']
+			append_text_lines(
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg',
+					parent			: messages_container
+				}),
+				msg_lines
+			)
+
+			// A SUCCESS can still carry warnings in the payload's `errors` (per-record
+			// notes, not a wire failure) — same TEXT treatment.
+			const ontology_notes = ontology_data.errors
+			if (Array.isArray(ontology_notes) && ontology_notes.length > 0) {
+				append_text_lines(
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error',
+						parent			: messages_container
+					}),
+					ontology_notes
+				)
 			}
 
 		} catch (error) {
 			console.error('Error in click_handler:', error)
+			// exception text: TEXT only (DS-1)
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
-				inner_html		: 'Error: ' + (error.message || 'Unknown error'),
+				text_content	: 'Error: ' + (error.message || 'Unknown error'),
 				parent			: messages_container
 			})
 			messages_container.classList.add('error')

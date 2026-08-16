@@ -11,6 +11,15 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
 	import {build_report_model, tsv_tables, tsv_errors} from './report_model.js'
+	// ONE error model for the stream: a frame that ENDED the run is read by
+	// normalize_stream_error and routed by the shared dispatcher — the report
+	// panel below keeps rendering the per-record error list, which is a RESULT,
+	// not the failure that stopped the job.
+	import {is_api_error, normalize_stream_error, request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	// The ONE error text resolver: label_key → English message → code. Used for
+	// the coded `connection_status` verdict below (a payload, not an envelope).
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 
 
 
@@ -154,7 +163,7 @@ const get_content_data = async function(self) {
 
 	// bun_status
 		const bun_status = self.bun_status || {}
-		const bun_status_class = bun_status.result === true ? 'bun_status ready' : 'bun_status fail'
+		const bun_status_class = bun_status.ready === true ? 'bun_status ready' : 'bun_status fail'
 		const bun_status_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: bun_status_class,
@@ -169,7 +178,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			text_content	: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
+			text_content	: bun_status.label || (bun_status.ready === true ? 'Ready' : 'Unavailable'),
 			parent			: bun_status_node
 		})
 
@@ -204,7 +213,8 @@ const get_content_data = async function(self) {
 		const refresh_pending_deletions = function() {
 			self.retry_pending_deletions({count_only: true})
 			.then(function(response){
-				const pending = response.result?.pending ?? 0
+				// envelope v2 payload: `{summary, total, retried, remaining}`
+				const pending = response_data(response)?.remaining ?? 0
 				if (pending > 0) {
 					pending_deletions_value.textContent = pending
 					pending_deletions_node.classList.remove('hide')
@@ -220,8 +230,13 @@ const get_content_data = async function(self) {
 			self.retry_pending_deletions({})
 			.then(function(response){
 				pending_deletions_button.disabled = false
-				if (response.msg) {
-					pending_deletions_value.textContent = response.msg
+				// the run's own sentence is the payload's `summary`; a refusal
+				// carries the coded, translated error instead
+				const retry_line = request_failed(response)
+					? error_text(response.error)
+					: response_data(response)?.summary
+				if (retry_line) {
+					pending_deletions_value.textContent = retry_line
 				}
 				refresh_pending_deletions()
 			})
@@ -612,12 +627,30 @@ export const render_publication_items = function(self) {
 								class_name		: 'label',
 								parent			: publication_items_grid
 							})
-							const class_status = node.connection_status.result===true
+							// WC-2026-08-15-diffusion-connection-status-ok-message: the
+							// verdict is `{ok, code?, message}` (never the retired
+							// `{result,msg}` pair). It is a NESTED PAYLOAD, not an
+							// envelope: `ok` is the verdict and `code` (present only on
+							// a negative one) is the registered reason.
+							const connection_status	= node.connection_status
+							const class_status		= connection_status.ok===true
 								? 'success'
 								: 'fail'
+							// A coded verdict goes through the ONE error renderer so the
+							// admin reads it in their language; `label_key` follows the
+							// registry convention (ERRORS_SPEC §2.3: `error_` + code with
+							// `.` → `_`), and `error_text` falls back to the server's
+							// English `message` when that key is not in the catalog.
+							const status_text = typeof connection_status.code==='string' && connection_status.code.length
+								? error_text({
+									code		: connection_status.code,
+									label_key	: 'error_' + connection_status.code.replace(/\./g, '_'),
+									message		: connection_status.message
+								})
+								: connection_status.message
 							ui.create_dom_element({
 								element_type	: 'div',
-								text_content	: node.connection_status.msg,
+								text_content	: status_text,
 								class_name		: 'value ' + class_status,
 								parent			: publication_items_grid
 							})
@@ -917,7 +950,17 @@ const publish_content = async (self, options) => {
 			process_id				: process_id
 		})
 		if (!stream) {
-			ui.update_node_content(response_message, 'Error: no stream received from server')
+			// The failure itself was already routed as ONE ApiError by export()
+			// (tool_diffusion.js): here the panel only says the run did not start and
+			// gives the button back. text_content, never update_node_content — that
+			// helper is insertAdjacentHTML (ui.js).
+			response_message.replaceChildren()
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'stream_not_opened',
+				text_content	: 'The publication did not start.',
+				parent			: response_message
+			})
 			response_message.classList.add('error')
 			publication_button.classList.remove('loading')
 			console.error('Error: data_manager.request_stream did not return a valid stream.');
@@ -950,8 +993,8 @@ const publish_content = async (self, options) => {
 					if(SHOW_DEBUG===true) {
 						console.log('cancel_process API response:', response);
 					}
-					if (response.errors && response.errors.length) {
-						alert("Errors: " + response.errors.join('<br>') );
+					if (request_failed(response)) {
+						handle_api_error(response.error, {wrapper: response_message?.parentNode});
 					}
 				})
 			}
@@ -1059,8 +1102,8 @@ const update_process_status = (options) => {
 					if(SHOW_DEBUG===true) {
 						console.log('cancel_process API response:', response);
 					}
-					if (response.errors && response.errors.length) {
-						alert("Errors: " + response.errors.join('<br>') );
+					if (request_failed(response)) {
+						handle_api_error(response.error, {wrapper: container});
 					}
 				})
 			}
@@ -1223,6 +1266,38 @@ const build_stream_handlers = function(options) {
 	const lock_items		= options.lock_items || []
 
 	let last_sse_response = null
+	// The failure that ended the run is announced ONCE: a stream can deliver
+	// several frames after it, and a diffusion run legitimately reports dozens of
+	// per-record errors that are not this.
+	let error_dispatched = false
+
+	/**
+	* ROUTE_FRAME_ERROR
+	* A TERMINAL frame (or one read_stream could not parse) may carry the failure
+	* that ended the run — envelope v2 `error`, or the COMPAT `errors[]` of a body
+	* with no result. Everything else is a progress frame and says nothing here.
+	*
+	* @param {Object|null} sse_response
+	*/
+	const route_frame_error = (sse_response) => {
+
+		if (error_dispatched || !sse_response) {
+			return
+		}
+		const terminal = sse_response.is_running===false || is_api_error(sse_response.error)
+		if (!terminal) {
+			return
+		}
+		const api_error = normalize_stream_error(sse_response)
+		if (!api_error) {
+			return
+		}
+		error_dispatched = true
+		// not awaited: the report panel must paint now, whatever surface the
+		// policy chooses (a relogin overlay can stay open for minutes)
+		handle_api_error(api_error, {wrapper: container, scope: 'tool_diffusion'})
+			.catch((dispatch_error) => console.error('[tool_diffusion] error dispatch failed:', dispatch_error))
+	}
 
 	// on_read (every chunk)
 	const on_read = (sse_response) => {
@@ -1248,8 +1323,9 @@ const build_stream_handlers = function(options) {
 				// that helper is insertAdjacentHTML (ui.js:2035), and data.msg
 				// carries server exception text and file paths straight from the
 				// engine. This is the XSS fix for both former call sites.
-				const line = (sse_response?.data?.msg)
-					? String(sse_response.data.msg)
+				const frame_msg = sse_response?.data?.msg
+				const line = frame_msg
+					? String(frame_msg)
 					: (is_running
 						? 'Process running… please wait'
 						: 'Process completed in ' + (sse_response?.total_time ?? ''))
@@ -1258,6 +1334,8 @@ const build_stream_handlers = function(options) {
 		)
 
 		render_run_report({self, item, sse_response, container})
+
+		route_frame_error(sse_response)
 
 		last_sse_response = sse_response
 	}
@@ -1349,7 +1427,7 @@ const render_run_report = function(options) {
 		severity: model.severity,
 		tables	: model.tables.rows.length,
 		nonzero	: model.tables.nonzero_count,
-		errors	: model.errors.total,
+		errors	: model.issues.total,
 		files	: model.files.entries.length,
 		causes	: model.causes.list.length
 	})
@@ -1526,8 +1604,9 @@ const render_run_report = function(options) {
 
 	// ── errors ───────────────────────────────────────────────────────────────
 	{
-		const zone = build_zone(panel, 'zone_errors', tl('errors_title', model.errors.total), null)
-		if (model.errors.total === 0) {
+		const issues = model.issues
+		const zone = build_zone(panel, 'zone_errors', tl('errors_title', issues.total), null)
+		if (issues.total === 0) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_empty',
@@ -1535,15 +1614,15 @@ const render_run_report = function(options) {
 				parent			: zone
 			})
 		} else {
-			if (model.errors.capped) {
+			if (issues.capped) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'dd_note state_warning errors_capped',
-					text_content	: tl('errors_capped_note', model.errors.total),
+					text_content	: tl('errors_capped_note', issues.total),
 					parent			: zone
 				})
 			}
-			model.errors.groups.forEach((group) => {
+			issues.groups.forEach((group) => {
 				const group_node = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'error_group',
@@ -1591,13 +1670,13 @@ const render_run_report = function(options) {
 			const raw_toggle = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'run_toggle toggle_raw_errors',
-				text_content	: tl('show_raw_errors', model.errors.raw.length),
+				text_content	: tl('show_raw_errors', issues.raw.length),
 				parent			: zone
 			})
 			const raw_errors = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'run_console raw_errors hide',
-				text_content	: model.errors.raw.join('\n'),
+				text_content	: issues.raw.join('\n'),
 				parent			: zone
 			})
 			add_toggle(raw_toggle, raw_errors, 'collapsed_tool_diffusion_report_errors_raw', false)

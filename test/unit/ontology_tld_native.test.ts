@@ -432,7 +432,7 @@ describe('the `tldless` drift kind', () => {
 
 		const outcome = await rebuildOntology(TLD, USER_ID);
 
-		expect(outcome.result).toBe(true); // converged as far as a writer can
+		expect(outcome.ok).toBe(true); // converged as far as a writer can
 		expect(outcome.applied).toContain('rebuilt 1 node(s)'); // the real node landed
 		expect(outcome.msg).toContain(`${SECTION}/1`); // …and the invisible one is still named
 	});
@@ -478,7 +478,7 @@ describe('importFromCopyFile lands rows in the target section (the tld rename)',
 				filePath: file,
 				matrixTable: 'matrix_ontology',
 			});
-			expect(imported.result).toBe(true);
+			expect(imported.ok).toBe(true);
 
 			// The row is in THIS section, not the one the file named.
 			const landed = (await sql.unsafe(
@@ -512,7 +512,7 @@ describe('importFromCopyFile lands rows in the target section (the tld rename)',
 
 		try {
 			const imported = await importOntologyFile({ tld: TLD, filePath: file });
-			expect(imported.result).toBe(true);
+			expect(imported.ok).toBe(true);
 			expect(imported.tld_normalized).toBe(1); // the export's tld was rewritten
 
 			// The end-to-end promise: it parses as a node of THIS tld.

@@ -35,7 +35,8 @@ const RQO = {
 
 let phpBody: { result?: { data?: unknown[] } } | null = null;
 let tsStatus = 0;
-let tsResultFalse = false;
+let tsOk = true;
+let tsErrorCode: string | null = null;
 
 beforeAll(async () => {
 	if (!hasPhpCredentials()) return;
@@ -59,7 +60,8 @@ beforeAll(async () => {
 		} as never,
 	);
 	tsStatus = tsResult.status;
-	tsResultFalse = tsResult.body.result === false;
+	tsOk = tsResult.body.ok;
+	tsErrorCode = tsResult.body.ok === false ? tsResult.body.error.code : null;
 }, 60000);
 
 describe.if(hasPhpCredentials())('model-vs-tipo quirk divergence (dd917 as area_ontology)', () => {
@@ -73,6 +75,7 @@ describe.if(hasPhpCredentials())('model-vs-tipo quirk divergence (dd917 as area_
 	test('TS REFUSES the mismatch (400)', () => {
 		if (!hasPhpCredentials()) return;
 		expect(tsStatus).toBe(400);
-		expect(tsResultFalse).toBe(true);
+		expect(tsOk).toBe(false);
+		expect(tsErrorCode).toBe('request.invalid_source');
 	});
 });

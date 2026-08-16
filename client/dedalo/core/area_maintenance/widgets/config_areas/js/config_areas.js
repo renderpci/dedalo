@@ -23,6 +23,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {render_config_areas} from './render_config_areas.js'
+	import {response_data} from '../../../../common/js/api_error.js'
 
 
 
@@ -99,7 +100,7 @@ config_areas.prototype.save = async function(areas_deny, areas_allow) {
 
 	// On success, force the live menu to recalculate so the admin sees the
 	// allow/deny effect immediately, without a logout/reload.
-	if (api_response && api_response.result) {
+	if (api_response && response_data(api_response)) {
 		event_manager.publish('menu_config_changed', { source: 'config_areas' })
 	}
 

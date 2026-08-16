@@ -17,6 +17,7 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const TEST_TABLE = 'matrix_test';
@@ -158,7 +159,8 @@ describe('component save round-trip (Phase 5d gate)', () => {
 			contextBadCsrf,
 		);
 		expect(deniedByCsrf.status).toBe(403);
-		expect(deniedByCsrf.body.msg).toContain('CSRF');
+		expect(deniedByCsrf.body.ok).toBe(false);
+		expect((deniedByCsrf.body.error as { code: string }).code).toBe('auth.csrf_failed');
 	});
 
 	test('insert allocates fresh ids from the meta counter; concurrent inserts never collide', async () => {
@@ -264,5 +266,17 @@ describe('component save round-trip (Phase 5d gate)', () => {
 				userId: -1,
 			}),
 		).rejects.toThrow(/not implemented/);
+		// …and it is the TYPED caller fault (the action string is the caller's).
+		const refusal = await refusalOf(
+			saveComponentData({
+				componentTipo: 'numisdata16',
+				sectionTipo: 'numisdata6',
+				sectionId: 1,
+				lang: 'lg-spa',
+				changedData: [{ action: 'not_a_real_action', value: null }],
+				userId: -1,
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_data');
 	});
 });

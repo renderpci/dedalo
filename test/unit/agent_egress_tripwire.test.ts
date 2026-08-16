@@ -89,7 +89,7 @@ describe('agent egress tripwire (mechanical classification of every read tool)',
 				section_id: 1,
 			});
 			expect(refusal).not.toBeNull();
-			expect(refusal?.error.code).toBe('egress_restricted');
+			expect(refusal?.error.code).toBe('mcp.egress_restricted');
 		}
 	});
 

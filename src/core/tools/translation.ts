@@ -12,7 +12,12 @@
  */
 
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
+import { DedaloError, ok } from '../errors/index.ts';
+import { LEGACY_TOKEN_MAP } from '../errors/registry.ts';
+import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
+import type { Principal } from '../security/permissions.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 import { addBabelNotransTags, processBabelResponse } from './babel.ts';
 
 export interface TranslateRequest {
@@ -23,13 +28,25 @@ export interface TranslateRequest {
 	text: string;
 }
 
-export interface TranslateResult {
-	/** Translated text, or false on provider failure. */
-	result: string | false;
-	msg: string;
-	/** Unmodified provider body (PHP $response->raw_result) — debug only, never persisted. */
-	rawResult?: string;
+/** The current RQO's id (the tool dispatcher opens the scope), or '' outside a request. */
+function currentRequestId(): string {
+	return currentRequestContext()?.requestId ?? '';
 }
+
+/**
+ * One provider call's outcome — an INTERNAL protocol shape, never a wire body:
+ * the discriminant is `ok`, so nothing envelope-shaped can escape a translator.
+ */
+export type TranslateResult =
+	| {
+			ok: true;
+			/** Translated text. */
+			text: string;
+			msg: string;
+			/** Unmodified provider body (PHP $response->raw_result) — debug only, never persisted. */
+			rawResult?: string;
+	  }
+	| { ok: false; msg: string };
 
 /** PHP tool_lang:270 budgets the provider message in BYTES (strlen/substr). */
 const PROVIDER_MSG_MAX_BYTES = 512;
@@ -100,11 +117,11 @@ export async function translateItems(
 			targetLang: cfg.targetLang,
 			text,
 		});
-		if (res.result === false) return { items: [], error: truncateProviderMessage(res.msg) };
-		if (res.result.startsWith('Sorry. Quota exceeded')) {
+		if (!res.ok) return { items: [], error: truncateProviderMessage(res.msg) };
+		if (res.text.startsWith('Sorry. Quota exceeded')) {
 			return { items: [], error: 'Sorry. Quota exceeded' };
 		}
-		out.push({ value: res.result, lang: cfg.targetLang });
+		out.push({ value: res.text, lang: cfg.targetLang });
 	}
 	return { items: out, error: null };
 }
@@ -178,7 +195,7 @@ function isSafeTranslatorUrl(uri: string): boolean {
  * PHP's — HTTP 200 is not proof of a translation.
  */
 export const babelProvider: TranslationProvider = async (req) => {
-	if (!isSafeTranslatorUrl(req.uri)) return { result: false, msg: 'invalid translator URL (SSRF)' };
+	if (!isSafeTranslatorUrl(req.uri)) return { ok: false, msg: 'invalid translator URL (SSRF)' };
 	const body = new URLSearchParams({
 		key: req.key,
 		// PHP: trim(TR::addBabelTagsOnTheFly($text)) — the timecode/index/person/
@@ -189,14 +206,14 @@ export const babelProvider: TranslationProvider = async (req) => {
 	});
 	try {
 		const res = await fetch(req.uri, { method: 'POST', body });
-		if (!res.ok) return { result: false, msg: `translate HTTP ${res.status}` };
+		if (!res.ok) return { ok: false, msg: `translate HTTP ${res.status}` };
 		const rawResult = await res.text();
 		const processed = processBabelResponse(rawResult);
 		return processed.ok
-			? { result: processed.value, msg: 'ok', rawResult }
-			: { result: false, msg: processed.msg };
+			? { ok: true, text: processed.value, msg: 'ok', rawResult }
+			: { ok: false, msg: processed.msg };
 	} catch (error) {
-		return { result: false, msg: (error as Error).message };
+		return { ok: false, msg: (error as Error).message };
 	}
 };
 
@@ -246,7 +263,7 @@ export async function translateAndWrite(input: {
 	uri: string;
 	key: string;
 	userId: number;
-}): Promise<{ ok: boolean; msg: string; count: number }> {
+}): Promise<{ ok: boolean; msg: string; count: number; providerError?: boolean }> {
 	const { getColumnNameByModel, getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
 	const { readMatrixRecord } = await import('../db/matrix.ts');
 	const { readComponentItems, filterItemsByLang } = await import('../resolve/component_data.ts');
@@ -277,7 +294,9 @@ export async function translateAndWrite(input: {
 		sourceLang: input.sourceLang,
 		targetLang: input.targetLang,
 	});
-	if (error !== null) return { ok: false, msg: error, count: 0 };
+	// `providerError` is what lets the caller route this sentence into the
+	// declared `provider_message` detail instead of onto the wire (WC-2026-08-09).
+	if (error !== null) return { ok: false, msg: error, count: 0, providerError: true };
 
 	return await withTransaction(async () => {
 		// TAKE THE ROW LOCK. The merge base must be the row as it stands NOW, not
@@ -317,9 +336,10 @@ export async function translateAndWrite(input: {
 		if (lockedRecord === null) {
 			// Impossible under the row lock we hold — report it rather than
 			// inventing an empty merge base out of it.
-			throw new Error(
-				`translateAndWrite: ${table}/${input.sectionTipo}/${input.sectionId} vanished between FOR UPDATE and the locked re-read`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `translateAndWrite: ${table}/${input.sectionTipo}/${input.sectionId} vanished between FOR UPDATE and the locked re-read`,
+				coordinates: { section_tipo: input.sectionTipo, section_id: input.sectionId },
+			});
 		}
 		const currentItems = readComponentItems(lockedRecord, input.componentTipo, input.model) ?? [];
 
@@ -380,15 +400,10 @@ export async function runAutomaticTranslation(
 	ctx: {
 		options: Record<string, unknown>;
 		userId: number;
-		principal: import('../security/permissions.ts').Principal;
+		principal: Principal;
 	},
 	configToolName: string,
-): Promise<{ result: unknown; msg: string; errors: string[]; count?: number }> {
-	const fail = (message: string, errors: string[] = [message]) => ({
-		result: false,
-		msg: `Error. ${message}`,
-		errors,
-	});
+): Promise<ApiEnvelope> {
 	const o = ctx.options;
 	const componentTipo = String(o.component_tipo ?? '');
 	const sectionTipo = String(o.section_tipo ?? '');
@@ -398,9 +413,10 @@ export async function runAutomaticTranslation(
 	const engine = String(o.translator ?? 'babel');
 
 	if (componentTipo === '' || sectionTipo === '' || targetLang === '') {
-		return fail('Missing required parameters: component_tipo, section_tipo, target_lang', [
-			'invalid_request',
-		]);
+		throw new DedaloError('request.invalid_options', {
+			publicMessage:
+				'Error. Missing required parameters: component_tipo, section_tipo, target_lang',
+		});
 	}
 
 	// PHP asserts BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124;
@@ -412,32 +428,31 @@ export async function runAutomaticTranslation(
 	// 'record' gate below is the second half only, so the pair is asserted
 	// explicitly first. (Both branches added this same check in parallel; merged
 	// 2026-07-29.)
-	const { getPermissions } = await import('../security/permissions.ts');
-	if ((await getPermissions(ctx.principal, sectionTipo, componentTipo)) < 2) {
-		return fail('insufficient permissions on the target component', ['unauthorized']);
-	}
-	const { assertActionPermission } = await import('./security.ts');
-	const gate = await assertActionPermission(
-		{
-			permission: 'record',
-			minLevel: 2,
-			handler: async () => ({ result: false, msg: '', errors: [] }),
-		},
-		{ section_tipo: sectionTipo, section_id: sectionId },
-		ctx.principal,
-	);
-	if (!gate.ok) return fail(gate.msg, gate.errors);
+	await assertTranslationPermissions(ctx.principal, sectionTipo, componentTipo, sectionId);
 
 	const { provider, error: providerError } = resolveTranslationProvider(engine);
-	if (provider === null) return fail(providerError ?? 'unknown translator engine');
+	if (provider === null) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: `Error. ${providerError ?? 'unknown translator engine'}`,
+		});
+	}
 
 	const { getToolConfig } = await import('./config.ts');
 	const cfg = resolveTranslatorConfig(await getToolConfig(configToolName), engine);
-	if (cfg === null) return fail(`Translator config (uri/key) is not defined for '${engine}'`);
+	if (cfg === null) {
+		throw new DedaloError('translation.not_configured', {
+			publicMessage: `Error. Translator config (uri/key) is not defined for '${engine}'`,
+		});
+	}
 
 	const { getModelByTipo } = await import('../ontology/resolver.ts');
 	const model = await getModelByTipo(componentTipo);
-	if (model === null) return fail(`unknown component tipo: ${componentTipo}`);
+	if (model === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			message: `unknown component tipo: ${componentTipo}`,
+			coordinates: { tipo: componentTipo },
+		});
+	}
 
 	const outcome = await translateAndWrite({
 		model,
@@ -451,9 +466,82 @@ export async function runAutomaticTranslation(
 		key: cfg.key,
 		userId: ctx.userId,
 	});
-	return outcome.ok
-		? { result: true, msg: outcome.msg, errors: [], count: outcome.count }
-		: fail(outcome.msg);
+	if (!outcome.ok) throw translationFailure(outcome);
+	return ok(true, {
+		requestId: currentRequestId(),
+		// PHP parity: the tool_lang / tool_lang_multi clients read `msg` (and the
+		// multi one the per-run `count`) at the top level.
+		extend: { msg: outcome.msg, count: outcome.count },
+	});
+}
+
+/**
+ * The two PHP permission asserts of automatic_translation, as ONE throwing gate
+ * (tool_lang :164/:167, tool_lang_multi :122/:124; TOOLS-10, 2026-07-28 audit):
+ * assert_tipo_permission(section_tipo, component_tipo, 2) — the SCHEMA pair,
+ * which a section-level check does NOT imply when the component carries its own
+ * dd774 grant, so a user with section write but NOT write on THIS component
+ * cannot translate-overwrite it — and assert_record_in_user_scope(section_tipo,
+ * section_id). The 'record' gate is the second half only, so the pair is
+ * asserted explicitly here.
+ */
+async function assertTranslationPermissions(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+	sectionId: number,
+): Promise<void> {
+	const { getPermissions } = await import('../security/permissions.ts');
+	if ((await getPermissions(principal, sectionTipo, componentTipo)) < 2) {
+		throw new DedaloError('perm.denied', {
+			message: 'insufficient permissions on the target component',
+			coordinates: { section_tipo: sectionTipo, component_tipo: componentTipo },
+		});
+	}
+	const { assertActionPermission } = await import('./security.ts');
+	const gate = await assertActionPermission(
+		{ permission: 'record', minLevel: 2, handler: unreachableHandler },
+		{ section_tipo: sectionTipo, section_id: sectionId },
+		principal,
+	);
+	if (!gate.ok) {
+		// security.ts still answers with a legacy token; mapped through the ONE
+		// translation table until its own sweep makes it throw (tools/dispatch.ts
+		// does exactly this).
+		throw new DedaloError(LEGACY_TOKEN_MAP[gate.errors?.[0] ?? ''] ?? 'perm.denied', {
+			message: gate.msg,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
+	}
+}
+
+/** Never called: assertActionPermission only consults the spec's gate fields. */
+const unreachableHandler = async (): Promise<never> => {
+	throw new DedaloError('internal.unexpected', {
+		message: 'translation permission probe handler must never run',
+	});
+};
+
+/**
+ * A failed translateAndWrite → the thrown refusal.
+ *
+ * WC-2026-08-09: a translation service that fails can answer with a whole HTML
+ * error page, and that text is UNTRUSTED third-party prose. It therefore travels
+ * as the code's declared `provider_message` DETAIL (already truncated to the
+ * 512-byte budget by translateItems), never as a `publicMessage` that would
+ * replace the registry English on the wire. Everything else — no matrix
+ * table/column, a record deleted under the lock — is an engine-side save
+ * failure.
+ */
+function translationFailure(outcome: { msg: string; providerError?: boolean }): DedaloError {
+	return outcome.providerError === true
+		? new DedaloError('translation.provider_failed', {
+				details: { provider_message: outcome.msg },
+				message: `translation provider failed: ${outcome.msg}`,
+			})
+		: new DedaloError('record.save_failed', {
+				message: `automatic translation: ${outcome.msg}`,
+			});
 }
 
 /**

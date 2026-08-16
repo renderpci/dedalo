@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global SHOW_DEBUG, page_globals, DEDALO_CORE_URL */
+/*global SHOW_DEBUG, page_globals, DEDALO_CORE_URL, get_label */
 /*eslint no-undef: "error"*/
 
 
@@ -21,6 +21,9 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_edit_ts_object} from './render_edit_ts_object.js'
 	import {render_children} from './view_default_edit_ts_object.js'
+	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -498,7 +501,7 @@ ts_object.prototype.build = async function(autoload=false) {
 * action: 'get_node_data'). The result is stored in self.data by build().
 * Derives thesaurus_view_mode and terms_are_model from the caller instance
 * so the server can tailor the response (e.g. ontology model labels).
-* @returns {Promise<Object>} Resolves to api_response.result on success.
+* @returns {Promise<Object>} Resolves to the API response payload on success.
 *   Result shape: { ar_elements, ts_id, ts_parent, is_descriptor, order,
 *     permissions_button_new, permissions_button_delete, permissions_indexation,
 *     has_descriptor_children, ... }
@@ -552,17 +555,18 @@ ts_object.prototype.get_node_data = async function() {
 			throw new Error("Invalid API response format");
 		}
 
-		if (api_response.result) {
+		const node_data = response_data(api_response)
+		if (node_data) {
 
 			// success case
 
-			return api_response.result
+			return node_data
 
 		}else{
 
 			// error case
 
-			console.warn("[get_node_data] Error, api_response.result is null or undefined");
+			console.warn("[get_node_data] Error, the API response carries no data");
 			throw new Error("API response did not contain a valid result.");
 		}
 	} catch (error) {
@@ -592,7 +596,7 @@ ts_object.prototype.get_node_data = async function() {
 * @param {Object|null} [options.pagination=null] - Pagination params forwarded to the API.
 * @param {Array|null} [options.children=null] - Explicit child locator list; null = all.
 * @param {boolean} [options.cache=true] - Return self.children_data when available.
-* @returns {Promise<Object>} Resolves to api_response.result.
+* @returns {Promise<Object>} Resolves to the API response payload.
 *   Shape: { ar_children_data: Array, pagination: { limit, offset, total } }
 * @throws {Error} Re-throws on API failure.
 */
@@ -662,20 +666,21 @@ ts_object.prototype.get_children_data = async function(options) {
 				console.warn('get_children_data api_response:', api_response);
 			}
 
-			if (api_response && api_response.result) {
+			const children_data = response_data(api_response)
+			if (children_data) {
 
 				// success case
 
 				// Sort by order (ascending)
-				api_response.result.ar_children_data.sort((a, b) => a.order - b.order);
+				children_data.ar_children_data.sort((a, b) => a.order - b.order);
 
-				return api_response.result
+				return children_data
 
 			}else{
 
 				// error case
 
-				console.warn("[get_children_data] Error, api_response.result is null or undefined");
+				console.warn("[get_children_data] Error, the API response carries no data");
 				throw new Error("API response did not contain a valid result.");
 			}
 		} catch (error) {
@@ -1118,8 +1123,9 @@ ts_object.prototype.get_children_recursive = function( options ) {
 		})
 		.then(async function(response) {
 
-			if (response && response.result) {
-				const section_data = response.result.data.find(el => el.tipo === section_tipo)
+			const response_datum = response_data(response)
+			if (response_datum) {
+				const section_data = response_datum.data.find(el => el.tipo === section_tipo)
 				console.log('----> get_children_recursive section_data X', section_data);
 				const children_recursive = section_data.value.map(el =>{
 					return {
@@ -1393,9 +1399,8 @@ ts_object.prototype.open_record = function(section_id, section_tipo) {
 * ADD_CHILD
 * Creates a new child thesaurus term record under this node by calling
 * dd_ts_api (action: 'add_child'). On server-side failure the method
-* surfaces the error via alert() (legacy UX pattern). On success the caller
-* is expected to refresh the children list.
-* (!) Uses alert() for error feedback — legacy pattern; not changed here.
+* hands the refusal to `handle_api_error` (one policy, one renderer). On success
+* the caller is expected to refresh the children list.
 * @returns {Promise<Object>} The raw api_response from the server.
 */
 ts_object.prototype.add_child = async function() {
@@ -1426,15 +1431,17 @@ ts_object.prototype.add_child = async function() {
 
 		if (!api_response) {
 
-			// Server script error
-			alert('Error on add_child. See server log for details');
+			// no answer at all (the transport always resolves an envelope, so this
+			// is a caller/programming fault rather than a server one)
+			await handle_api_error(new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: 'Error on add_child. See server log for details'
+			}), {wrapper: this.node})
 
-		}else{
+		}else if (request_failed(api_response)) {
 
-			if (api_response.result===false) {
-				// Problems found on add
-				alert(api_response.msg);
-			}
+			// Problems found on add: the policy renders the refusal
+			await handle_api_error(api_response.error, {wrapper: this.node})
 		}
 
 
@@ -1612,11 +1619,11 @@ ts_object.prototype.swap_parent = async function (options) {
 		if(SHOW_DEBUG===true) {
 			console.log('update_parent_data. Response:', api_response);
 		}
-		if (!api_response?.result) {
+		if (!response_data(api_response)) {
 			console.error('Error on update_parent_data. Unable to continue.');
 			// bubbles notifications
-			const msg = SHOW_DEBUG
-				? 'Error on update parent data. ' + api_response?.msg || 'Unknown error'
+			const msg = request_failed(api_response)
+				? error_text(api_response.error)
 				: 'Error on update parent data.'
 			event_manager.publish('notification', {
 				msg			: msg,
@@ -1625,7 +1632,7 @@ ts_object.prototype.swap_parent = async function (options) {
 			})
 		}else{
 			event_manager.publish('notification', {
-				msg			: api_response?.msg || 'OK',
+				msg			: get_label.saved || 'OK',
 				type		: 'success',
 				remove_time	: 1200
 			})
@@ -2826,13 +2833,13 @@ ts_object.prototype.save_order = async function( value ) {
 
 		if (SHOW_DEBUG) console.log("[ts_object.save_order] api_response", api_response)
 
-		if (!api_response?.result) {
-			throw new Error(api_response?.msg || 'Error on save order response')
+		if (!response_data(api_response)) {
+			throw new Error(request_failed(api_response) ? error_text(api_response.error) : 'Error on save order response')
 		}
 
 		// Success notification
 		event_manager.publish('notification', {
-			msg			: api_response.msg || 'Order updated successfully',
+			msg			: get_label.saved || 'Order updated',
 			type		: 'success',
 			remove_time	: 1200
 		})

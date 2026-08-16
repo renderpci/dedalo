@@ -6,8 +6,12 @@
 
 // imports
 	import {validate_tipo} from '../../../core/common/js/common.js'
+	import {append_text_lines} from '../../../core/common/js/utils/index.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -275,11 +279,18 @@ const get_content_data = async function(self) {
 
 			// import_files
 				self.import_files(files, time_machine_save)
-				.then(function(api_response){
+				.then(async function(api_response){
 					if(SHOW_DEBUG===true) {
 						console.log(')) import_files api_response:', api_response)
 					}
-					if(api_response.result===true && api_response.job_id){
+					// failure. ONE error model: before this a refused import was
+					// completely silent — the button simply did nothing.
+					if (request_failed(api_response)) {
+						console.error('import_files failed:', api_response.error)
+						await handle_api_error(api_response.error, {wrapper: process_info_container})
+						return
+					}
+					if(response_data(api_response)===true && api_response.job_id){
 						// The job runs in the server process we are talking to, so its id is
 						// the whole handle: subscribe and every state change is PUSHED to us.
 						follow_import_job({
@@ -389,7 +400,7 @@ const render_file_info = function(self, item) {
 			const checkbox_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'checkbox_label',
-				inner_html		: item.name,
+				text_content	: item.name,
 				parent			: file_line
 			})
 			const checkbox_file_selection = ui.create_dom_element({
@@ -499,7 +510,7 @@ const render_file_info = function(self, item) {
 				const section_label = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'section_label',
-					inner_html		: item.section_label || 'XX',
+					text_content	: item.section_label || 'XX',
 					parent			: section_tipo_label
 				})
 
@@ -540,7 +551,7 @@ const render_file_info = function(self, item) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info_text',
-			inner_html		: info_text,
+			text_content	: info_text,
 			parent			: info_container
 		})
 
@@ -584,7 +595,7 @@ const render_file_info = function(self, item) {
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview error hide',
-				inner_html		: text.replaceAll('<br>','\n'),
+				text_content	: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
 			button_preview.classList.add('error')
@@ -597,7 +608,7 @@ const render_file_info = function(self, item) {
 			preview = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'preview hide',
-				inner_html		: text.replaceAll('<br>','\n'),
+				text_content	: text.replaceAll('<br>','\n'),
 				parent			: fragment
 			})
 			button_preview.classList.add('ok')
@@ -682,7 +693,7 @@ const render_columns_mapper = async function(self, item) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'warning error',
-				inner_html		: section_components_list.msg,
+				text_content	: section_components_list.error,
 				parent			: fragment
 			})
 
@@ -709,8 +720,14 @@ const render_columns_mapper = async function(self, item) {
 		const header = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'columns_header icon_arrow',
-			inner_html		: 'Columns mapper: <b>' + section_label + '</b>',
+			text_content	: 'Columns mapper: ',
 			parent			: fragment
+		})
+		// the section label is server text — an ELEMENT, never markup in a string
+		ui.create_dom_element({
+			element_type	: 'b',
+			text_content	: section_label,
+			parent			: header
 		})
 
 	// body
@@ -789,7 +806,7 @@ const render_columns_mapper = async function(self, item) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'column_name',
-					inner_html		: column_name,
+					text_content	: column_name,
 					parent			: line
 				})
 
@@ -797,7 +814,7 @@ const render_columns_mapper = async function(self, item) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'column_info',
-					inner_html		: item.ar_columns_map[i].model,
+					text_content	: item.ar_columns_map[i].model,
 					parent			: line
 				})
 
@@ -805,7 +822,7 @@ const render_columns_mapper = async function(self, item) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'column_info',
-					inner_html		: item.ar_columns_map[i].label,
+					text_content	: item.ar_columns_map[i].label,
 					parent			: line
 				})
 
@@ -832,7 +849,7 @@ const render_columns_mapper = async function(self, item) {
 				const target_select = ui.create_dom_element({
 					element_type	: 'select',
 					class_name		: 'column_select',
-					inner_html		: column_name,
+					text_content	: column_name,
 					parent			: target_container
 				})
 				// empty option
@@ -860,7 +877,7 @@ const render_columns_mapper = async function(self, item) {
 					const option = ui.create_dom_element({
 						element_type	: 'option',
 						value			: ar_components[k].value,
-						inner_html		: ar_components[k].label + ' [' + ar_components[k].value + ' - '+ ar_components[k].model +']',
+						text_content	: ar_components[k].label + ' [' + ar_components[k].value + ' - '+ ar_components[k].model +']',
 						parent			: target_select
 					})
 					// assign the model to the option to be obtained by the the event
@@ -940,7 +957,7 @@ const render_columns_mapper = async function(self, item) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'sample_data',
-					inner_html		: sample_data,
+					text_content	: sample_data,
 					parent			: line
 				})
 		}//end for (let i = 0; i < file_info_length; i++)
@@ -1060,14 +1077,18 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
 			spinner.remove()
 
-			// process_file remove info loading
-			if (!response.result) {
+			// process_file remove info loading. Envelope v2: a refusal carries the
+			// coded, translated error; a success has no prose (the payload is
+			// `{file_name}`), so the tool's own sentence is used.
+			if (request_failed(response) || !response_data(response)) {
 				// error case (SEC-031)
-				process_file_info.textContent = response.msg || 'Error on processing file!'
+				process_file_info.textContent = request_failed(response)
+					? error_text(response.error)
+					: 'Error on processing file!'
 
 			}else{
 				// OK case (SEC-031)
-				process_file_info.textContent = response.msg || 'Processing file done successfully.'
+				process_file_info.textContent = 'Processing file done successfully.'
 
 				// self update (forces update list of files)
 					self.refresh()
@@ -1147,8 +1168,9 @@ const follow_import_job = (options) => {
 				)
 
 				// A job that died (server shutdown, an unhandled throw) reports here.
-				const errors = (sse_response.errors && sse_response.errors.length)
-					? sse_response.errors
+				const frame_errors = sse_response.errors
+				const errors = (frame_errors && frame_errors.length)
+					? frame_errors
 					: null
 				if (errors) {
 					progress_node.error(
@@ -1268,35 +1290,35 @@ const render_progress_node = (self, container) => {
 				? ' (' + frame.file_index + '/' + frame.files_total + ')'
 				: ''
 
-			ui.update_node_content(headline, [
+			// textContent: `frame.file` and `frame.component_label` are server text
+			headline.textContent =
 				phase_label + ': ' + (frame.file || '') + position +
 				(rows_total > 0 ? ' — ' + row + '/' + rows_total + ' (' + percent + '%)' : '')
-			])
 
 			const ar_detail = []
 			if (frame.section_id) ar_detail.push('id: ' + frame.section_id)
 			if (frame.component_label) ar_detail.push(frame.component_label)
-			ui.update_node_content(detail, [ar_detail.join(' | ')])
+			detail.textContent = ar_detail.join(' | ')
 
-			ui.update_node_content(counters, [
+			counters.textContent =
 				label_of('created', 'Created') + ': ' + (frame.created || 0) + '  ·  ' +
 				label_of('updated', 'Updated') + ': ' + (frame.updated || 0) + '  ·  ' +
 				label_of('failed', 'Failed') + ': ' + (frame.failed || 0) + '  ·  ' +
 				label_of('warnings', 'Warnings') + ': ' + (frame.warnings || 0)
-			])
 		},
 		finish : (msg) => {
 			bar_track.classList.remove('indeterminate')
 			bar_fill.style.width = '100%'
 			panel.classList.add('done')
-			ui.update_node_content(headline, [msg])
-			ui.update_node_content(detail, [''])
+			headline.textContent = msg
+			detail.textContent = ''
 		},
 		error : (msg) => {
+			// `msg` carries the job's own error text — text_content, never HTML
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
-				inner_html		: msg,
+				text_content	: msg,
 				parent			: panel
 			})
 		}
@@ -1372,12 +1394,14 @@ const render_id_block = (self, parent, label_key, fallback_label, ids) => {
 	copy_button(self, header, 'copy_to_find', 'Copy as comma separated', () => ids.join(','))
 	copy_button(self, header, 'copy_as_column', 'Copy as column', () => ids.join('\n'))
 
-	ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'section_id_container',
-		inner_html		: ids.join('<br>'),
-		parent			: parent
-	})
+	append_text_lines(
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'section_id_container',
+			parent			: parent
+		}),
+		ids
+	)
 }//end render_id_block
 
 
@@ -1423,13 +1447,13 @@ const render_issue_block = (self, parent, label_key, fallback_label, issues, css
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'failed_container ' + css_class,
-			inner_html		: row_label + issue.section_id + ' | ' + issue.component_tipo + ' | ' + issue.msg,
+			text_content	: row_label + issue.section_id + ' | ' + issue.component_tipo + ' | ' + issue.msg,
 			parent			: parent
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'failed_data_container ' + css_class,
-			inner_html		: JSON.stringify( issue.data ),
+			text_content	: JSON.stringify( issue.data ),
 			parent			: parent
 		})
 	}
@@ -1443,7 +1467,8 @@ const render_issue_block = (self, parent, label_key, fallback_label, issues, css
 *
 * @param {Object} options
 * @param {Object} options.self - tool instance
-* @param {Object} options.batch_report - ImportBatchReport {result: ImportFileReport[], msg, errors}
+* @param {Object} options.batch_report - the terminal frame's envelope; its payload
+*   is the ImportBatchReport {files: ImportFileReport[], summary, created, updated, failed}
 * @param {HTMLElement} options.process_info_container
 * @returns {void}
 */
@@ -1452,13 +1477,17 @@ const render_final_report = function(options){
 	const self			= options.self
 	const batch_report	= options.batch_report
 
-	if (!batch_report || !Array.isArray(batch_report.result)) {
+	// The terminal frame's `data` IS the handler's envelope (background.ts: "the
+	// RETURN VALUE becomes the final SSE frame's data"), so the report is one
+	// level deeper — `response_data` is the ONE accessor that reaches it.
+	const report_data	= response_data(batch_report)
+	const files			= report_data?.files
+	if (!Array.isArray(files)) {
 		console.error('Invalid import report:', batch_report)
 		return
 	}
 
 	const selected_files	= self.csv_files_list
-	const files				= batch_report.result
 
 	for (let i = files.length - 1; i >= 0; i--) {
 
@@ -1503,13 +1532,14 @@ const render_final_report = function(options){
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'user_msg_container',
-				inner_html		: report.section_tipo + ' — ' + summary +
+				text_content	: report.section_tipo + ' — ' + summary +
 					(report.ms ? ' (' + report.ms + ' ms)' : ''),
 				parent			: result_container
 			})
 
 		// file-level errors (unreadable CSV, no mapped column, a skipped row…)
-			if (report.errors && report.errors.length > 0) {
+			const file_errors = report.errors
+			if (file_errors && file_errors.length > 0) {
 				const errors_container = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'dedalo_last_error_container',
@@ -1518,7 +1548,7 @@ const render_final_report = function(options){
 				ui.create_dom_element({
 					element_type	: 'pre',
 					class_name		: 'error_pre',
-					inner_html		: report.errors.join('\n'),
+					text_content	: file_errors.join('\n'),
 					parent			: errors_container
 				})
 			}
@@ -1573,9 +1603,8 @@ const check_process_data = (options) => {
 	self.get_background_jobs('import_files')
 	.then(function(api_response){
 
-		const jobs = (api_response && Array.isArray(api_response.result))
-			? api_response.result
-			: []
+		const job_rows	= response_data(api_response)
+		const jobs		= Array.isArray(job_rows) ? job_rows : []
 
 		// Newest first (the server sorts). Re-attach only to a run still going —
 		// a finished one would otherwise re-render its report every time the tool

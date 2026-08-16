@@ -83,7 +83,7 @@ describe.if(hasPhpCredentials())("duplicated operator '!!' differential", () => 
 				principal,
 			} as never,
 		);
-		const tsTotal = Number((tsResult.body as { result?: { total?: unknown } }).result?.total);
+		const tsTotal = Number((tsResult.body as { data?: { total?: unknown } }).data?.total);
 		expect(tsTotal).toBe(2);
 
 		if (!hasPhpCredentials()) return;

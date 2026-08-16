@@ -267,8 +267,8 @@ describe('subtitles still work on a paragraphed transcript', () => {
 			total_ms: 60000,
 		});
 
-		expect(vtt.result).not.toBe(false);
-		const text = vtt.result as string;
+		expect(vtt.data).not.toBe(false);
+		const text = vtt.data as string;
 		expect(text.startsWith('WEBVTT')).toBe(true);
 		// Cue times must be spread across the recording, not bunched at its head.
 		expect(text).toContain('00:00:');

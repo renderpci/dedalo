@@ -9,10 +9,13 @@
 * Central client-to-server request layer for Dédalo v7.
 *
 * Responsibilities:
-* - Building and dispatching all API calls to the PHP JSON endpoint
+* - Building and dispatching all API calls to the JSON endpoint
 *   (`api/v1/json/`) with configurable HTTP options (method, mode, credentials).
-* - Retry-with-exponential-backoff and per-attempt timeout via
-*   `_fetch_with_retry_and_timeout`.
+* - Delegating the fetch itself to the shared, DOM-free transport
+*   `api_transport.js` (`fetch_api`: read-once body, JSON parse, envelope
+*   normalisation, retry keyed on `retryable` + `Retry-After`, per-attempt
+*   timeout with the busy-server health probe). The same transport serves the
+*   cache Worker and the Service Worker, so there is ONE request algorithm.
 * - CSRF token management (SEC-008): reads the token from `page_globals.csrf_token`,
 *   injects it as `X-Dedalo-Csrf-Token`, refreshes it from every response, and
 *   performs a single transparent retry on CSRF rejection.
@@ -23,6 +26,15 @@
 *   `*_local_db*` family of methods.
 * - Convenience download helpers (`download_url`, `download_data`).
 *
+* ERROR CONTRACT (envelope v2, see api_error.js): `request` resolves the server
+* envelope. On ANY failure — envelope `ok:false`, transport, unparseable body —
+* the resolved object carries `error` = an `ApiError` (`request_failed(api_response)`
+* is THE test), and the transport publishes `'api_error'` (the ApiError) on the
+* event bus. The payload of a success is `response_data(api_response)`.
+* A SUCCESS may also carry `notices[]` (non-fatal coded facts, ERRORS_SPEC §3):
+* they are published once as `'api_notices'` and rendered by the page's
+* `handle_api_notice` subscriber unless a caller reads them itself.
+*
 * Main exports: `data_manager` (namespace object), `check_server_health`,
 * `render_msg_to_inspector`, `download_url`, `download_data`.
 */
@@ -31,27 +43,15 @@
 	import {JSON_parse_safely} from '../../../core/common/js/utils/util.js'
 	import {event_manager} from './event_manager.js'
 	import {dd_request_idle_callback} from './events.js';
-
-
-
-/**
-* CLASS HTTPERROR
-* Custom Error subclass representing an HTTP-level failure (non-2xx response).
-* Raised by `_fetch_with_retry_and_timeout` so that retry logic can inspect
-* the HTTP status code separately from a generic network `TypeError`.
-* Retryable statuses: 408, 429, 500, 502, 503, 504.
-* Non-retryable 4xx errors are re-thrown immediately without further attempts.
-* @see _fetch_with_retry_and_timeout
-*/
-class HttpError extends Error {
-	constructor(status, statusText, response) {
-		super(`HTTP ${status}: ${statusText}`);
-		this.name = 'HttpError';
-		this.status = status;
-		this.statusText = statusText;
-		this.response = response;
-	}
-}
+	import {fetch_api, check_health} from './api_transport.js'
+	import {
+		ApiError,
+		CLIENT_ERROR,
+		normalize_api_error,
+		normalize_transport_error,
+		response_data
+	} from './api_error.js'
+	import {render_error_toast} from './render_api_error.js'
 
 
 
@@ -106,11 +106,12 @@ Object.defineProperty(data_manager, 'url', {
 * HEALTH_URL
 * URL of the engine's lightweight liveness endpoint. The TS/Bun engine serves it
 * at the ORIGIN ROOT `/health` (src/server.ts: `url.pathname === '/health'`), NOT
-* under the API path — the legacy PHP `<api>/health/` path 404s on the TS engine
+* under the API path — the legacy `<api>/health/` path 404s on the TS engine
 * (that stale path is why the system_info widget reported `false`). Kept as an
 * absolute, origin-relative path so it resolves the same from any page depth; the
 * reverse proxy must forward `/health` to the engine (see deploy/nginx.conf).
-* Called by `check_server_health` to tell a slow-but-alive server from a dead one.
+* Used by the transport's mid-attempt probe to tell a slow-but-alive server
+* from a dead one.
 * @type {string}
 */
 Object.defineProperty(data_manager, 'health_url', {
@@ -123,52 +124,61 @@ Object.defineProperty(data_manager, 'health_url', {
 
 /**
 * CHECK_SERVER_HEALTH
-* Probes the lightweight PHP health endpoint to verify the server is reachable
-* and responding without triggering the full API bootstrap.
-* Cache-busted with `performance.now()` + random number to prevent CDN / proxy
-* caching from masking a real outage.
-* Used by `_fetch_with_retry_and_timeout` to distinguish a long-running process
-* (server alive but busy) from a genuine server failure.
+* Probes the lightweight health endpoint to verify the server is reachable
+* and responding without triggering the full API bootstrap (cache-busted, so a
+* proxy cannot mask an outage). Thin wrapper over the transport's `check_health`
+* kept for the widgets that import it (system_info, diffusion_server_control).
 * @returns {Promise<boolean>} true when the server responds with HTTP 2xx
 */
 export const check_server_health = async () => {
-	try {
-		const health_url = data_manager.health_url
-		const url = health_url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
-		const response = await fetch( url, {
-			method: 'GET',
-			cache: 'no-cache'
-		});
-		return response.ok;
-	} catch (error) {
-		return false;
-	}
+	return check_health(data_manager.health_url)
 }//end check_server_health
+
+
+
+/**
+* CLIENT_FAILURE
+* Builds the envelope `request` resolves when the call could not even be sent
+* (bad URL, unserialisable body): v2 shape + the ApiError under `error`.
+* @param {ApiError} api_error
+* @returns {Object}
+*/
+const client_failure = (api_error) => ({
+	ok		: false,
+	error	: api_error
+})
 
 
 
 /**
 * REQUEST
 * Central API call dispatcher. Serializes `options.body` to JSON, attaches the
-* CSRF token (SEC-008), dispatches through `_fetch_with_retry_and_timeout`, parses
-* the JSON response, and returns a normalized API response object.
+* CSRF token (SEC-008), dispatches through the shared transport (`fetch_api`),
+* and resolves the API envelope.
 *
-* Key behaviors:
-* - Merges caller-supplied options with safe defaults (5 retries, 500 ms base
-*   delay, 5 000 ms timeout). All defaults can be overridden per call.
-* - If `options.cache_handler.handler === 'localdb'`, looks up the result from
-*   IndexedDB before going to the network and stores a successful response back
-*   on idle.
-* - Injects `recovery_mode: true` into every body when
-*   `page_globals.recovery_mode` is set, so server-side operations skip
-*   non-essential side effects.
-* - On CSRF rejection (`errors` includes `'csrf_failed'`), retries the request
-*   exactly once with the fresh token obtained from the rejection response.
-*   The `_csrf_retried` flag on options prevents an infinite loop.
-* - Logs structured error objects to `page_globals.api_errors` (captured by the
-*   page renderer to display user-visible error banners).
-* - Publishes `'api_response_errors'` events via `event_manager` when the
-*   server returns non-fatal `errors` alongside a valid result.
+* Algorithm:
+*  1. Merge options over the safe defaults (5 retries, 500 ms base delay,
+*     5 000 ms timeout) — every default is overridable per call.
+*  2. CSRF header from `page_globals.csrf_token` unless the caller set one.
+*  3. `cache_handler.handler==='localdb'` → IndexedDB short-circuit on a hit.
+*  4. `page_globals.recovery_mode` → `recovery_mode:true` in the body.
+*  5. URL / body validation → a `client.*` failure envelope, no network.
+*  6. `fetch_api`: fetch never throws on status → body read ONCE → JSON →
+*     `normalize_api_error` → retry ONLY when `api_error.retryable` or the
+*     server sent `Retry-After` (no status list, no 401/403 carve-outs — an
+*     auth/permission answer is an envelope like any other and is dispatched
+*     on its CODE). The mid-attempt health probe reports a busy server through
+*     the `awaiting_busy_server` notice.
+*  7. Refresh `page_globals.csrf_token` from every envelope (success or
+*     failure) and publish `session_activity` (WC-051).
+*  8. `auth.csrf_failed` → resend exactly once
+*     (`_csrf_retried`).
+*  9. Failure: attach `error` = the ApiError to the envelope (or synthesise
+*     `{ok:false, error}` when no JSON), publish `'api_error'`, toast TRANSPORT
+*     failures (the user must learn the network is down even when no caller
+*     handles the failure), resolve the envelope.
+* 10. Success: publish `'api_notices'` when the envelope carries any, write
+*     through to IndexedDB on idle when cached; resolve the envelope.
 *
 * @param {Object} options - Request configuration
 * @param {string} [options.url] - Override the default API URL
@@ -180,14 +190,18 @@ export const check_server_health = async () => {
 * @param {string} [options.redirect='follow'] - Fetch redirect mode
 * @param {string} [options.referrer='no-referrer'] - Fetch referrer
 * @param {Object|string|null} [options.body=null] - Request payload; objects are JSON-stringified
-* @param {boolean} [options.use_worker=false] - Route through a Web Worker (currently deactivated)
+* @param {AbortSignal} [options.signal] - Caller abort (→ `client.aborted`, never retried)
 * @param {number} [options.retries=5] - Maximum retry attempts
 * @param {number} [options.base_delay=500] - Base exponential-backoff delay in ms
 * @param {number} [options.timeout=5000] - Per-attempt timeout in ms
 * @param {Object} [options.cache_handler] - IndexedDB cache descriptor `{handler:'localdb', id:string}`
+* @param {string} [options.notices='page'] - Who renders a SUCCESS envelope's
+*   `notices[]`: 'page' publishes `'api_notices'` (the page subscriber toasts them
+*   through the policy table); 'caller' publishes NOTHING, because the caller
+*   renders the notice in its own wrapper and a second toast would duplicate it.
 * @param {boolean} [options._csrf_retried] - Internal flag; prevents recursive CSRF retry
-* @returns {Promise<Object>} Parsed API response. Always an object; on failure:
-*   `{ result: false, msg: string, error: *, errors: string[] }`
+* @returns {Promise<Object>} The API envelope. Always an object; on failure it
+*   carries `error` (an ApiError) — test with `request_failed(api_response)`.
 */
 data_manager.request = async function(options) {
 
@@ -203,16 +217,17 @@ data_manager.request = async function(options) {
 		redirect	: 'follow', // manual, *follow, error
 		referrer	: 'no-referrer', // no-referrer, *client
 		body		: null, // body data type must match "Content-Type" header
-		use_worker	: false,
+		signal		: null,
 		retries		: 5, // default request retries int
 		base_delay	: 500, // default base delay in ms
-		timeout		: 5000 // default timeout in ms
+		timeout		: 5000, // default timeout in ms
+		notices		: 'page' // 'page' = publish 'api_notices' (default); 'caller' = the caller renders them itself
 	};
 
 	const merged_options = { ...default_options, ...options };
 
 	// vars from options applying defaults
-	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker, retries, base_delay, timeout } = merged_options;
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, signal, retries, base_delay, timeout, notices } = merged_options;
 
 	// SEC-008: attach the CSRF token captured from the previous API response
 	// (or `null` on the very first call). The server requires the
@@ -232,7 +247,11 @@ data_manager.request = async function(options) {
 			cache_handler.id,
 			'data' // string table
 		);
-		if (cached_data) {
+		// Only an envelope v2 hit is a hit: a body cached before the error-system
+		// cut (WC-2026-08-15-error-envelope-v2) still carries the retired
+		// `{result,msg}` shape and would render as "menu without context". A stale
+		// or foreign value falls through to the network and is overwritten below.
+		if (cached_data && cached_data.value?.ok === true) {
 			return cached_data.value
 		}
 	}
@@ -240,9 +259,8 @@ data_manager.request = async function(options) {
 	// Debug request
 	if(SHOW_DEBUG) {
 		const action		= body?.action || 'load';
-		const worker_label	= use_worker ? '[wk] ' : ''
 		const source_model	= body?.source?.model || ''
-		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), source_model, merged_options);
+		console.warn(`> data_manager request ${method}:`, action.toUpperCase(), source_model, merged_options);
 	}
 
 	// recovery mode. Auto add if environment recovery_mode is true
@@ -253,498 +271,180 @@ data_manager.request = async function(options) {
 		}
 	}
 
-	// Reset page_globals.api_errors at the beginning of each request
-	window.page_globals.api_errors = [];
-	window.page_globals.request_message = null; // Reset request message
+	window.page_globals.request_message = null;
 
-	// Check URL
+	// Check URL. Nothing can be sent: resolve a client failure, no network.
 	if (!url || !url.length) {
-		const msg = 'Error: empty or invalid API URL';
-		console.error(msg, { typeof: typeof url, value: url });
-		this._record_api_error(
-			'data_manager', // error_type
-			msg, // message
-			'data_manager URL validation', // trace
-			null // details
-		)
-		return {
-			result	: false,
-			msg		: msg,
-			error	: 'URL is not valid',
-			errors	: ['URL is not valid']
-		};
+		const api_error = new ApiError({
+			code	: CLIENT_ERROR.NETWORK,
+			message	: 'Empty or invalid API URL',
+			details	: {reason: 'invalid_url'},
+			source	: 'client'
+		})
+		console.error(api_error.message, { typeof: typeof url, value: url });
+		event_manager.publish('api_error', api_error)
+		return client_failure(api_error);
 	}
-	// Adding 'time' param prevents potential proxy problems in 'no-cache' calls
-	// 'time' param is ignored by the API endpoint (@see ../json/index.php)
-	// const safe_url = merged_options.cache === 'no-cache'
-	// 	? url // + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
-	// 	: url
-	const safe_url = url
 
-	// using worker cases.
-		// Note that execution is slower, but it is useful for low priority
-		// calls like 'update_lock_components_state'
-		// (!) Deactivated 22-05-2025 temporally to simplify network issues debug
-		// if (use_worker === true) {
-		// 	return this._handle_worker_request(url, body);
-		// }
-
-	// handle_errors
-	const handle_errors = async (response) => {
-		if (!response.ok) {
-			// WC-051: HTTP 401 is the session gate, and it carries a normal API
-			// envelope (`errors:['not_logged']`). Let it through UNPARSED-BY-US so the
-			// caller's `.json()` reads it and `api_response_errors` publishes — that
-			// event is what raises the re-login modal (page.js) and what components
-			// wait on to retry after `login_successful`.
-			//
-			// Throwing here instead — as every non-ok status used to — swallowed the
-			// envelope: the whole re-login recovery path was unreachable, and an
-			// expired session showed up as a network error with blank widgets. It is
-			// NOT an error to be reported either; `_record_api_error` would relay a
-			// routine logout to the error-report surface on every pending request.
-			// WC-2026-08-12-authorization-denial-token: HTTP 403 is the SAME kind of
-			// answer for the same reason — the authorization gate replying with a
-			// normal API envelope (`errors:['not_authorized']`). Reported as a
-			// transport failure it became "Not retry-able HTTP error 403" over a
-			// blank page, with the real message ("Insufficient permissions to read")
-			// never reaching `.json()`.
-			if (response.status === 401 || response.status === 403) {
-				return response;
-			}
-			console.warn("-> HANDLE_ERRORS response:", response);
-			// extract response text to console
-			let response_text;
+	// Prepare body for request
+	let request_body = null;
+	if (body) {
+		if (typeof body === 'string') {
+			request_body = body;
+		} else {
 			try {
-				response_text = await response.text();
-			} catch (textError) {
-				response_text = `Failed to read response text: ${textError.message}`;
+				request_body = JSON.stringify(body);
+			} catch (json_error) {
+				const api_error = new ApiError({
+					code	: CLIENT_ERROR.NETWORK,
+					message	: `Failed to serialize request body: ${json_error.message}`,
+					details	: {reason: 'body_serialize'},
+					source	: 'client',
+					raw		: json_error
+				})
+				console.error(api_error.message, json_error);
+				event_manager.publish('api_error', api_error)
+				return client_failure(api_error);
 			}
-			console.error(response_text);
-			this._record_api_error(
-				'data_manager', // error_type
-				response_text, // message
-				'data_manager fetch handle_errors', // trace
-				null // details
-			);
-			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
 		}
-		return response;
 	}
 
-	try {
-		const request_start_time = performance.now();
+	const request_start_time = performance.now();
 
-		// Prepare body for request
-		let request_body = null;
-		if (body) {
-			if (typeof body === 'string') {
-				request_body = body;
-			} else {
-				try {
-					request_body = JSON.stringify(body);
-				} catch (jsonError) {
-					throw new Error(`Failed to serialize request body: ${jsonError.message}`);
+	// exec fetch through the shared transport
+	const {json, api_error} = await fetch_api(
+		url,
+		{
+			method		: method,
+			mode		: mode,
+			cache		: cache,
+			credentials	: credentials,
+			headers		: headers,
+			redirect	: redirect,
+			referrer	: referrer,
+			body		: request_body,
+			signal		: signal || undefined
+		},
+		{
+			timeout_ms	: timeout,
+			retries		: retries,
+			base_delay	: base_delay,
+			health_url	: self.health_url,
+			on_wait		: (attempt, delay, reason) => {
+				// The loop itself is silent; the page tells the user why it waits.
+				if (reason==='busy') {
+					const msg = (typeof get_label!=='undefined' && get_label.awaiting_busy_server) || 'Awaiting for busy server..'
+					if(SHOW_DEBUG) {
+						console.log(msg, {attempt});
+					}
+					render_msg_to_inspector(msg, 'warning', delay);
+				} else if(SHOW_DEBUG) {
+					console.log(`Retrying in ${delay}ms (attempt ${attempt})...`);
 				}
 			}
 		}
+	)
 
-		// exec fetch with retry and timeout
-		const fetch_response = await _fetch_with_retry_and_timeout(
-			safe_url,
-			{
-				method		: method,
-				mode		: mode,
-				cache		: cache,
-				credentials	: credentials,
-				headers		: headers,
-				redirect	: redirect,
-				referrer	: referrer,
-				body		: request_body
-			},
-			retries,
-			base_delay,
-			timeout
-		)
+	// SEC-008: refresh the cached CSRF token from every response so the
+	// next call carries the latest one (the server may rotate it on auth
+	// state changes such as login or logout). Failure envelopes carry it too.
+	if (json && typeof json.csrf_token === 'string' && json.csrf_token.length > 0) {
+		if (typeof window !== 'undefined' && window.page_globals) {
+			window.page_globals.csrf_token = json.csrf_token;
+		}
+		// WC-051: the same signal, for the same reason. A response carrying a CSRF
+		// token IS an authenticated response, which is exactly what refreshed the
+		// server's `last_seen` — so it is the honest beat for the client's idle
+		// clock (session_expiry.js). Published rather than called directly to keep
+		// the data layer free of a UI dependency, and to avoid an import cycle.
+		event_manager.publish('session_activity');
+	}
 
-		const data_start_time = performance.now();
+	// SEC-008: transparent retry on CSRF rejection. This handles the bootstrap
+	// race where a non-exempt action fires before the SPA has obtained a
+	// token from `start` (e.g. parallel menu/read calls during page build,
+	// or the post-login full page reload that resets page_globals). The
+	// rejection response already carries a fresh token (captured above), so
+	// we just resend the original request exactly once. The `_csrf_retried`
+	// flag on options prevents infinite loops if the server still refuses.
+	if (
+		api_error
+		&& api_error.code === 'auth.csrf_failed'
+		&& !options._csrf_retried
+	) {
+		console.warn('CSRF token mismatch; retrying once with fresh token.');
+		return self.request({ ...options, _csrf_retried: true });
+	}
 
-		// Parse API JSON response handling errors
-		const json_response = await (await handle_errors(fetch_response)).json();
+	if(SHOW_DEBUG) {
+		console.log(`_*_Time to request: ${(performance.now() - request_start_time).toFixed(2)}ms`);
+	}
 
-		// SEC-008: refresh the cached CSRF token from every response so the
-		// next call carries the latest one (the server may rotate it on auth
-		// state changes such as login or logout).
-		if (json_response && typeof json_response.csrf_token === 'string' && json_response.csrf_token.length > 0) {
-			if (typeof window !== 'undefined' && window.page_globals) {
-				window.page_globals.csrf_token = json_response.csrf_token;
-			}
-			// WC-051: the same signal, for the same reason. A response carrying a CSRF
-			// token IS an authenticated response, which is exactly what refreshed the
-			// server's `last_seen` — so it is the honest beat for the client's idle
-			// clock (session_expiry.js). Published rather than called directly to keep
-			// the data layer free of a UI dependency, and to avoid an import cycle.
-			event_manager.publish('session_activity');
+	// failure
+	if (api_error) {
+
+		// envelope: the server's own body when there is one, else synthesised
+		const envelope = (json && typeof json === 'object' && !Array.isArray(json))
+			? json
+			: {ok:false}
+		envelope.ok		= false
+		envelope.error	= api_error
+
+		// debug console message. Lock-state chatter is not worth a red line.
+		if (body?.action !== 'update_lock_components_state') {
+			console.error(`data_manager request failed [${api_error.code}]:`, api_error, envelope);
 		}
 
-		// SEC-008: transparent retry on CSRF rejection. This handles the bootstrap
-		// race where a non-exempt action fires before the SPA has obtained a
-		// token from `start` (e.g. parallel menu/read calls during page build,
-		// or the post-login full page reload that resets page_globals). The
-		// rejection response already carries a fresh token (captured above), so
-		// we just resend the original request exactly once. The `_csrf_retried`
-		// flag on options prevents infinite loops if the server still refuses.
-		if (
-			json_response
-			&& json_response.result === false
-			&& Array.isArray(json_response.errors)
-			&& json_response.errors.includes('csrf_failed')
-			&& !options._csrf_retried
-		) {
-			console.warn('CSRF token mismatch; retrying once with fresh token.');
-			return self.request({ ...options, _csrf_retried: true });
-		}
+		// THE failure event: one ApiError, dispatched on its code by whoever listens
+		// (page.js relogin/no-access, error_dispatch.handle_api_error).
+		event_manager.publish('api_error', api_error);
 
-		if(SHOW_DEBUG) {
-			console.log(`_*_Time to request: ${(performance.now() - request_start_time).toFixed(2)}ms`);
-			console.log(`_*_Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
-		}
-
-		// Fetch error occurred. Catch and alert
-		if (json_response?.error) {
-
-			// debug console message
-			console.error("data_manager request api_response:", json_response);
-
-			// update_lock_components_state fails. Do not send alert here
-			const action = body?.action;
-			if (action !== 'update_lock_components_state') {
-				// alert msg to user
-				const msg = json_response.msg || json_response.error;
-				if (!window.page_globals.request_message || window.page_globals.request_message !== msg) {
-					render_msg_to_inspector(
-						`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`,
-						'error',
-						10000
-					);
-				}
-				// request_message. Store request message temporally
-				window.page_globals.request_message = msg;
+		// Transport failures (network/timeout/foreign status/unreadable body) get a
+		// toast HERE: no caller can act on them and the user must know the server
+		// is unreachable. Envelope failures are the caller's / policy's to render.
+		// (REMOVAL: once every caller awaits handle_api_error, this toast moves
+		// into the '*' policy and this block goes.)
+		if (api_error.transport === true && api_error.code !== CLIENT_ERROR.ABORTED) {
+			if (window.page_globals.request_message !== api_error.code) {
+				render_error_toast(api_error, {remove_time: 10000});
+				window.page_globals.request_message = api_error.code;
 				setTimeout(() => {
 					window.page_globals.request_message = null;
 				}, 3000);
 			}
-
-			// save error message. This is captured by page rendering to display the proper error
-			// api_errors. store api_errors. Used to render error page_globals
-			this._record_api_error(
-				'data_manager', // error_type
-				json_response.msg || json_response.error, // message
-				'data_manager json_parsed', // trace
-				json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
-			)
-
-			return json_response;
 		}
 
-		// Response errors (not fetch errors) from server API
-		if (json_response?.errors?.length) {
-			event_manager.publish('api_response_errors', json_response?.errors);
-		}
-
-		// cache_handler. Only cache api response if result is not false
-		if (cache_handler?.handler==='localdb' && json_response?.result !== false) {
-			dd_request_idle_callback(
-				() => {
-					this.set_local_db_data(
-						{
-							id		: cache_handler.id,
-							value	: json_response
-						},
-						'data' // string table
-					);
-				}
-			);
-		}
-
-		return json_response;
-
-	} catch (error) {
-
-		console.warn('request url:', typeof url, url);
-		console.warn("request options:", options);
-		console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid or network error. See your server log for details. catch ERROR:\n", error);
-
-		// api_errors. store api_errors. Used to render error page_globals
-		this._record_api_error(
-			'data_manager', // error_type
-			error.message || 'Network error or invalid JSON', // message
-			'data_manager catch error', // trace
-			error // details
-		)
-
-		return {
-			result	: false,
-			msg		: error.message || 'Network error',
-			error	: error,
-			errors	: [error.message || 'Network error'],
-		};
+		return envelope;
 	}
+
+	// notices[] (ERRORS_SPEC §3): a SUCCESS may carry non-fatal coded facts —
+	// a refused child delete, a degraded external source, a login soft warning.
+	// They are published once, generically; error_dispatch.handle_api_notice
+	// resolves each through the SAME policy table an ApiError goes through, so a
+	// tool/area can silence or re-route its own domain with register_error_policy.
+	// Callers that want to render a notice next to their own widget read
+	// `api_response.notices` themselves — this event is the page-level default.
+	if (notices !== 'caller' && json && Array.isArray(json.notices) && json.notices.length > 0) {
+		event_manager.publish('api_notices', {notices: json.notices, api_response: json});
+	}
+
+	// cache_handler. Only cache successful envelope v2 bodies
+	if (cache_handler?.handler==='localdb' && json?.ok === true) {
+		dd_request_idle_callback(
+			() => {
+				this.set_local_db_data(
+					{
+						id		: cache_handler.id,
+						value	: json
+					},
+					'data' // string table
+				);
+			}
+		);
+	}
+
+	return json
 }//end request
-
-
-
-/**
-* _FETCH_WITH_RETRY_AND_TIMEOUT
-* Low-level fetch driver with exponential-backoff retry and per-attempt timeout.
-* This is the only place that calls the native `fetch()` for regular (non-streaming)
-* requests; `data_manager.request` delegates here after preparing the request body.
-*
-* Algorithm per attempt:
-*  1. Compute `delay = base_delay * 2^(attempt-1)` (exponential backoff).
-*  2. Create a fresh `AbortController`; schedule `controller.abort()` after
-*     `timeout + delay` ms (growing with each retry to give later attempts more time).
-*  3. Schedule a mid-attempt health probe at `timeout / 2` ms. If the server
-*     responds to the health check, the main-request abort is cancelled so the
-*     long-running process can finish naturally.
-*  4. On a successful 2xx response, clear both timers and return the `Response`.
-*  5. On `HttpError`: retry only for statuses in `[408, 429, 500, 502, 503, 504]`;
-*     throw immediately for all other 4xx.
-*  6. On `AbortError` or `TypeError` (network failure): log, notify the user via
-*     `render_msg_to_inspector`, and loop.
-*  7. After all retries exhausted, throw to let `data_manager.request` catch and
-*     return a normalized error response.
-*
-* @param {string} url - Full API endpoint URL
-* @param {Object} [options={}] - Native `fetch()` init options (headers, method, body, …)
-* @param {number} [retries=5] - Maximum number of attempts
-* @param {number} [base_delay=500] - Base delay in ms for exponential backoff
-* @param {number} [timeout=5000] - Abort timeout in ms for the first attempt
-* @returns {Promise<Response>} Resolved with the raw `Response` on success
-* @throws {Error} When all retries are exhausted or a non-retryable HTTP error occurs
-*/
-async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
-
-	let attempts = 0;
-
-	while (attempts < retries) {
-		attempts++;
-
-		if(SHOW_DEBUG && attempts > 1) {
-			console.log('Trying : ', attempts);
-		}
-
-		// Delay between tries. Exponential backoff
-		const delay = base_delay * Math.pow(2, attempts - 1); // Fixed: attempts-1 for proper backoff
-
-		// Increase timeout in each API call
-		const current_time_out = attempts === 1
-			? timeout
-			: timeout + delay
-
-		// Create a controller for the request in each iteration
-		const controller = new AbortController();
-		const signal = controller.signal;
-
-		// Set the controller timeout and get his ID
-		const timeout_id = setTimeout(() => controller.abort(), current_time_out);
-
-		// check_long_process_time
-		// If there is no response from the server within the assigned timeout period,
-		// the server will be asked for its status (minimum health request).
-		// If the server responds before the timeout ends, the timeout will be removed
-		// to allow time to complete the main request (a long process probably).
-		const check_long_process_time = parseInt( current_time_out / 2 )
-		const server_health_timeout_id = setTimeout(async () => {
-			try {
-				// fast API call to check health
-				const is_server_health = await check_server_health()
-				if (is_server_health) {
-					// Clear main timeout to prevent fire the signal timeout
-					// This allows to wait until main request ends (stops new tries).
-					clearTimeout(timeout_id);
-					const msg = 'Awaiting for busy server..'
-					if(SHOW_DEBUG) {
-						console.log(msg);
-					}
-					render_msg_to_inspector(msg, 'warning', delay + 3000);
-				}
-			} catch (health_error) {
-				// Handle health check errors silently or log them
-				if(SHOW_DEBUG) {
-					console.log('Health check failed:', health_error.message);
-				}
-			}
-
-		},  check_long_process_time)
-
-		try {
-
-			// Attempt the fetch request with timeout and retry logic
-			const response = await fetch(url, { ...options, signal });
-
-			// Clear timeouts once fetch completes
-			clearTimeout(timeout_id);
-			clearTimeout(server_health_timeout_id);
-
-			// Handle HTTP errors (4xx, 5xx)
-			// WC-051: 401 is EXEMPT. It is not a transport failure but the session
-			// gate answering with a normal API envelope (`errors:['not_logged']`),
-			// and it is the routine end of every session. Treated as an HttpError it
-			// was classified non-retryable below, which painted a permanent red
-			// "Not retry-able HTTP error 401" in the inspector and threw — so the
-			// envelope never reached `.json()`, `api_response_errors` never published,
-			// and the re-login modal never opened. Return it and let the normal
-			// response path dispatch on the token.
-			// 403 rides the same exemption for the same reason
-			// (WC-2026-08-12-authorization-denial-token): an authorization refusal is
-			// an ANSWER, not a transport failure, and retrying it is meaningless.
-			// 409 rides it too, and for the third time the same reason: a CONFLICT is
-			// the server's ANSWER about the request's subject, not a transport
-			// failure. The picker's "no active hierarchy is configured for this
-			// component target" is a 409; thrown here it never reached `.json()`, so
-			// the named reason the server took care to state was replaced by a
-			// generic red transport error and the operator was told nothing.
-			// Retrying it is meaningless — the configuration will not change between
-			// attempts.
-			const answered_statuses = [401, 403, 409]
-			if (!response?.ok && !answered_statuses.includes(response?.status)) {
-				throw new HttpError(response.status, response.statusText, response);
-			}
-
-			return response;
-		} catch (error) {
-
-			// ensure cleanup timeouts if fetch throws before completion
-			clearTimeout(timeout_id);
-			clearTimeout(server_health_timeout_id);
-
-			// HttpError. Don't retry on client errors (4xx) except 408, 429
-			if (error instanceof HttpError) {
-				// notify to user
-				const msg = `Server responded with status ${error.status}`;
-				render_msg_to_inspector(msg, 'warning', 7000);
-
-				const retryableStatuses = [408, 429, 500, 502, 503, 504];
-				if( !retryableStatuses.includes(error.status) ) {
-					const msg = `Not retry-able HTTP error ${error.status}`;
-					render_msg_to_inspector(msg, 'error', null);
-					console.error(msg);
-					throw new Error(msg);
-				}
-			}
-
-			// AbortError. Controller abort case
-			if (error.name === 'AbortError') {
-				// notify to user
-				const msg = `Request (${attempts}) timed out after ${current_time_out/1000}s`
-				render_msg_to_inspector(msg, 'warning', delay + 3000);
-				console.error(msg);
-			}
-
-			// TypeError. Network error
-			if (error instanceof TypeError && error.message.includes('fetch')) {
-				// notify to user
-				const msg = `Network connection failed`
-				render_msg_to_inspector(msg, 'warning', delay + 3000);
-				console.error(msg);
-			}
-
-			// If we've exhausted the retries, throw error
-			if (attempts >= retries) {
-				const msg = 'Max retries reached, request failed.';
-				render_msg_to_inspector(msg, 'error', null);
-				throw new Error(msg);
-			}
-
-			// Exponential backoff: increase delay between retries
-			{
-				const msg = `Retrying in ${delay}ms. Please wait...`
-				render_msg_to_inspector(msg, 'warning', delay + 3000);
-				if(SHOW_DEBUG) {
-					console.log(`Retrying in ${delay}ms...`);
-				}
-				await new Promise(resolve => setTimeout(resolve, delay));
-			}
-		}
-	}
-}//end _fetch_with_retry_and_timeout
-
-
-
-/**
-* _FETCH_WITH_RACE
-* Alternative fetch strategy: fires up to `retries` staggered fetch attempts
-* simultaneously and resolves with whichever finishes first (`Promise.race`).
-* All remaining in-flight requests are aborted via a shared `AbortController`
-* once a winner is determined.
-*
-* This function is NOT currently used by `data_manager.request` — the active
-* strategy is `_fetch_with_retry_and_timeout`. It is retained as an experimental
-* alternative for comparison.
-*
-* (!) Retries share a single AbortController: aborting one aborts all.
-*
-* @param {string} url - Full API endpoint URL
-* @param {Object} [options={}] - Native `fetch()` init options
-* @param {number} [retries=5] - Number of parallel staggered attempts
-* @param {number} [base_delay=500] - Stagger delay increment between attempts in ms
-* @param {number} [timeout=5000] - Overall race timeout in ms (total_timeout = timeout * retries)
-* @returns {Promise<Response>} The first successful response, extended with `controller`
-* @throws {Error} When the race is lost or all attempts fail
-*/
-async function _fetch_with_race(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
-
-	// Create a controller in each iteration
-	const controller = new AbortController();
-	const signal = controller.signal;
-
-	const race_calls = []
-	const total_timeout = timeout * retries
-	for (let i = 0; i < retries; i++) {
-
-		const delay = (i==0)
-			? 0
-			: base_delay * Math.pow(2, i+1);
-
-		const api_response = new Promise(function(resolve){
-			if(SHOW_DEBUG) {
-				console.log('Promise :', i+1 + ' - delay: ' + delay);
-			}
-			setTimeout(() => {
-				resolve(
-					fetch(url, { ...options, signal })
-				)
-			}, delay);
-		})
-		// const api_response = new Promise(resolve => setTimeout(resolve, 6000));
-
-		race_calls.push(api_response)
-	}
-	// Add a total timeout to the race to prevent an infinite wait.
-	race_calls.push( new Promise(resolve => setTimeout(resolve, total_timeout)) )
-
-	try {
-		const api_response = await Promise.race(race_calls)
-
-		// Handle HTTP errors (4xx, 5xx)
-		if (!api_response?.ok) {
-			controller.abort();
-			throw new Error(api_response);
-		}
-
-		// set the controller to abort after parse JSON
-		api_response.controller = controller
-
-		return api_response
-	} catch (error) {
-		controller.abort();
-		// Error case
-		console.error("RACE failed with error:", error);
-		const msg = 'Max retries reached, request failed. ' + error;
-		throw new Error(msg)
-	}
-}//end fetch_with_race
 
 
 
@@ -752,8 +452,8 @@ async function _fetch_with_race(url, options = {}, retries = 5, base_delay = 500
 * RENDER_MSG_TO_INSPECTOR
 * Publishes a user-visible notification via the `event_manager` 'notification' channel.
 * The inspector UI subscribes to this event and renders a temporary banner.
-* Used throughout the data layer to surface network errors, retry warnings,
-* and server-busy notices without coupling the data layer to a specific UI component.
+* Used by the data layer for the busy-server notice; ApiErrors go through
+* `render_api_error.render_error_toast` instead.
 * @param {string} msg - Human-readable notification text
 * @param {string} type - Severity level: `'error'`, `'warning'`, or `'info'`
 * @param {number|null} remove_time - Auto-dismiss delay in ms; pass `null` for sticky notifications
@@ -767,110 +467,6 @@ export const render_msg_to_inspector = (msg, type, remove_time) => {
 		remove_time	: remove_time
 	})
 }//end render_msg_to_inspector
-
-
-
-/**
-* _HANDLE_WORKER_REQUEST
-* Routes an API call through a short-lived Web Worker (`worker_data.js`)
-* so the main thread is not blocked during low-priority network calls
-* (e.g., `update_lock_components_state`).
-*
-* Each call spawns a fresh Worker, posts `{url, body}`, waits for the
-* `api_response` message, then terminates the worker. Errors at any stage
-* (worker creation, onerror, missing `api_response`) are caught and resolved
-* as a normalized error response so callers never receive a rejected promise.
-*
-* (!) Currently deactivated in `data_manager.request` (see the commented-out
-* block) while network issue debugging is in progress.
-*
-* @param {string} url - API endpoint URL
-* @param {Object} body - Request payload (not yet JSON-stringified)
-* @returns {Promise<Object>} Resolved with the parsed API response object
-*/
-data_manager._handle_worker_request = function(url, body) {
-
-	return new Promise((resolve, reject) => {
-		try {
-			const current_worker = new Worker(DEDALO_CORE_URL + '/common/js/worker_data.js', {
-				type: 'module'
-			});
-
-			current_worker.postMessage({ url, body });
-
-			current_worker.onerror = (event) => {
-				console.error("There is an error with current worker error!", event);
-				this._record_api_error('data_manager', 'Worker error', 'worker onerror', event);
-				current_worker.terminate();
-				reject(this._create_error_response('Worker error', event.message));
-			};
-
-			current_worker.onmessage = (e) => {
-				if (!e.data?.api_response) {
-					const error_message = 'Error in worker response: missing api_response';
-					console.error(error_message, 'e.data:', e.data);
-					this._record_api_error('data_manager', error_message, 'worker onmessage', e.data);
-					current_worker.terminate();
-					reject(this._create_error_response(error_message, 'Missing API response from worker'));
-					return;
-				}
-				current_worker.terminate();
-				resolve(e.data.api_response);
-			};
-		} catch (error) {
-			console.error("Error creating worker:", error);
-			this._record_api_error('data_manager', error.message, 'worker creation');
-			reject(this._create_error_response(error.message, 'Failed to create worker'));
-		}
-	}).catch(error => {
-		console.error("Worker Promise Catch:", error);
-		this._record_api_error('data_manager', error.message, 'data_manager worker catch error');
-		return this._create_error_response(error.message, error);
-	});
-}//end _handle_worker_request
-
-
-
-/**
-* _RECORD_API_ERROR
-* Appends a structured error entry to `page_globals.api_errors`.
-* The array is reset to `[]` at the start of every `data_manager.request` call
-* and inspected by the page renderer to decide whether to show an error overlay.
-* @param {string} error_type - Category label (e.g. `'data_manager'`)
-* @param {string} message - Human-readable error description
-* @param {string} trace - Code location identifier for debugging (e.g. `'data_manager catch error'`)
-* @param {*} [details=null] - Optional raw error object or additional context
-* @returns {void}
-*/
-data_manager._record_api_error = function(error_type, message, trace, details = null) {
-	page_globals.api_errors.push({
-		error	: error_type,
-		msg		: message,
-		trace	: trace,
-		details	: details,
-	});
-}//end _record_api_error
-
-
-
-/**
-* _CREATE_ERROR_RESPONSE
-* Builds a normalized failure response object matching the shape that callers
-* of `data_manager.request` expect when the API cannot be reached.
-* Ensures downstream code can always destructure `{ result, msg, error, errors }`
-* without null-checking.
-* @param {string} msg - Human-readable error description
-* @param {*} error - Original error object or message string
-* @returns {Object} `{ result: false, msg, error, errors: [msg] }`
-*/
-data_manager._create_error_response = function(msg, error) {
-	return {
-		result	: false,
-		msg		: msg,
-		error	: error,
-		errors	: [msg],
-	};
-}//end _create_error_response
 
 
 
@@ -897,7 +493,9 @@ data_manager._create_error_response = function(msg, error) {
 *   cannot: a fetch still awaiting response headers has no reader yet, so a caller
 *   that gives up during connect had no way to release the request without this.
 * @returns {Promise<ReadableStream>} Resolved with the raw `response.body` stream
-* @throws Rejects on network failure or a non-2xx response (see below)
+* @throws {ApiError} Rejects with an ApiError on network failure (`client.*`,
+*   see normalize_transport_error) or on a non-2xx answer (the server's envelope
+*   error when the body is one — e.g. `auth.not_logged` — else `client.http_status`)
 */
 data_manager.request_stream = async function(options) {
 
@@ -950,8 +548,20 @@ data_manager.request_stream = async function(options) {
 			// "data:\n…\n\n" framing, never fired on_read, and then ended cleanly —
 			// so a hard failure was indistinguishable from a stream that had simply
 			// finished, and the caller silently showed nothing.
+			// The body is read (once) so the server's envelope error — its CODE —
+			// is what the caller gets (`auth.not_logged` mid-job triggers relogin);
+			// a non-envelope answer becomes `client.http_status`.
 			if (!response.ok) {
-				reject(new Error('request_stream: HTTP ' + response.status + ' ' + response.statusText))
+				response.text()
+					.then((text) => JSON_parse_safely(text))
+					.catch(() => null)
+					.then((json) => {
+						const api_error = normalize_api_error(response, json)
+							|| new ApiError({code: CLIENT_ERROR.HTTP_STATUS, status: response.status, details: {status: response.status, status_text: response.statusText}, source: 'transport'})
+						console.error('request_stream failed:', api_error.code, api_error);
+						event_manager.publish('api_error', api_error)
+						reject(api_error)
+					})
 				return
 			}
 
@@ -965,9 +575,14 @@ data_manager.request_stream = async function(options) {
 			// leaving the promise permanently PENDING — so `await request_stream(…)`
 			// on a network failure never resumed and the caller hung forever with no
 			// error path to run. Logging preserved: the console line was the only
-			// diagnostic callers had.
-			console.error(error);
-			reject(error)
+			// diagnostic callers had. Rejects with an ApiError (`client.aborted`
+			// when the caller's own signal fired — silent by policy).
+			const api_error = normalize_transport_error(error, {caller_aborted: !!options.signal?.aborted})
+			console.error('request_stream failed:', api_error.code, error);
+			if (api_error.code !== CLIENT_ERROR.ABORTED) {
+				event_manager.publish('api_error', api_error)
+			}
+			reject(api_error)
 		});
 	})
 }//end request_stream
@@ -994,7 +609,8 @@ data_manager.request_stream = async function(options) {
 * @param {Object} [options.headers] - HTTP headers; defaults to `application/x-ndjson` Accept
 * @param {Object} options.body - Request payload (will be JSON-stringified)
 * @returns {Promise<ReadableStream>} Raw `response.body` stream for NDJSON consumption
-* @throws {Error} On non-2xx HTTP response
+* @throws {ApiError} On network failure (`client.*`) or a non-2xx answer (the
+*   envelope's error code when the body is an envelope, else `client.http_status`)
 */
 data_manager.request_fetch_stream = async function(options) {
 
@@ -1018,14 +634,29 @@ data_manager.request_fetch_stream = async function(options) {
 		}
 	}
 
-	const response = await fetch(url, {
-		method	: method,
-		headers	: headers,
-		body	: JSON.stringify(body)
-	});
+	let response
+	try {
+		response = await fetch(url, {
+			method	: method,
+			headers	: headers,
+			body	: JSON.stringify(body),
+			signal	: options.signal
+		});
+	} catch (error) {
+		const api_error = normalize_transport_error(error, {caller_aborted: !!options.signal?.aborted})
+		if (api_error.code !== CLIENT_ERROR.ABORTED) {
+			event_manager.publish('api_error', api_error)
+		}
+		throw api_error
+	}
 
 	if (!response.ok) {
-		throw new Error(`HTTP error! status: ${response.status}`);
+		// read the body once: an envelope names the failure, anything else is a foreign status
+		const json = JSON_parse_safely(await response.text().catch(() => ''))
+		const api_error = normalize_api_error(response, json)
+			|| new ApiError({code: CLIENT_ERROR.HTTP_STATUS, status: response.status, details: {status: response.status, status_text: response.statusText}, source: 'transport'})
+		event_manager.publish('api_error', api_error)
+		throw api_error
 	}
 
 	return response.body;
@@ -1049,7 +680,10 @@ data_manager.request_fetch_stream = async function(options) {
 * - Each complete message payload is decoded via `TextDecoder`, split on `data:\n`,
 *   and the last non-empty part is taken as the current message fragment.
 * - JSON parsing uses `JSON_parse_safely` to avoid breaking the read loop on
-*   malformed messages; invalid JSON yields a synthetic error SSE response.
+*   malformed messages; invalid JSON yields a synthetic frame carrying
+*   `error` = ApiError `client.bad_response` (source 'stream') — consumers
+*   read it with `normalize_stream_error(frame)`, which also understands the
+*   server's own end-of-run error frames (v2 `frame.error.code`).
 *
 * The reader is pushed into `page_globals.stream_readers` so that navigation away
 * from the page can abort all in-flight readers. That registry is the LAST resort,
@@ -1150,15 +784,24 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 					// JSON_parse_safely is needed to check and don't stop the event loop
 					// BUT only a valid JSON is expected here.
 					const data_string	= ar_chunks.join('')
-					const sse_response	= JSON_parse_safely(data_string) || {
-						data : {
-							msg : 'JSON invalid SSE message'
-						},
-						is_running	: true,
-						errors		: ['Invalid JSON message'],
-						total_time	: '0 sec',
-						data_string	: data_string
-					}
+					const sse_response	= JSON_parse_safely(data_string) || (() => {
+						const api_error = new ApiError({
+							code	: CLIENT_ERROR.BAD_RESPONSE,
+							message	: 'Invalid JSON stream message',
+							details	: {reason: 'invalid_json'},
+							source	: 'stream',
+							raw		: data_string
+						})
+						return {
+							data : {
+								msg : 'JSON invalid SSE message'
+							},
+							is_running	: true,
+							error		: api_error,
+							total_time	: '0 sec',
+							data_string	: data_string
+						}
+					})()
 
 					// reset the array
 					ar_chunks.length = 0
@@ -1317,8 +960,8 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 			}
 		})
 
-	// model from context simple response
-		const model = api_response.result?.model || null
+	// model from context simple response (THE payload accessor)
+		const model = response_data(api_response)?.model || null
 
 	// store in cache
 		page_globals.models[cache_key] = model

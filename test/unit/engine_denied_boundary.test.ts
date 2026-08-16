@@ -9,6 +9,18 @@
 
 import { describe, expect, test } from 'bun:test';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
+
+/** The DedaloError an async call rejected with (fails when nothing typed was thrown). */
+async function rejectedBy(run: () => Promise<unknown>): Promise<DedaloError> {
+	try {
+		await run();
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a DedaloError, nothing was thrown');
+}
 
 const ROOT = { userId: -1, isGlobalAdmin: true };
 
@@ -39,27 +51,25 @@ const DENIED: [string, string][] = [
 ];
 
 describe('closed-by-design boundary (explicit engine_denied refusals)', () => {
-	test('every boundary method refuses with a NAMED engine_denied envelope', async () => {
+	test('every boundary method refuses with the NAMED maintenance.widget_unavailable code', async () => {
 		for (const [widget, method] of DENIED) {
-			const response = await dispatchWidgetRequest(
-				ROOT as never,
-				{ model: widget, action: method },
-				{},
+			const error = await rejectedBy(() =>
+				dispatchWidgetRequest(ROOT as never, { model: widget, action: method }, {}),
 			);
-			expect(response.result).toBe(false);
-			expect(response.errors).toContain(`engine_denied: ${widget}.${method}`);
-			expect(response.msg).toContain('is not runnable on this engine');
-			expect(response.msg).toContain('PHP maintenance dashboard');
+			expect(error.code).toBe('maintenance.widget_unavailable');
+			// The sentence NAMES the refused method and points at the PHP dashboard
+			// (public disclosure — it reaches the admin who fired it).
+			expect(error.publicMessage).toContain(`'${widget}.${method}'`);
+			expect(error.publicMessage).toContain('is not runnable on this engine');
+			expect(error.publicMessage).toContain('PHP maintenance dashboard');
 		}
 	});
 
 	test('unknown methods still get the generic registry denial', async () => {
-		const response = await dispatchWidgetRequest(
-			ROOT as never,
-			{ model: 'update_code', action: 'not_a_method' },
-			{},
+		const error = await rejectedBy(() =>
+			dispatchWidgetRequest(ROOT as never, { model: 'update_code', action: 'not_a_method' }, {}),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized_method');
+		expect(error.code).toBe('tool.method_not_allowed');
+		expect(error.details?.method).toBe('not_a_method');
 	});
 });

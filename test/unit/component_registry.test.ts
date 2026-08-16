@@ -17,6 +17,7 @@ import {
 	getRelationResolver,
 	getRelationSearchFragmentBuilder,
 } from '../../src/core/relations/registry.ts';
+import { refusalOf, refusalOfSync } from '../helpers/refusal.ts';
 
 // --- GOLDEN: the pre-refactor tables, verbatim -----------------------------
 
@@ -164,6 +165,10 @@ describe('getRelationResolver matches the old RESOLVERS map', () => {
 	}
 	test('a non-relation model throws (uncovered scope)', () => {
 		expect(() => getRelationResolver('component_input_text')).toThrow('no registered resolver');
+		// The ledger throw is the TYPED uncovered-scope refusal (ERRORS_SPEC §7).
+		expect(refusalOfSync(() => getRelationResolver('component_input_text')).code).toBe(
+			'engine.uncovered_scope',
+		);
 	});
 	test('component_external declares NO resolver and owns its emission instead', () => {
 		// The deliberate absence, asserted so nobody "restores" the portal
@@ -190,6 +195,9 @@ describe('getRelationSearchFragmentBuilder matches the old SEARCH_UNCOVERED ledg
 	test('a non-relation model throws (uncovered scope)', async () => {
 		await expect(getRelationSearchFragmentBuilder('component_input_text')).rejects.toThrow(
 			'no registered resolver',
+		);
+		expect((await refusalOf(getRelationSearchFragmentBuilder('component_input_text'))).code).toBe(
+			'engine.uncovered_scope',
 		);
 	});
 });

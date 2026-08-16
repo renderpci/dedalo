@@ -16,6 +16,8 @@
  * (diffusion_processor.ts) byte-for-byte.
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
+
 /** Strict post-sanitize grammar: leading letter, then [a-z0-9_], max 64 total. */
 const SQL_IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 
@@ -47,9 +49,10 @@ export function requireSqlIdentifier(
 ): string {
 	const sanitized = sanitizeSqlName(rawName);
 	if (!isValidSqlIdentifier(sanitized)) {
-		throw new Error(
-			`Invalid ${role} identifier ${JSON.stringify(rawName)} (sanitized: ${JSON.stringify(sanitized)}) — diffusion target names must sanitize to ^[a-z][a-z0-9_]{0,63}$ (fix the ontology node label)`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `Invalid ${role} identifier ${JSON.stringify(rawName)} (sanitized: ${JSON.stringify(sanitized)}) — diffusion target names must sanitize to ^[a-z][a-z0-9_]{0,63}$ (fix the ontology node label)`,
+			coordinates: { role, raw_name: rawName, sanitized },
+		});
 	}
 	return sanitized;
 }

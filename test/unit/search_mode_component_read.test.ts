@@ -278,7 +278,7 @@ function insertChange(pickedSectionId: number | string): Record<string, unknown>
 describe('search-mode component read (Activity dd542 Who picker)', () => {
 	test('typeahead (source.mode search) resolves users instead of throwing', async () => {
 		const { body } = await dispatchRqo(typeaheadRqo(TWIN_USERNAME), ctx);
-		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
+		const result = (body as { data?: { data?: Record<string, unknown>[] } }).data;
 		expect(result).toBeDefined();
 
 		const data = result?.data ?? [];
@@ -295,7 +295,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 
 	test('chip echo emits the injected section_id as int (WC-2026-08-10-section-id-int-canonical)', async () => {
 		const { body } = await dispatchRqo(echoRqo(TWIN_USER_ID), ctx);
-		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
+		const result = (body as { data?: { data?: Record<string, unknown>[] } }).data;
 		expect(result).toBeDefined();
 
 		const data = result?.data ?? [];
@@ -318,7 +318,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 
 	test("save on the 'search_1' host echoes int entries under the synthetic id", async () => {
 		const { body } = await dispatchRqo(pickSaveRqo([insertChange(TWIN_USER_ID)]), ctx);
-		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
+		const result = (body as { data?: { data?: Record<string, unknown>[] } }).data;
 		expect(result).toBeDefined();
 
 		const data = result?.data ?? [];
@@ -358,7 +358,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 			existing: Record<string, unknown>[],
 		): Promise<Record<string, unknown>[]> => {
 			const { body } = await dispatchRqo(pickSaveRqo(changedData, existing), ctx);
-			const data = (body as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? [];
+			const data = (body as { data?: { data?: Record<string, unknown>[] } }).data?.data ?? [];
 			const mainItem = data.find(
 				(item) => item.tipo === WHO_PORTAL && String(item.section_id) === 'search_1',
 			) as { entries?: Record<string, unknown>[] } | undefined;
@@ -433,11 +433,10 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 				},
 			} as unknown as Rqo;
 			const { body } = await dispatchRqo(rqo, ctx);
-			const result = (body as { result?: false | { context?: unknown[]; data?: unknown[] } })
-				.result;
-			// Before the fix this was `false` (Throwable Exception). The client's
-			// build() gate is exactly `result.context?.length`.
-			expect(result).not.toBe(false);
+			expect((body as { ok?: boolean }).ok).toBe(true);
+			const result = (body as { data?: { context?: unknown[]; data?: unknown[] } }).data;
+			// Before the fix this was a failure envelope (Throwable Exception). The
+			// client's build() gate is exactly `data.context?.length`.
 			const context = (result as { context?: unknown[] }).context ?? [];
 			expect(context.length).toBeGreaterThan(0);
 		}
@@ -447,8 +446,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		// 1. The real pick: SAVE on the 'search_1' host (link_record). The response
 		// is what lands in the component's data.entries (refresh tmp_api_response).
 		const { body: echoBody } = await dispatchRqo(pickSaveRqo([insertChange(TWIN_USER_ID)]), ctx);
-		const echoData =
-			(echoBody as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? [];
+		const echoData = (echoBody as { data?: { data?: Record<string, unknown>[] } }).data?.data ?? [];
 		const echoMain = echoData.find(
 			(item) => item.tipo === WHO_PORTAL && String(item.section_id) === 'search_1',
 		) as {
@@ -498,7 +496,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 			},
 		} as unknown as Rqo;
 		const { body } = await dispatchRqo(searchRqo, ctx);
-		const data = (body as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? [];
+		const data = (body as { data?: { data?: Record<string, unknown>[] } }).data?.data ?? [];
 		const rows = data
 			.filter((item) => item.tipo === WHO_PORTAL)
 			.map((item) => Number(item.row_section_id))

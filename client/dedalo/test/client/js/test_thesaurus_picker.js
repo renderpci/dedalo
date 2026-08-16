@@ -161,7 +161,8 @@
 // It carries exactly the context fields build() distributes onto the instance, so
 // "the context still comes from the server" is a real assertion and not a tautology.
 	const build_area_response = (options={}) => ({
-		result : {
+		ok : true,
+		data : {
 			context : [{
 				tipo			: AREA_TIPO,
 				parent			: null,

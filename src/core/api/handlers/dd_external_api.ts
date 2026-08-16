@@ -48,9 +48,11 @@
  * server-side so the rendering path downstream is untouched: a `typo:'sections'`
  * entry carrying the locators, then one `record_data` per record × ddo.
  *
- * FAILURE OUTPUT is a 200 envelope carrying the record path's own
- * `source_status` — see `searchFailure` below for why a 4xx would be an
- * explanation nobody reads. Ledger: `WC-2026-08-06-external-search-request`.
+ * DEGRADATION OUTPUT (the service down, the target misconfigured, the circuit
+ * open) is an `ok:true` envelope with `data.rows` empty and ONE coded notice
+ * `external.<kind>` — see `searchDegraded` below. Ledger:
+ * `WC-2026-08-06-external-search-request` (superseded on the failure shape by
+ * the envelope-v2 fold-in, engineering/ERRORS_SPEC.md §5).
  */
 
 import type {
@@ -60,11 +62,12 @@ import type {
 	ExternalServiceModel,
 	FieldsMapEntry,
 } from '../../../external/api/index.ts';
+import { type ApiNotice, DedaloError, ok, specOf } from '../../errors/index.ts';
 import { getModelByTipo, getNode, getPropertiesByTipo } from '../../ontology/resolver.ts';
 import { engineOf } from '../../relations/request_config/engine_select.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
-import { type ApiResult, denied, notAuthorized } from '../response.ts';
+import type { ApiResult } from '../response.ts';
 
 /** The relation type the client stamps on a fabricated external record_data. */
 const EXTERNAL_RECORD_DATA_TYPE = 'dd687';
@@ -91,6 +94,11 @@ export interface ResolvedSearchTarget {
 	readonly model: ExternalServiceModel;
 }
 
+/** A caller-authored paging value the handler refuses (public: the sentence names the field). */
+function invalidOption(sentence: string): DedaloError {
+	return new DedaloError('request.invalid_options', { publicMessage: sentence });
+}
+
 export const externalApiActions: Record<string, ActionHandler> = {
 	/**
 	 * dd_external_api::search — terms in, the client's own record_data shape out.
@@ -105,18 +113,28 @@ export const externalApiActions: Record<string, ActionHandler> = {
 		const callerTipo = typeof source.tipo === 'string' ? source.tipo : '';
 		const callerSectionTipo = typeof source.section_tipo === 'string' ? source.section_tipo : '';
 		if (callerTipo === '' || callerSectionTipo === '') {
-			return denied(400, 'Error. source.tipo and source.section_tipo are required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'source.tipo and source.section_tipo are required',
+			});
 		}
 
 		// The caller component must EXIST and the actor must be able to read it.
 		// Without this, an authenticated actor could name any component in the
 		// ontology and drive the engine's outbound socket through a binding they
 		// are not authorized to see.
+		// Existence is decided BEFORE permission: a 403 on an unknown tipo would
+		// answer "does this node exist?" — the 400 (same code as a missing source)
+		// is the non-disclosing answer; the tipo itself stays LOG-ONLY.
 		if ((await getNode(callerTipo)) === null) {
-			return denied(400, 'Error. Unknown source tipo');
+			throw new DedaloError('request.invalid_source', {
+				message: 'unknown source tipo',
+				coordinates: { tipo: callerTipo },
+			});
 		}
 		if ((await getPermissions(principal, callerSectionTipo, callerTipo)) < 1) {
-			return notAuthorized('Error. Not authorized on this component');
+			throw new DedaloError('perm.denied', {
+				coordinates: { tipo: callerTipo, section_tipo: callerSectionTipo },
+			});
 		}
 
 		const options = (rqo.options ?? {}) as {
@@ -131,15 +149,16 @@ export const externalApiActions: Record<string, ActionHandler> = {
 		// "silently narrow scope" failure with a friendly face.
 		const limit = readInteger(options.limit);
 		const offset = readInteger(options.offset);
+		// `request.invalid_options` is public-disclosure: the sentence names the
+		// caller's own field, which is the whole value of a 400.
 		if (options.limit !== undefined && options.limit !== null && limit === undefined) {
-			return denied(400, 'Error. limit must be an integer');
+			throw invalidOption('limit must be an integer');
 		}
 		if (options.offset !== undefined && options.offset !== null && offset === undefined) {
-			return denied(400, 'Error. offset must be an integer');
+			throw invalidOption('offset must be an integer');
 		}
-		if (limit !== undefined && limit <= 0) return denied(400, 'Error. limit must be positive');
-		if (offset !== undefined && offset < 0)
-			return denied(400, 'Error. offset must not be negative');
+		if (limit !== undefined && limit <= 0) throw invalidOption('limit must be positive');
+		if (offset !== undefined && offset < 0) throw invalidOption('offset must not be negative');
 
 		let target: ResolvedSearchTarget;
 		try {
@@ -153,7 +172,7 @@ export const externalApiActions: Record<string, ActionHandler> = {
 				`[dd_external_api] search target unresolved for ${callerTipo}@${callerSectionTipo} [req ${context.requestId}]`,
 				error,
 			);
-			return await searchFailure('unknown', 'bad_config');
+			return await searchDegraded(context.requestId, 'unknown', 'bad_config');
 		}
 
 		const { searchExternalService } = await import('../../../external/api/index.ts');
@@ -169,37 +188,41 @@ export const externalApiActions: Record<string, ActionHandler> = {
 		} catch (error) {
 			// The search THROWS by design (src/external/search.ts): an empty array
 			// on a search box reads as "no matches" and a cataloguer acts on it.
-			// Named, logged server-side, and reported as a failure envelope — never
-			// as an empty result set.
-			const { ExternalServiceError, ExternalSearchUnsupportedError } = await import(
-				'../../../external/api/index.ts'
-			);
+			// Named, logged server-side (logExternalError — the registry severity),
+			// and reported as DEGRADATION: ok:true + a coded notice — never as an
+			// empty result set the widget cannot tell from "no matches".
+			const { ExternalServiceError, ExternalSearchUnsupportedError, logExternalError } =
+				await import('../../../external/api/index.ts');
 			if (error instanceof ExternalSearchUnsupportedError) {
-				console.error(error.message, error);
-				return await searchFailure(error.service, error.kind, error.reason);
+				logExternalError(error);
+				return await searchDegraded(context.requestId, error.service, error.kind, error.reason);
 			}
 			if (error instanceof ExternalServiceError) {
-				console.error(error.message, error);
-				return await searchFailure(error.service, error.kind);
+				logExternalError(error);
+				return await searchDegraded(context.requestId, error.service, error.kind);
 			}
 			throw error;
 		}
 
 		return {
 			status: 200,
-			body: {
-				result: {
+			body: ok(
+				{
 					context: target.context,
 					data: await formatExternalSearchData(result, target),
 				},
-				msg: 'OK. Request done',
-				// Provenance the browser engine could not report at all. The client
-				// ignores unknown keys, so this widens the envelope without changing it.
-				total: result.total,
-				limit: result.limit,
-				offset: result.offset,
-				...(result.dropped > 0 ? { dropped_unaddressable: result.dropped } : {}),
-			},
+				{
+					requestId: context.requestId,
+					// Provenance the browser engine could not report at all — the
+					// handler's own extension keys (the client reads them by name).
+					extend: {
+						total: result.total,
+						limit: result.limit,
+						offset: result.offset,
+						...(result.dropped > 0 ? { dropped_unaddressable: result.dropped } : {}),
+					},
+				},
+			),
 		};
 	},
 };
@@ -213,28 +236,25 @@ function readTerms(options: { q?: unknown; terms?: unknown }): string[] {
 }
 
 /**
- * THE FAILURE ENVELOPE a search box can act on.
+ * THE DEGRADATION ENVELOPE a search box can act on: `ok:true`, an empty result
+ * (`data.data: []`, `data.context: []`), and ONE coded notice
+ * `external.<kind>` — the external source did not answer, which is not a
+ * failure of the request (the request was well-formed and authorized; the
+ * SOURCE is what is degraded). A 4xx never reached the widget anyway
+ * (`data_manager.request` discards a non-ok body), and an empty success with
+ * no notice would read as "no matches" — the "silently narrow scope" failure
+ * with a friendly face.
  *
- * HTTP 200 with `result: false`, deliberately. A 4xx body never reaches the
- * caller: `data_manager.request`'s `handle_errors` reads a non-ok response as a
- * thrown fetch error (only 401 is let through, WC-051), so everything the
- * server said about WHY is discarded and the widget is back to the generic
- * "network error" this whole change exists to remove. A 4xx is therefore
- * reserved here for CALLER FAULTS (a missing source tipo, an unparseable page,
- * no read permission) — a programming error nobody translates — while a
- * SERVICE or CONFIGURATION state, which a curator must read, travels in a 200
- * envelope.
- *
- * The envelope carries the SAME `source_status` object the record path emits
- * (component_external/value.ts), built by the SAME two functions: `stateForKind`
- * (total over ExternalErrorKind) and `externalSourceStatus`. One taxonomy, one
- * state→label_key map, one place to change it — the browser gets a labels
- * CATALOG KEY and never prose, exactly as `source_status_label` expects. The
- * `errors` token keeps the finer grain the closed state set folds away
- * ('blocked_host' and 'not_registered' are both `misconfigured` states): the
- * client shows it as diagnostic detail next to the localized text.
+ * The notice is the registry row of the kind (`label_key`, `retryable`) with
+ * `details.service` (+ `details.reason` for a search-unsupported refusal —
+ * 'service' | 'engine' | 'config'). Beside it, during the compat window, the
+ * SAME `source_status` object the record path emits (component_external/
+ * value.ts) rides as an EXTENSION KEY: the autocomplete widget renders its
+ * chip from `api_response.source_status` today (`view_default_autocomplete.js`
+ * render_search_notice). Removal condition: the widget reads `notices[]`.
  */
-export async function searchFailure(
+export async function searchDegraded(
+	requestId: string,
 	service: string,
 	kind: ExternalErrorKind,
 	reason?: string,
@@ -242,23 +262,32 @@ export async function searchFailure(
 	const { externalSourceStatus, stateForKind } = await import(
 		'../../components/component_external/value.ts'
 	);
+	const code = `external.${kind}` as const;
+	const spec = specOf(code);
+	const notice: ApiNotice = {
+		code,
+		label_key: spec.label_key,
+		retryable: spec.retryable,
+		details: { service, ...(reason === undefined ? {} : { reason }) },
+	};
 	const state = stateForKind(kind);
 	return {
 		status: 200,
-		body: {
-			result: false,
-			// Human fallback for a client that does not know this envelope. The
-			// TRANSLATABLE text is source_status.label_key; this is never rendered
-			// by the autocomplete.
-			msg: 'Error. The external search did not complete',
-			errors: [`external_${kind}`, ...(reason === undefined ? [] : [`search_${reason}`])],
-			source_status: externalSourceStatus(service, state) ?? {
-				service,
-				state,
-				label_key: 'external_source_unavailable',
-				retryable: false,
+		body: ok(
+			{ context: [], data: [] },
+			{
+				requestId,
+				notices: [notice],
+				extend: {
+					source_status: externalSourceStatus(service, state) ?? {
+						service,
+						state,
+						label_key: 'external_source_unavailable',
+						retryable: false,
+					},
+				},
 			},
-		},
+		),
 	};
 }
 
@@ -354,18 +383,25 @@ export async function selectExternalSearchTarget(
 		}
 	}
 	if (!sawExternalItem) {
-		throw new Error(`component ${callerTipo} declares no external api_engine`);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} declares no external api_engine`,
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	const targets = [
 		...new Set(externalDdos.map((entry) => entry.section).filter((s) => s !== null)),
 	];
 	if (targets.length === 0) {
-		throw new Error(`component ${callerTipo} external config names no external target section`);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config names no external target section`,
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	if (targets.length > 1) {
-		throw new Error(
-			`component ${callerTipo} external config names ${targets.length} target sections (${targets.join(', ')}) — the search cannot choose`,
-		);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config names ${targets.length} target sections (${targets.join(', ')}) — the search cannot choose`,
+			coordinates: { tipo: callerTipo, targets: targets.join(', ') },
+		});
 	}
 	return { targetSectionTipo: targets[0] as string, externalDdos };
 }
@@ -424,9 +460,10 @@ export async function hydrateExternalSearchDdos(
 		}
 	}
 	if (ddos.length === 0) {
-		throw new Error(
-			`component ${callerTipo} external config shows no external field with a fields_map`,
-		);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config shows no external field with a fields_map`,
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	return { ddos, context, remoteFields };
 }
@@ -494,7 +531,10 @@ export async function resolveExternalSearchTarget(
 	const { getExternalServiceForSection } = await import('../../../external/api/index.ts');
 	const resolved = await getExternalServiceForSection(targetSectionTipo);
 	if (resolved === null) {
-		throw new Error(`target section ${targetSectionTipo} carries no api_config`);
+		throw new DedaloError('external.bad_config', {
+			message: `target section ${targetSectionTipo} carries no api_config`,
+			coordinates: { section_tipo: targetSectionTipo },
+		});
 	}
 	return { targetSectionTipo, ddos, remoteFields, context, callerTipo, model: resolved.model };
 }

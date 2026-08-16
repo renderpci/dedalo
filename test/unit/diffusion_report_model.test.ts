@@ -6,6 +6,11 @@
  * because tools/tool_diffusion/js/report_model.js imports NOTHING — that
  * constraint exists precisely so this gate can exist.
  *
+ * The persisted job RECORD the terminal chunk carries is `{ok, error?, msg?,
+ * errors?, …}` (WC-2026-08-15-diffusion-job-result-record): a completed run that
+ * collected per-record errors is `ok:true` WITH a non-empty `errors` list
+ * ("partial"), and a refusal says `ok:false` and names itself by registry code.
+ *
  * THE GUARANTEES under test:
  * - the verdict comes from the server's `state` when present, and falls back to
  *   the pinned message vocabulary only when it is absent — an unrecognised
@@ -86,10 +91,14 @@ describe('classify_outcome — server state wins', () => {
 		}
 	});
 
-	test("'completed' with a false result is PARTIAL, not success", () => {
+	test("'completed' with collected errors is PARTIAL, not success", () => {
 		const sse = chunk({
 			state: 'completed',
-			result: { result: false, msg: 'Partial success: 50 error(s) — see errors' },
+			result: {
+				ok: true,
+				msg: 'Partial success: 50 error(s) — see errors',
+				errors: ['rsc170:1204 dd_lang: locator has no section_tipo'],
+			},
 		});
 		expect(classify_outcome(sse)).toBe('partial');
 		expect(SEVERITY[classify_outcome(sse) as keyof typeof SEVERITY]).toBe('warning');
@@ -144,7 +153,7 @@ describe('losslessness by construction (the acceptance gate)', () => {
 				future_progress_field: 'invented tomorrow',
 			},
 			result: {
-				result: true,
+				ok: true,
 				msg: 'OK. Request done',
 				tables: [{ table_name: 'image', records_count: 5, records_affected: 5 }],
 				errors: [],
@@ -182,7 +191,7 @@ describe('tables partition', () => {
 	const sse = chunk({
 		state: 'completed',
 		result: {
-			result: true,
+			ok: true,
 			msg: 'OK. Request done',
 			tables: [
 				{ table_name: 'documentales', records_count: 0, records_affected: 0 },
@@ -246,12 +255,12 @@ describe('errors', () => {
 			(_, i) => `rsc170:${1000 + i} dd_lang: no section_tipo`,
 		);
 		const model = build_report_model(
-			chunk({ state: 'completed', result: { result: false, msg: 'Partial', errors } }),
+			chunk({ state: 'completed', result: { ok: true, msg: 'Partial', errors } }),
 			{},
 		);
-		expect(model.errors.capped).toBe(true);
-		expect(model.errors.raw).toHaveLength(50);
-		expect(model.errors.raw).toEqual(errors);
+		expect(model.issues.capped).toBe(true);
+		expect(model.issues.raw).toHaveLength(50);
+		expect(model.issues.raw).toEqual(errors);
 		expect(tsv_errors(model).split('\n')).toHaveLength(50);
 	});
 
@@ -260,7 +269,7 @@ describe('errors', () => {
 			chunk({
 				state: 'completed',
 				result: {
-					result: false,
+					ok: true,
 					msg: 'Partial',
 					errors: [
 						'rsc170:1204 dd_lang: locator has no section_tipo',
@@ -270,17 +279,25 @@ describe('errors', () => {
 			}),
 			{},
 		);
-		expect(model.errors.groups).toHaveLength(1);
-		expect(model.errors.groups[0].count).toBe(2);
-		expect(model.errors.groups[0].ids).toEqual(['rsc170:1204', 'rsc170:1207']);
+		expect(model.issues.groups).toHaveLength(1);
+		expect(model.issues.groups[0].count).toBe(2);
+		expect(model.issues.groups[0].ids).toEqual(['rsc170:1204', 'rsc170:1207']);
 	});
 
 	test('job-level errors stay distinguishable from run errors', () => {
 		const model = build_report_model(
-			chunk({ state: 'failed', errors: ['runner died'], result: { result: false, msg: 'x' } }),
+			chunk({
+				state: 'failed',
+				errors: ['runner died'],
+				result: {
+					ok: false,
+					error: { code: 'diffusion.run_failed', category: 'internal', message: 'x' },
+					msg: 'x',
+				},
+			}),
 			{},
 		);
-		const job = model.errors.groups.filter((g: { source: string }) => g.source === 'job');
+		const job = model.issues.groups.filter((g: { source: string }) => g.source === 'job');
 		expect(job).toHaveLength(1);
 		expect(job[0].text).toBe('runner died');
 	});
@@ -294,7 +311,7 @@ describe('the two structural defects of the old renderer stay dead', () => {
 			chunk({
 				state: 'completed',
 				result: {
-					result: true,
+					ok: true,
 					msg: 'OK. Request done',
 					diffusion_class: 'diffusion_rdf',
 					tables: [],
@@ -322,7 +339,14 @@ describe('the two structural defects of the old renderer stay dead', () => {
 					total: 10,
 				},
 				result: {
-					result: false,
+					ok: false,
+					error: {
+						code: 'diffusion.run_failed',
+						category: 'internal',
+						message: "Duplicate column name 'publicacion'",
+						label_key: 'error_diffusion_run_failed',
+						retryable: false,
+					},
 					msg: "Error. Diffusion run failed: Duplicate column name 'publicacion'",
 				},
 			}),
@@ -344,7 +368,14 @@ describe('the two structural defects of the old renderer stay dead', () => {
 			"- missing or unknown properties->diffusion->type ''\n" +
 			'- unable to resolve database name';
 		const model = build_report_model(
-			chunk({ state: 'failed', result: { result: false, msg: raw } }),
+			chunk({
+				state: 'failed',
+				result: {
+					ok: false,
+					error: { code: 'diffusion.plan_compile_failed', category: 'caller', message: raw },
+					msg: raw,
+				},
+			}),
 			{},
 		);
 		expect(model.causes.list).toHaveLength(3);
@@ -357,7 +388,7 @@ describe('the two structural defects of the old renderer stay dead', () => {
 			chunk({
 				state: 'completed',
 				result: {
-					result: true,
+					ok: true,
 					msg: 'OK. Request done',
 					diffusion_class: 'diffusion_markdown',
 					tables: [],
@@ -375,7 +406,7 @@ describe('robustness — the panel must never be the thing that breaks', () => {
 		const model = build_report_model(null, {});
 		expect(model.outcome).toBe('unknown');
 		expect(model.tables.none_reported).toBe(true);
-		expect(model.errors.raw).toEqual([]);
+		expect(model.issues.raw).toEqual([]);
 	});
 
 	test('subject falls back to parsing process_id, and flags that it did', () => {

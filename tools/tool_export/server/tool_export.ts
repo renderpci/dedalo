@@ -16,12 +16,17 @@
  * that pinned the rebuild).
  */
 
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { getNode } from '../../../src/core/ontology/resolver.ts';
 import { getParentTipo } from '../../../src/core/relations/children.ts';
 import { buildRequestConfigForElement } from '../../../src/core/relations/request_config/build.ts';
 import { extractSqoSectionTipos } from '../../../src/core/relations/request_config/explicit.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
 import { exportGridUnified } from '../../../src/diffusion/export/index.ts';
 
 /**
@@ -48,11 +53,9 @@ export async function toolExportGetExportGrid(context: ToolActionContext): Promi
 			sectionTipo === '' ||
 			(await getPermissions(context.principal, sectionTipo, sectionTipo)) < 1
 		) {
-			return {
-				result: false,
-				msg: 'Error. Insufficient permissions on an sqo section target',
-				errors: ['unauthorized'],
-			};
+			throw new DedaloError('perm.denied', {
+				coordinates: { tool: 'tool_export', sqo_section_tipo: sectionTipo },
+			});
 		}
 	}
 	return exportGridUnified(context);
@@ -85,7 +88,9 @@ export async function toolExportComponentsWithParent(
 			)
 		: [];
 	if (components.length === 0) {
-		return { result: false, msg: 'Error. Missing components', errors: ['invalid_request'] };
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'options.components must be a non-empty list of {tipo, section_tipo}',
+		});
 	}
 	const result: Record<string, boolean> = {};
 	for (const component of components) {
@@ -107,5 +112,5 @@ export async function toolExportComponentsWithParent(
 		}
 		result[component.tipo] = hasParent;
 	}
-	return { result, msg: 'OK. Request done', errors: [] };
+	return ok(result, { requestId: toolRequestId(context) });
 }

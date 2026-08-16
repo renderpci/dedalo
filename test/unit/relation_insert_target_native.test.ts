@@ -28,10 +28,19 @@
  *    it cannot be asserted against a live thesaurus whose flags an operator may
  *    flip;
  *  - scratch caller nodes (synthetic tld) declaring one target each;
- *  - one test3 host record + two throwaway identities.
+ *  - one test3 host record + three throwaway identities (the provisioner, an
+ *    UNGRANTED one, and a project-scoped FILTER EDITOR: level 2 on test3's
+ *    component_filter, 0 on the projects section dd153, one project — the
+ *    ordinary non-admin shape every install has).
  * Provisioning grants the creating user's PROFILE level 2 over the new
  * sections, so it runs as a THROWAWAY user — never the superuser, whose profile
  * dd234/2 is a real record holding thousands of live grants.
+ *
+ * WHAT THE LENGTH-1 DOOR NOW ANSWERS. A constraint refusal reaching a save is
+ * THROWN (`relation.insert_refused` 400 / `perm.denied` 403), never a silent
+ * null-and-ok — the save-path cases below assert the wire status AND the
+ * stored bytes, because "refused" and "deduped" used to be indistinguishable
+ * on the wire and that is what the operator saw as a vanished chip.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -72,9 +81,20 @@ const CAPPED = 'zzwt4';
 const FORBIDDEN = 'zzwt5';
 /** Targets the scratch thesaurus, no view — isolates the TARGET gate. */
 const THESAURUS_PLAIN = 'zzwt6';
+/** A FRAME slot: targets test3 with `data_limit: 1` — the per-main-item cap. */
+const FRAMED = 'zzwt7';
+/** The main component the FRAMED slot's frames extend (a name; never resolved). */
+const FRAMED_MAIN = 'zzwtm';
 
 const HOST = 'test3';
 const HOST_ID = 926201;
+/** test3's own component_filter (parent test45, the section_group under test3). */
+const HOST_FILTER = 'test101';
+/** DEDALO_SECTION_PROJECTS_TIPO — the section every component_filter targets. */
+const PROJECTS = 'dd153';
+/** Two live projects of the canonical playground. */
+const PROJECT_HELD = 1;
+const PROJECT_PICKED = 2;
 /** Records that exist in the canonical test3 playground. */
 const IN_TARGET = [1, 2, 27];
 /** A section no caller here declares. */
@@ -100,11 +120,16 @@ let hierarchyId = 0;
 let provisioner: Identity | undefined;
 /** Holds NO grant on test3 — the read-grant gate's subject. */
 let ungranted: Identity | undefined;
+/** Level 2 on test3's component_filter, 0 on dd153, member of PROJECT_HELD. */
+let filterEditor: Identity | undefined;
+/** Level 2 on the TREE picker caller, 0 on the scratch thesaurus, member of PROJECT_HELD. */
+let treeEditor: Identity | undefined;
 let superuser: Principal;
 let unselectableTermId = 0;
 
 async function buildIdentity(
 	grants: { tipo: string; section_tipo: string; value: number }[],
+	projects: number[] = [],
 ): Promise<Identity> {
 	const profileId = await createSectionRecord('dd234', -1);
 	const userId = await createSectionRecord('dd128', -1);
@@ -117,6 +142,24 @@ async function buildIdentity(
 			from_component_tipo: 'dd1725',
 		},
 	]);
+	if (projects.length > 0) {
+		// The user's own projects filter (dd170) — what the per-record scope gate
+		// and filter_projects' authorized datalist both read.
+		await updateMatrixKeyData(
+			'matrix_users',
+			'dd128',
+			userId,
+			'relation',
+			'dd170',
+			projects.map((projectId, index) => ({
+				id: index + 1,
+				type: 'dd151',
+				section_tipo: PROJECTS,
+				section_id: projectId,
+				from_component_tipo: 'dd170',
+			})),
+		);
+	}
 	await updateMatrixKeyData(
 		'matrix_profiles',
 		'dd234',
@@ -195,7 +238,7 @@ async function purgeScratch(): Promise<void> {
 		   AND misc->'dd551'->0->'value'->>'section_tipo' = $2`,
 		[String(HOST_ID), HOST],
 	);
-	for (const identity of [provisioner, ungranted]) {
+	for (const identity of [provisioner, ungranted, filterEditor, treeEditor]) {
 		if (identity === undefined) continue;
 		for (const [table, sectionTipo, sectionId] of [
 			['matrix_profiles', 'dd234', identity.profileId],
@@ -241,12 +284,17 @@ function asPrincipal<T>(principal: Principal | undefined, fn: () => Promise<T>):
 const codes = (result: RelationInsertBatchResult) =>
 	result.outcomes.map((outcome) => [outcome.status, outcome.code ?? null]);
 
-/** Insert one locator through the REAL save path (not the door in isolation). */
-async function saveInserts(
+/**
+ * Send changed_data through the REAL save path (not the door in isolation), as
+ * the superuser unless an identity is given. Answers the wire status and the
+ * envelope's error code (null on success) — a refusal is asserted on BOTH.
+ */
+async function saveChanges(
 	componentTipo: string,
-	values: Record<string, unknown>[],
-): Promise<number> {
-	const token = createSession(-1, 'root', true);
+	changedData: { action: string; id: null; value: unknown }[],
+	as: { principal: Principal; userId: number } = { principal: superuser, userId: -1 },
+): Promise<{ status: number; code: string | null }> {
+	const token = createSession(as.userId, `insert_gate_${as.userId}`, as.userId === -1);
 	const session = getSession(token);
 	const dispatched = await dispatchRqo(
 		{
@@ -270,7 +318,7 @@ async function saveInserts(
 				tipo: componentTipo,
 				lang: 'lg-nolan',
 				from_component_tipo: componentTipo,
-				changed_data: values.map((value) => ({ action: 'insert', id: null, value })),
+				changed_data: changedData,
 			},
 		} as never,
 		{
@@ -278,10 +326,25 @@ async function saveInserts(
 			clientIp: '127.0.0.1',
 			session,
 			csrfCandidate: session?.csrfToken ?? null,
-			principal: superuser,
+			principal: as.principal,
 		} as never,
 	);
-	return dispatched.status;
+	const body = dispatched.body as { error?: { code?: string } };
+	return { status: dispatched.status, code: body.error?.code ?? null };
+}
+
+/** Insert locators through the save path; answers the wire status. */
+async function saveInserts(
+	componentTipo: string,
+	values: Record<string, unknown>[],
+	as?: { principal: Principal; userId: number },
+): Promise<number> {
+	const answer = await saveChanges(
+		componentTipo,
+		values.map((value) => ({ action: 'insert', id: null, value })),
+		as,
+	);
+	return answer.status;
 }
 
 /** What the host record actually holds for a component, straight from jsonb. */
@@ -309,6 +372,11 @@ beforeAll(async () => {
 
 	provisioner = await buildIdentity([]);
 	ungranted = await buildIdentity([]);
+	filterEditor = await buildIdentity(
+		[{ tipo: HOST_FILTER, section_tipo: HOST, value: 2 }],
+		[PROJECT_HELD],
+	);
+	treeEditor = await buildIdentity([{ tipo: TREE, section_tipo: HOST, value: 2 }], [PROJECT_HELD]);
 	superuser = await resolvePrincipal(-1);
 
 	hierarchyId = await createSectionRecord('hierarchy1', provisioner.userId);
@@ -325,7 +393,7 @@ beforeAll(async () => {
 		},
 	]);
 	const provisioned = await ensureHierarchy(hierarchyId, provisioner.userId);
-	if (!provisioned.result) {
+	if (!provisioned.ok) {
 		throw new Error(
 			`relation insert gate: the scratch thesaurus did not provision (${provisioned.msg}; ${provisioned.errors.join('; ')}) — the selectability cases below would be vacuous.`,
 		);
@@ -347,9 +415,21 @@ beforeAll(async () => {
 	await buildCallerNode(CAPPED, { data_limit: 2, source: targetConfig(HOST) });
 	await buildCallerNode(FORBIDDEN, { data_limit: 0, source: targetConfig(HOST) });
 	await buildCallerNode(THESAURUS_PLAIN, { source: targetConfig(TERMS) });
+	await buildCallerNode(FRAMED, { data_limit: 1, source: targetConfig(HOST) });
 	await sql.unsafe('INSERT INTO matrix_test (section_id, section_tipo) VALUES ($1, $2)', [
 		HOST_ID,
 		HOST,
+	]);
+	// The host sits in PROJECT_HELD, so the two project-scoped identities pass
+	// dispatch's per-record scope gate (isRecordInScope) on their way to the door.
+	await updateMatrixKeyData('matrix_test', HOST, HOST_ID, 'relation', HOST_FILTER, [
+		{
+			id: 1,
+			type: 'dd151',
+			section_tipo: PROJECTS,
+			section_id: PROJECT_HELD,
+			from_component_tipo: HOST_FILTER,
+		},
 	]);
 	await clearOntologyDerivedCaches();
 }, 180000);
@@ -398,10 +478,14 @@ describe.if(DB_READY)('the insert door — the TARGET constraint', () => {
 		// a term from another: the whole point of the declaration is which
 		// vocabulary this component links into.
 		//
-		// MEASURED TODAY: accepted. `relations/picker_constraint.ts` real-resolves
-		// the declared targets AND the incoming section, so both sides read
-		// 'hierarchy20' and every thesaurus is every other thesaurus's target —
-		// the write-path face of the same collapse the picker read shows.
+		// THE LAW: `off_target`. `relations/picker_constraint.ts` keeps the
+		// declared targets AS DECLARED and `isTargetAllowed` resolves only ONE
+		// side per comparison (never real-vs-real), so es1 against a caller
+		// declaring the scratch thesaurus is refused although both are virtual
+		// over hierarchy20. (History: before the asymmetric comparison landed —
+		// commit 625f17e7b3 — both sides real-resolved to 'hierarchy20' and this
+		// was ACCEPTED, the write-path face of the picker read's collapse. That
+		// is the bug, not the expectation.)
 		const result = await asPrincipal(superuser, () =>
 			validateRelationInserts([{ section_tipo: 'es1', section_id: 1 }], context(THESAURUS_PLAIN)),
 		);
@@ -415,20 +499,98 @@ describe.if(DB_READY)('the insert door — the TARGET constraint', () => {
 });
 
 describe.if(DB_READY)('the insert door — the READ GRANT on the linked section', () => {
-	test('a principal with no read on the target cannot persist a locator into it', async () => {
+	test('a TREE-PICKER caller: a principal with no read on the thesaurus cannot persist a term', async () => {
+		// The write twin of the picker READ, which prunes the hierarchies the
+		// principal holds no grant on: `ungranted` holds 0 on the scratch
+		// thesaurus, and term 1 is the SELECTABLE root — so the refusal is the
+		// grant, not selectability (gate 2 runs before gate 3).
 		expect(ungranted).toBeDefined();
 		const refused = await asPrincipal(ungranted?.principal, () =>
-			validateRelationInserts([{ section_tipo: HOST, section_id: IN_TARGET[0] }], context(PLAIN)),
+			validateRelationInserts([{ section_tipo: TERMS, section_id: 1 }], context(TREE)),
 		);
 		expect(codes(refused)).toEqual([['refused', 'target_not_readable']]);
-		expect(refused.outcomes[0]?.reason).toContain(HOST);
+		expect(refused.outcomes[0]?.reason).toContain(TERMS);
 
 		// The CONTROL: the identical locator, accepted for a principal that may
 		// read the section. The refusal is the grant and nothing else.
 		const accepted = await asPrincipal(superuser, () =>
-			validateRelationInserts([{ section_tipo: HOST, section_id: IN_TARGET[0] }], context(PLAIN)),
+			validateRelationInserts([{ section_tipo: TERMS, section_id: 1 }], context(TREE)),
 		);
 		expect(codes(accepted)).toEqual([['accepted', null]]);
+	});
+
+	test('a NON-picker caller is authorized by the CALLER grant — the target is not re-judged', async () => {
+		// The read model for a portal/autocomplete/filter: a value reached
+		// THROUGH an authorized caller is floored to read
+		// (inheritSubdatumPermission); the actor may hold 0 on the target
+		// section and still see and pick its records. Dispatch enforced >= 2 on
+		// the caller before this door; judging the target here refused every
+		// non-admin's own project pick (component_filter → dd153).
+		const result = await asPrincipal(ungranted?.principal, () =>
+			validateRelationInserts([{ section_tipo: HOST, section_id: IN_TARGET[0] }], context(PLAIN)),
+		);
+		expect(codes(result)).toEqual([['accepted', null]]);
+	});
+
+	test('the gate is FAIL-CLOSED: a picker insert with NO actor is refused, not exempted', async () => {
+		// No threaded principal and no request scope. Inside gate 2's scope this
+		// is a refusal — a write-authorization gate that answers "allowed"
+		// because it could not see who was asking is not a gate.
+		const noActor = await validateRelationInserts(
+			[{ section_tipo: TERMS, section_id: 1 }],
+			context(TREE),
+		);
+		expect(codes(noActor)).toEqual([['refused', 'target_not_readable']]);
+		expect(noActor.outcomes[0]?.reason).toContain('fail-closed');
+
+		// Outside the scope the same credless call is unaffected (the import
+		// and maintenance doors keep working).
+		const plain = await validateRelationInserts(
+			[{ section_tipo: HOST, section_id: IN_TARGET[0] }],
+			context(PLAIN),
+		);
+		expect(codes(plain)).toEqual([['accepted', null]]);
+	});
+
+	test('the THREADED principal is the actor; the request-context ALS is only the backstop', async () => {
+		// ALS says superuser, the context says `ungranted`: the explicit channel
+		// wins, so a caller cannot be judged as whoever happens to be ambient.
+		const threaded = await asPrincipal(superuser, () =>
+			validateRelationInserts([{ section_tipo: TERMS, section_id: 1 }], {
+				...context(TREE),
+				principal: ungranted?.principal,
+			}),
+		);
+		expect(codes(threaded)).toEqual([['refused', 'target_not_readable']]);
+		// …and with nothing threaded the ALS backstop still identifies the actor.
+		const ambient = await asPrincipal(superuser, () =>
+			validateRelationInserts([{ section_tipo: TERMS, section_id: 1 }], context(TREE)),
+		);
+		expect(codes(ambient)).toEqual([['accepted', null]]);
+	});
+
+	test('a non-admin with level 2 on a component_filter and 0 on dd153 PERSISTS a project pick', async () => {
+		// The shape every install has: the profile grants the filter component,
+		// never the projects section; the datalist is built from the user's OWN
+		// authorized projects (filter_projects.ts). Through the REAL save door,
+		// as that user (dispatch enforces >= 2 on the filter and the per-record
+		// projects scope, which the seeded PROJECT_HELD locator satisfies).
+		expect(filterEditor).toBeDefined();
+		const editor = filterEditor as Identity;
+		const { getPermissions } = await import('../../src/core/security/permissions.ts');
+		expect(await getPermissions(editor.principal, HOST, HOST_FILTER)).toBe(2);
+		expect(await getPermissions(editor.principal, PROJECTS, PROJECTS)).toBe(0);
+		expect((await storedLocators(HOST_FILTER)).map((l) => l.section_id)).toEqual([PROJECT_HELD]);
+
+		const status = await saveInserts(
+			HOST_FILTER,
+			[{ section_tipo: PROJECTS, section_id: PROJECT_PICKED }],
+			{ principal: editor.principal, userId: editor.userId },
+		);
+		expect(status).toBe(200);
+		const stored = await storedLocators(HOST_FILTER);
+		expect(stored.map((locator) => locator.section_id)).toEqual([PROJECT_HELD, PROJECT_PICKED]);
+		expect(stored[1]?.from_component_tipo).toBe(HOST_FILTER);
 	});
 });
 
@@ -576,13 +738,200 @@ describe.if(DB_READY)('the insert door — a BATCH is validated as a SET', () =>
 	});
 });
 
+describe.if(DB_READY)(
+	'the insert door — the RE-PERSIST baseline (storedItems) is a data-integrity control',
+	() => {
+		// A `set_data` replays the WHOLE stored array through the door (CSV import,
+		// raw-export round trip). The gates police GROWTH: a locator the component
+		// already holds must survive every gate even when the world has moved under
+		// it — else an unrelated save silently deletes heritage data and reports
+		// success. Each case pairs the stored form (accepted) with its control
+		// (`storedItems: []`, refused), so a broken baseline reddens here.
+		const offTarget = { section_tipo: OFF_TARGET_SECTION, section_id: 1 };
+
+		test('an OFF-TARGET locator is accepted when already stored, refused when net-new', async () => {
+			const stored = await asPrincipal(superuser, () =>
+				validateRelationInserts([offTarget], {
+					...context(PLAIN),
+					storedItems: [{ ...offTarget, type: 'dd151', from_component_tipo: PLAIN }],
+				}),
+			);
+			expect(codes(stored)).toEqual([['accepted', null]]);
+			const netNew = await asPrincipal(superuser, () =>
+				validateRelationInserts([offTarget], { ...context(PLAIN), storedItems: [] }),
+			);
+			expect(codes(netNew)).toEqual([['refused', 'off_target']]);
+		});
+
+		test('a NON-SELECTABLE term is accepted when already stored, refused when net-new', async () => {
+			const term = { section_tipo: TERMS, section_id: unselectableTermId };
+			const stored = await asPrincipal(superuser, () =>
+				validateRelationInserts([term], {
+					...context(TREE),
+					storedItems: [{ ...term, type: 'dd151', from_component_tipo: TREE }],
+				}),
+			);
+			expect(codes(stored)).toEqual([['accepted', null]]);
+			const netNew = await asPrincipal(superuser, () =>
+				validateRelationInserts([term], { ...context(TREE), storedItems: [] }),
+			);
+			expect(codes(netNew)).toEqual([['refused', 'term_not_selectable']]);
+		});
+
+		test('an OVER-CAP locator is accepted when already stored, refused when net-new', async () => {
+			// FORBIDDEN declares data_limit 0: nothing may be ADDED, but a locator
+			// stored before the cap tightened is written back untouched.
+			const held = { section_tipo: HOST, section_id: IN_TARGET[0] };
+			const stored = await asPrincipal(superuser, () =>
+				validateRelationInserts([held], {
+					...context(FORBIDDEN),
+					storedItems: [{ ...held, type: 'dd151', from_component_tipo: FORBIDDEN }],
+				}),
+			);
+			expect(codes(stored)).toEqual([['accepted', null]]);
+			const netNew = await asPrincipal(superuser, () =>
+				validateRelationInserts([held], { ...context(FORBIDDEN), storedItems: [] }),
+			);
+			expect(codes(netNew)).toEqual([['refused', 'selection_limit']]);
+		});
+
+		test('the baseline match is the LOCATOR LAW: section_id loose-numeric ("05" IS 5), tipo strict', async () => {
+			// isAlreadyStored compares through compareLocators, NOT the key-string
+			// membership test (which stringifies: '05' ≠ '5'). A pre-sweep string
+			// id, or an int-vs-string difference between the stored bytes and the
+			// canonicalized incoming value, must still read as "already stored" —
+			// otherwise a stored link is re-judged and can be dropped.
+			const stored = await asPrincipal(superuser, () =>
+				validateRelationInserts([{ section_tipo: OFF_TARGET_SECTION, section_id: 5 }], {
+					...context(PLAIN),
+					storedItems: [{ section_tipo: OFF_TARGET_SECTION, section_id: '05', type: 'dd151' }],
+				}),
+			);
+			expect(codes(stored)).toEqual([['accepted', null]]);
+			// The tipo is NOT loose: a different section with the same id is net-new.
+			const otherSection = await asPrincipal(superuser, () =>
+				validateRelationInserts([{ section_tipo: OFF_TARGET_SECTION, section_id: 5 }], {
+					...context(PLAIN),
+					storedItems: [{ section_tipo: `${OFF_TARGET_SECTION}x`, section_id: 5, type: 'dd151' }],
+				}),
+			);
+			expect(codes(otherSection)).toEqual([['refused', 'off_target']]);
+		});
+
+		test('SAVE PATH: a set_data replay keeps a stored over-cap locator and adds none', async () => {
+			// Seed FORBIDDEN (data_limit 0) with one locator directly — the state a
+			// tightened cap leaves behind — then replay it through the real save.
+			const held = {
+				id: 1,
+				type: 'dd151',
+				section_tipo: HOST,
+				section_id: IN_TARGET[0],
+				from_component_tipo: FORBIDDEN,
+			};
+			await updateMatrixKeyData('matrix_test', HOST, HOST_ID, 'relation', FORBIDDEN, [held]);
+			const replay = await saveChanges(FORBIDDEN, [
+				{ action: 'set_data', id: null, value: [held] },
+			]);
+			expect(replay.status).toBe(200);
+			expect((await storedLocators(FORBIDDEN)).map((l) => l.section_id)).toEqual([IN_TARGET[0]]);
+
+			// The same replay carrying ONE net-new locator is refused as a whole
+			// (the door throws, the transaction rolls back): the stored one stays,
+			// nothing is added — growth is what the cap forbids.
+			const grown = await saveChanges(FORBIDDEN, [
+				{
+					action: 'set_data',
+					id: null,
+					value: [held, { section_tipo: HOST, section_id: IN_TARGET[1] }],
+				},
+			]);
+			expect(grown.status).toBe(400);
+			expect(grown.code).toBe('relation.insert_refused');
+			expect((await storedLocators(FORBIDDEN)).map((l) => l.section_id)).toEqual([IN_TARGET[0]]);
+		});
+	},
+);
+
+describe.if(DB_READY)(
+	'the insert door — a DATAFRAME cap counts per MAIN ITEM on BOTH sides',
+	() => {
+		const frame = (idKey: number, sectionId: number) => ({
+			id: idKey,
+			type: 'dd490',
+			section_tipo: HOST,
+			section_id: sectionId,
+			from_component_tipo: FRAMED,
+			main_component_tipo: FRAMED_MAIN,
+			id_key: idKey,
+		});
+		const pairingFor = (idKey: number) => ({
+			frameTipo: FRAMED,
+			mainComponentTipo: FRAMED_MAIN,
+			idKey,
+		});
+
+		test('a second frame on item A is refused at data_limit 1 even though the slot holds other items’ frames', async () => {
+			// The slot holds one frame for item 1 and one for item 2. `held` used to
+			// be the SLOT count (2), so item 1 growing to two frames (resulting 2)
+			// failed the growth clause (2 > 2 is false) and was ACCEPTED. Both sides
+			// now count in the pairing scope: held 1, resulting 2 → refused.
+			const [targetA, targetB] = IN_TARGET as [number, number, number];
+			await updateMatrixKeyData('matrix_test', HOST, HOST_ID, 'relation', FRAMED, [
+				frame(1, targetA),
+				frame(2, targetB),
+			]);
+			const refused = await asPrincipal(superuser, () =>
+				validateRelationInserts([{ section_tipo: HOST, section_id: 27 }], {
+					...context(FRAMED),
+					model: 'component_dataframe',
+					// The caller's frame subset (what save_component hands in).
+					existingItems: [frame(1, targetA)],
+					pairing: pairingFor(1),
+				}),
+			);
+			expect(codes(refused)).toEqual([['refused', 'selection_limit']]);
+
+			// The CONTROL: item 3 holds no frame yet — its first frame is accepted,
+			// the slot-wide count of 2 notwithstanding (one frame PER ITEM).
+			const accepted = await asPrincipal(superuser, () =>
+				validateRelationInserts([{ section_tipo: HOST, section_id: 27 }], {
+					...context(FRAMED),
+					model: 'component_dataframe',
+					existingItems: [],
+					pairing: pairingFor(3),
+				}),
+			);
+			expect(codes(accepted)).toEqual([['accepted', null]]);
+			expect(accepted.outcomes[0]?.value?.id_key).toBe(3);
+		});
+	},
+);
+
 describe.if(DB_READY)('the insert door — wired into the SAVE path, under concurrency', () => {
-	test('an off-target locator sent through the save API stores NOTHING', async () => {
+	test('an off-target locator sent through the save API stores NOTHING and is REFUSED on the wire', async () => {
 		// The door in isolation is not the contract; the contract is that no save
-		// route reaches the matrix around it.
-		const status = await saveInserts(PLAIN, [{ section_tipo: OFF_TARGET_SECTION, section_id: 1 }]);
-		expect(status).toBe(200); // refused per locator, not a transport error
+		// route reaches the matrix around it — and that the refusal is NAMED to
+		// the caller. A 200-with-nothing-stored was the silent success the
+		// operator saw as a vanished chip.
+		const answer = await saveChanges(PLAIN, [
+			{ action: 'insert', id: null, value: { section_tipo: OFF_TARGET_SECTION, section_id: 1 } },
+		]);
+		expect(answer.status).toBe(400);
+		expect(answer.code).toBe('relation.insert_refused');
 		expect(await storedLocators(PLAIN)).toEqual([]);
+
+		// The read-grant refusal is the GENERIC permission code, naming nothing:
+		// `treeEditor` passes dispatch's own gate (level 2 on the picker caller,
+		// host in scope) and is stopped by gate 2 (0 on the thesaurus).
+		const editor = treeEditor as Identity;
+		const denied = await saveChanges(
+			TREE,
+			[{ action: 'insert', id: null, value: { section_tipo: TERMS, section_id: 1 } }],
+			{ principal: editor.principal, userId: editor.userId },
+		);
+		expect(denied.status).toBe(403);
+		expect(denied.code).toBe('perm.denied');
+		expect(await storedLocators(TREE)).toEqual([]);
 
 		// The CONTROL: an in-target locator through the same route DOES store.
 		await saveInserts(PLAIN, [{ section_tipo: HOST, section_id: IN_TARGET[0] }]);

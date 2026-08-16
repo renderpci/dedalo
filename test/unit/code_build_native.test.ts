@@ -14,6 +14,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import { buildVersionFromGit } from '../../src/core/update/code_build.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 
@@ -249,12 +250,11 @@ describe('buildVersionFromGit — rewired to planCodeBuild', () => {
 		expect(source).toContain('planCodeBuild(options, {');
 	});
 
-	test('the refusal path is reported through the CodeBuildResponse shape', async () => {
+	test('the refusal path THROWS the registered update.refused code (P1 sweep)', async () => {
 		// The first gate is asserted against a MOCKED non-code-server config, not
-		// against the ambient one. It used to read `realConfigModule.config` and
-		// require it to be false — which silently made the gate depend on the
-		// developer's own `../private/.env`, and turned this case red on any
-		// machine actually set up as a code master (2026-08-16).
+		// against the ambient one: reading `realConfigModule.config` made the gate
+		// depend on the developer's own `../private/.env` and turned this case red
+		// on any machine actually set up as a code master (2026-08-16).
 		mock.module('../../src/config/config.ts', () => ({
 			...REAL_CONFIG,
 			config: {
@@ -263,12 +263,18 @@ describe('buildVersionFromGit — rewired to planCodeBuild', () => {
 			},
 		}));
 		try {
-			const out = await buildVersionFromGit({ version: '7.0.1' });
-			expect(out.result).toBe(false);
-			expect(out.msg).toBe('Error. This instance is not a code server');
-			expect(out.errors).toEqual(['not a code server']);
-			expect(out.file_path).toBeUndefined();
-			expect(out.sha256).toBeUndefined();
+			const error = await buildVersionFromGit({ version: '7.0.1' }).then(
+				() => null,
+				(caught: unknown) => caught,
+			);
+			expect(isDedaloError(error)).toBe(true);
+			expect((error as { code: string }).code).toBe('update.refused');
+			// the operator sentence reaches the wire (update.refused is public-disclosure)
+			expect((error as { publicMessage?: string }).publicMessage).toBe(
+				'Error. This instance is not a code server',
+			);
+			// the machine detail stays LOG-side only
+			expect((error as Error).message).toContain('not a code server');
 		} finally {
 			mock.module('../../src/config/config.ts', () => REAL_CONFIG);
 		}
@@ -318,8 +324,7 @@ describe('buildVersionFromGit — real git archive', () => {
 			}));
 
 			const out = await buildVersionFromGit({ version: '7.0.1', ref: 'v7.0.1' });
-			expect(out.errors).toEqual([]);
-			expect(out.result).toBe(true);
+			expect(out.ok).toBe(true);
 
 			const expected = join(filesDir, '7', '7.0', '7.0.1.zip');
 			expect(out.file_path).toBe(expected);
@@ -336,11 +341,16 @@ describe('buildVersionFromGit — real git archive', () => {
 			expect(readFileSync(`${expected}.sha256`, 'utf8')).toBe(`${digest}  7.0.1.zip\n`);
 
 			// a bad ref: refused by git itself, no sidecar written
-			const bad = await buildVersionFromGit({ version: '7.0.2', ref: 'no-such-ref' });
-			expect(bad.result).toBe(false);
-			expect(bad.msg).toBe('Error. git archive failed');
-			expect(bad.errors.length).toBe(1);
-			expect(bad.errors[0]!.length).toBeGreaterThan(0);
+			const bad = await buildVersionFromGit({ version: '7.0.2', ref: 'no-such-ref' }).then(
+				() => null,
+				(caught: unknown) => caught,
+			);
+			expect(isDedaloError(bad)).toBe(true);
+			expect((bad as { code: string }).code).toBe('update.failed');
+			expect((bad as { publicMessage?: string }).publicMessage).toBe('Error. git archive failed');
+			// git's stderr is the LOG-side detail, never the wire sentence
+			expect((bad as Error).message).toStartWith('git archive failed: ');
+			expect((bad as Error).message.length).toBeGreaterThan('git archive failed: '.length);
 			expect(existsSync(join(filesDir, '7', '7.0', '7.0.2.zip.sha256'))).toBe(false);
 		} finally {
 			mock.module('../../src/config/config.ts', () => REAL_CONFIG);

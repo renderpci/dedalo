@@ -26,6 +26,27 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 
 const UNDEFINED_METHOD = 'Undefined or unauthorized method (action)';
+/**
+ * Envelope v2: a refused report is the generic caller refusal `request.invalid`
+ * — the registry message ("Invalid request"), never a report-specific sentence
+ * (the "terse generic envelope" property WC-017 asks for). The mimicry of the
+ * Gate-1 shape is asserted on the CODE (`request.unknown_action`) AND, since the
+ * P1 call-site sweep, on the whole refusal body: the handler's own
+ * token-mismatch refusal is BYTE-IDENTICAL to the disabled-receiver gate's,
+ * `details.action` included — WC-017 restated as code identity.
+ */
+const INVALID_REPORT = 'Invalid request';
+
+/**
+ * A refusal body reduced to what a PROBE can see: `request_id` is per-request,
+ * and `error.debug` exists only under DEDALO_DEBUG_API_ERRORS (which this suite
+ * runs with) and carries the throw's own stack by construction — neither is part
+ * of the WC-017 identity claim.
+ */
+function comparableRefusal(body: Record<string, unknown>): Record<string, unknown> {
+	const { debug: _debug, ...error } = (body.error ?? {}) as Record<string, unknown>;
+	return { ...body, request_id: null, error };
+}
 
 /** Unique per-run entity so throttle windows never bleed across runs. */
 const ENTITY = `test_er_${process.pid}`;
@@ -129,7 +150,8 @@ describe('error-report intake (WC-017)', () => {
 		try {
 			const result = await post(validWirePayload());
 			expect(result.status).toBe(400);
-			expect(result.body.msg).toBe(UNDEFINED_METHOD);
+			expect((result.body.error as { message: string }).message).toBe(UNDEFINED_METHOD);
+			expect((result.body.error as { code: string }).code).toBe('request.unknown_action');
 		} finally {
 			process.env.DEDALO_ERROR_REPORT_RECEIVER = 'true';
 		}
@@ -138,7 +160,7 @@ describe('error-report intake (WC-017)', () => {
 	test('flag ON + valid payload → 200, row appended, source_ip receiver-stamped', async () => {
 		const result = await post(validWirePayload(), anon('198.51.100.7'));
 		expect(result.status).toBe(200);
-		expect(result.body.result).toBe(true);
+		expect(result.body.data).toBe(true);
 		const reportId = result.body.report_id as number;
 		expect(typeof reportId).toBe('number');
 
@@ -173,7 +195,7 @@ describe('error-report intake (WC-017)', () => {
 	test('screenshot: a non-data URL (http) is refused — no fetchable-URL smuggling', async () => {
 		const result = await post(validWirePayload({ screenshot: 'http://evil.example/x.png' }));
 		expect(result.status).toBe(400);
-		expect(result.body.msg).toBe('Invalid error report');
+		expect((result.body.error as { message: string }).message).toBe(INVALID_REPORT);
 	});
 
 	test('screenshot: omitted entirely still validates (optional, cross-version wire)', async () => {
@@ -186,7 +208,7 @@ describe('error-report intake (WC-017)', () => {
 	test('strict schema: an unknown field is REJECTED with a terse generic envelope', async () => {
 		const result = await post(validWirePayload({ smuggled: 'field' }));
 		expect(result.status).toBe(400);
-		expect(result.body.msg).toBe('Invalid error report');
+		expect((result.body.error as { message: string }).message).toBe(INVALID_REPORT);
 		// No field-level detail leaks (IN-6).
 		expect(JSON.stringify(result.body)).not.toContain('smuggled');
 	});
@@ -194,13 +216,13 @@ describe('error-report intake (WC-017)', () => {
 	test('identifier chokepoint: a non-tipo section_tipo is refused', async () => {
 		const result = await post(validWirePayload({ section_tipo: 'oh1; DROP TABLE x' }));
 		expect(result.status).toBe(400);
-		expect(result.body.msg).toBe('Invalid error report');
+		expect((result.body.error as { message: string }).message).toBe(INVALID_REPORT);
 	});
 
 	test('oversize payload (beyond 256 KiB) is refused before parsing', async () => {
 		const result = await post(validWirePayload({ description: 'x'.repeat(300 * 1024) }));
 		expect(result.status).toBe(400);
-		expect(result.body.msg).toBe('Invalid error report');
+		expect((result.body.error as { message: string }).message).toBe(INVALID_REPORT);
 	});
 
 	test('token required: wrong/missing → unregistered-action shape; correct → accepted', async () => {
@@ -208,15 +230,29 @@ describe('error-report intake (WC-017)', () => {
 
 		const missing = await post(validWirePayload());
 		expect(missing.status).toBe(400);
-		expect(missing.body.msg).toBe(UNDEFINED_METHOD);
+		expect((missing.body.error as { message: string }).message).toBe(UNDEFINED_METHOD);
+		expect((missing.body.error as { code: string }).code).toBe('request.unknown_action');
 
 		const wrong = await post(validWirePayload(), anon('203.0.113.9', 'guess'));
 		expect(wrong.status).toBe(400);
-		expect(wrong.body.msg).toBe(UNDEFINED_METHOD);
+		expect((wrong.body.error as { message: string }).message).toBe(UNDEFINED_METHOD);
+
+		// WC-017 BYTE IDENTITY: the handler's token refusal and the Gate-1c
+		// disabled refusal must be the SAME body (request_id excepted — it is
+		// per-request), `details.action` included. A probe must not be able to
+		// tell "wrong token" from "this endpoint does not exist here".
+		process.env.DEDALO_ERROR_REPORT_RECEIVER = '';
+		const disabled = await post(validWirePayload(), anon('203.0.113.9', 'guess'));
+		process.env.DEDALO_ERROR_REPORT_RECEIVER = 'true';
+		expect(wrong.status).toBe(disabled.status);
+		expect(comparableRefusal(wrong.body)).toEqual(comparableRefusal(disabled.body));
+		expect((wrong.body.error as { details?: unknown }).details).toEqual({
+			action: 'receive_report',
+		});
 
 		const right = await post(validWirePayload(), anon('203.0.113.9', 'fleet-secret'));
 		expect(right.status).toBe(200);
-		expect(right.body.result).toBe(true);
+		expect(right.body.data).toBe(true);
 	});
 
 	test('IP allowlist: a non-listed caller gets 403; loopback shorthand admits local', async () => {
@@ -265,6 +301,6 @@ describe('error-report intake (WC-017)', () => {
 			anon('192.0.2.55', null, 300 * 1024), // declares > 256 KiB
 		);
 		expect(result.status).toBe(400);
-		expect(result.body.msg).toBe('Invalid error report');
+		expect((result.body.error as { message: string }).message).toBe(INVALID_REPORT);
 	});
 });

@@ -36,6 +36,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'b
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
 import type { ParentLocator } from '../../src/core/relations/parent.ts';
 import * as parentModule from '../../src/core/relations/parent.ts';
 import { addParent } from '../../src/core/relations/parent.ts';
@@ -128,10 +129,27 @@ async function callAddChild(
 	source: Record<string, unknown>,
 	principal: Principal,
 ): Promise<Awaited<ReturnType<typeof addChild>>> {
-	const response = await addChild({ source } as never, principal);
-	const created = Number(response.result);
+	const outcome = await addChild({ source } as never, principal);
+	const created = Number(outcome.data);
 	if (Number.isInteger(created) && created > 0) autoCreatedIds.push(created);
-	return response;
+	return outcome;
+}
+
+/**
+ * A refusal is a THROW now (ERRORS_SPEC §4), asserted by CODE — the one
+ * machine-readable identity — instead of by the old `{result:false,msg,errors}`
+ * prose. `coordinates` are LOG-ONLY, so they are checked here, never on a wire
+ * assertion. A refused addChild must still create nothing, which every caller
+ * below asserts against the row count.
+ */
+async function refusal(run: Promise<unknown>): Promise<DedaloError> {
+	try {
+		await run;
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a refusal, but the call resolved');
 }
 
 /** Live count of test3 rows — only ever used as a DELTA inside one test body. */
@@ -249,9 +267,7 @@ describe('saveOrder', () => {
 		);
 		const ontologyAfter = await testTldOntologyDigest();
 
-		expect(response.errors).toEqual([]);
-		expect(response.msg).toBe('OK. Order saved successfully. Changed values: 2');
-		expect(response.result).toEqual([
+		expect(response.data).toEqual([
 			{ value: 1, locator: { section_tipo: SECTION, section_id: B } },
 			{ value: 2, locator: { section_tipo: SECTION, section_id: A } },
 		]);
@@ -268,7 +284,7 @@ describe('saveOrder', () => {
 		expect(ontologyAfter).toBe(ontologyBefore);
 	});
 
-	test('a second identical saveOrder is a no-op: result [] and "Changed values: 0"', async () => {
+	test('a second identical saveOrder is a no-op: it changes nothing', async () => {
 		await seedNode(P1);
 		await seedNode(A);
 		await seedNode(B);
@@ -288,14 +304,12 @@ describe('saveOrder', () => {
 		} as never;
 
 		const first = await saveOrder(request, SUPERUSER);
-		expect((first.result as unknown[]).length).toBe(2);
+		expect((first.data as unknown[]).length).toBe(2);
 		const settled = await orderItemsOf(A);
 		const settledB = await orderItemsOf(B);
 
 		const second = await saveOrder(request, SUPERUSER);
-		expect(second.result).toEqual([]);
-		expect(second.msg).toBe('OK. Order saved successfully. Changed values: 0');
-		expect(second.errors).toEqual([]);
+		expect(second.data).toEqual([]);
 		expect(await orderItemsOf(A)).toEqual(settled as OrderItem[]);
 		expect(await orderItemsOf(B)).toEqual(settledB as OrderItem[]);
 	});
@@ -306,54 +320,66 @@ describe('saveOrder', () => {
 		await link(A, P1);
 		const before = await orderItemsOf(A);
 
-		const response = await saveOrder(
-			{
-				source: {
-					section_tipo: SECTION,
-					ar_locators: [{ section_tipo: SECTION, section_id: A }],
-					parent_section_tipo: '',
-					parent_section_id: P1,
-				},
-			} as never,
-			SUPERUSER,
+		const error = await refusal(
+			saveOrder(
+				{
+					source: {
+						section_tipo: SECTION,
+						ar_locators: [{ section_tipo: SECTION, section_id: A }],
+						parent_section_tipo: '',
+						parent_section_id: P1,
+					},
+				} as never,
+				SUPERUSER,
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Error. parent_section_tipo and parent_section_id are required');
-		expect(response.errors).toEqual(['missing parent context']);
+		expect(error.code).toBe('request.invalid_options');
+		expect(error.spec.status).toBe(400);
+		// request.invalid_options discloses its sentence, so the caller still
+		// learns WHICH fields are missing.
+		expect(error.publicMessage).toBe(
+			'Error. parent_section_tipo and parent_section_id are required',
+		);
 		expect(await orderItemsOf(A)).toEqual(before as OrderItem[]);
 
 		// …and the same refusal when only the id is absent.
-		const noId = await saveOrder(
-			{
-				source: {
-					section_tipo: SECTION,
-					ar_locators: [{ section_tipo: SECTION, section_id: A }],
-					parent_section_tipo: SECTION,
-				},
-			} as never,
-			SUPERUSER,
+		const noId = await refusal(
+			saveOrder(
+				{
+					source: {
+						section_tipo: SECTION,
+						ar_locators: [{ section_tipo: SECTION, section_id: A }],
+						parent_section_tipo: SECTION,
+					},
+				} as never,
+				SUPERUSER,
+			),
 		);
-		expect(noId.errors).toEqual(['missing parent context']);
+		expect(noId.code).toBe('request.invalid_options');
 	});
 
-	test('a section with no order component returns the verbatim invalid-section-map envelope', async () => {
+	test('a section with no order component refuses as a state conflict, verbatim', async () => {
 		// dd623 (presets) has no `thesaurus` section_map at all → sortChildren false.
-		const response = await saveOrder(
-			{
-				source: {
-					section_tipo: 'dd623',
-					ar_locators: [{ section_tipo: 'dd623', section_id: 1 }],
-					parent_section_tipo: 'dd623',
-					parent_section_id: 1,
-				},
-			} as never,
-			SUPERUSER,
+		const error = await refusal(
+			saveOrder(
+				{
+					source: {
+						section_tipo: 'dd623',
+						ar_locators: [{ section_tipo: 'dd623', section_id: 1 }],
+						parent_section_tipo: 'dd623',
+						parent_section_id: 1,
+					},
+				} as never,
+				SUPERUSER,
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe(
+		expect(error.code).toBe('resource.conflict');
+		expect(error.spec.status).toBe(409);
+		// resource.conflict is public-disclosure precisely so the operator
+		// sentence — which names the fix — still reaches the caller verbatim.
+		expect(error.publicMessage).toBe(
 			'Error. The order cannot be established. Invalid section map. Please, define a valid section list map such as {"order":"hierarchy49"}',
 		);
-		expect(response.errors).toEqual([]);
 	});
 
 	test('a caller without write permission is refused and nothing moves', async () => {
@@ -365,25 +391,25 @@ describe('saveOrder', () => {
 		const beforeA = await orderItemsOf(A);
 		const beforeB = await orderItemsOf(B);
 
-		const response = await saveOrder(
-			{
-				source: {
-					section_tipo: SECTION,
-					ar_locators: [
-						{ section_tipo: SECTION, section_id: B },
-						{ section_tipo: SECTION, section_id: A },
-					],
-					parent_section_tipo: SECTION,
-					parent_section_id: P1,
-				},
-			} as never,
-			NOBODY,
+		const error = await refusal(
+			saveOrder(
+				{
+					source: {
+						section_tipo: SECTION,
+						ar_locators: [
+							{ section_tipo: SECTION, section_id: B },
+							{ section_tipo: SECTION, section_id: A },
+						],
+						parent_section_tipo: SECTION,
+						parent_section_id: P1,
+					},
+				} as never,
+				NOBODY,
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe(
-			`Error. Insufficient permissions to update order in section (${SECTION})`,
-		);
-		expect(response.errors).toEqual(['insufficient permissions']);
+		expect(error.code).toBe('perm.denied');
+		expect(error.spec.status).toBe(403);
+		expect(error.coordinates).toEqual({ section_tipo: SECTION, required_level: 2 });
 		expect(await orderItemsOf(A)).toEqual(beforeA as OrderItem[]);
 		expect(await orderItemsOf(B)).toEqual(beforeB as OrderItem[]);
 	});
@@ -397,14 +423,14 @@ describe('addChild', () => {
 		await seedNode(P1);
 
 		const response = await callAddChild({ section_tipo: SECTION, section_id: P1 }, SUPERUSER);
-		const newId = Number(response.result);
+		const newId = Number(response.data);
 
 		expect(Number.isInteger(newId)).toBe(true);
 		expect(newId).toBeGreaterThan(0);
 		// test3's section_map defines is_descriptor (test88) but NOT is_indexable —
-		// so the action completes WITH that one error, verbatim.
-		expect(response.errors).toEqual(["Invalid section_map 'is_indexable' property from section"]);
-		expect(response.msg).toBe('Warning! Added child with errors');
+		// so the action COMPLETES and reports that one warning verbatim. A warning
+		// is not a refusal: the child exists.
+		expect(response.warnings).toEqual(["Invalid section_map 'is_indexable' property from section"]);
 
 		expect(await relationOf(newId, PARENT_TIPO)).toEqual([
 			{
@@ -429,13 +455,15 @@ describe('addChild', () => {
 			)) as { n: number }[]
 		)[0]?.n;
 
-		const response = await callAddChild({ section_tipo: 'dd623', section_id: 1 }, SUPERUSER);
+		const error = await refusal(callAddChild({ section_tipo: 'dd623', section_id: 1 }, SUPERUSER));
 
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe(
+		expect(error.code).toBe('tree.parent_unresolved');
+		expect(error.spec.status).toBe(409);
+		// public disclosure — the operator sentence survives verbatim.
+		expect(error.publicMessage).toBe(
 			'Error on get component_relation_parent from section. Model does not exists',
 		);
-		expect(response.errors).toContain('Invalid component_relation_parent from section: dd623');
+		expect(error.coordinates?.section_tipo).toBe('dd623');
 		const listCountAfter = (
 			(await sql.unsafe(
 				`SELECT count(*)::int AS n FROM matrix_list WHERE section_tipo = 'dd623'`,
@@ -449,10 +477,10 @@ describe('addChild', () => {
 	test('a caller without write permission is refused', async () => {
 		await seedNode(P1);
 		const before = await test3RowCount();
-		const response = await callAddChild({ section_tipo: SECTION, section_id: P1 }, NOBODY);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe(`Error. Insufficient permissions to create in section (${SECTION})`);
-		expect(response.errors).toEqual(['insufficient permissions']);
+		const error = await refusal(callAddChild({ section_tipo: SECTION, section_id: P1 }, NOBODY));
+		expect(error.code).toBe('perm.denied');
+		expect(error.spec.status).toBe(403);
+		expect(error.coordinates).toEqual({ section_tipo: SECTION, required_level: 2 });
 		expect(await test3RowCount()).toBe(before);
 	});
 
@@ -465,16 +493,19 @@ describe('addChild', () => {
 			addParent: async () => ({ ok: false, errors: [] }),
 		}));
 
-		const response = await callAddChild({ section_tipo: SECTION, section_id: P1 }, SUPERUSER);
+		const error = await refusal(callAddChild({ section_tipo: SECTION, section_id: P1 }, SUPERUSER));
 
-		expect(response.result).toBe(false);
-		expect(response.msg.startsWith('Error on add_child. Process rolled back:')).toBe(true);
-		expect(response.msg).toContain('Failed add parent locator to new section');
-		// the pre-existing is_indexable warning is kept; the rollback error is appended.
-		expect(response.errors).toEqual([
-			"Invalid section_map 'is_indexable' property from section",
-			'add_child failed: Failed add parent locator to new section',
-		]);
+		expect(error.code).toBe('tree.node_write_failed');
+		expect(error.spec.status).toBe(500);
+		expect(error.publicMessage).toBe('Error on add_child. The process was rolled back');
+		// The caught reason is the CAUSE — logged, never serialized (a rollback
+		// reason is engine internals).
+		expect((error.cause as Error).message).toContain('Failed add parent locator to new section');
+		expect(error.coordinates).toEqual({
+			section_tipo: SECTION,
+			section_id: P1,
+			action: 'add_child',
+		});
 		// the record created inside the transaction must be gone.
 		expect(await test3RowCount()).toBe(before);
 	});
@@ -490,25 +521,24 @@ describe('updateParentData', () => {
 		await link(A, P1);
 		const before = await relationOf(A, PARENT_TIPO);
 
-		const response = await updateParentData(
-			{
-				source: {
-					section_tipo: SECTION,
-					section_id: String(A), // STRING on the wire…
-					old_parent_section_tipo: SECTION,
-					old_parent_section_id: P1,
-					new_parent_section_tipo: SECTION,
-					new_parent_section_id: A, // …NUMBER here: only Number() normalization catches it
-				},
-			} as never,
-			SUPERUSER,
+		const error = await refusal(
+			updateParentData(
+				{
+					source: {
+						section_tipo: SECTION,
+						section_id: String(A), // STRING on the wire…
+						old_parent_section_tipo: SECTION,
+						old_parent_section_id: P1,
+						new_parent_section_tipo: SECTION,
+						new_parent_section_id: A, // …NUMBER here: only the door's coercion catches it
+					},
+				} as never,
+				SUPERUSER,
+			),
 		);
 
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['cycle']);
-		expect(response.msg).toBe(
-			'Error. The node cannot be moved under itself or under its own descendant',
-		);
+		expect(error.code).toBe('tree.cycle');
+		expect(error.spec.status).toBe(409);
 		expect(await relationOf(A, PARENT_TIPO)).toEqual(before as Locator[]);
 	});
 
@@ -521,22 +551,23 @@ describe('updateParentData', () => {
 		const beforeA = await relationOf(A, PARENT_TIPO);
 		const beforeB = await relationOf(B, PARENT_TIPO);
 
-		const response = await updateParentData(
-			{
-				source: {
-					section_tipo: SECTION,
-					section_id: A,
-					old_parent_section_tipo: SECTION,
-					old_parent_section_id: P1,
-					new_parent_section_tipo: SECTION,
-					new_parent_section_id: B,
-				},
-			} as never,
-			SUPERUSER,
+		const error = await refusal(
+			updateParentData(
+				{
+					source: {
+						section_tipo: SECTION,
+						section_id: A,
+						old_parent_section_tipo: SECTION,
+						old_parent_section_id: P1,
+						new_parent_section_tipo: SECTION,
+						new_parent_section_id: B,
+					},
+				} as never,
+				SUPERUSER,
+			),
 		);
 
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['cycle']);
+		expect(error.code).toBe('tree.cycle');
 		expect(await relationOf(A, PARENT_TIPO)).toEqual(beforeA as Locator[]);
 		expect(await relationOf(B, PARENT_TIPO)).toEqual(beforeB as Locator[]);
 	});
@@ -566,9 +597,7 @@ describe('updateParentData', () => {
 			SUPERUSER,
 		);
 
-		expect(response.result).toBe(true);
-		expect(response.msg).toBe('OK. Parent data updated successfully');
-		expect(response.errors).toEqual([]);
+		expect(response.data).toBe(true);
 
 		// exactly ONE parent link, and it points at P2.
 		const links = (await relationOf(A, PARENT_TIPO)) as Locator[];
@@ -594,27 +623,27 @@ describe('updateParentData', () => {
 		// removeParent(P1) SUCCEEDS and writes; addParent(P2) then hits the dedup
 		// guard and returns ok:false → the throw, and ONLY the transaction restores
 		// the locator + its order entry.
-		const response = await updateParentData(
-			{
-				source: {
-					section_tipo: SECTION,
-					section_id: A,
-					old_parent_section_tipo: SECTION,
-					old_parent_section_id: P1,
-					new_parent_section_tipo: SECTION,
-					new_parent_section_id: P2,
-				},
-			} as never,
-			SUPERUSER,
+		const error = await refusal(
+			updateParentData(
+				{
+					source: {
+						section_tipo: SECTION,
+						section_id: A,
+						old_parent_section_tipo: SECTION,
+						old_parent_section_id: P1,
+						new_parent_section_tipo: SECTION,
+						new_parent_section_id: P2,
+					},
+				} as never,
+				SUPERUSER,
+			),
 		);
 
-		expect(response.result).toBe(false);
-		expect(response.msg.startsWith('Error. Update parent data failed and was rolled back:')).toBe(
-			true,
+		expect(error.code).toBe('tree.node_write_failed');
+		expect(error.publicMessage).toBe('Error on update_parent_data. The process was rolled back');
+		expect((error.cause as Error).message).toContain(
+			`Add new parent locator failed: ${SECTION}_${P2}`,
 		);
-		expect(response.msg).toContain(`Add new parent locator failed: ${SECTION}_${P2}`);
-		expect(response.errors.length).toBe(1);
-		expect(response.errors[0]).toContain('update_parent_data failed:');
 
 		expect(await relationOf(A, PARENT_TIPO)).toEqual(beforeLinks as Locator[]);
 		expect(await orderItemsOf(A)).toEqual(beforeOrder as OrderItem[]);
@@ -627,23 +656,24 @@ describe('updateParentData', () => {
 		await link(A, P1);
 		const before = await relationOf(A, PARENT_TIPO);
 
-		const response = await updateParentData(
-			{
-				source: {
-					section_tipo: SECTION,
-					section_id: A,
-					old_parent_section_tipo: SECTION,
-					old_parent_section_id: P1,
-					new_parent_section_tipo: SECTION,
-					new_parent_section_id: P2,
-				},
-			} as never,
-			NOBODY,
+		const error = await refusal(
+			updateParentData(
+				{
+					source: {
+						section_tipo: SECTION,
+						section_id: A,
+						old_parent_section_tipo: SECTION,
+						old_parent_section_id: P1,
+						new_parent_section_tipo: SECTION,
+						new_parent_section_id: P2,
+					},
+				} as never,
+				NOBODY,
+			),
 		);
 
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe(`Error. Insufficient permissions to update in section (${SECTION})`);
-		expect(response.errors).toEqual(['insufficient permissions']);
+		expect(error.code).toBe('perm.denied');
+		expect(error.coordinates).toEqual({ section_tipo: SECTION, required_level: 2 });
 		expect(await relationOf(A, PARENT_TIPO)).toEqual(before as Locator[]);
 	});
 });

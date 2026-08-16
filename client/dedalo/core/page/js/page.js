@@ -15,7 +15,7 @@
 *   rendering, and destroying instances on each menu-driven navigation.
 * - Subscribes to application-wide events (user_navigation, activate_component,
 *   dedalo_notification, render_page, render_instance, notification, quit,
-*   change_lang, api_response_errors) and dispatches to the correct handler.
+*   change_lang, api_error) and dispatches to the correct handler.
 * - Owns global keyboard shortcuts (Escape, ArrowLeft/Right with Shift, Ctrl+I, Enter).
 * - Registers itself as `window.dd_page` so other modules can reach the shell without
 *   an ES-module import cycle.
@@ -53,7 +53,9 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
-	import {render_relogin} from '../../login/js/render_login.js'
+	import {ApiError, CLIENT_ERROR, request_failed, response_data, response_extension} from '../../common/js/api_error.js'
+	import {handle_api_error, handle_api_notices} from '../../common/js/error_dispatch.js'
+	import {error_text, render_error_modal} from '../../common/js/render_api_error.js'
 	import {init_session_expiry} from '../../common/js/session_expiry.js'
 	import {prune_orphan_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
@@ -231,7 +233,8 @@ page.prototype.scroll_component_into_view = function(component) {
 *   'notification'         → prepends inspector bubble to bubbles_notification_container
 *   'quit'                 → calls delete_cache to clear local storage
 *   'change_lang'          → calls delete_cache so stale translations are dropped
-*   'api_response_errors'  → shows re-login modal on 'not_logged' error
+*   'api_error'            → hands the ApiError to the policy (relogin, no-access, toast)
+*   'api_notices'          → hands a SUCCESS envelope's notices[] to the same policy
 *
 * After subscribing, `add_events()` attaches global window/document listeners and
 * `set_custom_css()` applies OS-specific body classes.
@@ -327,11 +330,19 @@ page.prototype.init = async function(options) {
 										})
 
 									// show warning
-										const lock_modal = ui.attach_to_modal({
-											header	: get_label.warning || 'Warning',
-											body	: api_response.msg,
-											size	: 'small'
-										})
+									// NOT a failure: the server answered `ok` and says the
+									// component is held by someone else. It is rendered
+									// through the ONE error renderer anyway — text-only DOM
+									// (the message names a user) and the same surface the
+									// `record.in_use` policy prescribes (action `modal`).
+										const lock_modal = render_error_modal(
+											new ApiError({
+												code		: 'record.in_use',
+												message		: response_extension(api_response, 'msg'),
+												severity	: 'warning'
+											}),
+											{header: get_label.warning || 'Warning'}
+										)
 
 									// notify-on-release poll. Watch the locked component until the
 									// holder releases it (or their lock expires server-side), then
@@ -486,26 +497,33 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('change_lang', change_lang_handler)
 			)
 
-		// event API response errors
-			// Check API response events from data_manager.request
-			const api_response_errors_handler = (errors) => {
-				if(errors.includes('not_logged')) {
-					// RE-login, never a SECOND login. The overlay exists to recover a
-					// session that DIED under a working page; when this page loaded
-					// logged out it is already showing the login form, and stacking a
-					// dimmed overlay on top of it shows the panel twice and asks for the
-					// credentials twice (measured: any pre-auth 401 did this).
-					// page_globals.is_logged is the boot snapshot, so a session that
-					// expires mid-use still reaches the modal — which is the whole point.
-					if (page_globals.is_logged!==true) {
-						return
-					}
-					// Show login modal
-					render_relogin()
-				}
+		// event api_error
+			// THE failure channel: data_manager publishes one ApiError per failed
+			// call and the policy (error_policy.js) decides what the page does with
+			// it — relogin on `auth.not_logged`, no-access panel on `perm.denied`,
+			// toast on the rest. The page no longer inspects tokens itself.
+			// (error_dispatch owns the "never a SECOND login" rule and the single
+			// overlay shared by every request that failed at once.)
+			const api_error_handler = (api_error) => {
+				handle_api_error(api_error, {scope:'page'})
 			}
 			self.events_tokens.push(
-				event_manager.subscribe('api_response_errors', api_response_errors_handler)
+				event_manager.subscribe('api_error', api_error_handler)
+			)
+
+		// event api_notices
+			// The NOTICE channel (ERRORS_SPEC §3): a SUCCESSFUL call may carry
+			// `notices[]` — coded, non-fatal facts (children refused on a delete, a
+			// degraded external source, a login soft warning). Subscribed ONCE here
+			// so no tool has to remember to look: the policy table decides per code
+			// (default toast/warning; a widget that renders the fact itself registers
+			// its domain as `silent`). Callers that want the notice next to their own
+			// wrapper read `api_response.notices` and call handle_api_notice directly.
+			const api_notices_handler = (payload) => {
+				handle_api_notices(payload)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('api_notices', api_notices_handler)
 			)
 
 		// session expiry warning
@@ -533,6 +551,22 @@ page.prototype.init = async function(options) {
 
 
 /**
+* SET_PAGE_ERROR
+* THE page-level failure slot: `page_globals.page_error`, ONE ApiError, which
+* common.prototype.render reads to draw the page panel.
+* @param {ApiError} api_error
+* @return bool always false, so callers can `return set_page_error(…)`
+*/
+const set_page_error = function(api_error) {
+
+	page_globals.page_error = api_error
+
+	return false
+}//end set_page_error
+
+
+
+/**
 * BUILD
 * Fetches and validates the initial page context from the PHP API when `autoload`
 * is true (first page load), or verifies that a pre-supplied context is valid.
@@ -545,7 +579,8 @@ page.prototype.init = async function(options) {
 *    `get_label`, `DEDALO_ENVIRONMENT`, etc.) into the window scope.
 * 4. Validates the response at three levels: missing result, missing environment,
 *    and missing DEDALO_ENVIRONMENT global — each pushes a descriptive entry to
-*    `page_globals.api_errors` and returns false so the caller can render an error page.
+*    `page_globals.page_error` and returns false so
+*    the caller can render an error page.
 * 5. Sets `self.context` and `self.data` from the validated response.
 *
 * When `autoload === false` the caller is expected to have already set `self.context`
@@ -615,11 +650,11 @@ page.prototype.build = async function(autoload=false) {
 				// errors check
 				// AUTHORIZATION refusal (WC-2026-08-12-authorization-denial-token).
 				// The server answers a page the user holds no grant for with HTTP 403
-				// + `errors:['not_authorized']`. It is a normal answer, not a
+				// + `error.code:'perm.denied'`. It is a normal answer, not a
 				// malfunction: it gets its own error type so the renderer can say so
 				// in the user's language, instead of the generic "check your server
 				// log" panel that used to read "Not retry-able HTTP error 403".
-					if (api_response?.errors?.includes('not_authorized')) {
+					if (request_failed(api_response) && api_response.error.code==='perm.denied') {
 
 						// The refusal carries the environment (start is the first call —
 						// without it there is no get_label and the message could only be
@@ -629,46 +664,45 @@ page.prototype.build = async function(autoload=false) {
 							set_environment(api_response.environment.result)
 						}
 
-						page_globals.api_errors.push(
-							{
-								error	: 'not_authorized', // error type
-								msg		: (typeof get_label!=='undefined' && get_label.no_access_page)
-											|| 'You don\'t have permission to access this page',
-								trace	: 'page build'
-							}
-						)
+						// policy `perm.denied` → no_access_page: sets page_globals.page_error
+						// with the label in the user's language, so
+						// common.prototype.render draws the no-access panel.
+						await handle_api_error(api_response.error, {scope:'page build'})
 
 						return false
 					}
 
 				// error generic case starting the page
-				if (!api_response || !api_response.result) {
-					// api_response do not exists or result is false
-					console.error('!!! STOP build: page build api_response:', api_response);
-					// API start_error
-					page_globals.api_errors.push(
-						{
-							error	: 'start_error', // error type
-							msg		: api_response.msg || 'Error: Unable to start page. Check that PHP server is running and configuration files are correct [1]',
-							trace	: 'page build'
-						}
-					)
+				// start_data. THE payload accessor (the envelope's `data`)
+				const start_data = response_data(api_response)
 
-					return false
+				if (request_failed(api_response) || !start_data) {
+					// api_response does not exist, or it is a failure envelope
+					console.error('!!! STOP build: page build api_response:', api_response);
+					// API start_error. The server's own ApiError when there is one;
+					// a client-side one when the answer was not an envelope at all.
+					// Every coded page fault arrives HERE — `request.invalid_tipo`
+					// included (it used to be grepped out of the prose in `errors[]`
+					// further down); the panel renders its label in the user's language.
+					return set_page_error(
+						request_failed(api_response)
+							? api_response.error
+							: new ApiError({
+								code	: CLIENT_ERROR.BAD_RESPONSE,
+								message	: 'Error: Unable to start page. Check that the server is running and configuration files are correct [1]'
+							})
+					)
 				}
 
 				// environment API data check
 				if (!api_response.environment || !api_response.environment.result) {
 					// API environment data is not available
-					page_globals.api_errors.push(
-						{
-							error	: 'start_error', // error type
-							msg		: api_response.msg || 'Error: Unable to start page: environment is unavailable. Check that PHP server is running and configuration files are correct [2]',
-							trace	: 'page build'
-						}
+					return set_page_error(
+						new ApiError({
+							code	: CLIENT_ERROR.BAD_RESPONSE,
+							message	: 'Error: Unable to start page: environment is unavailable. Check that the server is running and configuration files are correct [2]'
+						})
 					)
-
-					return false
 				}
 				// fix API environment vars to window (page_globals, plain_vars, get_label)
 				set_environment(api_response.environment.result)
@@ -710,15 +744,12 @@ page.prototype.build = async function(autoload=false) {
 					// environment vars are not set correctly
 					console.error('!!! STOP build: environment unavailable. DEDALO_ENVIRONMENT var is not defined');
 
-					page_globals.api_errors.push(
-						{
-							error	: 'start_error', // error type
-							msg		: 'Error: The environment is not available. Check that PHP server is running and configuration files are correct [3]',
-							trace	: 'page build'
-						}
+					return set_page_error(
+						new ApiError({
+							code	: CLIENT_ERROR.BAD_RESPONSE,
+							message	: 'Error: The environment is not available. Check that the server is running and configuration files are correct [3]'
+						})
 					)
-
-					return false
 				}
 
 				// server_errors check (minor page and environment errors)
@@ -726,23 +757,8 @@ page.prototype.build = async function(autoload=false) {
 					console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
 				}
 
-				// Invalid tipo case.
-				if (api_response.errors) {
-					const is_invalid_tipo = api_response.errors.some(item => item.includes('Invalid tipo'));
-					if (is_invalid_tipo) {
-						// API start error. Invalid tipo.
-						page_globals.api_errors.push(
-							{
-								error	: 'start_error', // error type
-								msg		: api_response.msg || api_response.errors.join(' - '),
-								trace	: 'page build'
-							}
-						)
-					}
-				}
-
 				// set context and data to current instance
-				self.context	= api_response.result.context
+				self.context	= start_data.context
 				self.data		= {}
 			}
 		}//end if (autoload===true)
@@ -750,16 +766,15 @@ page.prototype.build = async function(autoload=false) {
 	// check page context is valid. If not, return special error node
 		if (!self.context) {
 
-			// api_errors.
-			// It's important to set instance as api_errors because this
-			// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+			// page_error.
+			// It's important to set the page error because this generates a
+			// temporal wrapper. Once solved the problem, (usually a not login scenario)
 			// the instance could be built and rendered again replacing the temporal wrapper
-				page_globals.api_errors.push(
-					{
-						error	: 'invalid_context', // error type
-						msg		: 'Invalid context. ' + (page_globals.request_message ?? ''),
-						trace	: 'page build'
-					}
+				set_page_error(
+					new ApiError({
+						code	: CLIENT_ERROR.BAD_RESPONSE,
+						message	: 'Invalid context. ' + (page_globals.request_message ?? '')
+					})
 				)
 
 			return false

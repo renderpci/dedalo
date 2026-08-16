@@ -17,17 +17,29 @@
  * per-class handler bodies live in api/handlers/<class>.ts (statically
  * imported below); the read sub-action routing lives in the section facade
  * (src/core/section/read_facade.ts).
+ *
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4 — the converter chokepoint):
+ * every gate REFUSES BY THROWING a DedaloError; a handler succeeds by
+ * returning `ok(data, …)` and fails by throwing. The ONE catch below turns
+ * any throw into `{status, body}` via toErrorEnvelope (registry status,
+ * ok:false ⇒ non-2xx, Retry-After threaded on the ApiResult) and reports it
+ * through logError. A handler body that is NOT an envelope (no `ok` key —
+ * the PHP `{result,msg,errors}` fossil) is a BUG, refused loudly as
+ * `internal.unexpected` naming the action (the P1-era legacy_body_adapter
+ * that used to translate it is DELETED; error_taxonomy_tripwire guards).
  */
 
 import { ragApiActions } from '../../ai/rag/api.ts';
 import { config } from '../../config/config.ts';
-import { readEnv } from '../../config/env.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import {
 	ERROR_REPORT_ACTION_KEYS,
 	receiverEnabled,
 	reporterIpAllowed,
 } from '../error_report/gate.ts';
+import { toErrorEnvelope } from '../errors/convert.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
+import { logError } from '../errors/log.ts';
 import { INSTALL_ACTION_KEYS, installIpAllowed, installSurfaceReachable } from '../install/gate.ts';
 import { resolvePrincipal, SUPERUSER_ID } from '../security/permissions.ts';
 import { verifyCsrf } from '../security/session_store.ts';
@@ -48,8 +60,7 @@ import { mcpApiActions } from './handlers/dd_mcp_api.ts';
 import { toolsApiActions } from './handlers/dd_tools_api.ts';
 import { tsApiActions } from './handlers/dd_ts_api.ts';
 import { utilsApiActions } from './handlers/dd_utils_api.ts';
-import { isModulePoisonError, markProcessPoisoned } from './process_health.ts';
-import { type ApiResult, denied, notAuthorized, notLogged } from './response.ts';
+import type { ApiResult } from './response.ts';
 
 export type { ApiRequestContext } from './handler_context.ts';
 export type { ApiResult } from './response.ts';
@@ -158,6 +169,22 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
 };
 
 /**
+ * TEST SEAM (error_taxonomy_tripwire's runtime leg): every registered
+ * (class, action) pair, so the gate can force a throw through each and prove
+ * the wire is converter-made — the registry itself stays private.
+ */
+export function listRegisteredActions(): readonly { apiClass: string; action: string }[] {
+	return Object.entries(ACTION_REGISTRY).flatMap(([apiClass, table]) =>
+		Object.keys(table).map((action) => ({ apiClass, action })),
+	);
+}
+
+/** TEST SEAM (same gate): the live handler table of a class, to swap a probe handler in and out. */
+export function actionTableFor(apiClass: string): Record<string, ActionHandler> | undefined {
+	return classTableFor(apiClass);
+}
+
+/**
  * Dispatch one RQO through all gates, then emit the structured access-log
  * line/counters for EVERY outcome — including gate denials (audit S2-37).
  * The wrapper owns only timing + logging; all gates live in executeRqo.
@@ -173,8 +200,16 @@ export async function dispatchRqo(rqo: Rqo, context: ApiRequestContext): Promise
 		status: result.status,
 		ms: performance.now() - startedAt,
 		detail: summarizeRqo(rqo),
+		...errorIdentity(result.body),
 	});
 	return result;
+}
+
+/** `{error_code, error_category}` of an ok:false envelope for the access log; nothing on success. */
+function errorIdentity(body: ApiResult['body']): { error_code?: string; error_category?: string } {
+	if (body.ok !== false) return {};
+	const error = body.error as { code: string; category: string };
+	return { error_code: error.code, error_category: error.category };
 }
 
 /**
@@ -216,115 +251,186 @@ function summarizeRqo(rqo: Rqo): string {
 	}
 }
 
-/** The gate chain + handler execution (see dispatchRqo). */
+/**
+ * The gate chain + handler execution (see dispatchRqo) — and THE CATCH: the
+ * one place a throw becomes a wire body. Every refusal below is a throw of a
+ * registered code; the catch converts (registry status), logs, and threads
+ * Retry-After. `csrf_token` is appended to every response for client
+ * transparency (PHP parity), success or failure.
+ */
 async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
-	const apiClass = rqo.dd_api ?? 'dd_core_api';
-	const action = rqo.action;
+	const apiClass = String(rqo.dd_api ?? 'dd_core_api');
+	const action = String(rqo.action ?? '');
+	let result: ApiResult;
+	try {
+		result = await runGatesAndHandler(rqo, context);
+	} catch (error) {
+		result = failureResult(error, context, `${apiClass}::${action}`);
+	}
+	if (context.session !== null) {
+		result.body.csrf_token = context.session.csrfToken;
+	}
+	return result;
+}
 
-	// Gate 1 — allowlist: the (class, action) pair must be EXPLICITLY registered.
-	// Resolve with Object.hasOwn, NOT a bare index. `ACTION_REGISTRY[apiClass]?.[action]`
-	// over plain object literals returns inherited Object.prototype builtins —
-	// `constructor` (the Object function), `toString`/`valueOf`/`hasOwnProperty` —
-	// instead of undefined, so a crafted `action:'constructor'` slipped past a
-	// `=== undefined` check and violated the "an unregistered pair does not exist"
-	// invariant (API-01). hasOwn on both keys + a typeof-function guard makes any
-	// inherited key resolve to no handler ⇒ the documented 400 envelope.
-	const classTable =
-		typeof apiClass === 'string' && Object.hasOwn(ACTION_REGISTRY, apiClass)
-			? ACTION_REGISTRY[apiClass]
-			: undefined;
+/**
+ * The converter door for the API surface. Poison-latch classification (a
+ * TDZ ReferenceError anywhere in the cause chain flips /health to 503 so the
+ * watchdog recycles the process) lives INSIDE toDedaloError, not here. The
+ * raw exception text never reaches the wire (SQL fragments, paths): the
+ * envelope carries the registry message + request_id; the exception is
+ * echoed ONLY under DEDALO_DEBUG_API_ERRORS=true (convert.ts debug block).
+ */
+function failureResult(error: unknown, context: ApiRequestContext, subsystem: string): ApiResult {
+	const converted = toErrorEnvelope(error, { requestId: context.requestId });
+	logError(converted.error, { subsystem, requestId: context.requestId });
+	return converted.retryAfterMs === undefined
+		? { status: converted.status, body: converted.body }
+		: { status: converted.status, body: converted.body, retryAfterMs: converted.retryAfterMs };
+}
+
+/**
+ * Gate 1 — allowlist: the (class, action) pair must be EXPLICITLY registered.
+ * Resolve with Object.hasOwn, NOT a bare index. `ACTION_REGISTRY[apiClass]?.[action]`
+ * over plain object literals returns inherited Object.prototype builtins —
+ * `constructor` (the Object function), `toString`/`valueOf`/`hasOwnProperty` —
+ * instead of undefined, so a crafted `action:'constructor'` slipped past a
+ * `=== undefined` check and violated the "an unregistered pair does not exist"
+ * invariant (API-01). hasOwn on both keys + a typeof-function guard makes any
+ * inherited key resolve to no handler ⇒ the documented `request.unknown_action`.
+ */
+function resolveHandler(apiClass: unknown, action: unknown): ActionHandler {
+	const classTable = classTableFor(apiClass);
 	const handler =
 		classTable !== undefined && typeof action === 'string' && Object.hasOwn(classTable, action)
 			? classTable[action]
 			: undefined;
-	if (typeof handler !== 'function') {
-		return denied(400, 'Undefined or unauthorized method (action)');
-	}
+	if (typeof handler !== 'function') throw unknownAction(action);
+	return handler;
+}
 
+function classTableFor(apiClass: unknown): Record<string, ActionHandler> | undefined {
+	return typeof apiClass === 'string' && Object.hasOwn(ACTION_REGISTRY, apiClass)
+		? ACTION_REGISTRY[apiClass]
+		: undefined;
+}
+
+/**
+ * The Gate-1 refusal — ALSO what a disabled Gate-1c surface answers, so the
+ * two bodies are byte-identical (minus request_id) and a probe cannot learn
+ * the endpoint exists on this host.
+ */
+function unknownAction(action: unknown): DedaloError {
+	return new DedaloError('request.unknown_action', {
+		details: { action: typeof action === 'string' ? action : String(action) },
+	});
+}
+
+/**
+ * Gates 1b + 1c — the pre-auth surfaces.
+ *
+ * 1b — install window (DEC-19, hardened by OPS-01 2026-07-28). The install
+ * surface is pre-auth by design (a fresh instance has no session), but ONLY
+ * on a genuinely fresh / mid-wizard box (installSurfaceReachable:
+ * INSTALL_MODE || installInProgress, never once sealed) and ONLY from an
+ * allowed address. A CONFIGURED or PHP-migrated instance is NOT reachable —
+ * keying on the bare seal check alone exposed the unauthenticated installer on
+ * every coexistence deploy (no install_status ⇒ not "sealed"). Not-reachable
+ * answers `install.not_reachable` (404, GONE), the same shape a sealed
+ * instance gives.
+ *
+ * 1c — error-report intake window (WC-017). Disabled ⇒ the EXACT Gate-1
+ * unregistered-action refusal (unknownAction), so a probe cannot learn the
+ * endpoint exists on this host; the optional IP allowlist mirrors the
+ * install gate. Throttle/token/schema live in the handler.
+ */
+function runPreAuthGates(actionKey: string, action: unknown, clientIp: string): void {
+	if (INSTALL_ACTION_KEYS.has(actionKey)) runInstallGate(clientIp);
+	if (ERROR_REPORT_ACTION_KEYS.has(actionKey)) runErrorReportGate(action, clientIp);
+}
+
+function runInstallGate(clientIp: string): void {
+	if (!installSurfaceReachable()) throw new DedaloError('install.not_reachable');
+	if (!installIpAllowed(clientIp)) throw new DedaloError('install.ip_denied');
+}
+
+function runErrorReportGate(action: unknown, clientIp: string): void {
+	if (!receiverEnabled()) throw unknownAction(action);
+	if (!reporterIpAllowed(clientIp)) {
+		throw new DedaloError('perm.denied', {
+			publicMessage: 'Error report not permitted from this address',
+		});
+	}
+}
+
+/**
+ * Gates 2 + 2b + 3 — authentication, maintenance, CSRF.
+ *
+ * 2 — the exemption is keyed on the (class, action) pair. The install surface
+ * is additionally pre-auth WHILE UNSEALED (runPreAuthGates); individual
+ * record-writing install steps re-check the session in the handler. WC-051:
+ * `auth.not_logged` is the code the client's re-login recovery dispatches on
+ * — this is the path an EXPIRED session takes, so it is the one that must
+ * reach render_relogin() rather than dying as a thrown fetch error.
+ *
+ * 2b — maintenance mode (AUTH-05). PHP verify_login() re-checks maintenance
+ * on EVERY request and demotes any non-root session to unauthenticated while
+ * the flag is set. The login gate (auth.ts login()) blocks only NEW logins, so
+ * a session minted BEFORE maintenance was enabled stayed free to keep writing
+ * into the matrix tables during a data-version migration under maintenance —
+ * the exact corruption window this closes. Re-checked per request; refuses
+ * every non-superuser session with `auth.maintenance` (401 — the
+ * unauthenticated status, so the client's relogin policy keys on BOTH codes)
+ * so only root — who enables and lifts maintenance — traverses.
+ * `session.userId` is the user's section_id (-1 === SUPERUSER_ID for root),
+ * the same identity the login gate keys on; getServerState() reads
+ * ts_state.json uncached, so the flag is live the instant root sets it.
+ *
+ * 3 — CSRF for authenticated, non-exempt actions. `auth.csrf_failed` (403) is
+ * the code the client's transparent single retry keys on (SEC-008,
+ * data_manager); the envelope MUST carry the session's current token
+ * (`csrf_token`, appended by executeRqo to every response) so that retry can
+ * succeed — without the fresh token the client would loop on the stale one.
+ * `action` rides as an extension key for the same reason it always did.
+ */
+async function runAuthGates(
+	actionKey: string,
+	action: unknown,
+	context: ApiRequestContext,
+): Promise<void> {
+	if (context.session === null) {
+		if (!isNoLoginAction(actionKey)) throw new DedaloError('auth.not_logged');
+		return;
+	}
+	await refuseUnderMaintenance(context.session.userId);
+	if (!CSRF_EXEMPT_ACTIONS.has(actionKey) && !verifyCsrf(context.session, context.csrfCandidate)) {
+		throw new DedaloError('auth.csrf_failed', { extend: { action } });
+	}
+}
+
+/** Gate 2's exemption: the pair is in NO_LOGIN_ACTIONS, or it is the install surface while unsealed. */
+function isNoLoginAction(actionKey: string): boolean {
+	return (
+		NO_LOGIN_ACTIONS.has(actionKey) ||
+		(INSTALL_ACTION_KEYS.has(actionKey) && installSurfaceReachable())
+	);
+}
+
+/** Gate 2b (see runAuthGates): every non-superuser session is refused while maintenance is on. */
+async function refuseUnderMaintenance(userId: number): Promise<void> {
+	if (userId === SUPERUSER_ID) return;
+	const { getServerState } = await import('../resolve/server_state.ts');
+	if (getServerState().maintenance_mode === true) throw new DedaloError('auth.maintenance');
+}
+
+/** Gates 1 → 3, then the handler inside the request-scoped identity + language contexts. */
+async function runGatesAndHandler(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
+	const apiClass = rqo.dd_api ?? 'dd_core_api';
+	const action = rqo.action;
+	const handler = resolveHandler(apiClass, action);
 	const actionKey = `${apiClass}:${action}`;
-
-	// Gate 1b — install window (DEC-19, hardened by OPS-01 2026-07-28). The
-	// install surface is pre-auth by design (a fresh instance has no session),
-	// but ONLY on a genuinely fresh / mid-wizard box (installSurfaceReachable:
-	// INSTALL_MODE || installInProgress, never once sealed) and ONLY from an
-	// allowed address. A CONFIGURED or PHP-migrated instance is NOT reachable —
-	// keying on `!isSealed()` alone exposed the unauthenticated installer on
-	// every coexistence deploy (no install_status ⇒ not "sealed"). Not-reachable
-	// answers 404 (GONE), the same shape a sealed instance gives.
-	const isInstallSurface = INSTALL_ACTION_KEYS.has(actionKey);
-	if (isInstallSurface) {
-		if (!installSurfaceReachable()) return denied(404, 'Not found');
-		if (!installIpAllowed(context.clientIp)) {
-			return notAuthorized('Install not permitted from this address');
-		}
-	}
-
-	// Gate 1c — error-report intake window (WC-017). Disabled ⇒ answer the
-	// EXACT Gate-1 unregistered-action shape, so a probe cannot learn the
-	// endpoint exists on this host; the optional IP allowlist mirrors the
-	// install gate. Throttle/token/schema live in the handler.
-	if (ERROR_REPORT_ACTION_KEYS.has(actionKey)) {
-		if (!receiverEnabled()) {
-			return denied(400, 'Undefined or unauthorized method (action)');
-		}
-		if (!reporterIpAllowed(context.clientIp)) {
-			return notAuthorized('Error report not permitted from this address');
-		}
-	}
-
-	// Gate 2 — authentication. The exemption is keyed on the (class, action) pair.
-	// The install surface is additionally pre-auth WHILE UNSEALED (checked above);
-	// individual record-writing install steps re-check the session in the handler.
-	const noLogin =
-		NO_LOGIN_ACTIONS.has(actionKey) || (isInstallSurface && installSurfaceReachable());
-	if (context.session === null && !noLogin) {
-		// WC-051: `errors: ['not_logged']`, the token the client's re-login recovery
-		// dispatches on. This is the path an EXPIRED session takes, so it is the one
-		// that must reach render_relogin() rather than dying as a thrown fetch error.
-		return notLogged();
-	}
-
-	// Gate 2b — maintenance mode (AUTH-05). PHP verify_login() re-checks
-	// maintenance on EVERY request and demotes any non-root session to
-	// unauthenticated while the flag is set. The login gate (auth.ts login())
-	// blocks only NEW logins, so a session minted BEFORE maintenance was enabled
-	// stayed free to keep writing into the matrix tables during a data-version
-	// migration under maintenance — the exact corruption window this closes.
-	// Re-checked per request; refuses every non-superuser session (401, the
-	// unauthenticated shape) so only root — who enables and lifts maintenance —
-	// traverses. `session.userId` is the user's section_id (-1 === SUPERUSER_ID
-	// for root), the same identity the login gate keys on; getServerState() reads
-	// ts_state.json uncached, so the flag is live the instant root sets it.
-	if (context.session !== null && context.session.userId !== SUPERUSER_ID) {
-		const { getServerState } = await import('../resolve/server_state.ts');
-		if (getServerState().maintenance_mode === true) {
-			// Same unauthenticated shape as gate 2 (WC-051) — that is what this gate
-			// has always claimed to return, and the claim only holds if the machine
-			// token matches too. Re-login will refuse with the maintenance message,
-			// which is the informative outcome.
-			return notLogged('Server under maintenance');
-		}
-	}
-
-	// Gate 3 — CSRF for authenticated, non-exempt actions. The rejection is the
-	// exact shape the client's transparent retry keys on (SEC-008,
-	// data_manager): errors MUST include 'csrf_failed' and the body MUST carry
-	// the session's current token so the single retry can succeed — without
-	// the fresh token the client would loop on the stale one.
-	if (context.session !== null && !CSRF_EXEMPT_ACTIONS.has(actionKey)) {
-		if (!verifyCsrf(context.session, context.csrfCandidate)) {
-			return {
-				status: 403,
-				body: {
-					result: false,
-					msg: 'Error. Invalid or missing CSRF token',
-					errors: ['csrf_failed'],
-					action,
-					csrf_token: context.session.csrfToken,
-				},
-			};
-		}
-	}
+	runPreAuthGates(actionKey, action, context.clientIp);
+	await runAuthGates(actionKey, action, context);
 
 	// Resolve the authorization identity ONCE per request, now that the auth gate
 	// has passed, and seed it on the context. Previously ~27 handlers each
@@ -348,68 +454,39 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	//    when the session carries no override.
 	const { runWithRequestContext } = await import('../security/request_context.ts');
 	const { runWithRequestLangs } = await import('../resolve/request_lang.ts');
-	let result: ApiResult;
-	try {
-		result = await runWithRequestContext(
-			{
-				principal: context.principal,
-				session: context.session,
-				requestId: context.requestId,
-				clientIp: context.clientIp,
-			},
-			() =>
-				runWithRequestLangs(
-					{
-						applicationLang: context.session?.applicationLang ?? config.menu.applicationLang,
-						dataLang: context.session?.dataLang ?? config.menu.dataLang,
-					},
-					() => handler(rqo, context),
-				),
-		);
-	} catch (error) {
-		// Final fallback (PHP json/index.php Throwable catch, :364): an unexpected
-		// handler exception must degrade to the client envelope — HTTP 200 +
-		// result:false — NOT a raw 500 error page. The vanilla client only reads
-		// api_response.result to decide failure; a 500 HTML body leaves data_manager
-		// unable to parse the response (it stalls/times out) instead of failing fast
-		// like PHP. Log the full detail server-side; return the PHP-shaped msg.
-		const message = error instanceof Error ? error.message : String(error);
-		console.error(
-			`Dedalo API EXCEPTION (${apiClass}::${action}) [req ${context.requestId}]: ${message}`,
-			error instanceof Error ? error.stack : '',
-		);
-		// A TDZ-shaped ReferenceError means a module evaluation failed and Bun has
-		// cached the failure — this process will serve the identical error forever
-		// (first-load race class, 2026-07-07). Flip the poison latch so /health
-		// goes 503 and the watchdog recycles the process instead of it serving
-		// degraded for its whole lifetime.
-		if (isModulePoisonError(error)) {
-			markProcessPoisoned(`TDZ ReferenceError in ${apiClass}::${action}: ${message}`);
-		}
-		// The raw exception text can carry SQL fragments, filesystem paths, and
-		// internal identifiers — it MUST stay server-side (logged above, keyed by
-		// request_id). The client gets a generic message + the correlation id; the
-		// exception is echoed on the wire ONLY when DEDALO_DEBUG_API_ERRORS=true (dev).
-		const exposeExceptionDetail = readEnv('DEDALO_DEBUG_API_ERRORS') === 'true';
-		result = {
-			status: 200,
-			body: {
-				result: false,
-				msg: 'Throwable Exception when calling Dédalo API',
-				errors: ['An unexpected error occurred'],
-				request_id: context.requestId,
-				...(exposeExceptionDetail ? { debug: { exception: message } } : {}),
-			},
-		};
-	}
-	// PHP appends the csrf token to every response for client transparency. Guard
-	// `result.body` (API-01): this assignment is OUTSIDE the try/catch above, so a
-	// handler returning a body-less result would throw a TypeError here that
-	// escapes into the un-try/caught fetch wrapper as a raw 500 instead of a
-	// client envelope. Every registered handler returns a body; the guard is
-	// belt-and-braces so no future handler can reopen that path.
-	if (context.session !== null && result.body !== undefined && result.body !== null) {
-		result.body.csrf_token = context.session.csrfToken;
-	}
+	const result = await runWithRequestContext(
+		{
+			principal: context.principal,
+			session: context.session,
+			requestId: context.requestId,
+			clientIp: context.clientIp,
+		},
+		() =>
+			runWithRequestLangs(
+				{
+					applicationLang: context.session?.applicationLang ?? config.menu.applicationLang,
+					dataLang: context.session?.dataLang ?? config.menu.dataLang,
+				},
+				() => handler(rqo, context),
+			),
+	);
+	assertEnvelopeBody(result, String(apiClass), String(action));
 	return result;
+}
+
+/**
+ * The one-producer law (ERRORS_SPEC §4): a handler returns `ok(...)` or
+ * throws. A body without `ok` (a streamed result carries no serialized body
+ * and is exempt) is a handler BUG — refused as `internal.unexpected` through
+ * the executeRqo catch, coordinates naming the action, so it can never reach
+ * the wire half-shaped and silently "work".
+ */
+function assertEnvelopeBody(result: ApiResult, apiClass: string, action: string): void {
+	if (result.stream !== undefined) return;
+	const body: unknown = result.body;
+	if (typeof body === 'object' && body !== null && Object.hasOwn(body, 'ok')) return;
+	throw new DedaloError('internal.unexpected', {
+		message: `handler ${apiClass}::${action} returned a non-envelope body (no \`ok\` key)`,
+		coordinates: { api_class: apiClass, action },
+	});
 }

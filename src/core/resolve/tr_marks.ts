@@ -10,6 +10,8 @@
  *   [note-<state>-<id>(-<label>)?-data:…:data] annotation  (state a|b)
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
+
 /** [TC_…_TC] full-tag pattern; group 1 = full tag, group 2 = timecode value. */
 export const TC_PATTERN = /\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\]/g;
 
@@ -47,10 +49,17 @@ const TAG_ID_SHAPE = /^[0-9]{1,6}$/;
  */
 export function markPatternById(type: IdTargetedMarkType, tagId: string): RegExp {
 	if (!ID_TARGETED_MARK_TYPES.includes(type)) {
-		throw new Error(`markPatternById: tag type '${type}' is not deletable by id`);
+		throw new DedaloError('request.invalid', {
+			message: `markPatternById: tag type '${type}' is not deletable by id`,
+			publicMessage: `Only ${ID_TARGETED_MARK_TYPES.join('/')} marks can be deleted by id`,
+			coordinates: { tag_type: String(type) },
+		});
 	}
 	if (!TAG_ID_SHAPE.test(tagId)) {
-		throw new Error(`markPatternById: tag_id '${tagId}' is not a valid tag id (1-6 digits)`);
+		throw new DedaloError('request.invalid', {
+			message: `markPatternById: tag_id '${tagId}' is not a valid tag id (1-6 digits)`,
+			publicMessage: 'A tag id must be 1-6 digits',
+		});
 	}
 	return new RegExp(`\\[\\/{0,1}${type}-[a-z]-${tagId}(-[^-]{0,22}-data:.*?:data)?\\]`, 'g');
 }

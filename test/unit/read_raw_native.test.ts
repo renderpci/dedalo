@@ -48,6 +48,7 @@ import {
 	installAclIdentityFixture,
 	removeAclIdentityFixture,
 } from '../helpers/acl_identity_fixture.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -410,25 +411,29 @@ describe('readRaw — guards', () => {
 	 * (and indistinguishable, at the client, from "this record has nothing").
 	 */
 	test('an unknown type THROWS rather than returning an empty result', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			readRaw(
 				{ sectionTipo: SECTION, tipo: TEXT_TIPO, type: 'not_a_type', sqo: scratchSqo() },
 				admin,
 			),
-		).rejects.toThrow(/type 'not_a_type' not implemented/);
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.message).toMatch(/type 'not_a_type' not implemented/);
 	});
 
 	test('an unresolvable model THROWS naming the tipo', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			readRaw(
 				{ sectionTipo: SECTION, tipo: 'test999999', type: 'component', sqo: scratchSqo() },
 				admin,
 			),
-		).rejects.toThrow(/cannot resolve model for tipo 'test999999'/);
+		);
+		expect(refusal.code).toBe('request.invalid_tipo');
+		expect(refusal.message).toMatch(/cannot resolve model for tipo 'test999999'/);
 	});
 
 	test('a model with no jsonb column THROWS naming the model', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			readRaw(
 				{
 					sectionTipo: SECTION,
@@ -439,7 +444,9 @@ describe('readRaw — guards', () => {
 				},
 				admin,
 			),
-		).rejects.toThrow(/cannot resolve data column from model 'diffusion_element'/);
+		);
+		expect(refusal.code).toBe('request.invalid_model');
+		expect(refusal.message).toMatch(/cannot resolve data column from model 'diffusion_element'/);
 	});
 });
 
@@ -473,8 +480,8 @@ describe('dd_core_api read_raw — the caller-side permission door', () => {
 			contextFor(ACL_NON_ADMIN_USER_ID, 'zzacl_reader', nonAdmin) as never,
 		);
 		expect(result.status).toBe(403);
-		// The denial envelope carries `result:false` — never an array of rows.
-		expect((result.body as { result?: unknown }).result).toBe(false);
+		// The denial envelope is `ok:false` — never an array of rows.
+		expect((result.body as { ok?: unknown }).ok).toBe(false);
 		expect((result.body as { table?: unknown }).table).not.toBeDefined();
 	});
 
@@ -493,10 +500,10 @@ describe('dd_core_api read_raw — the caller-side permission door', () => {
 			contextFor(ACL_NON_ADMIN_USER_ID, 'zzacl_reader', nonAdmin) as never,
 		);
 		expect(result.status).toBe(200);
-		const body = result.body as { result: unknown[]; table: string };
+		const body = result.body as unknown as { data: unknown[]; table: string };
 		expect(body.table).toBe(TABLE);
-		expect(body.result).toEqual([[{ lang: 'lg-eng', value: VALUE_A }], null]);
-		expect(JSON.stringify(body.result)).not.toContain(SECRET);
+		expect(body.data).toEqual([[{ lang: 'lg-eng', value: VALUE_A }], null]);
+		expect(JSON.stringify(body.data)).not.toContain(SECRET);
 	});
 
 	test('missing options.section_tipo / options.tipo → 400 (before any search)', async () => {

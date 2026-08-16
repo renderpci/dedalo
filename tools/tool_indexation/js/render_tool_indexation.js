@@ -6,6 +6,7 @@
 
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import Split from '../../../lib/split/dist/split.es.js'
@@ -708,7 +709,7 @@ const get_tag_info = function(self) {
 					// Hide the panel only when BOTH the tag deletion and locator
 					// deletion succeeded; partial failures leave the panel visible
 					// so the user can see the error state.
-					if (response && response.delete_tag.result!==false && response.delete_locator.result!==false) {
+					if (response && !request_failed(response.delete_tag) && !request_failed(response.delete_locator)) {
 						const toggle_node = self.tag_info_container // self.info_container
 						if (!toggle_node.classList.contains('hide')) {
 							toggle_node.classList.add('hide')

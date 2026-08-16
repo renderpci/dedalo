@@ -80,9 +80,9 @@ The response gains two fields, both emitted ONLY in relation mode:
 The hierarchy list is NARROWED to `targets` inside the projection loop, and the two empty
 cases stop looking alike:
 
-- every candidate dropped by a permission check → `notAuthorized()` (403) with the GENERIC
-  default message, naming no section (`src/core/api/response.ts` refuses `denied(403, …)`
-  precisely so a refusal cannot describe what the caller may not reach);
+- every candidate dropped by a permission check → a thrown `perm.denied` (403) with the
+  GENERIC registry message, naming no section (operator disclosure — a refusal cannot
+  describe what the caller may not reach);
 - dropped by the data-driven skips (no active hierarchy, none of them a target) →
   `409 read: no active hierarchy is configured for this component target`.
 

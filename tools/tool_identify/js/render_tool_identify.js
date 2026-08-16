@@ -59,9 +59,10 @@
 * fails to load (a media URL is cookie-gated by the web server, so a request can
 * still fail after the file was found on disk).
 *
-* Declines each get their own message. `no_profile` is NORMAL — a section that
-* does not do identification is not a broken section — so it is styled as
-* information, not as an error.
+* Declines each get their own message, chosen by the REGISTERED error code the
+* server threw (`identify.*`, `perm.denied`, …). `identify.no_profile` is NORMAL
+* — a section that does not do identification is not a broken section — so it is
+* styled as information, not as an error.
 *
 * ── PROPOSALS: TWO SOURCES THAT MUST NEVER LOOK ALIKE ────────────────────────
 *
@@ -114,6 +115,11 @@
 	// and record-title resolver (exported below) so the whole tool speaks with
 	// one voice about a decline.
 	import {build_clusters_panel} from './render_tool_identify_clusters.js'
+	// error_text: the ONE sentence resolver for an ApiError (label in the user's
+	// language → the registry's English message → the code). It is the fallback
+	// for every code this tool has no curated sentence of its own for, so a new
+	// registered code always reaches the curator as a sentence, never as a token.
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 
 
 
@@ -617,67 +623,92 @@ const criterion_labels = function(report) {
 
 /**
 * RENDER_DECLINE
-* One honest message per decline code.
+* One honest message per REGISTERED error code (ERRORS_SPEC §3). The decline is
+* an ApiError — the server's, or one the tool decided itself (tool_identify.js
+* local_decline) — so there is exactly one field to dispatch on: `code`.
 *
-* `no_profile` is the important one: a section with no identification profile
-* is a NORMAL section, not a broken one, so it is styled as information. Only
-* `invalid_profile` and a transport failure are painted as problems, and both
+* `identify.no_profile` is the important one: a section with no identification
+* profile is a NORMAL section, not a broken one, so it is styled as information.
+* Only the malformed-profile and failure codes are painted as problems, and those
 * carry the server's own message verbatim — a malformed descriptor names the
 * exact criterion and hop that is wrong, which is the whole point of refusing
 * loudly instead of returning a quietly reduced result set.
 *
+* TEXT: the curated tool sentence wins where this tool has one (it is longer,
+* translated, and says what the curator should DO about it); every other code
+* — anything the registry grows, `client.*` transport failures included — falls
+* through to `error_text`, which resolves the master.json label in the user's
+* language and degrades to the registry's English sentence and finally the code.
+* Nothing reaches the DOM through innerHTML: `text_content` only (DS-1).
+*
 * @param {Object} self
 * @param {HTMLElement} container
-* @param {Object} [decline_in] - the decline to render; defaults to self.decline
+* @param {ApiError} [decline_in] - the decline to render; defaults to self.decline
 *   (the proposals panel passes self.proposals_decline, which uses the same codes)
 * @returns {HTMLElement} notice node
 */
 export const render_decline = function(self, container, decline_in) {
 
-	const decline	= decline_in || self.decline || { code : 'failed', msg : null }
-	const code		= decline.code
+	const decline	= decline_in || self.decline || null
+	const code		= (decline && typeof decline.code==='string') ? decline.code : ''
 
-	// label key + tone per code. Unknown codes fall back to the generic
-	// failure rather than being silently swallowed.
+	// curated sentence + tone per registered code. A code with no row falls back
+	// to the generic failure tone and `error_text`, never to silence.
 		const by_code = {
-			no_profile		: { label : 'identify_no_profile',		tone : 'decline', show_detail : false },
-			invalid_profile	: { label : 'identify_invalid_profile',	tone : 'failure', show_detail : true },
-			forbidden		: { label : 'identify_forbidden',		tone : 'decline', show_detail : false },
-			missing_seed	: { label : 'identify_missing_seed',	tone : 'decline', show_detail : false },
+			'identify.no_profile'		: { label : 'identify_no_profile',		tone : 'decline', show_detail : false },
+			'identify.invalid_profile'	: { label : 'identify_invalid_profile',	tone : 'failure', show_detail : true },
+			// the section read grant, refused BEFORE the profile is loaded so the
+			// decline codes can never reveal whether a section has a descriptor
+			'perm.denied'				: { label : 'identify_forbidden',		tone : 'decline', show_detail : false },
+			'identify.missing_seed'		: { label : 'identify_missing_seed',	tone : 'decline', show_detail : false },
 			// a source name the server does not define: a client bug, and refused
 			// rather than quietly answered with the default source
-			invalid_source	: { label : 'identify_invalid_source',	tone : 'failure', show_detail : true },
+			'identify.invalid_source'	: { label : 'identify_invalid_source',	tone : 'failure', show_detail : true },
 			// ── promotion (resolve_type_link) ───────────────────────────────
 			// Both of these are ANSWERS ABOUT THE COLLECTION, not defects, and the
 			// server's own sentence IS the explanation — so both show the detail and
 			// only the second is painted as a problem:
-			//  · no_type_section   this corpus keeps no canonical Types (a photo
-			//                      archive clusters and promotes nowhere). Normal.
-			//  · no_link_component the profile does not reveal WHICH component links
-			//                      an object to its Type. The engine refuses to guess;
-			//                      an administrator must add the criterion.
-			no_type_section		: { label : 'identify_no_type_section',	tone : 'decline', show_detail : true },
-			no_link_component	: { label : 'identify_no_link_component',tone : 'failure', show_detail : true },
-			missing_section		: { label : 'identify_missing_seed',	tone : 'decline', show_detail : false },
-			// the clustering action's own bad-request code
-			invalid_request		: { label : 'identify_failed',			tone : 'failure', show_detail : true }
+			//  · identify.no_type_section   this corpus keeps no canonical Types (a
+			//                      photo archive clusters and promotes nowhere). Normal.
+			//  · identify.no_link_component the profile does not reveal WHICH component
+			//                      links an object to its Type. The engine refuses to
+			//                      guess; an administrator must add the criterion.
+			'identify.no_type_section'	: { label : 'identify_no_type_section',	tone : 'decline', show_detail : true },
+			'identify.no_link_component': { label : 'identify_no_link_component',tone : 'failure', show_detail : true },
+			'identify.missing_section'	: { label : 'identify_missing_seed',	tone : 'decline', show_detail : false },
+			// the clustering action's own bad-request codes: the tool's server module
+			// throws `request.invalid_options` (tools/tool_identify/server/index.ts)
+			// with the missing option named in the public message; `request.invalid`
+			// is the generic caller refusal from the same family.
+			'request.invalid_options'	: { label : 'identify_failed',			tone : 'failure', show_detail : true },
+			'request.invalid'			: { label : 'identify_failed',			tone : 'failure', show_detail : true }
 		}
-		const spec = by_code[code] || { label : 'identify_failed', tone : 'failure', show_detail : true }
+		const spec = by_code[code] || { label : null, tone : 'failure', show_detail : true }
+
+	// the sentence: the curated tool label first, then the registry label/message
+	// through error_text, then a last-resort English line.
+		const curated	= spec.label ? self.get_tool_label(spec.label) : null
+		const text		= curated
+			|| (decline ? error_text(decline) : null)
+			|| self.get_tool_label('identify_failed')
+			|| 'The identification request did not return candidates.'
 
 	const notice = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'identify_notice ' + spec.tone,
-		text_content	: self.get_tool_label(spec.label) || 'The identification request did not return candidates.',
+		text_content	: text,
 		parent			: container
 	})
 
-	// the server's own message: for invalid_profile it is the parser's exact
-	// complaint, which an administrator needs verbatim.
-		if (spec.show_detail===true && typeof decline.msg==='string' && decline.msg.length>0) {
+	// the server's own message: for identify.invalid_profile it is the parser's
+	// exact complaint, which an administrator needs verbatim. Skipped when it
+	// merely repeats the sentence already shown.
+		const detail = (decline && typeof decline.message==='string') ? decline.message : ''
+		if (spec.show_detail===true && detail.length>0 && detail!==text) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'identify_notice_detail',
-				text_content	: decline.msg,
+				text_content	: detail,
 				parent			: notice
 			})
 		}

@@ -57,8 +57,9 @@ const t0 = performance.now()
 
 		// page_globals. Set basic properties
 			window.page_globals = {
-				// API response errors
-				api_errors : [],
+				// THE page-level failure: one ApiError, set by error_dispatch /
+				// page.build and rendered by render_api_error.render_error_panel
+				page_error : null,
 				// API response last message
 				request_message : null,
 				// SEC-008: CSRF token captured from API responses; injected into

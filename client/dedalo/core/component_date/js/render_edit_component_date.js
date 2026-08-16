@@ -55,6 +55,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 
 
@@ -963,10 +964,11 @@ export const render_input_element_time = (i, current_value, self) => {
 *        'time'   → self.parse_string_time(input_value)
 *        'period' → self.parse_string_period(input_value)
 *        default  → self.parse_string_date(input_value)
-*      Each parser returns { result: dd_date|{}, error?: [{msg, type}] }.
+*      Each parser returns { data: dd_date|{}, error?: [{text, type}] }.
 *   2. If the response is null (self is falsy) or missing, logs and returns false.
-*   3. If response.error is set, shows an alert() with the first error message and
-*      marks the input_wrap with an error style via ui.component.error(). Returns false.
+*   3. If response.error is set (an ApiError from the parser), hands it to
+*      handle_api_error — the `validation.*` policy renders it inline in the
+*      field wrapper — and marks input_wrap via ui.component.error(). Returns false.
 *   4. On success, clears the error style on input_wrap.
 *   5. Determines the effective_key ('start', 'end', or 'period') from options.date_input
 *      or options.type, then merges the parsed result into the current data entry:
@@ -980,7 +982,6 @@ export const render_input_element_time = (i, current_value, self) => {
 *        edit mode   — calls self.change_value({ changed_data, refresh:false }) which
 *                      records the mutation and queues a save without re-rendering.
 *
-* (!) alert() is used to surface parse errors to the user. This is a blocking browser dialog.
 *     Prefer ui.attach_to_modal() in future iterations for non-blocking feedback.
 *
 * @param {Object}          options             - All parameters are passed as named properties
@@ -1030,7 +1031,9 @@ export const change_handler = function(options) {
 
 	// error case
 		if(response.error){
-			alert(response.error[0].msg)
+			// policy `validation.*` → inline: the message lands inside the field's
+			// own wrapper instead of a blocking browser dialog
+			handle_api_error(response.error, {wrapper: input_wrap})
 			ui.component.error(true, input_wrap)
 			return false
 		}
@@ -1043,7 +1046,7 @@ export const change_handler = function(options) {
 		const value	= data.entries || []
 
 	// new value. New parsed value
-		const result = response.result || {}
+		const result = response.data || {}
 		const new_value = (Object.keys(result).length === 0 && result.constructor === Object)
 			? null // empty object case
 			: result

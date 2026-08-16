@@ -249,12 +249,9 @@ tool_import_rdf.prototype.get_rdf_data = async function(ontology_tipo, ar_values
 					dd_console("-> get_rdf_data API response:",'DEBUG',response);
 				}
 
-				// user messages
-				// msg_type drives the UI toast/notification in the render layer;
-				// the value is computed here but consumed by the caller of get_rdf_data,
-				// which must read response.result to determine the display state.
-					const msg_type = (response.result===false) ? 'error' : 'ok'
-
+				// The envelope is resolved verbatim: the render layer decides what to
+				// show from `request_failed(response)` / `response_data(response)`
+				// (tools/tool_import_rdf/js/render_tool_import_rdf.js).
 				resolve(response)
 			})
 		})

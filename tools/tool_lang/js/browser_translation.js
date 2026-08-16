@@ -44,6 +44,25 @@
 
 
 /**
+* ERROR_NODE
+* Builds the `.error` status node with the message as a TEXT node. The message
+* is engine/worker text (exception message, file path, stack fragment) and must
+* NEVER be parsed as HTML (DS-1, error_report_xss_tripwire).
+* @param {string} message
+* @return HTMLElement
+*/
+const error_node = function(message) {
+
+	const node = document.createElement('div')
+	node.className	= 'error'
+	node.textContent = String(message)
+
+	return node
+}//end error_node
+
+
+
+/**
 * Module-level reusable worker. Lazy created.
 * @type {Worker|null}
 */
@@ -605,7 +624,8 @@ export const translate_component_browser = async function(options) {
 					const error_msg = data.message || data.name || String(data)
 					console.error('Worker error details:', data)
 					if (status_container) {
-						status_container.innerHTML = `<div class="error">${error_msg}</div>`
+						// worker/engine text (exception message, file path): TEXT only (DS-1)
+						status_container.replaceChildren(error_node(error_msg))
 					}
 					reject(new Error(error_msg))
 					break;
@@ -623,7 +643,8 @@ export const translate_component_browser = async function(options) {
 			dispose_browser_worker()
 			if (status_container) {
 				status_container.classList.remove('loading_status')
-				status_container.innerHTML = `<div class="error">${msg}</div>`
+				// worker/engine text (exception message, file path): TEXT only (DS-1)
+				status_container.replaceChildren(error_node(msg))
 			}
 			reject(e)
 		}

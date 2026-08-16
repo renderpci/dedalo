@@ -12,6 +12,7 @@
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { AUDIO_TR_QUALITY, type MediaTypeSpec } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { extractAudio } from '../engine/ffmpeg.ts';
 import {
 	buildMediaLocation,
@@ -20,6 +21,14 @@ import {
 	type MediaPathOptions,
 } from '../path.ts';
 import { resolveMasterSource } from '../processing.ts';
+
+/** The one "there is nothing to extract audio from" refusal, shared by both entry points. */
+function avOriginalMissing(): DedaloError {
+	return new DedaloError('media.file_not_found', {
+		message: 'AV original file not found',
+		publicMessage: 'AV original file not found',
+	});
+}
 
 const AUDIO_TR_EXTENSION = 'wav';
 
@@ -44,13 +53,16 @@ export async function ensureTranscribableAudio(
 	pathOpts: MediaPathOptions,
 ): Promise<string> {
 	if (spec.model !== 'component_av') {
-		throw new Error('transcribable audio requires a component_av source');
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'transcribable audio requires a component_av source',
+			publicMessage: 'transcribable audio requires a component_av source',
+		});
 	}
 	const location = transcribableAudioLocation(spec, identity, pathOpts);
 	if (existsSync(location.absolutePath)) return location.relativePath;
 
 	const source = resolveMasterSource(spec, identity, pathOpts);
-	if (source === null) throw new Error('AV original file not found');
+	if (source === null) throw avOriginalMissing();
 
 	mkdirSync(dirname(location.absolutePath), { recursive: true, mode: 0o775 });
 	await extractAudio(source, location.absolutePath, 'audio_tr');
@@ -71,11 +83,14 @@ export async function ensureAudioQuality(
 	pathOpts: MediaPathOptions,
 ): Promise<string> {
 	if (spec.model !== 'component_av')
-		throw new Error('audio quality requires a component_av source');
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'audio quality requires a component_av source',
+			publicMessage: 'audio quality requires a component_av source',
+		});
 	const location = buildMediaLocation(spec, identity, 'audio', spec.defaultExtension, pathOpts);
 	if (existsSync(location.absolutePath)) return location.relativePath;
 	const source = resolveMasterSource(spec, identity, pathOpts);
-	if (source === null) throw new Error('AV original file not found');
+	if (source === null) throw avOriginalMissing();
 	mkdirSync(dirname(location.absolutePath), { recursive: true, mode: 0o775 });
 	await extractAudio(source, location.absolutePath, 'audio');
 	if (!existsSync(location.absolutePath)) throw new Error('audio quality could not be created');

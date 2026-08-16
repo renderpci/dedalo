@@ -72,7 +72,7 @@ test('the artifact carries the real additions when the pre-import schema is pass
 	const after = { zz1: ['zz2', 'zz3', 'zz4'], zz9: ['zz10'] };
 
 	const saved = saveSimpleSchemaFile(before, after, workDir);
-	expect(saved.result).toBe(true);
+	expect(saved.ok).toBe(true);
 	const written = JSON.parse(readFileSync(saved.filepath as string, 'utf8'));
 	expect(written).toEqual([{ tipo: 'zz1', children_added: ['zz3', 'zz4'] }]);
 

@@ -30,11 +30,13 @@ import {
 	ensureErrorReportsTable,
 	insertErrorReport,
 } from '../../../src/core/error_report/store.ts';
+import { DedaloError, isDedaloError, ok } from '../../../src/core/errors/index.ts';
 import { currentApplicationLang, currentDataLang } from '../../../src/core/resolve/request_lang.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { DEDALO_ENGINE_VERSION } from '../../../src/core/update/version.ts';
 
@@ -82,8 +84,28 @@ const defaultDeps: SendReportDeps = {
 	},
 };
 
-function failed(msg: string, errors: string[]): ToolResponse {
-	return { result: false, msg, errors };
+/**
+ * The relay/store refusals, as registered codes. The three relay conditions
+ * share one wire code (`tool.dependency_unavailable` — the admin can only do
+ * one thing about any of them: fix the relay), and stay distinguishable in the
+ * LOG through the throw's `message`, which never reaches the wire.
+ */
+function relayRefusal(reason: string): DedaloError {
+	return new DedaloError('tool.dependency_unavailable', {
+		coordinates: { tool: 'tool_error_report' },
+		message: reason,
+	});
+}
+
+/**
+ * A relay condition detected INSIDE the try: logged with its own specific
+ * reason, then refused with the shared `relay_failed` refusal — exactly what
+ * the catch below does for a transport throw, so a bad HTTP status and a dead
+ * socket stay one wire fact and one log grammar.
+ */
+function relayFault(reason: string): DedaloError {
+	console.warn('[tool_error_report] relay failed', reason);
+	return relayRefusal('relay_failed');
 }
 
 /** https-only, except loopback http for the two-server dev flow. */
@@ -105,13 +127,18 @@ export function buildSendReportHandler(deps: SendReportDeps = defaultDeps) {
 		const settings: RelaySettings = deps.settings ?? config.errorReport;
 		// Defense in depth over the registry non-grant: admins only.
 		if (!context.principal.isGlobalAdmin) {
-			return failed('Error report is an administrators-only tool', ['unauthorized']);
+			throw new DedaloError('perm.denied', {
+				coordinates: { tool: 'tool_error_report', action: 'send_report' },
+				message: 'Error report is an administrators-only tool',
+			});
 		}
 
 		// Validate the browser-supplied submission (shared schema; strict).
 		const parsed = reportSubmissionSchema.safeParse(context.options);
 		if (!parsed.success) {
-			return failed('Invalid error report submission', ['invalid_submission']);
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'Invalid error report submission',
+			});
 		}
 		const submission = parsed.data;
 
@@ -133,14 +160,16 @@ export function buildSendReportHandler(deps: SendReportDeps = defaultDeps) {
 			report.js_errors = report.js_errors.slice(1);
 		}
 		if (reportPayloadTooLarge(report)) {
-			return failed('Error report is too large', ['too_large']);
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'Error report is too large',
+			});
 		}
 
 		const masterUrl = settings.masterApiUrl;
 		if (masterUrl !== undefined && masterUrl !== '') {
 			if (!masterUrlAllowed(masterUrl)) {
 				console.warn('[tool_error_report] DEDALO_ERROR_REPORT_MASTER_URL refused (https required)');
-				return failed('Error report relay is misconfigured', ['relay_misconfigured']);
+				throw relayRefusal('relay_misconfigured');
 			}
 			// Outbound relay (the llm_provider fetch shape: abort + try/finally).
 			const controller = new AbortController();
@@ -161,24 +190,21 @@ export function buildSendReportHandler(deps: SendReportDeps = defaultDeps) {
 					signal: controller.signal,
 				});
 				if (!response.ok) {
-					throw new Error(`relay_http_${response.status}`);
+					throw relayFault(`relay_http_${response.status}`);
 				}
-				const body = (await response.json()) as { result?: unknown; report_id?: unknown };
-				if (body.result !== true) {
-					throw new Error('relay_rejected');
+				// The master answers an envelope v2 (`ok`), never the compat `result` mirror.
+				const body = (await response.json()) as { ok?: unknown; report_id?: unknown };
+				if (body.ok !== true) {
+					throw relayFault('relay_rejected');
 				}
-				return {
-					result: { delivered: true, via: 'master' },
-					msg: 'OK. Report sent to the master installation',
-					errors: [],
-				};
+				return ok({ delivered: true, via: 'master' }, { requestId: toolRequestId(context) });
 			} catch (error) {
+				// A refusal this function already typed passes through untouched.
+				if (isDedaloError(error)) throw error;
 				// Message only — NEVER the payload or the token (CONVENTIONS §1).
 				const message = error instanceof Error ? error.message : String(error);
 				console.warn('[tool_error_report] relay failed', message);
-				return failed('The report could not be delivered to the master installation', [
-					'relay_failed',
-				]);
+				throw relayRefusal('relay_failed');
 			} finally {
 				clearTimeout(timer);
 			}
@@ -188,20 +214,21 @@ export function buildSendReportHandler(deps: SendReportDeps = defaultDeps) {
 			// THIS server is the master: store directly, no HTTP loopback.
 			try {
 				const id = await deps.storeLocally(report);
-				return {
-					result: { delivered: true, via: 'local', report_id: id },
-					msg: 'OK. Report stored on this installation',
-					errors: [],
-				};
+				return ok(
+					{ delivered: true, via: 'local', report_id: id },
+					{ requestId: toolRequestId(context) },
+				);
 			} catch (error) {
 				console.warn('[tool_error_report] local store failed', error);
-				return failed('The report could not be stored', ['store_failed']);
+				throw new DedaloError('tool.action_failed', {
+					cause: error,
+					coordinates: { tool: 'tool_error_report' },
+					message: 'store_failed',
+				});
 			}
 		}
 
-		return failed('Error report relay is not configured (set DEDALO_ERROR_REPORT_MASTER_URL)', [
-			'relay_not_configured',
-		]);
+		throw relayRefusal('relay_not_configured');
 	};
 }
 

@@ -54,7 +54,7 @@ describe('change_lang action', () => {
 			contextFor(token),
 		);
 		expect(result.status).toBe(200);
-		expect(result.body.result).toBe(true);
+		expect(result.body.data).toBe(true);
 		// Re-read the session: the choice survived.
 		expect(getSession(token)?.dataLang).toBe('lg-eng');
 		expect(getSession(token)?.applicationLang).toBeNull(); // untouched
@@ -86,8 +86,7 @@ describe('change_lang action', () => {
 			{ dd_api: 'dd_core_api', action: 'get_environment' } as Rqo,
 			contextFor(token),
 		);
-		const pageGlobals = (env.body.result as { page_globals?: Record<string, unknown> })
-			?.page_globals;
+		const pageGlobals = (env.body.data as { page_globals?: Record<string, unknown> })?.page_globals;
 		expect(pageGlobals?.dedalo_application_lang).toBe('lg-cat');
 		expect(pageGlobals?.dedalo_data_lang).toBe('lg-eng');
 	});
@@ -101,7 +100,8 @@ describe('change_lang action', () => {
 			} as Rqo,
 			contextFor(token),
 		);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
+		expect((result.body.error as { code: string }).code).toBe('request.invalid_options');
 		expect(getSession(token)?.dataLang).toBeNull();
 	});
 
@@ -112,8 +112,7 @@ describe('change_lang action', () => {
 			{ dd_api: 'dd_core_api', action: 'get_environment' } as Rqo,
 			contextFor(token),
 		);
-		const pageGlobals = (env.body.result as { page_globals?: Record<string, unknown> })
-			?.page_globals;
+		const pageGlobals = (env.body.data as { page_globals?: Record<string, unknown> })?.page_globals;
 		const { config } = await import('../../src/config/config.ts');
 		expect(pageGlobals?.dedalo_data_lang).toBe(config.menu.dataLang);
 		expect(pageGlobals?.dedalo_application_lang).toBe(config.menu.applicationLang);

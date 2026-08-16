@@ -91,9 +91,9 @@ describe('media-versions panel ↔ engine contract', () => {
 		const response = (await getFilesInfo({
 			options: { tipo: 'test94', section_tipo: 'test3', section_id: 1 },
 			userId: -1,
-		} as never)) as unknown as { result: unknown; files_info_db: unknown };
-		expect(Array.isArray(response.result)).toBe(true);
-		expect(Array.isArray(response.files_info_db)).toBe(true);
+		} as never)) as unknown as { data: { files_info: unknown; files_info_db: unknown } };
+		expect(Array.isArray(response.data.files_info)).toBe(true);
+		expect(Array.isArray(response.data.files_info_db)).toBe(true);
 	});
 
 	/**
@@ -204,14 +204,15 @@ describe('media-versions panel ↔ engine contract', () => {
 			expect(source).toMatch(/options\.extension\b/);
 		});
 
-		test('a twin the host cannot write reaches the operator: errors + msg', () => {
+		test('a twin the host cannot write reaches the operator: errors + summary', () => {
 			const body = buildVersionBody();
-			// The tier BUILT, so `result` stays true — a result:false would tell the
-			// operator nothing was produced when the tier and its jpg were. The refusal
-			// therefore has to travel in the two fields the panel actually renders.
+			// The tier BUILT, so the envelope stays ok:true — a THROW here would tell
+			// the operator nothing was produced when the tier and its jpg were. The
+			// refusal therefore travels in the PAYLOAD the panel renders.
 			expect(body).toMatch(/errors:\s*built\.errors/);
 			expect(body).toMatch(/built\.errors\.length/);
-			expect(body).toMatch(/result:\s*true/);
+			expect(body).toMatch(/return ok\(/);
+			expect(body).not.toMatch(/result:\s*false/);
 		});
 	});
 
@@ -262,13 +263,17 @@ describe('media-versions panel ↔ engine contract', () => {
 	 * instead of resolving the boolean it used to.
 	 */
 	describe('side effects of a SUCCESSFUL action reach the operator', () => {
-		test('the panel reports errors/retired on result:true', () => {
+		test('the panel reports errors/retired on a SUCCESSFUL action', () => {
 			const source = readFileSync(RENDER_JS, 'utf8');
 			expect(source).toContain('const report_side_effects = function(self, response)');
-			// Triggered by STRUCTURED data, never by matching the prose of `msg` —
+			// Envelope v2: the account lives in the PAYLOAD, reached through the ONE
+			// accessor (`response_data`) — the retired compat mirror is gone.
+			expect(source).toContain('const data = response_data(response)');
+			// Triggered by STRUCTURED data, never by matching a sentence's prose —
 			// a reworded sentence must not silently stop being shown.
-			expect(source).toMatch(/response\.errors\)\s*\?\s*response\.errors\s*:\s*\[\]/);
-			expect(source).toMatch(/response\.retired\)\s*\?\s*response\.retired\s*:\s*\[\]/);
+			expect(source).toMatch(/const reported\s*=\s*data\.errors/);
+			expect(source).toMatch(/Array\.isArray\(reported\)\s*\?\s*reported\s*:\s*\[\]/);
+			expect(source).toMatch(/Array\.isArray\(data\.retired\)\s*\?\s*data\.retired\s*:\s*\[\]/);
 			// Every mutating path calls it: build, delete_version, delete_quality, sync.
 			expect(
 				(source.match(/report_side_effects\(self, response\)/g) ?? []).length,
@@ -336,6 +341,9 @@ describe('media-versions panel ↔ engine contract', () => {
 		// so pin the count AND pin that the server assignment exists.
 		const fromCache = source.match(/files_info_db\s*=\s*entries\[0\]/g) ?? [];
 		expect(fromCache.length).toBe(1);
-		expect(source).toContain('response?.files_info_db');
+		// Envelope v2: the server's answer is a PAYLOAD field, read through the one
+		// accessor — it used to sit on the body's top level, where nothing lives now.
+		expect(source).toContain('const api_data = response_data(response)');
+		expect(source).toContain('api_data?.files_info_db');
 	});
 });

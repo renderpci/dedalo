@@ -16,6 +16,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
 import { deleteJobsForTests, enqueueDiffusionJob } from '../../src/diffusion/jobs/queue.ts';
@@ -31,6 +32,20 @@ const createdJobIds: string[] = [];
 
 function call(action: string, options: Record<string, unknown> = {}) {
 	return dispatchWidgetRequest(ADMIN, { model: 'diffusion_server_control', action }, options);
+}
+
+/** The DedaloError a widget call rejected with (fails when nothing typed was thrown). */
+async function refusal(
+	action: string,
+	options: Record<string, unknown> = {},
+): Promise<DedaloError> {
+	try {
+		await call(action, options);
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error(`expected ${action} to refuse, it answered`);
 }
 
 function spec(element: string, section: string): DiffusionJobSpec {
@@ -53,7 +68,7 @@ afterAll(async () => {
 describe('diffusion_server_control widget (native engine)', () => {
 	test('get_value: native advisory + scheduler status + jobs + config', async () => {
 		const body = await call('get_value');
-		const result = body.result as {
+		const result = body.data as {
 			engine: { state: string; checks: { engine: string; formats: string[] } };
 			scheduler: {
 				running: number;
@@ -97,7 +112,7 @@ describe('diffusion_server_control widget (native engine)', () => {
 		createdJobIds.push(job.job.job_id);
 
 		const body = await call('get_value');
-		const jobs = (body.result as { jobs: Record<string, unknown>[] }).jobs;
+		const jobs = (body.data as { jobs: Record<string, unknown>[] }).jobs;
 		const row = jobs.find((candidate) => candidate.job_id === job.job.job_id);
 		expect(row, 'the freshly enqueued job is missing from get_value').toBeDefined();
 
@@ -131,26 +146,25 @@ describe('diffusion_server_control widget (native engine)', () => {
 
 	test('removed lifecycle methods deny loudly (no daemon to control)', async () => {
 		for (const action of ['start_server', 'stop_server', 'restart_server']) {
-			const body = await call(action);
-			expect(body.result).toBe(false);
-			expect(body.errors).toContain('unauthorized_method');
+			const error = await refusal(action);
+			expect(error.code).toBe('tool.method_not_allowed');
+			expect(error.details?.method).toBe(action);
 		}
 	});
 
 	test('unregistered method still denies loudly', async () => {
-		const body = await call('drop_the_server');
-		expect(body.result).toBe(false);
-		expect(body.errors).toContain('unauthorized_method');
+		const error = await refusal('drop_the_server');
+		expect(error.code).toBe('tool.method_not_allowed');
+		expect(error.details?.method).toBe('drop_the_server');
 	});
 
 	test('cancel_process: validation + queue-backed positive path', async () => {
-		const invalid = await call('cancel_process', {});
-		expect(invalid.result).toBe(false);
-		expect(invalid.errors).toContain('invalid_process_id');
+		expect((await refusal('cancel_process', {})).code).toBe('diffusion.invalid_process_id');
 
-		const missing = await call('cancel_process', { process_id: 'process_diffusion_0_nope_nope' });
-		expect(missing.result).toBe(false);
-		expect(missing.errors).toContain('not_found');
+		const missing = await refusal('cancel_process', {
+			process_id: 'process_diffusion_0_nope_nope',
+		});
+		expect(missing.code).toBe('resource.not_found');
 
 		const job = await enqueueDiffusionJob({
 			ownerUserId: OWNER,
@@ -159,18 +173,17 @@ describe('diffusion_server_control widget (native engine)', () => {
 		});
 		createdJobIds.push(job.job.job_id);
 		const cancelled = await call('cancel_process', { process_id: job.job.client_process_id });
-		expect(cancelled.result).toBe(true);
+		expect(cancelled.data).toBe(true);
 		expect(String(cancelled.msg)).toContain('cancelled');
 	});
 
 	test('requeue_job: validation + revive a terminal job', async () => {
-		const invalid = await call('requeue_job', {});
-		expect(invalid.result).toBe(false);
-		expect(invalid.errors).toContain('invalid_job_id');
+		expect((await refusal('requeue_job', {})).code).toBe('diffusion.invalid_job_id');
 
-		const notFound = await call('requeue_job', { job_id: '00000000-0000-0000-0000-000000000000' });
-		expect(notFound.result).toBe(false);
-		expect(notFound.errors).toContain('not_requeueable');
+		const notFound = await refusal('requeue_job', {
+			job_id: '00000000-0000-0000-0000-000000000000',
+		});
+		expect(notFound.code).toBe('diffusion.not_requeueable');
 
 		const job = await enqueueDiffusionJob({
 			ownerUserId: OWNER,
@@ -181,27 +194,27 @@ describe('diffusion_server_control widget (native engine)', () => {
 		// cancel it (queued → cancelled = terminal), then requeue.
 		await call('cancel_process', { process_id: job.job.client_process_id });
 		const requeued = await call('requeue_job', { job_id: job.job.job_id });
-		expect(requeued.result).toBe(true);
+		expect(requeued.data).toBe(true);
 		expect(String(requeued.msg)).toContain('requeued');
 	});
 
 	test('purge_jobs returns a count envelope', async () => {
 		const body = await call('purge_jobs', { older_than_hours: 24 });
-		expect(body.result).toBe(true);
+		expect(body.data).toBe(true);
 		expect(String(body.msg)).toContain('Purged');
 	});
 
 	test('set_scheduler: validation + pause/resume flips the shared flag', async () => {
-		const bad = await call('set_scheduler', { action: 'bogus' });
-		expect(bad.result).toBe(false);
-		expect(bad.errors).toContain('invalid_action');
+		expect((await refusal('set_scheduler', { action: 'bogus' })).code).toBe(
+			'diffusion.invalid_action',
+		);
 
 		const paused = await call('set_scheduler', { action: 'pause' });
-		expect(paused.result).toBe(true);
+		expect(paused.data).toBe(true);
 		expect(isSchedulerPaused()).toBe(true);
 
 		const resumed = await call('set_scheduler', { action: 'resume' });
-		expect(resumed.result).toBe(true);
+		expect(resumed.data).toBe(true);
 		expect(isSchedulerPaused()).toBe(false);
 	});
 
@@ -210,8 +223,8 @@ describe('diffusion_server_control widget (native engine)', () => {
 	// leaving a paused scheduler or a background wait behind.
 	test('set_scheduler drain_resume: returns at once and drains an idle queue', async () => {
 		const body = await call('set_scheduler', { action: 'drain_resume' });
-		expect(body.result).toBe(true);
-		expect(body.errors).toEqual([]);
+		expect(body.data).toBe(true);
+		expect(body.errors).toBeUndefined();
 		expect(String(body.msg)).toContain('Draining');
 
 		// Started, not awaited — the request must not carry the wait (it is bounded
@@ -223,7 +236,7 @@ describe('diffusion_server_control widget (native engine)', () => {
 
 	test('get_value reports the drain state alongside paused', async () => {
 		const body = await call('get_value');
-		const scheduler = (body.result as { scheduler: Record<string, unknown> }).scheduler;
+		const scheduler = (body.data as { scheduler: Record<string, unknown> }).scheduler;
 		// Both flags must be present: the client renders ONE dispatch pill from
 		// them, and a missing `draining` would silently read as "not draining".
 		expect(typeof scheduler.paused).toBe('boolean');
@@ -232,7 +245,7 @@ describe('diffusion_server_control widget (native engine)', () => {
 
 	test('retry_pending_deletions count_only reports the dd1758 pending rows', async () => {
 		const body = await call('retry_pending_deletions', { count_only: true });
-		const result = body.result as { pending: number };
+		const result = body.data as { pending: number };
 		expect(typeof result.pending).toBe('number');
 		expect(String(body.msg)).toContain(`${result.pending} pending deletion(s)`);
 	});

@@ -44,11 +44,13 @@ import {
 	type ClusterReport,
 	clusterRecords,
 } from '../../../src/ai/identify/cluster.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { DEFAULT_CLUSTER_POOL_CAP } from '../../../src/core/identify/record_pool.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
 /** Hard ceiling on the pool, whatever a caller asks for: the run is quadratic. */
@@ -143,11 +145,13 @@ function toWire(report: ClusterReport): Record<string, unknown> {
 async function cluster(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sectionTipos = clusterSectionTipos(ctx.options).map((tipo) => String(tipo));
 	if (sectionTipos.length === 0) {
-		return {
-			result: false,
-			msg: 'Error. section_tipo is required (the sections to cluster within)',
-			errors: ['invalid_request'],
-		};
+		// `message` as well as `publicMessage`: this action is backgroundRunnable,
+		// and the executor records `error.message` on the job record — the one
+		// place a curator reads why a detached run stopped.
+		throw new DedaloError('request.invalid_options', {
+			message: 'section_tipo is required (the sections to cluster within)',
+			publicMessage: 'section_tipo is required (the sections to cluster within)',
+		});
 	}
 
 	const rawCap = Number(ctx.options.cap);
@@ -160,60 +164,57 @@ async function cluster(ctx: ToolActionContext): Promise<ToolResponse> {
 	const sqoRaw = ctx.options.sqo;
 	const publish = ctx.publishProgress;
 
-	try {
-		const report = await clusterRecords({
-			sectionTipos,
-			principal: ctx.principal,
-			records: parseRecords(ctx.options.records),
-			sqo:
-				sqoRaw !== null && typeof sqoRaw === 'object' && !Array.isArray(sqoRaw)
-					? (sqoRaw as Record<string, unknown>)
-					: null,
-			cap,
-			imageThreshold: parseThreshold(ctx.options.image_threshold),
-			criteriaThreshold: parseThreshold(ctx.options.criteria_threshold),
-			...(Number.isFinite(rawTopK) && rawTopK > 0 ? { neighbourTopK: Math.trunc(rawTopK) } : {}),
-			...(Number.isFinite(rawMinSize) && rawMinSize > 1
-				? { minClusterSize: Math.trunc(rawMinSize) }
-				: {}),
-			...(typeof ctx.options.lang === 'string' ? { lang: ctx.options.lang } : {}),
-			...(ctx.signal !== undefined ? { signal: ctx.signal } : {}),
-			...(publish !== undefined
-				? {
-						onProgress: (progress: ClusterProgress) =>
-							publish({
-								msg: progress.msg,
-								is_running: true,
-								phase: progress.phase,
-								counter: progress.counter,
-								total: progress.total,
-							}),
-					}
-				: {}),
-		});
+	const report = await clusterRecords({
+		sectionTipos,
+		principal: ctx.principal,
+		records: parseRecords(ctx.options.records),
+		sqo:
+			sqoRaw !== null && typeof sqoRaw === 'object' && !Array.isArray(sqoRaw)
+				? (sqoRaw as Record<string, unknown>)
+				: null,
+		cap,
+		imageThreshold: parseThreshold(ctx.options.image_threshold),
+		criteriaThreshold: parseThreshold(ctx.options.criteria_threshold),
+		...(Number.isFinite(rawTopK) && rawTopK > 0 ? { neighbourTopK: Math.trunc(rawTopK) } : {}),
+		...(Number.isFinite(rawMinSize) && rawMinSize > 1
+			? { minClusterSize: Math.trunc(rawMinSize) }
+			: {}),
+		...(typeof ctx.options.lang === 'string' ? { lang: ctx.options.lang } : {}),
+		...(ctx.signal !== undefined ? { signal: ctx.signal } : {}),
+		...(publish !== undefined
+			? {
+					onProgress: (progress: ClusterProgress) =>
+						publish({
+							msg: progress.msg,
+							is_running: true,
+							phase: progress.phase,
+							counter: progress.counter,
+							total: progress.total,
+						}),
+				}
+			: {}),
+	});
 
-		const summary = report.stopped
-			? `Stopped. ${report.clusters.length} cluster(s) found across ${report.recordsConsidered} record(s) before the stop.`
-			: `OK. ${report.clusters.length} cluster(s) found across ${report.recordsConsidered} record(s); ${report.singletons.length} record(s) grouped with nothing.`;
-		// The cap is reported in the SENTENCE too, not only as a flag: a curator
-		// reading "12 clusters" must not take it for a statement about the whole
-		// collection when it is a statement about the first `cap` records.
-		const msg = report.truncated
-			? `${summary} The pool cap (${report.cap}) stopped the run — more records match than were compared.`
-			: summary;
+	const summary = report.stopped
+		? `Stopped. ${report.clusters.length} cluster(s) found across ${report.recordsConsidered} record(s) before the stop.`
+		: `OK. ${report.clusters.length} cluster(s) found across ${report.recordsConsidered} record(s); ${report.singletons.length} record(s) grouped with nothing.`;
+	// The cap is reported in the SENTENCE too, not only as a flag: a curator
+	// reading "12 clusters" must not take it for a statement about the whole
+	// collection when it is a statement about the first `cap` records.
+	const msg = report.truncated
+		? `${summary} The pool cap (${report.cap}) stopped the run — more records match than were compared.`
+		: summary;
 
-		publish?.({
-			msg,
-			is_running: false,
-			phase: 'done',
-			counter: report.recordsConsidered,
-			total: report.recordsConsidered,
-		});
-		return { result: toWire(report), msg, errors: [] };
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return { result: false, msg: `Error. ${message}`, errors: [message] };
-	}
+	publish?.({
+		msg,
+		is_running: false,
+		phase: 'done',
+		counter: report.recordsConsidered,
+		total: report.recordsConsidered,
+	});
+	// The human summary is PART OF THE PAYLOAD (the curator reads it beside the
+	// clusters) — the legacy body carried it only as the response `msg`.
+	return ok({ ...toWire(report), summary: msg }, { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {

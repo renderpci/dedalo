@@ -44,6 +44,7 @@
 	import {render_edit_component_3d} from '../../component_3d/js/render_edit_component_3d.js'
 	import {render_list_component_3d} from '../../component_3d/js/render_list_component_3d.js'
 	import {render_search_component_3d} from '../../component_3d/js/render_search_component_3d.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -311,7 +312,7 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			key_dir				: '3d',
 			max_size_bytes		: image_blob.size
 		})
-		if (!api_response.result) {
+		if (!response_data(api_response)) {
 			console.error("Error on upload api_response:", api_response);
 			return false
 		}
@@ -349,7 +350,7 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 		}
 
 	// result (boolean)
-		const result = move_api_response.result
+		const result = response_data(move_api_response)
 
 
 	return result
@@ -399,7 +400,7 @@ component_3d.prototype.delete_posterframe = async function() {
 		}
 
 
-	return api_response.result
+	return response_data(api_response)
 }//end delete_posterframe
 
 

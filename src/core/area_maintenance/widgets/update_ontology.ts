@@ -16,7 +16,13 @@
 import { config } from '../../../config/config.ts';
 import { publicOrigin } from '../../resolve/public_origin.ts';
 import type { Principal } from '../../security/permissions.ts';
-import { engineDenied, gated, type WidgetModule, type WidgetResponse } from './support.ts';
+import {
+	engineDenied,
+	fromOutcome,
+	gated,
+	type WidgetModule,
+	type WidgetResponse,
+} from './support.ts';
 
 /**
  * update_ontology panel (PHP get_value — response bytes preserved; the
@@ -50,7 +56,10 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 		server.msg = probe.msg;
 		server.errors = probe.errors;
 		server.response_code = probe.code;
-		server.result = probe.result;
+		// `server.result` is the REMOTE's own decoded body, and the key name is the
+		// panel contract the client reads (render_update_ontology.js) — the probe's
+		// own outcome field is `data` since the P1 sweep.
+		server.result = probe.data;
 		if (
 			server.code === 'localhost' &&
 			typeof server.result === 'object' &&
@@ -80,7 +89,7 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 
 	const labels = await getLabels(config.lang.structureLang);
 	return {
-		result: {
+		data: {
 			servers,
 			current_ontology: currentOntology,
 			active_ontology_tlds: activeOntologyTlds,
@@ -91,8 +100,6 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 				'Are you sure you want to overwrite the current Ontology data?\n' +
 				'You will lose all changes made to the local Ontology.',
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -111,8 +118,10 @@ async function updateOntologyOwned(
 ): Promise<WidgetResponse> {
 	const { updateOntology } = await import('../../ontology/ontology_update.ts');
 	const outcome = await updateOntology(options, principal.userId);
-	// The client reads root_info off the envelope (render_update_ontology.js).
-	return outcome as unknown as WidgetResponse;
+	// The client reads root_info at the TOP LEVEL of the response
+	// (render_update_ontology.js), so it rides as an extension key.
+	const { ok: _ok, msg: _msg, errors: _errors, ...rest } = outcome;
+	return fromOutcome(outcome, { extend: rest });
 }
 
 export const widget: WidgetModule = {

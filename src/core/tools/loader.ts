@@ -17,6 +17,7 @@
 
 import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
+import { DedaloError } from '../errors/index.ts';
 import { LIFECYCLE_KEYS, type ToolServerModule } from './module.ts';
 import { getRoots } from './paths.ts';
 
@@ -38,6 +39,12 @@ let collisions: string[] = [];
 /** In-flight load promise so concurrent callers share one scan. */
 let loadingPromise: Promise<Map<string, LoadedTool>> | null = null;
 
+/** A tool module that does not honour the contract is OUR bug, not a caller's:
+ * the precise sentence stays server-side as `internal.invariant`'s log message. */
+function invalidToolModule(message: string): DedaloError {
+	return new DedaloError('internal.invariant', { message });
+}
+
 /**
  * Validate a dynamically imported module object against the contract. Returns
  * the typed module or throws with a precise reason (caught per-tool by the
@@ -46,26 +53,28 @@ let loadingPromise: Promise<Map<string, LoadedTool>> | null = null;
 function validateModule(imported: unknown, expectedName: string): ToolServerModule {
 	const tool = (imported as { tool?: unknown }).tool;
 	if (tool === undefined || tool === null || typeof tool !== 'object') {
-		throw new Error('server/index.ts must export a `tool` object');
+		throw invalidToolModule('server/index.ts must export a `tool` object');
 	}
 	const module = tool as ToolServerModule;
 	if (module.name !== expectedName) {
-		throw new Error(`tool.name '${module.name}' must equal directory name '${expectedName}'`);
+		throw invalidToolModule(
+			`tool.name '${module.name}' must equal directory name '${expectedName}'`,
+		);
 	}
 	if (!TOOL_NAME_PATTERN.test(module.name)) {
-		throw new Error(`tool.name '${module.name}' must match ^tool_[a-z0-9_]+$`);
+		throw invalidToolModule(`tool.name '${module.name}' must match ^tool_[a-z0-9_]+$`);
 	}
 	if (typeof module.apiActions !== 'object' || module.apiActions === null) {
-		throw new Error('tool.apiActions must be an object');
+		throw invalidToolModule('tool.apiActions must be an object');
 	}
 	for (const key of LIFECYCLE_KEYS) {
 		if (Object.hasOwn(module.apiActions, key)) {
-			throw new Error(`lifecycle hook '${key}' must not appear inside apiActions`);
+			throw invalidToolModule(`lifecycle hook '${key}' must not appear inside apiActions`);
 		}
 	}
 	for (const [method, spec] of Object.entries(module.apiActions)) {
 		if (typeof spec?.handler !== 'function') {
-			throw new Error(`apiActions.${method}.handler must be a function`);
+			throw invalidToolModule(`apiActions.${method}.handler must be a function`);
 		}
 	}
 	return module;

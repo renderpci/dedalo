@@ -70,7 +70,7 @@ const MENU_RQO = {
 async function readMenuTools(context: ApiRequestContext): Promise<Record<string, unknown>[]> {
 	const result = await dispatchRqo(MENU_RQO, context);
 	expect(result.status).toBe(200);
-	const menuContext = ((result.body.result as { context?: Record<string, unknown>[] }).context ??
+	const menuContext = ((result.body.data as { context?: Record<string, unknown>[] }).context ??
 		[])[0];
 	expect(menuContext).toBeDefined();
 	return (menuContext?.tools ?? []) as Record<string, unknown>[];

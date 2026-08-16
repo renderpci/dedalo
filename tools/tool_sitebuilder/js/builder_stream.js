@@ -6,6 +6,11 @@
 
 // import
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import {
+		normalize_api_error,
+		normalize_stream_error,
+		normalize_transport_error
+	} from '../../../core/common/js/api_error.js'
 
 
 
@@ -23,11 +28,17 @@
  * daemon StoredEvent `{seq, ts, body}`, and `body.type` is one of turn_start | text |
  * tool | file_change | result | error | turn_end.
  *
+ * ERROR CONTRACT: every failure — transport, refusal envelope, `event: error`
+ * frame — reaches `on_error` as ONE `ApiError` (api_error.js), never a
+ * hand-rolled `{code, message}`. The caller dispatches it through
+ * `handle_api_error`, so a mid-run `auth.not_logged` raises the relogin overlay
+ * instead of a dead message in the chat log.
+ *
  * @param {Object}   opts
  * @param {Object}   opts.options    - {session_id, after}
  * @param {AbortSignal} [opts.signal]
  * @param {Function} [opts.on_event] - (stored_event) for every parsed frame
- * @param {Function} [opts.on_error] - ({code, message}) terminal on failure
+ * @param {Function} [opts.on_error] - (ApiError) terminal on failure
  * @param {Function} [opts.on_done]  - () when the stream ends cleanly
  * @returns {Promise<void>}
  */
@@ -62,7 +73,7 @@ export async function builder_stream(opts) {
 		})
 	} catch(e) {
 		if (e && e.name === 'AbortError') return
-		on_error({ code: 'network', message: e.message || 'Network error' })
+		on_error(normalize_transport_error(e))
 		return
 	}
 
@@ -73,13 +84,18 @@ export async function builder_stream(opts) {
 	if (content_type.indexOf('text/event-stream') === -1) {
 		let envelope = null
 		try { envelope = await response.json() } catch(e) {
-			on_error({ code: 'bad_response', message: 'Unreadable server response' }); return
+			on_error(normalize_transport_error(e)); return
 		}
-		if (!envelope || envelope.result === false || !response.ok) {
-			on_error({
-				code	: (envelope && envelope.errors && envelope.errors[0]) || 'denied',
-				message	: (envelope && envelope.msg) || ('HTTP ' + response.status)
-			})
+		// ONE normaliser for the refusal: it reads the v2 `{ok:false, error:{code}}`
+		// envelope, the COMPAT `{result:false, errors:[token]}` body, and a non-2xx
+		// answer that is no envelope at all (client.http_status).
+		const api_error = normalize_api_error(response, envelope)
+		if (api_error) {
+			on_error(api_error)
+			return
+		}
+		if (!envelope || typeof envelope !== 'object') {
+			on_error(normalize_transport_error(new Error('empty non-stream answer')))
 			return
 		}
 		on_done()
@@ -108,12 +124,23 @@ export async function builder_stream(opts) {
 		}
 		if (data_lines.length === 0) return
 
-		// The engine emits `event: error` only if the pass-through itself dies.
+		// TWO writers can emit `event: error` on this one stream: the engine when the
+		// pass-through itself dies (`site_builder.stream_lost`,
+		// tools/tool_sitebuilder/server/index.ts) and the DAEMON when it cannot replay
+		// a session backlog (`replay_failed`, publication/site_builder/src/sessions/
+		// sse.ts — an isolated subsystem, so its token is outside the engine registry).
 		if (event_name === 'error') {
 			terminal = true
-			let payload = {}
+			let payload = null
 			try { payload = JSON.parse(data_lines.join('\n')) } catch(e) { /* ignore */ }
-			on_error({ code: payload.code || 'stream_error', message: payload.message || 'Stream error' })
+			// The frame's data IS the error body ({code, message}); normalize_stream_error
+			// takes it as it came — it recognises the bare body and the older
+			// `{is_running:false, error:{…}}` wrapper alike. An unparseable frame has
+			// nothing to say beyond "the stream broke" → client.bad_response.
+			on_error(
+				normalize_stream_error(payload)
+				|| normalize_transport_error(new Error('unparseable stream error frame'))
+			)
 			return
 		}
 
@@ -136,7 +163,7 @@ export async function builder_stream(opts) {
 		if (buffer.trim().length > 0) process_record(buffer)
 	} catch(e) {
 		if (e && e.name === 'AbortError') return
-		if (!terminal) on_error({ code: 'stream_interrupted', message: e.message || 'Stream interrupted' })
+		if (!terminal) on_error(normalize_transport_error(e))
 		return
 	}
 

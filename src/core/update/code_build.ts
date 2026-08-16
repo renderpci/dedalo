@@ -16,14 +16,23 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
+import { DedaloError, ok } from '../errors/index.ts';
+import type { ApiEnvelope } from '../errors/schema.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 import { planCodeBuild } from './code_build_plan.ts';
+import { refuseUpdate } from './refuse.ts';
 
-export interface CodeBuildResponse {
-	result: boolean;
-	msg: string;
-	errors: string[];
-	file_path?: string;
-	sha256?: string;
+/**
+ * The build's answer IS the wire body (the update_code widget returns it
+ * verbatim), so it is ENVELOPE v2: `data` is the built release
+ * ({file_path, sha256}) and `msg` rides as an extension key, the way the
+ * maintenance client reads it. Every refusal THROWS (./refuse.ts).
+ */
+export type CodeBuildResponse = ApiEnvelope;
+
+/** The current RQO's id (the widget dispatcher opens the scope), or '' outside a request. */
+function currentRequestId(): string {
+	return currentRequestContext()?.requestId ?? '';
 }
 
 /**
@@ -35,7 +44,6 @@ export async function buildVersionFromGit(options: {
 	version: string;
 	ref?: string;
 }): Promise<CodeBuildResponse> {
-	const response: CodeBuildResponse = { result: false, msg: '', errors: [] };
 	// All refusal gates (code-server flag → dirs → version → ref → confinement)
 	// and the release path live in the pure planner.
 	const plan = planCodeBuild(options, {
@@ -44,17 +52,18 @@ export async function buildVersionFromGit(options: {
 		codeFilesDir: config.update.codeFilesDir,
 	});
 	if (plan.ok !== true) {
-		response.msg = plan.msg;
-		response.errors.push(plan.error);
-		return response;
+		// `plan.msg` is the operator sentence; `plan.error` the machine detail —
+		// the latter goes to the LOG side only (`message`), never to the wire.
+		throw new DedaloError('update.refused', {
+			message: `${plan.msg} (${plan.error})`,
+			publicMessage: plan.msg,
+		});
 	}
 	const { gitDir, ref, versionString, targetDir, filePath } = plan;
 	try {
 		mkdirSync(targetDir, { recursive: true });
 	} catch (error) {
-		response.msg = 'Error. Unable to create the release directory';
-		response.errors.push((error as Error).message);
-		return response;
+		refuseUpdate('update.failed', 'Error. Unable to create the release directory', error);
 	}
 
 	// git archive → the zip file. -C <gitDir> selects the repo; argv array, no shell.
@@ -68,18 +77,28 @@ export async function buildVersionFromGit(options: {
 	);
 	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
 	if (exitCode !== 0 || !existsSync(filePath) || statSync(filePath).size === 0) {
-		response.msg = 'Error. git archive failed';
-		response.errors.push(stderr.trim() || 'git archive produced no output');
-		return response;
+		// The git stderr is a LOG-side detail (paths, refs) — it stays out of the
+		// wire sentence and travels on the thrown error's `message`.
+		throw new DedaloError('update.failed', {
+			message: `git archive failed: ${stderr.trim() || 'git archive produced no output'}`,
+			publicMessage: 'Error. git archive failed',
+		});
 	}
 
 	// sha256 sidecar (WC-024 — the integrity guarantee PHP never emitted).
 	const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
 	await Bun.write(`${filePath}.sha256`, `${digest}  ${versionString}.zip\n`);
 
-	response.result = true;
-	response.msg = `OK. Built release ${versionString}.zip (${statSync(filePath).size} bytes)`;
-	response.file_path = filePath;
-	response.sha256 = digest;
-	return response;
+	return ok(
+		{ file_path: filePath, sha256: digest },
+		{
+			requestId: currentRequestId(),
+			extend: {
+				msg: `OK. Built release ${versionString}.zip (${statSync(filePath).size} bytes)`,
+				// PHP parity: the maintenance client reads both at the top level.
+				file_path: filePath,
+				sha256: digest,
+			},
+		},
+	);
 }

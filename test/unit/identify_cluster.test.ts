@@ -661,20 +661,29 @@ describe('tool_identify::cluster — the background tier', () => {
 		// exercises the whole background path (allowlist → job → terminal state)
 		// without a corpus or a database.
 		const response = scheduleBackground(loaded, 'cluster', spec, {}, ADMIN, -1);
-		expect(response.result).toBe(true);
+		expect(response.data).toBe(true);
 		const jobId = response.background_job_id as string;
 		await new Promise((resolve) => setTimeout(resolve, 30));
 		const job = getBackgroundJob(jobId);
-		expect(job?.status).toBe('done');
-		expect((job?.result as { errors?: string[] })?.errors).toEqual(['invalid_request']);
+		// The handler REFUSES BY THROWING now (ERRORS_SPEC §4), so the terminal
+		// state is 'error' with the refusal's sentence on the job record — which is
+		// what get_background_job_status serves to the poller.
+		expect(job?.status).toBe('error');
+		expect(job?.error).toContain('section_tipo is required');
 	});
 
 	test('an action outside the allowlist is refused a fork', () => {
 		const spec = tool.apiActions.cluster;
 		if (spec === undefined) throw new Error('cluster action missing');
 		const loaded = { module: { ...tool, backgroundRunnable: [] }, dir: '/x', rootIndex: 0 };
-		const response = scheduleBackground(loaded, 'cluster', spec, {}, ADMIN, -1);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('background_not_allowed');
+		// ERRORS_SPEC §4: the refusal is a THROW carrying the registry code — there
+		// is no `{result:false, errors:[…]}` body to read any more.
+		let thrown: unknown;
+		try {
+			scheduleBackground(loaded, 'cluster', spec, {}, ADMIN, -1);
+		} catch (error) {
+			thrown = error;
+		}
+		expect((thrown as { code?: string } | undefined)?.code).toBe('tool.background_not_allowed');
 	});
 });

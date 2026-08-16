@@ -8,6 +8,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { conformTmFilter } from '../../src/core/resolve/tm_filter.ts';
+import { refusalOfSync } from '../helpers/refusal.ts';
 
 /** Run one leaf (unwrapped) through the conformer; returns {sql, params}. */
 function one(componentTipo: string, q: unknown, qOperator: string) {
@@ -111,5 +112,7 @@ describe('conformTmFilter — structure', () => {
 
 	test('an unmapped component tipo throws loudly (no silent narrowing)', () => {
 		expect(() => one('dd9999', ['x'], '=')).toThrow(/no matrix_time_machine column/);
+		// …and it is the TYPED refusal, not a bare Error (ERRORS_SPEC §7).
+		expect(refusalOfSync(() => one('dd9999', ['x'], '=')).code).toBe('engine.uncovered_scope');
 	});
 });

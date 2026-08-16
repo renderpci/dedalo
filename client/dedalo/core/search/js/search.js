@@ -78,6 +78,7 @@
 		save_temp_preset
 	} from './search_user_presets.js'
 	import {is_filter_empty} from './search_utils.js'
+	import {response_data} from '../../common/js/api_error.js'
 	export {is_filter_empty} from './search_utils.js'
 
 
@@ -1588,8 +1589,9 @@ search.prototype.update_state = async function(options) {
 					options			: options
 				}
 			})
-			return Array.isArray(api_response?.result)
-				? api_response.result
+			const hits = response_data(api_response)
+			return Array.isArray(hits)
+				? hits
 				: false
 		} catch (error) {
 			console.error('Error on resolve_semantic_hits:', error);

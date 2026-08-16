@@ -26,6 +26,7 @@
 import { config } from '../../../config/config.ts';
 import { mediaTypeOf } from '../../concepts/media.ts';
 import { isValidTipo } from '../../concepts/ontology.ts';
+import { DedaloError, toErrorEnvelope } from '../../errors/index.ts';
 import { resolveMediaPathOptions } from '../../media/ontology_path.ts';
 import { buildMediaLocation } from '../../media/path.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
@@ -57,8 +58,14 @@ const VERSION_PARAM = 'v';
 
 /** Fail-closed 404 — generic, no existence leak. */
 function notFound(): Response {
-	return new Response(JSON.stringify({ result: false, msg: 'Not found' }), {
-		status: 404,
+	// Converter-made body (ERRORS_SPEC §4): this is a STATIC route, so it never
+	// entered the dispatch chokepoint and has no correlation id to reuse — the
+	// envelope gets a fresh one rather than a fake constant.
+	const { status, body } = toErrorEnvelope(new DedaloError('resource.not_found'), {
+		requestId: crypto.randomUUID(),
+	});
+	return new Response(JSON.stringify(body), {
+		status,
 		headers: { 'Content-Type': 'application/json' },
 	});
 }

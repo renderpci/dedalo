@@ -8,6 +8,8 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
+	import {request_failed, response_data, ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -259,7 +261,8 @@ const get_content_data = async function(self) {
 			e.stopPropagation()
 
 			// cleanup
-				response_msg.innerHTML = '<br>'
+				// replaceChildren also drops any error node a previous run injected
+				response_msg.replaceChildren(document.createElement('br'))
 				response_msg.classList.remove('error')
 
 			// loading css
@@ -272,28 +275,34 @@ const get_content_data = async function(self) {
 
 			// pdf_data. Extract PDF file text/html
 				const extracted_data_response = await self.get_pdf_data()
-				if(!extracted_data_response || !extracted_data_response.result || extracted_data_response.result===false) {
+				if(!extracted_data_response || request_failed(extracted_data_response)) {
 
 					// loading css
 					elements.forEach(el => el.classList.remove('loading'))
 
 					// msg
-					const msg = extracted_data_response.msg || 'Unknown error on get_pdf_data'
 					if(SHOW_DEBUG===true) {
 						console.warn('extracted_data_response:', extracted_data_response);
 					}
-					// alert(msg);
-					response_msg.innerHTML = msg
+					// the ONE error surface: policy decides (inline / toast / relogin) and
+					// renders the server text as TEXT (DS-1)
 					response_msg.classList.add('error')
+					const api_error = request_failed(extracted_data_response)
+						? extracted_data_response.error
+						: new ApiError({code: CLIENT_ERROR.BAD_RESPONSE, source: 'client'})
+					await handle_api_error(api_error, {wrapper: response_msg})
 
 					return false
 				}
 
-				// API response msg
-				response_msg.innerHTML = extracted_data_response.msg
+				// Envelope v2 carries no prose on a success — the extraction speaks for
+				// itself, so the message line is cleared instead of echoing a sentence
+				// the server no longer sends.
+				response_msg.textContent = ''
 
-			// process_pdf_data. Apply result to target component value
-				const raw_pdf_string	= extracted_data_response.result
+			// process_pdf_data. Apply the extracted text (the payload) to the target
+			// component value
+				const raw_pdf_string	= response_data(extracted_data_response)
 				const pdf_data			= await self.process_pdf_data(raw_pdf_string)
 				// debug
 					if(SHOW_DEBUG===true) {

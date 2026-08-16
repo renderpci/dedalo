@@ -41,7 +41,10 @@
 // imports
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {pause} from '../../../core/common/js/utils/index.js'
+	import {is_api_error, request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
+	import {pause, append_text_lines} from '../../../core/common/js/utils/index.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
 
@@ -268,7 +271,7 @@ const get_content_data = async function(self) {
 					const set_error = (instance) => {
 						instance.node.classList.add('error')
 						ui.component.activate(instance)
-						messages_container.innerHTML =
+						messages_container.textContent =
 						  (self.get_tool_label('insert_value') || 'Please, insert a valid value to continue.') + ' ' + instance.label
 					}
 
@@ -334,40 +337,97 @@ const get_content_data = async function(self) {
 						force_to_create : check_force_to_create.checked
 					})
 				} catch (err) {
+					console.error('generate_virtual_section threw:', err)
 					messages_container.classList.add('error')
-					ui.create_dom_element({
-						element_type: 'div',
-						class_name: 'error',
-						inner_html: 'Unexpected error: ' + err.message,
-						parent: messages_container
-					})
+					// ONE error model: an ApiError goes to the dispatcher, anything else
+					// is client text (text_content — never an HTML-parsing sink)
+					if (is_api_error(err)) {
+						await handle_api_error(err, {wrapper: messages_container})
+					}else{
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							text_content	: 'Unexpected error: ' + err.message,
+							parent			: messages_container
+						})
+					}
 					set_loading(false)
 					return
 				}
 
-				// messages
-				// The server returns a msg string or array. Arrays are joined with <br>
-				// so each message renders on its own line.
-					const msg = api_response.msg
-						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-						: 'Unknown error'
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'messages',
-						inner_html		: msg,
-						parent			: messages_container
-					})
+				// payload (envelope v2)
+				// The SUCCESS payload is `{state, applied, summary}` — tools/tool_hierarchy/
+				// server/tool_hierarchy.ts:99-102. `response_data` is the ONE accessor
+				// (`data`, then the compat `result` mirror); on a FAILURE it is `false`,
+				// so the object literal below keeps every read total.
+					const api_response_data = response_data(api_response) || {}
 
-				// errors
-				// api_response.errors is an array of string error messages accumulated by
-				// the server handler; render each error below the main message.
-					if (api_response.errors?.length) {
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'error',
-							inner_html		: api_response.errors.join('<br>'),
-							parent			: messages_container
-						})
+				// failure
+				// ONE error model: a failed call carries an ApiError, and the dispatcher
+				// owns both the policy and the surface (render_error_inline writes TEXT
+				// into this wrapper). Server text NEVER reaches an HTML sink.
+					const failed = request_failed(api_response)
+					if (failed) {
+						console.error('generate_virtual_section failed:', api_response.error)
+						messages_container.classList.add('error')
+						await handle_api_error(api_response.error, {wrapper: messages_container})
+
+						// errors — a NAMED extension key on the FAILURE envelope, at its TOP
+						// level, beside `state` (ERRORS_SPEC §3.0; thrown as DedaloError
+						// `extend` in tool_hierarchy.ts:93-97). It is the per-CHECK detail
+						// behind the one sentence the dispatcher just printed: without it
+						// the panel can only say the run was refused, never which invariant
+						// refused it. NOT inside `error.details`, so it is read from here.
+							const check_errors = api_response.errors
+							if (check_errors?.length) {
+								append_text_lines(
+									ui.create_dom_element({
+										element_type	: 'div',
+										class_name		: 'error',
+										parent			: messages_container
+									}),
+									// bare string prints as-is; a coded entry resolves through
+									// the ONE renderer
+									check_errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
+								)
+							}
+					}else{
+
+						// summary
+						// Envelope v2 has NO prose `msg` on a success: the run sentence is
+						// `data.summary` (the server's `outcome.msg`). Rendered as one line
+						// per entry — each its own TEXT node, with the client supplying the
+						// <br> elements between them.
+							const summary		= api_response_data.summary
+							const msg_lines		= Array.isArray(summary)
+								? summary
+								: (summary ? [summary] : [])
+							if (msg_lines.length) {
+								append_text_lines(
+									ui.create_dom_element({
+										element_type	: 'div',
+										class_name		: 'messages',
+										parent			: messages_container
+									}),
+									msg_lines
+								)
+							}
+
+						// errors
+						// A success carries none today (the server's per-check list rides on
+						// the REFUSAL, above) — read anyway, because a payload that grows one
+						// must not need a client change to be seen.
+							const payload_errors = api_response_data.errors
+							if (payload_errors?.length) {
+								append_text_lines(
+									ui.create_dom_element({
+										element_type	: 'div',
+										class_name		: 'error',
+										parent			: messages_container
+									}),
+									payload_errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
+								)
+							}
 					}
 
 				// applied
@@ -375,30 +435,41 @@ const get_content_data = async function(self) {
 				// the action is idempotent, and saying "nothing to do" out loud is the
 				// point: it tells the operator the button worked AND that the hierarchy
 				// was already sound, two things the old UI could not distinguish).
-					if (api_response.applied?.length) {
-						ui.create_dom_element({
+					if (api_response_data.applied?.length) {
+						const applied_list = ui.create_dom_element({
 							element_type	: 'ul',
 							class_name		: 'applied',
-							inner_html		: api_response.applied.map(line => '<li>' + line + '</li>').join(''),
 							parent			: messages_container
 						})
+						for (const line of api_response_data.applied) {
+							ui.create_dom_element({
+								element_type	: 'li',
+								text_content	: String(line),
+								parent			: applied_list
+							})
+						}
 					}
 
 				// status panel
 				// Repaint the checklist from the state the SERVER returned with the write —
 				// no second round-trip, and no chance of the panel disagreeing with what
 				// just happened.
-					if (api_response.state) {
-						paint_status(self, status_container, api_response.state)
+				// (!) TWO PLACES, on purpose: `state` is PAYLOAD on a success and a named
+				// TOP-LEVEL extension key on the refusal (tool_hierarchy.ts:96), which is
+				// exactly the case the checklist matters most in — a refused Generate must
+				// still show WHICH invariant is unmet.
+					const state = api_response_data.state ?? api_response.state
+					if (state) {
+						paint_status(self, status_container, state)
 					}
 
 				// reload section (caller)
-				// On success (result !== false), refresh the caller section so the new
+				// On success, refresh the caller section so the new
 				// virtual section appears in its record, and also refresh the menu
 				// instance so the new hierarchy entry becomes visible in the navigation.
 				// Both refreshes are guarded with try/catch because the caller chain is
 				// not guaranteed to be present in all render contexts.
-					if (api_response.result !== false) {
+					if (!failed) {
 						try {
 							// refresh section
 							self.caller?.refresh()
@@ -408,8 +479,6 @@ const get_content_data = async function(self) {
 						} catch (error) {
 							console.error('Unable to refresh section or menu: ' , error)
 						}
-					}else{
-						messages_container.classList.add('error')
 					}
 
 				set_loading(false)
@@ -516,13 +585,13 @@ export const paint_status = function(self, container, state) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'check_label',
-				inner_html		: check.label,
+				text_content	: check.label,
 				parent			: item
 			})
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'check_detail',
-				inner_html		: check.detail,
+				text_content	: check.detail,
 				parent			: item
 			})
 		}
@@ -542,19 +611,38 @@ export const paint_status = function(self, container, state) {
 */
 export const render_status_panel = async function(self, container) {
 
+	const unavailable_label = () => self.get_tool_label('status_unavailable') || 'Hierarchy status unavailable'
+
 	try {
 		const api_response = await self.inspect_hierarchy()
-		if (api_response?.state) {
-			paint_status(self, container, api_response.state)
+		// envelope v2: inspect answers `ok({state})` — the checklist is PAYLOAD
+		// (tools/tool_hierarchy/server/tool_hierarchy.ts:68), so it is read through
+		// the ONE accessor, not off the envelope's top level.
+		const state = response_data(api_response)?.state
+		if (state) {
+			paint_status(self, container, state)
 			return
 		}
-		throw new Error(api_response?.msg || 'no state in response')
-	} catch (error) {
+		// no state: say so in the panel, and let the dispatcher say WHY (the server
+		// msg is never printed here — the ApiError carries it, in the user's language)
 		container.innerHTML = ''
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'status_headline',
-			inner_html		: (self.get_tool_label('status_unavailable') || 'Hierarchy status unavailable') + ': ' + error.message,
+			text_content	: unavailable_label(),
+			parent			: container
+		})
+		if (request_failed(api_response)) {
+			console.error('inspect_hierarchy failed:', api_response.error)
+			await handle_api_error(api_response.error, {wrapper: container})
+		}
+	} catch (error) {
+		console.error('inspect_hierarchy threw:', error)
+		container.innerHTML = ''
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_headline',
+			text_content	: unavailable_label() + ': ' + error.message,
 			parent			: container
 		})
 	}

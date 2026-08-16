@@ -213,13 +213,18 @@ tool_hierarchy.prototype.build = async function(autoload=false) {
 * 4. Issues the request via `data_manager.request` with a 60-second timeout and a
 *    single retry; wraps it in a Promise so callers can `await` the response.
 *
-* Server response shape (see class.tool_hierarchy.php::generate_virtual_section):
+* Server response shape — envelope v2 (tools/tool_hierarchy/server/tool_hierarchy.ts:
+* toolHierarchyGenerateVirtualSection; engineering/ERRORS_SPEC.md §3):
 *
-*   result  : boolean            — true = success
-*   msg     : string|string[]   — human-readable status messages
-*   errors  : string[]          — non-fatal error messages (may coexist with result:true)
-*   created_general_term        — result of hierarchy::create_thesaurus_general_term (hierarchy45)
-*   created_general_term_model  — result of hierarchy::create_thesaurus_general_term (hierarchy59)
+*   SUCCESS  {ok:true, request_id, data:{state, applied, summary}}
+*     state   : {usable, tld, checks:[{id,label,ok,detail}]} — the invariant checklist
+*     applied : string[]  — what ensureHierarchy actually CHANGED (empty = already sound)
+*     summary : string    — the run sentence (v2 has NO prose `msg` on a success)
+*
+*   FAILURE  {ok:false, request_id, error:{…}, state, errors}
+*     `state` and `errors` are NAMED EXTENSION KEYS at the envelope's TOP level
+*     (ERRORS_SPEC §3.0), NOT inside `error.details`: the refused panel re-renders
+*     its checklist from `state`, and `errors` is the per-check detail behind it.
 *
 * (!) SHOW_DEVELOPER is referenced in the debug branch but is NOT declared in the
 *     global-comment pragma at the top of this file.  This will trigger an ESLint
@@ -288,7 +293,8 @@ tool_hierarchy.prototype.generate_virtual_section = async function(options) {
 * usable?" (core/ontology/hierarchy_state.ts inspectHierarchy), and this call fetches it
 * so the panel can SHOW the operator which condition failed, and why.
 *
-* @return {Promise<object>} api_response with .state = {usable, tld, checks:[{id,label,ok,detail}]}
+* @return {Promise<object>} envelope v2 — the checklist is PAYLOAD:
+*   data.state = {usable, tld, checks:[{id,label,ok,detail}]} (read it with response_data)
 */
 tool_hierarchy.prototype.inspect_hierarchy = async function() {
 

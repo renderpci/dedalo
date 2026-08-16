@@ -7,6 +7,7 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tr} from '../../../core/common/js/tr.js'
@@ -435,7 +436,7 @@ tool_subtitles.prototype.get_user_tools = async function(ar_requested_tools){
 					dd_console("-> get_user_tools API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
+				const result = response_data(response) // array of objects
 
 				resolve(result)
 			})

@@ -13,7 +13,13 @@
 
 import { config } from '../../../config/config.ts';
 import { readEnv } from '../../../config/env.ts';
-import { engineDenied, gated, type WidgetModule, type WidgetResponse } from './support.ts';
+import {
+	engineDenied,
+	fromEnvelope,
+	gated,
+	type WidgetModule,
+	type WidgetResponse,
+} from './support.ts';
 
 /**
  * update_code panel (PHP get_value bytes).
@@ -36,18 +42,18 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 			msg: probe.msg,
 			errors: probe.errors,
 			response_code: probe.code,
-			result: probe.result,
+			// The REMOTE's own decoded body; `result` is the panel key the client
+			// reads (the probe's own outcome field is `data` since the P1 sweep).
+			result: probe.data,
 		});
 	}
 	return {
-		result: {
+		data: {
 			servers,
 			dedalo_source_version_local_dir:
 				(readEnv('DEDALO_SOURCE_VERSION_LOCAL_DIR') as string | undefined) ?? null,
 			is_a_code_server: config.update.isCodeServer,
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -63,7 +69,9 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
  */
 async function updateCodeOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { updateCode } = await import('../../update/code_update.ts');
-	return (await updateCode(options)) as unknown as WidgetResponse;
+	// core/update/** REFUSES BY THROWING (update.refused / update.failed) and
+	// answers an ok envelope; unwrap it so the widget dispatcher re-wraps it once.
+	return fromEnvelope(await updateCode(options));
 }
 
 /**
@@ -85,7 +93,7 @@ async function buildVersionOwned(options: Record<string, unknown>): Promise<Widg
 	const branch = typeof options.branch === 'string' ? options.branch : undefined;
 	const version = typeof options.version === 'string' ? options.version : DEDALO_VERSION;
 	const ref = typeof options.ref === 'string' ? options.ref : branch;
-	return (await buildVersionFromGit({ version, ref })) as unknown as WidgetResponse;
+	return fromEnvelope(await buildVersionFromGit({ version, ref }));
 }
 
 export const widget: WidgetModule = {

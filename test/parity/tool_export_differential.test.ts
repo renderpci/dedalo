@@ -90,7 +90,7 @@ beforeAll(async () => {
 			principal,
 		} as never,
 	);
-	tsGrid = ((tsResult.body as { result?: Grid }).result ?? {}) as Grid;
+	tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
 });
 
 describe.if(hasPhpCredentials())('tool_export grid differential', () => {
@@ -193,8 +193,8 @@ describe.if(hasPhpCredentials())('tool_export grid_value breakdown differential'
 							principal,
 						} as never,
 					)
-				).body as { result?: Grid }
-			).result ?? {}) as Grid;
+				).body as { data?: Grid }
+			).data ?? {}) as Grid;
 
 			expect(tsResult.meta?.total).toBe(phpResult.meta?.total as number);
 			expect(tsResult.meta?.data_format).toBe('grid_value');
@@ -347,8 +347,8 @@ describe.if(hasPhpCredentials())('tool_export dedalo_raw differential', () => {
 							principal,
 						} as never,
 					)
-				).body as { result?: Grid }
-			).result ?? {}) as Grid;
+				).body as { data?: Grid }
+			).data ?? {}) as Grid;
 
 			const stripRow = (row: Record<string, unknown>): Record<string, unknown> => ({
 				rec: row.rec,
@@ -442,8 +442,8 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 							principal,
 						} as never,
 					)
-				).body as { result?: Grid }
-			).result ?? {}) as Grid;
+				).body as { data?: Grid }
+			).data ?? {}) as Grid;
 
 			const stripRow = (row: Record<string, unknown>): Record<string, unknown> => ({
 				rec: row.rec,
@@ -538,8 +538,8 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 							principal,
 						} as never,
 					)
-				).body as { result?: Grid }
-			).result ?? {}) as Grid;
+				).body as { data?: Grid }
+			).data ?? {}) as Grid;
 
 			const stripRow = (row: Record<string, unknown>): Record<string, unknown> => ({
 				rec: row.rec,
@@ -630,8 +630,8 @@ describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 						principal,
 					} as never,
 				)
-			).body as { result?: Grid }
-		).result ?? {}) as Grid;
+			).body as { data?: Grid }
+		).data ?? {}) as Grid;
 
 		const stripRow = (row: Record<string, unknown>): Record<string, unknown> => ({
 			rec: row.rec,

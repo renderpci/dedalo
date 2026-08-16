@@ -24,7 +24,19 @@ import {
 	insertErrorReport,
 	listErrorReports,
 } from '../../src/core/error_report/store.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+
+/** The DedaloError an async call rejected with (fails when nothing typed was thrown). */
+async function rejectedBy(run: () => Promise<unknown>): Promise<DedaloError> {
+	try {
+		await run();
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a DedaloError, nothing was thrown');
+}
 
 const SCRATCH_TABLE = `dedalo_ts_test_error_reports_${process.pid}`;
 
@@ -110,38 +122,39 @@ describe('error_reports widget (WC-018)', () => {
 
 	test('getValue reports the configured target (env-driven display)', async () => {
 		const value = await widget.getValue?.({}, admin);
-		const result = value?.result as { target?: unknown };
-		expect(typeof result.target).toBe('string');
+		const data = value?.data as { target?: unknown };
+		expect(typeof data.target).toBe('string');
 	});
 
 	test('dispatch: non-admin refused; non-member id refused outright when flag off', async () => {
 		// Admin gate runs FIRST regardless of catalog membership.
-		const nonAdminResult = await dispatchWidgetRequest(
-			nonAdmin,
-			{ model: 'error_reports', action: 'get_reports' },
-			{},
+		const nonAdminRefusal = await rejectedBy(() =>
+			dispatchWidgetRequest(nonAdmin, { model: 'error_reports', action: 'get_reports' }, {}),
 		);
-		expect(nonAdminResult.result).toBe(false);
-		expect(nonAdminResult.errors).toEqual(['unauthorized']);
+		expect(nonAdminRefusal.code).toBe('perm.denied');
 
-		const nonAdminValue = await dispatchGetWidgetValue(nonAdmin, { model: 'error_reports' });
-		expect(nonAdminValue.result).toBe(false);
-
-		const adminResult = await dispatchWidgetRequest(
-			admin,
-			{ model: 'error_reports', action: 'get_reports' },
-			{},
+		const nonAdminValueRefusal = await rejectedBy(() =>
+			dispatchGetWidgetValue(nonAdmin, { model: 'error_reports' }),
 		);
+		expect(nonAdminValueRefusal.code).toBe('perm.denied');
+
 		const participates =
 			config.errorReport.receiverEnabled || Boolean(config.errorReport.masterApiUrl);
 		if (participates) {
 			// Participating install: the widget is in the catalog, the handler answers.
-			expect(adminResult.msg).toContain('OK');
+			const adminResult = await dispatchWidgetRequest(
+				admin,
+				{ model: 'error_reports', action: 'get_reports' },
+				{},
+			);
+			expect(adminResult.data).toBeDefined();
 		} else {
 			// Non-participating install: the widget id is NOT in the catalog —
 			// refused before any handler exists to run.
-			expect(adminResult.result).toBe(false);
-			expect(adminResult.errors).toEqual(['Invalid widget name: error_reports']);
+			const refusal = await rejectedBy(() =>
+				dispatchWidgetRequest(admin, { model: 'error_reports', action: 'get_reports' }, {}),
+			);
+			expect(refusal.code).toBe('maintenance.widget_unknown');
 		}
 	});
 
@@ -153,9 +166,9 @@ describe('error_reports widget (WC-018)', () => {
 		// envelope shape.
 		const value = await widget.getValue?.({}, admin);
 		expect(value).toBeDefined();
-		expect(value?.errors).toEqual([]);
-		const result = value?.result as { total: unknown; latest_received_at: unknown };
-		expect('total' in result).toBe(true);
-		expect('latest_received_at' in result).toBe(true);
+		expect(value?.errors).toBeUndefined();
+		const data = value?.data as { total: unknown; latest_received_at: unknown };
+		expect('total' in data).toBe(true);
+		expect('latest_received_at' in data).toBe(true);
 	});
 });

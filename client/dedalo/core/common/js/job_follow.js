@@ -5,6 +5,10 @@
 import {data_manager, release_stream_reader} from './data_manager.js'
 // dd_console is an import as well — see job_tray.js.
 import {dd_console} from './utils/index.js'
+// ONE error model + ONE dispatcher: a frame's failure and a rejected connect are
+// the same kind of thing here, and both must be able to raise the relogin overlay.
+import {is_api_error, normalize_stream_error, normalize_transport_error} from './api_error.js'
+import {handle_api_error} from './error_dispatch.js'
 
 /**
 * JOB_FOLLOW
@@ -22,6 +26,14 @@ import {dd_console} from './utils/index.js'
 * streams JobStatusFrame here; a diffusion/publication job has its own SSE, pinned
 * byte-for-byte against the old engine. The activity row names which stream it
 * belongs to, and this module serves the media one only.
+*
+* ERRORS ARE ROUTED HERE, ONCE. A job frame can now carry an `error` (envelope v2,
+* api_error.js), and the connect itself rejects with an ApiError. Both go through
+* `handle_api_error`, so a session that expires under a two-hour transcode raises
+* the relogin overlay instead of painting a row red and saying nothing actionable.
+* Doing it in THIS module rather than in each follower is what makes that true for
+* every surface that follows a job — a caller still gets the terminal frame and
+* decides what to paint.
 *
 * The reader registers itself in page_globals.stream_readers (inside
 * data_manager.read_stream), so navigating away aborts it — a followed job never
@@ -62,6 +74,11 @@ export const follow_job = function(job_id, handlers) {
 	let cancelled	= false
 	let last_frame	= null
 	let finished	= false
+	// The last failure SEEN on a frame that did not itself end the run — an
+	// unparseable frame is the case (read_stream synthesises one carrying an
+	// ApiError). It only speaks if the stream then closes without a terminal
+	// frame: a run that ended properly is judged by its own last frame.
+	let stream_error	= null
 	// The two halves of the transport, each releasable on its own: the controller
 	// covers the CONNECT phase (a fetch still awaiting response headers has no
 	// reader yet — request_stream documents its `signal` for exactly this), the
@@ -72,12 +89,25 @@ export const follow_job = function(job_id, handlers) {
 	// finish: exactly once, whatever path got us here (terminal frame, stream
 	// close, or an error). A double call would re-render a cell twice and, worse,
 	// could put a build button back while the job is still running.
-	const finish = function(frame) {
+	//
+	// `api_error` is the failure that ENDED the run, when there was one: the
+	// terminal frame's own error, or the transport's. It is dispatched here and
+	// the caller is still handed the frame — the lifecycle is unchanged, the
+	// routing is new.
+	const finish = function(frame, api_error) {
 		if (finished || cancelled) {
 			return
 		}
 		finished = true
 		release()
+		const error = is_api_error(api_error) ? api_error : normalize_stream_error(frame)
+		if (error) {
+			// not awaited: the caller's on_done must not queue behind a relogin
+			// overlay the user may leave open for minutes
+			handle_api_error(error).catch(function(dispatch_error){
+				console.error('follow_job: error dispatch failed', dispatch_error)
+			})
+		}
 		on_done(frame || null)
 	}
 
@@ -140,6 +170,10 @@ export const follow_job = function(job_id, handlers) {
 					dd_console('-> follow_job frame:', 'DEBUG', sse_response)
 				}
 				last_frame = sse_response
+				const frame_error = normalize_stream_error(sse_response)
+				if (frame_error) {
+					stream_error = frame_error
+				}
 				on_frame(sse_response)
 				// The server ends the stream on this frame; finishing here (rather
 				// than only in on_done) means the caller reacts to the TERMINAL
@@ -151,7 +185,10 @@ export const follow_job = function(job_id, handlers) {
 			function(){
 				// Stream closed. If a terminal frame already arrived this is a no-op;
 				// otherwise the job's fate is unknown and the caller is told so.
-				finish(last_frame && last_frame.is_running===false ? last_frame : null)
+				finish(
+					last_frame && last_frame.is_running===false ? last_frame : null,
+					stream_error
+				)
 			}
 		)
 	})
@@ -161,7 +198,9 @@ export const follow_job = function(job_id, handlers) {
 		if (!cancelled) {
 			console.error(`follow_job failed for ${job_id}:`, error)
 		}
-		finish(null)
+		// request_stream rejects with an ApiError (its @throws): the server's own
+		// code when the answer was an envelope — `auth.not_logged` included.
+		finish(null, is_api_error(error) ? error : normalize_transport_error(error))
 	})
 
 	return function cancel() {

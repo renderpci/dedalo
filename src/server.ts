@@ -55,6 +55,8 @@ import {
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
+import { toErrorEnvelope } from './core/errors/convert.ts';
+import { DedaloError } from './core/errors/dedalo_error.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
 import {
 	getSession,
@@ -347,15 +349,31 @@ export function jsonApiResponse(
 }
 
 /**
- * Sanitized 500 for the Bun.serve `error` catch-all (API-01 hardening). The
- * detail is logged server-side by the handler; the wire gets a generic
- * client-shaped envelope, never a raw stack (which can carry SQL / paths).
+ * THE HTTP-LAYER FAILURE DOOR (engineering/ERRORS_SPEC.md §4): every failure
+ * Response this file builds itself — parse/RQO refusals, route 404s, the
+ * Bun.serve `error` catch-all — is converter-made (toErrorEnvelope: registry
+ * status, envelope v2, `Content-Type: application/json`). Nothing here hand-
+ * builds a body; the detail of an unexpected throw is logged server-side and
+ * the wire gets the registry message + request_id, never a raw stack (which
+ * can carry SQL / paths — API-01 hardening).
  */
+function jsonFailureResponse(error: unknown, requestId: string): Response {
+	const converted = toErrorEnvelope(error, { requestId });
+	const response = jsonResponse(converted.body, converted.status);
+	if (converted.retryAfterMs !== undefined) {
+		response.headers.set('Retry-After', String(Math.ceil(converted.retryAfterMs / 1000)));
+	}
+	return response;
+}
+
+/** Sanitized 500 for the Bun.serve `error` catch-all — no request context survives to here. */
 function jsonErrorResponse(): Response {
-	return jsonResponse(
-		{ result: false, msg: 'Internal server error', errors: ['An unexpected error occurred'] },
-		500,
-	);
+	return jsonFailureResponse(new DedaloError('internal.unexpected'), 'unhandled');
+}
+
+/** The route-level 404: `resource.not_found` (no existence leak — one shape for every miss). */
+function notFoundResponse(requestId: string): Response {
+	return jsonFailureResponse(new DedaloError('resource.not_found'), requestId);
 }
 
 /** The application entry point — the only client directory with an index.html. */
@@ -398,18 +416,22 @@ function redirectResponse(location: string): Response {
  * or outside is a plain 404. A directory path serves its index.html. Response
  * semantics (validators/304/Cache-Control/gzip) come from staticAssetResponse.
  */
-async function serveClientAsset(pathname: string, request: Request): Promise<Response> {
+async function serveClientAsset(
+	pathname: string,
+	request: Request,
+	requestId: string,
+): Promise<Response> {
 	let decodedPath: string;
 	try {
 		decodedPath = decodeURIComponent(pathname);
 	} catch {
-		return jsonResponse({ result: false, msg: 'Not found' }, 404);
+		return notFoundResponse(requestId);
 	}
 	// Strip the /dedalo prefix; map onto the client root.
 	const relativePath = decodedPath.replace(/^\/dedalo\/?/, '');
 	let fullPath = resolve(CLIENT_ROOT, relativePath);
 	if (fullPath !== CLIENT_ROOT && !fullPath.startsWith(CLIENT_ROOT + sep)) {
-		return jsonResponse({ result: false, msg: 'Not found' }, 404); // traversal attempt
+		return notFoundResponse(requestId); // traversal attempt
 	}
 	const isDirectory = await stat(fullPath)
 		.then((entry) => entry.isDirectory())
@@ -428,7 +450,7 @@ async function serveClientAsset(pathname: string, request: Request): Promise<Res
 		fullPath = resolve(fullPath, 'index.html');
 	}
 	const response = await staticAssetResponse(fullPath, request);
-	return response ?? jsonResponse({ result: false, msg: 'Not found' }, 404);
+	return response ?? notFoundResponse(requestId);
 }
 
 /**
@@ -440,8 +462,8 @@ async function serveClientAsset(pathname: string, request: Request): Promise<Res
  * IS_AN_ONTOLOGY_SERVER is set; only a version-shaped dir segment and an
  * allowlisted basename; resolved path confined under the IO dir.
  */
-async function serveOntologyIoFile(pathname: string): Promise<Response> {
-	const notFound = () => jsonResponse({ result: false, msg: 'Not found' }, 404);
+async function serveOntologyIoFile(pathname: string, requestId: string): Promise<Response> {
+	const notFound = () => notFoundResponse(requestId);
 	if (config.ontologyIo.isOntologyServer !== true) return notFound();
 	const match = pathname.match(
 		/^\/dedalo\/install\/import\/ontology\/(\d+\.\d+)\/([A-Za-z0-9_.-]+)$/,
@@ -640,7 +662,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		mediaFallbackAllowed(context)
 	) {
 		if (MEDIA_ROOT === null) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		const cookieHeader = request.headers.get('cookie') ?? '';
 		const mediaSessionToken = cookieHeader
@@ -649,18 +671,18 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			.find((pair) => pair.startsWith(`${SESSION_COOKIE}=`))
 			?.slice(SESSION_COOKIE.length + 1);
 		if (mediaSessionToken === undefined || getSession(mediaSessionToken) === null) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404); // fail-closed, no existence leak
+			return notFoundResponse(context.requestId); // fail-closed, no existence leak
 		}
 		let mediaPath: string;
 		try {
 			// Strip the '/dedalo/<mediaDir>/' prefix, then decode the file path.
 			mediaPath = decodeURIComponent(url.pathname.slice(MEDIA_URL_PREFIX.length));
 		} catch {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		const fullMediaPath = resolve(MEDIA_ROOT, mediaPath);
 		if (!fullMediaPath.startsWith(MEDIA_ROOT + sep)) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404); // traversal
+			return notFoundResponse(context.requestId); // traversal
 		}
 		// MEDIA-04: the dev listener must NEVER serve staged uploads (other users'
 		// in-flight files under upload/) or the marker store (.publication/auth
@@ -668,11 +690,11 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		// original media only.
 		const relSegments = fullMediaPath.slice((MEDIA_ROOT + sep).length).split(sep);
 		if (relSegments[0] === 'upload' || relSegments.includes('.publication')) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		const mediaFile = Bun.file(fullMediaPath);
 		if (!(await mediaFile.exists())) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		// HTTP Range support (RFC 7233). <video>/<audio> elements stream via Range
 		// requests and browsers like Safari/iOS REFUSE to play a media response that
@@ -766,16 +788,20 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// Ontology-master snapshot files (fail-closed on IS_AN_ONTOLOGY_SERVER).
 	// MUST run before the generic /dedalo/ static handler (no client subtree).
 	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/install/import/ontology/')) {
-		return serveOntologyIoFile(url.pathname);
+		return serveOntologyIoFile(url.pathname, context.requestId);
 	}
 
 	// Code-master release archives (fail-closed on IS_A_CODE_SERVER). Same
 	// ordering reason as the ontology route: no client subtree serves this path.
 	if (request.method === 'GET' && url.pathname.startsWith(CODE_RELEASE_URL_PREFIX)) {
-		return serveCodeReleaseRequest(url.pathname, {
-			isCodeServer: config.update.isCodeServer,
-			codeFilesDir: config.update.codeFilesDir,
-		});
+		return serveCodeReleaseRequest(
+			url.pathname,
+			{
+				isCodeServer: config.update.isCodeServer,
+				codeFilesDir: config.update.codeFilesDir,
+			},
+			context.requestId,
+		);
 	}
 
 	// Third-party client libraries, resolved through the CLIENT_LIBS allowlist to
@@ -821,21 +847,21 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			?.slice(SESSION_COOKIE.length + 1);
 		const stagedSession = stagedToken !== undefined ? getSession(stagedToken) : null;
 		if (stagedSession === null) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		let stagedRel: string;
 		try {
 			stagedRel = decodeURIComponent(url.pathname.slice(STAGED_URL_PREFIX.length));
 		} catch {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		const stagedPath = resolveStagedPath(stagedSession.userId, stagedRel);
 		if (stagedPath === null) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		const stagedFile = Bun.file(stagedPath);
 		if (!(await stagedFile.exists())) {
-			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+			return notFoundResponse(context.requestId);
 		}
 		return new Response(stagedFile, {
 			headers: {
@@ -853,7 +879,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 
 	// Copied-client static assets (Phase 7 seam).
 	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/')) {
-		return serveClientAsset(url.pathname, request);
+		return serveClientAsset(url.pathname, request, context.requestId);
 	}
 
 	// CORS preflight for the API path. MUST come before every other API branch:
@@ -902,13 +928,17 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		try {
 			rawBody = await request.json();
 		} catch {
-			return jsonResponse({ result: false, msg: 'Invalid JSON body' }, 400);
+			return jsonFailureResponse(new DedaloError('request.malformed_body'), context.requestId);
 		}
 		const parsedRqo = rqoSchema.safeParse(rawBody);
 		if (!parsedRqo.success) {
-			return jsonResponse(
-				{ result: false, msg: 'Invalid RQO', errors: parsedRqo.error.issues },
-				400,
+			// The zod issues are summarized to their PATHS (a bounded scalar) —
+			// never the raw issue objects, which echo caller input.
+			return jsonFailureResponse(
+				new DedaloError('request.invalid_rqo', {
+					details: { issue_paths: summarizeIssuePaths(parsedRqo.error.issues) },
+				}),
+				context.requestId,
 			);
 		}
 
@@ -995,10 +1025,19 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				},
 			});
 		}
+		if (outcome.retryAfterMs !== undefined) {
+			headers.set('Retry-After', String(Math.ceil(outcome.retryAfterMs / 1000)));
+		}
 		return jsonApiResponse(outcome.body, outcome.status, headers, request);
 	}
 
-	return jsonResponse({ result: false, msg: 'Not found' }, 404);
+	return notFoundResponse(context.requestId);
+}
+
+/** `issue_paths` for request.invalid_rqo: comma-joined zod paths, capped at 200 chars. */
+function summarizeIssuePaths(issues: readonly { path: readonly PropertyKey[] }[]): string {
+	const joined = issues.map((issue) => issue.path.map(String).join('.') || '(root)').join(',');
+	return joined.length > 200 ? `${joined.slice(0, 197)}...` : joined;
 }
 
 /**

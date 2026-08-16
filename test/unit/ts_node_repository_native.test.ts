@@ -48,6 +48,7 @@ import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invali
 import { getModelByTipo } from '../../src/core/ontology/resolver.ts';
 import { getSectionMap } from '../../src/core/ontology/section_map.ts';
 import { batchDescriptorFlags, fetchNodeInfo } from '../../src/core/ts_object/node_repository.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 /** This file's scratch section tipos (matrix_test rows only). */
 const SCRATCH_TIPOS = ['zzt921001', 'hierarchy921001'] as const;
@@ -415,6 +416,8 @@ describe('fetchNodeInfo — hard failures (no legacy fallback in TS)', () => {
 
 	test('a locator with no section_tipo throws', async () => {
 		await expect(fetchNodeInfo([{ section_id: 1 }])).rejects.toThrow(/invalid locator/);
+		// TYPED: a caller locator fault (ERRORS_SPEC §7), not an engine surprise.
+		expect((await refusalOf(fetchNodeInfo([{ section_id: 1 }]))).code).toBe('section.bad_locators');
 	});
 
 	test('an unresolvable section (no matrix table) throws — it does not silently yield nulls', async () => {

@@ -105,7 +105,13 @@ async function tsCall(rqo: Record<string, unknown>): Promise<Record<string, unkn
 	return outcome.body as Record<string, unknown>;
 }
 
-function dataOf(body: Record<string, unknown>): Record<string, unknown>[] {
+/** TS body — envelope v2: the payload lives under `data`. */
+function tsDataOf(body: Record<string, unknown>): Record<string, unknown>[] {
+	return ((body.data as { data?: unknown[] })?.data ?? []) as Record<string, unknown>[];
+}
+
+/** PHP oracle body — the frozen dd_manager envelope: payload under `result`. */
+function phpDataOf(body: Record<string, unknown>): Record<string, unknown>[] {
 	return ((body.result as { data?: unknown[] })?.data ?? []) as Record<string, unknown>[];
 }
 
@@ -131,8 +137,8 @@ describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () 
 
 	// Full list emission (portals, profile image) is slow on both engines.
 	test('the users LIST excludes -1 on both engines (as root)', async () => {
-		const tsData = dataOf(await tsCall(LIST_RQO));
-		const phpData = dataOf(
+		const tsData = tsDataOf(await tsCall(LIST_RQO));
+		const phpData = phpDataOf(
 			(await php.call(structuredClone(LIST_RQO) as Record<string, unknown>)).body as Record<
 				string,
 				unknown
@@ -145,7 +151,7 @@ describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () 
 	}, 30000);
 
 	test('the users COUNT matches PHP and equals the positive-id SQL truth', async () => {
-		const tsTotal = ((await tsCall(COUNT_RQO)).result as { total: number }).total;
+		const tsTotal = ((await tsCall(COUNT_RQO)).data as { total: number }).total;
 		const phpTotal = (
 			(await php.call(structuredClone(COUNT_RQO) as Record<string, unknown>)).body.result as {
 				total: number;
@@ -160,7 +166,7 @@ describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () 
 	});
 
 	test('a client filter_by_locators pin on (dd128,-1) counts ZERO on both engines', async () => {
-		const tsTotal = ((await tsCall(PIN_COUNT_RQO)).result as { total: number }).total;
+		const tsTotal = ((await tsCall(PIN_COUNT_RQO)).data as { total: number }).total;
 		const phpTotal = (
 			(await php.call(structuredClone(PIN_COUNT_RQO) as Record<string, unknown>)).body.result as {
 				total: number;
@@ -171,8 +177,8 @@ describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () 
 	});
 
 	test('resolve_data still carries the -1 chip on both engines (label exemption)', async () => {
-		const tsData = dataOf(await tsCall(RESOLVE_RQO));
-		const phpData = dataOf(
+		const tsData = tsDataOf(await tsCall(RESOLVE_RQO));
+		const phpData = phpDataOf(
 			(await php.call(structuredClone(RESOLVE_RQO) as Record<string, unknown>)).body as Record<
 				string,
 				unknown

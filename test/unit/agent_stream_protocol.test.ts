@@ -74,7 +74,21 @@ mock.module('../../src/ai/agent/model_catalog.ts', () => ({
 	...REAL_CATALOG,
 	resolveProvider: (modelId: string | undefined) => {
 		if (modelId === 'nope') {
-			throw new REAL_CATALOG.ModelCatalogError('Unknown model "nope" — pick one from agent_models');
+			throw new REAL_CATALOG.ModelCatalogError(
+				'ai.model_unknown',
+				'Unknown model "nope" — pick one from agent_models',
+			);
+		}
+		if (modelId === 'boom') {
+			return {
+				model: { ...SCRIPTED_MODEL, id: 'boom' },
+				provider: {
+					name: 'boom',
+					createTurn: async () => {
+						throw new Error('upstream 500: ANTHROPIC_API_KEY sk-secret-leak');
+					},
+				} as AgentLlmProvider,
+			};
 		}
 		if (modelId === 'novision') {
 			return {
@@ -262,6 +276,44 @@ describe('agent_chat_stream — SSE protocol', () => {
 			{ role: 'assistant', text: 'Hello' },
 		]);
 	});
+
+	test('a provider failure mid-run is a terminal `error` frame: coded body, no internals', async () => {
+		// The debug block (DEDALO_DEBUG_API_ERRORS) is the ONE opt-in path to the
+		// exception text; this asserts the default wire.
+		const previousDebug = process.env.DEDALO_DEBUG_API_ERRORS;
+		process.env.DEDALO_DEBUG_API_ERRORS = 'false';
+		let frames: { event: string; data: Record<string, unknown> }[];
+		try {
+			const result = await dispatchRqo(
+				chatRqo('agent_chat_stream', { question: 'say hello', model: 'boom' }),
+				contextFor(admin) as never,
+			);
+			expect(result.status).toBe(200);
+			frames = await readFrames(result.stream as ReadableStream<Uint8Array>);
+		} finally {
+			if (previousDebug === undefined) delete process.env.DEDALO_DEBUG_API_ERRORS;
+			else process.env.DEDALO_DEBUG_API_ERRORS = previousDebug;
+		}
+		const errorFrame = frames.find((frame) => frame.event === 'error');
+		expect(errorFrame).toBeDefined();
+		const data = errorFrame?.data as {
+			code: string;
+			message: string;
+			label_key: string;
+			retryable: boolean;
+			hint?: string;
+		};
+		// The frame DATA is the envelope-v2 error body (+ registry hint) — the
+		// shape tools/tool_assistant/js/agent_stream.js normalises (ERRORS_SPEC §5).
+		expect(data.code).toBe('ai.provider_failed');
+		expect(data.label_key).toBe('error_ai_provider_failed');
+		expect(data.retryable).toBe(true);
+		expect(data.hint).toContain('Retry');
+		// provider text (env key names, upstream bodies) never reaches the wire
+		expect(JSON.stringify(errorFrame)).not.toContain('sk-secret-leak');
+		expect(JSON.stringify(errorFrame)).not.toContain('ANTHROPIC_API_KEY');
+		expect(frames.some((frame) => frame.event === 'final')).toBe(false);
+	});
 });
 
 describe('agent_models — gated, secret-free', () => {
@@ -314,7 +366,11 @@ describe('agent_chat — model + vision validation', () => {
 			contextFor(admin) as never,
 		);
 		expect(result.status).toBe(400);
-		expect((result.body as { msg: string }).msg).toContain('Unknown model');
+		// The catalog refusal is a public-disclosure `ai.*` code: the operator's
+		// own "Unknown model …" sentence IS the wire message.
+		const body = result.body as { error: { code: string; message: string } };
+		expect(body.error.code).toBe('ai.model_unknown');
+		expect(body.error.message).toContain('Unknown model "nope"');
 	});
 
 	test('images on a vision:false model are refused, not silently stripped', async () => {
@@ -327,7 +383,9 @@ describe('agent_chat — model + vision validation', () => {
 			contextFor(admin) as never,
 		);
 		expect(result.status).toBe(400);
-		expect((result.body as { msg: string }).msg).toContain('does not accept images');
+		const body = result.body as { error: { code: string; message: string } };
+		expect(body.error.code).toBe('ai.model_no_vision');
+		expect(body.error.message).toContain('does not accept images');
 	});
 
 	test('agent_chat returns model/usage/history alongside the answer', async () => {

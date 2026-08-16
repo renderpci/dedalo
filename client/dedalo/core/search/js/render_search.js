@@ -78,6 +78,7 @@
 	} from './search_user_presets.js'
 	import {get_scope} from '../../common/js/section_map.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
+	import {response_data} from '../../common/js/api_error.js'
 	import {
 		apply_semantic_from_preset
 	} from './render_semantic.js'
@@ -394,7 +395,7 @@ render_search.prototype.render_base = function() {
 					})
 					.then(function(response){
 						console.log('Preset saved!', response);
-						if (response.result) {
+						if (response_data(response)) {
 							button_save_preset.classList.add('hide')
 						}
 					})

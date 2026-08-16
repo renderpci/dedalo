@@ -1,7 +1,8 @@
 /**
  * EXTERNAL-SERVICE ERROR TAXONOMY.
  *
- * One class, one closed `kind` set. The operator's question is always "no data,
+ * One class (a `DedaloError` subclass, code `external.<kind>` — the registry
+ * row per kind is the wire identity), one closed `kind` set. The operator's question is always "no data,
  * or swallowed failure?" (engineering/CONVENTIONS.md §1), and for an outbound
  * subsystem there is a second one: "how far did it get?" — the kind answers
  * both, because the kinds are ordered by how much of transport.ts ran.
@@ -13,6 +14,9 @@
  * the full URL is simply never stored on the error. Credentials and payloads
  * are likewise never logged.
  */
+
+import { DedaloError } from '../core/errors/dedalo_error.ts';
+import { logError } from '../core/errors/log.ts';
 
 /** How far the outbound attempt got before it failed. */
 export type ExternalErrorKind =
@@ -54,18 +58,31 @@ export interface ExternalErrorFields {
 	readonly cause?: unknown;
 }
 
-export class ExternalServiceError extends Error {
+/**
+ * The one typed failure of the subsystem — a `DedaloError` whose code is
+ * `external.<kind>` (the registry is total over ExternalErrorKind; its
+ * `retryable` is tripwired equal to the component_external state map). The
+ * external fields stay on the instance for the callers that branch on them
+ * (`kind`, `service`, `status`, `retryAfterMs`); `Error.message` keeps the
+ * log grammar (`formatExternalError`); the registry English is what reaches
+ * any wire (the external `notices[]` of dd_external_api name the service).
+ */
+export class ExternalServiceError extends DedaloError {
 	readonly service: string;
 	readonly kind: ExternalErrorKind;
 	readonly origin?: string;
 	readonly status?: number;
 	readonly sectionTipo?: string;
 	readonly remoteId?: string;
-	readonly retryAfterMs?: number;
 	readonly detail?: string;
 
 	constructor(fields: ExternalErrorFields) {
-		super(formatExternalError(fields));
+		super(`external.${fields.kind}`, {
+			message: formatExternalError(fields),
+			coordinates: externalCoordinates(fields),
+			...(fields.retryAfterMs === undefined ? {} : { retryAfterMs: fields.retryAfterMs }),
+			...(fields.cause === undefined ? {} : { cause: fields.cause }),
+		});
 		this.name = 'ExternalServiceError';
 		this.service = fields.service;
 		this.kind = fields.kind;
@@ -73,10 +90,18 @@ export class ExternalServiceError extends Error {
 		if (fields.status !== undefined) this.status = fields.status;
 		if (fields.sectionTipo !== undefined) this.sectionTipo = fields.sectionTipo;
 		if (fields.remoteId !== undefined) this.remoteId = fields.remoteId;
-		if (fields.retryAfterMs !== undefined) this.retryAfterMs = fields.retryAfterMs;
 		if (fields.detail !== undefined) this.detail = fields.detail;
-		if (fields.cause !== undefined) this.cause = fields.cause;
 	}
+}
+
+/** The LOG-ONLY coordinates (origin/status/section/id — never a URL). */
+function externalCoordinates(fields: ExternalErrorFields): Record<string, string | number> {
+	const out: Record<string, string | number> = {};
+	if (fields.origin !== undefined) out.origin = fields.origin;
+	if (fields.status !== undefined) out.status = fields.status;
+	if (fields.sectionTipo !== undefined) out.section = fields.sectionTipo;
+	if (fields.remoteId !== undefined) out.id = fields.remoteId;
+	return out;
 }
 
 /**
@@ -84,6 +109,7 @@ export class ExternalServiceError extends Error {
  * this is the one failure the totality tripwire asserts is a THROW and never an
  * empty result: silently returning `[]`/`null` for an unknown api_engine is how
  * a mis-typed ontology edit becomes an empty component nobody investigates.
+ * Code: `external.not_registered`.
  */
 export class ExternalServiceNotRegisteredError extends ExternalServiceError {
 	constructor(fields: Omit<ExternalErrorFields, 'kind'>) {
@@ -103,7 +129,7 @@ export class ExternalServiceNotRegisteredError extends ExternalServiceError {
  * one: the alternative is returning `[]`, which on a search box is
  * indistinguishable from "no matches" — the user retypes, gets nothing again,
  * and concludes the catalogue is empty. `reason` names which of the three it is
- * so the fix is unambiguous.
+ * so the fix is unambiguous. Code: `external.bad_config`.
  */
 export class ExternalSearchUnsupportedError extends ExternalServiceError {
 	readonly reason: 'service' | 'engine' | 'config';
@@ -143,17 +169,13 @@ export function originOf(url: string | URL): string {
 }
 
 /**
- * The one reporting door. `warn` for a degraded-but-expected outcome (a service
- * is down, a record is gone), `error` for a contract/configuration failure that
- * an operator must fix. The error object is passed through so the stack
- * survives; its message is already disclosure-safe by construction.
+ * The one reporting door — `logError` (src/core/errors/log.ts) with the
+ * subsystem tag `[external:<service>]`; severity comes from the registry
+ * (`warn` for a degraded-but-expected outcome — a service down, a record gone;
+ * `error` for a contract/configuration failure an operator must fix). The
+ * error object rides along so the stack survives; its message is already
+ * disclosure-safe by construction.
  */
 export function logExternalError(error: ExternalServiceError): void {
-	const expected =
-		error.kind === 'not_found' ||
-		error.kind === 'circuit_open' ||
-		error.kind === 'disabled' ||
-		error.kind === 'timeout';
-	if (expected) console.warn(error.message);
-	else console.error(error.message, error);
+	logError(error, { subsystem: `external:${error.service}` });
 }

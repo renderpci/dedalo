@@ -13,7 +13,12 @@
  *      unauthenticated prober that this host IS a master.
  *   2. The `Number('') === 0` trap — an empty/short version must be refused.
  *   3. The refusal bytes are PHP parity, typo included ('is not an code
- *      server'): they are the wire, not prose.
+ *      server') — this is a MACHINE-TO-MACHINE wire another Dédalo install
+ *      speaks. Envelope v2 keeps them: every refusal is the ONE public-
+ *      disclosure code `update_server.refused` (403) carrying the exact
+ *      sentence as its `publicMessage`. One code for every reason is the
+ *      point (see the registry entry): "not a master", "invalid code" and
+ *      "invalid version" must stay indistinguishable to a prober.
  *   4. The rewire itself (source assertions): a revert that re-inlines the old
  *      blocks must go red, not silently pass.
  */
@@ -28,6 +33,7 @@ import {
 	utilsApiActions,
 } from '../../src/core/api/handlers/dd_utils_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { getOntologyIoPath } from '../../src/core/ontology/data_io_import.ts';
 
 const HANDLER_SOURCE_PATH = join(import.meta.dir, '../../src/core/api/handlers/dd_utils_api.ts');
@@ -246,30 +252,35 @@ describe('the two doors as wired (this install is neither master)', () => {
 		expect(config.update.isCodeServer).toBe(false);
 	});
 
-	test('get_ontology_update_info refuses a non-master before any code check', async () => {
-		const out = await handlerFor('get_ontology_update_info')(
-			rqo({ version: '7.0', code: 'localhost' }),
-			context,
+	/** The DedaloError a door threw (the handler builds no failure body). */
+	async function refusalOf(call: Promise<unknown>): Promise<DedaloError> {
+		const outcome = await call.then(
+			(value) => ({ threw: false as const, value }),
+			(error: unknown) => ({ threw: true as const, error }),
 		);
-		expect(out.status).toBe(200);
-		expect(out.body).toEqual({
-			result: false,
-			msg: 'Error. Server is not an ontology server',
-			errors: ['Error. Server is not an ontology server'],
-		});
+		if (!outcome.threw) {
+			throw new Error(`expected a refusal, got ${JSON.stringify(outcome.value)}`);
+		}
+		if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+		return outcome.error;
+	}
+
+	test('get_ontology_update_info refuses a non-master before any code check', async () => {
+		const refusal = await refusalOf(
+			handlerFor('get_ontology_update_info')(rqo({ version: '7.0', code: 'localhost' }), context),
+		);
+		expect(refusal.code).toBe('update_server.refused');
+		expect(refusal.spec.status).toBe(403);
+		// PUBLIC disclosure — the PHP sentence still reaches the peer install.
+		expect(refusal.publicMessage).toBe('Error. Server is not an ontology server');
 	});
 
 	test("get_code_update_info answers the PHP typo 'is not an code server' VERBATIM", async () => {
-		const out = await handlerFor('get_code_update_info')(
-			rqo({ version: '7.0.0', code: 'localhost' }),
-			context,
+		const refusal = await refusalOf(
+			handlerFor('get_code_update_info')(rqo({ version: '7.0.0', code: 'localhost' }), context),
 		);
-		expect(out.status).toBe(200);
-		expect(out.body).toEqual({
-			result: false,
-			msg: 'Error. Server is not an code server',
-			errors: ['Error. Server is not an code server'],
-		});
+		expect(refusal.code).toBe('update_server.refused');
+		expect(refusal.publicMessage).toBe('Error. Server is not an code server');
 	});
 });
 

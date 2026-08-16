@@ -11,16 +11,20 @@
 * This widget is a developer/administrator debugging tool that lets a global-admin
 * user write a raw Search Query Object (SQO) in the browser and fire it directly
 * against the `dd_utils_api → convert_search_object_to_sql_query` endpoint.  The
-* server resolves the SQO through the normal Dédalo search pipeline and returns:
-*   - `msg`          {string}  The resolved SQL string (placeholders substituted).
-*   - `sql`          {string}  The raw, unresolved SQL with positional placeholders.
-*   - `ar_section_id` {Array} Distinct `section_id` values from the result set.
-*   - `db_data`      {Array}  Full raw row objects from the database.
-*   - `errors`       {Array}  Non-empty when the pipeline rejected the SQO.
+* server resolves the SQO through the normal Dédalo search pipeline and answers
+* with envelope v2 — the four pieces of the answer are the PAYLOAD (`data`),
+* never top-level body keys (src/core/api/handlers/dd_utils_api.ts):
+*   - `sql_resolved`  {string} The resolved SQL string (placeholders substituted).
+*   - `sql`           {string} The raw, unresolved SQL with positional placeholders.
+*   - `ar_section_id` {Array}  Distinct `section_id` values from the result set.
+*   - `db_data`       {Array}  Full raw row objects from the database.
+* A failure carries no payload at all: it is `{ok:false, error:{code,…}}`.
 *
-* The response is rendered inside `body_response` via the shared `print_response`
-* helper from `render_area_maintenance.js`, which shows human-readable text plus an
-* interactive JSON tree.
+* (!) The resolved SQL used to arrive in the prose `msg`. Envelope v2 has NO prose
+* channel on success, so the shared `print_response` (which prints `msg`) can no
+* longer render this widget's answer — `print_sqo_response` below does, reading
+* `response_data(api_response).sql_resolved` and routing a failure through the ONE
+* error renderer.
 *
 * Lazy-init contract
 * ------------------
@@ -44,17 +48,90 @@
 *                                 sqo_test_environment in sqo_test_environment.js).
 *   (internal) get_content_data_edit — builds the widget body DOM.
 *
-* Server peer:  core/api/v1/common/class.dd_utils_api.php
-*               → convert_search_object_to_sql_query()
+* Server peer:  src/core/api/handlers/dd_utils_api.ts
+*               → convert_search_object_to_sql_query
 * Lifecycle:    sqo_test_environment.js (init / build / render / load / destroy)
-* Shared helpers: render_area_maintenance.js → print_response
+* Shared helpers: common.js → render_tree_data; render_api_error.js → render_error_inline
 */
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {createJSONEditor} from '../../../../../lib/jsoneditor/standalone.js'
-	import {print_response} from '../../../js/render_area_maintenance.js'
+	import {render_tree_data} from '../../../../common/js/common.js'
+	import {append_text_lines} from '../../../../common/js/utils/index.js'
+	import {request_failed, response_data} from '../../../../common/js/api_error.js'
+	import {render_error_inline} from '../../../../common/js/render_api_error.js'
+
+
+
+/**
+* PRINT_SQO_RESPONSE
+* Renders one convert_search_object_to_sql_query answer into `container`.
+*
+* Replaces the shared `print_response` here: that helper renders the PHP-era
+* prose `msg`, which envelope v2 removed from every SUCCESS body. This widget's
+* answer is a named payload field (`data.sql_resolved`), so it is read through
+* `response_data` and written as TEXT NODES (server text never reaches an HTML
+* sink). A failure has no payload — it goes to the ONE error renderer.
+*
+* @param {HTMLElement} container - node to populate; emptied first
+* @param {Object} api_response - the data_manager.request envelope
+* @return HTMLElement container
+*/
+const print_sqo_response = function(container, api_response) {
+
+	// clean container
+		while (container.firstChild) {
+			container.removeChild(container.firstChild)
+		}
+
+	// button_eraser (same dismiss affordance the shared print_response offers)
+		const button_eraser = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button reset eraser',
+			parent			: container
+		})
+		button_eraser.addEventListener('mouseup', function(e){
+			e.stopPropagation()
+			while (container.firstChild) {
+				container.removeChild(container.firstChild)
+			}
+		})
+
+	// the answer — a failure through the ONE error renderer (label → English
+	// message → code), a success as its named payload field. Either way the full
+	// envelope tree is rendered below: this IS the developer's inspection console.
+		if (request_failed(api_response)===true) {
+			render_error_inline(container, api_response.error)
+		} else {
+			// sql_resolved — the console's answer (was the prose `msg` before v2)
+			const api_data		= response_data(api_response)
+			const sql_resolved	= (api_data && typeof api_data.sql_resolved==='string')
+				? api_data.sql_resolved
+				: ''
+			const sql_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'api_response',
+				parent			: container
+			})
+			append_text_lines(
+				sql_node,
+				sql_resolved.length ? sql_resolved.split(/\\n|\n/) : ['No SQL resolved for this SQO']
+			)
+		}
+
+	// full envelope tree, for structured inspection
+		const pre = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'pre',
+			parent			: container
+		})
+		render_tree_data(api_response, pre)
+
+
+	return container
+}//end print_sqo_response
 
 
 
@@ -136,7 +213,7 @@ render_sqo_test_environment.prototype.list = async function(options) {
 *   1. `<label>` — static "Test Search Query Object (SQO)" heading.
 *   2. `<button class="button_submit">` — triggers the API call on click.
 *   3. `<div class="editor_json_container">` — mount-point for svelte-jsoneditor.
-*   4. `<div class="body_response">` — receives `print_response()` output.
+*   4. `<div class="body_response">` — receives `print_sqo_response()` output.
 *
 * The JSON editor is NOT mounted immediately.  A `load_editor` closure is stored
 * on `self.activate` so the host's `load()` method can call it when the user opens
@@ -154,7 +231,7 @@ render_sqo_test_environment.prototype.list = async function(options) {
 * variable is captured by reference, not by value) and works correctly because the
 * click can only fire after the spinner callback has returned and the DOM has been
 * committed.  However the `body_response` node is undefined at the point where
-* `print_response` is called if the outer `container` variable is somehow shadowed;
+* `print_sqo_response` is called if the outer `container` variable is somehow shadowed;
 * see flags.
 *
 * @param {Object} self - The `sqo_test_environment` instance that owns the widget.
@@ -200,7 +277,7 @@ const get_content_data_edit = async function(self) {
 						parent			: container
 					})
 					// click event — reads the editor text, submits it to the API, and
-					// renders the result via print_response()
+					// renders the result via print_sqo_response()
 					const click_handler = async (e) => {
 						e.stopPropagation()
 
@@ -245,7 +322,7 @@ const get_content_data_edit = async function(self) {
 							// scope.  The call is safe because click events can only fire after
 							// the full DocumentFragment has been committed to the DOM; at that
 							// point `body_response` is already in scope and assigned.
-							print_response(body_response, api_response)
+							print_sqo_response(body_response, api_response)
 						} finally {
 							content_data.classList.remove('loading')
 							button_submit.classList.remove('button_spinner')

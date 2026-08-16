@@ -326,7 +326,7 @@ describe('target refusal short-circuits before any artifact exists', () => {
 			changesDir,
 		});
 
-		expect(out.result).toBe(false);
+		expect(out.ok).toBe(false);
 		expect(out.errors).toEqual(['unknown ontology server code: zzdmaster']);
 		expect(out.msg).toBe('Error. The selected server is not configured on this instance');
 		// The refusal is BEFORE setOntologyIoPath: nothing at all was created.
@@ -359,7 +359,7 @@ describe('target refusal short-circuits before any artifact exists', () => {
 			ioBaseDir,
 			changesDir,
 		});
-		expect(accepted.result).toBe(false);
+		expect(accepted.ok).toBe(false);
 		expect(accepted.msg).toBe('Error. Local ontology file missing: zzd.copy.gz');
 		// It got past the guard into Phase A — the io dir now exists — but no
 		// destructive phase ran: no recovery dir, and the staging dir is gone.
@@ -402,7 +402,7 @@ describe('single-flight latch', () => {
 		await hasArrived;
 
 		const concurrent = await updateOntology(optionsFor(origin, [TLD]), -1, deps);
-		expect(concurrent.result).toBe(false);
+		expect(concurrent.ok).toBe(false);
 		expect(concurrent.errors).toEqual(['an ontology update is already running']);
 		expect(concurrent.msg).toBe('Error. An ontology update is already running');
 
@@ -450,7 +450,7 @@ describe('Phase B recovery snapshot', () => {
 			});
 			fixture.stop();
 
-			expect(out.result).toBe(false);
+			expect(out.ok).toBe(false);
 			expect(out.msg).toBe('Error. Recovery snapshot failed — database untouched');
 			expect(out.errors).toContain('recovery snapshot failed for zzd');
 			// "database untouched" is a CLAIM — measure it. Moving the import
@@ -489,7 +489,7 @@ describe('Phase C auto-restore', () => {
 			});
 			fixture.stop();
 
-			expect(out.result).toBe(false);
+			expect(out.ok).toBe(false);
 			// D7: the message may NOT claim the previous state was restored — the
 			// registry record and dd_ontology root node of every provisioned TLD
 			// are NOT covered by the Phase-B snapshots.
@@ -536,7 +536,7 @@ describe('success tail', () => {
 			fixture.stop();
 
 			expect(out.errors).toEqual([]);
-			expect(out.result).toBe(true);
+			expect(out.ok).toBe(true);
 			expect(out.msg.startsWith('OK. Request done successfully')).toBe(true);
 
 			// -- the imported rows landed, and dd_ontology was re-derived from them

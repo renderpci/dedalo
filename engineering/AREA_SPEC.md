@@ -160,6 +160,18 @@ The READ calls it for the affordances; the WRITE calls it again before it persis
 sites, one answer — which is what makes a rendered affordance stop being an authorization
 and a forged client cap stop mattering.
 
+The WRITE side (`relations/save.ts refuseByPickerConstraint`, on every NET-NEW locator —
+a locator the component already holds is re-persisted untouched, `storedItems`) runs four
+gates: TARGET (`isTargetAllowed`, every caller); READ GRANT on the linked section
+(**tree-picker callers only** — the write twin of §7's pruning; a non-picker caller is
+authorized by the CALLER grant dispatch enforced, the read-side `inheritSubdatumPermission`
+model — and **fail-closed**: no principal ⇒ refused, never exempted); SELECTABILITY
+(tree-picker callers whose target declares `is_indexable`); the CAP (`data_limit`, counted
+in the cap scope — per main item for a frame — on BOTH the held and the resulting side).
+A refusal reaching a save is THROWN — `relation.insert_refused` (400) or, for the read
+grant, the generic `perm.denied` (403) — never a silent ok. Wire:
+`WC-2026-08-14-relation-insert-target-validation` (+ its 2026-08-16 addendum).
+
 **4. What the request_config does and does NOT constrain.** The `sqo` names the target
 section(s) and nothing more. The tree's CONTENTS are the thesaurus's; it is not paged
 (`sqo_config.limit` is the autocomplete's dropdown size, a different surface); its nodes are
@@ -181,8 +193,8 @@ addressed by locator rather than by position. Default mode emits none of them, w
 keeps the frozen differentials byte-identical.
 
 **7. The two empty trees are two different facts.** Every candidate dropped by a permission
-check → `notAuthorized()` (403) with the GENERIC message, naming no section (`response.ts`
-refuses a `denied(403, …)` for exactly this reason). Dropped by the data-driven skips (no
+check → a thrown `perm.denied` (403) with the GENERIC registry message, naming no section
+(the code's disclosure is `operator`, so a site's sentence never reaches the wire). Dropped by the data-driven skips (no
 active hierarchy, or none of them among the caller's targets) → `409 read: no active
 hierarchy is configured for this component target`, which the client renders as "this picker
 has no thesaurus" rather than as a permission error. The two causes are counted separately at

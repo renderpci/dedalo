@@ -44,9 +44,11 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {append_text_lines} from '../../../../common/js/utils/index.js'
  	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
  	import {check_server_health,data_manager} from '../../../../common/js/data_manager.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
+	import {request_failed} from '../../../../common/js/api_error.js'
 
 
 
@@ -150,13 +152,13 @@ const render_content_data = async function(self) {
 
 	// info errors
 		if (errors.length) {
-			const text = `Errors found. Fix this errors before continue: <br>` + errors.join('<br>')
-			ui.create_dom_element({
+			// server text: text nodes + real <br>, never an HTML sink
+			const errors_node = ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: text,
 				class_name		: 'info_text error',
 				parent			: content_data
 			})
+			append_text_lines(errors_node, ['Errors found. Fix this errors before continue:'].concat(errors))
 		}
 
 	// datalist_container
@@ -447,10 +449,11 @@ const render_health_list = function (self, datalist_container) {
 
 					const total_time = performance.now() - start_time;
 
-					value_node.textContent = JSON.stringify(response.result!==false, null, 2)
+					const reachable = request_failed(response)===false
+					value_node.textContent = JSON.stringify(reachable, null, 2)
 
 					// icon success / failed
-					if (response.result!==false) {
+					if (reachable) {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button icon check success',
@@ -573,7 +576,7 @@ const render_requeriments_list = function (requeriments_list, self, datalist_con
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'name',
-			inner_html		: name,
+			text_content	: String(name ?? ''),
 			parent			: info_item
 		})
 
@@ -589,7 +592,7 @@ const render_requeriments_list = function (requeriments_list, self, datalist_con
 		const value_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value' + class_add,
-			inner_html		: is_unavailable ? 'Not available' : JSON.stringify(value, null, 2),
+			text_content	: is_unavailable ? 'Not available' : JSON.stringify(value, null, 2),
 			parent			: info_item
 		})
 
@@ -614,7 +617,7 @@ const render_requeriments_list = function (requeriments_list, self, datalist_con
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info',
-			inner_html		: info,
+			text_content	: String(info ?? ''),
 			parent			: info_item
 		})
 	}
@@ -696,7 +699,7 @@ const render_system_list = function (system_list) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'name',
-			inner_html		: name,
+			text_content	: String(name ?? ''),
 			parent			: info_item
 		})
 
@@ -709,7 +712,7 @@ const render_system_list = function (system_list) {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'value',
-			inner_html		: value_string,
+			text_content	: value_string,
 			parent			: info_item
 		})
 	}

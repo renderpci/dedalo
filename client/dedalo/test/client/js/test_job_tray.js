@@ -139,7 +139,7 @@ describe('JOB TRAY / LONG-PROCESS MONITORING CLIENT TEST', function() {
 	// ── NO USER, NO TRAY ──────────────────────────────────────────────────────
 	// Measured bug (2026-08-13): render_page mounts the tray for the LOGIN
 	// element too, and the tray's first act is get_activity — which the session
-	// gate answers 401 errors:['not_logged'] to an anonymous caller. page.js
+	// gate answers 401 error.code 'auth.not_logged' to an anonymous caller. page.js
 	// turns that token into the re-login OVERLAY, so the boot login form got a
 	// second login panel stacked on it and the operator typed the credentials
 	// twice. The guard is in the tray, so no mount site can reintroduce it.
@@ -153,7 +153,7 @@ describe('JOB TRAY / LONG-PROCESS MONITORING CLIENT TEST', function() {
 
 		data_manager.request = async function() {
 			requests++
-			return {result: false}
+			return {ok: true, data: false}
 		}
 
 		// Counted, not asserted at zero: the harness page may legitimately carry a

@@ -6,7 +6,7 @@
 The API subsystem is the single HTTP entry point of the Dédalo **work system**: it
 decodes a Request Query Object (RQO), runs the security gates, dispatches the
 action to a registered handler, and returns a standard JSON envelope whose
-`result` is the `{context, data}` ddo.
+`data` is the `{context, data}` ddo.
 
 This page is the **subsystem reference**. For the *request format* itself — every
 RQO property, the action catalogue, the response-envelope fields — read
@@ -46,10 +46,14 @@ call passes through it. It is two modules — a thin HTTP transport edge
   verification. Inside each data handler the untrusted SQO is scrubbed and the
   caller's permission is asserted.
 - **Dispatch** — route the RQO to `ACTION_REGISTRY[dd_api][action]`.
-- **Response shaping** — guarantee the standard envelope (`result`, `msg`,
-  `errors`, `csrf_token`), append the session's fresh CSRF token, set the session
-  cookie on login and logout, stream NDJSON where a handler asks for it, and
-  convert a top-level throwable into a safe error envelope.
+- **Response shaping** — guarantee the standard envelope (`ok`, `request_id`,
+  and then `data` or `error`), append the session's fresh CSRF token, set the
+  session cookie on login and logout, stream NDJSON where a handler asks for it,
+  and convert a top-level throwable into a safe error envelope. The conversion
+  is a **chokepoint**: handlers throw to fail and return `ok(data, …)` to
+  succeed, and one converter (`src/core/errors/convert.ts`) is the only thing in
+  the engine that writes a failure body — so every failure gets the same shape,
+  the same disclosure rules and the same status.
 - **Session lifecycle at the edge** — resolve the session from its cookie, thread
   it through the request-scoped context, and open the per-request language scope.
 - **Observability** — every outcome, gate denials included, emits a structured
@@ -58,9 +62,14 @@ call passes through it. It is two modules — a thin HTTP transport edge
 ## Key concepts
 
 **RQO in, envelope out.** One HTTP call carries exactly one RQO; the response is
-always `{result, msg, errors, …, csrf_token}`. The `result` shape depends on the
-action: a `read` returns the ddo `{context, data}`, a `count` returns `{total}`, a
-`start` returns `{context, data, environment}`.
+either `{ok: true, request_id, data, …}` or `{ok: false, request_id, error, …}`,
+and a session always gets a fresh `csrf_token` appended to it — on a failure too.
+The `data` shape depends on the action: a `read` returns the ddo
+`{context, data}`, a `count` returns `{total}`, a `start` returns
+`{context, data}` with the installation `environment` alongside. A failure
+carries a registered `error.code` from a closed set and a status derived from that
+code's category; the full field list is in
+[the API reference](../../api/dedalo_api_v1.md#response-envelope).
 
 **Two-level dispatch.** The top-level `action` selects the *handler* and must be
 registered. Inside a data action, the per-element modifier `source.action` selects
@@ -93,7 +102,8 @@ src/
     ├── api/
     │   ├── dispatch.ts           # ACTION_REGISTRY assembly, the gates, the envelope
     │   ├── handlers/             # one module per dd_api class
-    │   ├── response.ts           # the ApiResult envelope + denied() helper
+    │   ├── response.ts           # the ApiResult type (status + body)
+    ├── errors/                   # the closed error registry + THE converter (envelope, MCP, stream)
     │   ├── raw_view.ts           # read-only /api/v1/raw endpoint
     │   └── environment_view.ts   # read-only /api/v1/environment endpoint
     ├── section/read_facade.ts    # the read sub-action routing
@@ -179,9 +189,12 @@ Two narrower gates ride alongside:
   `Secure` cookie flag.
 - Routes the API paths, the media path (session-gated, fail-closed), and the
   read-only raw/environment views.
-- Reads the body and parses it; on a parse failure returns
-  `400 {result:false, msg:'Invalid JSON body'}`. Validates with `rqoSchema`; on
-  failure returns `400 {result:false, msg:'Invalid RQO', errors}`.
+- Reads the body and parses it; on a parse failure returns `400` with
+  `error.code = "request.malformed_body"`. Validates with `rqoSchema`; on failure
+  returns `400` with `error.code = "request.invalid_rqo"` and
+  `details.issue_paths` — the failing property paths only, never the submitted
+  values. A route that matches nothing is `404 resource.not_found`. All four are
+  built by the same converter as every other failure.
 - Handles the **multipart** upload branch before JSON dispatch, resolving its own
   cookie and CSRF candidate.
 - Builds the `ApiRequestContext` and awaits `dispatchRqo(rqo, context)`.
@@ -196,7 +209,7 @@ The *policy* — who may call what — lives one layer down, in `dispatch.ts`.
 
 | symbol | purpose |
 | --- | --- |
-| `dispatchRqo(rqo, context)` | The central router: registry allowlist → login check → CSRF check, open the request-scoped language context, run the handler, catch any throwable into a uniform error envelope, append the session `csrf_token`, and emit the access-log line. Returns an `ApiResult`. |
+| `dispatchRqo(rqo, context)` | The central router: registry allowlist → login check → CSRF check, open the request-scoped language context, run the handler, catch any throwable into a uniform error envelope through the single converter, append the session `csrf_token`, and emit the access-log line (which carries `error_code` / `error_category` on a failure). Returns an `ApiResult`. |
 | `NO_LOGIN_ACTIONS` | The actions runnable without a session, keyed on the `${dd_api}:${action}` **pair**. |
 | `CSRF_EXEMPT_ACTIONS` | The bootstrap and machine-to-machine actions exempt from CSRF, keyed on the same pair. |
 | `ApiRequestContext` | The per-request state the HTTP layer threads explicitly: `requestId`, `clientIp`, `session`, `sessionToken`, `csrfCandidate`, and the lazily-resolved `principal`. |
@@ -210,8 +223,9 @@ CSRF verification is `verifyCsrf(session, candidate)` (constant-time, in
 `session_store.ts`). The client echoes the token back via the
 `X-Dedalo-Csrf-Token` header — or a `csrf_token` query parameter for multipart
 uploads. Read and count are **not** exempt. On a CSRF failure the dispatcher
-returns `403` whose `errors` include `csrf_failed` and whose body carries the
-session's **current** token, so the client's transparent single retry can succeed.
+returns `403` with `error.code = "auth.csrf_failed"`, and the body carries the
+session's **current** `csrf_token`, so the client's transparent single retry can
+succeed.
 
 Sessions are the rotating server-side sessions of
 `src/core/security/session_store.ts`, issued by the Argon2id login in `auth.ts`.
@@ -253,7 +267,7 @@ The default handler class. Every action is an
   only place an untrusted SQO is scrubbed; from there it flows to
   `buildSearchSql()`.
 - **[dd_object (ddo)](../dd_object.md)** — what a data action *returns*: the
-  handlers pack the `{context, data}` ddo into `result`.
+  handlers pack the `{context, data}` ddo into `data`.
 - **[Architecture overview](../architecture_overview.md#the-request-lifecycle)** —
   the wider round trip.
 - **[login](login.md) / [security](security.md)** — the session, CSRF and
@@ -272,7 +286,8 @@ The default handler class. Every action is an
 // src/server.ts (essence)
 const rawBody = await request.json();
 const parsedRqo = rqoSchema.safeParse(rawBody);           // validate → one Rqo
-if (!parsedRqo.success) return jsonResponse({ result: false, msg: 'Invalid RQO' }, 400);
+if (!parsedRqo.success) return jsonFailureResponse(                    // → the converter
+    new DedaloError('request.invalid_rqo', { details: { issue_paths } }), context.requestId);
 
 const apiContext: ApiRequestContext = {
     requestId: context.requestId,
@@ -301,15 +316,33 @@ Request — see [RQO](../rqo.md) for the full property reference:
 }
 ```
 
-Response — `result` carries the [ddo](../dd_object.md):
+Response — `data` carries the [ddo](../dd_object.md):
 
 ```json
 {
-    "result" : { "context": [ ], "data": [ ] },
-    "msg"    : "OK",
+    "ok"         : true,
+    "request_id" : "…",
+    "data"       : { "context": [ ], "data": [ ] },
     "csrf_token" : "…"
 }
 ```
+
+The same read refused for want of a permission:
+
+```json
+{
+    "ok"         : false,
+    "request_id" : "…",
+    "error"      : { "code": "perm.denied", "category": "permission",
+                     "message": "Insufficient permissions",
+                     "label_key": "no_access_page", "retryable": false },
+    "csrf_token" : "…"
+}
+```
+
+with HTTP `403` — the status follows the code's category. See
+[the API reference](../../api/dedalo_api_v1.md#response-envelope) for the full
+field list and the category-to-status table.
 
 ### Adding a remote action
 
@@ -331,7 +364,7 @@ Without the registry entry, `dispatchRqo()` rejects the call with
 
 - [RQO](../rqo.md) — the request format decoded here.
 - [SQO](../sqo.md) — the query carried inside the RQO and scrubbed in the handlers.
-- [dd_object (ddo)](../dd_object.md) — the `{context, data}` unit returned in `result`.
+- [dd_object (ddo)](../dd_object.md) — the `{context, data}` unit returned in `data`.
 - [Architecture overview](../architecture_overview.md) — where the API sits in the
   work system.
 - [login](login.md) · [security](security.md) — the policies the gates enforce.

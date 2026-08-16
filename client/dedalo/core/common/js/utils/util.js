@@ -1487,6 +1487,34 @@ export function tool_base_url(model) {
 	return DEDALO_TOOLS_URL + '/' + model
 }//end tool_base_url
 
+/**
+* APPEND_TEXT_LINES
+* Append one or more lines to a node as TEXT NODES separated by real <br>
+* elements. THE way to print server text (msg, errors, file paths, exception
+* text) without an HTML sink: `inner_html` / `insertAdjacentHTML` parse whatever
+* the server sent, this cannot (error_report_xss_tripwire, SEC-XSS-005).
+*
+* @param {HTMLElement} node - target container (its existing children are kept)
+* @param {Array|string} lines - one line or a list of them; null/undefined dropped
+* @returns {HTMLElement} the same node, for chaining
+*/
+export function append_text_lines(node, lines) {
+
+	if (!node) {
+		return node
+	}
+
+	const list = (Array.isArray(lines) ? lines : [lines]).filter(line => line!==null && line!==undefined)
+	for (let i = 0; i < list.length; i++) {
+		if (i > 0) {
+			node.appendChild(document.createElement('br'))
+		}
+		node.appendChild(document.createTextNode(String(list[i])))
+	}
+
+	return node
+}//end append_text_lines
+
 
 
 // @license-end

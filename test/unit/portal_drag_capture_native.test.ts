@@ -141,8 +141,8 @@ describe('portal drag-reorder: captured client RQOs, TS-native', () => {
 		// page-1 drag (absolute keys 2 → 0): 103 moves to the front.
 		const page1 = (
 			await dispatchRqo(fixtureFor('sort_data_page1', host) as unknown as Rqo, tsContext as never)
-		).body as { result?: unknown };
-		expect(page1.result).not.toBe(false);
+		).body as { ok?: boolean };
+		expect(page1.ok).toBe(true);
 		// full stored array after page 1 (differential pin: leading slice
 		// ['103','101','102']; the rest untouched, paginated_key ABSENT).
 		const afterPage1 = [3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(storedLocator);
@@ -151,8 +151,8 @@ describe('portal drag-reorder: captured client RQOs, TS-native', () => {
 		// page-2 drag (ABSOLUTE keys 10 → 9 despite offset 9): 111 before 110.
 		const page2 = (
 			await dispatchRqo(fixtureFor('sort_data_page2', host) as unknown as Rqo, tsContext as never)
-		).body as { result?: unknown };
-		expect(page2.result).not.toBe(false);
+		).body as { ok?: boolean };
+		expect(page2.ok).toBe(true);
 		// differential pin: trailing slice ['109','111','110','112'].
 		const afterPage2 = [3, 1, 2, 4, 5, 6, 7, 8, 9, 11, 10, 12].map(storedLocator);
 		expect(await storedPortalOf(host)).toEqual(afterPage2);
@@ -162,8 +162,8 @@ describe('portal drag-reorder: captured client RQOs, TS-native', () => {
 		const host = await seedTwin();
 		const body = (
 			await dispatchRqo(fixtureFor('paginate_offset9', host) as unknown as Rqo, tsContext as never)
-		).body as { result?: { data?: Record<string, unknown>[] } };
-		const data = body.result?.data ?? [];
+		).body as { data?: { data?: Record<string, unknown>[] } };
+		const data = body.data?.data ?? [];
 		const portalItem = data.find(
 			(item) => item.tipo === 'numisdata77' && String(item.section_id) === String(host),
 		) as Record<string, unknown> | undefined;

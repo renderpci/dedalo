@@ -20,13 +20,15 @@
 
 //import
 	import {ui} from '../ui.js'
+	import {request_failed} from '../api_error.js'
+	import {error_text} from '../render_api_error.js'
 
 
 
 /**
 * APPEND_TEXT_WITH_BREAKS
 * SEC-029: safe alternative to insertAdjacentHTML for messages that may contain
-* attacker-controlled fragments (component labels, api_response.msg, error messages).
+* attacker-controlled fragments (component labels, server sentences, error messages).
 * Splits the input on `<br>` literals (the only HTML token the previous code relied on)
 * and emits text nodes + <br> elements so that any other HTML/script payload is rendered
 * as text rather than parsed.
@@ -68,9 +70,9 @@ function append_text_with_breaks(target, text, position = 'beforeend') {
 * CSS 'fade-out' animation, and it removes itself immediately on click.
 *
 * Type dispatch:
-*   'save'    (default) — colour and text derived from `api_response.result`.
+*   'save'    (default) — colour and text derived from the api_response outcome.
 *                         Green ('ok' class) on success; red ('error' class) on failure.
-*                         Error details from api_response.error + api_response.msg are
+*                         Error details from api_response.error (the ONE renderer) are
 *                         appended as additional lines. Falls back to 'warning' when
 *                         api_response is absent (e.g. the save short-circuited client-side).
 *   'success' — green bubble; caller supplies `msg` and optionally `remove_time`.
@@ -173,28 +175,20 @@ export function render_node_info(options) {
 			// msg. Based on API response result
 			if(api_response) {
 
-				if (api_response.result===false) {
+				if (request_failed(api_response)) {
 
 					// error response
 
 					node_info.classList.add('error')
 					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
 					append_text_with_breaks(node_info, text, 'afterbegin')
-					// error msg
-					// Collect error detail lines, deduplicating api_response.msg
-					// against the error object's own message to avoid repetition.
-						const ar_msg = []
-						if (api_response.error) {
-							// Typically, api_response.error is an Error object. Extract the message if it exists.
-							const message = api_response.error.message || JSON.stringify(api_response.error)
-							ar_msg.push(message)
-						}
-						// Add the message to the error array only if it is different from the error message already added.
-						if (api_response.msg && !ar_msg.includes(api_response.msg)) {
-							ar_msg.push(api_response.msg)
-						}
-						if (ar_msg.length>0) {
-							append_text_with_breaks(node_info, '<br>' + ar_msg.join('<br>'), 'beforeend')
+					// error detail
+					// ONE sentence, from the ONE renderer: the coded error resolved
+					// in the user's language. Envelope v2 has no prose channel of its
+					// own on a failure, so there is nothing left to deduplicate.
+						const detail = error_text(api_response.error)
+						if (detail) {
+							append_text_with_breaks(node_info, '<br>' + detail, 'beforeend')
 						}
 				}else{
 

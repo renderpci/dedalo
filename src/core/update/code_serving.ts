@@ -18,6 +18,8 @@
  */
 
 import { SECURITY_HEADERS } from '../api/static_asset.ts';
+import { toErrorEnvelope } from '../errors/convert.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { codeReleasePath } from './code_manifest.ts';
 
 const RELEASE_URL_RE = /^\/dedalo\/install\/code\/(\d+\.\d+\.\d+)\/([A-Za-z0-9_.-]+)$/;
@@ -67,12 +69,19 @@ function parseReleaseUrl(
 export async function serveCodeReleaseRequest(
 	pathname: string,
 	cfg: CodeServingConfig,
+	requestId: string = crypto.randomUUID(),
 ): Promise<Response> {
-	const notFound = () =>
-		new Response(JSON.stringify({ result: false, msg: 'Not found' }), {
-			status: 404,
+	// The same opaque miss every route answers (server.ts notFoundResponse):
+	// converter-made `resource.not_found` envelope v2 — never a hand-built body.
+	const notFound = () => {
+		const { status, body } = toErrorEnvelope(new DedaloError('resource.not_found'), {
+			requestId,
+		});
+		return new Response(JSON.stringify(body), {
+			status,
 			headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS },
 		});
+	};
 	const target = resolveCodeReleaseFile(pathname, cfg);
 	if (target === null) return notFound();
 	const file = Bun.file(target.path);

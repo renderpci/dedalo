@@ -219,3 +219,32 @@ page, no read permission) — a programming error nobody translates.
 Two new label keys: `external_search_empty_query` (nothing was typed — the one
 NEUTRAL state, and it must not look like a failure) and `external_search_failed`
 (the response failed with no envelope at all: a 4xx, or a thrown fetch).
+
+## Addendum 2026-08-15 — the status rule of this entry is SUPERSEDED
+
+Everything above about the REQUEST — the derivation of the target section, the
+egress classes, the removed sentinel, the caching decision, the client half —
+stands. Two statements about the FAILURE shape do not:
+
+1. **"A search that fails does NOT return 4xx… so a SERVICE or CONFIGURATION
+   failure answers HTTP 200 with `result:false`."** Superseded by
+   `WC-2026-08-15-external-degradation-is-a-notice`: a degraded source answers
+   `ok:true` + one coded notice (`external.<kind>`, `details.service`), with the
+   `source_status` object kept as an extension key for the chip during the
+   compat window. Degradation is not a failure of the request.
+2. **"A 4xx is now reserved for CALLER FAULTS."** Superseded by
+   `WC-2026-08-15-error-status-is-a-channel`: the HTTP status is derived from
+   the error code's category for EVERY failure — `caller` 400, `auth` 401,
+   `permission` 403, `not_found` 404, `conflict` 409, `limit` 429,
+   `unavailable` 503, `internal` 500 — and `ok:false ⇒ status ∉ 2xx`.
+
+The reason this entry gave for both rules was a CLIENT defect, stated plainly
+here at the time: `data_manager.request` read a non-ok response as a thrown
+fetch error and discarded the body before any caller saw it. That defect is
+fixed rather than accommodated — `api_transport.js` parses the body on any
+status — so the per-status exemption list (401 from WC-051, 403 from
+WC-2026-08-12) is gone with it.
+
+The two label keys this entry introduced survive: `external_search_empty_query`
+(the one NEUTRAL state) and `external_search_failed`, now reachable as the
+`label_key` of the corresponding registry rows.

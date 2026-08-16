@@ -27,6 +27,7 @@ import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_posterframe_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -116,6 +117,11 @@ describe('tool_posterframe core', () => {
 		await expect(createIdentifyingImageCore(avCtx(), avCtx(), '0')).rejects.toThrow(
 			/component_image/,
 		);
+		// One registered caller fact for the whole "wrong model here" family
+		// (ERRORS_SPEC §1) — a 400 with the sentence, not an untyped throw.
+		expect((await refusalOf(createIdentifyingImageCore(imageCtx(), imageCtx(), '0'))).code).toBe(
+			'media.unsupported_operation',
+		);
 	});
 });
 
@@ -179,7 +185,7 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 			expect(existsSync(thumb)).toBe(true);
 
 			const outcome = await deletePosterframe(avCtx());
-			expect(outcome.result).toBe(true);
+			expect(outcome.ok).toBe(true);
 			// The thumb it depicted was retired in the same call — never left serving a
 			// picture of a file the operator just deleted…
 			expect(outcome.retiredThumb).not.toBeNull();
@@ -205,11 +211,14 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 	test('a delete with nothing to delete reports it, and does nothing else', async () => {
 		rmSync(ROOT, { recursive: true, force: true });
 		const outcome = await deletePosterframe(avCtx());
-		expect(outcome).toEqual({ result: false, retiredThumb: null, rebuiltThumb: null });
+		expect(outcome).toEqual({ ok: false, retiredThumb: null, rebuiltThumb: null });
 	});
 
 	test('rejects an unsupported model', async () => {
 		await expect(deletePosterframe(imageCtx())).rejects.toThrow(/component_av or component_3d/);
+		expect((await refusalOf(deletePosterframe(imageCtx()))).code).toBe(
+			'media.unsupported_operation',
+		);
 	});
 });
 
@@ -361,7 +370,7 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 			expect(existsSync(thumb)).toBe(true);
 
 			const outcome = await deletePosterframe(tdCtx());
-			expect(outcome.result).toBe(true);
+			expect(outcome.ok).toBe(true);
 			// Retired WITH the posterframe — and NOT rebuilt, because this engine has
 			// no mesh renderer: the record honestly falls back to its placeholder
 			// until a browser captures a new scene.
@@ -370,7 +379,7 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 			expect(existsSync(thumb)).toBe(false);
 			expect(existsSync(posterframeAbsolutePath(threeD, tdIdentity, pathOpts))).toBe(false);
 
-			expect((await deletePosterframe(tdCtx())).result).toBe(false);
+			expect((await deletePosterframe(tdCtx())).ok).toBe(false);
 		},
 	);
 });
@@ -423,25 +432,26 @@ describe('create_identifying_image per-record scope gate', () => {
 			loaded!.module.apiActions.create_identifying_image,
 			'create_identifying_image',
 		).handler;
-		const response = await handler({
-			principal: scopedPrincipal,
-			userId: -1,
-			background: false,
-			options: {
-				tipo: 'rsc36', // component_text_area — never reached once the gate fires
-				section_tipo: 'rsc167',
-				section_id: 1,
-				current_time: '00:00:01',
-				item_value: {
-					component_portal: 'rsc254',
-					component_image: 'rsc29',
+		const refusal = await refusalOf(
+			handler({
+				principal: scopedPrincipal,
+				userId: -1,
+				background: false,
+				options: {
+					tipo: 'rsc36', // component_text_area — never reached once the gate fires
 					section_tipo: 'rsc167',
-					section_id: 99999999, // no such record — cannot be in any scope
+					section_id: 1,
+					current_time: '00:00:01',
+					item_value: {
+						component_portal: 'rsc254',
+						component_image: 'rsc29',
+						section_tipo: 'rsc167',
+						section_id: 99999999, // no such record — cannot be in any scope
+					},
 				},
-			},
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('record is out of the user scope');
+			}),
+		);
+		expect(refusal.code).toBe('perm.out_of_scope');
 	});
 });
 

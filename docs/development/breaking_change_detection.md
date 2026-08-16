@@ -114,10 +114,21 @@ explicitly, in this order:
    `WC-<yyyy>-<mm>-<dd>-<slug>` — the grammar and the entry format are in
    `engineering/WIRE_CONTRACT.md`.
 4. **Then update the fixture** to the new shape, so the gate pins the new contract.
-5. **Never silence a diff via `normalize.ts`** unless the field is genuinely volatile —
+5. **Or transform, when the whole SHAPE moved.** Editing 80 fixtures by hand is
+   itself a place to make 80 mistakes, so a change that reshapes every body — the
+   move to the `{ok, request_id, data | error}` envelope was one — is absorbed by a
+   *projection* in `normalize.ts` that maps the frozen shape onto the new one before
+   any diff, leaving the fixtures alone. A projection is legitimate only when it is
+   **total and refusing**: it is built from an explicit table of every frozen body it
+   covers, it throws on anything the table does not name rather than inferring from
+   text, and every caller asserts that it actually matched. A transform that quietly
+   no-ops is how a divergence becomes a regression the day the shape moves again.
+6. **Never silence a diff via `normalize.ts`** unless the field is genuinely volatile —
    and then only with a written justification in that file. Stripping a real contract
-   field to make a test pass defeats the entire guard.
-6. **Flag it in the commit message** with a `BREAKING CHANGE:` footer (Conventional
+   field to make a test pass defeats the entire guard. Note the difference from the
+   step above: projecting a value into its new shape preserves the assertion,
+   deleting it removes one.
+7. **Flag it in the commit message** with a `BREAKING CHANGE:` footer (Conventional
    Commits, see [Development overview](index.md#git-commit-style)).
 
 ## Known limits

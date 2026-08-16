@@ -180,7 +180,7 @@ beforeAll(async () => {
 			frameSaveRqo(twin, operation.idKey, operation.changed) as unknown as Rqo,
 			tsContext as never,
 		);
-		if (dispatched.status !== 200 || (dispatched.body as { result?: unknown }).result === false) {
+		if (dispatched.status !== 200 || (dispatched.body as { ok?: unknown }).ok === false) {
 			throw new Error(`frame save failed: ${JSON.stringify(dispatched.body)}`);
 		}
 	}

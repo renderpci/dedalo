@@ -22,6 +22,7 @@
 
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 
 /** Max rows an untrusted (client) SQO may request. PHP: DEDALO_SEARCH_CLIENT_MAX_LIMIT. */
 export const CLIENT_MAX_LIMIT = config.features.searchClientMaxLimit;
@@ -173,11 +174,17 @@ function stripServerOnlyKeysRecursive(
 	counter: { nodes: number },
 ): unknown {
 	if (depth > MAX_SQO_DEPTH) {
-		throw new Error(`sqo: filter nesting exceeds the maximum depth (${MAX_SQO_DEPTH})`);
+		throw new DedaloError('search.invalid_sqo', {
+			message: `sqo: filter nesting exceeds the maximum depth (${MAX_SQO_DEPTH})`,
+			publicMessage: `The search filter is nested deeper than the maximum of ${MAX_SQO_DEPTH}`,
+		});
 	}
 	counter.nodes += 1;
 	if (counter.nodes > MAX_SQO_NODES) {
-		throw new Error(`sqo: filter exceeds the maximum node count (${MAX_SQO_NODES})`);
+		throw new DedaloError('search.invalid_sqo', {
+			message: `sqo: filter exceeds the maximum node count (${MAX_SQO_NODES})`,
+			publicMessage: `The search filter holds more than the maximum of ${MAX_SQO_NODES} nodes`,
+		});
 	}
 	if (Array.isArray(value)) {
 		return value.map((entry) => stripServerOnlyKeysRecursive(entry, depth + 1, counter));

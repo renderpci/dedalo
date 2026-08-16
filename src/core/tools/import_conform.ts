@@ -31,6 +31,7 @@
 import type { ImportConformId } from '../components/types.ts';
 import { hasCoordinate, isCoordinateInRange, toCoordinate } from '../concepts/geo_coordinate.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
+import { isErrorInDomain } from '../errors/dedalo_error.ts';
 import type { ConformFailure, ConformResult } from './import_data.ts';
 
 /** Context a facet needs beyond the cell itself (resolved by the caller). */
@@ -881,10 +882,11 @@ const conformRelation: ImportConformFn = async (value, json, ctx) => {
 			String(item.section_tipo),
 			'import_conform.relation_locator',
 		).catch((error: unknown) => {
-			// Only the classifier's own "this is not an address" TypeError is import
-			// data being wrong; anything else (a malformed api_config, a DB failure)
-			// is an ENGINE fault and must not be laundered into a per-cell error.
-			if (error instanceof TypeError) return null;
+			// Only the classifier's own "this is not an address" refusal
+			// (section_id.* — SectionIdRefused) is import data being wrong; anything
+			// else (a malformed api_config, a DB failure) is an ENGINE fault and must
+			// not be laundered into a per-cell error.
+			if (isErrorInDomain(error, 'section_id')) return null;
 			throw error;
 		});
 		if (classified === null || classified.kind === 'synthetic' || classified.kind === 'absent') {

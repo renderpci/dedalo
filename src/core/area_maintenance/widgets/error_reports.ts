@@ -37,19 +37,13 @@ async function errorReportsGetValue(): Promise<WidgetResponse> {
 			listErrorReports({ limit: 1 }),
 		]);
 		return {
-			result: { total, latest_received_at: latest[0]?.received_at ?? null, target: reportTarget() },
-			msg: 'OK. Request done successfully',
-			errors: [],
+			data: { total, latest_received_at: latest[0]?.received_at ?? null, target: reportTarget() },
 		};
 	} catch (error) {
 		// getValue is fail-soft by contract (a missing table on a
 		// just-enabled master must not break the whole dashboard).
 		console.warn('[error_reports widget] get_value failed', error);
-		return {
-			result: { total: null, latest_received_at: null, target: reportTarget() },
-			msg: 'OK',
-			errors: [],
-		};
+		return { data: { total: null, latest_received_at: null, target: reportTarget() } };
 	}
 }
 
@@ -61,11 +55,7 @@ async function errorReportsGetReports(options: Record<string, unknown>): Promise
 		listErrorReports({ offset, limit }),
 		countErrorReports(),
 	]);
-	return {
-		result: { reports, total, offset },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { reports, total, offset } };
 }
 
 export const widget: WidgetModule = {

@@ -16,6 +16,7 @@
  */
 
 import { listTiposWithApiConfig } from '../../db/dd_ontology.ts';
+import { DedaloError } from '../../errors/index.ts';
 import { intifySectionIdsInValue } from './section_id_intify.ts';
 
 /**
@@ -38,9 +39,12 @@ export async function listExternalSectionTipos(): Promise<Set<string>> {
 		try {
 			if (await isExternalSectionTipo(tipo)) externalTipos.add(tipo);
 		} catch (error) {
-			throw new Error(
-				`external-service config for tipo '${tipo}' is malformed — fix the ontology first: ${(error as Error).message}`,
-			);
+			throw new DedaloError('update.refused', {
+				message: `external-service config for tipo '${tipo}' is malformed — fix the ontology first: ${(error as Error).message}`,
+				publicMessage: 'An external-service ontology config is malformed — fix the ontology first',
+				coordinates: { tipo },
+				cause: error,
+			});
 		}
 	}
 	return externalTipos;

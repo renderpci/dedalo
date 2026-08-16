@@ -21,6 +21,19 @@
 
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { DedaloError } from '../errors/index.ts';
+
+/**
+ * The guard's refusals, as ONE registered code. `security.ssrf_blocked` is
+ * OPERATOR disclosure on purpose: the wire sentence is the registry's fixed
+ * English, and the URL, the protocol, the host and the resolved address ride
+ * only as LOG-ONLY `coordinates` — echoing them back would turn a blocked
+ * fetch into an internal-network oracle. `Error.message` keeps the old
+ * sentence verbatim (logs, and the per-URI report lists that already render it).
+ */
+function ssrfRefusal(message: string, coordinates: Record<string, string | number>): DedaloError {
+	return new DedaloError('security.ssrf_blocked', { message, coordinates });
+}
 
 /** Parse an IPv4 dotted string to its 32-bit value, or null if malformed. */
 function ipv4ToInt(ip: string): number | null {
@@ -98,15 +111,23 @@ export async function assertPublicUrl(uri: string): Promise<SafeUrlResult> {
 	try {
 		url = new URL(uri);
 	} catch {
-		throw new Error('ssrf: unparseable URL');
+		throw ssrfRefusal('ssrf: unparseable URL', { reason: 'unparseable' });
 	}
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-		throw new Error(`ssrf: refused non-http(s) URL (${url.protocol})`);
+		throw ssrfRefusal(`ssrf: refused non-http(s) URL (${url.protocol})`, {
+			reason: 'protocol',
+			protocol: url.protocol,
+		});
 	}
 	const host = url.hostname.replace(/^\[|\]$/g, ''); // strip IPv6 brackets
 
 	if (isIP(host) !== 0) {
-		if (isPrivateIp(host)) throw new Error(`ssrf: refused private/reserved address ${host}`);
+		if (isPrivateIp(host)) {
+			throw ssrfRefusal(`ssrf: refused private/reserved address ${host}`, {
+				reason: 'private_literal',
+				host,
+			});
+		}
 		return { url, addresses: [host] };
 	}
 	// DNS name: resolve ALL records and vet every one.
@@ -114,12 +135,17 @@ export async function assertPublicUrl(uri: string): Promise<SafeUrlResult> {
 	try {
 		records = await lookup(host, { all: true });
 	} catch {
-		throw new Error(`ssrf: DNS resolution failed for ${host}`);
+		throw ssrfRefusal(`ssrf: DNS resolution failed for ${host}`, { reason: 'dns_failed', host });
 	}
-	if (records.length === 0) throw new Error(`ssrf: no addresses for ${host}`);
+	if (records.length === 0) {
+		throw ssrfRefusal(`ssrf: no addresses for ${host}`, { reason: 'no_addresses', host });
+	}
 	for (const record of records) {
 		if (isPrivateIp(record.address)) {
-			throw new Error(`ssrf: ${host} resolves to a private/reserved address (${record.address})`);
+			throw ssrfRefusal(
+				`ssrf: ${host} resolves to a private/reserved address (${record.address})`,
+				{ reason: 'private_resolved', host, address: record.address },
+			);
 		}
 	}
 	return { url, addresses: records.map((r) => r.address) };
@@ -164,7 +190,12 @@ export async function fetchGuardedText(
 			redirect: 'error', // a redirect re-chooses the target — refuse it
 			signal: controller.signal,
 		});
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		if (!res.ok) {
+			throw new DedaloError('security.outbound_failed', {
+				message: `HTTP ${res.status}`,
+				coordinates: { status: res.status },
+			});
+		}
 		const reader = res.body?.getReader();
 		if (!reader) return '';
 		const chunks: Uint8Array[] = [];
@@ -176,7 +207,10 @@ export async function fetchGuardedText(
 				total += value.byteLength;
 				if (total > maxBytes) {
 					await reader.cancel();
-					throw new Error(`response exceeds ${maxBytes} bytes`);
+					throw new DedaloError('security.outbound_failed', {
+						message: `response exceeds ${maxBytes} bytes`,
+						coordinates: { reason: 'body_cap', max_bytes: maxBytes },
+					});
 				}
 				chunks.push(value);
 			}

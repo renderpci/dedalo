@@ -2,7 +2,7 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
-// SEC-032: install runs WITHOUT authentication. All `*_status.innerHTML = api_response.msg`
+// SEC-032: install runs WITHOUT authentication. All `*_status.innerHTML = <server text>`
 // sites have been converted to `textContent` so that any reflection of attacker-controlled
 // input (DB host, password validator, hierarchy import errors, etc.) cannot trigger
 // pre-auth XSS. Counter tickers and reset-to-empty assignments were also converted for
@@ -12,11 +12,52 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {append_text_lines} from '../../common/js/utils/index.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {component_password} from '../../component_password/js/component_password.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {toggle_theme, get_theme} from '../../page/js/theme.js'
+	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
+	import {error_text} from '../../common/js/render_api_error.js'
+
+
+
+/**
+* SERVER_TEXT
+* The sentence to print for ONE installer API answer.
+*
+* A FAILURE is an ApiError on the envelope — envelope v2 carries NO `msg` on a
+* failure at all, so reading the step's `msg` there prints nothing. The ONE
+* renderer resolves it (label → English `message` → code), which is exactly what
+* this screen needs: the installer runs PRE-LOGIN with an empty label catalog, and
+* `error_text` degrades to the English message on its own without assuming
+* `get_label` exists.
+*
+* A SUCCESS keeps the step's own `msg` EXTENSION KEY (ERRORS_SPEC §3.0 — the
+* install router puts every field beside the verdict there: src/core/install/
+* engine.ts stepResult), read through response_extension so a failure can never
+* fall back onto the compat mirror. Arrays are joined.
+*
+* @param {Object} api_response
+* @param {string} [fallback]
+* @return {string}
+*/
+const server_text = function(api_response, fallback) {
+
+	if (request_failed(api_response)) {
+		return error_text(api_response.error) || (fallback || '')
+	}
+
+	const msg = response_extension(api_response, 'msg')
+	if (Array.isArray(msg)) {
+		return msg.filter(line => line!==null && line!==undefined).join(' | ')
+	}
+
+	return (typeof msg==='string' && msg.length) ? msg : (fallback || '')
+}//end server_text
+
+
 
 /**
 * RENDER_INSTALLER
@@ -304,13 +345,14 @@ const api_call_with_spinner = async function(options) {
 */
 const set_status_result = function(status_node, api_response) {
 
-	if (api_response.result === true) {
-		status_node.classList.add('ok')
-		status_node.textContent = api_response.msg
-	} else {
+	// ONE error model: a failed call has no `msg` on the wire — its text comes from
+	// the ApiError through the ONE renderer (server_text).
+	if (request_failed(api_response) || response_data(api_response) !== true) {
 		status_node.classList.add('error')
-		status_node.textContent = api_response.msg
+	} else {
+		status_node.classList.add('ok')
 	}
+	status_node.textContent = server_text(api_response)
 }//end set_status_result
 
 
@@ -531,7 +573,7 @@ const get_content_data = function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'installer_version',
-			inner_html		: properties.version || '',
+			text_content	: properties.version || '',
 			parent			: header
 		})
 
@@ -921,15 +963,18 @@ const render_init_test_block = function(self) {
 	// When init_test is absent it usually means a PHP fatal prevented the context from
 	// being built at all; show a generic error rather than crashing.
 		if (!init_test || init_test.result===false) {
-			const msg = init_test && init_test.msg
-				? init_test.msg.join('<br>')
-				: 'Init test fails (unknown server error)'
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg error',
-				inner_html		: msg,
-				parent			: fragment
-			})
+			const msg_lines = (init_test && Array.isArray(init_test.msg) && init_test.msg.length)
+				? init_test.msg
+				: ['Init test fails (unknown server error)']
+			// TEXT nodes + real <br> elements — server diagnostics are never markup
+			append_text_lines(
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg error',
+					parent			: fragment
+				}),
+				msg_lines
+			)
 
 			ui.create_dom_element({
 				element_type	: 'div',
@@ -980,7 +1025,7 @@ const render_init_test_block = function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'diagnostic_value',
-				inner_html		: value,
+				text_content	: value,
 				parent			: info
 			})
 		}
@@ -1093,12 +1138,14 @@ const render_init_test_block = function(self) {
 	// show individual test messages if any (only when init_test passed, since errors are already shown above on fail)
 		if (init_test && init_test.result !== false && init_test.msg && init_test.msg.length > 0) {
 			const add_css = has_errors ? 'warning' : 'ok'
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg ' + add_css,
-				inner_html		: init_test.msg.join('<br>'),
-				parent			: fragment
-			})
+			append_text_lines(
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + add_css,
+					parent			: fragment
+				}),
+				init_test.msg
+			)
 		}
 
 	// auto-reveal config block when diagnostics are in viewport.
@@ -1390,8 +1437,8 @@ const render_config_options = function(self) {
 					})
 
 				// manage result
-					if (api_response.result===false) {
-						console.error("to_update api_response:", api_response);
+					if (request_failed(api_response) || response_data(api_response)===false) {
+						console.error("to_update failed:", api_response.error || api_response);
 					}else{
 						console.log("to_update api_response:", api_response);
 						countdown_and_reload(to_update_status, 3)
@@ -1481,7 +1528,7 @@ const render_db_config_block = function(self) {
 				button_node	: test_button
 			})
 			set_status_result(status, api_response)
-			if (api_response.result===true) {
+			if (response_data(api_response)===true) {
 				reveal_section(self.node.content_data.entity_block)
 				update_step_indicator(self.node.content_data.step_indicator, 3)
 			}
@@ -1542,7 +1589,7 @@ const render_entity_block = function(self) {
 		cb.checked = checked_default.indexOf(code) !== -1
 		cb.addEventListener('change', sync_langs)
 		lang_checkboxes[code] = cb
-		ui.create_dom_element({ element_type:'span', inner_html:(available_langs[code] || code)+' ('+code+')', parent:row })
+		ui.create_dom_element({ element_type:'span', text_content:(available_langs[code] || code)+' ('+code+')', parent:row })
 	})
 	ui.create_dom_element({ element_type:'div', class_name:'installer_field_help', inner_html:'Languages this installation manages. At least one is required.', parent:langs_field })
 
@@ -1561,7 +1608,7 @@ const render_entity_block = function(self) {
 		const codes = checked_lang_codes()
 		select.innerHTML = ''
 		codes.forEach(function(code){
-			const opt = ui.create_dom_element({ element_type:'option', inner_html:(available_langs[code] || code)+' ('+code+')', parent:select })
+			const opt = ui.create_dom_element({ element_type:'option', text_content:(available_langs[code] || code)+' ('+code+')', parent:select })
 			opt.value = code
 		})
 		const want = (codes.indexOf(prev) !== -1) ? prev : (codes[0] || '')
@@ -1705,7 +1752,7 @@ const render_diffusion_block = function(self) {
 			button_node	: test_button
 		})
 		set_status_result(status, api_response)
-		tested_ok = (api_response.result===true)
+		tested_ok = (response_data(api_response)===true)
 	})
 
 	continue_button.addEventListener('mouseup', function() {
@@ -1795,7 +1842,7 @@ const render_mailer_block = function(self) {
 			timeout		: 20*1000
 		})
 		set_status_result(status, api_response)
-		tested_ok = (api_response.result===true)
+		tested_ok = (response_data(api_response)===true)
 	})
 
 	continue_button.addEventListener('mouseup', function() {
@@ -1849,7 +1896,7 @@ const render_persist_block = function(self) {
 			timeout		: 20*1000
 		})
 		set_status_result(status, api_response)
-		if (api_response.result!==true) {
+		if (response_data(api_response)!==true) {
 			return
 		}
 		// show generated secrets ONCE
@@ -1860,7 +1907,7 @@ const render_persist_block = function(self) {
 			ui.create_dom_element({ element_type:'div', class_name:'generated_secrets_title', inner_html:(get_label.generated_secrets_warning || '⚠ Save these secrets now — they are shown only once and must never be changed later:'), parent:secrets_box })
 			for (const k of keys) {
 				const row = ui.create_dom_element({ element_type:'div', class_name:'generated_secret_row', parent:secrets_box })
-				ui.create_dom_element({ element_type:'span', class_name:'generated_secret_key', inner_html:k, parent:row })
+				ui.create_dom_element({ element_type:'span', class_name:'generated_secret_key', text_content:k, parent:row })
 				const val = ui.create_dom_element({ element_type:'input', class_name:'generated_secret_val', value:generated[k], parent:row })
 				val.readOnly = true
 			}
@@ -1877,7 +1924,7 @@ const render_persist_block = function(self) {
 			button_node	: verify_button
 		})
 		set_status_result(verify_status, api_response)
-		if (api_response.result===true) {
+		if (response_data(api_response)===true) {
 			verify_button.remove()
 			reveal_section(self.node.content_data.directories_block)
 			update_step_indicator(self.node.content_data.step_indicator, 7)
@@ -1919,8 +1966,8 @@ const render_directories_block = function(self) {
 			const ok = d.exists && d.writable
 			const row = ui.create_dom_element({ element_type:'div', class_name:'directory_row ' + (ok?'ok':'error'), parent:list })
 			ui.create_dom_element({ element_type:'span', class_name:'directory_icon', inner_html: ok ? '&#10003;' : '&#10007;', parent:row })
-			ui.create_dom_element({ element_type:'span', class_name:'directory_label', inner_html:d.label, parent:row })
-			ui.create_dom_element({ element_type:'span', class_name:'directory_path', inner_html:d.path, parent:row })
+			ui.create_dom_element({ element_type:'span', class_name:'directory_label', text_content:d.label, parent:row })
+			ui.create_dom_element({ element_type:'span', class_name:'directory_path', text_content:d.path, parent:row })
 		}
 	}
 
@@ -1933,7 +1980,7 @@ const render_directories_block = function(self) {
 		})
 		render_dirs(api_response.dirs)
 		set_status_result(status, api_response)
-		if (api_response.result===true) {
+		if (response_data(api_response)===true) {
 			create_button.classList.add('hide')
 			reveal_section(self.node.content_data.installer_db_block)
 			update_step_indicator(self.node.content_data.step_indicator, 8)
@@ -2023,13 +2070,13 @@ const render_installer_db_block = function(self) {
 				ui.create_dom_element({
 					element_type 	: 'div',
 					class_name		: 'db_config key',
-					inner_html		: config_item,
+					text_content	: config_item,
 					parent			: db_config_container
 				})
 				ui.create_dom_element({
 					element_type 	: 'div',
 					class_name		: 'db_config value',
-					inner_html		: db_config_display[config_item] ?? '',
+					text_content	: db_config_display[config_item] ?? '',
 					parent			: db_config_container
 				})
 			}
@@ -2058,7 +2105,7 @@ const render_installer_db_block = function(self) {
 				})
 
 			// manage result
-				if (api_response.result===true) {
+				if (response_data(api_response)===true) {
 					console.log('DBB installed:', api_response);
 					set_status_result(installer_db_status, api_response)
 					// show set_root_password_block
@@ -2068,7 +2115,7 @@ const render_installer_db_block = function(self) {
 					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 4)
 					installer_db_button.remove();
 				}else{
-					console.error(api_response.msg);
+					console.error('install_db_from_default_file failed:', api_response.error || api_response);
 					set_status_result(installer_db_status, api_response)
 				}
 		})//end mouse_up event
@@ -2186,8 +2233,8 @@ const render_set_root_password_block = function(self) {
 		* user-event handlers that fire after the full fragment has been composed.
 		*
 		* @param {Object} validated_obj - Return value of component_password.validate_password_format
-		* @param {boolean} validated_obj.result - true if password meets all policy requirements
-		* @param {string}  validated_obj.msg    - human-readable failure reason (empty on success)
+		* @param {boolean} validated_obj.valid   - true if password meets all policy requirements
+		* @param {string}  validated_obj.message - human-readable failure reason (empty on success)
 		* @param {HTMLElement} input_node - The password input to decorate
 		* @returns {boolean} Always true
 		*/
@@ -2198,11 +2245,11 @@ const render_set_root_password_block = function(self) {
 				set_pw_status.classList.remove('error')
 				set_pw_status.textContent = ''
 
-			if (validated_obj.result===false) {
+			if (validated_obj.valid===false) {
 				input_node.classList.remove('valid')
 				input_node.classList.add('invalid')
 				set_pw_status.classList.add('error')
-				set_pw_status.textContent = validated_obj.msg
+				set_pw_status.textContent = validated_obj.message
 				change_root_pw_button.classList.add('loading')
 			}else{
 				input_node.classList.remove('invalid')
@@ -2241,8 +2288,8 @@ const render_set_root_password_block = function(self) {
 			)
 			set_message(
 				{
-					result	: input_new_pw_retype.value===input_new_pw.value && validated_obj.result===true,
-					msg		: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
+					valid	: input_new_pw_retype.value===input_new_pw.value && validated_obj.valid===true,
+					message	: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
 				},
 				input_new_pw_retype
 			)
@@ -2293,7 +2340,7 @@ const render_set_root_password_block = function(self) {
 					input_new_pw.value,
 					password_validation_options
 				)
-				if (validated_obj.result!==true) {
+				if (validated_obj.valid!==true) {
 					set_message(validated_obj, input_new_pw)
 					return false
 				}
@@ -2301,7 +2348,7 @@ const render_set_root_password_block = function(self) {
 			// check again mismatch retype
 				if(input_new_pw_retype.value!==input_new_pw.value) {
 					set_message(
-						{ result: false, msg: 'Error. Password do not match!' },
+						{ valid: false, message: 'Error. Password do not match!' },
 						input_new_pw_retype
 					)
 					return false
@@ -2316,15 +2363,15 @@ const render_set_root_password_block = function(self) {
 				})
 
 			// manage result
-				if (api_response.result===true) {
-					console.log('api_response:', api_response.msg)
+				if (response_data(api_response)===true) {
+					console.log('api_response:', server_text(api_response))
 					set_status_result(set_pw_status, api_response)
 					change_root_pw_button.remove();
 					// show next block: login (root logs in inside the installer)
 					reveal_section(self.node.content_data.login_block)
 					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 5)
 				}else{
-					console.error(api_response.msg);
+					console.error('set_root_pw failed:', api_response.error || api_response);
 					set_status_result(set_pw_status, api_response)
 				}
 		})
@@ -2388,7 +2435,7 @@ const render_login_block = async function(self) {
 			// the install wizard without navigating away from the page.
 				const custom_action_dispatch = function(api_response){
 
-					if (api_response.result===true) {
+					if (response_data(api_response)===true) {
 
 						// all is OK case
 							login_status.classList.add('ok')
@@ -2410,11 +2457,11 @@ const render_login_block = async function(self) {
 
 						// fail case
 							login_status.classList.add('error')
-							login_status.textContent = api_response.msg || 'API response login fails'
+							login_status.textContent = server_text(api_response, 'API response login fails')
 							console.warn('api_response:', api_response);
 					}
 
-					return api_response.result
+					return response_data(api_response)
 				}
 				login.custom_action_dispatch = custom_action_dispatch
 
@@ -2585,7 +2632,7 @@ export const render_hierarchies_import_block = function(options) {
 			ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'typology_label',
-				inner_html		: current_hierarchy_typology.label,
+				text_content	: current_hierarchy_typology.label,
 				parent			: hierarchy_container
 			})
 
@@ -2626,7 +2673,7 @@ export const render_hierarchies_import_block = function(options) {
 					const hierarchy_label = ui.create_dom_element({
 						element_type	: 'label',
 						class_name		: 'hierarchy_label',
-						inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
+						text_content	: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
 						parent			: hierarchy_li
 					})
 					if (installed_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
@@ -2770,12 +2817,14 @@ export const render_hierarchies_import_block = function(options) {
 				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
-				// Backend contract: { result:bool (overall ok), msg, errors:[], responses:[] }.
-				// Success only when result===true AND no per-item errors were recorded.
-				const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
-				if (api_response.result===true && ar_errors.length===0) {
+				// Backend contract: the step's verdict is the payload; `msg`, `errors[]` and
+				// `responses[]` are its extension keys. Success only when the verdict is
+				// true AND no per-item errors were recorded.
+				const step_errors = response_extension(api_response, 'errors')
+				const ar_errors = Array.isArray(step_errors) ? step_errors : []
+				if (response_data(api_response)===true && ar_errors.length===0) {
 					import_hierarchies_status.classList.add('ok')
-					import_hierarchies_status.textContent = api_response.msg
+					import_hierarchies_status.textContent = server_text(api_response)
 					import_hierarchies_button.remove()
 					if (typeof callback==='function') {
 						callback(api_response)
@@ -2783,7 +2832,9 @@ export const render_hierarchies_import_block = function(options) {
 				}else{
 					console.error('install_hierarchies errors:', ar_errors, api_response);
 					import_hierarchies_status.classList.add('error')
-					import_hierarchies_status.textContent = ar_errors.length>0 ? ar_errors[0] : (api_response.msg || 'Hierarchy import failed')
+					import_hierarchies_status.textContent = ar_errors.length>0
+						? String(ar_errors[0])
+						: server_text(api_response, 'Hierarchy import failed')
 				}
 
 			// unlock container
@@ -2846,17 +2897,20 @@ export const render_hierarchies_import_block = function(options) {
 					console.log('reset_hierarchies response: ', api_response);
 
 				// manage result (same contract as import)
-					const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
-					if (api_response.result===true && ar_errors.length===0) {
+					const step_errors = response_extension(api_response, 'errors')
+				const ar_errors = Array.isArray(step_errors) ? step_errors : []
+					if (response_data(api_response)===true && ar_errors.length===0) {
 						import_hierarchies_status.classList.add('ok')
-						import_hierarchies_status.textContent = api_response.msg
+						import_hierarchies_status.textContent = server_text(api_response)
 						if (typeof callback==='function') {
 							callback(api_response)
 						}
 					}else{
 						console.error('reset_hierarchies errors:', ar_errors, api_response);
 						import_hierarchies_status.classList.add('error')
-						import_hierarchies_status.textContent = ar_errors.length>0 ? ar_errors[0] : (api_response.msg || 'Hierarchy reset failed')
+						import_hierarchies_status.textContent = ar_errors.length>0
+							? String(ar_errors[0])
+							: server_text(api_response, 'Hierarchy reset failed')
 					}
 
 				// unlock container
@@ -2990,17 +3044,18 @@ const render_register_tools_block = function(self) {
 		// status + advance.
 		// Best-effort: reveal Finish on any completed run so a single broken tool can't trap the
 		// install. A clean run removes the button; a run with per-tool errors keeps it for a retry.
-			const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
-			if (api_response.result===true && ar_errors.length===0) {
+			const step_errors = response_extension(api_response, 'errors')
+				const ar_errors = Array.isArray(step_errors) ? step_errors : []
+			if (response_data(api_response)===true && ar_errors.length===0) {
 				status.classList.add('ok')
-				status.textContent = api_response.msg
+				status.textContent = server_text(api_response)
 				register_button.remove()
 			}else{
 				console.error('register_tools errors:', ar_errors, api_response);
 				status.classList.add('warning')
 				status.textContent = ar_errors.length>0
-					? (api_response.msg + ' — ' + ar_errors[0])
-					: (api_response.msg || 'Tool registration finished with warnings')
+					? (server_text(api_response) + ' — ' + ar_errors[0])
+					: server_text(api_response, 'Tool registration finished with warnings')
 			}
 
 			reveal_section(self.node.content_data.installer_finish_block)
@@ -3062,7 +3117,7 @@ const render_installer_finish_block = function(self) {
 				})
 
 			// manage result
-				if (api_response.result===false) {
+				if (request_failed(api_response) || response_data(api_response)===false) {
 
 					// fail case
 					// (!) The 'loading' class is NOT removed on error — intentional guard
@@ -3070,11 +3125,11 @@ const render_installer_finish_block = function(self) {
 
 					console.error("install_finish api_response:", api_response);
 					installer_finish_status.classList.add('error')
-					installer_finish_status.textContent = api_response.msg
+					installer_finish_status.textContent = server_text(api_response, 'Install finish failed')
 				}else{
 					console.log("install_finish api_response:", api_response);
 					installer_finish_status.classList.add('ok')
-					installer_finish_status.textContent = api_response.msg + ' Setting up!'
+					installer_finish_status.textContent = server_text(api_response) + ' Setting up!'
 					installer_finish_button.remove()
 					countdown_and_reload(installer_finish_status, 5)
 				}

@@ -37,8 +37,8 @@
  * local provider (openai_compat_provider.ts) via the model catalog.
  */
 
+import { toStructuredErr } from '../../core/errors/convert.ts';
 import type { Principal } from '../../core/security/permissions.ts';
-import { wrapError } from '../mcp/envelope.ts';
 import {
 	getToolSpec,
 	type RegistryGates,
@@ -498,7 +498,7 @@ export async function runAgent(
 						use.id === proposal.id
 							? Promise.resolve({
 									tool_use_id: use.id,
-									content: JSON.stringify(wrapError(error)),
+									content: JSON.stringify(toStructuredErr(error)),
 									is_error: true,
 								})
 							: runOne(use),

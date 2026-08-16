@@ -66,6 +66,8 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {JSON_parse_safely} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
 
 
@@ -171,9 +173,9 @@ tag_note.prototype.render_indexation_note = async function(tag) {
 *   - Calls `self.transcription_component.save_editor()` immediately after tagging.
 *   - Sets `self.title_instance` so the caller can reference the rendered instance.
 *
-* (!) `alert()` is used on note-creation failure. This is a legacy browser pattern;
-*     Dédalo's notification system (event_manager.publish 'notification') is
-*     preferred for new code.
+* (!) `alert()` is used on note-creation failure with CLIENT-side text only —
+*     never a server message. Server failures are ApiErrors and go through
+*     handle_api_error (see new_tag_note).
 *
 * @param {Object} tag - Tag descriptor from component_text_area.
 *   Shape: { tag_id: string, state: string, label: string, data: string }
@@ -367,13 +369,12 @@ tag_note.prototype.render_note = async function(options) {
 * Sends a `create` RQO targeting the indexation-note section tipo. The server
 * allocates a new record and returns its integer id in `api_response.result`.
 *
-* Error handling: if `result` is absent, zero, or negative the function displays
-* an alert with the joined error messages from `api_response.errors` (or a
-* fallback string) and returns null.
+* Error handling: a failed call is an ApiError on the envelope — it goes to
+* handle_api_error (ONE model, ONE renderer) and the function returns null. A
+* successful call with no usable id returns null silently; the caller reports it.
 *
-* (!) Uses `alert()` on error — see note in render_empty_note. The `tag` parameter
-*     is only used in the fallback error message and for debug logging; it is not
-*     sent to the server.
+* (!) The `tag` parameter is only used for debug logging; it is not sent to the
+*     server.
 *
 * @param {Object} tag - Tag descriptor (used only for logging/error context).
 *   Shape: { tag_id: string, ... }
@@ -398,20 +399,21 @@ const new_tag_note = async function(tag, section_tipo) {
 			console.log("api_response:", api_response);
 		}
 
-	// error manage
-		if (!api_response.result || api_response.result<1) {
-
-			// something wrong happens
-			const error_text = api_response.errors?.length
-				? api_response.errors.join(' | ')
-				: 'Unknown error on create new_tag_note for tag ' + tag.tag_id
-			alert(error_text);
-			console.error('api_response.errors:', api_response.errors);
+	// error manage. The server's own account of the failure is an ApiError: the
+	// dispatcher picks the surface and the renderer emits TEXT (never alert(),
+	// which shows raw, unlocalised server strings). A response that succeeded but
+	// carries no usable id has no ApiError behind it — the caller reports that one.
+		const new_record = response_data(api_response)
+		if (request_failed(api_response) || !new_record || new_record<1) {
+			console.error('new_tag_note failed. tag, api_response:', tag, api_response);
+			if (request_failed(api_response)) {
+				await handle_api_error(api_response.error, {})
+			}
 			return null;
 		}
 
 	// OK response
-		const new_section_id = api_response.result // int
+		const new_section_id = new_record // int
 
 
 	return new_section_id

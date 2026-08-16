@@ -19,7 +19,7 @@ import { sql } from '../../db/postgres.ts';
 import { offeredHierarchies, readHierarchyJson } from '../../install/hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from '../../install/paths.ts';
 import type { Principal } from '../../security/permissions.ts';
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { fromOutcome, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * The importer SEAM (test injection only; production always takes the default).
@@ -87,14 +87,12 @@ async function installedHierarchies(): Promise<{ tld: string }[]> {
 
 async function addHierarchyGetValue(): Promise<WidgetResponse> {
 	return {
-		result: {
+		data: {
 			hierarchies: offeredHierarchies(),
 			installed_hierarchies: await installedHierarchies(),
 			hierarchy_typologies: readHierarchyJson('hierarchies_typologies.json', []),
 			hierarchy_files_dir_path: HIERARCHY_IMPORT_DIR,
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -114,7 +112,7 @@ export async function addHierarchyInstall(
 	const installHierarchies = importer ?? (await realImporter());
 	// NO fourth argument on purpose: `replace` stays false, i.e. additive.
 	const r = await installHierarchies(tlds, undefined, principal.userId);
-	return { result: r.result, msg: r.msg, errors: r.errors };
+	return fromOutcome({ ok: r.ok, msg: r.msg, errors: r.errors });
 }
 
 /**
@@ -131,7 +129,7 @@ export async function addHierarchyReset(
 	const tlds = Array.isArray(options.hierarchies) ? options.hierarchies.map(String) : [];
 	const installHierarchies = importer ?? (await realImporter());
 	const r = await installHierarchies(tlds, undefined, principal.userId, { replace: true });
-	return { result: r.result, msg: r.msg, errors: r.errors };
+	return fromOutcome({ ok: r.ok, msg: r.msg, errors: r.errors });
 }
 
 export const widget: WidgetModule = {

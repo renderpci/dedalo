@@ -17,9 +17,23 @@ import { join } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
-/** Files that render untrusted error-report content — textContent only. */
+/**
+ * Files that render untrusted error-report content — textContent only.
+ *
+ * The client error contract (ERRORS_SPEC; `client/dedalo/core/common/js/`) put
+ * every failure through ONE renderer, so the same DS-1 invariant now has to
+ * hold there: an `error.message` is server text, an `error.details` value can be
+ * a user-typed string echoed back, and a stream frame can be anything at all.
+ * `render_api_error.js` is the renderer and `error_dispatch.js` the policy
+ * executor that feeds it; `notifications.js` is the bubble both end in.
+ * `render_common.js` is deliberately NOT here: it still renders ontology labels
+ * through the ui.js `inner_html` option, which is a separate burn-down.
+ */
 const XSS_SENSITIVE_FILES: readonly string[] = [
 	'client/dedalo/core/area_maintenance/widgets/error_reports/js/render_error_reports.js',
+	'client/dedalo/core/common/js/error_dispatch.js',
+	'client/dedalo/core/common/js/render_api_error.js',
+	'client/dedalo/core/common/js/utils/notifications.js',
 	'tools/tool_error_report/js/render_tool_error_report.js',
 	'tools/tool_error_report/js/tool_error_report.js',
 ];

@@ -8,6 +8,9 @@
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {error_text, render_error_inline} from '../../../core/common/js/render_api_error.js'
 
 
 
@@ -252,26 +255,54 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		process_file_info.classList.remove('failed')
 		process_file_info.classList.remove('success')
 
+	// response payload (envelope v2). `response_data` is the ONE accessor:
+	// `data` on a v2 success, the compat `result` mirror while it lasts, and
+	// `false` on a failure envelope — so the guard below covers both shapes.
+		const response_data_value = response_data(response)
+
 	// response failed case
-		if (!response.result) {
+		if (request_failed(response) || !response_data_value) {
 
 			// ERROR case
-			// SEC-XSS-005: server messages may contain file paths / error text
-			// with < > & characters. Use textContent to avoid parsing as HTML.
-			process_file_info.textContent = response.msg || 'Error on processing file!'
+			// The dispatcher owns the surface for a real ApiError; the inline text
+			// is the fallback for a body that is neither a v2 failure nor a payload.
+			// SEC-XSS-005: server text may contain file paths / < > & characters —
+			// textContent, never an HTML sink.
+			process_file_info.textContent = request_failed(response)
+				? error_text(response.error)
+				: 'Error on processing file!'
 			process_file_info.classList.add('failed')
 
-			if (response.errors?.length) {
-				alert(response.errors.join(' | '));
+			if (request_failed(response)) {
+				handle_api_error(response.error, {wrapper: process_file_info.parentNode});
 			}
 
 			return false
 		}
 
 	// response OK case
+		// Envelope v2 has NO prose `msg` on success, and tool_upload's server does
+		// not compose one either (its payload is original_file_name / extension /
+		// files_info / derivative_errors — tools/tool_upload/server/index.ts:96-104).
+		// The sentence is therefore the client's own.
 		// SEC-XSS-005
-		process_file_info.textContent = response.msg || 'Processing file done successfully.'
+		process_file_info.textContent = 'Processing file done successfully.'
 		process_file_info.classList.add('success')
+
+	// derivative_errors. The upload LANDED (the file was moved and indexed) but one
+	// or more derivatives could not be built, so the server reports them BESIDE the
+	// success instead of failing the envelope (server/index.ts:85-95). Each entry is
+	// its own line so a multi-derivative failure stays readable.
+		const derivative_errors = Array.isArray(response_data_value.derivative_errors)
+			? response_data_value.derivative_errors
+			: []
+		for (const entry of derivative_errors) {
+			// The SAME surface the failure branch above uses (handle_api_error →
+			// render_error_inline into this wrapper), so the two kinds of bad news
+			// read alike. A bare string prints as-is; a coded entry resolves through
+			// the ONE renderer (label in the user's language, message, then code).
+			render_error_inline(self.process_file, entry)
+		}
 
 	// HAND THE TRANSCODE TO THE TRAY. The server has been returning `job_id` here
 	// all along and this client dropped it, which is why uploading a video looked

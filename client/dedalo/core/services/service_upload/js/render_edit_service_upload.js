@@ -64,6 +64,8 @@
 // imports
 	import {ui} from '../../../common/js/ui.js'
 	import {get_content_data_queue} from './render_edit_service_upload_queue.js'
+	import {response_data, request_failed} from '../../../common/js/api_error.js'
+	import {error_text} from '../../../common/js/render_api_error.js'
 
 
 
@@ -430,7 +432,7 @@ export const render_info = function(self) {
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: self.allowed_extensions.join(", "),
+			text_content	: self.allowed_extensions.join(", "),
 			parent			: info
 		})
 
@@ -478,7 +480,7 @@ export const render_info = function(self) {
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: self.sys_get_temp_dir,
+			text_content	: self.sys_get_temp_dir,
 			parent			: info
 		})
 
@@ -490,7 +492,7 @@ export const render_info = function(self) {
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: self.upload_tmp_dir,
+			text_content	: self.upload_tmp_dir,
 			parent			: info
 		})
 
@@ -502,7 +504,7 @@ export const render_info = function(self) {
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: self.upload_tmp_perms,
+			text_content	: self.upload_tmp_perms,
 			parent			: info
 		})
 
@@ -630,11 +632,18 @@ export const render_filedrag = function(self) {
 	// label text
 		// The note span lists allowed extensions inline so the user can see what
 		// file types are accepted without opening the info panel.
-		ui.create_dom_element({
+		const filedrag_label = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: '',
-			inner_html		: `Select or drop a file here <span class="note">[${self.allowed_extensions.join(',')}]</span>`,
+			text_content	: 'Select or drop a file here ',
 			parent			: filedrag
+		})
+		// the note is an ELEMENT; the extension list is server config text (DS-1)
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'note',
+			text_content	: '[' + self.allowed_extensions.join(',') + ']',
+			parent			: filedrag_label
 		})
 
 	// filedrag
@@ -692,12 +701,17 @@ export const file_selected = async function(self, file) {
 		self.response_msg.classList.remove('success')
 
 	// on finish actions
-		if (response.result===true) {
-			self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
+		// The failure sentence comes from the ONE renderer (the coded error in the
+		// curator's language) and reaches the DOM as TEXT, never parsed as HTML
+		// (DS-1).
+		if (!request_failed(response) && response_data(response)===true) {
+			self.response_msg.textContent = 'OK. File uploaded'
 			self.response_msg.classList.add('success')
 
 		}else{
-			self.response_msg.innerHTML = response.msg || 'Error on upload file'
+			self.response_msg.textContent = request_failed(response)
+				? error_text(response.error)
+				: 'Error on upload file'
 			self.response_msg.classList.add('failed')
 		}
 

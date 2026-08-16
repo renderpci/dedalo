@@ -34,7 +34,8 @@ import type { HierarchyMeta } from './hierarchy_meta.ts';
 const HIERARCHY_MAIN_TABLE = 'matrix_hierarchy_main';
 
 export interface ActivateHierarchyResult {
-	result: boolean;
+	/** INTERNAL outcome (never a wire body): did the activation converge? */
+	ok: boolean;
 	created: boolean;
 	sectionId: number | null;
 	errors: string[];
@@ -62,7 +63,7 @@ export async function activateHierarchy(
 ): Promise<ActivateHierarchyResult> {
 	const tld = meta.tld.trim().toLowerCase();
 	const outcome: ActivateHierarchyResult = {
-		result: false,
+		ok: false,
 		created: false,
 		sectionId: null,
 		errors: [],
@@ -120,8 +121,8 @@ export async function activateHierarchy(
 	});
 	outcome.applied = ensured.applied;
 	outcome.errors.push(...ensured.errors);
-	outcome.result = ensured.result;
-	if (!ensured.result && ensured.errors.length === 0) {
+	outcome.ok = ensured.ok;
+	if (!ensured.ok && ensured.errors.length === 0) {
 		outcome.errors.push(ensured.msg);
 	}
 	return outcome;

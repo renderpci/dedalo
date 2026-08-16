@@ -88,7 +88,7 @@ beforeAll(async () => {
 		);
 		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 		const tsData = normalizeSectionIdTypes(
-			((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+			((tsResult.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
 				string,
 				unknown
 			>[],

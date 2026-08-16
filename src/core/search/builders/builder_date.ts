@@ -59,6 +59,7 @@
  * params (a plain `"timestamp"` column comparison, not jsonpath).
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { BuilderContext, BuilderResult } from './types.ts';
 import { fragment } from './types.ts';
 
@@ -511,9 +512,10 @@ export function buildDateFragment(
 	// it on the dd_date via set_op but never consults it when building SQL).
 	const effectiveOperator = date.op !== '' ? date.op : operator;
 	if (!COMPARISON_OPERATORS.has(effectiveOperator)) {
-		throw new Error(
-			`search builder_date: operator '${effectiveOperator}' not implemented yet (uncovered scope)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `search builder_date: operator '${effectiveOperator}' not implemented yet (uncovered scope)`,
+			coordinates: { operator: effectiveOperator },
+		});
 	}
 
 	// Time-machine tables: SARGable `timestamp` predicates (precision + operator
@@ -539,8 +541,9 @@ export function buildDateFragment(
 		default:
 			// PHP resolve_date_mode_unknown_sql logs an ERROR and emits NO
 			// sentence — a silent empty result. Uncovered scope fails loudly.
-			throw new Error(
-				`search builder_date: date_mode '${dateMode}' is not implemented (uncovered scope; PHP emitted no sentence at all here)`,
-			);
+			throw new DedaloError('engine.uncovered_scope', {
+				message: `search builder_date: date_mode '${dateMode}' is not implemented (uncovered scope; PHP emitted no sentence at all here)`,
+				coordinates: { date_mode: String(dateMode) },
+			});
 	}
 }

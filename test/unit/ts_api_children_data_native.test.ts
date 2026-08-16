@@ -51,6 +51,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getChildrenData } from '../../src/core/ts_object/ts_api.ts';
 
@@ -118,35 +119,52 @@ beforeAll(async () => {
 
 afterAll(sweepScratch);
 
-/** The result envelope both modes share, once it is not `false`. */
+/** The payload both modes share (envelope v2: it rides in `data`). */
 type ChildrenResult = {
 	ar_children_data: unknown[];
 	pagination: Record<string, unknown> | null;
 };
 
-const resultOf = (response: { result: unknown }): ChildrenResult =>
-	response.result as ChildrenResult;
+const resultOf = (response: { data: unknown }): ChildrenResult => response.data as ChildrenResult;
+
+/**
+ * A refusal is a THROW now (ERRORS_SPEC §4), so it is asserted by CODE — the
+ * one machine-readable identity — instead of by the old `{result:false,msg}`
+ * prose. `coordinates` are log-only and deliberately unasserted.
+ */
+async function refusal(run: Promise<unknown>): Promise<DedaloError> {
+	try {
+		await run;
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a refusal, but the call resolved');
+}
 
 describe('get_children_data — the request envelope', () => {
 	test('a request with NO source is refused before anything else runs', async () => {
-		const response = await getChildrenData({ dd_api: 'dd_ts_api' } as never, SUPERUSER);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Invalid request. Source data is missing.');
-		expect(response.errors).toEqual(['Missing source property in the request object.']);
+		const error = await refusal(getChildrenData({ dd_api: 'dd_ts_api' } as never, SUPERUSER));
+		expect(error.code).toBe('request.invalid_source');
+		expect(error.spec.status).toBe(400);
 	});
 
-	test('a section the principal cannot read is refused, and the message names it', async () => {
-		const response = await getChildrenData(
-			{
-				dd_api: 'dd_ts_api',
-				action: 'get_children_data',
-				source: { section_tipo: TIPO, section_id: PARENT, children_tipo: CHILDREN_TIPO },
-			} as never,
-			NO_ACCESS,
+	test('a section the principal cannot read is refused as perm.denied', async () => {
+		const error = await refusal(
+			getChildrenData(
+				{
+					dd_api: 'dd_ts_api',
+					action: 'get_children_data',
+					source: { section_tipo: TIPO, section_id: PARENT, children_tipo: CHILDREN_TIPO },
+				} as never,
+				NO_ACCESS,
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['insufficient permissions']);
-		expect(response.msg).toBe(`Error. Insufficient permissions to read section (${TIPO})`);
+		expect(error.code).toBe('perm.denied');
+		expect(error.spec.status).toBe(403);
+		// The refused section is a COORDINATE (log-only): naming it on the wire
+		// would tell a caller a section exists that they may not see.
+		expect(error.coordinates?.section_tipo).toBe(TIPO);
 	});
 
 	test('a source with NO section_tipo never consults the ACL', async () => {
@@ -160,7 +178,6 @@ describe('get_children_data — the request envelope', () => {
 			{ dd_api: 'dd_ts_api', action: 'get_children_data', source: {} } as never,
 			NO_ACCESS,
 		);
-		expect(response.msg).toBe('OK. Request done successfully');
 		expect(resultOf(response).ar_children_data).toEqual([]);
 		expect(resultOf(response).pagination).toBeNull();
 	});
@@ -176,8 +193,6 @@ describe('get_children_data — mode A (resolve the children ourselves)', () => 
 			} as never,
 			SUPERUSER,
 		);
-		expect(response.msg).toBe('OK. Request done successfully');
-		expect(response.errors).toEqual([]);
 		expect(resultOf(response).ar_children_data).toHaveLength(3);
 		// The defaults, pinned: limit 300 / offset 0 come from the API layer, total
 		// is counted by the delegate.
@@ -193,7 +208,6 @@ describe('get_children_data — mode A (resolve the children ourselves)', () => 
 			} as never,
 			SUPERUSER,
 		);
-		expect(response.msg).toBe('OK. Request done successfully');
 		expect(resultOf(response).ar_children_data).toEqual([]);
 		expect(resultOf(response).pagination).toEqual({ limit: 300, offset: 0, total: 0 });
 	});
@@ -298,21 +312,23 @@ describe('get_children_data — mode A (resolve the children ourselves)', () => 
 		expect(callerPagination).toEqual({ limit: 2, offset: 0 });
 	});
 
-	test('a children_tipo of the wrong model is refused, and the message names the model found', async () => {
-		const response = await getChildrenData(
-			{
-				dd_api: 'dd_ts_api',
-				action: 'get_children_data',
-				source: { section_tipo: TIPO, section_id: PARENT, children_tipo: TERM_TIPO },
-			} as never,
-			SUPERUSER,
+	test('a children_tipo of the wrong model is refused, and the model found is logged', async () => {
+		const error = await refusal(
+			getChildrenData(
+				{
+					dd_api: 'dd_ts_api',
+					action: 'get_children_data',
+					source: { section_tipo: TIPO, section_id: PARENT, children_tipo: TERM_TIPO },
+				} as never,
+				SUPERUSER,
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['Wrong model']);
-		// The CALCULATED model is in the message — that is what makes the error
-		// diagnosable from a log line alone.
-		expect(response.msg).toContain('Expected model (component_relation_children)');
-		expect(response.msg).toContain('component_input_text');
+		expect(error.code).toBe('request.invalid_model');
+		expect(error.spec.status).toBe(400);
+		// The CALCULATED model rides as a COORDINATE — that is what makes the
+		// refusal diagnosable from a log line alone.
+		expect(error.coordinates?.calculated_model).toBe('component_input_text');
+		expect(error.coordinates?.children_tipo).toBe(TERM_TIPO);
 	});
 });
 
@@ -333,7 +349,6 @@ describe('get_children_data — mode B (children supplied by the caller)', () =>
 			} as never,
 			SUPERUSER,
 		);
-		expect(response.msg).toBe('OK. Request done successfully');
 		expect(resultOf(response).ar_children_data).toHaveLength(2);
 	});
 

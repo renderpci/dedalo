@@ -80,9 +80,9 @@ describe.if(hasPhpCredentials())('area_thesaurus ts_search injection differentia
 		).result?.data?.[0]?.ts_search;
 		const tsItem = (
 			(await dispatchRqo(structuredClone(rqo) as never, tsContext)).body as {
-				result?: { data?: { ts_search?: unknown }[] };
+				data?: { data?: { ts_search?: unknown }[] };
 			}
-		).result?.data?.[0]?.ts_search;
+		).data?.data?.[0]?.ts_search;
 		// S2-40: assert presence FIRST — without these, an empty response on
 		// both sides compared undefined===undefined and the gate passed vacuously.
 		expect(phpItem).toBeDefined();

@@ -13,18 +13,16 @@
  * `options.section_tipo`, which this tool's client never sends.
  */
 
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { fetchGuardedText } from '../../../src/core/security/ssrf_guard.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../../src/core/tools/rdf_xml.ts';
-
-function fail(message: string): ToolResponse {
-	return { result: false, msg: `Error. ${message}`, errors: [message] };
-}
 
 /**
  * SSRF guard for outbound RDF fetches (PHP is_safe_remote_url, SEC-072).
@@ -111,49 +109,48 @@ function rdfSectionTipos(options: Record<string, unknown>): unknown[] {
 }
 
 async function getRdfData(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const o = ctx.options;
-		const arValues = (o.ar_values ?? []) as string[];
-		const locator = (o.locator ?? {}) as { section_tipo?: string };
-		if (locator.section_tipo) {
-			// Defense in depth behind the declarative gate — same level, so a direct
-			// call can never reach the fetch loop on a weaker check than the wire.
-			if ((await getPermissions(ctx.principal, locator.section_tipo, locator.section_tipo)) < 2) {
-				return fail('insufficient permissions on the target section');
-			}
+	const o = ctx.options;
+	const arValues = (o.ar_values ?? []) as string[];
+	const locator = (o.locator ?? {}) as { section_tipo?: string };
+	if (locator.section_tipo) {
+		// Defense in depth behind the declarative gate — same level, so a direct
+		// call can never reach the fetch loop on a weaker check than the wire.
+		if ((await getPermissions(ctx.principal, locator.section_tipo, locator.section_tipo)) < 2) {
+			throw new DedaloError('perm.denied', {
+				coordinates: { tool: 'tool_import_rdf', section_tipo: locator.section_tipo },
+			});
 		}
-		if (!Array.isArray(arValues) || arValues.length === 0)
-			return fail('Missing ar_values (RDF URIs)');
-
-		const rdfData: { uri: string; subjects: unknown[] }[] = [];
-		const errors: string[] = [];
-		for (const raw of arValues) {
-			const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
-			try {
-				// SSRF-01 + DOS-05: resolve+vet the URL against private/reserved
-				// ranges (not a string blocklist), no redirects, timeout, body cap.
-				const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 });
-				const { subjects } = parseRdfXml(xml);
-				// If a class-map is supplied, return the mapped fields (the dd_object
-				// the client form consumes); else the raw subjects.
-				const map = ((ctx.options.tool_config as { config?: { main?: unknown[] } })?.config?.main ??
-					[]) as RdfMapEntry[];
-				const mapped = Array.isArray(map) && map.length > 0 ? applyRdfMap(subjects, map) : null;
-				rdfData.push({ uri, subjects: mapped ?? subjects });
-			} catch (error) {
-				errors.push(`${uri}: ${(error as Error).message}`);
-			}
-		}
-		// The subject→dd_object class-map is config-driven (ledgered); the fetch +
-		// parse are done and returned for the client/mapper to consume.
-		return {
-			result: rdfData,
-			msg: 'OK. RDF fetched + parsed. (Ontology class-map to dd_object is ledgered.)',
-			errors,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
 	}
+	if (!Array.isArray(arValues) || arValues.length === 0) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Missing ar_values (RDF URIs)',
+		});
+	}
+
+	const rdfData: { uri: string; subjects: unknown[] }[] = [];
+	const errors: string[] = [];
+	for (const raw of arValues) {
+		const uri = raw.endsWith('.rdf') ? raw : `${raw}.rdf`;
+		try {
+			// SSRF-01 + DOS-05: resolve+vet the URL against private/reserved
+			// ranges (not a string blocklist), no redirects, timeout, body cap.
+			const xml = await fetchGuardedText(uri, { maxBytes: 20 * 1024 * 1024 });
+			const { subjects } = parseRdfXml(xml);
+			// If a class-map is supplied, return the mapped fields (the dd_object
+			// the client form consumes); else the raw subjects.
+			const map = ((ctx.options.tool_config as { config?: { main?: unknown[] } })?.config?.main ??
+				[]) as RdfMapEntry[];
+			const mapped = Array.isArray(map) && map.length > 0 ? applyRdfMap(subjects, map) : null;
+			rdfData.push({ uri, subjects: mapped ?? subjects });
+		} catch (error) {
+			errors.push(`${uri}: ${(error as Error).message}`);
+		}
+	}
+	// The subject→dd_object class-map is config-driven (ledgered); the fetch +
+	// parse are done and returned for the client/mapper to consume.
+	// `errors` is the PER-URI refusal list (one bad URI never fails the batch):
+	// payload, not a wire failure — so it rides inside `data`.
+	return ok({ rdf: rdfData, errors }, { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {

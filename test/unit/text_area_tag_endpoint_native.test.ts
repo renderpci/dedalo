@@ -68,14 +68,28 @@ async function callTag(
 	return handleTagRequest(new Request(url, { headers }), url);
 }
 
-/** A comparable, byte-level fingerprint of a miss response. */
+/**
+ * A comparable fingerprint of a miss response. Envelope v2 gives every failure
+ * a FRESH `request_id` (a per-request correlation id, not information about the
+ * resource) and, under DEDALO_DEBUG_API_ERRORS, a `debug` block carrying the
+ * throw site — both are stripped here so what is compared is exactly what a
+ * caller could use to tell one miss class from another: status, headers, and
+ * the error identity (`ok`/`code`/`category`/`message`/`label_key`/`retryable`).
+ */
 async function fingerprint(response: Response): Promise<string> {
+	const raw = await response.text();
+	const body = JSON.parse(raw) as {
+		ok: boolean;
+		request_id?: string;
+		error: Record<string, unknown>;
+	};
+	const { debug: _debug, ...error } = body.error;
 	return JSON.stringify({
 		status: response.status,
 		contentType: response.headers.get('content-type'),
 		cacheControl: response.headers.get('cache-control'),
 		location: response.headers.get('location'),
-		body: await response.text(),
+		body: { ok: body.ok, error },
 	});
 }
 
@@ -117,7 +131,13 @@ describe('handleTagRequest — 2. ACL on the SAME, proven-resolvable locator', (
 		const response = await callTag(locatorId());
 		expect(response.status).toBe(404);
 		expect(response.headers.get('Content-Type')).toBe('application/json');
-		expect(await response.clone().json()).toEqual({ result: false, msg: 'Not found' });
+		const missBody = (await response.clone().json()) as {
+			ok: boolean;
+			error: { code: string; message: string };
+		};
+		expect(missBody.ok).toBe(false);
+		expect(missBody.error.code).toBe('resource.not_found');
+		expect(missBody.error.message).toBe('Not found');
 		// No Location, no cache directive: nothing distinguishes it from a miss.
 		expect(response.headers.get('Location')).toBeNull();
 		expect(response.headers.get('Cache-Control')).toBeNull();
@@ -240,7 +260,16 @@ describe('handleTagRequest — 4. indistinguishability of every miss', () => {
 		);
 		// Sanity: the reference itself is the generic 404 (not some other shape).
 		expect(JSON.parse(reference).status).toBe(404);
-		expect(JSON.parse(reference).body).toBe('{"result":false,"msg":"Not found"}');
+		expect(JSON.parse(reference).body).toEqual({
+			ok: false,
+			error: {
+				code: 'resource.not_found',
+				category: 'not_found',
+				message: 'Not found',
+				label_key: 'error_resource_not_found',
+				retryable: false,
+			},
+		});
 
 		const misses: Array<[string, Promise<Response>]> = [
 			['id absent', callTag(null, { cookie: sessionCookie })],

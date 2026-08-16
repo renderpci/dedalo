@@ -8,6 +8,8 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {create_source} from '../../../core/common/js/common.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -276,16 +278,22 @@ const get_content_data_edit = async function(self) {
 						self.node.content_data.classList.add('loading')
 						// get message
 						// `get_tool_label` reads localised strings registered in the tool's register.json.
-						const msg = (response.result===true)
-							? self.get_tool_label('upload_done') || 'Files imported successfully'
-							: self.get_tool_label('upload_error') || 'Error: Files not imported!'
+						const failed	= request_failed(response)
+						const msg		= failed
+							? self.get_tool_label('upload_error') || 'Error: Files not imported!'
+							: self.get_tool_label('upload_done') || 'Files imported successfully'
 						// add the message to wrapper (outside content_data that has loading class)
+						// TEXT only: the node may end up next to server text (DS-1)
 						const msg_container = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'msg_container',
-							inner_html 		: msg,
+							text_content	: msg,
 							parent			: self.node
 						})
+						// the ONE error surface: shows the real cause under the generic label
+						if (failed) {
+							handle_api_error(response.error, {wrapper: msg_container})
+						}
 						// when user click reload the tool
 						// (!) A full page reload is used intentionally: the tool has no
 						// incremental refresh path after a completed batch import.

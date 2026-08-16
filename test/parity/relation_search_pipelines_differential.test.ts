@@ -74,9 +74,14 @@ function searchRqo(
 	};
 }
 
-function envelopeEntries(body: unknown): { section_tipo: string; section_id: string }[] {
+/**
+ * The read payload (`{context, data}`) of either engine: the PHP oracle carries
+ * it under the frozen `result` key, the TS envelope v2 under `data`. Callers
+ * pass the payload, so neither engine's envelope key leaks in here.
+ */
+function envelopeEntries(payload: unknown): { section_tipo: string; section_id: string }[] {
 	const data =
-		((body as { result?: { data?: unknown[] } }).result?.data as
+		((payload as { data?: unknown[] } | undefined)?.data as
 			| { typo?: string; entries?: { section_tipo: string; section_id: string }[] }[]
 			| undefined) ?? [];
 	const envelope = data.find((item) => item.typo === 'sections');
@@ -121,9 +126,9 @@ async function diffCase(
 	expectNonEmpty: boolean,
 ): Promise<void> {
 	const rqo = searchRqo(componentTipo, model, q, qOperator);
-	const phpEntries = envelopeEntries((await php.call(structuredClone(rqo))).body);
+	const phpEntries = envelopeEntries((await php.call(structuredClone(rqo))).body.result);
 	const dispatched = await dispatchRqo(structuredClone(rqo) as unknown as Rqo, tsContext);
-	const tsEntries = envelopeEntries(dispatched.body);
+	const tsEntries = envelopeEntries(dispatched.body.data);
 	expect(tsEntries.map(key)).toEqual(phpEntries.map(key));
 	if (expectNonEmpty) expect(tsEntries.length).toBeGreaterThan(0);
 }

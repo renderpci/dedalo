@@ -41,6 +41,7 @@ import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { getMediaFileDate, withDedaloTime } from '../../../src/core/media/file_date.ts';
 import { sanitizeSegment, stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import {
@@ -68,15 +69,28 @@ import {
 	fileBasename,
 	getFileProcessor,
 } from '../../../src/core/tools/import_files_match.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { parseFilename } from './filename_grammar.ts';
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: `Error. ${message}`, errors: [message] };
+/**
+ * A caller fault. `message` AND `publicMessage`: import_files is
+ * backgroundRunnable, and the executor records `error.message` on the job.
+ */
+function invalidRequest(message: string): DedaloError {
+	return new DedaloError('request.invalid_options', { message, publicMessage: message });
+}
+
+/** A role write the save layer refused. The engine sentence stays log-only. */
+function saveRefused(message: string, tipo: string): DedaloError {
+	return new DedaloError('record.save_failed', {
+		coordinates: { tool: 'tool_import_files', tipo },
+		message,
+	});
 }
 
 /** A locator as READ from a stored `relation` jsonb bag. The union is stored-
@@ -160,7 +174,12 @@ async function matchFromSource(
 	filenameTipo: string,
 ): Promise<(number | string)[]> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) throw new Error('no matrix table for source section');
+	if (table === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			message: 'no matrix table for source section',
+			coordinates: { section_tipo: sectionTipo },
+		});
+	}
 	const record = await readMatrixRecord(table, sectionTipo, sectionId);
 	const relationColumn = (record?.columns.relation ?? {}) as Record<string, Locator[]>;
 
@@ -286,51 +305,43 @@ export function matchFreeNameSectionTipos(options: Record<string, unknown>): unk
 
 /** get_media_section_match_from_souce: relation-driven match (PHP parity). */
 async function getMediaSectionMatchFromSource(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const o = ctx.options;
-		const sectionTipo = String(o.section_tipo ?? '');
-		const sectionId = Number(o.section_id);
-		const targetSectionTipo = String(o.target_section_tipo ?? '');
-		const fullName = String(o.full_name ?? '');
-		const targetFilename = (o.target_filename ?? {}) as { tipo?: string };
-		const filenameTipo = String(targetFilename.tipo ?? '');
-		if (
-			sectionTipo === '' ||
-			!Number.isInteger(sectionId) ||
-			targetSectionTipo === '' ||
-			filenameTipo === ''
-		) {
-			return fail('Missing required parameters');
-		}
-		const matches = await matchFromSource(
-			sectionTipo,
-			sectionId,
-			targetSectionTipo,
-			fullName,
-			filenameTipo,
-		);
-		return { result: matches, msg: 'OK. Request done', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
+	const o = ctx.options;
+	const sectionTipo = String(o.section_tipo ?? '');
+	const sectionId = Number(o.section_id);
+	const targetSectionTipo = String(o.target_section_tipo ?? '');
+	const fullName = String(o.full_name ?? '');
+	const targetFilename = (o.target_filename ?? {}) as { tipo?: string };
+	const filenameTipo = String(targetFilename.tipo ?? '');
+	if (
+		sectionTipo === '' ||
+		!Number.isInteger(sectionId) ||
+		targetSectionTipo === '' ||
+		filenameTipo === ''
+	) {
+		throw invalidRequest('Missing required parameters');
 	}
+	const matches = await matchFromSource(
+		sectionTipo,
+		sectionId,
+		targetSectionTipo,
+		fullName,
+		filenameTipo,
+	);
+	return ok(matches, { requestId: toolRequestId(ctx) });
 }
 
 /** get_media_section_match: free-name match by scanning the target section. */
 async function getMediaSectionMatch(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const o = ctx.options;
-		const fullName = String(o.full_name ?? '');
-		const targetFilename = (o.target_filename ?? {}) as { tipo?: string; section_tipo?: string };
-		const filenameTipo = String(targetFilename.tipo ?? '');
-		const targetSectionTipo = String(targetFilename.section_tipo ?? '');
-		if (fullName === '' || filenameTipo === '' || targetSectionTipo === '') {
-			return fail('Missing required parameters');
-		}
-		const matches = await matchFreeName(fullName, filenameTipo, targetSectionTipo);
-		return { result: matches, msg: 'OK. Request done', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
+	const o = ctx.options;
+	const fullName = String(o.full_name ?? '');
+	const targetFilename = (o.target_filename ?? {}) as { tipo?: string; section_tipo?: string };
+	const filenameTipo = String(targetFilename.tipo ?? '');
+	const targetSectionTipo = String(targetFilename.section_tipo ?? '');
+	if (fullName === '' || filenameTipo === '' || targetSectionTipo === '') {
+		throw invalidRequest('Missing required parameters');
 	}
+	const matches = await matchFreeName(fullName, filenameTipo, targetSectionTipo);
+	return ok(matches, { requestId: toolRequestId(ctx) });
 }
 
 /** file_processor: run a REGISTERED named processor (allowlist; none ported — crop_50 ledgered). */
@@ -341,10 +352,21 @@ async function fileProcessor(ctx: ToolActionContext): Promise<ToolResponse> {
 		// SEC-053 collapse: only registered names run. No processors are ported
 		// (crop_50 is ledgered on-demand), so any request fails closed rather
 		// than executing arbitrary code.
-		return fail(`file_processor '${name}' is not a registered processor (none ported yet)`);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `file_processor '${name}' is not a registered processor`,
+			coordinates: { file_processor: name },
+		});
 	}
+	// The processor answers with its own internal outcome object; a false one is a
+	// failed operation, not a body.
 	const outcome = await processor(ctx.options);
-	return { result: outcome.result, msg: outcome.msg, errors: outcome.result ? [] : [outcome.msg] };
+	if (!outcome.ok) {
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { tool: 'tool_import_files', file_processor: name },
+			message: outcome.message,
+		});
+	}
+	return ok(outcome.ok, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -509,7 +531,7 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 					userId,
 				});
 				if (!save.ok) {
-					throw new Error(`target_filename save failed on '${tipo}': ${save.message}`);
+					throw saveRefused(`target_filename save failed on '${tipo}': ${save.message}`, tipo);
 				}
 				break;
 			}
@@ -538,7 +560,7 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 					userId,
 				});
 				if (!save.ok) {
-					throw new Error(`target_date save failed on '${tipo}': ${save.message}`);
+					throw saveRefused(`target_date save failed on '${tipo}': ${save.message}`, tipo);
 				}
 				break;
 			}
@@ -595,7 +617,7 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 						userId,
 					});
 					if (!save.ok) {
-						throw new Error(`input_component save failed on '${tipo}': ${save.message}`);
+						throw saveRefused(`input_component save failed on '${tipo}': ${save.message}`, tipo);
 					}
 				}
 				break;
@@ -659,404 +681,282 @@ interface ImportFileData {
  * caller's section.
  */
 async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
+	const o = ctx.options;
+	const toolConfig = (o.tool_config ?? {}) as {
+		import_mode?: string;
+		import_file_name_mode?: string | null;
+		ddo_map?: DdoMapEntry[];
+	};
+	const importMode = String(toolConfig.import_mode ?? 'default');
+	const nameMode = String(toolConfig.import_file_name_mode ?? 'default');
+	const ddoMap = Array.isArray(toolConfig.ddo_map) ? toolConfig.ddo_map : [];
+	const sectionTipo = String(o.section_tipo ?? '');
+	const componentTipo = String(o.tipo ?? '');
+	const callerSectionId = Number(o.section_id ?? 0);
+	const componentsTempData = (o.components_temp_data ?? []) as TempDataEntry[];
+	const optionsKeyDir = String(o.key_dir ?? '');
+	// The Quality selector's choice (render_tool_import_files.js :989). PHP
+	// set_quality()'d the component with it before add_file; undefined ⇒ the
+	// component's original tier. add_file validates it against the ladder.
+	const customTargetQuality =
+		typeof o.custom_target_quality === 'string' && o.custom_target_quality !== ''
+			? o.custom_target_quality
+			: undefined;
+	const filesData = (o.files_data ?? []) as ImportFileData[];
+	if (sectionTipo === '' || componentTipo === '' || filesData.length === 0) {
+		throw invalidRequest('Missing section_tipo, tipo or files_data');
+	}
+
+	// Target media component: ddo_map role 'target_component' (PHP :818-827);
+	// without a ddo_map, options.tipo is the media component (module contract).
+	const targetDdoComponent = ddoMap.find((ddo) => ddo.role === 'target_component') ?? null;
+	if (ddoMap.length > 0 && targetDdoComponent === null) {
+		throw invalidRequest(
+			'Invalid target_component. Role "target_component" is not defined in Ontology tool configuration properties.',
+		);
+	}
+	const targetComponentTipo = String(targetDdoComponent?.tipo ?? componentTipo);
+	const targetComponentModel = await getModelByTipo(targetComponentTipo);
+	let spec: MediaTypeSpec;
 	try {
-		const o = ctx.options;
-		const toolConfig = (o.tool_config ?? {}) as {
-			import_mode?: string;
-			import_file_name_mode?: string | null;
-			ddo_map?: DdoMapEntry[];
-		};
-		const importMode = String(toolConfig.import_mode ?? 'default');
-		const nameMode = String(toolConfig.import_file_name_mode ?? 'default');
-		const ddoMap = Array.isArray(toolConfig.ddo_map) ? toolConfig.ddo_map : [];
-		const sectionTipo = String(o.section_tipo ?? '');
-		const componentTipo = String(o.tipo ?? '');
-		const callerSectionId = Number(o.section_id ?? 0);
-		const componentsTempData = (o.components_temp_data ?? []) as TempDataEntry[];
-		const optionsKeyDir = String(o.key_dir ?? '');
-		// The Quality selector's choice (render_tool_import_files.js :989). PHP
-		// set_quality()'d the component with it before add_file; undefined ⇒ the
-		// component's original tier. add_file validates it against the ladder.
-		const customTargetQuality =
-			typeof o.custom_target_quality === 'string' && o.custom_target_quality !== ''
-				? o.custom_target_quality
-				: undefined;
-		const filesData = (o.files_data ?? []) as ImportFileData[];
-		if (sectionTipo === '' || componentTipo === '' || filesData.length === 0) {
-			return fail('Missing section_tipo, tipo or files_data');
-		}
+		spec = requireMediaSpec(targetComponentModel ?? '');
+	} catch (error) {
+		throw new DedaloError('tool.unsupported_target', {
+			cause: error,
+			publicMessage: `'${targetComponentTipo}' is not a media component`,
+			coordinates: { tipo: targetComponentTipo, model: targetComponentModel ?? '' },
+		});
+	}
 
-		// Target media component: ddo_map role 'target_component' (PHP :818-827);
-		// without a ddo_map, options.tipo is the media component (module contract).
-		const targetDdoComponent = ddoMap.find((ddo) => ddo.role === 'target_component') ?? null;
-		if (ddoMap.length > 0 && targetDdoComponent === null) {
-			return fail(
-				'Invalid target_component. Role "target_component" is not defined in Ontology tool configuration properties.',
+	// (No pre-flight refusal of translatable input_components: the
+	// setComponentsData input_component branch now saves them per-lang from the
+	// client payload. The old check rejected the ENTIRE batch before touching a
+	// single file, which made the tool unusable with the shipped import form.)
+
+	// Capture the request data language NOW, while still in request scope, and
+	// thread it into every setComponentsData call (Rule 6) — the translatable
+	// role writes must not read the ALS from a leaf on the background path.
+	const dataLang = currentDataLang();
+
+	const namedGroups = new Map<string, number>();
+	let imported = 0;
+	const errors: string[] = [];
+
+	/**
+	 * Move one staged file into a target record's media component, AND record it
+	 * on the record.
+	 *
+	 * (!) BOTH HALVES ARE REQUIRED. `processUploadedFile` only touches the DISK —
+	 * add_file + derivatives + a files_info SCAN which it returns. Writing that
+	 * scan onto the record is a separate call, and this importer used to skip it:
+	 * the files landed in image/original, image/1.5MB and image/thumb while the
+	 * matrix `media` key stayed NULL, so the record did not know its own files.
+	 * tool_media_versions reported exactly that — `files_info_db: []` against
+	 * three disk entries — and unlike component_av (re-scanned on every emit)
+	 * an image has no read-time rescue, so the loss was permanent.
+	 * PHP did persist here: process_uploaded_file → regenerate_component →
+	 * update_component_data_files_info + save.
+	 *
+	 * The persist lives INSIDE this closure so both call sites — the multi-match
+	 * copy loop and the default single-target path — are covered by construction.
+	 */
+	const ingest = async (
+		targetSectionTipo: string,
+		targetSectionId: number,
+		keyDir: string,
+		tmpName: string,
+		extension: string,
+		originalFileName: string,
+	): Promise<void> => {
+		// The context is RE-RESOLVED per call (stored items read fresh), so importing
+		// several files into the SAME record accumulates instead of each one clobbering
+		// the last.
+		const { identity, pathOpts } = await resolveMediaToolContext({
+			component_tipo: targetComponentTipo,
+			section_tipo: targetSectionTipo,
+			section_id: targetSectionId,
+		});
+		const result = await processUploadedFile({
+			spec,
+			identity,
+			pathOpts,
+			userId: ctx.userId,
+			keyDir,
+			tmpName,
+			extension,
+			quality: customTargetQuality,
+		});
+		const { persistUploadedMedia, nameKeysForQuality } = await import(
+			'../../../src/core/media/tools/files_info_persist.ts'
+		);
+		const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
+		await persistUploadedMedia({
+			sectionTipo: identity.sectionTipo,
+			sectionId: identity.sectionId,
+			componentTipo: identity.componentTipo,
+			lang: identity.lang,
+			filesInfo: result.filesInfo,
+			// The name the operator recognises. NOTE it is not always human-readable:
+			// a dropzone row restored from the server listing carries the SANITIZED
+			// staged name, because that is what the listing reports.
+			originalFileName: originalFileName || result.originalFileName,
+			originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
+			// Provenance follows the tier the file landed in (PHP :778) — an import
+			// into a non-original tier records no original_*/modified_* names.
+			nameKeys: nameKeysForQuality(spec, customTargetQuality),
+		});
+		// A derivative failure is NOT an import failure: the original landed and
+		// is now indexed by the persist above, so the file counts as imported and
+		// the missing tiers can be rebuilt (tool_media_versions / repair). Report
+		// it per file so the operator knows a tier is missing.
+		//
+		// Reported through the EXISTING `errors[]` — the ONE channel the panel
+		// reads: render_tool_import_files.js:605-609 renders
+		// `sse_response.data.errors` and nothing else, so a `warnings` field
+		// would be dropped on the floor and the failure would be silent.
+		for (const message of result.derivativeErrors) {
+			errors.push(
+				`${originalFileName || result.originalFileName}: imported, but a derivative could not be built — ${message}`,
 			);
 		}
-		const targetComponentTipo = String(targetDdoComponent?.tipo ?? componentTipo);
-		const targetComponentModel = await getModelByTipo(targetComponentTipo);
-		let spec: MediaTypeSpec;
+		// AFTER the persist commits: an av transcode writes its own files_info
+		// back, and must not race the write above (IngestResult.startTranscode).
+		result.startTranscode?.();
+	};
+
+	// Live progress + cooperative cancellation. `import_files` runs under the
+	// background executor (backgroundRunnable below), which supplies both
+	// publishProgress and signal; a direct call has neither, so both are
+	// optional here. Frame keys are the ones the client's compound_msg reads
+	// verbatim (render_tool_import_files.js:597-620) — msg / counter / total /
+	// total_ms / current_time / errors. `current_time` is the PER-FILE ms: the
+	// panel averages it over a rolling window to estimate time remaining, so
+	// it must be one file's cost, NOT the elapsed total.
+	const publish = ctx.publishProgress;
+	const totalFiles = filesData.length;
+	const runStartedAt = Date.now();
+	let counter = 0;
+
+	for (const file of filesData) {
+		// Cancellation is checked at the loop boundary: a file is imported whole
+		// or not at all, so an abort never leaves a half-ingested record behind.
+		if (ctx.signal?.aborted) {
+			errors.push(`Import cancelled after ${counter} of ${totalFiles} files`);
+			break;
+		}
+		const fileStartedAt = Date.now();
+		counter++;
+		// The client's display name arrives URI-encoded (tool_import_files.js
+		// applies encodeURI; PHP applied rawurldecode here). Decode defensively:
+		// a name containing a bare '%' is not a valid escape sequence and must
+		// survive untouched. Declared OUTSIDE the try so the `finally` progress
+		// frame and the error message can both name the file.
+		const rawName = String(file.name ?? '');
+		let fileName: string;
 		try {
-			spec = requireMediaSpec(targetComponentModel ?? '');
+			fileName = decodeURIComponent(rawName);
 		} catch {
-			return fail(`'${targetComponentTipo}' is not a media component`);
+			fileName = rawName;
 		}
-
-		// (No pre-flight refusal of translatable input_components: the
-		// setComponentsData input_component branch now saves them per-lang from the
-		// client payload. The old check rejected the ENTIRE batch before touching a
-		// single file, which made the tool unusable with the shipped import form.)
-
-		// Capture the request data language NOW, while still in request scope, and
-		// thread it into every setComponentsData call (Rule 6) — the translatable
-		// role writes must not read the ALS from a leaf on the background path.
-		const dataLang = currentDataLang();
-
-		const namedGroups = new Map<string, number>();
-		let imported = 0;
-		const errors: string[] = [];
-
-		/**
-		 * Move one staged file into a target record's media component, AND record it
-		 * on the record.
-		 *
-		 * (!) BOTH HALVES ARE REQUIRED. `processUploadedFile` only touches the DISK —
-		 * add_file + derivatives + a files_info SCAN which it returns. Writing that
-		 * scan onto the record is a separate call, and this importer used to skip it:
-		 * the files landed in image/original, image/1.5MB and image/thumb while the
-		 * matrix `media` key stayed NULL, so the record did not know its own files.
-		 * tool_media_versions reported exactly that — `files_info_db: []` against
-		 * three disk entries — and unlike component_av (re-scanned on every emit)
-		 * an image has no read-time rescue, so the loss was permanent.
-		 * PHP did persist here: process_uploaded_file → regenerate_component →
-		 * update_component_data_files_info + save.
-		 *
-		 * The persist lives INSIDE this closure so both call sites — the multi-match
-		 * copy loop and the default single-target path — are covered by construction.
-		 */
-		const ingest = async (
-			targetSectionTipo: string,
-			targetSectionId: number,
-			keyDir: string,
-			tmpName: string,
-			extension: string,
-			originalFileName: string,
-		): Promise<void> => {
-			// The context is RE-RESOLVED per call (stored items read fresh), so importing
-			// several files into the SAME record accumulates instead of each one clobbering
-			// the last.
-			const { identity, pathOpts } = await resolveMediaToolContext({
-				component_tipo: targetComponentTipo,
-				section_tipo: targetSectionTipo,
-				section_id: targetSectionId,
-			});
-			const result = await processUploadedFile({
-				spec,
-				identity,
-				pathOpts,
-				userId: ctx.userId,
-				keyDir,
-				tmpName,
-				extension,
-				quality: customTargetQuality,
-			});
-			const { persistUploadedMedia, nameKeysForQuality } = await import(
-				'../../../src/core/media/tools/files_info_persist.ts'
+		try {
+			const keyDir = String(file.key_dir ?? optionsKeyDir);
+			// The STAGED name is not the client name: it is SERVER-ASSIGNED
+			// (upload.ts claimStagedName). Anything outside [A-Za-z0-9_.-] became
+			// '_', so 'DSC 001.jpg' / 'María.jpg' / 'photo (1).jpg' are on disk
+			// under a different name — and two names that sanitize alike are kept
+			// apart with a '-1', '-2' … suffix, which no transform can reproduce.
+			// service_dropzone echoes the server's tmp_name back into files_data;
+			// resolveStagedName takes it when present and falls back to the legacy
+			// transform otherwise, REFUSING (throwing, reported as this file's
+			// error) rather than guessing when suffixed candidates exist.
+			const tmpName = resolveStagedName(
+				stagingDir(ctx.userId, keyDir),
+				fileName,
+				typeof file.tmp_name === 'string' ? file.tmp_name : null,
 			);
-			const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
-			await persistUploadedMedia({
-				sectionTipo: identity.sectionTipo,
-				sectionId: identity.sectionId,
-				componentTipo: identity.componentTipo,
-				lang: identity.lang,
-				filesInfo: result.filesInfo,
-				// The name the operator recognises. NOTE it is not always human-readable:
-				// a dropzone row restored from the server listing carries the SANITIZED
-				// staged name, because that is what the listing reports.
-				originalFileName: originalFileName || result.originalFileName,
-				originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
-				// Provenance follows the tier the file landed in (PHP :778) — an import
-				// into a non-original tier records no original_*/modified_* names.
-				nameKeys: nameKeysForQuality(spec, customTargetQuality),
-			});
-			// A derivative failure is NOT an import failure: the original landed and
-			// is now indexed by the persist above, so the file counts as imported and
-			// the missing tiers can be rebuilt (tool_media_versions / repair). Report
-			// it per file so the operator knows a tier is missing.
-			//
-			// Reported through the EXISTING `errors[]` — the ONE channel the panel
-			// reads: render_tool_import_files.js:605-609 renders
-			// `sse_response.data.errors` and nothing else, so a `warnings` field
-			// would be dropped on the floor and the failure would be silent.
-			for (const message of result.derivativeErrors) {
+			const parsed = parseFilename(fileName);
+			// Extension resolution. parseFilename implements the PHP IMPORT-NAME
+			// grammar, whose extension group is `[a-zA-Z]{3,4}` — ALPHA ONLY. That
+			// grammar exists to split section_id / base_name / letter for the
+			// matching modes; it is NOT a media-extension parser, and using it as
+			// the only source made every digit-bearing extension resolve to '' —
+			// so .mp4, .mp3, .jp2, .3gp and .m4v (the dominant AV formats) each
+			// died with 'Invalid media extension (empty)'.
+			// Order: the server-staged extension (authoritative — the receiver
+			// sniffed the magic bytes against it), then the grammar, then a plain
+			// last-dot split as the honest fallback.
+			const lastDot = fileName.lastIndexOf('.');
+			const plainExtension = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : '';
+			const extension = String(file.extension ?? parsed.extension ?? plainExtension ?? '');
+
+			// Per-file named-processor selections are fail-closed (SEC-053): no
+			// processor is ported (crop_50 ledgered), so the selection is an
+			// explicit per-file error — never a silent generic import.
+			if (file.file_processor) {
 				errors.push(
-					`${originalFileName || result.originalFileName}: imported, but a derivative could not be built — ${message}`,
+					`${fileName}: file_processor '${file.file_processor}' is not a registered processor (none ported)`,
 				);
+				continue;
 			}
-			// AFTER the persist commits: an av transcode writes its own files_info
-			// back, and must not race the write above (IngestResult.startTranscode).
-			result.startTranscode?.();
-		};
 
-		// Live progress + cooperative cancellation. `import_files` runs under the
-		// background executor (backgroundRunnable below), which supplies both
-		// publishProgress and signal; a direct call has neither, so both are
-		// optional here. Frame keys are the ones the client's compound_msg reads
-		// verbatim (render_tool_import_files.js:597-620) — msg / counter / total /
-		// total_ms / current_time / errors. `current_time` is the PER-FILE ms: the
-		// panel averages it over a rolling window to estimate time remaining, so
-		// it must be one file's cost, NOT the elapsed total.
-		const publish = ctx.publishProgress;
-		const totalFiles = filesData.length;
-		const runStartedAt = Date.now();
-		let counter = 0;
-
-		for (const file of filesData) {
-			// Cancellation is checked at the loop boundary: a file is imported whole
-			// or not at all, so an abort never leaves a half-ingested record behind.
-			if (ctx.signal?.aborted) {
-				errors.push(`Import cancelled after ${counter} of ${totalFiles} files`);
-				break;
-			}
-			const fileStartedAt = Date.now();
-			counter++;
-			// The client's display name arrives URI-encoded (tool_import_files.js
-			// applies encodeURI; PHP applied rawurldecode here). Decode defensively:
-			// a name containing a bare '%' is not a valid escape sequence and must
-			// survive untouched. Declared OUTSIDE the try so the `finally` progress
-			// frame and the error message can both name the file.
-			const rawName = String(file.name ?? '');
-			let fileName: string;
-			try {
-				fileName = decodeURIComponent(rawName);
-			} catch {
-				fileName = rawName;
-			}
-			try {
-				const keyDir = String(file.key_dir ?? optionsKeyDir);
-				// The STAGED name is not the client name: it is SERVER-ASSIGNED
-				// (upload.ts claimStagedName). Anything outside [A-Za-z0-9_.-] became
-				// '_', so 'DSC 001.jpg' / 'María.jpg' / 'photo (1).jpg' are on disk
-				// under a different name — and two names that sanitize alike are kept
-				// apart with a '-1', '-2' … suffix, which no transform can reproduce.
-				// service_dropzone echoes the server's tmp_name back into files_data;
-				// resolveStagedName takes it when present and falls back to the legacy
-				// transform otherwise, REFUSING (throwing, reported as this file's
-				// error) rather than guessing when suffixed candidates exist.
-				const tmpName = resolveStagedName(
-					stagingDir(ctx.userId, keyDir),
-					fileName,
-					typeof file.tmp_name === 'string' ? file.tmp_name : null,
+			// ── match / match_freename: matcher-driven multi-target copy loop
+			// (PHP :934-1051) ───────────────────────────────────────────────
+			if (
+				targetDdoComponent !== null &&
+				(importMode === 'section' || importMode === 'section_resource') &&
+				(nameMode === 'match' || nameMode === 'match_freename')
+			) {
+				const targetSectionTipo = String(targetDdoComponent.section_tipo ?? '');
+				const targetFilenameDdo = ddoMap.find(
+					(ddo) => ddo.role === 'target_filename' && ddo.section_tipo === targetSectionTipo,
 				);
-				const parsed = parseFilename(fileName);
-				// Extension resolution. parseFilename implements the PHP IMPORT-NAME
-				// grammar, whose extension group is `[a-zA-Z]{3,4}` — ALPHA ONLY. That
-				// grammar exists to split section_id / base_name / letter for the
-				// matching modes; it is NOT a media-extension parser, and using it as
-				// the only source made every digit-bearing extension resolve to '' —
-				// so .mp4, .mp3, .jp2, .3gp and .m4v (the dominant AV formats) each
-				// died with 'Invalid media extension (empty)'.
-				// Order: the server-staged extension (authoritative — the receiver
-				// sniffed the magic bytes against it), then the grammar, then a plain
-				// last-dot split as the honest fallback.
-				const lastDot = fileName.lastIndexOf('.');
-				const plainExtension = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : '';
-				const extension = String(file.extension ?? parsed.extension ?? plainExtension ?? '');
-
-				// Per-file named-processor selections are fail-closed (SEC-053): no
-				// processor is ported (crop_50 ledgered), so the selection is an
-				// explicit per-file error — never a silent generic import.
-				if (file.file_processor) {
-					errors.push(
-						`${fileName}: file_processor '${file.file_processor}' is not a registered processor (none ported)`,
-					);
-					continue;
-				}
-
-				// ── match / match_freename: matcher-driven multi-target copy loop
-				// (PHP :934-1051) ───────────────────────────────────────────────
-				if (
-					targetDdoComponent !== null &&
-					(importMode === 'section' || importMode === 'section_resource') &&
-					(nameMode === 'match' || nameMode === 'match_freename')
-				) {
-					const targetSectionTipo = String(targetDdoComponent.section_tipo ?? '');
-					const targetFilenameDdo = ddoMap.find(
-						(ddo) => ddo.role === 'target_filename' && ddo.section_tipo === targetSectionTipo,
-					);
-					const filenameTipo = String(targetFilenameDdo?.tipo ?? '');
-					let matches: number[];
-					if (file.section_id != null) {
-						// Pre-matched by the client via the matcher actions.
-						matches = [Number(file.section_id)];
-					} else if (nameMode === 'match') {
-						matches = (
-							await matchFromSource(
-								sectionTipo,
-								Number(parsed.section_id),
-								targetSectionTipo,
-								fileName,
-								filenameTipo,
-							)
-						).map(Number);
-					} else {
-						matches = await matchFreeName(fileName, filenameTipo, targetSectionTipo);
-					}
-
-					const plan = buildMultiMatchCopyPlan(matches, fileName, tmpName);
-					for (const step of plan) {
-						if (!step.isLast) {
-							// Copy the staged file so the original survives for the next
-							// target (PHP :991-1008); the LAST ingest consumes the original.
-							const dir = stagingDir(ctx.userId, keyDir);
-							copyFileSync(
-								join(dir, sanitizeSegment(tmpName)),
-								join(dir, sanitizeSegment(step.tmpName)),
-							);
-						}
-						await ingest(
-							targetSectionTipo,
-							step.targetSectionId,
-							keyDir,
-							step.tmpName,
-							extension,
-							fileName,
-						);
-						await setComponentsData({
-							ddoMap,
+				const filenameTipo = String(targetFilenameDdo?.tipo ?? '');
+				let matches: number[];
+				if (file.section_id != null) {
+					// Pre-matched by the client via the matcher actions.
+					matches = [Number(file.section_id)];
+				} else if (nameMode === 'match') {
+					matches = (
+						await matchFromSource(
 							sectionTipo,
-							sectionId: callerSectionId,
-							targetSectionId: step.targetSectionId,
-							currentFileName: step.fileName,
-							// PHP file_data['file_path'] stays the ORIGINAL staged file for
-							// every target; on the LAST step the ingest above has already
-							// consumed it → the date read skips (PHP-identical ordering).
-							mediaFilePath: join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
-							targetComponentModel: targetComponentModel ?? '',
-							componentsTempData,
-							userId: ctx.userId,
-							dataLang,
-						});
-					}
-					// A zero-match file ingests nothing (plan is empty): report it as a
-					// per-file note instead of silently counting a no-op as imported.
-					if (plan.length === 0) {
-						errors.push(`${fileName}: no target record matched`);
-					} else {
-						imported += 1;
-					}
-					continue;
-				}
-
-				// ── enumerate / named / default: resolve the destination record ──
-				if (
-					ddoMap.length > 0 &&
-					nameMode === 'enumerate' &&
-					importMode !== 'section' &&
-					importMode !== 'section_resource'
-				) {
-					// PHP :916-926: enumerate needs a section import mode.
-					errors.push(
-						`${fileName}: Incompatible import mode: '${importMode}' with import_file_name_mode: 'enumerate'. Ignored action`,
-					);
-					continue;
-				}
-
-				let resolvedSectionId: number;
-				if (ddoMap.length > 0 && importMode === 'default') {
-					// PHP 'default' import_mode (:1132-1141): files go into the portal
-					// on the CALLING record — no record is created per name mode.
-					resolvedSectionId = callerSectionId;
-				} else if (file.section_id != null) {
-					resolvedSectionId = Number(file.section_id); // pre-matched
-				} else if (nameMode === 'enumerate' && parsed.section_id) {
-					// PHP :1060-1070: the numeric prefix is the explicit section_id;
-					// create_record() returns the existing id without duplicating.
-					resolvedSectionId = Number(parsed.section_id);
-					await createSectionRecord(sectionTipo, ctx.userId, new Date(), resolvedSectionId, {
-						conflictTolerant: true,
-					});
-				} else if (nameMode === 'named') {
-					const key = parsed.base_name || parsed.section_id || fileName;
-					const existing = namedGroups.get(key);
-					if (existing !== undefined) {
-						resolvedSectionId = existing;
-					} else {
-						resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
-						namedGroups.set(key, resolvedSectionId);
-					}
+							Number(parsed.section_id),
+							targetSectionTipo,
+							fileName,
+							filenameTipo,
+						)
+					).map(Number);
 				} else {
-					resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
+					matches = await matchFreeName(fileName, filenameTipo, targetSectionTipo);
 				}
 
-				// ── media destination: portal chain vs the record itself ─────────
-				let targetSectionTipo = sectionTipo;
-				let targetSectionId = resolvedSectionId;
-				if (ddoMap.length > 0 && importMode !== 'section_resource') {
-					// PORTAL-LINKING chain (PHP :1108-1251): the component_option ddo
-					// is the portal that receives the new media record's locator.
-					let portalDdo: DdoMapEntry;
-					if (importMode === 'section') {
-						const optionTipo = String(file.component_option ?? '');
-						const found = ddoMap.find(
-							(ddo) => ddo.role === 'component_option' && ddo.tipo === optionTipo,
-						);
-						if (found === undefined) {
-							// PHP :1113-1122 skips the file. (TS checks BEFORE creating the
-							// destination record, so a config error leaves no orphan row —
-							// deliberate ordering improvement over PHP.)
-							errors.push(
-								`${fileName}: empty target_ddo for role "component_option" and tipo "${optionTipo}"`,
-							);
-							continue;
-						}
-						// 'self' placeholder substitution (PHP :1128-1130).
-						portalDdo =
-							found.section_tipo === 'self' ? { ...found, section_tipo: sectionTipo } : found;
-					} else {
-						// PHP 'default' import_mode: the CALLING component is the portal.
-						portalDdo = { tipo: componentTipo, section_tipo: sectionTipo };
-					}
-					const portalTipo = String(portalDdo.tipo ?? '');
-					const portalSectionTipo = String(portalDdo.section_tipo ?? '');
-					const portalTarget =
-						portalDdo.target_section_tipo ??
-						(await portalTargetSectionTipo(portalTipo, portalSectionTipo));
-					if (portalTarget == null || portalTarget === '') {
-						throw new Error(
-							`cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
+				const plan = buildMultiMatchCopyPlan(matches, fileName, tmpName);
+				for (const step of plan) {
+					if (!step.isLast) {
+						// Copy the staged file so the original survives for the next
+						// target (PHP :991-1008); the LAST ingest consumes the original.
+						const dir = stagingDir(ctx.userId, keyDir);
+						copyFileSync(
+							join(dir, sanitizeSegment(tmpName)),
+							join(dir, sanitizeSegment(step.tmpName)),
 						);
 					}
-					// Create + link the media record through the portal — the
-					// add_new_element relation hook (relations/save.ts) inside the
-					// tx-wrapped, TM-audited saveComponentData (PHP :1217-1232).
-					const save = await saveComponentData({
-						componentTipo: portalTipo,
-						sectionTipo: portalSectionTipo,
-						sectionId: resolvedSectionId,
-						lang: 'lg-nolan',
-						changedData: [{ action: 'add_new_element', id: null, value: portalTarget }],
-						userId: ctx.userId,
-					});
-					const created = (save as { ok: boolean; created_section_id?: number }).created_section_id;
-					if (!save.ok || created == null) {
-						// PHP :1220-1227 aborts the whole batch on portal-create failure.
-						return fail(`Error on create portal children: ${save.message}`);
-					}
-					targetSectionTipo = portalTarget;
-					targetSectionId = created;
-				}
-
-				// Role writes BEFORE the media move (PHP order :1254-1285) — the
-				// staged file is still in place for the target_date capture read.
-				if (ddoMap.length > 0) {
+					await ingest(
+						targetSectionTipo,
+						step.targetSectionId,
+						keyDir,
+						step.tmpName,
+						extension,
+						fileName,
+					);
 					await setComponentsData({
 						ddoMap,
 						sectionTipo,
-						sectionId: resolvedSectionId,
-						targetSectionId,
-						currentFileName: fileName,
+						sectionId: callerSectionId,
+						targetSectionId: step.targetSectionId,
+						currentFileName: step.fileName,
+						// PHP file_data['file_path'] stays the ORIGINAL staged file for
+						// every target; on the LAST step the ingest above has already
+						// consumed it → the date read skips (PHP-identical ordering).
 						mediaFilePath: join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
 						targetComponentModel: targetComponentModel ?? '',
 						componentsTempData,
@@ -1064,59 +964,188 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 						dataLang,
 					});
 				}
-				await ingest(targetSectionTipo, targetSectionId, keyDir, tmpName, extension, fileName);
-				imported += 1;
-			} catch (error) {
-				errors.push(`${file.name}: ${(error as Error).message}`);
-			} finally {
-				// Publish AFTER the file settles (in `finally`, so a failed file still
-				// advances the counter — otherwise the bar stalls on the first error).
-				// `errors` is sent every frame so the panel can list them as they
-				// happen instead of only at the terminal frame.
-				publish?.({
-					msg: `Importing ${fileName}`,
-					counter,
-					total: totalFiles,
-					total_ms: Date.now() - runStartedAt,
-					current_time: Date.now() - fileStartedAt,
-					file: fileName,
-					errors,
+				// A zero-match file ingests nothing (plan is empty): report it as a
+				// per-file note instead of silently counting a no-op as imported.
+				if (plan.length === 0) {
+					errors.push(`${fileName}: no target record matched`);
+				} else {
+					imported += 1;
+				}
+				continue;
+			}
+
+			// ── enumerate / named / default: resolve the destination record ──
+			if (
+				ddoMap.length > 0 &&
+				nameMode === 'enumerate' &&
+				importMode !== 'section' &&
+				importMode !== 'section_resource'
+			) {
+				// PHP :916-926: enumerate needs a section import mode.
+				errors.push(
+					`${fileName}: Incompatible import mode: '${importMode}' with import_file_name_mode: 'enumerate'. Ignored action`,
+				);
+				continue;
+			}
+
+			let resolvedSectionId: number;
+			if (ddoMap.length > 0 && importMode === 'default') {
+				// PHP 'default' import_mode (:1132-1141): files go into the portal
+				// on the CALLING record — no record is created per name mode.
+				resolvedSectionId = callerSectionId;
+			} else if (file.section_id != null) {
+				resolvedSectionId = Number(file.section_id); // pre-matched
+			} else if (nameMode === 'enumerate' && parsed.section_id) {
+				// PHP :1060-1070: the numeric prefix is the explicit section_id;
+				// create_record() returns the existing id without duplicating.
+				resolvedSectionId = Number(parsed.section_id);
+				await createSectionRecord(sectionTipo, ctx.userId, new Date(), resolvedSectionId, {
+					conflictTolerant: true,
+				});
+			} else if (nameMode === 'named') {
+				const key = parsed.base_name || parsed.section_id || fileName;
+				const existing = namedGroups.get(key);
+				if (existing !== undefined) {
+					resolvedSectionId = existing;
+				} else {
+					resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
+					namedGroups.set(key, resolvedSectionId);
+				}
+			} else {
+				resolvedSectionId = await createSectionRecord(sectionTipo, ctx.userId);
+			}
+
+			// ── media destination: portal chain vs the record itself ─────────
+			let targetSectionTipo = sectionTipo;
+			let targetSectionId = resolvedSectionId;
+			if (ddoMap.length > 0 && importMode !== 'section_resource') {
+				// PORTAL-LINKING chain (PHP :1108-1251): the component_option ddo
+				// is the portal that receives the new media record's locator.
+				let portalDdo: DdoMapEntry;
+				if (importMode === 'section') {
+					const optionTipo = String(file.component_option ?? '');
+					const found = ddoMap.find(
+						(ddo) => ddo.role === 'component_option' && ddo.tipo === optionTipo,
+					);
+					if (found === undefined) {
+						// PHP :1113-1122 skips the file. (TS checks BEFORE creating the
+						// destination record, so a config error leaves no orphan row —
+						// deliberate ordering improvement over PHP.)
+						errors.push(
+							`${fileName}: empty target_ddo for role "component_option" and tipo "${optionTipo}"`,
+						);
+						continue;
+					}
+					// 'self' placeholder substitution (PHP :1128-1130).
+					portalDdo =
+						found.section_tipo === 'self' ? { ...found, section_tipo: sectionTipo } : found;
+				} else {
+					// PHP 'default' import_mode: the CALLING component is the portal.
+					portalDdo = { tipo: componentTipo, section_tipo: sectionTipo };
+				}
+				const portalTipo = String(portalDdo.tipo ?? '');
+				const portalSectionTipo = String(portalDdo.section_tipo ?? '');
+				const portalTarget =
+					portalDdo.target_section_tipo ??
+					(await portalTargetSectionTipo(portalTipo, portalSectionTipo));
+				if (portalTarget == null || portalTarget === '') {
+					throw new DedaloError('tool.unsupported_target', {
+						coordinates: { tool: 'tool_import_files', tipo: portalTipo },
+						message: `cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
+					});
+				}
+				// Create + link the media record through the portal — the
+				// add_new_element relation hook (relations/save.ts) inside the
+				// tx-wrapped, TM-audited saveComponentData (PHP :1217-1232).
+				const save = await saveComponentData({
+					componentTipo: portalTipo,
+					sectionTipo: portalSectionTipo,
+					sectionId: resolvedSectionId,
+					lang: 'lg-nolan',
+					changedData: [{ action: 'add_new_element', id: null, value: portalTarget }],
+					userId: ctx.userId,
+				});
+				const created = (save as { ok: boolean; created_section_id?: number }).created_section_id;
+				if (!save.ok || created == null) {
+					// PHP :1220-1227 aborts the whole batch on portal-create failure.
+					throw new DedaloError('record.save_failed', {
+						coordinates: { tool: 'tool_import_files', section_tipo: targetSectionTipo },
+						message: `Error on create portal children: ${save.message}`,
+					});
+				}
+				targetSectionTipo = portalTarget;
+				targetSectionId = created;
+			}
+
+			// Role writes BEFORE the media move (PHP order :1254-1285) — the
+			// staged file is still in place for the target_date capture read.
+			if (ddoMap.length > 0) {
+				await setComponentsData({
+					ddoMap,
+					sectionTipo,
+					sectionId: resolvedSectionId,
+					targetSectionId,
+					currentFileName: fileName,
+					mediaFilePath: join(stagingDir(ctx.userId, keyDir), sanitizeSegment(tmpName)),
+					targetComponentModel: targetComponentModel ?? '',
+					componentsTempData,
+					userId: ctx.userId,
+					dataLang,
 				});
 			}
+			await ingest(targetSectionTipo, targetSectionId, keyDir, tmpName, extension, fileName);
+			imported += 1;
+		} catch (error) {
+			errors.push(`${file.name}: ${(error as Error).message}`);
+		} finally {
+			// Publish AFTER the file settles (in `finally`, so a failed file still
+			// advances the counter — otherwise the bar stalls on the first error).
+			// `errors` is sent every frame so the panel can list them as they
+			// happen instead of only at the terminal frame.
+			publish?.({
+				msg: `Importing ${fileName}`,
+				counter,
+				total: totalFiles,
+				total_ms: Date.now() - runStartedAt,
+				current_time: Date.now() - fileStartedAt,
+				file: fileName,
+				errors,
+			});
 		}
-		// CONSUME the staging form (WC-079). The "Values" the operator typed have
-		// now been written into real records, so the scratch rows must go or the
-		// NEXT batch silently inherits this run's metadata.
-		//
-		// Server-side, on the code path that actually consumed them — not a client
-		// hook. That is what makes it survive a closed tab, and what gives
-		// tool_import_marc21 / tool_import_zotero the same behaviour without either
-		// of them growing an on_done handler they never had.
-		//
-		// Best effort, and only when something was ACTUALLY imported. `result: true`
-		// is not success here — this handler returns it for a run where every single
-		// file failed (each per-file error is collected into `errors` and the loop
-		// carries on), so clearing on it would wipe the form after a run that wrote
-		// nothing and leave the operator retyping it.
-		if (imported > 0) {
-			try {
-				const { clearTemporalScratch } = await import(
-					'../../../src/core/section/record/temporal_store.ts'
-				);
-				await clearTemporalScratch(ctx.userId, 'tool_import_files');
-			} catch (error) {
-				console.warn('[tool_import_files] scratch clear failed:', (error as Error).message);
-			}
+	}
+	// CONSUME the staging form (WC-079). The "Values" the operator typed have
+	// now been written into real records, so the scratch rows must go or the
+	// NEXT batch silently inherits this run's metadata.
+	//
+	// Server-side, on the code path that actually consumed them — not a client
+	// hook. That is what makes it survive a closed tab, and what gives
+	// tool_import_marc21 / tool_import_zotero the same behaviour without either
+	// of them growing an on_done handler they never had.
+	//
+	// Best effort, and only when something was ACTUALLY imported. `ok:true` is
+	// not success here — this handler answers it for a run where every single
+	// file failed (each per-file error is collected into `errors` and the loop
+	// carries on), so clearing on it would wipe the form after a run that wrote
+	// nothing and leave the operator retyping it.
+	if (imported > 0) {
+		try {
+			const { clearTemporalScratch } = await import(
+				'../../../src/core/section/record/temporal_store.ts'
+			);
+			await clearTemporalScratch(ctx.userId, 'tool_import_files');
+		} catch (error) {
+			console.warn('[tool_import_files] scratch clear failed:', (error as Error).message);
 		}
-		return {
-			result: true,
-			msg: `OK. Imported ${imported} of ${filesData.length} (${nameMode} mode)${errors.length > 0 ? ' with errors' : ''}.`,
+	}
+	// Per-file failures are PAYLOAD: the batch never aborts on one file.
+	return ok(
+		{
+			summary: `OK. Imported ${imported} of ${filesData.length} (${nameMode} mode)${errors.length > 0 ? ' with errors' : ''}.`,
 			errors,
 			imported,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 export const tool: ToolServerModule = {

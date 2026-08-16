@@ -25,6 +25,7 @@
 */
 
 import {data_manager} from '../../../core/common/js/data_manager.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 import {common} from '../../../core/common/js/common.js'
 import {tool_common, wire_tool} from '../../../core/tools_common/js/tool_common.js'
 import {render_tool_print, PRINT_MAX} from './render_tool_print.js'
@@ -377,9 +378,10 @@ tool_print.prototype.get_record_ids = async function(options={}) {
 				rqo.sqo.limit		= want
 				rqo.sqo.offset		= 0
 				if (rqo.source) rqo.source.session_save = false
-				const api_response = await data_manager.request({ body: rqo })
-				self._last_record_total = api_response?.result?.total ?? api_response?.result?.pagination?.total ?? null
-				const ids = extract_section_ids(api_response?.result)
+				const api_response	= await data_manager.request({ body: rqo })
+				const read_data		= response_data(api_response)
+				self._last_record_total = read_data?.total ?? read_data?.pagination?.total ?? null
+				const ids = extract_section_ids(read_data)
 				if (ids.length) return ids.slice(0, want)
 			} catch (error) {
 				console.error('tool_print get_record_ids error:', error)
@@ -557,10 +559,10 @@ tool_print.prototype.fetch_print_datum = async function(record_ids) {
 	}
 
 	try {
-		const api_response = await data_manager.request({ body: rqo })
-		const result = api_response?.result
-		if (result && Array.isArray(result.data)) {
-			self._print_datum = { context: result.context || [], data: result.data }
+		const api_response	= await data_manager.request({ body: rqo })
+		const read_data		= response_data(api_response)
+		if (read_data && Array.isArray(read_data.data)) {
+			self._print_datum = { context: read_data.context || [], data: read_data.data }
 			return self._print_datum
 		}
 	} catch (e) {
@@ -577,11 +579,11 @@ tool_print.prototype.fetch_print_datum = async function(record_ids) {
 * The read returns a `sections` container element whose `entries` are the record
 * locators ({section_tipo, section_id, …}); fall back to rows that directly carry
 * section_id. De-duplicates while preserving order.
-* @param {Object} datum - a read response (.result), its .data array, or .datum
+* @param {Object} datum - a read payload (`response_data`), its .data array, or .datum
 * @returns {Array<number|string>} ordered, unique section_id values
 */
 const extract_section_ids = function(datum) {
-	const data = (datum && (datum.data || (datum.result && datum.result.data)))
+	const data = (datum && datum.data)
 		|| (Array.isArray(datum) ? datum : null)
 	if (!Array.isArray(data)) return []
 	const container = data.find(el => el && el.typo==='sections' && Array.isArray(el.entries))

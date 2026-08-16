@@ -12,6 +12,7 @@
 
 import {
 	engineDenied,
+	failAction,
 	gated,
 	type WidgetHandler,
 	type WidgetModule,
@@ -88,11 +89,7 @@ function moveWidgetGetValue(widget: string): WidgetHandler {
 		const files = listDefinitionFiles(
 			widget as import('../../update/transform/definitions.ts').MoveWidgetId,
 		);
-		return {
-			result: { body: MOVE_WIDGET_BODIES[widget] ?? '', files },
-			msg: 'OK. Request done successfully',
-			errors: [],
-		};
+		return { data: { body: MOVE_WIDGET_BODIES[widget] ?? '', files } };
 	};
 }
 
@@ -115,16 +112,20 @@ function moveWidgetRun(id: string): WidgetHandler {
 			options,
 			executor,
 		);
-		// The client reads result/msg/errors; the counts/sample/dryRun ride along
-		// as diagnostic fields (the widget renders the envelope generically).
+		// A refused/failed run throws with the transform's own sentence; a
+		// successful one keeps msg/errors and the diagnostic fields the widget
+		// renders generically (dry_run / counts / sample).
+		if (!report.ok) {
+			failAction(
+				report.errors.length === 0 ? report.msg : `${report.msg} (${report.errors.join('; ')})`,
+			);
+		}
 		return {
-			result: report.result,
+			data: report.ok,
 			msg: report.msg,
-			errors: report.errors,
-			dry_run: report.dryRun,
-			counts: report.counts,
-			sample: report.sample,
-		} as unknown as WidgetResponse;
+			...(report.errors.length === 0 ? {} : { errors: report.errors }),
+			extend: { dry_run: report.dryRun, counts: report.counts, sample: report.sample },
+		};
 	};
 }
 

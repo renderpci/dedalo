@@ -139,3 +139,236 @@ export function normalizeSectionIdTypes<T>(value: T): T {
 	};
 	return walk(value) as T;
 }
+
+/**
+ * DELIBERATE WIRE DIVERGENCE — ERROR ENVELOPE v2 (the WC-001 gate-side
+ * transform pattern; the frozen fixtures are NOT edited — a re-harvest is
+ * impossible by definition, see engineering/ORACLE_HARVEST.md).
+ *
+ * The frozen PHP store speaks the dd_manager envelope
+ * `{result, msg, errors, …}` (an error is `result:false` + free English/
+ * Spanish `msg` + `errors:[token]`). The TS engine's v2 envelope is
+ * `{ok:true, data}` / `{ok:false, error:{code, details?, …}}` (plan §1.2:
+ * `error.code` is a registry code, the human text is label-driven and NOT a
+ * wire fact). Comparing raw bytes across that seam is impossible, so this
+ * transform PROJECTS a frozen PHP body onto the v2 fields a gate may compare:
+ *
+ *   success (`result` !== false) → `{ok:true, data:<frozen result>}`;
+ *   error   (`result` === false) → `{ok:false, error:{code, details?}}`.
+ *
+ * What keeps it honest (the "starts EMPTY of cleverness" rule):
+ *   - TOP-LEVEL ONLY, never recursive. widgets_differential.json carries a
+ *     nested `connection_status:{result:false,msg}` payload (a diffusion
+ *     element's DB probe) — that is DATA, not an envelope, and stays verbatim
+ *     inside `data`. A dd_manager error envelope ALWAYS carries an `errors`
+ *     key (8/8 frozen bodies); a `result:false` object without one is
+ *     therefore `not_an_envelope`, matched:false — a gate asserting
+ *     matched===true reddens instead of quietly passing.
+ *   - The error mapping is a TOTAL, EXPLICIT table keyed by the exact frozen
+ *     `(msg, errors)` pair (FROZEN_ERROR_BODIES). A `result:false` envelope
+ *     that is not in the table THROWS: nothing is inferred from text, so a new
+ *     or drifted frozen error can never be silently "classified".
+ *   - `php_fault_not_reproduced` = the frozen body is a PHP CRASH surfaced
+ *     through dd_manager's Throwable catch (`Call to a member function … on
+ *     false`, a null-typed argument). TS does not reproduce PHP faults; those
+ *     gates assert nothing about the error today and this transform adds
+ *     nothing (matched:true so the gate's totality assertion holds,
+ *     projection:null so no equality can be built on it).
+ *   - `details` carries only typed scalars derived from the frozen text
+ *     (delete_children_guard: the refused ids), never the text itself.
+ *
+ * Every caller MUST assert `matched === true` (the get_widget_data
+ * `stripStateTotalItems` anti-vacuity pattern) — a transform that no-ops is
+ * how a divergence becomes a regression the day the shape moves.
+ *
+ * FIXTURE-SIDE ONLY (P4, 2026-08-16 — the compat mirror is gone from the TS
+ * wire, WC-2026-08-16-error-envelope-compat-removal): this transform is applied
+ * to FROZEN PHP bodies and never to a TS body. A TS body carries `ok` and no
+ * `result`; handed one, the transform REFUSES it (`kind:'ts_body_refused'`,
+ * matched:false) instead of projecting — so a server regression back to the
+ * `result:false` prose (which would make a TS body look adoptable) reddens the
+ * gate that fed it, and a gate that mistakenly projects the TS side reddens
+ * on `matched`. test/parity/error_envelope_transform.test.ts pins both.
+ */
+export type ErrorEnvelopeKind =
+	| 'error'
+	| 'ok'
+	| 'not_an_envelope'
+	| 'php_fault_not_reproduced'
+	| 'ts_body_refused';
+
+export interface AdoptedErrorEnvelope {
+	matched: boolean;
+	kind: ErrorEnvelopeKind;
+	/** `{ok:true,data}` | `{ok:false,error:{code,details?}}` | null (fault / not an envelope). */
+	projection: unknown;
+}
+
+export interface FrozenErrorBodyEntry {
+	/** Which harvest gate file carries this body (documentation + totality test). */
+	gate: string;
+	/** Exact frozen `msg` (string; get_widget_data emits a string ARRAY). */
+	msg: unknown;
+	/** Exact frozen `errors`. */
+	errors: unknown;
+	kind: 'error' | 'php_fault_not_reproduced';
+	/** v2 registry code (plan §4); absent for php faults. */
+	code?: string;
+	/** Typed scalars derived from the frozen text; absent when there are none. */
+	details?: Record<string, unknown>;
+}
+
+/**
+ * The refused ids of a delete_children_guard body — parsed, not hand-typed:
+ * PHP prints the skipped ids as a pretty JSON array after `not deleted: ` and
+ * repeats each as `record not deleted: <id>` in `errors`. Both sources must
+ * agree, or the table is built on a body this parser does not understand.
+ * Ids are INTS (WC-2026-08-10-section-id-int-canonical: TS addresses are ints
+ * on the wire; the frozen text carries them as strings).
+ */
+function parseNotDeletedIds(msg: string, errors: readonly string[]): number[] {
+	const marker = 'not deleted: ';
+	const at = msg.indexOf(marker);
+	if (at < 0) throw new Error(`delete_children_guard: no "${marker}" in frozen msg: ${msg}`);
+	const fromMsg = (JSON.parse(msg.slice(at + marker.length)) as string[]).map((id) => Number(id));
+	const fromErrors = errors
+		.map((entry) => /^record not deleted: (\d+)$/.exec(entry)?.[1])
+		.filter((id): id is string => id !== undefined)
+		.map(Number);
+	if (JSON.stringify(fromMsg) !== JSON.stringify(fromErrors)) {
+		throw new Error(
+			`delete_children_guard: msg ids ${JSON.stringify(fromMsg)} != errors ids ${JSON.stringify(fromErrors)}`,
+		);
+	}
+	return fromMsg;
+}
+
+const DELETE_CHILDREN_GUARD_MSG =
+	'Error. Request failed. [4] Some records were not deleted: [\n    "1363"\n]';
+const DELETE_CHILDREN_GUARD_ERRORS = [
+	'Se ha omitido la eliminación del registro actual porque tiene hijos : 1363 [1364]',
+	'record not deleted: 1363',
+];
+
+/**
+ * THE TOTAL TABLE — every root `result:false` body in
+ * test/parity/fixtures/oracle_harvest/ (8 bodies, 7 files; pinned by
+ * test/parity/error_envelope_transform.test.ts). Adding a frozen error body
+ * without a row here throws at classification time.
+ */
+export const FROZEN_ERROR_BODIES: readonly FrozenErrorBodyEntry[] = [
+	{
+		gate: 'section_terms_differential',
+		msg: 'Error. Invalid or empty locators',
+		errors: ['bad_locators'],
+		kind: 'error',
+		code: 'section.bad_locators',
+	},
+	{
+		gate: 'indexation_grid_differential',
+		msg: 'Error. Request failed Trigger Error: (get_indexation_grid) Empty source properties (section_tipo, section_id, tipo are mandatory)',
+		errors: ['invalid rqo source'],
+		kind: 'error',
+		code: 'request.invalid_source',
+	},
+	{
+		// PHP: `Empty widget_obj for widget <name>` — the widget NAME is not
+		// defined on the component (unknown widget_name).
+		gate: 'get_widget_data_differential',
+		msg: [' Empty widget_obj for widget no_such_widget'],
+		errors: [],
+		kind: 'error',
+		code: 'widget.not_defined',
+	},
+	{
+		// PHP: `Empty defined widgets for <model> : <label> [<tipo>]` — the
+		// component defines NO widgets at all (widgets-less tipo).
+		gate: 'get_widget_data_differential',
+		msg: [' Empty defined widgets for dd_component_info : Nombre [rsc85] '],
+		errors: [],
+		kind: 'error',
+		code: 'widget.empty',
+	},
+	{
+		gate: 'delete_children_guard_differential',
+		msg: DELETE_CHILDREN_GUARD_MSG,
+		errors: DELETE_CHILDREN_GUARD_ERRORS,
+		kind: 'error',
+		code: 'record.delete_children_refused',
+		details: {
+			not_deleted: parseNotDeletedIds(DELETE_CHILDREN_GUARD_MSG, DELETE_CHILDREN_GUARD_ERRORS),
+		},
+	},
+	{
+		// PHP TypeError inside component_relation_index (null section_id).
+		gate: 'relation_corpus_config',
+		msg: 'Throwable Exception when calling Dédalo API: \n  locator::set_section_id(): Argument #1 ($value) must be of type string|int, null given, called in v7_php_frozen/master_dedalo/core/component_relation_index/class.component_relation_index.php on line 878',
+		errors: ['An unexpected error occurred'],
+		kind: 'php_fault_not_reproduced',
+	},
+	{
+		// PHP fatal building a section context on a tipo with no section_list.
+		gate: 'section_list_css_differential',
+		msg: 'Throwable Exception when calling Dédalo API: \n  Call to a member function get_json() on false',
+		errors: ['An unexpected error occurred'],
+		kind: 'php_fault_not_reproduced',
+	},
+	{
+		// PHP fatal building a section on a non-section tipo (tool start).
+		gate: 'section_tool_start_differential',
+		msg: 'Throwable Exception when calling Dédalo API: \n  Call to a member function set_lang() on false',
+		errors: ['An unexpected error occurred'],
+		kind: 'php_fault_not_reproduced',
+	},
+];
+
+/** Exact-pair key: the frozen `(msg, errors)` bytes, nothing looser. */
+function frozenErrorBodyKey(msg: unknown, errors: unknown): string {
+	return JSON.stringify([msg ?? null, errors ?? null]);
+}
+
+const FROZEN_ERROR_BODY_INDEX: ReadonlyMap<string, FrozenErrorBodyEntry> = (() => {
+	const index = new Map<string, FrozenErrorBodyEntry>();
+	for (const entry of FROZEN_ERROR_BODIES) {
+		const key = frozenErrorBodyKey(entry.msg, entry.errors);
+		if (index.has(key)) throw new Error(`FROZEN_ERROR_BODIES: duplicate row ${key}`);
+		index.set(key, entry);
+	}
+	return index;
+})();
+
+export function adoptErrorEnvelopeV2(body: unknown): AdoptedErrorEnvelope {
+	if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+		return { matched: false, kind: 'not_an_envelope', projection: null };
+	}
+	// A TS envelope v2 body (`ok` present) is never adopted: the transform is
+	// fixture-side only. A body carrying BOTH `ok` and `result` is a converter
+	// regression (the compat mirror came back) — refused the same way.
+	if ('ok' in body) {
+		return { matched: false, kind: 'ts_body_refused', projection: null };
+	}
+	if (!('result' in body)) {
+		return { matched: false, kind: 'not_an_envelope', projection: null };
+	}
+	const envelope = body as { result: unknown; msg?: unknown; errors?: unknown };
+	if (envelope.result !== false) {
+		return { matched: true, kind: 'ok', projection: { ok: true, data: envelope.result } };
+	}
+	if (!('errors' in envelope)) {
+		// `result:false` without `errors` is a nested payload (connection_status),
+		// never a dd_manager error envelope.
+		return { matched: false, kind: 'not_an_envelope', projection: null };
+	}
+	const entry = FROZEN_ERROR_BODY_INDEX.get(frozenErrorBodyKey(envelope.msg, envelope.errors));
+	if (entry === undefined) {
+		throw new Error(
+			`unclassified frozen error body: ${JSON.stringify({ msg: envelope.msg, errors: envelope.errors })}`,
+		);
+	}
+	if (entry.kind === 'php_fault_not_reproduced') {
+		return { matched: true, kind: 'php_fault_not_reproduced', projection: null };
+	}
+	const error: { code: string; details?: Record<string, unknown> } = { code: entry.code as string };
+	if (entry.details !== undefined) error.details = structuredClone(entry.details);
+	return { matched: true, kind: 'error', projection: { ok: false, error } };
+}

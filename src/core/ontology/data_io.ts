@@ -14,7 +14,7 @@
  *   5. exportLlmMap           — write <io>/ontology_llm_map.json (built by
  *                               src/ai/mcp/tools/llm_map.ts, lazy import)
  *
- * Error semantics mirror PHP: soft failures return {result:false, errors:[…]}
+ * Error semantics mirror PHP: soft failures return {ok:false, errors:[…]}
  * responses; a COPY export whose output file never appears THROWS (PHP throws
  * an Exception there by design — the tool-level caller catches and aborts).
  *
@@ -62,9 +62,14 @@ import { getColumnNameByModel, getMatrixTableFromTipo, getModelByTipo } from './
 const INFO_SECTION_TIPO = 'dd0';
 const INFO_SECTION_ID = 1;
 
-/** The PHP-shaped response every IO function returns. */
+/**
+ * The outcome every IO function returns — an INTERNAL narrative object, not a
+ * wire envelope: the tool/widget callers aggregate `msg`/`errors` across many
+ * TLDs and build the response themselves. `ok` is the discriminator (never
+ * `result`: that name is the legacy wire body's, and this shape is not one).
+ */
 export interface OntologyIoResponse {
-	result: boolean;
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	[key: string]: unknown;
@@ -358,7 +363,7 @@ export async function updateOntologyInfo(userId: number): Promise<boolean> {
  */
 export async function exportOntologyInfo(): Promise<OntologyIoResponse> {
 	const response: OntologyIoResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed',
 		errors: [],
 	};
@@ -402,7 +407,7 @@ export async function exportOntologyInfo(): Promise<OntologyIoResponse> {
 	}
 
 	const written = describeWrittenFile(pathFile, saved);
-	response.result = true;
+	response.ok = true;
 	response.msg = `OK. Ontology info${written.note}`;
 	response.path = written.path;
 	response.size = written.bytes;
@@ -503,7 +508,7 @@ function confinedCopyPath(ioPath: string, fileName: string): string | null {
  */
 export async function exportToFile(tld: string): Promise<OntologyIoResponse> {
 	const response: OntologyIoResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed',
 		errors: [],
 	};
@@ -548,7 +553,7 @@ export async function exportToFile(tld: string): Promise<OntologyIoResponse> {
 	}
 
 	const written = describeWrittenFile(filePath);
-	response.result = true;
+	response.ok = true;
 	response.msg = `OK. Exported ${sectionTipo}${written.note}`;
 	response.path = written.path;
 	response.size = written.bytes;
@@ -564,7 +569,7 @@ export async function exportToFile(tld: string): Promise<OntologyIoResponse> {
  */
 export async function exportPrivateListsToFile(): Promise<OntologyIoResponse> {
 	const response: OntologyIoResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed',
 		errors: [],
 	};
@@ -592,7 +597,7 @@ export async function exportPrivateListsToFile(): Promise<OntologyIoResponse> {
 	}
 
 	const written = describeWrittenFile(filePath);
-	response.result = true;
+	response.ok = true;
 	response.msg = `OK. Private lists (matrix_dd)${written.note}`;
 	response.path = written.path;
 	response.size = written.bytes;
@@ -612,7 +617,7 @@ export async function exportPrivateListsToFile(): Promise<OntologyIoResponse> {
  */
 export async function exportLlmMap(): Promise<OntologyIoResponse> {
 	const response: OntologyIoResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed',
 		errors: [],
 	};
@@ -651,7 +656,7 @@ export async function exportLlmMap(): Promise<OntologyIoResponse> {
 	}
 
 	const written = describeWrittenFile(pathFile, saved);
-	response.result = true;
+	response.ok = true;
 	response.msg = `OK. LLM map: ${map.length} sections${
 		skipped.length === 0 ? '' : ` (${skipped.length} skipped)`
 	}${written.note}`;

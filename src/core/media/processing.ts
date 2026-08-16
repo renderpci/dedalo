@@ -23,6 +23,7 @@
 import { copyFileSync, existsSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { canonicalCoverExtension, type MediaTypeSpec } from '../concepts/media.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { withTempSibling, writeAtomically, writeAtomicallySync } from './atomic.ts';
 import {
 	assertWritableTargetExtension,
@@ -60,7 +61,9 @@ const PDF_THUMB_QUALITY = 75;
 /** Resolve the media root for these path options (scratch override or config). */
 function _rootOf(pathOpts: MediaPathOptions): string {
 	const root = pathOpts.mediaRoot ?? config.media.rootPath;
-	if (root === null || root === undefined) throw new Error('MEDIA_PATH not configured');
+	if (root === null || root === undefined) {
+		throw new DedaloError('media.not_configured', { message: 'MEDIA_PATH not configured' });
+	}
 	return root;
 }
 
@@ -524,7 +527,7 @@ export async function buildThumbVersion(
  * FAILURE POLICY: every cover is attempted and the failures come back as VALUES,
  * so an extension this host cannot encode never costs the record the covers it
  * CAN build — and never turns a pdf build the operator watched succeed into a
- * `result:false`. `regeneratePdf` additionally builds the thumb before this runs.
+ * failure. `regeneratePdf` additionally builds the thumb before this runs.
  */
 export async function buildPdfCovers(
 	spec: MediaTypeSpec,
@@ -628,14 +631,20 @@ export function derivedTwinQualities(spec: MediaTypeSpec): string[] {
  */
 function assertTwinTier(spec: MediaTypeSpec, quality: string): void {
 	if (spec.masterQualities.includes(quality)) {
-		throw new Error(
-			`buildAlternateVersions: '${quality}' is a MASTER tier of ${spec.model} — a twin there would be resolvable as the master itself (see derivedTwinQualities)`,
-		);
+		// PUBLIC: `quality` is one of the type's own tiers and `spec.model` is
+		// engine data — no raw caller string, no path (ERRORS_SPEC §2.2).
+		const reason = `buildAlternateVersions: '${quality}' is a MASTER tier of ${spec.model} — a twin there would be resolvable as the master itself (see derivedTwinQualities)`;
+		throw new DedaloError('media.unsupported_operation', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 	if (quality === config.media.thumb.quality) {
-		throw new Error(
-			`buildAlternateVersions: '${quality}' is the thumb tier — files_info scans it with the '${config.media.thumb.extension}' extension alone, so a twin there could never be indexed`,
-		);
+		const reason = `buildAlternateVersions: '${quality}' is the thumb tier — files_info scans it with the '${config.media.thumb.extension}' extension alone, so a twin there could never be indexed`;
+		throw new DedaloError('media.unsupported_operation', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 }
 
@@ -1185,9 +1194,9 @@ export interface RegeneratePdfResult {
  * IT RETURNS A RESULT OBJECT for the same reason regenerateImage does (D9): a
  * cover failure is non-fatal, so with a `string[]` return it had nowhere to go
  * and every caller reported a complete success. It also removes an asymmetry the
- * operator could see — the image path kept `result:true` with the failure in
+ * operator could see — the image path reported SUCCESS with the failure in
  * `errors`, while the pdf path turned a build whose copy, thumb and jpg cover all
- * landed into a red `result:false`.
+ * landed into a red failure.
  */
 export async function regeneratePdf(
 	spec: MediaTypeSpec,

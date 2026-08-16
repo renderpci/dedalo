@@ -29,6 +29,16 @@ function newSession(userId: number): { token: string; csrf: string } {
 }
 
 const context = { requestId: 'upload-test', startedAt: 0 };
+/** The envelope-v2 error object (engineering/ERRORS_SPEC.md §3). */
+interface ApiError {
+	code: string;
+	message: string;
+	category: string;
+}
+interface ErrBody {
+	ok: boolean;
+	error: ApiError;
+}
 const UPLOAD_USER = 3;
 /** Every key_dir this file writes into — torn down before and after the run. */
 const KEY_DIRS = ['kd_ep', 'kd_chunk', 'kd_collide', 'kd_corrupt', 'kd_badid'];
@@ -65,6 +75,9 @@ describe('media upload endpoint (fail-closed auth/CSRF)', () => {
 	test.if(HAVE_MAGICK)('anonymous upload → 404 (no existence leak)', async () => {
 		const res = await handleRequest(multipartRequest(await jpegBlob(), {}), context);
 		expect(res.status).toBe(404);
+		const body = (await res.json()) as ErrBody;
+		expect(body.ok).toBe(false);
+		expect(body.error.code).toBe('resource.not_found');
 	});
 
 	test.if(HAVE_MAGICK)('valid session but missing/blank CSRF → 403', async () => {
@@ -74,17 +87,20 @@ describe('media upload endpoint (fail-closed auth/CSRF)', () => {
 			context,
 		);
 		expect(res.status).toBe(403);
-		// The rejection body KEY SET is contractual and had no coverage. It is
-		// exactly {result,msg,errors}: `errors[]` is the one machine-readable
-		// carrier `upload_transport.js` reads (then falls back to `msg`). The
-		// Dropzone-only `error` string key is GONE with service_dropzone
-		// (WC-2026-08-03-service-dropzone-folded-into-service-upload) — and this
-		// CSRF branch, which previously carried `error` and NO `errors`, gains the
-		// array so it is not left without a machine-readable error at all.
+		// The rejection body KEY SET is contractual and had no coverage. Envelope
+		// v2 (engineering/ERRORS_SPEC.md §3): `error.code` is the machine-readable
+		// carrier and `error.message` the sentence; the PHP-era compat mirror
+		// (`result`/`msg`/`errors`) was REMOVED on 2026-08-16
+		// (WC-2026-08-16-error-envelope-compat-removal). Asserting the key set —
+		// not just the presence of `error` — is what stops an undeclared key (the
+		// Dropzone-only `error` STRING removed with service_dropzone,
+		// WC-2026-08-03-service-dropzone-folded-into-service-upload) coming back,
+		// and pins that the retired mirror does not grow back.
 		const body = (await res.json()) as Record<string, unknown>;
-		expect(Object.keys(body).sort()).toEqual(['errors', 'msg', 'result']);
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['CSRF validation failed']);
+		expect(Object.keys(body).sort()).toEqual(['error', 'ok', 'request_id']);
+		expect(body.ok).toBe(false);
+		expect((body.error as ApiError).code).toBe('auth.csrf_failed');
+		expect((body.error as ApiError).message).toBe('CSRF validation failed');
 	});
 
 	test.if(HAVE_MAGICK)('valid session + CSRF stages the file and returns file_data', async () => {
@@ -97,8 +113,16 @@ describe('media upload endpoint (fail-closed auth/CSRF)', () => {
 			context,
 		);
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { result: boolean; file_data: Record<string, unknown> };
-		expect(body.result).toBe(true);
+		const body = (await res.json()) as {
+			ok: boolean;
+			data: boolean;
+			file_data: Record<string, unknown>;
+		};
+		expect(body.ok).toBe(true);
+		// `data` is the boolean outcome and `file_data` a TOP-LEVEL extension key:
+		// upload_transport.js gates every part on the outcome flag and reads
+		// `api_response.file_data`, so `data` has to be exactly `true`.
+		expect(body.data).toBe(true);
 		expect(body.file_data.complete).toBe(true);
 		expect(body.file_data.extension).toBe('jpg');
 		expect(body.file_data.tmp_name).toBe('shot.jpg');
@@ -157,10 +181,10 @@ describe('chunked upload contract through the real server (the browser flow)', (
 			);
 			expect(joinRes.status).toBe(200);
 			const joinBody = (await joinRes.json()) as {
-				result: boolean;
+				data: boolean;
 				file_data: Record<string, unknown>;
 			};
-			expect(joinBody.result).toBe(true);
+			expect(joinBody.data).toBe(true);
 			expect(joinBody.file_data.tmp_name).toBe('c.jpg');
 			expect(joinBody.file_data.extension).toBe('jpg');
 			expect(joinBody.file_data.complete).toBe(true);
@@ -328,17 +352,19 @@ describe('join verification reaches past the first 8192 bytes', () => {
 		const hostile = new Uint8Array([0xff, 0xd8, 0xff, ...new Array(16384).fill(0x00)]);
 		const { status, body } = await upload(s, 'hostile.jpg', hostile);
 		expect(status).toBe(400);
-		// The rejection body KEY SET is pinned: exactly {result,msg,errors}. The
-		// Dropzone-only `error` string key was removed with service_dropzone
+		// The rejection body KEY SET is pinned: envelope v2 plus the bounded
+		// compat trio, and nothing else. The Dropzone-only `error` STRING key was
+		// removed with service_dropzone
 		// (WC-2026-08-03-service-dropzone-folded-into-service-upload); asserting
-		// the key set — not just the presence of `errors` — is what stops it, or
-		// any other undeclared key, being reintroduced.
-		expect(Object.keys(body).sort()).toEqual(['errors', 'msg', 'result']);
-		expect(body.result).toBe(false);
-		expect(body.msg).toBe('Upload rejected');
-		expect(Array.isArray(body.errors)).toBe(true);
-		expect((body.errors as string[]).length).toBe(1);
-		expect((body.errors as string[])[0]).toContain('verification failed');
+		// the key set — not just the presence of the error object — is what stops
+		// it, or any other undeclared key, being reintroduced.
+		expect(Object.keys(body).sort()).toEqual(['error', 'ok', 'request_id']);
+		expect(body.ok).toBe(false);
+		expect((body.error as ApiError).code).toBe('media.upload_rejected');
+		// The VALIDATOR'S OWN SENTENCE still reaches the curator: the code is
+		// public-disclosure, so the refusal reason rides `error.message` instead of
+		// a raw exception string.
+		expect((body.error as ApiError).message).toContain('verification failed');
 		expect(existsSync(resolve(stagingDir(UPLOAD_USER, 'kd_corrupt'), 'hostile.jpg'))).toBe(false);
 	});
 
@@ -429,10 +455,12 @@ describe('upload_id is validated, not sanitized', () => {
 			);
 			expect(res.status).toBe(400);
 			const body = (await res.json()) as Record<string, unknown>;
-			expect(body.result).toBe(false);
-			// `errors[]`, not the removed Dropzone-only `error` string
+			expect(body.ok).toBe(false);
+			expect((body.error as ApiError).code).toBe('media.upload_rejected');
+			// The refusal REASON, on `error.message` (envelope v2) — never the
+			// removed Dropzone-only `error` string
 			// (WC-2026-08-03-service-dropzone-folded-into-service-upload).
-			expect(String((body.errors as string[])[0])).toContain('invalid upload_id');
+			expect((body.error as ApiError).message).toContain('invalid upload_id');
 			// Nothing was staged under a rewritten id.
 			expect(existsSync(stagingDir(UPLOAD_USER, 'kd_badid'))).toBe(false);
 		});

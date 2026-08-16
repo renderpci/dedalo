@@ -19,91 +19,43 @@
 
 
 
+// imports (module Service Worker — registered with {type:'module'} by login.js
+// run_service_worker; the shared transport is what data_manager.js and
+// worker_cache.js use too, so there is no third copy of the request algorithm)
+	import {fetch_api} from './common/js/api_transport.js'
+	import {response_data} from './common/js/api_error.js'
+
+
+
 /**
- * DATA_MANAGER REQUEST CUSTOM
- * Avoid to use data_manager module to allow happy Firefox users
+ * API_REQUEST
+ * One JSON POST through the shared transport. Resolves the envelope; on failure
+ * the envelope carries `error` (an ApiError) — read `response_data()` for the
+ * payload. Never rejects.
+ * @param {Object} options - {url, body}
+ * @return Promise<Object>
  */
-const data_manager = {
-	request : async function(options) {
-
-		// options (local variables prevent shared-state races on concurrent calls)
-			const url			= options.url
-			const method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-			const mode			= options.mode || 'cors' // no-cors, cors, *same-origin
-			const cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-			const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
-			const headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-			const redirect		= options.redirect || 'follow' // manual, *follow, error
-			const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
-			const body			= options.body // body data type must match "Content-Type" header
-
-		// handle_errors
-			const handle_errors = function(response) {
-				if (!response.ok) {
-					console.warn("-> HANDLE_ERRORS response:",response);
-					throw Error(response.statusText);
-				}
-				return response;
-			}
-
-		const api_response = fetch(
-			url,
-			{
-				method		: method,
-				mode		: mode,
-				cache		: cache,
-				credentials	: credentials,
-				headers		: headers,
-				redirect	: redirect,
-				referrer	: referrer,
-				body		: JSON.stringify(body)
-			})
-			.then(handle_errors)
-			.then(response => {
-				const json_parsed = response.json().then((result)=>{
-
-					if (result.error) {
-
-						// debug console message
-							console.error("result error:",result);
-
-						// alert msg to user
-							const msg = result.msg || result.error
-							console.error("An error occurred in the connection with the API (worker cache data_manager). \n" + msg);
-
-						// custom behaviors
-							switch (result.error) {
-								case 'not_logged':
-									// redirect to login page
-									// location.reload();
-									console.warn('Result error. no logged!', result);
-									break;
-
-								default:
-									// write message to the console
-									break;
-							}
-					}
-
-					return result
-				})
-
-				return json_parsed
-			})
-			.catch(error => {
-				console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
-				console.warn("options:", options);
-				return {
-					result	: false,
-					msg		: error.message,
-					error	: error
-				}
-			});
-
-
-		return api_response
+const api_request = async (options) => {
+	const {json, api_error} = await fetch_api(
+		options.url,
+		{
+			method		: 'POST',
+			mode		: 'cors',
+			cache		: 'no-cache',
+			credentials	: 'same-origin',
+			headers		: {'Content-Type': 'application/json'},
+			redirect	: 'follow',
+			referrer	: 'no-referrer',
+			body		: JSON.stringify(options.body)
+		},
+		{timeout_ms: 30000, retries: 3, health_url: '/health'}
+	)
+	if (api_error) {
+		console.error('[sw] API request failed:', api_error.code, api_error.message, api_error)
+		return {ok:false, error:api_error}
 	}
-}//end data_manager
+	return json
+}//end api_request
 
 
 
@@ -140,7 +92,7 @@ const load_files_list = async () => {
 	}
 
 	// get_dedalo_files from API
-		const api_response = await data_manager.request({
+		const api_response = await api_request({
 			url		: './api/v1/json/', // DEDALO_API_URL,
 			body	: {
 				action	: 'get_dedalo_files',
@@ -148,14 +100,15 @@ const load_files_list = async () => {
 			}
 		});
 
-	// API error case
-		if (!api_response.result) {
+	// API error case (an ApiError under `error`; nothing to do inside a SW but log)
+		const files = response_data(api_response)
+		if (api_response.error || !Array.isArray(files)) {
 			console.error('Error on get api response:', api_response);
 			return null
 		}
 
 	// fix values
-		files_list = api_response.result.map(el => el.url)
+		files_list = files.map(el => el.url)
 		// build a Set with absolute URLs for fast lookups in the fetch handler
 		files_set = new Set(files_list.map(url => new URL(url, self.location.origin).href))
 		// the cache is named after the served code (see cache_name above)

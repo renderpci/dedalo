@@ -71,14 +71,14 @@ beforeAll(async () => {
 				} as never,
 			)
 		).body as {
-			result?: { data?: Record<string, unknown>[]; context?: Record<string, unknown>[] };
+			data?: { data?: Record<string, unknown>[]; context?: Record<string, unknown>[] };
 		};
 		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 		results.set(testCase.model, {
 			php: normalizeSectionIdTypes((phpResult.result?.data?.[0] ?? {}) as Record<string, unknown>),
-			ts: normalizeSectionIdTypes((tsResult.result?.data?.[0] ?? {}) as Record<string, unknown>),
+			ts: normalizeSectionIdTypes((tsResult.data?.data?.[0] ?? {}) as Record<string, unknown>),
 			phpContext: normalizeSectionIdTypes(phpResult.result?.context ?? []),
-			tsContext: normalizeSectionIdTypes(tsResult.result?.context ?? []),
+			tsContext: normalizeSectionIdTypes(tsResult.data?.context ?? []),
 		});
 	}
 }, 120000);

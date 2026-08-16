@@ -45,6 +45,7 @@
 // over data_manager.request() directly, because tool_request adds the tool id,
 // caller context, and security token automatically.
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 // import get_instance to create and init sections or components
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 // tool_common: base lifecycle (init/build/render), tool_request, wire_tool
@@ -391,7 +392,7 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 		const api_response = await data_manager.request({
 			body : rqo
 		})
-		self.main_element.context = api_response.result.context
+		self.main_element.context = response_data(api_response).context
 
 	// second, with the context, load the full component (context and data).
 	// clone the context so tool_common's load_component can extend it without

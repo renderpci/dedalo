@@ -1,7 +1,9 @@
 /**
  * Connection probes (PHP installer test_db_connection / test_diffusion_connection).
- * Both take POSTED credentials and answer the client contract `{result, msg,
- * ...}`. The Postgres probe additionally distinguishes "DB missing" from
+ * Both take POSTED credentials and answer a PROBE REPORT (`{ok, msg, …}`) that
+ * the install router serves as an ok:true envelope — an unreachable server is
+ * the answer to the question, not a failure of the engine to answer it. The
+ * Postgres probe additionally distinguishes "DB missing" from
  * "auth/host wrong" by falling back to the `postgres` maintenance DB, so the
  * wizard can tell the operator whether to create the database.
  *
@@ -20,7 +22,7 @@ export async function testDbConnection(o: Record<string, unknown>): Promise<DbPr
 	const conn = pgConnFromOptions(o);
 	if (conn.database === '' || conn.user === '') {
 		return {
-			result: false,
+			ok: false,
 			can_connect: false,
 			db_exists: false,
 			can_create: false,
@@ -40,7 +42,7 @@ export async function testDbConnection(o: Record<string, unknown>): Promise<DbPr
 }
 
 export interface DiffusionProbeResult {
-	result: boolean;
+	ok: boolean;
 	msg: string;
 }
 
@@ -50,5 +52,9 @@ export async function testDiffusionConnection(
 ): Promise<DiffusionProbeResult> {
 	// Reach MariaDB ONLY through the diffusion facade (boundary_seam rule).
 	const { probeDiffusionConnection } = await import('../../diffusion/api/info.ts');
-	return probeDiffusionConnection(diffusionConnFromOptions(o));
+	// The facade answers `{ok, code?, message}` (P1 error sweep); map it to the
+	// install step contract here so nothing envelope-shaped crosses the install
+	// boundary.
+	const status = await probeDiffusionConnection(diffusionConnFromOptions(o));
+	return { ok: status.ok, msg: status.message };
 }

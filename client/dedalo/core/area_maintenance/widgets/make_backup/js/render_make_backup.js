@@ -8,6 +8,7 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {response_data} from '../../../../common/js/api_error.js'
 
 
 
@@ -141,7 +142,7 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 			ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'response_node',
-				inner_html		: JSON.stringify(api_response, null, 2),
+				text_content	: JSON.stringify(api_response, null, 2),
 				parent			: body_response
 			})
 		}else{
@@ -294,7 +295,7 @@ const get_content_data = async function(self) {
 			// call API to fire process and get PID
 			const api_response = await self.make_backup()
 
-			if (!api_response || !api_response.result) {
+			if (!api_response || !response_data(api_response)) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'error',
@@ -399,9 +400,10 @@ const refresh_files_list = async (self, type, container) => {
 	})
 
 	// message from API response
-	const msg = api_response?.result || ['Unknown error']
+	const msg = response_data(api_response) || ['Unknown error']
 	// print list
-	ui.update_node_content(container, JSON.stringify(msg, null, 2))
+	// server text as TEXT, never an HTML sink
+	container.textContent = JSON.stringify(msg, null, 2)
 }//end refresh_files_list
 
 

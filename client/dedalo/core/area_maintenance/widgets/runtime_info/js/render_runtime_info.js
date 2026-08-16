@@ -6,6 +6,8 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -140,14 +142,14 @@ const get_content_data_edit = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'runtime_summary',
-				inner_html		: summary,
+				text_content	: String(summary),
 				parent			: content_data
 			})
 		}
 		const info_pre = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: '',
-			inner_html		: JSON.stringify(info, null, 2),
+			text_content	: JSON.stringify(info, null, 2),
 			parent			: content_data
 		})
 
@@ -161,7 +163,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: '',
-			inner_html		: String(environment),
+			text_content	: String(environment),
 			parent			: content_data
 		})
 
@@ -211,10 +213,10 @@ const add_action_button = function(o) {
 		try {
 			const api_response = await o.run()
 
-			// SUCCESS is a truthy `result` (the TS widget_request returns
-			// result:{cleared:[…]} / {pruned:N} on success and result:false on
-			// failure — NOT the boolean `true` the PHP-era check assumed).
-			const ok = !!(api_response && api_response.result)
+			// SUCCESS is a truthy PAYLOAD (the TS widget_request returns
+			// {cleared:[…]} / {pruned:N} on success and `false` on a refusal —
+			// NOT the boolean `true` the PHP-era check assumed).
+			const ok = !!(api_response && !request_failed(api_response) && response_data(api_response))
 
 			// run the success refresh FIRST (it only updates the data panel, leaving
 			// body_response untouched) so the message printed below survives.
@@ -223,23 +225,28 @@ const add_action_button = function(o) {
 			}
 
 			// clear any previous message so repeated clicks don't stack
-			ui.update_node_content(o.body_response, '')
+			o.body_response.replaceChildren()
 
 			if (!ok) {
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'error',
-					inner_html		: (api_response && api_response.msg) || ('Error: failed ' + o.label),
-					parent			: o.body_response
-				})
+				if (request_failed(api_response)) {
+					await handle_api_error(api_response.error, {wrapper: o.body_response})
+				} else {
+					// server text is TEXT, never an HTML sink
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error',
+						text_content	: String(response_extension(api_response, 'msg') || ('Error: failed ' + o.label)),
+						parent			: o.body_response
+					})
+				}
 				return
 			}
 
-			// message OK
+			// message OK (server text as TEXT)
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'ok',
-				inner_html		: api_response.msg || ('OK. ' + o.label),
+				text_content	: String(response_extension(api_response, 'msg') || ('OK. ' + o.label)),
 				parent			: o.body_response
 			})
 		} finally {
@@ -299,7 +306,8 @@ const render_maintenance_section = function(self, container, info_pre) {
 		const refresh = async () => {
 			self.value = await self.get_value()
 			if (info_pre) {
-				ui.update_node_content(info_pre, JSON.stringify((self.value||{}).info || {}, null, 2))
+				// server text as TEXT, never an HTML sink
+				info_pre.textContent = JSON.stringify((self.value||{}).info || {}, null, 2)
 			}
 		}
 

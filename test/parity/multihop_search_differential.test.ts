@@ -65,7 +65,7 @@ async function tsCall(rqo: Record<string, unknown>): Promise<Record<string, unkn
 			principal,
 		} as never,
 	);
-	return (result.body as { result?: Record<string, unknown> }).result ?? {};
+	return (result.body as { data?: Record<string, unknown> }).data ?? {};
 }
 
 let php: PhpApiClient | null = null;

@@ -9,7 +9,7 @@
  * exactly as before, so this relocation is zero behavior change).
  */
 
-import { type ApiResult, denied, notAuthorized } from '../api/response.ts';
+import type { ApiResult } from '../api/response.ts';
 import {
 	AREA_ONTOLOGY_TIPO,
 	areaBehaviorOf,
@@ -27,6 +27,7 @@ import {
 } from '../concepts/area.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
+import { DedaloError, ok } from '../errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -39,6 +40,7 @@ import {
 } from '../relations/picker_constraint.ts';
 import { buildStructureContext } from '../resolve/structure_context.ts';
 import { getPermissions, type Principal, SUPERUSER_ID } from '../security/permissions.ts';
+import { currentRequestId } from '../security/request_context.ts';
 import { readAreaHierarchyData } from './tree.ts';
 
 /** Shape of the tree-area boot item (subset consumed by the permission filter). */
@@ -70,11 +72,6 @@ interface HierarchyBootItem {
 interface ResolvedPickerCaller {
 	mode: ThesaurusMode;
 	constraint: PickerConstraint | null;
-}
-
-/** Distinguish a refusal from a resolution (both are returned by value). */
-function isRefusal(value: ResolvedPickerCaller | ApiResult): value is ApiResult {
-	return 'status' in value;
 }
 
 /**
@@ -156,16 +153,22 @@ async function resolvePickerCaller(
 	caller: PickerCaller,
 	principal: Principal,
 	lang: string,
-): Promise<ResolvedPickerCaller | ApiResult> {
+): Promise<ResolvedPickerCaller> {
 	const model = await getModelByTipo(caller.tipo);
 	if (model === null) {
-		return denied(400, PICKER_CALLER_UNKNOWN_MESSAGE);
+		throw new DedaloError('area.picker_caller_invalid', {
+			publicMessage: PICKER_CALLER_UNKNOWN_MESSAGE,
+			coordinates: { tipo: caller.tipo },
+		});
 	}
 	if (getColumnNameByModel(model) !== 'relation') {
 		return { mode: 'default', constraint: null };
 	}
 	if ((await getMatrixTableFromTipo(caller.section_tipo)) === null) {
-		return denied(400, PICKER_CALLER_SECTIONLESS_MESSAGE);
+		throw new DedaloError('area.picker_caller_invalid', {
+			publicMessage: PICKER_CALLER_SECTIONLESS_MESSAGE,
+			coordinates: { section_tipo: caller.section_tipo },
+		});
 	}
 	// THE PAIR MUST BE REAL. `tipo` and `section_tipo` arrive as two independent
 	// client strings, and nothing above ties them together: without this check a
@@ -176,7 +179,10 @@ async function resolvePickerCaller(
 	// component that never declared a picker. The grant is only as honest as the
 	// pair it is derived from.
 	if (!(await tipoBelongsToSection(caller.tipo, caller.section_tipo))) {
-		return denied(400, PICKER_CALLER_UNKNOWN_MESSAGE);
+		throw new DedaloError('area.picker_caller_invalid', {
+			publicMessage: PICKER_CALLER_UNKNOWN_MESSAGE,
+			coordinates: { tipo: caller.tipo, section_tipo: caller.section_tipo },
+		});
 	}
 
 	const permissions = await getPermissions(principal, caller.section_tipo, caller.tipo);
@@ -248,23 +254,23 @@ async function resolveRootTermSelectability(
  * non-data definition with no matrix row, so save/create/delete/duplicate
  * addressed at an area tipo (by declared model OR by the resolved model of the
  * target section_tipo) must be refused — never routed into section write code
- * via the duck-type shims. Returns a denial, or null when the target is not an
- * area.
+ * via the duck-type shims. THROWS `area.write_refused`; returns normally when
+ * the target is not an area (ERRORS_SPEC §4 — a gate throws, it never builds a
+ * body).
  */
 export async function refuseAreaWrite(
 	sectionTipo: string | undefined,
 	declaredModel: string | null | undefined,
-): Promise<ApiResult | null> {
+): Promise<void> {
 	if (declaredModel != null && isAreaModel(declaredModel)) {
-		return denied(400, 'Areas hold no data — write refused');
+		throw new DedaloError('area.write_refused', { coordinates: { model: declaredModel } });
 	}
 	if (sectionTipo !== undefined) {
 		const model = await getModelByTipo(sectionTipo);
 		if (model !== null && isAreaModel(model)) {
-			return denied(400, 'Areas hold no data — write refused');
+			throw new DedaloError('area.write_refused', { coordinates: { section_tipo: sectionTipo } });
 		}
 	}
-	return null;
 }
 
 /**
@@ -307,7 +313,13 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 	if (areaTipo !== undefined) {
 		const actualModel = await getModelByTipo(areaTipo);
 		if (actualModel !== null && actualModel !== model) {
-			return denied(400, `read: source.model '${model}' does not match tipo '${areaTipo}'`);
+			// The declared model and the tipo's real model disagree: an invalid
+			// source, and the two values are LOG-ONLY (naming them back would
+			// confirm what the tipo actually is).
+			throw new DedaloError('request.invalid_source', {
+				message: `read: source.model '${model}' does not match tipo '${areaTipo}'`,
+				coordinates: { model, tipo: areaTipo },
+			});
 		}
 	}
 
@@ -316,7 +328,7 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 	// Fail-closed: reject any non-superuser before touching the ontology.
 	if (model === 'area_ontology' || areaTipo === AREA_ONTOLOGY_TIPO) {
 		if (principal.userId !== SUPERUSER_ID) {
-			return notAuthorized('Insufficient permissions to read');
+			throw new DedaloError('perm.denied', { coordinates: { area_tipo: areaTipo ?? model } });
 		}
 	}
 
@@ -328,7 +340,7 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 		// Maintenance-area read (PHP area_maintenance_json): the widget catalog
 		// rides as `datalist`. Admin-only, like the PHP area.
 		if (!principal.isGlobalAdmin) {
-			return notAuthorized('Insufficient permissions to read');
+			throw new DedaloError('perm.denied', { coordinates: { area_tipo: rqo.source?.tipo ?? '' } });
 		}
 		const maintTipo = rqo.source?.tipo ?? '';
 		const permissions = await getPermissions(principal, maintTipo, maintTipo);
@@ -341,7 +353,10 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 		const { buildMaintenanceDataItem } = await import('../area_maintenance/widgets/registry.ts');
 		return {
 			status: 200,
-			body: { result: { context, data: [await buildMaintenanceDataItem()] }, msg: 'OK' },
+			body: ok(
+				{ context, data: [await buildMaintenanceDataItem()] },
+				{ requestId: currentRequestId() },
+			),
 		};
 	}
 
@@ -352,7 +367,10 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 	// An area model with no behavior resolver (area_graph — dead/excluded, or any
 	// unmapped area model): refuse loudly rather than silently fall into the
 	// section path (engineering/AREA_SPEC.md §9 — never silently narrow).
-	return denied(400, `read: area model '${model}' is not supported`);
+	throw new DedaloError('request.invalid_model', {
+		message: `read: area model '${model}' is not supported`,
+		coordinates: { model },
+	});
 }
 
 /**
@@ -366,7 +384,9 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 async function readDashboardArea(rqo: Rqo, principal: Principal): Promise<ApiResult> {
 	const areaTipo = rqo.source?.tipo;
 	if (areaTipo === undefined) {
-		return denied(400, 'read: source.tipo is required');
+		throw new DedaloError('request.invalid_source', {
+			message: 'read: source.tipo is required',
+		});
 	}
 	const mode = rqo.source?.mode ?? 'list';
 	const lang = rqo.source?.lang ?? 'lg-spa';
@@ -395,8 +415,132 @@ async function readDashboardArea(rqo: Rqo, principal: Principal): Promise<ApiRes
 
 	return {
 		status: 200,
-		body: { result: { context, data: [dataItem] }, msg: 'OK. Request done' },
+		body: ok({ context, data: [dataItem] }, { requestId: currentRequestId() }),
 	};
+}
+
+/**
+ * THE PICKER CALLER (engineering/AREA_SPEC.md §5): a read may declare WHICH
+ * component instance it is opening the tree for. It declares nothing else — no
+ * mode, no target list, no term pinning: those are conclusions, and a client's
+ * conclusions are not authority (the same objection dispatchAreaRead already
+ * makes about source.model). A present-but-malformed caller refuses; an absent
+ * one is an ordinary browse read, byte-unchanged (null).
+ */
+async function resolveDeclaredPickerCaller(
+	rqo: Rqo,
+	principal: Principal,
+	lang: string,
+): Promise<ResolvedPickerCaller | null> {
+	const declaredCaller = (rqo.source as { caller?: unknown } | undefined)?.caller;
+	if (declaredCaller === undefined || declaredCaller === null) return null;
+	const caller = parsePickerCaller(declaredCaller);
+	if (caller === null) {
+		throw new DedaloError('area.picker_caller_invalid', {
+			publicMessage: PICKER_CALLER_MALFORMED_MESSAGE,
+		});
+	}
+	return resolvePickerCaller(caller, principal, lang);
+}
+
+/** The pruned hierarchy list plus the two drop counters (see filterHierarchiesByGrant). */
+interface PrunedHierarchies {
+	kept: HierarchyBootItem['value'];
+	/** Candidates dropped by a PERMISSION check (a target or root-term section the principal may not read). */
+	refusedByAcl: number;
+	/** Candidates dropped by DATA (inactive, no children tipo, no readable root term). */
+	droppedByConfig: number;
+}
+
+/**
+ * Per-hierarchy read-permission filter (PHP area_thesaurus_json loop):
+ * ontology-area global admins bypass; everyone else must hold read on each
+ * hierarchy's target section AND on each root term's section.
+ *
+ * THE TWO EMPTY CASES ARE DIFFERENT FACTS (engineering/AREA_SPEC.md §5) and are
+ * counted SEPARATELY as the loop drops each candidate — "nothing survived"
+ * alone cannot tell them apart, and answering the wrong one tells a curator
+ * their thesaurus is forbidden when it is merely unconfigured (or the reverse,
+ * which leaks that it exists).
+ */
+async function filterHierarchiesByGrant(
+	hierarchies: HierarchyBootItem['value'],
+	principal: Principal,
+	isOntologyArea: boolean,
+): Promise<PrunedHierarchies> {
+	const pruned: PrunedHierarchies = { kept: [], refusedByAcl: 0, droppedByConfig: 0 };
+	for (const hierarchy of hierarchies) {
+		if (isOntologyArea && principal.isGlobalAdmin) {
+			pruned.kept.push(hierarchy);
+			continue;
+		}
+		if (
+			(await getPermissions(
+				principal,
+				hierarchy.target_section_tipo,
+				hierarchy.target_section_tipo,
+			)) < 1
+		) {
+			pruned.refusedByAcl++;
+			continue;
+		}
+		if (hierarchy.active_in_thesaurus === false || !isNonEmptyString(hierarchy.children_tipo)) {
+			pruned.droppedByConfig++;
+			continue;
+		}
+		const rootTerms = await filterRootTermsByGrant(hierarchy.root_terms, principal);
+		if (rootTerms.kept.length === 0) {
+			// Root terms the principal may not read → refused. NO root terms (or
+			// only unaddressable ones) → the hierarchy declares no entry point.
+			if (rootTerms.refused > 0) pruned.refusedByAcl++;
+			else pruned.droppedByConfig++;
+			continue;
+		}
+		pruned.kept.push({ ...hierarchy, root_terms: rootTerms.kept });
+	}
+	return pruned;
+}
+
+/** The root terms whose section the principal may read, and how many it may not. */
+async function filterRootTermsByGrant<T extends { section_tipo?: unknown }>(
+	rootTerms: readonly T[],
+	principal: Principal,
+): Promise<{ kept: T[]; refused: number }> {
+	const kept: T[] = [];
+	let refused = 0;
+	for (const rootTerm of rootTerms) {
+		if (typeof rootTerm.section_tipo !== 'string') continue;
+		if ((await getPermissions(principal, rootTerm.section_tipo, rootTerm.section_tipo)) < 1) {
+			refused++;
+			continue;
+		}
+		kept.push(rootTerm);
+	}
+	return { kept, refused };
+}
+
+function isNonEmptyString(value: unknown): value is string {
+	return typeof value === 'string' && value !== '';
+}
+
+/**
+ * Which refusal an EMPTY picker read gets (engineering/AREA_SPEC.md §5): every
+ * candidate dropped by a permission check → `perm.denied`, which carries NO
+ * sentence of its own here (naming the target sections the caller cannot reach
+ * would tell them those sections exist; it is also the code the client
+ * dispatches its "no permission" page on — never a 403 spelled as a generic
+ * caller error). Otherwise the OTHER fact — the target declares no active
+ * hierarchy — as `resource.conflict`, which is public, so the sentence that
+ * tells the curator what to configure survives to the wire.
+ */
+function emptyPickerRefusal(pruned: PrunedHierarchies, areaTipo: string): DedaloError {
+	if (pruned.refusedByAcl > 0 && pruned.droppedByConfig === 0) {
+		return new DedaloError('perm.denied', { coordinates: { area_tipo: areaTipo } });
+	}
+	return new DedaloError('resource.conflict', {
+		publicMessage: PICKER_NO_HIERARCHY_MESSAGE,
+		coordinates: { area_tipo: areaTipo },
+	});
 }
 
 /**
@@ -420,31 +564,19 @@ async function readTreeArea(
 ): Promise<ApiResult> {
 	const areaTipo = rqo.source?.tipo;
 	if (areaTipo === undefined) {
-		return denied(400, 'read: source.tipo is required');
+		throw new DedaloError('request.invalid_source', {
+			message: 'read: source.tipo is required',
+		});
 	}
 	const level = await getPermissions(principal, areaTipo, areaTipo);
 	if (level < 1 && !principal.isGlobalAdmin) {
-		return notAuthorized('Insufficient permissions to read');
+		throw new DedaloError('perm.denied', { coordinates: { area_tipo: areaTipo } });
 	}
 	const lang = rqo.source?.lang ?? 'lg-spa';
 
-	// THE PICKER CALLER (engineering/AREA_SPEC.md §5): a read may declare WHICH component instance
-	// it is opening the tree for. It declares nothing else — no mode, no target
-	// list, no term pinning: those are conclusions, and a client's conclusions
-	// are not authority (the same objection dispatchAreaRead already makes about
-	// source.model). A present-but-malformed caller refuses; an absent one is an
-	// ordinary browse read, byte-unchanged.
-	const declaredCaller = (rqo.source as { caller?: unknown } | undefined)?.caller;
-	let picker: ResolvedPickerCaller | null = null;
-	if (declaredCaller !== undefined && declaredCaller !== null) {
-		const caller = parsePickerCaller(declaredCaller);
-		if (caller === null) {
-			return denied(400, PICKER_CALLER_MALFORMED_MESSAGE);
-		}
-		const resolved = await resolvePickerCaller(caller, principal, lang);
-		if (isRefusal(resolved)) return resolved;
-		picker = resolved;
-	}
+	// THE PICKER CALLER (engineering/AREA_SPEC.md §5) — resolved from the
+	// declaration alone; see resolveDeclaredPickerCaller.
+	const picker = await resolveDeclaredPickerCaller(rqo, principal, lang);
 
 	// terms_are_model (PHP build_options->terms_are_model): the ontology model
 	// view. The client sends it in source.build_options.
@@ -463,65 +595,14 @@ async function readTreeArea(
 		picker?.constraint?.targets ?? null,
 	)) as unknown as HierarchyBootItem;
 
-	// Per-hierarchy read-permission filter (PHP area_thesaurus_json loop):
-	// ontology-area global admins bypass; everyone else must hold read on each
-	// hierarchy's target section AND on each root term's section.
-	//
-	// THE TWO EMPTY CASES ARE DIFFERENT FACTS (engineering/AREA_SPEC.md §5) and are counted
-	// SEPARATELY as the loop drops each candidate — "nothing survived" alone
-	// cannot tell them apart, and answering the wrong one tells a curator their
-	// thesaurus is forbidden when it is merely unconfigured (or the reverse,
-	// which leaks that it exists).
-	const isOntologyArea = areaModel === 'area_ontology';
-	const filteredValue: HierarchyBootItem['value'] = [];
-	let refusedByAcl = 0;
-	let droppedByConfig = 0;
-	for (const hierarchy of item.value) {
-		if (isOntologyArea && principal.isGlobalAdmin) {
-			filteredValue.push(hierarchy);
-			continue;
-		}
-		if (
-			(await getPermissions(
-				principal,
-				hierarchy.target_section_tipo,
-				hierarchy.target_section_tipo,
-			)) < 1
-		) {
-			refusedByAcl++;
-			continue;
-		}
-		if (hierarchy.active_in_thesaurus === false) {
-			droppedByConfig++;
-			continue;
-		}
-		if (
-			hierarchy.children_tipo === undefined ||
-			hierarchy.children_tipo === null ||
-			hierarchy.children_tipo === ''
-		) {
-			droppedByConfig++;
-			continue;
-		}
-		const safeRootTerms: typeof hierarchy.root_terms = [];
-		let rootTermsRefused = 0;
-		for (const rootTerm of hierarchy.root_terms) {
-			if (typeof rootTerm.section_tipo !== 'string') continue;
-			if ((await getPermissions(principal, rootTerm.section_tipo, rootTerm.section_tipo)) < 1) {
-				rootTermsRefused++;
-				continue;
-			}
-			safeRootTerms.push(rootTerm);
-		}
-		if (safeRootTerms.length === 0) {
-			// Root terms the principal may not read → refused. NO root terms (or
-			// only unaddressable ones) → the hierarchy declares no entry point.
-			if (rootTermsRefused > 0) refusedByAcl++;
-			else droppedByConfig++;
-			continue;
-		}
-		filteredValue.push({ ...hierarchy, root_terms: safeRootTerms });
-	}
+	// Per-hierarchy read-permission filter (PHP area_thesaurus_json loop) —
+	// see filterHierarchiesByGrant for the rule and the two drop counters.
+	const pruned = await filterHierarchiesByGrant(
+		item.value,
+		principal,
+		areaModel === 'area_ontology',
+	);
+	const filteredValue = pruned.kept;
 	// Rebuild typologies from the surviving hierarchies (dedup, first-seen).
 	const survivingTypologyIds = new Set(filteredValue.map((h) => h.typology_section_id));
 	item.value = filteredValue;
@@ -532,14 +613,7 @@ async function readTreeArea(
 	// empty projection, which is the shape the frozen parity fixtures pin; a
 	// picker that opens on nothing is a broken affordance and must say why.
 	if (picker !== null && filteredValue.length === 0) {
-		if (refusedByAcl > 0 && droppedByConfig === 0) {
-			// The GENERIC message: naming the target sections the caller cannot
-			// reach tells them those sections exist (api/response.ts). And it is
-			// notAuthorized(), never denied(403, …) — the machine token is what
-			// the client dispatches its "no permission" page on.
-			return notAuthorized();
-		}
-		return denied(409, PICKER_NO_HIERARCHY_MESSAGE);
+		throw emptyPickerRefusal(pruned, areaTipo);
 	}
 
 	// Per-node link affordance, relation mode only (engineering/AREA_SPEC.md §5): the picker
@@ -606,6 +680,6 @@ async function readTreeArea(
 
 	return {
 		status: 200,
-		body: { result: { context, data: [item] }, msg: 'OK. Request done' },
+		body: ok({ context, data: [item] }, { requestId: currentRequestId() }),
 	};
 }

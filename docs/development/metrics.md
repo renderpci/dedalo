@@ -32,7 +32,8 @@ The counters that always exist:
 | Counter | Meaning |
 | --- | --- |
 | `requests_total` | every API request that reached dispatch |
-| `requests_4xx` / `requests_5xx` | client-error / server-error responses |
+| `requests_4xx` / `requests_5xx` | client-error / server-error responses. **Meaningful since the error taxonomy landed**: a failure now answers a status derived from its error code's category, so a refused, throttled or crashed request is finally visible here. Before that, the dispatcher answered `200` for essentially every failure and both counters were structurally near zero on a server that was refusing everything. |
+| `errors_total` | every failure that passed through `logError` — i.e. every typed failure the engine reported, on any surface (API, tools, the assistant, streams), not only the ones that produced an HTTP body |
 | `requests_slow` | responses at or over `config.ops.slowRequestMs` |
 | `db_pool_waits` | queries that had to wait for a free pooled connection |
 | `db_pool_wait_ms_total` | cumulative milliseconds spent waiting on the pool |
@@ -45,6 +46,7 @@ Counters minted on demand, one key per named boundary:
 
 | Counter | Meaning |
 | --- | --- |
+| `error_<code>` | one failure of that registered error code, with the dot replaced by an underscore (`error_auth_not_logged`, `error_perm_denied`, `error_external_timeout`, `error_internal_unexpected`). Minted by `logError` alongside `errors_total`, so the key set is exactly the codes this process has actually raised — the closed registry bounds the cardinality, and a code nobody hits costs nothing. This is the counter to graph: `requests_5xx` tells you something broke, `error_<code>` tells you what. |
 | `section_id_string_coercions.<source>` | a `section_id` arrived as a numeric **string** at the door `<source>` and was coerced to its canonical integer. A deprecation signal: RQO-body doors must trend to zero before the string form is removed. `url.*` doors (`URLSearchParams` yields strings forever) are permanent and excluded from that gate. Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md` |
 
 Read these against `uptime_s`: counters are process-lifetime, so a bare zero on a
@@ -64,6 +66,10 @@ caller identity are already in hand there, so the module only formats and counts
     ```json
     {"ts":"…","type":"access","request_id":"…","user_id":1,"api":"dd_core_api::read","status":200,"ms":42.3}
     ```
+
+    A failed outcome adds `error_code` and `error_category` to the same line, and
+    the response body carries the same `request_id` — so a user report and a log
+    line join without guessing.
 
 - **Independently of that flag**, any request at or over `config.ops.slowRequestMs`
   increments `requests_slow` and emits a `[slow-request]` warning line naming the

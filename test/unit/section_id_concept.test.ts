@@ -20,6 +20,7 @@ import {
 	resetSectionIdCoercionStateForTests,
 	type SectionId,
 } from '../../src/core/concepts/section_id.ts';
+import { SectionIdRefused } from '../../src/core/errors/families.ts';
 
 afterEach(() => {
 	resetSectionIdCoercionStateForTests();
@@ -44,10 +45,21 @@ describe('the brand', () => {
 
 	test('asSectionId throws on anything not already an int — no silent coercion', () => {
 		expect(asSectionId(7)).toBe(7 as SectionId);
-		expect(() => asSectionId('7')).toThrow(TypeError);
-		expect(() => asSectionId(7.5)).toThrow(TypeError);
+		expect(() => asSectionId('7')).toThrow(SectionIdRefused);
+		expect(() => asSectionId(7.5)).toThrow(SectionIdRefused);
+		expect(refusalCode(() => asSectionId('7'))).toBe('section_id.not_an_address');
 	});
 });
+
+/** The registry code a synchronous refusal carries. */
+function refusalCode(fn: () => unknown): string | undefined {
+	try {
+		fn();
+		return undefined;
+	} catch (error) {
+		return error instanceof SectionIdRefused ? error.code : undefined;
+	}
+}
 
 describe('coerceSectionId (the boundary door)', () => {
 	test('ints pass without touching the observer', () => {
@@ -66,11 +78,14 @@ describe('coerceSectionId (the boundary door)', () => {
 	});
 
 	test('leading zeros, tokens, empties and junk THROW — never guessed', () => {
-		expect(() => coerceSectionId('007', 'test.door')).toThrow(TypeError);
-		expect(() => coerceSectionId('', 'test.door')).toThrow(TypeError);
-		expect(() => coerceSectionId('search_1', 'test.door')).toThrow(TypeError);
-		expect(() => coerceSectionId(null, 'test.door')).toThrow(TypeError);
-		expect(() => coerceSectionId(7.5, 'test.door')).toThrow(TypeError);
+		expect(() => coerceSectionId('007', 'test.door')).toThrow(SectionIdRefused);
+		expect(() => coerceSectionId('', 'test.door')).toThrow(SectionIdRefused);
+		expect(() => coerceSectionId('search_1', 'test.door')).toThrow(SectionIdRefused);
+		expect(() => coerceSectionId(null, 'test.door')).toThrow(SectionIdRefused);
+		expect(() => coerceSectionId(7.5, 'test.door')).toThrow(SectionIdRefused);
+		expect(refusalCode(() => coerceSectionId('007', 'test.door'))).toBe(
+			'section_id.not_an_address',
+		);
 	});
 });
 
@@ -130,13 +145,22 @@ describe('classifyWireSectionId — kinds + NaN-era branch parity', () => {
 
 	test('numeric-shaped non-addresses on a matrix tipo THROW loudly (WC-noted divergence)', async () => {
 		// NaN era silently read Number('007') === 7 — a wrong record. Now: refusal.
-		await expect(classifyWireSectionId('007', TIPO, 't')).rejects.toThrow(TypeError);
-		await expect(classifyWireSectionId('9007199254740992', TIPO, 't')).rejects.toThrow(TypeError);
+		await expect(classifyWireSectionId('007', TIPO, 't')).rejects.toThrow(SectionIdRefused);
+		await expect(classifyWireSectionId('9007199254740992', TIPO, 't')).rejects.toThrow(
+			SectionIdRefused,
+		);
+		await expect(classifyWireSectionId('007', TIPO, 't')).rejects.toMatchObject({
+			code: 'section_id.numeric_shaped',
+		});
 	});
 
 	test('unusable raw types (bool, object) THROW', async () => {
-		await expect(classifyWireSectionId(true, TIPO, 't')).rejects.toThrow(TypeError);
-		await expect(classifyWireSectionId({}, TIPO, 't')).rejects.toThrow(TypeError);
+		await expect(classifyWireSectionId(true, TIPO, 't')).rejects.toThrow(SectionIdRefused);
+		await expect(classifyWireSectionId({}, TIPO, 't')).rejects.toMatchObject({
+			code: 'section_id.unusable_type',
+		});
+		// the refusal is a DedaloError family, never a builtin — catch sites key on the domain
+		await expect(classifyWireSectionId({}, TIPO, 't')).rejects.not.toBeInstanceOf(TypeError);
 	});
 
 	test('string coercion through the classifier feeds the same observer', async () => {

@@ -121,8 +121,46 @@ const TABLE_FORMATS = Object.freeze(['sql', 'socrata'])
 /** MAX_PERSISTED_ERRORS in src/diffusion/runner.ts — the server's error cap. */
 const ERROR_CAP = 50
 
+/** Registry codes a diffusion job's FAILURE record can carry (src/core/errors/registry.ts). */
+const CANCELLED_CODE	= 'diffusion.cancelled'
+const RUNNER_LOST_CODE	= 'diffusion.runner_lost'
+
 /** `${sectionTipo}:${sectionId} ${columnName}: ` — stripped to group like errors. */
 const ERROR_PREFIX_RE = /^(\S+?:\d+)\s+(\S+?):\s*/
+
+
+
+/**
+* OUTCOME_FROM_RECORD
+* The verdict the persisted job RECORD carries, or null when it carries none.
+* The record is the converter's own shape (WC-2026-08-15-diffusion-job-result-record):
+*   { ok:true,  msg, tables?, errors?… }   — a completed run ('partial' when it
+*                                            collected per-record errors)
+*   { ok:false, error:{code,…}, msg }      — a refusal, named by registry code
+*
+* @param {*} record - sse.result
+* @return {string|null} one of OUTCOMES, or null
+*/
+function outcome_from_record(record) {
+
+	if (!record || typeof record !== 'object') {
+		return null
+	}
+
+	if (record.ok === false) {
+		const code = (record.error && typeof record.error.code === 'string') ? record.error.code : ''
+		if (code === CANCELLED_CODE)	return 'cancelled'
+		if (code === RUNNER_LOST_CODE)	return 'interrupted'
+		return 'failed'
+	}
+
+	if (record.ok === true) {
+		const collected = record.errors
+		return (Array.isArray(collected) && collected.length > 0) ? 'partial' : 'completed'
+	}
+
+	return null
+}//end outcome_from_record
 
 
 
@@ -141,11 +179,15 @@ export function classify_outcome(sse) {
 		return 'unknown'
 	}
 
-	// 1. server state (additive wire field). 'completed' with a false result is
-	// the partial-success case — the server reports completion either way.
+	// 1. server state (additive wire field). The persisted job RECORD
+	// (`sse.result`) is `{ok, error?, msg?, errors?, …}` since
+	// WC-2026-08-15-diffusion-job-result-record: a completed run that collected
+	// per-record errors is `ok:true` WITH a non-empty `errors` list — "partial",
+	// not a failure — and a record that says `ok:false` names its refusal by
+	// registry code (`diffusion.cancelled` ⇒ cancelled, anything else ⇒ failed).
 	if (typeof sse.state === 'string' && SERVER_STATES.includes(sse.state)) {
 		if (sse.state === 'completed') {
-			return sse.result && sse.result.result === false ? 'partial' : 'completed'
+			return outcome_from_record(sse.result) || 'completed'
 		}
 		return sse.state
 	}
@@ -155,10 +197,10 @@ export function classify_outcome(sse) {
 		return 'running'
 	}
 
-	// 3. message vocabulary
-	const msg = String(
-		(sse.data && sse.data.msg) || (sse.result && sse.result.msg) || ''
-	)
+	// 3. message vocabulary (no `state`: an old cached client, a replayed fixture)
+	const record	= sse.result
+	const line		= (sse.data && sse.data.msg) || (record && record.msg) || ''
+	const msg		= String(line)
 	if (msg === MSG.done || msg === MSG.done_legacy)	return 'completed'
 	if (msg === MSG.cancelled)							return 'cancelled'
 	if (msg === MSG.not_found)							return 'gone'
@@ -186,7 +228,8 @@ export function classify_outcome(sse) {
 */
 function resolve_format(sse, ctx) {
 
-	const class_name = sse && sse.result && sse.result.diffusion_class
+	const record		= sse && sse.result
+	const class_name	= record && record.diffusion_class
 	if (typeof class_name === 'string' && class_name.startsWith('diffusion_')) {
 		const format = class_name.slice('diffusion_'.length)
 		// 'diffusion_mysql' is the legacy class name for the sql writer
@@ -250,12 +293,29 @@ function build_subject(sse, ctx) {
 */
 function build_causes(sse) {
 
-	const raw = (sse.result && typeof sse.result.msg === 'string')
-		? sse.result.msg
-		: (sse.data && typeof sse.data.msg === 'string' ? sse.data.msg : null)
+	const record		= sse.result
+	const api_error		= (record && record.ok === false && record.error && typeof record.error === 'object')
+		? record.error
+		: null
+	// the run's own sentence, then the progress line — both server-owned names
+	const record_msg	= record && record.msg
+	const frame_msg		= sse.data && sse.data.msg
+	const record_errors	= record && record.errors
+	const raw = (typeof record_msg === 'string')
+		? record_msg
+		: (typeof frame_msg === 'string' ? frame_msg : null)
 
 	if (raw === null || raw === '') {
-		return { list:[], raw:null, dropped:false }
+		// a refusal always names itself, even when the record kept no sentence
+		if (api_error === null) {
+			return { list:[], raw:null, dropped:false, code:null }
+		}
+		return {
+			list	: [String(api_error.message || api_error.code || '')].filter(s => s !== ''),
+			raw		: null,
+			dropped	: !Array.isArray(record_errors),
+			code	: typeof api_error.code === 'string' ? api_error.code : null
+		}
 	}
 
 	let body = raw
@@ -273,7 +333,12 @@ function build_causes(sse) {
 		raw,
 		// a failure discards the per-record error list; say so rather than
 		// letting an empty Errors zone imply "nothing else went wrong"
-		dropped : !Array.isArray(sse.result && sse.result.errors)
+		dropped	: !Array.isArray(record_errors),
+		// the registry code behind a refusal — the machine channel, kept beside
+		// the sentence so the panel can say WHICH refusal this was
+		code	: api_error === null
+			? null
+			: (typeof api_error.code === 'string' ? api_error.code : null)
 	}
 }//end build_causes
 
@@ -301,8 +366,9 @@ function build_files(sse, format) {
 		entries.push({ kind, url, name : url.split('\\').pop().split('/').pop() })
 	}
 
+	const record = sse.result
 	const consolidated_sources = [
-		sse.result && sse.result.consolidated_files,
+		record && record.consolidated_files,
 		sse.data && sse.data.consolidated_files
 	]
 	for (const source of consolidated_sources) {
@@ -312,7 +378,7 @@ function build_files(sse, format) {
 	}
 
 	const list_sources = [
-		sse.result && sse.result.diffusion_data,
+		record && record.diffusion_data,
 		sse.data && sse.data.diffusion_data
 	]
 	for (const source of list_sources) {
@@ -335,7 +401,7 @@ function build_files(sse, format) {
 
 
 /**
-* BUILD_ERRORS
+* BUILD_ISSUES
 * Group repeated per-record errors so 47 identical failures read as one line
 * with a count, while keeping every original string byte-verbatim in `raw`.
 * Top-level (job) errors stay distinguishable from run errors — different
@@ -344,10 +410,13 @@ function build_files(sse, format) {
 * @param {Object} sse
 * @return {Object}
 */
-function build_errors(sse) {
+function build_issues(sse) {
 
-	const run_errors = Array.isArray(sse.result && sse.result.errors) ? sse.result.errors : []
-	const job_errors = Array.isArray(sse.errors) ? sse.errors : []
+	const record		= sse.result
+	const record_list	= record && record.errors
+	const frame_list	= sse.errors
+	const run_errors	= Array.isArray(record_list) ? record_list : []
+	const job_errors	= Array.isArray(frame_list) ? frame_list : []
 
 	const groups	= []
 	const index		= new Map()
@@ -385,7 +454,7 @@ function build_errors(sse) {
 		// the server truncates at MAX_PERSISTED_ERRORS; do NOT invent a real total
 		capped	: run_errors.length === ERROR_CAP
 	}
-}//end build_errors
+}//end build_issues
 
 
 
@@ -400,7 +469,8 @@ function build_errors(sse) {
 */
 function build_tables(sse) {
 
-	const raw = sse.result && sse.result.tables
+	const record	= sse.result
+	const raw		= record && record.tables
 	if (!Array.isArray(raw)) {
 		return {
 			rows:[], nonzero_count:0, zero_count:0, total_count:0,
@@ -569,16 +639,22 @@ export function build_report_model(sse, ctx) {
 	sse = (sse && typeof sse === 'object') ? sse : {}
 	ctx = ctx || {}
 
+	// the persisted job RECORD (absent while the run is still going) and the two
+	// server-owned message lines the panel prints
+	const record		= sse.result
+	const record_msg	= record && record.msg
+	const frame_msg		= sse.data && sse.data.msg
+
 	const outcome		= classify_outcome(sse)
 	const format		= resolve_format(sse, ctx)
 	const is_running	= outcome === 'running' || outcome === 'queued'
 
 	const tables	= build_tables(sse)
 	const files		= build_files(sse, format)
-	const errors	= build_errors(sse)
-	const causes	= (outcome === 'failed' || outcome === 'interrupted' || outcome === 'unknown')
+	const issues	= build_issues(sse)
+	const causes	= (outcome === 'failed' || outcome === 'interrupted' || outcome === 'cancelled' || outcome === 'unknown')
 		? build_causes(sse)
-		: { list:[], raw:null, dropped:false }
+		: { list:[], raw:null, dropped:false, code:null }
 
 	// the zero-everything inversion: the server said OK, the data says nothing
 	// moved. Raise severity and open the evidence rather than showing a green tick.
@@ -620,8 +696,11 @@ export function build_report_model(sse, ctx) {
 		'is_running', 'state', 'process_id', 'started_at', 'total_time',
 		'data.msg', 'data.counter', 'data.total', 'data.section_label',
 		'data.current.section_id', 'data.current.time', 'data.total_ms',
-		'errors', 'result.result', 'result.msg', 'result.tables', 'result.errors',
-		'result.diffusion_class'
+		// the persisted job RECORD's own keys (WC-2026-08-15-diffusion-job-result-record)
+		'errors', 'result.ok', 'result.msg', 'result.tables', 'result.errors',
+		'result.diffusion_class',
+		'result.error.code', 'result.error.message', 'result.error.category',
+		'result.error.label_key', 'result.error.retryable'
 	])
 	if (files.entries.length > 0) {
 		for (const path of [
@@ -642,13 +721,15 @@ export function build_report_model(sse, ctx) {
 		is_file_format	: format !== null && FILE_FORMATS.includes(format),
 		is_table_format	: format !== null && TABLE_FORMATS.includes(format),
 		subject			: build_subject(sse, ctx),
-		headline		: (sse.result && typeof sse.result.msg === 'string') ? sse.result.msg : null,
-		status_line		: (sse.data && typeof sse.data.msg === 'string') ? sse.data.msg : null,
+		headline		: (typeof record_msg === 'string') ? record_msg : null,
+		status_line		: (typeof frame_msg === 'string') ? frame_msg : null,
 		metrics,
 		progress,
 		causes,
 		files,
-		errors,
+		// the run's per-record + per-job diagnostic lines (the model's own name:
+		// the wire keys they come from stay `errors`)
+		issues,
 		tables,
 		consumed		: [...consumed],
 		raw_json		: safe_json(sse),
@@ -708,5 +789,5 @@ export function tsv_tables(model) {
 * @return {string}
 */
 export function tsv_errors(model) {
-	return model.errors.raw.join('\n')
+	return model.issues.raw.join('\n')
 }//end tsv_errors

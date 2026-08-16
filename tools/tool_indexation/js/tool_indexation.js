@@ -68,6 +68,8 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {common, rebuild_component_in_lang} from '../../../core/common/js/common.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
@@ -685,7 +687,7 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 			body : rqo
 		})
 
-	const datum = api_response.result
+	const datum = response_data(api_response)
 
 
 	return datum
@@ -926,16 +928,19 @@ tool_indexation.prototype.delete_tag = async function(tag_id) {
 		.catch(error => {
 			console.error('ERROR: delete_tag found errors')
 			console.error(error.message)
-			return {result: false, msg: [error.message]}
+			// a thrown transport/DOM failure becomes THE client error model, so the
+			// caller reads one shape (envelope v2) whatever went wrong
+			return {ok: false, error: new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: error.message
+			})}
 		});
 		// transcription_component response
-		if (api_response_delete_tag.result===false) {
+		if (request_failed(api_response_delete_tag)) {
 			// error case
-			const msg = api_response_delete_tag.msg
-				? api_response_delete_tag.msg.join('\n')
-				: 'Unknown error'
 			alert(
-				(self.get_tool_label('error_delete_tag') || 'Error on delete tag') + '\n' + msg
+				(self.get_tool_label('error_delete_tag') || 'Error on delete tag')
+				+ '\n' + error_text(api_response_delete_tag.error)
 			)
 		}
 
@@ -954,16 +959,17 @@ tool_indexation.prototype.delete_tag = async function(tag_id) {
 		.catch(error => {
 			console.error('ERROR: delete_locator found errors')
 			console.error(error.message)
-			return {result: false, msg: [error.message]}
+			return {ok: false, error: new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: error.message
+			})}
 		});
 		// indexing_component response
-		if (api_response_delete_locator.result===false) {
+		if (request_failed(api_response_delete_locator)) {
 			// error case
-			const msg = api_response_delete_locator.msg
-				? api_response_delete_locator.msg.join('\n')
-				: 'Unknown error'
 			alert(
-				(self.get_tool_label('error_delete_locator') || 'Error on delete locator') + '\n' + msg
+				(self.get_tool_label('error_delete_locator') || 'Error on delete locator')
+				+ '\n' + error_text(api_response_delete_locator.error)
 			)
 		}else{
 			// indexing_component. Remember force clean full data and datum before refresh

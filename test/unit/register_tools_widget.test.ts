@@ -73,7 +73,7 @@ describe('closed mode — mocked gate (the real gate collapsed to true at the 20
 		}));
 		const body = await runImport();
 		mock.module('../../src/core/update/ownership.ts', () => REAL_OWNERSHIP);
-		const result = body.result as {
+		const result = body.data as {
 			dry_run: boolean;
 			total: number;
 			invalid_count: number;
@@ -121,9 +121,9 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 		// No tools_active option ⇒ an EMPTY override map: every tool keeps the
 		// active state its own register.json declares (the pre-WC-057 behavior).
 		expect(importArgs(importTools)).toEqual({ dryRun: false, activeOverrides: {} });
-		expect(body.msg).toBe('OK. Request done successfully');
-		expect(body.errors).toEqual([]);
-		expect(body.result).toEqual([
+		expect(body.msg).toBeUndefined();
+		expect(body.errors).toBeUndefined();
+		expect(body.data).toEqual([
 			{
 				name: 'tool_fixture',
 				dir: 'tools/tool_fixture',
@@ -161,7 +161,7 @@ describe('open (owned) mode — mocked gate, importTools spy', () => {
 		const body = await runImport();
 		expect(body.msg).toBe('Warning! Request done with errors');
 		expect(body.errors).toEqual(['register.json parse error', 'missing label']);
-		const report = body.result as Record<string, unknown>[];
+		const report = body.data as Record<string, unknown>[];
 		expect(report[1]).toEqual({
 			name: 'tool_broken',
 			dir: 'tools/tool_broken',
@@ -221,7 +221,7 @@ describe('tools_active overrides (open mode)', () => {
 			tool_fixture: false,
 			tool_other: true,
 		});
-		expect((body.result as Record<string, unknown>[])[0]?.active).toBe(false);
+		expect((body.data as Record<string, unknown>[])[0]?.active).toBe(false);
 	});
 
 	test('malformed pairs are DROPPED, never defaulted', async () => {
@@ -256,8 +256,8 @@ describe('tools_active overrides (open mode)', () => {
 
 describe('gated() combinator branching (spy handlers)', () => {
 	test('closed → whenClosed result BY IDENTITY; open → whenOpen; marks introspect', async () => {
-		const closedResponse = { result: false, msg: 'closed', errors: [] };
-		const openResponse = { result: true, msg: 'open', errors: [] };
+		const closedResponse = { data: false, msg: 'closed' };
+		const openResponse = { data: true, msg: 'open' };
 		const whenClosed = mock(async () => closedResponse);
 		const whenOpen = mock(async () => openResponse);
 		const handler = gated('spy.spy', whenClosed, whenOpen);

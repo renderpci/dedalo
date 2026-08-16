@@ -34,11 +34,28 @@ const {
 	BACKGROUND_JOBS_ACTION,
 } = await import('../../src/core/tools/job_status.ts');
 
+import { ok } from '../../src/core/errors/convert.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { LoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolServerModule } from '../../src/core/tools/module.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+
+/**
+ * The DedaloError a call threw, or null when it returned. P1 error sweep: both
+ * status wires REFUSE BY THROWING a registered code (the dispatch chokepoint
+ * converts it), so the assertions below are on the CODE, not on an `errors[]`
+ * token.
+ */
+async function refusalOf(run: () => unknown): Promise<{ code: string } | null> {
+	try {
+		await run();
+		return null;
+	} catch (error) {
+		return isDedaloError(error) ? { code: error.code } : null;
+	}
+}
 
 beforeAll(() => {
 	resetBackgroundJobs();
@@ -62,7 +79,9 @@ describe('media job status through the tool dispatch (DEC-22a)', () => {
 			{ model: 'tool_upload', action: 'get_job_status' },
 			{ job_id: record.id },
 		);
-		expect(response.result).toBe(true);
+		// Envelope v2: `data` is the served-a-frame flag and the frame fields ride
+		// as extension keys (the client's status machinery reads them by name).
+		expect(response.ok).toBe(true);
 		expect(response.is_running).toBe(false);
 		expect(response.data).toEqual({ built: ['a.mp4'] });
 		expect(response.errors).toEqual([]);
@@ -86,30 +105,27 @@ describe('media job status through the tool dispatch (DEC-22a)', () => {
 			{ model: 'tool_upload', action: 'get_job_status' },
 			{ job_id: record.id },
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.is_running).toBe(true);
 		release();
 		await new Promise((resolve) => setTimeout(resolve, 10));
 	});
 
 	test('unknown job id and missing job_id fail loud (no silent ok)', async () => {
-		const unknown = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_upload', action: 'get_job_status' },
-			{ job_id: 'no_such_job_1' },
+		const unknown = await refusalOf(() =>
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_upload', action: 'get_job_status' },
+				{ job_id: 'no_such_job_1' },
+			),
 		);
-		expect(unknown.result).toBe(false);
-		expect(unknown.errors).toContain('job_not_found');
+		expect(unknown?.code).toBe('tool.job_not_found');
 
-		const missing = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_upload', action: 'get_job_status' },
-			{},
+		const missing = await refusalOf(() =>
+			dispatchToolRequest(SUPERUSER, -1, { model: 'tool_upload', action: 'get_job_status' }, {}),
 		);
-		expect(missing.result).toBe(false);
-		expect(missing.errors).toContain('invalid_request');
+		expect(missing?.code).toBe('request.invalid');
 	});
 });
 
@@ -120,7 +136,7 @@ function makeLoaded(name: string, result: unknown): LoadedTool {
 		apiActions: {
 			long_job: {
 				permission: null,
-				handler: async () => ({ result, msg: 'done', errors: [] }),
+				handler: async () => ok(result, { requestId: 'tool-job-status-test' }),
 			},
 		},
 		backgroundRunnable: ['long_job'],
@@ -134,7 +150,8 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 		const spec = loaded.module.apiActions.long_job;
 		if (spec === undefined) throw new Error('spec missing');
 		const started = scheduleBackground(loaded, 'long_job', spec, {}, SUPERUSER, -1);
-		expect(started.result).toBe(true);
+		expect(started.ok).toBe(true);
+		expect(started.data).toBe(true); // the started flag lives in `data`
 		const jobId = started.background_job_id as string;
 		await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -144,11 +161,11 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 			{ model: 'tool_time_machine', action: BACKGROUND_JOB_STATUS_ACTION },
 			{ background_job_id: jobId },
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		const job = response.job as Record<string, unknown>;
 		expect(job.status).toBe('done');
 		expect(job.tool).toBe('tool_time_machine');
-		expect((job.response as Record<string, unknown>).result).toEqual({ imported: 42 });
+		expect((job.response as Record<string, unknown>).data).toEqual({ imported: 42 });
 	});
 
 	test('a job is NOT visible through a different tool name (scope, no oracle)', async () => {
@@ -161,14 +178,15 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 
 		// Same admin caller, DIFFERENT (also active) tool: same job_not_found as a
 		// truly absent id — the wire is not an existence oracle across tools.
-		const crossTool = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_export', action: BACKGROUND_JOB_STATUS_ACTION },
-			{ background_job_id: jobId },
+		const crossTool = await refusalOf(() =>
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_export', action: BACKGROUND_JOB_STATUS_ACTION },
+				{ background_job_id: jobId },
+			),
 		);
-		expect(crossTool.result).toBe(false);
-		expect(crossTool.errors).toContain('job_not_found');
+		expect(crossTool?.code).toBe('tool.job_not_found');
 	});
 
 	test("ownership scoping: a non-admin cannot read another user's job", async () => {
@@ -180,43 +198,45 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 		await new Promise((resolve) => setTimeout(resolve, 20));
 
 		const stranger: Principal = { userId: 8, isGlobalAdmin: false, isDeveloper: false };
-		const denied = backgroundJobStatusResponse('tool_time_machine', stranger, 8, {
-			background_job_id: jobId,
-		});
-		expect(denied.result).toBe(false);
-		expect(denied.errors).toContain('job_not_found');
+		const denied = await refusalOf(() =>
+			backgroundJobStatusResponse('tool_time_machine', stranger, 8, {
+				background_job_id: jobId,
+			}),
+		);
+		expect(denied?.code).toBe('tool.job_not_found');
 
 		// The owner reads it fine; a global admin reads any user's job.
 		const owner: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 		expect(
-			backgroundJobStatusResponse('tool_time_machine', owner, 7, { background_job_id: jobId })
-				.result,
+			backgroundJobStatusResponse('tool_time_machine', owner, 7, { background_job_id: jobId }).ok,
 		).toBe(true);
 		expect(
 			backgroundJobStatusResponse('tool_time_machine', SUPERUSER, -1, {
 				background_job_id: jobId,
-			}).result,
+			}).ok,
 		).toBe(true);
 	});
 
-	test('missing background_job_id is an invalid_request, unknown id a job_not_found', async () => {
-		const missing = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_time_machine', action: BACKGROUND_JOB_STATUS_ACTION },
-			{},
+	test('missing background_job_id is request.invalid, unknown id tool.job_not_found', async () => {
+		const missing = await refusalOf(() =>
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_time_machine', action: BACKGROUND_JOB_STATUS_ACTION },
+				{},
+			),
 		);
-		expect(missing.result).toBe(false);
-		expect(missing.errors).toContain('invalid_request');
+		expect(missing?.code).toBe('request.invalid');
 
-		const unknown = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: 'tool_time_machine', action: BACKGROUND_JOB_STATUS_ACTION },
-			{ background_job_id: crypto.randomUUID() },
+		const unknown = await refusalOf(() =>
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: 'tool_time_machine', action: BACKGROUND_JOB_STATUS_ACTION },
+				{ background_job_id: crypto.randomUUID() },
+			),
 		);
-		expect(unknown.result).toBe(false);
-		expect(unknown.errors).toContain('job_not_found');
+		expect(unknown?.code).toBe('tool.job_not_found');
 	});
 });
 
@@ -242,7 +262,7 @@ describe('background job LIST through the tool dispatch', () => {
 			{ model: 'tool_time_machine', action: BACKGROUND_JOBS_ACTION },
 			{ action: 'long_job' },
 		);
-		const jobs = response.result as Record<string, unknown>[];
+		const jobs = response.data as Record<string, unknown>[];
 		expect(jobs).toHaveLength(1);
 		// Exactly what the client needs to re-attach: the id it lost.
 		expect(jobs[0]?.id).toBe(started.job_id as string);
@@ -260,14 +280,14 @@ describe('background job LIST through the tool dispatch', () => {
 		scheduleBackground(loaded, 'long_job', spec, {}, SUPERUSER, 7);
 
 		const stranger: Principal = { userId: 8, isGlobalAdmin: false, isDeveloper: false };
-		expect(backgroundJobsResponse('tool_time_machine', stranger, 8, {}).result).toEqual([]);
+		expect(backgroundJobsResponse('tool_time_machine', stranger, 8, {}).data).toEqual([]);
 
 		const owner: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 		expect(
-			(backgroundJobsResponse('tool_time_machine', owner, 7, {}).result as unknown[]).length,
+			(backgroundJobsResponse('tool_time_machine', owner, 7, {}).data as unknown[]).length,
 		).toBe(1);
 		expect(
-			(backgroundJobsResponse('tool_time_machine', SUPERUSER, -1, {}).result as unknown[]).length,
+			(backgroundJobsResponse('tool_time_machine', SUPERUSER, -1, {}).data as unknown[]).length,
 		).toBe(1);
 	});
 
@@ -280,10 +300,10 @@ describe('background job LIST through the tool dispatch', () => {
 		scheduleBackground(loaded, 'long_job', spec, {}, owner, 7);
 
 		// A different tool never sees it.
-		expect(backgroundJobsResponse('tool_export', owner, 7, {}).result).toEqual([]);
+		expect(backgroundJobsResponse('tool_export', owner, 7, {}).data).toEqual([]);
 		// A different action of the same tool never sees it.
 		expect(
-			backgroundJobsResponse('tool_time_machine', owner, 7, { action: 'other_job' }).result,
+			backgroundJobsResponse('tool_time_machine', owner, 7, { action: 'other_job' }).data,
 		).toEqual([]);
 	});
 });

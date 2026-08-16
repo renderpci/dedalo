@@ -15,19 +15,19 @@
  * (see loader.ts) — never by request-supplied names.
  */
 
+import type { ApiEnvelope } from '../errors/schema.ts';
 import type { Principal } from '../security/permissions.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 
 /**
- * The response envelope every tool action returns. It REPLACES the API envelope
- * wholesale (PHP: the tool's return value is the response body), so a tool owns
- * its own `result`/`msg`/`errors` and any extra fields (e.g. streaming bodies).
+ * The response every tool action returns. It REPLACES the API envelope
+ * wholesale (PHP: the tool's return value is the response body) — so it IS the
+ * API envelope v2 (engineering/ERRORS_SPEC.md §3): `ok(data, {requestId,
+ * extend?})` on success, with a tool's extra fields (streaming bodies, `pid`,
+ * `job_id`, …) as extension keys; a failure is a THROWN DedaloError, never a
+ * body (a non-envelope body is refused by the dispatcher as a bug).
  */
-export interface ToolResponse {
-	result: unknown;
-	msg: string;
-	errors?: string[];
-	[key: string]: unknown;
-}
+export type ToolResponse = ApiEnvelope;
 
 /**
  * The per-request context handed to a tool action handler. `options` are the
@@ -62,6 +62,23 @@ export interface ToolActionContext {
 	 * the job outlives the request, so there is no live socket to ask.
 	 */
 	clientIp?: string;
+	/**
+	 * The request id the tool's envelope carries (`ok(data, {requestId})`).
+	 * OPTIONAL because a background job outlives the request that started it —
+	 * read it through `toolRequestId(context)`, never directly, so a handler
+	 * running under the executor degrades to '' instead of crashing.
+	 */
+	requestId?: string;
+}
+
+/**
+ * The request id for a tool handler's envelope: the explicitly threaded one,
+ * else the request-scoped identity context (foreground calls run inside
+ * dispatchRqo's `runWithRequestContext`), else '' (background executor — the
+ * job has no live request).
+ */
+export function toolRequestId(context: ToolActionContext): string {
+	return context.requestId ?? currentRequestContext()?.requestId ?? '';
 }
 
 /**

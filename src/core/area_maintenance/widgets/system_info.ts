@@ -127,11 +127,7 @@ async function systemInfoGetValue(): Promise<WidgetResponse> {
 		});
 	}
 
-	return {
-		result: { requeriments_list, system_list, errors },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { requeriments_list, system_list, errors } };
 }
 
 export const widget: WidgetModule = {

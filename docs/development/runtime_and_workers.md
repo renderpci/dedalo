@@ -239,8 +239,8 @@ Cookie lifecycle is handled at the response boundary:
 
 `getSession()` enforces **two** expiry clocks — the sliding idle window and an
 absolute cap since creation — and destroys the row when either runs out. When it
-returns null the auth gate answers 401 with `errors: ['not_logged']`, the token
-the client's in-place re-login recovery is built on. Full contract:
+returns null the auth gate answers `401` with `error.code = "auth.not_logged"`,
+the code the client's in-place re-login recovery is built on. Full contract:
 [login](../core/system/login.md).
 
 ### Media route (dev listener)
@@ -264,6 +264,23 @@ and returns a `Response` with the dispatch-computed `status`. Two special cases:
   (`tool_export`'s `ndjson_stream`), the content type switches to
   `application/x-ndjson; charset=utf-8` and the raw protocol lines are streamed,
   so a large export never has to be buffered in memory.
+
+Every JSON body — success or failure, dispatched or refused before dispatch — is
+the standard envelope, and every failure body is built by the one converter, so
+the pre-dispatch refusals (unparseable body, invalid RQO, route miss, the
+last-resort catch-all) look exactly like a handler's own failure. The browser
+side reads them through a single transport module (`api_transport.js`): it never
+throws on a status, it parses the body on **any** status and branches on
+`error.code`, and it retries from `error.retryable` and `Retry-After` rather than
+from a hard-coded status list. That is why an expired session (`401`,
+`auth.not_logged`) reaches the re-login recovery instead of surfacing as a
+network error.
+
+A terminal failure inside an already-open **stream** cannot use the envelope —
+the status line is long gone — so it arrives as a frame instead:
+`{"is_running": false, "error": { … }}`, carrying the same `error` object. For a
+background job that frame is also what is persisted as the job's result, so a
+client that attaches late sees exactly what a client watching live saw.
 
 ## How it fits with the rest of Dédalo
 

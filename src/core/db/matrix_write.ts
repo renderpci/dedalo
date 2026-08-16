@@ -26,6 +26,7 @@
  * against real rows.
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { asRawJsonText, encodeForJsonb, type RawJsonText } from './json_codec.ts';
 import { assertMatrixTable, MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from './matrix.ts';
 import { isInTransaction, sql } from './postgres.ts';
@@ -111,14 +112,18 @@ export async function updateMatrixRecord(
 
 	const columnNames = Object.keys(values) as MatrixJsonbColumn[];
 	if (columnNames.length === 0) {
-		throw new Error('updateMatrixRecord: empty values payload');
+		throw new DedaloError('internal.invariant', {
+			message: 'updateMatrixRecord: empty values payload',
+			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	for (const columnName of columnNames) {
 		// Identifier gate: column names must be in the fixed jsonb column set.
 		if (!MATRIX_JSONB_COLUMNS.includes(columnName)) {
-			throw new Error(
-				`updateMatrixRecord: column '${columnName}' is not an allowlisted jsonb column (spec §7.6)`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `updateMatrixRecord: column '${columnName}' is not an allowlisted jsonb column (spec §7.6)`,
+				coordinates: { table: tableName, column: columnName },
+			});
 		}
 	}
 
@@ -217,18 +222,23 @@ export async function updateMatrixKeysData(
 ): Promise<number> {
 	assertMatrixTable(tableName);
 	if (writes.length === 0) {
-		throw new Error('updateMatrixKeysData: empty writes payload');
+		throw new DedaloError('internal.invariant', {
+			message: 'updateMatrixKeysData: empty writes payload',
+			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	for (const write of writes) {
 		if (!MATRIX_JSONB_COLUMNS.includes(write.column)) {
-			throw new Error(
-				`updateMatrixKeysData: column '${write.column}' is not allowlisted (spec §7.6)`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `updateMatrixKeysData: column '${write.column}' is not allowlisted (spec §7.6)`,
+				coordinates: { table: tableName, column: write.column },
+			});
 		}
 		if (!/^[a-z]+[0-9]+$/.test(write.key)) {
-			throw new Error(
-				`updateMatrixKeysData: key '${write.key}' fails the tipo grammar (spec §7.6)`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `updateMatrixKeysData: key '${write.key}' fails the tipo grammar (spec §7.6)`,
+				coordinates: { table: tableName, key: write.key },
+			});
 		}
 	}
 
@@ -298,18 +308,24 @@ export async function readMatrixKeyForUpdate(
 ): Promise<unknown[] | null> {
 	assertMatrixTable(tableName);
 	if (!MATRIX_JSONB_COLUMNS.includes(columnName)) {
-		throw new Error(
-			`readMatrixKeyForUpdate: column '${columnName}' is not allowlisted (spec §7.6)`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `readMatrixKeyForUpdate: column '${columnName}' is not allowlisted (spec §7.6)`,
+			coordinates: { table: tableName, column: columnName },
+		});
 	}
 	if (!/^[a-z]+[0-9]+$/.test(key)) {
-		throw new Error(`readMatrixKeyForUpdate: key '${key}' fails the tipo grammar (spec §7.6)`);
+		throw new DedaloError('internal.invariant', {
+			message: `readMatrixKeyForUpdate: key '${key}' fails the tipo grammar (spec §7.6)`,
+			coordinates: { table: tableName, key },
+		});
 	}
 	if (!isInTransaction()) {
-		throw new Error(
-			'readMatrixKeyForUpdate: FOR UPDATE outside a transaction holds no lock past the ' +
+		throw new DedaloError('internal.invariant', {
+			message:
+				'readMatrixKeyForUpdate: FOR UPDATE outside a transaction holds no lock past the ' +
 				'statement — wrap the read-modify-write in withTransaction',
-		);
+			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	const rows = (await sql.unsafe(
 		`SELECT "${columnName}"->'${key}' AS items FROM "${tableName}"
@@ -341,9 +357,10 @@ export async function allocateComponentItemId(
 ): Promise<number> {
 	assertMatrixTable(tableName);
 	if (!/^[a-z]+[0-9]+$/.test(componentTipo)) {
-		throw new Error(
-			`allocateComponentItemId: key '${componentTipo}' fails the tipo grammar (spec §7.6)`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `allocateComponentItemId: key '${componentTipo}' fails the tipo grammar (spec §7.6)`,
+			coordinates: { table: tableName, key: componentTipo },
+		});
 	}
 	// PHP stores the counter as an ARRAY of one object: {tipo: [{count: N}]}
 	// (canonical shape on every real record) — read/write element 0.
@@ -360,9 +377,15 @@ export async function allocateComponentItemId(
 	)) as { new_id: number }[];
 	const newId = rows[0]?.new_id;
 	if (newId === undefined) {
-		throw new Error(
-			`allocateComponentItemId: record ${sectionTipo}/${sectionId} not found in ${tableName}`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `allocateComponentItemId: record ${sectionTipo}/${sectionId} not found in ${tableName}`,
+			coordinates: {
+				table: tableName,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+				tipo: componentTipo,
+			},
+		});
 	}
 	return newId;
 }
@@ -406,9 +429,10 @@ export async function absorbComponentItemIds(
 ): Promise<void> {
 	assertMatrixTable(tableName);
 	if (!/^[a-z]+[0-9]+$/.test(componentTipo)) {
-		throw new Error(
-			`absorbComponentItemIds: key '${componentTipo}' fails the tipo grammar (spec §7.6)`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `absorbComponentItemIds: key '${componentTipo}' fails the tipo grammar (spec §7.6)`,
+			coordinates: { table: tableName, key: componentTipo },
+		});
 	}
 	let maxId = 0;
 	for (const item of items) {
@@ -452,9 +476,10 @@ export async function insertMatrixRecordWithCounter(
 	for (const [columnName, value] of Object.entries(jsonbColumns)) {
 		if (value === undefined) continue;
 		if (!MATRIX_JSONB_COLUMNS.includes(columnName as MatrixJsonbColumn)) {
-			throw new Error(
-				`insertMatrixRecordWithCounter: '${columnName}' is not a matrix jsonb column`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `insertMatrixRecordWithCounter: '${columnName}' is not a matrix jsonb column`,
+				coordinates: { table: tableName, column: columnName },
+			});
 		}
 		columnNames.push(`"${columnName}"`);
 		selectExprs.push(`$${paramIndex}::text::jsonb`);
@@ -497,9 +522,10 @@ export async function insertMatrixRecordWithCounter(
 			);
 			return insertMatrixRecordWithCounter(tableName, sectionTipo, jsonbColumns, depth + 1);
 		}
-		throw new Error(
-			`insertMatrixRecordWithCounter: insert into ${tableName} returned no section_id (counter for '${sectionTipo}' still colliding after realign)`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `insertMatrixRecordWithCounter: insert into ${tableName} returned no section_id (counter for '${sectionTipo}' still colliding after realign)`,
+			coordinates: { table: tableName, section_tipo: sectionTipo },
+		});
 	}
 	return Number(sectionId);
 }
@@ -536,9 +562,10 @@ export async function insertMatrixRecordWithExplicitId(
 	for (const [columnName, value] of Object.entries(jsonbColumns)) {
 		if (value === undefined) continue;
 		if (!MATRIX_JSONB_COLUMNS.includes(columnName as MatrixJsonbColumn)) {
-			throw new Error(
-				`insertMatrixRecordWithExplicitId: '${columnName}' is not a matrix jsonb column`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `insertMatrixRecordWithExplicitId: '${columnName}' is not a matrix jsonb column`,
+				coordinates: { table: tableName, column: columnName },
+			});
 		}
 		columnNames.push(`"${columnName}"`);
 		valuePlaceholders.push(`$${paramIndex}::text::jsonb`);
@@ -570,9 +597,10 @@ export async function insertMatrixRecordWithExplicitId(
 			// exactly the tolerated outcome; the caller re-reads under its lock.
 			return sectionId;
 		}
-		throw new Error(
-			`insertMatrixRecordWithExplicitId: insert into ${tableName} returned no section_id`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `insertMatrixRecordWithExplicitId: insert into ${tableName} returned no section_id`,
+			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	return Number(inserted);
 }

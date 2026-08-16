@@ -14,18 +14,20 @@
  * `X-Accel-Buffering: no` so nginx does not buffer the event stream.
  *
  * The tool hides itself when the daemon is not configured (isAvailable → false), and
- * every action fails closed with `site_builder_unconfigured` if somehow reached anyway.
+ * every action fails closed with `site_builder.unconfigured` if somehow reached anyway.
  */
 
 import { config } from '../../../src/config/config.ts';
+import { isErrorInDomain, ok as okEnvelope } from '../../../src/core/errors/index.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { type Actor, daemonJson, daemonStream, isConfigured } from './daemon_client.ts';
-import { SiteBuilderError } from './wire.ts';
+import { siteBuilderFailure, siteBuilderRejected } from './wire.ts';
 
 const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
 const MESSAGE_MAX = 32 * 1024;
@@ -41,29 +43,24 @@ function actorFor(context: { principal: Principal }): Actor {
 	return { user_id: context.principal.userId, username: `user_${context.principal.userId}` };
 }
 
-function ok(result: unknown): ToolResponse {
-	return { result, msg: 'OK', errors: [] };
+/** The daemon's answer as the success envelope (its JSON IS the payload). */
+function ok(context: ToolActionContext, data: unknown): ToolResponse {
+	return okEnvelope(data, { requestId: toolRequestId(context) });
 }
 
-function fail(error: SiteBuilderError): ToolResponse {
-	return { result: false, msg: error.message, errors: [error.code] };
-}
-
-/** Runs a proxy handler, converting a SiteBuilderError into a ToolResponse failure. */
+/**
+ * Runs a proxy handler. A site_builder refusal is already a registered throw (wire.ts) and
+ * travels to the dispatch chokepoint untouched; only the unconfigured pre-check is added
+ * here, so an action reached despite isAvailable still fails closed.
+ */
 async function proxy(fn: () => Promise<ToolResponse>): Promise<ToolResponse> {
 	if (!isConfigured()) {
-		return {
-			result: false,
-			msg: 'The site builder is not configured on this server.',
-			errors: ['site_builder_unconfigured'],
-		};
+		throw siteBuilderFailure(
+			'site_builder.unconfigured',
+			'The site builder is not configured on this server.',
+		);
 	}
-	try {
-		return await fn();
-	} catch (error) {
-		if (error instanceof SiteBuilderError) return fail(error);
-		throw error;
-	}
+	return fn();
 }
 
 /**
@@ -74,7 +71,7 @@ async function proxy(fn: () => Promise<ToolResponse>): Promise<ToolResponse> {
 function requireSlug(options: Record<string, unknown>): string {
 	const slug = String(options.slug ?? '');
 	if (!SLUG_PATTERN.test(slug)) {
-		throw new SiteBuilderError('site_builder_rejected', 'Invalid site name.');
+		throw siteBuilderRejected('Invalid site name.');
 	}
 	return slug;
 }
@@ -92,7 +89,7 @@ function requireSlug(options: Record<string, unknown>): string {
 function requireId(options: Record<string, unknown>, key: string): string {
 	const id = String(options[key] ?? '');
 	if (id.length === 0 || id.length > 200 || /[^A-Za-z0-9._-]/.test(id) || id.includes('..')) {
-		throw new SiteBuilderError('site_builder_rejected', `Invalid ${key}.`);
+		throw siteBuilderRejected(`Invalid ${key}.`);
 	}
 	return id;
 }
@@ -112,7 +109,7 @@ function assertPublisher(
 	message = 'Publishing requires developer or administrator permission.',
 ): void {
 	if (!principal.isDeveloper && !principal.isGlobalAdmin) {
-		throw new SiteBuilderError('site_builder_rejected', message);
+		throw siteBuilderRejected(message);
 	}
 }
 
@@ -127,18 +124,25 @@ function assertPublisher(
 async function getStatus(context: ToolActionContext): Promise<ToolResponse> {
 	const canPublish = context.principal.isDeveloper || context.principal.isGlobalAdmin;
 	if (!isConfigured()) {
-		return ok({ configured: false, reachable: false, can_publish: canPublish });
+		return ok(context, { configured: false, reachable: false, can_publish: canPublish });
 	}
 	try {
 		const health = (await daemonJson('GET', '/health', actorFor(context))) as {
 			service?: string;
 			drivers?: unknown[];
 		};
-		return ok({ configured: true, reachable: true, health, can_publish: canPublish });
+		return ok(context, { configured: true, reachable: true, health, can_publish: canPublish });
 	} catch (error) {
-		if (error instanceof SiteBuilderError) {
-			// Distinguish "can't reach it" from "it's off": the client shows either honestly.
-			return ok({ configured: true, reachable: false, error: error.code, can_publish: canPublish });
+		if (isErrorInDomain(error, 'site_builder')) {
+			// Distinguish "can't reach it" from "it's off": the client shows either
+			// honestly. This action ANSWERS a down daemon (it is what the client
+			// renders its empty state from), so the code travels inside `data`.
+			return ok(context, {
+				configured: true,
+				reachable: false,
+				error: error.code,
+				can_publish: canPublish,
+			});
 		}
 		throw error;
 	}
@@ -146,7 +150,7 @@ async function getStatus(context: ToolActionContext): Promise<ToolResponse> {
 
 /** GET /v1/sites — the full (collaborative) site list; no per-site ownership filter. */
 async function listSites(context: ToolActionContext): Promise<ToolResponse> {
-	return proxy(async () => ok(await daemonJson('GET', '/v1/sites', actorFor(context))));
+	return proxy(async () => ok(context, await daemonJson('GET', '/v1/sites', actorFor(context))));
 }
 
 /**
@@ -161,13 +165,13 @@ async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 		const slug = requireSlug(o);
 		const name = String(o.name ?? '').trim();
 		if (name.length === 0 || name.length > 200) {
-			throw new SiteBuilderError('site_builder_rejected', 'A site name is required.');
+			throw siteBuilderRejected('A site name is required.');
 		}
 		const body: Record<string, unknown> = { slug, name };
 		if (typeof o.template === 'string') body.template = o.template;
 		if (o.driver === 'claude_code' || o.driver === 'opencode' || o.driver === 'pi')
 			body.driver = o.driver;
-		return ok(await daemonJson('POST', '/v1/sites', actorFor(context), body));
+		return ok(context, await daemonJson('POST', '/v1/sites', actorFor(context), body));
 	});
 }
 
@@ -198,15 +202,12 @@ async function deleteSite(context: ToolActionContext): Promise<ToolResponse> {
 				'Removing the published site requires developer or administrator permission.',
 			);
 			if (context.options.confirm !== true) {
-				throw new SiteBuilderError(
-					'site_builder_rejected',
-					'Removing the published site must be confirmed.',
-				);
+				throw siteBuilderRejected('Removing the published site must be confirmed.');
 			}
 		}
 		const slug = requireSlug(context.options);
 		const purge = purgeProd ? '?purge_prod=true' : '';
-		return ok(await daemonJson('DELETE', `/v1/sites/${slug}${purge}`, actorFor(context)));
+		return ok(context, await daemonJson('DELETE', `/v1/sites/${slug}${purge}`, actorFor(context)));
 	});
 }
 
@@ -219,11 +220,14 @@ async function sessionStart(context: ToolActionContext): Promise<ToolResponse> {
 		const slug = requireSlug(context.options);
 		const prompt = String(context.options.prompt ?? '');
 		if (prompt.trim().length === 0 || prompt.length > MESSAGE_MAX) {
-			throw new SiteBuilderError('site_builder_rejected', 'A prompt is required (max 32 KiB).');
+			throw siteBuilderRejected('A prompt is required (max 32 KiB).');
 		}
 		const body: Record<string, unknown> = { prompt };
 		if (context.options.driver) body.driver = context.options.driver;
-		return ok(await daemonJson('POST', `/v1/sites/${slug}/sessions`, actorFor(context), body));
+		return ok(
+			context,
+			await daemonJson('POST', `/v1/sites/${slug}/sessions`, actorFor(context), body),
+		);
 	});
 }
 
@@ -236,9 +240,10 @@ async function sessionMessage(context: ToolActionContext): Promise<ToolResponse>
 		const id = requireId(context.options, 'session_id');
 		const message = String(context.options.message ?? '');
 		if (message.trim().length === 0 || message.length > MESSAGE_MAX) {
-			throw new SiteBuilderError('site_builder_rejected', 'A message is required (max 32 KiB).');
+			throw siteBuilderRejected('A message is required (max 32 KiB).');
 		}
 		return ok(
+			context,
 			await daemonJson('POST', `/v1/sessions/${id}/messages`, actorFor(context), { message }),
 		);
 	});
@@ -248,7 +253,7 @@ async function sessionMessage(context: ToolActionContext): Promise<ToolResponse>
 async function sessionStop(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const id = requireId(context.options, 'session_id');
-		return ok(await daemonJson('POST', `/v1/sessions/${id}/stop`, actorFor(context)));
+		return ok(context, await daemonJson('POST', `/v1/sessions/${id}/stop`, actorFor(context)));
 	});
 }
 
@@ -256,7 +261,7 @@ async function sessionStop(context: ToolActionContext): Promise<ToolResponse> {
 async function sessionHistory(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
-		return ok(await daemonJson('GET', `/v1/sites/${slug}/sessions`, actorFor(context)));
+		return ok(context, await daemonJson('GET', `/v1/sites/${slug}/sessions`, actorFor(context)));
 	});
 }
 
@@ -264,7 +269,7 @@ async function sessionHistory(context: ToolActionContext): Promise<ToolResponse>
 async function build(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
-		return ok(await daemonJson('POST', `/v1/sites/${slug}/build`, actorFor(context)));
+		return ok(context, await daemonJson('POST', `/v1/sites/${slug}/build`, actorFor(context)));
 	});
 }
 
@@ -273,7 +278,10 @@ async function getBuild(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
 		const id = requireId(context.options, 'build_id');
-		return ok(await daemonJson('GET', `/v1/sites/${slug}/builds/${id}`, actorFor(context)));
+		return ok(
+			context,
+			await daemonJson('GET', `/v1/sites/${slug}/builds/${id}`, actorFor(context)),
+		);
 	});
 }
 
@@ -281,7 +289,7 @@ async function getBuild(context: ToolActionContext): Promise<ToolResponse> {
 async function preview(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
 		const slug = requireSlug(context.options);
-		return ok(await daemonJson('GET', `/v1/sites/${slug}/preview`, actorFor(context)));
+		return ok(context, await daemonJson('GET', `/v1/sites/${slug}/preview`, actorFor(context)));
 	});
 }
 
@@ -296,11 +304,14 @@ async function publish(context: ToolActionContext): Promise<ToolResponse> {
 		const slug = requireSlug(context.options);
 		// The client's confirm dialog sets this; a call without it must not go live.
 		if (context.options.confirm !== true) {
-			throw new SiteBuilderError('site_builder_rejected', 'Publishing must be confirmed.');
+			throw siteBuilderRejected('Publishing must be confirmed.');
 		}
 		const body: Record<string, unknown> = { confirm: true };
 		if (typeof context.options.note === 'string') body.note = context.options.note;
-		return ok(await daemonJson('POST', `/v1/sites/${slug}/publish`, actorFor(context), body));
+		return ok(
+			context,
+			await daemonJson('POST', `/v1/sites/${slug}/publish`, actorFor(context), body),
+		);
 	});
 }
 
@@ -314,7 +325,7 @@ async function getAudit(context: ToolActionContext): Promise<ToolResponse> {
 		assertPublisher(context.principal);
 		const slug = typeof context.options.slug === 'string' ? requireSlug(context.options) : '';
 		const query = slug ? `?site=${slug}` : '';
-		return ok(await daemonJson('GET', `/v1/audit${query}`, actorFor(context)));
+		return ok(context, await daemonJson('GET', `/v1/audit${query}`, actorFor(context)));
 	});
 }
 
@@ -325,35 +336,23 @@ async function getAudit(context: ToolActionContext): Promise<ToolResponse> {
  */
 async function sessionStream(context: ToolActionContext): Promise<ToolResponse> {
 	if (!isConfigured()) {
-		return {
-			result: false,
-			msg: 'The site builder is not configured on this server.',
-			errors: ['site_builder_unconfigured'],
-		};
+		throw siteBuilderFailure(
+			'site_builder.unconfigured',
+			'The site builder is not configured on this server.',
+		);
 	}
-	let id: string;
-	let after: number;
-	try {
-		id = requireId(context.options, 'session_id');
-		const rawAfter = context.options.after;
-		after = typeof rawAfter === 'number' && Number.isFinite(rawAfter) ? rawAfter : -1;
-	} catch (error) {
-		if (error instanceof SiteBuilderError) return fail(error);
-		throw error;
-	}
+	// Both of these REFUSE BY THROWING a registered code; the dispatch chokepoint
+	// converts (the stream never opens, so there is no frame to fail into).
+	const id = requireId(context.options, 'session_id');
+	const rawAfter = context.options.after;
+	const after = typeof rawAfter === 'number' && Number.isFinite(rawAfter) ? rawAfter : -1;
 
 	const upstreamAbort = new AbortController();
-	let upstream: Response;
-	try {
-		upstream = await daemonStream(
-			`/v1/sessions/${id}/events?after=${after}`,
-			actorFor(context),
-			upstreamAbort.signal,
-		);
-	} catch (error) {
-		if (error instanceof SiteBuilderError) return fail(error);
-		throw error;
-	}
+	const upstream = await daemonStream(
+		`/v1/sessions/${id}/events?after=${after}`,
+		actorFor(context),
+		upstreamAbort.signal,
+	);
 
 	const reader = (upstream.body as ReadableStream<Uint8Array>).getReader();
 	const passthrough = new ReadableStream<Uint8Array>({
@@ -367,10 +366,13 @@ async function sessionStream(context: ToolActionContext): Promise<ToolResponse> 
 				controller.enqueue(value);
 			} catch (error) {
 				// Upstream died mid-stream: tell the client, then close.
+				// A STREAM FRAME, not an envelope: the registered code identifies the
+				// fault; the raw cause stays in the server log.
+				console.error('[tool_sitebuilder] session stream lost:', error);
 				const encoder = new TextEncoder();
 				controller.enqueue(
 					encoder.encode(
-						`event: error\ndata: ${JSON.stringify({ code: 'site_builder_stream_lost', message: String(error) })}\n\n`,
+						`event: error\ndata: ${JSON.stringify({ code: 'site_builder.stream_lost' })}\n\n`,
 					),
 				);
 				controller.close();
@@ -382,13 +384,16 @@ async function sessionStream(context: ToolActionContext): Promise<ToolResponse> 
 		},
 	});
 
-	return {
-		result: true,
-		msg: 'OK',
-		stream: passthrough,
-		streamContentType: 'text/event-stream; charset=utf-8',
-		streamHeaders: { 'X-Accel-Buffering': 'no' },
-	};
+	// stream/streamContentType/streamHeaders are EXTENSION KEYS the dd_tools_api
+	// handler reads off the top level to hand the bytes to the stream seam.
+	return okEnvelope(null, {
+		requestId: toolRequestId(context),
+		extend: {
+			stream: passthrough,
+			streamContentType: 'text/event-stream; charset=utf-8',
+			streamHeaders: { 'X-Accel-Buffering': 'no' },
+		},
+	});
 }
 
 export const tool: ToolServerModule = {

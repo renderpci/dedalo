@@ -89,7 +89,7 @@ describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate
 				csrfCandidate: session?.csrfToken ?? null,
 				principal,
 			});
-			const tsEntry = (tsResult.body.result as Record<string, unknown>[])[0] ?? {};
+			const tsEntry = (tsResult.body.data as Record<string, unknown>[])[0] ?? {};
 			results.push({ model: source.model, php: phpEntry, ts: tsEntry });
 		}
 	});

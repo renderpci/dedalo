@@ -25,15 +25,20 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import { readEnv } from '../../config/env.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 
-/** Thrown at open() when no file root is configured (loud config gate). */
-export class MissingDiffusionFilesRootError extends Error {
+/**
+ * Thrown at open() when no file root is configured (loud config gate). A thin
+ * DedaloError family with a fixed code; the sentence stays log-only.
+ */
+export class MissingDiffusionFilesRootError extends DedaloError {
 	constructor() {
-		super(
-			'No diffusion files root configured: set MEDIA_PATH (PHP DEDALO_MEDIA_PATH) ' +
+		super('diffusion.files_root_missing', {
+			message:
+				'No diffusion files root configured: set MEDIA_PATH (PHP DEDALO_MEDIA_PATH) ' +
 				'or the DEDALO_DIFFUSION_FILES_ROOT override.',
-		);
+		});
 		this.name = 'MissingDiffusionFilesRootError';
 	}
 }

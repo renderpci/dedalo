@@ -10,6 +10,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_posterframe} from './render_tool_posterframe.js' // self tool rendered (called from render common)
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -301,8 +302,8 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 *     add 'SHOW_DEVELOPER' to the /*global*\/ list in a separate code commit.
 *
 * @returns {Promise<Array>} Resolves with the array of identifying image descriptor
-*   objects returned by the API. Resolves with whatever `response.result` holds
-*   (typically an empty array when no inverse references define identifying_image).
+*   objects returned by the API — ALWAYS an array: an empty one when no inverse
+*   reference defines identifying_image, and an empty one when the call failed.
 */
 tool_posterframe.prototype.get_ar_identifying_image = async function() {
 
@@ -334,9 +335,15 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 					dd_console("-> get_ar_identifying_image API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
+				// Envelope v2: the payload is `data` (`response_data` also reads the
+				// COMPAT `result` mirror). An EMPTY selection is an empty ARRAY, not
+				// the legacy `false` sentinel — and a FAILED call has no payload at
+				// all, so resolve an empty array rather than a non-iterable.
+				const result = request_failed(response)
+					? []
+					: (response_data(response) ?? [])
 
-				resolve(result)
+				resolve(Array.isArray(result) ? result : [])
 			})
 		})
 }//end get_ar_identifying_image
@@ -416,7 +423,7 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 					dd_console("-> create_identifying_image API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
+				const result = response_data(response) // array of objects
 
 				resolve(result)
 			})

@@ -32,6 +32,7 @@ import {
 	ownershipMark,
 	type WidgetHandler,
 } from '../../src/core/area_maintenance/widgets/support.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -200,10 +201,19 @@ describe('denied handlers are pure engine_denied refusals', () => {
 				if (closedMark?.kind === 'denied') targets.push(mark.whenClosed);
 			}
 			for (const target of targets) {
-				const response = await target({}, DUMMY);
-				expect(response.result, `${key} denied result`).toBe(false);
-				expect(response.errors[0], `${key} denied errors[0]`).toStartWith('engine_denied: ');
-				expect(response.msg, `${key} denied msg`).toMatch(
+				// Since the P1 error sweep a denial is a THROW of the registered
+				// `maintenance.widget_unavailable`, whose PUBLIC sentence still names
+				// the method and points at the PHP dashboard (same bytes as before).
+				let thrown: unknown;
+				try {
+					await target({}, DUMMY);
+				} catch (error) {
+					thrown = error;
+				}
+				expect(thrown, `${key} denied throws`).toBeInstanceOf(DedaloError);
+				const error = thrown as DedaloError;
+				expect(error.code, `${key} denied code`).toBe('maintenance.widget_unavailable');
+				expect(error.publicMessage, `${key} denied message`).toMatch(
 					/^Error\. '.+' is not runnable on this engine: .+\. Run it from the PHP maintenance dashboard\.$/,
 				);
 			}

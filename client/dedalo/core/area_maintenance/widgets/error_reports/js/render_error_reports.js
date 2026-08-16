@@ -7,6 +7,9 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -193,15 +196,21 @@ const render_content_data = function(self) {
 						options	: { offset : offset, limit : page_size }
 					}
 				})
-				const result = api_response && api_response.result ? api_response.result : null
-				if (!result || !Array.isArray(result.reports)) {
+				const result = response_data(api_response) || null
+				if (request_failed(api_response) || !result || !Array.isArray(result.reports)) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'error_reports_empty',
-						text_content	: (api_response && api_response.msg) || 'The reports could not be loaded.',
+						text_content	: request_failed(api_response)
+							? error_text(api_response.error)
+							: 'The reports could not be loaded.',
 						parent			: list_container
 					})
 					load_button.disabled = false
+					if (request_failed(api_response)) {
+						// ONE error model: policy + renderer decide the surface
+						await handle_api_error(api_response.error, {wrapper: list_container})
+					}
 					return
 				}
 				if (result.reports.length===0 && offset===0) {

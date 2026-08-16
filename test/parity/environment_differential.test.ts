@@ -80,8 +80,11 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 				principal,
 			},
 		);
-		tsEnv = (tsResult.body as { environment: { result: Record<string, Record<string, unknown>> } })
-			.environment.result;
+		tsEnv = (
+			tsResult.body as unknown as {
+				environment: { result: Record<string, Record<string, unknown>> };
+			}
+		).environment.result;
 	});
 
 	test('get_label: every oracle key is served, renamed, or ledger-removed (WC-033/WC-034)', () => {

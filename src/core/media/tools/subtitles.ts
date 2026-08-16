@@ -319,7 +319,7 @@ export interface BuildSubtitlesOptions {
 
 export interface BuildSubtitlesResult {
 	/** The WEBVTT document, or false on invalid input. */
-	result: string | false;
+	data: string | false;
 	msg: string;
 }
 
@@ -343,7 +343,7 @@ function phpEmpty(value: unknown): boolean {
  */
 export function buildSubtitlesText(options: BuildSubtitlesOptions): BuildSubtitlesResult {
 	const response: BuildSubtitlesResult = {
-		result: false,
+		data: false,
 		msg: 'Error. Request failed [build_subtitles_text]',
 	};
 
@@ -405,7 +405,7 @@ export function buildSubtitlesText(options: BuildSubtitlesOptions): BuildSubtitl
 		cueNumber++;
 	}
 
-	response.result = `WEBVTT\n\n${srt}`;
+	response.data = `WEBVTT\n\n${srt}`;
 	response.msg = 'OK. Request done [build_subtitles_text]';
 	return response;
 }

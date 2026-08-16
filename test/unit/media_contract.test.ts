@@ -21,6 +21,7 @@ import {
 	qualityToMegabytes,
 	thumbQuality,
 } from '../../src/core/concepts/media.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 
 /** The repo root — the capability filter is proved in a child (see that block). */
 const REPO_ROOT = join(import.meta.dir, '../..');
@@ -101,6 +102,17 @@ describe('media contract — type catalog (env-config)', () => {
 	});
 });
 
+/** The registered code of a synchronous refusal (ERRORS_SPEC §4). */
+function codeOf(run: () => unknown): string {
+	try {
+		run();
+	} catch (error) {
+		if (isDedaloError(error)) return error.code;
+		throw error;
+	}
+	throw new Error('expected a DedaloError refusal, but the call succeeded');
+}
+
 describe('media contract — quality validation (SEC-065 strengthened)', () => {
 	const image = mediaTypeOf('component_image')!;
 
@@ -111,6 +123,12 @@ describe('media contract — quality validation (SEC-065 strengthened)', () => {
 	});
 
 	test('rejects traversal, bad charset, and unknown qualities (fail-closed)', () => {
+		// The refusal is the REGISTERED code (ERRORS_SPEC §1): the rejected value is
+		// raw caller data and stays in the log-only `message`, so a test that only
+		// matched the sentence would stop describing what the caller receives.
+		expect(codeOf(() => assertValidQuality(image, '..'))).toBe('media.invalid_quality');
+		expect(codeOf(() => assertValidQuality(image, '404'))).toBe('media.invalid_quality');
+		expect(codeOf(() => assertValidQuality(image, ''))).toBe('media.invalid_quality');
 		expect(() => assertValidQuality(image, '..')).toThrow();
 		expect(() => assertValidQuality(image, '.')).toThrow();
 		expect(() => assertValidQuality(image, '../etc')).toThrow();
@@ -124,6 +142,7 @@ describe('media contract — quality validation (SEC-065 strengthened)', () => {
 		expect(assertAllowedExtension(image, 'TIF')).toBe('tif');
 		expect(assertAllowedExtension(image, '.jpg')).toBe('jpg');
 		expect(() => assertAllowedExtension(image, 'exe')).toThrow();
+		expect(codeOf(() => assertAllowedExtension(image, 'exe'))).toBe('media.invalid_extension');
 	});
 });
 

@@ -44,7 +44,7 @@ describe('install window gate (P1)', () => {
 		// installable tld data files, environment-dependent) are the handler's
 		// concern, exercised against a fresh temp DB in install_e2e.
 		expect(res.status).toBe(200);
-		const result = res.body.result as { model: string; properties: Record<string, unknown> }[];
+		const result = res.body.data as { model: string; properties: Record<string, unknown> }[];
 		expect(Array.isArray(result)).toBe(true);
 		expect(result[0]?.model).toBe('installer');
 		expect((result[0]?.properties as Record<string, unknown>).needs_config).toBe(true);
@@ -79,9 +79,13 @@ describe('install window gate (P1)', () => {
 			{ action: 'install', dd_api: 'dd_utils_api', options: { action: 'to_update' } } as Rqo,
 			anon(),
 		);
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false); // to_update is unsupported by design
-		expect(res.body.msg).toContain('Update path not supported');
+		// to_update is unsupported by design: a refusal (envelope v2 —
+		// `engine.uncovered_scope`, 503, since the P1 install sweep), NOT the 401
+		// the auth gate would answer.
+		expect(res.status).toBe(503);
+		expect(res.body.ok).toBe(false);
+		expect('result' in res.body).toBe(false);
+		expect((res.body.error as { code: string }).code).toBe('engine.uncovered_scope');
 	});
 
 	test('install: SEALED → 404 for every step', async () => {
@@ -133,7 +137,7 @@ describe('install window gate (P1)', () => {
 	// Regression (found driving the real browser wizard): the router spread the
 	// ASYNC verifyActiveConfig without awaiting, so the body was `{}` and the
 	// wizard stuck at Verify. A mismatched entity keeps this DB-free.
-	test('verify_active_config is AWAITED — body carries result/active, not {}', async () => {
+	test('verify_active_config is AWAITED — body carries the poll answer, not {}', async () => {
 		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo(
 			{
@@ -147,10 +151,13 @@ describe('install window gate (P1)', () => {
 			} as Rqo,
 			anon(),
 		);
+		// A mismatched entity is the ANSWER to the poll, not an engine failure: the
+		// envelope succeeds (200) and carries `active` as an extension key — NOT
+		// absent (the {} bug) — with the verdict on `data`.
 		expect(res.status).toBe(200);
-		expect(typeof res.body.active).toBe('boolean'); // NOT absent (the {} bug)
-		expect(res.body.result).toBe(false);
-		expect(typeof res.body.msg).toBe('string');
+		expect(typeof res.body.active).toBe('boolean');
+		expect(res.body.data).toBe(false);
+		expect(res.body.ok).toBe(true);
 	});
 
 	// Regression (found driving the real browser wizard): after persist_config
@@ -160,7 +167,7 @@ describe('install window gate (P1)', () => {
 	test('start resumes the wizard while an install is in progress (configured, not sealed)', async () => {
 		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo({ action: 'start', dd_api: 'dd_core_api' } as Rqo, anon());
-		const ctx = (res.body.result as { context?: { model?: string }[] })?.context ?? [];
+		const ctx = (res.body.data as { context?: { model?: string }[] })?.context ?? [];
 		expect(ctx[0]?.model).toBe('installer');
 	});
 
@@ -170,7 +177,7 @@ describe('install window gate (P1)', () => {
 		expect(isSealed()).toBe(true);
 		expect(installInProgress()).toBe(false);
 		const sealed = await dispatchRqo({ action: 'start', dd_api: 'dd_core_api' } as Rqo, anon());
-		expect((sealed.body.result as { context?: { model?: string }[] })?.context?.[0]?.model).toBe(
+		expect((sealed.body.data as { context?: { model?: string }[] })?.context?.[0]?.model).toBe(
 			'login',
 		);
 		// An existing (PHP-provisioned) deployment never ran the TS installer →

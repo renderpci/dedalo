@@ -110,7 +110,7 @@ describe('copied client serving (Phase 7 gate, first slice)', () => {
 		);
 		expect(response.status).toBe(400);
 		const body = (await response.json()) as { msg: string };
-		expect(body.msg).toContain('Invalid JSON');
+		expect((body as { error?: { code?: string } }).error?.code).toBe('request.malformed_body');
 	});
 
 	test('assets carry validators and answer conditional requests with 304', async () => {

@@ -31,6 +31,7 @@
 
 // import
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
@@ -292,7 +293,7 @@ tool_tr_print.prototype.load_relation_list = async function() {
 			body : rqo
 		})
 
-	const datum = api_response.result
+	const datum = response_data(api_response)
 
 
 	return datum

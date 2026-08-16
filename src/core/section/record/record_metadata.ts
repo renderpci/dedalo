@@ -31,6 +31,7 @@
 
 import { readMatrixRecord } from '../../db/matrix.ts';
 import { updateMatrixRecord } from '../../db/matrix_write.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 
 /** The `data`-column metadata keys an importer may legitimately set. */
@@ -55,11 +56,17 @@ export async function setRecordMetadata(
 
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		throw new Error(`setRecordMetadata: no matrix table for section '${sectionTipo}'`);
+		throw new DedaloError('section.no_matrix_table', {
+			message: `setRecordMetadata: no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
 	}
 	const record = await readMatrixRecord(table, sectionTipo, sectionId);
 	if (record === null) {
-		throw new Error(`setRecordMetadata: no record ${sectionTipo}/${sectionId}`);
+		throw new DedaloError('resource.not_found', {
+			message: `setRecordMetadata: no record ${sectionTipo}/${sectionId}`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 
 	// MERGE, never replace: the column also holds `label`, `section_tipo`,

@@ -375,7 +375,7 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		await deleteUserActivityStats(UID);
 		const rebuilt = await updateUserActivityStats(UID);
 		expect(rebuilt.errors).toEqual([]);
-		expect((rebuilt.result as { date: string }[]).map((day) => day.date)).toEqual([DAY_A, DAY_B]);
+		expect((rebuilt.value as { date: string }[]).map((day) => day.date)).toEqual([DAY_A, DAY_B]);
 		expect(await scratchStatsCount()).toBe(2);
 
 		// CONTRAST: the guard is DATE-conditional, not "any second call". The
@@ -383,7 +383,7 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		// re-scans [2019-03-06, today) and finds nothing.
 		const stale = await updateUserActivityStats(UID);
 		expect(stale.msg).toBe('No activity records found');
-		expect(stale.result).toEqual([]);
+		expect(stale.value).toEqual([]);
 
 		// Now make the newest saved day YESTERDAY. Same local-Date arithmetic the
 		// function uses, so the two cannot drift across a DST/timezone edge.
@@ -416,7 +416,7 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		expect(before).toBe(3);
 		const response = await updateUserActivityStats(UID);
 		// The exact early-return wire shape: result is the NUMBER 0, not [].
-		expect(response.result).toBe(0);
+		expect(response.value).toBe(0);
 		expect(response.msg).toBe('Stats are already updated');
 		expect(await scratchStatsCount()).toBe(before);
 	}, 60000);
@@ -426,7 +426,7 @@ describe('an actor with no activity at all', () => {
 	test('reports the zero-activity contract instead of writing anything', async () => {
 		const response = await updateUserActivityStats(SILENT_UID);
 		expect(response.msg).toBe('No activity records found');
-		expect(response.result).toEqual([]);
+		expect(response.value).toEqual([]);
 		expect(response.errors).toEqual([]);
 
 		const written = (await sql.unsafe(

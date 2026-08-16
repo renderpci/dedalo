@@ -26,7 +26,9 @@ import type { ApiResult } from '../../api/response.ts';
 import { isLocatorInArray } from '../../concepts/locator.ts';
 import type { Rqo } from '../../concepts/rqo.ts';
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
+import { ok } from '../../errors/convert.ts';
 import type { Principal } from '../../security/permissions.ts';
+import { currentRequestContext } from '../../security/request_context.ts';
 import type { ChangedDataItem } from './save_component.ts';
 
 /**
@@ -150,5 +152,8 @@ export async function resolveRelationEcho(options: {
 		offset: 0,
 	};
 	const context = await buildGetDataContext(resolveRqo, resolved as never, principal);
-	return { status: 200, body: { result: { context, data: resolved }, msg: 'OK' } };
+	return {
+		status: 200,
+		body: ok({ context, data: resolved }, { requestId: currentRequestContext()?.requestId ?? '' }),
+	};
 }

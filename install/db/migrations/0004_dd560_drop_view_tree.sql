@@ -1,3 +1,8 @@
+-- SHARED-ROW SEED CORRECTION: dd560 declares properties.view 'tree' over a
+-- non-thesaurus target (dd1706) — a shipped seed defect every install inherits.
+-- (The tag names the ONE class of shared-schema DML the TS migration lane
+-- admits — see install/db/migrate.ts header + migration_shared_row_tripwire.)
+--
 -- 0004_dd560_drop_view_tree — correct ONE ontology mistake on live installs:
 -- dd560 ("Label", parent dd555, component_dataframe, data_limit 1) declares
 -- properties."view" = "tree" — the thesaurus-picker view — while its own
@@ -57,11 +62,13 @@ WHERE source_record.section_tipo = 'dd0'
 	AND jsonb_typeof(source_record.misc->'ontology18') = 'array'
 	AND source_record.misc @> '{"ontology18": [{"value": {"view": "tree"}}]}'::jsonb;
 
--- 2. the derived runtime row.
+-- 2. the derived runtime row (pinned by `@>` on the exact defective value —
+--    equivalent to properties->>'view' = 'tree' on an object; the containment
+--    form is the one shape the shared-row tripwire admits).
 UPDATE public.dd_ontology
 SET properties = properties - 'view'
 WHERE tipo = 'dd560'
-	AND properties->>'view' = 'tree';
+	AND properties @> '{"view": "tree"}'::jsonb;
 
 -- 3. the operator restore slice, only if it has ever been built here.
 DO $$
@@ -70,7 +77,7 @@ BEGIN
 		UPDATE public.dd_ontology_recovery
 		SET properties = properties - 'view'
 		WHERE tipo = 'dd560'
-			AND properties->>'view' = 'tree';
+			AND properties @> '{"view": "tree"}'::jsonb;
 	END IF;
 END
 $$;

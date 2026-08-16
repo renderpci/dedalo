@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { ok } from '../../src/core/errors/convert.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { mediaJobs } from '../../src/core/media/jobs.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
@@ -49,6 +50,7 @@ import {
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_transcription_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -171,14 +173,15 @@ describe('tool_transcription module', () => {
 		// to disk — an operator act. The refusal must run before any catalog read.
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.download_model!.handler;
-		const response = await handler({
-			principal: stubPrincipal, // not an admin
-			userId: 7,
-			options: { model: 'onnx-community/whisper-large-v3-turbo' },
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('administrator');
+		const refusal = await refusalOf(
+			handler({
+				principal: stubPrincipal, // not an admin
+				userId: 7,
+				options: { model: 'onnx-community/whisper-large-v3-turbo' },
+				background: false,
+			}),
+		);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('download_model refuses a model that is not in the catalog', async () => {
@@ -187,18 +190,27 @@ describe('tool_transcription module', () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.download_model!.handler;
 		const admin: Principal = { userId: 1, isGlobalAdmin: true, isDeveloper: false };
-		const response = await handler({
-			principal: admin,
-			userId: 1,
-			options: { model: '../../evil/path' },
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('not in the transcriber catalog');
+		const refusal = await refusalOf(
+			handler({
+				principal: admin,
+				userId: 1,
+				options: { model: '../../evil/path' },
+				background: false,
+			}),
+		);
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(refusal.publicMessage).toContain('not in the transcriber catalog');
 	});
 });
 
 const stubPrincipal: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
+
+/** The envelope v2 failure body (ERRORS_SPEC §3) — what the wire really carries. */
+interface WireFailure {
+	ok: false;
+	request_id: string;
+	error: { code: string; message: string; label_key: string; category: string };
+}
 
 /**
  * The REAL envelope a failing poll puts on the wire, harvested once.
@@ -207,20 +219,27 @@ const stubPrincipal: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper:
  * DEDALO_MEDIA_EXPORT_BASE (unset on a dev box, where the URL builder refuses
  * first). `config` freezes at import, so overlay it in a child — same pattern as
  * media_export_base.test.ts. The uri stays loopback, so the SSRF guard answers
- * `{result:false,…}` with no network call. Memoized: the client-coupling test
- * feeds this exact object to the browser poller.
+ * with a refusal (`ok:false` + the registered code) and no network call.
+ * Memoized: the client-coupling test feeds this exact object to the browser
+ * poller (through the same normalization data_manager applies).
  */
-let failureEnvelope: { result: unknown; msg: string; errors: string[] } | null = null;
-function liveFailureEnvelope(): { result: unknown; msg: string; errors: string[] } {
+let failureEnvelope: WireFailure | null = null;
+function liveFailureEnvelope(): WireFailure {
 	if (failureEnvelope !== null) return failureEnvelope;
 	const script = [
 		"const {getLoadedTool}=await import('./src/core/tools/loader.ts');",
 		"const t=await getLoadedTool('tool_transcription');",
+		"const {toErrorEnvelope}=await import('./src/core/errors/index.ts');",
+		'try{',
 		'const r=await t.module.apiActions.check_server_transcriber_status.handler({',
 		'principal:{userId:-1,isGlobalAdmin:true,isDeveloper:true},userId:-1,background:false,',
 		"options:{media_ddo:{component_tipo:'rsc35',section_tipo:'rsc167',section_id:1},",
 		"transcriber_engine:'babel_transcriber',pid:4321}});",
 		'console.log(JSON.stringify(r));',
+		// The handler REFUSES BY THROWING now (ERRORS_SPEC §4); the wire body the
+		// browser reads is what the chokepoint's converter makes of it, so the
+		// probe converts it exactly the same way.
+		"}catch(e){console.log(JSON.stringify(toErrorEnvelope(e,{requestId:'probe'}).body));}",
 	].join('');
 	const probe = Bun.spawnSync(
 		['bun', '--preload', './test/preload/component_registry.ts', '-e', script],
@@ -234,7 +253,7 @@ function liveFailureEnvelope(): { result: unknown; msg: string; errors: string[]
 		},
 	);
 	const line = probe.stdout.toString().trim().split('\n').pop() ?? '{}';
-	failureEnvelope = JSON.parse(line) as { result: unknown; msg: string; errors: string[] };
+	failureEnvelope = JSON.parse(line) as WireFailure;
 	return failureEnvelope;
 }
 
@@ -242,31 +261,35 @@ describe('check_server_transcriber_status handler', () => {
 	test('denies fail-closed on an invalid media_ddo record target (READ gate)', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
-		const response = await handler({
-			principal: stubPrincipal,
-			userId: 7,
-			options: {
-				media_ddo: { component_tipo: 'rsc439', section_tipo: 'bad tipo!', section_id: 1 },
-				transcriber_engine: 'babel_transcriber',
-				pid: 123,
-			},
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toContain('invalid record target');
+		const refusal = await refusalOf(
+			handler({
+				principal: stubPrincipal,
+				userId: 7,
+				options: {
+					media_ddo: { component_tipo: 'rsc439', section_tipo: 'bad tipo!', section_id: 1 },
+					transcriber_engine: 'babel_transcriber',
+					pid: 123,
+				},
+				background: false,
+			}),
+		);
+		// security.ts answers an unusable record target with the `invalid_request`
+		// token, which LEGACY_TOKEN_MAP resolves to request.invalid.
+		expect(refusal.code).toBe('request.invalid');
+		expect(refusal.message).toContain('invalid record target');
 	});
 
 	test('reports the missing required parameters (PHP message shape)', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
-		const response = await handler({
-			principal: stubPrincipal,
-			userId: 7,
-			options: {},
-			background: false,
-		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Missing required parameters: media_ddo, transcriber_engine, pid');
+		const refusal = await refusalOf(
+			handler({ principal: stubPrincipal, userId: 7, options: {}, background: false }),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		// A public-disclosure code, so the sentence still reaches the wire.
+		expect(refusal.publicMessage).toBe(
+			'Missing required parameters: media_ddo, transcriber_engine, pid',
+		);
 	});
 });
 
@@ -278,9 +301,9 @@ describe('check_server_transcriber_status handler', () => {
  *     answering "Transcriber config (uri/key) is not defined";
  *  2. the poll called ensureAudioQuality, i.e. a level-1 READ action could fire
  *     an ffmpeg transcode and write a media file (PHP only builds the URL);
- *  3. an unreachable/blocked transcriber came back as `msg:'OK. Request done'`
- *     with `errors:[]` — a dead ASR server read as success (and the client maps
- *     a status-less response to its `default:` "Process done" branch).
+ *  3. an unreachable/blocked transcriber came back as a SUCCESS envelope with
+ *     no status — a dead ASR server read as success (and the client maps a
+ *     status-less payload to its `default:` "Process done" branch).
  * The seeded uri is loopback, so the SSRF guard trips: no network is touched.
  */
 describe('check_server_transcriber_status against a configured transcriber', () => {
@@ -314,29 +337,30 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 	test('never transcodes, and never reports a failed poll as OK', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
 		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
-		const response = await handler({
-			principal: adminPrincipal,
-			userId: -1,
-			options: {
-				media_ddo: { component_tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 },
-				transcriber_engine: 'babel_transcriber',
-				pid: 4321,
-			},
-			background: false,
-		});
-		// It got PAST the config lookup (regression 1).
-		expect(response.msg).not.toContain('Transcriber config');
-		// It never asked for the audio quality to be BUILT (regression 2):
-		// 'AV original file not found' is ensureAudioQuality's error and can only
-		// surface here if the read path tries to transcode.
-		expect(response.msg).not.toContain('AV original file not found');
+		const refusal = await refusalOf(
+			handler({
+				principal: adminPrincipal,
+				userId: -1,
+				options: {
+					media_ddo: { component_tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 },
+					transcriber_engine: 'babel_transcriber',
+					pid: 4321,
+				},
+				background: false,
+			}),
+		);
+		// It got PAST the config lookup (regression 1) and never asked for the
+		// audio quality to be BUILT (regression 2): 'AV original file not found'
+		// is ensureAudioQuality's error and can only surface here if the read path
+		// tries to transcode. `message` is the LOG sentence the throw carried.
+		expect(refusal.message).not.toContain('Transcriber config');
+		expect(refusal.message).not.toContain('AV original file not found');
 		// And it did not dress a failure up as a success (regression 3): the
 		// loopback uri is refused by the SSRF guard (or, when
 		// DEDALO_MEDIA_EXPORT_BASE is unset, the URL builder refuses first) —
-		// either way this call cannot succeed, so it must not say 'OK.'.
-		expect(response.result).toBe(false);
-		expect(response.msg.startsWith('OK.')).toBe(false);
-		expect((response.errors ?? []).length).toBeGreaterThan(0);
+		// either way this call cannot succeed, and a REFUSAL is a throw now, not a
+		// body that could be mistaken for one.
+		expect(refusal.code).toBe('tool.dependency_unavailable');
 	});
 
 	/**
@@ -348,19 +372,22 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 	 */
 	test('a provider failure is reported as a failure, never as OK', () => {
 		const response = liveFailureEnvelope();
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('invalid transcriber URL');
-		expect(response.errors).toEqual(['invalid transcriber URL']);
+		// Envelope v2: `ok:false` is the fact and `error.code` the registered code
+		// (the raw 'invalid transcriber URL' sentence is LOG-only — the code's
+		// disclosure is 'operator'). The retired `result`/`errors` mirror is gone.
+		expect(response.ok).toBe(false);
+		expect('result' in response).toBe(false);
+		expect(response.error.code).toBe('tool.dependency_unavailable');
 	});
 });
 
 /**
  * CLIENT half of the outage-honesty contract (audit 2026-07-28).
  *
- * The server now answers a dead/blocked ASR server with `{result:false,…}`, but
- * the browser is what the user reads: `get_server_status()` in
- * tools/tool_transcription/js/render_tool_transcription.js switches on
- * `response.result.status`, and a status-less envelope used to fall through to
+ * The server now answers a dead/blocked ASR server with an `ok:false` envelope,
+ * but the browser is what the user reads: `get_server_status()` in
+ * tools/tool_transcription/js/render_tool_transcription.js switches on the
+ * payload's `status`, and a status-less envelope used to fall through to
  * `case 3: default:` — rendering "Process done" AND deleting the stored pid.
  * A dead transcriber therefore looked like a finished transcription and threw
  * away the only handle to the running job.
@@ -445,6 +472,64 @@ function panelIsError(panel: StubPanel): boolean {
 }
 
 let getServerStatus: (options: unknown) => void;
+
+/**
+ * The envelope accessors the poller reads. They arrive by `import` in the
+ * browser (core/common/js/api_error.js, render_api_error.js), and the harness
+ * strips the import block — so they are installed as globals, exactly the way
+ * `data_manager` / `ui` already are.
+ *
+ * `request_failed` / `response_data` / `normalize_api_error` are the REAL,
+ * dependency-free client source. `error_text` cannot be imported (its module
+ * pulls ui.js → tool_common.js, which does not resolve off the HTTP root), so
+ * it is the documented equivalent of render_api_error.js's chain WITH AN EMPTY
+ * LABEL CATALOGUE — which is precisely the state of this harness: no labels
+ * loaded ⇒ `message`, else the code.
+ */
+interface ClientEnvelopeHelpers {
+	request_failed: (response: unknown) => boolean;
+	response_data: (response: unknown) => unknown;
+	normalize_api_error: (response: unknown, body: unknown) => unknown;
+}
+let clientHelpers: ClientEnvelopeHelpers;
+
+async function installClientEnvelopeHelpers(): Promise<void> {
+	clientHelpers = (await import(
+		'../../client/dedalo/core/common/js/api_error.js'
+	)) as unknown as ClientEnvelopeHelpers;
+	// biome-ignore lint/suspicious/noExplicitAny: browser globals the client module reads free.
+	const g = globalThis as any;
+	g.request_failed = clientHelpers.request_failed;
+	g.response_data = clientHelpers.response_data;
+	g.error_text = (error: { message?: string; code?: string } | null) =>
+		typeof error?.message === 'string' && error.message.length > 0
+			? error.message
+			: String(error?.code ?? '');
+}
+
+/**
+ * A failure envelope as the POLLER receives it: data_manager parses the wire
+ * body and replaces `error` with the normalized ApiError before resolving
+ * (data_manager.request step 9), so the client-side gate must be fed that, not
+ * the raw JSON.
+ */
+function clientFailure(body: WireFailure): Record<string, unknown> {
+	return { ...body, error: clientHelpers.normalize_api_error(null, body) };
+}
+
+/** The same, minted from a code + message (no live harvest needed). */
+function refusedEnvelope(code: string, message: string): Record<string, unknown> {
+	return clientFailure({
+		ok: false,
+		request_id: 'client-poll-test',
+		error: {
+			code,
+			message,
+			label_key: `error_${code.replace(/\W/g, '_')}`,
+			category: 'unavailable',
+		},
+	});
+}
 
 async function loadClientPoller(): Promise<(options: unknown) => void> {
 	const raw = await Bun.file(CLIENT_SOURCE).text();
@@ -539,15 +624,14 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 
 describe('client poll honesty (render_tool_transcription.get_server_status)', () => {
 	beforeAll(async () => {
+		await installClientEnvelopeHelpers();
 		getServerStatus = await loadClientPoller();
 	});
 
-	test('a {result:false} envelope is NOT rendered as a finished transcription', async () => {
-		const run = await drivePoll({
-			result: false,
-			msg: 'invalid transcriber URL',
-			errors: ['invalid transcriber URL'],
-		});
+	test('an ok:false envelope is NOT rendered as a finished transcription', async () => {
+		const run = await drivePoll(
+			refusedEnvelope('tool.dependency_unavailable', 'invalid transcriber URL'),
+		);
 		// the whole point: the user must not read "Process done"
 		expect(panelText(run.status_panel)).not.toBe('Process done');
 		expect(panelText(run.status_panel)).toContain('invalid transcriber URL');
@@ -563,7 +647,13 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('a status-less / malformed envelope is treated as a failure, not as done', async () => {
-		for (const response of [undefined, null, {}, { result: null }, { result: 'unexpected' }]) {
+		for (const response of [
+			undefined,
+			null,
+			{},
+			{ ok: true, data: null },
+			{ ok: true, data: 'unexpected' },
+		]) {
 			const run = await drivePoll(response);
 			expect(panelText(run.status_panel)).not.toBe('Process done');
 			expect(panelIsError(run.status_panel)).toBe(true);
@@ -573,12 +663,14 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('the failure branch does not re-enable the button (a job may still be running)', async () => {
-		const run = await drivePoll({ result: false, msg: 'transcriber HTTP 502' });
+		const run = await drivePoll(
+			refusedEnvelope('tool.dependency_unavailable', 'transcriber HTTP 502'),
+		);
 		expect(run.button.classList.contains('disable')).toBe(true);
 	});
 
 	test('status 2 still re-polls and keeps the pid, and the trigger spins', async () => {
-		const run = await drivePoll({ result: { status: 2 }, msg: 'OK. Request done' });
+		const run = await drivePoll({ ok: true, data: { status: 2 } });
 		expect(panelText(run.status_panel)).toBe('Processing');
 		expect(panelIsError(run.status_panel)).toBe(false);
 		expect(run.deleted).toEqual([]);
@@ -589,7 +681,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('status 3 still clears the pid and refreshes the component, and stops the spinner', async () => {
-		const run = await drivePoll({ result: { status: 3 }, msg: 'OK. Request done' });
+		const run = await drivePoll({ ok: true, data: { status: 3 } });
 		expect(panelText(run.status_panel)).toBe('Process done');
 		// A finished run reports as `success`, never as `info`: the panel paints
 		// severity, and an outcome sharing the neutral grey of "the model is
@@ -601,7 +693,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('status 1 still clears the stale pid, reads Inactive and stops the spinner', async () => {
-		const run = await drivePoll({ result: { status: 1 }, msg: 'OK. Request done' });
+		const run = await drivePoll({ ok: true, data: { status: 1 } });
 		expect(panelText(run.status_panel)).toBe('Inactive');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([]);
@@ -616,16 +708,16 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	 */
 	test('the real server failure envelope renders as a failure in the browser', async () => {
 		const envelope = liveFailureEnvelope();
-		expect(envelope.result).toBe(false); // the harvest actually ran
-		const run = await drivePoll(envelope);
-		expect(panelText(run.status_panel)).toContain(envelope.msg);
+		expect(envelope.ok).toBe(false); // the harvest actually ran
+		const run = await drivePoll(clientFailure(envelope));
+		expect(panelText(run.status_panel)).toContain(envelope.error.message);
 		expect(panelIsError(run.status_panel)).toBe(true);
 		expect(run.deleted).toEqual([]);
 		expect(run.scheduled).toEqual([]);
 	});
 
 	test('no stored pid → the poll never calls the server at all', async () => {
-		const run = await drivePoll({ result: { status: 3 } }, null);
+		const run = await drivePoll({ ok: true, data: { status: 3 } }, null);
 		expect(run.requests).toEqual([]);
 		expect(run.status_panel.shown).toEqual([]);
 	});
@@ -725,10 +817,10 @@ describe('remote ASR status seam', () => {
 	test('SSRF guard fails closed without any network call', async () => {
 		for (const uri of ['http://127.0.0.1/x', 'http://169.254.169.254/x', 'file:///etc/passwd']) {
 			const result = (await babelTranscriberStatusProvider({ ...statusRequest, uri })) as {
-				result: unknown;
+				ok: unknown;
 				msg: string;
 			};
-			expect(result.result).toBe(false);
+			expect(result.ok).toBe(false);
 			expect(result.msg).toBe('invalid transcriber URL');
 		}
 	});
@@ -844,7 +936,7 @@ describe('ASR write-back (process_file port)', () => {
 				sleeps += 1;
 			},
 		});
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(sleeps).toBe(2);
 		expect(seen).toHaveLength(3);
 		// server-side polls are the destructive ones (PHP delete_result=true)
@@ -868,7 +960,7 @@ describe('ASR write-back (process_file port)', () => {
 			maxAttempts: 2,
 			sleep: async () => {},
 		});
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('already has data');
 	});
 
@@ -879,7 +971,7 @@ describe('ASR write-back (process_file port)', () => {
 			maxAttempts: 3,
 			sleep: async () => {},
 		});
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('gave up after 3 poll attempts');
 	});
 
@@ -892,18 +984,18 @@ describe('ASR write-back (process_file port)', () => {
 			maxAttempts: 2,
 			sleep: async () => {},
 		});
-		expect(status1.result).toBe(false);
+		expect(status1.ok).toBe(false);
 		expect(status1.msg).toContain('status 1');
 
 		const invalid = await pollTranscriptionCompletion(pollJob, {
-			provider: async () => ({ result: false, msg: 'invalid transcriber URL' }),
+			provider: async () => ({ ok: false, msg: 'invalid transcriber URL' }),
 			save: async () => {
 				throw new Error('must not save');
 			},
 			maxAttempts: 2,
 			sleep: async () => {},
 		});
-		expect(invalid.result).toBe(false);
+		expect(invalid.ok).toBe(false);
 		expect(invalid.msg).toContain('status not valid');
 	});
 });
@@ -961,32 +1053,37 @@ describe('model actions are admin-gated and catalog-bound', () => {
 	const nonAdmin = { isGlobalAdmin: false } as unknown as ToolActionContext['principal'];
 
 	test('repair_model refuses a non-admin', async () => {
-		const response = await tool.apiActions.repair_model!.handler({
-			options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
-			principal: nonAdmin,
-			userId: 1,
-		} as unknown as ToolActionContext);
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('administrator');
+		const refusal = await refusalOf(
+			tool.apiActions.repair_model!.handler({
+				options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
+				principal: nonAdmin,
+				userId: 1,
+			} as unknown as ToolActionContext),
+		);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('repair_model refuses a model outside the catalog', async () => {
-		const response = await tool.apiActions.repair_model!.handler({
-			options: { model: 'evil/not-in-catalog' },
-			principal: { isGlobalAdmin: true },
-			userId: 1,
-		} as unknown as ToolActionContext);
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('not in the transcriber catalog');
+		const refusal = await refusalOf(
+			tool.apiActions.repair_model!.handler({
+				options: { model: 'evil/not-in-catalog' },
+				principal: { isGlobalAdmin: true },
+				userId: 1,
+			} as unknown as ToolActionContext),
+		);
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(String(refusal.publicMessage)).toContain('not in the transcriber catalog');
 	});
 
 	test('verify_model refuses a non-admin', async () => {
-		const response = await tool.apiActions.verify_model!.handler({
-			options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
-			principal: nonAdmin,
-			userId: 1,
-		} as unknown as ToolActionContext);
-		expect(response.result).toBe(false);
+		const refusal = await refusalOf(
+			tool.apiActions.verify_model!.handler({
+				options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
+				principal: nonAdmin,
+				userId: 1,
+			} as unknown as ToolActionContext),
+		);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	// A REAL name from the register default catalog (tools/tool_transcription/
@@ -1015,18 +1112,20 @@ describe('model actions are admin-gated and catalog-bound', () => {
 				principal: admin,
 				userId: 1,
 			} as unknown as ToolActionContext);
-			// Distinct from the catalog-refusal message: the gate let it through.
-			expect(accepted.result).toBe(true);
-			expect(String(accepted.msg)).toContain('OK. Verified');
-			expect(String(accepted.msg)).not.toContain('not in the transcriber catalog');
+			// Distinct from the catalog refusal: the gate let it through, and the
+			// verdict is DATA now (`state`), not a sentence inside a msg string.
+			expect(accepted.ok).toBe(true);
+			expect((accepted.data as { state?: string }).state).toBeString();
 
-			const refused = await tool.apiActions.verify_model!.handler({
-				options: { model: 'evil/not-in-catalog' },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext);
-			expect(refused.result).toBe(false);
-			expect(String(refused.msg)).toContain('not in the transcriber catalog');
+			const refusal = await refusalOf(
+				tool.apiActions.verify_model!.handler({
+					options: { model: 'evil/not-in-catalog' },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext),
+			);
+			expect(refusal.code).toBe('tool.unsupported_target');
+			expect(String(refusal.publicMessage)).toContain('not in the transcriber catalog');
 		} finally {
 			if (prior === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
 			else process.env.DEDALO_AI_MODEL_STORE = prior;
@@ -1042,7 +1141,7 @@ describe('model actions are admin-gated and catalog-bound', () => {
 		const calls: Parameters<ScheduleRepair>[] = [];
 		const stubSchedule: ScheduleRepair = (...args) => {
 			calls.push(args);
-			return { result: true, msg: 'OK. Background process started', errors: [] };
+			return ok(true, { requestId: 'tool-transcription-test' });
 		};
 
 		const accepted = await repairModelAction(
@@ -1053,21 +1152,23 @@ describe('model actions are admin-gated and catalog-bound', () => {
 			} as unknown as ToolActionContext,
 			stubSchedule,
 		);
-		expect(accepted.result).toBe(true);
+		expect(accepted.ok).toBe(true);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]?.[1]).toBe('background_repair_model');
 		expect((calls[0]?.[3] as { model?: string } | undefined)?.model).toBe(KNOWN_CATALOG_MODEL);
 
-		const refused = await repairModelAction(
-			{
-				options: { model: 'evil/not-in-catalog' },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext,
-			stubSchedule,
+		const refusal = await refusalOf(
+			repairModelAction(
+				{
+					options: { model: 'evil/not-in-catalog' },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext,
+				stubSchedule,
+			),
 		);
-		expect(refused.result).toBe(false);
-		expect(String(refused.msg)).toContain('not in the transcriber catalog');
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(String(refusal.publicMessage)).toContain('not in the transcriber catalog');
 		// The refusal never reached scheduling: still just the one call above.
 		expect(calls).toHaveLength(1);
 		// The stub never runs the job, so the in-flight guard this accept path set
@@ -1192,7 +1293,7 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 			download,
 		});
 
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		// EXACTLY the failing file: not the decoder, not the config, not a common file.
 		expect(asked).toEqual([['onnx/encoder_model_q4.onnx']]);
 		// The healthy weight was never touched.
@@ -1216,9 +1317,11 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 			download,
 		});
 
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(asked).toEqual([['tokenizer.json']]);
-		expect(String(response.msg)).toContain('common file');
+		// The repaired count is DATA now; the "weights, config and N common file(s)"
+		// sentence stays in the server log, where the operator reads it.
+		expect((response.data as { repaired?: number }).repaired).toBe(1);
 	});
 
 	test('a healthy model reports nothing to repair and deletes nothing', async () => {
@@ -1227,8 +1330,8 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
 			download,
 		});
-		expect(response.result).toBe(true);
-		expect(String(response.msg)).toContain('Nothing to repair');
+		expect(response.ok).toBe(true);
+		expect((response.data as { repaired?: number }).repaired).toBe(0);
 		expect(asked).toEqual([]);
 		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
 	});
@@ -1244,11 +1347,13 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		});
 
 		const { asked, download } = recordingDownload();
-		const response = await backgroundRepairModel(ctx({ model: MODEL, kind: 'asr' }), { download });
+		const refusal = await refusalOf(
+			backgroundRepairModel(ctx({ model: MODEL, kind: 'asr' }), { download }),
+		);
 
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('Repair refused');
-		expect(String(response.msg)).toContain('cannot be named to fetch back');
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(String(refusal.publicMessage)).toContain('Repair refused');
+		expect(String(refusal.publicMessage)).toContain('cannot be named to fetch back');
 		// Nothing was deleted and nothing was downloaded.
 		expect(asked).toEqual([]);
 		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
@@ -1260,12 +1365,13 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		seed(files);
 
 		const { download } = recordingDownload({ ok: false });
-		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
-			download,
-		});
-
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toContain('download failed');
+		// A BACKGROUND job's failure is a THROW: the executor records it on the job
+		// (status 'error' + `error`), which is what get_background_job_status serves.
+		const refusal = await refusalOf(
+			backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), { download }),
+		);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain('download failed');
 	});
 
 	test('a second concurrent repair is refused SERVER-side', async () => {
@@ -1274,7 +1380,7 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		const calls: Parameters<ScheduleRepair>[] = [];
 		const stubSchedule: ScheduleRepair = (...args) => {
 			calls.push(args);
-			return { result: true, msg: 'OK. Background process started', errors: [] };
+			return ok(true, { requestId: 'tool-transcription-test' });
 		};
 		const KNOWN = 'onnx-community/whisper-large-v3-turbo';
 		const admin = { isGlobalAdmin: true } as unknown as ToolActionContext['principal'];
@@ -1286,11 +1392,11 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 
 		try {
 			const first = await request();
-			expect(first.result).toBe(true);
+			expect(first.ok).toBe(true);
 
-			const second = await request();
-			expect(second.result).toBe(false);
-			expect(String(second.msg)).toContain('already running');
+			const second = await refusalOf(request());
+			expect(second.code).toBe('resource.conflict');
+			expect(second.message).toContain('already running');
 			// The refusal never reached scheduling.
 			expect(calls).toHaveLength(1);
 		} finally {
@@ -1301,7 +1407,7 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 
 		// Released: the model is repairable again.
 		const third = await request();
-		expect(third.result).toBe(true);
+		expect(third.data).toBe(true);
 		releaseModelRepairLock(KNOWN);
 	});
 });
@@ -1333,7 +1439,7 @@ describe('model sources report a real state, and a download cannot claim a broke
 			principal: admin,
 			userId: 1,
 		} as unknown as ToolActionContext);
-		const result = response.result as {
+		const result = response.data as {
 			diarization: {
 				installed: boolean;
 				state: string;
@@ -1376,14 +1482,16 @@ describe('model sources report a real state, and a download cannot claim a broke
 		writeFileSync(`${dir}/encoder_model.onnx`, '<!doctype html><h1>502</h1>');
 		writeFileSync(`${dir}/decoder_model_merged.onnx`, '<!doctype html><h1>502</h1>');
 		try {
-			const response = await tool.apiActions.download_model!.handler({
-				options: { model: KNOWN_CATALOG_MODEL },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext);
-			expect(response.result).toBe(false);
-			expect(String(response.msg)).toContain('repair it instead');
-			expect(String(response.msg)).not.toContain('already installed');
+			const refusal = await refusalOf(
+				tool.apiActions.download_model!.handler({
+					options: { model: KNOWN_CATALOG_MODEL },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext),
+			);
+			expect(refusal.code).toBe('tool.unsupported_target');
+			expect(String(refusal.publicMessage)).toContain('repair it instead');
+			expect(String(refusal.publicMessage)).not.toContain('already installed');
 		} finally {
 			rmSync(`${SOURCES_STORE}/${KNOWN_CATALOG_MODEL}`, { recursive: true, force: true });
 		}
@@ -1457,9 +1565,7 @@ describe('a cancelled repair job does not lock the model out', () => {
 		mediaJobs.stop(record.id);
 
 		const schedule: ScheduleRepair = () => ({
-			result: true,
-			msg: 'OK. Background process started',
-			errors: [],
+			...ok(true, { requestId: 'tool-transcription-test' }),
 			job_id: record.id,
 			background_job_id: record.id,
 		});
@@ -1470,15 +1576,15 @@ describe('a cancelled repair job does not lock the model out', () => {
 			);
 
 		try {
-			expect((await request()).result).toBe(true);
+			expect((await request()).ok).toBe(true);
 			// The job never ran, and never will: it is 'stopped'.
 			expect(mediaJobs.status(record.id)?.status).toBe('stopped');
 
 			// The model is repairable again — the claim was released by the job's
-			// own death, not by anybody remembering to clear a flag.
+			// own death, not by anybody remembering to clear a flag (a second
+			// refusal would THROW resource.conflict, so a plain success proves it).
 			const second = await request();
-			expect(second.result).toBe(true);
-			expect(String(second.msg)).not.toContain('already running');
+			expect(second.ok).toBe(true);
 		} finally {
 			releaseModelRepairLock(KNOWN);
 		}
@@ -1495,9 +1601,7 @@ describe('a cancelled repair job does not lock the model out', () => {
 			return true;
 		});
 		const schedule: ScheduleRepair = () => ({
-			result: true,
-			msg: 'OK. Background process started',
-			errors: [],
+			...ok(true, { requestId: 'tool-transcription-test' }),
 			job_id: record.id,
 			background_job_id: record.id,
 		});
@@ -1506,23 +1610,31 @@ describe('a cancelled repair job does not lock the model out', () => {
 				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
 				schedule,
 			);
-			expect(first.result).toBe(true);
+			expect(first.ok).toBe(true);
 
-			const second = await repairModelAction(
-				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
-				schedule,
+			const second = await refusalOf(
+				repairModelAction(
+					{
+						options: { model: KNOWN },
+						principal: admin,
+						userId: 1,
+					} as unknown as ToolActionContext,
+					schedule,
+				),
 			);
-			expect(second.result).toBe(false);
-			expect(String(second.msg)).toContain('already running');
+			expect(second.code).toBe('resource.conflict');
+			expect(second.message).toContain('already running');
 
 			// download_model is the OTHER writer of the same files: same guard.
-			const download = await tool.apiActions.download_model!.handler({
-				options: { model: KNOWN },
-				principal: admin,
-				userId: 1,
-			} as unknown as ToolActionContext);
-			expect(download.result).toBe(false);
-			expect(String(download.msg)).toContain('already running');
+			const download = await refusalOf(
+				tool.apiActions.download_model!.handler({
+					options: { model: KNOWN },
+					principal: admin,
+					userId: 1,
+				} as unknown as ToolActionContext),
+			);
+			expect(download.code).toBe('resource.conflict');
+			expect(download.message).toContain('already running');
 		} finally {
 			if (release !== null) (release as () => void)();
 			mediaJobs.stop(record.id);

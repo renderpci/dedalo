@@ -8,6 +8,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { extractText } from '../engine/pdf.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 
@@ -32,7 +33,10 @@ export async function extractPdfCore(
 		pathOpts,
 	).absolutePath;
 	if (!existsSync(source)) {
-		throw new Error('pdf extractor: default-quality PDF not found');
+		throw new DedaloError('media.file_not_found', {
+			message: 'pdf extractor: default-quality PDF not found',
+			publicMessage: 'pdf extractor: default-quality PDF not found',
+		});
 	}
 	// UPLOAD-TRAV-01 (2026-07-28 audit): the extractor used a PREDICTABLE shared
 	// path (/tmp/dedalo_pdf_<pid>_<sectionId>.txt) — an attacker could pre-place a

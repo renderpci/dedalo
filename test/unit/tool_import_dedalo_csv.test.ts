@@ -56,7 +56,7 @@ describe('tool_import_dedalo_csv module', () => {
 			background: false,
 			options: { section_tipo: 'test0' },
 		});
-		const list = res.result as { value: string; model: string }[];
+		const list = (res.data as { components: { value: string; model: string }[] }).components;
 		expect(list.length).toBeGreaterThan(0);
 		// The real section's components are what an exported test0 CSV is keyed on.
 		expect(list.some((el) => el.value === 'ontology3')).toBe(true);
@@ -93,10 +93,11 @@ describe('tool_import_dedalo_csv module', () => {
 			background: false,
 			options: { section_tipo: SECTION },
 		});
-		expect(res.result).not.toBe(false);
-		// The client reads response.result (→ list), response.label, response.msg.
-		expect(typeof res.label).toBe('string');
-		const list = res.result as Record<string, unknown>[];
+		expect(res.ok).toBe(true);
+		// The payload carries the list and the section label together.
+		const payload = res.data as { components: Record<string, unknown>[]; label: unknown };
+		expect(typeof payload.label).toBe('string');
+		const list = payload.components;
 		expect(Array.isArray(list)).toBe(true);
 		expect(list.length).toBeGreaterThan(0);
 		for (const el of list) {
@@ -179,7 +180,7 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 			},
 		});
 
-		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+		const report = (res.data as { files: ImportFileReport[] }).files[0] as ImportFileReport;
 		expect(report.ok).toBe(true);
 		// THE CONTRACT: created/updated are the section_ids, not counts. The client
 		// lists them and offers "copy as column"; a number has no .length and the
@@ -240,7 +241,7 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+		const report = (res.data as { files: ImportFileReport[] }).files[0] as ImportFileReport;
 		bulkProcessIds.push(report.bulk_process_id as number);
 		expect(report.failed).toEqual([]);
 
@@ -293,7 +294,7 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+		const report = (res.data as { files: ImportFileReport[] }).files[0] as ImportFileReport;
 		bulkProcessIds.push(report.bulk_process_id as number);
 		expect(report.failed).toEqual([]);
 
@@ -331,7 +332,7 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		const report2 = (res2.result as ImportFileReport[])[0] as ImportFileReport;
+		const report2 = (res2.data as { files: ImportFileReport[] }).files[0] as ImportFileReport;
 		bulkProcessIds.push(report2.bulk_process_id as number);
 		expect(report2.failed).toEqual([]);
 
@@ -372,7 +373,7 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+		const report = (res.data as { files: ImportFileReport[] }).files[0] as ImportFileReport;
 		bulkProcessIds.push(report.bulk_process_id as number);
 		expect(report.created).toEqual([]);
 		expect(report.updated).toEqual([]);
@@ -401,7 +402,9 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 				],
 			},
 		});
-		bulkProcessIds.push((res.result as ImportFileReport[])[0]?.bulk_process_id as number);
+		bulkProcessIds.push(
+			(res.data as { files: ImportFileReport[] }).files[0]?.bulk_process_id as number,
+		);
 		// At minimum the 'reading' phase frame — and it carries the file identity and
 		// the batch position the progress bar needs.
 		expect(frames.length).toBeGreaterThan(0);
@@ -456,9 +459,9 @@ describe('path traversal is REFUSED (fail-closed, canary-verified)', () => {
 			`..%2fcanary_${process.pid}.csv`, // encoded '../' — must NOT be decoded into a traversal
 			'..%2f..%2fetc%2fpasswd',
 		]) {
-			const res = await callAction('delete_csv_file', { file_name });
-			expect(res.result).toBe(false); // refused via the error envelope, no throw
-			expect(String(res.msg)).toStartWith('Error.');
+			// Refused by a THROW (the path guards are still untyped engine throws;
+			// the tool's own refusals are registered codes). Either way nothing runs.
+			expect(callAction('delete_csv_file', { file_name })).rejects.toThrow();
 		}
 		expect(existsSync(canary)).toBe(true); // nothing outside the user dir was touched
 		expect(existsSync('/etc/passwd')).toBe(true);
@@ -473,9 +476,7 @@ describe('path traversal is REFUSED (fail-closed, canary-verified)', () => {
 			{ key_dir: '', tmp_name: '/etc/passwd' },
 			{ key_dir: '../../../../../etc', tmp_name: 'passwd' },
 		]) {
-			const res = await callAction('process_uploaded_file', { file_data });
-			expect(res.result).toBe(false);
-			expect(String(res.msg)).toStartWith('Error.');
+			expect(callAction('process_uploaded_file', { file_data })).rejects.toThrow();
 		}
 		expect(existsSync('/etc/passwd')).toBe(true); // never moved into the import dir
 		expect(existsSync(resolve(userDir, 'passwd'))).toBe(false);
@@ -492,11 +493,11 @@ describe('path traversal is REFUSED (fail-closed, canary-verified)', () => {
 			// SCRATCH_USER tries to reach it via key_dir='../<VICTIM>'. That path stays
 			// INSIDE the shared staging root (so the old root-only check passed), but
 			// sanitizeSegment rejects the '..' segment fail-closed.
-			const res = await callAction('process_uploaded_file', {
-				file_data: { key_dir: `../${VICTIM}`, tmp_name: 'victim.csv' },
-			});
-			expect(res.result).toBe(false);
-			expect(String(res.msg)).toStartWith('Error.');
+			await expect(
+				callAction('process_uploaded_file', {
+					file_data: { key_dir: `../${VICTIM}`, tmp_name: 'victim.csv' },
+				}),
+			).rejects.toThrow();
 			expect(existsSync(victimFile)).toBe(true); // the victim's file was NOT moved/claimed
 			expect(existsSync(resolve(userDir, 'victim.csv'))).toBe(false);
 		} finally {
@@ -510,14 +511,15 @@ describe('path traversal is REFUSED (fail-closed, canary-verified)', () => {
 		const staged = resolve(stagingDir, 'real.csv');
 		writeFileSync(staged, 'a;b\n1;2\n');
 		const escaped = resolve(root, 'import', `escape_${process.pid}.csv`);
-		const res = await callAction('process_uploaded_file', {
-			file_data: {
-				key_dir: 'kd',
-				tmp_name: 'real.csv',
-				file_name: `../../escape_${process.pid}.csv`,
-			},
-		});
-		expect(res.result).toBe(false);
+		await expect(
+			callAction('process_uploaded_file', {
+				file_data: {
+					key_dir: 'kd',
+					tmp_name: 'real.csv',
+					file_name: `../../escape_${process.pid}.csv`,
+				},
+			}),
+		).rejects.toThrow();
 		expect(existsSync(staged)).toBe(true); // the source was NOT moved
 		expect(existsSync(escaped)).toBe(false); // nothing landed outside the import dir
 	});

@@ -72,6 +72,7 @@ import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { getComponentModel } from '../../core/components/registry.ts';
 import { getPopulatedTlds } from '../../core/db/dd_ontology.ts';
+import { DedaloError } from '../../core/errors/dedalo_error.ts';
 import { getModelByTipo } from '../../core/ontology/resolver.ts';
 import { getTldFromTipo } from '../../core/ontology/tld.ts';
 import { currentOntologyRevision } from './cache.ts';
@@ -124,7 +125,7 @@ export type ModelResolver = (tipo: string) => Promise<string | null>;
  * naming its element/section/field, plus the warnings AND the field-local
  * degradations gathered before the failure, so `validate` reports all three.
  */
-export class PlanCompileError extends Error {
+export class PlanCompileError extends DedaloError {
 	readonly elementTipo: string;
 	readonly compileErrors: string[];
 	readonly compileWarnings: string[];
@@ -136,7 +137,15 @@ export class PlanCompileError extends Error {
 		warnings: string[],
 		degradations: PlanDegradation[] = [],
 	) {
-		super(`diffusion plan compile failed for element '${elementTipo}':\n- ${errors.join('\n- ')}`);
+		// `diffusion.plan_compile_failed` is PUBLIC: the operator authored the
+		// config, and the per-cause list (the `\n- ` grammar tool_diffusion's
+		// report model splits on) IS the fix — it is the wire message.
+		const message = `diffusion plan compile failed for element '${elementTipo}':\n- ${errors.join('\n- ')}`;
+		super('diffusion.plan_compile_failed', {
+			message,
+			publicMessage: message,
+			coordinates: { element: elementTipo },
+		});
 		this.name = 'PlanCompileError';
 		this.elementTipo = elementTipo;
 		this.compileErrors = errors;

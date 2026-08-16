@@ -23,6 +23,7 @@ import {
 	type RelaySettings,
 	tool,
 } from '../../tools/tool_error_report/server/index.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 function adminContext(options: Record<string, unknown>): ToolActionContext {
 	return {
@@ -56,12 +57,12 @@ function settings(overrides: Partial<RelaySettings> = {}): RelaySettings {
 	};
 }
 
-/** A fetch mock capturing the outbound request; responds 200 {result:true}. */
+/** A fetch mock capturing the outbound request; responds 200 {ok:true}. */
 function captureFetch(capture: { url?: string; init?: RequestInit }): typeof fetch {
 	return (async (url: string | URL | Request, init?: RequestInit) => {
 		capture.url = String(url);
 		capture.init = init;
-		return new Response(JSON.stringify({ result: true, report_id: 9 }), { status: 200 });
+		return new Response(JSON.stringify({ ok: true, report_id: 9 }), { status: 200 });
 	}) as typeof fetch;
 }
 
@@ -85,9 +86,8 @@ describe('tool_error_report send_report (WC-019)', () => {
 		});
 		const context = adminContext(submission());
 		context.principal = { userId: 7, isGlobalAdmin: false, isDeveloper: true };
-		const response = await handler(context);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['unauthorized']);
+		const refusal = await refusalOf(handler(context));
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('invalid submission (unknown field) is refused by the shared strict schema', async () => {
@@ -98,9 +98,9 @@ describe('tool_error_report send_report (WC-019)', () => {
 			storeLocally: storeNever,
 			settings: settings({ masterApiUrl: 'https://master.example/api' }),
 		});
-		const response = await handler(adminContext(submission({ csrf_token: 'leak-me' })));
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['invalid_submission']);
+		const refusal = await refusalOf(handler(adminContext(submission({ csrf_token: 'leak-me' }))));
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toBe('Invalid error report submission');
 	});
 
 	test('relay: server-stamps identity, sends the WC-017 RQO with the token header', async () => {
@@ -111,7 +111,7 @@ describe('tool_error_report send_report (WC-019)', () => {
 			settings: settings({ masterApiUrl: 'https://master.example/api', token: 'fleet-secret' }),
 		});
 		const response = await handler(adminContext(submission()));
-		expect(response.result).toEqual({ delivered: true, via: 'master' });
+		expect(response.data).toEqual({ delivered: true, via: 'master' });
 
 		expect(capture.url).toBe('https://master.example/api');
 		const headers = capture.init?.headers as Record<string, string>;
@@ -141,9 +141,11 @@ describe('tool_error_report send_report (WC-019)', () => {
 			storeLocally: storeNever,
 			settings: settings({ masterApiUrl: 'https://master.example/api' }),
 		});
-		const response = await handler(adminContext(submission()));
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['relay_failed']);
+		// One wire code for every relay condition (the admin's only remedy is the
+		// same); WHICH condition stays legible in the LOG-only message.
+		const refusal = await refusalOf(handler(adminContext(submission())));
+		expect(refusal.code).toBe('tool.dependency_unavailable');
+		expect(refusal.message).toBe('relay_failed');
 	});
 
 	test('relay network error → honest failure envelope', async () => {
@@ -154,9 +156,9 @@ describe('tool_error_report send_report (WC-019)', () => {
 			storeLocally: storeNever,
 			settings: settings({ masterApiUrl: 'https://master.example/api' }),
 		});
-		const response = await handler(adminContext(submission()));
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['relay_failed']);
+		const refusal = await refusalOf(handler(adminContext(submission())));
+		expect(refusal.code).toBe('tool.dependency_unavailable');
+		expect(refusal.message).toBe('relay_failed');
 	});
 
 	test('master URL scheme: https required; plain http only for loopback (dev)', async () => {
@@ -174,9 +176,9 @@ describe('tool_error_report send_report (WC-019)', () => {
 			storeLocally: storeNever,
 			settings: settings({ masterApiUrl: 'http://master.example/x' }),
 		});
-		const response = await handler(adminContext(submission()));
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['relay_misconfigured']);
+		const refusal = await refusalOf(handler(adminContext(submission())));
+		expect(refusal.code).toBe('tool.dependency_unavailable');
+		expect(refusal.message).toBe('relay_misconfigured');
 	});
 
 	test('local shortcut: no master URL + receiver on THIS server → direct store', async () => {
@@ -192,7 +194,7 @@ describe('tool_error_report send_report (WC-019)', () => {
 			settings: settings({ receiverEnabled: true }),
 		});
 		const response = await handler(adminContext(submission()));
-		expect(response.result).toEqual({ delivered: true, via: 'local', report_id: 31 });
+		expect(response.data).toEqual({ delivered: true, via: 'local', report_id: 31 });
 		expect(stored[0]?.user_id).toBe(7);
 		expect(stored[0]?.report_version).toBe(1);
 	});
@@ -205,9 +207,9 @@ describe('tool_error_report send_report (WC-019)', () => {
 			storeLocally: storeNever,
 			settings: settings(),
 		});
-		const response = await handler(adminContext(submission()));
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['relay_not_configured']);
+		const refusal = await refusalOf(handler(adminContext(submission())));
+		expect(refusal.code).toBe('tool.dependency_unavailable');
+		expect(refusal.message).toBe('relay_not_configured');
 	});
 
 	test('size fitting drops the OLDEST errors first; the description always survives', async () => {
@@ -229,7 +231,7 @@ describe('tool_error_report send_report (WC-019)', () => {
 		});
 		const fifty = Array.from({ length: 50 }, (_, index) => bigError(index));
 		const response = await handler(adminContext(submission({ js_errors: fifty })));
-		expect(response.result).toEqual({ delivered: true, via: 'master' });
+		expect(response.data).toEqual({ delivered: true, via: 'master' });
 
 		const body = JSON.parse(String(capture.init?.body)) as { options: ReportWire };
 		const sent = body.options.js_errors;

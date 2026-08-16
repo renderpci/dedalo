@@ -71,6 +71,8 @@
 	import {render_list_section} from './render_list_section.js'
 	import {render_solved_section} from './render_solved_section.js'
 	import {render_common_section} from './render_common_section.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
+	import {handle_api_error, handle_api_notice} from '../../common/js/error_dispatch.js'
 
 
 
@@ -798,7 +800,8 @@ section.prototype.build = async function(autoload=false) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error, section without context:", api_response);
 					return false
 				}
@@ -811,7 +814,7 @@ section.prototype.build = async function(autoload=false) {
 				)
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = datum
 
 			// set Context
 				// context is set only when the origin context is empty,
@@ -1308,8 +1311,8 @@ section.prototype.load_section_tool_files = function() {
 * section tipo, lang, and credentials into the standard source envelope that the
 * Dédalo PHP API expects.
 *
-* Errors returned by the API are surfaced via alert() so the user is informed even
-* if the promise is not awaited at the call site.
+* A refused request is handed to `handle_api_error`, which renders it through the
+* one policy/renderer pair (see error_policy.js).
 *
 * @returns {Promise<number|string|null>} The new record's section_id (positive
 *   integer) on success; null if the API returned a falsy or non-positive result
@@ -1331,20 +1334,20 @@ section.prototype.create_section = async function () {
 		})
 
 		// manage errors
-		const errors = api_response?.errors || []
-		if (errors.length>0) {
-			alert('Errors: \n' + errors.join('\n'));
+		// The policy renders the refusal (toast / no-access panel / relogin) in
+		// the user's language; the console line stays for the developer.
+		if (request_failed(api_response)) {
+			console.error('create_section api_response error:', api_response.error);
+			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
-		if (api_response.result && api_response.result>0) {
-
-			const new_section_id = api_response.result
+		const new_section_id = response_data(api_response)
+		if (new_section_id && new_section_id>0) {
 
 			return new_section_id
 
 		}else{
-			console.error('api_response.errors:', api_response.errors);
-			console.error( api_response.msg || 'Error on create record!');
+			console.error('Error on create record!', api_response);
 		}
 
 
@@ -1387,20 +1390,20 @@ section.prototype.duplicate_section = async function (section_id) {
 		})
 
 		// manage errors
-		const errors = api_response?.errors || []
-		if (errors.length>0) {
-			alert('Errors: \n' + errors.join('\n'));
+		// The policy renders the refusal (toast / no-access panel / relogin) in
+		// the user's language; the console line stays for the developer.
+		if (request_failed(api_response)) {
+			console.error('duplicate_section api_response error:', api_response.error);
+			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
-		if (api_response.result && api_response.result>0) {
-
-			const new_section_id = api_response.result
+		const new_section_id = response_data(api_response)
+		if (new_section_id && new_section_id>0) {
 
 			return new_section_id
 
 		}else{
-			console.error('api_response.errors:', api_response.errors);
-			console.error( api_response.msg || 'Error on duplicate record!');
+			console.error('Error on duplicate record!', api_response);
 		}
 
 
@@ -1456,24 +1459,45 @@ section.prototype.delete_section = async function (options) {
 			}
 		}
 		const api_response = await data_manager.request({
-			body : rqo
+			body	: rqo,
+			// this method renders the delete notices itself, next to the record
+			// it could not remove — the page-level toast would say it twice.
+			notices	: 'caller'
 		})
 
 		// manage errors
-		const errors = api_response?.errors || []
-		if (errors.length>0) {
-			alert('Errors: \n' + errors.join('\n'));
+		// The policy renders the refusal (toast / no-access panel / relogin) in
+		// the user's language; the console line stays for the developer.
+		if (request_failed(api_response)) {
+			console.error('delete_section api_response error:', api_response.error);
+			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
-		if (api_response?.result && api_response.result.length>0) {
+		// notices. A delete SUCCEEDS with a coded, non-fatal fact when the server
+		// kept a record because one of its children refused to go
+		// (`record.delete_children_refused`, `details.not_deleted` = the refused
+		// ids, comma-joined). What was deleted really was deleted, so this is not
+		// a failure — it is the sentence the old alert used to show, rendered
+		// through the one error renderer (label + placeholders, never innerHTML)
+		// inside the section's own wrapper.
+		if (Array.isArray(api_response?.notices) && api_response.notices.length>0) {
+			for (const notice of api_response.notices) {
+				await handle_api_notice(notice, {
+					wrapper		: self.node,
+					request_id	: api_response.request_id
+				})
+			}
+		}
+
+		const deleted = response_data(api_response)
+		if (deleted && deleted.length>0) {
 
 			// all is OK
 			return true
 		}
 
 	// delete has failed. Notify and return false
-		console.error('api_response.errors:', api_response.errors);
-		console.error( api_response.msg || 'Error on delete records!');
+		console.error('Error on delete records!', api_response);
 
 
 	return false
@@ -2024,13 +2048,13 @@ section.prototype.get_total = async function(sqo) {
 					})
 
 				// API error case
-					if ( api_count_response.result===false || api_count_response.errors?.length ) {
-						console.error('Error on count total : api_count_response:', api_count_response);
+					if ( request_failed(api_count_response) ) {
+						console.error('Error on count total : api_count_response:', api_count_response.error);
 						return
 					}
 
 				// set result
-					const total = api_count_response.result.total
+					const total = response_data(api_count_response).total
 
 				// only cache the default/unfiltered count on the instance
 				if (use_cache) {

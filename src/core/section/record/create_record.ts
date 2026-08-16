@@ -29,6 +29,7 @@ import {
 	insertMatrixRecordWithExplicitId,
 } from '../../db/matrix_write.ts';
 import { sql } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { fireSaveEvent } from '../../section_record/save_event.ts';
 
@@ -187,13 +188,17 @@ export async function createSectionRecord(
 	// engine backstop covers the client API, MCP tools, the agent and any future
 	// door in one place. The API handlers deny earlier with a clean 403.
 	if (isConsultationOnlySection(sectionTipo)) {
-		throw new Error(
-			`createSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
-		);
+		throw new DedaloError('perm.denied', {
+			message: `createSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
+			coordinates: { section_tipo: sectionTipo, operation: 'create' },
+		});
 	}
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		throw new Error(`createSectionRecord: no matrix table for section '${sectionTipo}'`);
+		throw new DedaloError('section.no_matrix_table', {
+			message: `createSectionRecord: no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
 	}
 	// Ontology-declared birth state (project filter + properties.dato_default).
 	// Merged UNDER the audit metadata: no default may ever displace the

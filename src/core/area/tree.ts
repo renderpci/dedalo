@@ -238,8 +238,20 @@ export async function readAreaHierarchyData(
 		}
 	}
 
-	// Typologies (deduplicated, first-seen order): label hierarchy16 + order
-	// hierarchy106 from the typology record.
+	const typologies = await readTypologies(typologyOrder, typologySources, lang);
+
+	return { tipo: areaTipo, value, typologies };
+}
+
+/**
+ * Typologies (deduplicated, first-seen order — the caller's `typologyOrder`):
+ * label hierarchy16 + order hierarchy106 from each typology record.
+ */
+async function readTypologies(
+	typologyOrder: readonly string[],
+	typologySources: ReadonlyMap<string, string>,
+	lang: string,
+): Promise<TypologyItem[]> {
 	const typologies: TypologyItem[] = [];
 	for (const typologyId of typologyOrder) {
 		const typologySection = typologySources.get(typologyId) ?? TYPOLOGY_SECTION_FALLBACK;
@@ -253,14 +265,13 @@ export async function readAreaHierarchyData(
 			order_items: { value?: unknown }[] | null;
 		}[];
 		typologies.push({
-			// The SAME canonicalization as typology_section_id above — the two
-			// are compared on the client and must not diverge in type.
+			// The SAME canonicalization as the hierarchy item's typology_section_id
+			// — the two are compared on the client and must not diverge in type.
 			section_id: canonicalizeStoredSectionId(typologyId),
 			type: 'typology',
 			label: langSliceValue(typologyRows[0]?.label_items, lang),
 			order: Number(typologyRows[0]?.order_items?.[0]?.value ?? 0),
 		});
 	}
-
-	return { tipo: areaTipo, value, typologies };
+	return typologies;
 }

@@ -13,25 +13,50 @@
  * internal isDeveloper assert here is defense-in-depth (PHP assert_developer()).
  */
 
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { setRecordsInDdOntology } from '../../../src/core/ontology/ontology_write.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
+
+/**
+ * The ontology write's own outcome object → the envelope. A refusal becomes the
+ * registered throw (its per-check detail joins the LOG-only message, which the
+ * operator reads in the console and the wire never sees); a success carries the
+ * summary + the non-fatal per-record notes as PAYLOAD.
+ */
+function ontologyWriteResponse(
+	outcome: { ok: boolean; msg: string; errors: string[] },
+	context: ToolActionContext,
+	sectionTipo: string,
+): ToolResponse {
+	if (!outcome.ok) {
+		const detail = outcome.errors.length === 0 ? '' : ` — ${outcome.errors.join('; ')}`;
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { tool: 'tool_ontology', section_tipo: sectionTipo },
+			message: `${outcome.msg}${detail}`,
+		});
+	}
+	return ok(
+		{ summary: outcome.msg, errors: outcome.errors },
+		{ requestId: toolRequestId(context) },
+	);
+}
 
 export async function toolOntologySetRecords(context: ToolActionContext): Promise<ToolResponse> {
 	if (!context.principal.isDeveloper) {
-		return {
-			result: false,
-			msg: 'Error. tool_ontology requires developer privileges',
-			errors: ['unauthorized'],
-		};
+		throw new DedaloError('perm.developer_required', {
+			coordinates: { tool: 'tool_ontology', action: 'set_records' },
+		});
 	}
 	const sectionTipo =
 		typeof context.options.section_tipo === 'string' ? context.options.section_tipo : '';
 	if (sectionTipo === '') {
-		return {
-			result: false,
-			msg: 'Error. Missing required parameter: section_tipo',
-			errors: ['section_tipo is required'],
-		};
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'section_tipo is required',
+		});
 	}
 	const rawSectionId = context.options.section_id;
 	const sectionId =
@@ -46,7 +71,7 @@ export async function toolOntologySetRecords(context: ToolActionContext): Promis
 			sectionId,
 			userId: context.userId,
 		});
-		return { result: edited.result, msg: edited.msg, errors: edited.errors };
+		return ontologyWriteResponse(edited, context, sectionTipo);
 	}
 
 	// LIST mode: the scope is the caller's LIVE list sqo, and it is REQUIRED.
@@ -58,11 +83,9 @@ export async function toolOntologySetRecords(context: ToolActionContext): Promis
 	// list still matches the whole section, but EXPLICITLY.
 	const sqoRaw = context.options.sqo;
 	if (sqoRaw === null || typeof sqoRaw !== 'object' || Array.isArray(sqoRaw)) {
-		return {
-			result: false,
-			msg: 'Error. sqo is required (the scope to act on — no whole-section default; WC-043)',
-			errors: ['invalid_request'],
-		};
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'sqo is required (the scope to act on — no whole-section default; WC-043)',
+		});
 	}
 	const { sanitizeClientSqo } = await import('../../../src/core/concepts/sqo.ts');
 	const { buildSearchSql } = await import('../../../src/core/search/sql_assembler.ts');
@@ -84,9 +107,5 @@ export async function toolOntologySetRecords(context: ToolActionContext): Promis
 		sectionIds,
 		userId: context.userId,
 	});
-	return {
-		result: response.result,
-		msg: response.msg,
-		errors: response.errors,
-	};
+	return ontologyWriteResponse(response, context, sectionTipo);
 }

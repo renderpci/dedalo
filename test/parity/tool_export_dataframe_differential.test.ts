@@ -38,6 +38,9 @@ interface Grid {
 	rows?: Record<string, unknown>[];
 	end?: { columns?: unknown };
 	meta?: { total?: unknown };
+	/** Non-fatal "no atom for this cell model" notes — the successor of the
+	 *  legacy top-level `errors[]` (src/diffusion/export/grid.ts). */
+	unresolved?: string[];
 }
 
 const SECTION = 'numisdata3';
@@ -151,8 +154,8 @@ describe.if(hasPhpCredentials())('tool_export dataframe fan-out differential', (
 				}
 			).result ?? {}) as Grid;
 			const tsResult = await tsCall(rqo);
-			const tsGrid = ((tsResult.body as { result?: Grid }).result ?? {}) as Grid;
-			const tsErrors = (tsResult.body as { errors?: string[] }).errors ?? [];
+			const tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
+			const tsErrors = tsGrid.unresolved ?? [];
 
 			// The old loud gap must be GONE.
 			expect(tsErrors.filter((error) => error.includes('component_dataframe'))).toEqual([]);
@@ -185,7 +188,7 @@ describe.if(hasPhpCredentials())('tool_export dataframe fan-out differential', (
 		const phpGrid = ((
 			(await php.call(structuredClone(rqo) as Record<string, unknown>)).body as { result?: Grid }
 		).result ?? {}) as Grid;
-		const tsGrid = (((await tsCall(rqo)).body as { result?: Grid }).result ?? {}) as Grid;
+		const tsGrid = (((await tsCall(rqo)).body as { data?: Grid }).data ?? {}) as Grid;
 
 		/** The cells of one grid's row for a record, decoded. */
 		const cellsOf = (grid: Grid, recordId: string): Record<string, unknown>[] => {
@@ -238,7 +241,8 @@ describe.if(hasPhpCredentials())('tool_export dataframe fan-out differential', (
 	test('a DECLARED dataframe path step stays loud on TS (PHP 500s — not pinnable)', async () => {
 		if (!hasPhpCredentials()) return;
 		const tsResult = await tsCall(buildRqo('grid_value', 'default', true));
-		const tsErrors = (tsResult.body as { errors?: string[] }).errors ?? [];
+		const tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
+		const tsErrors = tsGrid.unresolved ?? [];
 		expect(tsErrors.some((error) => error.includes('component_dataframe:declared-path'))).toBe(
 			true,
 		);

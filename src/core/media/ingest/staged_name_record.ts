@@ -50,6 +50,7 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { resolve, sep } from 'node:path';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { MEDIA_DIR_MODE } from '../../install/media_tree.ts';
 import { writeAtomicallySync } from '../atomic.ts';
 import { sanitizeSegment } from './add_file.ts';
@@ -79,7 +80,10 @@ function recordPath(stagingDirPath: string, stagedName: string): string {
 	const dir = resolve(stagingDirPath, STAGED_NAME_DIR);
 	const full = resolve(dir, safe);
 	if (!full.startsWith(dir + sep)) {
-		throw new Error('staged name record escapes the staging dir');
+		throw new DedaloError('media.invalid_path', {
+			message: 'staged name record escapes the staging dir',
+			coordinates: { path: full },
+		});
 	}
 	return full;
 }

@@ -47,8 +47,10 @@ import {
 import { dbTimestamp } from '../db/db_timestamp.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
+import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
 import {
+	inCapScope,
 	isTargetAllowed,
 	isTermSelectable,
 	type PickerConstraint,
@@ -462,9 +464,20 @@ export async function maintainRelationSearchIndex(
  * THIS IS THE LENGTH-1 DOOR. The list above is `normalizeRelationInsert`;
  * everything else — the target, read-grant, selectability and selection-cap
  * constraints — is `validateRelationInserts`, the array door this delegates to.
- * The signature and the null-means-dropped contract are unchanged, so every
- * caller keeps working; what a single call CANNOT carry is the refusal reason,
- * so the new constraint refusals are logged here instead (see the branch).
+ *
+ * TWO KINDS OF REFUSAL, TWO SIGNALS. The PHP-era drops (bad_form /
+ * autoreference / duplicate) keep this door's designed contract: null, read by
+ * every caller as PHP's "ignored" (the client's server-authoritative duplicate
+ * check is exactly an unchanged pagination.total). The four CONSTRAINT
+ * refusals are NOT ignorable facts — a null here was a silent success (the save
+ * answered ok, the locator was never written, only a server console line said
+ * why), which is the exact "silently narrowed scope" CLAUDE.md forbids. They
+ * are THROWN as the registered errors below, so the save transaction rolls
+ * back and the API answers a named refusal (`relation.insert_refused` 400 for
+ * off_target / term_not_selectable / selection_limit; the generic
+ * `perm.denied` 403 for target_not_readable — a refusal must not describe what
+ * the actor may not reach, the same posture the picker read takes).
+ * Callers wanting per-locator verdicts WITHOUT a throw use the batch door.
  */
 export async function validateRelationInsert(
 	rawValue: Record<string, unknown>,
@@ -473,21 +486,39 @@ export async function validateRelationInsert(
 	const { outcomes } = await validateRelationInserts([rawValue], context);
 	const outcome = outcomes[0];
 	if (outcome === undefined || outcome.status === 'refused') {
-		// The four CONSTRAINT refusals are new facts this door has no channel
-		// for: it answers null, which every caller reads as PHP's "ignored", so
-		// the operator would see an unchanged pagination.total and no reason.
-		// Logged loudly (CONVENTIONS §1) until every caller uses the batch door
-		// below, which carries the reason per locator. The PHP-era drops
-		// (bad_form / autoreference / duplicate) are NOT logged: they are the
-		// designed contract of this door and logging them would bury the rest.
-		if (outcome !== undefined && outcome.code !== undefined && !PHP_ERA_DROPS.has(outcome.code)) {
-			console.error(
-				`validateRelationInsert: refused (${outcome.code}) ${context.componentTipo} @ ${context.hostSectionTipo}/${String(context.hostSectionId)} — ${String(outcome.reason)}`,
-			);
+		if (outcome?.code !== undefined && !PHP_ERA_DROPS.has(outcome.code)) {
+			throw refusalToError(outcome, context);
 		}
 		return null;
 	}
 	return outcome.value ?? null;
+}
+
+/**
+ * The typed error a constraint refusal becomes at the length-1 door. Kept
+ * beside the door so the code→error mapping has ONE home; the reason string is
+ * the LOG message (Error.message), never the wire — the wire carries the
+ * registry message + the whitelisted details.
+ */
+function refusalToError(
+	outcome: RelationInsertOutcome,
+	context: RelationInsertContext,
+): DedaloError {
+	const targetSectionTipo = String(outcome.locator.section_tipo ?? '');
+	const message = `validateRelationInsert: refused (${String(outcome.code)}) ${context.componentTipo} @ ${context.hostSectionTipo}/${String(context.hostSectionId)} — ${String(outcome.reason)}`;
+	const coordinates = {
+		tipo: context.componentTipo,
+		section_tipo: context.hostSectionTipo,
+		section_id: String(context.hostSectionId),
+	};
+	if (outcome.code === 'target_not_readable') {
+		return new DedaloError('perm.denied', { message, coordinates });
+	}
+	return new DedaloError('relation.insert_refused', {
+		message,
+		coordinates,
+		details: { constraint: String(outcome.code), section_tipo: targetSectionTipo },
+	});
 }
 
 /** The caller context both insert doors share. */
@@ -525,6 +556,16 @@ export interface RelationInsertContext {
 	 * where every value IS net-new and the baseline would be noise.
 	 */
 	storedItems?: unknown[];
+	/**
+	 * The ACTOR the read-grant gate judges — threaded EXPLICITLY by the caller
+	 * that holds the request principal (save_component, from dispatch / the
+	 * MCP write tools). `undefined` = not threaded: the door falls back to the
+	 * request-context ALS, which is the documented BACKSTOP for the leaf callers
+	 * that reach saveComponentData without a principal in hand (listed on
+	 * `SaveRequest.principal`), never the primary channel. A write-validation
+	 * path must not depend on ambient state it cannot see was set.
+	 */
+	principal?: Principal;
 	/**
 	 * Frame pairing context — present ONLY for a component_dataframe save.
 	 * Switches on the two dataframe particularities: the persisted-frame
@@ -611,7 +652,9 @@ export interface RelationInsertBatchResult {
  *     target is exempt, and that exemption is the `reason` on the branch, not a
  *     silent pass.
  *  2. READ GRANT — an operator must not persist a locator into a section they
- *     cannot see.
+ *     cannot see. Scoped to TREE-PICKER callers (the write twin of the picker
+ *     read's pruning) and FAIL-CLOSED there; every other caller is authorized
+ *     by the caller grant dispatch enforced (see gate 2).
  *  3. SELECTABILITY — the term's own answer (`isTermSelectable`). The tree
  *     renders it, but a rendered affordance is not an authorization, so it is
  *     re-asked here. Scoped honestly: a target section that declares no
@@ -646,16 +689,18 @@ export async function validateRelationInserts(
 			context.componentTipo,
 			context.hostSectionTipo,
 			context.hostSectionId,
+			// The cap scope: for a frame the constraint counts the main item's
+			// frames (`held`), the same scope resultingCountInCapScope uses.
+			context.pairing ?? null,
 		);
 		return constraint;
 	};
-	// Request identity is ALS-scoped and read HERE, per call — never captured at
-	// module level. UNDEFINED (no request scope: imports, background jobs, unit
-	// harnesses) applies NO grant filter, the same posture `ddoIsAuthorized`
-	// takes for the read side: a production request always carries a principal,
-	// and refusing internal resolutions would break every credless door.
-	const { currentPrincipal } = await import('../security/request_context.ts');
-	const actor = currentPrincipal();
+	// The actor: the principal the caller THREADED, else the request-context ALS
+	// as the documented backstop (read per call, never captured at module
+	// level). It is resolved once for the batch and handed to the read-grant
+	// gate, which is FAIL-CLOSED inside its scope: no actor there is a refusal,
+	// not an exemption — see refuseByPickerConstraint gate 2.
+	const actor = context.principal ?? (await ambientPrincipal());
 
 	const accepted: Record<string, unknown>[] = [];
 	for (const rawValue of rawValues) {
@@ -886,14 +931,33 @@ async function refuseByPickerConstraint(
 		};
 	}
 
-	// 2. READ GRANT on the linked section. An operator must not be able to
-	// persist a locator into a section they cannot see — the write twin of the
-	// read path's ddo filter. NO principal = no request scope (import, CLI,
-	// background job, unit harness): no filter, the same posture
-	// `permissions.ddoIsAuthorized` documents for the read side, because those
-	// doors carry no session and refusing them would break every internal
-	// resolution. Section-level, like deletePortalLocator's own gate.
-	if (actor !== undefined) {
+	// 2. READ GRANT on the linked section — SCOPED TO TREE-PICKER CALLERS, the
+	// same scope as gate 3(a), and for the same reason: it is the write twin of
+	// the picker READ, which prunes the hierarchies a principal holds no grant
+	// on (area/read.ts, the 403 branch). Everywhere else the read model is the
+	// OPPOSITE: a value reached THROUGH an authorized caller is floored to read
+	// (`permissions.inheritSubdatumPermission` — the portal's resolved values,
+	// the autocomplete's picks, the component_filter's project datalist are all
+	// rendered from targets the actor may hold 0 on). Authorization there IS the
+	// caller grant, which dispatch already enforced (>= 2 on componentTipo)
+	// before this door was reached. Judging the target section here for those
+	// callers refused every non-admin's own project pick (component_filter →
+	// dd153: level 2 on the filter, 0 on the section, and the datalist was built
+	// from THEIR OWN authorized projects) — a rule the read side never had.
+	//
+	// FAIL-CLOSED inside the scope: no actor (a picker caller written with no
+	// principal threaded AND no request scope) is a refusal, never a skip. A
+	// write-authorization gate that answers "allowed" because it could not see
+	// who was asking is not a gate. The doors that legitimately run credless
+	// (import, maintenance) re-persist through `storedItems` (gate 0) and are
+	// unaffected; a NET-NEW pick into a tree picker with no actor is refused.
+	if (await callerDeclaresTreePicker(context.componentTipo)) {
+		if (actor === undefined) {
+			return {
+				code: 'target_not_readable',
+				reason: `no principal to judge the read grant on the linked section '${targetSectionTipo}' (write refused fail-closed)`,
+			};
+		}
 		const { getSectionPermissions } = await import('../security/permissions.ts');
 		if ((await getSectionPermissions(actor, targetSectionTipo)) < 1) {
 			return {
@@ -971,6 +1035,14 @@ async function refuseByPickerConstraint(
 	// first item's frame and refuse every sibling item's, which on a whole-array
 	// re-import silently truncates the record. The caller computes the scoped
 	// count and hands it in; this gate only compares.
+	//
+	// BOTH SIDES IN THE SAME SCOPE. `held` (selection_limit − remaining) is
+	// what the constraint counted as already stored, and the constraint was
+	// resolved WITH the caller's pairing (validateRelationInserts hands it to
+	// resolvePickerConstraint), so for a frame it counts the main item's frames,
+	// not the slot's. A slot-wide `held` against a per-item `resultingCount`
+	// let a `data_limit:1` slot grow item A to two frames as long as the OTHER
+	// items' frames outnumbered two — the growth clause never fired.
 	if (constraint.selection_limit !== null && constraint.remaining !== null) {
 		const held = constraint.selection_limit - constraint.remaining;
 		if (resultingCount > constraint.selection_limit && resultingCount > held) {
@@ -1001,19 +1073,10 @@ function resultingCountInCapScope(
 	baseline: readonly unknown[],
 	context: RelationInsertContext,
 ): number {
-	const pairing = context.pairing ?? null;
-	if (pairing === null) {
-		return baseline.length + 1;
-	}
-	const inScope = baseline.filter((item) => {
-		if (item === null || typeof item !== 'object') return false;
-		const entry = item as Record<string, unknown>;
-		return (
-			String(entry.main_component_tipo) === String(pairing.mainComponentTipo) &&
-			String(entry.id_key) === String(pairing.idKey)
-		);
-	});
-	return inScope.length + 1;
+	// One scope predicate — `picker_constraint.inCapScope` — so the count the
+	// resolver makes for `held` and the count made here for `resulting` are
+	// the SAME filter, never two.
+	return inCapScope(baseline, context.pairing ?? null).length + 1;
 }
 
 /**
@@ -1033,28 +1096,42 @@ function resultingCountInCapScope(
  * for every item of the main component, so "already stored" for a frame means
  * "already stored against this same main item".
  */
-function isAlreadyStored(
-	value: Record<string, unknown>,
-	context: RelationInsertContext,
-): boolean {
+function isAlreadyStored(value: Record<string, unknown>, context: RelationInsertContext): boolean {
 	const stored = context.storedItems;
 	if (stored === undefined || stored.length === 0) return false;
 
-	// The ADDRESS properties, and for a frame the main-item pairing too. Compared
-	// through `isLocatorInArray` — the locator law — never inline: the law's
-	// section_id match is LOOSE-NUMERIC (a stored '05' IS the same record as 5),
-	// and a strict String() comparison would read such a locator as net-new and
-	// hand it to the gates this function exists to keep it away from.
-	const properties =
-		context.pairing === null || context.pairing === undefined
-			? ['section_tipo', 'section_id']
-			: ['section_tipo', 'section_id', 'main_component_tipo', 'id_key'];
+	// The ADDRESS is compared through `compareLocators` — the locator equality
+	// law (concepts/locator.ts): section_id LOOSE-NUMERIC (a stored '05' IS the
+	// same record as 5, and int-vs-string is the ordinary pre-sweep case), the
+	// tipo strict. NOT `isLocatorInArray`: that is KEY-STRING equality
+	// (buildLocatorLookupKey stringifies, so '05' ≠ '5'), which would read such a
+	// re-persist as net-new and hand it to the gates this function exists to
+	// keep it away from. A frame additionally has to match its MAIN ITEM,
+	// compared the way `dataframeEntriesEqual` compares the pairing fields —
+	// String()-loose, because `id_key` is stamped as an int by the normalizer
+	// but a PHP-era or imported frame may carry it as a string.
+	const pairing = context.pairing ?? null;
+	return stored.some((item) => {
+		if (item === null || typeof item !== 'object') return false;
+		const candidate = item as Record<string, unknown>;
+		if (!compareLocators(value as never, candidate as never, ['section_tipo', 'section_id'])) {
+			return false;
+		}
+		if (pairing === null) return true;
+		return (
+			String(candidate.main_component_tipo) === String(value.main_component_tipo) &&
+			String(candidate.id_key) === String(value.id_key)
+		);
+	});
+}
 
-	const candidates = stored.filter(
-		(item): item is Record<string, unknown> => item !== null && typeof item === 'object',
-	);
-
-	return isLocatorInArray(value as never, candidates as never[], properties);
+/**
+ * The request-context principal, read per call — the BACKSTOP behind
+ * `RelationInsertContext.principal`, never the primary channel.
+ */
+async function ambientPrincipal(): Promise<Principal | undefined> {
+	const { currentPrincipal } = await import('../security/request_context.ts');
+	return currentPrincipal();
 }
 
 /**
@@ -1234,6 +1311,17 @@ export async function removeDataframeDataById(
 }
 
 /**
+ * What {@link deletePortalLocator} ANSWERS with. Not a wire envelope: a refusal
+ * is a THROW, so `removed` is always a real count (0 = nothing matched).
+ */
+export interface PortalLocatorRemoval {
+	/** How many stored locators the call removed. */
+	removed: number;
+	/** The operator narrative the panel prints (PHP `msg`, one line per outcome). */
+	msg: string[];
+}
+
+/**
  * dd_component_portal_api.delete_locator (PHP): remove every stored locator
  * matching the given partial locator on ar_properties via
  * locator::compare_locators (empty ar_properties → full property-UNION strict
@@ -1241,8 +1329,10 @@ export async function removeDataframeDataById(
  * paginated_key always excluded). A missing locator.type auto-sets to the
  * component's relation type; a MISMATCHED type aborts (PHP
  * remove_locator_from_data guard). Each removed locator cascades its paired
- * dataframe slot entries (remove_dataframe_data_by_id, S1-05). Returns the
- * PHP response shape {result: <removed count>, msg: [], errors: []}.
+ * dataframe slot entries (remove_dataframe_data_by_id, S1-05). ANSWERS with a
+ * `PortalLocatorRemoval` payload (never a wire envelope) and REFUSES by
+ * THROWING — a missing address is `request.invalid_options`, a caller below
+ * level 2 is `perm.denied` (ERRORS_SPEC §4).
  */
 export async function deletePortalLocator(
 	// `isDeveloper` is optional so an existing caller that only knows the
@@ -1255,23 +1345,25 @@ export async function deletePortalLocator(
 	// string form. Consumed numerically (Number()) for the row address only.
 	source: { tipo?: string; section_tipo?: string; section_id?: string | number },
 	options: { locator?: Record<string, unknown>; ar_properties?: string[] },
-): Promise<{ result: unknown; msg: string[]; errors: string[] }> {
-	const response = { result: false as unknown, msg: [] as string[], errors: [] as string[] };
+): Promise<PortalLocatorRemoval> {
+	const msg: string[] = [];
 	const tipo = source.tipo ?? '';
 	const sectionTipo = source.section_tipo ?? '';
 	const sectionId = source.section_id;
 	const locator = options.locator;
-	if (tipo === '' || sectionTipo === '' || sectionId === undefined || sectionId === null) {
-		response.errors.push(
-			'Missing required source/options (section_tipo, tipo, section_id, locator)',
-		);
-		return response;
-	}
-	if (locator === undefined || locator === null || typeof locator !== 'object') {
-		response.errors.push(
-			'Missing required source/options (section_tipo, tipo, section_id, locator)',
-		);
-		return response;
+	if (
+		tipo === '' ||
+		sectionTipo === '' ||
+		sectionId === undefined ||
+		sectionId === null ||
+		locator === undefined ||
+		locator === null ||
+		typeof locator !== 'object'
+	) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Missing required source/options (section_tipo, tipo, section_id, locator)',
+			coordinates: { section_tipo: sectionTipo, tipo },
+		});
 	}
 	// SEC: write permission — PHP dd_component_portal_api::delete_locator runs
 	// `security::assert_section_permission($section_tipo, 2)`, i.e. the LEVEL-2
@@ -1286,8 +1378,9 @@ export async function deletePortalLocator(
 	const { getSectionPermissions } = await import('../security/permissions.ts');
 	const actor: Principal = { isDeveloper: false, ...principal };
 	if ((await getSectionPermissions(actor, sectionTipo)) < 2) {
-		response.errors.push('insufficient permissions');
-		return response;
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: sectionTipo, tipo, required_level: 2 },
+		});
 	}
 
 	const { getMatrixTableFromTipo, getModelByTipo, getColumnNameByModel } = await import(
@@ -1431,14 +1524,12 @@ export async function deletePortalLocator(
 	});
 
 	if (outcome.emptyData) {
-		response.msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
-		response.result = 0;
-		return response;
+		msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
+		return { removed: 0, msg };
 	}
 	if (outcome.typeMismatch) {
-		response.msg.push(`No locators are removed (${model} - ${tipo})`);
-		response.result = 0;
-		return response;
+		msg.push(`No locators are removed (${model} - ${tipo})`);
+		return { removed: 0, msg };
 	}
 	const removed = outcome.removed;
 	if (removed > 0) {
@@ -1475,11 +1566,9 @@ export async function deletePortalLocator(
 				principal.userId,
 			);
 		}
-		response.msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
-		response.result = removed;
+		msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
 	} else {
-		response.msg.push(`No locators are removed (${model} - ${tipo})`);
-		response.result = 0;
+		msg.push(`No locators are removed (${model} - ${tipo})`);
 	}
-	return response;
+	return { removed, msg };
 }

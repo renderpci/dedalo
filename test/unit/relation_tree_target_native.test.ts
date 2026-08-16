@@ -193,7 +193,9 @@ const sqoTargets = (context: CallerContext): ResolvedTargetDdo[] =>
 	context.request_config?.[0]?.sqo?.section_tipo ?? [];
 
 /** The picker read for a declared caller. */
-async function readTreeFor(tipo: string): Promise<{ status: number; body: { msg?: string } }> {
+async function readTreeFor(
+	tipo: string,
+): Promise<{ status: number; body: { error?: { code?: string; message?: string } } }> {
 	const token = createSession(-1, 'root', true);
 	const session = getSession(token);
 	const dispatched = await dispatchRqo(
@@ -222,7 +224,10 @@ async function readTreeFor(tipo: string): Promise<{ status: number; body: { msg?
 			principal: superuser,
 		} as never,
 	);
-	return { status: dispatched.status, body: dispatched.body as { msg?: string } };
+	return {
+		status: dispatched.status,
+		body: dispatched.body as { error?: { code?: string; message?: string } },
+	};
 }
 
 beforeAll(async () => {
@@ -268,7 +273,7 @@ beforeAll(async () => {
 		},
 	]);
 	const provisioned = await ensureHierarchy(hierarchyId, provisionerUserId);
-	if (!provisioned.result) {
+	if (!provisioned.ok) {
 		throw new Error(
 			`relation tree target gate: the scratch thesaurus did not provision (${provisioned.msg}; ${provisioned.errors.join('; ')}) — every pin below would be vacuous.`,
 		);
@@ -366,7 +371,10 @@ describe.if(DB_READY)(
 			// findable instead of silent.
 			const { status, body } = await readTreeFor(MISDECLARED_CALLER);
 			expect(status).toBe(409);
-			expect(body.msg).toBe(PICKER_NO_HIERARCHY_MESSAGE);
+			// Envelope v2: the named refusal is `resource.conflict`, and the code is
+			// public-disclosure so the curator-facing sentence survives to the wire.
+			expect(body.error?.code).toBe('resource.conflict');
+			expect(body.error?.message).toBe(PICKER_NO_HIERARCHY_MESSAGE);
 		});
 
 		test('the CONTROL: the correctly-declared caller is not refused', async () => {

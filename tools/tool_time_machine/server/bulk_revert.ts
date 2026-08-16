@@ -38,6 +38,7 @@ import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { absorbComponentItemIds } from '../../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -48,7 +49,11 @@ import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
 import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import {
 	applyDataframeRestore,
@@ -144,11 +149,9 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 	const { options, userId, principal } = ctx;
 	const bulkProcessId = Number(options.bulk_process_id);
 	if (!Number.isInteger(bulkProcessId) || bulkProcessId <= 0) {
-		return {
-			result: false,
-			msg: 'Error. bulk_process_id is required',
-			errors: ['invalid_request'],
-		};
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'bulk_process_id must be a positive integer',
+		});
 	}
 
 	// Every component write in the batch (id DESC).
@@ -158,11 +161,10 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 		[bulkProcessId],
 	)) as TmRow[];
 	if (batchRows.length === 0) {
-		return {
-			result: false,
-			msg: `Error. No changes found for bulk_process_id ${bulkProcessId}`,
-			errors: ['not_found'],
-		};
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { bulk_process_id: bulkProcessId },
+			message: `No changes found for bulk_process_id ${bulkProcessId}`,
+		});
 	}
 
 	const label = String(options.bulk_revert_process_label ?? `Revert bulk process ${bulkProcessId}`);
@@ -326,11 +328,11 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 		}
 	}
 
-	return {
-		result: true,
-		msg: `OK. Bulk revert done${errors.length > 0 ? ' with warnings' : ''}. Reverted ${counter} component(s).`,
-		errors,
-		counter,
-		bulk_process_id: newBulkId,
-	};
+	// `skipped` is the per-row refusal/failure list — a NON-FATAL part of the
+	// payload (the batch never aborts on one row), so it rides inside `data`
+	// instead of the legacy body's `errors[]`, which meant "the call failed".
+	return ok(
+		{ counter, bulk_process_id: newBulkId, skipped: errors },
+		{ requestId: toolRequestId(ctx) },
+	);
 }

@@ -93,7 +93,7 @@ describe.if(hasPhpCredentials())('areas differential (Phase 6 gate — every are
 			const { body } = await client.call(structuredClone(rqo));
 			const phpEntry = (body.result as Record<string, unknown>[])?.[0] ?? {};
 			const tsResult = await dispatchRqo(rqo as unknown as Rqo, ctx);
-			const tsEntry = (tsResult.body.result as Record<string, unknown>[])?.[0] ?? {};
+			const tsEntry = (tsResult.body as { data?: Record<string, unknown>[] }).data?.[0] ?? {};
 			results.push({ model: area.model, php: phpEntry, ts: tsEntry });
 		}
 	});

@@ -31,8 +31,10 @@ import {
 	hydrateExternalSearchDdos,
 } from '../../src/core/api/handlers/dd_external_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { toErrorEnvelope } from '../../src/core/errors/convert.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import type { FieldsMapEntry } from '../../src/external/api/index.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -182,33 +184,39 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 	});
 
 	test('all fields_maps empty → a loud refusal naming the caller', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			hydrateExternalSearchDdos(
 				'test61',
 				'zenon1',
 				[ddoRef('zenon3', 'zenon1'), ddoRef('zenon4', 'zenon1')],
 				loaderFrom({}),
 			),
-		).rejects.toThrow(/component test61 .*no external field with a fields_map/);
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/component test61 .*no external field with a fields_map/);
 	});
 
 	test('no ddo on the target section at all → the same refusal, never an empty search', async () => {
-		await expect(
+		const refusal = await refusalOf(
 			hydrateExternalSearchDdos(
 				'rsc1285',
 				'zenon1',
 				[ddoRef('rsc368', 'rsc332')],
 				loaderFrom({ rsc368: dato('title') }),
 			),
-		).rejects.toThrow(
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toBe(
 			'component rsc1285 external config shows no external field with a fields_map',
 		);
 	});
 
 	test('an empty ddo list refuses rather than searching for nothing', async () => {
-		await expect(hydrateExternalSearchDdos('test61', 'zenon1', [], loaderFrom({}))).rejects.toThrow(
-			'no external field with a fields_map',
+		const refusal = await refusalOf(
+			hydrateExternalSearchDdos('test61', 'zenon1', [], loaderFrom({})),
 		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/no external field with a fields_map/);
 	});
 });
 
@@ -278,8 +286,20 @@ async function search(
 ): Promise<{ status: number; body: Record<string, unknown> }> {
 	const handler = externalApiActions.search;
 	if (handler === undefined) throw new Error('dd_external_api has no search action');
-	const result = await handler(rqo as unknown as Rqo, contextFor(principal));
-	return { status: result.status, body: result.body as Record<string, unknown> };
+	// The handler THROWS to refuse; the dispatch catch is the converter door —
+	// mirrored here so the pinned status/code are the wire's.
+	try {
+		const result = await handler(rqo as unknown as Rqo, contextFor(principal));
+		return { status: result.status, body: result.body as Record<string, unknown> };
+	} catch (error) {
+		const converted = toErrorEnvelope(error, { requestId: 'external-search-action-test' });
+		return { status: converted.status, body: converted.body as Record<string, unknown> };
+	}
+}
+
+/** `error.code` of a refusal body. */
+function codeOf(body: Record<string, unknown>): string | undefined {
+	return (body.error as { code?: string } | undefined)?.code;
 }
 
 describe('search refuses a caller it cannot identify', () => {
@@ -292,7 +312,7 @@ describe('search refuses a caller it cannot identify', () => {
 	])('%s → 400', async (_name, rqo) => {
 		const { status, body } = await search(rqo);
 		expect(status).toBe(400);
-		expect(body.msg).toBe('Error. source.tipo and source.section_tipo are required');
+		expect(codeOf(body)).toBe('request.invalid_source');
 	});
 });
 
@@ -308,7 +328,11 @@ describe('existence is decided BEFORE permission', () => {
 			NON_ADMIN,
 		);
 		expect(status).toBe(400);
-		expect(body.msg).toBe('Error. Unknown source tipo');
+		// the SAME code as a missing source: the tipo's existence is not disclosed
+		expect(codeOf(body)).toBe('request.invalid_source');
+		// the tipo is LOG-ONLY (coordinates): outside the debug block it never reaches the wire
+		const { debug: _debug, ...wireError } = body.error as Record<string, unknown>;
+		expect(JSON.stringify(wireError)).not.toContain('no_such_component_999');
 	});
 
 	test('a known component the actor cannot read → 403', async () => {
@@ -317,7 +341,7 @@ describe('existence is decided BEFORE permission', () => {
 			NON_ADMIN,
 		);
 		expect(status).toBe(403);
-		expect(body.msg).toBe('Error. Not authorized on this component');
+		expect(codeOf(body)).toBe('perm.denied');
 	});
 
 	/**
@@ -337,13 +361,13 @@ describe('existence is decided BEFORE permission', () => {
 
 describe('an unreadable paging value is REFUSED, never quietly defaulted', () => {
 	test.each([
-		['limit', 'twenty', 'Error. limit must be an integer'],
-		['offset', 'x', 'Error. offset must be an integer'],
-		['limit', 1.5, 'Error. limit must be an integer'],
+		['limit', 'twenty', 'limit must be an integer'],
+		['offset', 'x', 'offset must be an integer'],
+		['limit', 1.5, 'limit must be an integer'],
 		['offset', null as unknown as number, null],
-		['limit', 0, 'Error. limit must be positive'],
-		['limit', -1, 'Error. limit must be positive'],
-		['offset', -1, 'Error. offset must not be negative'],
+		['limit', 0, 'limit must be positive'],
+		['limit', -1, 'limit must be positive'],
+		['offset', -1, 'offset must not be negative'],
 	])('%s: %p', async (key, value, msg) => {
 		const { status, body } = await search({
 			source: { tipo: 'test61', section_tipo: 'test3' },
@@ -355,7 +379,9 @@ describe('an unreadable paging value is REFUSED, never quietly defaulted', () =>
 			return;
 		}
 		expect(status).toBe(400);
-		expect(body.msg).toBe(msg);
+		// request.invalid_options is public-disclosure: the sentence names the field
+		expect(codeOf(body)).toBe('request.invalid_options');
+		expect((body.error as { message: string }).message).toBe(msg);
 	});
 
 	test('a numeric STRING and an absent value both pass', async () => {
@@ -369,20 +395,25 @@ describe('an unreadable paging value is REFUSED, never quietly defaulted', () =>
 	});
 });
 
-describe('an unresolvable target is a 200 envelope a search box can act on', () => {
+describe('an unresolvable target is DEGRADATION: ok:true + a coded notice a search box can act on', () => {
 	/**
-	 * NOT a 4xx: `data_manager.request` discards a non-ok body, so everything
-	 * the server said about WHY would be replaced by the generic network error
-	 * this action exists to remove (WC-2026-08-06-external-search-request).
+	 * NOT a 4xx and NOT ok:false: the request was well-formed and authorized;
+	 * the SOURCE is what is degraded (ERRORS_SPEC §3 — external degradation is
+	 * `ok:true + notices[]`). `data_manager.request` discards a non-ok body, so
+	 * everything the server said about WHY would be replaced by the generic
+	 * network error this action exists to remove (WC-2026-08-06-external-search-request).
 	 */
-	test('bad_config → 200, errors, and a source_status the client can localize', async () => {
+	test('bad_config → 200, ok:true, empty data, notice external.bad_config + a source_status the client can localize', async () => {
 		const { status, body } = await search({
 			source: { tipo: 'test61', section_tipo: 'test3' },
 			options: { q: 'burnett' },
 		});
 		expect(status).toBe(200);
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['external_bad_config']);
+		expect(body.ok).toBe(true);
+		expect(body.data).toEqual({ context: [], data: [] });
+		const notices = body.notices as { code: string; details?: { service?: string } }[];
+		expect(notices.map((notice) => notice.code)).toEqual(['external.bad_config']);
+		expect(notices[0]?.details?.service).toBe('unknown');
 		const sourceStatus = body.source_status as {
 			state: string;
 			label_key: string;

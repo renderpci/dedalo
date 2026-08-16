@@ -63,9 +63,9 @@ async function phpData(rqo: Record<string, unknown>): Promise<Record<string, unk
 
 async function tsData(rqo: Record<string, unknown>): Promise<Record<string, unknown>[]> {
 	const body = (await dispatchRqo(structuredClone(rqo) as never, tsContext as never)).body as {
-		result?: { data?: Record<string, unknown>[] };
+		data?: { data?: Record<string, unknown>[] };
 	};
-	return normalize(body.result?.data ?? []);
+	return normalize(body.data?.data ?? []);
 }
 
 beforeAll(async () => {
@@ -225,9 +225,9 @@ describe.if(hasPhpCredentials())(
 				result?: { context?: Record<string, unknown>[] };
 			};
 			const tsBody = (await dispatchRqo(structuredClone(rqo) as never, tsContext as never))
-				.body as { result?: { context?: Record<string, unknown>[] } };
+				.body as { data?: { context?: Record<string, unknown>[] } };
 			const phpContext = normalizeContext(phpBody.result?.context ?? []);
-			const tsContextEntries = normalizeContext(tsBody.result?.context ?? []);
+			const tsContextEntries = normalizeContext(tsBody.data?.context ?? []);
 			// the resolved tree: portal + 5 config children + the nested rsc29
 			expect(phpContext.length).toBe(7);
 			expect(tsContextEntries.length).toBe(phpContext.length);

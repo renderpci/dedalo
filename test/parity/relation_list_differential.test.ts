@@ -54,9 +54,7 @@ async function tsCall(rqo: Record<string, unknown>): Promise<Record<string, unkn
 		} as never,
 	);
 	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
-	return normalizeSectionIdTypes(
-		(result.body as { result?: Record<string, unknown> }).result ?? {},
-	);
+	return normalizeSectionIdTypes((result.body as { data?: Record<string, unknown> }).data ?? {});
 }
 
 let php: PhpApiClient | null = null;

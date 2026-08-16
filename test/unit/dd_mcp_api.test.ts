@@ -82,8 +82,8 @@ async function initialize(session: Session): Promise<string> {
 		proxyRqo({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }),
 		contextFor(session) as never,
 	);
-	const body = result.body as { result: boolean; mcp_session_id?: string };
-	expect(body.result).toBe(true);
+	const body = result.body as { ok: boolean; mcp_session_id?: string };
+	expect(body.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 	expect(body.mcp_session_id).toBeTruthy();
 	return body.mcp_session_id as string;
 }
@@ -114,7 +114,7 @@ describe('dd_mcp_api gates', () => {
 			contextFor(admin, 'wrong-token') as never,
 		);
 		expect(badCsrf.status).toBe(403);
-		expect((badCsrf.body as { errors?: string[] }).errors).toContain('csrf_failed');
+		expect((badCsrf.body as { error?: { code?: string } }).error?.code).toBe('auth.csrf_failed');
 	});
 });
 
@@ -127,10 +127,10 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			contextFor(admin) as never,
 		);
 		const listBody = list.body as {
-			result: boolean;
+			ok: boolean;
 			data: { result: { tools: { name: string; inputSchema: unknown }[] } };
 		};
-		expect(listBody.result).toBe(true);
+		expect(listBody.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 		const toolNames = listBody.data.result.tools.map((tool) => tool.name);
 		expect(toolNames).toContain('dedalo_list_sections');
 		expect(toolNames).toContain('dedalo_search_records');
@@ -153,12 +153,12 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			contextFor(admin) as never,
 		);
 		const callBody = call.body as {
-			result: boolean;
+			ok: boolean;
 			data: {
 				result: { content: { type: string; text: string }[]; structuredContent: unknown };
 			};
 		};
-		expect(callBody.result).toBe(true);
+		expect(callBody.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
 		const structured = callBody.data.result.structuredContent as {
 			ok: boolean;
 			data: { model: string };
@@ -172,14 +172,19 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			proxyRqo({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
 			contextFor(admin) as never,
 		);
-		expect((missing.body as { result: boolean }).result).toBe(false);
-		expect((missing.body as { msg: string }).msg).toBe('No valid MCP session ID provided');
+		expect((missing.body as { ok: boolean }).ok).toBe(false);
+		expect((missing.body as { error: { code: string } }).error.code).toBe('mcp.session_invalid');
+		expect((missing.body as { error: { message: string } }).error.message).toBe(
+			'No valid MCP session ID provided',
+		);
 
 		const stale = await dispatchRqo(
 			proxyRqo({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, 'deadbeef'),
 			contextFor(admin) as never,
 		);
-		expect((stale.body as { msg: string }).msg).toBe('No valid MCP session ID provided');
+		expect((stale.body as { error: { message: string } }).error.message).toBe(
+			'No valid MCP session ID provided',
+		);
 	});
 
 	test('non-allowlisted JSON-RPC methods get a JSON-RPC error', async () => {
@@ -188,9 +193,15 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			proxyRqo({ jsonrpc: '2.0', id: 9, method: 'resources/list', params: {} }, mcpSessionId),
 			contextFor(admin) as never,
 		);
-		const body = result.body as { result: boolean; data: { error?: { code: number } } };
-		expect(body.result).toBe(true);
+		const body = result.body as {
+			ok: boolean;
+			data: { error?: { code: number; data?: { code: string; label_key: string } } };
+		};
+		expect(body.ok).toBe(true); // the JSON-RPC layer is the payload; the HTTP envelope is fine
 		expect(body.data.error?.code).toBe(-32601);
+		// the envelope-v2 error body rides in JSON-RPC `error.data`
+		expect(body.data.error?.data?.code).toBe('request.invalid');
+		expect(body.data.error?.data?.label_key).toBe('error_request_invalid');
 	});
 
 	test('per-request principal: the gated user sees fewer records than admin', async () => {
@@ -290,10 +301,17 @@ describe('agent_apply', () => {
 				} as unknown as Rqo,
 				contextFor(user) as never,
 			);
-			// user 16 has no write grants: the validation wall answers first.
-			const body = result.body as { result: boolean; data: { error?: { code: string } } };
-			expect(body.result).toBe(false);
-			expect(body.data.error?.code).toBe('permission_denied');
+			// user 16 has no write grants: the validation wall answers first — a
+			// plan refused as a WHOLE is a THROWN failure (envelope v2, registry
+			// status); the perm code is the wire identity, `op_id` an extension key.
+			const body = result.body as {
+				ok: boolean;
+				error?: { code: string };
+			};
+			expect(result.status).toBe(403);
+			expect(body.ok).toBe(false);
+			expect('result' in body).toBe(false);
+			expect(body.error?.code).toBe('perm.denied');
 		} finally {
 			process.env.DEDALO_AGENT_ALLOW_WRITE = '';
 		}

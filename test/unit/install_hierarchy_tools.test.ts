@@ -76,9 +76,9 @@ describe('hierarchy import + register_tools (P4)', () => {
 		// is not the database the engine writes to. The refusal is the contract — silently
 		// activating would flag the tld and provision its ontology in the CONFIGURED
 		// database while its terms sit here.
-		expect(result.result).toBe(false);
+		expect(result.ok).toBe(false);
 		const response = result.responses.find((r) => r.tld === TLD);
-		expect(response?.result).toBe(false);
+		expect(response?.ok).toBe(false);
 		expect(response?.msg).toContain('NOT activated');
 		expect(result.errors.join(' ')).toContain('not the engine');
 
@@ -106,8 +106,8 @@ describe('hierarchy import + register_tools (P4)', () => {
 
 		const response = result.responses.find((r) => r.tld === TLD);
 		expect(response?.skipped).toBe(true);
-		expect(response?.result).toBe(true);
-		expect(result.result).toBe(true); // a skip is not a failure
+		expect(response?.ok).toBe(true);
+		expect(result.ok).toBe(true); // a skip is not a failure
 		expect(result.msg).toContain('skipped');
 		// the exact regression: no Postgres unique-constraint error leaks through
 		expect(result.errors.join(' ')).not.toContain('duplicate key');
@@ -140,7 +140,7 @@ describe('hierarchy import + register_tools (P4)', () => {
 	test('an unknown TLD reports an error (no data file)', async () => {
 		if (!available) return;
 		const result = await installHierarchies(['zz'], scratch);
-		expect(result.result).toBe(false);
+		expect(result.ok).toBe(false);
 		expect(result.errors.join(' ')).toContain('zz');
 	});
 });

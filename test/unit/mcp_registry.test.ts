@@ -12,7 +12,6 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { HINTS } from '../../src/ai/mcp/envelope.ts';
 import {
 	getToolSpec,
 	registeredTools,
@@ -20,6 +19,7 @@ import {
 	TOOL_REGISTRY,
 	toAgentToolDefinition,
 } from '../../src/ai/mcp/registry.ts';
+import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
 
 const SCOPED_USER = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
 
@@ -66,8 +66,8 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 		const result = await runTool(spec, SCOPED_USER, { section_tipo: 'test2' });
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			expect(result.error.code).toBe('permission_denied');
-			expect(result.error.hint).toBe(HINTS.permission_denied);
+			expect(result.error.code).toBe('mcp.write_disabled');
+			expect(result.error.hint).toBe(ERROR_REGISTRY['mcp.write_disabled'].hint);
 		}
 	});
 
@@ -85,7 +85,7 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 		);
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			expect(result.error.code).toBe('section_not_writable');
+			expect(result.error.code).toBe('perm.section_not_writable');
 		}
 	});
 
@@ -96,7 +96,7 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 		const result = await runTool(spec, SCOPED_USER, { section_tipo: 'oh1' });
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			expect(result.error.code).toBe('invalid_request');
+			expect(result.error.code).toBe('request.invalid');
 		}
 	});
 
@@ -106,7 +106,7 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 		const result = await runTool(spec, SCOPED_USER, { tipo: "oh1'; DROP TABLE matrix; --" });
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			expect(result.error.code).toBe('invalid_tipo');
+			expect(result.error.code).toBe('request.invalid_tipo');
 			expect(result.error.hint).toContain('never guess a tipo');
 		}
 	});

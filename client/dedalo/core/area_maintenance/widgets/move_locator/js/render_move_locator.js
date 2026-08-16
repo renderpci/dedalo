@@ -207,7 +207,7 @@ const get_content_data_edit = async function(self) {
 			const input_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'label',
-				inner_html		: item.file_name,
+				text_content	: String(item.file_name ?? ''),
 				parent			: file_container
 			})
 
@@ -258,7 +258,7 @@ const get_content_data_edit = async function(self) {
 			const file_content_container = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'highlighted_code file_content_container language-json hide',
-				inner_html		: content_string,
+				text_content	: content_string,
 				parent			: file_container
 			})
 			// collapse file_content

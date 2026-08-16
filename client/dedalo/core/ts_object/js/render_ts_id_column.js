@@ -34,6 +34,7 @@
 	import {get_all_instances} from '../../common/js/instances.js'
 	import {render_delete_record_dialog} from './render_ts_dialogs.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
+	import {response_data} from '../../common/js/api_error.js'
 	import {
 		get_picker,
 		render_term_pick_control,
@@ -170,11 +171,11 @@ export const render_id_column = function(self) {
 
 						// add_child
 						// Calls the ts_object.add_child() method which issues the API request
-						// and returns { result: new_section_id } on success.
+						// and answers the new section_id as its payload on success.
 							const response = await self.add_child()
 
 						// new_section_id . Generated as response by the trigger add_child
-							const new_section_id = response.result
+							const new_section_id = response_data(response)
 							if (!new_section_id) {
 								return
 							}

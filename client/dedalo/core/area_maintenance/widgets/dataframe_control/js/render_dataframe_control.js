@@ -6,6 +6,9 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -206,14 +209,14 @@ const get_content_data = function(self) {
 * RENDER_RESPONSE
 * Paints one run_check / run_fix outcome and caches it on the instance.
 *
-* (!) A FAILED scan does not throw. The server answers `{result:false, msg, errors}`
-* — and on a large database that is the EXPECTED failure: the scan walks every
+* (!) A FAILED scan does not throw. The server answers `{ok:false, error}` —
+* and on a large database that is the EXPECTED failure: the scan walks every
 * matrix% table, and a batch that exceeds the server's per-statement timeout is
-* cancelled, which surfaces here as result:false. Treating that as a report
-* (`api_response?.result || {}`) would print five dashes and read exactly like a
+* cancelled, which surfaces here as a failed envelope. Treating that as a report
+* (an empty payload object) would print five dashes and read exactly like a
 * completed scan that found nothing — the "clean database we never looked at"
-* the not-run state exists to prevent. So a falsy `result` paints as an error and
-* `self.value` is left alone.
+* the not-run state exists to prevent. So a failed envelope, or a `data` that is
+* not a report object, paints as an error and `self.value` is left alone.
 *
 * @param {Object} self - widget instance (receives the cached report in self.value)
 * @param {HTMLElement} container - the summary div
@@ -222,18 +225,25 @@ const get_content_data = function(self) {
 */
 const render_response = function(self, container, api_response) {
 
-	const result = api_response?.result
+	const result = response_data(api_response)
 
 	// failed / refused scan: never a report
-	if (!result || typeof result!=='object') {
-		self.error = api_response?.msg || 'the server returned no report'
+	if (request_failed(api_response) || !result || typeof result!=='object') {
+		self.error = request_failed(api_response)
+			? error_text(api_response.error)
+			: (response_extension(api_response, 'msg') || 'the server returned no report')
 		render_error(container, self.error)
+		if (request_failed(api_response)) {
+			// ONE error model: policy + renderer decide the surface (relogin, toast, …)
+			handle_api_error(api_response.error, {wrapper: container})
+				.catch((error) => console.error('dataframe_control error dispatch failed', error))
+		}
 		return
 	}
 
 	self.error = null
 	self.value = result
-	render_report(container, result, api_response?.msg)
+	render_report(container, result, response_extension(api_response, 'msg'))
 }//end render_response
 
 

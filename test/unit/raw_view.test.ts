@@ -90,8 +90,12 @@ describe('raw record data view (dedicated GET, fail-closed)', () => {
 			context,
 		);
 		expect(response.status).toBe(403);
-		const body = (await response.json()) as { result: unknown };
-		expect(body.result).toBe(false); // no data returned
+		// Envelope v2: converter-made refusal — `perm.denied`, no data, and the
+		// message names nothing (the code's disclosure is `operator`).
+		const body = (await response.json()) as { ok: unknown; error: { code: string } };
+		expect(body.ok).toBe(false);
+		expect(body.error.code).toBe('perm.denied');
+		expect('data' in body).toBe(false);
 	});
 
 	test('authenticated NON-admin → 403', async () => {
@@ -120,9 +124,10 @@ describe('raw record data view (dedicated GET, fail-closed)', () => {
 		const rawText = await response.text();
 		// pretty_print: the body is indented (JSON.stringify(…, null, 2)).
 		expect(rawText).toContain('\n  ');
-		const body = JSON.parse(rawText) as { result: unknown[]; table: string | null };
-		expect(Array.isArray(body.result)).toBe(true);
-		expect(body.result.length).toBe(1);
+		const body = JSON.parse(rawText) as { ok: boolean; data: unknown[]; table: string | null };
+		expect(body.ok).toBe(true);
+		expect(Array.isArray(body.data)).toBe(true);
+		expect(body.data.length).toBe(1);
 
 		// Same engine as the POST read_raw handler: build the equivalent RQO and
 		// compare the resolved raw rows (the endpoint just wires the SQO server-side).
@@ -152,8 +157,9 @@ describe('raw record data view (dedicated GET, fail-closed)', () => {
 			csrfCandidate: session?.csrfToken ?? null,
 			principal,
 		});
-		const dispatchedBody = dispatched.body as { result: unknown[]; table: string | null };
-		expect(body.result).toEqual(dispatchedBody.result);
+		const dispatchedBody = dispatched.body as unknown as { data: unknown[]; table: string | null };
+		expect(body.data).toEqual(dispatchedBody.data);
+		// `table` is the owned top-level extension key on BOTH doors.
 		expect(body.table).toBe(dispatchedBody.table);
 	});
 });

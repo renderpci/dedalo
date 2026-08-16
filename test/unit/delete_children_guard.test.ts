@@ -2,9 +2,13 @@
  * Children-exist delete refusal (PHP sections::delete :535-593): a
  * delete_record on a record that still has children (computed inverse over
  * the paired component_relation_parent) is SKIPPED — never an orphaned
- * subtree — unless the caller passes options.delete_with_children. The skip
- * reason travels in the response `errors`; the msg stays 'OK. Request done'
- * (PHP quirk mirrored: its :681 errors check tests an undefined local).
+ * subtree — unless the caller passes options.delete_with_children.
+ *
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §3): the skip is a NON-FATAL CODED
+ * FACT on a SUCCESS — `notices:[{code:'record.delete_children_refused',
+ * details:{not_deleted}}]` — because what WAS deleted really was deleted and
+ * stays the payload. `record.delete_children_refused` is the code the parity
+ * reconciler maps the frozen PHP body to (test/parity/normalize.ts).
  *
  * Fixture: the disposable test3 section (matrix_test) — test201 is its
  * component_relation_children, paired to test71 (component_relation_parent).
@@ -31,11 +35,17 @@ let dbReady = false;
 let parentId = 0;
 let childId = 0;
 
+interface DeleteBody {
+	ok?: boolean;
+	data?: unknown;
+	notices?: { code: string; details?: Record<string, unknown> }[];
+}
+
 async function dispatchDelete(
 	sectionId: number,
 	deleteMode: 'delete_record' | 'delete_data',
 	deleteWithChildren = false,
-): Promise<{ result: unknown; errors?: string[] }> {
+): Promise<DeleteBody> {
 	const token = createSession(-1, 'root', true);
 	const session = getSession(token);
 	const principal = await resolvePrincipal(-1);
@@ -59,7 +69,7 @@ async function dispatchDelete(
 		},
 	} as unknown as Rqo;
 	const dispatched = await dispatchRqo(rqo, context);
-	return dispatched.body as { result: unknown; errors?: string[] };
+	return dispatched.body as DeleteBody;
 }
 
 async function rowExists(sectionId: number): Promise<boolean> {
@@ -116,39 +126,41 @@ describe('children-exist delete refusal (PHP sections::delete :535-593)', () => 
 		expect(await getChildrenTipo('test2')).toBeNull();
 	});
 
-	test('delete_record on a parent WITH children is refused: row stays, skip reason in errors', async () => {
+	test('delete_record on a parent WITH children is refused: row stays, coded notice', async () => {
 		if (!dbReady) return;
 		const body = await dispatchDelete(parentId, 'delete_record');
-		expect(body.result).toEqual([]);
-		expect(body.errors?.length).toBe(1);
-		expect(body.errors?.[0]).toContain(`has children : ${parentId}`);
-		expect(body.errors?.[0]).toContain(String(childId));
+		expect(body.ok).toBe(true); // what was deleted (nothing) is still the payload
+		expect(body.data).toEqual([]);
+		expect(body.notices?.length).toBe(1);
+		expect(body.notices?.[0]?.code).toBe('record.delete_children_refused');
+		// The refused id is the code's ONE declared detail (scalar, so ids are joined).
+		expect(body.notices?.[0]?.details?.not_deleted).toBe(String(parentId));
 		expect(await rowExists(parentId)).toBe(true);
 	});
 
 	test('delete_data mode is NOT gated (children present, data still emptied)', async () => {
 		if (!dbReady) return;
 		const body = await dispatchDelete(parentId, 'delete_data');
-		expect(body.errors).toBeUndefined();
-		expect((body.result as string[]).length).toBeGreaterThan(0);
+		expect(body.notices).toBeUndefined();
+		expect((body.data as string[]).length).toBeGreaterThan(0);
 		expect(await rowExists(parentId)).toBe(true); // delete_data keeps the row
 	});
 
 	test('delete_with_children bypasses the guard (caller accepts the orphaning)', async () => {
 		if (!dbReady) return;
 		const body = await dispatchDelete(parentId, 'delete_record', true);
-		expect(body.errors).toBeUndefined();
+		expect(body.notices).toBeUndefined();
 		// int-canonical delete result ids (WC-2026-08-10-section-id-int-canonical)
-		expect(body.result).toEqual([parentId]);
+		expect(body.data).toEqual([parentId]);
 		expect(await rowExists(parentId)).toBe(false);
 	});
 
 	test('a childless record deletes normally through the same path', async () => {
 		if (!dbReady) return;
 		const body = await dispatchDelete(childId, 'delete_record');
-		expect(body.errors).toBeUndefined();
+		expect(body.notices).toBeUndefined();
 		// int-canonical delete result ids (WC-2026-08-10-section-id-int-canonical)
-		expect(body.result).toEqual([childId]);
+		expect(body.data).toEqual([childId]);
 		expect(await rowExists(childId)).toBe(false);
 	});
 });

@@ -108,11 +108,7 @@ async function exportHierarchySyncActiveStatus(): Promise<WidgetResponse> {
 		});
 		if (!outcome.ok) errorCount++;
 	}
-	return {
-		result: errorCount === 0,
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: errorCount === 0 };
 }
 
 export const widget: WidgetModule = {

@@ -67,6 +67,8 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
+	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -536,14 +538,13 @@ const get_content_data = function(self) {
 					auth		: auth
 				})
 
-				if (api_response.result===false) {
+				if (request_failed(api_response)) {
 
 					// errors found
-					// Prefer api_response.errors array; fall back to api_response.msg string;
-					// final fallback to a generic message.
-					const message	= api_response.errors && api_response.errors.length>0
-						? api_response.errors
-						: api_response.msg || ['Unknown login error happen']
+					// ONE coded failure, rendered in the user's language when the
+					// label catalog is loaded (pre-login it falls back to the
+					// registry's English message, then to the code).
+					const message	= error_text(api_response.error)
 					const msg_type	= 'error'
 					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
@@ -560,7 +561,7 @@ const get_content_data = function(self) {
 					// Even on result!==false, the API may include soft errors
 					// (e.g. dd_init.test warnings about dirs/vars). These do NOT
 					// prevent login but pause the flow to let the user acknowledge.
-					const message	= api_response.msg
+					const message	= response_extension(api_response, 'msg')
 					const msg_type	= 'ok';
 					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
@@ -569,12 +570,16 @@ const get_content_data = function(self) {
 					// errors handle
 					// If errors found in API response (many vars and directories are checked in 'dd_init.test' on login)
 					// the login sequence is stopped to warn the user of problems
-					if (api_response.errors && api_response.errors.length) {
-						const msg = api_response.errors.join('<br>')
+					// v2 carries non-fatal coded facts in `notices`.
+					const soft_notices = api_response.notices?.length ? api_response.notices : null
+					if (soft_notices) {
+						const msg = soft_notices
+							.map((item) => typeof item==='string' ? item : error_text(item))
+							.join('\n')
 						console.error('msg:', msg);
 						ui.show_message(
 							messages_container,
-							api_response.errors.join('<br>'),
+							msg,
 							'error',
 							'component_message',
 							true
@@ -811,7 +816,7 @@ const get_content_data = function(self) {
 			self.reset_id = (api_response && api_response.reset_id) ? api_response.reset_id : null
 			ui.show_message(
 				messages_container,
-				(get_label.recovery_code_sent || (api_response && api_response.msg) || 'If an account matches, a recovery code has been sent.'),
+				(get_label.recovery_code_sent || response_extension(api_response, 'msg') || 'If an account matches, a recovery code has been sent.'),
 				'ok',
 				'component_message',
 				true
@@ -861,7 +866,7 @@ const get_content_data = function(self) {
 			self.status = 'rendered'
 			reset_confirm_button.classList.remove('white')
 
-			if (api_response && api_response.result===true) {
+			if (response_data(api_response)===true) {
 				ui.show_message(messages_container, (get_label.password_updated || 'Your password has been updated. You can now log in.'), 'ok', 'component_message', true)
 				// clear sensitive fields and return to login
 				reset_code.value					= ''
@@ -870,20 +875,17 @@ const get_content_data = function(self) {
 				self.reset_id						= null
 				show_login_view()
 			} else {
-				// map server error codes to translatable, user-friendly messages
-				const reset_error_labels = {
-					invalid_or_expired	: (get_label.recovery_invalid_or_expired || 'Invalid or expired code'),
-					too_many_attempts	: (get_label.recovery_too_many_attempts || 'Too many attempts. Please request a new code.'),
-					weak_password		: (get_label.password_too_short || 'Password too short. Use at least 8 characters'),
-					reset_failed		: (get_label.recovery_reset_failed || 'Could not update the password. Please try again later.')
-				}
-				const error_code	= (api_response && api_response.errors && api_response.errors.length>0) ? api_response.errors[0] : null
-				const message		= (error_code && reset_error_labels[error_code])
-					|| (api_response && api_response.msg)
-					|| reset_error_labels.invalid_or_expired
+				// The refusal names itself: `password_reset.invalid_or_expired |
+				// too_many_attempts | weak_password | failed`, each with its own
+				// label (error_password_reset_*), so there is no map to keep here.
+				const error_code	= api_response?.error?.code || null
+				const message		= request_failed(api_response)
+					? error_text(api_response.error)
+					: (get_label.error_password_reset_invalid_or_expired || 'Invalid or expired code')
 				ui.show_message(messages_container, message, 'error', 'component_message', true)
 				// on lockout, force a fresh request
-				if (error_code==='too_many_attempts') {
+				// ('too_many_attempts' is the COMPAT v1 token — REMOVAL: census 0)
+				if (error_code==='password_reset.too_many_attempts' || error_code==='too_many_attempts') {
 					self.reset_id = null
 					show_request_view()
 				}

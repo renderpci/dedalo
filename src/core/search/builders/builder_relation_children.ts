@@ -18,6 +18,7 @@
  * jsonb in PHP (runtime SQL error) — TS throws a clean error.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getRelatedParentTipo } from '../../relations/children.ts';
 import { type BuilderContext, type BuilderResult, fragment } from './types.ts';
 
@@ -48,9 +49,10 @@ function normalizeRelationQ(rawQ: unknown): string {
 	if (Array.isArray(source) && source.length > 1) {
 		// PHP's bracket-strip yields '{…},{…}' → invalid _Q2_::jsonb → runtime
 		// SQL error. Fail cleanly instead of emitting broken SQL.
-		throw new Error(
-			'relation_children search: multi-locator q is not supported (PHP emits invalid jsonb)',
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message:
+				'relation_children search: multi-locator q is not supported (PHP emits invalid jsonb)',
+		});
 	}
 	if (source !== null && typeof source === 'object') {
 		const { id: _clientDomId, ...locator } = source as Record<string, unknown>;
@@ -71,9 +73,10 @@ export async function buildRelationChildrenFragment(
 	context: BuilderContext,
 ): Promise<BuilderResult> {
 	if (context.table === 'matrix_time_machine') {
-		throw new Error(
-			'relation_children search: no time-machine twin exists (matrix_time_machine has no relation column; PHP errors identically)',
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message:
+				'relation_children search: no time-machine twin exists (matrix_time_machine has no relation column; PHP errors identically)',
+		});
 	}
 	const targetParentTipo = await getRelatedParentTipo(context.tipo, context.sectionTipo);
 	if (targetParentTipo === null) return false; // PHP :214-222 — clause dropped

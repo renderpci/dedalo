@@ -17,6 +17,8 @@ import {
 	OpenAiCompatProvider,
 	parseChatCompletion,
 } from '../../src/ai/agent/openai_compat_provider.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const TOOLS: AgentToolDefinition[] = [
 	{
@@ -190,7 +192,11 @@ describe('openai-compat provider — non-streaming parse', () => {
 			choices: [{ message: { content: 'partial' }, finish_reason: 'length' }],
 		});
 		expect(turn.stop_reason).toBe('max_tokens');
+		// A registered refusal (`ai.provider_failed`); the old token stays the
+		// LOG-only message, and the wire sentence is the registry English.
+		expect(() => parseChatCompletion('nope')).toThrow(DedaloError);
 		expect(() => parseChatCompletion('nope')).toThrow(/agent_llm_bad_response/);
+		expect(() => parseChatCompletion({ choices: [] })).toThrow(DedaloError);
 		expect(() => parseChatCompletion({ choices: [] })).toThrow(/agent_llm_bad_response/);
 	});
 
@@ -305,8 +311,10 @@ describe('openai-compat provider — SSE streaming parse', () => {
 			fetchImpl: (async (_url: unknown, _init?: unknown) =>
 				new Response('boom', { status: 502 })) as typeof fetch,
 		});
-		await expect(
+		const refusal = await refusalOf(
 			provider.createTurn({ system: 's', tools: [], transcript: [{ role: 'user', text: 'q' }] }),
-		).rejects.toThrow(/agent_llm_http_502/);
+		);
+		expect(refusal.code).toBe('ai.provider_failed');
+		expect(refusal.message).toMatch(/agent_llm_http_502/);
 	});
 });

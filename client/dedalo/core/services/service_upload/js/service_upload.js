@@ -42,6 +42,8 @@
 	import { common, create_source } from '../../../common/js/common.js'
 	import { render_edit_service_upload } from './render_edit_service_upload.js'
 	import { validate_file, create_connection_pool, create_transfer } from './upload_transport.js'
+	import {response_data, request_failed, ApiError, CLIENT_ERROR} from '../../../common/js/api_error.js'
+	import {error_text} from '../../../common/js/render_api_error.js'
 
 
 
@@ -137,7 +139,7 @@ export const service_upload = function () {
 * elements that are attached to `self` by `render_edit_service_upload`.
 *
 * The `upload_file_status` handler distinguishes three states via `options.value`:
-*   - `false`  → error/abort: writes `options.msg` into `response_msg`.
+*   - `false`  → error/abort: writes `options.text` into `response_msg`.
 *   - `100`    → complete: writes "Upload done." into `response_msg`.
 *   - 0–99     → in-progress: updates `progress_line.value` and `progress_info.innerHTML`.
 *
@@ -188,7 +190,7 @@ service_upload.prototype.init = async function(options) {
 	// events
 		const upload_file_status_handler = (options) => {
 			// options
-				const msg	= options.msg
+				const msg	= options.text
 				const value	= options.value
 
 			// DOM node fixed on render
@@ -197,8 +199,10 @@ service_upload.prototype.init = async function(options) {
 				const response_msg	= self.response_msg
 
 			// progress
+				// `msg` is server/transport text (file names, refusal sentences,
+				// exception details): TEXT only, never an HTML sink (DS-1).
 				if (progress_info) {
-					progress_info.innerHTML	= msg // progress text info
+					progress_info.textContent = msg // progress text info
 				}
 				if (progress_line) {
 					progress_line.value = value // percentage line
@@ -207,10 +211,10 @@ service_upload.prototype.init = async function(options) {
 			// messages
 				if (response_msg) {
 					if(value===false) {
-						response_msg.innerHTML = msg
+						response_msg.textContent = msg
 					}
 					else if(value===100) {
-						response_msg.innerHTML = 'Upload done.'
+						response_msg.textContent = 'Upload done.'
 					}
 				}
 		}
@@ -409,9 +413,7 @@ const get_system_info = async function() {
 					dd_console("-> get_system_info API response:",'DEBUG',response);
 				}
 
-				const result = response.result
-
-				resolve(result)
+				resolve(response_data(response))
 			})
 		})
 }//end get_system_info
@@ -425,7 +427,7 @@ const get_system_info = async function() {
 * Everything that touches bytes now lives in `create_transfer`; what stays here
 * is exactly the legacy single-file UX contract, quarantined on purpose:
 *
-*  - the `upload_file_status_<id>` event topic, with the same value/msg
+*  - the `upload_file_status_<id>` event topic, with the same value/text
 *    semantics as before (0 on start, N in progress, 100 on done, `false` on
 *    error or abort). service_upload.prototype.init subscribes to it and drives
 *    the one progress bar / response message the service renders.
@@ -458,8 +460,8 @@ const get_system_info = async function() {
 *   @param {number}  [options.max_size_bytes]  - Maximum allowed size in bytes; falsy = no cap.
 *   @param {string|null} [options.tipo]        - Ontology tipo of the owning component.
 *   @param {number|false} [options.max_concurrent] - Max simultaneous XHR connections; falsy = unlimited.
-* @returns {Promise<Object>} API response object. On success `{result:true, file_data:{…}}`;
-*   on ANY failure (validation, transport, abort, server refusal) `{result:false, msg:string}`.
+* @returns {Promise<Object>} API response object. On success the envelope `{ok:true, data, file_data:{…}}`;
+*   on ANY failure (validation, transport, abort, server refusal) `{ok:false, error:ApiError}`.
 *   (!) It ALWAYS returns — see defect D1 in upload_transport.js.
 */
 export const upload = async function(options) {
@@ -478,7 +480,7 @@ export const upload = async function(options) {
 		const publish_status = function(value, msg) {
 			event_manager.publish('upload_file_status_' + id, {
 				value	: value,
-				msg		: msg
+				text	: msg
 			})
 		}
 
@@ -493,12 +495,21 @@ export const upload = async function(options) {
 		})
 		if (validation.valid===false) {
 			const label = get_label[validation.code] || validation.code
-			const text	= label + validation.msg
+			const text	= label + validation.detail
 			alert( text )
 			publish_status(false, text)
+			// ONE failure shape (the page transport's): a coded ApiError the caller
+			// renders through error_text(). `media.upload_rejected` is the SAME
+			// registry code the server answers a refused upload with — the refusal
+			// is identical, this one simply happens before the bytes leave.
 			return {
-				result	: false,
-				msg		: text
+				ok		: false,
+				error	: new ApiError({
+					code		: 'media.upload_rejected',
+					message		: text,
+					severity	: 'warning',
+					source		: 'client'
+				})
 			}
 		}
 
@@ -539,14 +550,17 @@ export const upload = async function(options) {
 		const api_response = await transfer.start()
 
 	// status
-		if (!api_response || api_response.result!==true) {
-			const msg = (api_response && typeof api_response.msg==='string' && api_response.msg!=='')
-				? api_response.msg
-				: `${get_label.error_on_upload_file} ${file.name}`
-			publish_status(false, msg)
+		if (!api_response || request_failed(api_response) || response_data(api_response)!==true) {
+			const api_error = request_failed(api_response)
+				? api_response.error
+				: new ApiError({
+					code	: CLIENT_ERROR.BAD_RESPONSE,
+					message	: `${get_label.error_on_upload_file} ${file.name}`
+				})
+			publish_status(false, error_text(api_error))
 			return {
-				result	: false,
-				msg		: msg
+				ok		: false,
+				error	: api_error
 			}
 		}
 		publish_status(100, 'Loaded file ' + file.name)
@@ -575,7 +589,7 @@ export const upload = async function(options) {
 * so that the owning component can trigger server-side post-processing
 * (e.g. component_av media pipeline, tool_import_dedalo_csv row processing).
 *
-* On upload failure returns `{ result: false, msg: <string> }` without publishing
+* On upload failure returns `{ ok:false, error:ApiError }` without publishing
 * the done event, so callers can surface the error independently.
 *
 * @param {Object} options - Upload options.
@@ -612,11 +626,16 @@ service_upload.prototype.upload_file = async function(options) {
 			tipo				: self.caller?.caller?.tipo || null,
 			max_concurrent 		: self.max_concurrent // int | false, limit the open connections with the server
 		})
-		if (!api_response.result) {
+		if (request_failed(api_response) || !response_data(api_response)) {
 			console.error("Error on api_response:", api_response);
 			return {
-				result	: false,
-				msg		: api_response.msg || 'Error on api_response'
+				ok		: false,
+				error	: request_failed(api_response)
+					? api_response.error
+					: new ApiError({
+						code	: CLIENT_ERROR.BAD_RESPONSE,
+						message	: 'Error on api_response'
+					})
 			}
 		}
 

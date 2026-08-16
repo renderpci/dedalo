@@ -87,6 +87,7 @@ import {
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from './ontology_tipos.ts';
 import {
 	addMainSection,
@@ -148,7 +149,8 @@ export interface OntologyState {
 }
 
 export interface OntologyWriteResult {
-	result: boolean;
+	/** INTERNAL outcome discriminator (never a wire body). */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	state: OntologyState;
@@ -217,9 +219,10 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	// records and named healthy ones (dd0/1, dd0/2 …) as the operator's fault.
 	// One shared cause must never be reported as N record-level defects.
 	if ((await getModelByTipo(ONTOLOGY_TLD)) === null) {
-		throw new Error(
-			`inspectOntology('${tld}'): the '${ONTOLOGY_TLD}' node cannot be resolved in dd_ontology, so NO record of '${sectionTipo}' can be parsed. This is an ontology-resolution failure, not a defect in the records — re-derive the 'ontology' tld first.`,
-		);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `inspectOntology('${tld}'): the '${ONTOLOGY_TLD}' node cannot be resolved in dd_ontology, so NO record of '${sectionTipo}' can be parsed. This is an ontology-resolution failure, not a defect in the records — re-derive the 'ontology' tld first.`,
+			coordinates: { tld, section_tipo: sectionTipo },
+		});
 	}
 
 	const rows = (await sql.unsafe(
@@ -484,7 +487,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 	if (tld === null) {
 		const state = await inspectOntology(rawTld);
 		return {
-			result: false,
+			ok: false,
 			msg: `'${rawTld}' is not a valid TLD`,
 			errors: [`invalid tld '${rawTld}'`],
 			state,
@@ -501,7 +504,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 			// Misfiled records are reported, never rebuilt: `deleteTldNodes(tld)` below scopes
 			// the wipe to THIS tld, so writing a foreign node would plant a row this rebuild
 			// could never take back. A misfiled record does not block the tld's own rebuild —
-			// it only keeps the result honest (result=false while the source stays wrong).
+			// it only keeps the outcome honest (ok=false while the source stays wrong).
 			for (const item of foreign) errors.push(foreignError(item, tld));
 			await deleteTldNodes(tld);
 			for (const node of parsed.values()) {
@@ -515,7 +518,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 		errors.push(String(error));
 		const state = await inspectOntology(tld);
 		return {
-			result: false,
+			ok: false,
 			msg: `Rebuild of '${tld}' failed and was rolled back`,
 			errors,
 			state,
@@ -526,7 +529,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 	const state = await inspectOntology(tld);
 	const converged = rebuildConverged(state);
 	return {
-		result: converged,
+		ok: converged,
 		msg: converged
 			? `Ontology '${tld}' rebuilt${tldlessNote(state)}`
 			: state.foreignNodes > 0

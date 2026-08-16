@@ -277,11 +277,12 @@ const get_buttons = function(self) {
 					for (let i = 0; i < ar_identifying_image_length; i++) {
 
 						const item = ar_identifying_image[i]
-						// option
+						// option. `label` is record data: it reaches the DOM as TEXT,
+						// never as markup (DS-1 / error_report_xss_tripwire).
 						ui.create_dom_element({
 							element_type	: 'option',
 							value			: JSON.stringify(item),
-							inner_html		: item.label + ' - ' + item.section_id,
+							text_content	: item.label + ' - ' + item.section_id,
 							parent			: identifying_image_selector
 						})
 					}

@@ -172,7 +172,7 @@ import {
 			captured.push(options?.body)
 			return options?.body?.action==='read_raw'
 				? response
-				: { result : { context:[], data:[] } }
+				: { ok : true, data : { context:[], data:[] } }
 		}
 		try {
 			await fn(captured)
@@ -349,7 +349,7 @@ describe(`OPEN_RELATED_DATA`, async () => {
 		let captured = []
 		try {
 			captured = await with_stubbed_request(
-				{ result : [], table : 'matrix', msg : 'OK. Request done' },
+				{ ok : true, data : [], table : 'matrix' },
 				async () => {
 					await with_stubbed_alert(async () => {
 						await drive_dialog(options, 'test4')
@@ -381,7 +381,7 @@ describe(`OPEN_RELATED_DATA`, async () => {
 		let captured = []
 		try {
 			captured = await with_stubbed_request(
-				{ result : [], table : 'matrix', msg : 'OK. Request done' },
+				{ ok : true, data : [], table : 'matrix' },
 				async () => {
 					await with_stubbed_alert(async () => {
 						await drive_dialog(options, 'test4')
@@ -408,7 +408,7 @@ describe(`OPEN_RELATED_DATA`, async () => {
 		let messages = []
 		try {
 			await with_stubbed_request(
-				{ result : [], table : 'matrix', msg : 'OK. Request done' },
+				{ ok : true, data : [], table : 'matrix' },
 				async () => {
 					messages = await with_stubbed_alert(async () => {
 						await drive_dialog(options, 'test4')
@@ -438,7 +438,7 @@ describe(`OPEN_RELATED_DATA`, async () => {
 		let stranded	= null
 		try {
 			captured = await with_stubbed_request(
-				{ result : [], table : 'matrix', msg : 'OK. Request done' },
+				{ ok : true, data : [], table : 'matrix' },
 				async () => {
 					messages = await with_stubbed_alert(async () => {
 						render_open_list_with_direct_relations(options)
@@ -513,14 +513,14 @@ describe(`OPEN_RELATED_DATA`, async () => {
 		try {
 			await with_stubbed_request(
 				{
+					ok		: true,
 					// one matched record holding three locators across two sections
-					result	: [[
+					data	: [[
 						make_locator('test4', 11),
 						make_locator('test5', 12),
 						make_locator('test4', 13)
 					]],
-					table	: 'matrix',
-					msg		: 'OK. Request done'
+					table	: 'matrix'
 				},
 				async () => {
 					urls = await with_stubbed_open(async () => {

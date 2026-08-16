@@ -10,6 +10,7 @@
 	import {open_window} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {render_menu, render_section_label} from './render_menu.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -229,13 +230,14 @@ menu.prototype.build = async function(autoload=true) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result?.context?.length){
+				const datum = response_data(api_response)
+				if(!datum?.context?.length){
 					console.error("Error!!!!, menu without context:", api_response);
 					return false
 				}
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = datum
 		}
 
 	// Safety check for datum before proceeding

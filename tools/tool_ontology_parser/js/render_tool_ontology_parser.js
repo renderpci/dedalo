@@ -40,6 +40,9 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {filter_ontologies} from './ontologies_filter.js'
+	// the ONE failure test + payload accessor + text resolver (envelope v2)
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 
 // SEC-031: helper to render API messages safely. Splits on `<br>` literals and emits
 // text nodes so api_response.msg / errors / ar_msg cannot inject HTML/script when
@@ -95,9 +98,13 @@ const paint_status = async function(self, container) {
 
 	let states
 	try {
-		const api_response = await self.inspect_ontologies()
-		states = api_response && Array.isArray(api_response.states) ? api_response.states : null
-		if (!states) throw new Error(api_response && api_response.msg ? api_response.msg : 'no states')
+		// envelope v2: `{states:[…]}` is the PAYLOAD (toolOntologyParserInspect
+		// returns ok({states})), and a failure carries the coded error instead.
+		const api_response	= await self.inspect_ontologies()
+		const failed		= request_failed(api_response)
+		const inspect_data	= failed ? null : response_data(api_response)
+		states = Array.isArray(inspect_data?.states) ? inspect_data.states : null
+		if (!states) throw new Error(failed ? error_text(api_response.error) : 'no states')
 	} catch (err) {
 		container.replaceChildren() // clear the loading line before the error
 		ui.create_dom_element({
@@ -573,18 +580,44 @@ const get_content_data = async function(self) {
 					_render_msg_lines(messages_container, 'No response')
 					return
 				}
-				_render_msg_lines(messages_container, api_response.msg ?? 'Unknown error')
-				messages_container.classList.toggle('error', api_response.result===false)
+				// ENVELOPE v2 (ERRORS_SPEC §3). The three panels read from two
+				// DIFFERENT places, because a batch that ran dirty is a FAILURE here:
+				//  · success — the account is the PAYLOAD's `summary` and the per-TLD
+				//    lines its `ar_msg` (tools/tool_ontology_parser/server/
+				//    tool_ontology_parser.ts summarize / repair / export).
+				//  · failure — the dispatcher's one coded sentence, with the per-TLD
+				//    `errors` + `ar_msg` riding as NAMED failure EXTENSION KEYS at the
+				//    body's top level (batchFailed, §3.0), not inside `error.details`.
+				// Reading `msg` for both is what printed the literal 'Unknown error'
+				// after every clean run and swallowed the per-file export lines.
+				const failed	= request_failed(api_response)
+				const api_data	= failed ? null : response_data(api_response)
+				const headline	= failed
+					? error_text(api_response.error)
+					: (api_data?.summary ?? (self.get_tool_label('done') || 'OK'))
+				_render_msg_lines(messages_container, headline)
+				messages_container.classList.toggle('error', failed)
 
-				if (api_response.errors?.length) {
-					_render_msg_lines(process_error_container, api_response.errors)
+				// errors: only a failure has them (extension key)
+				const batch_errors = api_response.errors
+				const process_errors = failed && Array.isArray(batch_errors)
+					? batch_errors
+					: []
+				if (process_errors.length) {
+					_render_msg_lines(process_error_container, process_errors)
 					process_error_container.classList.remove('hidden')
 				} else {
 					process_error_container.replaceChildren()
 					process_error_container.classList.add('hidden')
 				}
-				if (api_response.ar_msg?.length) {
-					_render_msg_lines(process_messages_container, api_response.ar_msg)
+
+				// ar_msg: the per-TLD lines, payload on a success and extension key
+				// on a failure — the operator needs them on BOTH outcomes.
+				const ar_msg = failed
+					? (Array.isArray(api_response.ar_msg) ? api_response.ar_msg : [])
+					: (Array.isArray(api_data?.ar_msg) ? api_data.ar_msg : [])
+				if (ar_msg.length) {
+					_render_msg_lines(process_messages_container, ar_msg)
 					process_messages_container.classList.remove('hidden')
 				} else {
 					process_messages_container.replaceChildren()

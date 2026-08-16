@@ -96,9 +96,10 @@ describe('get_section_elements_context (appendix)', () => {
 			context,
 		);
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { result: Record<string, unknown>[]; msg: string };
-		expect(Array.isArray(body.result)).toBe(true);
-		expect(body.result.length).toBeGreaterThan(1);
-		expect(body.result[0]?.model).toBe('section');
+		const body = (await res.json()) as { ok: boolean; data: Record<string, unknown>[] };
+		expect(body.ok).toBe(true);
+		expect(Array.isArray(body.data)).toBe(true);
+		expect(body.data.length).toBeGreaterThan(1);
+		expect(body.data[0]?.model).toBe('section');
 	});
 });

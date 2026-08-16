@@ -97,7 +97,7 @@ async function importCsv(
 			],
 		},
 	});
-	const report = (res.result as ImportFileReport[])[0] as ImportFileReport;
+	const report = (res.data as { files: ImportFileReport[] }).files[0] as ImportFileReport;
 	if (report.bulk_process_id !== null) bulkProcessIds.push(report.bulk_process_id);
 	return report;
 }
@@ -320,7 +320,10 @@ describe('validate_import (preflight) — catches the map BEFORE anything is wri
 				},
 			},
 		);
-		const file = (res.result as Record<string, unknown>[])[0] as Record<string, unknown>;
+		const file = (res.data as { files: Record<string, unknown>[] }).files[0] as Record<
+			string,
+			unknown
+		>;
 		expect(file.ok).toBe(false);
 		expect((file.errors as string[]).join(' ')).toContain('not a component of section');
 
@@ -354,7 +357,10 @@ describe('validate_import (preflight) — catches the map BEFORE anything is wri
 				},
 			},
 		);
-		const file = (res.result as Record<string, unknown>[])[0] as Record<string, unknown>;
+		const file = (res.data as { files: Record<string, unknown>[] }).files[0] as Record<
+			string,
+			unknown
+		>;
 		expect(file.ok).toBe(true);
 		expect(file.errors).toEqual([]);
 		expect(file.failed).toEqual([]);

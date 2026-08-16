@@ -100,7 +100,7 @@ const OBJECTS = [
 	},
 ];
 
-type Ctx = { session: { userId: number } | null; principal?: Principal };
+type Ctx = { requestId: string; session: { userId: number } | null; principal?: Principal };
 const rqo = (options: Record<string, unknown>) => ({ options }) as never;
 
 // ─────────────────────────── preconditions (loud skips) ───────────────────────────
@@ -554,7 +554,7 @@ describe.if(REAL_INGEST)('dd_rag_api image actions', () => {
 			{ principal: SUPERUSER } as Ctx,
 		);
 		expect(res.body.msg).toBe('ok');
-		const hits = res.body.result as { section_id: number; thumb_url: string | null }[];
+		const hits = res.body.data as { section_id: number; thumb_url: string | null }[];
 		expect(hits.some((h) => h.section_id === createdIds[1])).toBe(true);
 		// Every thumb_url points at THAT record's real thumb derivative.
 		for (const hit of hits) {
@@ -572,7 +572,7 @@ describe.if(REAL_INGEST)('dd_rag_api image actions', () => {
 			{ principal: SUPERUSER } as Ctx,
 		);
 		expect(res.body.msg).toBe('ok');
-		const hits = res.body.result as { section_id: number }[];
+		const hits = res.body.data as { section_id: number }[];
 		expect(hits.length).toBeGreaterThan(0);
 		expect(hits.every((h) => createdIds.includes(h.section_id))).toBe(true);
 	});
@@ -583,7 +583,7 @@ describe.if(REAL_INGEST)('dd_rag_api image actions', () => {
 			{ principal: SUPERUSER } as Ctx,
 		);
 		expect(res.body.msg).toBe('ok');
-		expect(res.body.result).toHaveProperty('neighboursConsidered');
+		expect(res.body.data).toHaveProperty('neighboursConsidered');
 	});
 });
 
@@ -592,10 +592,13 @@ describe('dd_rag_api image actions (flag gate)', () => {
 	test('image actions decline when media is disabled', async () => {
 		process.env.DEDALO_RAG_MEDIA_ENABLED = '';
 		try {
-			const res = await ragApiActions.search_by_text_image(rqo({ query: 'x' }), {
-				principal: SUPERUSER,
-			} as Ctx);
-			expect(res.body.errors).toContain('media_disabled');
+			// Envelope v2: the decline is a THROW carrying the registry code (the
+			// retired compat mirror used to spell it as `errors:['media_disabled']`).
+			await expect(
+				ragApiActions.search_by_text_image(rqo({ query: 'x' }), {
+					principal: SUPERUSER,
+				} as Ctx),
+			).rejects.toMatchObject({ code: 'rag.media_disabled' });
 		} finally {
 			process.env.DEDALO_RAG_MEDIA_ENABLED = 'true';
 		}

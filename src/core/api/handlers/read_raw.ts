@@ -18,6 +18,7 @@ import type { Sqo } from '../../concepts/sqo.ts';
 import { sanitizeClientSqo } from '../../concepts/sqo.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../db/matrix.ts';
 import { sql } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -66,11 +67,17 @@ export async function readRaw(input: ReadRawInput, principal?: Principal): Promi
 	if (type === 'component') {
 		const model = input.model ?? (await getModelByTipo(input.tipo));
 		if (model === null) {
-			throw new Error(`readRaw: cannot resolve model for tipo '${input.tipo}'`);
+			throw new DedaloError('request.invalid_tipo', {
+				message: `readRaw: cannot resolve model for tipo '${input.tipo}'`,
+				coordinates: { tipo: input.tipo },
+			});
 		}
 		const columnName = getColumnNameByModel(model);
 		if (columnName === null) {
-			throw new Error(`readRaw: cannot resolve data column from model '${model}'`);
+			throw new DedaloError('request.invalid_model', {
+				message: `readRaw: cannot resolve data column from model '${model}'`,
+				coordinates: { tipo: input.tipo, model },
+			});
 		}
 		for (const row of rows) {
 			const recordTable = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
@@ -122,7 +129,8 @@ export async function readRaw(input: ReadRawInput, principal?: Principal): Promi
 		return { result: rawData, table };
 	}
 
-	throw new Error(
-		`readRaw: type '${type}' not implemented (covered: 'component', 'section', 'target_section')`,
-	);
+	throw new DedaloError('request.invalid_options', {
+		message: `readRaw: type '${type}' not implemented (covered: 'component', 'section', 'target_section')`,
+		coordinates: { type },
+	});
 }

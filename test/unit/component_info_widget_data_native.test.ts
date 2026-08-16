@@ -64,6 +64,7 @@ import { componentInfoApiActions } from '../../src/core/api/handlers/dd_componen
 import * as widget_registry from '../../src/core/components/component_info/widgets/registry.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { Session } from '../../src/core/security/session_store.ts';
 import { mustGet } from '../helpers/assert.ts';
@@ -221,6 +222,24 @@ afterEach(() => {
 	mock.module(REGISTRY_PATH, () => REAL_REGISTRY);
 });
 
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a refusal is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function refusalOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a refusal, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
+
 describe('get_widget_data — identity and record gate', () => {
 	test('no seeded principal ⇒ requirePrincipal throws (never an anonymous compute)', async () => {
 		await expect(
@@ -231,18 +250,18 @@ describe('get_widget_data — identity and record gate', () => {
 		).rejects.toThrow(/no authenticated principal/);
 	});
 
-	test('AUTHZ-01: an EXISTING record outside the caller scope ⇒ forbidden envelope', async () => {
-		const result = await getWidgetData(
-			rqoOf(
-				{ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: SECTION_ID, mode: 'edit' },
-				{ widget_name: WIDGET_NAME },
+	test('AUTHZ-01: an EXISTING record outside the caller scope ⇒ perm.denied (403)', async () => {
+		const refusal = await refusalOf(
+			getWidgetData(
+				rqoOf(
+					{ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: SECTION_ID, mode: 'edit' },
+					{ widget_name: WIDGET_NAME },
+				),
+				contextFor(NO_ACCESS),
 			),
-			contextFor(NO_ACCESS),
 		);
-		expect(result).toEqual({
-			status: 200,
-			body: { result: false, msg: [' Forbidden record'], errors: ['forbidden'] },
-		});
+		expect(refusal.code).toBe('perm.denied');
+		expect(refusal.spec.status).toBe(403);
 	});
 
 	test('the SAME record + an admin principal passes the gate (the refusal is scope, not fixture)', async () => {
@@ -253,89 +272,94 @@ describe('get_widget_data — identity and record gate', () => {
 			),
 			contextFor(ADMIN),
 		);
-		const body = result.body as { result: unknown; errors: unknown };
-		expect(body.errors).toEqual([]);
-		expect(Array.isArray(body.result)).toBe(true);
+		const body = result.body as { ok: unknown; data: unknown };
+		expect(body.ok).toBe(true);
+		expect(Array.isArray(body.data)).toBe(true);
 	});
 
 	test('non-positive section_id is refused for ADMINS too (record_scope sectionId < 1)', async () => {
 		for (const sectionId of [0, -1, '0']) {
-			const result = await getWidgetData(
-				rqoOf(
-					{ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: sectionId },
-					{ widget_name: WIDGET_NAME },
+			const refusal = await refusalOf(
+				getWidgetData(
+					rqoOf(
+						{ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: sectionId },
+						{ widget_name: WIDGET_NAME },
+					),
+					contextFor(ADMIN),
 				),
-				contextFor(ADMIN),
 			);
-			expect(result).toEqual({
-				status: 200,
-				body: { result: false, msg: [' Forbidden record'], errors: ['forbidden'] },
-			});
+			expect(refusal.code).toBe('perm.denied');
 		}
 	});
 });
 
-describe('get_widget_data — widget resolution refusals (byte-exact PHP messages)', () => {
-	test('a tipo with no properties.widgets ⇒ the empty-widgets message, leading AND trailing space', async () => {
-		const result = await getWidgetData(
-			rqoOf(
-				{ tipo: NO_WIDGETS_TIPO, section_tipo: SECTION, section_id: SECTION_ID },
-				{ widget_name: WIDGET_NAME },
+/**
+ * ENVELOPE v2: the two PHP prose refusals are now the two REGISTERED widget
+ * codes — the same pair the parity reconciler maps the frozen PHP bodies to
+ * (test/parity/normalize.ts FROZEN_ERROR_BODIES): `widget.empty` (the component
+ * declares no widgets at all) and `widget.not_defined` (the named widget is not
+ * one of them). Both are OPERATOR disclosure, so the tipo/label/widget name
+ * ride the LOG message and the log-only coordinates, never the wire.
+ */
+describe('get_widget_data — widget resolution refusals (the two registered codes)', () => {
+	test('a tipo with no properties.widgets ⇒ widget.empty, the label in the LOG line', async () => {
+		const refusal = await refusalOf(
+			getWidgetData(
+				rqoOf(
+					{ tipo: NO_WIDGETS_TIPO, section_tipo: SECTION, section_id: SECTION_ID },
+					{ widget_name: WIDGET_NAME },
+				),
+				contextFor(ADMIN),
 			),
-			contextFor(ADMIN),
 		);
-		expect(result.status).toBe(200);
-		const body = result.body as { result: unknown; msg: string[]; errors: unknown };
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual([]);
+		expect(refusal.code).toBe('widget.empty');
+		expect(refusal.spec.status).toBe(400);
 		// The label is the app-lang term of the tipo (lg-spa: 'input_text').
-		expect(body.msg).toEqual([
-			' Empty defined widgets for dd_component_info : input_text [test52] ',
-		]);
-		expect(body.msg[0]?.startsWith(' ')).toBe(true);
-		expect(body.msg[0]?.endsWith('] ')).toBe(true);
+		expect(refusal.message).toBe(
+			'Empty defined widgets for dd_component_info : input_text [test52]',
+		);
+		expect(refusal.coordinates).toMatchObject({ tipo: NO_WIDGETS_TIPO });
 	});
 
 	test('an unknown tipo (no ontology node) takes the same branch, label = the tipo itself', async () => {
-		const result = await getWidgetData(
-			rqoOf(
-				{ tipo: UNKNOWN_TIPO, section_tipo: SECTION, section_id: SECTION_ID },
-				{ widget_name: WIDGET_NAME },
+		const refusal = await refusalOf(
+			getWidgetData(
+				rqoOf(
+					{ tipo: UNKNOWN_TIPO, section_tipo: SECTION, section_id: SECTION_ID },
+					{ widget_name: WIDGET_NAME },
+				),
+				contextFor(ADMIN),
 			),
-			contextFor(ADMIN),
 		);
-		expect(result.body).toEqual({
-			result: false,
-			msg: [` Empty defined widgets for dd_component_info : ${UNKNOWN_TIPO} [${UNKNOWN_TIPO}] `],
-			errors: [],
-		});
+		expect(refusal.code).toBe('widget.empty');
+		expect(refusal.message).toBe(
+			`Empty defined widgets for dd_component_info : ${UNKNOWN_TIPO} [${UNKNOWN_TIPO}]`,
+		);
 	});
 
-	test('a widget_name none of the declared widgets carries ⇒ empty widget_obj', async () => {
-		const result = await getWidgetData(
-			rqoOf(
-				{ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: SECTION_ID },
-				{ widget_name: 'not_declared' },
+	test('a widget_name none of the declared widgets carries ⇒ widget.not_defined', async () => {
+		const refusal = await refusalOf(
+			getWidgetData(
+				rqoOf(
+					{ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: SECTION_ID },
+					{ widget_name: 'not_declared' },
+				),
+				contextFor(ADMIN),
 			),
-			contextFor(ADMIN),
 		);
-		expect(result.body).toEqual({
-			result: false,
-			msg: [' Empty widget_obj for widget not_declared'],
-			errors: [],
-		});
+		expect(refusal.code).toBe('widget.not_defined');
+		expect(refusal.coordinates).toMatchObject({ widget_name: 'not_declared' });
 	});
 
-	test('absent options ⇒ widget_name defaults to the empty string and names itself in the message', async () => {
-		const result = await getWidgetData(
-			rqoOf({ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: SECTION_ID }),
-			contextFor(ADMIN),
+	test('absent options ⇒ widget_name defaults to the empty string and names itself in the LOG', async () => {
+		const refusal = await refusalOf(
+			getWidgetData(
+				rqoOf({ tipo: INFO_WITH_WIDGETS, section_tipo: SECTION, section_id: SECTION_ID }),
+				contextFor(ADMIN),
+			),
 		);
-		expect(result.body).toEqual({
-			result: false,
-			msg: [' Empty widget_obj for widget '],
-			errors: [],
-		});
+		expect(refusal.code).toBe('widget.not_defined');
+		expect(refusal.message).toBe('Empty widget_obj for widget ');
 	});
 });
 
@@ -402,10 +426,9 @@ describe('get_widget_data — thread-through into the widget compute', () => {
 		});
 
 		// …and the compute's return value IS the envelope's result.
-		expect(result.body).toEqual({
-			result: [{ echo: { ipo, context: mustGet(echo.calls[0], 'echo call 0').context } }],
-			msg: 'OK. Request done successfully',
-			errors: [],
+		expect(result.body).toMatchObject({
+			ok: true,
+			data: [{ echo: { ipo, context: mustGet(echo.calls[0], 'echo call 0').context } }],
 		});
 	});
 
@@ -442,8 +465,9 @@ describe('get_widget_data — success envelope (real registry)', () => {
 		// test212 declares two outputs; the scratch record holds no test52 data,
 		// so every item carries test_info's placeholder — which encodes the
 		// threaded section coordinates.
-		expect(result.body).toEqual({
-			result: [
+		expect(result.body).toMatchObject({
+			ok: true,
+			data: [
 				{
 					widget: 'test_info',
 					key: 0,
@@ -459,8 +483,6 @@ describe('get_widget_data — success envelope (real registry)', () => {
 					value: `test_info widget value for section ${SECTION} - ${SECTION_ID}`,
 				},
 			],
-			msg: 'OK. Request done successfully',
-			errors: [],
 		});
 	});
 });
@@ -489,13 +511,12 @@ describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', 
 	async function descriptorItems(mode?: string): Promise<WidgetItem[]> {
 		const result = await getWidgetData(descriptorsRqo(mode), contextFor(ADMIN));
 		expect(result.status).toBe(200);
-		const body = result.body as { result: unknown; msg: unknown; errors: unknown };
+		const body = result.body as { ok: unknown; data: unknown };
 		// The short-circuit is a SUCCESS with no data, never a refusal — so the
 		// envelope must be the OK one in BOTH modes.
-		expect(body.msg).toBe('OK. Request done successfully');
-		expect(body.errors).toEqual([]);
-		expect(Array.isArray(body.result)).toBe(true);
-		return body.result as WidgetItem[];
+		expect(body.ok).toBe(true);
+		expect(Array.isArray(body.data)).toBe(true);
+		return body.data as WidgetItem[];
 	}
 
 	test("mode 'edit' ⇒ the indexation count and the terms grid, over the oh25 hop", async () => {
@@ -556,8 +577,8 @@ describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', 
 			),
 			contextFor(ADMIN),
 		);
-		const body = result.body as { result: unknown[]; errors: unknown };
-		expect(body.errors).toEqual([]);
-		expect(body.result.length).toBeGreaterThan(0);
+		const body = result.body as { ok: unknown; data: unknown[] };
+		expect(body.ok).toBe(true);
+		expect(body.data.length).toBeGreaterThan(0);
 	}, 30000);
 });

@@ -39,6 +39,7 @@
 
 // import needed modules
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
@@ -221,11 +222,12 @@ tool_qr.prototype.load_section = async function() {
 			tipo			: tipo,
 			section_tipo	: section_tipo
 		})
-		if (!element_context_response.result || !element_context_response.result[0]) {
+		const element_context_data = response_data(element_context_response)
+		if (!element_context_data || !element_context_data[0]) {
 			console.error('element_context_response:', element_context_response);
 			return false
 		}
-		const element_context = element_context_response.result[0]
+		const element_context = element_context_data[0]
 
 	// request_config
 		const request_config = element_context.request_config

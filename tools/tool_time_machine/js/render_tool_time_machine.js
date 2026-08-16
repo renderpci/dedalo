@@ -6,6 +6,8 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -231,7 +233,10 @@ const get_content_data = async function(self) {
 								bulk_revert_process_label	: bulk_revert_process_name
 							})
 							.then(function(response){
-								if (response.result===true) {
+								// envelope v2: the revert's payload is
+								// `{counter, bulk_process_id, skipped}`; a refusal carries
+								// the coded error and no payload at all.
+								if (!request_failed(response) && response_data(response)) {
 									// success case
 									if (window.opener) {
 										// close this window when was opened from another
@@ -240,7 +245,9 @@ const get_content_data = async function(self) {
 								}else{
 									// error case
 									console.warn('response:',response);
-									alert(response.msg || 'Error. Unknown error on apply tm value');
+									if (request_failed(response)) {
+										handle_api_error(response.error, {wrapper: self.node});
+									}
 								}
 							})
 						}
@@ -272,7 +279,8 @@ const get_content_data = async function(self) {
 						matrix_id		: self.selected_matrix_id
 					})
 					.then(function(response){
-						if (response.result===true) {
+						// envelope v2: apply_value answers `data===true`
+						if (response_data(response)===true) {
 							// success case
 							if (window.opener) {
 								// close this window when was opened from another
@@ -281,7 +289,9 @@ const get_content_data = async function(self) {
 						}else{
 							// error case
 							console.warn('response:',response);
-							alert(response.msg || 'Error. Unknown error on apply tm value');
+							if (request_failed(response)) {
+								handle_api_error(response.error, {wrapper: self.node});
+							}
 						}
 					})
 				})

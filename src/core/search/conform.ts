@@ -5,7 +5,8 @@
  *   1. validates all identifiers at the §7.6 chokepoint (tipos, lang),
  *   2. resolves the component's model/column/translatability from the ontology,
  *   3. dispatches to the per-model fragment builder,
- * and returns a ConformedFilter tree whose leaves carry BuilderResults.
+ * and returns a ConformedFilter tree whose leaves carry BuilderResults
+ * (`fragment` — never an envelope `result`).
  *
  * PHP reference: search::parse_sqo/conform_filter (class.search.php:733/:809)
  * and the per-component resolve_query_object_sql traits.
@@ -22,6 +23,7 @@
 import { readString } from '../../config/readers.ts';
 import { getSearchBuilderFamily } from '../components/registry.ts';
 import type { SqoFilterLeaf, SqoFilterNode } from '../concepts/sqo.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
@@ -71,7 +73,8 @@ export interface JoinFragment {
 
 export type ConformedFilter =
 	| { kind: 'group'; op: string; items: ConformedFilter[] }
-	| { kind: 'leaf'; result: BuilderResult; joins?: JoinFragment[] };
+	/** `fragment` is the leaf's BuilderResult — the SQL it contributes, `false` when it contributes nothing. */
+	| { kind: 'leaf'; fragment: BuilderResult; joins?: JoinFragment[] };
 
 /**
  * Build the PHP build_sql_join chain for a multi-hop path: per hop, a
@@ -94,7 +97,10 @@ export async function buildJoinChain(
 		const hopComponent = (path[index - 1] as { component_tipo?: string }).component_tipo;
 		const stepSection = step.section_tipo;
 		if (stepSection === undefined || hopComponent === undefined) {
-			throw new Error('search conform: a multi-hop path step needs section_tipo + component_tipo');
+			throw new DedaloError('search.invalid_sqo', {
+				message: 'search conform: a multi-hop path step needs section_tipo + component_tipo',
+				publicMessage: 'Every step of a multi-hop search path needs a section and a component',
+			});
 		}
 		assertValidTipo(stepSection, 'join path');
 		assertValidTipo(hopComponent, 'join path');
@@ -103,7 +109,11 @@ export async function buildJoinChain(
 		const hopDataTipo = await resolveDataTipo(hopComponent);
 		const stepTable = await getMatrixTableFromTipo(stepSection);
 		if (stepTable === null) {
-			throw new Error(`search conform: no matrix table for join step '${stepSection}'`);
+			throw new DedaloError('search.invalid_sqo', {
+				message: `search conform: no matrix table for join step '${stepSection}'`,
+				publicMessage: 'A section named in the search path holds no records',
+				coordinates: { step_section_tipo: stepSection },
+			});
 		}
 		aliasChain.push(`${hopDataTipo}_${stepSection}`);
 		const joinAlias = `j_${aliasChain.join('_')}`;
@@ -148,30 +158,38 @@ const RELATION_LEAF_FIELDS: Record<string, [string, 'text' | 'int']> = {
  */
 function parseRelationLeafLocator(raw: unknown): RelationLeafLocator {
 	if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-		throw new Error(
-			"search conform: format 'relation' q must be a locator object or an array of them",
-		);
+		throw new DedaloError('search.invalid_sqo', {
+			message: "search conform: format 'relation' q must be a locator object or an array of them",
+			publicMessage: "A 'relation' filter value must be a locator or an array of locators",
+		});
 	}
 	const record = raw as Record<string, unknown>;
 	if (typeof record.section_tipo !== 'string' || record.section_tipo === '') {
-		throw new Error("search conform: format 'relation' locator needs a section_tipo");
+		throw new DedaloError('search.invalid_sqo', {
+			message: "search conform: format 'relation' locator needs a section_tipo",
+			publicMessage: "A 'relation' filter locator needs a section_tipo",
+		});
 	}
 	const resolved: RelationLeafLocator = [];
 	for (const [field, value] of Object.entries(record)) {
 		const mapped = RELATION_LEAF_FIELDS[field];
 		if (mapped === undefined) {
-			throw new Error(
-				`search conform: format 'relation' unknown locator field '${field}' ` +
+			throw new DedaloError('search.invalid_sqo', {
+				message:
+					`search conform: format 'relation' unknown locator field '${field}' ` +
 					`(allowed: ${Object.keys(RELATION_LEAF_FIELDS).join(', ')})`,
-			);
+				publicMessage: `A 'relation' filter locator accepts only: ${Object.keys(RELATION_LEAF_FIELDS).join(', ')}`,
+				coordinates: { field },
+			});
 		}
 		const [column, cast] = mapped;
 		if (cast === 'int') {
 			const id = String(value);
 			if (!/^-?[0-9]+$/.test(id)) {
-				throw new Error(
-					`search conform: format 'relation' section_id '${String(value)}' is not an integer`,
-				);
+				throw new DedaloError('search.invalid_sqo', {
+					message: `search conform: format 'relation' section_id '${String(value)}' is not an integer`,
+					publicMessage: "A 'relation' filter section_id must be an integer",
+				});
 			}
 			resolved.push([column, cast, id]);
 		} else {
@@ -185,7 +203,10 @@ function parseRelationLeafLocator(raw: unknown): RelationLeafLocator {
 function parseRelationLeafQ(rawQ: unknown): RelationLeafLocator[] {
 	const items = Array.isArray(rawQ) ? rawQ : [rawQ];
 	if (items.length === 0) {
-		throw new Error("search conform: format 'relation' q array is empty");
+		throw new DedaloError('search.invalid_sqo', {
+			message: "search conform: format 'relation' q array is empty",
+			publicMessage: "A 'relation' filter needs at least one locator",
+		});
 	}
 	return items.map(parseRelationLeafLocator);
 }
@@ -225,9 +246,11 @@ function parseLegacyFunctionLeaf(leaf: {
 	const name = String(leaf.use_function ?? '').replace(/^data_/, '');
 	const columns = LEGACY_FLAT_VARIANTS[name];
 	if (columns === undefined) {
-		throw new Error(
-			`search conform: format 'function' with unknown use_function '${String(leaf.use_function)}' (allowlist-only, never interpolated)`,
-		);
+		throw new DedaloError('search.invalid_sqo', {
+			message: `search conform: format 'function' with unknown use_function '${String(leaf.use_function)}' (allowlist-only, never interpolated)`,
+			publicMessage: "A 'function' filter names an unknown use_function",
+			coordinates: { use_function: String(leaf.use_function) },
+		});
 	}
 	let flatKey = typeof leaf.q === 'string' ? leaf.q : '';
 	try {
@@ -255,7 +278,7 @@ async function conformLeaf(
 	const path = leaf.path ?? [];
 	const lastStep = path[path.length - 1];
 	if (lastStep === undefined) {
-		return { kind: 'leaf', result: false };
+		return { kind: 'leaf', fragment: false };
 	}
 
 	// §7.6 chokepoint — every identifier that will be interpolated.
@@ -282,16 +305,21 @@ async function conformLeaf(
 			const hopComponent = (path[index - 1] as { component_tipo?: string }).component_tipo;
 			const stepSection = step.section_tipo;
 			if (stepSection === undefined || hopComponent === undefined) {
-				throw new Error(
-					'search conform: a multi-hop path step needs section_tipo + component_tipo',
-				);
+				throw new DedaloError('search.invalid_sqo', {
+					message: 'search conform: a multi-hop path step needs section_tipo + component_tipo',
+					publicMessage: 'Every step of a multi-hop search path needs a section and a component',
+				});
 			}
 			// component_alias (WC-020): stored locators live under the TARGET's key.
 			const { resolveDataTipo } = await import('../ontology/alias.ts');
 			const hopDataTipo = await resolveDataTipo(hopComponent);
 			const stepTable = await getMatrixTableFromTipo(stepSection);
 			if (stepTable === null) {
-				throw new Error(`search conform: no matrix table for join step '${stepSection}'`);
+				throw new DedaloError('search.invalid_sqo', {
+					message: `search conform: no matrix table for join step '${stepSection}'`,
+					publicMessage: 'A section named in the search path holds no records',
+					coordinates: { step_section_tipo: stepSection },
+				});
 			}
 			// Deterministic alias from the path chain — identical paths in other
 			// clauses reuse the SAME joined rows (PHP legacy alias dedup).
@@ -313,7 +341,7 @@ async function conformLeaf(
 
 	const componentTipo = lastStep.component_tipo;
 	if (componentTipo === undefined) {
-		return { kind: 'leaf', result: false };
+		return { kind: 'leaf', fragment: false };
 	}
 
 	// RELATION LEAVES — filter records whose `relation` column holds a locator
@@ -347,7 +375,7 @@ async function conformLeaf(
 			const legacy = parseLegacyFunctionLeaf(leaf as { use_function?: unknown; q?: unknown });
 			if (legacy === null) {
 				// malformed flat key — contributes nothing (the legacy contract)
-				return { kind: 'leaf', result: false };
+				return { kind: 'leaf', fragment: false };
 			}
 			locators = [legacy];
 		}
@@ -370,7 +398,9 @@ async function conformLeaf(
 				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' OR ')})`,
 			tokenValues,
 		);
-		return joins.length > 0 ? { kind: 'leaf', result, joins } : { kind: 'leaf', result };
+		return joins.length > 0
+			? { kind: 'leaf', fragment: result, joins }
+			: { kind: 'leaf', fragment: result };
 	}
 
 	// Ontology resolution. PHP ontology_utils::check_active_tld:271 allowlists
@@ -380,11 +410,17 @@ async function conformLeaf(
 	const model =
 		componentTipo === 'section_id' ? 'component_section_id' : await getModelByTipo(componentTipo);
 	if (model === null) {
-		throw new Error(`search conform: unknown component tipo '${componentTipo}'`);
+		throw new DedaloError('request.invalid_tipo', {
+			message: `search conform: unknown component tipo '${componentTipo}'`,
+			coordinates: { tipo: componentTipo },
+		});
 	}
 	const column = getColumnNameByModel(model);
 	if (column === null) {
-		throw new Error(`search conform: no matrix column for model '${model}'`);
+		throw new DedaloError('request.invalid_model', {
+			message: `search conform: no matrix column for model '${model}'`,
+			coordinates: { tipo: componentTipo, model },
+		});
 	}
 	const translatable = await getTranslatableByTipo(componentTipo);
 	// No clause lang ⇒ search ALL langs — PHP component_common::get_search_query
@@ -476,11 +512,14 @@ async function conformLeaf(
 			context,
 		);
 	} else {
-		throw new Error(
-			`search conform: model '${model}' declares no searchBuilder family and is not a relation model — unsearchable through conform (ledgered, never silently narrowed)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `search conform: model '${model}' declares no searchBuilder family and is not a relation model — unsearchable through conform (ledgered, never silently narrowed)`,
+			coordinates: { model },
+		});
 	}
-	return joins.length > 0 ? { kind: 'leaf', result, joins } : { kind: 'leaf', result };
+	return joins.length > 0
+		? { kind: 'leaf', fragment: result, joins }
+		: { kind: 'leaf', fragment: result };
 }
 
 /** Recursively conform a filter node ($and/$or trees with leaves). */

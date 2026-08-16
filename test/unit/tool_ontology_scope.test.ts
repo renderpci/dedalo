@@ -22,6 +22,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { setRecordsInDdOntology } from '../../src/core/ontology/ontology_write.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { toolOntologySetRecords } from '../../tools/tool_ontology/server/tool_ontology.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 /** An ontology section with real rows in the suite DB: a sweep would resolve 216. */
 const POPULATED_SECTION = 'test0';
@@ -67,7 +68,7 @@ describe('setRecordsInDdOntology — no whole-section default', () => {
 			sectionTipo: POPULATED_SECTION,
 			userId: -1,
 		});
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.total).toBe(0);
 		expect(response.processed_count).toBe(0);
 		expect(response.errors.join(' ')).toMatch(/scope|sqo|section_id/i);
@@ -103,28 +104,27 @@ describe('setRecordsInDdOntology — no whole-section default', () => {
 
 describe('the handler takes its scope from the request', () => {
 	test('a non-developer is refused before any scope work', async () => {
-		const response = await toolOntologySetRecords(
-			ctx(PLAIN_USER, { section_tipo: POPULATED_SECTION }),
+		const refusal = await refusalOf(
+			toolOntologySetRecords(ctx(PLAIN_USER, { section_tipo: POPULATED_SECTION })),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized');
+		expect(refusal.code).toBe('perm.developer_required');
 	});
 
 	test('LIST mode without an sqo FAILS CLOSED (PHP wrote nothing here too)', async () => {
-		const response = await toolOntologySetRecords(
-			ctx(DEVELOPER, { section_tipo: POPULATED_SECTION }),
+		const refusal = await refusalOf(
+			toolOntologySetRecords(ctx(DEVELOPER, { section_tipo: POPULATED_SECTION })),
 		);
-		expect(response.result).toBe(false);
-		expect(String(response.msg)).toMatch(/sqo/i);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(String(refusal.publicMessage)).toMatch(/sqo/i);
 	});
 
 	test('a non-object sqo is refused, not coerced into a whole-section run', async () => {
 		for (const bad of ['all', 42, [], null]) {
-			const response = await toolOntologySetRecords(
-				ctx(DEVELOPER, { section_tipo: POPULATED_SECTION, sqo: bad }),
+			const refusal = await refusalOf(
+				toolOntologySetRecords(ctx(DEVELOPER, { section_tipo: POPULATED_SECTION, sqo: bad })),
 			);
-			expect(response.result).toBe(false);
-			expect(String(response.msg)).toMatch(/sqo/i);
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(String(refusal.publicMessage)).toMatch(/sqo/i);
 		}
 	});
 
@@ -140,18 +140,19 @@ describe('the handler takes its scope from the request', () => {
 				},
 			}),
 		);
-		expect(String(response.msg)).toMatch(/no records/i);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		expect(String((response.data as { summary?: unknown }).summary)).toMatch(/no records/i);
 	});
 
 	test('EDIT mode (an explicit section_id) still passes the scope guard', async () => {
 		// A tipo with no matrix table stops the run harmlessly AFTER the scope
 		// check, proving the guard does not block the single-record path.
-		const response = await toolOntologySetRecords(
-			ctx(DEVELOPER, { section_tipo: 'zzz999', section_id: 1 }),
+		const refusal = await refusalOf(
+			toolOntologySetRecords(ctx(DEVELOPER, { section_tipo: 'zzz999', section_id: 1 })),
 		);
-		expect(response.result).toBe(false);
-		expect((response.errors ?? []).join(' ')).toMatch(/matrix table/i);
-		expect(String(response.msg)).not.toMatch(/sqo/i);
+		expect(refusal.code).toBe('tool.action_failed');
+		// The write's per-check detail joins the LOG-only message.
+		expect(refusal.message).toMatch(/matrix table/i);
+		expect(refusal.message).not.toMatch(/sqo/i);
 	});
 });

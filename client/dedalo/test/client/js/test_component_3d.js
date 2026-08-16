@@ -9,6 +9,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 import {is_empty} from '../../../core/component_common/js/component_common.js'
 import {ui} from '../../../core/common/js/ui.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -258,8 +259,9 @@ describe(`COMPONENT_3D DATA OPERATIONS`, function() {
 		})
 
 		assert.isOk(response, 'change_value expected response')
-		if (response.result) {
-			assert.isOk(response.result, 'change_value result expected ok')
+		const saved = response_data(response)
+		if (saved) {
+			assert.isOk(saved, 'change_value payload expected ok')
 		}
 
 		// verify data was updated

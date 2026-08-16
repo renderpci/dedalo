@@ -66,6 +66,7 @@ import { incrementCounter } from '../../api/counters.ts';
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import { isInTransaction, registerCommitAction, sql } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/resolver.ts';
 // type-only: erased at build, so no static relations↔section cycle is created
 // (the VALUE import of relations/related.ts stays dynamic on the compute path).
@@ -271,9 +272,10 @@ export async function runObserverCascadeHop(
 ): Promise<void> {
 	if (isInTransaction()) {
 		incrementCounter('observers_cascade_in_transaction_refused');
-		throw new Error(
-			`runObserverCascadeHop: refusing to run inside an ambient transaction — hop '${observerTipo}' @ ${sectionTipo}/${sectionId}, chain: ${guard.chain.join(' -> ')}. Cascade hops read committed state and open their own transactions (B6); schedule through registerCommitAction / emitCascadeHop instead.`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `runObserverCascadeHop: refusing to run inside an ambient transaction — hop '${observerTipo}' @ ${sectionTipo}/${sectionId}, chain: ${guard.chain.join(' -> ')}. Cascade hops read committed state and open their own transactions (B6); schedule through registerCommitAction / emitCascadeHop instead.`,
+			coordinates: { tipo: observerTipo, section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	try {
 		const node = await getNode(observerTipo);
@@ -666,10 +668,11 @@ export async function propagateToObservers(
 		// Rethrow so the transaction OWNER sees the real failure and fails fast.
 		if (isInTransaction()) {
 			incrementCounter('observers_propagation_failed_in_tx');
-			throw new Error(
-				`observer propagation failed inside an ambient transaction (B6) — '${observedTipo}' @ ${sectionTipo}/${sectionId}; rethrown so the transaction owner sees the real failure: ${error instanceof Error ? error.message : String(error)}`,
-				{ cause: error },
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `observer propagation failed inside an ambient transaction (B6) — '${observedTipo}' @ ${sectionTipo}/${sectionId}; rethrown so the transaction owner sees the real failure: ${error instanceof Error ? error.message : String(error)}`,
+				coordinates: { tipo: observedTipo, section_tipo: sectionTipo, section_id: sectionId },
+				cause: error,
+			});
 		}
 		console.error('observer propagation failed (swallowed):', error);
 	}

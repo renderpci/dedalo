@@ -33,7 +33,7 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 			// get_install_context, which the server denies with 404 once
 			// install_status is 'sealed' (src/core/install/gate.ts — terminal
 			// state, permanent on any post-cutover dev/prod box). The denial
-			// records a page_globals.api_errors entry (data_manager.js) that
+			// records a page_globals.page_error (error_dispatch.js) that
 			// common.prototype.render's own guard (common.js:404) then bails
 			// on before ever setting self.status='rendered' — so RENDER can
 			// never pass here. Exercising the installer wizard needs a fresh,

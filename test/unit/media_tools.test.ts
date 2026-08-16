@@ -25,6 +25,7 @@ import {
 } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_tools_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -302,7 +303,7 @@ describe('tool_media_versions core', () => {
 			await makeImage('/image/1.5MB/rsc29_rsc170_10.jpg', '400x300');
 			const origBefore = await getDimensions(`${ROOT}/image/original/rsc29_rsc170_10.jpg`);
 			const outcome = await rotateVersionCore(image, id10, pathOpts, '1.5MB', 90);
-			expect(outcome.result).toBe(true);
+			expect(outcome.ok).toBe(true);
 			expect(outcome.errors).toEqual([]);
 			// the named tier swapped W/H; the original is untouched (Original law).
 			const webAfter = await getDimensions(`${ROOT}/image/1.5MB/rsc29_rsc170_10.jpg`);
@@ -317,6 +318,14 @@ describe('tool_media_versions core', () => {
 		);
 		await expect(conformHeadersCore(image, identity, pathOpts, '1.5MB')).rejects.toThrow(
 			/only supported/,
+		);
+		// Both are the SAME registered caller fact — a 400 the panel can render,
+		// not an untyped throw that reaches the wire as "unexpected" (ERRORS_SPEC §1).
+		expect((await refusalOf(rotateVersionCore(av, identity, pathOpts, '404', 90))).code).toBe(
+			'media.unsupported_operation',
+		);
+		expect((await refusalOf(conformHeadersCore(image, identity, pathOpts, '1.5MB'))).code).toBe(
+			'media.unsupported_operation',
 		);
 	});
 
@@ -460,39 +469,50 @@ describe('media tool handlers reject malformed destructive requests', () => {
 		toolName: string,
 		action: string,
 		options: Record<string, unknown>,
-	): Promise<{ result: unknown; msg: string }> {
+	): Promise<unknown> {
 		const loaded = await getLoadedTool(toolName);
 		const spec = loaded?.module.apiActions[action];
 		if (spec === undefined) throw new Error(`missing action ${toolName}.${action}`);
 		return spec.handler({ principal, userId: -1, options, background: false });
 	}
 
+	/** The refusal a malformed destructive request throws (ERRORS_SPEC §4). */
+	async function refuse(
+		toolName: string,
+		action: string,
+		options: Record<string, unknown>,
+	): ReturnType<typeof refusalOf> {
+		return refusalOf(drive(toolName, action, options));
+	}
+
 	test('tool_media_versions: a delete without a quality is refused', async () => {
-		expect((await drive('tool_media_versions', 'delete_quality', IMAGE)).msg).toBe(
-			'delete_quality: missing quality',
-		);
-		expect((await drive('tool_media_versions', 'delete_version', IMAGE)).msg).toBe(
-			'delete_version: missing quality',
-		);
+		for (const [action, sentence] of [
+			['delete_quality', 'delete_quality: missing quality'],
+			['delete_version', 'delete_version: missing quality'],
+		] as const) {
+			const refusal = await refuse('tool_media_versions', action, IMAGE);
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(refusal.publicMessage).toBe(sentence);
+		}
 	});
 
 	test('tool_media_versions: conform_headers without a quality is refused', async () => {
-		expect((await drive('tool_media_versions', 'conform_headers', AV)).msg).toBe(
-			'conform_headers: missing quality',
-		);
+		const refusal = await refuse('tool_media_versions', 'conform_headers', AV);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toBe('conform_headers: missing quality');
 	});
 
 	test('tool_media_versions: rotate needs both a quality and finite degrees', async () => {
-		expect((await drive('tool_media_versions', 'rotate', IMAGE)).msg).toBe(
-			'rotate: missing quality',
-		);
-		expect((await drive('tool_media_versions', 'rotate', { ...IMAGE, quality: '1.5MB' })).msg).toBe(
-			'rotate: missing degrees',
-		);
-		expect(
-			(await drive('tool_media_versions', 'rotate', { ...IMAGE, quality: '1.5MB', degrees: 'x' }))
-				.msg,
-		).toBe('rotate: invalid degrees');
+		const cases: [Record<string, unknown>, string][] = [
+			[IMAGE, 'rotate: missing quality'],
+			[{ ...IMAGE, quality: '1.5MB' }, 'rotate: missing degrees'],
+			[{ ...IMAGE, quality: '1.5MB', degrees: 'x' }, 'rotate: invalid degrees'],
+		];
+		for (const [options, sentence] of cases) {
+			const refusal = await refuse('tool_media_versions', 'rotate', options);
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(refusal.publicMessage).toBe(sentence);
+		}
 	});
 
 	test('every media_versions action refuses a non-media component', async () => {
@@ -505,26 +525,29 @@ describe('media tool handlers reject malformed destructive requests', () => {
 			'conform_headers',
 			'rotate',
 		]) {
-			// rsc36 is a component_text_area — the media context resolve must refuse it.
-			const response = await drive('tool_media_versions', action, {
-				tipo: 'rsc36',
-				section_tipo: 'rsc167',
-				section_id: 1,
-				quality: '1.5MB',
-				degrees: 90,
-			});
-			expect(response.result).toBe(false);
-			expect(response.msg).toContain('is not a media component');
+			// rsc36 is a component_text_area — the media context resolve must refuse
+			// it. That refusal is still an UNTYPED engine throw (tool_support.ts is
+			// a different sweep), so it reaches the chokepoint as internal.unexpected
+			// instead of a body the handler dresses up as a result.
+			expect(
+				drive('tool_media_versions', action, {
+					tipo: 'rsc36',
+					section_tipo: 'rsc167',
+					section_id: 1,
+					quality: '1.5MB',
+					degrees: 90,
+				}),
+			).rejects.toThrow(/is not a media component/);
 		}
 	});
 
 	test('tool_image_rotation refuses a non-image component before any write', async () => {
-		const response = await drive('tool_image_rotation', 'apply_rotation', {
+		const refusal = await refuse('tool_image_rotation', 'apply_rotation', {
 			...AV,
 			rotation_degrees: 90,
 		});
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('rotation is image-only');
+		expect(refusal.code).toBe('tool.unsupported_target');
+		expect(refusal.publicMessage).toBe('Rotation is image-only');
 	});
 });
 

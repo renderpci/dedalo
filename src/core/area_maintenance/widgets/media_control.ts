@@ -13,8 +13,9 @@
  * re-authenticating. Definition of the subsystem: engineering/MEDIA_PROTECTION.md.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { Principal } from '../../security/permissions.ts';
-import { failed, type WidgetModule, type WidgetResponse } from './support.ts';
+import { failAction, refuseAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
@@ -94,7 +95,7 @@ async function mediaControlGetValue(
 	}
 
 	return {
-		result: {
+		data: {
 			mode: protection.resolveMediaAccessMode(),
 			mode_source: protection.resolveModeSource(),
 			custom_override: protection.getStateOverride(),
@@ -121,9 +122,7 @@ async function mediaControlGetValue(
 			markers,
 			engine,
 			is_root: principal.userId === -1,
-		} as unknown as WidgetResponse['result'],
-		msg: 'OK. Request done successfully',
-		errors: [],
+		},
 	};
 }
 
@@ -142,28 +141,26 @@ async function mediaControlSetAccessMode(
 	// isGlobalAdmin, and a profile-admin who can set the mode to 'off' can open the entire
 	// media tree to the world. PHP gated this on DEDALO_SUPERUSER inside set_config_core.
 	if (principal.userId !== -1) {
-		return failed('only the root user can change the media access mode', ['unauthorized']);
+		throw new DedaloError('perm.denied', {
+			message: 'only the root user can change the media access mode',
+		});
 	}
 
 	const value = options.value;
 	if (value !== 'config' && value !== 'off' && value !== 'private' && value !== 'publication') {
-		return {
-			result: false,
-			msg: 'Error. Invalid value. Allowed: config | off | private | publication',
-			errors: ['invalid value'],
-		};
+		refuseAction('Error. Invalid value. Allowed: config | off | private | publication');
 	}
 
 	const { isStateWritable, setServerState } = await import('../../resolve/server_state.ts');
 	if (!isStateWritable()) {
-		return failed('the TS state file is not writable', ['state not writable']);
+		refuseAction('Error. Request failed. The TS state file is not writable');
 	}
 
 	const protection = await import('../../media/protection.ts');
 	if (protection.mediaRoot() === null && value !== 'off' && value !== 'config') {
-		return failed('MEDIA_PATH is not configured — there is no media root to write the gate into', [
-			'media path not configured',
-		]);
+		refuseAction(
+			'Error. Request failed. MEDIA_PATH is not configured — there is no media root to write the gate into',
+		);
 	}
 
 	// UI token → stored override. 'config' clears it (null = "no override").
@@ -193,14 +190,12 @@ async function mediaControlSetAccessMode(
 		// mismatch rather than rolling back — a rollback would leave rules for a mode the
 		// state no longer claims.
 		console.error('[media_protection] rule-file write failed after a mode change:', error);
-		return {
-			result: false,
-			msg:
-				'Error. The mode was saved, but the media rule files could not be written, so the ' +
+		failAction(
+			'Error. The mode was saved, but the media rule files could not be written, so the ' +
 				'gate on disk still enforces the PREVIOUS mode. Check write permissions on the ' +
 				'media root, then re-apply.',
-			errors: ['rule file write failed'],
-		};
+			{ cause: error },
+		);
 	}
 
 	// Re-enabling: re-lay the auth markers from the persisted store so users who ALREADY
@@ -224,9 +219,8 @@ async function mediaControlSetAccessMode(
 	].filter((note) => note !== '');
 
 	return {
-		result: true,
+		data: true,
 		msg: `OK. Media access mode applied: ${label}. ${notes.join(' ')}`.trim(),
-		errors: [],
 	};
 }
 
@@ -239,10 +233,18 @@ export const widget: WidgetModule = {
 	apiActions: {
 		get_value: mediaControlGetValue,
 		// Full marker resync from the publication databases (native since the cutover).
-		rebuild_media_index: async () =>
-			(
-				await import('../../diffusion_bridge/diffusion_delete.ts')
-			).rebuildMediaIndex() as unknown as Promise<WidgetResponse>,
+		// The rebuild THROWS on failure and answers with a report payload; the
+		// keys render_media_control.js reads stay at top level.
+		rebuild_media_index: async () => {
+			const { rebuildMediaIndex } = await import('../../diffusion_bridge/diffusion_delete.ts');
+			const report = await rebuildMediaIndex();
+			return {
+				data: true,
+				msg: report.msg,
+				...(report.errors.length === 0 ? {} : { errors: report.errors }),
+				extend: { markers: report.markers, targets: report.targets },
+			};
+		},
 		set_media_access_mode: mediaControlSetAccessMode,
 	},
 	getValue: mediaControlGetValue,

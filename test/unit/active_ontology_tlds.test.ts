@@ -36,7 +36,7 @@ const READ_PANEL_TLDS =
 	"const { dispatchGetWidgetValue } = await import('./src/core/area_maintenance/widgets/registry.ts');" +
 	'const ADMIN = { userId: -1, isGlobalAdmin: true, isDeveloper: true };' +
 	"const body = await dispatchGetWidgetValue(ADMIN, { model: 'update_ontology' });" +
-	'console.log(JSON.stringify(body.result.active_ontology_tlds));';
+	'console.log(JSON.stringify(body.data.active_ontology_tlds));';
 
 function bootConfigWith(
 	env: Record<string, string | undefined>,
@@ -121,8 +121,8 @@ describe('update_ontology panel wire key (WC-028)', () => {
 		// the widget module's getValue in isolation.
 		const body = (await dispatchGetWidgetValue(ADMIN, {
 			model: 'update_ontology',
-		})) as unknown as { result: Record<string, unknown> };
-		const result = body.result;
+		})) as unknown as { data: Record<string, unknown> };
+		const result = body.data;
 
 		expect(result).toHaveProperty('active_ontology_tlds');
 		// The retired wire key must be GONE, not merely shadowed by the new one.

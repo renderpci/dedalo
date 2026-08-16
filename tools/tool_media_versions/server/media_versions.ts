@@ -13,6 +13,7 @@
  * stored cache is written back so a subsequent read is immediately consistent.
  */
 
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
 	type FileInfoEntry,
 	type ScanContext,
@@ -37,10 +38,15 @@ import {
 	getFilesInfoCore,
 	rotateVersionCore,
 } from '../../../src/core/media/tools/versions.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: message, errors: [message] };
+/** A required option the media action cannot proceed without. */
+function missingOption(message: string): DedaloError {
+	return new DedaloError('request.invalid_options', { message, publicMessage: message });
 }
 
 /**
@@ -61,10 +67,10 @@ function scanContext(mediaContext: MediaToolContext): ScanContext {
  * not claim must not create a stored value — only the operator's explicit
  * sync_files repair may (see syncFiles).
  *
- * A vanished record throws (assertRecordPresent) rather than passing silently:
- * every media action wraps its body in the try/catch that turns that into the
- * tool's `fail(...)` response, so the operator learns the record is gone
- * instead of being told an op landed on nothing.
+ * A vanished record throws (assertRecordPresent) rather than passing silently.
+ * The throw travels to the dispatch chokepoint, which converts it into the
+ * refusal envelope — so the operator learns the record is gone instead of being
+ * told an op landed on nothing.
  */
 async function writeBack(
 	mediaContext: MediaToolContext,
@@ -97,24 +103,20 @@ async function writeBack(
  * loaded the stored items.
  */
 export async function getFilesInfo(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts, items } = mediaContext;
-		const filesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		const item = items.find((entry) => (entry.lang ?? null) === identity.lang) ?? items[0];
-		const stored = (item as { files_info?: unknown } | undefined)?.files_info;
-		return {
-			result: filesInfo,
-			msg: 'ok',
-			errors: [],
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts, items } = mediaContext;
+	const filesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
+	const item = items.find((entry) => (entry.lang ?? null) === identity.lang) ?? items[0];
+	const stored = (item as { files_info?: unknown } | undefined)?.files_info;
+	return ok(
+		{
 			files_info: filesInfo,
 			// [] is the honest answer when the component stores nothing: the panel
 			// SHOULD warn then, and Regenerate is the documented repair.
 			files_info_db: Array.isArray(stored) ? stored : [],
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /**
@@ -168,170 +170,160 @@ async function logMediaActivity(
  * the documented `target_extension` instead of a lie.
  */
 export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
-		const quality = String(ctx.options.quality ?? spec.defaultQuality);
-		const targetExtension =
-			typeof ctx.options.target_extension === 'string' ? ctx.options.target_extension : null;
-		// The SOURCE selector is not the caller's to choose: it is the raw master
-		// extension, resolved from the disk (resolveMaster walks the allowlist).
-		const built = await buildVersionCore(
-			spec,
-			identity,
-			pathOpts,
-			quality,
-			null,
-			targetExtension,
-			ctx.userId,
-		);
-		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		// Persist only for synchronous builds; av transcodes finish in a background
-		// job and refresh files_info when the next read/save re-scans.
-		if (built.jobId === null) await writeBack(mediaContext, freshFilesInfo);
-		await logMediaActivity(ctx, 'NEW VERSION', identity, {
-			msg: `Built version. Generated ${spec.model} file`,
-			quality,
-			source_quality: String(ctx.options.source_quality ?? spec.defaultQuality),
-			target_quality: quality,
-			...(targetExtension === null ? {} : { target_extension: targetExtension }),
-		});
-		return {
-			// The tier BUILT — a twin this host cannot encode is not a failed build,
-			// so `result` stays true and the refusal travels in `msg` + `errors`, the
-			// two fields the panel reads (a `result:false` here would tell the operator
-			// nothing was produced when the tier and its jpg were).
-			result: true,
-			msg:
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts } = mediaContext;
+	const quality = String(ctx.options.quality ?? spec.defaultQuality);
+	const targetExtension =
+		typeof ctx.options.target_extension === 'string' ? ctx.options.target_extension : null;
+	// The SOURCE selector is not the caller's to choose: it is the raw master
+	// extension, resolved from the disk (resolveMaster walks the allowlist).
+	const built = await buildVersionCore(
+		spec,
+		identity,
+		pathOpts,
+		quality,
+		null,
+		targetExtension,
+		ctx.userId,
+	);
+	const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
+	// Persist only for synchronous builds; av transcodes finish in a background
+	// job and refresh files_info when the next read/save re-scans.
+	if (built.jobId === null) await writeBack(mediaContext, freshFilesInfo);
+	await logMediaActivity(ctx, 'NEW VERSION', identity, {
+		msg: `Built version. Generated ${spec.model} file`,
+		quality,
+		source_quality: String(ctx.options.source_quality ?? spec.defaultQuality),
+		target_quality: quality,
+		...(targetExtension === null ? {} : { target_extension: targetExtension }),
+	});
+	// The tier BUILT — a twin this host cannot encode is not a failed build, so
+	// the envelope stays ok:true and the refusal travels in the PAYLOAD
+	// (`summary` + `errors`); throwing here would tell the operator nothing was
+	// produced when the tier and its jpg were.
+	return ok(
+		{
+			summary:
 				built.errors.length === 0
 					? 'ok'
 					: `Version built, but not every configured format could be written: ${built.errors.join('; ')}`,
 			errors: built.errors,
 			built: built.built,
-			job_id: built.jobId,
 			files_info: freshFilesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx), extend: { job_id: built.jobId } },
+	);
 }
 
 /**
  * sync_files: reconcile the stored files_info against the filesystem (PHP
- * regenerate_component) — re-scan and persist the fresh index, returning a
- * boolean `result` (the render layer checks `response.result===true`).
+ * regenerate_component) — re-scan and persist the fresh index; the refreshed
+ * index and any per-file rebuild failure come back as the payload.
  */
 export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts } = mediaContext;
+
+	// IT REGENERATES BEFORE IT RE-INDEXES — which is what the button has always
+	// said and what it never did.
+	//
+	// The panel's control is labelled "Regenerate files", its tooltip promises
+	// "re-create alternatives and thumb", and it ships a "Delete normalized
+	// files" checkbox whose value the client dutifully sends as
+	// `regenerate_options`. The handler read NONE of it: it re-scanned the disk
+	// and persisted the result, so on a record whose derivatives were missing —
+	// the exact case the unsync warning appears for — the operator pressed
+	// Regenerate, was told "Success", and nothing was built. A control that
+	// reports success for work it did not do is worse than a missing control.
+	//
+	// `regenerateMissingDerivatives` is the same pass tool_update_cache runs
+	// (repair.ts): build what is MISSING, never re-encode what is there, with
+	// every model's thumb going through the shared handler. Its failures are
+	// VALUES — a host that cannot encode one format must not cost the operator
+	// the whole repair — and they travel to the panel below.
+	const options = (ctx.options.regenerate_options ?? {}) as {
+		delete_normalized_files?: unknown;
+	};
+	const item =
+		mediaContext.items.find((entry) => (entry.lang ?? null) === identity.lang) ??
+		mediaContext.items[0];
+	const originalName = (item as { original_normalized_name?: unknown } | undefined)
+		?.original_normalized_name;
+	//
+	// THE REBUILD MAY NOT COST THE RE-INDEX. Re-indexing is the operation the
+	// operator asked for — it is what repairs a record whose files sit on disk
+	// while its media key is NULL — and rebuilding is best-effort on top of it.
+	// A pass that throws (no master on this box, a binary this host lacks) must
+	// therefore become a VALUE here, not a failed request: with an unguarded
+	// await, a record with nothing to rebuild FROM answered `result:false` and
+	// its index was never repaired. Same doctrine as the twins and the covers,
+	// applied to the whole pass.
+	let rebuildErrors: string[] = [];
 	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
+		rebuildErrors = await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
+			// The raw upload extension behind a normalized name (the '.tif' behind a
+			// '.jpg'), so the pass resolves the right master — same cue repair.ts uses.
+			rawExtension:
+				typeof originalName === 'string' ? (originalName.split('.').pop() ?? null) : null,
+			deleteNormalized: options.delete_normalized_files === true,
+			bulkProcessId: null,
+		});
+	} catch (error) {
+		rebuildErrors = [(error as Error).message];
+	}
 
-		// IT REGENERATES BEFORE IT RE-INDEXES — which is what the button has always
-		// said and what it never did.
-		//
-		// The panel's control is labelled "Regenerate files", its tooltip promises
-		// "re-create alternatives and thumb", and it ships a "Delete normalized
-		// files" checkbox whose value the client dutifully sends as
-		// `regenerate_options`. The handler read NONE of it: it re-scanned the disk
-		// and persisted the result, so on a record whose derivatives were missing —
-		// the exact case the unsync warning appears for — the operator pressed
-		// Regenerate, was told "Success", and nothing was built. A control that
-		// reports success for work it did not do is worse than a missing control.
-		//
-		// `regenerateMissingDerivatives` is the same pass tool_update_cache runs
-		// (repair.ts): build what is MISSING, never re-encode what is there, with
-		// every model's thumb going through the shared handler. Its failures are
-		// VALUES — a host that cannot encode one format must not cost the operator
-		// the whole repair — and they travel to the panel below.
-		const options = (ctx.options.regenerate_options ?? {}) as {
-			delete_normalized_files?: unknown;
-		};
-		const item =
-			mediaContext.items.find((entry) => (entry.lang ?? null) === identity.lang) ??
-			mediaContext.items[0];
-		const originalName = (item as { original_normalized_name?: unknown } | undefined)
-			?.original_normalized_name;
-		//
-		// THE REBUILD MAY NOT COST THE RE-INDEX. Re-indexing is the operation the
-		// operator asked for — it is what repairs a record whose files sit on disk
-		// while its media key is NULL — and rebuilding is best-effort on top of it.
-		// A pass that throws (no master on this box, a binary this host lacks) must
-		// therefore become a VALUE here, not a failed request: with an unguarded
-		// await, a record with nothing to rebuild FROM answered `result:false` and
-		// its index was never repaired. Same doctrine as the twins and the covers,
-		// applied to the whole pass.
-		let rebuildErrors: string[] = [];
-		try {
-			rebuildErrors = await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
-				// The raw upload extension behind a normalized name (the '.tif' behind a
-				// '.jpg'), so the pass resolves the right master — same cue repair.ts uses.
-				rawExtension:
-					typeof originalName === 'string' ? (originalName.split('.').pop() ?? null) : null,
-				deleteNormalized: options.delete_normalized_files === true,
-				bulkProcessId: null,
-			});
-		} catch (error) {
-			rebuildErrors = [(error as Error).message];
-		}
+	const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 
-		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-
-		// repairStoredFilesInfo: this is the ONE path that may MINT a stored item —
-		// a separately-named entry point, not a flag, so no other caller can reach
-		// the mint by flipping a boolean. PHP
-		// parity, not a new policy. update_component_data_files_info (:3748) minted
-		// `{files_info}` from scratch on every save whenever the component's data
-		// was empty and the scan found files, with no original_* keys because it
-		// knew nothing about provenance. That is exactly the state a persist-less
-		// ingest leaves behind: the files sit in image/original + image/1.5MB +
-		// image/thumb while the matrix `media` key is NULL, so the widget reports
-		// `files_info_db: []` against N disk entries and the record renders
-		// nothing. Every OTHER caller uses reconcileStoredFilesInfo, which never
-		// mints — a passive scan must not resurrect media someone removed.
-		//
-		// The emptiness test lives INSIDE the reconcile, under the row lock: a
-		// decision taken from the request's snapshot could mint a second item over
-		// an upload that committed while the disk scan ran.
-		// S2-02 fail-loud: assertRecordPresent throws when the record is gone
-		// (deleted mid-flight, or a section with no matrix table) — answering
-		// "Success" there tells the operator a repair landed that never did. That
-		// state is 'missing', NOT 'noop': a guard on the affected count alone could
-		// never see it, because "nothing needed doing" also writes no row.
-		const outcome = assertRecordPresent(
-			await repairStoredFilesInfo({
-				sectionTipo: identity.sectionTipo,
-				sectionId: identity.sectionId,
-				componentTipo: identity.componentTipo,
-				lang: identity.lang,
-				freshFilesInfo,
-			}),
-			identity,
-		);
-		// A derivative that could not be rebuilt is reported BESIDE the success: the
-		// re-index really did happen, and telling the operator the whole thing failed
-		// would be as wrong as the old silence.
-		const note =
-			rebuildErrors.length === 0
-				? ''
-				: ` — but ${rebuildErrors.length} file(s) could NOT be rebuilt: ${rebuildErrors.join('; ')}`;
-		if (outcome.action === 'created') {
-			return {
-				result: true,
-				msg: `Success. Recorded ${freshFilesInfo.length} file(s) the component had no stored value for.${note}`,
-				errors: rebuildErrors,
-				files_info: freshFilesInfo,
-			};
-		}
-		// 'refreshed' / 'noop': the record exists and now matches the disk.
-		return {
-			result: true,
-			msg: `Success. Request done${note}`,
+	// repairStoredFilesInfo: this is the ONE path that may MINT a stored item —
+	// a separately-named entry point, not a flag, so no other caller can reach
+	// the mint by flipping a boolean. PHP
+	// parity, not a new policy. update_component_data_files_info (:3748) minted
+	// `{files_info}` from scratch on every save whenever the component's data
+	// was empty and the scan found files, with no original_* keys because it
+	// knew nothing about provenance. That is exactly the state a persist-less
+	// ingest leaves behind: the files sit in image/original + image/1.5MB +
+	// image/thumb while the matrix `media` key is NULL, so the widget reports
+	// `files_info_db: []` against N disk entries and the record renders
+	// nothing. Every OTHER caller uses reconcileStoredFilesInfo, which never
+	// mints — a passive scan must not resurrect media someone removed.
+	//
+	// The emptiness test lives INSIDE the reconcile, under the row lock: a
+	// decision taken from the request's snapshot could mint a second item over
+	// an upload that committed while the disk scan ran.
+	// S2-02 fail-loud: assertRecordPresent throws when the record is gone
+	// (deleted mid-flight, or a section with no matrix table) — answering
+	// "Success" there tells the operator a repair landed that never did. That
+	// state is 'missing', NOT 'noop': a guard on the affected count alone could
+	// never see it, because "nothing needed doing" also writes no row.
+	const outcome = assertRecordPresent(
+		await repairStoredFilesInfo({
+			sectionTipo: identity.sectionTipo,
+			sectionId: identity.sectionId,
+			componentTipo: identity.componentTipo,
+			lang: identity.lang,
+			freshFilesInfo,
+		}),
+		identity,
+	);
+	// A derivative that could not be rebuilt is reported BESIDE the success: the
+	// re-index really did happen, and telling the operator the whole thing failed
+	// would be as wrong as the old silence.
+	const note =
+		rebuildErrors.length === 0
+			? ''
+			: ` — but ${rebuildErrors.length} file(s) could NOT be rebuilt: ${rebuildErrors.join('; ')}`;
+	return ok(
+		{
+			summary:
+				outcome.action === 'created'
+					? `Success. Recorded ${freshFilesInfo.length} file(s) the component had no stored value for.${note}`
+					: // 'refreshed' / 'noop': the record exists and now matches the disk.
+						`Success. Request done${note}`,
 			errors: rebuildErrors,
 			files_info: freshFilesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /**
@@ -370,30 +362,29 @@ function withRetiredTwins(message: string, retired: string[]): string {
 
 /** delete_quality: soft-delete EVERY extension of one quality tier. */
 export async function deleteQuality(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
-		const quality = String(ctx.options.quality ?? '');
-		if (quality === '') return fail('delete_quality: missing quality');
-		// delete → rebuild-if-the-master-changed → re-scan, as ONE core call: the
-		// order is the invariant (a scan taken before the rebuild persists tiers
-		// that still depict the deleted master) and it is gated there.
-		const outcome = await deleteAndResyncCore(
-			spec,
-			identity,
-			pathOpts,
-			quality,
-			null,
-			scanContext(mediaContext),
-		);
-		await writeBack(mediaContext, outcome.filesInfo);
-		await logMediaActivity(ctx, 'DELETE FILE', identity, {
-			msg: 'Deleted media file (file is renamed and moved to delete folder)',
-			quality,
-		});
-		return {
-			result: true,
-			msg: withRetiredTwins(
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts } = mediaContext;
+	const quality = String(ctx.options.quality ?? '');
+	if (quality === '') throw missingOption('delete_quality: missing quality');
+	// delete → rebuild-if-the-master-changed → re-scan, as ONE core call: the
+	// order is the invariant (a scan taken before the rebuild persists tiers
+	// that still depict the deleted master) and it is gated there.
+	const outcome = await deleteAndResyncCore(
+		spec,
+		identity,
+		pathOpts,
+		quality,
+		null,
+		scanContext(mediaContext),
+	);
+	await writeBack(mediaContext, outcome.filesInfo);
+	await logMediaActivity(ctx, 'DELETE FILE', identity, {
+		msg: 'Deleted media file (file is renamed and moved to delete folder)',
+		quality,
+	});
+	return ok(
+		{
+			summary: withRetiredTwins(
 				withRebuildFailure(`File deleted successfully. ${quality}`, outcome.errors),
 				outcome.retired,
 			),
@@ -401,39 +392,37 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 			moved: outcome.moved,
 			retired: outcome.retired,
 			files_info: outcome.filesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /** delete_version: soft-delete one quality×extension file (thumb passes its extension). */
 export async function deleteVersion(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
-		const quality = String(ctx.options.quality ?? '');
-		if (quality === '') return fail('delete_version: missing quality');
-		const extension = String(ctx.options.extension ?? spec.defaultExtension);
-		// See deleteQuality. Removing ONE extension of a master that still holds
-		// another leaves the same file as master, so the rebuild is skipped.
-		const outcome = await deleteAndResyncCore(
-			spec,
-			identity,
-			pathOpts,
-			quality,
-			extension,
-			scanContext(mediaContext),
-		);
-		await writeBack(mediaContext, outcome.filesInfo);
-		await logMediaActivity(ctx, 'DELETE FILE', identity, {
-			msg: 'Deleted media file (file is renamed and moved to delete folder)',
-			quality,
-			extension,
-		});
-		return {
-			result: true,
-			msg: withRetiredTwins(
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts } = mediaContext;
+	const quality = String(ctx.options.quality ?? '');
+	if (quality === '') throw missingOption('delete_version: missing quality');
+	const extension = String(ctx.options.extension ?? spec.defaultExtension);
+	// See deleteQuality. Removing ONE extension of a master that still holds
+	// another leaves the same file as master, so the rebuild is skipped.
+	const outcome = await deleteAndResyncCore(
+		spec,
+		identity,
+		pathOpts,
+		quality,
+		extension,
+		scanContext(mediaContext),
+	);
+	await writeBack(mediaContext, outcome.filesInfo);
+	await logMediaActivity(ctx, 'DELETE FILE', identity, {
+		msg: 'Deleted media file (file is renamed and moved to delete folder)',
+		quality,
+		extension,
+	});
+	return ok(
+		{
+			summary: withRetiredTwins(
 				withRebuildFailure('OK file delete successfully', outcome.errors),
 				outcome.retired,
 			),
@@ -441,69 +430,64 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 			moved: outcome.moved,
 			retired: outcome.retired,
 			files_info: outcome.filesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /** conform_headers: remux an av container's headers (component_av only). */
 export async function conformHeaders(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
-		const quality = String(ctx.options.quality ?? '');
-		if (quality === '') return fail('conform_headers: missing quality');
-		const extension = typeof ctx.options.extension === 'string' ? ctx.options.extension : null;
-		await conformHeadersCore(spec, identity, pathOpts, quality, extension);
-		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		await writeBack(mediaContext, freshFilesInfo);
-		// PHP logs a remux as NEW VERSION too (component_av :1291) — the container
-		// really is rewritten, so the audit trail treats it as a new file version.
-		await logMediaActivity(ctx, 'NEW VERSION', identity, {
-			msg: 'conform_header av file',
-			quality,
-		});
-		return {
-			result: true,
-			msg: 'Rebuilding av file headers',
-			errors: [],
-			files_info: freshFilesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts } = mediaContext;
+	const quality = String(ctx.options.quality ?? '');
+	if (quality === '') throw missingOption('conform_headers: missing quality');
+	const extension = typeof ctx.options.extension === 'string' ? ctx.options.extension : null;
+	await conformHeadersCore(spec, identity, pathOpts, quality, extension);
+	const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
+	await writeBack(mediaContext, freshFilesInfo);
+	// PHP logs a remux as NEW VERSION too (component_av :1291) — the container
+	// really is rewritten, so the audit trail treats it as a new file version.
+	await logMediaActivity(ctx, 'NEW VERSION', identity, {
+		msg: 'conform_header av file',
+		quality,
+	});
+	return ok(
+		{ summary: 'Rebuilding av file headers', errors: [], files_info: freshFilesInfo },
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /** rotate: rotate one quality tier in place (component_image only). */
 export async function rotate(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
-		const quality = String(ctx.options.quality ?? '');
-		if (quality === '') return fail('rotate: missing quality');
-		if (ctx.options.degrees === undefined || ctx.options.degrees === null) {
-			return fail('rotate: missing degrees');
-		}
-		const degrees = Number(ctx.options.degrees);
-		if (Number.isNaN(degrees)) return fail('rotate: invalid degrees');
-		const outcome = await rotateVersionCore(
-			spec,
-			identity,
-			pathOpts,
-			quality,
-			degrees,
-			scanContext(mediaContext),
-		);
-		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		await writeBack(mediaContext, freshFilesInfo);
-		return {
-			result: outcome.result,
-			msg: outcome.result ? 'Success. Request done.' : 'Error on rotate file.',
-			errors: outcome.errors,
-			files_info: freshFilesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
+	const mediaContext = await resolveMediaToolContext(ctx.options);
+	const { spec, identity, pathOpts } = mediaContext;
+	const quality = String(ctx.options.quality ?? '');
+	if (quality === '') throw missingOption('rotate: missing quality');
+	if (ctx.options.degrees === undefined || ctx.options.degrees === null) {
+		throw missingOption('rotate: missing degrees');
 	}
+	const degrees = Number(ctx.options.degrees);
+	if (Number.isNaN(degrees)) throw missingOption('rotate: invalid degrees');
+	const outcome = await rotateVersionCore(
+		spec,
+		identity,
+		pathOpts,
+		quality,
+		degrees,
+		scanContext(mediaContext),
+	);
+	const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
+	await writeBack(mediaContext, freshFilesInfo);
+	// A rotation that produced nothing IS a failed action (unlike a missing
+	// twin above): the operator asked for one file to change and none did.
+	if (!outcome.ok) {
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { tool: 'tool_media_versions', quality, degrees },
+			message: `Error on rotate file: ${outcome.errors.join('; ')}`,
+		});
+	}
+	return ok(
+		{ summary: 'Success. Request done.', errors: outcome.errors, files_info: freshFilesInfo },
+		{ requestId: toolRequestId(ctx) },
+	);
 }

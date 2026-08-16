@@ -106,7 +106,7 @@ async function saveAndEcho(
 		context,
 	);
 	expect(response.status).toBe(200);
-	const data = (response.body as { result: { data: unknown[] } }).result.data;
+	const data = (response.body as { data: { data: unknown[] } }).data.data;
 	const item = data.find(
 		(el) =>
 			(el as { tipo?: string }).tipo === tipo &&

@@ -92,7 +92,7 @@ async function readTree(principal: Principal): Promise<{ target_section_tipo?: s
 		csrfCandidate: session?.csrfToken ?? null,
 		principal,
 	} as never);
-	const data = (dispatched.body as { result?: { data?: { value?: unknown[] }[] } }).result?.data;
+	const data = (dispatched.body as { data?: { data?: { value?: unknown[] }[] } }).data?.data;
 	return (data?.[0]?.value ?? []) as { target_section_tipo?: string }[];
 }
 

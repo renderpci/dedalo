@@ -53,6 +53,7 @@ import {
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { ProfileError, parseProfile } from '../../src/core/identify/profile.ts';
 import { getSectionMapValue } from '../../src/core/ontology/section_map.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -180,6 +181,24 @@ type ImageAnswer = {
 
 /* ═══════════════════════════════ input bounds ═══════════════════════════════ */
 
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a decline is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function declineOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a decline, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
+
 describe('readImageInput — the input is bounded before it is trusted', () => {
 	test('accepts real image bytes, bare base64 or a data: URL', () => {
 		const bare = readImageInput(asBase64(COIN_IMAGE));
@@ -198,7 +217,7 @@ describe('readImageInput — the input is bounded before it is trusted', () => {
 		]) {
 			const result = readImageInput(payload);
 			expect(result.ok).toBe(false);
-			expect((result as { code: string }).code).toBe('invalid_image');
+			expect((result as { code: string }).code).toBe('identify.invalid_image');
 		}
 	});
 
@@ -208,21 +227,21 @@ describe('readImageInput — the input is bounded before it is trusted', () => {
 		const oversized = 'A'.repeat(Math.ceil((MAX_IMAGE_BYTES / 3) * 4) + 4096);
 		const result = readImageInput(oversized);
 		expect(result.ok).toBe(false);
-		expect((result as { code: string }).code).toBe('image_too_large');
+		expect((result as { code: string }).code).toBe('identify.image_too_large');
 	});
 
 	test('missing / empty / non-string is missing_image, not a throw', () => {
 		for (const raw of [undefined, null, '', '   ', 42, { image: 'x' }]) {
 			const result = readImageInput(raw);
 			expect(result.ok).toBe(false);
-			expect((result as { code: string }).code).toBe('missing_image');
+			expect((result as { code: string }).code).toBe('identify.missing_image');
 		}
 	});
 });
 
 /* ═══════════════════════════════ the declines ═══════════════════════════════ */
 
-describe('identify_by_image — the declines (HTTP 200, never a 500)', () => {
+describe('identify_by_image — the declines (a registered code, never a 500)', () => {
 	const image = asBase64(COIN_IMAGE);
 
 	test('the master RAG switch and the media switch each decline, before decoding', async () => {
@@ -233,80 +252,96 @@ describe('identify_by_image — the declines (HTTP 200, never a 500)', () => {
 				return fakeProvider();
 			},
 		};
-		const ragOff = await buildIdentifyByImage(fakeDeps({ ragEnabled: () => false, ...watch }))(
-			rqo({ image }),
-			ctx(SUPERUSER),
+		const ragOff = await declineOf(
+			buildIdentifyByImage(fakeDeps({ ragEnabled: () => false, ...watch }))(
+				rqo({ image }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(ragOff.status).toBe(200);
-		expect(ragOff.body.result).toBe(false);
-		expect(ragOff.body.errors).toEqual(['rag_disabled']);
+		expect(ragOff.code).toBe('identify.rag_disabled');
+		expect(ragOff.spec.status).toBe(503);
 
-		const mediaOff = await buildIdentifyByImage(fakeDeps({ mediaEnabled: () => false, ...watch }))(
-			rqo({ image }),
-			ctx(SUPERUSER),
+		const mediaOff = await declineOf(
+			buildIdentifyByImage(fakeDeps({ mediaEnabled: () => false, ...watch }))(
+				rqo({ image }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(mediaOff.body.errors).toEqual(['media_disabled']);
+		expect(mediaOff.code).toBe('identify.media_disabled');
 		expect(decoded).toBe(false);
 	});
 
 	test('a bad image is declined with the reason', async () => {
 		const handler = buildIdentifyByImage(fakeDeps());
-		expect((await handler(rqo({}), ctx(SUPERUSER))).body.errors).toEqual(['missing_image']);
+		expect((await declineOf(handler(rqo({}), ctx(SUPERUSER)))).code).toBe('identify.missing_image');
 		expect(
-			(await handler(rqo({ image: Buffer.from('%PDF-1.7').toString('base64') }), ctx(SUPERUSER)))
-				.body.errors,
-		).toEqual(['invalid_image']);
+			(
+				await declineOf(
+					handler(rqo({ image: Buffer.from('%PDF-1.7').toString('base64') }), ctx(SUPERUSER)),
+				)
+			).code,
+		).toBe('identify.invalid_image');
 	});
 
 	test('an egress policy that forbids the provider declines with the operator message', async () => {
 		// buildMultimodalProvider throws exactly this shape when it would ship the
 		// photograph off the host under 'local_only'. It must reach the curator.
-		const res = await buildIdentifyByImage(
-			fakeDeps({
-				buildProvider: () => {
-					throw new Error(
-						"Multimodal image embedding would send object images off this host (endpoint 'https://api.vendor.com' is not on this host or its private network), but DEDALO_RAG_IMAGE_EGRESS_POLICY is 'local_only'.",
-					);
-				},
-			}),
-		)(rqo({ image }), ctx(SUPERUSER));
-		expect(res.status).toBe(200);
-		expect(res.body.errors).toEqual(['egress_forbidden']);
-		expect(res.body.msg).toContain('DEDALO_RAG_IMAGE_EGRESS_POLICY');
+		const decline = await declineOf(
+			buildIdentifyByImage(
+				fakeDeps({
+					buildProvider: () => {
+						throw new Error(
+							"Multimodal image embedding would send object images off this host (endpoint 'https://api.vendor.com' is not on this host or its private network), but DEDALO_RAG_IMAGE_EGRESS_POLICY is 'local_only'.",
+						);
+					},
+				}),
+			)(rqo({ image }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.egress_forbidden');
+		expect(decline.spec.status).toBe(403);
+		// PUBLIC disclosure — the operator sentence reaches the wire.
+		expect(decline.spec.disclosure).toBe('public');
+		expect(decline.publicMessage).toContain('DEDALO_RAG_IMAGE_EGRESS_POLICY');
 	});
 
 	test('a provider failure under an OPEN egress policy is provider_unavailable', async () => {
-		const res = await buildIdentifyByImage(
-			fakeDeps({
-				config: () => fakeConfig({ imageEgressPolicy: 'allow_external' }),
-				buildProvider: () => {
-					throw new Error('sidecar configuration is incomplete');
-				},
-			}),
-		)(rqo({ image }), ctx(SUPERUSER));
-		expect(res.body.errors).toEqual(['provider_unavailable']);
+		const decline = await declineOf(
+			buildIdentifyByImage(
+				fakeDeps({
+					config: () => fakeConfig({ imageEgressPolicy: 'allow_external' }),
+					buildProvider: () => {
+						throw new Error('sidecar configuration is incomplete');
+					},
+				}),
+			)(rqo({ image }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.provider_unavailable');
 	});
 
 	test('an encoder that returns nothing is embed_failed (never a partial batch)', async () => {
-		const res = await buildIdentifyByImage(fakeDeps({ buildProvider: () => fakeProvider(null) }))(
-			rqo({ image }),
-			ctx(SUPERUSER),
+		const decline = await declineOf(
+			buildIdentifyByImage(fakeDeps({ buildProvider: () => fakeProvider(null) }))(
+				rqo({ image }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(res.body.errors).toEqual(['embed_failed']);
+		expect(decline.code).toBe('identify.embed_failed');
 	});
 
 	test('a scope the caller may not open is refused, not silently widened', async () => {
 		let queried = false;
-		const res = await buildIdentifyByImage(
-			fakeDeps({
-				componentGrant: async () => 0,
-				queryImagePartition: async () => {
-					queried = true;
-					return [];
-				},
-			}),
-		)(rqo({ image, section_tipo: ['test3'] }), ctx(NO_ACCESS));
-		expect(res.body.errors).toEqual(['forbidden']);
+		const decline = await declineOf(
+			buildIdentifyByImage(
+				fakeDeps({
+					componentGrant: async () => 0,
+					queryImagePartition: async () => {
+						queried = true;
+						return [];
+					},
+				}),
+			)(rqo({ image, section_tipo: ['test3'] }), ctx(NO_ACCESS)),
+		);
+		expect(decline.code).toBe('perm.denied');
 		// Running unscoped instead would answer a different question than the asked one.
 		expect(queried).toBe(false);
 	});
@@ -318,23 +353,26 @@ describe('identify_by_image — an empty index is a different answer from no mat
 	const image = asBase64(COIN_IMAGE);
 
 	test('an empty partition DECLINES with empty_index and says so in prose', async () => {
-		const res = await buildIdentifyByImage(fakeDeps({ queryImagePartition: async () => [] }))(
-			rqo({ image }),
-			ctx(SUPERUSER),
+		const decline = await declineOf(
+			buildIdentifyByImage(fakeDeps({ queryImagePartition: async () => [] }))(
+				rqo({ image }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['empty_index']);
-		expect(res.body.msg).toContain('Nothing has been indexed');
+		expect(decline.code).toBe('identify.empty_index');
+		// PUBLIC disclosure — the prose that makes the distinction reaches the wire.
+		expect(decline.publicMessage).toContain('Nothing has been indexed');
 	});
 
 	test('an empty SCOPED partition names the scope it searched', async () => {
-		const res = await buildIdentifyByImage(fakeDeps({ queryImagePartition: async () => [] }))(
-			rqo({ image, section_tipo: 'test3' }),
-			ctx(SUPERUSER),
+		const decline = await declineOf(
+			buildIdentifyByImage(fakeDeps({ queryImagePartition: async () => [] }))(
+				rqo({ image, section_tipo: 'test3' }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(res.body.errors).toEqual(['empty_index']);
-		expect(res.body.msg).toContain('test3');
+		expect(decline.code).toBe('identify.empty_index');
+		expect(decline.publicMessage).toContain('test3');
 	});
 
 	test('hits that ALL fail the ACL are "no matches" — an ok answer with no results', async () => {
@@ -348,8 +386,8 @@ describe('identify_by_image — an empty index is a different answer from no mat
 			}),
 		)(rqo({ image }), ctx(NO_ACCESS));
 		expect(res.status).toBe(200);
-		expect(res.body.msg).toBe('ok');
-		const answer = res.body.result as ImageAnswer;
+		expect(res.body.ok).toBe(true);
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.results).toEqual([]);
 		expect(JSON.stringify(answer)).not.toContain('hidden');
 	});
@@ -397,8 +435,8 @@ describe('identify_by_image — the answer', () => {
 			}),
 		)(rqo({ image }), ctx(SUPERUSER));
 
-		expect(res.body.msg).toBe('ok');
-		const answer = res.body.result as ImageAnswer;
+		expect(res.body.ok).toBe(true);
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.model).toBe('fake-multimodal');
 		expect(answer.scope).toEqual([]);
 		expect(answer.warnings).toEqual([]);
@@ -441,7 +479,7 @@ describe('identify_by_image — the answer', () => {
 				rqo({ image }),
 				ctx(SUPERUSER),
 			);
-			expect((res.body.result as ImageAnswer).results[0]!.types).toEqual([]);
+			expect((res.body.data as ImageAnswer).results[0]!.types).toEqual([]);
 		}
 	});
 
@@ -453,8 +491,8 @@ describe('identify_by_image — the answer', () => {
 				},
 			}),
 		)(rqo({ image }), ctx(SUPERUSER));
-		expect(res.body.msg).toBe('ok');
-		const answer = res.body.result as ImageAnswer;
+		expect(res.body.ok).toBe(true);
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.results).toHaveLength(1);
 		expect(answer.results[0]!.types).toEqual([]);
 		expect(answer.warnings).toHaveLength(1);
@@ -473,7 +511,7 @@ describe('identify_by_image — the answer', () => {
 			}),
 		);
 		const res = await handler(rqo({ image, limit: 5 }), ctx(SUPERUSER));
-		expect((res.body.result as ImageAnswer).results).toHaveLength(5);
+		expect((res.body.data as ImageAnswer).results).toHaveLength(5);
 		await handler(rqo({ image, limit: 9999 }), ctx(SUPERUSER));
 		// max(40, limit*4): a hit dropped for permissions must not cost a slot.
 		expect(asked).toEqual([40, 200]);
@@ -510,7 +548,7 @@ describe('identify_by_image — a vector hit is not permission', () => {
 				},
 			}),
 		)(rqo({ image }), ctx(NO_ACCESS));
-		const answer = res.body.result as ImageAnswer;
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.results[0]!.label).toBeNull();
 		// The gate must stop us BEFORE the read, not filter its output.
 		expect(read).toBe(false);
@@ -547,7 +585,7 @@ describe('identify_by_image — a vector hit is not permission', () => {
 				scopeRecords: async () => [],
 			}),
 		)(rqo({ image }), ctx(NO_ACCESS));
-		const answer = res.body.result as ImageAnswer;
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.results[0]!.types).toEqual([]);
 		expect(JSON.stringify(answer)).not.toContain('77');
 	});
@@ -661,8 +699,8 @@ describe.if(LIVE)('identify_by_image — the live stack', () => {
 			rqo({ image: asBase64(COIN_IMAGE), section_tipo: SECTION_TIPO, limit: 10 }),
 			ctx(SUPERUSER),
 		);
-		expect(res.body.msg).toBe('ok');
-		const answer = res.body.result as ImageAnswer;
+		expect(res.body.ok).toBe(true);
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.model).toBe(MODEL);
 		expect(answer.scope).toEqual([SECTION_TIPO]);
 
@@ -694,7 +732,7 @@ describe.if(LIVE)('identify_by_image — the live stack', () => {
 			ctx(NO_ACCESS),
 		);
 		expect(res.status).toBe(200);
-		const answer = res.body.result as ImageAnswer;
+		const answer = res.body.data as ImageAnswer;
 		expect(answer.results.some((hit) => hit.section_id === COIN_ID)).toBe(false);
 		expect(answer.results.some((hit) => hit.section_id === OTHER_ID)).toBe(false);
 	});

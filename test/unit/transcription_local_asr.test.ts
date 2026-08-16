@@ -94,7 +94,7 @@ describe('localAsrProvider', () => {
 				readFile: async () => new Blob([new Uint8Array([1, 2, 3])]),
 			});
 
-			expect(result.result).toEqual({ pid: 'job-42' });
+			expect(result).toMatchObject({ ok: true, pid: 'job-42' });
 			expect(seen!.url).toBe('http://192.168.1.20:9000/jobs');
 			expect(seen!.form.get('language')).toBe('es');
 			expect(seen!.form.get('model')).toBe('large-v3');
@@ -118,7 +118,7 @@ describe('localAsrProvider', () => {
 			entityName: 'mib',
 		});
 
-		expect(result.result).toBe(false);
+		expect(result.ok).toBe(false);
 		expect(result.msg).toContain('audio file path');
 	});
 
@@ -135,7 +135,7 @@ describe('localAsrProvider', () => {
 			entityName: 'mib',
 		});
 
-		expect(result.result).toBe(false);
+		expect(result.ok).toBe(false);
 		expect(result.msg).toContain('DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS');
 	});
 });

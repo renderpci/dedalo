@@ -25,12 +25,20 @@ const FILES_DIR = join(ROOT, 'files');
 const ARCHIVE = join(FILES_DIR, '7', '7.0', '7.0.1.zip');
 const OPEN = { isCodeServer: true, codeFilesDir: FILES_DIR };
 
+// The 404 body is a converter-made envelope; under DEDALO_DEBUG_API_ERRORS=true
+// (a dev .env convenience) it carries a `debug.stack` that differs per call site,
+// so the indistinguishability assertion pins the flag OFF (process.env wins
+// over ../private/.env — see error_converter_native.test.ts).
+const previousDebugFlag = process.env.DEDALO_DEBUG_API_ERRORS;
 beforeAll(() => {
+	process.env.DEDALO_DEBUG_API_ERRORS = 'false';
 	mkdirSync(join(FILES_DIR, '7', '7.0'), { recursive: true });
 	writeFileSync(ARCHIVE, 'PK-not-a-real-zip');
 	writeFileSync(`${ARCHIVE}.sha256`, `${'c'.repeat(64)}  7.0.1.zip\n`);
 });
 afterAll(() => {
+	if (previousDebugFlag === undefined) delete process.env.DEDALO_DEBUG_API_ERRORS;
+	else process.env.DEDALO_DEBUG_API_ERRORS = previousDebugFlag;
 	rmSync(ROOT, { recursive: true, force: true });
 });
 
@@ -81,15 +89,24 @@ describe('serveCodeReleaseRequest', () => {
 	});
 
 	test('a release that was never built 404s like everything else', async () => {
-		const missing = await serveCodeReleaseRequest('/dedalo/install/code/7.0.9/7.0.9.zip', OPEN);
-		const refused = await serveCodeReleaseRequest('/dedalo/install/code/7.0.1/7.0.1.zip', {
-			isCodeServer: false,
-			codeFilesDir: FILES_DIR,
-		});
+		const missing = await serveCodeReleaseRequest(
+			'/dedalo/install/code/7.0.9/7.0.9.zip',
+			OPEN,
+			'req-probe',
+		);
+		const refused = await serveCodeReleaseRequest(
+			'/dedalo/install/code/7.0.1/7.0.1.zip',
+			{ isCodeServer: false, codeFilesDir: FILES_DIR },
+			'req-probe',
+		);
 		expect(missing.status).toBe(404);
 		expect(refused.status).toBe(404);
-		// indistinguishable from outside: a probe cannot map the release dir
-		expect(await missing.text()).toBe(await refused.text());
+		// indistinguishable from outside: a probe cannot map the release dir —
+		// the same converter-made `resource.not_found` envelope v2 for both
+		const missingBody = (await missing.json()) as { ok: boolean; error: { code: string } };
+		expect(missingBody.ok).toBe(false);
+		expect(missingBody.error.code).toBe('resource.not_found');
+		expect(await refused.text()).toBe(JSON.stringify(missingBody));
 	});
 
 	test('the exported prefix is the one the manifest URL starts with', () => {

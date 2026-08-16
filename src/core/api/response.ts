@@ -1,15 +1,33 @@
 /**
- * Shared API response shape + helpers.
+ * The ApiResult — what a handler hands the dispatcher: the HTTP status, the
+ * JSON body, and the transport side-effects (cookies, streams) that
+ * server.ts turns into a Response.
  *
  * Extracted from dispatch.ts so decomposed handler modules (e.g.
  * src/core/area/read.ts) can build results without importing the dispatcher —
  * dispatch.ts imports the dispatchers, so the dispatchers must not import it
- * back (no cycle). The dispatcher owns routing; this module owns the envelope.
+ * back (no cycle). The dispatcher owns routing; this module owns the shape.
+ *
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §3-4). A handler:
+ *   - SUCCEEDS by returning `ok(data, {requestId, extend?})` from
+ *     src/core/errors/convert.ts — `extend` carries its extension keys;
+ *   - FAILS by THROWING `new DedaloError(code, {…})` — the dispatch catch is
+ *     the ONE converter door (`toErrorEnvelope`), so no handler builds a
+ *     failure body. Nothing here builds one either: this module exports the
+ *     ApiResult SHAPE and no FAILURE-body builder (the P1-era throwing shells
+ *     `denied`/`notAuthorized`/`notLogged` and the legacy_body_adapter are
+ *     DELETED — a body without `ok` is a bug the dispatcher refuses loudly;
+ *     error_taxonomy_tripwire + authorization_denial_native pin the export set).
  */
+
+import { ok } from '../errors/convert.ts';
+import type { ApiEnvelope } from '../errors/schema.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 
 export interface ApiResult {
 	status: number;
-	body: Record<string, unknown>;
+	/** Envelope v2 — converter-made (`ok(...)`), or the dispatch catch's failure body. */
+	body: ApiEnvelope;
 	/** Set-Cookie value for session issuance (login). */
 	setSessionToken?: string;
 	/** Emit an expiring Set-Cookie that clears the session cookie (logout/quit). */
@@ -35,53 +53,30 @@ export interface ApiResult {
 	 */
 	stream?: ReadableStream<Uint8Array>;
 	streamHeaders?: Record<string, string>;
+	/**
+	 * Set by the dispatch catch from the thrown `retryAfterMs` (limit /
+	 * unavailable codes) — server.ts emits the `Retry-After` header from it.
+	 */
+	retryAfterMs?: number;
 }
 
 /**
- * Uniform validation/refusal denial (PHP denied JSON output).
- *
- * NOT for authorization refusals — those are {@link notAuthorized} (403), which
- * carries a machine token the client dispatches on. `denied(403, …)` is refused
- * mechanically by `test/unit/authorization_denial_native.test.ts`.
+ * A STREAMED result (SSE: diffusion follow, job events, process status).
+ * server.ts writes `stream` with `streamHeaders` and NEVER serializes `body`;
+ * the body is still an envelope (`ok(null)`, request-scoped id) so ApiResult
+ * stays ONE shape and the dispatcher's envelope check needs no stream carve-out
+ * beyond `stream !== undefined`. The dispatch gates (auth/CSRF/allowlist) ran
+ * in front — that is the whole point of threading streams through ApiResult.
  */
-export function denied(status: number, message: string): ApiResult {
-	return { status, body: { result: false, msg: message, errors: [message] } };
-}
-
-/**
- * The AUTHORIZATION denial (WC-2026-08-12-authorization-denial-token) — the 403
- * sibling of {@link notLogged}, and for the same reason.
- *
- * `denied(403, 'Insufficient permissions to read')` put the human sentence in
- * `errors`, the machine channel, so nothing could dispatch on it: the client's
- * fetch layer classified the 403 as a non-retryable transport failure and
- * painted a permanent red "Not retry-able HTTP error 403" over a blank page —
- * the whole answer a user got for opening a page they lack a grant for.
- *
- * `errors` now carries the token `not_authorized`; the human message stays in
- * `msg`. The client exempts 403 from its transport-error classification exactly
- * as it does 401, reads the envelope, and renders the localized
- * "no permission" page (`get_label.no_access_page`).
- *
- * The default message is deliberately generic: it is shown to the refused user,
- * and naming the element they cannot reach is an information leak. Call sites
- * that pass a specific sentence keep it — none of them name a record.
- */
-export function notAuthorized(message = 'Insufficient permissions'): ApiResult {
-	return { status: 403, body: { result: false, msg: message, errors: ['not_authorized'] } };
-}
-
-/**
- * The AUTHENTICATION denial (WC-051). Distinct from `denied` because the whole
- * client keys its re-login recovery on the literal error token `not_logged`
- * (page.js → render_relogin, common.js, component_common.js, render_common.js —
- * all four switch on that exact string, inherited from the PHP oracle).
- *
- * `denied(401, 'Authentication required')` put the human message in `errors`, so
- * no branch ever matched and the entire recovery UX was unreachable: an expired
- * session surfaced as a thrown fetch error and blank widgets. The message stays
- * in `msg` for humans; `errors` carries the machine token the client dispatches on.
- */
-export function notLogged(message = 'Authentication required'): ApiResult {
-	return { status: 401, body: { result: false, msg: message, errors: ['not_logged'] } };
+export function streamResult(
+	stream: ReadableStream<Uint8Array>,
+	streamHeaders?: Record<string, string>,
+): ApiResult {
+	const result: ApiResult = {
+		status: 200,
+		body: ok(null, { requestId: currentRequestContext()?.requestId ?? '' }),
+		stream,
+	};
+	if (streamHeaders !== undefined) result.streamHeaders = streamHeaders;
+	return result;
 }

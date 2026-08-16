@@ -24,7 +24,7 @@ const RUNTIME_STARTED_AT = Date.now();
 async function runtimeInfoGetValue(): Promise<WidgetResponse> {
 	const memory = process.memoryUsage();
 	return {
-		result: {
+		data: {
 			info: {
 				engine: 'bun',
 				version: Bun.version,
@@ -36,8 +36,6 @@ async function runtimeInfoGetValue(): Promise<WidgetResponse> {
 			},
 			environment: process.env.NODE_ENV ?? 'production',
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -71,11 +69,7 @@ async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
 	await clearOntologyDerivedCaches();
 	const { invalidateAllToolCaches } = await import('../../tools/cache.ts');
 	invalidateAllToolCaches();
-	return {
-		result: { cleared: ['ontology_derived', 'tools'] },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { cleared: ['ontology_derived', 'tools'] } };
 }
 
 /**
@@ -86,11 +80,7 @@ async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
 async function runtimeInfoClearSessions(): Promise<WidgetResponse> {
 	const { pruneExpiredSessions } = await import('../../security/session_store.ts');
 	const pruned = pruneExpiredSessions();
-	return {
-		result: { pruned },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { pruned } };
 }
 
 export const widget: WidgetModule = {

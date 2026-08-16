@@ -18,6 +18,7 @@ import {
 	type MediaTypeSpec,
 	POSTERFRAME_WRITER_BY_MODEL,
 } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { writeAtomically } from '../atomic.ts';
 import { createPosterframe, probeFormat, probeStreams } from '../engine/ffmpeg.ts';
 import { moveToDeleted } from '../file_ops.ts';
@@ -65,9 +66,13 @@ export async function createIdentifyingImageCore(
 	image: MediaContext,
 	timecode: string,
 ): Promise<PosterframeResult> {
-	if (av.spec.model !== 'component_av') throw new Error('posterframe source must be component_av');
-	if (image.spec.model !== 'component_image')
-		throw new Error('posterframe target must be component_image');
+	if (av.spec.model !== 'component_av') throw notAvSource();
+	if (image.spec.model !== 'component_image') {
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'posterframe target must be component_image',
+			publicMessage: 'posterframe target must be component_image',
+		});
+	}
 
 	// AV source: original quality, else default quality (PHP fallback when the
 	// original file is absent).
@@ -87,7 +92,12 @@ export async function createIdentifyingImageCore(
 			}
 		}
 	}
-	if (source === null) throw new Error('AV source file not found');
+	if (source === null) {
+		throw new DedaloError('media.file_not_found', {
+			message: 'AV source file not found',
+			publicMessage: 'AV source file not found',
+		});
+	}
 
 	// Frame size = the source video dimensions (PHP derived it internally).
 	const probe = await probeStreams(source);
@@ -149,7 +159,10 @@ export function posterframeAbsolutePath(
 ): string {
 	const location = posterframeLocation(spec, identity, pathOpts);
 	if (location === null) {
-		throw new Error(`${spec.model} has no posterframe`);
+		throw new DedaloError('media.unsupported_operation', {
+			message: `${spec.model} has no posterframe`,
+			publicMessage: `${spec.model} has no posterframe`,
+		});
 	}
 	return location.absolutePath;
 }
@@ -199,11 +212,11 @@ async function writeThumbFrom(ctx: MediaContext, source: string): Promise<string
  * calls create_thumb() afterward so the two stay in sync).
  *
  * Returns false — never throws — when there is no usable source file or the
- * source carries no video stream (audio-only), matching the PHP contract that
- * feeds the client a plain result:false.
+ * source carries no video stream (audio-only). The handler turns that into the
+ * `ok:false` outcome the client renders (PHP fed it a plain false result).
  */
 export async function createAvPosterframe(av: MediaContext, timecode: string): Promise<boolean> {
-	if (av.spec.model !== 'component_av') throw new Error('posterframe source must be component_av');
+	if (av.spec.model !== 'component_av') throw notAvSource();
 
 	// AV source: original quality, else default quality (PHP fallback when the
 	// original file is absent).
@@ -284,8 +297,28 @@ export async function createAvPosterframe(av: MediaContext, timecode: string): P
  */
 const AV_AUTO_POSTERFRAME_SECONDS = 10;
 
-/** Internal signal: ffmpeg reported "no frame" — not an error, just nothing to rename. */
-class PosterframeNotCreated extends Error {}
+/**
+ * Internal signal: ffmpeg reported "no frame" — not an error, just nothing to
+ * rename. It is thrown and caught INSIDE `createAvPosterframe` and never
+ * escapes, but it is a `DedaloError` subclass with a fixed code all the same
+ * (ERRORS_SPEC §4): if a refactor ever lets it out, it converts like everything
+ * else instead of reaching the wire as an untyped exception. The
+ * `instanceof PosterframeNotCreated` catch site is unchanged.
+ */
+class PosterframeNotCreated extends DedaloError {
+	constructor() {
+		super('media.action_failed', { message: 'posterframe: ffmpeg produced no frame' });
+		this.name = 'PosterframeNotCreated';
+	}
+}
+
+/** The "this is not an av component" refusal, shared by the three posterframe entry points. */
+function notAvSource(message = 'posterframe source must be component_av'): DedaloError {
+	return new DedaloError('media.unsupported_operation', {
+		message,
+		publicMessage: message,
+	});
+}
 
 /**
  * MINT a posterframe the engine is able to produce by itself — the av self-heal,
@@ -304,15 +337,20 @@ class PosterframeNotCreated extends Error {}
 export async function mintPosterframe(ctx: MediaContext): Promise<string> {
 	const writer = POSTERFRAME_WRITER_BY_MODEL[ctx.spec.model];
 	if (writer !== 'server_frame_extract') {
-		throw new Error(
-			`${ctx.spec.model} posterframes cannot be minted by this engine — ${CLIENT_POSTERFRAME_REMEDY[ctx.spec.model] ?? 'create it first'}`,
-		);
+		// PUBLIC: the model name and the remedy table are engine data; the remedy
+		// IS the operator's next move, so it must reach them.
+		const reason = `${ctx.spec.model} posterframes cannot be minted by this engine — ${CLIENT_POSTERFRAME_REMEDY[ctx.spec.model] ?? 'create it first'}`;
+		throw new DedaloError('media.unsupported_operation', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 	const source = resolveAvSource(ctx);
 	if (source === null) {
-		throw new Error(
-			`no ${ctx.spec.model} source file to extract a posterframe from (${buildMediaIdentifier(ctx.identity)})`,
-		);
+		throw new DedaloError('media.file_not_found', {
+			message: `no ${ctx.spec.model} source file to extract a posterframe from (${buildMediaIdentifier(ctx.identity)})`,
+			publicMessage: `no ${ctx.spec.model} source file to extract a posterframe from`,
+		});
 	}
 	const format = (await probeFormat(source)) as { format?: { duration?: unknown } } | null;
 	const duration = Number(format?.format?.duration ?? 0);
@@ -322,9 +360,11 @@ export async function mintPosterframe(ctx: MediaContext): Promise<string> {
 			: AV_AUTO_POSTERFRAME_SECONDS;
 	const created = await createAvPosterframe(ctx, seconds.toFixed(3));
 	if (!created) {
-		throw new Error(
-			`no video frame to build a posterframe from (${buildMediaIdentifier(ctx.identity)} — an audio-only source has no picture)`,
-		);
+		throw new DedaloError('media.unsupported_operation', {
+			message: `no video frame to build a posterframe from (${buildMediaIdentifier(ctx.identity)} — an audio-only source has no picture)`,
+			publicMessage:
+				'no video frame to build a posterframe from — an audio-only source has no picture',
+		});
 	}
 	return posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
 }
@@ -359,13 +399,16 @@ function resolveAvSource(ctx: MediaContext): string | null {
  */
 function assertPosterframeModel(spec: MediaTypeSpec): void {
 	if (!hasPosterframe(spec.model)) {
-		throw new Error('posterframe target must be component_av or component_3d');
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'posterframe target must be component_av or component_3d',
+			publicMessage: 'posterframe target must be component_av or component_3d',
+		});
 	}
 }
 
 export interface DeletePosterframeResult {
 	/** true when a posterframe was really removed (false = there was none). */
-	result: boolean;
+	ok: boolean;
 	/** The thumb retired with it, or null (see below). */
 	retiredThumb: string | null;
 	/** The thumb rebuilt from a freshly minted replacement (av), or null. */
@@ -401,7 +444,7 @@ export async function deletePosterframe(ctx: MediaContext): Promise<DeletePoster
 	assertPosterframeModel(ctx.spec);
 	const target = posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
 	if (!existsSync(target)) {
-		return { result: false, retiredThumb: null, rebuiltThumb: null };
+		return { ok: false, retiredThumb: null, rebuiltThumb: null };
 	}
 	moveToDeleted(target, { mediaRoot: ctx.pathOpts.mediaRoot });
 
@@ -410,18 +453,18 @@ export async function deletePosterframe(ctx: MediaContext): Promise<DeletePoster
 	// posterframe must not survive this call.
 	const retiredThumb = retireThumb(ctx);
 	if (POSTERFRAME_WRITER_BY_MODEL[ctx.spec.model] !== 'server_frame_extract') {
-		return { result: true, retiredThumb, rebuiltThumb: null };
+		return { ok: true, retiredThumb, rebuiltThumb: null };
 	}
 	try {
 		const outcome = await rebuildThumb(ctx);
-		return { result: true, retiredThumb, rebuiltThumb: outcome.built };
+		return { ok: true, retiredThumb, rebuiltThumb: outcome.built };
 	} catch (error) {
 		// An audio-only av, or a box with no source file: the delete stands, the
 		// record is honestly thumb-less, and the reason is said out loud.
 		console.warn(
 			`[posterframe] ${buildMediaIdentifier(ctx.identity)}: posterframe deleted, no replacement minted: ${(error as Error).message}`,
 		);
-		return { result: true, retiredThumb, rebuiltThumb: null };
+		return { ok: true, retiredThumb, rebuiltThumb: null };
 	}
 }
 
@@ -429,7 +472,11 @@ export async function deletePosterframe(ctx: MediaContext): Promise<DeletePoster
 function uploadedExtension(fileName: string): string {
 	const dot = fileName.lastIndexOf('.');
 	const ext = dot >= 0 ? fileName.slice(dot + 1).toLowerCase() : '';
-	if (!/^[a-z0-9]+$/.test(ext)) throw new Error(`invalid uploaded file extension in '${fileName}'`);
+	if (!/^[a-z0-9]+$/.test(ext)) {
+		throw new DedaloError('media.invalid_extension', {
+			message: `invalid uploaded file extension in '${fileName}'`,
+		});
+	}
 	return ext;
 }
 
@@ -459,7 +506,10 @@ export async function moveUploadedToMediaDir(input: {
 	const dir = stagingDir(userId, keyDir, ctx.pathOpts.mediaRoot);
 	const source = resolve(dir, sanitizeSegment(tmpName));
 	if (source !== dir && !source.startsWith(dir + sep)) {
-		throw new Error('staged source escapes the staging dir');
+		throw new DedaloError('media.invalid_path', {
+			message: 'staged source escapes the staging dir',
+			coordinates: { source },
+		});
 	}
 	if (!existsSync(source) || !statSync(source).isFile()) return false;
 
@@ -528,7 +578,7 @@ export async function getAvMediaStreams(
 	quality?: string | null,
 ): Promise<{ streams: unknown[] } | null> {
 	if (av.spec.model !== 'component_av')
-		throw new Error('media streams source must be component_av');
+		throw notAvSource('media streams source must be component_av');
 	const targetQuality = quality != null && quality !== '' ? quality : av.spec.defaultQuality;
 	const file = resolveAvQualityFile(av, targetQuality);
 	if (file === null) return null;

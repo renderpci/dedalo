@@ -67,7 +67,7 @@ async function tsTotal(rqo: Record<string, unknown>): Promise<number> {
 			principal,
 		} as never,
 	);
-	return Number((result.body as { result?: { total?: unknown } }).result?.total);
+	return Number((result.body as { data?: { total?: unknown } }).data?.total);
 }
 
 let php: PhpApiClient | null = null;

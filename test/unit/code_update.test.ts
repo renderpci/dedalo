@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import { UPDATE_CATALOG } from '../../src/core/update/catalog.ts';
 import { buildCodeUpdateInfo, linearUpgradeTargets } from '../../src/core/update/code_manifest.ts';
 import {
@@ -21,6 +22,7 @@ import {
 	updateCode,
 } from '../../src/core/update/code_update.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // Capture the REAL modules ONCE at top level; mock.restore() does NOT revert
 // mock.module, so afterAll re-installs them — a per-test `await import()` would
@@ -168,7 +170,11 @@ describe('archive hardening', () => {
 			stderr: 'ignore',
 		});
 		await child.exited;
-		expect(extractArchive(zipPath, join(ROOT, 'nomark', 'q'))).rejects.toThrow('not a Dédalo tree');
+		// A registered refusal (`update.refused`); the marker sentence is both the
+		// log message and the operator-facing publicMessage.
+		const refusal = await refusalOf(extractArchive(zipPath, join(ROOT, 'nomark', 'q')));
+		expect(refusal.code).toBe('update.refused');
+		expect(refusal.message).toMatch(/not a Dédalo tree/);
 	});
 });
 
@@ -227,7 +233,9 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 				},
 			);
 
-			expect(out.result).toBe(true);
+			// Envelope v2: `data` names the installed release; `msg` is an extension key.
+			expect(out.ok).toBe(true);
+			expect(out.data).toEqual({ version: '7.0.1', update_mode: 'clean' });
 			expect(out.msg).toContain('Installed Dédalo 7.0.1');
 			expect(restarted).toContain('7.0.1');
 			// the new tree landed (marker + new file), the stale file is gone
@@ -270,15 +278,21 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 					},
 				},
 			}));
-			const out = await updateCode(
+			// P1 sweep: a gate REFUSES BY THROWING, and the refusal keeps its own
+			// code — the catch-all must not launder it into a generic update.failed.
+			const refusal = await updateCode(
 				{
 					file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: 'a'.repeat(64) },
 					update_mode: 'clean',
 				},
 				{ targetRoot, backupRoot: join(base, 'b'), restart: () => {}, supervised: true },
+			).then(
+				() => null,
+				(caught: unknown) => caught,
 			);
-			expect(out.result).toBe(false);
-			expect(out.msg).toContain('checksum mismatch');
+			expect(isDedaloError(refusal)).toBe(true);
+			expect((refusal as { code: string }).code).toBe('update.refused');
+			expect((refusal as Error).message).toContain('checksum mismatch');
 			// the live tree is untouched
 			expect(readFileSync(join(targetRoot, 'package.json'), 'utf8')).toBe('{"name":"old"}');
 		} finally {
@@ -324,7 +338,7 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 				},
 			}));
 			for (const sha of [undefined, '', 'not-hex', 'a'.repeat(63), `${'A'.repeat(64)}`]) {
-				const out = await updateCode(
+				const refusal = await updateCode(
 					{
 						file: {
 							version: '7.0.1',
@@ -334,10 +348,15 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 						update_mode: 'clean',
 					},
 					{ targetRoot, backupRoot: join(base, 'b'), restart: () => {}, supervised: true },
+				).then(
+					() => null,
+					(caught: unknown) => caught,
 				);
-				expect(out.result).toBe(false);
-				expect(out.msg).toContain('checksum');
-				expect(out.errors).toContain('sha256 must be 64 hex chars');
+				// typed refusal (P1 sweep): a missing/malformed digest is a caller fault
+				expect(isDedaloError(refusal)).toBe(true);
+				expect((refusal as { code: string }).code).toBe('request.invalid_options');
+				expect((refusal as Error).message).toContain('checksum');
+				expect((refusal as Error).message).toContain('sha256 must be 64 hex chars');
 			}
 			// nothing was downloaded and the live tree never moved
 			expect(fetched).toBe(0);

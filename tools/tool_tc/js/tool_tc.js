@@ -40,6 +40,7 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_tc} from './render_tool_tc.js'
@@ -331,7 +332,7 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 				dd_console("-> change_all_time_codes API response:",'DEBUG',response);
 			}
 
-			const result = response.result // array of changed tc
+			const result = response_data(response) // array of changed tc
 
 			resolve(result)
 		})

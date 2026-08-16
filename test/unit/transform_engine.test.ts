@@ -113,7 +113,7 @@ describe('TransformRecorder', () => {
 		rec.record({ op: 'delete', table: 'matrix_counter', target: 'x1' });
 		const report = rec.toReport('move_tld');
 		expect(report.dryRun).toBe(true);
-		expect(report.result).toBe(true);
+		expect(report.ok).toBe(true);
 		expect(report.counts).toEqual({ update: 5, delete: 1 });
 		expect(report.msg).toContain('DRY RUN');
 		expect(report.msg).toContain('6 change(s)');

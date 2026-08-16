@@ -17,6 +17,7 @@
  * NO _tm twin exists — matrix_time_machine searches throw loudly.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { type BuilderContext, type BuilderResult, fragment } from './types.ts';
 
 /** DEDALO_RELATION_TYPE_INDEX_TIPO — the indexation locator type. */
@@ -28,9 +29,10 @@ export async function buildRelationIndexFragment(
 	context: BuilderContext,
 ): Promise<BuilderResult> {
 	if (context.table === 'matrix_time_machine') {
-		throw new Error(
-			'relation_index search: no time-machine twin exists (PHP has none; the computed-inverse scan targets live relation columns)',
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message:
+				'relation_index search: no time-machine twin exists (PHP has none; the computed-inverse scan targets live relation columns)',
+		});
 	}
 	if (qOperator !== '*' && qOperator !== '!*') return false; // PHP :135-149
 

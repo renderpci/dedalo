@@ -29,6 +29,7 @@
  *    parallelizes; the four surrounding steps stay strictly sequential.
  */
 
+import { DedaloError, isDedaloError, ok } from '../../../src/core/errors/index.ts';
 import type { OntologyIoResponse } from '../../../src/core/ontology/data_io.ts';
 import {
 	exportLlmMap,
@@ -44,7 +45,34 @@ import {
 	type OntologyWriteResult,
 	rebuildOntologies,
 } from '../../../src/core/ontology/ontology_state.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
+
+/** Every action here is developer-only (PHP parity); the gate is imperative. */
+function assertDeveloper(context: ToolActionContext): void {
+	if (!context.principal.isDeveloper) {
+		throw new DedaloError('perm.developer_required', {
+			coordinates: { tool: 'tool_ontology_parser' },
+		});
+	}
+}
+
+/**
+ * A batch that ran but did not come out clean. The per-TLD lines are what the
+ * client's panel renders, so they ride as NAMED failure extension keys
+ * (ERRORS_SPEC §3.0 — the `start`/`environment` precedent): without them the
+ * operator is told "it failed" and nothing about which ontology.
+ */
+function batchFailed(summary: string, errors: string[], arMsg: string[]): DedaloError {
+	return new DedaloError('tool.action_failed', {
+		coordinates: { tool: 'tool_ontology_parser' },
+		message: `${summary} — ${errors.join('; ')}`,
+		extend: { errors, ar_msg: arMsg },
+	});
+}
 
 /** The selected TLDs from options, coerced to a clean string list. */
 function selectedTlds(context: ToolActionContext): string[] {
@@ -53,36 +81,38 @@ function selectedTlds(context: ToolActionContext): string[] {
 }
 
 /** Roll a per-TLD rebuild batch into one tool response. */
-function summarize(outcomes: OntologyWriteResult[], tlds: string[], verb: string): ToolResponse {
+function summarize(
+	outcomes: OntologyWriteResult[],
+	tlds: string[],
+	verb: string,
+	context: ToolActionContext,
+): ToolResponse {
 	const errors: string[] = [];
 	const ar_msg: string[] = [];
 	let applied = 0;
 	outcomes.forEach((outcome, index) => {
 		const tld = tlds[index] ?? outcome.state.tld ?? '?';
-		if (!outcome.result) errors.push(`${tld}: ${outcome.msg}`);
+		if (!outcome.ok) errors.push(`${tld}: ${outcome.msg}`);
 		errors.push(...outcome.errors.map((error) => `${tld}: ${error}`));
 		applied += outcome.applied.length;
 		ar_msg.push(
 			`${tld}: ${outcome.msg}${outcome.applied.length ? ` (${outcome.applied.join('; ')})` : ''}`,
 		);
 	});
-	const ok = errors.length === 0;
-	return {
-		result: ok,
-		msg: ok
-			? `${verb} ${outcomes.length} ontolog${outcomes.length === 1 ? 'y' : 'ies'} — ${applied} change(s)`
-			: `${verb} completed with errors`,
-		errors,
-		ar_msg,
-	};
+	if (errors.length > 0) throw batchFailed(`${verb} completed with errors`, errors, ar_msg);
+	return ok(
+		{
+			summary: `${verb} ${outcomes.length} ontolog${outcomes.length === 1 ? 'y' : 'ies'} — ${applied} change(s)`,
+			ar_msg,
+		},
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 export async function toolOntologyParserGetOntologies(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
-	if (!context.principal.isDeveloper) {
-		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
-	}
+	assertDeveloper(context);
 	const census = await getActiveOntologies();
 
 	// PHP get_ontologies wire shape: exactly the five UI metadata fields
@@ -95,7 +125,16 @@ export async function toolOntologyParserGetOntologies(
 		typology_name: entry.typology_name,
 	}));
 
-	return { result: ontologies, msg: 'OK. Request done', errors: census.errors };
+	// Wire shape (ledgered, WC-2026-08-15-tool-response-envelope-v2): `data` IS the
+	// flat census array — the client does `self.ontologies = response_data(...)` and
+	// `.find`s on it. `census.errors` are per-ontology notes on an otherwise
+	// successful read: a handler-owned EXTENSION key on success (ERRORS_SPEC §3.0),
+	// read through `response_extension(api_response, 'errors')`, never the
+	// envelope's failure channel and never nested inside `data`.
+	return ok(ontologies, {
+		requestId: toolRequestId(context),
+		extend: { errors: census.errors },
+	});
 }
 
 /**
@@ -104,13 +143,11 @@ export async function toolOntologyParserGetOntologies(
  * orphaned — so an operator SEES why an ontology is out of sync before touching anything.
  */
 export async function toolOntologyParserInspect(context: ToolActionContext): Promise<ToolResponse> {
-	if (!context.principal.isDeveloper) {
-		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
-	}
+	assertDeveloper(context);
 	const tlds = selectedTlds(context);
 	const states = [];
 	for (const tld of tlds) states.push(await inspectOntology(tld));
-	return { result: true, msg: 'OK. Request done', errors: [], states };
+	return ok({ states }, { requestId: toolRequestId(context) });
 }
 
 /**
@@ -136,9 +173,7 @@ export async function toolOntologyParserInspect(context: ToolActionContext): Pro
 export async function toolOntologyParserRepairTlds(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
-	if (!context.principal.isDeveloper) {
-		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
-	}
+	assertDeveloper(context);
 	const tlds = selectedTlds(context);
 	const errors: string[] = [];
 	const ar_msg: string[] = [];
@@ -158,15 +193,14 @@ export async function toolOntologyParserRepairTlds(
 				: `${tld}: rewrote ontology7 on ${rewritten} record(s)`,
 		);
 	}
-	return {
-		result: errors.length === 0,
-		msg:
-			errors.length === 0
-				? `OK. Repaired ${repaired} record(s). Run Rebuild to re-derive dd_ontology.`
-				: 'Warning! Repair finished with errors',
-		errors,
-		ar_msg,
-	};
+	if (errors.length > 0) throw batchFailed('Repair finished with errors', errors, ar_msg);
+	return ok(
+		{
+			summary: `OK. Repaired ${repaired} record(s). Run Rebuild to re-derive dd_ontology.`,
+			ar_msg,
+		},
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 /**
@@ -187,12 +221,10 @@ export async function toolOntologyParserRepairTlds(
 export async function toolOntologyParserRegenerate(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
-	if (!context.principal.isDeveloper) {
-		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
-	}
+	assertDeveloper(context);
 	const tlds = selectedTlds(context);
 	const outcomes = await rebuildOntologies(tlds, context.userId);
-	return summarize(outcomes, tlds, 'Rebuilt');
+	return summarize(outcomes, tlds, 'Rebuilt', context);
 }
 
 /**
@@ -241,13 +273,12 @@ export async function runExportOntologies(
 	context: ToolActionContext,
 	io: OntologyExportIo = PRODUCTION_IO,
 ): Promise<ToolResponse> {
-	if (!context.principal.isDeveloper) {
-		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
-	}
+	assertDeveloper(context);
 
-	const response: ToolResponse & { errors: string[]; ar_msg: string[] } = {
-		result: false,
-		msg: 'Error. Request failed [export_ontologies]',
+	// The RUNNING report — deliberately NOT envelope-shaped: it is this
+	// function's working state, and only the two exits below reach the wire.
+	const report: { summary: string; errors: string[]; ar_msg: string[] } = {
+		summary: '',
 		errors: [],
 		ar_msg: [],
 	};
@@ -256,9 +287,9 @@ export async function runExportOntologies(
 	// would write only the metadata file — not useful (PHP parity).
 	const selected = context.options.selected_ontologies;
 	if (!Array.isArray(selected) || selected.length === 0) {
-		response.msg = 'Error. Invalid or empty selected_ontologies parameter';
-		response.errors.push('selected_ontologies must be a non-empty array');
-		return response;
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'selected_ontologies must be a non-empty array',
+		});
 	}
 	const tlds = selected.map((tld) => String(tld));
 
@@ -267,17 +298,21 @@ export async function runExportOntologies(
 		// (!) Must run before exportOntologyInfo, which reads the value just written.
 		const updated = await io.updateOntologyInfo(context.userId);
 		if (!updated) {
-			response.errors.push('unable to update_ontology_info');
-			response.msg = 'Unable to update ontology information in dd1 (ontology40_1)';
-			return response;
+			throw batchFailed(
+				'Unable to update ontology information in dd1 (ontology40_1)',
+				['unable to update_ontology_info'],
+				report.ar_msg,
+			);
 		}
 
 		// 2. Shared metadata file — must exist before any per-TLD file.
 		const infoResponse = await io.exportOntologyInfo();
-		if (!infoResponse.result) {
-			response.errors.push('unable to export ontology info JSON file');
-			response.msg = 'Unable to export the ontology information JSON file';
-			return response;
+		if (!infoResponse.ok) {
+			throw batchFailed(
+				'Unable to export the ontology information JSON file',
+				['unable to export ontology info JSON file'],
+				report.ar_msg,
+			);
 		}
 
 		// 3. Per-TLD exports — BOUNDED-PARALLEL. Each exportToFile forks an
@@ -312,8 +347,8 @@ export async function runExportOntologies(
 			if (result.status !== 'fulfilled') continue; // unreachable: rejects thrown above
 			const ontologyResponse = result.value;
 			arMsg.push(ontologyResponse.msg);
-			if (ontologyResponse.result === false) {
-				response.errors.push(...(ontologyResponse.errors ?? []));
+			if (ontologyResponse.ok === false) {
+				report.errors.push(...(ontologyResponse.errors ?? []));
 				continue;
 			}
 			done++;
@@ -322,35 +357,46 @@ export async function runExportOntologies(
 		// 4. Private lists — always runs regardless of per-TLD errors.
 		const privateListResponse = await io.exportPrivateListsToFile();
 		arMsg.push(privateListResponse.msg);
-		if (privateListResponse.result === false) {
-			response.errors.push(...(privateListResponse.errors ?? []));
+		if (privateListResponse.ok === false) {
+			report.errors.push(...(privateListResponse.errors ?? []));
 		}
 
 		// 5. LLM map — regenerated so it stays in sync with the new files.
 		const llmMapResponse = await io.exportLlmMap();
 		arMsg.push(llmMapResponse.msg);
-		if (!llmMapResponse.result) {
-			response.errors.push(...(llmMapResponse.errors ?? []));
+		if (!llmMapResponse.ok) {
+			report.errors.push(...(llmMapResponse.errors ?? []));
 		}
 
-		response.result = response.errors.length === 0;
 		// The per-file ar_msg lines carry each file's path (relative to the I/O dir) + size;
 		// name the target directory once here so the operator knows where to find them.
 		const { config } = await import('../../../src/config/config.ts');
-		response.msg = response.result
-			? `OK. Exported ${done} ontolog${done === 1 ? 'y' : 'ies'} to ${config.ops.ontologyDataIoDir}`
-			: 'Errors found. Export Ontologies request failed.';
-		response.ar_msg = arMsg;
+		report.ar_msg = arMsg;
+		report.summary = `OK. Exported ${done} ontolog${done === 1 ? 'y' : 'ies'} to ${config.ops.ontologyDataIoDir}`;
 	} catch (error) {
 		// PHP outer catch: a thrown sub-step (e.g. COPY output file not created)
-		// aborts the remaining steps and reports the message.
-		response.result = false;
-		response.msg = `Error. ${(error as Error).message}`;
-		response.errors.push((error as Error).message);
+		// aborts the remaining steps and reports the message. A refusal this
+		// function already typed passes through untouched.
+		if (isDedaloError(error)) throw error;
 		console.error('[tool_ontology_parser] export_ontologies exception:', error);
+		throw batchFailed(
+			'Export Ontologies request failed',
+			[(error as Error).message],
+			report.ar_msg,
+		);
 	}
 
-	return response;
+	if (report.errors.length > 0) {
+		throw batchFailed(
+			'Errors found. Export Ontologies request failed.',
+			report.errors,
+			report.ar_msg,
+		);
+	}
+	return ok(
+		{ summary: report.summary, ar_msg: report.ar_msg },
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 export async function toolOntologyParserExport(context: ToolActionContext): Promise<ToolResponse> {

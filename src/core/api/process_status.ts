@@ -28,6 +28,8 @@
  */
 
 import type { Rqo } from '../concepts/rqo.ts';
+import { ok } from '../errors/convert.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { type JobStatusFrame, mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
 import {
@@ -37,7 +39,7 @@ import {
 	SSE_HEADERS,
 	terminalStream,
 } from './job_stream.ts';
-import type { ApiResult } from './response.ts';
+import { type ApiResult, streamResult } from './response.ts';
 
 /**
  * Reduce the client-supplied pfile (PHP: a filename relative to the process
@@ -138,7 +140,7 @@ export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult
 			cancelled = true;
 		},
 	});
-	return { status: 200, body: {}, stream, streamHeaders: { ...SSE_HEADERS } };
+	return streamResult(stream, { ...SSE_HEADERS });
 }
 
 /**
@@ -150,30 +152,37 @@ export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult
  * loop boundary and returns a partial summary — never a mid-write kill.
  *
  * Fail-closed and oracle-free: an unknown, terminal, or FOREIGN job answers the
- * same "not running" envelope — a guessable job id must not reveal existence.
+ * same `resource.not_found` refusal — a guessable job id must not reveal existence.
  */
-export function stopUtilsProcess(rqo: Rqo, principal: Principal): ApiResult {
+export function stopUtilsProcess(rqo: Rqo, principal: Principal, requestId: string): ApiResult {
 	const options = (rqo.options ?? {}) as { pid?: unknown; pfile?: unknown };
 	const pfile = typeof options.pfile === 'string' ? options.pfile : '';
 	const id = pfile !== '' ? jobIdFromPfile(pfile) : null;
 	if (id === null) {
-		return {
-			status: 200,
-			body: {
-				result: false,
-				msg: 'Error: a valid pfile is mandatory',
-				errors: ['invalid_request'],
-			},
-		};
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'options.pfile must be a valid job id',
+		});
 	}
-	const notRunning = {
-		status: 200 as const,
-		body: { result: false, msg: `Error: process '${pfile}' is not running`, errors: [] },
-	};
-	const record = mediaJobs.status(id);
-	if (record === null) return notRunning;
-	if (!mayStreamJob(record, principal)) return notRunning; // same shape — no existence oracle
-	if (record.status !== 'running' && record.status !== 'queued') return notRunning;
+	// ONE refusal for unknown / terminal / FOREIGN: `resource.not_found` (404).
+	// A guessable job id must not reveal existence — same code, same status,
+	// whichever of the three it is (isStoppable collapses them deliberately).
+	if (!isStoppable(mediaJobs.status(id), principal)) {
+		throw new DedaloError('resource.not_found', {
+			message: `stop_process: process '${pfile}' is not running`,
+			coordinates: { job_id: id },
+		});
+	}
 	mediaJobs.stop(id);
-	return { status: 200, body: { result: true, msg: 'OK. Stop requested', errors: [] } };
+	return { status: 200, body: ok(true, { requestId }) };
+}
+
+/**
+ * May THIS caller stop THIS job? Unknown, foreign and already-terminal all
+ * answer false — one predicate, so the caller has one refusal and cannot tell
+ * the three apart (fail-closed, oracle-free).
+ */
+function isStoppable(record: ReturnType<typeof mediaJobs.status>, principal: Principal): boolean {
+	if (record === null) return false;
+	if (!mayStreamJob(record, principal)) return false;
+	return record.status === 'running' || record.status === 'queued';
 }

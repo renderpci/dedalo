@@ -60,13 +60,13 @@ const to_total = function(value) {
 /**
 * SERVER_TOTAL
 * The count of locators the server says a component holds, read from a component
-* datum in the canonical save/read shape: `result.data[] → {tipo, pagination:{total}}`.
+* datum in the canonical save/read shape: `data.data[] → {tipo, pagination:{total}}`.
 *
 * This is the ONLY authoritative count available to the client. `data.entries` is
 * the currently loaded PAGE, so a component whose links span pages reports fewer
 * entries than it holds — the bug that made "already linked" a guess.
 *
-* @param {Object|null|undefined} data_item - one element of result.data
+* @param {Object|null|undefined} data_item - one element of the payload's `data`
 * @returns {number|null}
 */
 export const server_total = function(data_item) {
@@ -82,9 +82,9 @@ export const server_total = function(data_item) {
 
 /**
 * FIND_COMPONENT_DATA
-* The saved component's own datum inside an API response
-* (`api_response.result.data`), matched by tipo exactly as component_portal's
-* link_record matches it.
+* The saved component's own datum inside an API response — envelope v2, so the
+* payload is `api_response.data` and the component rows are `data.data[]` —
+* matched by tipo exactly as component_portal's link_record matches it.
 *
 * @param {*} api_response
 * @param {string} component_tipo
@@ -92,9 +92,8 @@ export const server_total = function(data_item) {
 */
 export const find_component_data = function(api_response, component_tipo) {
 
-	const data = (api_response && api_response.result && Array.isArray(api_response.result.data))
-		? api_response.result.data
-		: null
+	const payload	= (api_response && typeof api_response==='object') ? api_response.data : null
+	const data		= (payload && Array.isArray(payload.data)) ? payload.data : null
 	if (data===null) {
 		return null
 	}
@@ -123,10 +122,10 @@ export const find_component_data = function(api_response, component_tipo) {
 *                                               a save that claimed success
 *   either total unknown         → 'unconfirmed'
 *
-* 'unconfirmed' exists because the honest fourth answer must be sayable. A truthy
-* `api_response.result` means "the request did not fail"; it does not mean a
-* locator was written, and reporting 'attached' on it is precisely the false
-* report this flow is built to avoid.
+* 'unconfirmed' exists because the honest fourth answer must be sayable. An
+* `ok:true` envelope means "the request did not fail"; it does not mean a locator
+* was written, and reporting 'attached' on it is precisely the false report this
+* flow is built to avoid.
 *
 * @param {Object} options
 *   options.api_response {*}          what change_value returned (false = cancelled)
@@ -146,13 +145,20 @@ export const attach_outcome = function(options) {
 			return { status : 'failed', detail : 'the save was cancelled' }
 		}
 
-	// a refusal is the server's own message, verbatim
-		if (!api_response || typeof api_response!=='object' || !api_response.result) {
-			const errors = (api_response && Array.isArray(api_response.errors)) ? api_response.errors : []
-			const msg = (api_response && typeof api_response.msg==='string' && api_response.msg.length>0)
-				? api_response.msg
-				: (errors.join(', ') || 'the server refused the save')
-			return { status : 'failed', detail : msg }
+	// a refusal is the server's own CODED error (envelope v2: `ok:false` +
+	// `error:{code, message, …}`). This module stays import-free — the browser
+	// surfaces render the label, here the registry sentence is the detail.
+		const failed	= !api_response || typeof api_response!=='object' || api_response.ok===false
+		const api_error	= (api_response && typeof api_response==='object' && api_response.error && typeof api_response.error==='object')
+			? api_response.error
+			: null
+		if (failed || api_error!==null) {
+			const detail = (api_error && typeof api_error.message==='string' && api_error.message.length>0)
+				? api_error.message
+				: ((api_error && typeof api_error.code==='string' && api_error.code.length>0)
+					? api_error.code
+					: 'the server refused the save')
+			return { status : 'failed', detail : detail }
 		}
 
 	const total_after = server_total(find_component_data(api_response, component_tipo))

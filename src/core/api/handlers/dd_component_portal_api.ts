@@ -5,6 +5,7 @@
  */
 
 import { coerceSectionId } from '../../concepts/section_id.ts';
+import { DedaloError, ok } from '../../errors/index.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 
 /**
@@ -49,20 +50,27 @@ export const componentPortalApiActions: Record<string, ActionHandler> = {
 				'rqo.dd_component_portal_api.delete_locator.section_id',
 			);
 		} catch (error) {
-			return {
-				status: 400,
-				body: {
-					result: false,
-					msg: `delete_locator: ${error instanceof Error ? error.message : String(error)}`,
-					errors: ['invalid section_id'],
+			// The coercer's own message names the offending value — LOG-ONLY
+			// (`cause` + coordinates); the wire carries the registry sentence.
+			throw new DedaloError('section_id.not_an_address', {
+				cause: error,
+				coordinates: {
+					section_tipo: source.section_tipo ?? '',
+					section_id: JSON.stringify(source.section_id ?? null),
 				},
-			};
+			});
 		}
-		const body = await deletePortalLocator(
+		// deletePortalLocator ANSWERS with a payload and REFUSES by throwing, so
+		// the envelope is built here: `data` is the removed COUNT (the shape the
+		// client reads as `result`) and the operator narrative rides as `msg`.
+		const outcome = await deletePortalLocator(
 			principal,
 			{ ...source, section_id: sectionId },
 			options,
 		);
-		return { status: 200, body: body as unknown as Record<string, unknown> };
+		return {
+			status: 200,
+			body: ok(outcome.removed, { requestId: context.requestId, extend: { msg: outcome.msg } }),
+		};
 	},
 };

@@ -153,7 +153,7 @@ export const render_button = function(button_config) {
 *     on every keyup, resetting any active search. This is intentional — it prevents
 *     stale highlights while the user is still typing the new query.
 *
-* (!) result_label.innerHTML is set to self.result (undefined at construction time)
+* (!) result_label starts empty (no search has run at construction time)
 *     at mount and is only updated to the real count after the first "Search" click.
 *
 * @param {Object} editor - A live CKEditor 5 editor instance. Must have the
@@ -256,12 +256,12 @@ export const render_find_and_replace = function(editor) {
 		})
 
 		// result_label displays the number of matches found by the last Search.
-		// (!) self.result is undefined at this point; the label is effectively
-		// empty until the first "Search" click updates it via innerHTML.
+		// It starts EMPTY — there is no search yet — and every "Search" click writes
+		// `self.results.length` into it below.
 		const result_label = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'result_label',
-			inner_html		: self.result,
+			text_content	: '',
 			parent			: body_container
 		})
 

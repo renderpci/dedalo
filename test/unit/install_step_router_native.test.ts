@@ -5,8 +5,15 @@
  * per-step session requirement on the two record-WRITING steps, and the
  * required-field guard the db probe answers with all lived untested. Nothing
  * here needs a seam — every arm below is hermetic (the default arm imports
- * nothing, install_hierarchies/register_tools return 401 BEFORE their dynamic
- * import, test_db_connection stops at the db_probe field guard before any spawn).
+ * nothing, install_hierarchies/register_tools THROW auth.not_logged BEFORE their
+ * dynamic import, test_db_connection stops at the db_probe field guard before
+ * any spawn).
+ *
+ * P1 error sweep: a refusing arm THROWS a registered code (the dispatch catch
+ * converts it), and a returning arm answers envelope v2 — the step's own value
+ * in `data`, with `msg`/`dirs`/the db-probe booleans as extension keys. The
+ * compat mirror (`result`) was DELETED on 2026-08-16
+ * (WC-2026-08-16-error-envelope-compat-removal): `data` is the only channel.
  *
  * Scratch namespace: zzi. No DB writes; the one filesystem-touching arm
  * (check_directories) runs in a CHILD process pointed at a scratch private/
@@ -20,7 +27,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import { runInstallStep } from '../../src/core/install/engine.ts';
+
+/** The DedaloError a step threw, or null when it returned a body. */
+async function refusalOf(
+	options?: Record<string, unknown>,
+): Promise<{ code: string; message: string } | null> {
+	try {
+		await runInstallStep(stepRqo(options), anonContext());
+		return null;
+	} catch (error) {
+		return isDedaloError(error) ? { code: error.code, message: error.message } : null;
+	}
+}
 
 const ROOT = join(import.meta.dir, '..', '..');
 
@@ -40,37 +60,29 @@ function stepRqo(options?: Record<string, unknown>): Rqo {
 }
 
 describe('runInstallStep — unknown steps', () => {
-	test("an unrecognised action answers 200 with errors:['unknown_step']", async () => {
-		const r = await runInstallStep(stepRqo({ action: 'nope' }), anonContext());
-		expect(r.status).toBe(200);
-		expect(r.body).toEqual({
-			result: false,
-			msg: "Unknown install step 'nope'",
-			errors: ['unknown_step'],
-		});
+	test('an unrecognised action THROWS install.unknown_step (404-free, 400 from the registry)', async () => {
+		const refusal = await refusalOf({ action: 'nope' });
+		expect(refusal?.code).toBe('install.unknown_step');
+		// the step name is LOG-side only (the code's disclosure is 'operator')
+		expect(refusal?.message).toBe("Unknown install step 'nope'");
 	});
 
 	test('a missing options bag falls to the same arm with an EMPTY step name', async () => {
 		// quirk: pinned, not fixed — `options.action ?? ''` means "no action" is
 		// reported as the unknown step '' rather than as a distinct error.
-		const r = await runInstallStep(stepRqo(), anonContext());
-		expect(r.status).toBe(200);
-		expect((r.body as { msg: string }).msg).toBe("Unknown install step ''");
-		expect((r.body as { errors: string[] }).errors).toEqual(['unknown_step']);
+		const refusal = await refusalOf();
+		expect(refusal?.code).toBe('install.unknown_step');
+		expect(refusal?.message).toBe("Unknown install step ''");
 	});
 });
 
 describe('runInstallStep — per-step session requirement', () => {
 	// The two record-WRITING steps; every other step is reachable pre-login.
 	for (const step of ['install_hierarchies', 'register_tools']) {
-		test(`${step} refuses a session-less request with 401`, async () => {
-			const r = await runInstallStep(stepRqo({ action: step }), anonContext());
-			expect(r.status).toBe(401);
-			expect(r.body).toEqual({
-				result: false,
-				msg: 'Authentication required',
-				errors: ['unauthorized'],
-			});
+		test(`${step} refuses a session-less request with auth.not_logged`, async () => {
+			const refusal = await refusalOf({ action: step });
+			// WC-051: the code the client's re-login recovery dispatches on (401).
+			expect(refusal?.code).toBe('auth.not_logged');
 		});
 	}
 });
@@ -79,12 +91,16 @@ describe('runInstallStep — test_db_connection', () => {
 	test('routes to the db probe and stops at the required-field guard', async () => {
 		const r = await runInstallStep(stepRqo({ action: 'test_db_connection' }), anonContext());
 		expect(r.status).toBe(200);
+		// A PROBE ANSWER is an ok:true envelope: the four booleans + msg ride as
+		// extension keys, and the verdict is `data` — the whole body, exactly.
 		expect(r.body).toEqual({
-			result: false,
 			can_connect: false,
 			db_exists: false,
 			can_create: false,
 			msg: 'Database name and user are required',
+			ok: true,
+			request_id: 'zzi-install-router',
+			data: false,
 		});
 	});
 });
@@ -145,11 +161,19 @@ const scratchConfirmed = childResult.skip === undefined;
 
 describe('runInstallStep — check_directories', () => {
 	test.if(scratchConfirmed)('reports one row per managed directory', () => {
-		const body = childResult.plain as { result: boolean; dirs: unknown[]; msg: string };
+		const body = childResult.plain as {
+			ok: boolean;
+			data: boolean;
+			dirs: unknown[];
+			msg: string;
+		};
 		expect(Array.isArray(body.dirs)).toBe(true);
 		expect(body.dirs.length).toBeGreaterThan(0);
-		// Nothing exists under the scratch root, so the pre-flight must say so.
-		expect(body.result).toBe(false);
+		// The ENVELOPE succeeded (the check ran); the check's own verdict is
+		// `data`. Nothing exists under the scratch root, so the pre-flight must
+		// say so.
+		expect(body.ok).toBe(true);
+		expect(body.data).toBe(false);
 		expect(body.msg).toBe('One or more directories need attention');
 	});
 

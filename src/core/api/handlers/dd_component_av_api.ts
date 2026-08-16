@@ -7,11 +7,13 @@
  * "Delete posterframe" buttons call these through component_av, NOT through
  * dd_tools_api (only create_identifying_image goes through the tool module).
  * Both require section WRITE (PHP assert_section_permission level 2); writes
- * so CSRF is enforced by the dispatch gate. HTTP stays 200; failures ride as
- * result:false, matching the client contract (api_response.result).
+ * so CSRF is enforced by the dispatch gate. ENVELOPE v2: a success is `ok(data)`
+ * (the client keeps reading its boolean off the compat mirror); a refusal is a
+ * THROWN registry code the dispatch catch converts.
  */
 
 import type { Rqo } from '../../concepts/rqo.ts';
+import { ok } from '../../errors/convert.ts';
 import {
 	type ActionHandler,
 	type ApiRequestContext,
@@ -26,8 +28,7 @@ import {
 
 /**
  * dd_component_av_api::create_posterframe / delete_posterframe. Both need section
- * WRITE (PHP level 2). Failures ride as HTTP 200 + result:false (the client reads
- * api_response.result).
+ * WRITE (PHP level 2); a refusal is a throw (resolveMediaActionContext).
  */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
@@ -43,7 +44,6 @@ async function posterframeAction(
 	op: 'create' | 'delete',
 ): Promise<ApiResult> {
 	const resolved = await resolveMediaActionContext(rqo, context, 2, 'component_av');
-	if ('error' in resolved) return resolved.error;
 
 	const options = (rqo.options ?? {}) as { current_time?: unknown };
 	const { createAvPosterframe, deletePosterframe } = await import(
@@ -56,7 +56,7 @@ async function posterframeAction(
 	const result =
 		op === 'create'
 			? await createAvPosterframe(resolved.ctx, String(options.current_time ?? '0'))
-			: (await deletePosterframe(resolved.ctx)).result;
+			: (await deletePosterframe(resolved.ctx)).ok;
 
 	// PERSIST what just changed on disk. Without this the record's stored index
 	// still claims the old thumb state, and every reader that trusts the cache —
@@ -92,24 +92,23 @@ async function posterframeAction(
 		});
 	}
 
-	return { status: 200, body: { result, msg: 'OK. Request done', errors: [] } };
+	return { status: 200, body: ok(result, { requestId: context.requestId }) };
 }
 
 /**
  * dd_component_av_api::get_media_streams — ffprobe the AV file at a quality (PHP
  * asserts section READ, level 1). Result is the {streams:[...]} object (or null
- * when no file exists at that quality); the client reads api_response.result.streams.
+ * when no file exists at that quality); the client reads `response_data(api_response).streams`.
  */
 async function mediaStreamsAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
-	if ('error' in resolved) return resolved.error;
 
 	const options = (rqo.options ?? {}) as { quality?: unknown };
 	const quality = typeof options.quality === 'string' ? options.quality : null;
 	const { getAvMediaStreams } = await import('../../media/tools/posterframe.ts');
 	const streams = await getAvMediaStreams(resolved.ctx, quality);
 
-	return { status: 200, body: { result: streams, msg: ['OK. Request done'], errors: [] } };
+	return { status: 200, body: ok(streams, { requestId: context.requestId }) };
 }
 
 /**
@@ -129,12 +128,13 @@ async function mediaStreamsAction(rqo: Rqo, context: ApiRequestContext): Promise
  * handler therefore does not impose a budget of its own: the producer's
  * INACTIVITY cap is what distinguishes slow from wedged.
  *
- * Failures ride as HTTP 200 + `result:false` + a message, which is the shape the
- * client alerts with (`api_response.msg`).
+ * A failure is a THROWN `media.action_failed`. DIVERGENCE from
+ * WC-2026-08-09-av-fragment-failure-reason on envelope v2: the core's reason is
+ * no longer a wire fact (it can carry filesystem paths) — it rides the log line
+ * + the `cause` chain, and reaches a debugger through DEDALO_DEBUG_API_ERRORS.
  */
 async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
-	if ('error' in resolved) return resolved.error;
 
 	const source = (rqo.source ?? {}) as { tag_id?: unknown };
 	const options = (rqo.options ?? {}) as {
@@ -161,17 +161,14 @@ async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Pro
 			tcOutSeconds: Number(options.tc_out_secs ?? 0),
 			watermark: options.watermark === true || options.watermark === 'true',
 		});
-		return {
-			status: 200,
-			body: { result: fragment.url, msg: 'OK. Request done successfully', errors: [] },
-		};
+		return { status: 200, body: ok(fragment.url, { requestId: context.requestId }) };
 	} catch (error) {
-		// PHP's wording, plus the REASON (WC-2026-08-09-av-fragment-failure-reason).
-		// PHP answered a fixed "Error on create the fragment file <name>", which told
-		// whoever clicked nothing at all — and the client renders this in a blocking
-		// alert(), so it is the only diagnosis anyone gets. Every message thrown by
-		// the core names exactly what was refused.
-		return avActionFail(`on create the fragment file: ${(error as Error).message}`);
+		// The core's message names exactly what was refused — kept as the LOG line
+		// and the `cause` chain, not as a wire field.
+		avActionFail(
+			`on create the fragment file (${quality}, tag ${String(source.tag_id ?? '')})`,
+			error,
+		);
 	}
 }
 

@@ -35,7 +35,7 @@ describe('optimizeTables validation ladder (nothing runs)', () => {
 
 	test('an injection attempt is refused by the name format regex, before any statement', async () => {
 		const response = await optimizeTables([`${SAFE_TABLE}; DROP TABLE ${SAFE_TABLE}`]);
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.reindex).toEqual({});
 		expect(response.vacuum).toEqual({});
 		expect(response.prune).toEqual({});
@@ -55,7 +55,7 @@ describe('optimizeTables validation ladder (nothing runs)', () => {
 		// pg_stat_activity passes the name regex and IS a relation; only the
 		// `table_type = 'BASE TABLE'` bound in tableExists refuses it.
 		const response = await optimizeTables(['pg_stat_activity']);
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.errors).toContain('Table does not exist: pg_stat_activity');
 		expect(response.reindex).toEqual({});
 		expect(response.vacuum).toEqual({});
@@ -63,7 +63,7 @@ describe('optimizeTables validation ladder (nothing runs)', () => {
 
 	test('empty string + a non-string produce one error each, plus the no-valid-tables error', async () => {
 		const response = await optimizeTables(['', 42 as unknown as string]);
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.errors.length).toBe(3);
 		expect(response.errors).toEqual([
 			'Invalid table name: ',
@@ -81,7 +81,7 @@ describe('optimizeTables validation ladder (nothing runs)', () => {
 describe('optimizeTables live run on the test playground table', () => {
 	test('a single valid table reindexes + vacuums, prunes nothing, and reports the success count', async () => {
 		const response = await optimizeTables([SAFE_TABLE]);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.errors).toEqual([]);
 		expect(response.reindex[SAFE_TABLE]).toBe('REINDEX\n');
 		expect(response.vacuum[SAFE_TABLE]).toBe('VACUUM\n');
@@ -92,7 +92,7 @@ describe('optimizeTables live run on the test playground table', () => {
 
 	test('one valid + one malformed table still runs the valid one, and downgrades the msg to a warning', async () => {
 		const response = await optimizeTables([SAFE_TABLE, 'bad name!']);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.errors).toContain('Invalid table name format: bad name!');
 		expect(response.reindex[SAFE_TABLE]).toBe('REINDEX\n');
 		expect(response.vacuum[SAFE_TABLE]).toBe('VACUUM\n');
@@ -102,7 +102,7 @@ describe('optimizeTables live run on the test playground table', () => {
 
 	test('dryRun executes nothing: no reindex/vacuum entries, validation and msg unchanged', async () => {
 		const response = await optimizeTables([SAFE_TABLE], { dryRun: true });
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.errors).toEqual([]);
 		// empty maps ARE the "nothing was done" signal — the destructive half has
 		// no other preview

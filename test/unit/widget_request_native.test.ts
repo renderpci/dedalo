@@ -103,26 +103,37 @@ async function tsCall(
 	return result.body;
 }
 
-describe('widget_request dispatch gates (differential-pinned envelopes)', () => {
-	test('non-admin is refused with unauthorized', async () => {
+// Envelope v2 (ERRORS_SPEC §3): the machine channel is `error.code`, and it is
+// the ONLY one — the compat mirror (`result`/`msg`/`errors:[code]`) was removed
+// on 2026-08-16. Legacy tokens map through LEGACY_TOKEN_MAP (unauthorized →
+// perm.denied, unauthorized_method → tool.method_not_allowed); the widget-name
+// refusal rides the transitional adapter's status default (request.invalid)
+// until the maintenance sweep codes it.
+describe('widget_request dispatch gates (envelope v2)', () => {
+	test('non-admin is refused with perm.denied', async () => {
 		const nonAdmin = await tsCall(WIDGET_RQO, false);
-		expect((nonAdmin.errors as string[])[0]).toBe('unauthorized');
+		expect(nonAdmin.ok).toBe(false);
+		expect((nonAdmin.error as { code: string }).code).toBe('perm.denied');
+		// One machine channel: the retired mirror is not on the failure body.
+		expect('result' in nonAdmin).toBe(false);
+		expect(nonAdmin.errors).toBeUndefined();
 	});
 
-	test('unknown widget id is refused with Invalid widget name', async () => {
+	test('unknown widget id is refused (caller fault)', async () => {
 		const badWidget = await tsCall({
 			...WIDGET_RQO,
 			source: { typo: 'source', model: 'not_a_widget', action: 'get_value' },
 		});
-		expect((badWidget.errors as string[])[0]).toContain('Invalid widget name');
+		expect(badWidget.ok).toBe(false);
+		expect((badWidget.error as { code: string; category: string }).category).toBe('caller');
 	});
 
-	test('unregistered method is refused with unauthorized_method', async () => {
+	test('unregistered method is refused with tool.method_not_allowed', async () => {
 		const badMethod = await tsCall({
 			...WIDGET_RQO,
 			source: { typo: 'source', model: 'counters_status', action: 'drop_everything' },
 		});
-		expect(badMethod.errors as string[]).toContain('unauthorized_method');
+		expect((badMethod.error as { code: string }).code).toBe('tool.method_not_allowed');
 	});
 
 	test('widget_request DENIES database_info.get_value (panel-only allowlist)', async () => {
@@ -130,8 +141,8 @@ describe('widget_request dispatch gates (differential-pinned envelopes)', () => 
 			...WIDGET_RQO,
 			source: { typo: 'source', model: 'database_info', action: 'get_value' },
 		});
-		expect(denied.result).toBe(false);
-		expect(denied.errors as string[]).toContain('unauthorized_method');
+		expect(denied.ok).toBe(false);
+		expect((denied.error as { code: string }).code).toBe('tool.method_not_allowed');
 	});
 });
 
@@ -157,8 +168,10 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 			)) as { max: number | string }[];
 
 			const body = await tsCall(WIDGET_RQO);
-			expect(body.msg).toBe('OK. Request done successfully');
-			const result = body.result as { datalist?: Record<string, unknown>[]; errors?: string[] };
+			// envelope v2: a plain OK carries no `msg` extension key (the
+			// boilerplate sentence is dropped by the P1 sweep).
+			expect(body.msg).toBeUndefined();
+			const result = body.data as { datalist?: Record<string, unknown>[]; errors?: string[] };
 
 			// every item carries EXACTLY the differential-pinned key set
 			expect((result.datalist?.length ?? 0) > 0).toBe(true);
@@ -190,7 +203,7 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 				"Counter row with tipo: 'test52' is a 'component_input_text' . Only sections can use counters. Fix ASAP",
 			);
 			expect((result.datalist ?? []).some((item) => item.section_tipo === 'test52')).toBe(false);
-			expect(body.errors).toEqual([]);
+			expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 		} finally {
 			removed = (await sql.unsafe(
 				`DELETE FROM matrix_counter WHERE tipo = 'test52' RETURNING tipo`,
@@ -222,7 +235,7 @@ describe('database_info compute (get_widget_value catalog read)', () => {
 			options: {},
 			source: { typo: 'source', model: 'database_info' },
 		});
-		const result = body.result as {
+		const result = body.data as {
 			tables?: string[];
 			indexes?: Record<string, Record<string, unknown>[]>;
 			info?: { server?: unknown; host?: unknown };
@@ -355,9 +368,9 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 			...WIDGET_RQO,
 			options: { section_tipo: 'test3', counter_action: 'fix' },
 			source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
-		})) as { result?: unknown; msg?: string; datalist?: Record<string, unknown>[] };
+		})) as { data?: unknown; msg?: string; datalist?: Record<string, unknown>[] };
 		// TS-side surviving contract, verbatim from the differential
-		expect(fixed.result).toBe(true);
+		expect(fixed.data).toBe(true);
 		expect(fixed.msg).toBe('OK. fix counter successfully test3');
 
 		const maxRows = (await sql.unsafe(
@@ -388,8 +401,8 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 				...WIDGET_RQO,
 				options: { section_tipo: 'zztc2', counter_action: 'reset' },
 				source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
-			})) as { result?: unknown; msg?: string };
-			expect(reset.result).toBe(true);
+			})) as { data?: unknown; msg?: string };
+			expect(reset.data).toBe(true);
 			// msg from the same PHP template the fix variant pinned (softened:
 			// the reset wording itself was never differential-compared)
 			expect(reset.msg).toBe('OK. reset counter successfully zztc2');
@@ -586,10 +599,10 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 		}
 	});
 
-	test('envelope: result true, OK msg, one updated-days batch per user', () => {
-		expect(body.result).toBe(true);
+	test('envelope: data true, OK msg, one updated-days batch per user', () => {
+		expect(body.data).toBe(true);
 		expect(body.msg).toBe('OK. Request done.');
-		expect(body.errors).toEqual([]);
+		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 		expect(body.updated_days).toEqual([
 			[
 				{ user: UID, date: isoDay(dayA) },
@@ -674,7 +687,7 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			options: {},
 			source: { typo: 'source', model: 'add_hierarchy' },
 		});
-		const result = body.result as {
+		const result = body.data as {
 			hierarchies?: { tld: string }[];
 			installed_hierarchies?: { tld: string }[];
 			hierarchy_typologies?: unknown[];
@@ -715,9 +728,9 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			options: { hierarchies: [] },
 			source: { typo: 'source', model: 'add_hierarchy', action: 'install_hierarchies' },
 		});
-		expect(body.result).toBe(true);
+		expect(body.data).toBe(true);
 		expect(String(body.msg)).toContain('Imported 0');
-		expect(body.errors).toEqual([]);
+		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
 
 	test('reset_hierarchies routes (replace verb) and is a no-op for an empty selection', async () => {
@@ -726,8 +739,8 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			options: { hierarchies: [] },
 			source: { typo: 'source', model: 'add_hierarchy', action: 'reset_hierarchies' },
 		});
-		expect(body.result).toBe(true);
+		expect(body.data).toBe(true);
 		expect(String(body.msg)).toContain('Reset 0');
-		expect(body.errors).toEqual([]);
+		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
 });

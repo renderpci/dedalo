@@ -9,16 +9,16 @@
 
 import { createWriteStream, rmSync } from 'node:fs';
 import { assertTlsVerificationOn } from '../ontology/data_io_import.ts';
+import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 
 export const CODE_DOWNLOAD_TIMEOUT_MS = 600_000;
 export const CODE_DOWNLOAD_STALL_TIMEOUT_MS = 60_000;
 export const MAX_CODE_ARCHIVE_BYTES = 256 * 1024 * 1024;
 
+/** What a COMPLETED download reports. Every refusal throws (./refuse.ts). */
 export interface CodeDownloadResponse {
-	result: boolean;
 	msg: string;
-	errors: string[];
-	bytes?: number;
+	bytes: number;
 }
 
 /**
@@ -39,20 +39,18 @@ export async function downloadReleaseArchive(options: {
 	targetPath: string;
 }): Promise<CodeDownloadResponse> {
 	assertTlsVerificationOn();
-	const response: CodeDownloadResponse = { result: false, msg: '', errors: [] };
 
 	let parsed: URL;
 	try {
 		parsed = new URL(options.url);
-	} catch {
-		response.msg = 'Error. Invalid release URL';
-		response.errors.push('invalid url');
-		return response;
+	} catch (error) {
+		refuseUpdate('request.invalid_options', 'Error. Invalid release URL', error);
 	}
 	if (parsed.origin !== options.configuredOrigin) {
-		response.msg = 'Error. Release URL is not on the configured code server';
-		response.errors.push(`origin mismatch: ${parsed.origin} != ${options.configuredOrigin}`);
-		return response;
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Release URL is not on the configured code server',
+		);
 	}
 
 	try {
@@ -61,20 +59,14 @@ export async function downloadReleaseArchive(options: {
 			signal: AbortSignal.timeout(CODE_DOWNLOAD_TIMEOUT_MS),
 		});
 		if (!remote.ok) {
-			response.msg = `Error. bad server response code: ${remote.status}`;
-			response.errors.push(`bad server response code: ${remote.status}`);
-			return response;
+			refuseUpdate('update.failed', `Error. bad server response code: ${remote.status}`);
 		}
 		const declared = Number(remote.headers.get('content-length') ?? '0');
 		if (declared > MAX_CODE_ARCHIVE_BYTES) {
-			response.msg = 'Error. Release archive exceeds the size cap';
-			response.errors.push(`content-length ${declared} > ${MAX_CODE_ARCHIVE_BYTES}`);
-			return response;
+			refuseUpdate('update.refused', 'Error. Release archive exceeds the size cap');
 		}
 		if (remote.body === null) {
-			response.msg = 'Error. empty response body';
-			response.errors.push('empty data');
-			return response;
+			refuseUpdate('update.failed', 'Error. empty response body');
 		}
 		const reader = remote.body.getReader();
 		const sink = createWriteStream(options.targetPath);
@@ -89,7 +81,9 @@ export async function downloadReleaseArchive(options: {
 				]);
 				if (chunk.done) break;
 				total += chunk.value.byteLength;
-				if (total > MAX_CODE_ARCHIVE_BYTES) throw new Error('download exceeds the size cap');
+				if (total > MAX_CODE_ARCHIVE_BYTES) {
+					refuseUpdate('update.refused', 'Error. Release archive exceeds the size cap');
+				}
 				if (!sink.write(chunk.value)) {
 					await new Promise<void>((resolveDrain) => sink.once('drain', () => resolveDrain()));
 				}
@@ -100,18 +94,15 @@ export async function downloadReleaseArchive(options: {
 		}
 		if (total === 0) {
 			rmSync(options.targetPath, { force: true });
-			response.msg = 'Error. empty data';
-			response.errors.push('empty data');
-			return response;
+			refuseUpdate('update.failed', 'Error. empty data');
 		}
-		response.result = true;
-		response.msg = 'OK. Release downloaded';
-		response.bytes = total;
-		return response;
+		return { msg: 'OK. Release downloaded', bytes: total };
 	} catch (error) {
 		rmSync(options.targetPath, { force: true });
-		response.msg = `Error. Release download failed: ${(error as Error).message}`;
-		response.errors.push((error as Error).message);
-		return response;
+		rethrowOrRefuseUpdate(
+			error,
+			'update.failed',
+			`Error. Release download failed: ${(error as Error).message}`,
+		);
 	}
 }

@@ -157,12 +157,12 @@ const tlds = [
 const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 const hierarchies = await installHierarchies(tlds);
 console.log(
-	`[test-db] hierarchies imported: ${tlds.length} TLDs${hierarchies.result === true ? '' : ` (WITH ERRORS: ${JSON.stringify(hierarchies.errors)})`}`,
+	`[test-db] hierarchies imported: ${tlds.length} TLDs${hierarchies.ok === true ? '' : ` (WITH ERRORS: ${JSON.stringify(hierarchies.errors)})`}`,
 );
 
 const { registerInstallTools } = await import('../src/core/install/register_tools.ts');
 const tools = await registerInstallTools();
-console.log(`[test-db] tools registered (result: ${tools.result})`);
+console.log(`[test-db] tools registered (ok: ${tools.ok})`);
 
 console.log(`[test-db] ready — 'bun test' now uses '${testDb}' automatically.`);
 process.exit(0);

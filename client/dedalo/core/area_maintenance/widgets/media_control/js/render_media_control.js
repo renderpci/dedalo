@@ -7,6 +7,9 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -347,14 +350,14 @@ const build_status_block = function(value, parent) {
 *   1. A `confirm()` dialog asks the operator to confirm the change.
 *   2. `self.set_media_access_mode(new_value)` is called (media_control.js prototype).
 *   3. On success the widget value is reloaded and the body re-rendered.
-*   4. On failure an alert shows the error message from the API.
+*   4. On failure the ApiError is routed through handle_api_error() (policy + renderer).
 *
 * The `body_response` <pre> element (sibling of this block in content_data) is
 * updated via `.textContent` after every apply (SEC-XSS guard — api_response.msg
 * is server-sourced).
 *
-* (!) alert() is used here for operator feedback — this is intentional in
-* area_maintenance widgets and must not be changed to console.warn.
+* (!) Failures NEVER reach alert(): they go through handle_api_error(), the ONE
+* client error model (policy decides toast / inline / relogin).
 *
 * @param {Object}      self   - the media_control widget instance
 * @param {Object}      value  - the full widget value snapshot (see module header)
@@ -438,12 +441,14 @@ const build_mode_selector = function(self, value, parent) {
 
 			const api_response = await self.set_media_access_mode(new_value)
 
-			// SEC-XSS: textContent prevents any HTML parsing of api_response.msg
+			// SEC-XSS: textContent prevents any HTML parsing of the server sentence
 			if (body_response) {
-				body_response.textContent = api_response.msg || (api_response.result ? 'Done' : 'Unknown error')
+				body_response.textContent = request_failed(api_response)
+					? error_text(api_response.error)
+					: (response_extension(api_response, 'msg') || (response_data(api_response) ? 'Done' : 'Unknown error'))
 			}
 
-			if (api_response.result===true) {
+			if (request_failed(api_response)===false && response_data(api_response)===true) {
 				// reload value and re-render the widget body
 				try {
 					self.value = await self.get_value()
@@ -458,9 +463,11 @@ const build_mode_selector = function(self, value, parent) {
 						})
 					}
 				)
-				alert(api_response.msg)
+				// no blocking alert(): the server message is already shown as text in body_response
 			}else{
-				alert('Error! \n' + (api_response.msg || 'Unknown error'))
+				console.error('media_control set_media_access_mode failed:', api_response)
+				// ONE error model: policy + renderer decide the surface
+				await handle_api_error(api_response.error, {wrapper: body_response || selector_block})
 			}
 		} finally {
 			button_apply.classList.remove('button_spinner')
@@ -540,16 +547,18 @@ const build_rebuild_block = function(self, value, parent) {
 			// SEC-XSS: textContent prevents any HTML parsing of server strings
 			if (body_response) {
 				const summary = {
-					result	: api_response.result===true,
-					msg		: api_response.msg || null,
+					result	: response_data(api_response)===true,
+					msg		: request_failed(api_response)
+						? error_text(api_response.error)
+						: (response_extension(api_response, 'msg') || null),
 					markers	: api_response.markers ?? null,
 					targets	: api_response.targets ?? null,
-					errors	: api_response.errors || []
+					errors	: response_extension(api_response, 'errors') || []
 				}
 				body_response.textContent = JSON.stringify(summary, null, 2)
 			}
 
-			if (api_response.result===true) {
+			if (request_failed(api_response)===false && response_data(api_response)===true) {
 				// reload value (marker counts changed)
 				try {
 					self.value = await self.get_value()
@@ -565,7 +574,9 @@ const build_rebuild_block = function(self, value, parent) {
 					}
 				)
 			}else{
-				alert('Error! \n' + (api_response.msg || 'Unknown error'))
+				console.error('media_control rebuild_media_index failed:', api_response)
+				// ONE error model: policy + renderer decide the surface
+				await handle_api_error(api_response.error, {wrapper: body_response || rebuild_block})
 			}
 		} finally {
 			button_rebuild.classList.remove('button_spinner')

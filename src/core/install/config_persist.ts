@@ -19,10 +19,12 @@ import {
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { parseEnvFile } from '../../config/env.ts';
+import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
 import { connFromConfig, psqlSelect1 } from './pg_exec.ts';
+import { refuseInstall } from './refuse.ts';
 import { generateSecret } from './secret.ts';
 
 /** Existing .env values (for preserve-or-generate on secrets); {} when absent. */
@@ -87,15 +89,19 @@ function assignedKeys(lines: readonly string[]): Set<string> {
  */
 export function envQuote(value: string): string {
 	if (/[\r\n\0]/.test(value)) {
-		throw new Error('install: configuration value contains an illegal control character');
+		throw new DedaloError('install.invalid_input', {
+			message: 'install: configuration value contains an illegal control character',
+			publicMessage: 'A submitted configuration value contains an illegal control character',
+		});
 	}
 	if (value === '') return '""';
 	if (/[\s"'#=]/.test(value)) return `"${value.replace(/"/g, '\\"')}"`;
 	return value;
 }
 
+/** The step's answer on the ONLY path that returns: written (every refusal throws). */
 export interface PersistConfigResult {
-	result: boolean;
+	ok: true;
 	msg: string;
 	generated: Record<string, string>;
 }
@@ -131,11 +137,10 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		dataLangDefault: o.data_lang_default === undefined ? undefined : String(o.data_lang_default),
 	});
 	if (langs.errors.length > 0) {
-		return {
-			result: false,
-			msg: `Language selection invalid: ${langs.errors.join('; ')}`,
-			generated: {},
-		};
+		refuseInstall(
+			'install.invalid_input',
+			`Language selection invalid: ${langs.errors.join('; ')}`,
+		);
 	}
 
 	// Secrets: preserve an existing value, else generate (and surface once).
@@ -266,11 +271,11 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		}
 		renameSync(tmp, target);
 	} catch (error) {
-		return {
-			result: false,
-			msg: `Failed to write ../private/.env: ${(error as Error).message}`,
-			generated: {},
-		};
+		refuseInstall(
+			'install.step_failed',
+			`Failed to write ../private/.env: ${(error as Error).message}`,
+			error,
+		);
 	}
 
 	// Drop the key census next to the .env the operator just wrote. Before this, every
@@ -306,11 +311,16 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		info_key: str('info_key') || undefined,
 	});
 
-	return { result: true, msg: 'Configuration saved. The server will restart.', generated };
+	return { ok: true, msg: 'Configuration saved. The server will restart.', generated };
 }
 
+/**
+ * A POLL ANSWER (see db_probe_plan.ts DbProbeResult): "the restart has not
+ * happened yet" is the answer to the question the wizard asked, not a refusal —
+ * the Verify button stays for a re-check.
+ */
 export interface VerifyActiveConfigResult {
-	result: boolean;
+	ok: boolean;
 	active: boolean;
 	msg: string;
 }
@@ -325,7 +335,7 @@ export async function verifyActiveConfig(
 ): Promise<VerifyActiveConfigResult> {
 	if (config.installMode) {
 		return {
-			result: false,
+			ok: false,
 			active: false,
 			msg: 'Server restart pending — click Verify again in a moment',
 		};
@@ -333,14 +343,14 @@ export async function verifyActiveConfig(
 	const entity = String(o.entity ?? '');
 	const dbName = String(o.db_database ?? '');
 	if (entity !== '' && config.entity !== entity) {
-		return { result: false, active: false, msg: 'Active entity does not match the saved config' };
+		return { ok: false, active: false, msg: 'Active entity does not match the saved config' };
 	}
 	if (dbName !== '' && config.db.database !== dbName) {
-		return { result: false, active: false, msg: 'Active database does not match the saved config' };
+		return { ok: false, active: false, msg: 'Active database does not match the saved config' };
 	}
 	const live = await psqlSelect1(connFromConfig());
 	if (live.exitCode !== 0) {
-		return { result: false, active: false, msg: `Configured but DB unreachable: ${live.stderr}` };
+		return { ok: false, active: false, msg: `Configured but DB unreachable: ${live.stderr}` };
 	}
-	return { result: true, active: true, msg: 'Active configuration verified' };
+	return { ok: true, active: true, msg: 'Active configuration verified' };
 }

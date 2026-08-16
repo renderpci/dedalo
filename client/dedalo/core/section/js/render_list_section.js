@@ -22,6 +22,7 @@
 	import {view_tm_list_section} from './view_tm_list_section.js'
 	import {view_search_user_presets} from './view_search_user_presets.js'
 	import {view_export_user_presets} from './view_export_user_presets.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -924,8 +925,8 @@ const _update_link_button = async function(initiator, link_icon, link_button, se
 				const api_response = await data_manager.request({
 					body : rqo
 				})
-				// Expecting result[0] to contain the array of linked items
-				caller_instance.data.entries_full = api_response.result?.[0] || []
+				// Expecting the payload's first row to contain the array of linked items
+				caller_instance.data.entries_full = response_data(api_response)?.[0] || []
 			})()
 
 			try {

@@ -55,7 +55,9 @@ beforeAll(async () => {
 		GET_ONTOLOGIES_RQO.source,
 		GET_ONTOLOGIES_RQO.options,
 	);
-	captured.ts = (tsResponse.result as OntologyDescriptor[]) ?? [];
+	// Envelope v2: `data` IS the flat descriptor array (the census notes ride
+	// beside it as the `errors` extension key).
+	captured.ts = (Array.isArray(tsResponse.data) ? tsResponse.data : []) as OntologyDescriptor[];
 }, 60000);
 
 describe.if(hasPhpCredentials())('get_ontologies differential', () => {
@@ -86,8 +88,11 @@ describe.if(hasPhpCredentials())('developer security gates', () => {
 	test('non-developer principal is refused', async () => {
 		if (!hasPhpCredentials()) return;
 		const nonDev = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
-		const response = await dispatchToolRequest(nonDev, 999999, GET_ONTOLOGIES_RQO.source, {});
-		expect(response.result).toBe(false);
+		// Envelope v2: the tool dispatch gates REFUSE BY THROWING (tools_dispatch.test.ts).
+		const thrown = await dispatchToolRequest(nonDev, 999999, GET_ONTOLOGIES_RQO.source, {}).catch(
+			(error: unknown) => error,
+		);
+		expect((thrown as { code?: string }).code).toBe('tool.not_authorized');
 	});
 
 	test('export_ontologies is REGISTERED and developer-gated (refuses a non-developer)', async () => {
@@ -99,20 +104,24 @@ describe.if(hasPhpCredentials())('developer security gates', () => {
 		// and developer-only — asserted with a refused non-developer, so the
 		// gate never triggers a real export.
 		const nonDev = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
-		const response = await dispatchToolRequest(
+		const thrown = await dispatchToolRequest(
 			nonDev,
 			999999,
 			{ model: 'tool_ontology_parser', action: 'export_ontologies' },
 			{ selected_ontologies: ['dd'] },
-		);
-		expect(response.result).toBe(false);
-		expect(response.errors ?? []).not.toContain('unauthorized_method');
+		).catch((error: unknown) => error);
+		// refused (thrown), and NOT as an unregistered method
+		expect(typeof (thrown as { code?: string }).code).toBe('string');
+		expect((thrown as { code?: string }).code).not.toBe('tool.method_not_allowed');
 	});
 
 	test('empty options passes the developer gate', async () => {
 		if (!hasPhpCredentials()) return;
 		const principal = await resolvePrincipal(-1);
 		const response = await dispatchToolRequest(principal, -1, GET_ONTOLOGIES_RQO.source, {});
-		expect(Array.isArray(response.result)).toBe(true);
+		// Envelope v2: `data` IS the flat list (the census notes ride beside it as
+		// the `errors` extension key, never nested in `data`).
+		expect(Array.isArray(response.data)).toBe(true);
+		expect(Array.isArray((response as { errors?: unknown }).errors)).toBe(true);
 	});
 });

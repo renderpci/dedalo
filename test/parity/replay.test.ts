@@ -18,7 +18,7 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
-import { apiResponseSchema, rqoSchema } from '../../src/core/concepts/rqo.ts';
+import { legacyApiResponseSchema, rqoSchema } from '../../src/core/concepts/rqo.ts';
 import { normalizeApiResponse, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
@@ -61,7 +61,7 @@ describe.if(hasPhpCredentials())('parity replay against live PHP', () => {
 
 			// 1. Schema gates: real payloads must parse.
 			expect(() => rqoSchema.parse(definition.rqo)).not.toThrow();
-			expect(() => apiResponseSchema.parse(captured.response)).not.toThrow();
+			expect(() => legacyApiResponseSchema.parse(captured.response)).not.toThrow();
 
 			// 2. Live replay + diff (skip loudly if auth is needed but unavailable).
 			if (definition.requires_login && !hasPhpCredentials()) {

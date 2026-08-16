@@ -682,10 +682,10 @@ describe('the receiver carries the human file name beside the staged one', () =>
 			);
 			expect(joinResponse.status).toBe(200);
 			const joinBody = (await joinResponse.json()) as {
-				result: boolean;
+				data: boolean;
 				file_data: Record<string, unknown>;
 			};
-			expect(joinBody.result).toBe(true);
+			expect(joinBody.data).toBe(true);
 			expect(joinBody.file_data.name).toBe(HUMAN);
 			expect(String(joinBody.file_data.tmp_name)).toMatch(SAFE_SEGMENT);
 		});

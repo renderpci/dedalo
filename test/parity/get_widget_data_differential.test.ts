@@ -3,11 +3,14 @@
  * channel (the client widget_common.js autoload path + the async widgets'
  * only delivery) vs the live PHP oracle.
  *
- * Compares the {result, msg, errors} envelope triple byte-for-byte on:
+ * Compares the widget payload byte-for-byte (TS envelope v2 `data` vs the
+ * frozen PHP `result`) and the REFUSALS by registry code (the PHP-era
+ * {msg, errors} prose is not a v2 wire fact — ERRORS_SPEC §3):
  *  - state widget success (scratch rsc2 → REAL dd501/dd174 vocab records);
  *  - get_archive_weights success (scratch numisdata3 archive, 3 real coins);
- *  - unknown widget_name → PHP ' Empty widget_obj for widget <name>' bytes;
- *  - a widgets-less tipo → PHP ' Empty defined widgets …' bytes;
+ *  - unknown widget_name → PHP ' Empty widget_obj for widget <name>'
+ *    ⇒ `widget.not_defined`;
+ *  - a widgets-less tipo → PHP ' Empty defined widgets …' ⇒ `widget.empty`;
  *  - user_activity (async — this channel is its ONLY delivery): the
  *    three-tier totals over a scratch dd1521 stats day + a synthetic today
  *    matrix_activity row.
@@ -20,9 +23,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { CATEGORY_STATUS, type ErrorCode, specOf } from '../../src/core/errors/registry.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { adoptErrorEnvelopeV2 } from './normalize.ts';
 import { hasLivePhpOracle, PhpApiClient } from './php_client.ts';
 
 const created: { table: string; sectionTipo: string; sectionId: number }[] = [];
@@ -85,12 +90,6 @@ function widgetRqo(
 	};
 }
 
-/** The handler-owned envelope triple (volatile dd_manager extras stripped). */
-function triple(body: unknown): { result: unknown; msg: unknown; errors: unknown } {
-	const envelope = body as { result?: unknown; msg?: unknown; errors?: unknown };
-	return { result: envelope.result, msg: envelope.msg, errors: envelope.errors };
-}
-
 /**
  * WC-2026-08-03-state-widget-total-source-count — the TS state widget adds
  * `items` (the source-locator count, the total's own divisor) to every `total`
@@ -102,10 +101,10 @@ function triple(body: unknown): { result: unknown; msg: unknown; errors: unknown
  * regression the day the field stops being emitted.
  */
 function stripStateTotalItems(body: unknown): boolean {
-	const result = (body as { result?: unknown }).result;
-	if (!Array.isArray(result)) return false;
+	const data = (body as { data?: unknown }).data;
+	if (!Array.isArray(data)) return false;
 	let found = false;
-	for (const entry of result) {
+	for (const entry of data) {
 		const item = entry as { widget?: unknown; type?: unknown; items?: unknown };
 		if (item?.widget !== 'state' || item?.type !== 'total') continue;
 		if (item.items === undefined) continue;
@@ -119,24 +118,55 @@ function stripStateTotalItems(body: unknown): boolean {
 	return found;
 }
 
+/**
+ * SUCCESS parity: the TS envelope v2 payload (`data`) against the frozen PHP
+ * `result`, byte-for-byte. The PHP-era `msg`/`errors` prose is not compared —
+ * the converter never emits it (ERRORS_SPEC §3.0), and the refusals assert the
+ * registry code instead (expectRefusalParity).
+ */
 async function expectEnvelopeParity(
 	rqo: Record<string, unknown>,
 	options: { nonEmpty?: boolean; expectStateItems?: boolean } = {},
 ): Promise<void> {
 	const phpBody = (await php.call(structuredClone(rqo))).body;
-	const tsBody = (await dispatchRqo(structuredClone(rqo) as never, tsContext as never)).body;
+	const tsOutcome = await dispatchRqo(structuredClone(rqo) as never, tsContext as never);
+	const tsBody = tsOutcome.body;
 	// WC-2026-08-03-state-widget-total-source-count
 	const strippedItems = stripStateTotalItems(tsBody);
 	if (options.expectStateItems === true) {
 		expect(strippedItems).toBe(true);
 	}
 	if (options.nonEmpty === true) {
-		// non-vacuity floor: a both-engines result:false would "match" too —
+		// non-vacuity floor: a both-engines empty answer would "match" too —
 		// the success cases must return actual widget items.
 		expect(Array.isArray((phpBody as { result?: unknown }).result)).toBe(true);
 		expect(((phpBody as { result?: unknown[] }).result ?? []).length).toBeGreaterThan(0);
 	}
-	expect(triple(tsBody)).toEqual(triple(phpBody) as never);
+	expect(tsOutcome.status).toBe(200);
+	expect(tsBody.ok).toBe(true);
+	expect((tsBody as { data?: unknown }).data).toEqual(
+		(phpBody as { result?: unknown }).result as never,
+	);
+}
+
+/**
+ * REFUSAL parity restated in envelope v2: PHP answered `result:false` + free
+ * prose at HTTP 200; TS throws a REGISTRY CODE at the registry status. The
+ * frozen PHP body is projected through the parity reconciler
+ * (normalize.ts FROZEN_ERROR_BODIES → code), so both engines are compared on
+ * the code — the retired prose is no longer a wire fact on either side.
+ */
+async function expectRefusalParity(rqo: Record<string, unknown>, code: ErrorCode): Promise<void> {
+	const phpBody = (await php.call(structuredClone(rqo))).body;
+	const adopted = adoptErrorEnvelopeV2(phpBody);
+	expect(adopted.matched).toBe(true);
+	expect(adopted.kind).toBe('error');
+	expect((adopted.projection as { error: { code: string } }).error.code).toBe(code);
+
+	const tsOutcome = await dispatchRqo(structuredClone(rqo) as never, tsContext as never);
+	expect(tsOutcome.status).toBe(CATEGORY_STATUS[specOf(code).category]);
+	expect(tsOutcome.body.ok).toBe(false);
+	expect((tsOutcome.body as { error?: { code?: string } }).error?.code).toBe(code);
 }
 
 beforeAll(async () => {
@@ -317,14 +347,18 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 		);
 	});
 
-	test('unknown widget_name: PHP error bytes (Empty widget_obj)', async () => {
-		await expectEnvelopeParity(
+	test('unknown widget_name: the PHP Empty-widget_obj refusal ⇒ widget.not_defined', async () => {
+		await expectRefusalParity(
 			widgetRqo('numisdata595', 'numisdata3', fixtures.archive, 'no_such_widget'),
+			'widget.not_defined',
 		);
 	});
 
-	test('widgets-less tipo: PHP error bytes (Empty defined widgets)', async () => {
-		await expectEnvelopeParity(widgetRqo('rsc85', 'rsc2', fixtures.stateRecord, 'state'));
+	test('widgets-less tipo: the PHP Empty-defined-widgets refusal ⇒ widget.empty', async () => {
+		await expectRefusalParity(
+			widgetRqo('rsc85', 'rsc2', fixtures.stateRecord, 'state'),
+			'widget.empty',
+		);
 	});
 
 	test('user_activity (async): three-tier totals — BOTH engines pinned (PHP tier-1 live defect)', async () => {
@@ -343,12 +377,12 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 			errors?: unknown;
 		};
 		const tsBody = (await dispatchRqo(structuredClone(rqo) as never, tsContext as never)).body as {
-			result?: { value?: Record<string, unknown> }[];
-			msg?: unknown;
-			errors?: unknown;
+			ok?: boolean;
+			data?: { value?: Record<string, unknown> }[];
 		};
-		expect(tsBody.msg).toEqual(phpBody.msg as never);
-		expect(tsBody.errors).toEqual(phpBody.errors as never);
+		// Envelope v2: the async delivery SUCCEEDS (the PHP-era {msg, errors}
+		// prose is not a wire fact; the payload pins below carry the contract).
+		expect(tsBody.ok).toBe(true);
 
 		const { termByTipo } = await import('../../src/core/ontology/labels.ts');
 		// Session data lang on both engines (the root PHP session + tsContext).
@@ -372,7 +406,7 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 
 		// TS: tier 1 WORKS → saved stats day + today merged (who stays dead —
 		// PHP-mirrored) — the widget actually shows the saved history.
-		const tsValue = tsBody.result?.[0]?.value as Record<string, unknown>;
+		const tsValue = tsBody.data?.[0]?.value as Record<string, unknown>;
 		expect(tsValue.what).toEqual([
 			{ key: 'dd700', label: saveLabel, value: 3 },
 			{ key: 'dd694', label: editLabel, value: 1 },

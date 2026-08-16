@@ -63,6 +63,7 @@ import {
 } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../config/config.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { sniffAndValidate } from '../engine/mime.ts';
 import { verifyFileContent } from '../engine/verify_content.ts';
 import { sanitizeSegment, stagingDir } from './add_file.ts';
@@ -139,6 +140,29 @@ export const UPLOAD_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 /** Ceiling on the chunk count/index a client may declare (a sanity bound, not a policy). */
 const MAX_CHUNKS = 100_000;
 
+/**
+ * The two refusals the join raises from more than one place, each as ONE typed
+ * throw so the code and the sentence cannot drift between their call sites.
+ *
+ * NOTE ON THE WIRE: the upload endpoint (upload_endpoint.ts `rejectedUpload`)
+ * deliberately re-wraps everything this module throws as `media.upload_rejected`
+ * — that shape is pinned by test/unit/media_upload_endpoint.test.ts and is not
+ * changed here. The codes below are what the MCP media tool and the logs see.
+ */
+function noStagedParts(): DedaloError {
+	return new DedaloError('media.file_not_found', {
+		message: 'join: no staged parts for this upload',
+		publicMessage: 'join: no staged parts for this upload',
+	});
+}
+
+function alreadyAssembling(): DedaloError {
+	return new DedaloError('media.upload_conflict', {
+		message: 'join: this upload is already being assembled',
+		publicMessage: 'join: this upload is already being assembled',
+	});
+}
+
 /** Parse the multipart form into the upload fields. Throws on a malformed body. */
 export async function parseUploadRequest(request: Request): Promise<ParsedUpload> {
 	const form = await request.formData();
@@ -147,7 +171,12 @@ export async function parseUploadRequest(request: Request): Promise<ParsedUpload
 	// Dropzone/blueimp configuration is not silently rejected (PHP read $_FILES
 	// positionally and so accepted either).
 	const file = form.get('file_to_upload') ?? form.get('file');
-	if (!(file instanceof Blob)) throw new Error('upload: missing file_to_upload');
+	if (!(file instanceof Blob)) {
+		throw new DedaloError('media.upload_rejected', {
+			message: 'upload: missing file_to_upload',
+			publicMessage: 'upload: missing file_to_upload',
+		});
+	}
 
 	// File name resolution, most explicit source first:
 	//   1. X-File-Name header  (service_upload, service_dropzone — URI-encoded)
@@ -179,7 +208,11 @@ export async function parseUploadRequest(request: Request): Promise<ParsedUpload
 	// the client. The transport-layer maxRequestBodySize is the outer bound; this
 	// enforces the ADVERTISED limit explicitly with a clean error.
 	if (file.size > config.media.upload.maxSizeBytes) {
-		throw new Error('upload: file exceeds the maximum allowed size');
+		throw new DedaloError('media.too_large', {
+			message: 'upload: file exceeds the maximum allowed size',
+			publicMessage: 'upload: file exceeds the maximum allowed size',
+			coordinates: { size: file.size, max: config.media.upload.maxSizeBytes },
+		});
 	}
 	const blob = new Uint8Array(await file.arrayBuffer());
 	const chunked = String(form.get('chunked') ?? 'false') === 'true';
@@ -206,7 +239,11 @@ function readCount(raw: FormDataEntryValue | null, fallback: number, label: stri
 	if (raw === null || raw === '') return fallback;
 	const value = Number(raw);
 	if (!Number.isInteger(value) || value < 0 || value > MAX_CHUNKS) {
-		throw new Error(`upload: invalid ${label}`);
+		// `label` is one of this module's own field names, never client text.
+		throw new DedaloError('media.upload_rejected', {
+			message: `upload: invalid ${label}`,
+			publicMessage: `upload: invalid ${label}`,
+		});
 	}
 	return value;
 }
@@ -265,7 +302,10 @@ export function displayFileName(raw: string): string {
 /** Validate a client-supplied upload id. Refuses — never rewrites — a bad one. */
 function assertUploadId(raw: string): string {
 	if (!UPLOAD_ID_PATTERN.test(raw)) {
-		throw new Error('upload: invalid upload_id');
+		throw new DedaloError('media.upload_rejected', {
+			message: 'upload: invalid upload_id',
+			publicMessage: 'upload: invalid upload_id',
+		});
 	}
 	return raw;
 }
@@ -513,7 +553,10 @@ export function receiveUpload(
 	// drives the join once it has counted all chunks. Echo index/total so its
 	// counter works, and the upload id so the join can find these parts.
 	if (parsed.chunkIndex >= parsed.totalChunks && parsed.totalChunks > 0) {
-		throw new Error('upload: chunk_index is outside the declared total_chunks');
+		throw new DedaloError('media.upload_rejected', {
+			message: 'upload: chunk_index is outside the declared total_chunks',
+			publicMessage: 'upload: chunk_index is outside the declared total_chunks',
+		});
 	}
 	mkdirSync(upDir, { recursive: true, mode: 0o700 });
 	writeUploadMeta(upDir, { proposal, extension, name });
@@ -562,11 +605,11 @@ function locateUploadDir(
 ): string {
 	if (typeof uploadId === 'string' && uploadId !== '') {
 		const dir = uploadArtifactDir(userId, keyDir, assertUploadId(uploadId), mediaRoot);
-		if (!existsSync(dir)) throw new Error('join: no staged parts for this upload');
+		if (!existsSync(dir)) throw noStagedParts();
 		return dir;
 	}
 	const stagingRoot = stagingDir(userId, keyDir, mediaRoot);
-	if (!existsSync(stagingRoot)) throw new Error('join: no staged parts for this upload');
+	if (!existsSync(stagingRoot)) throw noStagedParts();
 	const matches: string[] = [];
 	for (const entry of readdirSync(stagingRoot)) {
 		if (!entry.startsWith(UPLOAD_DIR_PREFIX)) continue;
@@ -582,11 +625,13 @@ function locateUploadDir(
 		}
 		if (complete) matches.push(candidate);
 	}
-	if (matches.length === 0) throw new Error('join: no staged parts for this upload');
+	if (matches.length === 0) throw noStagedParts();
 	if (matches.length > 1) {
-		throw new Error(
-			'join: several staged uploads match this file name — the client must send upload_id',
-		);
+		throw new DedaloError('media.upload_conflict', {
+			message: 'join: several staged uploads match this file name — the client must send upload_id',
+			publicMessage:
+				'join: several staged uploads match this file name — the client must send upload_id',
+		});
 	}
 	return matches[0] as string;
 }
@@ -740,7 +785,10 @@ export async function joinChunkedUpload(
 	const { keyDir, tmpName, totalChunks, userId, uploadId, mediaRoot } = input;
 	const dir = stagingDir(userId, keyDir, mediaRoot);
 	if (!Number.isInteger(totalChunks) || totalChunks < 1 || totalChunks > MAX_CHUNKS) {
-		throw new Error('join: invalid total_chunks');
+		throw new DedaloError('media.upload_rejected', {
+			message: 'join: invalid total_chunks',
+			publicMessage: 'join: invalid total_chunks',
+		});
 	}
 	const hint = sanitizeSegment(tmpName);
 	const upDir = locateUploadDir(userId, keyDir, hint, totalChunks, uploadId, mediaRoot);
@@ -758,15 +806,18 @@ export async function joinChunkedUpload(
 	// A transfer already quarantined must not read as "missing chunks": say what
 	// actually happened, and that the bytes are still there.
 	if (existsSync(resolve(upDir, REJECTION_MARKER))) {
-		throw new Error(
-			'join: this upload was already rejected by content verification; its bytes are quarantined and released by cancelling it (delete_uploaded_file with upload_id) or by the 24 h sweep',
-		);
+		const reason =
+			'join: this upload was already rejected by content verification; its bytes are quarantined and released by cancelling it (delete_uploaded_file with upload_id) or by the 24 h sweep';
+		throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 	}
 
 	// Confirm every part is present before joining (fail-closed).
 	for (let i = 0; i < totalChunks; i++) {
 		if (!existsSync(resolve(upDir, `${i}.part`))) {
-			throw new Error(`join: missing chunk ${i} of ${totalChunks}`);
+			throw new DedaloError('media.upload_rejected', {
+				message: `join: missing chunk ${i} of ${totalChunks}`,
+				publicMessage: `join: missing chunk ${i} of ${totalChunks}`,
+			});
 		}
 	}
 	const assembled = resolve(upDir, 'assembled');
@@ -796,7 +847,7 @@ export async function joinChunkedUpload(
 			idleFor = 0; // it vanished under us: let the retry below decide
 		}
 		if (idleFor < ASSEMBLY_STALE_MS) {
-			throw new Error('join: this upload is already being assembled');
+			throw alreadyAssembling();
 		}
 		rmSync(assembled, { force: true });
 		try {
@@ -804,7 +855,7 @@ export async function joinChunkedUpload(
 		} catch {
 			// Another join won the race to recover it — that one is live, so this is
 			// the ordinary concurrent case again.
-			throw new Error('join: this upload is already being assembled');
+			throw alreadyAssembling();
 		}
 	}
 	try {
@@ -855,11 +906,14 @@ export async function joinChunkedUpload(
 		console.warn(
 			`[upload] transfer quarantined (not deleted): ${parked} — ${reason}. Release it with delete_uploaded_file + upload_id, or let the 24 h sweep collect it.`,
 		);
-		throw new Error(
-			`${reason} — the uploaded bytes are NOT deleted: this transfer is quarantined${
+		// The verifier's own sentence + the quarantine remedy. `uploadId` is client
+		// input, so it rides the LOG message only; the public half names no id.
+		throw new DedaloError('media.upload_rejected', {
+			message: `${reason} — the uploaded bytes are NOT deleted: this transfer is quarantined${
 				uploadId ? ` as upload_id '${uploadId}'` : ''
 			} and can be released by cancelling it, or is collected by the 24 h sweep`,
-		);
+			publicMessage: `${reason} — the uploaded bytes are NOT deleted: this transfer is quarantined and can be released by cancelling it (delete_uploaded_file with upload_id), or is collected by the 24 h sweep`,
+		});
 	}
 	const staged = claimStagedName(dir, proposal, assembled);
 	// DOOR 2 (the chunked join). Same reason as the single-shot door above, and
@@ -894,7 +948,10 @@ function confine(dir: string, name: string): string {
 	const safe = name.includes('/') ? sanitizeSegment(name) : name;
 	const full = resolve(dir, safe);
 	if (!full.startsWith(dir + sep)) {
-		throw new Error('upload path escapes staging dir');
+		throw new DedaloError('media.invalid_path', {
+			message: 'upload path escapes staging dir',
+			coordinates: { path: full },
+		});
 	}
 	return full;
 }

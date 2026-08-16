@@ -129,7 +129,8 @@ export interface EnsureOptions {
 }
 
 export interface EnsureResult {
-	result: boolean;
+	/** Did the hierarchy end up usable? (An INTERNAL outcome, never a wire body.) */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	/** The state AFTER the writes — what the client re-renders its checklist from. */
@@ -569,6 +570,39 @@ async function ensureRootTerm(
 }
 
 /**
+ * Step 4 of ensureHierarchy — the target sections. generateVirtualSection
+ * writes them; when it was skipped (ontology already present) they may still be
+ * missing on an older record. DEFAULT them when unset — never OVERWRITE them
+ * (the same law as the source section, step 1). hierarchy53/hierarchy58 are the
+ * operator's pairing of terms section and model section, and a pairing that
+ * names foreign sections is legitimate (live: hierarchy1/250 'WW' →
+ * `mht72`/`ww2`) — rewriting it to the tld constants would quietly repoint the
+ * hierarchy, and the model-section resolver reads this pairing. A set value
+ * that does not name a section is a data defect the `targets` check surfaces —
+ * repairing it here would destroy the evidence the operator needs.
+ *
+ * Re-reads the registry row itself (the steps before it write to the row) and
+ * answers the `applied` lines it produced.
+ */
+async function ensureTargetSectionDefaults(sectionId: number, tld: string): Promise<string[]> {
+	const applied: string[] = [];
+	const row = await readRegistry(sectionId);
+	if (literal(row, HIERARCHY_TARGET_SECTION) === '') {
+		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION, [
+			{ id: 1, lang: 'lg-nolan', value: `${tld}1` },
+		]);
+		applied.push(`target section set to ${tld}1`);
+	}
+	if (literal(row, HIERARCHY_TARGET_SECTION_MODEL) === '') {
+		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION_MODEL, [
+			{ id: 1, lang: 'lg-nolan', value: `${tld}2` },
+		]);
+		applied.push(`target model section set to ${tld}2`);
+	}
+	return applied;
+}
+
+/**
  * Converge ONE hierarchy to the invariant. THE only writer. Idempotent: the second run
  * reports `applied: []`. Safe on a live hierarchy — it never deletes anything.
  */
@@ -580,7 +614,7 @@ export async function ensureHierarchy(
 	const applied: string[] = [];
 	const errors: string[] = [];
 	const fail = async (msg: string): Promise<EnsureResult> => ({
-		result: false,
+		ok: false,
 		msg,
 		errors: [...errors, msg],
 		state: await inspectHierarchy(sectionId),
@@ -653,7 +687,7 @@ export async function ensureHierarchy(
 		// "already generated" is the precondition firing on a PARTIAL ontology (e.g. the
 		// node records exist but a dd_ontology node was purged). Surface it — a rebuild
 		// is the honest fix, and silently proceeding would leave a half-built hierarchy.
-		if (!provision.result) {
+		if (!provision.ok) {
 			return fail(
 				provision.msg.includes('already generated')
 					? `the ontology of '${tld}' is INCOMPLETE (${ontology.detail}) — use Rebuild`
@@ -663,28 +697,9 @@ export async function ensureHierarchy(
 		applied.push(`provisioned the ontology (${tld}0, ${tld}1, ${tld}2)`);
 	}
 
-	// 4. the target sections. generateVirtualSection writes them; when it was skipped
-	// (ontology already present) they may still be missing on an older record.
-	// DEFAULT them when unset — never OVERWRITE them (the same law as the source section,
-	// step 1). hierarchy53/hierarchy58 are the operator's pairing of terms section and
-	// model section, and a pairing that names foreign sections is legitimate (live:
-	// hierarchy1/250 'WW' → `mht72`/`ww2`) — rewriting it to the tld constants would
-	// quietly repoint the hierarchy, and the model-section resolver reads this pairing.
-	// A set value that does not name a section is a data defect the `targets` check
-	// surfaces — repairing it here would destroy the evidence the operator needs.
-	row = await readRegistry(sectionId);
-	if (literal(row, HIERARCHY_TARGET_SECTION) === '') {
-		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION, [
-			{ id: 1, lang: 'lg-nolan', value: `${tld}1` },
-		]);
-		applied.push(`target section set to ${tld}1`);
-	}
-	if (literal(row, HIERARCHY_TARGET_SECTION_MODEL) === '') {
-		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION_MODEL, [
-			{ id: 1, lang: 'lg-nolan', value: `${tld}2` },
-		]);
-		applied.push(`target model section set to ${tld}2`);
-	}
+	// 4. the target sections — defaulted when unset, never overwritten (see
+	// ensureTargetSectionDefaults for the law).
+	applied.push(...(await ensureTargetSectionDefaults(sectionId, tld)));
 
 	// 5. the roots — resolve-or-create, never trust the stored locator.
 	row = await readRegistry(sectionId);
@@ -714,7 +729,7 @@ export async function ensureHierarchy(
 
 	const state = await inspectHierarchy(sectionId);
 	return {
-		result: state.usable && errors.length === 0,
+		ok: state.usable && errors.length === 0,
 		msg: state.usable
 			? applied.length === 0
 				? 'Already consistent — nothing to do'
@@ -741,7 +756,7 @@ export async function rebuildHierarchy(
 	const tld = safeTld(literal(row, HIERARCHY_TLD).trim().toLowerCase());
 	if (row === null || tld === null) {
 		return {
-			result: false,
+			ok: false,
 			msg: 'cannot rebuild: the hierarchy record has no valid TLD',
 			errors: ['invalid tld'],
 			state: await inspectHierarchy(sectionId),
@@ -749,9 +764,9 @@ export async function rebuildHierarchy(
 		};
 	}
 	const teardown = await deleteOntologyByTld(tld, deleteRecord);
-	if (!teardown.result) {
+	if (!teardown.ok) {
 		return {
-			result: false,
+			ok: false,
 			msg: `teardown of '${tld}' failed — nothing was rebuilt`,
 			errors: teardown.errors,
 			state: await inspectHierarchy(sectionId),

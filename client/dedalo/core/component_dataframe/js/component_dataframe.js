@@ -40,6 +40,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {DATAFRAME_TYPE} from '../../component_common/js/dataframe.js'
 	import {same_section_id} from '../../common/js/utils/index.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -125,9 +126,8 @@ component_dataframe.prototype.create_new_section = async function(options) {
 	})
 
 	// if the server response is OK, it will send the new section_id
-	if (api_response.result && api_response.result>0) {
-
-		const section_id = api_response.result
+	const section_id = response_data(api_response)
+	if (section_id && section_id>0) {
 
 		// Build the pairing locator. `DATAFRAME_TYPE` ('dd490') is the positive marker
 		// that distinguishes this entry from ordinary portal relation locators in the

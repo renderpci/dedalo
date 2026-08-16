@@ -7,6 +7,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 import {is_empty} from '../../../core/component_common/js/component_common.js'
 import {ui} from '../../../core/common/js/ui.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -395,7 +396,7 @@ describe(`COMPONENT_RELATION_RELATED DATA OPERATIONS`, async function() {
 			})
 
 			assert.notEqual(api_response, null)
-			assert.ok(api_response.result)
+			assert.ok(response_data(api_response))
 			await instance.destroy(true, true, true)
 		})
 	})//end CHANGE DATA

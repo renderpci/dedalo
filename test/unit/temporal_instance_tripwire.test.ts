@@ -172,8 +172,8 @@ describe('WC-059 — the temporal door never persists', () => {
 
 		// The door answered, and answered with the applied value.
 		expect(response.status).toBe(200);
-		const body = response.body as { result: { data: Record<string, unknown>[] } };
-		const item = body.result.data.find((entry) => entry.tipo === LITERAL);
+		const body = response.body as { data: { data: Record<string, unknown>[] } };
+		const item = body.data.data.find((entry) => entry.tipo === LITERAL);
 		expect(item).toBeDefined();
 		// The client resolves its item by the stringified record id — the sentinel
 		// must come back verbatim or the widget silently keeps its old value.
@@ -236,9 +236,9 @@ describe('WC-059 — the temporal door never persists', () => {
 		);
 		expect(response.status).toBe(200);
 		const body = response.body as {
-			result: { context: unknown[]; data: Record<string, unknown>[] };
+			data: { context: unknown[]; data: Record<string, unknown>[] };
 		};
-		const item = body.result.data.find((entry) => entry.tipo === PORTAL);
+		const item = body.data.data.find((entry) => entry.tipo === PORTAL);
 		expect(item).toBeDefined();
 		// The client's link_record reads pagination.total and requires it to have
 		// grown; the chip list must carry BOTH the prior chip and the new one.
@@ -246,7 +246,7 @@ describe('WC-059 — the temporal door never persists', () => {
 		expect((item?.entries as unknown[]).length).toBe(2);
 		// Relation echoes carry context too (the client reuses the save response as
 		// a build response — component_portal.js:632 reads result.context.length).
-		expect(body.result.context.length).toBeGreaterThan(0);
+		expect(body.data.context.length).toBeGreaterThan(0);
 
 		const after = await worldState(SENTINEL_ID);
 		expect(after.row).toBe(before.row);

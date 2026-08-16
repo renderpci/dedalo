@@ -187,8 +187,8 @@ function readRqo(sectionId: number, mode: string): Record<string, unknown> {
 async function entriesOf(sectionId: number, mode = 'list'): Promise<unknown[]> {
 	const response = (
 		await dispatchRqo(structuredClone(readRqo(sectionId, mode)) as never, tsContext as never)
-	).body as { result?: { data?: unknown[] } };
-	const items = (response.result?.data ?? []).slice(1) as { entries?: unknown }[];
+	).body as { data?: { data?: unknown[] } };
+	const items = (response.data?.data ?? []).slice(1) as { entries?: unknown }[];
 	return (items[0]?.entries ?? null) as unknown[];
 }
 

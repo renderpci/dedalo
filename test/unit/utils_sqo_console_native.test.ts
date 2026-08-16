@@ -28,6 +28,7 @@ import { join } from 'node:path';
 import type { ActionHandler, ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { resolveSqlForDisplay, utilsApiActions } from '../../src/core/api/handlers/dd_utils_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
 const HANDLER_PATH = join(import.meta.dir, '../../src/core/api/handlers/dd_utils_api.ts');
@@ -131,25 +132,27 @@ describe('convert_search_object_to_sql_query — authorization door', () => {
 		expect(typeof registered).toBe('function');
 	});
 
-	test('a non-global-admin is refused 403 with the named message', async () => {
-		const result = await handler(
+	test('a non-global-admin is refused: a thrown perm.denied (403), named — before any query work', async () => {
+		// Envelope v2: the handler THROWS; the dispatch chokepoint converts it to
+		// the 403 envelope. Thrown means no SQL / db_data can escape to the client.
+		const thrown = await handler(
 			RQO,
 			contextFor({ userId: 42, isGlobalAdmin: false, isDeveloper: false }),
+		).catch((error: unknown) => error);
+		expect(thrown).toBeInstanceOf(DedaloError);
+		expect((thrown as DedaloError).code).toBe('perm.denied');
+		expect((thrown as DedaloError).spec.status).toBe(403);
+		expect((thrown as DedaloError).publicMessage).toBe(
+			'Only global admins can use the SQO test environment',
 		);
-		expect(result.status).toBe(403);
-		expect(result.body.msg).toBe('Only global admins can use the SQO test environment');
-		expect(result.body.result).toBe(false);
-		// The refusal is BEFORE any query work: no SQL escapes to the client.
-		expect(result.body.sql).toBeUndefined();
-		expect(result.body.db_data).toBeUndefined();
 	});
 
 	test('a developer flag does NOT open the door — only isGlobalAdmin does', async () => {
-		const result = await handler(
+		const thrown = await handler(
 			RQO,
 			contextFor({ userId: 43, isGlobalAdmin: false, isDeveloper: true }),
-		);
-		expect(result.status).toBe(403);
+		).catch((error: unknown) => error);
+		expect((thrown as DedaloError).code).toBe('perm.denied');
 	});
 
 	test('an unauthenticated context throws (requirePrincipal), never falls through', async () => {

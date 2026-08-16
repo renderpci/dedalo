@@ -70,7 +70,7 @@ describe('root user record (dd128,-1) — record-level gate beats the admin bypa
 			},
 		} as unknown as Parameters<typeof routeSectionRead>[0];
 		const result = await routeSectionRead(rqo, SUPERUSER);
-		const data = (result.body as { result?: { data?: unknown[] } }).result?.data ?? [];
+		const data = (result.body as { data?: { data?: unknown[] } }).data?.data ?? [];
 		expect(Array.isArray(data)).toBe(true);
 		expect(data.length).toBe(0);
 	});
@@ -93,7 +93,7 @@ describe('AUTHZ-01 — get_data read path enforces the projects filter', () => {
 			},
 		} as unknown as Parameters<typeof routeSectionRead>[0];
 		const result = await routeSectionRead(rqo, NO_PROJECTS);
-		const data = (result.body as { result?: { data?: unknown[] } }).result?.data ?? [];
+		const data = (result.body as { data?: { data?: unknown[] } }).data?.data ?? [];
 		expect(Array.isArray(data)).toBe(true);
 		expect(data.length).toBe(0);
 	});

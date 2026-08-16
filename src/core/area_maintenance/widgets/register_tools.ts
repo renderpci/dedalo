@@ -163,11 +163,7 @@ async function registerToolsGetValue(): Promise<WidgetResponse> {
 			? ["Your Ontology is outdated. Term 'dd1644' (Developer) do not exists"]
 			: null;
 
-	return {
-		result: { datalist, errors, registry_state: summarizeRegistryState(datalist) },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { datalist, errors, registry_state: summarizeRegistryState(datalist) } };
 }
 
 /**
@@ -187,8 +183,9 @@ async function registerToolsImport(): Promise<WidgetResponse> {
 		(item) => item.valid && (!item.inRegistry || item.diff.length > 0),
 	);
 
+	const invalidErrors = invalid.flatMap((item) => item.errors);
 	return {
-		result: {
+		data: {
 			dry_run: dryRun,
 			total: report.length,
 			invalid_count: invalid.length,
@@ -198,7 +195,7 @@ async function registerToolsImport(): Promise<WidgetResponse> {
 		msg: dryRun
 			? `OK. Dry-run: ${report.length} tools scanned, ${wouldChange.length} would change, ${invalid.length} invalid. Registry not modified.`
 			: `OK. ${report.length} tools registered.`,
-		errors: invalid.flatMap((item) => item.errors),
+		...(invalidErrors.length === 0 ? {} : { errors: invalidErrors }),
 	};
 }
 
@@ -256,10 +253,8 @@ async function registerToolsImportOwned(options: Record<string, unknown>): Promi
 	}));
 	const errors = report.flatMap((item) => item.errors);
 	return {
-		result: report,
-		msg:
-			errors.length === 0 ? 'OK. Request done successfully' : 'Warning! Request done with errors',
-		errors,
+		data: report,
+		...(errors.length === 0 ? {} : { msg: 'Warning! Request done with errors', errors }),
 	};
 }
 

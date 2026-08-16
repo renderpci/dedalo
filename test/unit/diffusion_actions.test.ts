@@ -28,6 +28,7 @@ import {
 } from '../../src/diffusion/jobs/queue.ts';
 import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
 import type { ProgressData } from '../../src/diffusion/jobs/sse.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const createdJobIds: string[] = [];
@@ -123,7 +124,7 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 		}
 		const final = chunks[chunks.length - 1];
 		expect(final?.is_running).toBe(false);
-		expect(final?.result?.result).toBe(true);
+		expect(final?.result?.ok).toBe(true);
 		expect(final?.data.counter).toBe(4);
 		expect(final?.data.total).toBe(4);
 
@@ -135,7 +136,7 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 	test('reconnect: list_processes finds the run by label; get_process_status replays it', async () => {
 		const label = 'process_diffusion_-1_acttest1_actsec1';
 		const list = await listProcessesAction({ action: 'list_processes' } as never, SUPERUSER);
-		const processes = list.body.processes as ProgressData[];
+		const processes = (list.body.data as { processes: ProgressData[] }).processes;
 		const mine = [...processes]
 			.sort((a, b) => b.started_at - a.started_at)
 			.find((entry) => entry.process_id === label);
@@ -188,9 +189,9 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 			{ action: 'cancel_process', process_id: label } as never,
 			SUPERUSER,
 		);
-		expect(cancel.body).toEqual({
-			result: true,
-			msg: `Process ${label} cancelled`,
+		expect(cancel.body.data).toEqual({
+			cancelled: true,
+			message: `Process ${label} cancelled`,
 		});
 
 		const chunks = await chunksPromise;
@@ -203,9 +204,11 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 			{ action: 'cancel_process', process_id: label } as never,
 			SUPERUSER,
 		);
-		expect(again.body).toEqual({
-			result: false,
-			msg: `Process ${label} not found or not running`,
+		// A double cancel is not a failed request — the process IS stopped; only
+		// `cancelled` says whether THIS call is what stopped it.
+		expect(again.body.data).toEqual({
+			cancelled: false,
+			message: `Process ${label} not found or not running`,
 		});
 	});
 
@@ -230,13 +233,15 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 
 	test('permission gate: a plain user without section read is refused', async () => {
 		const nobody: Principal = { userId: 999999999, isGlobalAdmin: false, isDeveloper: false };
-		const refused = await diffuseAction(
-			diffuseRqo('acttest3', 'actsec1', 2, 'process_diffusion_9_acttest3_actsec1') as never,
-			nobody,
+		// The refusal is a THROW now (ERRORS_SPEC §4): no body, and therefore no
+		// stream — the job is never enqueued.
+		const refusal = await refusalOf(
+			diffuseAction(
+				diffuseRqo('acttest3', 'actsec1', 2, 'process_diffusion_9_acttest3_actsec1') as never,
+				nobody,
+			),
 		);
-		expect(refused.stream).toBeUndefined();
-		expect(refused.body.result).toBe(false);
-		expect(refused.body.errors).toEqual(['insufficient permissions']);
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('dispatch gate: unauthenticated diffuse is denied 401 before any handler runs', async () => {
@@ -245,7 +250,8 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 			{ requestId: 'test', clientIp: '127.0.0.1', session: null, csrfCandidate: null },
 		);
 		expect(denied.status).toBe(401);
-		expect(denied.body.result).toBe(false);
+		expect(denied.body.ok).toBe(false);
+		expect((denied.body.error as { code: string }).code).toBe('auth.not_logged');
 	});
 
 	test('crash recovery: SIGKILLed runner is swept back to queued with its checkpoint', async () => {

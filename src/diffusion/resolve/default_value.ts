@@ -38,6 +38,7 @@
 import { config } from '../../config/config.ts';
 import { mediaTypeOf } from '../../core/concepts/media.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
 import { phpTrim } from '../parsers/php_string.ts';
 import type { MetaValueIR, ValueMeta } from '../parsers/types.ts';
@@ -188,10 +189,12 @@ function mediaOptionsOf(
 		(key) => !SUPPORTED_MEDIA_OPTIONS.has(key) && !isPhpFalsy(options[key]),
 	);
 	if (unsupported.length > 0) {
-		throw new Error(
-			`media ddo '${componentTipo}': unsupported options ${unsupported.join(', ')} — this engine ` +
+		throw new DedaloError('diffusion.unported_fn', {
+			message:
+				`media ddo '${componentTipo}': unsupported options ${unsupported.join(', ')} — this engine ` +
 				`implements ${[...SUPPORTED_MEDIA_OPTIONS].join('/')} only (refusing to publish a URL the ontology did not ask for)`,
-		);
+			coordinates: { tipo: componentTipo, options: unsupported.join(', ') },
+		});
 	}
 	return {
 		quality: typeof options.quality === 'string' ? options.quality : defaults.quality,

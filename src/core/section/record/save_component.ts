@@ -49,6 +49,7 @@ import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts
 import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
 	getColumnNameByModel,
@@ -67,6 +68,7 @@ import {
 	type SortDataChange,
 } from '../../relations/save.ts';
 import { persistModifiedStamp, persistRecordKeys } from '../../section_record/index.ts';
+import type { Principal } from '../../security/permissions.ts';
 
 /** One change from the client (PHP changed_data item). */
 export interface ChangedDataItem {
@@ -115,6 +117,19 @@ export interface SaveRequest {
 	 * — an unstamped interactive save is an unauditable one.
 	 */
 	skipModifiedStamp?: boolean;
+	/**
+	 * The REQUEST PRINCIPAL, threaded explicitly for the relation-insert
+	 * read-grant gate (`relations/save.ts` gate 2). Dispatch and the MCP write
+	 * tools hold one and pass it; the door falls back to the request-context ALS
+	 * ONLY as the documented backstop for the leaf callers that reach here
+	 * without a principal in hand — import_execute / import_csv_execute (dd800
+	 * runs under mediaJobs, ALS present), transcription_asr, password_reset,
+	 * section_permissions, area_maintenance export_hierarchy, ontology data_io,
+	 * component_text_area tag_delete, media companion_writes. Inside gate 2's
+	 * scope (a tree-picker caller) an absent actor REFUSES; a write-validation
+	 * path never answers "allowed" because it could not see who was asking.
+	 */
+	principal?: Principal;
 }
 
 export interface SaveResult {
@@ -156,15 +171,24 @@ export interface SaveResult {
  * could go", which is a contract violation by the caller and must reach the
  * operator's log with the tipo that caused it.
  */
-export class ExternalWriteRefused extends Error {
+export class ExternalWriteRefused extends DedaloError {
 	readonly componentTipo: string;
 	readonly sectionTipo: string;
 	readonly model: string;
 
 	constructor(fields: { componentTipo: string; sectionTipo: string; model: string; door: string }) {
-		super(
-			`${fields.door}: write refused to '${fields.componentTipo}' (${fields.model}) in section '${fields.sectionTipo}' — its value is DERIVED from a third-party service at read time, so the local record has no slot for it and the remote service is never written to`,
-		);
+		// Thin DedaloError family (ERRORS_SPEC §2.1): the fixed code
+		// `record.external_write_refused` (caller, 400) is the wire identity; the
+		// sentence below stays the LOG message; the tipos ride as coordinates.
+		super('record.external_write_refused', {
+			message: `${fields.door}: write refused to '${fields.componentTipo}' (${fields.model}) in section '${fields.sectionTipo}' — its value is DERIVED from a third-party service at read time, so the local record has no slot for it and the remote service is never written to`,
+			coordinates: {
+				tipo: fields.componentTipo,
+				section_tipo: fields.sectionTipo,
+				model: fields.model,
+				door: fields.door,
+			},
+		});
 		this.name = 'ExternalWriteRefused';
 		this.componentTipo = fields.componentTipo;
 		this.sectionTipo = fields.sectionTipo;
@@ -775,9 +799,15 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			change.action !== 'sort_by_column' &&
 			change.action !== 'add_new_element'
 		) {
-			throw new Error(
-				`saveComponentData: action '${change.action}' not implemented yet (Phase 5 uncovered scope)`,
-			);
+			throw new DedaloError('request.invalid_data', {
+				message: `saveComponentData: action '${change.action}' not implemented yet (Phase 5 uncovered scope)`,
+				coordinates: {
+					tipo: componentTipo,
+					section_tipo: sectionTipo,
+					section_id: sectionId,
+					action: change.action,
+				},
+			});
 		}
 
 		if (change.action === 'sort_data') {
@@ -874,6 +904,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 						existingItems: validatedItems,
 						storedItems: storedItemsBaseline,
 						pairing: dataframePairing,
+						principal: request.principal,
 					});
 					if (safeElement !== null) validatedItems.push(safeElement);
 				}
@@ -959,7 +990,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		if (change.action === 'insert') {
 			let value = change.value;
 			if (value === null || typeof value !== 'object') {
-				throw new Error('saveComponentData: insert value must be an object item');
+				throw new DedaloError('request.invalid_data', {
+					message: 'saveComponentData: insert value must be an object item',
+					coordinates: { tipo: componentTipo, section_tipo: sectionTipo, section_id: sectionId },
+				});
 			}
 			// Relation-family insert validation (PHP validate_data_element,
 			// component_relation_common.php:1058 — the service_autocomplete
@@ -981,6 +1015,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 					lang: effectiveLang,
 					existingItems: items,
 					pairing: dataframePairing,
+					principal: request.principal,
 				});
 				if (validated === null) continue; // ignored insert (PHP returns false)
 				value = validated;
@@ -1060,6 +1095,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 				lang: effectiveLang,
 				existingItems: otherItems,
 				pairing: dataframePairing,
+				principal: request.principal,
 			});
 			// PHP drops the element when validate_data_element returns false; we leave
 			// the stored item untouched rather than persist a bad-formed locator.

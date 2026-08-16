@@ -15,8 +15,10 @@
  * Bun Worker executor is a drop-in follow-up behind this same signature.
  */
 
+import { DedaloError, ok } from '../errors/index.ts';
 import { mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 import type { LoadedTool } from './loader.ts';
 import type { ToolActionSpec, ToolResponse } from './module.ts';
 
@@ -32,6 +34,11 @@ export interface BackgroundJob {
 	userId?: number;
 	/** Date.now() at schedule time (duration for the journal). */
 	startedAt?: number;
+}
+
+/** The current RQO's id (the tool dispatcher opens the scope), or '' outside a request. */
+function currentRequestId(): string {
+	return currentRequestContext()?.requestId ?? '';
 }
 
 /** In-process job table (cleared on restart — see the ledger note above). */
@@ -106,6 +113,15 @@ export function logDyingBackgroundJobs(): void {
 	}
 }
 
+/**
+ * Did a finished job's captured response REFUSE? Envelope v2 says `ok:false`
+ * (which a handler reaches only by throwing — the executor's catch converts it
+ * into the captured response, so this is the terminal-state read).
+ */
+function jobRefused(response: ToolResponse | undefined): boolean {
+	return response?.ok === false;
+}
+
 /** Journal one terminal transition (audit S2-16: terminal states must be observable). */
 function logTerminalState(job: BackgroundJob): void {
 	const duration = job.startedAt !== undefined ? `${Date.now() - job.startedAt}ms` : '?ms';
@@ -113,9 +129,9 @@ function logTerminalState(job: BackgroundJob): void {
 	if (job.status === 'error') {
 		console.error(`[background jobs] ${identity} FAILED: ${job.error ?? 'unknown error'}`);
 	} else {
-		const result = job.result?.result;
-		const outcome = result === false ? `result:false — ${job.result?.msg ?? ''}` : 'ok';
-		const log = result === false ? console.error : console.log;
+		const failed = jobRefused(job.result);
+		const outcome = failed ? `refused — ${String(job.result?.msg ?? '')}` : 'ok';
+		const log = failed ? console.error : console.log;
 		log(`[background jobs] ${identity} finished: ${outcome}`);
 	}
 	// Bounded map (S3-62): evict the terminal record (with its full ToolResponse
@@ -143,11 +159,9 @@ export function scheduleBackground(
 ): ToolResponse {
 	const allowed = loaded.module.backgroundRunnable ?? [];
 	if (!allowed.includes(method)) {
-		return {
-			result: false,
-			msg: `Error. Method not allowed for background execution: ${method}`,
-			errors: ['background_not_allowed'],
-		};
+		throw new DedaloError('tool.background_not_allowed', {
+			coordinates: { tool: loaded.module.name, method },
+		});
 	}
 
 	const job: BackgroundJob = {
@@ -212,20 +226,25 @@ export function scheduleBackground(
 	job.id = record.id;
 	jobs.set(record.id, job);
 
-	return {
-		result: true,
-		msg: 'OK. Background process started',
-		errors: [],
-		// THE handle. A job runs in THIS process, so its id is all a consumer needs:
-		// dd_utils_api::get_job_events subscribes to it and pushes every state change
-		// (core/api/job_stream.ts), and get_background_job_status polls it.
-		job_id: record.id,
-		background_job_id: record.id,
-		// LEGACY handle, kept for the clients that still speak the pfile poll wire
-		// (the area_maintenance widgets, the AV transcodes). pid is the SERVER
-		// process — PHP returned a detached CLI child's pid — and pfile is the
-		// BASENAME get_process_status accepts. New consumers use job_id.
-		pid: process.pid,
-		pfile: `${record.id}.json`,
-	};
+	// Envelope v2: `data` is the started flag (a client re-attaches on a
+	// successful body carrying `job_id` — job_follow.js), and the four handles
+	// ride as EXTENSION KEYS — ERRORS_SPEC §3.0 names pid/pfile/job_id in the
+	// closed legacy set.
+	return ok(true, {
+		requestId: currentRequestId(),
+		extend: {
+			// THE handle. A job runs in THIS process, so its id is all a consumer
+			// needs: dd_utils_api::get_job_events subscribes to it and pushes every
+			// state change (core/api/job_stream.ts), and get_background_job_status
+			// polls it.
+			job_id: record.id,
+			background_job_id: record.id,
+			// LEGACY handle, kept for the clients that still speak the pfile poll
+			// wire (the area_maintenance widgets, the AV transcodes). pid is the
+			// SERVER process — PHP returned a detached CLI child's pid — and pfile
+			// is the BASENAME get_process_status accepts. New consumers use job_id.
+			pid: process.pid,
+			pfile: `${record.id}.json`,
+		},
+	});
 }

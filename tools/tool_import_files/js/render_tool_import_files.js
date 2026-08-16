@@ -6,8 +6,11 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
-	import {time_unit_auto} from '../../../core/common/js/utils/index.js'
+	import {time_unit_auto, append_text_lines} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
@@ -299,10 +302,12 @@ const get_content_data_edit = async function(self) {
 				self.node.classList.remove('loading')
 
 				// error case
-				// (!) alert() is used here for legacy UI consistency; a modal would be preferred.
-				if (!api_response.result) {
-					const msg = "Error importing files " + (api_response.msg || 'Unknown')
-					alert(msg);
+				// ONE error model: the failure is an ApiError on the envelope, the
+				// dispatcher chooses the surface and the renderer emits TEXT. Never
+				// alert() a server string — it is untrusted and unlocalised.
+				if (request_failed(api_response)) {
+					console.error('import_files failed:', api_response.error)
+					await handle_api_error(api_response.error, {wrapper: response_message})
 					return
 				}
 
@@ -569,6 +574,11 @@ const update_process_status = (options) => {
 	})
 	.then(function(stream){
 
+		// The final report is rendered ONCE. `on_read` fires per chunk and a
+		// terminal frame can be read more than once (a re-poll, a reconnect), which
+		// would otherwise append a second copy of the summary and the error list.
+		let final_report_rendered = false
+
 		// render base nodes and set functions to manage
 		// the stream reader events
 		const render_response = render_stream({
@@ -600,15 +610,62 @@ const update_process_status = (options) => {
 				// is_running defaults to true when absent (stream still open)
 				const is_running = sse_response?.is_running ?? true
 
-				// Render any server-reported errors at the end of the stream.
-				if (is_running===false) {
-					if (sse_response.data.errors && sse_response.data.errors.length>0) {
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'container error',
-							inner_html		: sse_response.data.errors.join('<br>'),
-							parent			: container
-						})
+				// THE FINAL REPORT, at the end of the stream.
+				//
+				// (!) The last frame is NOT shaped like a progress frame. A progress
+				// frame's `data` is the raw payload the handler published (msg /
+				// counter / total / errors); the TERMINAL frame's `data` is the
+				// handler's whole ENVELOPE — src/core/tools/background.ts:210 ("the
+				// RETURN VALUE becomes the final SSE frame's data") through
+				// src/core/media/jobs.ts:628 (`record.data = result`). So the report
+				// sits one level deeper, and `response_data` is the ONE accessor that
+				// reaches it (`data`, then the compat `result` mirror); a progress
+				// frame has neither, so it falls back to itself and nothing changes.
+				//
+				// Import report keys (tools/tool_import_files/server/index.ts:1127-1133,
+				// asserted in test/unit/tool_import_files.test.ts:258):
+				//   summary  — the run sentence (envelope v2 has NO success `msg`)
+				//   errors   — the per-file failures; the batch never aborts on one file
+				//   imported — how many landed
+				if (is_running===false && final_report_rendered===false) {
+
+					final_report_rendered = true
+					const report = response_data(sse_response.data) || sse_response.data || {}
+
+					// run summary — a text node, never an HTML sink
+					if (typeof report.summary==='string' && report.summary.length>0) {
+						append_text_lines(
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'container summary',
+								parent			: container
+							}),
+							report.summary
+						)
+					}
+
+					// per-file failures. Also the frame's OWN `errors`: when the handler
+					// throws outright there is no report at all, and the job manager
+					// records the exception there (src/core/media/jobs.ts:630).
+					const report_failures	= report.errors
+					const frame_failures	= sse_response.errors
+					const report_errors		= [
+						...(Array.isArray(report_failures) ? report_failures : []),
+						...(Array.isArray(frame_failures) ? frame_failures : [])
+					]
+					if (report_errors.length>0) {
+						// TEXT nodes + real <br> elements: a stream frame is server text
+						// (paths, tool output) and must never be parsed as HTML.
+						// A bare string prints as-is; a coded entry resolves through the
+						// ONE renderer (label in the user's language, then message, then code).
+						append_text_lines(
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'container error',
+								parent			: container
+							}),
+							report_errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
+						)
 					}
 				}
 
@@ -644,10 +701,8 @@ const update_process_status = (options) => {
 					return parts.join(' | ')
 				}
 
-				const msg = sse_response
-							&& sse_response.data
-							&& sse_response.data.msg
-							&& sse_response.data.msg.length>5
+				const frame_line = sse_response && sse_response.data && sse_response.data.msg
+				const msg = (typeof frame_line==='string' && frame_line.length>5)
 					? compound_msg(sse_response)
 					: is_running
 						? 'Process running... please wait'
@@ -661,7 +716,8 @@ const update_process_status = (options) => {
 						parent			: info_node
 					})
 				}
-				ui.update_node_content(info_node.msg_node, msg)
+				// textContent: `msg` embeds the server's own `data.msg`
+				info_node.msg_node.textContent = msg
 			})
 		}
 

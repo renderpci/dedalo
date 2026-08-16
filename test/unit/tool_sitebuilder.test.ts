@@ -16,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import * as realConfigModule from '../../src/config/config.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { ToolActionContext, ToolServerModule } from '../../src/core/tools/module.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // SNAPSHOT the real exports by spread BEFORE any mock.module runs (the code_update.test.ts
 // convention). The namespace object itself is a LIVE view: once the module is mocked it
@@ -145,7 +146,7 @@ describe('tool_sitebuilder proxy', () => {
 
 	test('list_sites forwards with bearer token and acting-user headers', async () => {
 		const res = await tool.apiActions.list_sites!.handler(ctx(DEV, {}));
-		expect(res.result).toEqual({ data: [{ manifest: { slug: 'demo' } }] });
+		expect(res.data).toEqual({ data: [{ manifest: { slug: 'demo' } }] });
 		const req = lastRequest();
 		expect(req.auth).toBe('Bearer test-token-abc');
 		expect(req.userId).toBe('7');
@@ -158,16 +159,17 @@ describe('tool_sitebuilder proxy', () => {
 	});
 
 	test('create_site validates the slug before proxying and sends the actor in the body', async () => {
-		const bad = await tool.apiActions.create_site!.handler(
-			ctx(DEV, { slug: 'Bad Slug', name: 'x' }),
+		const bad = await refusalOf(
+			tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'Bad Slug', name: 'x' })),
 		);
-		expect(bad.result).toBe(false);
-		expect(bad.errors).toContain('site_builder_rejected');
+		expect(bad.code).toBe('site_builder.rejected');
+		// Engine-authored prose, so it DOES reach the wire (public disclosure).
+		expect(bad.publicMessage).toBe('Invalid site name.');
 
 		const good = await tool.apiActions.create_site!.handler(
 			ctx(DEV, { slug: 'demo', name: 'Demo' }),
 		);
-		expect(good.result).toEqual({ manifest: { slug: 'demo' } });
+		expect(good.data).toEqual({ manifest: { slug: 'demo' } });
 		const req = lastRequest();
 		expect(req.body).toMatchObject({
 			slug: 'demo',
@@ -177,23 +179,22 @@ describe('tool_sitebuilder proxy', () => {
 	});
 
 	test('publish is denied to a plain user, allowed to a developer and a global admin', async () => {
-		const denied = await tool.apiActions.publish!.handler(
-			ctx(PLAIN, { slug: 'demo', confirm: true }),
+		const denied = await refusalOf(
+			tool.apiActions.publish!.handler(ctx(PLAIN, { slug: 'demo', confirm: true })),
 		);
-		expect(denied.result).toBe(false);
-		expect(denied.errors).toContain('site_builder_rejected');
+		expect(denied.code).toBe('site_builder.rejected');
 
 		// Developer, but no confirm → rejected before proxying.
-		const noConfirm = await tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo' }));
-		expect(noConfirm.result).toBe(false);
+		const noConfirm = await refusalOf(tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo' })));
+		expect(noConfirm.publicMessage).toBe('Publishing must be confirmed.');
 
 		const dev = await tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo', confirm: true }));
-		expect(dev.result).toMatchObject({ release: 'r1' });
+		expect(dev.data).toMatchObject({ release: 'r1' });
 
 		const admin = await tool.apiActions.publish!.handler(
 			ctx(ADMIN, { slug: 'demo', confirm: true }),
 		);
-		expect(admin.result).toMatchObject({ release: 'r1' });
+		expect(admin.data).toMatchObject({ release: 'r1' });
 	});
 
 	/**
@@ -209,7 +210,7 @@ describe('tool_sitebuilder proxy', () => {
 	 */
 	test('delete_site without purge_prod is ordinary tool work for any grantee', async () => {
 		const res = await tool.apiActions.delete_site!.handler(ctx(PLAIN, { slug: 'demo' }));
-		expect(res.result).toMatchObject({ deleted: 'demo', purged_prod: false });
+		expect(res.data).toMatchObject({ deleted: 'demo', purged_prod: false });
 		const req = lastRequest();
 		expect(req.method).toBe('DELETE');
 		expect(req.path).toBe('/v1/sites/demo');
@@ -218,11 +219,12 @@ describe('tool_sitebuilder proxy', () => {
 
 	test('delete_site --purge_prod is refused to a plain user and never reaches the daemon', async () => {
 		const before = requests.length;
-		const denied = await tool.apiActions.delete_site!.handler(
-			ctx(PLAIN, { slug: 'demo', purge_prod: true, confirm: true }),
+		const denied = await refusalOf(
+			tool.apiActions.delete_site!.handler(
+				ctx(PLAIN, { slug: 'demo', purge_prod: true, confirm: true }),
+			),
 		);
-		expect(denied.result).toBe(false);
-		expect(denied.errors).toContain('site_builder_rejected');
+		expect(denied.code).toBe('site_builder.rejected');
 		// Fails closed BEFORE the proxy call: the daemon trusts us entirely, so a refusal
 		// that still sent the DELETE would have purged production anyway.
 		expect(requests.length).toBe(before);
@@ -230,11 +232,11 @@ describe('tool_sitebuilder proxy', () => {
 
 	test('delete_site --purge_prod requires an explicit confirm, even for a developer', async () => {
 		const before = requests.length;
-		const res = await tool.apiActions.delete_site!.handler(
-			ctx(DEV, { slug: 'demo', purge_prod: true }),
+		const refusal = await refusalOf(
+			tool.apiActions.delete_site!.handler(ctx(DEV, { slug: 'demo', purge_prod: true })),
 		);
-		expect(res.result).toBe(false);
-		expect(res.errors).toContain('site_builder_rejected');
+		expect(refusal.code).toBe('site_builder.rejected');
+		expect(refusal.publicMessage).toBe('Removing the published site must be confirmed.');
 		expect(requests.length).toBe(before);
 	});
 
@@ -242,40 +244,43 @@ describe('tool_sitebuilder proxy', () => {
 		const dev = await tool.apiActions.delete_site!.handler(
 			ctx(DEV, { slug: 'demo', purge_prod: true, confirm: true }),
 		);
-		expect(dev.result).toMatchObject({ deleted: 'demo', purged_prod: true });
+		expect(dev.data).toMatchObject({ deleted: 'demo', purged_prod: true });
 		expect(lastRequest().path).toBe('/v1/sites/demo?purge_prod=true');
 
 		const admin = await tool.apiActions.delete_site!.handler(
 			ctx(ADMIN, { slug: 'demo', purge_prod: true, confirm: true }),
 		);
-		expect(admin.result).toMatchObject({ purged_prod: true });
+		expect(admin.data).toMatchObject({ purged_prod: true });
 		expect(lastRequest().path).toBe('/v1/sites/demo?purge_prod=true');
 	});
 
 	test('get_audit is developer/admin-gated', async () => {
-		const denied = await tool.apiActions.get_audit!.handler(ctx(PLAIN, {}));
-		expect(denied.result).toBe(false);
+		const denied = await refusalOf(tool.apiActions.get_audit!.handler(ctx(PLAIN, {})));
+		expect(denied.code).toBe('site_builder.rejected');
 		const allowed = await tool.apiActions.get_audit!.handler(ctx(ADMIN, {}));
-		expect(allowed.result).toMatchObject({ data: [{ action: 'publish' }] });
+		expect(allowed.data).toMatchObject({ data: [{ action: 'publish' }] });
 	});
 
-	test('a daemon 4xx with a reason maps to site_builder_rejected with the detail', async () => {
-		const res = await tool.apiActions.session_start!.handler(
-			ctx(DEV, { slug: 'rejectme', prompt: 'go' }),
+	test('a daemon 4xx maps to site_builder.rejected, and its prose stays OFF the wire', async () => {
+		const refusal = await refusalOf(
+			tool.apiActions.session_start!.handler(ctx(DEV, { slug: 'rejectme', prompt: 'go' })),
 		);
-		expect(res.result).toBe(false);
-		expect(res.errors).toContain('site_builder_rejected');
-		expect(res.msg).toContain('already running');
+		expect(refusal.code).toBe('site_builder.rejected');
+		// The daemon's own detail is LOG-only: it is on `message`…
+		expect(refusal.message).toContain('already running');
+		// …and NEVER offered as the vetted public sentence, so another service can
+		// never write this install's browser-facing error text.
+		expect(refusal.publicMessage).toBeUndefined();
 	});
 
 	test('get_status reports reachable true, and false when the daemon is down', async () => {
 		const up = await tool.apiActions.get_status!.handler(ctx(DEV, {}));
-		expect(up.result).toMatchObject({ configured: true, reachable: true, can_publish: true });
+		expect(up.data).toMatchObject({ configured: true, reachable: true, can_publish: true });
 
 		const savedUrl = siteBuilder.url;
 		siteBuilder.url = 'http://127.0.0.1:1'; // nothing listening
 		const down = await tool.apiActions.get_status!.handler(ctx(PLAIN, {}));
-		expect(down.result).toMatchObject({ configured: true, reachable: false, can_publish: false });
+		expect(down.data).toMatchObject({ configured: true, reachable: false, can_publish: false });
 		siteBuilder.url = savedUrl;
 	});
 
@@ -291,8 +296,8 @@ describe('tool_sitebuilder proxy', () => {
 				mode: 'list',
 			}),
 		).toBe(false);
-		const res = await tool.apiActions.list_sites!.handler(ctx(DEV, {}));
-		expect(res.errors).toContain('site_builder_unconfigured');
+		const refusal = await refusalOf(tool.apiActions.list_sites!.handler(ctx(DEV, {})));
+		expect(refusal.code).toBe('site_builder.unconfigured');
 		siteBuilder.url = savedUrl;
 	});
 
@@ -301,17 +306,21 @@ describe('tool_sitebuilder proxy', () => {
 		// /v1/sessions/../stop → /v1/stop. Refuse it at the seam, and never reach the daemon.
 		const before = requests.length;
 		for (const id of ['..', 'a/../b', '..%2e', 'x..y']) {
-			const stop = await tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: id }));
-			expect(stop.result, id).toBe(false);
-			expect(stop.errors, id).toContain('site_builder_rejected');
+			const stop = await refusalOf(
+				tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: id })),
+			);
+			expect(stop.code, id).toBe('site_builder.rejected');
 		}
-		const build = await tool.apiActions.get_build!.handler(
-			ctx(DEV, { slug: 'demo', build_id: '..' }),
+		const build = await refusalOf(
+			tool.apiActions.get_build!.handler(ctx(DEV, { slug: 'demo', build_id: '..' })),
 		);
-		expect(build.result).toBe(false);
-		const stream = await tool.apiActions.session_stream!.handler(ctx(DEV, { session_id: '..' }));
-		expect(stream.result).toBe(false);
-		expect(stream.stream).toBeUndefined();
+		expect(build.code).toBe('site_builder.rejected');
+		// The stream never opens: the refusal is a throw, so there is no body
+		// carrying a half-open stream.
+		const stream = await refusalOf(
+			tool.apiActions.session_stream!.handler(ctx(DEV, { session_id: '..' })),
+		);
+		expect(stream.code).toBe('site_builder.rejected');
 		// Nothing reached the daemon.
 		expect(requests.length).toBe(before);
 	});
@@ -320,7 +329,7 @@ describe('tool_sitebuilder proxy', () => {
 		const res = await tool.apiActions.session_stream!.handler(
 			ctx(DEV, { session_id: 'abc', after: -1 }),
 		);
-		expect(res.result).toBe(true);
+		expect(res.ok).toBe(true);
 		expect(res.streamContentType).toContain('text/event-stream');
 		expect((res.streamHeaders as Record<string, string>)['X-Accel-Buffering']).toBe('no');
 

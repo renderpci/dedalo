@@ -38,6 +38,7 @@ import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn, readMatrixRecord } from '../../db/matrix.ts';
 import { insertMatrixRecordWithCounter, updateMatrixKeyData } from '../../db/matrix_write.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { duplicateMediaFiles } from '../../media/file_ops.ts';
 import { refreshStoredFilesInfo } from '../../media/files_info.ts';
 import { resolveMediaPathOptions } from '../../media/ontology_path.ts';
@@ -90,27 +91,41 @@ export async function duplicateSectionRecord(
 	// Consultation-only sections are read-only for every caller (engine backstop;
 	// the API handler denies earlier with a clean 403). See concepts/section.ts.
 	if (isConsultationOnlySection(sectionTipo)) {
-		throw new Error(
-			`duplicateSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
-		);
+		throw new DedaloError('perm.denied', {
+			message: `duplicateSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
+			coordinates: {
+				section_tipo: sectionTipo,
+				section_id: sourceSectionId,
+				operation: 'duplicate',
+			},
+		});
 	}
 	// PHP refuses duplicating non-positive records even for root (API duplicate →
 	// assert_record_in_user_scope → user_can_access_record false for section_id<1);
 	// engine backstop mirroring the delete_record.ts guards.
 	if (sourceSectionId < 1) {
-		throw new Error(
-			`duplicateSectionRecord: refusing to duplicate non-positive section_id ${sourceSectionId}`,
-		);
+		throw new DedaloError('section_id.not_an_address', {
+			message: `duplicateSectionRecord: refusing to duplicate non-positive section_id ${sourceSectionId}`,
+			coordinates: {
+				section_tipo: sectionTipo,
+				section_id: sourceSectionId,
+				operation: 'duplicate',
+			},
+		});
 	}
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		throw new Error(`duplicateSectionRecord: no matrix table for section '${sectionTipo}'`);
+		throw new DedaloError('section.no_matrix_table', {
+			message: `duplicateSectionRecord: no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
 	}
 	const source = await readMatrixRecord(table, sectionTipo, sourceSectionId);
 	if (source === null) {
-		throw new Error(
-			`duplicateSectionRecord: source record ${sectionTipo}/${sourceSectionId} not found`,
-		);
+		throw new DedaloError('resource.not_found', {
+			message: `duplicateSectionRecord: source record ${sectionTipo}/${sourceSectionId} not found`,
+			coordinates: { section_tipo: sectionTipo, section_id: sourceSectionId },
+		});
 	}
 
 	// 1. Copy component columns (audit tipos dropped — fresh stamps below;

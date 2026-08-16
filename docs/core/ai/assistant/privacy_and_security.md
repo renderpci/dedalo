@@ -36,7 +36,7 @@ By default (`DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT=false`), a conversatio
 - use the **discovery / structure** tools (list sections, describe a section's fields, resolve a name to a `tipo`, validate a path) — these return ontology *structure*, not record data; and
 - converse and reason;
 
-but **every record-content tool call is refused** with a coded `egress_restricted` error, and the assistant is told to answer without it or to suggest switching to a local model. In this posture, no record content ever reaches the cloud.
+but **every record-content tool call is refused** with a coded `mcp.egress_restricted` error, and the assistant is told to answer without it or to suggest switching to a local model. In this posture, no record content ever reaches the cloud.
 
 ### Opening it up, section by section
 

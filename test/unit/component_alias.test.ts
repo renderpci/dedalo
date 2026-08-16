@@ -25,6 +25,7 @@ import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invali
 import { getModelByTipo, getTranslatableByTipo } from '../../src/core/ontology/resolver.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { readComponentData } from '../../src/core/section/read.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const TLD = 'zzalias';
 const SECTION = `${TLD}1`;
@@ -155,6 +156,12 @@ describe('component_alias resolution (WC-020)', () => {
 		// hop deliberately skips it so ontology-tree walks over UNMIGRATED v5
 		// nodes keep working until the migration runs.
 		expect(resolveAliasTargetTipo(RETIRED_KEYS)).rejects.toThrow(/retired v5 key 'max_records'/);
+		// Every WC-020 contract refusal is the TYPED ontology.invalid_node
+		// (ERRORS_SPEC §7): a bad DEFINITION, never an unexpected error.
+		expect((await refusalOf(resolveAliasTargetTipo(ALIAS_OF_ALIAS))).code).toBe(
+			'ontology.invalid_node',
+		);
+		expect((await refusalOf(getModelByTipo(NO_ALIAS_OF))).code).toBe('ontology.invalid_node');
 		expect(await getModelByTipo(RETIRED_KEYS)).toBe('component_portal');
 	});
 });

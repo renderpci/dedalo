@@ -30,6 +30,7 @@
 
 import { existsSync } from 'node:fs';
 import { config } from '../../../config/config.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { runBinary } from './spawn.ts';
 
 /** True when librsvg's CLI is installed where the config says (boot/gear probe). */
@@ -79,9 +80,12 @@ export async function rasterizeSvg(
 	dpi: number = config.media.svgThumbDpi,
 ): Promise<string> {
 	if (!rsvgAvailable()) {
-		throw new Error(
-			`rasterizeSvg: ${RSVG_MISSING_HINT} — not found at '${config.media.binaries.rsvgConvert}'. Install librsvg (brew install librsvg / apt install librsvg2-bin) or set DEDALO_RSVG_CONVERT_PATH.`,
-		);
+		// Operator disclosure: the install remedy names a filesystem path, so it
+		// stays in the log; the wire says only "not available on this server".
+		throw new DedaloError('media.engine_unavailable', {
+			message: `rasterizeSvg: ${RSVG_MISSING_HINT} — not found at '${config.media.binaries.rsvgConvert}'. Install librsvg (brew install librsvg / apt install librsvg2-bin) or set DEDALO_RSVG_CONVERT_PATH.`,
+			coordinates: { binary: config.media.binaries.rsvgConvert },
+		});
 	}
 	const result = await runBinary(buildRsvgArgv(source, target, dpi), { nice: true });
 	if (result.exitCode !== 0) {

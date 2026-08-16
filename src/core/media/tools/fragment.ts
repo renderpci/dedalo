@@ -46,6 +46,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { assertValidQuality, type MediaTypeSpec } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { secondsToTc } from '../../resolve/tr_marks.ts';
 import { withTempSibling, writeAtomically } from '../atomic.ts';
 import { buildFragmentArgv, producerSpawnOptions } from '../engine/ffmpeg.ts';
@@ -95,13 +96,17 @@ export function fragmentFileName(
 	extension: string,
 ): string {
 	if (!TAG_ID.test(tagId)) {
-		throw new Error(
-			`download_fragment: invalid tag_id '${tagId}' — it becomes part of a filename, so it must be letters, digits, '_' or '-' (max 64)`,
-		);
+		throw new DedaloError('media.invalid_identifier', {
+			message: `download_fragment: invalid tag_id '${tagId}' — it becomes part of a filename, so it must be letters, digits, '_' or '-' (max 64)`,
+			publicMessage:
+				"download_fragment: invalid tag_id — it becomes part of a filename, so it must be letters, digits, '_' or '-' (max 64)",
+		});
 	}
 	const cleanExtension = String(extension).replace(/^\./, '');
 	if (!/^[A-Za-z0-9]+$/.test(cleanExtension)) {
-		throw new Error(`download_fragment: invalid extension '${extension}'`);
+		throw new DedaloError('media.invalid_extension', {
+			message: `download_fragment: invalid extension '${extension}'`,
+		});
 	}
 	return `fragment_${buildMediaIdentifier(identity)}_${tagId}.${cleanExtension}`;
 }
@@ -174,21 +179,25 @@ export interface FragmentOutcome {
  * Cut the fragment and return its URL. Throws — with the reason — on every
  * refusal: an unknown quality, a missing source, a non-positive duration, a
  * missing watermark still, or an ffmpeg run that did not succeed. The handler
- * turns that into PHP's `result:false` + message; nothing here reports a URL for
- * a file that is not on disk.
+ * turns that into the refusal envelope; nothing here reports a URL for a file
+ * that is not on disk.
  */
 export async function buildAvFragment(request: FragmentRequest): Promise<FragmentOutcome> {
 	const { spec, identity, pathOpts, tagId, watermark } = request;
 	if (spec.model !== 'component_av') {
-		throw new Error('download_fragment: only supported for component_av');
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'download_fragment: only supported for component_av',
+			publicMessage: 'download_fragment: only supported for component_av',
+		});
 	}
 	const quality = assertValidQuality(spec, request.quality);
 	const extension = request.extension ?? spec.defaultExtension;
 	const source = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
 	if (!existsSync(source)) {
-		throw new Error(
-			`download_fragment: no '${quality}' file for ${buildMediaIdentifier(identity)} to cut from`,
-		);
+		throw new DedaloError('media.file_not_found', {
+			message: `download_fragment: no '${quality}' file for ${buildMediaIdentifier(identity)} to cut from`,
+			publicMessage: `download_fragment: no '${quality}' file to cut from`,
+		});
 	}
 
 	// The RANGE is checked before anything spawns. ffmpeg accepts a zero or
@@ -197,13 +206,15 @@ export async function buildAvFragment(request: FragmentRequest): Promise<Fragmen
 	const tcIn = Number(request.tcInSeconds);
 	const tcOut = Number(request.tcOutSeconds);
 	if (!Number.isFinite(tcIn) || !Number.isFinite(tcOut) || tcIn < 0) {
-		throw new Error('download_fragment: tc_in_secs / tc_out_secs must be finite seconds');
+		throw new DedaloError('media.invalid_timecode', {
+			message: 'download_fragment: tc_in_secs / tc_out_secs must be finite seconds',
+			publicMessage: 'download_fragment: tc_in_secs / tc_out_secs must be finite seconds',
+		});
 	}
 	const durationSeconds = tcOut - tcIn;
 	if (!(durationSeconds > 0)) {
-		throw new Error(
-			`download_fragment: the fragment duration is ${String(durationSeconds)}s — tc_out_secs must be later than tc_in_secs`,
-		);
+		const reason = `download_fragment: the fragment duration is ${String(durationSeconds)}s — tc_out_secs must be later than tc_in_secs`;
+		throw new DedaloError('media.invalid_timecode', { message: reason, publicMessage: reason });
 	}
 	// The IN-POINT goes to ffmpeg as an HH:MM:SS.mmm timecode (PHP
 	// OptimizeTC::seg2tc — the same grammar the tr marks the grid reads use); the
@@ -217,9 +228,10 @@ export async function buildAvFragment(request: FragmentRequest): Promise<Fragmen
 		// clip, because the watermark is an access-control expectation: whoever
 		// clicked the watermarked button is entitled to a marked copy, not to a
 		// clean one.
-		throw new Error(
-			`download_fragment: the watermark file is missing (${watermarkFile}) — a watermarked fragment cannot be produced, and an unmarked one is not a substitute`,
-		);
+		throw new DedaloError('media.engine_unavailable', {
+			message: `download_fragment: the watermark file is missing (${watermarkFile}) — a watermarked fragment cannot be produced, and an unmarked one is not a substitute`,
+			coordinates: { watermark_file: watermarkFile },
+		});
 	}
 
 	const location = fragmentLocation(spec, identity, quality, tagId, extension, pathOpts);

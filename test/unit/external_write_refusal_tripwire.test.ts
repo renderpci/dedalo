@@ -132,6 +132,8 @@ describe('the save door refuses a derived component', () => {
 		await attempt.catch((error: unknown) => {
 			expect(error).toBeInstanceOf(ExternalWriteRefused);
 			const refusal = error as ExternalWriteRefused;
+			// A thin DedaloError family: the fixed registry code is the wire identity.
+			expect(refusal.code).toBe('record.external_write_refused');
 			expect(refusal.componentTipo).toBe('test215');
 			expect(refusal.model).toBe('component_external');
 			// It THROWS rather than answering ok:false: there is no slot on disk,
@@ -327,9 +329,21 @@ describe('the one curated write still works', () => {
 	// The rsc368 shape, on the playground: an ordinary relation component whose
 	// locator points at an EXTERNAL section (test3 carries properties.api_config)
 	// with a zero-padded remote id as its section_id.
-	const SECTION_TIPO = 'test2';
+	//
+	// THE CALLER MUST DECLARE THE TARGET. Since
+	// WC-2026-08-14-relation-insert-target-validation the insert door refuses a
+	// locator whose section is not among the caller's declared targets
+	// (`off_target`), and since the length-1 door stopped swallowing constraint
+	// refusals it THROWS rather than answering ok. The previous fixture named
+	// `numisdata434` on `test2` — a node the suite DB does not even hold, so
+	// its resolved targets were never test3 and the "curated write" was only
+	// ever green because the door silently dropped it. `test80` is test3's own
+	// component_portal (parent test45) and resolves its sqo target to test3, so
+	// the write is a legitimate one: a real caller, its declared target, an
+	// external remote id kept byte-identical.
+	const SECTION_TIPO = 'test3';
 	const SECTION_ID = 900042;
-	const RELATION_TIPO = 'numisdata434';
+	const RELATION_TIPO = 'test80';
 	const REMOTE_ID = '001338683';
 
 	const cleanup = (): Promise<void> => cleanScratchRecord(SECTION_TIPO, SECTION_ID);

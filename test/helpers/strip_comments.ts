@@ -21,6 +21,15 @@
  * ONE COPY, on purpose: three tripwires (external_outbound, external_client_render,
  * sql_confinement's src/external scan) fired on the same broken stripper, and
  * three copies is three chances to fix one of them.
+ *
+ * `{ blankStrings: true }` (2026-08-15, for the error_throw_ratchet census in
+ * scripts/lib/throw_census.ts) additionally BLANKS the content of every string
+ * and template literal — the quotes stay, the bytes between them become spaces
+ * (newlines kept), so a scanner counting a CODE token (`throw new Error(`) does
+ * not count a message that merely mentions it. Same scanner, one option: a
+ * second walker that only knew strings would disagree with this one about where
+ * a regex literal ends, which is exactly the two-copies defect this file exists
+ * to prevent. Default behaviour is unchanged.
  */
 
 /** Chars after which a `/` starts a REGEX rather than a division. */
@@ -66,7 +75,13 @@ function regexMayStart(emitted: string): boolean {
  * Newlines inside removed comments are preserved so line numbers still line up
  * for a scanner that reports them.
  */
-export function stripComments(source: string): string {
+export interface StripCommentsOptions {
+	/** Also blank the CONTENT of string/template literals (quotes and newlines kept). */
+	blankStrings?: boolean;
+}
+
+export function stripComments(source: string, options: StripCommentsOptions = {}): string {
+	const blankStrings = options.blankStrings === true;
 	let output = '';
 	let index = 0;
 	while (index < source.length) {
@@ -93,16 +108,21 @@ export function stripComments(source: string): string {
 			index++;
 			while (index < source.length) {
 				const inner = source[index] as string;
-				output += inner;
 				index++;
 				if (inner === '\\') {
+					output += blankStrings ? ' ' : inner;
 					if (index < source.length) {
-						output += source[index];
+						const escaped = source[index] as string;
+						output += blankStrings && escaped !== '\n' ? ' ' : escaped;
 						index++;
 					}
 					continue;
 				}
-				if (inner === quote) break;
+				if (inner === quote) {
+					output += inner;
+					break;
+				}
+				output += blankStrings && inner !== '\n' ? ' ' : inner;
 				// A non-template literal never spans a raw newline; bail out rather
 				// than swallowing the file when the source is not what we assumed.
 				if (inner === '\n' && quote !== '`') break;

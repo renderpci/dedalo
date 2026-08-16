@@ -6,8 +6,21 @@
  * client hands to tool_upload.process_uploaded_file (PHP two-call flow:
  * dd_utils_api::upload → tool_upload::process_uploaded_file). Fail-closed: no
  * session → 404 (no existence leak), bad CSRF → 403, bad file → 400.
+ *
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §3-4). This route is served by
+ * server.ts BEFORE the API dispatcher — it never enters the dispatch
+ * chokepoint, so it owns its own Responses. It still builds them through the
+ * ONE converter door (`ok` / `toErrorEnvelope`), never by hand.
+ *
+ * `file_data` stays a TOP-LEVEL EXTENSION KEY and `data` carries the boolean
+ * outcome (PHP answered `result:true`): the upload client reads
+ * `api_response.file_data` at top level and gates every part on
+ * `response_data(api_response) !== true` (upload_transport.js), so `data` has
+ * to BE `true` — a payload object there would fail that strict check and hang
+ * every transfer.
  */
 
+import { DedaloError, ok, toErrorEnvelope } from '../../errors/index.ts';
 import type { Session } from '../../security/session_store.ts';
 import { verifyCsrf } from '../../security/session_store.ts';
 import { createStagedThumbnail } from './staged_thumbnail.ts';
@@ -21,6 +34,12 @@ function json(body: unknown, status = 200): Response {
 	});
 }
 
+/** A refusal, converter-made: registry status + the v2 error body. */
+function refusal(error: DedaloError, requestId: string): Response {
+	const converted = toErrorEnvelope(error, { requestId, surface: 'http' });
+	return json(converted.body, converted.status);
+}
+
 /**
  * Handle a multipart upload POST. `session` is the resolved TS session (null =
  * anonymous), `csrfCandidate` the header/field token.
@@ -30,8 +49,14 @@ export async function handleMediaUpload(
 	session: Session | null,
 	csrfCandidate: string | null,
 ): Promise<Response> {
+	// The envelope's correlation id. GENERATED here, and honestly so: this route
+	// is served ahead of the dispatch chokepoint, so no request id was minted for
+	// it upstream and there is none to reuse. One id per call, shared by every
+	// response below.
+	const requestId = crypto.randomUUID();
+
 	// Auth: anonymous callers get a 404 (never reveal the endpoint or leak state).
-	if (session === null) return json({ result: false, msg: 'Not found' }, 404);
+	if (session === null) return refusal(new DedaloError('resource.not_found'), requestId);
 
 	// CSRF: state-changing, constant-time compare. Accepts the header OR the
 	// `csrf_token` form field (SEC-008 twin — both upload clients send both; the
@@ -44,20 +69,10 @@ export async function handleMediaUpload(
 	try {
 		parsed = await parseUploadRequest(request);
 	} catch (error) {
-		return json(
-			{
-				result: false,
-				msg: 'Upload rejected',
-				errors: [(error as Error).message],
-			},
-			400,
-		);
+		return refusal(rejectedUpload(error), requestId);
 	}
 	if (!verifyCsrf(session, csrfCandidate) && !verifyCsrf(session, parsed.csrfToken)) {
-		return json(
-			{ result: false, msg: 'CSRF validation failed', errors: ['CSRF validation failed'] },
-			403,
-		);
+		return refusal(new DedaloError('auth.csrf_failed'), requestId);
 	}
 	try {
 		const received = receiveUpload(parsed, session.userId);
@@ -73,58 +88,60 @@ export async function handleMediaUpload(
 						received.extension ?? null,
 					)
 				: null;
-		return json({
-			result: true,
-			msg: 'ok',
-			// file_data MUST echo chunk_index + total_chunks: the client counts
-			// chunk completion by these (files_chunked[chunk_index]=tmp_name;
-			// count === total_chunks → fire join_chunked_files_uploaded). Omitting
-			// them made total_chunks NaN → the join never fired → uploads hung.
-			file_data: {
-				key_dir: parsed.keyDir,
-				tmp_name: received.tmpName ?? null,
-				// THE HUMAN FILE NAME (PHP file_data->name :1260 — 'My Picture 1.jpg').
-				// Restored 2026-08-09 for the CLIENT: the queue row's label, and the
-				// PHP wire shape. The ARCHIVE does not get the name from here — the
-				// ingest is a LATER request and would depend on the caller relaying
-				// this key back, which no ingest caller does. The receiver therefore
-				// also persists it beside the staged file and the ingest reads it
-				// there (staged_name_record.ts). With neither, the ingest had only
-				// `tmp_name` — the SANITIZED staged segment — so a record's
-				// `target_filename` field recorded 'Mar_a_Pi_n.jpg' for a file the
-				// curator uploaded as 'María Piñón.jpg'.
-				name: received.name ?? null,
-				extension: received.extension ?? null,
-				chunked: parsed.chunked,
-				chunk_index: received.chunkIndex ?? 0,
-				total_chunks: received.totalChunks ?? 1,
-				complete: received.complete,
-				// The TRANSFER IDENTITY (WC-2026-08-03-chunked-upload-identity).
-				// Echoed so it round-trips: the client forwards the LAST chunk's
-				// file_data verbatim into join_chunked_files_uploaded, which is how the
-				// join finds exactly THIS transfer's parts instead of guessing from a
-				// file name two different uploads can share.
-				upload_id: received.uploadId ?? null,
-				// PHP dd_utils_api :1269 — null when the format is not previewable.
-				thumbnail_url: thumbnailUrl,
-			},
-		});
-	} catch (error) {
-		// Validation failures (bad MIME, traversal, polyglot) → 400, no detail leak.
-		// ONE machine-readable error key: `errors` (array), the shape
-		// `upload_transport.js` reads (`errors[]` then `msg`). The former sibling
-		// `error` (string) existed ONLY because Dropzone 5's default renderer
-		// unwraps `.error`; with service_dropzone deleted it has no consumer
-		// (WC-2026-08-03-service-dropzone-folded-into-service-upload, which
-		// REVERSES the WC-078 "error bodies gain an `error` string key" section).
-		// The rejection body key set is pinned by test/unit/media_upload_endpoint.
 		return json(
-			{
-				result: false,
-				msg: 'Upload rejected',
-				errors: [(error as Error).message],
-			},
-			400,
+			ok(true, {
+				requestId,
+				extend: {
+					// file_data MUST echo chunk_index + total_chunks: the client counts
+					// chunk completion by these (files_chunked[chunk_index]=tmp_name;
+					// count === total_chunks → fire join_chunked_files_uploaded). Omitting
+					// them made total_chunks NaN → the join never fired → uploads hung.
+					file_data: {
+						key_dir: parsed.keyDir,
+						tmp_name: received.tmpName ?? null,
+						// THE HUMAN FILE NAME (PHP file_data->name :1260 — 'My Picture 1.jpg').
+						// Restored 2026-08-09 for the CLIENT: the queue row's label, and the
+						// PHP wire shape. The ARCHIVE does not get the name from here — the
+						// ingest is a LATER request and would depend on the caller relaying
+						// this key back, which no ingest caller does. The receiver therefore
+						// also persists it beside the staged file and the ingest reads it
+						// there (staged_name_record.ts). With neither, the ingest had only
+						// `tmp_name` — the SANITIZED staged segment — so a record's
+						// `target_filename` field recorded 'Mar_a_Pi_n.jpg' for a file the
+						// curator uploaded as 'María Piñón.jpg'.
+						name: received.name ?? null,
+						extension: received.extension ?? null,
+						chunked: parsed.chunked,
+						chunk_index: received.chunkIndex ?? 0,
+						total_chunks: received.totalChunks ?? 1,
+						complete: received.complete,
+						// The TRANSFER IDENTITY (WC-2026-08-03-chunked-upload-identity).
+						// Echoed so it round-trips: the client forwards the LAST chunk's
+						// file_data verbatim into join_chunked_files_uploaded, which is how the
+						// join finds exactly THIS transfer's parts instead of guessing from a
+						// file name two different uploads can share.
+						upload_id: received.uploadId ?? null,
+						// PHP dd_utils_api :1269 — null when the format is not previewable.
+						thumbnail_url: thumbnailUrl,
+					},
+				},
+			}),
 		);
+	} catch (error) {
+		return refusal(rejectedUpload(error), requestId);
 	}
+}
+
+/**
+ * The staging/validation refusal (bad MIME, traversal, polyglot, malformed
+ * upload_id) as ONE typed throw. `media.upload_rejected` is a public-disclosure
+ * code, so the validator's own sentence still reaches the curator — but as the
+ * envelope's `error.message`, never as a raw exception string assigned to a
+ * wire field; the original travels as `cause` for the log.
+ */
+function rejectedUpload(error: unknown): DedaloError {
+	return new DedaloError('media.upload_rejected', {
+		publicMessage: error instanceof Error ? error.message : String(error),
+		cause: error,
+	});
 }

@@ -38,6 +38,9 @@
 
 // imports
 	import { ui } from '../../../core/common/js/ui.js'
+	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
+	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
+	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { render_tool_image_crop } from './render_tool_image_crop.js'
 	import { ua } from '../../../core/common/js/ua.js'
 
@@ -552,17 +555,40 @@ const get_buttons = function(self) {
 					self.node.content_data.classList.remove('loading')
 					return
 				}
-				if (response?.result!==true) {
-					// Do not fail silently: the server reports per-tier errors
-					// (e.g. an out-of-bounds crop box) that the user must see.
-					const msg = (response?.errors?.length)
-						? response.errors.join(' | ')
-						: (response?.msg || 'Error')
-					ui.show_message(options_container, msg, 'error')
+				// Do not fail silently: the server reports per-tier errors (e.g. an
+				// out-of-bounds crop box) that the user must see. ONE error model —
+				// the dispatcher picks the surface, the renderer emits TEXT.
+				if (request_failed(response)) {
+					console.error('apply_rotation failed:', response.error)
+					await handle_api_error(response.error, {wrapper: options_container})
 					self.node.content_data.classList.remove('loading')
 					return
 				}
-				if (response.result===true) {
+				// envelope v2 payload: `{rotated:[path], cropped:[path], files_info,
+				// errors:[per-tier failure]}` (tools/tool_image_rotation/server/index.ts).
+				// A tier that refused is PAYLOAD, not a wire failure — but a run that
+				// rotated NOTHING is a no-op the user must be told about.
+				const rotation_data		= response_data(response) || {}
+				const rotated_count		= Array.isArray(rotation_data.rotated) ? rotation_data.rotated.length : 0
+				const rotation_failures	= rotation_data.errors
+				const rotation_errors	= Array.isArray(rotation_failures) ? rotation_failures : []
+				if (rotated_count===0) {
+					// answered, but nothing was written and no ApiError behind it: a
+					// CLIENT sentence, plus whatever the engine said per tier
+					ui.show_message(
+						options_container,
+						(self.get_tool_label('rotation_not_applied') || 'The rotation could not be applied')
+							+ (rotation_errors.length ? ': ' + rotation_errors.join(' | ') : ''),
+						'error'
+					)
+					self.node.content_data.classList.remove('loading')
+					return
+				}
+				{
+					if (rotation_errors.length) {
+						// partial run: some tiers landed, some refused — say both
+						ui.show_message(options_container, rotation_errors.join(' | '), 'error')
+					}
 					// reload the image
 					await fetch(self.main_element_image.src, {cache: 'reload', mode: 'no-cors'});
 					self.main_element_image.src = self.main_element_image.src
@@ -654,7 +680,14 @@ const get_buttons = function(self) {
 				// set the status done
 				button_remove_background.classList.remove('disable')
 				const msg = self.get_tool_label('backgroun_removal_completed') || 'Background removal completed.';
-				status_container.innerHTML = `<span class="success_text">${msg}</span>`;
+				// the label is served content — an ELEMENT with text, never a markup string
+				status_container.textContent = ''
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'success_text',
+					text_content	: msg,
+					parent			: status_container
+				})
 
 				// REFRESH THE COMPONENT'S OWN files_info FROM THE UPLOAD RESPONSE.
 				// `build(true)` is a NO-OP on an already-built instance — component_common
@@ -667,7 +700,7 @@ const get_buttons = function(self) {
 				// down exists on disk and is invisible here, and the preview never
 				// changes on the FIRST removal — which is exactly the symptom the twin
 				// builder was written to end.
-				const fresh_files_info = response?.files_info
+				const fresh_files_info = response_data(response)?.files_info
 				if (Array.isArray(fresh_files_info) && self.main_element.data?.entries?.[0]) {
 					self.main_element.data.entries[0].files_info = fresh_files_info
 				}
@@ -692,7 +725,14 @@ const get_buttons = function(self) {
 					// configured, or this host cannot encode it — the server says which in
 					// its response). Say so instead of returning silently: the removal DID
 					// happen and is stored in the 'modified' master.
-					const detail = (response?.errors?.length) ? response.errors.join(' | ') : (response?.msg || '')
+					// envelope v2: the per-derivative failures are PAYLOAD
+				// (`derivative_errors`, tools/tool_upload/server/index.ts); a failed
+				// call carries the coded error instead.
+					const upload_data	= request_failed(response) ? null : response_data(response)
+					const ar_detail		= Array.isArray(upload_data?.derivative_errors) ? upload_data.derivative_errors : []
+					const detail		= ar_detail.length
+						? ar_detail.join(' | ')
+						: (request_failed(response) ? error_text(response.error) : '')
 					console.warn('[tool_image_rotation] background removal stored, but no', extension, 'version of the 1.5MB tier to preview.', detail)
 					return
 				}

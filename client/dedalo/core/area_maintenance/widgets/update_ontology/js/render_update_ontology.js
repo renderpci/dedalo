@@ -43,6 +43,8 @@
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -120,7 +122,7 @@ const build_readout = function (rows) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: row.mono ? 'dd_v mono' : 'dd_v',
-			inner_html		: (row.v===null || row.v===undefined || row.v==='') ? '—' : row.v,
+			text_content	: (row.v===null || row.v===undefined || row.v==='') ? '—' : String(row.v),
 			parent			: tr
 		})
 	})
@@ -156,10 +158,11 @@ const build_details = function (summary_text, pre_content, opts) {
 		inner_html		: summary_text,
 		parent			: details
 	})
+	// pre_content is SERVER text (import log, warnings, raw JSON): TEXT, never a sink
 	ui.create_dom_element({
 		element_type	: 'pre',
 		class_name		: options.pre_class || '',
-		inner_html		: pre_content,
+		text_content	: String(pre_content ?? ''),
 		parent			: details
 	})
 
@@ -189,8 +192,8 @@ const build_version_change = function (installed, incoming) {
 	// installed card
 		const from = ui.create_dom_element({ element_type:'div', class_name:'vcard', parent:wrap })
 		ui.create_dom_element({ element_type:'div', class_name:'lbl', inner_html:'Installed now', parent:from })
-		ui.create_dom_element({ element_type:'div', class_name:'num', inner_html:installed.version || '—', parent:from })
-		ui.create_dom_element({ element_type:'div', class_name:'src', inner_html:`${installed.host || '—'} · ${fmt_date(installed.date)}`, parent:from })
+		ui.create_dom_element({ element_type:'div', class_name:'num', text_content:String(installed.version || '—'), parent:from })
+		ui.create_dom_element({ element_type:'div', class_name:'src', text_content:`${installed.host || '—'} · ${fmt_date(installed.date)}`, parent:from })
 
 	// arrow
 		ui.create_dom_element({ element_type:'div', class_name:'arrow', inner_html:'→', parent:wrap })
@@ -198,8 +201,8 @@ const build_version_change = function (installed, incoming) {
 	// incoming card
 		const to = ui.create_dom_element({ element_type:'div', class_name:'vcard incoming', parent:wrap })
 		ui.create_dom_element({ element_type:'div', class_name:'lbl', inner_html:'Incoming', parent:to })
-		ui.create_dom_element({ element_type:'div', class_name:'num', inner_html:(incoming && incoming.version) || '—', parent:to })
-		ui.create_dom_element({ element_type:'div', class_name:'src', inner_html:`${(incoming && incoming.host) || '—'} · ${fmt_date(incoming && incoming.date)}`, parent:to })
+		ui.create_dom_element({ element_type:'div', class_name:'num', text_content:String((incoming && incoming.version) || '—'), parent:to })
+		ui.create_dom_element({ element_type:'div', class_name:'src', text_content:`${(incoming && incoming.host) || '—'} · ${fmt_date(incoming && incoming.date)}`, parent:to })
 
 	return wrap
 }//end build_version_change
@@ -342,14 +345,19 @@ const get_content_data_edit = async function(self) {
 							console.log('))) get_ontology_update_info:', server_ontology_api_response)
 						}
 
-						const result = server_ontology_api_response?.result
-						if(!result){
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'error',
-								inner_html		: server_ontology_api_response.msg || 'Could not reach the master server.',
-								parent			: body_response
-							})
+						const result = response_data(server_ontology_api_response)
+						if(request_failed(server_ontology_api_response) || !result){
+							if (request_failed(server_ontology_api_response)) {
+								// ONE error model: policy + renderer decide the surface
+								await handle_api_error(server_ontology_api_response.error, {wrapper: body_response})
+							} else {
+								ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'error',
+									text_content	: String(response_extension(server_ontology_api_response, 'msg') || 'Could not reach the master server.'),
+									parent			: body_response
+								})
+							}
 							return
 						}
 
@@ -380,13 +388,18 @@ const get_content_data_edit = async function(self) {
 						})
 
 					// fail case
-						if(!api_response?.result){
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'error',
-								inner_html		: api_response.msg || 'The ontology import failed.',
-								parent			: body_response
-							})
+						if(request_failed(api_response) || !response_data(api_response)){
+							if (request_failed(api_response)) {
+								// ONE error model: policy + renderer decide the surface
+								await handle_api_error(api_response.error, {wrapper: body_response})
+							} else {
+								ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'error',
+									text_content	: String(response_extension(api_response, 'msg') || 'The ontology import failed.'),
+									parent			: body_response
+								})
+							}
 							return
 						}
 
@@ -404,13 +417,13 @@ const get_content_data_edit = async function(self) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'warning',
-								inner_html		: `Your Dédalo code is older than this ontology needs (≥ ${required_version}). Update the code soon to avoid incompatibilities.`,
+								text_content	: `Your Dédalo code is older than this ontology needs (≥ ${required_version}). Update the code soon to avoid incompatibilities.`,
 								parent			: body_response
 							})
 						}
 
 					// non-fatal import errors
-						const errors = (api_response.errors || []).filter(Boolean)
+						const errors = (response_extension(api_response, 'errors') || []).filter(Boolean)
 						if (errors.length>0) {
 							body_response.appendChild(
 								build_details('Import warnings ('+errors.length+')', errors.join('\n'), { open:true, pre_class:'warning' })
@@ -418,9 +431,10 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// collapsible import log (the per-file messages)
-						if (api_response.msg) {
+						const import_log = response_extension(api_response, 'msg')
+						if (import_log) {
 							body_response.appendChild(
-								build_details('Import log', api_response.msg, { open:true, pre_class:'log' })
+								build_details('Import log', import_log, { open:true, pre_class:'log' })
 							)
 						}
 
@@ -485,7 +499,7 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note empty',
-			inner_html		: `No master servers are configured (${env_key}).`,
+			text_content	: `No master servers are configured (${env_key}).`,
 			parent			: picker
 		})
 		return picker
@@ -495,7 +509,9 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 	for (let i = 0; i < server_len; i++) {
 
 		const current_server	= servers[i]
-		const reachable			= current_server.response_code === 200 && !!current_server.result?.result
+		// `current_server.result` is the REMOTE's decoded body (a nested probe key,
+		// not our envelope): its own payload says whether it answered ready.
+		const reachable			= current_server.response_code === 200 && !!response_data(current_server.result)
 
 		// row = clickable <label> wrapping the radio, meta and pill
 			const server_row = ui.create_dom_element({
@@ -529,8 +545,8 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 
 		// meta: name + url
 			const meta = ui.create_dom_element({ element_type:'span', class_name:'meta', parent:server_row })
-			ui.create_dom_element({ element_type:'span', class_name:'nm', inner_html:current_server.name, parent:meta })
-			ui.create_dom_element({ element_type:'span', class_name:'url', inner_html:current_server.url, parent:meta })
+			ui.create_dom_element({ element_type:'span', class_name:'nm', text_content:String(current_server.name ?? ''), parent:meta })
+			ui.create_dom_element({ element_type:'span', class_name:'url', text_content:String(current_server.url ?? ''), parent:meta })
 
 		// reachability pill
 			ui.create_dom_element({

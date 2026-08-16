@@ -13,6 +13,8 @@
  * 404 like every other admin surface (no existence leak).
  */
 
+import { toErrorEnvelope } from '../errors/convert.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { getSession, SESSION_COOKIE } from '../security/session_store.ts';
 import { getProcessPoison } from './process_health.ts';
 
@@ -116,7 +118,12 @@ export async function collectOpsCounters(): Promise<Record<string, unknown>> {
  * GET /api/v1/counters — session-gated, global-admin-only diagnostics.
  * Anything short of an admin session answers a plain 404 (fail-closed).
  */
-export async function handleCountersRequest(request: Request): Promise<Response> {
+export async function handleCountersRequest(
+	request: Request,
+	// server.ts routes by path + method only and does not thread its per-request
+	// id here yet; a fresh one keeps `request_id` present and unique per response.
+	requestId: string = crypto.randomUUID(),
+): Promise<Response> {
 	const cookieHeader = request.headers.get('cookie') ?? '';
 	const token = cookieHeader
 		.split(';')
@@ -125,8 +132,10 @@ export async function handleCountersRequest(request: Request): Promise<Response>
 		?.slice(SESSION_COOKIE.length + 1);
 	const session = token !== undefined ? getSession(token) : null;
 	if (session === null || session.isGlobalAdmin !== true) {
-		return new Response(JSON.stringify({ result: false, msg: 'Not found' }), {
-			status: 404,
+		// Converter-made (ERRORS_SPEC §4): the same 404 shape a route miss answers.
+		const converted = toErrorEnvelope(new DedaloError('resource.not_found'), { requestId });
+		return new Response(JSON.stringify(converted.body), {
+			status: converted.status,
 			headers: { 'Content-Type': 'application/json' },
 		});
 	}

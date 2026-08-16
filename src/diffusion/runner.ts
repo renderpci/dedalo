@@ -30,9 +30,11 @@ import '../core/components/registry.ts';
 import { readString } from '../config/readers.ts';
 import { closeDatabasePool } from '../core/db/postgres.ts';
 import { logDiffusionActivity } from '../core/diffusion_bridge/diffusion_delete.ts';
+import { DedaloError, isDedaloError, logError, toErrorBody } from '../core/errors/index.ts';
 import type { DiffusionJobRow } from './jobs/queue.ts';
 import {
 	checkpointJob,
+	failedJobResult,
 	finishJob,
 	getJobById,
 	heartbeatJob,
@@ -49,6 +51,9 @@ function parseJobIdArgument(argv: string[]): string | null {
 	return inline !== undefined ? inline.slice('--job='.length) : null;
 }
 
+/** The cancellation `msg` line (totals.msg + result.msg) the client renders. */
+const CANCELLED_MSG = 'Process cancelled by user';
+
 /** Cap on error strings persisted to the job row (full detail goes to stderr). */
 const MAX_PERSISTED_ERRORS = 50;
 
@@ -64,7 +69,11 @@ async function runStubJob(job: DiffusionJobRow): Promise<void> {
 	const resumeFrom = Number((job.checkpoint as { counter?: unknown }).counter ?? 0) || 0;
 	for (let counter = resumeFrom + 1; counter <= total; counter++) {
 		if (await isCancelRequested(jobId)) {
-			await finishJob(jobId, 'cancelled', { result: false, msg: 'Process cancelled by user' });
+			await finishJob(
+				jobId,
+				'cancelled',
+				failedJobResult(new DedaloError('diffusion.cancelled'), CANCELLED_MSG),
+			);
 			return;
 		}
 		await Bun.sleep(STUB_BATCH_DELAY_MS);
@@ -76,7 +85,7 @@ async function runStubJob(job: DiffusionJobRow): Promise<void> {
 		});
 		await checkpointJob(jobId, { counter });
 	}
-	await finishJob(jobId, 'completed', { result: true, msg: 'OK. Request done', tables: [] });
+	await finishJob(jobId, 'completed', { ok: true, msg: 'OK. Request done', tables: [] });
 }
 
 /** The real publication pipeline. */
@@ -169,11 +178,13 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 				// Everything committed so far stays published (idempotent re-run
 				// completes the rest); close() finalizes the partial summary.
 				const partial = await session.close();
-				await finishJob(jobId, 'cancelled', {
-					result: false,
-					msg: 'Process cancelled by user',
-					tables: partial.tables,
-				});
+				await finishJob(
+					jobId,
+					'cancelled',
+					failedJobResult(new DedaloError('diffusion.cancelled'), CANCELLED_MSG, {
+						tables: partial.tables,
+					}),
+				);
 				return;
 			}
 
@@ -260,8 +271,11 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 			}
 		}
 
+		// A completed job is a SUCCESS record even with per-record diagnostic
+		// lines: `ok:true` + `errors` (the report model reads `errors.length`
+		// for its "partial" verdict); a FAILURE record is `ok:false` + `error`.
 		await finishJob(jobId, 'completed', {
-			result: allErrors.length === 0,
+			ok: true,
 			msg:
 				allErrors.length === 0
 					? 'OK. Request done'
@@ -305,10 +319,22 @@ async function runJob(jobId: string): Promise<void> {
 			await runPublicationJob(job);
 		}
 	} catch (error) {
-		await finishJob(jobId, 'failed', {
-			result: false,
-			msg: `Error. Diffusion run failed: ${error instanceof Error ? error.message : String(error)}`,
-		});
+		// The persisted job `result` is a FAILURE RECORD (`{ok:false, error:{code,
+		// …}, msg}` — toFailureRecord; progressDataFromJob copies it into the
+		// follow stream's terminal chunk as `result`), plus the `msg` line the
+		// report model reads. A typed failure (a PlanCompileError — public, its
+		// cause list is the message) keeps its code; anything else is
+		// `diffusion.run_failed` with the raw error as LOG-ONLY cause
+		// (engineering/ERRORS_SPEC.md §5).
+		const typed = isDedaloError(error)
+			? error
+			: new DedaloError('diffusion.run_failed', { cause: error, coordinates: { job: jobId } });
+		logError(typed, { subsystem: 'diffusion runner' });
+		await finishJob(
+			jobId,
+			'failed',
+			failedJobResult(typed, `Error. Diffusion run failed: ${toErrorBody(typed).message}`),
+		);
 	} finally {
 		clearInterval(heartbeat);
 	}

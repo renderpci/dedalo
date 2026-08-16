@@ -34,6 +34,7 @@ import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { componentTextAreaApiActions } from '../../src/core/api/handlers/dd_component_text_area_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { Session } from '../../src/core/security/session_store.ts';
 import { mustGet } from '../helpers/assert.ts';
@@ -149,17 +150,33 @@ afterAll(async () => {
 	}
 });
 
-const BAD_SOURCE_BODY = {
-	result: false,
-	msg: [' Bad request: source.tipo, source.section_tipo and source.section_id are mandatory'],
-	errors: ['bad_source'],
-};
-const BAD_OPTIONS_BODY = {
-	result: false,
-	msg: [' Bad request: options.ar_type must be a non-empty array of tag types'],
-	errors: ['bad_options'],
-};
-const FORBIDDEN_BODY = { result: false, msg: [' Forbidden record'], errors: ['forbidden'] };
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): each refusal is a THROWN
+ * registry code (the old `bad_source` / `bad_options` / `forbidden` tokens,
+ * mapped through LEGACY_TOKEN_MAP). The CODE is the contract now — the PHP
+ * prose bytes are gone from the wire by design.
+ */
+const BAD_SOURCE_CODE = 'request.invalid_source';
+const BAD_OPTIONS_CODE = 'request.invalid_options';
+const FORBIDDEN_CODE = 'perm.denied';
+
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a refusal is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function refusalOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a refusal, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
 
 describe('get_tags_info — argument refusals', () => {
 	test('no seeded principal ⇒ requirePrincipal throws (never an anonymous feed)', async () => {
@@ -178,19 +195,24 @@ describe('get_tags_info — argument refusals', () => {
 			{ tipo: '', section_tipo: SECTION, section_id: SECTION_ID },
 		];
 		for (const source of cases) {
-			const result = await getTagsInfo(rqoOf(source, { ar_type: ['index'] }), contextFor(ADMIN));
-			expect(result).toEqual({ status: 200, body: BAD_SOURCE_BODY });
+			const refusal = await refusalOf(
+				getTagsInfo(rqoOf(source, { ar_type: ['index'] }), contextFor(ADMIN)),
+			);
+			expect(refusal.code).toBe(BAD_SOURCE_CODE);
+			expect(refusal.spec.status).toBe(400);
 		}
 	});
 
 	test('section_id 0 is NOT a coordinate refusal — it reaches the record gate', async () => {
-		const result = await getTagsInfo(
-			rqoOf({ tipo: TEXT_AREA, section_tipo: SECTION, section_id: 0 }, { ar_type: ['index'] }),
-			contextFor(ADMIN),
+		const refusal = await refusalOf(
+			getTagsInfo(
+				rqoOf({ tipo: TEXT_AREA, section_tipo: SECTION, section_id: 0 }, { ar_type: ['index'] }),
+				contextFor(ADMIN),
+			),
 		);
 		// Admin, so the ONLY thing that can refuse here is record_scope's
 		// `sectionId < 1` — proving the coordinate check let 0 through.
-		expect(result).toEqual({ status: 200, body: FORBIDDEN_BODY });
+		expect(refusal.code).toBe(FORBIDDEN_CODE);
 	});
 
 	test('a missing / non-array / string-less ar_type ⇒ bad_options, byte-exact', async () => {
@@ -202,26 +224,30 @@ describe('get_tags_info — argument refusals', () => {
 			{ ar_type: [42] },
 		];
 		for (const options of cases) {
-			const result = await getTagsInfo(rqoOf(hostSource(), options), contextFor(ADMIN));
-			expect(result).toEqual({ status: 200, body: BAD_OPTIONS_BODY });
+			const refusal = await refusalOf(getTagsInfo(rqoOf(hostSource(), options), contextFor(ADMIN)));
+			expect(refusal.code).toBe(BAD_OPTIONS_CODE);
+			// PUBLIC disclosure: the vetted sentence names the field, not the value.
+			expect(refusal.publicMessage).toBe('options.ar_type must be a non-empty array of tag types');
 		}
 	});
 
 	test('the options refusal is decided BEFORE the record gate', async () => {
 		// An out-of-scope caller on a bad-options request still gets bad_options:
 		// the order in the handler is arguments → authz.
-		const result = await getTagsInfo(rqoOf(hostSource(), { ar_type: [] }), contextFor(NO_ACCESS));
-		expect(result.body).toEqual(BAD_OPTIONS_BODY);
+		const refusal = await refusalOf(
+			getTagsInfo(rqoOf(hostSource(), { ar_type: [] }), contextFor(NO_ACCESS)),
+		);
+		expect(refusal.code).toBe(BAD_OPTIONS_CODE);
 	});
 });
 
 describe('get_tags_info — AUTHZ-01 record gate', () => {
 	test('an EXISTING record outside the caller scope ⇒ forbidden envelope, no tags shape', async () => {
-		const result = await getTagsInfo(
-			rqoOf(hostSource(), { ar_type: ['index', 'note'] }),
-			contextFor(NO_ACCESS),
+		const refusal = await refusalOf(
+			getTagsInfo(rqoOf(hostSource(), { ar_type: ['index', 'note'] }), contextFor(NO_ACCESS)),
 		);
-		expect(result).toEqual({ status: 200, body: FORBIDDEN_BODY });
+		expect(refusal.code).toBe(FORBIDDEN_CODE);
+		expect(refusal.spec.status).toBe(403);
 	});
 
 	test('the SAME record + an admin principal passes the gate (the refusal is scope, not fixture)', async () => {
@@ -229,9 +255,9 @@ describe('get_tags_info — AUTHZ-01 record gate', () => {
 			rqoOf(hostSource(), { ar_type: ['index'] }),
 			contextFor(ADMIN),
 		);
-		const body = result.body as { result: { tags_index?: unknown[] } };
-		expect(body.result).not.toBe(false);
-		expect(body.result.tags_index).toHaveLength(1);
+		const body = result.body as { ok: boolean; data: { tags_index?: unknown[] } };
+		expect(body.ok).toBe(true);
+		expect(body.data.tags_index).toHaveLength(1);
 	});
 });
 
@@ -242,10 +268,12 @@ describe('get_tags_info — resolved payload', () => {
 			contextFor(ADMIN),
 		);
 		expect(result.status).toBe(200);
-		const body = result.body as { result: { tags_index: unknown[] }; msg: string[]; errors: [] };
-		expect(body.msg).toEqual([]);
-		expect(body.errors).toEqual([]);
-		expect(body.result.tags_index).toEqual([
+		const body = result.body as unknown as {
+			data: { tags_index: unknown[] };
+			unknown_types: string[];
+		};
+		expect(body.unknown_types).toEqual([]);
+		expect(body.data.tags_index).toEqual([
 			{
 				data: {
 					id: 1,
@@ -266,9 +294,14 @@ describe('get_tags_info — resolved payload', () => {
 			rqoOf(hostSource(), { ar_type: ['index', 'not_a_type'] }),
 			contextFor(ADMIN),
 		);
-		const body = result.body as { result: { tags_index?: unknown[] }; msg: string[] };
-		expect(body.msg).toEqual([' Unsupported tag type(s) ignored: not_a_type']);
-		expect(body.result.tags_index).toHaveLength(1); // the known type still resolved
+		// Never silently narrow: the unresolvable type is NAMED — as the owned
+		// top-level `unknown_types` key now that the prose channel is gone.
+		const body = result.body as unknown as {
+			data: { tags_index?: unknown[] };
+			unknown_types: string[];
+		};
+		expect(body.unknown_types).toEqual(['not_a_type']);
+		expect(body.data.tags_index).toHaveLength(1); // the known type still resolved
 	});
 
 	test('several unknown types are joined in one message', async () => {
@@ -276,8 +309,9 @@ describe('get_tags_info — resolved payload', () => {
 			rqoOf(hostSource(), { ar_type: ['zzz_one', 'index', 'zzz_two'] }),
 			contextFor(ADMIN),
 		);
-		expect((result.body as { msg: string[] }).msg).toEqual([
-			' Unsupported tag type(s) ignored: zzz_one, zzz_two',
+		expect((result.body as unknown as { unknown_types: string[] }).unknown_types).toEqual([
+			'zzz_one',
+			'zzz_two',
 		]);
 	});
 });
@@ -285,7 +319,7 @@ describe('get_tags_info — resolved payload', () => {
 describe('get_tags_info — the lang of the transcription', () => {
 	/** buildTagsInfo can OMIT a key entirely, so never compare `undefined` to []. */
 	const notesOf = (result: { body: unknown }): unknown[] =>
-		((result.body as { result: { tags_notes?: unknown[] } }).result.tags_notes ?? []) as unknown[];
+		((result.body as { data: { tags_notes?: unknown[] } }).data.tags_notes ?? []) as unknown[];
 
 	test("source.lang 'lg-spa' resolves the note marks of the lg-spa text", async () => {
 		const result = await getTagsInfo(

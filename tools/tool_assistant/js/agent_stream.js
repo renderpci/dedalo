@@ -6,6 +6,11 @@
 
 // import
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import {
+		normalize_api_error,
+		normalize_stream_error,
+		normalize_transport_error
+	} from '../../../core/common/js/api_error.js'
 
 
 
@@ -24,7 +29,11 @@
  *   event: iteration    data: {n, max}
  *   event: final        data: {answer, stop, change_plan, history,
  *                              transcript_summary, usage, turns, model}
- *   event: error        data: {code, message, hint}             (terminal)
+ *   event: error        data: {code, category, message, label_key, retryable,
+ *                              details?, hint?}                    (terminal)
+ *                       The DATA is the error BODY itself — the event name
+ *                       already says terminal, so there is no `is_running:false`
+ *                       wrapper (ERRORS_SPEC §5.3, dd_mcp_api agentErrorFrame).
  *   `: ping` comment heartbeats are ignored. Unknown events are no-ops.
  *
  * Content negotiation: when the server refuses BEFORE the stream opens
@@ -46,6 +55,52 @@
 
 
 /**
+ * LIFT_HINT
+ * `hint` is the one field the wire carries that the error model has no column
+ * for, so it moves into `details` — the ONE place an ApiError keeps per-code
+ * scalars, and where a renderer may read it — instead of being dropped.
+ *
+ * @param {Object} body - an envelope-v2 error body
+ * @returns {Object}
+ */
+const lift_hint = function(body) {
+
+	return (typeof body.hint === 'string' && body.hint.length)
+		? {...body, details: {...(body.details || {}), hint: body.hint}}
+		: body
+}//end lift_hint
+
+
+
+/**
+ * ERROR_FRAME
+ * The `event: error` payload, hint lifted, SHAPE PRESERVED.
+ *
+ * Two shapes reach here and both stay legal: today's BARE body (`{code,
+ * category, message, label_key, retryable, details?, hint?}` — the event name
+ * already says terminal, so the server sends no wrapper) and the older
+ * `toStreamFrame` wrapper `{is_running:false, error:{…}}`. This function does
+ * not choose between them: it lifts the hint wherever it sits and hands the
+ * frame to `normalize_stream_error`, which is THE place that decides.
+ *
+ * @param {Object|null} data - the parsed frame payload
+ * @returns {Object|null}
+ */
+const error_frame = function(data) {
+
+	if (!data || typeof data !== 'object') {
+		return null
+	}
+	// COMPAT: the wrapped frame carries the body one level down
+	if (data.error && typeof data.error === 'object') {
+		return {...data, error: lift_hint(data.error)}
+	}
+	return lift_hint(data)
+}//end error_frame
+
+
+
+/**
  * AGENT_STREAM
  * Send one chat turn and consume the streamed reply.
  *
@@ -59,7 +114,11 @@
  * @param {Function} [opts.on_tool_use] - ({id, name, summary})
  * @param {Function} [opts.on_tool_result] - ({id, name, ok, code})
  * @param {Function} [opts.on_final]    - (final_data)  terminal on success
- * @param {Function} [opts.on_error]    - ({code, message, hint}) terminal on failure
+ * @param {Function} [opts.on_error]    - (ApiError) terminal on failure. ONE error
+ *   model for every failure class — transport, refusal envelope, `event: error`
+ *   frame, truncated stream — so the caller dispatches it through
+ *   `handle_api_error` and a mid-turn `auth.not_logged` reaches the relogin
+ *   overlay instead of a dead line in the transcript.
  * @returns {Promise<void>} resolves when the stream is fully consumed
  */
 export async function agent_stream(opts) {
@@ -98,7 +157,7 @@ export async function agent_stream(opts) {
 		})
 	} catch(e) {
 		if (e && e.name === 'AbortError') return // user stop — caller renders it
-		on_error({ code: 'network', message: e.message || 'Network error', hint: null })
+		on_error(normalize_transport_error(e))
 		return
 	}
 
@@ -111,22 +170,22 @@ export async function agent_stream(opts) {
 		try {
 			envelope = await response.json()
 		} catch(e) {
-			on_error({ code: 'bad_response', message: 'Unreadable server response', hint: null })
+			on_error(normalize_transport_error(e))
 			return
 		}
-		if (!envelope || envelope.result === false || !response.ok) {
-			on_error({
-				code	: 'denied',
-				message	: (envelope && envelope.msg) || ('HTTP ' + response.status),
-				hint	: null
-			})
+		// ONE normaliser: v2 `{ok:false, error:{code}}`, the COMPAT
+		// `{result:false, errors:[token]}` body, and a non-2xx that is no envelope
+		// at all (client.http_status) all resolve here, code intact.
+		const api_error = normalize_api_error(response, envelope)
+		if (api_error) {
+			on_error(api_error)
 			return
 		}
-		if (envelope.data) {
+		if (envelope && envelope.data) {
 			on_final(envelope.data)
 			return
 		}
-		on_error({ code: 'bad_response', message: 'Empty server response', hint: null })
+		on_error(normalize_transport_error(new Error('empty non-stream answer')))
 		return
 	}
 
@@ -150,7 +209,14 @@ export async function agent_stream(opts) {
 			case 'tool_use'		: on_tool_use(data); break
 			case 'tool_result'	: on_tool_result(data); break
 			case 'final'		: terminal = true; on_final(data); break
-			case 'error'		: terminal = true; on_error(data); break
+			// the frame goes to normalize_stream_error AS IT CAME: that one function
+			// recognises the bare v2 body AND the older {is_running:false, error:{…}}
+			// wrapper, so this client keeps working against either server without a
+			// shape test of its own. `hint` has been lifted into `details` first.
+			case 'error'		: terminal = true; on_error(
+									normalize_stream_error(error_frame(data))
+									|| normalize_transport_error(new Error('unparseable stream error frame'))
+								); break
 			default				: break // unknown events are no-ops (forward compat)
 		}
 	}
@@ -192,12 +258,14 @@ export async function agent_stream(opts) {
 	} catch(e) {
 		if (e && e.name === 'AbortError') return // user stop
 		if (!terminal) {
-			on_error({ code: 'stream_interrupted', message: e.message || 'Stream interrupted', hint: null })
+			on_error(normalize_transport_error(e))
 		}
 		return
 	}
 
 	if (!terminal) {
-		on_error({ code: 'stream_truncated', message: 'The stream ended without a final frame', hint: null })
+		// the connection closed cleanly but the run never landed: the answer we
+		// would show is unreadable, which is exactly client.bad_response
+		on_error(normalize_transport_error(new Error('stream ended without a final frame')))
 	}
 }//end agent_stream

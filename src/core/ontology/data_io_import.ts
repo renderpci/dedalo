@@ -67,9 +67,9 @@ const COPY_SANITY_LINES = 50;
 const GZ_BASENAME_RE = /^(?:[a-z]{2,}|matrix|matrix_dd)\.copy\.gz$/;
 const IMPORT_TABLE_ALLOWLIST: ReadonlySet<string> = new Set(['matrix_ontology', 'matrix_dd']);
 
-/** The PHP-shaped response every IO function returns (data_io.ts twin). */
+/** The internal outcome every IO function returns (data_io.ts twin — `ok` is the discriminator, not a wire body). */
 export interface OntologyIoResponse {
-	result: boolean;
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	[key: string]: unknown;
@@ -123,8 +123,8 @@ export function confinedPath(baseDir: string, fileName: string): string | null {
 /**
  * Probe one master server (PHP check_remote_server): POST the
  * get_server_ready_status rqo, 5 s timeout. Response mirrors PHP's
- * curl_request envelope: `result` is the decoded remote body (or false),
- * `code` the HTTP status.
+ * curl_request envelope: `data` is the decoded remote body (or false when it
+ * could not be decoded) — a PAYLOAD, not a discriminator — and `code` the HTTP status.
  *
  * `check` names WHICH master role is being probed, and the remote answers only
  * for the role it actually holds (`dd_utils_api.get_server_ready_status`). It
@@ -137,7 +137,7 @@ export async function checkRemoteServer(
 	server: OntologyServer,
 	check: 'ontology_server' | 'code_server' = 'ontology_server',
 ): Promise<{
-	result: unknown;
+	data: unknown;
 	msg: string;
 	errors: string[];
 	code: number | null;
@@ -170,7 +170,7 @@ export async function checkRemoteServer(
 			decoded = false;
 		}
 		return {
-			result: decoded,
+			data: decoded,
 			msg: response.ok
 				? 'OK. Request done successfully'
 				: `Error. bad server response code: ${response.status}`,
@@ -179,7 +179,7 @@ export async function checkRemoteServer(
 		};
 	} catch (error) {
 		return {
-			result: false,
+			data: false,
 			msg: `Error. Request failed [check_remote_server]: ${(error as Error).message}`,
 			errors: [(error as Error).message],
 			code: null,
@@ -211,12 +211,12 @@ export function getOntologyIoPath(baseDir: string, version: readonly number[]): 
 export function buildOntologyUpdateInfo(
 	ioPath: string,
 	publicBaseUrl: string,
-): { result: { info: unknown; files: ManifestFileItem[] }; msg: string; errors: string[] } {
-	const result: { info: unknown; files: ManifestFileItem[] } = { info: null, files: [] };
+): { data: { info: unknown; files: ManifestFileItem[] }; msg: string; errors: string[] } {
+	const manifest: { info: unknown; files: ManifestFileItem[] } = { info: null, files: [] };
 	for (const name of readdirSync(ioPath).sort()) {
 		if (name === 'ontology.json') {
 			try {
-				result.info = JSON.parse(readFileSync(join(ioPath, name), 'utf8'));
+				manifest.info = JSON.parse(readFileSync(join(ioPath, name), 'utf8'));
 			} catch {
 				// unreadable metadata stays null (PHP json_decode null)
 			}
@@ -225,14 +225,14 @@ export function buildOntologyUpdateInfo(
 		const match = name.match(/^([a-z_]{2,})\.copy\.gz$/);
 		if (match === null) continue;
 		const tld = match[1] as string;
-		result.files.push({
+		manifest.files.push({
 			tld,
 			section_tipo: tld === 'matrix' ? 'matrix' : `${tld}0`,
 			url: `${publicBaseUrl}/${name}`,
 		});
 	}
-	// PHP wire bytes: result carries {info, files} directly.
-	return { result, msg: 'OK. request done', errors: [] };
+	// The manifest IS the payload: it becomes the envelope's `data` at the door.
+	return { data: manifest, msg: 'OK. request done', errors: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -254,7 +254,7 @@ export async function downloadRemoteOntologyFile(options: {
 	targetDir: string;
 }): Promise<OntologyIoResponse> {
 	assertTlsVerificationOn();
-	const response: OntologyIoResponse = { result: false, msg: '', errors: [] };
+	const response: OntologyIoResponse = { ok: false, msg: '', errors: [] };
 	const started = Date.now();
 
 	let parsed: URL;
@@ -342,7 +342,7 @@ export async function downloadRemoteOntologyFile(options: {
 			response.errors.push('empty data');
 			return response;
 		}
-		response.result = true;
+		response.ok = true;
 		response.msg = `OK. Request done successfully [download_remote_ontology_file] file: ${options.expectedBasename}`;
 		response.file_path = filePath;
 		response.file_size = total;
@@ -462,7 +462,7 @@ export interface ImportCopyFileOptions {
 export async function importFromCopyFile(
 	options: ImportCopyFileOptions,
 ): Promise<OntologyIoResponse> {
-	const response: OntologyIoResponse = { result: false, msg: '', errors: [] };
+	const response: OntologyIoResponse = { ok: false, msg: '', errors: [] };
 	const started = Date.now();
 	const conn = options.conn ?? connFromConfig();
 	const deleteTable = options.deleteTable === true;
@@ -505,7 +505,7 @@ export async function importFromCopyFile(
 	try {
 		// -- empty-export short-circuit (PHP: skip the DELETE entirely)
 		if (statSync(uncompressed).size === 0) {
-			response.result = true;
+			response.ok = true;
 			response.msg = `OK. Empty export, nothing to import [import_from_copy_file] ${basename(options.filePath)}`;
 			return response;
 		}
@@ -587,7 +587,7 @@ export async function importFromCopyFile(
 			console.warn(`[data_io_import] sequence bump failed (non-fatal): ${setval.stderr.trim()}`);
 		}
 
-		response.result = true;
+		response.ok = true;
 		response.msg = `OK. Request done successfully [import_from_copy_file] ${basename(options.filePath)} | ${Date.now() - started} ms`;
 		return response;
 	} finally {
@@ -712,7 +712,7 @@ export async function importOntologyFile(
 	conn: DbConnDescriptor = connFromConfig(),
 ): Promise<OntologyIoResponse> {
 	if (!safeTld(fileItem.tld)) {
-		return { result: false, msg: `Error. Invalid tld: ${fileItem.tld}`, errors: ['invalid tld'] };
+		return { ok: false, msg: `Error. Invalid tld: ${fileItem.tld}`, errors: ['invalid tld'] };
 	}
 	const sectionTipo = `${fileItem.tld}0`;
 	const imported = await importFromCopyFile({
@@ -721,7 +721,7 @@ export async function importOntologyFile(
 		matrixTable: 'matrix_ontology',
 		conn,
 	});
-	if (imported.result === true) {
+	if (imported.ok === true) {
 		// ONT-TLD before the counter: a row whose tld still names the EXPORT's
 		// namespace is not this tld's node at all (see normalizeOntologyTld).
 		const rewritten = await normalizeOntologyTld(sectionTipo, conn);
@@ -729,7 +729,7 @@ export async function importOntologyFile(
 			// FATAL, not a warning. An un-normalized import is an ontology whose
 			// every node declares the wrong namespace — the caller must not go on to
 			// re-derive dd_ontology from it and report success.
-			imported.result = false;
+			imported.ok = false;
 			imported.errors.push(`ontology7 normalization failed for ${sectionTipo}`);
 			imported.msg = `Error. ONT-TLD normalization failed for ${sectionTipo} — the imported rows may declare another tld`;
 			return imported;

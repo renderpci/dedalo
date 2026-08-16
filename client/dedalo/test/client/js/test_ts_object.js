@@ -67,7 +67,8 @@ describe('TS_OBJECT : ', function() {
 		items.forEach(el => {
 			const key = `get_node_data_${el.section_tipo}_${el.section_id}`
 			responses.set(key, {
-				result : {
+				ok : true,
+				data : {
 					ts_id						: `${el.section_tipo}_${el.section_id}`,
 					ts_parent					: null,
 					section_tipo				: el.section_tipo,
@@ -104,7 +105,7 @@ describe('TS_OBJECT : ', function() {
 			// Node with no children fixtures: the test never expands, so
 			// get_children_data is not expected. Any other call gets a benign
 			// success so an unrelated stray request cannot break the pipeline.
-			return { result : true }
+			return { ok : true, data : true }
 		}
 	})
 
@@ -361,7 +362,8 @@ describe('TS_OBJECT : ', function() {
 		before(function() {
 			show_models_backup = window.page_globals.show_models
 			responses.set(`get_node_data_${section_tipo}_${section_id}`, {
-				result : {
+				ok : true,
+				data : {
 					ts_id						: `${section_tipo}_${section_id}`,
 					ts_parent					: null,
 					section_tipo				: section_tipo,

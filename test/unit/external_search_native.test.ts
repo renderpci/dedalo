@@ -783,32 +783,53 @@ describe('a failed search answers with a state the client can name', () => {
 		'not_found',
 	] as const;
 
-	test('every error kind produces a 200 envelope with a defined label key', async () => {
-		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
+	type DegradedBody = {
+		ok: boolean;
+		data: { context: unknown[]; data: unknown[] };
+		notices?: {
+			code: string;
+			label_key: string;
+			retryable: boolean;
+			details?: Record<string, unknown>;
+		}[];
+		source_status?: { label_key: string; state: string };
+	};
+	const degraded = async (kind: (typeof KINDS)[number], reason?: string) => {
+		const { searchDegraded } = await import('../../src/core/api/handlers/dd_external_api.ts');
+		const result = await searchDegraded('req-external-search-test', 'zenon', kind, reason);
+		return { status: result.status, body: result.body as unknown as DegradedBody };
+	};
+
+	test('every error kind is ok:true + an empty result + ONE coded notice with a defined label key', async () => {
 		const master = (await Bun.file(
 			`${import.meta.dir}/../../src/core/labels/master.json`,
 		).json()) as Record<string, string>;
 		for (const kind of KINDS) {
-			const result = await searchFailure('zenon', kind);
-			// A 4xx here would be an explanation nobody ever reads.
-			expect(result.status, `${kind} answered ${result.status}`).toBe(200);
-			expect(result.body.result).toBe(false);
-			expect(result.body.errors).toEqual([`external_${kind}`]);
-			const status = result.body.source_status as { label_key: string; state: string };
-			expect(status.state, `${kind} produced no state`).toBeString();
+			const { status, body } = await degraded(kind);
+			// Degradation of the SOURCE is not a failure of the request (ERRORS_SPEC §3).
+			expect(status, `${kind} answered ${status}`).toBe(200);
+			expect(body.ok).toBe(true);
+			expect(body.data).toEqual({ context: [], data: [] });
+			expect(body.notices?.length, `${kind} notices`).toBe(1);
+			const notice = body.notices?.[0];
+			expect(notice?.code).toBe(`external.${kind}`);
+			expect(notice?.details?.service).toBe('zenon');
 			// The key must EXIST in the catalog: a marker whose text resolves to
 			// undefined is the empty box this whole mechanism exists to remove.
 			expect(
-				master[status.label_key],
-				`${kind} → '${status.label_key}' is not in master.json`,
+				master[notice?.label_key ?? ''],
+				`${kind} → '${notice?.label_key}' is not in master.json`,
 			).toBeString();
+			// The compat extension key the autocomplete chip renders from today.
+			const status_ = body.source_status;
+			expect(status_?.state, `${kind} produced no state`).toBeString();
+			expect(master[status_?.label_key ?? '']).toBeString();
 		}
 	});
 
 	test('the three states a curator must tell apart do not collapse into one', async () => {
-		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
-		const stateOf = async (kind: (typeof KINDS)[number]): Promise<string> =>
-			((await searchFailure('zenon', kind)).body.source_status as { state: string }).state;
+		const stateOf = async (kind: (typeof KINDS)[number]): Promise<string | undefined> =>
+			(await degraded(kind)).body.source_status?.state;
 		// "the catalogue is down" (retry may work) …
 		expect(await stateOf('transport')).toBe('unavailable');
 		// … "this install has not allowlisted the host" (retrying never helps) …
@@ -817,21 +838,18 @@ describe('a failed search answers with a state the client can name', () => {
 		expect(await stateOf('disabled')).toBe('disabled');
 	});
 
-	test('the finer grain the state set folds away survives as an error token', async () => {
-		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
+	test('the finer grain the state set folds away survives as the notice code', async () => {
 		// blocked_host and not_registered are BOTH 'misconfigured' states — the
-		// closed set is what the user reads, the token is what an operator quotes.
-		const blocked = await searchFailure('zenon', 'blocked_host');
-		const unknown = await searchFailure('zenon', 'not_registered');
-		expect((blocked.body.source_status as { state: string }).state).toBe(
-			(unknown.body.source_status as { state: string }).state,
-		);
-		expect(blocked.body.errors).not.toEqual(unknown.body.errors);
+		// closed set is what the user reads, the code is what an operator quotes.
+		const blocked = await degraded('blocked_host');
+		const unknown = await degraded('not_registered');
+		expect(blocked.body.source_status?.state).toBe(unknown.body.source_status?.state as string);
+		expect(blocked.body.notices?.[0]?.code).not.toBe(unknown.body.notices?.[0]?.code);
 	});
 
 	test('an unsupported search names WHICH of the three reasons it was', async () => {
-		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
-		const result = await searchFailure('zenon', 'bad_config', 'engine');
-		expect(result.body.errors).toEqual(['external_bad_config', 'search_engine']);
+		const { body } = await degraded('bad_config', 'engine');
+		expect(body.notices?.[0]?.code).toBe('external.bad_config');
+		expect(body.notices?.[0]?.details).toEqual({ service: 'zenon', reason: 'engine' });
 	});
 });

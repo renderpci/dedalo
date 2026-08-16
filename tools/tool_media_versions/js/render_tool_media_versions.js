@@ -9,6 +9,9 @@
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {format_elapsed} from '../../../core/common/js/job_follow.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {error_text, render_error_inline, render_error_toast} from '../../../core/common/js/render_api_error.js'
 	import {bytes_format, download_file, open_window} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 
@@ -292,16 +295,19 @@ const render_sync_data = function(self) {
 				self.node.content_data.classList.add('loading')
 
 				self.sync_files()
-				.then(function(response){
+				.then(async function(response){
 					report_side_effects(self, response)
-					if (response.result===true) {
+					if (action_succeeded(response)) {
 						self.refresh({
 							build_autoload	: false,
 							destroy			: false
 						})
 					}else{
 						self.node.content_data.classList.remove('loading')
-						alert('Error: ' + (response.msg || 'Unknown') )
+						// ONE error model: the dispatcher decides the surface and the
+						// renderer emits TEXT (server msg is untrusted, never alert/HTML)
+						console.error('sync_files failed:', response.error)
+						await handle_api_error(response.error, {wrapper: self.node.content_data})
 					}
 				})
 			})
@@ -333,7 +339,7 @@ const render_sync_data = function(self) {
 			const pre_data = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'pre hide',
-				inner_html		: JSON.stringify({
+				text_content	: JSON.stringify({
 					files_info_db				: files_info_db,
 					files_info_disk				: files_info_disk,
 					original_file_name			: original_file_name,
@@ -1007,7 +1013,7 @@ const render_file_versions = function(quality, self) {
 					element_type	: 'span',
 					class_name		: 'button file_info_extension',
 					title			: get_label.extension || 'Extension',
-					inner_html		: extension,
+					text_content	: extension,
 					parent			: cell_node
 				})
 
@@ -1028,9 +1034,9 @@ const render_file_versions = function(quality, self) {
 					self.node.content_data.classList.add('loading')
 
 					self.delete_version(quality, extension)
-					.then(function(response){
+					.then(async function(response){
 						report_side_effects(self, response)
-						if (response.result===true) {
+						if (action_succeeded(response)) {
 							// destroy:false — see the note in render_build_version: a
 							// destroying refresh nulls main_element.context and the
 							// re-render throws before it can repaint.
@@ -1040,7 +1046,8 @@ const render_file_versions = function(quality, self) {
 							})
 						}else{
 							self.node.content_data.classList.remove('loading')
-							alert('Error: ' + (response.msg || 'Unknown') )
+							console.error('delete_version failed:', response.error)
+							await handle_api_error(response.error, {wrapper: self.node.content_data})
 						}
 					})
 				})
@@ -1119,7 +1126,7 @@ const render_file_delete = function(quality, self) {
 				// The full response now (see tool_media_versions.js delete_quality):
 				// a successful delete can still have taken companion files with it.
 				report_side_effects(self, response)
-				if (response && response.result===true) {
+				if (action_succeeded(response)) {
 					// self.main_element_quality = quality
 					self.refresh({
 						build_autoload	: false,
@@ -1188,6 +1195,28 @@ const THUMB_QUALITY = 'thumb'
 
 
 /**
+* ACTION_SUCCEEDED
+* Did the action really run?
+*
+* Envelope v2 answers with `ok:true` — the ONE test, for a server answer and for
+* the shapes this client synthesises alike (`create_3d_posterframe` returns the
+* same `{ok}` discriminator, so there is no second convention to honour).
+*
+* @param {Object|false} response - an API envelope (or a client-made one)
+* @returns {boolean}
+*/
+const action_succeeded = (response) => {
+
+	if (!response || request_failed(response)) {
+		return false
+	}
+
+	return response.ok===true
+}//end action_succeeded
+
+
+
+/**
 * REPORT_SIDE_EFFECTS
 * Put the server's own account of a SUCCESSFUL action in front of the operator.
 *
@@ -1201,9 +1230,9 @@ const THUMB_QUALITY = 'thumb'
 * could remove files the operator never named, or leave a tier stale, and the only
 * record of it was the server log. The sentences existed; nobody ever saw them.
 *
-* It is a dismissible banner, not an alert(): the action succeeded, so it must not
-* block the refresh that follows. Failures keep their alert() — those need the
-* operator to stop.
+* It is a dismissible banner, not a blocking dialog: the action succeeded, so it
+* must not block the refresh that follows. Real FAILURES go the other way — they
+* are ApiErrors and the dispatcher (handle_api_error) owns their surface.
 *
 * @param {Object} self - the tool_media_versions instance
 * @param {Object} response - the raw API response
@@ -1211,26 +1240,57 @@ const THUMB_QUALITY = 'thumb'
 */
 const report_side_effects = function(self, response) {
 
-	if (!response || response.result!==true) {
+	// ENVELOPE v2. The account lives in the PAYLOAD — there is no prose `msg` on a
+	// success any more, and `result` is now the compat MIRROR of `data` (an object,
+	// so the old `result!==true` test rejected every successful action and this
+	// whole report went silent). `response_data` is the ONE accessor: `data`, then
+	// the mirror while it lasts, `false` on a failure envelope.
+	if (!response || request_failed(response)) {
+		return false
+	}
+	const data = response_data(response)
+	if (!data || typeof data!=='object') {
 		return false
 	}
 
 	// The TRIGGER is structured data (errors / retired), never a string match on
-	// msg — a sentence that changes wording must not silently stop being shown.
-	const errors	= Array.isArray(response.errors) ? response.errors : []
-	const retired	= Array.isArray(response.retired) ? response.retired : []
-	if (errors.length===0 && retired.length===0) {
+	// the sentence — wording that changes must not silently stop being shown.
+	// Both lists are payload keys of every mutating action of this tool
+	// (tools/tool_media_versions/server/media_versions.ts:385-396, :423-434).
+	const reported		= data.errors
+	const error_entries	= Array.isArray(reported) ? reported : []
+	const retired		= Array.isArray(data.retired) ? data.retired : []
+	if (error_entries.length===0 && retired.length===0) {
 		return false
 	}
 
-	// The server's `msg` already composes the whole account (withRetiredTwins /
-	// withRebuildFailure build it); fall back to the raw lists if it is absent.
-	const message = response.msg || [...errors, ...retired].join('; ')
-	const wrapper = self.node?.content_data || self.node
+	// `data.summary` ALREADY composes the whole account — withRebuildFailure
+	// (media_versions.ts:338-343) appends the errors and withRetiredTwins the
+	// retired twins to the sentence — so the entries are printed once, as the
+	// summary, and only fall back to a per-item list when the server sent none.
+	// A coded entry resolves through the ONE renderer, a bare string prints as-is.
+	const item_line	= (entry) => typeof entry==='string' ? entry : error_text(entry)
+	const summary	= (typeof data.summary==='string' && data.summary.length>0)
+		? data.summary
+		: null
+	const wrapper	= self.node?.content_data || self.node
+	const severity	= error_entries.length>0 ? 'error' : 'warning'
 	if (wrapper) {
-		ui.show_message(wrapper, message, errors.length>0 ? 'error' : 'warning')
+		if (summary!==null) {
+			// ui.show_message writes the text through `text_content` — never a sink
+			ui.show_message(wrapper, summary, severity)
+		}else{
+			// no sentence: each item on its own line, through the ONE renderer
+			for (const entry of [...error_entries, ...retired]) {
+				render_error_inline(wrapper, entry)
+			}
+		}
 	}else{
-		alert(message)
+		// no node to host the banner — the ONE renderer's toast surface, text-only
+		render_error_toast({
+			message		: summary ?? [...error_entries, ...retired].map(item_line).join('; '),
+			severity	: severity
+		})
 	}
 
 
@@ -1295,23 +1355,25 @@ const create_3d_posterframe = async function(self) {
 	// from it) with the camera angle on screen right now — the same confirmation
 	// every other mutating gear in this panel asks for.
 		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
-			return { result : false, msg : '' }
+			// the user cancelled: the same `{ok}` discriminator every answer carries,
+			// with no ApiError behind it (nothing failed)
+			return { ok : false }
 		}
 
 	// capture path: the component's own posterframe method, driven by the live viewer
 		const created = await main_element.create_posterframe(viewer)
 		if (created===true) {
-			return { result : true, msg : 'ok' }
+			return { ok : true }
 		}
 
-	// A refusal THIS function produced has no server round-trip behind it, so it is
-	// alerted here — self.build_version alerts its own (tool_media_versions.js), and
-	// the click handler must not alert a second time on the fallback path.
+	// A refusal THIS function produced has no server round-trip behind it — there is
+	// no ApiError to dispatch, so it is reported here as a client-side failure.
+	// Server refusals travel the other path (self.build_version → handle_api_error).
 		const msg = 'The 3D scene could not be captured or uploaded. Check the browser console.'
 		alert('Error: ' + msg)
 
 
-	return { result : false, msg : msg }
+	return { ok : false }
 }//end create_3d_posterframe
 
 
@@ -1486,7 +1548,8 @@ const render_build_version = function(quality, self) {
 				},
 				on_done : function(frame) {
 					progress_ui.stop()
-					const errors = (frame && Array.isArray(frame.errors)) ? frame.errors : []
+					const reported	= frame && frame.errors
+					const errors	= Array.isArray(reported) ? reported : []
 					if (errors.length>0) {
 						// A failed tier stays readable with its reason. Reverting it to a
 						// blank cell is the "never built" lie this whole path removes.
@@ -1535,7 +1598,7 @@ const render_build_version = function(quality, self) {
 			const response	= is_3d_posterframe
 				? await create_3d_posterframe(self)
 				: await self.build_version(quality)
-			const accepted	= response && response.result===true
+			const accepted	= action_succeeded(response)
 			// A build that SUCCEEDED can still have failed to write a configured
 			// format (the twin channel) — the server says so, and this is where the
 			// operator hears it.
@@ -1548,11 +1611,19 @@ const render_build_version = function(quality, self) {
 			// refusal nobody can see is the same defect as a job that dies quietly.
 			if (!accepted) {
 				const wrapper = self.node?.content_data || self.node
-				const reason = (response && response.msg) || 'the server refused this build'
-				if (wrapper) {
-					ui.show_message(wrapper, reason, 'warning')
+				if (request_failed(response)) {
+					// a real server refusal: ONE error model, ONE renderer (text-only)
+					console.error('build_version refused:', response.error)
+					await handle_api_error(response.error, {wrapper: wrapper})
 				}else{
-					alert(reason)
+					// a refusal THIS client synthesised (create_3d_posterframe) — no
+					// envelope behind it, so there is no ApiError to dispatch
+					const reason = 'the server refused this build'
+					if (wrapper) {
+						ui.show_message(wrapper, reason, 'warning')
+					}else{
+						render_error_toast({message: reason, severity: 'warning'})
+					}
 				}
 				// The panel's view of what is running is now stale — the refusal
 				// usually MEANS someone else's job holds this tier. Re-render so the
@@ -1685,7 +1756,8 @@ const render_build_version = function(quality, self) {
 								}
 
 								// Errors win over everything else.
-								const errors = Array.isArray(frame.errors) ? frame.errors : []
+								const reported	= frame.errors
+								const errors	= Array.isArray(reported) ? reported : []
 								if (errors.length>0) {
 									return give_up(errors.join('; '))
 								}
@@ -1779,9 +1851,13 @@ const render_specific_actions = {
 			})
 			button_conform_headers.addEventListener('click', async function(){
 				self.node.classList.add('loading')
-				// exec conform_headers
-				const result = await self.conform_headers(quality)
-				if (result===true) {
+				// exec conform_headers. The method resolves the WHOLE envelope now:
+				// the payload is `{summary, errors, files_info}`, never the bare
+				// `true` this branch used to compare against — which is why the
+				// panel stopped repainting after a remux.
+				const response = await self.conform_headers(quality)
+				report_side_effects(self, response)
+				if (action_succeeded(response)) {
 					self.main_element_quality = quality
 					// destroy:false — see render_build_version.
 					self.refresh({
@@ -1836,9 +1912,10 @@ const render_specific_actions = {
 						e.stopPropagation()
 
 						self.node.classList.add('loading')
-						// exec rotate
-						const result = await self.rotate(quality, -90)
-						if (result===true) {
+						// exec rotate (see the conform_headers note: the whole envelope)
+						const response = await self.rotate(quality, -90)
+						report_side_effects(self, response)
+						if (action_succeeded(response)) {
 							self.main_element.quality = quality
 							self.main_element.refresh()
 						}
@@ -1856,9 +1933,10 @@ const render_specific_actions = {
 						e.stopPropagation()
 
 						self.node.classList.add('loading')
-						// exec rotate
-						const result = await self.rotate(quality, 90)
-						if (result===true) {
+						// exec rotate (see the conform_headers note: the whole envelope)
+						const response = await self.rotate(quality, 90)
+						report_side_effects(self, response)
+						if (action_succeeded(response)) {
 							self.main_element.quality = quality
 							self.main_element.refresh()
 						}

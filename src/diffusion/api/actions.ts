@@ -8,8 +8,8 @@
  *
  * - diffuse .............. enqueue durable job → SSE stream over its progress
  * - get_process_status ... SSE poll stream by client process_id (reconnect)
- * - list_processes ....... { result:true, processes: progress_data[] }
- * - cancel_process ....... { result, msg }
+ * - list_processes ....... ok({ processes: progress_data[] })
+ * - cancel_process ....... ok({ cancelled, message })
  *
  * AUTHORIZATION (stronger than the old engine): every action runs behind the
  * dispatch gates (session, CSRF, allowlist); diffuse additionally requires
@@ -25,11 +25,13 @@
 
 import { readEnv } from '../../config/env.ts';
 import { incrementCounter } from '../../core/api/counters.ts';
-import type { ApiResult } from '../../core/api/response.ts';
+import { type ApiResult, streamResult } from '../../core/api/response.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
 import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
+import { DedaloError, type ErrorCode, ok } from '../../core/errors/index.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { getPermissions } from '../../core/security/permissions.ts';
+import { currentRequestContext } from '../../core/security/request_context.ts';
 import type { DiffusionJobRow } from '../jobs/queue.ts';
 import {
 	enqueueDiffusionJob,
@@ -65,10 +67,24 @@ const STATUS_DEFAULT_UPDATE_RATE_MS = 1000;
 /** Poll cadence for change detection on the diffuse stream. */
 const DIFFUSE_POLL_MS = 500;
 
-const failBody = (msg: string, errors: string[]): ApiResult => ({
-	status: 200,
-	body: { result: false, msg: `Error. ${msg}`, errors },
-});
+/**
+ * REFUSE BY THROWING (engineering/ERRORS_SPEC.md §4): the dispatch chokepoint
+ * converts, with the status the registry gives the code. `publicMessage` is
+ * honoured only for public-disclosure codes; for the rest the sentence is the
+ * LOG line and the wire carries the registry's.
+ */
+function refuse(code: ErrorCode, message: string): never {
+	throw new DedaloError(code, { message, publicMessage: message });
+}
+
+/**
+ * The request id these actions' envelopes carry. They are dispatch handlers, so
+ * they always run inside dispatchRqo's request-identity scope; '' is the
+ * defensive floor for a direct (test) call outside one.
+ */
+function requestId(): string {
+	return currentRequestContext()?.requestId ?? '';
+}
 
 /** Client label grammar: 'process_diffusion_{user}_{element}_{section}' and kin. */
 const CLIENT_PROCESS_ID_PATTERN = /^[A-Za-z0-9_-]{1,200}$/;
@@ -196,12 +212,7 @@ export function buildJobFollowStream(
 
 /** ApiResult carrying an SSE stream (server.ts turns it into the raw Response). */
 function sseResult(stream: ReadableStream<Uint8Array>): ApiResult {
-	return {
-		status: 200,
-		body: {},
-		stream,
-		streamHeaders: sseResponseHeaders(),
-	};
+	return streamResult(stream, sseResponseHeaders());
 }
 
 /* ── follow_queue: the admin queue stream (WC-067) ────────────────────────── */
@@ -490,17 +501,16 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 			: null;
 	const sectionTipo = sqoSectionTipo;
 	if (sectionTipo === null || elementTipo === null) {
-		return failBody('diffuse requires sqo.section_tipo and options.diffusion_element_tipo', [
-			'invalid_request',
-		]);
+		refuse(
+			'request.invalid_options',
+			'diffuse requires sqo.section_tipo and options.diffusion_element_tipo',
+		);
 	}
 
 	// SEC-13: read permission on the source section, server-enforced.
 	const level = await getPermissions(principal, sectionTipo, sectionTipo);
 	if (level < 1) {
-		return failBody('Insufficient permissions to diffuse this section', [
-			'insufficient permissions',
-		]);
+		refuse('perm.denied', 'Insufficient permissions to diffuse this section');
 	}
 
 	// Staged-cutover routing (DIFFUSION_PLAN P5 step 2): when the deployment
@@ -513,9 +523,9 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 	if (routedElements !== undefined && routedElements !== '' && routedElements !== 'all') {
 		const allowed = routedElements.split(',').map((entry: string) => entry.trim());
 		if (!allowed.includes(elementTipo)) {
-			return failBody(
+			refuse(
+				'engine.uncovered_scope',
 				`Element ${elementTipo} is not routed to the native engine yet (DEDALO_DIFFUSION_NATIVE_ELEMENTS)`,
-				['element_not_routed'],
 			);
 		}
 	}
@@ -622,10 +632,10 @@ export async function listProcessesAction(_rqo: Rqo, principal: Principal): Prom
 	const jobs = await listJobsForCaller(ownerScope(principal));
 	return {
 		status: 200,
-		body: {
-			result: true,
-			processes: jobs.map((job) => progressDataFromJob(job)),
-		},
+		body: ok(
+			{ processes: jobs.map((job) => progressDataFromJob(job)) },
+			{ requestId: requestId() },
+		),
 	};
 }
 
@@ -634,24 +644,26 @@ export async function cancelProcessAction(rqo: Rqo, principal: Principal): Promi
 	const body = rqo as unknown as { process_id?: unknown };
 	const processId = typeof body.process_id === 'string' ? body.process_id : null;
 	if (processId === null || !CLIENT_PROCESS_ID_PATTERN.test(processId)) {
-		return {
-			status: 400,
-			body: {
-				result: false,
-				msg: 'Missing or invalid process_id',
-				errors: ['invalid_process_id'],
-			},
-		};
+		throw new DedaloError('diffusion.invalid_process_id', {
+			coordinates: { process_id: String(body.process_id ?? '') },
+		});
 	}
+	// A cancel that finds nothing is NOT a failed request: the caller asked for
+	// the process to stop and it is stopped. `cancelled` says whether this call
+	// is what stopped it (a double-cancel answers false), which is exactly what
+	// the panel renders.
 	const { cancelled } = await requestCancel(processId, ownerScope(principal));
 	return {
 		status: 200,
-		body: {
-			result: cancelled,
-			msg: cancelled
-				? `Process ${processId} cancelled`
-				: `Process ${processId} not found or not running`,
-		},
+		body: ok(
+			{
+				cancelled,
+				message: cancelled
+					? `Process ${processId} cancelled`
+					: `Process ${processId} not found or not running`,
+			},
+			{ requestId: requestId() },
+		),
 	};
 }
 
@@ -660,24 +672,30 @@ export async function getDiffusionInfoAction(rqo: Rqo, principal: Principal): Pr
 	const options = (rqo.options ?? {}) as { section_tipo?: unknown };
 	const sectionTipo = typeof options.section_tipo === 'string' ? options.section_tipo : null;
 	if (sectionTipo === null) {
-		return failBody('Missing section_tipo.', ['Missing section_tipo.']);
+		refuse('request.invalid_options', 'options.section_tipo is required');
 	}
 	const level = await getPermissions(principal, sectionTipo, sectionTipo);
 	if (level < 1) {
-		return failBody('Insufficient permissions', ['insufficient permissions']);
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: sectionTipo, action: 'get_diffusion_info' },
+		});
 	}
 	const { buildDiffusionInfo } = await import('./info.ts');
-	const result = await buildDiffusionInfo(sectionTipo);
 	return {
 		status: 200,
-		body: { result, msg: 'Diffusion info retrieved successfully', errors: [] },
+		body: ok(await buildDiffusionInfo(sectionTipo), { requestId: requestId() }),
 	};
 }
 
 /** `get_engine_advisory` — client reads the body TOP-LEVEL (state/title/checks). */
 export async function getEngineAdvisoryAction(_rqo: Rqo, principal: Principal): Promise<ApiResult> {
 	const { buildEngineAdvisory } = await import('./info.ts');
-	return { status: 200, body: buildEngineAdvisory(principal.isGlobalAdmin) };
+	// (!) CLIENT SWEEP PENDING: the advisory is PAYLOAD, so it lives in `data`
+	// now; tool_diffusion.js:476-487 still reads it off the body top level.
+	return {
+		status: 200,
+		body: ok(buildEngineAdvisory(principal.isGlobalAdmin), { requestId: requestId() }),
+	};
 }
 
 /** `retry_pending_deletions` — native dd1758 pending-unpublish retry. */
@@ -689,10 +707,12 @@ export async function retryPendingDeletionsAction(
 	const summary = await retryPendingDiffusion();
 	return {
 		status: 200,
-		body: {
-			result: true,
-			msg: `Retried ${summary.retried} of ${summary.total} pending deletions (${summary.remaining} remaining)`,
-			...summary,
-		},
+		body: ok(
+			{
+				summary: `Retried ${summary.retried} of ${summary.total} pending deletions (${summary.remaining} remaining)`,
+				...summary,
+			},
+			{ requestId: requestId() },
+		),
 	};
 }

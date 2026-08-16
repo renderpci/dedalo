@@ -6,7 +6,42 @@
 
 // imports
 	import { builder_stream } from './builder_stream.js'
-	import { render_markdown } from './markdown.js'
+	// markdown.render: the module's ONE export is the `markdown` namespace object
+	// (markdown.js has never exported a bare `render_markdown`, so the old named
+	// import was a hard ES-module load error that took the whole controller down).
+	import { markdown } from './markdown.js'
+	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
+	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
+	import { error_text } from '../../../core/common/js/render_api_error.js'
+	import { register_error_policy } from '../../../core/common/js/error_policy.js'
+
+
+
+// ERROR POLICY. Every site_builder.* failure is about THIS tool's own workspace,
+// and the tool owns a full-width pane the user is already looking at — so the
+// message belongs inside that pane, not in a page-corner bubble that disappears
+// while the operator is reading the chat log. The core codes are untouched: a
+// mid-run auth.not_logged still raises the relogin overlay.
+//
+// The six `site_builder_*` UNDERSCORE aliases are GONE: the engine proxy refuses
+// by throwing the registered dotted codes (tools/tool_sitebuilder/server/index.ts
+// siteBuilderFailure / siteBuilderRejected), and its own terminal stream frame
+// now names `site_builder.stream_lost` (same file, sessionStream's pull catch) —
+// so every one of them matches `site_builder.*` on the dot.
+//
+// ONE non-registry token still reaches this client, and it is NOT a site_builder
+// one: the DAEMON's own SSE writer emits `event: error` with
+// `{code:'replay_failed'}` (publication/site_builder/src/sessions/sse.ts) when it
+// cannot replay a session's backlog, and the engine relays that stream
+// byte-for-byte. The daemon is outside the engine's registry by design (an
+// isolated subsystem), so the token has no dot to match on and needs its own row
+// — without it a lost backlog would toast in a corner instead of appearing in the
+// pane the operator is reading. REMOVAL: when the daemon frame carries a
+// registered code.
+register_error_policy({
+	'site_builder.*'	: {action:'inline'},
+	'replay_failed'		: {action:'inline'}
+})
 
 
 
@@ -42,14 +77,34 @@ export const sitebuilder_controller = function(tool, nodes) {
 
 /**
  * REQUEST
- * One tool_request round-trip. Returns the parsed ToolResponse. A failure surfaces its
- * stable error code in `errors[0]`, which the caller maps to a message.
+ * One tool_request round-trip. Returns the API envelope: `request_failed(res)` is THE
+ * failure test and `res.error` is the ApiError (api_error.js) carrying the registry code.
  */
 sitebuilder_controller.prototype.request = async function(action, options) {
 
 	const self = this
 	return self.tool.tool_request({ action: action, options: options || {} })
 }//end request
+
+
+
+/**
+ * REPORT
+ * Route a failed envelope through the ONE dispatcher. No local code→prose map: the
+ * message comes from the registry label (render_api_error), and the SURFACE from the
+ * policy registered above (inline, in this tool's chat pane).
+ *
+ * @param {Object} api_response - a failed envelope (request_failed(api_response)===true)
+ * @returns {Promise<Object>} {recovered, action}
+ */
+sitebuilder_controller.prototype.report = function(api_response) {
+
+	const self = this
+	return handle_api_error(api_response.error, {
+		wrapper	: self.chat_log || self.nodes.root,
+		scope	: 'tool_sitebuilder'
+	})
+}//end report
 
 
 
@@ -64,12 +119,14 @@ sitebuilder_controller.prototype.boot = async function() {
 	const self = this
 
 	const status = await self.request('get_status', {})
-	if (status.result === false) {
-		return self.render_empty_state(status.errors && status.errors[0])
+	if (request_failed(status)) {
+		return self.render_empty_state(error_text(status.error))
 	}
-	const value = status.result || {}
-	if (value.configured === false) return self.render_empty_state('site_builder_unconfigured')
-	if (value.reachable === false) return self.render_empty_state('site_builder_unreachable')
+	const value = response_data(status) || {}
+	// STATE, not error: the daemon answered, and what it answered is "there is
+	// nothing to build against". Prose, not a code.
+	if (value.configured === false) return self.render_empty_state(self.label('sitebuilder_unconfigured', 'The site builder is not configured on this server.'))
+	if (value.reachable === false) return self.render_empty_state(self.label('sitebuilder_unreachable', 'The site builder service is not reachable right now.'))
 
 	self.can_publish = value.can_publish === true
 	await self.refresh_sites()
@@ -86,8 +143,8 @@ sitebuilder_controller.prototype.refresh_sites = async function() {
 	const self = this
 
 	const res = await self.request('list_sites', {})
-	if (res.result === false) return self.toast(self.message_for(res.errors))
-	self.sites = (res.result && res.result.data) || []
+	if (request_failed(res)) return self.report(res)
+	self.sites = response_data(res)?.data || []
 	self.render_sites()
 }//end refresh_sites
 
@@ -155,7 +212,7 @@ sitebuilder_controller.prototype.create_site = async function(slug, name) {
 	const self = this
 	if (!slug || !name) return self.toast('A slug and a name are required.')
 	const res = await self.request('create_site', { slug: slug.trim(), name: name.trim() })
-	if (res.result === false) return self.toast(self.message_for(res.errors, res.msg))
+	if (request_failed(res)) return self.report(res)
 	await self.refresh_sites()
 	self.select_site(slug.trim())
 }//end create_site
@@ -194,7 +251,7 @@ sitebuilder_controller.prototype.delete_site = async function() {
 	// eslint-disable-next-line no-alert
 	if (!window.confirm('Delete site "' + self.selected + '"? This cannot be undone.')) return
 	const res = await self.request('delete_site', { slug: self.selected })
-	if (res.result === false) return self.toast(self.message_for(res.errors, res.msg))
+	if (request_failed(res)) return self.report(res)
 	self.selected = null
 	await self.refresh_sites()
 	self.nodes.chat.replaceChildren()
@@ -265,10 +322,10 @@ sitebuilder_controller.prototype.load_history = async function() {
 	const self = this
 	if (!self.selected) return
 	const res = await self.request('session_history', { slug: self.selected })
-	if (res.result === false) return
+	if (request_failed(res)) return
 	// The most recent session's events are streamed on demand; here we only show that a
 	// history exists. A full past-session browser is a later refinement.
-	const sessions = (res.result && res.result.data) || []
+	const sessions = response_data(res)?.data || []
 	if (sessions.length > 0 && self.chat_log) {
 		const note = document.createElement('div')
 		note.className = 'sb_history_note'
@@ -299,9 +356,10 @@ sitebuilder_controller.prototype.send = async function() {
 		res = await self.request('session_message', { session_id: self.session_id, message: prompt })
 	} else {
 		res = await self.request('session_start', { slug: self.selected, prompt: prompt })
-		if (res.result && res.result.session_id) self.session_id = res.result.session_id
+		const started = response_data(res)
+		if (started && started.session_id) self.session_id = started.session_id
 	}
-	if (res.result === false) return self.toast(self.message_for(res.errors, res.msg))
+	if (request_failed(res)) return self.report(res)
 
 	self.open_stream()
 }//end send
@@ -325,7 +383,16 @@ sitebuilder_controller.prototype.open_stream = function() {
 		options	: { session_id: self.session_id, after: -1 },
 		signal	: self.stream_abort.signal,
 		on_event: (stored) => self.render_event(stored.body),
-		on_error: (err) => { self.toast(err.message); self.set_running(false) },
+		// on_error carries an ApiError (builder_stream.js): the dispatcher owns the
+		// surface, so a session that died mid-build raises the relogin overlay
+		// instead of a line in a chat log nobody can act on.
+		on_error: async (api_error) => {
+			self.set_running(false)
+			await handle_api_error(api_error, {
+				wrapper	: self.chat_log || self.nodes.root,
+				scope	: 'tool_sitebuilder'
+			})
+		},
 		on_done	: () => { self.set_running(false); self.load_preview() }
 	})
 }//end open_stream
@@ -398,8 +465,8 @@ sitebuilder_controller.prototype.run_build = async function() {
 	self.building = true
 	self.append_line('sb_build_status', 'Building…')
 	const res = await self.request('build', { slug: self.selected })
-	if (res.result === false) { self.building = false; return self.toast(self.message_for(res.errors, res.msg)) }
-	const build_id = res.result && res.result.build_id
+	if (request_failed(res)) { self.building = false; return self.report(res) }
+	const build_id = response_data(res)?.build_id
 	self.poll_build(build_id)
 }//end run_build
 
@@ -416,7 +483,7 @@ sitebuilder_controller.prototype.poll_build = async function(build_id) {
 
 	const self = this
 	const res = await self.request('get_build', { slug: self.selected, build_id: build_id })
-	const record = res.result || {}
+	const record = response_data(res) || {}
 	if (record.outcome === 'running') {
 		window.setTimeout(() => self.poll_build(build_id), 1500)
 		return
@@ -442,8 +509,8 @@ sitebuilder_controller.prototype.load_preview = async function(bust) {
 	const self = this
 	if (!self.selected) return
 	const res = await self.request('preview', { slug: self.selected })
-	if (res.result === false) return
-	const preview = res.result || {}
+	if (request_failed(res)) return
+	const preview = response_data(res) || {}
 
 	const pane = self.nodes.preview
 	pane.replaceChildren()
@@ -492,7 +559,7 @@ sitebuilder_controller.prototype.publish = async function(url) {
 	// eslint-disable-next-line no-alert
 	if (!window.confirm('Publish "' + self.selected + '" to production?\nIt will be public at:\n' + (url || ''))) return
 	const res = await self.request('publish', { slug: self.selected, confirm: true })
-	if (res.result === false) return self.toast(self.message_for(res.errors, res.msg))
+	if (request_failed(res)) return self.report(res)
 	self.toast('Published.')
 }//end publish
 
@@ -576,7 +643,7 @@ sitebuilder_controller.prototype.append_agent_text = function(text) {
 		self.chat_log.appendChild(block)
 	}
 	block.dataset.raw += text
-	block.innerHTML = render_markdown(block.dataset.raw)
+	block.innerHTML = markdown.render(block.dataset.raw)
 	self.chat_log.scrollTop = self.chat_log.scrollHeight
 }//end append_agent_text
 
@@ -584,44 +651,25 @@ sitebuilder_controller.prototype.append_agent_text = function(text) {
 
 /**
  * RENDER_EMPTY_STATE
- * Replace the whole workspace with a single explanatory message when there is nothing to
- * build against (daemon unconfigured, unreachable, or rejecting our token). Maps the stable
- * error code to human prose, falling back to a generic notice for an unrecognised code.
+ * Replace the whole workspace with a single explanatory line when there is nothing to build
+ * against. Takes the SENTENCE, never a code: the two callers are a state the daemon
+ * reported (unconfigured / unreachable) and an ApiError already resolved through
+ * `error_text` — the local code→prose map that used to live here is gone with the
+ * server-side registry that owns those words now.
+ *
+ * textContent, never innerHTML: the sentence can carry the server's own message.
+ *
+ * @param {string} message
  */
-sitebuilder_controller.prototype.render_empty_state = function(code) {
+sitebuilder_controller.prototype.render_empty_state = function(message) {
 
 	const self = this
-	const messages = {
-		site_builder_unconfigured	: 'The site builder is not configured on this server.',
-		site_builder_unreachable	: 'The site builder service is not reachable right now.',
-		site_builder_auth			: 'The site builder rejected this server. Check its configuration.'
-	}
 	self.nodes.root.replaceChildren()
 	const box = document.createElement('div')
 	box.className = 'sb_empty'
-	box.textContent = messages[code] || 'The site builder is unavailable.'
+	box.textContent = message || 'The site builder is unavailable.'
 	self.nodes.root.appendChild(box)
 }//end render_empty_state
-
-
-
-/**
- * MESSAGE_FOR
- * Turn a ToolResponse `errors[]` into a user-facing string. Prefers a known code's mapped
- * message, then the caller-supplied fallback (usually the server's `msg`, which for a
- * site_builder_rejected carries the daemon's own capped detail), then a generic default.
- */
-sitebuilder_controller.prototype.message_for = function(errors, fallback) {
-
-	const messages = {
-		site_builder_unconfigured	: 'The site builder is not configured.',
-		site_builder_unreachable	: 'The site builder is not reachable.',
-		site_builder_auth			: 'The site builder rejected this server.',
-		site_builder_failed			: 'The site builder reported an error.'
-	}
-	const code = errors && errors[0]
-	return (code && messages[code]) || fallback || 'The request failed.'
-}//end message_for
 
 
 

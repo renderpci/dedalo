@@ -1,11 +1,13 @@
 /**
- * Phase 7 gate (seam item 2): the CSRF handshake matches what the copied
- * client's data_manager implements (SEC-008):
+ * Phase 7 gate (seam item 2): the CSRF handshake matches what the client's
+ * data_manager implements (SEC-008), restated on envelope v2 (ERRORS_SPEC §3-4):
  * - the client sends the token as the `X-Dedalo-Csrf-Token` header (exact
  *   casing it uses) and reads `json.csrf_token` from EVERY response;
- * - a rejection carries result:false + errors including the LITERAL string
- *   'csrf_failed' + a fresh csrf_token, and the client retries exactly once
- *   with that token — so the retry MUST succeed.
+ * - a rejection is 403 + `error.code === 'auth.csrf_failed'` + a fresh
+ *   `csrf_token`, and the client retries exactly once with that token — so the
+ *   retry MUST succeed. The PHP-era compat mirror (`result`, `errors:[code]`)
+ *   is DELETED (WC-2026-08-16-error-envelope-compat-removal): no body carries a
+ *   top-level `result` at all.
  *
  * Exercised over the real HTTP layer (handleRequest with Request objects +
  * session cookie), i.e. the exact path a browser takes.
@@ -59,13 +61,17 @@ describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {
 		const rejected = await handleRequest(apiRequest(READ_RQO, cookie, 'stale-token'), context);
 		expect(rejected.status).toBe(403);
 		const rejectedBody = (await rejected.json()) as {
-			result: boolean;
-			errors: string[];
+			ok: boolean;
+			error: { code: string; category: string };
+			action?: string;
 			csrf_token?: string;
 		};
 		// The exact shape data_manager keys its transparent retry on.
-		expect(rejectedBody.result).toBe(false);
-		expect(rejectedBody.errors).toContain('csrf_failed');
+		expect(rejectedBody.ok).toBe(false);
+		expect(rejectedBody.error.code).toBe('auth.csrf_failed');
+		expect('result' in rejectedBody).toBe(false);
+		// The refused action rides as an extension key (it always did).
+		expect(rejectedBody.action).toBe('read');
 		expect(typeof rejectedBody.csrf_token).toBe('string');
 		expect((rejectedBody.csrf_token as string).length).toBeGreaterThan(0);
 
@@ -76,10 +82,14 @@ describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {
 		);
 		expect(retried.status).toBe(200);
 		const retriedBody = (await retried.json()) as {
-			result: { context: unknown[]; data: unknown[] };
+			ok: boolean;
+			data: { context: unknown[]; data: unknown[] };
 			csrf_token?: string;
 		};
-		expect(Array.isArray(retriedBody.result.data)).toBe(true);
+		expect(retriedBody.ok).toBe(true);
+		expect(Array.isArray(retriedBody.data.data)).toBe(true);
+		// The payload lives in `data` and nowhere else.
+		expect('result' in retriedBody).toBe(false);
 		// 3. Every successful response also carries the token (client refreshes
 		//    its cache from every response).
 		expect(retriedBody.csrf_token).toBe(getSession(token)?.csrfToken as string);

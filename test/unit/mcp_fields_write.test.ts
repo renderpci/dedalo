@@ -16,7 +16,6 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { ToolError } from '../../src/ai/mcp/envelope.ts';
 import {
 	findOrCreate,
 	portalLink,
@@ -25,6 +24,7 @@ import {
 } from '../../src/ai/mcp/tools/fields_write.ts';
 import { loadMediaSource } from '../../src/ai/mcp/tools/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -183,9 +183,10 @@ describe('dedalo_find_or_create (scratch section)', () => {
 			});
 			throw new Error('expected ambiguous_match');
 		} catch (error) {
-			expect(error).toBeInstanceOf(ToolError);
-			expect((error as ToolError).code).toBe('ambiguous_match');
-			const details = (error as ToolError).details as { candidates: unknown[] };
+			expect(error).toBeInstanceOf(DedaloError);
+			expect((error as DedaloError).code).toBe('mcp.ambiguous_match');
+			// the model-facing payload rides as an extension key (top level beside `error`)
+			const details = (error as DedaloError).extend as { candidates: unknown[] };
 			expect(details.candidates.length).toBeGreaterThanOrEqual(2);
 		}
 	});
@@ -259,7 +260,7 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 	test('path source is DISABLED without the import dir (fail-closed)', async () => {
 		await withImportDir(undefined, async () => {
 			await expect(loadMediaSource({ kind: 'path', path: '/etc/hosts' })).rejects.toMatchObject({
-				code: 'media_path_disabled',
+				code: 'mcp.media_path_disabled',
 			});
 		});
 	});
@@ -279,13 +280,13 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 						kind: 'path',
 						path: `${ROOT}/../${OUTSIDE.split('/').pop()}/secret.jpg`,
 					}),
-				).rejects.toMatchObject({ code: 'invalid_request' });
+				).rejects.toMatchObject({ code: 'request.invalid' });
 				await expect(
 					loadMediaSource({ kind: 'path', path: `${ROOT}/sneaky.jpg` }),
-				).rejects.toMatchObject({ code: 'invalid_request' });
+				).rejects.toMatchObject({ code: 'request.invalid' });
 				await expect(
 					loadMediaSource({ kind: 'path', path: 'relative/path.jpg' }),
-				).rejects.toMatchObject({ code: 'invalid_request' });
+				).rejects.toMatchObject({ code: 'request.invalid' });
 			});
 		} finally {
 			rmSync(ROOT, { recursive: true, force: true });
@@ -308,7 +309,7 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 			const huge = Buffer.alloc(11 * 1024 * 1024, 1).toString('base64');
 			await expect(
 				loadMediaSource({ kind: 'base64', data: huge, filename: 'huge.bin' }),
-			).rejects.toMatchObject({ code: 'media_too_large' });
+			).rejects.toMatchObject({ code: 'mcp.media_too_large' });
 		} finally {
 			if (saved === undefined) {
 				// undefined assignment leaves the STRING 'undefined'
@@ -335,10 +336,10 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 					data: Buffer.from('x'.repeat(64)).toString('base64'),
 					filename: 'big.txt',
 				}),
-			).rejects.toMatchObject({ code: 'media_too_large' });
+			).rejects.toMatchObject({ code: 'mcp.media_too_large' });
 			await expect(
 				loadMediaSource({ kind: 'base64', data: '', filename: 'empty.txt' }),
-			).rejects.toMatchObject({ code: 'invalid_request' });
+			).rejects.toMatchObject({ code: 'request.invalid' });
 		} finally {
 			if (saved === undefined) {
 				// undefined assignment leaves the STRING 'undefined'

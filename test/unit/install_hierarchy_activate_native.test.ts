@@ -111,7 +111,7 @@ describe('install: activate an imported hierarchy', () => {
 		const outcome = await activateHierarchy(META, USER_ID);
 		sectionId = outcome.sectionId;
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(outcome.sectionId).not.toBeNull();
 
 		const row = await registryRow();
@@ -173,7 +173,7 @@ describe('install: activate an imported hierarchy', () => {
 	test('re-activating is idempotent (the wizard may be re-run)', async () => {
 		const outcome = await activateHierarchy(META, USER_ID);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(outcome.sectionId).toBe(sectionId); // the SAME record, not a second one
 		expect(await nodeRecordIds()).toEqual([1, 2]); // no duplicate node records
 	});

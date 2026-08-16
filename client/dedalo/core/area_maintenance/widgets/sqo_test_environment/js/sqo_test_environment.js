@@ -26,7 +26,7 @@
 *      action (requires global-admin privileges server-side).
 *   3. View the resolved SQL, unresolved SQL template, matching section IDs, and raw
 *      row data returned by the PostgreSQL query — all rendered in a structured
-*      response block by `print_response()`.
+*      response block by `print_sqo_response()`.
 *
 * Lifecycle
 * ---------
@@ -61,29 +61,31 @@
 * Server API
 * ----------
 * Action: `convert_search_object_to_sql_query`
-* Handler: `dd_utils_api` (core/api/v1/common/class.dd_utils_api.php)
+* Handler: `dd_utils_api` (src/core/api/handlers/dd_utils_api.ts)
 * Route:   POST → data_manager.request({ body: rqo })
 *
 * SQO sample (pre-populated in the editor and persisted to localStorage):
 *   {"section_tipo":["rsc170"],"limit":5,"offset":0}
 *
-* API response shape (on success):
+* API response shape (envelope v2 — the answer is the PAYLOAD, not top-level keys):
 *   {
-*     result          : true,
-*     msg             : {string}  resolved SQL (placeholders substituted),
-*     sql             : {string}  unresolved SQL template,
-*     ar_section_id   : {Array}   deduplicated section IDs returned,
-*     db_data         : {Array}   raw row objects from the PostgreSQL result
+*     ok   : true,
+*     data : {
+*       sql_resolved  : {string}  resolved SQL (placeholders substituted),
+*       sql           : {string}  unresolved SQL template,
+*       ar_section_id : {Array}   deduplicated section IDs returned,
+*       db_data       : {Array}   raw row objects from the PostgreSQL result
+*     }
 *   }
+* A failure is `{ok:false, error:{code,…}}` and carries no payload at all.
 *
 * Persistence
 * -----------
 * The SQO text is persisted in `localStorage` under the key `'json_editor_sqo'`
 * so that the last-edited query survives page refreshes.
 *
-* Server peer: core/area_maintenance/widgets/sqo_test_environment/class.sqo_test_environment.php
 * Render module: render_sqo_test_environment.js
-* API handler:   core/api/v1/common/class.dd_utils_api.php
+* API handler:   src/core/api/handlers/dd_utils_api.ts
 */
 export const sqo_test_environment = function() {
 

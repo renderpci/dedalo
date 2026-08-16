@@ -4,29 +4,39 @@
  */
 
 import type { Rqo } from '../../concepts/rqo.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { MediaContext } from '../../media/tools/posterframe.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { type ApiRequestContext, requirePrincipal } from '../handler_context.ts';
-import type { ApiResult } from '../response.ts';
 
-export const avActionFail = (msg: string): ApiResult => ({
-	status: 200,
-	body: { result: false, msg: `Error. ${msg}`, errors: [msg] },
-});
+/**
+ * The media-action refusal — a THROW, never a body (ERRORS_SPEC §4: only the
+ * converter writes a failure body), typed `never` so a call site cannot forget
+ * to relay it. `media.action_failed` is the operation-failed code; the engine
+ * reason rides `cause`/the log line, never the wire (a filesystem or ffmpeg
+ * message can carry paths).
+ */
+export function avActionFail(reason: string, cause?: unknown): never {
+	throw new DedaloError('media.action_failed', {
+		message: `media action failed: ${reason}`,
+		cause,
+	});
+}
 
 /**
  * Resolve the language-neutral media context for a component API action and assert
  * the caller's section permission (PHP assert_section_permission). Posterframes /
  * media files are DEDALO_DATA_NOLAN — lang:null, matching the identifier the
- * section read serves. `expectedModel` gates the component model (component_av vs
- * component_3d). Returns either the context or an error ApiResult to relay.
+ * section read serves. `expectedModel` gates the component model (component_av
+ * vs component_3d). Returns the context, or THROWS the registered refusal
+ * (ERRORS_SPEC §4 — a helper may exist only if it throws).
  */
 export async function resolveMediaActionContext(
 	rqo: Rqo,
 	context: ApiRequestContext,
 	minLevel: number,
 	expectedModel: 'component_av' | 'component_3d',
-): Promise<{ ctx: MediaContext } | { error: ApiResult }> {
+): Promise<{ ctx: MediaContext }> {
 	const source = (rqo.source ?? {}) as {
 		tipo?: string;
 		section_tipo?: string;
@@ -36,25 +46,31 @@ export async function resolveMediaActionContext(
 	const sectionTipo = String(source.section_tipo ?? '');
 	const sectionId = Number(source.section_id);
 	if (tipo === '' || sectionTipo === '' || !Number.isInteger(sectionId) || sectionId <= 0) {
-		return { error: avActionFail('tipo, section_tipo and a positive section_id are required') };
+		throw new DedaloError('request.invalid_source', {
+			message:
+				'media action: source.tipo, source.section_tipo and a positive source.section_id are required',
+		});
 	}
 
 	const principal = requirePrincipal(context);
 	const level = await getPermissions(principal, sectionTipo, sectionTipo);
 	if (level < minLevel) {
-		return {
-			error: avActionFail(
-				minLevel >= 2 ? 'insufficient permissions (write required)' : 'insufficient permissions',
-			),
-		};
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: sectionTipo, tipo, required: minLevel },
+		});
 	}
 
 	const { mediaTypeOf } = await import('../../concepts/media.ts');
 	const { getModelByTipo } = await import('../../ontology/resolver.ts');
 	const model = await getModelByTipo(tipo);
-	if (model !== expectedModel) return { error: avActionFail(`component is not ${expectedModel}`) };
+	if (model !== expectedModel) {
+		throw new DedaloError('request.invalid_model', {
+			message: `media action: component ${tipo} is not ${expectedModel}`,
+			coordinates: { tipo, model: model ?? 'null', expected: expectedModel },
+		});
+	}
 	const spec = mediaTypeOf(expectedModel);
-	if (spec === null) return { error: avActionFail(`${expectedModel} media spec unavailable`) };
+	if (spec === null) avActionFail(`${expectedModel} media spec unavailable`);
 
 	const { resolveMediaPathOptions } = await import('../../media/ontology_path.ts');
 	const identity = { componentTipo: tipo, sectionTipo, sectionId, lang: null };

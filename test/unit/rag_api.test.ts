@@ -22,7 +22,7 @@ const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: tru
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 const createdIds: number[] = [];
 
-type Ctx = { session: { userId: number } | null; principal?: Principal };
+type Ctx = { requestId: string; session: { userId: number } | null; principal?: Principal };
 const rqo = (options: Record<string, unknown>): Rqo => ({ options }) as unknown as Rqo;
 
 beforeAll(async () => {
@@ -76,9 +76,10 @@ describe('dd_rag_api semantic_search', () => {
 	});
 
 	test('missing query is rejected', async () => {
-		const res = await ragApiActions.semantic_search(rqo({}), { principal: SUPERUSER } as Ctx);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toContain('missing_query');
+		// a refusal is a THROW (the dispatch catch converts it): request.invalid_options
+		await expect(
+			ragApiActions.semantic_search(rqo({}), { principal: SUPERUSER } as Ctx),
+		).rejects.toMatchObject({ code: 'request.invalid_options' });
 	});
 });
 
@@ -129,10 +130,11 @@ describe('dd_rag_api similar_to', () => {
 	});
 
 	test('missing seed is rejected', async () => {
-		const res = await ragApiActions.similar_to(rqo({ section_tipo: SECTION_TIPO }), {
-			principal: SUPERUSER,
-		} as Ctx);
-		expect(res.body.errors).toContain('missing_seed');
+		await expect(
+			ragApiActions.similar_to(rqo({ section_tipo: SECTION_TIPO }), {
+				principal: SUPERUSER,
+			} as Ctx),
+		).rejects.toMatchObject({ code: 'request.invalid_options' });
 	});
 });
 
@@ -140,11 +142,9 @@ describe('dd_rag_api kill-switch', () => {
 	test('declines every action when DEDALO_RAG_ENABLED is off', async () => {
 		process.env.DEDALO_RAG_ENABLED = '';
 		try {
-			const res = await ragApiActions.semantic_search(rqo({ query: 'x' }), {
-				principal: SUPERUSER,
-			} as Ctx);
-			expect(res.body.result).toBe(false);
-			expect(res.body.errors).toContain('rag_disabled');
+			await expect(
+				ragApiActions.semantic_search(rqo({ query: 'x' }), { principal: SUPERUSER } as Ctx),
+			).rejects.toMatchObject({ code: 'rag.disabled' });
 		} finally {
 			process.env.DEDALO_RAG_ENABLED = 'true';
 		}
@@ -152,7 +152,11 @@ describe('dd_rag_api kill-switch', () => {
 });
 
 describe('dd_rag_api embed_groups', () => {
-	const ctx = (principal: Principal): Ctx => ({ session: { userId: principal.userId }, principal });
+	const ctx = (principal: Principal): Ctx => ({
+		requestId: 'rag-api-test',
+		session: { userId: principal.userId },
+		principal,
+	});
 
 	test('opted-in section (numisdata3 descriptor) returns its group ids', async () => {
 		const res = await ragApiActions.embed_groups(

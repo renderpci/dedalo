@@ -147,7 +147,7 @@ describe('progress_data projection (job row → pinned client shape)', () => {
 				state: 'completed',
 				finished_at: new Date(1751700012000),
 				result: {
-					result: true,
+					ok: true,
 					msg: 'OK',
 					diffusion_data: [{ file_url: '/media/rdf/x_1.rdf' }],
 					consolidated_files: { merged_url: '/m.rdf', zip_url: '/m.zip' },
@@ -174,7 +174,11 @@ describe('progress_data projection (job row → pinned client shape)', () => {
 				state: 'cancelled',
 				totals: { counter: 2, total: 10, msg: CANCELLED_MSG },
 				errors: [CANCELLED_MSG],
-				result: { result: false, msg: CANCELLED_MSG },
+				result: {
+					ok: false,
+					error: { code: 'diffusion.cancelled' },
+					msg: CANCELLED_MSG,
+				},
 				finished_at: new Date(1751700002000),
 			}),
 		);

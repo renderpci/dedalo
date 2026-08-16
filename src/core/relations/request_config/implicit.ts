@@ -35,6 +35,7 @@
 
 import { EXPLICIT_CONFIG_REQUIRED_MODELS } from '../../concepts/request_config.ts';
 import { sql } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
 import {
@@ -138,10 +139,12 @@ export async function buildImplicitComponentListConfig(
 	// PHP :88 — parent/children are not resolvable via the implicit graph walk.
 	const ownerModel = await getModelByTipo(context.ownerTipo);
 	if (ownerModel !== null && EXPLICIT_CONFIG_REQUIRED_MODELS.includes(ownerModel)) {
-		throw new Error(
-			`Invalid component [${ownerModel}] configuration. v5 resolution fallback is ` +
+		throw new DedaloError('ontology.invalid_node', {
+			message:
+				`Invalid component [${ownerModel}] configuration. v5 resolution fallback is ` +
 				`no longer supported. Configure an RQO for the node ${context.ownerTipo}`,
-		);
+			coordinates: { tipo: context.ownerTipo, model: ownerModel },
+		});
 	}
 
 	// component_filter always targets the projects section (PHP :261-264).

@@ -268,11 +268,22 @@ export const rqoSchema = z
 
 export type Rqo = z.infer<typeof rqoSchema>;
 
+export type { ApiEnvelope as ApiResponse } from '../errors/schema.ts';
 /**
- * Standard API response envelope (PHP dd_manager response shape).
- * Captured here so parity fixtures can be schema-checked from day one.
+ * The API response envelope — envelope v2 (engineering/ERRORS_SPEC.md §3),
+ * re-exported from the errors subsystem so registry totality (`error.code =
+ * z.enum(ERROR_CODES)`) reaches every consumer that validates a LIVE response,
+ * the parity harness included.
  */
-export const apiResponseSchema = z
+export { apiEnvelopeSchema as apiResponseSchema } from '../errors/schema.ts';
+
+/**
+ * The FROZEN PHP-era body shape (`{result, msg, errors}`), kept ONLY to
+ * schema-check the frozen oracle fixture store (test/parity/replay.test.ts,
+ * engineering/ORACLE_HARVEST.md) — a store that can never be re-harvested and
+ * still carries the PHP envelope. Never used for a live TS response.
+ */
+export const legacyApiResponseSchema = z
 	.object({
 		result: z.unknown(),
 		msg: z.union([z.string(), z.array(z.string())]).optional(),
@@ -280,4 +291,3 @@ export const apiResponseSchema = z
 		errors: z.array(z.unknown()).optional(),
 	})
 	.passthrough();
-export type ApiResponse = z.infer<typeof apiResponseSchema>;

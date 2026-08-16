@@ -26,7 +26,7 @@
  * lie. Reverting it now turns `the ON-PREMISE poll hands the provider NO url`
  * red in both possible environments: with an export base configured the captured
  * av_url is a string instead of null, and without one `externalMediaUrl` throws
- * and the handler answers `{result:false}`.
+ * and the handler REFUSES (`tool.dependency_unavailable`).
  *
  * Both branches assert, so no block can be vacuous: the external engine must
  * really reach the media publication layer (a URL when a base is configured, the
@@ -51,6 +51,7 @@ import {
 	statusPollAvUrl,
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 /** A plausible av 'audio' quality relative path (the poll rebuilds this shape). */
 const AUDIO_REL = 'audio/404/0/test94_test3_1.mp3';
@@ -126,11 +127,14 @@ const PRINCIPAL: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: fa
  * build stay on the production code path, and the provider records the request
  * the handler built — which is the only place the invariant is observable.
  */
-async function pollWithEngine(engine: string): Promise<{
+async function pollWithEngine(
+	engine: string,
+	/** The caller may own the sink, so a REFUSAL (a throw) still exposes what the provider saw. */
+	seen: TranscriberStatusRequest[] = [],
+): Promise<{
 	seen: TranscriberStatusRequest[];
 	response: Awaited<ReturnType<typeof checkServerTranscriberStatus>>;
 }> {
-	const seen: TranscriberStatusRequest[] = [];
 	const response = await checkServerTranscriberStatus(
 		{
 			principal: PRINCIPAL,
@@ -143,7 +147,7 @@ async function pollWithEngine(engine: string): Promise<{
 			},
 		},
 		{
-			gate: async () => null,
+			gate: async () => {},
 			transcriberConfig: async () => ({ uri: 'https://asr.example.org/api', key: 'k' }),
 			mediaContext: async () => ({
 				spec: AV_SPEC,
@@ -176,12 +180,13 @@ describe('checkServerTranscriberStatus — the HANDLER, not a helper it may stop
 		// THE regression gate for audit 2026-08 §5.6/3. Revert the call site to
 		// `avUrl: externalMediaUrl(audioRel)` and this fails either way: with an
 		// export base configured `avUrl` becomes a string; without one (the normal
-		// on-premise install) externalMediaUrl throws and `result` is false.
+		// on-premise install) externalMediaUrl throws and the poll refuses.
 		const { seen, response } = await pollWithEngine(LOCAL_ASR_ENGINE);
 
 		expect(seen).toHaveLength(1);
 		expect(seen[0]?.avUrl).toBeNull();
-		expect(response.result).toEqual({ status: 1 });
+		expect(response.ok).toBe(true);
+		expect(response.data).toEqual({ status: 1 });
 		// The client poll is non-destructive: babel may only clean up on the
 		// server-side background poll.
 		expect(seen[0]?.deleteResult).toBe(false);
@@ -190,15 +195,21 @@ describe('checkServerTranscriberStatus — the HANDLER, not a helper it may stop
 
 	test('an EXTERNAL poll DOES reach the publication layer (so the null above means something)', async () => {
 		const base = config.media.exportBase;
-		const { seen, response } = await pollWithEngine('babel_transcriber');
 
 		if (base === undefined || base === '') {
 			// Nothing is published here, so the handler must refuse loudly rather
-			// than POST an address babel cannot resolve.
-			expect(response.result).toBe(false);
-			expect(String(response.msg)).toContain('DEDALO_MEDIA_EXPORT_BASE');
+			// than POST an address babel cannot resolve. A refusal is a THROW
+			// carrying the registered code (ERRORS_SPEC §4); the export-base
+			// sentence is the LOG message the throw carries.
+			const seen: TranscriberStatusRequest[] = [];
+			const refusal = await refusalOf(
+				pollWithEngine('babel_transcriber', seen).then((run) => run.response),
+			);
+			expect(refusal.code).toBe('tool.dependency_unavailable');
+			expect(refusal.message).toContain('DEDALO_MEDIA_EXPORT_BASE');
 			expect(seen).toHaveLength(0);
 		} else {
+			const { seen } = await pollWithEngine('babel_transcriber');
 			expect(seen).toHaveLength(1);
 			expect(seen[0]?.avUrl).toBe(
 				`${base}${AV_SPEC.folder}/audio/0/test94_test3_1.${AV_SPEC.defaultExtension}`,

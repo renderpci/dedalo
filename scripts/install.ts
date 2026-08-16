@@ -165,13 +165,15 @@ async function main(): Promise<void> {
 		const { testMailerConnection } = await import('../src/core/install/mailer_probe.ts');
 		step('SMTP connection');
 		const smtp = await testMailerConnection(cfg);
-		if (!smtp.result) console.warn(`  ⚠ ${smtp.msg} — writing the SMTP config anyway`);
+		if (!smtp.ok) console.warn(`  ⚠ ${smtp.msg} — writing the SMTP config anyway`);
 	}
 
 	const { persistConfig } = await import('../src/core/install/config_persist.ts');
 	step('write ../private/.env');
+	// Every install step REFUSES BY THROWING a registered install.* code
+	// (src/core/install/refuse.ts); main()'s catch prints its message through
+	// fail(), so there is no per-step `result` to test any more.
 	const persisted = await persistConfig(cfg);
-	if (!persisted.result) fail(persisted.msg);
 	for (const [k, v] of Object.entries(persisted.generated)) {
 		console.log(`  generated ${k} = ${v}`);
 	}
@@ -179,7 +181,7 @@ async function main(): Promise<void> {
 	const { checkDirectories } = await import('../src/core/install/directories.ts');
 	step('directories');
 	const dirs = checkDirectories({ create: true });
-	if (!dirs.result)
+	if (!dirs.ok)
 		fail(
 			dirs.dirs
 				.filter((d) => !d.writable)
@@ -189,19 +191,17 @@ async function main(): Promise<void> {
 
 	const { installDbFromSeed } = await import('../src/core/install/db_restore.ts');
 	step('restore database from seed');
-	const restored = await installDbFromSeed();
-	if (!restored.result) fail(restored.msg);
+	await installDbFromSeed();
 
 	const { setRootPassword } = await import('../src/core/install/root_pw.ts');
 	step('set root password');
-	const rootSet = await setRootPassword(rootPassword as string);
-	if (!rootSet.result) fail(rootSet.msg);
+	await setRootPassword(rootPassword as string);
 
 	if (hierarchies.length > 0) {
 		const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 		step(`import hierarchies: ${hierarchies.join(', ')}`);
 		const h = await installHierarchies(hierarchies);
-		if (!h.result) console.warn(`  ⚠ some hierarchies failed: ${h.errors.join('; ')}`);
+		if (!h.ok) console.warn(`  ⚠ some hierarchies failed: ${h.errors.join('; ')}`);
 	}
 
 	if (!skipTools) {
@@ -213,8 +213,7 @@ async function main(): Promise<void> {
 
 	const { installFinish } = await import('../src/core/install/finish.ts');
 	step('seal install');
-	const finished = await installFinish();
-	if (!finished.result) fail(finished.msg);
+	await installFinish();
 
 	// End-to-end proof: an actual root login must succeed against the new DB.
 	const { login } = await import('../src/core/security/auth.ts');

@@ -179,7 +179,7 @@ describe.if(hasPhpCredentials())(
 					csrfCandidate: session?.csrfToken ?? null,
 					principal,
 				});
-				const tsEntry = ((tsResult.body.result as Record<string, unknown>[]) ?? [])[0];
+				const tsEntry = ((tsResult.body.data as Record<string, unknown>[]) ?? [])[0];
 				// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 				results.set(testCase.tipo, {
 					php: normalizeSectionIdTypes(configProjection(phpEntry?.request_config)),
@@ -287,7 +287,7 @@ describe.if(hasPhpCredentials())(
 					csrfCandidate: session?.csrfToken ?? null,
 					principal,
 				});
-				const tsEntry = ((tsResult.body.result as Record<string, unknown>[]) ?? [])[0];
+				const tsEntry = ((tsResult.body.data as Record<string, unknown>[]) ?? [])[0];
 				const projection = configProjection(tsEntry?.request_config) as {
 					targets: unknown[];
 					show: { tipo: unknown; section_tipo: unknown }[];

@@ -114,7 +114,7 @@ describe('buildRecoveryVersionFile', () => {
 		const response = await buildRecoveryVersionFile(conn, outFile);
 
 		expect(response.errors).toEqual([]);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.msg).toBe('OK. Request done successfully');
 		expect(response.file_size).toBe(`${statSync(outFile).size} Bytes`);
 
@@ -139,7 +139,7 @@ describe('buildRecoveryVersionFile', () => {
 		const badConn: DbConnDescriptor = { ...conn, database: 'zzt04_no_such_database' };
 		const response = await buildRecoveryVersionFile(badConn, outFile);
 
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.msg).toBe('Error. pg_dump failed building the recovery file');
 		expect(response.errors[0]?.startsWith('pg_dump failed:')).toBe(true);
 		expect(response.file_size).toBeUndefined();
@@ -165,7 +165,7 @@ describe('buildRecoveryVersionFile', () => {
 		const badConn: DbConnDescriptor = { ...conn, database: 'zzt04_no_such_database' };
 		const response = await buildRecoveryVersionFile(badConn, outFile);
 
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(readFileSync(outFile)).toEqual(previous);
 		expect(existsSync(`${outFile}.part`)).toBe(false);
 	}, 60_000);
@@ -181,7 +181,7 @@ describe('restoreDdOntologyRecoveryFromFile', () => {
 		expect(existsSync(missing)).toBe(false);
 		const response = await restoreDdOntologyRecoveryFromFile(conn, missing);
 		expect(response).toEqual({
-			result: false,
+			ok: false,
 			msg: 'Error. source sql_file do not exists',
 			errors: ['source sql_file do not exists'],
 		});
@@ -190,7 +190,7 @@ describe('restoreDdOntologyRecoveryFromFile', () => {
 	test('restore recreates the slice table and leaves dd_ontology untouched', async () => {
 		const outFile = join(workDir, 'restore_scope.sql.gz');
 		const built = await buildRecoveryVersionFile(conn, outFile);
-		expect(built.result).toBe(true);
+		expect(built.ok).toBe(true);
 
 		// Baselines taken immediately before the restore (never suite-global truth).
 		const before = await sql.unsafe(
@@ -208,7 +208,7 @@ describe('restoreDdOntologyRecoveryFromFile', () => {
 
 		const response = await restoreDdOntologyRecoveryFromFile(conn, outFile);
 		expect(response.errors).toEqual([]);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.msg).toBe('OK. Request done successfully');
 
 		const after = await sql.unsafe(
@@ -235,7 +235,7 @@ describe('restoreDdOntologyRecoveryFromFile', () => {
 		writeFileSync(outFile, gzipSync(Buffer.from('SELECT this is not sql;\n', 'utf8')));
 		const response = await restoreDdOntologyRecoveryFromFile(conn, outFile);
 
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.msg).toBe('Error. Request failed [restore_dd_ontology_recovery_from_file]');
 		expect(response.errors[0]?.startsWith('psql restore failed:')).toBe(true);
 		expect(existsSync(outFile.slice(0, -'.gz'.length))).toBe(false);
@@ -246,7 +246,7 @@ describe('restoreDdOntologyRecoveryFromFile', () => {
 		writeFileSync(outFile, Buffer.from('this is not gzip at all', 'utf8'));
 		const response = await restoreDdOntologyRecoveryFromFile(conn, outFile);
 
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.msg).toBe('Error. Request failed [restore_dd_ontology_recovery_from_file]');
 		expect(response.errors.length).toBe(1);
 		expect(response.errors[0]?.startsWith('psql restore failed:')).toBe(false);
@@ -281,7 +281,7 @@ describe('restoreSnapshots', () => {
 			conn,
 		});
 		expect(imported.errors).toEqual([]);
-		expect(imported.result).toBe(true);
+		expect(imported.ok).toBe(true);
 
 		// state really CHANGED (without this the restore assertion is vacuous)
 		const mutated = await readScratchRows(TIPO_A);

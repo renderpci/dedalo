@@ -344,7 +344,7 @@ describe('portal edit writes, TS-native stored end states', () => {
 			},
 		});
 		const response = await tsCall(saveRqo(host, [pick()]));
-		expect((response as { result?: unknown }).result).not.toBe(false);
+		expect((response as { ok?: boolean }).ok).toBe(true);
 		// Differential pin: ONE stored locator, id stamped 1, normalized bytes.
 		expect(await portalDataOf(host)).toEqual([locatorOf(1, 101)]);
 
@@ -373,7 +373,8 @@ describe('portal edit writes, TS-native stored end states', () => {
 				{ action: 'sort_data', source_key: 0, target_key: 1, value: locatorOf(1, 999) },
 			]),
 		);
-		expect((response as { result?: unknown }).result).toBe(false);
+		expect((response as { ok?: boolean }).ok).toBe(false);
+		expect((response as { error?: { code?: string } }).error?.code).toBe('record.save_failed');
 		expect(await portalDataOf(host)).toEqual(seed);
 	}, 60000);
 
@@ -385,7 +386,8 @@ describe('portal edit writes, TS-native stored end states', () => {
 				{ action: 'sort_by_column', component_tipo: 'numisdata158', direction: 'ASC', value: null },
 			]),
 		);
-		expect((response as { result?: unknown }).result).toBe(false);
+		expect((response as { ok?: boolean }).ok).toBe(false);
+		expect((response as { error?: { code?: string } }).error?.code).toBe('record.save_failed');
 		expect(await portalDataOf(host)).toEqual(seed);
 	}, 60000);
 
@@ -394,7 +396,7 @@ describe('portal edit writes, TS-native stored end states', () => {
 		const response = await tsCall(
 			saveRqo(host, [{ action: 'add_new_element', id: null, value: TARGET_SECTION }]),
 		);
-		expect((response as { result?: unknown }).result).not.toBe(false);
+		expect((response as { ok?: boolean }).ok).toBe(true);
 
 		const data = (await portalDataOf(host)) as Record<string, unknown>[];
 		expect(data?.length).toBe(1);
@@ -449,7 +451,7 @@ describe('portal edit writes, TS-native stored end states', () => {
 		const response = await tsCall(
 			saveRqo(host, [{ action: 'add_new_element', id: null, value: TARGET_SECTION }]),
 		);
-		expect((response as { result?: unknown }).result).not.toBe(false);
+		expect((response as { ok?: boolean }).ok).toBe(true);
 		const data = (await portalDataOf(host)) as Record<string, unknown>[];
 		const newId = Number((data[0] as { section_id: string }).section_id);
 		track(TARGET_SECTION, newId);
@@ -483,7 +485,7 @@ describe('portal edit writes, TS-native stored end states', () => {
 		const response = await tsCall(
 			saveRqo(host, [{ action: 'insert', id: null, value: { ...tagLocator } }]),
 		);
-		expect((response as { result?: unknown }).result).not.toBe(false);
+		expect((response as { ok?: boolean }).ok).toBe(true);
 		// WC-2026-08-10-section-id-int-canonical: stored address int, the rest
 		// (tag_id, section_top_id) byte-identical.
 		expect(await portalDataOf(host)).toEqual([{ ...tagLocator, section_id: 101, id: 1 }]);
@@ -522,7 +524,7 @@ describe('delete_locator, TS-native (bulk match / strict tag_id / full-union / d
 				ar_properties: ['tag_id', 'type'],
 			}),
 		);
-		expect((body as { result?: unknown }).result).toBe(2);
+		expect((body as { data?: unknown }).data).toBe(2);
 		// survivors: the PHP locator class re-persists with tag_id CAST TO STRING
 		// (differential byte-pin) — the tag_id-less locator is untouched.
 		expect(await portalDataOf(host)).toEqual([
@@ -540,7 +542,7 @@ describe('delete_locator, TS-native (bulk match / strict tag_id / full-union / d
 				ar_properties: ['tag_id', 'type'],
 			}),
 		);
-		expect((body as { result?: unknown }).result).toBe(0);
+		expect((body as { data?: unknown }).data).toBe(0);
 		expect(await portalDataOf(host)).toEqual(seed);
 	}, 60000);
 
@@ -552,7 +554,7 @@ describe('delete_locator, TS-native (bulk match / strict tag_id / full-union / d
 		const body = await tsCall(
 			deleteLocatorRqo(PORTAL, HOST_SECTION, host, { locator: { ...seed[0] } }),
 		);
-		expect((body as { result?: unknown }).result).toBe(1);
+		expect((body as { data?: unknown }).data).toBe(1);
 		expect(await portalDataOf(host)).toEqual([seed[1]]);
 	}, 60000);
 
@@ -583,7 +585,7 @@ describe('delete_locator, TS-native (bulk match / strict tag_id / full-union / d
 				ar_properties: ['tag_id', 'type'],
 			}),
 		);
-		expect((body as { result?: unknown }).result).toBe(1);
+		expect((body as { data?: unknown }).data).toBe(1);
 		expect(await portalDataOf(host, INDEXING, INDEXING_SECTION)).toEqual([tagLink(2, '3')]);
 	}, 60000);
 });

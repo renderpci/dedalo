@@ -23,7 +23,7 @@ const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: tru
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 const createdIds: number[] = [];
 
-type Ctx = { session: { userId: number } | null; principal?: Principal };
+type Ctx = { requestId: string; session: { userId: number } | null; principal?: Principal };
 const askRqo = (options: Record<string, unknown>) => ({ options }) as never;
 
 const passage = (over: Partial<RagPassageHit> = {}): RagPassageHit => ({
@@ -177,11 +177,12 @@ describe('dd_rag_api ask', () => {
 		// egress gate otherwise blocks the external provider before any transport.
 		process.env.DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT = 'true';
 		try {
-			const res = await ragApiActions.ask(askRqo({ query: 'moneda de bronce', limit: 5 }), {
-				principal: SUPERUSER,
-			} as Ctx);
-			expect(res.body.result).toBe(false);
-			expect(res.body.errors).toContain('generation_failed');
+			// a transport failure is the typed rag.generation_failed THROW (never a fabricated answer)
+			await expect(
+				ragApiActions.ask(askRqo({ query: 'moneda de bronce', limit: 5 }), {
+					principal: SUPERUSER,
+				} as Ctx),
+			).rejects.toMatchObject({ code: 'rag.generation_failed' });
 		} finally {
 			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.DEDALO_RAG_LLM_ENDPOINT;

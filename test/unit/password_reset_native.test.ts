@@ -1,7 +1,8 @@
 /**
  * Password recovery — TS-native write-path contract (DEC-14b twin of the frozen
- * PHP core/password_reset/class.password_reset.php; the wire shapes asserted
- * here are what the copied client consumes — render_login.js reset handlers).
+ * PHP core/password_reset/class.password_reset.php). Step 1 answers a payload;
+ * every step-2 refusal is a THROWN registered `password_reset.*` code
+ * (ERRORS_SPEC §4) — asserted here by code, which is what the client keys on.
  *
  * Needs the DB: a SCRATCH user record is inserted into matrix_users (unique
  * username/email, deleted in afterAll together with its TM audit rows). The
@@ -32,13 +33,13 @@ const REAL_MAILER = { ...realMailerModule };
 
 /** Every sendMail call the flow makes, captured for code extraction. */
 const sentMails: { to: string; subject: string; bodyText: string }[] = [];
-let mailerResult = { result: true, msg: 'OK. Mail sent', errors: [] as string[] };
+let mailerResult: { ok: boolean; code?: string; msg: string } = { ok: true, msg: 'OK. Mail sent' };
 
 mock.module('../../src/core/mailer/mailer.ts', () => ({
 	...REAL_MAILER,
 	sendMail: async (options: { to: string; subject: string; bodyText: string }) => {
 		sentMails.push({ to: options.to, subject: options.subject, bodyText: options.bodyText });
-		return { ...mailerResult, errors: [...mailerResult.errors] };
+		return { ...mailerResult };
 	},
 }));
 
@@ -46,6 +47,16 @@ mock.module('../../src/core/mailer/mailer.ts', () => ({
 const { confirmPasswordReset, requestPasswordReset } = await import(
 	'../../src/core/security/password_reset.ts'
 );
+
+/** The registered code a confirm refusal threw (fails loudly if it did NOT throw). */
+async function confirmCode(resetId: string, code: string, newPassword: string): Promise<string> {
+	try {
+		await confirmPasswordReset(resetId, code, newPassword, IP);
+	} catch (error) {
+		return (error as { code?: string }).code ?? String(error);
+	}
+	throw new Error('confirmPasswordReset resolved where a refusal was expected');
+}
 
 const USERS_TABLE = 'matrix_users';
 const USERS_SECTION_TIPO = 'dd128';
@@ -145,34 +156,33 @@ afterAll(async () => {
 
 afterEach(() => {
 	sentMails.length = 0;
-	mailerResult = { result: true, msg: 'OK. Mail sent', errors: [] };
+	mailerResult = { ok: true, msg: 'OK. Mail sent' };
 	resetSessionStoreForTests();
 });
 
 describe('requestPasswordReset — anti-enumeration', () => {
 	test('nonexistent identifier: generic OK shape, fresh reset_id, zero mails', async () => {
 		const response = await requestPasswordReset(`${RUN_TAG}_nobody`, IP);
-		expect(response.result).toBe(true);
 		expect(response.reset_id).toMatch(/^[0-9a-f]{32}$/);
 		expect(response.msg).toBe(
 			'If an account matches, a recovery code has been sent to its email address.',
 		);
 		expect(sentMails).toHaveLength(0);
 		// Nothing was stored — the confirm step must treat the id as unknown.
-		const confirm = await confirmPasswordReset(response.reset_id, '12345678', NEW_PASSWORD, IP);
-		expect(confirm.errors).toEqual(['invalid_or_expired']);
+		expect(await confirmCode(response.reset_id, '12345678', NEW_PASSWORD)).toBe(
+			'password_reset.invalid_or_expired',
+		);
 	});
 
 	test('inactive account: byte-identical generic shape, zero mails', async () => {
 		const response = await requestPasswordReset(`${RUN_TAG}_inactive`, IP);
-		expect(response.result).toBe(true);
 		expect(response.reset_id).toMatch(/^[0-9a-f]{32}$/);
 		expect(sentMails).toHaveLength(0);
 	});
 
 	test('too-short identifier: generic shape, zero mails', async () => {
 		const response = await requestPasswordReset('x', IP);
-		expect(response.result).toBe(true);
+		expect(response.reset_id).toMatch(/^[0-9a-f]{32}$/);
 		expect(sentMails).toHaveLength(0);
 	});
 });
@@ -189,11 +199,7 @@ describe('happy path', () => {
 
 		sentMails.length = 0;
 		const confirm = await confirmPasswordReset(resetId, code, NEW_PASSWORD, IP);
-		expect(confirm).toEqual({
-			result: true,
-			msg: 'Your password has been updated. You can now log in.',
-			errors: [],
-		});
+		expect(confirm).toEqual({ msg: 'Your password has been updated. You can now log in.' });
 
 		// The stored value is a FRESH Argon2id hash of the new password.
 		const hash = await storedPasswordHash(scratchUserId);
@@ -203,8 +209,9 @@ describe('happy path', () => {
 
 		// The entry is burned: the same code can never be replayed.
 		expect(loadPasswordReset(resetId)).toBeNull();
-		const replay = await confirmPasswordReset(resetId, code, NEW_PASSWORD, IP);
-		expect(replay.errors).toEqual(['invalid_or_expired']);
+		expect(await confirmCode(resetId, code, NEW_PASSWORD)).toBe(
+			'password_reset.invalid_or_expired',
+		);
 
 		// Session eviction (wire-invisible hardening — WIRE_CONTRACT entry).
 		expect(getSession(stolenToken)).toBeNull();
@@ -225,21 +232,19 @@ describe('happy path', () => {
 describe('confirm guards', () => {
 	test('malformed reset_id shapes are rejected without touching the store', async () => {
 		for (const bad of ['', 'short', 'A'.repeat(32), 'g'.repeat(32), 'a'.repeat(31)]) {
-			const response = await confirmPasswordReset(bad, '12345678', NEW_PASSWORD, IP);
-			expect(response.result).toBe(false);
-			expect(response.errors).toEqual(['invalid_or_expired']);
+			expect(await confirmCode(bad, '12345678', NEW_PASSWORD)).toBe(
+				'password_reset.invalid_or_expired',
+			);
 		}
 	});
 
 	test('weak password refuses WITHOUT consuming the code, which still works after', async () => {
 		const { resetId, code } = await requestCode();
-		const weak = await confirmPasswordReset(resetId, code, 'short', IP);
-		expect(weak.errors).toEqual(['weak_password']);
-		expect(weak.msg).toBe('Password too short. Use at least 8 characters.');
+		expect(await confirmCode(resetId, code, 'short')).toBe('password_reset.weak_password');
 		expect(loadPasswordReset(resetId)?.attempts).toBe(0);
 
 		const ok = await confirmPasswordReset(resetId, code, NEW_PASSWORD, IP);
-		expect(ok.result).toBe(true);
+		expect(ok.msg).toBe('Your password has been updated. You can now log in.');
 	});
 
 	test('wrong codes hit the attempt cap; then even the correct code fails', async () => {
@@ -248,15 +253,18 @@ describe('confirm guards', () => {
 
 		// Attempts 1..4 → generic invalid_or_expired; the 5th (the cap) burns it.
 		for (let attempt = 1; attempt <= 4; attempt++) {
-			const response = await confirmPasswordReset(resetId, wrongCode, NEW_PASSWORD, IP);
-			expect(response.errors).toEqual(['invalid_or_expired']);
+			expect(await confirmCode(resetId, wrongCode, NEW_PASSWORD)).toBe(
+				'password_reset.invalid_or_expired',
+			);
 		}
-		const capped = await confirmPasswordReset(resetId, wrongCode, NEW_PASSWORD, IP);
-		expect(capped.errors).toEqual(['too_many_attempts']);
+		expect(await confirmCode(resetId, wrongCode, NEW_PASSWORD)).toBe(
+			'password_reset.too_many_attempts',
+		);
 		expect(loadPasswordReset(resetId)).toBeNull();
 
-		const afterCap = await confirmPasswordReset(resetId, code, NEW_PASSWORD, IP);
-		expect(afterCap.result).toBe(false);
+		expect(await confirmCode(resetId, code, NEW_PASSWORD)).toBe(
+			'password_reset.invalid_or_expired',
+		);
 	});
 
 	test('an expired entry is refused and cleaned up', async () => {
@@ -264,8 +272,9 @@ describe('confirm guards', () => {
 		const codeHash = await Bun.password.hash('12345678', { algorithm: 'argon2id' });
 		storePasswordReset(resetId, scratchUserId, codeHash, 0); // expires this second
 		await Bun.sleep(1100);
-		const response = await confirmPasswordReset(resetId, '12345678', NEW_PASSWORD, IP);
-		expect(response.errors).toEqual(['invalid_or_expired']);
+		expect(await confirmCode(resetId, '12345678', NEW_PASSWORD)).toBe(
+			'password_reset.invalid_or_expired',
+		);
 		expect(loadPasswordReset(resetId)).toBeNull();
 	});
 });
@@ -279,8 +288,8 @@ describe('mailer (real module, no network)', () => {
 			subject: 'x',
 			bodyText: 'y',
 		});
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['mailer_not_configured']);
+		expect(response.ok).toBe(false);
+		expect(response.code).toBe('mailer.not_configured');
 	});
 
 	test('email helpers strip header-injection payloads', () => {

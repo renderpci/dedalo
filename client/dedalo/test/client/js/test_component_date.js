@@ -234,7 +234,7 @@ describe(`COMPONENT_DATE DATA OPERATIONS (date mode)`, function() {
 		// Build changed_data_item the same way change_handler does
 		// This verifies the effective_key logic (start|end|period, never 'undefined')
 		const parse_response = instance.parse_string_date('25/12/2024')
-		assert.isOk(parse_response.result, 'parse_string_date expected result')
+		assert.isOk(parse_response.data, 'parse_string_date expected payload')
 
 		const data		= instance.data || {}
 		const entries	= data.entries || []
@@ -245,7 +245,7 @@ describe(`COMPONENT_DATE DATA OPERATIONS (date mode)`, function() {
 		const item = entries[key]
 			? JSON.parse(JSON.stringify(entries[key]))
 			: {}
-		item[effective_key] = parse_response.result
+		item[effective_key] = parse_response.data
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -286,7 +286,7 @@ describe(`COMPONENT_DATE DATA OPERATIONS (date mode)`, function() {
 		const item = entries[key]
 			? JSON.parse(JSON.stringify(entries[key]))
 			: {}
-		item[effective_key] = parse_response.result
+		item[effective_key] = parse_response.data
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -355,7 +355,7 @@ describe(`COMPONENT_DATE DATA OPERATIONS (date mode)`, function() {
 		const item = entries[key]
 			? JSON.parse(JSON.stringify(entries[key]))
 			: {}
-		item.start = parse_response.result
+		item.start = parse_response.data
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -450,7 +450,7 @@ describe(`COMPONENT_DATE PERIOD MODE`, function() {
 			month	: 10,
 			day		: 15
 		})
-		assert.isOk(parse_response.result, 'parse_string_period expected result')
+		assert.isOk(parse_response.data, 'parse_string_period expected payload')
 
 		const data		= instance.data || {}
 		const entries	= data.entries || []
@@ -462,7 +462,7 @@ describe(`COMPONENT_DATE PERIOD MODE`, function() {
 		// Build item from scratch (not cloned from entries) to isolate effective_key test
 		// from any pre-existing 'undefined' keys in server data from before the fix
 		const item = {}
-		item[effective_key] = parse_response.result
+		item[effective_key] = parse_response.data
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -500,7 +500,7 @@ describe(`COMPONENT_DATE PERIOD MODE`, function() {
 
 		// Build item from scratch to isolate effective_key test
 		const item = {}
-		item[effective_key] = parse_response.result
+		item[effective_key] = parse_response.data
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -570,7 +570,7 @@ describe(`COMPONENT_DATE PERIOD MODE`, function() {
 		const item = entries[key]
 			? JSON.parse(JSON.stringify(entries[key]))
 			: {}
-		item.period = parse_response.result
+		item.period = parse_response.data
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -710,7 +710,7 @@ describe(`COMPONENT_DATE CHANGE_HANDLER VALIDATION`, function() {
 			? JSON.parse(JSON.stringify(entries[key]))
 			: {}
 		// effective_key = options.date_input || type → 'end'
-		item['end'] = parse_response.result
+		item['end'] = parse_response.data
 
 		assert.isOk(item.end, 'expected end property when date_input=end')
 		assert.isUndefined(item['undefined'], 'expected NO undefined property')

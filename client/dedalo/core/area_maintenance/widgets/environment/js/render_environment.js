@@ -148,7 +148,7 @@ const get_content_data_edit = async function(self) {
 		const list_page_globals = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'list_page_globals',
-			inner_html		: JSON.stringify(page_globals, null, 2),
+			text_content	: JSON.stringify(page_globals, null, 2),
 			parent			: content_data
 		})
 

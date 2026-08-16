@@ -123,6 +123,7 @@
 	"error": "Error",
 	"error_invalid_date_format": "Error: formato de fecha invalido",
 	"error_on_upload_file": "Error al subir el archivo",
+	"error_relation_insert_refused": "El enlace a '{section_tipo}' fue rechazado ({constraint})",
 	"errors_found": "Errores encontrados",
 	"exactly": "Exactamente",
 	"exceeded_limit": "Se ha rebasado el máximo número de valores para este campo. Límite =",

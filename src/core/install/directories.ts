@@ -16,7 +16,7 @@
  * driver — `provisionMediaTreeAtBoot` runs on every server start, which is what
  * reaches a box that was installed years ago.
  *
- * Response shape is the client contract: `{result, dirs:[{label,path,exists,
+ * Response shape is the client contract: `{ok, dirs:[{label,path,exists,
  * writable}]}` (render_installer.js renders one row per dir). The media tree is
  * ONE row ("Media tree") — thirty rows would drown the panel — and `msg` carries
  * a ONE-LINE summary, never the list: the client assigns `msg` with textContent
@@ -74,7 +74,8 @@ function targetDirs(mediaRoot: string | null): { label: string; path: string }[]
 }
 
 export interface CheckDirectoriesResult {
-	result: boolean;
+	/** A REPORT flag, not a refusal: the wizard renders `dirs` either way (see db_probe_plan.ts). */
+	ok: boolean;
 	dirs: DirReport[];
 	msg: string;
 	/**
@@ -152,12 +153,12 @@ export function checkDirectories(options: CheckDirectoriesOptions): CheckDirecto
 		}
 	}
 
-	const result = reports.every((report) => report.exists && report.writable);
-	const base = result
+	const allGreen = reports.every((report) => report.exists && report.writable);
+	const base = allGreen
 		? 'All directories present and writable'
 		: 'One or more directories need attention';
 	return {
-		result,
+		ok: allGreen,
 		dirs: reports,
 		// Single line, always: joined with ' | ', never '\n' (header).
 		msg: notes.length > 0 ? [base, ...notes].join(' | ') : base,

@@ -27,6 +27,7 @@ import { join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { encodeForJsonb } from '../db/json_codec.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 import {
 	getMatchedDescriptor,
 	getUpdateVersion,
@@ -37,7 +38,7 @@ import {
 /** A registered TS migration script (the script_class::script_method twin). */
 export type UpdateScriptFn = (
 	...vars: unknown[]
-) => Promise<{ result: boolean; msg?: string; errors?: string[] } | boolean>;
+) => Promise<{ ok: boolean; msg?: string; errors?: string[] } | boolean>;
 
 /**
  * TS migration scripts, keyed by scriptId (catalog.ts UpdateScriptStep).
@@ -45,8 +46,14 @@ export type UpdateScriptFn = (
  */
 export const SCRIPT_REGISTRY: Readonly<Record<string, UpdateScriptFn>> = Object.freeze({});
 
+/**
+ * The migration run's INTERNAL outcome — never a wire body: the
+ * update_data_version widget folds it into its own response (and the background
+ * path publishes it as the job frame's `data`). `ok` (not `result`) so nothing
+ * envelope-shaped can escape the engine.
+ */
 export interface UpdateRunResponse {
-	result: boolean;
+	ok: boolean;
 	/** PHP: an ARRAY of step messages on success/abort paths. */
 	msg: string[];
 	errors: string[];
@@ -125,7 +132,7 @@ export async function updateVersion(
 	const descriptor = getMatchedDescriptor(current, catalog);
 	if (descriptor === null) {
 		return {
-			result: false,
+			ok: false,
 			msg: ['Unable to get proper update version. Nothing to update'],
 			errors: [],
 		};
@@ -136,7 +143,7 @@ export async function updateVersion(
 		if (!existsSync(logPath)) writeFileSync(logPath, '');
 	} catch {
 		return {
-			result: false,
+			ok: false,
 			msg: ["Error (1). It's not possible set update_log file"],
 			errors: ['update_log file is not available'],
 		};
@@ -167,7 +174,7 @@ export async function updateVersion(
 							`ERROR [SQL_update] ${index + 1}\nThe result is false. Check your query sentence. The update process aborted.`,
 						);
 						msg.push(`Error on SQL_update: ${(error as Error).message}`);
-						return { result: false, msg, errors };
+						return { ok: false, msg, errors };
 					}
 				}
 				break;
@@ -178,9 +185,10 @@ export async function updateVersion(
 					if (!isChecked(`components_update_${index}`)) continue;
 					// LEDGERED (rewrite/LEDGER.md): the per-record component hook
 					// machinery ships with its first real consumer — never silent.
-					throw new Error(
-						`components_update steps are not supported by the TS engine yet (model '${models[index]}') — implement the component updateDataVersion facet with the first 7.x descriptor that needs it`,
-					);
+					throw new DedaloError('engine.uncovered_scope', {
+						message: `components_update steps are not supported by the TS engine yet (model '${models[index]}') — implement the component updateDataVersion facet with the first 7.x descriptor that needs it`,
+						coordinates: { model: String(models[index]) },
+					});
 				}
 				break;
 			}
@@ -200,7 +208,7 @@ export async function updateVersion(
 							const outcome = await fn(...(step.scriptVars ?? []));
 							if (typeof outcome === 'boolean') ok = outcome;
 							else {
-								ok = outcome.result === true;
+								ok = outcome.ok === true;
 								stepMsg = outcome.msg ?? '';
 								errors.push(...(outcome.errors ?? []));
 							}
@@ -214,7 +222,7 @@ export async function updateVersion(
 						errors.push(stepMsg);
 						if (step.stopOnError === true) {
 							errors.push('unable to run update script');
-							return { result: false, msg, errors };
+							return { ok: false, msg, errors };
 						}
 					} else {
 						msg.push(`Updated script: ${step.scriptId}`);
@@ -267,5 +275,5 @@ export async function updateVersion(
 	const targetString = target.join('.');
 	await writeVersionRow(targetString);
 	msg.push(`Updated Dédalo data version: ${targetString}`, 'Updated version successfully');
-	return { result: true, msg, errors };
+	return { ok: true, msg, errors };
 }
