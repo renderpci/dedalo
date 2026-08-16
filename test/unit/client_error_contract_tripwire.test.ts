@@ -46,6 +46,11 @@
  *    strings blanked, `page_globals` lines skipped): a write `.msg = …` counts,
  *    a computed `obj['msg']` does not; `client/dedalo/test/**` and `-min.js`
  *    twins are ungated by design.
+ *  - The corpus is CLIENT CODE BY DESTINATION, not by directory: three scan
+ *    roots — `client/dedalo/**`, `tools/*\/js/**` and `src/**\/client/js/**`
+ *    (browser JS served with the tool subsystem, added 2026-08-16 after its two
+ *    stale `.result` reads blanked every tool header). A fourth tree of served
+ *    JS needs a fourth root, or it is ungated.
  *  - The three words are also the names of non-envelope shapes the client MUST
  *    keep reading (FileReader.result, server job STREAM FRAMES, payload
  *    diagnostic lists, named failure extension keys). Those are excused one
@@ -88,6 +93,14 @@ const TRANSPORT_CONSUMERS = [
 	DATA_MANAGER,
 	'client/dedalo/core/page/js/worker_cache.js',
 	'client/dedalo/core/sw.js',
+] as const;
+/**
+ * Browser JS that lives under src/ because it is served with the tool subsystem.
+ * Pinned so the third scan root cannot silently stop reaching it.
+ */
+const SRC_SERVED_CLIENT_JS = [
+	'src/core/tools/client/js/tool_common.js',
+	'src/core/tools/client/js/render_tool_common.js',
 ] as const;
 /** The compat block's two homes on the server (the flip target of rule 3). */
 const CONVERT_TS = 'src/core/errors/convert.ts';
@@ -341,6 +354,15 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 		const seen = new Set(RESULTS.map((result) => result.file));
 		for (const file of TRANSPORT_CONSUMERS)
 			expect(seen.has(file), `${file} not in the census`).toBe(true);
+		// SERVED-FROM-src BROWSER JS is client code too. It was outside the two
+		// original scan roots until 2026-08-16, and that blind spot is exactly
+		// where the last two `.result` envelope reads survived P4: every tool
+		// context came back null, so every tool header rendered a blank label.
+		for (const file of SRC_SERVED_CLIENT_JS)
+			expect(
+				seen.has(file),
+				`${file} not in the census — the src/ client-js scan root is gone or renamed; browser JS served from src/ must be counted like any other client file.`,
+			).toBe(true);
 	});
 
 	test('the non-envelope allowlist is printed: every entry, its hit count and its reason', () => {

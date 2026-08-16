@@ -20,7 +20,13 @@
  *
  * ── WHAT IS SCANNED ─────────────────────────────────────────────────────────
  * `client/dedalo/**\/*.js` minus `client/dedalo/test/**` (the browser test
- * suite fakes envelopes on purpose), plus `tools/*\/js/**\/*.js`. Discovery is
+ * suite fakes envelopes on purpose), plus `tools/*\/js/**\/*.js`, plus
+ * `src/**\/client/js/**\/*.js` — browser JS that lives under src/ because it is
+ * SERVED with the tool subsystem. The corpus is client code by DESTINATION, not
+ * by directory: that third root was missing until 2026-08-16, and the two stale
+ * `.result` envelope reads it hid left every tool context null (blank tool
+ * header label). A new tree of served JS needs its own root here, or it is
+ * ungated. Discovery is
  * `Glob().scanSync()` (dot + followSymlinks + loud on a dangling link), every
  * file read with `readFileSync` — NEVER a shell-out to grep. `*-min.js` build
  * artefacts are excluded (their source twin is counted).
@@ -47,6 +53,12 @@ export const REPO_ROOT = join(import.meta.dir, '..', '..');
 export const SCAN_ROOTS = [
 	{ root: 'client/dedalo', glob: '**/*.js' },
 	{ root: 'tools', glob: '*/js/**/*.js' },
+	// Browser JS that lives under src/ because it is SERVED with the tool
+	// subsystem (src/core/tools/client/js/tool_common.js et al). It is client
+	// code by every other measure, and it was invisible to this census until
+	// 2026-08-16, when its two stale `.result` envelope reads blanked the label
+	// of EVERY tool header.
+	{ root: 'src', glob: '**/client/js/**/*.js' },
 ] as const;
 
 /** Excluded PATH PREFIXES (repo-relative) — the browser test suite fakes envelopes on purpose. */
