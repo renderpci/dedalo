@@ -77,3 +77,14 @@ to stop that type being mistaken for a contract.
 store is untouched (measured: the parity failing set is identical at HEAD and on this
 change). Per `engineering/ORACLE_HARVEST.md` a re-harvest is impossible by definition in any
 case — the native gates above are this behaviour's only baseline.
+
+## Addendum 2026-08-16 — the length-1 door now THROWS a constraint refusal
+
+"What is deliberately NOT shipped" above described the length-1 door as
+`console.error`-ing the four constraint refusals and returning null. That is no longer
+the case: it THROWS (`relation.insert_refused` 400 / `perm.denied` 403 — see the sibling
+entry's addendum), so the save answers a named refusal instead of a silent success. The
+per-locator `outcomes` wire is STILL not shipped: a batch through the length-1 door
+(every production caller) is refused as a whole on its first refused net-new locator, and
+the accepted siblings roll back with it. Wiring `outcomes` onto the save response as
+per-locator notices remains the open work; ledgered in `rewrite/LEDGER.md` known-open.
