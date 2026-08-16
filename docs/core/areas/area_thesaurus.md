@@ -197,7 +197,11 @@ for this component target`, which is a configuration problem, not a permission o
 !!! note "The affordance is not the authorization"
     The same cap and the same target set are resolved again when the pick is saved, by
     the same module. What the tree offers and what the save accepts are literally the
-    same value, so a stale or altered client cap changes nothing.
+    same value, so a stale or altered client cap changes nothing. A pick the save
+    refuses — a term outside the caller's targets, a non-selectable term, one past the
+    cap — is answered as a named error (`relation.insert_refused`, HTTP 400), and a
+    thesaurus the picker's user may not read answers the generic permission error
+    (HTTP 403); a refused pick is never a silent no-op.
 
 !!! warning "The context must never be empty"
     An area read that returns an empty `context` makes the client render the area
