@@ -68,6 +68,7 @@ import {
 	type SortDataChange,
 } from '../../relations/save.ts';
 import { persistModifiedStamp, persistRecordKeys } from '../../section_record/index.ts';
+import type { Principal } from '../../security/permissions.ts';
 
 /** One change from the client (PHP changed_data item). */
 export interface ChangedDataItem {
@@ -116,6 +117,19 @@ export interface SaveRequest {
 	 * — an unstamped interactive save is an unauditable one.
 	 */
 	skipModifiedStamp?: boolean;
+	/**
+	 * The REQUEST PRINCIPAL, threaded explicitly for the relation-insert
+	 * read-grant gate (`relations/save.ts` gate 2). Dispatch and the MCP write
+	 * tools hold one and pass it; the door falls back to the request-context ALS
+	 * ONLY as the documented backstop for the leaf callers that reach here
+	 * without a principal in hand — import_execute / import_csv_execute (dd800
+	 * runs under mediaJobs, ALS present), transcription_asr, password_reset,
+	 * section_permissions, area_maintenance export_hierarchy, ontology data_io,
+	 * component_text_area tag_delete, media companion_writes. Inside gate 2's
+	 * scope (a tree-picker caller) an absent actor REFUSES; a write-validation
+	 * path never answers "allowed" because it could not see who was asking.
+	 */
+	principal?: Principal;
 }
 
 export interface SaveResult {
@@ -890,6 +904,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 						existingItems: validatedItems,
 						storedItems: storedItemsBaseline,
 						pairing: dataframePairing,
+						principal: request.principal,
 					});
 					if (safeElement !== null) validatedItems.push(safeElement);
 				}
@@ -1000,6 +1015,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 					lang: effectiveLang,
 					existingItems: items,
 					pairing: dataframePairing,
+					principal: request.principal,
 				});
 				if (validated === null) continue; // ignored insert (PHP returns false)
 				value = validated;
@@ -1079,6 +1095,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 				lang: effectiveLang,
 				existingItems: otherItems,
 				pairing: dataframePairing,
+				principal: request.principal,
 			});
 			// PHP drops the element when validate_data_element returns false; we leave
 			// the stored item untouched rather than persist a bad-formed locator.

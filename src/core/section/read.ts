@@ -125,6 +125,10 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
  * (offset 26, no filter) started listing the WHOLE 2.4M-row table on its first
  * pagination — silently, as always. Persist and merge already honour the flag
  * (readSectionRows); this closes the third door.
+ *
+ * WIRE: a deliberate divergence from PHP (which stamps sqo_session on every
+ * section read) — WC-2026-08-16-sqo-session-not-persisted-on-session-save-false.
+ * Gate: tm_session_sqo_isolation_native ("door 3 — THE STAMP").
  */
 function stripSessionSqoStamp(
 	context: StructureContextEntry[],
