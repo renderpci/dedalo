@@ -420,6 +420,130 @@ async function readDashboardArea(rqo: Rqo, principal: Principal): Promise<ApiRes
 }
 
 /**
+ * THE PICKER CALLER (engineering/AREA_SPEC.md §5): a read may declare WHICH
+ * component instance it is opening the tree for. It declares nothing else — no
+ * mode, no target list, no term pinning: those are conclusions, and a client's
+ * conclusions are not authority (the same objection dispatchAreaRead already
+ * makes about source.model). A present-but-malformed caller refuses; an absent
+ * one is an ordinary browse read, byte-unchanged (null).
+ */
+async function resolveDeclaredPickerCaller(
+	rqo: Rqo,
+	principal: Principal,
+	lang: string,
+): Promise<ResolvedPickerCaller | null> {
+	const declaredCaller = (rqo.source as { caller?: unknown } | undefined)?.caller;
+	if (declaredCaller === undefined || declaredCaller === null) return null;
+	const caller = parsePickerCaller(declaredCaller);
+	if (caller === null) {
+		throw new DedaloError('area.picker_caller_invalid', {
+			publicMessage: PICKER_CALLER_MALFORMED_MESSAGE,
+		});
+	}
+	return resolvePickerCaller(caller, principal, lang);
+}
+
+/** The pruned hierarchy list plus the two drop counters (see filterHierarchiesByGrant). */
+interface PrunedHierarchies {
+	kept: HierarchyBootItem['value'];
+	/** Candidates dropped by a PERMISSION check (a target or root-term section the principal may not read). */
+	refusedByAcl: number;
+	/** Candidates dropped by DATA (inactive, no children tipo, no readable root term). */
+	droppedByConfig: number;
+}
+
+/**
+ * Per-hierarchy read-permission filter (PHP area_thesaurus_json loop):
+ * ontology-area global admins bypass; everyone else must hold read on each
+ * hierarchy's target section AND on each root term's section.
+ *
+ * THE TWO EMPTY CASES ARE DIFFERENT FACTS (engineering/AREA_SPEC.md §5) and are
+ * counted SEPARATELY as the loop drops each candidate — "nothing survived"
+ * alone cannot tell them apart, and answering the wrong one tells a curator
+ * their thesaurus is forbidden when it is merely unconfigured (or the reverse,
+ * which leaks that it exists).
+ */
+async function filterHierarchiesByGrant(
+	hierarchies: HierarchyBootItem['value'],
+	principal: Principal,
+	isOntologyArea: boolean,
+): Promise<PrunedHierarchies> {
+	const pruned: PrunedHierarchies = { kept: [], refusedByAcl: 0, droppedByConfig: 0 };
+	for (const hierarchy of hierarchies) {
+		if (isOntologyArea && principal.isGlobalAdmin) {
+			pruned.kept.push(hierarchy);
+			continue;
+		}
+		if (
+			(await getPermissions(
+				principal,
+				hierarchy.target_section_tipo,
+				hierarchy.target_section_tipo,
+			)) < 1
+		) {
+			pruned.refusedByAcl++;
+			continue;
+		}
+		if (hierarchy.active_in_thesaurus === false || !isNonEmptyString(hierarchy.children_tipo)) {
+			pruned.droppedByConfig++;
+			continue;
+		}
+		const rootTerms = await filterRootTermsByGrant(hierarchy.root_terms, principal);
+		if (rootTerms.kept.length === 0) {
+			// Root terms the principal may not read → refused. NO root terms (or
+			// only unaddressable ones) → the hierarchy declares no entry point.
+			if (rootTerms.refused > 0) pruned.refusedByAcl++;
+			else pruned.droppedByConfig++;
+			continue;
+		}
+		pruned.kept.push({ ...hierarchy, root_terms: rootTerms.kept });
+	}
+	return pruned;
+}
+
+/** The root terms whose section the principal may read, and how many it may not. */
+async function filterRootTermsByGrant<T extends { section_tipo?: unknown }>(
+	rootTerms: readonly T[],
+	principal: Principal,
+): Promise<{ kept: T[]; refused: number }> {
+	const kept: T[] = [];
+	let refused = 0;
+	for (const rootTerm of rootTerms) {
+		if (typeof rootTerm.section_tipo !== 'string') continue;
+		if ((await getPermissions(principal, rootTerm.section_tipo, rootTerm.section_tipo)) < 1) {
+			refused++;
+			continue;
+		}
+		kept.push(rootTerm);
+	}
+	return { kept, refused };
+}
+
+function isNonEmptyString(value: unknown): value is string {
+	return typeof value === 'string' && value !== '';
+}
+
+/**
+ * Which refusal an EMPTY picker read gets (engineering/AREA_SPEC.md §5): every
+ * candidate dropped by a permission check → `perm.denied`, which carries NO
+ * sentence of its own here (naming the target sections the caller cannot reach
+ * would tell them those sections exist; it is also the code the client
+ * dispatches its "no permission" page on — never a 403 spelled as a generic
+ * caller error). Otherwise the OTHER fact — the target declares no active
+ * hierarchy — as `resource.conflict`, which is public, so the sentence that
+ * tells the curator what to configure survives to the wire.
+ */
+function emptyPickerRefusal(pruned: PrunedHierarchies, areaTipo: string): DedaloError {
+	if (pruned.refusedByAcl > 0 && pruned.droppedByConfig === 0) {
+		return new DedaloError('perm.denied', { coordinates: { area_tipo: areaTipo } });
+	}
+	return new DedaloError('resource.conflict', {
+		publicMessage: PICKER_NO_HIERARCHY_MESSAGE,
+		coordinates: { area_tipo: areaTipo },
+	});
+}
+
+/**
  * Thesaurus / ontology tree-area boot data (PHP area_thesaurus_json): the
  * active-hierarchies projection + typologies, per-hierarchy read-permission
  * filtered, with the optional pre-executed thesaurus search (ts_search).
@@ -450,23 +574,9 @@ async function readTreeArea(
 	}
 	const lang = rqo.source?.lang ?? 'lg-spa';
 
-	// THE PICKER CALLER (engineering/AREA_SPEC.md §5): a read may declare WHICH component instance
-	// it is opening the tree for. It declares nothing else — no mode, no target
-	// list, no term pinning: those are conclusions, and a client's conclusions
-	// are not authority (the same objection dispatchAreaRead already makes about
-	// source.model). A present-but-malformed caller refuses; an absent one is an
-	// ordinary browse read, byte-unchanged.
-	const declaredCaller = (rqo.source as { caller?: unknown } | undefined)?.caller;
-	let picker: ResolvedPickerCaller | null = null;
-	if (declaredCaller !== undefined && declaredCaller !== null) {
-		const caller = parsePickerCaller(declaredCaller);
-		if (caller === null) {
-			throw new DedaloError('area.picker_caller_invalid', {
-				publicMessage: PICKER_CALLER_MALFORMED_MESSAGE,
-			});
-		}
-		picker = await resolvePickerCaller(caller, principal, lang);
-	}
+	// THE PICKER CALLER (engineering/AREA_SPEC.md §5) — resolved from the
+	// declaration alone; see resolveDeclaredPickerCaller.
+	const picker = await resolveDeclaredPickerCaller(rqo, principal, lang);
 
 	// terms_are_model (PHP build_options->terms_are_model): the ontology model
 	// view. The client sends it in source.build_options.
@@ -485,65 +595,14 @@ async function readTreeArea(
 		picker?.constraint?.targets ?? null,
 	)) as unknown as HierarchyBootItem;
 
-	// Per-hierarchy read-permission filter (PHP area_thesaurus_json loop):
-	// ontology-area global admins bypass; everyone else must hold read on each
-	// hierarchy's target section AND on each root term's section.
-	//
-	// THE TWO EMPTY CASES ARE DIFFERENT FACTS (engineering/AREA_SPEC.md §5) and are counted
-	// SEPARATELY as the loop drops each candidate — "nothing survived" alone
-	// cannot tell them apart, and answering the wrong one tells a curator their
-	// thesaurus is forbidden when it is merely unconfigured (or the reverse,
-	// which leaks that it exists).
-	const isOntologyArea = areaModel === 'area_ontology';
-	const filteredValue: HierarchyBootItem['value'] = [];
-	let refusedByAcl = 0;
-	let droppedByConfig = 0;
-	for (const hierarchy of item.value) {
-		if (isOntologyArea && principal.isGlobalAdmin) {
-			filteredValue.push(hierarchy);
-			continue;
-		}
-		if (
-			(await getPermissions(
-				principal,
-				hierarchy.target_section_tipo,
-				hierarchy.target_section_tipo,
-			)) < 1
-		) {
-			refusedByAcl++;
-			continue;
-		}
-		if (hierarchy.active_in_thesaurus === false) {
-			droppedByConfig++;
-			continue;
-		}
-		if (
-			hierarchy.children_tipo === undefined ||
-			hierarchy.children_tipo === null ||
-			hierarchy.children_tipo === ''
-		) {
-			droppedByConfig++;
-			continue;
-		}
-		const safeRootTerms: typeof hierarchy.root_terms = [];
-		let rootTermsRefused = 0;
-		for (const rootTerm of hierarchy.root_terms) {
-			if (typeof rootTerm.section_tipo !== 'string') continue;
-			if ((await getPermissions(principal, rootTerm.section_tipo, rootTerm.section_tipo)) < 1) {
-				rootTermsRefused++;
-				continue;
-			}
-			safeRootTerms.push(rootTerm);
-		}
-		if (safeRootTerms.length === 0) {
-			// Root terms the principal may not read → refused. NO root terms (or
-			// only unaddressable ones) → the hierarchy declares no entry point.
-			if (rootTermsRefused > 0) refusedByAcl++;
-			else droppedByConfig++;
-			continue;
-		}
-		filteredValue.push({ ...hierarchy, root_terms: safeRootTerms });
-	}
+	// Per-hierarchy read-permission filter (PHP area_thesaurus_json loop) —
+	// see filterHierarchiesByGrant for the rule and the two drop counters.
+	const pruned = await filterHierarchiesByGrant(
+		item.value,
+		principal,
+		areaModel === 'area_ontology',
+	);
+	const filteredValue = pruned.kept;
 	// Rebuild typologies from the surviving hierarchies (dedup, first-seen).
 	const survivingTypologyIds = new Set(filteredValue.map((h) => h.typology_section_id));
 	item.value = filteredValue;
@@ -554,21 +613,7 @@ async function readTreeArea(
 	// empty projection, which is the shape the frozen parity fixtures pin; a
 	// picker that opens on nothing is a broken affordance and must say why.
 	if (picker !== null && filteredValue.length === 0) {
-		if (refusedByAcl > 0 && droppedByConfig === 0) {
-			// perm.denied carries NO sentence of its own here: naming the target
-			// sections the caller cannot reach would tell them those sections
-			// exist. `perm.denied` (disclosure operator) is also the code the
-			// client dispatches its "no permission" page on — never a 403 spelled
-			// as a generic caller error.
-			throw new DedaloError('perm.denied', { coordinates: { area_tipo: areaTipo } });
-		}
-		// The other empty case, and a DIFFERENT fact: the target declares no
-		// active hierarchy. resource.conflict is public, so the sentence that
-		// tells the curator what to configure survives to the wire.
-		throw new DedaloError('resource.conflict', {
-			publicMessage: PICKER_NO_HIERARCHY_MESSAGE,
-			coordinates: { area_tipo: areaTipo },
-		});
+		throw emptyPickerRefusal(pruned, areaTipo);
 	}
 
 	// Per-node link affordance, relation mode only (engineering/AREA_SPEC.md §5): the picker
