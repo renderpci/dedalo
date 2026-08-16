@@ -247,7 +247,11 @@ data_manager.request = async function(options) {
 			cache_handler.id,
 			'data' // string table
 		);
-		if (cached_data) {
+		// Only an envelope v2 hit is a hit: a body cached before the error-system
+		// cut (WC-2026-08-15-error-envelope-v2) still carries the retired
+		// `{result,msg}` shape and would render as "menu without context". A stale
+		// or foreign value falls through to the network and is overwritten below.
+		if (cached_data && cached_data.value?.ok === true) {
 			return cached_data.value
 		}
 	}
@@ -424,8 +428,8 @@ data_manager.request = async function(options) {
 		event_manager.publish('api_notices', {notices: json.notices, api_response: json});
 	}
 
-	// cache_handler. Only cache successful envelopes
-	if (cache_handler?.handler==='localdb' && json) {
+	// cache_handler. Only cache successful envelope v2 bodies
+	if (cache_handler?.handler==='localdb' && json?.ok === true) {
 		dd_request_idle_callback(
 			() => {
 				this.set_local_db_data(
