@@ -120,6 +120,14 @@ view_default_list_section_record.render = async function(self, options) {
 
 	// content_data render_columns
 		const fragment = await get_content_data(self)
+		// destroyed during the await case: a concurrent reload (e.g. two overlapping
+		// inspector time_machine_list loads) can destroy this instance while its columns
+		// are still rendering. destroy() nullifies self.caller, so anything downstream
+		// reading self.caller.model would throw. Return the bare wrapper instead: the
+		// node is already orphaned and the winning render owns the DOM.
+		if (self.caller===null) {
+			return wrapper
+		}
 		wrapper.appendChild(fragment)
 
 	// debug
@@ -469,7 +477,7 @@ const render_callback = async function (self, column) {
 const render_column_node = function(component_instance, self, ar_instances){
 
 	const column_id	= component_instance.column_id
-	const model		= self.caller.model
+	const model		= self.caller?.model || 'section'
 
 	const column_node = ui.create_dom_element({
 		element_type	: 'div',
@@ -481,7 +489,7 @@ const render_column_node = function(component_instance, self, ar_instances){
 	column_node.component_instance	= component_instance
 
 	// column_responsive mobile add-ons
-		if (self.caller.model==='section') {
+		if (self.caller?.model==='section') {
 			ui.make_column_responsive({
 				selector	: `#col_${column_id}`,
 				label		: component_instance.label
@@ -546,7 +554,7 @@ export const render_column_node_callback = function(column_obj, self){
 	})
 
 	// column_responsive mobile add-ons
-		if (self.caller.model==='section') {
+		if (self.caller?.model==='section') {
 			ui.make_column_responsive({
 				selector	: `#col_${column_id}`,
 				label		: column_obj.label
@@ -591,7 +599,7 @@ const render_empty_column_node = function(column_obj, self){
 	})
 
 	// column_responsive mobile add-ons
-		if (self.caller.model==='section') {
+		if (self.caller?.model==='section') {
 			ui.make_column_responsive({
 				selector	: `#col_${column_id}`,
 				label		: column_obj.label

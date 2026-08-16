@@ -300,10 +300,22 @@ event handlers and by the section view.
 
 | function | export? | purpose |
 | --- | --- | --- |
-| `load_time_machine_list(self)` | export | Instance a `service_time_machine` (view `mini`) for the whole section and render it into the Latest-changes body; skips when collapsed/destroyed, destroys the previous service. |
+| `load_time_machine_list(self)` | export | **Serializing entry point.** Chains each load onto the previous one through `self.tm_list_loading`, then delegates to `load_time_machine_list_run`. |
+| `load_time_machine_list_run(self)` | | The actual load: instance a `dd15` `section` (mode `list`, `tm_view` `mini`) for the current record and render it into the Latest-changes body; skips when collapsed/destroyed, destroys the previous `tm_list`. |
 | `load_component_history(self, component)` | export | Instance a `service_time_machine` (view `history`) for the active component + its notes (`rsc329`/`rsc832`) and render it; clears when `component` is null. |
 | `load_activity_info(self, options)` | export | Render one notification bubble (`render_node_info`) and prepend it to the activity body. |
 | `open_ontology_window(self, url, docu_type, focus=false)` | export | Open/recycle the shared `window.docu_window` at the given ontology URL. |
+
+!!! danger "`load_time_machine_list` must stay serialized"
+    Three independent triggers call it — the block's `expose_callback`, the `save`
+    handler, and `update_section_info` — and they can fire in the same frame.
+    Run in parallel, the second call's `self.tm_list.destroy(true, true)` nullifies
+    `caller` on every `section_record` the first call is still rendering (see
+    `common.js` `do_delete_self`), and the row render throws
+    `Cannot read properties of null (reading 'model')`, leaving the panel stuck on
+    `loading`. Never call `load_time_machine_list_run` directly, and never move the
+    `destroy` up into the entry point.
+    Gate: `test/unit/client_tm_list_destroy_race.test.ts`.
 
 !!! warning "Verified surface only"
     The tables above list the *real* functions present in `client/dedalo/core/inspector/js/`.

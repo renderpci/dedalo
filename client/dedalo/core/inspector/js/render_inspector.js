@@ -1864,6 +1864,39 @@ export const render_time_machine_list = function(self) {
 */
 export const load_time_machine_list = async function(self) {
 
+	// SERIALIZE. Two independent triggers (the expose callback and the 'save' /
+	// update_section_info idle callbacks) can fire in the same frame. Running them
+	// in parallel means the second call destroys self.tm_list — nullifying the
+	// caller of every section_record it owns — while the first call's row render is
+	// still awaiting its columns, which used to throw
+	// "Cannot read properties of null (reading 'model')" and left the panel loading.
+	// Chain instead: each load waits for the previous one to finish.
+		const previous = self.tm_list_loading || Promise.resolve()
+		const current = previous
+			.catch(() => null) // a failed load must not poison the chain
+			.then(() => load_time_machine_list_run(self))
+		self.tm_list_loading = current
+		try {
+			return await current
+		} finally {
+			// release the chain pointer only if no newer load took it
+			if (self.tm_list_loading===current) {
+				self.tm_list_loading = null
+			}
+		}
+}//end load_time_machine_list
+
+
+
+/**
+* LOAD_TIME_MACHINE_LIST_RUN
+* The actual load. Never call directly: go through load_time_machine_list, which
+* serializes concurrent calls.
+* @param {Object} self - Inspector instance.
+* @returns {Promise<HTMLElement|null>}
+*/
+const load_time_machine_list_run = async function(self) {
+
 	// container. Prevent to load data when the viewer is collapsed
 		const container	= self.time_machine_list_container
 		const is_open	= container && !container.classList.contains('hide')
@@ -1965,7 +1998,7 @@ export const load_time_machine_list = async function(self) {
 
 
 	return container
-}//end load_time_machine_list
+}//end load_time_machine_list_run
 
 
 
