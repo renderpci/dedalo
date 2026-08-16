@@ -226,7 +226,12 @@ describe('DEC-12 — the invariant constants have mechanical consumers', () => {
 			) ?? [];
 		expect(merged[0]).toEqual(normalizeDataframeEntry(RAW_CLIENT_LOCATOR, PAIRING));
 
-		// Door 2 — validateRelationInsert with a pairing.
+		// Door 2 — validateRelationInsert with a pairing. oh115 declares
+		// `properties.view: 'tree'` (it is a picker caller), so the door's
+		// read-grant gate judges an ACTOR and is fail-closed without one — the
+		// principal is threaded explicitly, as save_component does from dispatch.
+		const { resolvePrincipal } = await import('../../src/core/security/permissions.ts');
+		const principal = await resolvePrincipal(-1);
 		const validated = await validateRelationInsert({ ...RAW_CLIENT_LOCATOR }, {
 			componentTipo: 'oh115',
 			model: 'component_dataframe',
@@ -236,6 +241,7 @@ describe('DEC-12 — the invariant constants have mechanical consumers', () => {
 			lang: 'lg-nolan',
 			existingItems: [],
 			pairing: PAIRING,
+			principal,
 		} as never);
 		expect(validated).toEqual(normalizeDataframeEntry(RAW_CLIENT_LOCATOR, PAIRING));
 
@@ -250,6 +256,7 @@ describe('DEC-12 — the invariant constants have mechanical consumers', () => {
 			lang: 'lg-nolan',
 			existingItems: [{ ...(validated as Record<string, unknown>), id: 7 }],
 			pairing: PAIRING,
+			principal,
 		} as never);
 		expect(duplicate).toBeNull();
 	});
