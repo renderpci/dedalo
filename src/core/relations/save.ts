@@ -506,10 +506,12 @@ function refusalToError(
 ): DedaloError {
 	const targetSectionTipo = String(outcome.locator.section_tipo ?? '');
 	const message = `validateRelationInsert: refused (${String(outcome.code)}) ${context.componentTipo} @ ${context.hostSectionTipo}/${String(context.hostSectionId)} — ${String(outcome.reason)}`;
+	// LOG-ONLY coordinates: the host id rides as-is (int canonical,
+	// WC-2026-08-10-section-id-int-canonical — never String()-minted).
 	const coordinates = {
 		tipo: context.componentTipo,
 		section_tipo: context.hostSectionTipo,
-		section_id: String(context.hostSectionId),
+		section_id: context.hostSectionId,
 	};
 	if (outcome.code === 'target_not_readable') {
 		return new DedaloError('perm.denied', { message, coordinates });

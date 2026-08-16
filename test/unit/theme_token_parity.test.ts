@@ -74,7 +74,18 @@ const readTokens = (file: string) =>
 // kept only the compile-time `@alias` mappings and declares no custom property at all.
 const light = readTokens('vars_tokens.less');
 const dark = readTokens('theme_dark.less');
-const gated = (name: string) => GATED_PREFIXES.some((prefix) => name.startsWith(prefix));
+/**
+ * DIMENSION tokens that share a gated prefix but are not palette entries: a
+ * size has ONE value for both themes, so a "dark counterpart" would be a copy,
+ * not a colour. Each entry names why it lives at :root under that prefix.
+ */
+const DIMENSION_TOKENS = new Set<string>([
+	// menu height, declared at :root (not on .menu) so the LOADING PLACEHOLDERS
+	// can reserve the space before the menu exists (10fbc72ac8, page.less).
+	'--menu_heigth',
+]);
+const gated = (name: string) =>
+	!DIMENSION_TOKENS.has(name) && GATED_PREFIXES.some((prefix) => name.startsWith(prefix));
 
 describe('theme token parity tripwire', () => {
 	test('there are gated tokens to check (a zero-length pass is not a pass)', () => {
