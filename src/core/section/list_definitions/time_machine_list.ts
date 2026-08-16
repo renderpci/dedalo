@@ -211,15 +211,18 @@ const SURFACE_COLUMNS: Partial<
 > = {
 	// The tool opened on a COMPONENT: meta, the annotation, the value itself.
 	// `view:'text'` is the flat inline preview a history row wants, not the
-	// click-to-edit default.
+	// click-to-edit default. The ANNOTATION is 'text' too in the tool: the wide
+	// tool grid has room for the note's value, and a click-to-open icon there
+	// hid the one thing the column exists to show. The note MODAL stays on the
+	// inspector's narrow block (WC-2026-08-16-tm-tool-note-value).
 	component: (scope) => [
 		...metaColumns(),
-		{ tipo: TM_NOTES_COLUMN, view: 'note' },
+		{ tipo: TM_NOTES_COLUMN, view: 'text' },
 		...componentColumn(scope),
 	],
 
 	// One record's whole history.
-	record: () => [...metaColumns(), { tipo: TM_NOTES_COLUMN, view: 'note' }],
+	record: () => [...metaColumns(), { tipo: TM_NOTES_COLUMN, view: 'text' }],
 
 	// The tool opened on a SECTION: whole-record snapshots, so the caller
 	// section's OWN list columns follow the meta block. Derived from that

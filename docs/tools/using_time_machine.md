@@ -35,6 +35,7 @@ The time machine attaches to record elements — both individual **components** 
 | --- | --- |
 | History list | The change entries for the element, newest first — when, who, and which field changed. |
 | Preview (eye) icon | Loads the chosen historical value into the read-only preview pane for comparison with **Now**. |
+| Annotation column | Shows the **text** of the annotation attached to each history entry, if any. In the tool this column is read-only; annotations are written from the record inspector's history block, where the same column is a note icon that opens the annotation editor. |
 | Language selector | Chooses which language of the value to view and restore. |
 | **Apply and save** | Overwrites the live value with the selected snapshot (a component, or a whole record and its files). |
 | **Revert the bulk process** | Administrator-only: undoes an entire batch run across every record it touched. |

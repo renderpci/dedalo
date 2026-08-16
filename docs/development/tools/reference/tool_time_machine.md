@@ -26,6 +26,8 @@ The change log lives in the dd15 `matrix_time_machine` table, accessed server-si
 - When the user clicks a list row's preview/eye icon, the service publishes the `tm_edit_record` event; the tool's handler loads the historical component in `load_mode:'tm'` with the row's `matrix_id` into the preview pane (read-only: permissions forced to 1, tools/interface disabled), stores the `selected_matrix_id`, and reveals **Apply and save**. If the picked row has a `bulk_process_id`, a global admin additionally sees **Revert the bulk process** (others see an "contact an administrator" notice).
 - **Apply and save** calls `apply_value(...)`; **Revert the bulk process** calls `bulk_revert_process(...)`. Both go through `data_manager.request` to `dd_tools_api`; on success in a popped-out window the tool closes itself.
 
+- **Columns are a server decision.** The history list is an ordinary dd15 `section` instance and sends no column map: `src/core/section/list_definitions/time_machine_list.ts` derives one column set per surface from the SQO's scope. The tool's two surfaces (a component's history, a record's history) emit the annotation component `rsc329` with `view:'text'`, so the cell shows the annotation's **value**; the inspector's narrower component-history block emits the same tipo with `view:'note'`, the icon that opens the annotation editor in a modal.
+
 **Server** (`tools/tool_time_machine/server/{index,tool_time_machine,bulk_revert}.ts`):
 
 - `apply_value` reads the TM snapshot for `matrix_id`, then branches on the target's model:

@@ -89,18 +89,37 @@ describe('the columns each scope derives', () => {
 		expect(tipos(columns)).toEqual([...META, 'rsc329', 'oh25']);
 	});
 
-	test('COMPONENT renders its value as flat text, and the note as a note', async () => {
+	test('COMPONENT renders its value AND its annotation as flat text', async () => {
 		// The history cell is an inline preview, not the click-to-edit default
-		// view; the annotation opens the note modal.
+		// view; in the TOOL the annotation shows its VALUE too, not the note icon
+		// (WC-2026-08-16-tm-tool-note-value) — the icon survives only in the
+		// inspector's narrow block.
 		const columns =
 			(await tmListColumns({ kind: 'component', sectionTipo: 'oh1', tipo: 'oh25' })) ?? [];
 		expect(columns.find((column) => column.tipo === 'oh25')?.view).toBe('text');
-		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('note');
+		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('text');
+	});
+
+	test('RECORD shows the annotation VALUE, not the note icon', async () => {
+		const columns = (await tmListColumns({ kind: 'record', sectionTipo: 'oh1' })) ?? [];
+		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('text');
 	});
 
 	test('RECORD: meta + annotation, no component column', async () => {
 		const columns = await tmListColumns({ kind: 'record', sectionTipo: 'oh1' });
 		expect(tipos(columns)).toEqual([...META, 'rsc329']);
+	});
+
+	test('INSPECTOR component block KEEPS the note icon', async () => {
+		// The narrow side panel has no room for the value, and it is the surface
+		// that still creates/edits annotations through the note modal.
+		const columns =
+			(await tmListColumns({
+				kind: 'inspector_component',
+				sectionTipo: 'oh1',
+				tipo: 'oh25',
+			})) ?? [];
+		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('note');
 	});
 
 	test('BROWSE returns NO server opinion — dd15 falls back to its own ontology', async () => {
