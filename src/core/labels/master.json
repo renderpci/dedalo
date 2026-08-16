@@ -246,6 +246,7 @@
 	"error_record_external_write_refused": "Write refused: the component value is derived from an external service",
 	"error_record_in_use": "The record is being edited by another user",
 	"error_record_temporal_action_refused": "The action is not available on a temporal instance",
+	"error_relation_insert_refused": "The link into '{section_tipo}' was refused ({constraint})",
 	"error_request_invalid": "The request is invalid",
 	"error_request_invalid_context": "The page context could not be built",
 	"error_request_invalid_data": "The request data is invalid or incomplete",

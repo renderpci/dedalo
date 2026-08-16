@@ -7,6 +7,27 @@
  * a TS-only matrix provisioning path is a documented CUTOVER blocker
  * (engineering/PRODUCTION.md §Schema; DEC-17/DEC-19), not this runner's job.
  *
+ * ONE NAMED EXCEPTION — a "seed-defect correction on shared rows" (2026-08-16,
+ * first instance 0004_dd560_drop_view_tree.sql). A shipped seed can carry a
+ * data mistake that every install inherits; correcting it belongs to the
+ * install lane, not to a user edit, so such a file may UPDATE `matrix_*` /
+ * `dd_ontology*` rows under FOUR constraints, mechanically gated by
+ * test/unit/migration_shared_row_tripwire.test.ts:
+ *   1. an UPDATE only — never INSERT / DELETE / TRUNCATE / ALTER / DROP /
+ *      CREATE on a shared table (a seed ships through the ontology, a purge is
+ *      a tool, a schema change is the installer's);
+ *   2. the file carries the tag comment `-- SHARED-ROW SEED CORRECTION:` with
+ *      its reason (the gate requires the literal);
+ *   3. every such UPDATE pins its WHERE with a jsonb `@>` containment on the
+ *      EXACT defective value, so a row an operator has since changed — or
+ *      already fixed — is never overwritten (single row / single record);
+ *   4. NO TM audit row, by design: this is an install-level correction whose
+ *      operator-facing record is the version table itself, not a user write.
+ *      The ordinary write law (save_component.ts, tx + TM) is not weakened —
+ *      it simply does not apply to a seed correction.
+ * Anything outside that shape is not a migration: it goes through
+ * db/matrix_write.ts / ontology/ontology_write.ts like every other write.
+ *
  * Model (boring on purpose):
  * - migrations/ holds numbered files `NNNN_name.sql`, applied in filename
  *   order inside one transaction each;
