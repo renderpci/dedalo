@@ -281,6 +281,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			lang: source.lang ?? 'lg-nolan',
 			changedData: dataPayload.changed_data,
 			userId: principal.userId,
+			// The actor the relation-insert read-grant gate judges — explicit, so
+			// the write path never depends on ambient ALS state alone.
+			principal,
 			// Dataframe saves carry the pairing context (PHP source.caller_dataframe).
 			callerDataframe:
 				(

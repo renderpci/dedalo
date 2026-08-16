@@ -189,17 +189,26 @@ export interface PickerCaller {
  * counting zero for it would hand back a too-generous capacity.
  */
 export function parsePickerCaller(raw: unknown): PickerCaller | null {
-	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
-	const candidate = raw as { section_tipo?: unknown; section_id?: unknown; tipo?: unknown };
-	if (typeof candidate.tipo !== 'string' || candidate.tipo === '') return null;
-	if (typeof candidate.section_tipo !== 'string' || candidate.section_tipo === '') return null;
-	const sectionId = canonicalizeStoredSectionId(candidate.section_id);
+	if (!isPlainObject(raw)) return null;
+	if (!PICKER_CALLER_STRING_FIELDS.every((field) => isNonEmptyString(raw[field]))) return null;
+	const sectionId = canonicalizeStoredSectionId(raw.section_id);
 	if (!isSectionId(sectionId)) return null;
 	return {
-		section_tipo: candidate.section_tipo,
+		section_tipo: raw.section_tipo as string,
 		section_id: sectionId,
-		tipo: candidate.tipo,
+		tipo: raw.tipo as string,
 	};
+}
+
+/** The caller fields that must be non-empty strings — the address's two names. */
+const PICKER_CALLER_STRING_FIELDS = ['tipo', 'section_tipo'] as const;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+	return typeof value === 'string' && value !== '';
 }
 
 /** `rqo.source.caller` is present but is not a caller address. */
