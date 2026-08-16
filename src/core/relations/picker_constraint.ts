@@ -28,6 +28,7 @@
  */
 
 import { asSectionId, canonicalizeStoredSectionId } from '../concepts/section_id.ts';
+import type { DataframePairing } from '../concepts/subdatum.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import {
@@ -96,16 +97,22 @@ const TARGET_RESOLUTION_MODE = 'search';
  * canonicalizes it (`concepts/section_id.ts`); anything that is not a record
  * address throws rather than silently counting zero locators and handing back a
  * too-generous `remaining`.
+ *
+ * `pairing` is the CAP SCOPE for a dataframe caller: `data_limit` on a frame
+ * slot is declared per MAIN ITEM, so `held` (and therefore `remaining`) counts
+ * the frames of THAT item, not the whole slot. Null = an ordinary relation
+ * component, whose scope is the slot. See {@link inCapScope}.
  */
 export async function resolvePickerConstraint(
 	callerTipo: string,
 	callerSectionTipo: string,
 	callerSectionId: number | string,
+	pairing: DataframePairing | null = null,
 ): Promise<PickerConstraint> {
 	const sectionId = asSectionId(canonicalizeStoredSectionId(callerSectionId));
 
 	const selectionLimit = await resolveSelectionLimit(callerTipo);
-	const held = await countHeldLocators(callerTipo, callerSectionTipo, sectionId);
+	const held = await countHeldLocators(callerTipo, callerSectionTipo, sectionId, pairing);
 	const targets = await resolveTargets(callerTipo, callerSectionTipo);
 
 	return {
@@ -178,11 +185,17 @@ async function resolveSelectionLimit(callerTipo: string): Promise<number | null>
  *
  * A record that does not exist yet (a new, unsaved caller record) holds
  * nothing — 0, which is an answer, not a missing one.
+ *
+ * Counted IN THE CAP SCOPE ({@link inCapScope}): the whole slot for a relation
+ * component, the main item's frames for a dataframe pairing — the same filter
+ * the write path applies to the count it compares against, so `held` and
+ * `resulting` can never be measured in different units.
  */
 async function countHeldLocators(
 	callerTipo: string,
 	callerSectionTipo: string,
 	sectionId: number,
+	pairing: DataframePairing | null,
 ): Promise<number> {
 	const model = await getModelByTipo(callerTipo);
 	const column = model === null ? null : getColumnNameByModel(model);
@@ -208,7 +221,34 @@ async function countHeldLocators(
 	}
 	const record = await readMatrixRecord(table, callerSectionTipo, sectionId);
 	const items = (record?.columns.relation as Record<string, unknown[]> | null)?.[callerTipo];
-	return Array.isArray(items) ? items.length : 0;
+	return Array.isArray(items) ? inCapScope(items, pairing).length : 0;
+}
+
+/**
+ * THE CAP SCOPE — the ONE filter that decides which stored entries a
+ * `data_limit` counts.
+ *
+ * `data_limit` on an ordinary relation component bounds the SLOT: every entry
+ * counts. On a dataframe it is declared per MAIN ITEM — one slot tipo stores
+ * the frames of every item of the main component on the record
+ * (`relations/dataframe.ts filterCallerEntries` is the read twin) — so only
+ * the entries paired to THIS main item (`main_component_tipo` + `id_key`,
+ * String()-compared like `dataframeEntriesEqual`) count. Counting the slot
+ * would make a `data_limit:1` frame slot accept the first item's frame and
+ * refuse every sibling's (or, on the `held` side, let one item grow past its
+ * cap behind its siblings' frames). Exported so the resolver's `held` and the
+ * write path's `resulting` are the same predicate by construction.
+ */
+export function inCapScope(items: readonly unknown[], pairing: DataframePairing | null): unknown[] {
+	if (pairing === null) return [...items];
+	return items.filter((item) => {
+		if (item === null || typeof item !== 'object') return false;
+		const entry = item as Record<string, unknown>;
+		return (
+			String(entry.main_component_tipo) === String(pairing.mainComponentTipo) &&
+			String(entry.id_key) === String(pairing.idKey)
+		);
+	});
 }
 
 /**
