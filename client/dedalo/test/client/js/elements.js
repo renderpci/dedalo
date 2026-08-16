@@ -29,6 +29,9 @@ export const permissions	= 2
 
 
 // Per-suite test3 record isolation (WC-021 in-run isolation).
+// Relation new_value_params[0] MUST be a section the caller's ontology declares as
+// target (WC-2026-08-14-relation-insert-target-validation refuses `off_target`
+// at the save door); section_id is int-canonical (WC-2026-08-10).
 // The all-component save SWEEP (test_components_data_changes) writes to its
 // own record (test3/10, overridden inside that suite), and the run-order
 // fragile READ suites below bind their element to a private CLONE of record 1
@@ -91,7 +94,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: ['dd501','test88']
+		new_value_params	: ['dd64','test88']
 	})
 
 // component_date
@@ -139,7 +142,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: [section_tipo,'test70'] // [section_tipo, from_component_tipo, paginated_key]
+		new_value_params	: ['dd153','test70'] // [section_tipo, from_component_tipo, paginated_key]
 	})
 
 // component_filter_records
@@ -163,7 +166,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
+		new_value_params	: ['dd153','test101'] // [section_tipo, from_component_tipo, paginated_key]
 	})
 
 // component_geolocation
@@ -299,7 +302,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: ['test38', 'test80', 0] // [section_tipo, from_component_tipo, paginated_key]
+		new_value_params	: ['test3', 'test80', 0] // [section_tipo, from_component_tipo, paginated_key]
 	})
 
 // component_publication
@@ -323,7 +326,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: ['dd501','test87']
+		new_value_params	: ['dd64','test87']
 	})
 
 // component_relation_children
@@ -369,7 +372,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: ['es2','test169']
+		new_value_params	: ['test2','test169']
 	})
 
 // component_relation_parent
@@ -381,7 +384,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: ['es1','test71'],
+		new_value_params	: [section_tipo,'test71'],
 		test_save			: true
 	})
 
@@ -433,7 +436,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
-		new_value_params	: ['es1','test91']
+		new_value_params	: ['dd64','test91']
 	})
 
 // component_select_lang

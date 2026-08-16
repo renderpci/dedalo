@@ -620,17 +620,23 @@ buttons.render_button_tree_selector = (self) => {
 	const mousedown_handler = (e) => {
 		e.stopPropagation()
 
-		// show/hide the INLINE thesaurus pane — THE picker surface. The pane keeps this
-		// component on screen beside the tree, so a picked term is seen landing in it.
-		// Never call open_ontology_window with a mode here: the mode string it used to
-		// pass is no longer a client declaration (the server grants it from the caller).
+		// show/hide the thesaurus pane — THE picker surface. The pane is mounted on
+		// document.body beside this component (never inside it), so a picked term is
+		// seen landing here. Never call open_ontology_window with a mode: the mode
+		// string it used to pass is no longer a client declaration (the server grants
+		// it from the caller).
 		//
-		// (!) THE PANE IS BUILT BY THE TREE VIEW ONLY. Six shipped ontology nodes declare
-		// `button_tree:true` without a tree view, so this button also renders where there
-		// is no pane. Those callers keep the separate BROWSE window they had before —
-		// picking there has been dead since the cutover, but a button that does nothing
-		// at all is a worse answer than one that opens the tree to look at.
-		if (typeof self.toggle_thesaurus_pane==='function' && self.node?.querySelector('.thesaurus_pane')) {
+		// (!) THE GATE IS THE VIEW, NOT A DOM NODE. The pane is created ON DEMAND by
+		// toggle_thesaurus_pane and lives outside the wrapper, so querying the wrapper
+		// for it — as an earlier version did — finds nothing and sends EVERY click to
+		// the separate-window fallback: the window then declares the caller, is granted
+		// relation mode by the server, and has no picker wired onto it. What actually
+		// decides whether this component picks is its resolved view.
+		// Six shipped ontology nodes declare `button_tree:true` WITHOUT a tree view;
+		// those keep the separate BROWSE window they had before — a button that does
+		// nothing at all is a worse answer than one that opens the tree to look at.
+		const view = self.view || self.context?.view || null
+		if (view==='tree' && typeof self.toggle_thesaurus_pane==='function') {
 			self.toggle_thesaurus_pane().catch(error => {
 				console.error('Error toggling the thesaurus pane:', error);
 			})

@@ -17132,22 +17132,33 @@ dd-modal:has(.tool_header) {
 /**
 * THESAURUS PICKER PANE
 *
-* The picker surface: an area_thesaurus rendered INLINE inside the caller component's
-* own wrapper (component_portal's tree view builds the .thesaurus_pane node).
+* The picker surface: an area_thesaurus mounted on document.body — NEVER inside the
+* caller component's node — and placed flush under the component by MEASURING it
+* (component_portal position_thesaurus_pane sets top/left/width/max-height from
+* the component's bounding rect, on open and on every scroll/resize).
 *
-* The layout rule that matters: the caller MUST stay visible. A centred modal covered
-* the component being filled in, which is why the picked term had to be echoed back in
-* a tray — remove the occlusion and the component itself is the feedback. So the pane is
-* bounded in height and sits in the flow, never over it.
+* That gives the autocomplete dropdown's geometry without its parentage. The
+* parentage is the thing that must not happen: inside the wrapper the area's own
+* drags and clicks bubble into the portal's handlers — proven twice — and no guard
+* at the boundary is a substitute for not being a descendant.
+*
+* Tall and resizable on purpose: a thesaurus carries long terms and deep nested
+* branches, and a branch can hold 50, 100 or more children.
 */
 .thesaurus_pane {
-  max-height: 22rem;
+  position: fixed;
+  min-width: 50vh;
+  height: 60vh;
+  min-height: 10rem;
+  z-index: 3;
   overflow: auto;
-  margin-top: 0.4rem;
-  border: 1px solid var(--color_grey_9);
-  border-radius: 2px;
+  resize: both;
   background-color: var(--color_white);
-  resize: vertical;
+  border: 1px solid var(--color_grey_9);
+  border-top: 0;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 .thesaurus_pane.hide {
   display: none;
@@ -17155,6 +17166,9 @@ dd-modal:has(.tool_header) {
 .thesaurus_pane > .area_thesaurus,
 .thesaurus_pane > .area_ontology {
   padding: 0.3rem;
+}
+.thesaurus_pane .thesaurus_pane_error {
+  padding: 0.6rem;
 }
 /**
 * area_ontology

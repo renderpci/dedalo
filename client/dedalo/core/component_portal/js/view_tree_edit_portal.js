@@ -153,17 +153,16 @@ view_tree_edit_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// thesaurus_pane. THE picker surface: the thesaurus rendered INLINE, in this
-	// component's own wrapper, beside the terms it feeds — the layout tool_indexation
-	// uses (its left pane), not a modal that covers the component being filled in.
-	// Built empty and hidden; component_portal.toggle_thesaurus_pane mounts the area
-	// instance on first open, through the standard instance machinery.
-		const thesaurus_pane = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'thesaurus_pane hide',
-			parent			: wrapper
-		})
-		wrapper.thesaurus_pane = thesaurus_pane
+	// (!) NO THESAURUS PANE IS BUILT HERE, and that is the whole point.
+	// tool_indexation — the working reference — renders the area into its own
+	// `left_container`, a SIBLING of the pane that holds the components. The
+	// thesaurus is never a descendant of a component.
+	// An earlier version of this view appended the pane INSIDE this wrapper, and
+	// every conflict that followed came from that one decision: the area's drag
+	// events bubbled into the portal's dragover, its space collided with the
+	// autocomplete, its height drove the component's, and its stacking context was
+	// the component's. The pane is therefore created OUTSIDE the component DOM
+	// entirely — see component_portal.toggle_thesaurus_pane.
 
 		// size from style
 		// if expected number of columns (2) change, updates the columns CSS
