@@ -288,4 +288,65 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 			mock.restore();
 		}
 	}, 60000);
+
+	test('a release with NO declared checksum is refused before anything is fetched', async () => {
+		// VERIFY-OR-REFUSE (2026-08-15). The check used to be `declaredSha !== '' &&
+		// …`, so a request carrying no hash skipped verification entirely — and the
+		// manifest never carried one, which made the whole integrity guarantee inert.
+		// An unsigned release must now be un-installable, and the refusal must land
+		// BEFORE the download: no request is made, no staging dir is written.
+		let fetched = 0;
+		const server = Bun.serve({
+			port: 0,
+			fetch: () => {
+				fetched += 1;
+				return new Response('should never be requested');
+			},
+		});
+		const origin = `http://localhost:${server.port}`;
+		const base = join(ROOT, 'nosha');
+		const targetRoot = join(base, 'live');
+		mkdirSync(targetRoot, { recursive: true });
+		writeFileSync(join(targetRoot, 'package.json'), '{"name":"old"}');
+		try {
+			mock.module('../../src/core/update/ownership.ts', () => ({
+				...REAL_OWNERSHIP,
+				engineOwnsInstall: () => true,
+			}));
+			mock.module('../../src/config/config.ts', () => ({
+				...REAL_CONFIG,
+				config: {
+					...REAL_CONFIG.config,
+					update: {
+						...REAL_CONFIG.config.update,
+						codeServers: [{ name: 'm', url: `${origin}/`, code: 'c' }],
+					},
+				},
+			}));
+			for (const sha of [undefined, '', 'not-hex', 'a'.repeat(63), `${'A'.repeat(64)}`]) {
+				const out = await updateCode(
+					{
+						file: {
+							version: '7.0.1',
+							url: `${origin}/7.0.1.zip`,
+							...(sha === undefined ? {} : { sha256: sha }),
+						},
+						update_mode: 'clean',
+					},
+					{ targetRoot, backupRoot: join(base, 'b'), restart: () => {}, supervised: true },
+				);
+				expect(out.result).toBe(false);
+				expect(out.msg).toContain('checksum');
+				expect(out.errors).toContain('sha256 must be 64 hex chars');
+			}
+			// nothing was downloaded and the live tree never moved
+			expect(fetched).toBe(0);
+			expect(readFileSync(join(targetRoot, 'package.json'), 'utf8')).toBe('{"name":"old"}');
+		} finally {
+			server.stop(true);
+			mock.module('../../src/core/update/ownership.ts', () => REAL_OWNERSHIP);
+			mock.module('../../src/config/config.ts', () => REAL_CONFIG);
+			mock.restore();
+		}
+	});
 });

@@ -169,8 +169,8 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 		expect(info.info).toEqual({ version: '7.1.0', ...BASE_INFO });
 	});
 
-	test("forceUpdateMode:'clean' is carried; null/undefined omit the KEY entirely", () => {
-		// The client branches on key PRESENCE (a `forceUpdateMode: undefined`
+	test("the catalog's forceUpdateMode is carried as the WIRE key force_update_mode; null/undefined omit the KEY entirely", () => {
+		// The client branches on key PRESENCE (a `force_update_mode: undefined`
 		// would serialize away but still fail Object.hasOwn assertions here).
 		const clean = buildCodeUpdateInfo({
 			clientVersion: [7, 0, 0],
@@ -180,7 +180,7 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 			info: { ...BASE_INFO },
 			catalog: catalogOf(target(7, 0, 1, { forceUpdateMode: 'clean' })),
 		});
-		expect(clean.files[0]?.forceUpdateMode).toBe('clean');
+		expect(clean.files[0]?.force_update_mode).toBe('clean');
 
 		for (const mode of [null, undefined] as const) {
 			const info = buildCodeUpdateInfo({
@@ -192,11 +192,44 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 				catalog: catalogOf(target(7, 0, 1, { forceUpdateMode: mode })),
 			});
 			expect(info.files.length).toBe(1);
-			expect(Object.hasOwn(info.files[0] as object, 'forceUpdateMode')).toBe(false);
+			expect(Object.hasOwn(info.files[0] as object, 'force_update_mode')).toBe(false);
 		}
 	});
 
-	test('a MIS-KEYED catalog still advertises the file but loses forceUpdateMode', () => {
+	test('the sha256 SIDECAR is advertised; a missing or malformed one omits the key', () => {
+		// The consumer refuses a release without a declared digest (code_update.ts),
+		// so the manifest is the ONLY place that hash can come from: build writes
+		// `<file>.zip.sha256`, this reads it back. Malformed sidecar → no key, which
+		// surfaces as a loud refusal downstream rather than a skipped check.
+		const catalog = catalogOf(target(7, 0, 1));
+		const args = {
+			clientVersion: [7, 0, 0],
+			serverVersion: [7, 0, 1],
+			codeFilesDir: FILES_DIR,
+			publicBaseUrl: 'http://m',
+			info: { ...BASE_INFO },
+			catalog,
+		} as const;
+		const sidecar = join(FILES_DIR, '7', '7.0', '7.0.1.zip.sha256');
+		const digest = 'b'.repeat(64);
+		try {
+			writeFileSync(sidecar, `${digest}  7.0.1.zip\n`);
+			expect(buildCodeUpdateInfo({ ...args }).files[0]?.sha256).toBe(digest);
+
+			for (const bad of ['', 'not-a-digest  7.0.1.zip\n', `${'B'.repeat(64)}  x\n`]) {
+				writeFileSync(sidecar, bad);
+				const item = buildCodeUpdateInfo({ ...args }).files[0] as object;
+				expect(Object.hasOwn(item, 'sha256')).toBe(false);
+			}
+		} finally {
+			rmSync(sidecar, { force: true });
+		}
+		expect(Object.hasOwn(buildCodeUpdateInfo({ ...args }).files[0] as object, 'sha256')).toBe(
+			false,
+		);
+	});
+
+	test('a MIS-KEYED catalog still advertises the file but loses force_update_mode', () => {
 		// The descriptor lookup re-derives '701' from the triple; a catalog keyed
 		// any other way resolves `undefined` and the `?.` branch drops the flag.
 		const misKeyed: Record<string, UpdateDescriptor> = {
@@ -211,7 +244,7 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 			catalog: misKeyed,
 		});
 		expect(info.files.length).toBe(1);
-		expect(Object.hasOwn(info.files[0] as object, 'forceUpdateMode')).toBe(false);
+		expect(Object.hasOwn(info.files[0] as object, 'force_update_mode')).toBe(false);
 	});
 
 	test('no codeFilesDir (or a missing one) advertises nothing, even with targets', () => {

@@ -20,7 +20,15 @@ The "Update code" maintenance panel (`update_code` widget,
 archive from a configured code server, verifies its sha256 checksum,
 pre-validates every archive entry, extracts it into a quarantine directory,
 and only then swaps it onto the live tree — never over the live tree
-directly. It requires a process supervisor (systemd, Docker, pm2, …) so the
+directly.
+
+!!! info "A release is installed only against a declared checksum"
+    Every release the code server advertises carries the sha256 of its archive,
+    and the update refuses outright if that checksum is missing, malformed, or
+    does not match the bytes received. An archive that cannot be verified is
+    never extracted.
+
+It requires a process supervisor (systemd, Docker, pm2, …) so the
 server can restart itself onto the new code: set `DEDALO_SUPERVISED=true`, or
 run under a supervisor that sets `INVOCATION_ID`/`JOURNAL_STREAM`
 (systemd does this for you). Without a detected supervisor the update
@@ -59,6 +67,51 @@ refuses rather than risk a self-exit with nothing to restart it.
     Revert the maintenance status to `false`.
 
 7. Log out and re-login with a normal user.
+
+## Running a code server
+
+A Dédalo install can publish releases for other installs — the official server,
+or an institution's own mirror. Set in `../private/.env` (see the
+[Configuration Administrator Guide](../../config/administration.md)):
+
+| Setting | Purpose |
+|---|---|
+| `IS_A_CODE_SERVER` | Answer release manifests at all. Without it every request is refused. |
+| `DEDALO_CODE_FILES_DIR` | Where release archives are stored, `<major>/<major.minor>/<version>.zip`. |
+| `DEDALO_CODE_SERVER_GIT_DIR` | A git checkout of the engine, only needed to BUILD releases. A pure mirror does not need it. |
+| `CODE_SERVERS` | Must include this server's own entry: the `code` in it is the shared secret a caller has to present. |
+| `DEDALO_CORS_ALLOWED_ORIGINS` | The origins allowed to read the manifest. Each client fetches it **from the browser**, so without this the update panel of every remote install fails with a network error. Use `*` for a public master. |
+
+### Building a release
+
+On a code server, the "Update code" panel shows two extra buttons, "Build
+Dédalo code master branch" and "Build Dédalo code developer branch". Each
+archives that branch of the configured git checkout at the engine's **current
+version**, writing
+
+```
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip.sha256
+```
+
+The `.sha256` sidecar is what remote installs verify against — keep the two
+files together; an archive without its sidecar cannot be installed. Both
+buttons write the same filename for a given version, so a developer build
+overwrites a master build of that version.
+
+### Serving a release
+
+The server publishes each archive at
+`/dedalo/install/code/<version>/<version>.zip` (and its digest at the same URL
+plus `.sha256`), mapping the request back to `DEDALO_CODE_FILES_DIR`. Only that
+release's own files are reachable, and only while `IS_A_CODE_SERVER` is set —
+so the storage directory does not have to sit in the web root, and should not.
+
+!!! note "A built release is not automatically offered"
+    A release is advertised only when the engine's update catalogue knows the
+    target version, and only to callers for which it is the next step on the
+    upgrade path. Building an archive publishes the file; it does not make every
+    install eligible for it.
 
 ## Updating manually
 

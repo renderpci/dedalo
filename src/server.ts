@@ -62,6 +62,7 @@ import {
 	SESSION_IDLE_TTL_SECONDS,
 } from './core/security/session_store.ts';
 import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.ts';
+import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
 const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
@@ -766,6 +767,15 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// MUST run before the generic /dedalo/ static handler (no client subtree).
 	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/install/import/ontology/')) {
 		return serveOntologyIoFile(url.pathname);
+	}
+
+	// Code-master release archives (fail-closed on IS_A_CODE_SERVER). Same
+	// ordering reason as the ontology route: no client subtree serves this path.
+	if (request.method === 'GET' && url.pathname.startsWith(CODE_RELEASE_URL_PREFIX)) {
+		return serveCodeReleaseRequest(url.pathname, {
+			isCodeServer: config.update.isCodeServer,
+			codeFilesDir: config.update.codeFilesDir,
+		});
 	}
 
 	// Third-party client libraries, resolved through the CLIENT_LIBS allowlist to

@@ -20,7 +20,12 @@ The swap requires the backup directory to be on the same filesystem as the insta
 
 ## Choosing between them
 
-For patches and certain minor versions, Incremental is usually sufficient. For major updates, prefer Clean — the previous tree is fully preserved in the backup directory either way, so you can always recover an old file if the incremental overlay ever left something unexpected behind.
+For patches and certain minor versions, Incremental is usually sufficient. For major updates, prefer Clean.
+
+!!! warning "Only Clean makes a backup"
+    Incremental overlays files in place and keeps **no copy of the previous tree** — there is nothing to recover from if a release misbehaves. Clean is the only mode that preserves the old tree (in `../backups/code/`). Take your own database and code backups before an incremental update; see [Backup](../backup.md).
+
+A release may also *mandate* Clean: when the release entry declares it, the panel locks the choice to Clean and the server refuses to run the update any other way.
 
 ## After the swap
 
@@ -29,3 +34,8 @@ this requires a detected process supervisor (see
 [Updating code](updating_code.md#panel-self-update)). A record of the last
 code update (`version`, `updateMode`, timestamp, success) is written to
 `last_code_update.json` in the backup directory.
+
+!!! note "The record is written before the new code boots"
+    That file records that the swap completed, not that the new version started
+    successfully. Confirm the server came back by reloading Dédalo and checking
+    the version in the maintenance panel.

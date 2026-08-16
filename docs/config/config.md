@@ -4449,8 +4449,10 @@ CODE_SERVERS `array`
 
 This parameter defines the code servers this install offers releases from. By default the server defines the official Dédalo code server, but you can include other mirror servers by adding entries to the array. Each entry is a JSON object with `name`, `url` and `code`.
 
+`url` is the master's JSON API endpoint — it MUST end in `/dedalo/core/api/v1/json/` (or `/api/v1/json`); any other path answers 404 and the panel reports the server as unreachable. `code` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN `CODE_SERVERS`.
+
 ```bash
-CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
+CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
 
 *Default: (unset)*
@@ -4461,9 +4463,14 @@ CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedal
 
 DEDALO_CODE_FILES_DIR `string`
 
-This parameter defines the path to the code files in the server. Default location in root path /code.
-Code files are organize in version directories with major / minor / version_dedalo.zip as:
-`./dedalo/code/6/6.4/6.4.1_dedalo.zip`
+This parameter defines the path to the release archives on a code server. Releases are organised in version directories, `<major>/<major.minor>/<version>.zip`, each next to its `.sha256` sidecar:
+
+```
+/srv/dedalo/code/7/7.0/7.0.1.zip
+/srv/dedalo/code/7/7.0/7.0.1.zip.sha256
+```
+
+The build action writes both. Remote installs never read this path: they fetch `/dedalo/install/code/<version>/<version>.zip`, which the server maps back to it — so the directory does not need to be inside the web root, and should not be.
 
 ```bash
 DEDALO_CODE_FILES_DIR="/srv/dedalo/code"

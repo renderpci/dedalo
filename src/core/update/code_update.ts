@@ -262,8 +262,14 @@ export async function updateCode(
 		response.errors.push(linear);
 		return response;
 	}
-	if (declaredSha !== '' && !/^[a-f0-9]{64}$/.test(declaredSha)) {
-		response.msg = 'Error. Malformed release checksum';
+	// A release is installed ONLY against a declared digest. The manifest carries
+	// one for every built archive (code_manifest.readShaSidecar), so an ABSENT
+	// hash means either a master that never wrote the sidecar or a hand-assembled
+	// request — neither is a thing to swap a code tree for. Until 2026-08-15 an
+	// empty `file.sha256` silently skipped the check, which made WC-024's whole
+	// integrity guarantee inert (the manifest never carried a hash at all).
+	if (!/^[a-f0-9]{64}$/.test(declaredSha)) {
+		response.msg = 'Error. Malformed or missing release checksum';
 		response.errors.push('sha256 must be 64 hex chars');
 		return response;
 	}
@@ -314,7 +320,7 @@ export async function updateCode(
 			return response;
 		}
 
-		if (declaredSha !== '' && verifySha(zipPath) !== declaredSha) {
+		if (verifySha(zipPath) !== declaredSha) {
 			response.msg = 'Error. Release checksum mismatch — refusing to install';
 			response.errors.push('sha256 mismatch');
 			return response;

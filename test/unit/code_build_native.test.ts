@@ -250,15 +250,28 @@ describe('buildVersionFromGit — rewired to planCodeBuild', () => {
 	});
 
 	test('the refusal path is reported through the CodeBuildResponse shape', async () => {
-		// The live config of the test process is NOT a code server, so the first
-		// gate answers without any mock — and proves the wiring end to end.
-		expect(realConfigModule.config.update.isCodeServer).toBe(false);
-		const out = await buildVersionFromGit({ version: '7.0.1' });
-		expect(out.result).toBe(false);
-		expect(out.msg).toBe('Error. This instance is not a code server');
-		expect(out.errors).toEqual(['not a code server']);
-		expect(out.file_path).toBeUndefined();
-		expect(out.sha256).toBeUndefined();
+		// The first gate is asserted against a MOCKED non-code-server config, not
+		// against the ambient one. It used to read `realConfigModule.config` and
+		// require it to be false — which silently made the gate depend on the
+		// developer's own `../private/.env`, and turned this case red on any
+		// machine actually set up as a code master (2026-08-16).
+		mock.module('../../src/config/config.ts', () => ({
+			...REAL_CONFIG,
+			config: {
+				...REAL_CONFIG.config,
+				update: { ...REAL_CONFIG.config.update, isCodeServer: false },
+			},
+		}));
+		try {
+			const out = await buildVersionFromGit({ version: '7.0.1' });
+			expect(out.result).toBe(false);
+			expect(out.msg).toBe('Error. This instance is not a code server');
+			expect(out.errors).toEqual(['not a code server']);
+			expect(out.file_path).toBeUndefined();
+			expect(out.sha256).toBeUndefined();
+		} finally {
+			mock.module('../../src/config/config.ts', () => REAL_CONFIG);
+		}
 	});
 });
 
