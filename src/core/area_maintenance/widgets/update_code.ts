@@ -34,9 +34,9 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
 	const servers: Record<string, unknown>[] = [];
 	for (const server of config.update.codeServers) {
-		// Reuse the ontology transport probe (same get_server_ready_status POST);
-		// the code branch answers when the remote IS_A_CODE_SERVER.
-		const probe = await checkRemoteServer({ ...server });
+		// Reuse the ontology transport probe (same get_server_ready_status POST),
+		// asking for the CODE role: a code-only master refuses the ontology check.
+		const probe = await checkRemoteServer({ ...server }, 'code_server');
 		servers.push({
 			...server,
 			msg: probe.msg,
@@ -84,8 +84,15 @@ async function updateCodeOwned(options: Record<string, unknown>): Promise<Widget
  */
 async function buildVersionOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
-	const version = typeof options.version === 'string' ? options.version : '';
-	const ref = typeof options.ref === 'string' ? options.ref : undefined;
+	const { DEDALO_VERSION } = await import('../../update/version.ts');
+	// The panel's two buttons send a BRANCH ('master' / 'developer') and nothing
+	// else — the release they build is the engine's CURRENT version, exactly as
+	// their confirm text promises. Until 2026-08-15 only `version`/`ref` were read,
+	// so both buttons refused with 'Invalid version number' and a code master
+	// could not build a single release. Explicit version/ref still win (API callers).
+	const branch = typeof options.branch === 'string' ? options.branch : undefined;
+	const version = typeof options.version === 'string' ? options.version : DEDALO_VERSION;
+	const ref = typeof options.ref === 'string' ? options.ref : branch;
 	return fromEnvelope(await buildVersionFromGit({ version, ref }));
 }
 

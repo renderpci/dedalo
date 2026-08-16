@@ -10,8 +10,8 @@
 @menu_box_shadow: var(--shadow-3);
 
 .menu {
-	// vars
-	--menu_heigth: 2.2rem;
+	// --menu_heigth is declared at :root (vars_tokens.less) so the loading
+	// placeholder can reserve the same height before the menu exists.
 
 	contain: layout;
 	margin: 0px;
@@ -721,14 +721,17 @@
 // out of element styles
 
 // menu_placeholder (spinner container when ui.load_item_with_spinner is used)
+// Reserve EXACTLY the menu's own box so swapping the placeholder for the real
+// menu moves nothing below it. Same var, same sticky top offset.
 .menu_placeholder {
-	// default menu height is 28.59px
+	height: var(--menu_heigth);
+	min-height: var(--menu_heigth); // overrides the generic placeholder min height
+	margin: 0px;
 
-	// placeholder_debug is higher than regular menu because contains debug_info_bar
+	// placeholder_debug is taller because the real menu then carries the debug_info_bar
+	// (.menu.with_debug_info === --menu_heigth * 2)
 	&.placeholder_debug {
-		// default menu height is 57.19px
-		height: 57.19px;
-		display: flex;
-		align-items: center;
+		height: calc(var(--menu_heigth) * 2);
+		min-height: calc(var(--menu_heigth) * 2);
 	}
 }

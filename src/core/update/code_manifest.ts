@@ -9,17 +9,27 @@
  * releases — correct: there is no next version to build yet.
  */
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { compareVersionArrays } from './version.ts';
 
-/** One advertised release (PHP file_item). */
+/**
+ * One advertised release (PHP file_item).
+ *
+ * The two data-carrying keys are SNAKE_CASE because they are wire names the
+ * client reads verbatim: `render_update_code.js` branches on
+ * `force_update_mode === 'clean'` and `update_code.ts` forwards the whole item
+ * back as `options.file` (`file.sha256`, `file.force_update_mode`). A camelCase
+ * spelling here serializes fine and is silently never read.
+ */
 export interface CodeReleaseItem {
 	version: string;
 	url: string;
 	date: string;
-	forceUpdateMode?: 'clean';
+	/** sha256 of the archive, from the `<file>.zip.sha256` sidecar (WC-024). */
+	sha256?: string;
+	force_update_mode?: 'clean';
 }
 
 export interface CodeUpdateInfo {
@@ -105,11 +115,13 @@ export function buildCodeUpdateInfo(options: {
 			if (filePath === null || !existsSync(filePath)) continue;
 			const key = `${triple[0]}${triple[1]}${triple[2]}`;
 			const descriptor = (options.catalog ?? UPDATE_CATALOG)[key];
+			const sha256 = readShaSidecar(filePath);
 			files.push({
 				version: versionString,
 				url: `${options.publicBaseUrl}/${versionString}/${fileName}`,
 				date: new Date(statSync(filePath).mtimeMs).toISOString(),
-				...(descriptor?.forceUpdateMode === 'clean' ? { forceUpdateMode: 'clean' as const } : {}),
+				...(sha256 === null ? {} : { sha256 }),
+				...(descriptor?.forceUpdateMode === 'clean' ? { force_update_mode: 'clean' as const } : {}),
 			});
 		}
 	}
@@ -117,6 +129,23 @@ export function buildCodeUpdateInfo(options: {
 		info: { version: options.serverVersion.join('.'), ...options.info },
 		files,
 	};
+}
+
+/**
+ * The digest from the `<archive>.sha256` sidecar `code_build.ts` writes next to
+ * every built release (`<64 hex>  <name>.zip\n`), or null when there is no
+ * sidecar / it is not a plain 64-hex digest. Advertising it is what makes the
+ * consumer's verification possible at all: `updateCode` REFUSES any release
+ * whose request carries no 64-hex digest, so an unsigned archive is simply not
+ * installable (WC-024's 2026-08-15 addendum). A master that answers with no
+ * `sha256` is therefore advertising a release nobody can install — which is the
+ * intended, loud outcome of a build whose sidecar was lost.
+ */
+function readShaSidecar(archivePath: string): string | null {
+	const sidecar = `${archivePath}.sha256`;
+	if (!existsSync(sidecar)) return null;
+	const digest = readFileSync(sidecar, 'utf8').trim().split(/\s+/)[0] ?? '';
+	return /^[a-f0-9]{64}$/.test(digest) ? digest : null;
 }
 
 /** Release archive path: <codeFilesDir>/<major>/<major.minor>/<file>. Confined. */

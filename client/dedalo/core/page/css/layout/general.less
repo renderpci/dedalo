@@ -780,9 +780,17 @@
 	}
 
 // container_placeholder. Used lo show message 'Loading ...' until element rendered node is ready
+// The box is SIZE-RESERVING: the label is centred in whatever height the
+// placeholder is given, so a caller can pin it to the height of the node that
+// will replace it (see .menu_placeholder, .section_placeholder) and the swap
+// shifts nothing below. Without a pin it keeps its own intrinsic min height.
 	.container_placeholder {
 		contain: content;
-		padding: 1rem;
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
+		min-height: 3.5rem;
+		padding: 0.5rem 1rem;
 		position: relative;
 		padding-left: 3.5rem !important;
 		margin-top: 0.33rem;

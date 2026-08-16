@@ -489,24 +489,14 @@ class DDModal extends HTMLElement {
 	/**
 	 * _SHOWMODALBIG
 	 * Shows the modal at full viewport size (97vw × 97vh) by applying .modal_big
-	 * to the shadow .modal overlay.
-	 *
-	 * If a light-DOM child `iframe.fixed` is present (e.g. an embedded diffusion
-	 * preview), its top padding is adjusted by the actual rendered height of the
-	 * `[slot="header"]` element minus a 22 px correction so the iframe content
-	 * sits below the sticky header without overlap. Falls back to 0 if no header.
+	 * to the shadow .modal overlay. The sticky .modal-header is in normal flow,
+	 * so slotted content (including iframe.fixed bodies) already starts below it
+	 * — no offset compensation is needed here.
 	 */
 	_showModalBig() {
 		this._modalVisible = true;
 		this._modal.classList.add('modal_show');
 		this._modal.classList.add("modal_big");
-
-		const iframe = this.querySelector("iframe.fixed");
-		if (iframe) {
-			const header			= this.querySelector(".header");
-			const padding_top	= header ? header.offsetHeight - 22 : 0;
-			iframe.style.paddingTop = padding_top + 'px';
-		}
 	}
 
 	/**

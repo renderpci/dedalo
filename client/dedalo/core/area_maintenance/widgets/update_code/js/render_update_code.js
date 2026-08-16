@@ -405,7 +405,7 @@ const render_build_version = function(self, content_data, body_response) {
 								const ar_version	= page_globals.dedalo_version.split('.')
 								const major_version	= ar_version[0]
 								const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
-								return `A file using current version (${version}) will be created as: \n\n/dedalo/code/${major_version}/${version}/${version}_dedalo.zip\n`
+								return `A file using current version (${version}) will be created from branch 'master' as: \n\n<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/${version}.zip\n`
 							  })(),
 			body_info		: build_version_group,
 			body_response	: body_response,
@@ -431,7 +431,7 @@ const render_build_version = function(self, content_data, body_response) {
 								const ar_version	= page_globals.dedalo_version.split('.')
 								const major_version	= ar_version[0]
 								const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
-								return `A file will be created as: \n\n/dedalo/code/development/dedalo_development.zip\n`
+								return `A file using current version (${version}) will be created from branch 'v7' as: \n\n<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/${version}.zip\n\n(!) It OVERWRITES the master build of the same version.\n`
 							  })(),
 			body_info		: build_version_group,
 			body_response	: body_response,
@@ -444,7 +444,7 @@ const render_build_version = function(self, content_data, body_response) {
 					action	: 'build_version_from_git_master'
 				},
 				options	: {
-					branch : 'developer'
+					branch : 'v7'
 				}
 			},
 			on_done : on_done
@@ -772,6 +772,13 @@ const render_info_modal = function( self, versions_info ) {
 
 				// save the pointer to be called
 				nodes.clean_radio = clean_radio
+
+			// forced mode of the PRE-SELECTED entry
+			// The default selection (index 0, in the loop above) is made
+			// programmatically, so it never fires the radio 'change' handler that
+			// locks the mode. Without this call a release mandating a clean install
+			// was offered as 'incremental' unless the operator re-clicked the row.
+				set_update_mode( nodes.current_version_active )
 
 			// button_update
 				const button_update = ui.create_dom_element({

@@ -121,12 +121,22 @@ export function confinedPath(baseDir: string, fileName: string): string | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Probe one ontology server (PHP check_remote_server): POST the
- * get_server_ready_status rqo, 5 s timeout. `data` is the decoded remote body
- * (or false when it could not be decoded) — a PAYLOAD, not a discriminator —
- * and `code` the HTTP status.
+ * Probe one master server (PHP check_remote_server): POST the
+ * get_server_ready_status rqo, 5 s timeout. Response mirrors PHP's
+ * curl_request envelope: `data` is the decoded remote body (or false when it
+ * could not be decoded) — a PAYLOAD, not a discriminator — and `code` the HTTP status.
+ *
+ * `check` names WHICH master role is being probed, and the remote answers only
+ * for the role it actually holds (`dd_utils_api.get_server_ready_status`). It
+ * defaults to 'ontology_server' — the caller this was written for — but the
+ * update_code panel MUST pass 'code_server': asking a code-only master whether
+ * it is an ontology server got a refusal, so its row rendered UNREACHABLE with
+ * the radio disabled and no code update was ever startable (fixed 2026-08-15).
  */
-export async function checkRemoteServer(server: OntologyServer): Promise<{
+export async function checkRemoteServer(
+	server: OntologyServer,
+	check: 'ontology_server' | 'code_server' = 'ontology_server',
+): Promise<{
 	data: unknown;
 	msg: string;
 	errors: string[];
@@ -137,7 +147,7 @@ export async function checkRemoteServer(server: OntologyServer): Promise<{
 		dd_api: 'dd_utils_api',
 		action: 'get_server_ready_status',
 		prevent_lock: true,
-		options: { check: 'ontology_server' },
+		options: { check },
 	};
 	try {
 		// JSON body, not PHP's `rqo=`-form-encoded: the TS API endpoint parses the

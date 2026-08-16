@@ -747,8 +747,10 @@
 		}
 
 		.header_custom {
-			position: absolute;
-			width: 100%;
+			// Slotted into the shadow .modal-header (fixed height 3.66rem):
+			// fill it exactly or the two orange bars + two box-shadows render
+			// as a double header line.
+			height: 100%;
 			padding: 0.5rem;
 			display: flex;
 			align-items: center;
@@ -815,7 +817,6 @@
 		}//end .body
 
 		.iframe_container {
-			padding-top: 17px;
 
 			>iframe {
 				// height: calc(100vh - 68px);
