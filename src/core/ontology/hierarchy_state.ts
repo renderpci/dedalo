@@ -570,6 +570,39 @@ async function ensureRootTerm(
 }
 
 /**
+ * Step 4 of ensureHierarchy — the target sections. generateVirtualSection
+ * writes them; when it was skipped (ontology already present) they may still be
+ * missing on an older record. DEFAULT them when unset — never OVERWRITE them
+ * (the same law as the source section, step 1). hierarchy53/hierarchy58 are the
+ * operator's pairing of terms section and model section, and a pairing that
+ * names foreign sections is legitimate (live: hierarchy1/250 'WW' →
+ * `mht72`/`ww2`) — rewriting it to the tld constants would quietly repoint the
+ * hierarchy, and the model-section resolver reads this pairing. A set value
+ * that does not name a section is a data defect the `targets` check surfaces —
+ * repairing it here would destroy the evidence the operator needs.
+ *
+ * Re-reads the registry row itself (the steps before it write to the row) and
+ * answers the `applied` lines it produced.
+ */
+async function ensureTargetSectionDefaults(sectionId: number, tld: string): Promise<string[]> {
+	const applied: string[] = [];
+	const row = await readRegistry(sectionId);
+	if (literal(row, HIERARCHY_TARGET_SECTION) === '') {
+		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION, [
+			{ id: 1, lang: 'lg-nolan', value: `${tld}1` },
+		]);
+		applied.push(`target section set to ${tld}1`);
+	}
+	if (literal(row, HIERARCHY_TARGET_SECTION_MODEL) === '') {
+		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION_MODEL, [
+			{ id: 1, lang: 'lg-nolan', value: `${tld}2` },
+		]);
+		applied.push(`target model section set to ${tld}2`);
+	}
+	return applied;
+}
+
+/**
  * Converge ONE hierarchy to the invariant. THE only writer. Idempotent: the second run
  * reports `applied: []`. Safe on a live hierarchy — it never deletes anything.
  */
@@ -664,28 +697,9 @@ export async function ensureHierarchy(
 		applied.push(`provisioned the ontology (${tld}0, ${tld}1, ${tld}2)`);
 	}
 
-	// 4. the target sections. generateVirtualSection writes them; when it was skipped
-	// (ontology already present) they may still be missing on an older record.
-	// DEFAULT them when unset — never OVERWRITE them (the same law as the source section,
-	// step 1). hierarchy53/hierarchy58 are the operator's pairing of terms section and
-	// model section, and a pairing that names foreign sections is legitimate (live:
-	// hierarchy1/250 'WW' → `mht72`/`ww2`) — rewriting it to the tld constants would
-	// quietly repoint the hierarchy, and the model-section resolver reads this pairing.
-	// A set value that does not name a section is a data defect the `targets` check
-	// surfaces — repairing it here would destroy the evidence the operator needs.
-	row = await readRegistry(sectionId);
-	if (literal(row, HIERARCHY_TARGET_SECTION) === '') {
-		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION, [
-			{ id: 1, lang: 'lg-nolan', value: `${tld}1` },
-		]);
-		applied.push(`target section set to ${tld}1`);
-	}
-	if (literal(row, HIERARCHY_TARGET_SECTION_MODEL) === '') {
-		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION_MODEL, [
-			{ id: 1, lang: 'lg-nolan', value: `${tld}2` },
-		]);
-		applied.push(`target model section set to ${tld}2`);
-	}
+	// 4. the target sections — defaulted when unset, never overwritten (see
+	// ensureTargetSectionDefaults for the law).
+	applied.push(...(await ensureTargetSectionDefaults(sectionId, tld)));
 
 	// 5. the roots — resolve-or-create, never trust the stored locator.
 	row = await readRegistry(sectionId);
