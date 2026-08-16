@@ -181,6 +181,7 @@ export async function setField(
 		lang,
 		changedData,
 		userId: principal.userId,
+		principal,
 	});
 	if (!outcome.ok) {
 		throw new DedaloError('request.invalid', { publicMessage: outcome.message ?? 'save failed' });

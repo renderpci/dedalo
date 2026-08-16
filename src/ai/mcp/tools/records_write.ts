@@ -90,6 +90,7 @@ export async function saveComponentValue(
 		lang: input.lang ?? 'lg-nolan',
 		changedData: [{ action: input.action, id: input.item_id ?? null, value: input.value }],
 		userId: principal.userId,
+		principal,
 	});
 	return { ok: outcome.ok, message: outcome.ok ? undefined : outcome.message, data: outcome.data };
 }
