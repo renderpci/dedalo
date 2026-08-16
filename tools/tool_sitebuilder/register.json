@@ -1,5 +1,5 @@
 {
-	"$schema": "../../src/core/tools/client/register.schema.json",
+	"$schema": "../../src/core/tools/register.schema.json",
 	"name": "tool_sitebuilder",
 	"version": "1.0.0",
 	"label": { "lg-eng": "Site builder", "lg-spa": "Constructor de sitios" },

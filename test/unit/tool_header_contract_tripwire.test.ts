@@ -1,7 +1,7 @@
 /**
  * TOOL HEADER CONTRACT (DEC-12) — the unified header stays unified.
  *
- * `src/core/tools/client/css/tool_common.less` owns the tool header for every
+ * `client/dedalo/core/tools_common/css/tool_common.less` owns the tool header for every
  * tool and both themes: the surface (identity hue demoted to a 4px top edge over
  * --bg_surface_alt), the ink, and the controls band `>.tool_buttons_container` —
  * its geometry, its one control height, the caption idiom, the select shape and

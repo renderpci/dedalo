@@ -93,7 +93,6 @@
 			"!**/tools/**/*/css",
 			"!**/tools/**/*/img",
 			"!**/tools/**/*/register.json",
-			"!**/src/core/tools/client",
 			"!**/tools/tool_qr/lib",
 			"!**/tools/tool_lang/translators/browser_transformer",
 			"!**/tools/tool_transcription/transcribers/browser_whisper",

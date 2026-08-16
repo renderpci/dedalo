@@ -30,7 +30,7 @@ Every remotely callable server action is declared as a key of the module's **`ap
 Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 13 of the 37 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
 
 !!! note "No base class"
-    There is no `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is a real JS prototype base (`src/core/tools/client/js/tool_common.js`) that every tool wires into via `wire_tool`.
+    There is no `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is a real JS prototype base (`client/dedalo/core/tools_common/js/tool_common.js`) that every tool wires into via `wire_tool`.
 
 ## Catalog
 

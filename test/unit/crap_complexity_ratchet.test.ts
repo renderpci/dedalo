@@ -384,21 +384,18 @@ describe('crap ratchet — the scan is not vacuous', () => {
 	 * other code extensions, plus the `*.test.ts` / `*.d.ts` exclusions.
 	 *
 	 * WHY THIS IS A GATE AND NOT A COMMENT: "the scan root is src/core/" reads
-	 * as "the directory is covered", and it is not — the metric is `*.ts` only,
-	 * and three tracked `.js` files live under it today. Left unpinned, a new
-	 * `.tsx` module (or a src/core module named `foo.test.ts`, which would be
-	 * excluded by shape) would enter the tree completely outside the gate with
-	 * nothing to notice it. Pinned, it arrives as a red test naming the file.
+	 * as "the directory is covered", and it is not — the metric is `*.ts` only.
+	 * Left unpinned, a new `.tsx`/`.js` module (or a src/core module named
+	 * `foo.test.ts`, which would be excluded by shape) would enter the tree
+	 * completely outside the gate with nothing to notice it. Pinned, it arrives
+	 * as a red test naming the file.
 	 *
-	 * These three are CLIENT-SIDE browser JS shipped by the tools subsystem,
-	 * not engine TypeScript; measuring them is a separate decision, not a
-	 * silent one. To add a file here you must state which it is.
+	 * EMPTY since 2026-08-16: the three entries were the tools subsystem's
+	 * CLIENT-SIDE browser JS, which moved out of src/ to
+	 * client/dedalo/core/tools_common/ (WC-006) — src/core is engine TypeScript
+	 * and nothing else again. To add a file here you must state which it is.
 	 */
-	const UNMEASURED_SOURCE_UNDER_SCAN_ROOT = [
-		'src/core/tools/client/js/processors/remove_background/remove_background.js',
-		'src/core/tools/client/js/render_tool_common.js',
-		'src/core/tools/client/js/tool_common.js',
-	];
+	const UNMEASURED_SOURCE_UNDER_SCAN_ROOT: string[] = [];
 
 	test('the source under the scan root that is NOT measured is exactly the named set', () => {
 		expect(

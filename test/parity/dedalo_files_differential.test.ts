@@ -12,9 +12,9 @@
  *    not contractual beyond files[0] = main.css — compared as sets.
  *  - TOOL_COMMON URL: PHP serves the tool_common client machinery from
  *    tools/tool_common (/dedalo/tools/tool_common/…); the TS server relocated
- *    it to src/core/tools/client served at /dedalo/core/tools_common/… (see
- *    core/tools/paths.ts). Same files, TS-resolvable URL — PHP urls are mapped
- *    to the TS base before comparing.
+ *    the TS client keeps it at client/dedalo/core/tools_common, served at
+ *    /dedalo/core/tools_common/… (WC-006). Same files, TS-resolvable URL — PHP
+ *    urls are mapped to the TS base before comparing.
  *  - DEDALO_VERSION: a deploy stamp (PHP constant vs the TS install literal) —
  *    asserted non-empty string on both sides, not byte-equal.
  */
@@ -27,7 +27,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { resolveToolAssetPath, resolveToolCommonAssetPath } from '../../src/core/tools/paths.ts';
+import { resolveToolAssetPath } from '../../src/core/tools/paths.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
@@ -339,11 +339,10 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		if (!hasPhpCredentials()) return;
 		for (const entry of tsBody.data) {
 			let servedPath: string | null = null;
-			if (entry.url.startsWith('/dedalo/core/tools_common/')) {
-				servedPath = resolveToolCommonAssetPath(
-					entry.url.slice('/dedalo/core/tools_common/'.length),
-				);
-			} else if (entry.url.startsWith('/dedalo/tools/')) {
+			// tools_common needs no arm of its own since WC-006's 2026-08-16
+			// amendment: it is client source under client/dedalo/core/, so the
+			// generic client branch below resolves it like any other asset.
+			if (entry.url.startsWith('/dedalo/tools/')) {
 				const rest = entry.url.slice('/dedalo/tools/'.length);
 				const [name = '', ...restPath] = rest.split('/');
 				servedPath = resolveToolAssetPath(name, restPath.join('/'));

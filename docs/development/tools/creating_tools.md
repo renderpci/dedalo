@@ -149,7 +149,7 @@ The button reads the record back through the API (a `read_raw` request on that s
 
 ``` json
 {
-	"$schema": "../../src/core/tools/client/register.schema.json",
+	"$schema": "../../src/core/tools/register.schema.json",
 	"name": "tool_numisdata_import",
 	"version": "1.0.0",
 	"label": { "lg-eng": "Numismatic import" },
@@ -202,7 +202,7 @@ tool_numisdata_import.prototype.do_import = async function() {
 }
 ```
 
-The relative import `../../../core/tools_common/js/tool_common.js` resolves through the **served** URL tree, not the repo tree: `tool_common.js` itself lives at `src/core/tools/client/js/tool_common.js` and is served at `/dedalo/core/tools_common/js/tool_common.js`. Lifecycle, `ddo_map`, modal/window modes, labels: [JS lifecycle](js_lifecycle.md).
+The relative import `../../../core/tools_common/js/tool_common.js` resolves through the **served** URL tree, not the repo tree: `tool_common.js` itself lives at `client/dedalo/core/tools_common/js/tool_common.js` and is served at `/dedalo/core/tools_common/js/tool_common.js`. Lifecycle, `ddo_map`, modal/window modes, labels: [JS lifecycle](js_lifecycle.md).
 
 ## 7. Register the tool
 

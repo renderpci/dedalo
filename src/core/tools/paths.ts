@@ -33,8 +33,18 @@ export interface ToolRoot {
 /** Absolute path of the in-repo primary tools root (repo-root `tools/`). */
 const PRIMARY_ROOT_PATH = resolve(import.meta.dir, '../../../tools');
 
-/** The core-served directory backing the /dedalo/core/tools_common/ URL. */
-export const TOOL_COMMON_CLIENT_DIR = resolve(import.meta.dir, 'client');
+/**
+ * The directory backing the /dedalo/core/tools_common/ URL. It is ordinary
+ * CLIENT source (client/dedalo/core/tools_common/, moved there 2026-08-16 —
+ * WC-006): the generic client handler serves it like every other file under
+ * /dedalo/core/, so nothing here resolves it any more. Kept only because the
+ * get_dedalo_files manifest walks it as its own block, to hold the PHP entry
+ * ORDER and the tools filter rule (core/api/dedalo_files.ts).
+ */
+export const TOOL_COMMON_CLIENT_DIR = resolve(
+	import.meta.dir,
+	'../../../client/dedalo/core/tools_common',
+);
 
 /**
  * Forbidden root policy (PHP tool_paths::root_is_forbidden): a tools root must
@@ -206,13 +216,4 @@ export function resolveToolAssetPath(name: string, restPath: string): string | n
 	const firstSegment = restPath.split('/').filter(Boolean)[0];
 	if (firstSegment === 'server') return null;
 	return confineUnder(resolve(root.path, name), restPath);
-}
-
-/**
- * Resolve a `/dedalo/core/tools_common/<rest>` request to a confined path under
- * the core-served client dir, or null to 404. The tool_common client machinery
- * lives in core (src/core/tools/client/) and is served under its own core URL.
- */
-export function resolveToolCommonAssetPath(restPath: string): string | null {
-	return confineUnder(TOOL_COMMON_CLIENT_DIR, restPath);
 }

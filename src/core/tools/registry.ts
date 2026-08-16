@@ -629,7 +629,7 @@ export async function buildToolElementContext(
 	const properties = row.misc?.[TIPO.PROPERTIES]?.[0]?.value ?? null;
 	// Labels (dd1372) are stored for every lang but PHP exposes only the
 	// application-lang entries in the tool context. SINGLE-LANG CONTRACT: the
-	// client's get_tool_label (tools/client/js/tool_common.js) treats a name match
+	// client's get_tool_label (client/dedalo/core/tools_common/js/tool_common.js) treats a name match
 	// as already-correct-language BECAUSE of this filter, and relies on its own
 	// `|| 'literal'` fallback when the lang has no entry (the array is then empty).
 	// Widening this to several langs is a wire change: it needs a WIRE_CONTRACT

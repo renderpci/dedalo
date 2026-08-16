@@ -68,7 +68,7 @@ renameInTree(targetDir);
 
 // 3. Overwrite register.json with a minimal AUTHORING-format file.
 const authoring = {
-	$schema: '../../src/core/tools/client/register.schema.json',
+	$schema: '../../src/core/tools/register.schema.json',
 	name,
 	version: '1.0.0',
 	label: { 'lg-eng': label },

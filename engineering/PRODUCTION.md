@@ -127,12 +127,12 @@ server {
         location ~* \.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf)$ {
             add_header Cache-Control "public, max-age=3600";
         }
-        # Tool assets (/dedalo/tools/, /dedalo/core/tools_common/) live in the
-        # repo tools/ + src/core/tools/client/ trees, NOT under client/ — proxy
-        # them to the socket (the Bun handlers enforce the server/-subtree and
-        # extension fail-closed rules).
+        # Tool assets (/dedalo/tools/) live in the repo tools/ tree, NOT under
+        # client/ — proxy them to the socket (the Bun handler enforces the
+        # server/-subtree and extension fail-closed rules). tools_common needs
+        # no rule of its own: since 2026-08-16 it is client source under
+        # client/dedalo/core/ and the client location already covers it.
         location /dedalo/tools/ { proxy_pass http://dedalo_ts; }
-        location /dedalo/core/tools_common/ { proxy_pass http://dedalo_ts; }
     }
 }
 ```

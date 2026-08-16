@@ -225,10 +225,13 @@ beforeAll(async () => {
 	(globals.window as Record<string, unknown>).page_globals = globals.page_globals;
 
 	// `data_manager.js` reaches the error RENDERER (render_api_error.js), which
-	// imports `common/js/ui.js`, which imports `core/tools_common/js/tool_common.js`
-	// — a SERVING seam that maps to src/core/tools/client and has no such relative
-	// path on disk, so nothing here is importable without masking it. Same reason,
-	// same shape as client_upload_queue_render.test.ts.
+	// imports `common/js/ui.js`, which imports the whole tool machinery
+	// (`core/tools_common/js/tool_common.js`) and, through it, browser globals a
+	// unit test has no business standing up. Masked here. (Until 2026-08-16 that
+	// import did not even RESOLVE on disk — tool_common lived under src/ and the
+	// path was a serving seam; the move to client/dedalo/core/tools_common fixed
+	// the resolution, not the reason for the mask.) Same shape as
+	// client_upload_queue_render.test.ts.
 	mock.module(
 		join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'ui.js'),
 		() => ({

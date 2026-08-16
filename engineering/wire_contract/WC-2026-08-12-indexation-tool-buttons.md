@@ -14,7 +14,7 @@
 PHP emitted `../../../tools/tool_common/js/tool_common.js`, which the PHP
 engine served from its own `tools/tool_common/` package directory. The TS
 engine does **not** have that package: `tool_common` is CORE
-(`src/core/tools/client/`) and is served at `/dedalo/core/tools_common/`;
+(`client/dedalo/core/tools_common/`, `src/core/tools/client/` until 2026-08-16) and is served at `/dedalo/core/tools_common/`;
 `src/core/tools/serving.ts` excludes it from `/dedalo/tools/` by name.
 
 The client resolves this path with a bare `import()` relative to

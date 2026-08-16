@@ -63,7 +63,7 @@ import {
 	SESSION_COOKIE,
 	SESSION_IDLE_TTL_SECONDS,
 } from './core/security/session_store.ts';
-import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.ts';
+import { serveToolsRequest } from './core/tools/serving.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
@@ -747,14 +747,6 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				...svgSafetyHeaders,
 			},
 		});
-	}
-
-	// tool_common client machinery, served under a CORE url from
-	// src/core/tools/client/ (it lives in core, not the tools tree). Must run
-	// before the generic client handler (which has no core/tools_common dir).
-	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/core/tools_common/')) {
-		const toolCommonResponse = await serveToolCommonRequest(url.pathname, request);
-		if (toolCommonResponse !== null) return toolCommonResponse;
 	}
 
 	// Tool package assets (served from the repo `tools/` roots, NOT the copied
