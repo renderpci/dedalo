@@ -47,12 +47,17 @@
 		// glyphs stay in ONE family: thin outline (like search_light /
 		// add_light / duplicate). note.svg (solid bubble) and inspector.svg
 		// (bold bars) were replaced by _light outline redraws (2026-07-23).
-		&.info		{ .fn_add_mask('info.svg'); }
-		&.gear		{ .fn_add_mask('gear.svg'); }
-		&.link		{ .fn_add_mask('link.svg'); }
-		&.history	{ .fn_add_mask('history.svg'); }
+		// 2026-08-16: the last legacy solid/heavy glyphs (info, gear, link,
+		// history, gears) were replaced too — the whole rail now uses the
+		// light family: 24-unit viewBox, stroke-width 1.7 (= the 1024/72 of
+		// note_light et al.), round caps + joins, glyph inscribed in ~1.8-22.2
+		// so `mask-size: contain` yields the SAME optical size for every icon.
+		&.info		{ .fn_add_mask('info_light.svg'); }
+		&.gear		{ .fn_add_mask('gear_light.svg'); }
+		&.link		{ .fn_add_mask('link_light.svg'); }
+		&.history	{ .fn_add_mask('history_light.svg'); }
 		&.note		{ .fn_add_mask('note_light.svg'); }
-		&.activity	{ .fn_add_mask('gears.svg'); }
+		&.activity	{ .fn_add_mask('gears_light.svg'); }
 		&.panel		{ .fn_add_mask('inspector_light.svg'); }
 
 		// fn_add_mask uses mask-size:contain, so each glyph fills a different
@@ -63,13 +68,28 @@
 		// icons too, since those spans also carry .block_icon.
 		// Normalise the glyph size WITHOUT touching mask-size. The masks stay at
 		// `contain` (the only value Safari sizes reliably on these intrinsically-
-		// sizeless SVGs); transform:scale then shrinks each glyph to the same
-		// visual size. scale can ONLY shrink the rendered glyph, so it can never
-		// clip — which percentage/length mask-size did in Safari. ~0.88 of the box.
-		&.link, &.panel, &.activity, &.list, &.diffusion  { transform: scale(0.89); }
-		&.add_light, &.search                             { transform: scale(0.91); }
-		&.info, &.note, &.blank                           { transform: scale(0.92); }
-		&.gear, &.graph, &.history, &.duplicate, &.remove { transform: scale(0.95); }
+		// sizeless SVGs); transform:scale then sizes each glyph. scale can ONLY
+		// shrink the rendered glyph, so it can never clip — which percentage/
+		// length mask-size did in Safari.
+		//
+		// THE RULE (2026-08-16): every icon renders with the same INK extent,
+		// ~0.77 of the 1.3rem box. `contain` fits the viewBox, not the ink, so
+		// the factor per glyph is 0.77 / (its ink bbox as a fraction of its
+		// viewBox) — measured, not guessed. The redrawn light family is all
+		// normalised to 20/24 ink in the SVG itself, hence one shared factor;
+		// the legacy glyphs below (shared with the rest of the UI, so not
+		// editable here) carry their own compensation.
+		&.info, &.gear, &.history                         { transform: scale(0.92); } // ink 0.833
+		&.link, &.activity                                { transform: scale(0.91); } // ink 0.842
+		&.note, &.panel                                   { transform: scale(0.89); } // ink 0.858
+		&.list                                            { transform: scale(0.92); } // ink 0.838
+		&.blank                                           { transform: scale(0.92); }
+		&.remove                                          { transform: scale(0.83); } // ink 0.925
+		&.print                                           { transform: scale(0.82); } // ink 0.933
+		&.search                                          { transform: scale(0.79); } // ink 0.967
+		&.add_light                                       { transform: scale(0.78); } // ink 0.983
+		&.diffusion                                       { transform: scale(0.78); } // ink 0.988
+		&.duplicate, &.graph                              { transform: scale(0.77); } // ink 1.0
 	}
 
 	// inspector_div_content
@@ -290,11 +310,20 @@
 			// airy key/value sheet: no cell fills, no separator lines — the
 			// muted-key / ink-value contrast carries the structure
 
+			// docu links row. The generic button classes carry the LEGACY solid
+			// glyphs (link.svg heavy chain, pen.svg solid nib, tree.svg solid
+			// blocks, edit.svg filled sheet) — each a different weight. Remask
+			// them with the light family so this row matches the block-header
+			// icons: same 1.7/24 stroke, round caps, same optical size.
 			.link, .pen, .tree, .edit {
 				background-color: @color_orange_dedalo;
 				margin-right: var(--space-3);
 				transition: background-color var(--transition-fast);
 			}
+			.link	{ .fn_add_mask('link_light.svg'); }
+			.pen	{ .fn_add_mask('pen_light.svg'); }
+			.tree	{ .fn_add_mask('tree_light.svg'); }
+			.edit	{ .fn_add_mask('edit_light.svg'); }
 
 			.span {
 				&:active {
