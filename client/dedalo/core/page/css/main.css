@@ -1354,6 +1354,7 @@ pre {
   padding: 0.33rem;
   padding-right: 1.33rem;
   position: relative;
+  cursor: pointer;
 }
 .icon_arrow:after {
   -webkit-mask-image: url('../../themes/default/icons/arrow_down.svg');
@@ -1366,7 +1367,6 @@ pre {
   mask-position: center;
   background-color: var(--color_grey_10);
   content: ' ';
-  cursor: pointer;
   height: 1em;
   margin-right: 0.33rem;
   padding: 0.33rem;

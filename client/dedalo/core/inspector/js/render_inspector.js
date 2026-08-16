@@ -110,6 +110,42 @@ export const render_inspector = function() {
 
 
 /**
+* IS_INSPECTOR_RAILED
+* True when the panel is collapsed to the icon rail (labels hidden).
+* @returns {boolean}
+*/
+	const is_inspector_railed = () => {
+		const container = document.getElementById('inspector_container')
+		return !!container && container.classList.contains('inspector_rail')
+	}
+
+/**
+* TOOLTIP_SELECTOR
+* Every hoverable icon of the panel, so the whole set behaves the same in rail mode
+* (where the labels are hidden and the tooltip is the ONLY affordance):
+*   - '.button'                — toolbar / tool / inline action icons
+*   - '.block_icon[title]'     — collapsible block headers (title set by decorate_block_header)
+*   - '.inspector_rail_toggle' — the rail collapse/expand toggle (not a '.button')
+*/
+	const TOOLTIP_SELECTOR = '.button, .block_icon[title], .inspector_rail_toggle'
+
+/**
+* ACTIVATE_INSPECTOR_TOOLTIPS
+* Registers tooltips for every icon of the panel with placement 'left'.
+* The panel is docked to the RIGHT viewport edge, and codex-tooltip does not clamp
+* to the viewport: a 'top' tooltip is centred over its icon and gets cut off by the
+* edge (worst in rail mode, where the icons are ~24px from the edge). Drawing to the
+* left opens into the section content, which always has room.
+* @param {HTMLElement} node
+* @returns {void}
+*/
+	const activate_inspector_tooltips = (node) => {
+		ui.activate_tooltips(node, TOOLTIP_SELECTOR, false, 'left')
+	}
+
+
+
+/**
 * SET_INSPECTOR_WIDTH
 * Writes --inspector_width on :root. The section content width and the panel
 * position are calc() consumers of this CSS variable, so the layout reflows
@@ -340,10 +376,28 @@ export const init_inspector_resize = (handle, inspector) => {
 */
 const decorate_block_header = (header, icon_class, label_html) => {
 
-	ui.create_dom_element({
+	// plain-text label for the icon tooltip. In rail mode the label span is
+	// hidden, so this title is the only way to know what the icon opens.
+	const label_node	= document.createElement('span')
+	label_node.innerHTML = label_html
+	const label_text	= (label_node.textContent || '').trim()
+
+	const icon = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'block_icon ' + icon_class,
+		title			: label_text,
 		parent			: header
+	})
+	// rail-only tooltip. Expanded, the label sits right next to the icon and a
+	// tooltip repeating it is pure noise; railed, it is the only clue.
+	// (!) This listener MUST be registered BEFORE activate_inspector_tooltips
+	// registers the library's own 'mouseenter' handler on the same element:
+	// at-target listeners fire in registration order, so only a first-registered
+	// one can stopImmediatePropagation() the library's handler.
+	icon.addEventListener('mouseenter', (e) => {
+		if (!is_inspector_railed()) {
+			e.stopImmediatePropagation()
+		}
 	})
 	ui.create_dom_element({
 		element_type	: 'span',
@@ -463,7 +517,7 @@ render_inspector.prototype.edit = async function(options) {
 	// tooltip
 		dd_request_idle_callback(
 			() => {
-				ui.activate_tooltips(wrapper)
+				activate_inspector_tooltips(wrapper)
 			}
 		)
 
@@ -1229,7 +1283,7 @@ export const render_section_info = function(self) {
 		container.replaceChildren(fragment)
 
 	// re-activate tooltips
-	ui.activate_tooltips(container)
+	activate_inspector_tooltips(container)
 
 	return fragment
 }//end render_section_info
@@ -1463,7 +1517,7 @@ export const render_component_info = function(self, component) {
 		container.replaceChildren(fragment)
 
 	// re-activate tooltips
-	ui.activate_tooltips(container)
+	activate_inspector_tooltips(container)
 
 
 	return fragment
