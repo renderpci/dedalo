@@ -165,7 +165,20 @@ export interface SectionsEnvelope {
 	typo: 'sections';
 	tipo: string;
 	section_tipo: [];
-	entries: { section_tipo: string; section_id: number; paginated_key: number }[];
+	entries: {
+		section_tipo: string;
+		section_id: number;
+		paginated_key: number;
+		/**
+		 * The thesaurus picker's per-row selectability answer, stamped ONLY for
+		 * sections whose section_map declares `thesaurus.is_indexable` (the same
+		 * fact the tree node reads carry — ts_object/node_repository.fetchNodeInfo).
+		 * The client refuses to offer a pick affordance on a guess
+		 * (thesaurus_picker.term_selectability), so without it a thesaurus LIST row
+		 * renders no link arrow at all. Absent = "not a thesaurus row", never false.
+		 */
+		is_indexable?: boolean;
+	}[];
 }
 
 /**

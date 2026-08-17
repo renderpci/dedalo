@@ -515,6 +515,28 @@
 		}
 	}//end id_column
 
+// thesaurus list id cell (view_thesaurus_list_section.render_column_id)
+// The picker draws its term control ONLY on rows the server declares selectable,
+// so one list holds two shapes: `.link_button > .section_id + .arrow_link` and a
+// BARE `.section_id`. The rules below dress the control; the bare span inherited
+// none of them, so unflagged rows read smaller, shorter and left-hugging while
+// the flagged one sat right — a broken column, not a lighter row. Give the bare
+// id the SAME box, and reserve the arrow's width so every digit shares one right
+// edge.
+	.view_thesaurus_list .column.column_section_id > .section_id {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		width: 100%;
+		height: 1.4rem;
+		line-height: 1.4rem;
+		font-size: var(--section_id_font_size);
+		padding: 0.25rem 0.5rem;
+		// the arrow box the control adds after its id: icon (1em) + its 0.25rem
+		// margins + the 3px the control's own id span keeps to the icon's left.
+		padding-right: calc(1em + 1rem + 3px);
+	}
+
 // column_section_id
 	.column.column_section_id {
 		// background-color: @color_grey_15;

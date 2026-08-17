@@ -6623,6 +6623,17 @@ dd-modal.dd_confirm .body.content {
   display: inline-block;
   font-size: 1.22em;
 }
+.view_thesaurus_list .column.column_section_id > .section_id {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 1.4rem;
+  line-height: 1.4rem;
+  font-size: var(--section_id_font_size);
+  padding: 0.25rem 0.5rem;
+  padding-right: calc(1em + 1rem + 3px);
+}
 .column.column_section_id {
   display: flex;
   flex-direction: column;

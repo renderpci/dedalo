@@ -1713,6 +1713,34 @@ export async function readSectionRows(
 		})),
 	};
 
+	// PER-ROW SELECTABILITY (thesaurus picker). A list row is a term like any
+	// tree node, but the tree got its `is_indexable` answer from get_node_data /
+	// get_children_data and the list read emitted none — so the client's
+	// term_selectability answered UNKNOWN and refused the pick arrow on every
+	// search result (the primary way into a large thesaurus). Stamp the SAME
+	// fact here, from the SAME resolver, so the affordance follows a server
+	// answer and never a guess. Only for sections that actually declare the
+	// concept: absent means "not a thesaurus row", which is not `false`.
+	if (mode === 'list' || mode === 'list_thesaurus') {
+		const { getSectionMap } = await import('../ontology/section_map.ts');
+		const sectionMap = (await getSectionMap(callerTipo)) as {
+			thesaurus?: { is_indexable?: unknown };
+		} | null;
+		if (typeof sectionMap?.thesaurus?.is_indexable === 'string' && envelope.entries.length > 0) {
+			const { fetchNodeInfo } = await import('../ts_object/node_repository.ts');
+			const info = await fetchNodeInfo(
+				envelope.entries.map((entry) => ({
+					section_tipo: entry.section_tipo,
+					section_id: entry.section_id,
+				})),
+			);
+			for (const entry of envelope.entries) {
+				const node = info.get(`${entry.section_tipo}_${entry.section_id}`);
+				if (node !== undefined) entry.is_indexable = node.is_indexable;
+			}
+		}
+	}
+
 	// --- subdatum: record-major, ddo-minor (PHP get_subdatum loop order) ----
 	// The source owns per-row emission (matrix: record + direct-child ddo loop;
 	// tm: who/when/where/what + snapshot cell policy). emitDdoData is passed in
