@@ -31,13 +31,16 @@ import { asSectionId, canonicalizeStoredSectionId } from '../concepts/section_id
 import type { DataframePairing } from '../concepts/subdatum.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { createOntologyCache } from '../ontology/cache_factory.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
 	getNode,
+	getNodesWithProperty,
 } from '../ontology/resolver.ts';
 import { getSectionRealTipo } from '../resolve/security_access_datalist.ts';
+import { TOOL_PICKER_WIRING } from '../tools/picker_wiring.ts';
 import { isIndexable } from '../ts_object/ts_object.ts';
 import { getElementTargetSectionTipos } from './request_config/build.ts';
 
@@ -294,7 +297,203 @@ async function resolveTargets(callerTipo: string, callerSectionTipo: string): Pr
 	// constraint becomes vacuous, which is the opposite of its purpose.
 	// The virtual/real reconciliation belongs in the COMPARISON, asymmetrically
 	// (see {@link isTargetAllowed}), never in the stored set.
-	return [...new Set(declared)];
+	const targets = [...new Set(declared)];
+	// THE SECOND DECLARATION CHANNEL. A tool may wire a picker source into this
+	// caller that its own request_config never names — see
+	// {@link toolDeclaredTargets}. Unioned only into a NON-EMPTY set: an empty
+	// one is the "no target constraint" exemption (isTargetAllowed), and growing
+	// it from nothing would turn an unconstrained caller into a constrained one
+	// — a refusal invented by this function, not declared by anybody.
+	if (targets.length === 0) return targets;
+	for (const target of await toolDeclaredTargets(callerTipo)) {
+		if (!targets.includes(target)) targets.push(target);
+	}
+	return targets;
+}
+
+/**
+ * The sections a TOOL declares as picker sources for this caller.
+ *
+ * WHY THIS EXISTS. `request_config` is not the only place the ontology says
+ * "these records may be linked into that component". A tool's
+ * `properties.tool_config.<tool>.ddo_map` wires a set of ddos into one working
+ * surface, and some of those entries are SECTIONS the operator picks from,
+ * published into a sibling entry that is a relation component. tool_indexation
+ * is the live case: its map pairs `indexing_component` (rsc860, the portal that
+ * stores the links) with `people_section` (rsc197, a plain section browsed as a
+ * thesaurus list), and `tool_indexation.js` assigns
+ * `people_section.linker = indexing_component`. Nothing in rsc860's own
+ * request_config — hierarchies, from `source: 'hierarchy_types'` — names
+ * rsc197, so gate 1 of the write door refused a link the tool exists to make
+ * (`off_target`), while the client offered the affordance from the tool_config
+ * it had rendered. Two authorities declared what may be linked and only one was
+ * enforced; this reads the other one, from the SAME ontology bytes the client
+ * was handed, so the affordance and the persistence stay one answer.
+ *
+ * PAIRED BY ROLE, NEVER BY CROSS-PRODUCT. The pair comes from
+ * `tools/picker_wiring.ts` — the mirror of the tool's own single JS assignment,
+ * married to it by `tool_picker_wiring_tripwire`. Within one `ddo_map`, for
+ * each declared `{sourceRole, linkerRole}`:
+ *   - the SOURCE entry must carry that role, resolve to a SECTION, and name a
+ *     literal `section_tipo` (a 'self' sentinel is the host section, not a
+ *     picker source, and there is no runtime context here to resolve it). The
+ *     model is read from the ontology, never from the entry: the stored ddo_map
+ *     carries no `model` key at all — `enrichToolConfig` stamps it for the wire
+ *     from exactly this lookup;
+ *   - the LINKER entry must carry that role AND be of the PORTAL family
+ *     ({@link LINKER_MODELS}) — the components whose stored value IS a browsed
+ *     record link. `getModelByTipo` canonicalizes the family
+ *     (component_autocomplete / _hi → component_portal).
+ *
+ * WHY NOT "every section in the map to every relation component in it". That
+ * cross-product was the first shape of this function and it over-granted twice
+ * over on the live map: to `references_component` (rsc1368, a display list no
+ * pick ever reaches) and — before the family narrowing — to the status checkbox
+ * and select (rsc437/rsc439), whose values come from their own option lists. A
+ * ddo_map wires a whole working surface; only one pair of it is a link
+ * declaration, and widening a WRITE gate on a guess about the rest is the class
+ * of write gate 1 exists to refuse. The role check makes the grant exactly as
+ * wide as the tool's behaviour, and the tripwire is what keeps that true.
+ *
+ * NOT A GRANT. This widens the TARGET gate only. Gates 2-4 (the read grant on
+ * the linked section, selectability, the cap) run unchanged on every locator
+ * arriving this way.
+ */
+async function toolDeclaredTargets(callerTipo: string): Promise<string[]> {
+	return (await toolDeclaredTargetIndex()).get(callerTipo) ?? [];
+}
+
+/**
+ * The tool-declared target index, built once per ontology generation.
+ *
+ * The scan itself is a by-PROPERTY read (`getNodesWithProperty`, the canonical
+ * home for what the per-tipo cache cannot serve); the DERIVED index is what is
+ * memoized here, through the factory — so every dd_ontology write clears it and
+ * an edited tool_config takes effect on the next resolve, never after a
+ * restart. One entry keyed by the whole index, the observer-registry shape.
+ */
+const toolDeclaredTargetsCache = createOntologyCache<'index', Map<string, string[]>>();
+
+/**
+ * The models a tool-declared picker source may widen — the PORTAL family, whose
+ * stored value IS a browsed record link. Canonical models only
+ * (`getModelByTipo` has already applied the replacement map), and deliberately
+ * a list rather than a column test: see {@link toolDeclaredTargets}.
+ */
+const LINKER_MODELS: ReadonlySet<string> = new Set(['component_portal']);
+
+/** One ddo_map entry, resolved: what the index needs and nothing else. */
+interface DdoMapEntry {
+	role: string | null;
+	tipo: string;
+	model: string | null;
+	sectionTipo: string | null;
+}
+
+/**
+ * A ddo_map field that is a LITERAL address — a string that is not the 'self'
+ * sentinel. 'self' names the host element/section, which this index has no
+ * runtime context to resolve, so it is not an address here.
+ */
+function literalAddress(value: unknown): string | null {
+	if (typeof value !== 'string' || value === 'self') return null;
+	return value;
+}
+
+/** One ddo_map entry resolved, or null when it addresses nothing usable. */
+async function resolveDdoMapEntry(raw: unknown): Promise<DdoMapEntry | null> {
+	if (raw === null || typeof raw !== 'object') return null;
+	const entry = raw as Record<string, unknown>;
+	const tipo = literalAddress(entry.tipo);
+	if (tipo === null) return null;
+	return {
+		role: typeof entry.role === 'string' ? entry.role : null,
+		tipo,
+		model: await getModelByTipo(tipo),
+		sectionTipo: literalAddress(entry.section_tipo),
+	};
+}
+
+/** The addressable entries of one ddo_map, each resolved ONCE. */
+async function resolveDdoMapEntries(ddoMap: readonly unknown[]): Promise<DdoMapEntry[]> {
+	const entries: DdoMapEntry[] = [];
+	for (const raw of ddoMap) {
+		const entry = await resolveDdoMapEntry(raw);
+		if (entry !== null) entries.push(entry);
+	}
+	return entries;
+}
+
+/** The section this pair's source role names, or null when the map has none. */
+function pairSourceSection(entries: readonly DdoMapEntry[], sourceRole: string): string | null {
+	const source = entries.find(
+		(entry) => entry.role === sourceRole && entry.model === 'section' && entry.sectionTipo !== null,
+	);
+	return source?.sectionTipo ?? null;
+}
+
+/** The component this pair's linker role names, or null when it is not one. */
+function pairLinkerTipo(entries: readonly DdoMapEntry[], linkerRole: string): string | null {
+	const linker = entries.find(
+		(entry) => entry.role === linkerRole && entry.model !== null && LINKER_MODELS.has(entry.model),
+	);
+	return linker?.tipo ?? null;
+}
+
+/** Fold one tool's ddo_map into the index, one declared pair at a time. */
+async function indexToolConfig(
+	index: Map<string, string[]>,
+	toolName: string,
+	rawConfig: unknown,
+): Promise<void> {
+	// A tool that declares no picker link contributes nothing — the ordinary
+	// case, and the safe one.
+	const wiring = TOOL_PICKER_WIRING[toolName];
+	if (wiring === undefined) return;
+	const ddoMap = (rawConfig as { ddo_map?: unknown } | null)?.ddo_map;
+	if (!Array.isArray(ddoMap)) return;
+
+	const entries = await resolveDdoMapEntries(ddoMap);
+	for (const pair of wiring) {
+		addPairToIndex(
+			index,
+			pairLinkerTipo(entries, pair.linkerRole),
+			pairSourceSection(entries, pair.sourceRole),
+		);
+	}
+}
+
+/**
+ * Record one resolved pair. A pair whose map supplies only one half — the tool
+ * is configured on this element without its picker, the ordinary partial
+ * install — adds nothing.
+ */
+function addPairToIndex(
+	index: Map<string, string[]>,
+	linkerTipo: string | null,
+	sectionTipo: string | null,
+): void {
+	if (linkerTipo === null || sectionTipo === null) return;
+	const merged = index.get(linkerTipo) ?? [];
+	if (!merged.includes(sectionTipo)) merged.push(sectionTipo);
+	index.set(linkerTipo, merged);
+}
+
+async function toolDeclaredTargetIndex(): Promise<Map<string, string[]>> {
+	const cached = toolDeclaredTargetsCache.get('index');
+	if (cached !== undefined) return cached;
+
+	const index = new Map<string, string[]>();
+	for (const node of await getNodesWithProperty('tool_config')) {
+		const bag = node.properties.tool_config;
+		if (bag === null || typeof bag !== 'object') continue;
+		for (const [toolName, rawConfig] of Object.entries(bag as Record<string, unknown>)) {
+			await indexToolConfig(index, toolName, rawConfig);
+		}
+	}
+
+	toolDeclaredTargetsCache.set('index', index);
+	return index;
 }
 
 /**

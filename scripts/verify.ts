@@ -108,6 +108,7 @@ const TRIPWIRES = [
 	'test/unit/crap_complexity_ratchet.test.ts',
 	'test/unit/section_id_int_tripwire.test.ts',
 	'test/unit/thesaurus_picker_tripwire.test.ts',
+	'test/unit/tool_picker_wiring_tripwire.test.ts',
 	'test/unit/error_throw_ratchet.test.ts',
 	'test/unit/error_taxonomy_tripwire.test.ts',
 	'test/unit/client_error_contract_tripwire.test.ts',

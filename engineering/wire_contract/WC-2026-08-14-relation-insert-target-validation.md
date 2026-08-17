@@ -164,3 +164,73 @@ asserting the wire status + code. `test/unit/external_write_refusal_tripwire.tes
 "curated write" fixture now names a caller that DECLARES its target (`test80` → test3);
 the previous fixture (`numisdata434`, absent from the suite DB) was green only because the
 door silently dropped it.
+
+## Addendum 2026-08-17 — a TOOL's ddo_map is a second target declaration
+
+`constraint.targets` (and so gate 1, `off_target`) resolved ONE declaration channel: the
+caller component's own `request_config`. The ontology has a second one. A tool's
+`properties.tool_config.<tool>.ddo_map` wires a working surface whose entries are linked to
+each other, and some of those entries are SECTIONS the operator picks from, published into
+a sibling entry that is a relation component.
+
+tool_indexation is the live case, and the regression it produced was reported from a
+running install: its map pairs `indexing_component` (rsc860, the portal that stores the
+links) with `people_section` (rsc197, a plain section browsed as a thesaurus list), and
+`tools/tool_indexation/js/tool_indexation.js` assigns
+`people_section.linker = indexing_component`. rsc860's own request_config resolves to
+hierarchies (`source: 'hierarchy_types'`) and never names rsc197, so indexing a PERSON —
+the tool's central workflow, and the affordance the client rendered from the very
+tool_config the server had served it — was refused `off_target` at the write door. Two
+authorities declared what may be linked; only one was enforced. (Both halves are recent:
+the gate landed 2026-08-15, the list-row pick affordance 2026-08-15/17. Nothing
+long-standing regressed — the two simply never agreed.)
+
+`picker_constraint.resolveTargets` now UNIONS the tool-declared sources into the caller's
+own, from the same ontology bytes the client was handed, so the affordance and the
+persistence stay one answer. The rules, stated once and enforced by the index:
+
+- **The pair is declared, never inferred.** `src/core/tools/picker_wiring.ts` holds one
+  `{sourceRole, linkerRole}` list per tool — `tool_indexation: people_section →
+  indexing_component` — mirroring the tool's own JS wiring in both live
+  spellings (`tool_indexation.js:501,:753` direct; `:526` and
+  `tool_cataloging.js:316` through `attach_picker`'s `linker` option). Two of the three
+  declared pairs GRANT NOTHING — their source role is an `area_thesaurus`, never a
+  `model: 'section'` entry — and are declared so the table stays total over the tree's real
+  wirings, because an undeclared one is how a picker starts refusing silently the day an
+  install configures it. A tool absent from the table declares no picker link and
+  contributes nothing. `test/unit/tool_picker_wiring_tripwire.test.ts` fails when the table
+  and the JS disagree in either direction, so the two copies of that fact cannot drift.
+- A SOURCE is the entry carrying `sourceRole` whose tipo resolves to a section (model read
+  from the ontology — the stored map carries no `model` key; `enrichToolConfig` stamps it
+  for the wire from the same lookup) and that names a literal `section_tipo`; a `self`
+  sentinel is the host section, not a picker source, and is skipped.
+- A LINKER is the entry carrying `linkerRole` AND of the PORTAL family (`LINKER_MODELS` —
+  the canonical model `component_autocomplete`/`_hi` collapse into): the components whose
+  stored value IS a browsed record link.
+- **Why not a cross-product over the map.** The first shape of this fix paired every
+  section in a ddo_map with every relation component in it, and over-granted twice on the
+  live map: to `references_component` (rsc1368, a portal that DISPLAYS inverse references
+  and receives no picks) and — before the family narrowing — to the status checkbox and
+  select (rsc437/rsc439), whose values come from their own option lists. A ddo_map wires a
+  whole working surface; only one pair of it is a link declaration, and a WRITE gate must
+  not widen on a guess about the rest. Measured after the fix on dedalo7_mht: rsc860 gains
+  rsc197; rsc1368, rsc437 and rsc439 gain nothing.
+- **The empty-target exemption is untouched.** A caller resolving to NO target keeps the
+  "no target constraint exists" answer; unioning a tool source into an empty set would
+  invent a refusal nobody declared (every other section would start failing).
+- **Target gate only.** Gates 2-4 — the read grant on the linked section, selectability,
+  the cap — run unchanged on every locator arriving through a tool-declared source.
+
+Wire effect: `context.picker.targets` (the read side of the same resolver) gains the
+tool-declared sections for those callers — a WIDENING of a list the client only displays
+and never enforces. The derived index is built by an ontology-wide `tool_config` property
+scan and memoized through `createOntologyCache`, so a tool_config edit takes effect on the
+next resolve rather than on a restart.
+
+Gates: `test/unit/relation_insert_target_native.test.ts` — the TARGET describe's
+tool-declared five (the source accepted for the wired linker; the same section still
+refused for an identically-targeted caller in no ddo_map; a PORTAL in an unwired role of
+the same map gaining nothing; the wired role held by a non-portal model gaining nothing;
+the no-declaration caller keeping its exemption), verified red before the change and green
+after — plus `test/unit/tool_picker_wiring_tripwire.test.ts` (new tripwire, indexed in
+`engineering/TRIPWIRES.md` and `scripts/verify.ts`) marrying the table to the tool JS.
