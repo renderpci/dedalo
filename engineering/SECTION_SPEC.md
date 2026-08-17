@@ -213,6 +213,26 @@ Not every component appears in list view. The `section_list` child node's `relat
 > `test/unit/virtual_section_list_columns.test.ts` (DB unit, oracle-free —
 > columns derived from the real section, never hard-coded).
 
+> **ADDENDUM 2026-08-17 — `columns_map` is a FOURTH resolution site, and it does
+> NOT read the Site-B swap.** PHP `common::get_columns_map` (class.common.php:4339-4374)
+> reads `$this->get_properties()` — the element's OWN properties — and does its
+> OWN `section_list` child lookup, but only for `list`/`tm`. Every other mode
+> (`list_thesaurus`, `search`, `edit`, …) reads the element's own properties
+> verbatim. TS was feeding `getElementColumnsMap` the Site-B output
+> (`resolveSourceProperties`, which ALSO swaps for `list_thesaurus`), so a
+> thesaurus list inherited its `section_list_thesaurus` child's
+> `source.columns_map`. Concretely: `rsc197` (Personas) → `rsc1050` declares two
+> columns (`a: rsc85`, `b: rsc1051`) while `rsc85` and `rsc86` both carry
+> `column_id:'a'` — so the client's `get_columns_map` (common.js:1440) merged
+> Nombre+Apellidos into ONE header while the row renderer still emitted a cell
+> per ddo. The "Apellidos" header vanished and every header after it shifted
+> left. Fix: `structure_context.ts` keeps the pre-swap properties as the internal
+> `ownConfigProperties` (destructured out at stamp, never on the wire) and feeds
+> `getElementColumnsMap` from it; the list/tm section_list lookup inside
+> `getElementColumnsMap` is unchanged, exactly as PHP does it. Gate:
+> `test/unit/virtual_section_list_columns.test.ts` — "columns_map feeds from the
+> element OWN properties".
+
 ### 7.2 relation_list — inverse relations ("who calls me?")
 Two distinct consumptions:
 - **Grid columns** for the inverse-references view: `relation_list::get_relation_list_obj` (`core/relation_list/class.relation_list.php:261-339`) — prefers `section_map::get_scope(tipo,'relation_list', strict)` (`:292-304`), falls back to the legacy `relation_list` node's `relations` (`:311-322`).
