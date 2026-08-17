@@ -227,11 +227,21 @@ beforeAll(async () => {
 	// `data_manager.js` reaches the error RENDERER (render_api_error.js), which
 	// imports `common/js/ui.js`, which imports the whole tool machinery
 	// (`core/tools_common/js/tool_common.js`) and, through it, browser globals a
-	// unit test has no business standing up. Masked here. (Until 2026-08-16 that
-	// import did not even RESOLVE on disk — tool_common lived under src/ and the
-	// path was a serving seam; the move to client/dedalo/core/tools_common fixed
-	// the resolution, not the reason for the mask.) Same shape as
-	// client_upload_queue_render.test.ts.
+	// unit test has no business standing up. Masked here.
+	//
+	// The mask CANNOT be undone in afterAll (bun's mock.module is process-global
+	// and mock.restore() does not revert it), and it does not need to be: ui.js is
+	// not importable from disk AT ALL — it pulls `lib/codex-tooltip/dist/tooltip.js`
+	// through a SERVING path that exists only in the browser's URL tree. So every
+	// test that reaches ui.js must mask it (transcription_status_panel,
+	// component_change_value_refresh, component_info_widget_client all do); a
+	// leaked stub can only replace a module that would otherwise THROW, never a
+	// real one. If ui.js ever becomes disk-importable, that changes, and these two
+	// masks need snapshot+re-install.
+	//
+	// (Until 2026-08-16 tool_common.js was itself such a serving-only path —
+	// WC-006 moved it into client/dedalo/core/tools_common/, so that half now
+	// resolves; the tooltip lib is the remaining one.)
 	mock.module(
 		join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'ui.js'),
 		() => ({

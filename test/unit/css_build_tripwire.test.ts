@@ -45,8 +45,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, normalize } from 'node:path';
-import { buildOne, entrypoints } from '../../scripts/build_css.ts';
+import { dirname, join, normalize, sep } from 'node:path';
+import { Glob } from 'bun';
+import { buildOne, entrypoints, SEARCH_DIRS } from '../../scripts/build_css.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -70,6 +71,31 @@ describe('css build tripwire', () => {
 		// would iterate nothing and report GREEN while proving nothing at all.
 		expect(targets.length).toBeGreaterThan(30);
 		expect(targets).toContain('client/dedalo/core/page/css/main.less');
+	});
+
+	test('no .less lives outside the searched trees (SEARCH_DIRS is the whole story)', () => {
+		// build_css searches client/ and tools/ ONLY. A .less anywhere else still
+		// COMPILES when main.less @imports it by relative path — so main.css stays
+		// correct and nothing looks wrong — but it is invisible to entrypoint
+		// discovery and to the --watch rebuild, so editing it during `bun run dev`
+		// silently changes nothing. src/ carried exactly one such file
+		// (tool_common.less) until 2026-08-16 (WC-006), which is why 'src' was in
+		// SEARCH_DIRS at all. Named exemption + a new SEARCH_DIRS entry, or move it.
+		const strays = [...new Glob('**/*.less').scanSync({ cwd: REPO_ROOT })]
+			.map((match) => match.split(sep).join('/'))
+			.filter(
+				(file) =>
+					!file.startsWith('client/') &&
+					!file.startsWith('tools/') &&
+					!file.startsWith('node_modules/') &&
+					!file.startsWith('vendor/') &&
+					!file.includes('/lib/'),
+			)
+			.sort();
+		expect(
+			strays,
+			`.less outside build_css SEARCH_DIRS (${SEARCH_DIRS.join(', ')}). It compiles through an @import but the watcher and entrypoint discovery never see it — the "my .less edit did nothing" trap. Move it under client/ (or tools/), or add its tree to SEARCH_DIRS in scripts/build_css.ts.`,
+		).toEqual([]);
 	});
 
 	test('every committed .css matches a fresh compile of its .less', () => {

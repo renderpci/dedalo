@@ -64,3 +64,56 @@ describe('sw.js consumes the key (a server-only change would be inert)', () => {
 		expect(sw).toContain('await delete_old_caches( cache_name )');
 	});
 });
+
+/**
+ * MANIFEST SHAPE (WC-006, 2026-08-16). tool_common's client machinery moved
+ * INSIDE the core tree on disk (client/dedalo/core/tools_common/) but keeps its
+ * OWN manifest block: that block holds the PHP entry ORDER — after the core js,
+ * before the tools — and applies the TOOLS filter rule PHP applied to it (which
+ * admits css; the core rule would not, and would list it elsewhere). The core
+ * walk therefore SKIPS /tools_common/ (TOOLS_COMMON_REL in dedalo_files.ts).
+ *
+ * Drop that skip and every tools_common file is manifested TWICE — the service
+ * worker then pre-caches a duplicated list. The only other assertion that would
+ * notice is the parity set-compare, which is credentialed AND currently red for
+ * unrelated client drift, so a duplicate would arrive inside an already-failing
+ * diff and read as "the usual". Hence this hermetic, credless gate.
+ */
+describe('the manifest lists tool_common exactly once, in the PHP position', () => {
+	const urls = buildDedaloFilesResponse().result.map((entry) => entry.url);
+	const toolsCommon = urls.filter((url) => url.startsWith('/dedalo/core/tools_common/'));
+
+	test('no duplicate url anywhere in the manifest', () => {
+		const seen = new Set<string>();
+		const duplicates = urls.filter((url) => (seen.has(url) ? true : (seen.add(url), false)));
+		expect(
+			[...new Set(duplicates)],
+			'Duplicated manifest entries. The most likely cause: the core walk in dedalo_files.ts stopped skipping TOOLS_COMMON_REL, so the tools_common block emits every file a second time.',
+		).toEqual([]);
+	});
+
+	test('tool_common IS manifested (the block did not silently vanish)', () => {
+		expect(toolsCommon.length).toBeGreaterThan(0);
+		expect(toolsCommon).toContain('/dedalo/core/tools_common/js/tool_common.js');
+	});
+
+	test('its entries sit AFTER the core js and BEFORE the tools (PHP order)', () => {
+		const firstToolsCommon = urls.findIndex((url) => url.startsWith('/dedalo/core/tools_common/'));
+		// findLastIndex is es2023; the repo's lib target is older, so walk it.
+		let lastToolsCommon = -1;
+		for (let i = urls.length - 1; i >= 0; i--) {
+			if (urls[i]?.startsWith('/dedalo/core/tools_common/') === true) {
+				lastToolsCommon = i;
+				break;
+			}
+		}
+		const firstTool = urls.findIndex((url) => url.startsWith('/dedalo/tools/'));
+		const firstCore = urls.findIndex(
+			(url) => url.startsWith('/dedalo/core/') && !url.startsWith('/dedalo/core/tools_common/'),
+		);
+		expect(firstCore).toBeLessThan(firstToolsCommon);
+		expect(lastToolsCommon).toBeLessThan(firstTool);
+		// contiguous: one block, not scattered through the core walk
+		expect(lastToolsCommon - firstToolsCommon + 1).toBe(toolsCommon.length);
+	});
+});

@@ -62,3 +62,31 @@ list it twice.
 
 `register.schema.json` was not client code and did not move with it: it is now
 `src/core/tools/register.schema.json`.
+
+### Two behaviour changes the move DID make (2026-08-16, same day)
+
+The URL is identical and the bytes are identical, but the SURFACE that answers
+changed, and two of its policies differ from the deleted route's. Found by an
+adversarial review of the move, both now gated:
+
+1. **Confinement got STRONGER, not weaker.** `resolveToolCommonAssetPath` used
+   `confineUnder`, which canonicalises with `realpath` and so refuses a SYMLINK
+   escape; `serveClientAsset` had only a lexical `resolve()` + `startsWith`
+   check, which follows a link straight out of the tree. A move must not lose a
+   guarantee, so the check moved INTO the client handler: it now canonicalises
+   (`safeRealpath`, exported from `core/tools/paths.ts`) and re-tests against a
+   canonical `CLIENT_ROOT`. The whole client tree gained the stronger guard, not
+   just tools_common. Gate: `tools_path_confinement.test.ts` plants a real
+   symlink under `client/dedalo/core/tools_common/js/` and requires a 404 —
+   verified red with the check removed.
+
+2. **The extension allowlist is gone for this subtree.** `serveToolCommonRequest`
+   refused anything outside `SERVABLE_EXTENSIONS`, so
+   `/dedalo/core/tools_common/css/tool_common.less` was a 404. It is now a 200 —
+   the client tree serves what it holds, and always has: `/dedalo/core/page/css/main.less`
+   answers 200 too, as does every other `.less` in `client/`. This is therefore
+   ALIGNMENT with the tree tools_common joined, not a new hole: the source is
+   public, versioned client source with no secret in it, and the `server/`
+   subtree rule that the tools handler exists to enforce has no counterpart here
+   (there is no server code under `client/`). Ledgered rather than "fixed" so
+   the difference is a decision on the record instead of a surprise.

@@ -34,7 +34,7 @@ const REPO_ROOT = resolve(import.meta.dir, '..');
 // `src` is NOT here: no browser stylesheet lives under it. The one that did
 // (tool_common.less) moved to client/dedalo/core/tools_common/css on
 // 2026-08-16 (WC-006) — client source belongs in client/.
-const SEARCH_DIRS = ['client', 'tools'];
+export const SEARCH_DIRS = ['client', 'tools'];
 
 const checkOnly = Bun.argv.includes('--check');
 const watch = Bun.argv.includes('--watch');

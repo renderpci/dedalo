@@ -103,6 +103,15 @@ const TOOL_COMMON_CLIENT_JS = [
 	'client/dedalo/core/tools_common/js/tool_common.js',
 	'client/dedalo/core/tools_common/js/render_tool_common.js',
 ] as const;
+/**
+ * `src/` holds ENGINE TypeScript. A tracked `.js` under it is browser code (that
+ * is what it was for from 2026-07 to 2026-08-16) and would therefore be outside
+ * the census — the blind spot itself, not an instance of it. Named exemptions
+ * would go here with a reason; there are none, and the assertion is ZERO rather
+ * than a pin so a NEW tree cannot repeat the failure. Node-side `.mjs`/`.cjs`
+ * are equally suspect and equally absent.
+ */
+const SRC_BROWSER_JS_EXEMPT: readonly string[] = [];
 /** The compat block's two homes on the server (the flip target of rule 3). */
 const CONVERT_TS = 'src/core/errors/convert.ts';
 const SCHEMA_TS = 'src/core/errors/schema.ts';
@@ -364,6 +373,19 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 				seen.has(file),
 				`${file} not in the census — the shared tool client machinery moved out of client/dedalo again; browser JS is counted by DESTINATION, so it needs a scan root wherever it lives.`,
 			).toBe(true);
+	});
+
+	// The pins above prove the census REACHES two known files. This proves no
+	// browser JS exists where the census cannot reach — the failure mode itself.
+	test('no browser JS hides under src/ (the 2026-08-16 blind spot, re-armed)', () => {
+		const strays = [...new Glob('**/*.{js,mjs,cjs}').scanSync({ cwd: join(REPO_ROOT, 'src') })]
+			.map((match) => `src/${match.split(sep).join('/')}`)
+			.filter((file) => !SRC_BROWSER_JS_EXEMPT.includes(file))
+			.sort();
+		expect(
+			strays,
+			`Tracked JS under src/. src/ is engine TypeScript; a .js there is browser code, and browser code outside the census scan roots (client/dedalo/**, tools/*/js/**) is UNGATED — exactly how two stale \`.result\` envelope reads in tool_common.js survived P4 and blanked every tool header (WC-006, 2026-08-16). Move it to client/dedalo/, or add a SCAN_ROOT in scripts/lib/client_compat_census.ts AND a reason in SRC_BROWSER_JS_EXEMPT.`,
+		).toEqual([]);
 	});
 
 	test('the non-envelope allowlist is printed: every entry, its hit count and its reason', () => {

@@ -58,8 +58,14 @@ function rootIsForbidden(canonicalPath: string): boolean {
 	return forbidden.some((f) => canonicalPath === f || canonicalPath.startsWith(f + sep));
 }
 
-/** realpathSync that returns null instead of throwing on a missing path. */
-function safeRealpath(path: string): string | null {
+/**
+ * realpathSync that returns null instead of throwing on a missing path.
+ * Exported because the CLIENT static handler (src/server.ts serveClientAsset)
+ * needs the SAME canonicalisation: since 2026-08-16 it serves the tool_common
+ * subtree that used to have its own confineUnder-based route (WC-006), and a
+ * lexical `resolve()` alone follows a symlink straight out of the tree.
+ */
+export function safeRealpath(path: string): string | null {
 	try {
 		return realpathSync(path);
 	} catch {
