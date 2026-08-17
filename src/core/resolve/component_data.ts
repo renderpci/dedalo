@@ -178,6 +178,21 @@ export interface SectionsEnvelope {
 		 * renders no link arrow at all. Absent = "not a thesaurus row", never false.
 		 */
 		is_indexable?: boolean;
+		/**
+		 * `false` when the row's section declares NO `thesaurus.is_indexable`
+		 * component — i.e. it has no per-term selectability contract at all, the
+		 * ordinary case for every non-thesaurus picker target (People, rsc197).
+		 * The key is emitted ONLY in that case and never carries `true`: a
+		 * section that does declare the contract answers per row through
+		 * `is_indexable` above, and the two keys are mutually exclusive.
+		 *
+		 * It exists because silence was being read as "unknown". `relations/
+		 * save.ts` gate 3 exempts a no-contract target (the pick is authorized),
+		 * so the client must be able to draw the arrow for it —
+		 * `thesaurus_picker.term_selectability` turns this key into `true`.
+		 * Both sides now read `ontology/section_map.declaresTermSelectability`.
+		 */
+		selectability_declared?: false;
 	}[];
 }
 

@@ -583,8 +583,11 @@ const render_column_id = function(options) {
 			// envelope entry for sections whose section_map declares it, and the
 			// entry reaches this callback verbatim as options.locator — so a search
 			// result is pickable exactly when the server says the term is. A section
-			// that declares no such concept still answers nothing: UNKNOWN, no
-			// affordance, never a guess.
+			// that declares no such concept says THAT instead
+			// (`selectability_declared:false`), which the write gate already treats
+			// as an exemption, so its rows are pickable too. Only a declaring
+			// section that fails to answer for a row stays UNKNOWN — never a guess
+			// in either direction.
 			const control = render_term_pick_control({
 				picker		: picker,
 				term		: {
@@ -593,9 +596,12 @@ const render_column_id = function(options) {
 					label			: self.label ? self.label : ''
 				},
 				selectable	: term_selectability(picker, {
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					is_indexable	: locator?.is_indexable
+					section_tipo			: section_tipo,
+					section_id				: section_id,
+					is_indexable			: locator?.is_indexable,
+					// the section declares no per-term contract at all (People,
+					// rsc197). Channel 3 — see term_selectability.
+					selectability_declared	: locator?.selectability_declared
 				}),
 				parent		: fragment
 			})

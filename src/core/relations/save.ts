@@ -1158,17 +1158,16 @@ async function callerDeclaresTreePicker(componentTipo: string): Promise<boolean>
  * Does this target section declare a per-term selectability contract? The SCOPE
  * of gate 3's exemption (b), and only that.
  *
- * The predicate is `isIndexable`'s own precondition (ts_object.ts): the
- * section_map's `thesaurus.is_indexable` must name a component tipo — a string.
- * `false`, `null` and absent all mean "this section has no selectable-term
- * flag", which is the ordinary case for every non-thesaurus target.
+ * The predicate itself lives in ontology/section_map.ts and is SHARED with
+ * section/read.ts, which stamps the same answer on list rows so the picker's
+ * affordance and this gate cannot disagree — ledger:
+ * WC-2026-08-17-list-row-selectability-declared. It used to be a private copy
+ * here; two copies of a gate predicate is how the arrow went missing on rows
+ * this gate was already exempting.
  */
 async function targetDeclaresSelectability(sectionTipo: string): Promise<boolean> {
-	const { getSectionMap } = await import('../ontology/section_map.ts');
-	const declared = (
-		(await getSectionMap(sectionTipo))?.thesaurus as { is_indexable?: unknown } | undefined
-	)?.is_indexable;
-	return typeof declared === 'string' && declared !== '';
+	const { declaresTermSelectability } = await import('../ontology/section_map.ts');
+	return await declaresTermSelectability(sectionTipo);
 }
 
 /**

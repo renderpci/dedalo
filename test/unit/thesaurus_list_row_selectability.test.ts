@@ -21,7 +21,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
-import { getSectionMap } from '../../src/core/ontology/section_map.ts';
+import { declaresTermSelectability, getSectionMap } from '../../src/core/ontology/section_map.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { readSection } from '../../src/core/section/read.ts';
 
@@ -61,7 +61,11 @@ const readEntries = (tipo: string, mode: string) =>
 			(item) => (item as { typo?: string }).typo === 'sections',
 			// biome-ignore lint/suspicious/noExplicitAny: envelope entries are the assertion target
 		) as any;
-		return (envelope?.entries ?? []) as { section_id: number; is_indexable?: boolean }[];
+		return (envelope?.entries ?? []) as {
+			section_id: number;
+			is_indexable?: boolean;
+			selectability_declared?: false;
+		}[];
 	});
 
 describe.if(hasDb)('list-row selectability (thesaurus picker)', () => {
@@ -113,16 +117,43 @@ describe.if(hasDb)('list-row selectability (thesaurus picker)', () => {
 		expect(byId.get(SCRATCH_INDEXABLE)).toBe(true);
 	});
 
-	test('a section with NO is_indexable contract carries no key at all', async () => {
+	test('a section with NO is_indexable contract says so, and never answers per row', async () => {
 		// test3's section_map declares a thesaurus scope but no is_indexable
-		// component — absent, never `false`.
-		const thesaurus = (await getSectionMap('test3'))?.thesaurus as { is_indexable?: unknown };
-		expect(thesaurus?.is_indexable).toBeUndefined();
+		// component — absent, never `false`. The read states THAT
+		// (WC-2026-08-17-list-row-selectability-declared): silence used to be read
+		// by the client as UNKNOWN, so rows the write gate exempts lost their
+		// pick arrow.
+		expect(await declaresTermSelectability('test3')).toBe(false);
 
 		const entries = await readEntries('test3', 'list');
 		expect(entries.length).toBeGreaterThan(0);
 		for (const entry of entries) {
 			expect('is_indexable' in entry).toBe(false);
+			expect(entry.selectability_declared).toBe(false);
 		}
+	});
+
+	test('the two keys are mutually exclusive — a declaring section never sends the exemption', async () => {
+		// rsc197 declares the contract, so its rows answer per term and must NOT
+		// carry the blanket exemption; otherwise a term explicitly flagged
+		// NOT indexable would still be offered the arrow.
+		expect(await declaresTermSelectability('rsc197')).toBe(true);
+
+		const entries = await readEntries('rsc197', 'list_thesaurus');
+		expect(entries.length).toBeGreaterThan(0);
+		for (const entry of entries) {
+			expect('selectability_declared' in entry).toBe(false);
+		}
+	});
+
+	test('THE predicate is shared with the write gate, not copied', async () => {
+		// gate 3's exemption scope (relations/save.ts targetDeclaresSelectability)
+		// and the read's stamp must be the same function. Two copies is exactly
+		// how the arrow went missing on rows the gate was already exempting, so
+		// the private copy is gone and this pins the delegation.
+		const source = await Bun.file('src/core/relations/save.ts').text();
+		expect(source).toContain('declaresTermSelectability');
+		// no re-derivation of the predicate next to the gate
+		expect(source).not.toContain('thesaurus as { is_indexable?: unknown }');
 	});
 });

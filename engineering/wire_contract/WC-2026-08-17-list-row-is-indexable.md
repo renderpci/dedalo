@@ -28,7 +28,12 @@ query, that already answers for tree nodes.
 
 Absent ≠ `false`. A section that declares no `is_indexable` component has no
 selectable-term contract at all (the same scope the write path's
-`targetDeclaresSelectability` uses), so its rows carry no key.
+`targetDeclaresSelectability` uses), so its rows carry no `is_indexable` key.
+
+**Amended same day** by `WC-2026-08-17-list-row-selectability-declared`: those
+rows are no longer SILENT. They carry `selectability_declared:false`, because
+the client read silence as UNKNOWN and withheld the pick arrow from rows the
+write gate was already exempting. `is_indexable` itself is unchanged.
 
 ## Reason
 
@@ -46,7 +51,9 @@ follows the same answer the write path enforces.
 populated (dedalo7_mht: zero of 357 `rsc197` records carry `rsc1028`), every row
 answers `false` and no arrow renders. That is data, not a defect in this seam:
 PHP allowed the pick because it never asked. Flag the terms, or drop
-`is_indexable` from the section_map, to make the surface pickable again.
+`is_indexable` from the section_map, to make the surface pickable again — the
+latter now works end to end via the amendment above (no contract → the write
+gate's exemption → the arrow).
 
 ## Gate reconciliation
 

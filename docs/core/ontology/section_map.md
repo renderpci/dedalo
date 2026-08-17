@@ -111,6 +111,50 @@ flowchart TD
     Q1 -- exhausted --> NULL["return null"]
 ```
 
+### The `is_indexable` contract: declared, or absent
+
+The `is_indexable` role is what lets a cataloguer **exclude** individual records
+from being used as indexation targets. It names a `component_radio_button` whose
+value is a locator into the yes/no section `dd64` — first locator `section_id`
+`1` = yes, `2` = no. On `dedalo7_monedaiberica` the thesaurus template section
+`hierarchy20` declares it in its `section_map` child `hierarchy52`:
+
+```json
+{
+  "thesaurus": {
+    "term": "hierarchy25", "model": "hierarchy27", "order": "hierarchy2",
+    "parent": "hierarchy36",
+    "is_indexable": "hierarchy24", "is_descriptor": "hierarchy23"
+  }
+}
+```
+
+Whether the role is **declared at all** is itself a decision with consequences,
+and `declaresTermSelectability(sectionTipo)` is the one predicate that answers
+it — `thesaurus.is_indexable` must *name a component tipo*; `false`, `""`,
+`null` and absent all mean "not declared".
+
+| | declared | not declared |
+| --- | --- | --- |
+| What the section is saying | "judge my records one by one" | "I have no selectable-term flag" |
+| Per-record answer | the record's own flag; **no value ⇒ `false`** | — there is nothing to answer |
+| The pick affordance | drawn only on records flagged yes | drawn on every row |
+| Saving a pick | the flag is re-checked | exempt — nothing to re-check |
+
+The same predicate serves both the affordance and the save, so what the client
+offers and what the write accepts cannot drift apart.
+
+!!! danger "Declaring the role excludes every record that has no value"
+    A record with no value for the component reads as **not indexable**, not as
+    "unset". So adding `is_indexable` to a section whose records were never
+    flagged makes all of them un-pickable at once — the opposite of what an
+    *exclusion* control is for.
+
+    Declare the role together with a `dato_default` of `dd64`/`1` on the
+    component (so new records are born indexable, as `hierarchy24` is) **and** a
+    backfill of the existing corpus. Otherwise the only pickable records are the
+    handful somebody happened to flag by hand.
+
 ### The separator travels with the term
 
 `getFieldsSeparator()` (private, `ts_object/term_resolver.ts`) does **not** read
@@ -162,6 +206,7 @@ cached in `term_resolver.ts`.**
 | --- | --- | --- |
 | `getSectionMap(sectionTipo)` | `ontology/section_map.ts` | The raw `section_map` object; virtual-section-aware (falls back to the node's `relations[0].tipo`). `null` when absent. Cached per `sectionTipo`, hub-cleared. |
 | `getSectionMapValue(sectionTipo, scope, key)` | `ontology/section_map.ts` | Direct lookup + `SCOPE_FALLBACK` walk in one call. Returns `null` when nothing owns the key. |
+| `declaresTermSelectability(sectionTipo)` | `ontology/section_map.ts` | Does this section declare a per-term selectability contract — i.e. does `thesaurus.is_indexable` **name a component tipo**? See [The `is_indexable` contract](#the-is_indexable-contract-declared-or-absent). |
 | `clearSectionMapCache()` | `ontology/section_map.ts` | Drop the raw-map cache. Registered with the ontology invalidation hub. |
 | `resolveKeyScope()` *(private)* | `ts_object/term_resolver.ts` | Which scope owns the `term` key — used inside the term resolver only. |
 | `getTermTipos(sectionTipo, scope)` | `ts_object/term_resolver.ts` | Normalizes the `term` role's value to a string array. |

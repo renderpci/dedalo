@@ -359,6 +359,44 @@ describe('THESAURUS PICKER CLIENT TEST', function() {
 			assert.equal(term_selectability(picker, { ...TERM_UNKNOWN, is_indexable:false }), false)
 		})
 
+		it('a section that declares NO contract answers SELECTABLE, not unknown', function() {
+			const area		= make_area({ data: SELECTABLE_DATA() })
+			const linker	= make_linker('no_contract')
+			const picker	= attach_picker(area, { linker, caller: make_caller() })
+
+			// The section list read stamps `selectability_declared:false` on every row
+			// of a section whose section_map names no `is_indexable` component (People,
+			// browsed as a picker by the indexation tool). That is a server ANSWER —
+			// "there is no per-term flag here" — and the save path already exempts such
+			// a target, so the row must be pickable. Before this channel existed the
+			// read said nothing and the row was indistinguishable from UNKNOWN, which
+			// withheld the arrow from records the save would have accepted.
+			const row = { ...TERM_UNKNOWN, selectability_declared:false }
+			assert.equal(term_selectability(picker, row), true)
+
+			const control = render_term_pick_control({ picker, term: row })
+			assert.notEqual(control, null, 'a no-contract row gets the link affordance')
+		})
+
+		it('the exemption never overrides an answer the server DID give', function() {
+			const area		= make_area({ data: SELECTABLE_DATA() })
+			const linker	= make_linker('contract_wins')
+			const picker	= attach_picker(area, { linker, caller: make_caller() })
+
+			// The two keys are mutually exclusive on the wire, but precedence is pinned
+			// here anyway: a term explicitly flagged NOT indexable stays unpickable, or
+			// the exclusion control would be silently defeated by a stale key.
+			assert.equal(
+				term_selectability(picker, { ...TERM_UNKNOWN, is_indexable:false, selectability_declared:false }),
+				false
+			)
+			// and a root term the area read answered for keeps that answer
+			assert.equal(
+				term_selectability(picker, { ...TERM_ROOT, selectability_declared:false }),
+				term_selectability(picker, TERM_ROOT)
+			)
+		})
+
 		it('a SELECTABLE term renders an active control and publishes ON THE CLICK', async function() {
 			const area		= make_area({ data: SELECTABLE_DATA() })
 			const linker	= make_linker('selectable_publish')

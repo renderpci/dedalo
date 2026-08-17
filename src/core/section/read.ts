@@ -1719,14 +1719,27 @@ export async function readSectionRows(
 	// term_selectability answered UNKNOWN and refused the pick arrow on every
 	// search result (the primary way into a large thesaurus). Stamp the SAME
 	// fact here, from the SAME resolver, so the affordance follows a server
-	// answer and never a guess. Only for sections that actually declare the
-	// concept: absent means "not a thesaurus row", which is not `false`.
+	// answer and never a guess.
+	//
+	// TWO ANSWERS, BOTH EXPLICIT (2026-08-17). A section that declares no
+	// `thesaurus.is_indexable` has no per-term contract — and `relations/save.ts`
+	// gate 3 ALREADY exempts it: the pick is authorized, nothing to re-ask. The
+	// read used to say nothing at all in that case, the client read the silence
+	// as UNKNOWN, and every row of such a section (rsc197, People, reached
+	// through tool_indexation's people picker) rendered with no link arrow while
+	// the write door stood open. So the no-contract case is now STATED —
+	// `selectability_declared: false` on each entry, from `declaresTermSelectability`,
+	// the same predicate the gate reads. Silence is no longer an answer here.
 	if (mode === 'list' || mode === 'list_thesaurus') {
-		const { getSectionMap } = await import('../ontology/section_map.ts');
-		const sectionMap = (await getSectionMap(callerTipo)) as {
-			thesaurus?: { is_indexable?: unknown };
-		} | null;
-		if (typeof sectionMap?.thesaurus?.is_indexable === 'string' && envelope.entries.length > 0) {
+		const { declaresTermSelectability } = await import('../ontology/section_map.ts');
+		const declared = await declaresTermSelectability(callerTipo);
+		if (!declared) {
+			// No contract: say so once per row. The client turns this into
+			// "selectable", matching gate 3's exemption exactly.
+			for (const entry of envelope.entries) {
+				entry.selectability_declared = false;
+			}
+		} else if (envelope.entries.length > 0) {
 			const { fetchNodeInfo } = await import('../ts_object/node_repository.ts');
 			const info = await fetchNodeInfo(
 				envelope.entries.map((entry) => ({
