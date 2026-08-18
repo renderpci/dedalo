@@ -397,7 +397,7 @@ DEDALO_ACCESS_LOG=true
 DEDALO_SLOW_REQUEST_MS=5000
 
 # --- Ontology ---
-ACTIVE_ONTOLOGY_TLDS=dd,rsc,oh,ich,lg,hierarchy   # else the update panel shows only the two core TLDs
+ACTIVE_ONTOLOGY_TLDS=dd,rsc,ontology,ontologytype,hierarchy,lg,utoponymy,nexus,oh,ich   # core set + this install's domain TLDs
 ENV
 ```
 

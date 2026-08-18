@@ -96,6 +96,11 @@ export interface MatrixRecord {
 	rawText: Partial<Record<MatrixJsonbColumn, string | null>>;
 }
 
+/** Whether tableName is a known matrix RECORD table (the allowlist, no throw). */
+export function isMatrixTable(tableName: string): boolean {
+	return MATRIX_TABLE_ALLOWLIST.includes(tableName);
+}
+
 /** Throws unless tableName is a known matrix table (identifier gate). */
 export function assertMatrixTable(tableName: string): void {
 	if (!MATRIX_TABLE_ALLOWLIST.includes(tableName)) {
