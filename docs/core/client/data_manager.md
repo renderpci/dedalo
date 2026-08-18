@@ -319,7 +319,8 @@ For payloads delivered incrementally:
   consumers read frames with `normalize_stream_error`), and invoking
   `on_read` / `on_done` callbacks. It **returns the reader** driving the stream.
   Each reader is also registered in `page_globals.stream_readers` so navigation
-  can abort all in-flight readers.
+  can abort all in-flight readers, and `read_stream` releases its own reader from
+  that registry when the stream ends — see below.
 - **`release_stream_reader(reader, reason)`** cancels one reader and splices it
   out of that registry. It is the teardown for any consumer that stops following
   a stream **before** the page unloads.
@@ -349,6 +350,26 @@ Both streaming methods also attach the CSRF header.
     Splice **by identity**. The registry is shared with `make_backup`, the
     `move_*` widgets, `tool_diffusion`, the unit-test runner and the job
     followers — emptying it releases other consumers' readers too.
+
+!!! note "`on_done` fires exactly once, however the stream ends"
+    `on_done(true)` on normal completion, `on_done(false)` on an abnormal end —
+    a read failure, or a throw out of your own `on_read`. Either way
+    `read_stream` releases its own reader first, so a stream that ends by itself
+    neither leaks a registry entry nor holds its connection. A consumer that
+    gives up EARLY still has to release its own reader — that is what the
+    warning above is about.
+
+    A throw out of `on_done` itself is reported as a consumer bug and never
+    re-enters it. That guard is not cosmetic: the internal failure handler shares
+    a promise chain with the success path, so without it your throwing `on_done`
+    would be called a second time, with a console line blaming a transport
+    failure that never happened.
+
+    The failure half matters as much as the tidy-up. A read error used to be
+    logged and nothing else, so `on_done` never ran; `job_follow` calls its
+    `finish()` from `on_done`, which meant a dropped connection mid-job left the
+    caller with no outcome and no error — indistinguishable from a job still
+    running, forever.
 
 ## JS files and functions
 

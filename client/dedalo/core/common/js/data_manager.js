@@ -692,10 +692,20 @@ data_manager.request_fetch_stream = async function(options) {
 * a dead consumer still occupies one of the browser's six per-origin HTTP/1.1
 * connections, and six of them starve the whole origin (`/health` included).
 *
+* (!) This function now releases the reader ITSELF when the stream ends — on
+* completion and on a read failure alike. It previously did neither, so the
+* registry grew unboundedly and a failed read left both the entry and the
+* connection behind.
+*
 * @see https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
 * @param {ReadableStream} stream - Body stream obtained from `response.body`
 * @param {Function} on_read - Called for each complete SSE message: `on_read(sse_response, reader)`
-* @param {Function} on_done - Called once when the stream is fully consumed: `on_done(true)`
+* @param {Function} on_done - Called EXACTLY ONCE when the stream ends, whatever
+*   the reason: `on_done(true)` on normal completion, `on_done(false)` on an
+*   abnormal end — a read failure OR a throw out of the consumer's own
+*   `on_read`. The reader is released (cancelled and spliced out of
+*   `page_globals.stream_readers`) before it fires, on both paths. A throw out
+*   of `on_done` itself is reported as a consumer bug and never re-enters it.
 * @returns {ReadableStreamDefaultReader} the reader driving this stream, so the
 *   caller can release it (see `release_stream_reader`). Returned rather than only
 *   handed to `on_read`: a consumer that must cancel BEFORE the first frame arrives
@@ -708,6 +718,26 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 
 	// register reader (allow stop on page navigation)
 	page_globals.stream_readers.push(reader)
+
+	// THE single terminal path. `on_done` must fire exactly once however the
+	// stream ends, and the `.catch` below sits on the SAME promise chain as the
+	// success handler — so without this guard a consumer whose own on_done()
+	// threw would land in that catch and be called a SECOND time, with a
+	// console line blaming a transport failure that never happened.
+	let ended = false
+	const end_stream = (ok, reason, error) => {
+		if (ended===true) {
+			// we already ended: this is the consumer's own callback throwing back
+			// through our chain, not a stream failure. Report it as what it is.
+			console.error('[data_manager] read_stream: the consumer on_done/on_read handler threw', error);
+			return
+		}
+		ended = true
+		// release BEFORE on_done, so a consumer that starts another stream from
+		// its completion handler sees a clean registry
+		release_stream_reader(reader, reason)
+		on_done(ok)
+	}
 
 	// exec previous callback
 	on_read({
@@ -732,8 +762,13 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				if (done) {
 					// Log a message
 					console.log('Stream finished', done, value);
-					// exec callback function on_done
-					on_done(true)
+					// (!) RELEASE. A finished stream still left this reader in the shared
+					// page_globals.stream_readers registry, which nothing else ever prunes —
+					// so the array grew by one entry per stream for the life of the page.
+					// Released BEFORE on_done so a consumer that starts another stream from
+					// its completion handler sees a clean registry. Double release is safe:
+					// release_stream_reader splices by identity and ignores an unknown reader.
+					end_stream(true, 'stream finished')
 					// Return from the function
 					return;
 				}
@@ -816,8 +851,24 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				readChunk();
 			})
 			.catch(error => {
-				// Log the error
-				console.error(error);
+				// (!) A read failure ENDS the stream, so the consumer must be told. This
+				// used to only log: on_done never fired, so a consumer waiting on it
+				// waited forever — job_follow calls finish() from on_done, so a dropped
+				// connection mid-job left the caller with no outcome and no error,
+				// indistinguishable from a job still running. The reader also stayed in
+				// the registry, holding one of the browser's six per-origin HTTP/1.1
+				// connections against a stream that is over.
+				// Degraded behaviour: on_done(false) — the same completion signal, with
+				// `false` naming it an abnormal end (both consumers today ignore the
+				// argument, so this only adds information).
+				// Reached by a read() rejection (dropped connection) AND by a throw from
+				// the consumer's own on_read — both end the stream, so both end here.
+				// end_stream tells them apart: if the stream had already ended it
+				// reports a consumer-handler bug instead of a transport failure.
+				if (ended===false) {
+					console.error('[data_manager] read_stream ended abnormally', error);
+				}
+				end_stream(false, 'read failed', error)
 			});
 	};
 	// Start reading the first chunk
@@ -857,7 +908,16 @@ export const release_stream_reader = function(reader, reason='consumer released'
 	}
 
 	try {
-		reader.cancel(reason)
+		// (!) `cancel()` on an ERRORED stream returns a promise REJECTED with the
+		// stored error — the try/catch only guards a SYNCHRONOUS throw, so without
+		// handling the returned promise every dropped connection logged an
+		// "Uncaught (in promise)" on top of its real error (twice, when the
+		// consumer released as well). Nothing to do with it: we are abandoning
+		// this stream and the caller already has the failure.
+		const cancelled = reader.cancel(reason)
+		if (cancelled && typeof cancelled.catch==='function') {
+			cancelled.catch(() => {})
+		}
 	} catch (error) {
 		if (SHOW_DEBUG===true) {
 			console.warn('release_stream_reader: cancel failed', error)
