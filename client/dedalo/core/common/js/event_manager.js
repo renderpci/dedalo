@@ -174,19 +174,37 @@ class event_manager_class {
 	 * Fires the named event, invoking every subscribed callback in insertion order.
 	 *
 	 * All callbacks receive the same `data` argument. Callbacks are called synchronously
-	 * in the order they were subscribed. The method collects each callback's return value
-	 * into a results array, which is returned to the caller — useful when a subscriber
-	 * signals cancellation or provides a transformed value.
+	 * in the order they were subscribed. The method collects the return value of each
+	 * callback THAT RAN into a results array, which is returned to the caller — useful
+	 * when a subscriber signals cancellation or provides a transformed value. See
+	 * ISOLATION below for which callbacks run and which contribute a value.
 	 *
 	 * Returns false (not an empty array) when there are no subscribers, allowing callers
 	 * to distinguish "no listeners" from "listeners returned nothing".
 	 *
-	 * (!) Callbacks are not wrapped in try/catch. A throwing callback will abort the
-	 * remaining subscribers in the Set iteration.
+	 * ISOLATION. Every callback runs in its own try/catch: one throwing subscriber
+	 * is logged and skipped, and the remaining subscribers still run. Before this,
+	 * a single throw aborted the Set iteration — which mattered most on `api_error`,
+	 * where page.js, error_dispatch and per-tool policies all listen, so one bad
+	 * handler disabled error reporting for the rest of the session. A callback that
+	 * throws contributes NO entry to the results array (callers iterate the results
+	 * and dereference them; a placeholder would just move the crash downstream).
+	 * Swallow is legal here per CONVENTIONS §1: best-effort listener fan-out,
+	 * REPORTED with the event name, degraded behaviour defined (that subscriber's
+	 * side effect is skipped, everyone else's still happens).
+	 *
+	 * MUTATION DURING DISPATCH. The subscriber list is snapshotted, so a callback
+	 * subscribed by another callback during this publish does NOT fire in this pass
+	 * (it fires on the next one). Removals ARE honoured: each entry is re-checked
+	 * against the live Set immediately before it is invoked, so a handler torn down
+	 * mid-dispatch — `destroy()` unsubscribes its tokens and NULLS `context`, `data`
+	 * and `node` — is never called after its instance is gone. A `clear_event` /
+	 * `clear_all` during dispatch stops the remaining callbacks for the same reason.
 	 *
 	 * @param {string} event_name - The name of the event to publish
 	 * @param {*} data - Data to pass to each callback function (defaults to empty object)
-	 * @returns {Array|boolean} Array of callback return values, or false if no subscribers
+	 * @returns {Array|boolean} Array of the return values of the callbacks that ran
+	 *   (throwers omitted), or false if there were no subscribers at all
 	 *
 	 * @example
 	 * // Publish with data
@@ -202,14 +220,32 @@ class event_manager_class {
 		const callbacks = this.eventMap.get(event_name);
 		if (!callbacks || callbacks.size === 0) return false;
 
-		// Snapshot the subscriber set before dispatch so that subscribers added or
-		// removed during this publish (e.g. subscribe_once self-unsubscribing, or a
-		// handler re-arming itself) do not change which callbacks fire in this pass.
-		// Use forEach for better performance than for...of with array creation
+		// Snapshot: `Set.prototype.forEach` VISITS entries appended during iteration,
+		// so the previous implementation fired handlers that subscribed themselves
+		// mid-dispatch — while its comment claimed the opposite.
+		const snapshot = [...callbacks];
+
 		const results = [];
-		callbacks.forEach(callback => {
-			results.push(callback(data));
-		});
+		for (let i = 0; i < snapshot.length; i++) {
+
+			const callback = snapshot[i];
+
+			// still subscribed? A snapshot alone would keep calling handlers that
+			// were unsubscribed earlier in this very dispatch — including instances
+			// destroy() has already torn down and emptied. Re-checking the live Set
+			// (and that it is still THE set for this event, so clear_event/clear_all
+			// take effect too) is what makes teardown-during-publish safe.
+			if (this.eventMap.get(event_name) !== callbacks || !callbacks.has(callback)) {
+				continue;
+			}
+
+			try {
+				results.push(callback(data));
+			} catch (error) {
+				// best-effort fan-out: report and keep going (see ISOLATION above)
+				console.error(`[event_manager] subscriber threw while handling '${event_name}'`, error);
+			}
+		}
 
 		return results;
 	}

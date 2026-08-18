@@ -66,16 +66,36 @@ tokenMap : Map<token, {event_name, callback}>   // reverse index for fast unsubs
 
 ### Synchronous, insertion-ordered dispatch
 
-`publish(event_name, data = {})` invokes every subscribed callback
+`publish(event_name, data = {})` invokes the subscribed callbacks
 **synchronously, in subscription order**, passing each the same `data`. It
-collects the callbacks' return values into an array and returns it. When there are
+collects the return values of the callbacks that ran into an array and returns
+it. When there are
 **no subscribers it returns `false`** (not an empty array), so callers can tell
 "no listeners" apart from "listeners returned nothing".
 
-!!! warning "Callbacks are not wrapped in try/catch"
-    A throwing subscriber aborts the remaining callbacks for that publish. Keep
-    subscriber callbacks defensive; do not assume every subscriber will run if an
-    earlier one throws.
+!!! note "Subscribers are isolated from each other"
+    Each callback runs in its own `try`/`catch`. One that throws is reported with
+    `console.error` and skipped; every later subscriber still runs. A thrower
+    contributes **no entry** to the results array, so a caller iterating the
+    results never has to guard against a hole — the array holds only the values
+    of the callbacks that actually returned.
+
+    This matters most on `api_error`, which every failed request publishes and
+    which the page, the error dispatcher and per-tool policies all listen on: a
+    single bad handler used to disable error reporting for the rest of the
+    session.
+
+!!! warning "What a publish sees when subscriptions change mid-dispatch"
+    The subscriber list is **snapshotted** when the publish starts, so a callback
+    subscribed by another callback during that publish does **not** run in the
+    same pass — it runs on the next one.
+
+    Removals are the other way round and **do** take effect immediately: each
+    subscriber is re-checked against the live list right before it is invoked. So
+    a handler whose instance is destroyed earlier in the same dispatch is never
+    called — which matters because `destroy()` nulls `context`, `data` and `node`
+    before the publish finishes. `clear_event` and `clear_all` stop the remaining
+    subscribers for the same reason.
 
 ### Scoped event names
 
@@ -131,7 +151,7 @@ All of the following are methods of `event_manager_class`, exposed via the
 | --- | --- |
 | `subscribe(event_name, callback)` | Register `callback` for the event. Returns an opaque `event_N` token. In `SHOW_DEBUG` mode, re-registering the same callback reference for the same event logs an error and alerts (a dev guard, not a thrown error). |
 | `subscribe_once(event_name, callback)` | Subscribe a callback that unsubscribes **itself before firing**, guaranteeing a single execution. Returns the token of the internal wrapper — so `event_exists(name, callback)` returns `false` for it; use the token to cancel before the first fire. |
-| `publish(event_name, data = {})` | Fire the event synchronously to every subscriber in insertion order. Returns the array of return values, or `false` when there are no subscribers. |
+| `publish(event_name, data = {})` | Fire the event synchronously to every subscriber in insertion order, each isolated in its own `try`/`catch`. Returns the array of return values of the callbacks that ran (throwers omitted), or `false` when there are no subscribers. |
 | `unsubscribe(token)` | Remove the subscription for `token`. Returns `true` if removed, `false` (silently) if the token is unknown/stale. Deletes the event entry when its last subscriber is gone. |
 | `event_exists(event_name, callback)` | `true` if that exact callback **reference** is subscribed to the event (O(1), identity comparison). |
 | `event_name_exists(event_name)` | Returns the callback `Set` (truthy) or `undefined` (falsy) — **not a boolean**. Used to guard against double-subscribing an event. Do not compare with `=== true`. |
