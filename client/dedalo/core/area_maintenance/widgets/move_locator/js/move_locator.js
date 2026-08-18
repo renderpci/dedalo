@@ -53,6 +53,7 @@
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {area_maintenance} from '../../../js/area_maintenance.js'
 	import {render_move_locator} from './render_move_locator.js'
 
 
@@ -124,6 +125,12 @@ export const move_locator = function() {
 	move_locator.prototype.build	= widget_common.prototype.build
 	move_locator.prototype.render	= widget_common.prototype.render
 	move_locator.prototype.destroy	= widget_common.prototype.destroy
+	// data: the panel value (explanation body + the definition files to
+	// pick from) is served by the widget's server getValue and fetched
+	// LAZILY on panel-open by the unified widget load(). Without this
+	// assignment widget_common.load() no-ops and the panel renders with
+	// no body and an EMPTY file list — the transform is unusable.
+	move_locator.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	move_locator.prototype.edit		= render_move_locator.prototype.list
 	move_locator.prototype.list		= render_move_locator.prototype.list

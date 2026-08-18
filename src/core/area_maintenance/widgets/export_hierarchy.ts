@@ -111,7 +111,22 @@ async function exportHierarchySyncActiveStatus(): Promise<WidgetResponse> {
 	return { data: errorCount === 0 };
 }
 
+/**
+ * The panel value the client render reads (`value.export_hierarchy_path`).
+ * ALWAYS null on this engine: the export action writes install dump files
+ * into the PHP tree and is engineDenied below, so there is no configured
+ * EXPORT_HIERARCHY_PATH to report. The client render treats a falsy path as
+ * "exporting not enabled" and shows only the sync form — which is the whole
+ * of what this widget can do here. Without a getValue at all the panel
+ * refuses to load (maintenance.widget_unavailable) and the sync form is
+ * unreachable too.
+ */
+async function exportHierarchyGetValue(): Promise<WidgetResponse> {
+	return { data: { export_hierarchy_path: null } };
+}
+
 export const widget: WidgetModule = {
+	getValue: exportHierarchyGetValue,
 	spec: {
 		id: 'export_hierarchy',
 		category: 'data',

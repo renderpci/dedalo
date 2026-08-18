@@ -71,19 +71,33 @@ export const widget: WidgetModule = {
   card and the opened panel paint from identical data. It is fail-soft: a widget
   whose value cannot be computed must never break the dashboard read.
 
-> **`getValue` is PAGE-LOAD cost — budget it as such (WC-071).** It is not
-> "lazy" in any sense a caller can rely on: `render_area_maintenance.js` builds
-> and renders every widget card on every dashboard load, so whatever `getValue`
-> does happens once per load, per admin, in both Map and List views. Two
-> switches must BOTH be off for a panel to be genuinely deferred — the server
-> `getValue` **and** the client's `<widget>.prototype.get_value` binding, since
-> `widget_common.prototype.load()` only no-ops when
-> `typeof self.get_value !== 'function'`. Dropping the server field alone turns
-> a page-load query into a page-load ERROR. `dataframe_control` is the worked
-> example of getting this wrong: its `getValue` ran a whole-database integrity
-> scan on every dashboard load and could not finish inside the statement
-> timeout. It now has NO `getValue` and scans only on an operator's click.
-> If the work is unbounded or scales with table size, it belongs in
+> **`getValue` is a PAIR — the server field and the client's
+> `<widget>.prototype.get_value` binding are one switch with two halves, and
+> either half alone is a broken panel.** The value fetch is driven by
+> `widget_common.prototype.load()`, which the dashboard fires when a panel
+> opens (plus, at idle, for `background` widgets and for panels restored in the
+> open state). That loader **no-ops when `typeof self.get_value !== 'function'`**,
+> so:
+>
+> - client binding **without** a server `getValue` → opening the panel throws
+>   `maintenance.widget_unavailable` and the widget never renders. It does not
+>   degrade to an empty panel; the whole card dies, actions included.
+> - server `getValue` **without** the client binding → the loader never runs,
+>   `self.value` stays whatever the catalog carried (`null` for a widget with no
+>   `eagerValue`), and the panel paints EMPTY while a perfectly good value sits
+>   unrequested on the server.
+>
+> `test/unit/maintenance_widget_get_value_tripwire.test.ts` gates the pairing in
+> both directions, so a half-wired widget fails there rather than in an admin's
+> browser. Deliberately having NEITHER half is agreement and passes.
+
+> **Budget `getValue` as load-time cost (WC-071).** Whatever it does happens
+> per panel open, per admin, in both Map and List views — and immediately at
+> dashboard load for `background` and restored-open panels. `dataframe_control`
+> is the worked example of getting this wrong: its `getValue` ran a
+> whole-database integrity scan that could not finish inside the statement
+> timeout. It now has NEITHER half of the pair and scans only on an operator's
+> click. If the work is unbounded or scales with table size, it belongs in
 > `apiActions` behind a button, not in `getValue`.
 
 Every handler returns the same envelope: `{ result, msg, errors }`.
@@ -180,9 +194,9 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `make_backup` | data | `make_psql_backup`, `get_dedalo_backup_files` |
 | `build_database_version` | data | `build_recovery_version_file`, `restore_dd_ontology_recovery_from_file` |
 | `update_data_version` | data | `update_data_version` |
-| `export_hierarchy` | data | `sync_hierarchy_active_status` |
+| `export_hierarchy` | data | `sync_hierarchy_active_status` — the export action itself is engine-denied (it writes install dump files), so the panel value reports no export path and only the sync form is offered |
 | `add_hierarchy` | data | *(read-only panel)* |
-| `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang` | migration | one transform action each, named after the widget |
+| `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang` | migration | one transform action each, named after the widget; the panel value carries the explanation body and the JSON definition files to pick from, so both halves of the `getValue` pair are wired |
 | `check_config` | config | `set_maintenance_mode`, `set_recovery_mode`, `set_notification` |
 | `config_areas` | config | `save_config_areas` |
 | `menu_skip_tipos` | config | `save_menu_skip_tipos` |

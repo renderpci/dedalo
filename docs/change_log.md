@@ -10,6 +10,31 @@ Dédalo version
 
 ---
 
+## [Unreleased] - Maintenance panels that would not open, and panels that opened empty
+
+### Fixed
+- **The *Export hierarchy* maintenance panel opens again.** Selecting it in the
+  maintenance area refused with *"The 'export_hierarchy' panel is not available
+  on this engine"* and rendered nothing — which also put its working
+  *Sync hierarchy active status* action out of reach, since the whole card dies
+  with the failed value load. The panel now reports that hierarchy EXPORTING is
+  not offered by this engine (it wrote install dump files) and renders the sync
+  form, which is the operation it actually has.
+
+- **The five migration panels (*Move TLD*, *Move locator*, *Move to portal*,
+  *Move to table*, *Move lang*) show their definition files again.** Each opened
+  with no explanation text and an EMPTY file list, so there was nothing to
+  select and the transform could not be run at all. The engine had been serving
+  the body and the file list all along — the panel simply never asked for it.
+
+    Both bugs are the same invariant broken from opposite sides: a panel's value
+    load is a PAIR (the widget serves a value, the panel asks for it) and either
+    half alone is a broken panel. A gate now checks the pairing in both
+    directions for every maintenance widget, so a half-wired panel fails the
+    test suite instead of an operator's browser.
+
+---
+
 ## [Unreleased] - The login panel is shown once
 
 ### Fixed

@@ -15,7 +15,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { shouldDeactivate } from '../../src/core/area_maintenance/widgets/export_hierarchy.ts';
+import {
+	shouldDeactivate,
+	widget,
+} from '../../src/core/area_maintenance/widgets/export_hierarchy.ts';
 
 const SOURCE_FILE = `${import.meta.dir}/../../src/core/area_maintenance/widgets/export_hierarchy.ts`;
 
@@ -76,5 +79,27 @@ describe('the extraction is REWIRED, not duplicated', () => {
 		// and each predicate survives EXACTLY ONCE in the file, inside the extraction
 		expect(source.split("row.target === 'rsc197'").length - 1).toBe(1);
 		expect(source.split("row.active_ts === '1'").length - 1).toBe(1);
+	});
+});
+
+describe('the panel value', () => {
+	test('getValue exists — without it the panel refuses to open at all', () => {
+		expect(typeof widget.getValue).toBe('function');
+	});
+
+	test('reports NO export path, which is what makes the sync form render', async () => {
+		// The client shows the export form only for a truthy export_hierarchy_path
+		// and the sync form unconditionally. Exporting writes install dump files
+		// and is engine-denied here, so null is the honest answer — and the panel
+		// then offers exactly the one operation this engine has.
+		const response = await widget.getValue?.({}, {} as never);
+		expect(response?.data).toEqual({ export_hierarchy_path: null });
+	});
+
+	test('the export action stays denied — the null path is not a missing config', () => {
+		expect(Object.keys(widget.apiActions ?? {}).sort()).toEqual([
+			'export_hierarchy',
+			'sync_hierarchy_active_status',
+		]);
 	});
 });
