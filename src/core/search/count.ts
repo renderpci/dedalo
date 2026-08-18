@@ -7,6 +7,7 @@
  */
 
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
+import { isMatrixTable } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
@@ -17,7 +18,13 @@ export async function countSectionRecords(
 	sectionTipo: string,
 ): Promise<number | null> {
 	if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 1) return null;
-	if (!(await getMatrixTableFromTipo(sectionTipo))) return null;
+	// A section can DECLARE a table that is not a matrix record store: dd15 Time
+	// Machine → matrix_time_machine (flat columns, read through the mode 'tm'
+	// source, not the search assembler). buildSearchSql refuses it via the
+	// identifier allowlist, and that throw used to kill the WHOLE area dashboard
+	// (dd207 area_admin lists dd15). "Not countable" is the documented null.
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (!table || !isMatrixTable(table)) return null;
 
 	const sqo = sanitizeClientSqo({ section_tipo: [sectionTipo] });
 	sqo.full_count = true;

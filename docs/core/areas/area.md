@@ -169,6 +169,13 @@ A dashboard-behavior area serves an aggregate view over the sections inside it.
   built-in per-section metric; it calls `countSectionRecords`
   (`src/core/search/count.ts`), which goes through the [SQO](../sqo.md) count
   path, so the number respects the reader's permissions and project filters.
+  It is `null` — no badge — when the section is not countable: the reader lacks
+  read permission, the section declares no table, or the table it declares is
+  not a matrix **record** store. The last case is `dd15` (Time Machine →
+  `matrix_time_machine`, a flat column store read only through the SQO mode
+  `'tm'` source): counting it through the search assembler is refused by the
+  identifier allowlist, and one such section would otherwise abort the whole
+  dashboard (`WC-2026-08-18-dashboard-total-non-record-store`).
 - `activity_30d` is an **area-level** metric. `metricActivity` queries
   `matrix_activity` directly with JSONB operators — no per-row component
   instances — grouping by day, section and user over a rolling 30-day window, and

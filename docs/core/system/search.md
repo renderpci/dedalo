@@ -528,7 +528,7 @@ noted.
 
 | symbol | purpose |
 | --- | --- |
-| `countSectionRecords(principal, sectionTipo)` | Read-gated `full_count` for one section; `null` when not countable/accessible so callers can tell "zero" from "no access". |
+| `countSectionRecords(principal, sectionTipo)` | Read-gated `full_count` for one section; `null` when not countable/accessible so callers can tell "zero" from "no access" — unreadable, untabled, or declaring a table that is not a matrix **record** store (`dd15` → `matrix_time_machine`). |
 
 ## How it fits with the rest of Dédalo
 
