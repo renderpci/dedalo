@@ -230,9 +230,8 @@ export const render_error_panel = (api_error) => {
 			link_home.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
-			if (code.startsWith('perm.')) {
-				error_container.classList.add('no_access_error')
-			}
+			// raspa background: the generic full-page error look (perm.* keeps its own)
+			error_container.classList.add(code.startsWith('perm.') ? 'no_access_error' : 'raspa_error')
 		}
 
 	return error_container
