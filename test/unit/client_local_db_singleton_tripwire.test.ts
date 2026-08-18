@@ -23,6 +23,10 @@
  *  F. `blocked` does not end the open: the browser may still complete it later.
  *     A connection arriving after we gave up is CLOSED on arrival, never left
  *     as an unreferenced handle pinning the database open.
+ *  G. A pure read opens a READONLY transaction. IndexedDB serialises overlapping
+ *     readwrite transactions on a store and runs readonly ones concurrently, so
+ *     a read declared readwrite queues behind every other operation on the
+ *     busiest store ('data', the request cache).
  *
  * HARNESS. A hand-rolled fake IndexedDB (bun has none) installed on the window
  * seam data_manager reads (`window.indexedDB || window.mozIndexedDB || …`). It
@@ -37,7 +41,13 @@ import { join } from 'node:path';
 const CLIENT_COMMON = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js');
 const DATA_MANAGER_PATH = join(CLIENT_COMMON, 'data_manager.js');
 
-type Journal = { opens: number; closes: number; deletes: number; order: string[] };
+type Journal = {
+	opens: number;
+	closes: number;
+	deletes: number;
+	order: string[];
+	tx: Array<{ table: string; mode: string }>;
+};
 
 type DataManager = {
 	get_local_db: () => Promise<unknown>;
@@ -86,12 +96,33 @@ class FakeDb {
 		if (this.closed) {
 			throw new Error('InvalidStateError: the database connection is closing or closed');
 		}
+		journal.tx.push({
+			table: Array.isArray(_table) ? _table.join(',') : _table,
+			mode: _mode,
+		});
 		const tx: Record<string, unknown> = { onerror: null, oncomplete: null, error: null };
+		// a readonly transaction MUST refuse mutations (spec: ReadOnlyError). Without
+		// this the fake would happily accept a put under readonly, so a future write
+		// path that picked the wrong mode could pass unnoticed.
+		const deny_if_readonly = (op: string) => {
+			if (_mode !== 'readwrite') {
+				throw new Error(`ReadOnlyError: ${op} is not allowed in a ${_mode} transaction`);
+			}
+		};
 		tx.objectStore = () => ({
-			put: (v: unknown) => make_req(v),
+			put: (v: unknown) => {
+				deny_if_readonly('put');
+				return make_req(v);
+			},
 			get: () => make_req({ id: 'x', value: { ok: true } }),
-			delete: () => make_req(true),
-			clear: () => make_req(true),
+			delete: () => {
+				deny_if_readonly('delete');
+				return make_req(true);
+			},
+			clear: () => {
+				deny_if_readonly('clear');
+				return make_req(true);
+			},
 		});
 		return tx;
 	}
@@ -190,7 +221,7 @@ afterAll(() => {
 beforeEach(async () => {
 	// each test starts from a closed, forgotten connection
 	await data_manager.delete_whole_local_db().catch(() => {});
-	journal = { opens: 0, closes: 0, deletes: 0, order: [] };
+	journal = { opens: 0, closes: 0, deletes: 0, order: [], tx: [] };
 	fail_next_open = false;
 	block_next_open = false;
 	late_db = null;
@@ -306,5 +337,29 @@ describe('local db — a late connection after `blocked` is closed, not leaked (
 		const retry = await data_manager.get_local_db();
 		expect(retry).not.toBe(false);
 		expect(journal.opens).toBe(2);
+	});
+});
+
+describe('local db — reads do not take a write lock (G)', () => {
+	test('a pure get opens READONLY; writes and deletes still open readwrite', async () => {
+		await data_manager.get_local_db_data('k', 'data');
+		expect(journal.tx).toEqual([{ table: 'data', mode: 'readonly' }]);
+
+		journal.tx = [];
+		await data_manager.set_local_db_data({ id: 'k', value: 1 }, 'data');
+		await data_manager.delete_local_db_data('k', 'data');
+		expect(journal.tx).toEqual([
+			{ table: 'data', mode: 'readwrite' },
+			{ table: 'data', mode: 'readwrite' },
+		]);
+	});
+
+	test('no read path anywhere opens a readwrite transaction', async () => {
+		await data_manager.get_local_db_data('a', 'status');
+		await data_manager.get_local_db_data('b', 'context', true);
+		await data_manager.get_local_db_data('c', 'pagination');
+
+		expect(journal.tx.length).toBe(3);
+		expect(journal.tx.every((t) => t.mode === 'readonly')).toBe(true);
 	});
 });

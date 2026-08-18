@@ -1377,7 +1377,19 @@ data_manager.get_local_db_data = async function(id, table, use_cache=false) {
 		const result = await new Promise(function(resolve, reject){
 
 			// transaction
-				const transaction = db.transaction(table, 'readwrite');
+			// (!) READONLY. This is a pure `objectStore.get(id)` — it was opening a
+			// `readwrite` transaction, and IndexedDB serialises overlapping readwrite
+			// transactions on a store while letting readonly ones run concurrently.
+			// So every cache lookup queued behind every other lookup AND behind the
+			// idle write-throughs from data_manager.request, on 'data' — the busiest
+			// store there is. Ordering between reads and writes is unaffected, in BOTH
+			// directions: overlapping transactions of conflicting modes cannot run
+			// concurrently, so a read created after a write waits for that write to
+			// FINISH (commit or abort — an aborted write leaves the pre-write value,
+			// as it always did), and a write created after a read cannot overtake it
+			// either. Only read-vs-read becomes concurrent, which is unobservable:
+			// `get` has no effect on the store.
+				const transaction = db.transaction(table, 'readonly');
 
 				// complete. Do something when all the data is added to the database.
 					// transaction.oncomplete = function(event) {

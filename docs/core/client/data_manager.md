@@ -281,6 +281,17 @@ If IndexedDB is unavailable (blocked / private browsing) the helpers resolve
     nothing left to opt into. It remains in the signature because several call
     sites still pass `true`.
 
+!!! tip "Reads are readonly, writes are readwrite"
+    `get_local_db_data` opens a **readonly** transaction. IndexedDB serialises
+    overlapping readwrite transactions on a store and lets readonly ones run
+    concurrently, so a read declared readwrite queues behind every other
+    operation on that store — which for the request cache means behind every
+    other lookup and every idle write-through on `data`. Ordering between reads
+    and writes is untouched in both directions — overlapping transactions of
+    conflicting modes cannot run concurrently, so a read created after a write
+    waits for it to finish, and a write created after a read cannot overtake it.
+    Only read-vs-read becomes concurrent, which nothing can observe.
+
 !!! warning "Close before deleting"
     An open connection blocks `deleteDatabase`. `delete_whole_local_db()` closes
     this page's connection first (`close_local_db`); `onblocked` can still fire
