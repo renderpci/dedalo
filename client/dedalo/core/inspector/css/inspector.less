@@ -310,20 +310,14 @@
 			// airy key/value sheet: no cell fills, no separator lines — the
 			// muted-key / ink-value contrast carries the structure
 
-			// docu links row. The generic button classes carry the LEGACY solid
-			// glyphs (link.svg heavy chain, pen.svg solid nib, tree.svg solid
-			// blocks, edit.svg filled sheet) — each a different weight. Remask
-			// them with the light family so this row matches the block-header
-			// icons: same 1.7/24 stroke, round caps, same optical size.
+			// docu links row. Keep the generic button glyphs (link.svg, pen.svg,
+			// tree.svg, edit.svg) — the legacy set reads more harmonious here
+			// than the light family.
 			.link, .pen, .tree, .edit {
 				background-color: @color_orange_dedalo;
 				margin-right: var(--space-3);
 				transition: background-color var(--transition-fast);
 			}
-			.link	{ .fn_add_mask('link_light.svg'); }
-			.pen	{ .fn_add_mask('pen_light.svg'); }
-			.tree	{ .fn_add_mask('tree_light.svg'); }
-			.edit	{ .fn_add_mask('edit_light.svg'); }
 
 			.span {
 				&:active {
