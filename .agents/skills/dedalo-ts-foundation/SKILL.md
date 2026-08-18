@@ -89,6 +89,7 @@ Reach for the specialist when you cross into its area:
 - **`dedalo-ts-testing`** — differential gates, `hasPhpCredentials` (`test/parity/php_client.ts`), `ORACLE_MODE=fixtures` (`test/parity/oracle_fixtures.ts`), scratch-write hygiene. Fixture mode: `engineering/ORACLE_HARVEST.md`.
 - **`dedalo-ts-extension`** — adding component models / descriptors / facets.
 - **`dedalo-ts-ops-config`** — env/config catalog, pool/observability, running & supervising the server.
+- **`dedalo-errors-ts`** — the closed error system: the `DedaloError` code registry (`src/core/errors/registry.ts`), the ONE converter (`convert.ts`: `toErrorEnvelope` / `ok` / `toStructuredErr` / `toStreamFrame`), envelope v2 + its schema (`schema.ts`), the disclosure ladder and `DEDALO_DEBUG_API_ERRORS`, and the client contract (`api_error.js`, `error_policy.js`, `error_dispatch.js`). Handlers THROW to fail; gates: `error_registry_native`, `error_taxonomy_tripwire`, `error_throw_ratchet`, `client_error_contract_tripwire`. Spec: `engineering/ERRORS_SPEC.md`.
 - **`dedalo-labels-ts`** — repo-owned UI-label catalogs (WC-033/034): `master.json` (source of definitions) + `catalog/lg-<code>.json` (translations), `getLabels` fallback chain (`src/core/labels/catalog.ts`), `labels_tripwire`, `scripts/labels_fill.ts`. Labels ship with code, never ontology updates.
 
 ## Subsystem skills (the deep dives)
