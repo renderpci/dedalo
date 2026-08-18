@@ -236,9 +236,10 @@ resource](#the-connection-is-the-resource).
 
 ### Local caching (IndexedDB)
 
-`get_local_db()` opens the `dedalo` database at schema version **11**. Its
-`onupgradeneeded` handler is idempotent (creates only missing stores) and drops
-the legacy `sqo` store. Object stores:
+`get_local_db()` returns **the** connection to the `dedalo` database at schema
+version **11**, opening it on first call. Its `onupgradeneeded` handler is
+idempotent (creates only missing stores) and drops the legacy `sqo` store.
+Object stores:
 
 | store | holds |
 | --- | --- |
@@ -256,10 +257,36 @@ successful call. The `*_local_db*` helpers
 (`get_local_db_data`, `set_local_db_data`, `delete_local_db_data`,
 `delete_local_db_data_by_prefix`, `clear_local_db_table`,
 `delete_whole_local_db`) manage reads, writes, prefix-bulk deletes and resets.
-`get_local_db_data` can cache the open DB handle per table (`use_cache=true`,
-backed by a module-level `db_table_cache` map). If IndexedDB is unavailable
-(blocked / private browsing) the helpers resolve `false` and Dédalo runs without
-cache — callers must guard for a falsy result.
+If IndexedDB is unavailable (blocked / private browsing) the helpers resolve
+`false` and Dédalo runs without cache — callers must guard for a falsy result.
+
+!!! note "One connection per page, not one per operation"
+    The connection is memoized (`local_db_promise`) and shared by every store
+    and every helper; concurrent first callers await a single `open()`. Do not
+    call `close()` on the handle you receive — it is not yours. The memo is
+    dropped automatically when the connection stops being usable (`close`, or a
+    `versionchange` raised by another tab upgrading or deleting the database, in
+    which case this page steps aside by closing so the other tab is not blocked),
+    and a failed open is never memoized, so the next call retries.
+
+    A blocked open is a special case: `blocked` does **not** end the request —
+    the browser keeps it pending and may complete it after the blocking tab
+    goes away. `get_local_db()` resolves `false` so callers are not stranded,
+    and the connection that arrives later is closed on arrival rather than left
+    unreferenced, where it would pin the database open for the rest of the
+    page's life.
+
+    `get_local_db_data`'s third argument `use_cache` is **ignored**. It used to
+    opt into a per-table handle cache; with one shared connection there is
+    nothing left to opt into. It remains in the signature because several call
+    sites still pass `true`.
+
+!!! warning "Close before deleting"
+    An open connection blocks `deleteDatabase`. `delete_whole_local_db()` closes
+    this page's connection first (`close_local_db`); `onblocked` can still fire
+    when **another tab** holds the database open, and that is the only case it
+    now reports. `clear_local_db_table()` runs on the shared connection too — it
+    no longer opens a second, version-less one of its own.
 
 ### Streaming
 
@@ -334,7 +361,7 @@ All in `core/common/js/data_manager.js` unless noted.
 | `get_page_element(options)` | method | fully rendered page element (`get_page_element` action) |
 | `request_stream` / `request_fetch_stream` / `read_stream` | methods | SSE / NDJSON streaming (`read_stream` returns its reader) |
 | `release_stream_reader(reader, reason)` | exported | cancel one reader and splice it out of `page_globals.stream_readers` — the teardown that gives the connection back |
-| `get_local_db()` | method | open/upgrade the `dedalo` IndexedDB (v11) |
+| `get_local_db()` | method | the shared, memoized `dedalo` IndexedDB connection (v11); opens/upgrades on first call |
 | `get_local_db_data` / `set_local_db_data` / `delete_local_db_data` / `delete_local_db_data_by_prefix` / `clear_local_db_table` / `delete_whole_local_db` | methods | IndexedDB read / write / delete / prefix-delete / clear / drop |
 | `download_url(url, filename)` / `download_data(data, filename)` | exported | browser-download helpers (blob → temporary `<a>`) |
 

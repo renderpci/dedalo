@@ -1014,9 +1014,74 @@ data_manager.get_page_element = async function(options) {
 
 
 /**
+* @var {Promise<IDBDatabase|false>|null} local_db_promise
+* THE single open connection to the 'dedalo' IndexedDB, memoized as the Promise
+* that opens it.
+*
+* (!) WHY A SINGLETON. Every `*_local_db*` helper below used to call
+* `get_local_db()`, and `get_local_db()` used to call `indexedDB.open()` — so a
+* page opened one connection PER read and PER write, none of them ever closed
+* (there is no `db.close()` on any of those paths, because the helpers never
+* owned the handle long enough to close it). Two costs: the open/version-check
+* round trip was paid on every cache lookup, and the accumulated connections
+* pinned the database open, so any future `deleteDatabase` could only ever fire
+* `onblocked` while the tab lived.
+*
+* The memo holds the PROMISE, not the handle, so concurrent first callers share
+* one open() instead of racing several. It is dropped again whenever the
+* connection stops being usable (see the `close` / `versionchange` wiring in
+* `get_local_db`), so the next caller transparently reopens.
+*/
+let local_db_promise = null
+
+
+
+/**
+* CLOSE_LOCAL_DB
+* Close the memoized connection and forget it, so the next `get_local_db()`
+* opens a fresh one.
+*
+* Required before `indexedDB.deleteDatabase()`: an open connection blocks the
+* delete (the request fires `onblocked` and never completes while this tab holds
+* the database). Safe to call when nothing is open.
+*
+* @returns {Promise<void>}
+*/
+const close_local_db = async function() {
+
+	const pending = local_db_promise
+	if (!pending) {
+		return
+	}
+
+	// stop handing this connection out BEFORE awaiting, so a caller arriving
+	// during the await opens a fresh one instead of adopting the closing handle
+	local_db_promise = null
+
+	try {
+		const db = await pending
+		if (db && typeof db.close==='function') {
+			db.close()
+		}
+	} catch (error) {
+		// an open that never succeeded has nothing to close
+		if (SHOW_DEBUG===true) {
+			console.warn('[close_local_db] ignored failed open', error);
+		}
+	}
+}//end close_local_db
+
+
+
+/**
 * GET_LOCAL_DB
-* Opens (and if necessary upgrades) the browser's IndexedDB `'dedalo'` database
-* at schema version 11.
+* Returns THE shared connection to the browser's IndexedDB `'dedalo'` database
+* at schema version 11, opening (and if necessary upgrading) it on first call.
+*
+* (!) Memoized — see `local_db_promise` above. One connection serves every store
+* and every helper for the life of the page; callers must NOT close the handle
+* they receive (use `close_local_db`, which also clears the memo). Concurrent
+* first callers share a single `open()`.
 *
 * Object stores managed:
 * - `rqo`        — cached request/query objects
@@ -1029,30 +1094,46 @@ data_manager.get_page_element = async function(options) {
 * The `onupgradeneeded` handler is idempotent: it only creates stores that do not
 * already exist, and deletes the legacy `sqo` store if still present.
 *
-* Resolves with `false` (via the `.catch` handler) if IndexedDB is unavailable
-* or blocked (e.g. in private browsing on some browsers). Callers must guard
-* against a falsy result before proceeding.
+* Resolves with `false` if IndexedDB is unavailable, blocked by another tab
+* holding an older version open, or the open otherwise fails — and a failed open
+* is never memoized, so the next call retries. Callers must guard against a
+* falsy result before proceeding.
 *
-* @returns {Promise<IDBDatabase|false>} Opened database instance, or `false` on failure
+* (!) `false` on `blocked` means WE gave up, not that the request ended: the
+* browser keeps the open pending and may still complete it later. That late
+* connection is closed on arrival (see the `settled` flag) so it cannot linger
+* as an unreferenced handle blocking future upgrades.
+*
+* @returns {Promise<IDBDatabase|false>} Shared database instance, or `false` on failure
 */
 data_manager.get_local_db = async function() {
+
+	// memoized connection. One open per page (per invalidation), shared by every
+	// store and every helper. Concurrent first callers await the SAME open().
+		if (local_db_promise) {
+			return local_db_promise
+		}
 
 	// db storage
 		// In the following line, you should include the prefixes of implementations you want to test.
 		const current_indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-		// DON'T use "var indexedDB = ..." if you're not in a function.
-		// Moreover, you may need references to some window.IDB* objects:
-		// const IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
-		// const IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
-		// (Mozilla has never prefixed these objects, so we don't need window.mozIDB*)
 
 	// invalid local db case
 		if (!current_indexedDB) {
 			console.error("[get_local_db] Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
+			return false
 		}
 
+	const opening = new Promise(function(resolve, reject){
 
-	return new Promise(function(resolve, reject){
+		// (!) `blocked` does NOT end the request: per spec the open stays PENDING
+		// and still fires `success` once the blocking connection goes away. We give
+		// up on `blocked` (below) so callers are not stranded, which means a real
+		// IDBDatabase can still arrive afterwards — with nobody holding it and no
+		// invalidation wired. That orphan would block every future upgrade/delete
+		// for the life of the page: precisely the leak this whole singleton exists
+		// to remove. This flag lets `success` recognise that case and close it.
+			let settled = false
 
 		// open db. Let us open our database (name, version)
 			const db_request = current_indexedDB.open('dedalo', 11);
@@ -1065,6 +1146,16 @@ data_manager.get_local_db = async function() {
 					console.error("[get_local_db] It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
 				}
 
+				settled = true
+				reject(false)
+			};
+
+		// blocked case. Another tab holds an older version open and is refusing the
+		// upgrade. Without this the request never settles and every awaiting caller
+		// hangs forever on a Promise that is now memoized for the whole page.
+			db_request.onblocked = function(event) {
+				console.error("[get_local_db] Upgrade blocked by another open tab. Close the other Dédalo tabs and reload.", event.target);
+				settled = true
 				reject(false)
 			};
 
@@ -1072,6 +1163,21 @@ data_manager.get_local_db = async function() {
 			db_request.onsuccess = function(event) {
 
 				const db = event.target.result;
+
+				// late arrival after we already gave up (see `settled` above). The
+				// promise is spoken for, so this connection is unreachable — close it
+				// here or it pins the database open forever.
+				if (settled===true) {
+					console.log("[get_local_db] open completed after it was abandoned: closing the orphan connection");
+					try {
+						db.close()
+					} catch (error) {
+						console.warn("[get_local_db] could not close the orphan connection", error);
+					}
+					return
+				}
+
+				settled = true
 				resolve(db)
 			};
 
@@ -1106,9 +1212,43 @@ data_manager.get_local_db = async function() {
 					db.objectStoreNames.contains('pagination') || db.createObjectStore('pagination', { keyPath:'id' });
 			};
 	})
+	.then(db => {
+
+		// invalidation. The memo must not outlive the usability of the handle it
+		// holds, or every later caller gets a dead connection and all IndexedDB
+		// silently stops working for the rest of the page's life.
+			db.onclose = function() {
+				// fired when the connection is closed abnormally (storage evicted,
+				// user cleared site data)
+				if (local_db_promise===opening) {
+					local_db_promise = null
+				}
+			}
+			db.onversionchange = function() {
+				// ANOTHER tab is upgrading or deleting the database. Holding this
+				// connection open blocks it, so step aside immediately.
+				console.log("[get_local_db] versionchange from another tab: closing this connection");
+				db.close()
+				if (local_db_promise===opening) {
+					local_db_promise = null
+				}
+			}
+
+		return db
+	})
 	.catch(err => {
+		// a failed open must NOT be memoized, or the page never retries
+		if (local_db_promise===opening) {
+			local_db_promise = null
+		}
 		console.error(err)
+		return false
 	});
+
+	local_db_promise = opening
+
+
+	return opening
 }//end local_db
 
 
@@ -1189,20 +1329,11 @@ data_manager.set_local_db_data = async function(data, table) {
 
 
 /**
-* @var {Map<string, IDBDatabase>} db_table_cache
-* Module-level cache mapping store names to open `IDBDatabase` instances.
-* Populated by `get_local_db_data` when `use_cache=true` to avoid re-opening
-* the database on every call within the same page session.
-*/
-const db_table_cache = new Map();
-
-/**
 * GET_LOCAL_DB_DATA
 * Reads a single record from the specified IndexedDB object store by its `id` key.
 *
-* When `use_cache=true`, the open `IDBDatabase` handle is stored in the module-level
-* `db_table_cache` map (keyed by table name) and reused on subsequent calls,
-* avoiding the overhead of repeated `indexedDB.open()` calls.
+* The connection is the shared, memoized one from `get_local_db()` — there is no
+* per-table handle cache any more, and no `indexedDB.open()` per call.
 *
 * Throws and re-throws on unexpected errors so that callers can decide how to
 * handle them; returns `false` when IndexedDB is unavailable.
@@ -1214,7 +1345,11 @@ const db_table_cache = new Map();
 *
 * @param {string} id - Key of the record to retrieve (must match the store's `keyPath`)
 * @param {string} table - Name of the IndexedDB object store
-* @param {boolean} [use_cache=false] - Whether to cache the open DB handle for this table
+* @param {boolean} [use_cache=false] - IGNORED. Accepted for backward compatibility
+*   with the nine call sites that still pass `true` (section.js, render_inspector.js ×2,
+*   render_area_maintenance.js ×3, area_thesaurus.js, ui.js, area_graph.js). The connection is now memoized
+*   for every caller (see `local_db_promise`), so there is nothing left to opt in
+*   to; passing it neither helps nor harms.
 * @returns {Promise<*|false>} The stored record value, `undefined` when not found, or `false` on unavailability
 * @throws {Error} On IndexedDB transaction or request errors
 */
@@ -1229,20 +1364,13 @@ data_manager.get_local_db_data = async function(id, table, use_cache=false) {
 			throw new Error('Missing required parameters: id and table');
 		}
 
-		// Get database with optional caching
-		const db = use_cache && db_table_cache.has(table)
-			? db_table_cache.get(table)
-			: await self.get_local_db();
+		// Get the shared database connection (memoized in get_local_db)
+		const db = await self.get_local_db();
 
 		// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
 		if(!db){
 			console.warn('[get_local_db_data] IndexedDB not available, running without cache');
 			return false
-		}
-
-		// Cache database if requested
-		if (use_cache && !db_table_cache.has(table)) {
-			db_table_cache.set(table, db);
 		}
 
 		// Get data from IndexedDB
@@ -1401,13 +1529,20 @@ data_manager.delete_local_db_data_by_prefix = async function(table, prefix) {
 * Triggers `get_local_db` to recreate and re-migrate the schema on the next
 * call. Use after major application updates that change the stored data shape.
 *
-* The `onblocked` handler fires when another tab still has the database open;
-* the deletion is deferred until all connections are closed (page reload required).
+* (!) Closes THIS page's shared connection first (`close_local_db`). An open
+* connection blocks the delete: before the connection was a singleton, the page
+* held one handle per read and per write with no way to close any of them, so
+* `onblocked` was the only branch this function could ever reach while the tab
+* lived. Closing is not enough on its own — `onblocked` still fires when ANOTHER
+* tab holds the database open, which is why that handler stays.
 *
 * @returns {Promise<*>} Resolves on successful deletion
 * @throws {Error} (via rejection) when deletion fails
 */
 data_manager.delete_whole_local_db = async function() {
+
+	// release this page's connection, or the delete below can only block
+	await close_local_db()
 
 	return new Promise(function(resolve, reject) {
 
@@ -1437,37 +1572,47 @@ data_manager.delete_whole_local_db = async function() {
 * or affecting other stores. Uses `IDBObjectStore.clear()`.
 * Useful after application updates that invalidate cached data for one category
 * (e.g. clearing all `'context'` entries after an ontology change).
+* Runs on the shared memoized connection (`get_local_db`) — it no longer opens a
+* second, version-less connection of its own.
 * @param {string} table - Name of the IndexedDB object store to clear
-* @returns {Promise<boolean>} Resolves `true` on success, rejects `false` on transaction error
+* @returns {Promise<boolean>} Resolves `true` on success, `false` when IndexedDB is
+*   unavailable; rejects on a transaction or clear-request error
 */
 data_manager.clear_local_db_table = async function(table) {
 
+	const self = this
+
+	// shared connection. Was a SECOND, independent `indexedDB.open("dedalo")`
+	// with no version and no error handler — a duplicate connection that also
+	// raced the schema-11 upgrade owned by get_local_db().
+		const db = await self.get_local_db()
+
+		if (!db) {
+			return false
+		}
+
 	return new Promise(function(resolve, reject) {
 
-		// Let us open our database
-		const DBOpenRequest = window.indexedDB.open("dedalo");
-		DBOpenRequest.onsuccess = (event) => {
+		// clear previous data
+		const transaction = db.transaction([table], "readwrite");
+		transaction.oncomplete = (event) => {
+			console.log('[clear_local_db_table] Transaction done successful');
+		};
+		transaction.onerror = (event) => {
+			console.error(`[clear_local_db_table] Transaction not opened due to error: ${transaction.error}`);
+			reject(false)
+		};
 
-			console.log("[clear_local_db_table] Database initialized");
+		const objectStore			= transaction.objectStore(table);
+		const objectStoreRequest	= objectStore.clear();
 
-			// store the result of opening the database in the db variable.
-			const db = DBOpenRequest.result;
-
-			// clear previous data
-			const transaction = db.transaction([table], "readwrite");
-			transaction.oncomplete = (event) => {
-				console.log('[clear_local_db_table] Transaction done successful');
-			};
-			transaction.onerror = (event) => {
-				console.error(`[clear_local_db_table] Transaction not opened due to error: ${transaction.error}`);
-				reject(false)
-			};
-			const objectStore = transaction.objectStore(table);
-			const objectStoreRequest = objectStore.clear();
-			objectStoreRequest.onsuccess = (event) => {
-				console.log('[clear_local_db_table] Request clear successful');
-				resolve(true)
-			};
+		objectStoreRequest.onsuccess = (event) => {
+			console.log('[clear_local_db_table] Request clear successful');
+			resolve(true)
+		};
+		objectStoreRequest.onerror = (event) => {
+			console.error('[clear_local_db_table] Request clear failed:', event.target);
+			reject(event.target.error)
 		};
 	})
 }//end clear_local_db_table
