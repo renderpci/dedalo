@@ -1,6 +1,6 @@
 # errors
 
-> See also: [api](api.md) · [Dédalo API v1](../../api/dedalo_api_v1.md) · [data_manager](../client/data_manager.md) · [RQO](../rqo.md) · [Tool server contract](../../development/tools/server_contract.md)
+> See also: [Error system cookbook](../../development/errors_cookbook.md) · [api](api.md) · [Dédalo API v1](../../api/dedalo_api_v1.md) · [data_manager](../client/data_manager.md) · [RQO](../rqo.md) · [Tool server contract](../../development/tools/server_contract.md)
 
 The error subsystem is Dédalo's **closed vocabulary of failure**. Every refusal the engine
 reports — over the JSON API, a tool response, a stream frame or the assistant bridge —

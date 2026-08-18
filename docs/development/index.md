@@ -322,6 +322,15 @@ The commit enhances, adds to, revised, or otherwise changes the suite of automat
 For example:
 >test: Add unit tests for user authentication
 
+## Error handling
+
+Every refusal the engine reports carries exactly one **registered code**, and exactly one
+function turns a thrown value into a wire body. A handler throws to fail and returns
+`ok(data, …)` to succeed; the browser dispatches on the code, never on the sentence.
+
+- [errors](../core/system/errors.md) — the concept page: the registry, the eight categories, envelope v2, the disclosure ladder, notices, the client half
+- [Error system cookbook](errors_cookbook.md) — the recipes: refuse from a handler, add a code end-to-end, convert an untyped throw, emit a notice, fail a tool / MCP tool / stream, consume a response in the client, register a tool-local policy, debug with `request_id`, and the anti-patterns table
+
 ## Testing
 
 Dédalo ships an automated test suite run by `bun test`. It splits into a read-path parity layer (`test/parity/`, which replays a **frozen fixture store** of recorded request/response pairs), a unit/integration layer (`test/unit/`) that carries the write-path contracts and the tripwires, and an out-of-band headless client browser harness (`bun run test:client`).
