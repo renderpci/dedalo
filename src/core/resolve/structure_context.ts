@@ -621,6 +621,23 @@ export const contextLabelOf = labelByTipo;
  * Build one stamped context entry (PHP build_structure_context): clone the
  * cached core, deep-clone properties, stamp the per-call variant fields.
  */
+/**
+ * The columns_map feed for a stamped entry: the caller's properties override
+ * when given, else the element's OWN (pre-Site-B) properties — see
+ * ownConfigProperties for why the swapped ones must NOT be used. Extracted
+ * from buildStructureContext to keep its cyclomatic count under the ratchet.
+ */
+async function resolveEntryColumnsMap(
+	tipo: string,
+	propertiesOverride: Record<string, unknown> | undefined,
+	ownConfigProperties: unknown,
+	mode: string,
+): Promise<unknown[]> {
+	const { getElementColumnsMap } = await import('../relations/request_config/build.ts');
+	const feed = propertiesOverride !== undefined ? propertiesOverride : ownConfigProperties;
+	return (await getElementColumnsMap(tipo, feed, mode)) ?? [];
+}
+
 export async function buildStructureContext(options: {
 	tipo: string;
 	sectionTipo: string;
@@ -1061,15 +1078,12 @@ export async function buildStructureContext(options: {
 		// properties leaked a section_list_thesaurus columns_map into
 		// list_thesaurus mode — see ownConfigProperties.
 		if (parsedConfig.length > 0) {
-			const { getElementColumnsMap } = await import('../relations/request_config/build.ts');
-			entry.columns_map =
-				(await getElementColumnsMap(
-					options.tipo,
-					options.propertiesOverride !== undefined
-						? options.propertiesOverride
-						: ownConfigProperties,
-					options.mode,
-				)) ?? [];
+			entry.columns_map = await resolveEntryColumnsMap(
+				options.tipo,
+				options.propertiesOverride,
+				ownConfigProperties,
+				options.mode,
+			);
 		}
 	}
 
