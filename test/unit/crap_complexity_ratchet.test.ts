@@ -27,7 +27,7 @@
  * do not, why module-level code belongs to no function) lives in that module's
  * header — read it there, it is not restated here.
  *
- * ── THE FOUR RULES ───────────────────────────────────────────────────────────
+ * ── THE RULES ────────────────────────────────────────────────────────────────
  *  1. SHRINK-ONLY (the forward gate): no file may EXCEED its recorded baseline
  *     max, and the frozen DEBT census (functionsOverCap / filesOverCap) may not
  *     move. A raised entry is a deliberate, reviewable diff whose commit message
@@ -65,6 +65,18 @@
  *     the floor is not hypothetical hygiene. Rule 4 also asserts the engine's
  *     LOUD-FAILURE posture directly: an unparseable file THROWS, it is never
  *     skipped — a skipped file is a file outside the gate.
+ *  7. THE GATE'S OWN PROSE NARRATES RULES, NEVER STATE (2026-08-18): this
+ *     file's source, the exempt list and the baseline's `_` header must hold
+ *     no status-prose — a sentence pairing a status word with a dated or
+ *     sha-shaped instance marker (scripts/lib/status_prose.ts is the ONE
+ *     detector; its header defines the pairing and why bare rule wording
+ *     stays legal). The precedent was born in THIS file's comments: a
+ *     parenthetical once described the ratchet's state at a moment in time,
+ *     was load-bearing for nothing, and outlived the moment — teaching the
+ *     next reader that a non-green ratchet is the normal condition here and
+ *     that regeneration is the reflex. Transient state belongs in
+ *     rewrite/LEDGER.md or in the commit message; only the rule belongs in
+ *     the gate, and this rule enforces that on the gate itself.
  *
  * ── HONEST LIMITATIONS (stated, not hidden) ──────────────────────────────────
  *  - THIS IS NOT A CRAP SCORE, and no coverage is measured anywhere in it. The
@@ -123,6 +135,7 @@ import {
 	unmeasuredSources,
 } from '../../scripts/crap_baseline.ts';
 import { analyzeFile, COMPLEXITY_CAP, summarize } from '../../scripts/lib/complexity.ts';
+import { findStatusProse } from '../../scripts/lib/status_prose.ts';
 
 /**
  * ONE scan, shared by all four tests. `measure()` throws on any unreadable or
@@ -428,12 +441,9 @@ describe('crap ratchet — the scan is not vacuous', () => {
  *
  * IT IS NOT A SILENCER, AND THE GATE ENFORCES THAT. An exemption is for code that
  * CANNOT be covered (it destroys something no scratch surface contains, or it has
- * no decision to assert). It is never a way to quiet a complexity regression: as
- * of 2026-08-11 the ratchet is RED on three files from commit d1f5652783
- * (dd_component_portal_api.ts, ts_object/search.ts, ts_object/ts_api.ts) and
- * those three are deliberately ABSENT from the list. The rule is general — no
- * file currently reporting a regression above may hold an exemption — so nobody
- * can clear a red ratchet by writing a paragraph here.
+ * no decision to assert). It is never a way to quiet a complexity regression.
+ * The rule is general — no file currently reporting a regression above may hold
+ * an exemption — so nobody can clear a red ratchet by writing a paragraph here.
  *
  * WHAT IT CANNOT DO, said plainly: it cannot verify that a listed function is
  * genuinely uncovered, nor that an unlisted one is covered. That needs the
@@ -546,9 +556,8 @@ describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked a
 	test('an exemption may NOT cover a file that is currently a complexity REGRESSION', () => {
 		// The one abuse this list invites. An exemption is about coverage — about
 		// code no test may execute. It says nothing about complexity, and it must
-		// never become the quiet way to clear a red ratchet: as of 2026-08-11 rule 1
-		// is red on three files from commit d1f5652783, and the fix for that is to
-		// simplify them or to raise their entry deliberately with
+		// never become the quiet way to clear a red ratchet: the fix for a red
+		// rule 1 is to simplify the code or to raise its entry deliberately with
 		// `--allow-regression`, never to write a paragraph here.
 		const regressed = new Set(DRIFT.regressions.map((line) => line.split(':')[0] ?? ''));
 		const abuse = EXEMPT.entries
@@ -557,6 +566,110 @@ describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked a
 		expect(
 			abuse,
 			`These files are exempt from COVERAGE and are ALSO currently over their frozen complexity max. The two are unrelated and this list may not be used to soften the first gate: an exemption is for code that CANNOT be covered, not a silencer for a legitimate complexity regression. Fix rule 1 (simplify, or \`${FIX_COMMAND} --allow-regression\` with the reason in the commit message), then re-add the coverage exemption if it is still true.\n  ${abuse.join('\n  ')}`,
+		).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 7. THE GATE'S OWN PROSE — rules live here; state does not.
+// ---------------------------------------------------------------------------
+
+/**
+ * WHY A GATE READS ITS OWN COMMENTS. The status-prose precedent was born in
+ * this file: a dated parenthetical describing the ratchet's state at a moment
+ * in time sat in a describe header, load-bearing for nothing (no gate reads
+ * prose — the tripwire-index parser takes the first column only, and
+ * scripts/verify.ts has no allowlist), and it outlived the moment. Prose like
+ * that makes a non-green ratchet the EXPECTED condition and trains the
+ * regeneration reflex rule 1 exists to starve. The detector lives in
+ * scripts/lib/status_prose.ts — ONE implementation, shared with the
+ * TRIPWIRES.md row scan in ci_workflow_tripwire.test.ts — and its pairing
+ * design (status word + instance marker, see its header) is what keeps this
+ * gate's genuine RULE wording legal without a whitelist.
+ *
+ * THE CORPUS IS THE GATE'S OWN VOICE, all three places it speaks from: this
+ * test file's source, engineering/crap_coverage_exempt.json, and the `_`
+ * prose header of engineering/crap_complexity_baseline.json. The baseline's
+ * ENTRIES are numbers and are exactly where state belongs; only its prose
+ * header is scanned.
+ */
+describe("crap ratchet — the gate's own prose narrates rules, never transient state", () => {
+	/** Pinned two-way canary for the detector — see the last test in this block. */
+	const STATUS_PROSE_VECTORS_PATH = 'test/unit/fixtures/status_prose_vectors.json';
+
+	test('no status-prose in this file, the exempt list, or the baseline prose header', () => {
+		const baselineHeader = (JSON.parse(readFileSync(BASELINE_PATH, 'utf-8')) as { _?: unknown })._;
+		const corpus: Array<[string, string]> = [
+			[
+				'test/unit/crap_complexity_ratchet.test.ts (this file)',
+				readFileSync(import.meta.path, 'utf-8'),
+			],
+			[COVERAGE_EXEMPT_PATH, readFileSync(COVERAGE_EXEMPT_PATH, 'utf-8')],
+			[`${BASELINE_PATH} ("_" header)`, typeof baselineHeader === 'string' ? baselineHeader : ''],
+		];
+		// Anti-vacuity: an empty corpus member is a scan of nothing. readFileSync
+		// already throws on a missing file; the baseline's `_` header could vanish
+		// silently (JSON has no required keys), so its presence is asserted.
+		for (const [name, text] of corpus) {
+			expect(
+				text.length,
+				`${name}: empty — this scan just proved nothing about it`,
+			).toBeGreaterThan(0);
+		}
+		const offenders = corpus.flatMap(([name, text]) =>
+			findStatusProse(text).map((excerpt) => `${name}: “${excerpt}”`),
+		);
+		expect(
+			offenders,
+			"A gate's own prose is where a RULE lives, never where its current state lives. Transient state — which files the ratchet is over on, at which commit — belongs in rewrite/LEDGER.md (gitignored, not on a clone) or in the commit message of the change that opened it. Written into the gate, it makes a non-green ratchet read as the normal condition and hands the next reader the regeneration reflex rule 1 exists to starve. The general rule wording around such a sentence is usually correct — keep it; delete only the dated instance claim, after actually closing the gap it described (simplify the code, or `" +
+				FIX_COMMAND +
+				' --allow-regression` with the reason in the commit message). Each line quotes the offending excerpt:\n  ' +
+				offenders.join('\n  '),
+		).toEqual([]);
+	});
+
+	// ANTI-VACUITY FOR THE DETECTOR ITSELF. Every assertion above — and the
+	// TRIPWIRES.md row scan in ci_workflow_tripwire.test.ts — is of the form
+	// "this violation list is empty", which a broken detector satisfies
+	// perfectly while inspecting nothing: the client_libs_tripwire failure
+	// mode. A typo in a marker regex, or a normalizeProse regression, would
+	// turn BOTH gates green and silently re-open the precedent. So the
+	// detector is exercised in both directions against pinned vectors — the
+	// real sentences deleted on 2026-08-18 must still be caught, and the real
+	// RULE wording they were embedded in must still be legal.
+	//
+	// The vectors live in a fixture rather than inline because this file scans
+	// its OWN source: a genuine offender written here as a string literal
+	// would fail the test above, correctly.
+	test('the detector still fires — pinned offenders are caught, rule wording is not', () => {
+		const vectors = JSON.parse(readFileSync(STATUS_PROSE_VECTORS_PATH, 'utf-8')) as {
+			must_fire: Array<{ origin: string; text: string }>;
+			must_stay_clean: Array<{ origin: string; text: string }>;
+		};
+		// A truncated fixture would make both loops below vacuous in turn.
+		expect(
+			vectors.must_fire.length,
+			`${STATUS_PROSE_VECTORS_PATH}: must_fire is thin — the canary itself checks nothing. Restore the vectors; never lower this floor.`,
+		).toBeGreaterThanOrEqual(4);
+		expect(
+			vectors.must_stay_clean.length,
+			`${STATUS_PROSE_VECTORS_PATH}: must_stay_clean is thin — without controls the canary passes for a detector that flags everything.`,
+		).toBeGreaterThanOrEqual(3);
+
+		const missed = vectors.must_fire
+			.filter((vector) => findStatusProse(vector.text).length === 0)
+			.map((vector) => `${vector.origin}: NOT flagged`);
+		expect(
+			missed,
+			`scripts/lib/status_prose.ts no longer catches prose it was written to catch, so every "no status-prose" assertion in this repo is now green by accident. These vectors are the real sentences this change deleted — if one is deliberately no longer an offender, the detector's contract changed and that belongs in its header, not in a quietly edited fixture.\n  ${missed.join('\n  ')}`,
+		).toEqual([]);
+
+		const falsePositives = vectors.must_stay_clean.flatMap((vector) =>
+			findStatusProse(vector.text).map((excerpt) => `${vector.origin}: “${excerpt}”`),
+		);
+		expect(
+			falsePositives,
+			`scripts/lib/status_prose.ts now flags legitimate RULE wording. A detector that reds on "un-gating = red" or on the anti-abuse rule's own "currently" is a detector people will delete — the pairing design (status word + instance marker, narrow window for adverbs) exists precisely to keep these legal.\n  ${falsePositives.join('\n  ')}`,
 		).toEqual([]);
 	});
 });

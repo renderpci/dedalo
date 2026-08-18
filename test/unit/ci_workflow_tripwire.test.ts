@@ -39,6 +39,15 @@
  *   9. CODEQL PAIRING (2026-08-03) — every `github/codeql-action/*` step is pinned
  *      to the SAME SHA. init and analyze are one dependency (init writes the database
  *      analyze reads); Dependabot models them as two and WILL propose splitting them.
+ *  10. STATUS-PROSE (2026-08-18) — no row of engineering/TRIPWIRES.md narrates a
+ *      transient red/failing state as a standing fact (scripts/lib/status_prose.ts
+ *      is the ONE detector; see its header for what pairs a status word with an
+ *      instance marker and why bare rule wording stays legal). A row states what
+ *      its gate ASSERTS; how the gate is doing at some moment belongs in
+ *      rewrite/LEDGER.md or in the commit message. Narrated red in the index
+ *      becomes the expected condition and trains the regeneration reflex the
+ *      ratchets exist to starve — and it was never load-bearing: rule 4's parser
+ *      takes only the first column, and scripts/verify.ts has no allowlist.
  *
  * SCANNERS THAT ARE NOT GATED HERE, deliberately: CodeQL (.github/workflows/codeql.yml)
  * and the secret scan (.github/workflows/security.yml) are third-party analyses whose
@@ -53,6 +62,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { findStatusProse } from '../../scripts/lib/status_prose.ts';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
 const repoRoot = join(import.meta.dir, '..', '..');
@@ -327,6 +337,28 @@ describe('CI workflow tripwire', () => {
 
 	test('verify.ts TRIPWIRES equals the engineering/TRIPWIRES.md index exactly', () => {
 		expect([...verifyTripwires()].sort()).toEqual([...ledgerTripwires()].sort());
+	});
+
+	// Rule 10 — the index describes what each gate ASSERTS, never how it is doing.
+	test('no TRIPWIRES.md row narrates a transient red/failing state as a standing fact', () => {
+		const src = read('engineering/TRIPWIRES.md');
+		const rows = [...src.matchAll(/^\| (test\/[^\s|]+\.test\.ts) \|.*$/gm)].map(
+			(m) => [m[1] as string, m[0] as string] as const,
+		);
+		// Anti-vacuity: the same grammar rule 4 parses — if it drifted, this rule
+		// would otherwise scan zero rows and pass having read nothing.
+		expect(
+			rows.length,
+			'engineering/TRIPWIRES.md: the row grammar changed and this rule is now scanning nothing',
+		).toBe(ledgerTripwires().length);
+		const offenders = rows.flatMap(([path, row]) =>
+			findStatusProse(row).map((excerpt) => `${path}: “${excerpt}”`),
+		);
+		expect(
+			offenders,
+			'A TRIPWIRES.md row is where a RULE lives, never where its current state lives. Transient state — a gate that is not green at some moment, the files it is over on — belongs in rewrite/LEDGER.md (gitignored, not on a clone) or in the commit message of the change that opened it; narrating it in the index makes that state read as the expected condition and trains the regeneration reflex the ratchets exist to prevent. It is also never load-bearing: rule 4 parses only the first column, and scripts/verify.ts has no allowlist. Fix the gate (or take the deliberate, reviewed regression path its own message names), then DELETE the narration — keep the general rule wording around it, which is usually correct. Each line quotes the offending excerpt:\n  ' +
+				offenders.join('\n  '),
+		).toEqual([]);
 	});
 
 	test('every tripwire file listed anywhere actually exists', async () => {
