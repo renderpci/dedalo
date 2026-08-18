@@ -158,3 +158,32 @@ describe('explicit-config-required models (PHP trait.request_config_v5.php:88)',
 		).rejects.toThrow(/v5 resolution fallback is no longer supported/);
 	});
 });
+
+/**
+ * DEAD legacy models never reach the client (PHP $ar_temp_exclude_models).
+ * dd249 (component_security_areas, under the profiles section dd234) is the
+ * live case: the model has no server descriptor AND no client JS module, so an
+ * emitted ddo made the client 404 on its dynamic import and abort the whole
+ * edit render.
+ */
+describe('buildImplicitSectionEditConfig — dead legacy models are not emitted', () => {
+	test('dd234 edit form carries no dd249 and no unimplemented component model', async () => {
+		const { buildImplicitSectionEditConfig } = await import(
+			'../../src/core/relations/request_config/implicit.ts'
+		);
+		const { getComponentModel } = await import('../../src/core/components/registry.ts');
+		const config = await buildImplicitSectionEditConfig({
+			ownerTipo: 'dd234',
+			ownerSectionTipo: 'dd234',
+			mode: 'edit',
+			ownerIsSection: true,
+		});
+		const ddos = config.flatMap((item) => item.show?.ddo_map ?? []);
+		expect(ddos.length).toBeGreaterThan(0);
+		expect(ddos.some((ddo) => ddo.tipo === 'dd249')).toBe(false);
+		const unimplemented = ddos
+			.map((ddo) => ddo.model)
+			.filter((model) => model.startsWith('component_') && getComponentModel(model) === undefined);
+		expect(unimplemented).toEqual([]);
+	});
+});
