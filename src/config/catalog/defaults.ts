@@ -10,7 +10,14 @@ export const DEFAULTS_KEYS = {
 	ACTIVE_ONTOLOGY_TLDS: {
 		type: 'string_list',
 		scope: 'operator',
-		default: [],
+		// The MANDATORY core of any install ('dd','rsc','ontology','ontologytype',
+		// 'hierarchy','lg','nexus') plus 'utoponymy' — the set every project type
+		// needs whatever its heritage domain is (PHP sample.config.php
+		// DEDALO_PREFIX_TIPOS). Domain TLDs ('oh','ich','tch','numisdata', …) are
+		// per-install and go in ../private/.env. An empty default was a bug: a
+		// fresh install's update panel offered only 'ontology,ontologytype' and
+		// imported no usable ontology.
+		default: ['dd', 'rsc', 'ontology', 'ontologytype', 'hierarchy', 'lg', 'utoponymy', 'nexus'],
 		heading: 'Defining active ontology TLDs',
 		typeLabel: 'array',
 		doc: `!!! info "Renamed in v7 — was \`DEDALO_PREFIX_TIPOS\`"

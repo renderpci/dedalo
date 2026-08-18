@@ -476,7 +476,7 @@ ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "hierarchy", "lg", "oh", "ich" ]
     - for exhibitions section the tld could be: `actvexhibition`
     - for conferences section the tld could be: `actvconference`
 
-*Default: []*
+*Default: ["dd","rsc","ontology","ontologytype","hierarchy","lg","utoponymy","nexus"]*
 
 ---
 

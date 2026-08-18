@@ -55,6 +55,14 @@ To update the shared ontology enter into the Maintenance panel in the System adm
 
 The control panel will show the ontology configuration and the tlds to be updated; it's possible to change the tlds to be updated by editing the input field to add or remove one.
 
+The prefilled list is `ACTIVE_ONTOLOGY_TLDS` unioned with the core pair `ontology` / `ontologytype` (always imported, whatever the configuration says). When the key is not set in `../private/.env`, it falls back to the mandatory core set every installation needs:
+
+```
+dd, rsc, ontology, ontologytype, hierarchy, lg, utoponymy, nexus
+```
+
+Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add them to `ACTIVE_ONTOLOGY_TLDS` so they are offered here on every update.
+
 When ready, press the "Update Dédalo Ontology to the latest version" button, and the process will execute.
 
 Dédalo will erase all definitions of the specified tlds and import the new definition.

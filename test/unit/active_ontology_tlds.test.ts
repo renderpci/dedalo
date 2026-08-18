@@ -80,13 +80,24 @@ describe('ACTIVE_ONTOLOGY_TLDS config key', () => {
 		expect(JSON.parse(boot.stdout)).toEqual(['dd', 'hierarchy', 'lg']);
 	});
 
-	test('defaults to [] when unset', () => {
+	test('defaults to the mandatory core set when unset', () => {
+		// NOT [] — an empty default made a fresh install's update panel offer only
+		// the core pair, importing no usable ontology.
 		const boot = bootConfigWith({
 			ACTIVE_ONTOLOGY_TLDS: undefined,
 			DEDALO_PREFIX_TIPOS: undefined,
 		});
 		expect(boot.exitCode).toBe(0);
-		expect(JSON.parse(boot.stdout)).toEqual([]);
+		expect(JSON.parse(boot.stdout)).toEqual([
+			'dd',
+			'rsc',
+			'ontology',
+			'ontologytype',
+			'hierarchy',
+			'lg',
+			'utoponymy',
+			'nexus',
+		]);
 	});
 });
 
@@ -137,6 +148,11 @@ describe('update_ontology panel wire key (WC-028)', () => {
 		expect(new Set(tlds).size).toBe(tlds.length);
 		// Every configured TLD survives the union.
 		for (const tld of config.ontologyIo.activeOntologyTlds) {
+			expect(tlds).toContain(tld);
+		}
+		// A fresh install (key unset) must still be offered a USABLE manifest, not
+		// the core pair alone: the mandatory TLDs are in the default.
+		for (const tld of ['dd', 'rsc', 'hierarchy', 'lg', 'nexus']) {
 			expect(tlds).toContain(tld);
 		}
 	});
