@@ -1,6 +1,6 @@
 # tool_identify
 
-Curator-facing front end of the object-identification engine: from an object record, it asks which records are most likely to be the same type, and renders the per-criterion reason for every candidate. UI-only — it ships no server package and calls the already-registered `dd_identify_api` class directly.
+Curator-facing front end of the object-identification engine: from an object record, it asks which records are most likely to be the same type, and renders the per-criterion reason for every candidate. Its API surface is the already-registered `dd_identify_api` class, called directly; the tool's own `server/index.ts` holds a single action, `cluster`, and exists only because the background tier is reachable only from a tool action.
 
 ## What it does / why & when to use it
 
@@ -10,7 +10,7 @@ The tool is deliberately thin. All the reasoning (pool query, scoring, access co
 
 It **owns no write path**. It does write — an accepted proposal, and the Type link of a promoted group — but every write is `get_instance` + `change_value` on the target record's own component, the same call the record's edit form makes, on the precedent of [tool_cataloging](tool_cataloging.md). No tool-side write endpoint exists, and `dd_identify_api` is four READ actions.
 
-Use it as the reference implementation for a tool that consumes an **existing engine API class** rather than owning a server module.
+Use it as the reference implementation for a tool that consumes an **existing engine API class** instead of re-wrapping it in tool-local actions — its own server module is one background-only action, not an API surface.
 
 ## How it works (server + client)
 
@@ -250,7 +250,7 @@ const state = (outcome.agreed===true)
 ## Related
 
 - [Identify (user guide)](../../../tools/using_identify.md) — what the panel answers and how a curator reads a verdict, a score and a "not recorded" row.
-- [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model and the UI-only case this tool is an instance of.
-- [tool_cataloging](tool_cataloging.md) — the other UI-only tool that drives already-gated endpoints instead of owning actions.
+- [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, and the minimal-server-module case this tool is an instance of.
+- [tool_cataloging](tool_cataloging.md) — the UI-only tool that drives already-gated endpoints without owning any server module at all.
 - [tool_time_machine](tool_time_machine.md) — where a curator goes when a comparison changed because a value did.
 - Source: `tools/tool_identify/register.json`, `tools/tool_identify/server/index.ts` (the one `cluster` action), `tools/tool_identify/js/{index,tool_identify,render_tool_identify,render_tool_identify_clusters}.js`, `tools/tool_identify/css/tool_identify.less`; engine side `src/core/identify/`, `src/ai/identify/` and `src/core/api/handlers/dd_identify_api.ts`.
