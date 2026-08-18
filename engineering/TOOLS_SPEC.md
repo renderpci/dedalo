@@ -407,16 +407,17 @@ JSON `[{path,url}]`). A root that is missing, not a directory, or a system temp
 dir is refused. Additional-root URLs must be same-origin (root-relative) — the
 browser `import()`s tool JS from them.
 
+The tool_common client base is NOT here: it is ordinary client source at
+`client/dedalo/core/tools_common/` and the generic client handler serves it at
+`/dedalo/core/tools_common/…` like every other file under `/dedalo/core/`
+(moved there 2026-08-16 — WC-006 — from `src/core/tools/client/`, which had
+needed its own route, its own css search dir and its own scan root in every
+gate that walks the client; the URL is unchanged, so all 62 importers and
+`client/dedalo/core/page/css/main.less` are untouched).
+
 `server.ts` serves tool assets via `serving.ts` (before the generic client
 handler):
 
-- `/dedalo/core/tools_common/*` → `src/core/tools/client/` (the tool_common client
-  base). It lives in CORE, not the tools tree, and is served under a **core URL**;
-  every importer (18 core client files + 44 tool client files, and
-  `client/dedalo/core/page/css/main.less`) points here directly
-  (`…/core/tools_common/js/tool_common.js`). Since the cutover those files are
-  TS-owned primary source — there is no sync step to re-apply anything, so the
-  path is simply edited where it is wrong.
 - `/dedalo/tools/<tool>/*` → the tool's assets over the roots, **realpath**-confined,
   **refusing the `server/` subtree and any non-asset extension**. `register.json`
   IS servable (public registry data). Everything fails closed (404) — one identical
@@ -585,7 +586,7 @@ another lang. PHP behaved identically — frozen in
 where every emitted label carries the single requested lang.
 
 Consequently the client resolver `get_tool_label`
-(`src/core/tools/client/js/tool_common.js`) is a plain name lookup: a name match
+(`client/dedalo/core/tools_common/js/tool_common.js`) is a plain name lookup: a name match
 IS the right language. A miss returns `null`, which every call site handles with
 its own `|| 'literal'` English fallback — so an untranslated lang shows the
 literal rather than another language's string. (This replaced a three-tier

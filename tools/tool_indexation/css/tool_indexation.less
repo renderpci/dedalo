@@ -63,7 +63,7 @@
 //                        names sit INLINE on one baseline;
 //   • the select shape.
 // The caption idiom and the select shape have since been promoted into
-// src/core/tools/client/css/tool_common.less for the HEADER BAND, which is why
+// client/dedalo/core/tools_common/css/tool_common.less for the HEADER BAND, which is why
 // the band below no longer states them. These mixins stay local because the
 // PANES are not the header: nothing shared reaches `.top`.
 
@@ -480,32 +480,6 @@
 						border-bottom-left-radius: 20px;
 						transition: all 0.5s ease;
 
-						>* {
-							display: flex;
-							align-items: center;
-						}
-
-						// state select + delete button: no stacked-field margins
-						select, button, .button {
-							margin-top: 0px;
-							margin-bottom: 0px;
-							height: 1.7em;
-						}
-
-						>.fragment_id_info {
-							font-family: "Courier New",Courier,monospace;
-							color: @color_black;
-							font-size: 1rem;
-
-							>span {
-								margin-right: 0.5rem;
-							}
-
-							.fragment_id_tag_id {
-
-							}
-						}
-
 						.fn_background(@bg_color) {
 							background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, @bg_color 27px);
 						}
@@ -521,7 +495,46 @@
 						}
 
 						>* {
+							display: flex;
+							align-items: center;
 							padding-right: 1em;
+						}
+
+						// state select + delete button: no stacked-field margins
+						select, button, .button {
+							margin-top: 0px;
+							margin-bottom: 0px;
+							height: 1.7em;
+						}
+
+						// fragment_id_info
+						>.fragment_id_info {
+							font-family: "Courier New",Courier,monospace;
+							color: @color_black;
+							font-size: 1rem;
+
+							>span {
+								margin-right: 0.5rem;
+							}
+
+							.fragment_id_tag_id {
+
+							}
+						}
+
+						// wrap_tag_state_selector
+						>.wrap_tag_state_selector {
+
+						}
+
+						// tag_state_selector
+						>.tag_state_selector {
+
+						}
+
+						// wrap_delete_tag (trash icon)
+						>.wrap_delete_tag {
+							min-width: 3.4rem;
 						}
 					}
 				}

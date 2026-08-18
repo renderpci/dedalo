@@ -101,24 +101,22 @@ echo "Syncing first-party client (core/) …"
 rsync -a --prune-empty-dirs "${TS_OWNED_EXCLUDES[@]}" "${ASSET_INCLUDES[@]}" "$PHP_ROOT/core/" "$CLIENT_ROOT/core/"
 
 # tool_common relocation fixup (TS-owned): tool_common's client machinery lives
-# in core (src/core/tools/client/), NOT the PHP tree's tools/tool_common/. The
-# PHP core sources still import the old path, so rewrite it here after every sync
-# (idempotent). Two consumers need two different targets:
-#   - JS runtime imports are resolved by the browser via the server route
-#     /dedalo/core/tools_common/ (src/server.ts → src/core/tools/client/), so
-#     rewrite  tools/tool_common/  →  core/tools_common/.
-#   - core/page/css/main.less is compiled on disk by lessc (there is NO runtime
-#     LESS route), so its @import must reach the real file. Rewrite it to the
-#     on-disk src/ path. Only main.less imports tool_common CSS, and always at the
-#     ../../../ depth of core/page/css/, so the exact-prefix match is safe.
-# Both passes are idempotent (the old pattern is gone after the first rewrite) and
-# target disjoint file globs, so they never interfere.
+# at client/dedalo/core/tools_common/, NOT the PHP tree's tools/tool_common/
+# (WC-006; it sat in src/core/tools/client/ until 2026-08-16). The PHP core
+# sources still import the old path, so rewrite it here after every sync
+# (idempotent). Both consumers now want the SAME target, because URL and disk
+# path finally agree — JS runtime imports resolve through /dedalo/core/tools_common/
+# and main.less's @import reaches the file on disk at the same relative depth.
+# Only main.less imports tool_common CSS, and always at the ../../../ depth of
+# core/page/css/, so the exact-prefix match is safe. Both passes are idempotent
+# (the old pattern is gone after the first rewrite) and target disjoint file
+# globs, so they never interfere.
 echo "Fixing up tool_common imports in core/ …"
 grep -rl "tools/tool_common/" "$CLIENT_ROOT/core" --include="*.js" --include="*.mjs" 2>/dev/null | while read -r f; do
 	sed -i '' "s#tools/tool_common/#core/tools_common/#g" "$f"
 done
 grep -rl "tools/tool_common/" "$CLIENT_ROOT/core" --include="*.less" --include="*.css" 2>/dev/null | while read -r f; do
-	sed -i '' "s#\.\./\.\./\.\./tools/tool_common/css/tool_common#../../../../../src/core/tools/client/css/tool_common#g" "$f"
+	sed -i '' "s#\.\./\.\./\.\./tools/tool_common/css/tool_common#../../tools_common/css/tool_common#g" "$f"
 done
 
 # error_reports widget CSS (WC-018): the TS-only widget's styles are compiled

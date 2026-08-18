@@ -92,8 +92,8 @@
 				"type": "object",
 				"required": ["lang", "name", "value"],
 				"properties": {
-					"lang":  { "type": "string", "pattern": "^lg-[a-z0-9_]+$" },
-					"name":  { "type": "string" },
+					"lang": { "type": "string", "pattern": "^lg-[a-z0-9_]+$" },
+					"name": { "type": "string" },
 					"value": { "type": "string" }
 				}
 			},

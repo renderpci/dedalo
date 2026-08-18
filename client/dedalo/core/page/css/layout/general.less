@@ -423,12 +423,15 @@
 		padding: 0.33rem;
 		padding-right: 1.33rem;
 		position: relative;
+		// the WHOLE header is the collapse toggler, so the hand belongs to it, not
+		// only to the chevron: where the chevron is hidden (inspector rail mode) the
+		// icon would otherwise be clickable with no cursor affordance at all
+		cursor: pointer;
 
 		&:after {
 			.fn_add_mask('arrow_down.svg');
 			background-color: var(--color_grey_10);
 			content: ' ';
-			cursor: pointer;
 			height: 1em;
 			margin-right: 0.33rem;
 			padding: 0.33rem;

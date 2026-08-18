@@ -4,7 +4,7 @@
  *
  * dd1372 stores a tool's labels for every language; the context emits only the
  * entries matching the request's application lang. The client resolver
- * (src/core/tools/client/js/tool_common.js get_tool_label) takes a plain name
+ * (client/dedalo/core/tools_common/js/tool_common.js get_tool_label) takes a plain name
  * match as already-correct-language BECAUSE of this filter, and falls back to its
  * own call-site literal when a label is absent. If the filter ever widened
  * silently, every tool would start showing labels in a language the user did not

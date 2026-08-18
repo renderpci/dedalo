@@ -1,5 +1,5 @@
 {
-	"$schema": "../../src/core/tools/client/register.schema.json",
+	"$schema": "../../src/core/tools/register.schema.json",
 	"name": "tool_error_report",
 	"version": "1.0.0",
 	"label": {

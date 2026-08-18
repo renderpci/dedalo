@@ -110,3 +110,32 @@ gate.
   tokens fall to `*`, `test_render_api_error` asserts a bare token gets no
   auth affordance, `test_api_error` asserts a `result:false` body without
   `ok:false` is never a failure.
+
+## Addendum, 2026-08-16 — the census corpus was one root short
+
+The census as cut for this entry scanned `client/dedalo/**` and
+``tools/*/js/**`. The shared tool client machinery — then at
+`src/core/tools/client/js/*.js`, browser code living under `src/` because it is
+SERVED with the tool subsystem — was in NEITHER root, so its two envelope reads
+survived the sweep that this removal's condition was measured against:
+
+- `tool_common.js` `build()`: `self.context = api_response.result?.[0]` →
+  after the mirror's deletion this is `undefined` for EVERY tool, so
+  `self.context` was null, and `ui.tool.build_wrapper_edit` rendered every tool
+  header with an empty label (`context.label || ''`) — the visible symptom, on
+  all 36 tools, plus a console `Error. Tool context not loaded from API
+  response`.
+- `tool_common.js` `open_tool()`: the same `.result` read on the path that
+  resolves a tool context from a NAME string.
+
+Both now read through `response_data()`. The corpus is client code by
+DESTINATION, not by directory. The first repair was a third `SCAN_ROOT`
+(`{root:'src', glob:'**/client/js/**/*.js'}`); later the same day the files
+themselves moved to `client/dedalo/core/tools_common/` (WC-006 amendment), so
+the third root was reverted and the two scan roots reach them natively.
+`client_error_contract_tripwire` pins `tool_common.js` /
+`render_tool_common.js` as present in the census either way. Reverting the fix
+reddens rule 3 (4 `result` tokens in one file) — the gate that should have
+caught it, now does.
+
+Server side unchanged: no re-cut, no re-harvest, no shape change.

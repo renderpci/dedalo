@@ -83,6 +83,20 @@ const FORBIDDEN = 'zzwt5';
 const THESAURUS_PLAIN = 'zzwt6';
 /** A FRAME slot: targets test3 with `data_limit: 1` — the per-main-item cap. */
 const FRAMED = 'zzwt7';
+/** Targets test3 AND holds the wired linker role in TOOL_CARRIER's ddo_map. */
+const TOOL_LINKED = 'zzwt8';
+/** Wired too (TOOL_CARRIER_FREE), but declares NO target — the exemption's control. */
+const TOOL_LINKED_FREE = 'zzwt9';
+/** Carries `properties.tool_config`: the wired pair + an unwired portal. */
+const TOOL_CARRIER = 'zzwta';
+/** Holds the WIRED linker role, but is a component_select — not the portal family. */
+const TOOL_SIBLING_SELECT = 'zzwtb';
+/** The exemption's carrier: wires TOOL_LINKED_FREE, which declares no target. */
+const TOOL_CARRIER_FREE = 'zzwtc';
+/** A PORTAL in a role the tool never publishes into (the live rsc1368 shape). */
+const TOOL_UNWIRED_PORTAL = 'zzwtd';
+/** Carrier wiring TOOL_SIBLING_SELECT into the linker role. */
+const TOOL_CARRIER_SELECT = 'zzwte';
 /** The main component the FRAMED slot's frames extend (a name; never resolved). */
 const FRAMED_MAIN = 'zzwtm';
 
@@ -175,10 +189,14 @@ const targetConfig = (target: string) => ({
 	request_config: [{ sqo: { section_tipo: [{ value: [target], source: 'section' }] } }],
 });
 
-async function buildCallerNode(tipo: string, properties: Record<string, unknown>): Promise<void> {
+async function buildCallerNode(
+	tipo: string,
+	properties: Record<string, unknown>,
+	model = 'component_portal',
+): Promise<void> {
 	await sql.unsafe(
 		`INSERT INTO dd_ontology (tipo, parent, model, tld, term, is_model, is_translatable, is_main, properties)
-		 VALUES ($1, $2, 'component_portal', $3, $4::text::jsonb, false, false, false, $5::text::jsonb)`,
+		 VALUES ($1, $2, $6, $3, $4::text::jsonb, false, false, false, $5::text::jsonb)`,
 		[
 			tipo,
 			// Orphan parent: no section walk can reach these nodes.
@@ -186,6 +204,7 @@ async function buildCallerNode(tipo: string, properties: Record<string, unknown>
 			CALLER_TLD,
 			JSON.stringify({ 'lg-spa': `scratch insert caller ${tipo}` }),
 			JSON.stringify(properties),
+			model,
 		],
 	);
 }
@@ -416,6 +435,55 @@ beforeAll(async () => {
 	await buildCallerNode(FORBIDDEN, { data_limit: 0, source: targetConfig(HOST) });
 	await buildCallerNode(THESAURUS_PLAIN, { source: targetConfig(TERMS) });
 	await buildCallerNode(FRAMED, { data_limit: 1, source: targetConfig(HOST) });
+	// The TOOL-DECLARED source shape (tool_indexation's live one): a ddo_map
+	// pairing a SECTION the operator picks from with the component the tool
+	// publishes those picks into. The stored map carries no `model` key — the
+	// index resolves each tipo's model from the ontology exactly as
+	// enrichToolConfig does for the wire — and the pair is matched by ROLE,
+	// from `src/core/tools/picker_wiring.ts`.
+	await buildCallerNode(TOOL_LINKED, { source: targetConfig(HOST) });
+	await buildCallerNode(TOOL_UNWIRED_PORTAL, { source: targetConfig(HOST) });
+	await buildCallerNode(TOOL_LINKED_FREE, {});
+	await buildCallerNode(TOOL_SIBLING_SELECT, { source: targetConfig(HOST) }, 'component_select');
+	/** The people_section entry every carrier below pairs against. */
+	const peopleSource = {
+		role: 'people_section',
+		tipo: OFF_TARGET_SECTION,
+		section_tipo: OFF_TARGET_SECTION,
+		mode: 'list_thesaurus',
+		view: 'thesaurus_list',
+	};
+	const carrier = (ddoMap: Record<string, unknown>[]) => ({
+		tool_config: { tool_indexation: { ddo_map: ddoMap } },
+	});
+	await buildCallerNode(
+		TOOL_CARRIER,
+		carrier([
+			{ role: 'transcription_component', tipo: 'self', section_tipo: 'self' },
+			{ role: 'indexing_component', tipo: TOOL_LINKED, section_tipo: 'self' },
+			// A PORTAL in a role the tool never publishes into (the live rsc1368
+			// shape) — present precisely so the pairing cannot be a cross-product.
+			{ role: 'references_component', tipo: TOOL_UNWIRED_PORTAL, section_tipo: 'self' },
+			peopleSource,
+		]),
+	);
+	// The exemption's carrier: a wired linker that declares no target of its own.
+	await buildCallerNode(
+		TOOL_CARRIER_FREE,
+		carrier([
+			{ role: 'indexing_component', tipo: TOOL_LINKED_FREE, section_tipo: 'self' },
+			peopleSource,
+		]),
+	);
+	// The family's carrier: the WIRED role, held by a component whose value comes
+	// from its own option list rather than from a browsed record.
+	await buildCallerNode(
+		TOOL_CARRIER_SELECT,
+		carrier([
+			{ role: 'indexing_component', tipo: TOOL_SIBLING_SELECT, section_tipo: 'self' },
+			peopleSource,
+		]),
+	);
 	await sql.unsafe('INSERT INTO matrix_test (section_id, section_tipo) VALUES ($1, $2)', [
 		HOST_ID,
 		HOST,
@@ -495,6 +563,93 @@ describe.if(DB_READY)('the insert door — the TARGET constraint', () => {
 			validateRelationInserts([{ section_tipo: TERMS, section_id: 1 }], context(THESAURUS_PLAIN)),
 		);
 		expect(codes(own)).toEqual([['accepted', null]]);
+	});
+
+	test('a TOOL-declared picker source is a target of the role the tool publishes into', async () => {
+		// THE SECOND DECLARATION CHANNEL. tool_indexation pairs its
+		// `indexing_component` (rsc860 live) with a `people_section` the operator
+		// picks from (rsc197) and assigns people_section.linker =
+		// indexing_component in JS. The component's OWN request_config names
+		// hierarchies only, so gate 1 refused (`off_target`) a link the tool
+		// exists to make while the client offered the affordance from the same
+		// tool_config it had been served. The write door reads that declaration
+		// too, from the same ontology bytes — paired by ROLE, through
+		// `src/core/tools/picker_wiring.ts`.
+		const result = await asPrincipal(superuser, () =>
+			validateRelationInserts(
+				[{ section_tipo: OFF_TARGET_SECTION, section_id: 1 }],
+				context(TOOL_LINKED),
+			),
+		);
+		expect(codes(result)).toEqual([['accepted', null]]);
+		// …and its OWN declared target still passes: the tool source is a UNION,
+		// never a replacement.
+		const declared = await asPrincipal(superuser, () =>
+			validateRelationInserts(
+				[{ section_tipo: HOST, section_id: IN_TARGET[0] }],
+				context(TOOL_LINKED),
+			),
+		);
+		expect(codes(declared)).toEqual([['accepted', null]]);
+	});
+
+	test('a component in NO tool ddo_map is still refused that section', async () => {
+		// The control that keeps the case above from being vacuous: PLAIN declares
+		// the same target as TOOL_LINKED and differs ONLY in the tool wiring, so
+		// the acceptance is the tool declaration and nothing else. (Asserted as
+		// its own case in the off-target test above; repeated here as the pair.)
+		const result = await asPrincipal(superuser, () =>
+			validateRelationInserts(
+				[{ section_tipo: OFF_TARGET_SECTION, section_id: 1 }],
+				context(PLAIN),
+			),
+		);
+		expect(codes(result)).toEqual([['refused', 'off_target']]);
+	});
+
+	test('a PORTAL in an unwired role of the same map gains NOTHING (no cross-product)', async () => {
+		// The live shape this closes: tool_indexation's map also holds
+		// `references_component` (rsc1368), a portal that DISPLAYS inverse
+		// references and that the tool never publishes a pick into. Pairing every
+		// section in a map with every relation component in it would have handed
+		// it the people section as a write target — a widening nobody declared.
+		const result = await asPrincipal(superuser, () =>
+			validateRelationInserts(
+				[{ section_tipo: OFF_TARGET_SECTION, section_id: 1 }],
+				context(TOOL_UNWIRED_PORTAL),
+			),
+		);
+		expect(codes(result)).toEqual([['refused', 'off_target']]);
+	});
+
+	test('the WIRED role held by a NON-picker model gains nothing either', async () => {
+		// TOOL_SIBLING_SELECT holds the wired `indexing_component` role, and a
+		// select stores in the relation column too — but its value comes from its
+		// OWN option list, never from a browsed record. Granting it the source
+		// would let a forged save park a person locator in a status field, the
+		// exact class gate 1 exists to refuse.
+		const result = await asPrincipal(superuser, () =>
+			validateRelationInserts([{ section_tipo: OFF_TARGET_SECTION, section_id: 1 }], {
+				...context(TOOL_SIBLING_SELECT),
+				model: 'component_select',
+			}),
+		);
+		expect(codes(result)).toEqual([['refused', 'off_target']]);
+	});
+
+	test('a caller that declares NO target keeps the exemption — the tool source does not constrain it', async () => {
+		// An empty target set is "no target constraint exists", and unioning a
+		// tool source into it would INVENT one: every section but that source
+		// would start refusing. TOOL_LINKED_FREE holds the WIRED role in its own
+		// carrier — so the index really would have widened it — and declares no
+		// request_config, so a locator into a THIRD section must still be accepted.
+		const result = await asPrincipal(superuser, () =>
+			validateRelationInserts(
+				[{ section_tipo: HOST, section_id: IN_TARGET[0] }],
+				context(TOOL_LINKED_FREE),
+			),
+		);
+		expect(codes(result)).toEqual([['accepted', null]]);
 	});
 });
 

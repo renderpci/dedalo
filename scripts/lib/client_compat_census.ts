@@ -20,7 +20,13 @@
  *
  * ── WHAT IS SCANNED ─────────────────────────────────────────────────────────
  * `client/dedalo/**\/*.js` minus `client/dedalo/test/**` (the browser test
- * suite fakes envelopes on purpose), plus `tools/*\/js/**\/*.js`. Discovery is
+ * suite fakes envelopes on purpose), plus `tools/*\/js/**\/*.js`. The corpus is
+ * client code by DESTINATION: browser JS served from a tree OUTSIDE these two
+ * needs its own root here, or it is ungated — that gap is what hid the two stale
+ * `.result` reads in `tool_common.js` on 2026-08-16 (it then lived under `src/`),
+ * blanking the label of every tool header. The file moved into
+ * `client/dedalo/core/tools_common/` the same day (WC-006), which is why two
+ * roots are again enough. Discovery is
  * `Glob().scanSync()` (dot + followSymlinks + loud on a dangling link), every
  * file read with `readFileSync` — NEVER a shell-out to grep. `*-min.js` build
  * artefacts are excluded (their source twin is counted).

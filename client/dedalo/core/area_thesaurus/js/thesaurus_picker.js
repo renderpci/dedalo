@@ -241,18 +241,26 @@ const build_root_selectability_map = function(area_instance) {
 * TERM_SELECTABILITY
 * The server's answer to "may this term be linked?", read — never computed.
 *
-* Two server channels, in precedence order:
+* Three server channels, in precedence order:
 *  1. `root_terms_selectable` from the area read (root terms of each hierarchy).
 *  2. the node's own `is_indexable` flag (every deeper node, from get_node_data /
-*     get_children_data).
+*     get_children_data, and list rows via the section read).
+*  3. `selectability_declared:false` — the row's section declares NO per-term
+*     contract at all, so there is nothing to be selectable ABOUT and the write
+*     gate already exempts it (relations/save.ts gate 3). Selectable.
 *
-* A term that neither channel answers for is UNKNOWN and is refused the affordance with
-* its own reason: guessing "selectable" here would offer a link the write path refuses,
-* and guessing "not selectable" would hide a legitimate pick. Unknown is loud, not
-* silently resolved either way.
+* Channel 3 is not a guess, and this is the distinction the whole function turns on:
+* the server states "this section has no is_indexable component", the same predicate
+* the write gate reads (ontology/section_map.declaresTermSelectability). Without it a
+* People row — a legitimate, gate-authorized pick — answered nothing on channels 1-2
+* and silently lost its link arrow. Withholding an affordance on silence is the same
+* defect as offering one on a guess.
+*
+* A term that NO channel answers for is still UNKNOWN and still refused: that means a
+* section which DOES declare the contract failed to answer for this row.
 *
 * @param {Object} picker - The picker returned by attach_picker.
-* @param {Object} node - {section_tipo, section_id, is_indexable?}
+* @param {Object} node - {section_tipo, section_id, is_indexable?, selectability_declared?}
 * @returns {boolean|null} true | false | null (unknown)
 */
 export const term_selectability = function(picker, node) {
@@ -270,6 +278,13 @@ export const term_selectability = function(picker, node) {
 	// deeper nodes. The node itself carries the answer
 		if (node.is_indexable===true || node.is_indexable===false) {
 			return node.is_indexable
+		}
+
+	// no contract. The section has no selectable-term flag, which the write gate
+	// treats as "nothing to re-ask" — so the affordance is offered, on the server's
+	// own statement and not on an inference from a missing key.
+		if (node.selectability_declared===false) {
+			return true
 		}
 
 	return null

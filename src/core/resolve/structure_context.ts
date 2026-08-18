@@ -85,6 +85,19 @@ interface StructureContextCoreInternal extends StructureContextCore {
 	 */
 	configSourceProperties: unknown;
 	/**
+	 * The element's OWN (alias-resolved) properties, pre-Site-B swap. PHP
+	 * common::get_columns_map (class.common.php:4339-4374) reads
+	 * `$this->get_properties()` and does its OWN section_list lookup for
+	 * list/tm — it never sees resolve_source_properties' output. Feeding it the
+	 * SWAPPED properties instead makes list_thesaurus (and any other swapped
+	 * mode PHP leaves alone) inherit the section_list_thesaurus child's
+	 * source.columns_map, which collapses distinct list columns into the
+	 * configured ones and leaves the header row short of the rendered cells
+	 * (rsc197: Nombre+Apellidos share column 'a' → no Apellidos header).
+	 * INTERNAL: destructured out at stamp, never on the wire.
+	 */
+	ownConfigProperties: unknown;
+	/**
 	 * PHP common::get_view minus the per-call ddo_map injection (:4464-4506):
 	 * list-mode section_list-child view preference, then the element's OWN
 	 * properties.view — resolved against the ontology, NOT the Site-A swapped
@@ -411,6 +424,7 @@ async function buildCore(
 		// section_tipo), so it lives in the cached core.
 		sortable: resolveSortable(model, tipo, sectionTipo),
 		configSourceProperties,
+		ownConfigProperties: effectiveProperties,
 		structuralView,
 	};
 	coreCache.set(cacheKey, core);
@@ -732,7 +746,7 @@ export async function buildStructureContext(options: {
 	// Clone-before-stamp: shallow clone + deep-cloned properties (PHP :1644/:1653).
 	// The Site-B config feed + structural view are INTERNAL — destructured out
 	// so the spread cannot leak them onto the wire entry.
-	const { configSourceProperties, structuralView, ...coreFields } = core;
+	const { configSourceProperties, ownConfigProperties, structuralView, ...coreFields } = core;
 	const entry: StructureContextEntry = {
 		...coreFields,
 		// Wire markers (PHP dd_object): the client keys its wrapper CSS classes
@@ -1041,10 +1055,21 @@ export async function buildStructureContext(options: {
 		// columns_map exposure (PHP :1679): the base ontology value (section_list
 		// child in list mode) when a request_config exists, [] fallback. The
 		// client completes the final grid columns in JS (common.js get_columns_map).
+		// (!) The feed is the element's OWN properties, NOT the Site-B swap:
+		// PHP get_columns_map (:4339) reads $this->get_properties() and resolves
+		// the section_list child itself for list/tm. Handing it the swapped
+		// properties leaked a section_list_thesaurus columns_map into
+		// list_thesaurus mode — see ownConfigProperties.
 		if (parsedConfig.length > 0) {
 			const { getElementColumnsMap } = await import('../relations/request_config/build.ts');
 			entry.columns_map =
-				(await getElementColumnsMap(options.tipo, effectiveConfigSource, options.mode)) ?? [];
+				(await getElementColumnsMap(
+					options.tipo,
+					options.propertiesOverride !== undefined
+						? options.propertiesOverride
+						: ownConfigProperties,
+					options.mode,
+				)) ?? [];
 		}
 	}
 

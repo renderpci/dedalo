@@ -717,12 +717,6 @@ const get_tag_info = function(self) {
 					}
 				})
 			})
-		// label delete
-			const button_delete_label = ui.create_dom_element({
-				element_type	: 'label',
-				inner_html		: get_label.delete || 'Delete',
-				parent			: wrap_delete_tag
-			})
 
 	// active values
 		// Subscribe to reactive tag_id changes; fired by update_active_values
@@ -731,7 +725,6 @@ const get_tag_info = function(self) {
 
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
-			button_delete_label.textContent	= get_label.delete || 'Delete' //  + ' ' + value // update delete label
 
 			// show/hide info_container
 				if (self.tag_info_container.classList.contains('hide')) {

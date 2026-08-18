@@ -21,7 +21,6 @@
 # ---------------------------------------------------------------------------
 client/dedalo/**/*.css      linguist-generated=true
 tools/**/*.css              linguist-generated=true
-src/core/tools/client/**/*.css      linguist-generated=true
 
 # Third-party bundles we vendor verbatim — not our source, never reviewed as ours.
 vendor/**  linguist-vendored=true

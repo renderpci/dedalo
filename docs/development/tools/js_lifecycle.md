@@ -1,6 +1,6 @@
 # Tools JS lifecycle
 
-The client-side contract of a Dédalo tool — vanilla constructor-function/prototype JS, no build step. Base module: `src/core/tools/client/js/tool_common.js`, served at `/dedalo/core/tools_common/js/tool_common.js` (see *Roots & static serving* in `engineering/TOOLS_SPEC.md`). Reference implementation: `tools/tool_dev_template/js/`.
+The client-side contract of a Dédalo tool — vanilla constructor-function/prototype JS, no build step. Base module: `client/dedalo/core/tools_common/js/tool_common.js`, served at `/dedalo/core/tools_common/js/tool_common.js` (see *Roots & static serving* in `engineering/TOOLS_SPEC.md`). Reference implementation: `tools/tool_dev_template/js/`.
 
 ## Files
 

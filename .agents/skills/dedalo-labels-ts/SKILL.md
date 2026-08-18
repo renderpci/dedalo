@@ -108,7 +108,7 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 | `test/parity/wc034_label_cleanup.json` | Machine-readable rename/tool-local/removal map. |
 | `tools/<tool>/register.json` | TOOL-LOCAL labels (`misc.dd1372` / `labels[]`) — seed for `matrix_tools`. |
 | `src/core/tools/registry.ts` | `buildToolElementContext` — the single-lang label filter. |
-| `src/core/tools/client/js/tool_common.js` | `get_tool_label` — the client resolver. |
+| `client/dedalo/core/tools_common/js/tool_common.js` | `get_tool_label` — the client resolver. |
 | `test/unit/tool_context_labels_lang.test.ts` | Gate for the single-lang serving contract. |
 | `engineering/TOOLS_SPEC.md` (§ Tool labels) | Authoritative tool-label spec. |
 | `engineering/wire_contract/` (WC-033, WC-034) | Authoritative contract + gate reconciliation. |

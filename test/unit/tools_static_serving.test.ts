@@ -1,12 +1,17 @@
 /**
  * Tool static-serving fail-closed behavior (src/core/tools/serving.ts).
  * Asserts: real tool assets are served; the server/ subtree and non-asset
- * extensions 404; the tool_common alias resolves to the core-served client
- * dir; path traversal is refused; unknown/non-tool paths fall through (null).
+ * extensions 404; path traversal is refused; unknown/non-tool paths fall
+ * through (null). tool_common is NOT this handler's business since 2026-08-16
+ * (WC-006): it is client source under client/dedalo/core/tools_common, served
+ * by the generic client handler — asserted here through the real server so the
+ * URL the tools tree no longer answers is proven to be answered by someone.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { serveToolCommonRequest, serveToolsRequest } from '../../src/core/tools/serving.ts';
+import { resolve } from 'node:path';
+import { serveToolsRequest } from '../../src/core/tools/serving.ts';
+import { handleRequest } from '../../src/server.ts';
 
 const REQ = new Request('http://localhost/');
 
@@ -22,18 +27,22 @@ describe('tool static serving', () => {
 		expect(res?.status).toBe(200);
 	});
 
-	test('serves tool_common from its CORE url (200)', async () => {
-		const res = await serveToolCommonRequest('/dedalo/core/tools_common/js/tool_common.js', REQ);
-		expect(res?.status).toBe(200);
+	test('tool_common still serves at its CORE url, now as plain client source (200)', async () => {
+		const res = await handleRequest(
+			new Request('http://localhost/dedalo/core/tools_common/js/tool_common.js'),
+			{ requestId: 'test', startedAt: 0 },
+		);
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(
+			await Bun.file(
+				resolve(import.meta.dir, '../../client/dedalo/core/tools_common/js/tool_common.js'),
+			).text(),
+		);
 	});
 
 	test('tool_common is NO LONGER under /dedalo/tools/ (404)', async () => {
 		const res = await serveToolsRequest('/dedalo/tools/tool_common/js/tool_common.js', REQ);
 		expect(res?.status).toBe(404);
-	});
-
-	test('serveToolCommonRequest ignores non-tools_common paths (null)', async () => {
-		expect(await serveToolCommonRequest('/dedalo/core/page/index.html', REQ)).toBeNull();
 	});
 
 	test('refuses the server/ subtree (404)', async () => {

@@ -16,6 +16,7 @@ import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { getSectionRealTipo } from '../../src/core/resolve/security_access_datalist.ts';
+import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { deriveSectionDdoMap } from '../../src/core/section/read.ts';
 
 // DB reachability probe: only a genuinely unreachable DB downgrades to SKIP.
@@ -70,3 +71,41 @@ describe.if(hasDb)('virtual section list columns (PHP resolve_ar_related_list_se
 		expect((await listColumns('hierarchy20')).length).toBeGreaterThan(0);
 	});
 });
+
+/**
+ * COLUMNS_MAP FEED (PHP common::get_columns_map, class.common.php:4339-4374):
+ * the map is read from the element's OWN properties, and PHP does its OWN
+ * section_list lookup for list/tm — it NEVER sees resolve_source_properties'
+ * output ("Site B"). Feeding it the Site-B swap instead leaked the
+ * section_list_thesaurus child's `source.columns_map` into list_thesaurus mode:
+ * rsc197's rsc1050 declares 2 columns (a: rsc85, b: rsc1051) while the row
+ * ddo_map renders 3 cells, so the client's get_columns_map emitted one header
+ * too few — the "Apellidos" column lost its header and every header after it
+ * shifted left.
+ */
+describe.if(hasDb)(
+	'columns_map feeds from the element OWN properties (PHP get_columns_map)',
+	() => {
+		test('rsc197 list_thesaurus exposes NO columns_map (its own properties declare none)', async () => {
+			const entry = await runWithRequestLangs(
+				{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
+				async () =>
+					buildStructureContext({
+						tipo: 'rsc197',
+						sectionTipo: 'rsc197',
+						mode: 'list_thesaurus',
+						permissions: 2,
+						lang: 'lg-eng',
+					}),
+			);
+			// The section_list_thesaurus child DOES declare one — the point of the gate.
+			const child = (await sql`
+			SELECT properties FROM dd_ontology WHERE tipo = 'rsc1050'
+		`) as { properties: { source?: { columns_map?: unknown[] } } | null }[];
+			expect(child[0]?.properties?.source?.columns_map?.length).toBeGreaterThan(0);
+
+			expect(entry).not.toBeNull();
+			expect(entry?.columns_map).toEqual([]);
+		});
+	},
+);

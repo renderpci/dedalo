@@ -46,6 +46,11 @@
  *    strings blanked, `page_globals` lines skipped): a write `.msg = …` counts,
  *    a computed `obj['msg']` does not; `client/dedalo/test/**` and `-min.js`
  *    twins are ungated by design.
+ *  - The corpus is CLIENT CODE BY DESTINATION, not by directory: browser JS
+ *    served from a tree outside the two scan roots is ungated. That is how the
+ *    two stale `.result` reads in `tool_common.js` survived P4 and blanked every
+ *    tool header (2026-08-16, when it still lived under `src/`); it now sits in
+ *    `client/dedalo/core/tools_common/` (WC-006) and is pinned below.
  *  - The three words are also the names of non-envelope shapes the client MUST
  *    keep reading (FileReader.result, server job STREAM FRAMES, payload
  *    diagnostic lists, named failure extension keys). Those are excused one
@@ -89,6 +94,24 @@ const TRANSPORT_CONSUMERS = [
 	'client/dedalo/core/page/js/worker_cache.js',
 	'client/dedalo/core/sw.js',
 ] as const;
+/**
+ * The shared tool client machinery. Pinned because it is the one client tree
+ * that has already been outside the census once (it lived under `src/` until
+ * 2026-08-16, and the reads that blind spot hid blanked every tool header).
+ */
+const TOOL_COMMON_CLIENT_JS = [
+	'client/dedalo/core/tools_common/js/tool_common.js',
+	'client/dedalo/core/tools_common/js/render_tool_common.js',
+] as const;
+/**
+ * `src/` holds ENGINE TypeScript. A tracked `.js` under it is browser code (that
+ * is what it was for from 2026-07 to 2026-08-16) and would therefore be outside
+ * the census — the blind spot itself, not an instance of it. Named exemptions
+ * would go here with a reason; there are none, and the assertion is ZERO rather
+ * than a pin so a NEW tree cannot repeat the failure. Node-side `.mjs`/`.cjs`
+ * are equally suspect and equally absent.
+ */
+const SRC_BROWSER_JS_EXEMPT: readonly string[] = [];
 /** The compat block's two homes on the server (the flip target of rule 3). */
 const CONVERT_TS = 'src/core/errors/convert.ts';
 const SCHEMA_TS = 'src/core/errors/schema.ts';
@@ -341,6 +364,28 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 		const seen = new Set(RESULTS.map((result) => result.file));
 		for (const file of TRANSPORT_CONSUMERS)
 			expect(seen.has(file), `${file} not in the census`).toBe(true);
+		// The tool client machinery is client code and must be counted as such:
+		// while it lived outside the scan roots (under `src/`, until 2026-08-16)
+		// two `.result` envelope reads survived P4 there, nulling every tool
+		// context and blanking every tool header label.
+		for (const file of TOOL_COMMON_CLIENT_JS)
+			expect(
+				seen.has(file),
+				`${file} not in the census — the shared tool client machinery moved out of client/dedalo again; browser JS is counted by DESTINATION, so it needs a scan root wherever it lives.`,
+			).toBe(true);
+	});
+
+	// The pins above prove the census REACHES two known files. This proves no
+	// browser JS exists where the census cannot reach — the failure mode itself.
+	test('no browser JS hides under src/ (the 2026-08-16 blind spot, re-armed)', () => {
+		const strays = [...new Glob('**/*.{js,mjs,cjs}').scanSync({ cwd: join(REPO_ROOT, 'src') })]
+			.map((match) => `src/${match.split(sep).join('/')}`)
+			.filter((file) => !SRC_BROWSER_JS_EXEMPT.includes(file))
+			.sort();
+		expect(
+			strays,
+			`Tracked JS under src/. src/ is engine TypeScript; a .js there is browser code, and browser code outside the census scan roots (client/dedalo/**, tools/*/js/**) is UNGATED — exactly how two stale \`.result\` envelope reads in tool_common.js survived P4 and blanked every tool header (WC-006, 2026-08-16). Move it to client/dedalo/, or add a SCAN_ROOT in scripts/lib/client_compat_census.ts AND a reason in SRC_BROWSER_JS_EXEMPT.`,
+		).toEqual([]);
 	});
 
 	test('the non-envelope allowlist is printed: every entry, its hit count and its reason', () => {

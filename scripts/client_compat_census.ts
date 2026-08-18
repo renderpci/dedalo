@@ -18,11 +18,14 @@ import {
 	byPath,
 	census,
 	type FileCompatReads,
+	SCAN_ROOTS,
 	summarize,
 	totalsByTopLevel,
 } from './lib/client_compat_census.ts';
 
-const ROOTS_LABEL = 'client/dedalo/**/*.js, tools/*/js/**/*.js';
+// DERIVED, never re-typed: a hand-written label goes stale the day a root is
+// added (as one was on 2026-08-16 — see scripts/lib/client_compat_census.ts).
+const ROOTS_LABEL = SCAN_ROOTS.map((scan_root) => `${scan_root.root}/${scan_root.glob}`).join(', ');
 
 function printReport(results: readonly FileCompatReads[]): number {
 	const totals = summarize(results);

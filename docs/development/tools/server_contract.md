@@ -143,7 +143,7 @@ Resolution helpers:
 `importTools({dryRun})` scans the roots, parses each `register.json`, detects its format, and validates it:
 
 - top-level `components` key → legacy v6 dump — **not supported this wave** (none of the 34 in-repo tools use it, so this has not blocked any real port);
-- top-level `name` key → the flat **authoring** format (`authoringRegisterSchema`, a Zod mirror of `src/core/tools/client/register.schema.json`) — converted to the column-keyed shape;
+- top-level `name` key → the flat **authoring** format (`authoringRegisterSchema`, a Zod mirror of `src/core/tools/register.schema.json`) — converted to the column-keyed shape;
 - column-keyed (`data`/`string`/`relation`/…) → pass-through, validated as-is. **All 34 in-repo `register.json` files are this form** — they are seeded matrix-row dumps, not hand-authored files.
 
 **Write gating.** `importTools` defaults to **dry-run** (`config.tools.enableRegistryImport = false`): for every tool it reports whether the registry already reflects the declared identity (empty diff = no-op), writing nothing. The write path (`enableRegistryImport = true`) is gated behind the write-parity procedure in `engineering/TOOLS_SPEC.md` (a `test/parity/tools_register_differential.test.ts` no-op gate plus one manual scratch-DB write-parity run) before it may be documented as supported.

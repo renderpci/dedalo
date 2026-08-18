@@ -37,7 +37,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds). 
-- `bun run test:client` — the byte-identical client suite against a   `DEDALO_DEV_MODE=true` server (target: `rewrite/client_tests.md`). 
+- `bun run test:client` — the browser client suite (Mocha in headless Chrome)   against a running dev listener: `SERVER_TCP_PORT=4000 bun run test:client`   (the port is NOT in `../private/.env`; pass it or `--url`). It authenticates   by calling `login()` in-process and injecting the session cookie — the FORM   path is `--auth form`, and `--auth mint --user <existing>` is the dev-only,   no-password escape hatch for a DB whose `DEDALO_TEST_PASSWORD` is stale.   The baseline is IN the runner: `KNOWN_FAILING` (shrink-only, reasons   inline — a listed suite that PASSES is red too) and `--strict` ignores it.   Measured 2026-08-17: 125 suites, 123 pass, 2 known-fail, 4 deferred.   ALWAYS measure with the reseed on — a polluted test3 fakes ~7 failures. 
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run lint` — biome (burn-down owned by a dedicated pass). 
 
@@ -65,7 +65,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `rewrite/STATUS.md` | Historical narrative ledger (long-form phase history; frozen — see its banner). | 
 | `rewrite/COEXISTENCE.md` | CLOSED PHP-coexistence ledger (COEX tags, removal conditions) — history since the cutover. | 
 | `rewrite/CUTOVER_RUNBOOK.md` | The one-day operator procedure that froze PHP and made TS the single engine. | 
-| `rewrite/client_tests.md` | Client-gate baseline. | 
+| `rewrite/client_tests.md` | Historical client-gate notes (the LIVE baseline is `KNOWN_FAILING` in `scripts/client_test_runner.ts`). | 
 | `audits/2026-07_foundation/` | Foundation audit: FINDINGS / DECISIONS / REMEDIATION (finding ids like S2-26 resolve here). | 
 
 ## Architecture in one breath 

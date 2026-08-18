@@ -70,3 +70,33 @@ export async function getSectionMapValue(
 	}
 	return null;
 }
+
+/**
+ * Does this section declare a per-term selectability contract? THE predicate —
+ * one definition, every call site, because the two that matter used to answer
+ * differently and the disagreement was user-visible.
+ *
+ * The precondition is `isIndexable`'s own (ts_object.ts): the section_map's
+ * `thesaurus.is_indexable` must NAME a component tipo. `false`, `''`, `null`
+ * and absent all mean the same thing — this section has no selectable-term
+ * flag — which is the ordinary case for every non-thesaurus target (rsc197,
+ * People, is one).
+ *
+ * WHY IT IS SHARED. `relations/save.ts` gate 3 reads it to EXEMPT such a
+ * target: no contract, nothing to re-ask, the pick is authorized. `section/
+ * read.ts` reads it to tell the client the same thing, so the pick ARROW is
+ * drawn on exactly the rows the write door would accept. Before this was one
+ * function the read simply stayed silent, the client's `term_selectability`
+ * read that silence as UNKNOWN, and a People row the server would have linked
+ * happily offered the operator no affordance at all. An affordance must not be
+ * offered on a guess — but withholding one on a guess is the same defect.
+ *
+ * NOT the scope-fallback walk: `thesaurus` is the only scope that carries this
+ * key, exactly as `isIndexable` reads it.
+ */
+export async function declaresTermSelectability(sectionTipo: string): Promise<boolean> {
+	const declared = (
+		(await getSectionMap(sectionTipo))?.thesaurus as { is_indexable?: unknown } | undefined
+	)?.is_indexable;
+	return typeof declared === 'string' && declared !== '';
+}

@@ -536,6 +536,9 @@ const render_column_id = function(options) {
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 		const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
+		// the row's envelope entry, verbatim from the section read. Carries the
+		// server's per-row `is_indexable` answer for thesaurus sections.
+		const locator		= options.locator || null
 
 	// (!) Neither self.permissions nor self.show_interface is read here. They were
 	// unused locals before the picker landed too, and reading them would suggest this
@@ -573,16 +576,18 @@ const render_column_id = function(options) {
 	// term control. Rendered only when this thesaurus is a picker
 		if (picker) {
 
-			// (!) SELECTABILITY OF A LIST ROW — AND THE KNOWN GAP.
+			// (!) SELECTABILITY OF A LIST ROW.
 			// term_selectability reads the server's answer and computes none:
-			// root_terms_selectable (the area read) or the node's own is_indexable (the
-			// tree node reads). A list row is NEITHER — the section list read emits no
-			// per-row selectability today — so the answer is UNKNOWN and no control is
-			// rendered. An affordance is never offered on a guess.
-			// CONSEQUENCE, stated plainly: list-row picking is INACTIVE until the
-			// section list read emits the same isIndexable answer the tree paths already
-			// carry. Until then the row still renders its section id (see the else
-			// branch below); what it does not render is a link arrow.
+			// root_terms_selectable (the area read) or the node's own is_indexable.
+			// The section list read now stamps that SAME is_indexable on each
+			// envelope entry for sections whose section_map declares it, and the
+			// entry reaches this callback verbatim as options.locator — so a search
+			// result is pickable exactly when the server says the term is. A section
+			// that declares no such concept says THAT instead
+			// (`selectability_declared:false`), which the write gate already treats
+			// as an exemption, so its rows are pickable too. Only a declaring
+			// section that fails to answer for a row stays UNKNOWN — never a guess
+			// in either direction.
 			const control = render_term_pick_control({
 				picker		: picker,
 				term		: {
@@ -591,8 +596,12 @@ const render_column_id = function(options) {
 					label			: self.label ? self.label : ''
 				},
 				selectable	: term_selectability(picker, {
-					section_tipo	: section_tipo,
-					section_id		: section_id
+					section_tipo			: section_tipo,
+					section_id				: section_id,
+					is_indexable			: locator?.is_indexable,
+					// the section declares no per-term contract at all (People,
+					// rsc197). Channel 3 — see term_selectability.
+					selectability_declared	: locator?.selectability_declared
 				}),
 				parent		: fragment
 			})
@@ -611,6 +620,11 @@ const render_column_id = function(options) {
 				// they navigate by.
 				fragment.appendChild(section_id_node)
 			}
+		} else {
+			// no picker: a browsed thesaurus list offers no pick control — but the
+			// record number is still the operator's handle on the row, so the id
+			// renders exactly as in the generic list.
+			fragment.appendChild(section_id_node)
 		}
 
 

@@ -1,6 +1,6 @@
 /**
  * Zod schema for the v7 AUTHORING register.json format (mirrors
- * src/core/tools/client/register.schema.json and PHP tools_register::
+ * src/core/tools/register.schema.json and PHP tools_register::
  * validate_register). Hand-written tools use this flat shape; it is converted to
  * the column-keyed matrix record before the runtime validation runs.
  *

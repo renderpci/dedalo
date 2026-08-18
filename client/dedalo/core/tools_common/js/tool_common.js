@@ -56,6 +56,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {LZString as lzstring} from '../../../core/common/js/utils/lzstring.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {
 		clone,
 		dd_console,
@@ -530,7 +531,10 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					if (SHOW_DEBUG) {
 						console.log('tool common api_response: ' , api_response)
 					}
-					self.context = api_response.result?.[0] || null
+					// (!) THE payload accessor: the envelope carries `data`, not `result`.
+					// Reading `.result` here silently left every tool context null, so
+					// each tool header rendered with an empty label.
+					self.context = response_data(api_response)?.[0] || null
 
 				// config update
 					if (self.context) {
@@ -918,8 +922,9 @@ export const open_tool = async (options) => {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
-					if (api_response.result && api_response.result[0]) {
-						return api_response.result[0] // tool context object
+					const tool_context_data = response_data(api_response)
+					if (tool_context_data && tool_context_data[0]) {
+						return tool_context_data[0] // tool context object
 					}
 					return null
 				} catch (error) {

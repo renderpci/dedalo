@@ -183,6 +183,13 @@ expression at a time in `NON_ENVELOPE_READS` with a reason; the core sweep
 passthrough and the client compat branches (bare `not_logged` /
 `csrf_failed` / `not_authorized` policy rows, the `auth.`/`perm.` renderer
 aliases) were deleted the same day — `WC-2026-08-16-error-envelope-compat-removal`.
+That first census was one root short: the shared tool client machinery, then at
+`src/core/tools/client/js/*.js`, was in neither scanned tree, and its two
+surviving `.result` reads left every tool context null — a blank label on every
+tool header — until the same day. The corpus is client code by DESTINATION, not
+by directory; the machinery now lives at `client/dedalo/core/tools_common/`
+(WC-006), inside the primary scan root, and the gate pins it as present in the
+census (see the WC entry's addendum).
 What remains is the negative: `result` is a forbidden key (§3.0), the converter
 writes no `result:` (`error_taxonomy_tripwire` A2), the census is asserted at
 ZERO (no baseline file — a ratchet frozen at 0 is a second copy of a

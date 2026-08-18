@@ -188,6 +188,33 @@ In relation mode the response carries three extra facts, all absent from a brows
   is not selectable stays visible and navigable — those are the levels one passes
   through to reach a leaf — and simply carries no link affordance.
 
+### Where a row's `selectable` comes from
+
+A picker does not only paint trees. A search result, a section list opened as a picker
+(the indexation tool browses people that way) and a tree node are all rows that need the
+same answer, and the client reads it from whichever of **three** server channels
+answers — it never computes one:
+
+| Channel | Carried by | Answers for |
+| --- | --- | --- |
+| `root_terms_selectable` | the area read, keyed by locator | root terms of each hierarchy |
+| `is_indexable` | each tree node, and each section-list envelope entry | any record whose section **declares** the `is_indexable` role |
+| `selectability_declared: false` | each section-list envelope entry | every record of a section that declares **no** such role |
+
+The third channel exists because silence is not an answer. A section with no
+`is_indexable` role has no per-term contract, and saving a pick into it is already
+exempt from that check — so its rows must be pickable. While the read said nothing at
+all for those rows, the client could not tell "no contract" from "nobody answered" and
+withheld the affordance from records the save would have accepted.
+
+The two envelope keys are mutually exclusive: a section that declares the role answers
+per row with `is_indexable` and never sends the exemption. Only a **declaring** section
+that fails to answer for a row leaves the row genuinely unknown, and an unknown row gets
+no affordance — an affordance is never offered on a guess, and never withheld on one.
+
+See `is_indexable` in the section map documentation for what declaring the role costs:
+[The `is_indexable` contract](../ontology/section_map.md#the-is_indexable-contract-declared-or-absent).
+
 Two empty pickers are two different facts, and the read distinguishes them: everything
 refused by permissions answers `403` with a message that names nothing (naming what you
 may not see is itself a leak), while a target that declares no active hierarchy — or

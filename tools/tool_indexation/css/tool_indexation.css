@@ -253,9 +253,19 @@
   border-bottom-left-radius: 20px;
   transition: all 0.5s ease;
 }
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container.n {
+  background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, var(--color_orange) 27px);
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container.d {
+  background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, var(--color_blue_light) 27px);
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container.r {
+  background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, var(--color_red_light) 27px);
+}
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > * {
   display: flex;
   align-items: center;
+  padding-right: 1em;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container select,
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container button,
@@ -272,17 +282,8 @@
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > .fragment_id_info > span {
   margin-right: 0.5rem;
 }
-.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container.n {
-  background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, var(--color_orange) 27px);
-}
-.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container.d {
-  background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, var(--color_blue_light) 27px);
-}
-.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container.r {
-  background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, var(--color_red_light) 27px);
-}
-.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > * {
-  padding-right: 1em;
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > .wrap_delete_tag {
+  min-width: 3.4rem;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tab_label {
   flex: 1;

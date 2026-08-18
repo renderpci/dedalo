@@ -63,11 +63,20 @@ import {
 	SESSION_COOKIE,
 	SESSION_IDLE_TTL_SECONDS,
 } from './core/security/session_store.ts';
-import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.ts';
+import { safeRealpath } from './core/tools/paths.ts';
+import { serveToolsRequest } from './core/tools/serving.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
 const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
+/**
+ * CLIENT_ROOT canonicalised once. The symlink-escape check in serveClientAsset
+ * compares canonical paths, so the BASE must be canonical too — otherwise a
+ * checkout reached through a symlinked parent (…/v7 → /Volumes/…) would fail
+ * every comparison and 404 the whole client. Falls back to the lexical root if
+ * the tree is somehow unreadable at boot.
+ */
+const CLIENT_ROOT_CANONICAL = safeRealpath(CLIENT_ROOT) ?? CLIENT_ROOT;
 
 /**
  * Media directory served under /dedalo/<mediaDir>/ (the PHP DEDALO_MEDIA_URL
@@ -412,9 +421,16 @@ function redirectResponse(location: string): Response {
 
 /**
  * Serve one copied-client asset (GET /dedalo/*). Fail-closed: decoded paths are
- * resolved and must stay inside CLIENT_ROOT (traversal guard); anything missing
- * or outside is a plain 404. A directory path serves its index.html. Response
- * semantics (validators/304/Cache-Control/gzip) come from staticAssetResponse.
+ * resolved and must stay inside CLIENT_ROOT — LEXICALLY (traversal) and then
+ * CANONICALLY (symlink escape); anything missing or outside is a plain 404. A
+ * directory path serves its index.html. Response semantics
+ * (validators/304/Cache-Control/gzip) come from staticAssetResponse.
+ *
+ * The canonical half arrived with WC-006 (2026-08-16): the tool_common subtree
+ * moved in here from a route of its own whose `confineUnder` canonicalised with
+ * realpath, and a move must not weaken a guarantee. The whole client tree gets
+ * the stronger check — one realpath per asset request, on a path that is
+ * stat()ed anyway. Gate: tools_path_confinement.test.ts plants a real symlink.
  */
 async function serveClientAsset(
 	pathname: string,
@@ -432,6 +448,17 @@ async function serveClientAsset(
 	let fullPath = resolve(CLIENT_ROOT, relativePath);
 	if (fullPath !== CLIENT_ROOT && !fullPath.startsWith(CLIENT_ROOT + sep)) {
 		return notFoundResponse(requestId); // traversal attempt
+	}
+	// Symlink escape: a lexical check passes a link that POINTS outside the tree.
+	// Canonicalise and re-check. A missing path canonicalises to null and falls
+	// through to the normal 404 below (existence is never leaked either way).
+	const canonicalPath = safeRealpath(fullPath);
+	if (
+		canonicalPath !== null &&
+		canonicalPath !== CLIENT_ROOT_CANONICAL &&
+		!canonicalPath.startsWith(CLIENT_ROOT_CANONICAL + sep)
+	) {
+		return notFoundResponse(requestId); // symlink escape
 	}
 	const isDirectory = await stat(fullPath)
 		.then((entry) => entry.isDirectory())
@@ -747,14 +774,6 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				...svgSafetyHeaders,
 			},
 		});
-	}
-
-	// tool_common client machinery, served under a CORE url from
-	// src/core/tools/client/ (it lives in core, not the tools tree). Must run
-	// before the generic client handler (which has no core/tools_common dir).
-	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/core/tools_common/')) {
-		const toolCommonResponse = await serveToolCommonRequest(url.pathname, request);
-		if (toolCommonResponse !== null) return toolCommonResponse;
 	}
 
 	// Tool package assets (served from the repo `tools/` roots, NOT the copied

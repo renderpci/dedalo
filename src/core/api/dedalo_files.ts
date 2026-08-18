@@ -12,10 +12,14 @@
  *  - tools:       the in-repo primary tools root               → /dedalo/tools/…
  *    (PHP scans only DEDALO_TOOLS_PATH; additional roots are likewise not
  *    manifested here.)
- *  - tool_common: PHP serves it from tools/tool_common; the TS server relocated
- *    that client machinery to src/core/tools/client, served at
- *    /dedalo/core/tools_common/ (see core/tools/paths.ts) — the manifest emits
- *    the TS URL so the SW caches a fetchable path.
+ *  - tool_common: PHP serves it from tools/tool_common; the TS client keeps that
+ *    machinery at client/dedalo/core/tools_common (WC-006), served at
+ *    /dedalo/core/tools_common/ — the manifest emits the TS URL so the SW caches
+ *    a fetchable path. It is INSIDE the core tree on disk, so the core walk
+ *    skips it (TOOLS_COMMON_REL) and it keeps its own block below: that block
+ *    holds the PHP ENTRY ORDER (after core js, before tools) and applies the
+ *    TOOLS filter rule PHP applied to it — the core rule would drop its css and
+ *    list it in a different place.
  *
  * Filter rules are a 1:1 port of the PHP method (including its case
  * sensitivity quirks and the tools-branch entries all being typed 'js').
@@ -38,6 +42,8 @@ const CLIENT_CORE_ROOT = resolve(import.meta.dir, '../../../client/dedalo/core')
 /** Web bases (PHP DEDALO_CORE_URL and the TS tools_common seam). */
 const CORE_URL = '/dedalo/core';
 const TOOLS_COMMON_URL = `${CORE_URL}/tools_common`;
+/** tools_common's path INSIDE the core tree (it has its own manifest block). */
+const TOOLS_COMMON_REL = '/tools_common/';
 
 /**
  * Recursively collect files with an allowed extension under `dir` (PHP
@@ -124,13 +130,16 @@ export function buildDedaloFilesResponse(): {
 	// CORE — css: main.css first to preserve coherence (its /page/css/ path
 	// does not match the /js/ rule and would otherwise be skipped).
 	files.push({ type: 'css', url: `${CORE_URL}/page/css/main.css` });
-	// CORE — js.
+	// CORE — js. tools_common is INSIDE this tree on disk but has its OWN block
+	// below (PHP entry order + the tools filter rule), so it is skipped here —
+	// that skip is what keeps it from being listed twice.
 	for (const rel of walkDirFiles(CLIENT_CORE_ROOT, ['js'])) {
+		if (rel.startsWith(TOOLS_COMMON_REL)) continue;
 		const url = coreFileUrl(rel);
 		if (url !== null) files.push({ type: 'js', url });
 	}
 
-	// TOOL_COMMON — the TS relocation seam (see module doc). Filtered with the
+	// TOOL_COMMON — the relocation seam (see module doc). Filtered with the
 	// tools rule by prefixing the tool dir PHP sees ('/tool_common/js/…').
 	for (const rel of walkDirFiles(TOOL_COMMON_CLIENT_DIR, ['js', 'css'])) {
 		if (toolFileRelIsIncluded(`/tool_common${rel}`)) {

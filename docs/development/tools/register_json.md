@@ -2,10 +2,10 @@
 
 Every tool ships a `register.json` in its root directory. It is read by `importTools()` (`src/core/tools/register.ts`) — driven by the area_maintenance "Register tools" widget — and reconciled against the registered-tools section (dd1324, table `matrix_tools`).
 
-The machine-readable source of truth for **hand-authored** files is the JSON Schema at `src/core/tools/client/register.schema.json` (mirrored by the Zod schema `authoringRegisterSchema` in `src/core/tools/register_schema.ts`). Point your editor at it for autocomplete and validation:
+The machine-readable source of truth for **hand-authored** files is the JSON Schema at `src/core/tools/register.schema.json` (mirrored by the Zod schema `authoringRegisterSchema` in `src/core/tools/register_schema.ts`). Point your editor at it for autocomplete and validation:
 
 ``` json
-{ "$schema": "../../src/core/tools/client/register.schema.json", "...": "..." }
+{ "$schema": "../../src/core/tools/register.schema.json", "...": "..." }
 ```
 
 The same rules are enforced at registration by `importTools()`: an invalid authoring file is refused with explicit errors in the import report.
@@ -26,7 +26,7 @@ Both supported shapes are legitimate ways to register a new tool: author the rec
 
 ``` json
 {
-	"$schema": "../../src/core/tools/client/register.schema.json",
+	"$schema": "../../src/core/tools/register.schema.json",
 	"name": "tool_myorg_mytool",
 	"version": "1.0.0",
 	"label": { "lg-eng": "My tool" },

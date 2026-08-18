@@ -1713,6 +1713,47 @@ export async function readSectionRows(
 		})),
 	};
 
+	// PER-ROW SELECTABILITY (thesaurus picker). A list row is a term like any
+	// tree node, but the tree got its `is_indexable` answer from get_node_data /
+	// get_children_data and the list read emitted none — so the client's
+	// term_selectability answered UNKNOWN and refused the pick arrow on every
+	// search result (the primary way into a large thesaurus). Stamp the SAME
+	// fact here, from the SAME resolver, so the affordance follows a server
+	// answer and never a guess.
+	//
+	// TWO ANSWERS, BOTH EXPLICIT (2026-08-17). A section that declares no
+	// `thesaurus.is_indexable` has no per-term contract — and `relations/save.ts`
+	// gate 3 ALREADY exempts it: the pick is authorized, nothing to re-ask. The
+	// read used to say nothing at all in that case, the client read the silence
+	// as UNKNOWN, and every row of such a section (rsc197, People, reached
+	// through tool_indexation's people picker) rendered with no link arrow while
+	// the write door stood open. So the no-contract case is now STATED —
+	// `selectability_declared: false` on each entry, from `declaresTermSelectability`,
+	// the same predicate the gate reads. Silence is no longer an answer here.
+	if (mode === 'list' || mode === 'list_thesaurus') {
+		const { declaresTermSelectability } = await import('../ontology/section_map.ts');
+		const declared = await declaresTermSelectability(callerTipo);
+		if (!declared) {
+			// No contract: say so once per row. The client turns this into
+			// "selectable", matching gate 3's exemption exactly.
+			for (const entry of envelope.entries) {
+				entry.selectability_declared = false;
+			}
+		} else if (envelope.entries.length > 0) {
+			const { fetchNodeInfo } = await import('../ts_object/node_repository.ts');
+			const info = await fetchNodeInfo(
+				envelope.entries.map((entry) => ({
+					section_tipo: entry.section_tipo,
+					section_id: entry.section_id,
+				})),
+			);
+			for (const entry of envelope.entries) {
+				const node = info.get(`${entry.section_tipo}_${entry.section_id}`);
+				if (node !== undefined) entry.is_indexable = node.is_indexable;
+			}
+		}
+	}
+
 	// --- subdatum: record-major, ddo-minor (PHP get_subdatum loop order) ----
 	// The source owns per-row emission (matrix: record + direct-child ddo loop;
 	// tm: who/when/where/what + snapshot cell policy). emitDdoData is passed in
