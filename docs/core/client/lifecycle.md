@@ -113,13 +113,18 @@ to obtain a live element. It:
    values in the fixed `key_order` sequence:
    `model, tipo, section_tipo, section_id, mode, lang, parent, matrix_id, id_variant, column_id`.
 3. Returns the cached entry from the module-private `instances_map` on a hit.
-4. On a miss, dynamically `import()`s the ES module from a model-prefix-derived
+4. On a miss, checks the **in-flight builds** registry: if another caller is
+   already building this key, its build Promise is returned as-is and nothing
+   is constructed. See [Client instances](instances.md) for the full contract,
+   including whose `options` win when callers race.
+5. On a miss with no build in flight, dynamically `import()`s the ES module from a model-prefix-derived
    path — `tool_*` → tools root (or a `DEDALO_TOOLS_URLS` absolute URL),
    `service_*` → `core/services/<model>/js/<model>.js`, else
    `core/<model>/js/<model>.js`. It `new`-constructs the export **named exactly
    like the model**, sets `instance.id = key` and
    `instance.id_base = [section_tipo, section_id, tipo].join('_')`, `await`s
-   `instance.init(options)`, registers it in `instances_map`, then resolves.
+   `instance.init(options)`, registers it in `instances_map`, releases the
+   in-flight entry, then resolves.
 
 `common.init` (in `common.js`) seeds the baseline properties from options
 (`model` / `tipo` / `section_tipo` / `section_id` / `mode` / `lang` /
