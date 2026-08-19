@@ -33,6 +33,7 @@ export const generic_suites_green = [
 	'test_delete_instance',
 	'test_instances_lifecycle',
 	'test_event_manager',
+	'test_events',                    // when_in_dom shared-observer gate: sync fast path + return forwarding, exactly-once deferred fire, multi-callback per node, drain→re-arm lifecycle, throw isolation, re-entrant registration (events.js JSDoc invariants)
 	'test_components_activate',      // green after component fixes (was flaky, now stable 3/3)
 	'test_components_data_changes', // green after save-response DataItem-shape fix (dispatch.ts)
 	'test_no_logged_error',

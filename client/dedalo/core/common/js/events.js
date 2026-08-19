@@ -281,6 +281,46 @@ export const set_before_unload = function(value) {
 
 
 
+// pending registry: node -> array of callbacks awaiting that node's insertion
+	const when_in_dom_pending = new Map()
+
+// shared observer: lazily created, disconnected whenever the registry is empty
+	let when_in_dom_observer = null
+
+/**
+* WHEN_IN_DOM_CHECK_PENDING
+* Shared-observer callback: on each mutation batch, sweep the pending registry
+* ONCE, fire and remove the entries whose node is now in the document, and
+* disconnect the observer when nothing remains pending. A throwing callback is
+* isolated (try/catch + console.error) so it cannot block the other pending
+* callbacks or corrupt the registry.
+*/
+const when_in_dom_check_pending = function() {
+
+	for (const [node, callbacks] of when_in_dom_pending) {
+		if (document.contains(node)) {
+			// remove BEFORE firing so a callback that mutates the DOM
+			// (triggering a re-entrant batch) cannot fire the entry twice
+			when_in_dom_pending.delete(node)
+			const callbacks_length = callbacks.length
+			for (let i = 0; i < callbacks_length; i++) {
+				try {
+					callbacks[i]()
+				} catch (error) {
+					console.error('when_in_dom callback error. node:', node, error);
+				}
+			}
+		}
+	}
+
+	// disconnect when idle; re-connected by the next deferred registration
+	if (when_in_dom_pending.size===0 && when_in_dom_observer) {
+		when_in_dom_observer.disconnect()
+	}
+}//end when_in_dom_check_pending
+
+
+
 /**
 * WHEN_IN_DOM
 * Execute a callback the first time the given node is attached to the document.
@@ -288,16 +328,24 @@ export const set_before_unload = function(value) {
 * Many third-party components (Leaflet maps, canvas renderers, media players)
 * must query layout metrics that are only available once the element is part of
 * the live DOM. This helper either fires the callback immediately (if the node
-* is already present) or defers until a MutationObserver detects insertion.
+* is already present) or defers until a shared MutationObserver detects insertion.
 *
-* The observer watches the entire document subtree and disconnects itself after
-* the first successful detection to avoid memory leaks.
+* All deferred registrations share ONE module-level MutationObserver watching the
+* document subtree (a per-call observer made a 200-row list render quadratic:
+* every observer was notified of every mutation of the same render). The shared
+* observer is created lazily on the first pending registration and disconnected
+* as soon as the pending registry empties; it re-connects on the next pending
+* registration. Registering the same node twice with different callbacks fires
+* both. Fired entries are removed immediately; a node that is NEVER inserted
+* into the document stays pending (and retained) by design — exactly as the old
+* per-call observer did — so only register nodes that will be attached.
 *
 * @param {HTMLElement} node - The element to watch for DOM insertion.
 * @param {Function} callback - Called with no arguments once the node is in the DOM.
 *   When the node is already present, the callback's own return value is forwarded.
-* @returns {MutationObserver|*} The live MutationObserver when deferred, or the
-*   callback's return value when the node was already in the DOM.
+* @returns {*} The callback's return value when the node was already in the DOM;
+*   undefined when deferred. (Previously returned the per-call MutationObserver;
+*   no caller used it and it no longer exists.)
 */
 export const when_in_dom = function(node, callback) {
 
@@ -305,18 +353,21 @@ export const when_in_dom = function(node, callback) {
 		return callback()
 	}
 
-	const observer = new MutationObserver(function(mutations) {
-		if (document.contains(node)) {
-			// console.log("It's in the DOM!");
-			observer.disconnect();
-
-			callback()
+	// register pending callback (same node may accumulate several callbacks)
+		const existing = when_in_dom_pending.get(node)
+		if (existing) {
+			existing.push(callback)
+			return
 		}
-	});
+		when_in_dom_pending.set(node, [callback])
 
-	observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
-
-	return observer
+	// (re)connect the shared observer. Calling observe() again on an already
+	// observing observer with the same target/options is a no-op, so this is
+	// safe on every first-registration-after-idle path.
+		if (!when_in_dom_observer) {
+			when_in_dom_observer = new MutationObserver(when_in_dom_check_pending)
+		}
+		when_in_dom_observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
 }//end when_in_dom
 
 
