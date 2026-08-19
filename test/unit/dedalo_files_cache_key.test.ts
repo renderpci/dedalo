@@ -75,9 +75,10 @@ describe('sw.js consumes the key (a server-only change would be inert)', () => {
  *
  * Drop that skip and every tools_common file is manifested TWICE — the service
  * worker then pre-caches a duplicated list. The only other assertion that would
- * notice is the parity set-compare, which is credentialed AND currently red for
- * unrelated client drift, so a duplicate would arrive inside an already-failing
- * diff and read as "the usual". Hence this hermetic, credless gate.
+ * notice is the parity set-compare, and that compare is CREDENTIALED: it does not
+ * run on the hermetic tier, so on a credless checkout or in hermetic CI nothing
+ * notices the duplication at all. A gate that only fires where credentials happen
+ * to exist is not a gate. Hence this hermetic, credless one.
  */
 describe('the manifest lists tool_common exactly once, in the PHP position', () => {
 	const urls = buildDedaloFilesResponse().result.map((entry) => entry.url);

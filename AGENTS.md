@@ -56,6 +56,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/EXTERNAL_SPEC.md` | External record services (`src/external/`, a PEER of core) — the four ontology pieces, the one outbound door and its order, egress classes, the write invariant. | 
 | `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. | 
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. | 
+| `engineering/ERRORS_SPEC.md` | The error system: closed DedaloError registry, the ONE converter, envelope v2, client contract, gates. | 
 | `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. | 
 | `engineering/PRODUCTION.md` | Ops: supervision, socket, backups, health. | 
 | `engineering/STAGING_VALIDATION.md` | Exercise the ops hardening before production. | 

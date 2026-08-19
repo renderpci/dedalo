@@ -1,0 +1,61 @@
+{
+	"_": "CANARY VECTORS for scripts/lib/status_prose.ts. Both gates that use findStatusProse assert only that their corpus is CLEAN — an empty-set assertion proves nothing about the detector itself, so a typo in a marker regex or a normalizeProse regression would turn both gates green while scanning nothing (the client_libs_tripwire failure mode this repo names). These vectors are the positive half: MUST_FIRE holds prose the detector is REQUIRED to catch, MUST_STAY_CLEAN holds the rule wording it is REQUIRED to leave alone.",
+	"why_a_fixture_and_not_inline_literals": "The bootstrap trap: crap_complexity_ratchet.test.ts SCANS ITS OWN SOURCE, so a real offender sentence written as a string literal in that file would make its self-scan fail — correctly. The offenders have to live in a file nothing scans. This is that file.",
+	"must_fire": [
+		{
+			"origin": "engineering/TRIPWIRES.md row 85, removed 2026-08-18",
+			"text": "an exemption is for code that cannot be COVERED, never a way to silence a red ratchet (as of 2026-08-11 the ratchet is red on three files from commit d1f5652783 and they are deliberately absent)."
+		},
+		{
+			"origin": "engineering/crap_coverage_exempt.json not_a_silencer, removed 2026-08-18",
+			"text": "The ratchet is RED as of 2026-08-11 on three files from commit d1f5652783 (dd_component_portal_api.ts, ts_object/search.ts, ts_object/ts_api.ts)."
+		},
+		{
+			"origin": "test/unit/crap_complexity_ratchet.test.ts describe header, removed 2026-08-18 — SPLIT ACROSS COMMENT LINES on purpose: this vector is what proves normalizeProse, since a line-based scan sees only fragments",
+			"text": "/**\n * It is never a way to quiet a complexity regression: as of 2026-08-11 the\n * ratchet is RED on three files from commit d1f5652783\n * (dd_component_portal_api.ts, ts_object/search.ts, ts_object/ts_api.ts) and\n * those three are deliberately ABSENT from the list.\n */"
+		},
+		{
+			"origin": "test/unit/dedalo_files_cache_key.test.ts header, removed 2026-08-18",
+			"text": "The only other assertion that would notice is the parity set-compare, which is credentialed AND currently red for unrelated client drift."
+		},
+		{
+			"origin": "synthetic — the phrase the whole precedent is named after",
+			"text": "This gate has a known-red state and is expected to fail until the burn-down lands."
+		},
+		{
+			"origin": "ISOLATOR: 'as of <ISO date>' ALONE — no sha, no adverb. Added 2026-08-18 after a mutation test: crippling this marker left every other vector still firing (each carried a redundant sha), so the canary passed while a whole marker class was dead. One vector per marker class is the rule.",
+			"text": "The ontology sweep is red as of 2026-08-11 and the remaining files are listed below."
+		},
+		{
+			"origin": "ISOLATOR: a bare COMMIT SHA alone — no date, no adverb",
+			"text": "Since d1f5652783 landed, the second half of this gate is broken and the census is not trustworthy."
+		},
+		{
+			"origin": "ISOLATOR: the adverb 'currently' alone, inside its narrow window",
+			"text": "The nightly export tier is currently failing, so treat the counts below as indicative."
+		},
+		{
+			"origin": "ISOLATOR: 'today' alone, inside its narrow window",
+			"text": "Two of the four diffusion targets are red today; the third has never been wired.",
+			"note": "If a marker class is deliberately retired, delete its isolator IN THE SAME CHANGE as the detector edit and say why in the module header — never leave a vector that passes only because another class still fires."
+		}
+	],
+	"must_stay_clean": [
+		{
+			"origin": "engineering/TRIPWIRES.md, real rule wording — roughly forty rows use red/fails this way and every one must stay legal",
+			"text": "Adding a tripwire means adding a row here AND to scripts/verify.ts in the same change; either alone is a red gate. The gated set is FROZEN (un-gating = red); edit LESS, skip the css build, and CI is red; a new unclassified read tool fails CI, never silently ships; a stale entry that no longer declares anything fails too."
+		},
+		{
+			"origin": "test/unit/crap_complexity_ratchet.test.ts, the SURVIVING anti-abuse rule — 'currently' and 'red' here belong to different clauses, which is why NEAR_MARKER is a tight window",
+			"text": "The rule is general — no file currently reporting a regression above may hold an exemption — so nobody can clear a red ratchet by writing a paragraph here."
+		},
+		{
+			"origin": "a dated row opener plus rule wording: every TRIPWIRES.md row starts with a date, so a bare ISO date must never be a marker",
+			"text": "src/core/ CYCLOMATIC COMPLEXITY may only SHRINK (2026-08-09) — an entry for a deleted or moved file is RED, because a stale entry silently loosens the ratchet."
+		},
+		{
+			"origin": "a WC id and a zero-padded numeric id near rule wording — neither is a commit sha",
+			"text": "A stale entry is RED (WC-2026-08-10-section-id-int-canonical), and record 001338683 with its 16777216-byte payload is no exception."
+		}
+	]
+}
