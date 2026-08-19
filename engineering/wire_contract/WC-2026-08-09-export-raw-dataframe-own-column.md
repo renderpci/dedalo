@@ -89,12 +89,12 @@ in the data model, and the shape it introduced was conditional on the data.
   ontology-driven mint on a frameless record, the unwrap+conform round trip, and
   the two legacy envelope spellings. Fixture: the canonical test3 playground plus
   one synthetic `zzdf` dd_ontology node (swept in `afterAll`).
-- `test/parity/tool_export_dataframe_differential.test.ts`: the `dedalo_raw`
-  combo LEAVES the oracle-equality set and becomes its own test, which asserts
-  the PHP fossil (single column, `"dato"` present) and the TS shape (two columns,
-  no `"dato"`) side by side, plus unchanged record identity and `meta.total`.
-  grid_value default/rows/columns and value/default stay byte-equal to the
-  oracle — the divergence is confined to the raw format.
+- `test/unit/tool_export_relation_dataframe_fanout_native.test.ts` (the
+  generic-TLD twin that RETIRED `test/parity/tool_export_dataframe_differential
+  .test.ts`, 2026-08-19) carries the RELATION-main half: the `dedalo_raw` combo
+  asserts the TS shape (two columns, no `"dato"`) directly, and grid_value
+  default/rows/columns + value/default assert the fan-out's frame column and
+  frame values on a `zzxd` situation instead of the retired oracle equality.
 - **Re-harvest: NOT needed.** The fixture keeps the PHP response verbatim; the
   gate reads the oracle leg as the fossil instead of diffing it against TS
   (the WC-001 pattern).

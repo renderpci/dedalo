@@ -3,12 +3,25 @@
 > **CUTOVER EXECUTED 2026-07-11** (owner-authorized; `rewrite/CUTOVER_RUNBOOK.md`).
 > The PHP oracle is DECOMMISSIONED. This store IS the read-path
 > baseline-of-record (final harvest: 76 gates / 449 interactions; credless
-> proof 382 pass / 0 fail / 124 skip), pinned to the same-instant DB snapshot
-> `private/backups/db/2026-07-11_102750.….custom.backup`. `ORACLE_MODE` now
+> proof 382 pass / 0 fail / 124 skip — MEASURED AGAINST THE LIVE `dedalo_mib_v7`
+> DB), pinned to the same-instant DB snapshot
+> `../private/backups/db/2026-07-11_102750.….custom.backup`. `ORACLE_MODE` now
 > defaults to `fixtures`; the 23 fixture-exempt gates are RETIRED — the
 > DEC-14b punch list below maps each to its surviving TS-native twin. A
 > re-harvest is impossible by definition: any fixture change from here on is
 > a deliberate contract edit (`engineering/wire_contract/`).
+>
+> **STATUS 2026-08-19 — the store is CORPUS-BOUND and is being replaced.** On
+> the vendored suite DB (`scripts/test_db_setup.ts`, no install records) the
+> tier measures **173 pass / 13 skip / 208 fail** (2026-08-18); 186 reds are
+> corpus absence, 9 are landed changes the fixture predates, 8 were ONE real
+> regression (WC-034 addendum: `search_options`), 3 environment, 2 rolling
+> clock. All 76 gates carry `entity: monedaiberica`. The rule now in force
+> (AGENTS.md hard rules): tests use the generic `test` TLD and build the
+> situation they test. Each corpus-bound differential is replaced by a
+> test-TLD twin asserting the same contract and then deleted — the same
+> DEC-14b path as the 23 write-path gates and the 5 TM gates below. See
+> "§ Generic-TLD replacement map" at the end of this doc.
 
 The differential parity suite verified the TS engine against the **live PHP
 oracle** (`PHP_API_BASE_URL`, creds in `../private/.env`). That oracle was
@@ -183,9 +196,15 @@ WHY, precisely — the fixtures and the suite database drifted apart:
 - the TM fixtures were harvested 2026-07-11 against a **live shared DB**. Their
   rows exist ONLY in `dedalo7_mdcat` (`matrix_id` 51071497/96/95/94, caller
   `rsc1242`/578) — verified absent from every other local database;
-- the pinned `private/backups/db/2026-07-11_102750.….custom.backup` is GONE
-  (only `2026-07-16_161254/161317.dedalo7ts` survive, and `dedalo7ts` maxes at
-  TM id 63217);
+- ~~the pinned `private/backups/db/2026-07-11_102750.….custom.backup` is GONE~~
+  **CORRECTED 2026-08-19: it is NOT gone.** It is on disk at
+  `../private/backups/db/2026-07-11_102750.dedalo_mib_v7.…custom.backup`
+  (382 MB, `dbname: dedalo_mib_v7`, archived 2026-07-11 10:27:50 — the harvest
+  instant), and the harvest DB `dedalo_mib_v7` is itself still live locally.
+  This bullet was wrong when written; the retirement below stands on the
+  remaining three bullets alone, which are sufficient — and on the stronger
+  rule adopted 2026-08-19 that a corpus-bound gate is the wrong shape
+  regardless of whether its corpus can be restored;
 - `test/preload/test_database.ts` hard-points the WHOLE SUITE at `<app db>_test`
   and deliberately refuses to fall back to a real database (written after a gate
   deleted `test218` out of a live install);
@@ -304,3 +323,55 @@ diff against, so every entry below is a native contract, not a re-expression.
 The nine `external_*_tripwire` invariant gates are indexed in
 `engineering/TRIPWIRES.md`, not here — this table is contract coverage, that one
 is invariant enforcement.
+
+## § Generic-TLD replacement map (opened 2026-08-19)
+
+The rule (AGENTS.md hard rules): a test uses the generic `test` TLD and BUILDS
+the situation it tests. Every corpus-bound gate in this store is replaced by a
+test-TLD twin proving the SAME contract, then deleted together with its
+`oracle_harvest/<gate>.json`. Rows are appended as twins land — this table is
+the ledger of record for the migration; `rewrite/LEDGER.md` carries the
+measured counts between batches.
+
+Baseline 2026-08-18 (`ORACLE_MODE=fixtures bun test test/parity/`, suite DB):
+173 pass / 13 skip / 208 fail across 82 files; 51 files corpus-bound (class A).
+
+| Retired gate | Contract it proved | Twin | Landed |
+|---|---|---|---|
+| `test/parity/portal_differential.test.ts` | Portal subdatum in LIST mode through readSectionRows: for a record whose portal holds MORE locators than the list cell page, the portal item's entries are the paginated locator page (LIST limit chain: ddo-declared limit → the component's effective list config / section_list-substituted limit → PORTAL_LIST_LIMIT=1; autocomplete_hi shows all) and pagination = {total: FULL locator count, limit}; the child items (declared child ddo at the target section) come in locator order, one per paged locator, with identity (section_tipo, section_id of the target), entries = the target's stored value (WC-001: [] when empty, never null), and the subdatum stamps row_section_id = the OUTER record and parent_tipo = the portal tipo (section-read re-stamp — differs from get_data's target anchor). | `test/unit/portal_list_cell_pagination_native.test.ts` (situation `zzpl`) | 2026-08-19 |
+| `test/parity/relation_list_differential.test.ts` | get_relation_list (the Referencias panel): every record pointing AT the host (inverse index scan over 'all' owning sections, or the sqo.section_tipo-narrowed set) as a heterogeneous grid — context = per referencing section, on FIRST sight, an 'id' column entry then one entry per grid column (section_map relation_list scope term, else the section's legacy relation_list node relations) with component_label = the column's term in the request lang; data = per hit an id cell (no value key) + one cell per column whose `value` is the component's FLAT display string (string family lang-sliced joined ' \| ', relation models via datalist label resolution, dataframe frames folded), absent when null; sqo.limit/offset page the HITS, limit 0 = all; source.mode !== 'edit' returns the empty shell {context:[],data:[]}; host read permission gate. | `test/unit/relation_list_grid_native.test.ts` (situation `zzrl`) | 2026-08-19 |
+| `test/parity/tool_export_dataframe_differential.test.ts` | tool_export get_export_grid with a RELATION main (autocomplete/portal stored model → the fan-out path, NOT the WC-008 compact branch) carrying component_dataframe children: frames found on the OWNER record's relation column under the frame tipo, paired to each main locator by (type dd490, main_component_tipo, id_key = the main locator's stored id); grid_value default/rows/columns and value/default all mint a frame column and flow the frame VALUE into the framed record's cells; a frameless record still gets the column (mid-stream mint, empty cell); `unresolved` never contains 'component_dataframe' for this shape; columns/rows/end/meta.total consistent across formats. dedalo_raw (WC-2026-08-09): the frame slot is its OWN column `${section}_${frame}` after the main, every cell a bare {"dedalo_data": <array>} of dd490 locators with from_component_tipo=frame. A DECLARED dataframe path step stays LOUD: unresolved contains 'component_dataframe:declared-path'. | `test/unit/tool_export_relation_dataframe_fanout_native.test.ts` (situation `zzxd`) | 2026-08-19 |
+
+Blocked rows (a contract that could NOT be re-expressed generically) are
+recorded here with the reason inline, never dropped.
+
+Batch 1 (2026-08-19) — rows NOT ACCEPTED (twin refuted twice in review; the
+in-tree state at the time of writing is: twin file present, old gate + fixture
+staged as deleted — the row above is withheld until a review pass accepts it):
+
+- `test/parity/portal_edit_subdatum_differential.test.ts` — twin
+  `test/unit/portal_edit_subdatum_native.test.ts` (situation `zzpe`).
+  Reason (verbatim): "Rebuild completed; all three contract-fidelity gaps and
+  the surviving lang mutation are fixed and mutation-verified." Refutations on
+  record: (1) CONTRACT-FIDELITY — the context surface kept 7 of the old gate's
+  10 byte-compared keys (`lang`, `label`, `translatable` dropped; a
+  `translatable: false` mutation at `structure_context.ts:417` stayed green);
+  (2) MUTATION — get_data effective-limit CONFIG chain (`read.ts:1101-1111`)
+  never exercised because every rqo sent a numeric `sqo.limit` (fix: a
+  `limit: null` read asserting the LAST config item's limit wins).
+- `test/parity/section_elements_context_differential.test.ts` — twin
+  `test/unit/section_elements_context_native.test.ts` (situation `zzsec`).
+  Reason (verbatim): "Contract expressible generically; the twin landed and the
+  old gate + fixture are deleted (both staged as D)." Refutations on record:
+  (1) CONTRACT-FIDELITY — `search_operators_info` + `search_options_title`
+  gated behind a hand-written `OPERATORS_BY_MODEL` lookup with an
+  `if (pairs === undefined) continue` escape hatch; seven panel models
+  (component_section_id, iri, json, select_lang, filter_master,
+  filter_records, relation_model) asserted nowhere — deleting
+  `[',', 'sequence']` from SECTION_ID_OPERATORS stayed green; ontology1 /
+  hierarchy1 target-source coverage delegated to a currently-red gate;
+  (2) MUTATION — 6/72 survivors, two real: `getModelByTipo` canonicalization
+  at `section_elements_context.ts:93` and `buildSearchOptionsTitle(core.model)`
+  at `structure_context.ts:1352` — no legacy-model component (autocomplete_hi /
+  html_text) in the built situations (fix: add one under the grouper and pin
+  its target_section_tipo + title/operators keyed by entry.model).

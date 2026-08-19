@@ -45,3 +45,23 @@
   (`no_hay_etiqueta_seleccionada` → `no_tag_selected`; `tool_watermark`
   removed). `labels_tripwire` unchanged and green — it enforces the cleaned
   census going forward.
+
+## Addendum 2026-08-19 — two "unused" removals were live: `search_options`, `literal` RESTORED
+
+- **What:** the removal proof (static reference scan) missed one DYNAMIC site —
+  `src/core/search/search_operators.ts` resolves `search_options` (the tooltip
+  heading) and `literal` (a `component_number` operator label) through the
+  labels map at request time. Both keys were removed here as unused, so from
+  2026-07-16 every search-mode component shipped
+  `<b><mark>search_options</mark>:</b>` to the browser (PHP
+  `decorate_untranslated` fallback). Measured 2026-08-18 as 8 red assertions in
+  `section_elements_context_differential` (fixtures mode); invisible to the unit
+  tier because `test/unit/search_operators.test.ts` hand-injected the key.
+- **Shape after:** both keys are back in `master.json` and in every catalog that
+  carried them before this WC (values recovered from commit `9bf8463882^`);
+  removed from the machine-readable map's `removals` (240 → 238). Wire shape
+  unchanged; the served VALUE of `search_options_title` is the translation again.
+- **Gate:** `search_operators.test.ts` now carries a SERVED-CATALOG contract —
+  every key the module resolves must exist in the master catalog, with
+  `strict_different_from` as the one pinned parity exemption (PHP never had it
+  either). Red without the restore, green with it.
