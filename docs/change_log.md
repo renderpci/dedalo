@@ -10,6 +10,63 @@ Dédalo version
 
 ---
 
+## [Unreleased] - Unsaved edits are no longer dropped when another field is corrected
+
+### Fixed
+- **Editing one field and then correcting a typo in another no longer loses the
+  first edit.** A long text field commits its change half a second after you
+  stop typing. If, inside that window, you typed a character in any other field
+  and deleted it again, the page concluded that nothing was unsaved: closing the
+  tab or moving to another record then discarded the text field's edit with no
+  warning, no save and nothing in the console.
+
+    The page tracked unsaved work as a single yes/no answer for the whole
+    screen, and every field was allowed to write it. A field returning to its
+    stored value answered *no* on behalf of every other field, including ones
+    still holding work. Each field now reports only for itself, and the page
+    answers *yes* while any of them still has something unsaved — so the
+    save-before-leaving sweep and the confirmation prompt both run when they
+    should. A test now holds that a field may only ever retire its own answer.
+
+---
+
+## [Unreleased] - Windows that would not open, and requests that never ended
+
+### Fixed
+- **A blocked pop-up now says so instead of breaking the action that opened
+  it.** Opening a tool, a record, an ontology page or a related-records list in
+  a new window failed silently when the browser refused the pop-up: no window
+  appeared and the action behind it stopped half way, with nothing on screen to
+  explain why. The refusal is now reported to the user, and *open related
+  records* no longer claims success for a list nobody saw.
+
+- **A request to a slow server can no longer wait forever.** While a request is
+  in flight the page asks the server whether it is still alive, so that a slow
+  answer is not mistaken for a dead server. That check *removed* the request's
+  time limit instead of extending it: a server that answered the check and then
+  stopped responding left the page waiting indefinitely — the *awaiting for busy
+  server* notice dismissed itself, the panel stayed empty, and no error was ever
+  raised. A busy server now buys the request more time, and the notice stays
+  visible for as long as the wait it describes.
+
+    Long operations keep their own limit. The extra time is added to whatever is
+    left of the original allowance rather than replacing it, so a database
+    backup still gets its full hour.
+
+---
+
+## [Unreleased] - A user name can no longer inject markup into the dashboard
+
+### Security
+- **The activity panel of the area dashboard renders user names as text.** That
+  panel lists the most active users by the name recorded in the users section.
+  The name was inserted into the page as markup, so a name containing HTML was
+  interpreted by the browser of everyone who opened the dashboard instead of
+  being displayed. Names — and the counts beside them — are now written as text,
+  as the chart legend on the same panel already did.
+
+---
+
 ## [Unreleased] - Maintenance panels that would not open, and panels that opened empty
 
 ### Fixed
