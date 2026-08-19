@@ -13,8 +13,8 @@
 * (area_maintenance) and provides two long-running administrative operations:
 *
 *   1. Export hierarchies — fires `exec_export_hierarchy` which triggers the
-*      server to produce `.copy.gz` files under the configured
-*      `EXPORT_HIERARCHY_PATH` (e.g. `/install/import/hierarchy/`).  The caller
+*      server to produce `.copy.gz` files in the engine's own hierarchy import
+*      directory (`install/import/hierarchy/`).  The caller
 *      supplies a comma-separated list of section tipos (e.g. `"es1,es2"`) or
 *      `"*"` for all active sections.
 *
@@ -30,8 +30,8 @@
 *
 * Widget value (loaded by `get_value` / `area_maintenance.prototype.get_value`):
 *   {
-*     export_hierarchy_path : string|null  // server-configured output directory,
-*                                          // null if EXPORT_HIERARCHY_PATH is unset
+*     export_hierarchy_path : string|null  // absolute server output directory
+*                                          // (a fixed server-side constant)
 *   }
 *
 * Server peer:  core/area_maintenance/widgets/export_hierarchy/class.export_hierarchy.php
@@ -67,8 +67,9 @@
 * @property {string}       mode          - Render mode: 'edit' or 'list'.
 * @property {Object}       value         - Widget payload loaded by get_value.
 *   @property {string|null} value.export_hierarchy_path - Absolute server path where
-*     hierarchy export files are written, or null if EXPORT_HIERARCHY_PATH is not
-*     configured.  The DOM builder uses this to show/hide the export form.
+*     hierarchy export files are written (a fixed server-side constant), or null if
+*     the panel value failed to load.  The DOM builder uses this to show/hide the
+*     export form.
 * @property {HTMLElement}  node          - Root DOM node injected into the page after render.
 * @property {Array}        events_tokens - Subscriptions accumulated during lifecycle; cleared by destroy.
 * @property {Array}        ar_instances  - Child widget/component instances; cleared by destroy.
@@ -177,8 +178,9 @@ export_hierarchy.prototype.build = async function(autoload=false) {
 *
 * Calls `dd_area_maintenance_api::widget_request` with action `export_hierarchy`.
 * The server iterates over the requested section tipos, serialises each
-* hierarchy tree, compresses it to a `.copy.gz` file, and writes it under the
-* path configured by `EXPORT_HIERARCHY_PATH` (e.g. `/install/import/hierarchy/`).
+* hierarchy tree, compresses it to a `.copy.gz` file, and writes it into the
+* engine's hierarchy import directory (`install/import/hierarchy/`), from where
+* the same files can be re-imported by the "Add hierarchy" panel.
 *
 * The request is dispatched through a Web Worker (`use_worker: true`) because
 * the export can take several minutes for large ontologies; `prevent_lock: true`
