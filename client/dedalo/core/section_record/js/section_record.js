@@ -504,8 +504,15 @@ section_record.prototype.get_ar_instances_edit = async function() {
 *   c. Normalises the ddo context entry (`new_context`) by propagating override
 *      properties from the ddo itself (fixed_mode, mode, view, children_view,
 *      fields_separator, records_separator, hover, with_value).
-*   d. Calls `build_instance` sequentially (await inside loop, not parallel) to
-*      preserve `columns_map` order in `self.ar_instances`.
+*   d. Pushes the `build_instance` promise (NO per-item catch — unlike
+*      `get_ar_instances_edit`) so all child builds run concurrently; a single
+*      `Promise.all` after the loops resolves them. A REJECTED child build
+*      rejects the whole method (the try/finally resets `_instances_waiter`
+*      so a retry can rebuild); a child that RESOLVES null/undefined is
+*      skipped silently. Order is preserved because the promises are pushed
+*      in loop order and `Promise.all` returns results positionally —
+*      null/undefined builds are filtered out afterwards, without shifting
+*      the surviving instances' relative order.
 *
 * Context-not-found is a non-fatal condition: it occurs when a column is defined
 * in the ontology but the server did not include its sub-context because there is no
@@ -574,7 +581,10 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 			const request_config_length	= request_config.length
 
 		// instances — triple-nested loop: column → request_config → ddo
-		// This sequential structure preserves the exact column order in self.ar_instances
+		// The loops (and the ar_column_ddo dedup decision) stay synchronous; only the
+		// build_instance calls run concurrently. Promises are pushed in loop order and
+		// Promise.all resolves positionally, preserving column → request_config → ddo order
+			const ar_promises = []
 			const columns_map_length = columns_map.length
 			for (let i = 0; i < columns_map_length; i++) {
 
@@ -743,23 +753,36 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 									? [current_data.entries]
 									: current_data;
 
-								const current_instance = await build_instance(
-									self, // current section_record instance
-									new_context, // cloned and patched context for the child
-									section_id, // current section_id
-									instance_data, // pre-resolved data (no API fetch needed)
-									current_column.id, // column id for grid alignment
-									false // autoload — data already in datum, no additional fetch
-								)
-
-								// add built instance; null/undefined means build failed — skip silently
-								if (current_instance) {
-									self.ar_instances.push(current_instance)
-								}
+								// build_instance — push the promise directly so all child builds
+								// run concurrently. NO per-item catch here (unlike get_ar_instances_edit):
+								// a child build that REJECTS must reject the whole method — Promise.all
+								// rejects on the first rejection, the try/finally clears _instances_waiter,
+								// and a retry can rebuild. A build that RESOLVES to null/undefined is a
+								// distinct, non-fatal case filtered out below.
+								// Note: on rejection, sibling builds already in flight keep running after
+								// the method rejects; get_instance dedupes by id, so a retry reuses or
+								// awaits those same builds rather than racing them.
+									const current_promise = build_instance(
+										self, // current section_record instance
+										new_context, // cloned and patched context for the child
+										section_id, // current section_id
+										instance_data, // pre-resolved data (no API fetch needed)
+										current_column.id, // column id for grid alignment
+										false // autoload — data already in datum, no additional fetch
+									)
+									ar_promises.push(current_promise)
 						}//end if(current_ddo.column_id..
 					}//end for (let k = 0; k < ar_first_level_ddo_len; k++)
 				}//end for (let j = 0; j < request_config_length; j++)
 			}//end for (let i = 0; i < columns_map_length; i++)
+
+		// instances — await all parallel builds, then store results in loop order.
+		// Promise.all rejects on the first rejected build (the contract: a failed
+		// child aborts the row and the finally below frees the waiter for a retry).
+		// null/undefined resolutions (skipped builds) are filtered out so
+		// ar_instances has no holes; surviving order is unchanged
+			const ar_built = await Promise.all(ar_promises)
+			self.ar_instances.push(...ar_built.filter(Boolean))
 
 		return self.ar_instances
 	  } finally {
