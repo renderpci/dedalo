@@ -1,0 +1,2 @@
+UPDATE matrix_hierarchy SET iri = '{"ww47": [{"id": 1, "iri": "https://www.youtube.com/embed/I1g0Cr267hE?si=skK25KQ9TfOmq9hG", "lang": "lg-nolan"}]}'::jsonb WHERE section_tipo='mht160' AND section_id=380;
+UPDATE matrix_hierarchy SET iri = '{"ww47": [{"id": 1, "iri": "https://radiojaputa.com/historia-feminismo/historia-del-aborto-en-espana/", "lang": "lg-nolan"}]}'::jsonb WHERE section_tipo='mht160' AND section_id=58;

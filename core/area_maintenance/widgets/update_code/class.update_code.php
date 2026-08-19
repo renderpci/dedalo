@@ -405,7 +405,21 @@ class update_code {
 			$target	= $options->target;
 
 		// exec sync files using RSYNC
-			$exclude	= ' --exclude="*/config*" --exclude="media" ';
+			// Excludes ANCHORED to the transfer root ($source), i.e. the Dédalo root only.
+			// (!) They used to be ' --exclude="*/config*" --exclude="media" '. Without a leading
+			// slash rsync matches the pattern at EVERY directory boundary, so '*/config*' also
+			// stripped every nested config directory out of the update — among them
+			// core/area_maintenance/widgets/close_v6_prepare_v7/engine/config/ (bootstrap.php, the
+			// migration package entry point) and .../engine/core/base/config/ (the config catalog),
+			// leaving the updated install with a package the widget reports as incomplete.
+			// Only the install's OWN config files and media directory must be preserved; every
+			// nested config*/media* path in the tree is shipped code and has to be updated.
+			// server_config_headers.php is tracked BUT per-install (update_clean copies it over
+			// from the old install in $files_to_copy), so it needs an exclude of its own —
+			// anchoring alone would start overwriting a customised one.
+			$exclude	= ' --exclude="/config/config*"'
+				. ' --exclude="/media"'
+				. ' --exclude="/publication/server_api/v1/config_api/server_config_headers.php" ';
 			$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
 			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
 			$output		= shell_exec($command);

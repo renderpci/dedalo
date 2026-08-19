@@ -1,0 +1,2 @@
+UPDATE matrix_hierarchy SET string = '{"hierarchy25": [{"id": 1, "lang": "lg-spa", "value": "Otros"}]}'::jsonb WHERE section_tipo='rt1' AND section_id=4;
+UPDATE matrix_hierarchy SET string = '{"hierarchy25": [{"id": 1, "lang": "lg-spa", "value": "Restricted"}], "hierarchy28": [{"id": 1, "lang": "lg-spa", "value": "<p>root descriptor for this hierarchie</p>"}]}'::jsonb WHERE section_tipo='rt1' AND section_id=1;

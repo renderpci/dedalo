@@ -21,6 +21,20 @@
 !**/config/
 !**/config/**
 
+# Same story, two more root rules that swallow package source:
+#   root `acc`     (line 25)  -> engine/core/db/acc/, the legacy v6 record classes
+#                               build_package.sh ships (RecordObj_dd, JSON_RecordObj_matrix,
+#                               RecordDataBoundObject, RecordObj_time_machine, search_v6).
+#   root `backups` (line 101) -> engine/diffusion/migration/helpers/backups/, the hand-written
+#                               parity-baseline restore SQL. Note helpers/.gitignore ignores
+#                               only out/ and baseline/ — backups/ was always meant to be source.
+# The package-root /backups/ quarantine above stays ignored: different path, it holds the
+# imported v6 config (DB password).
+!/engine/core/db/acc/
+!/engine/core/db/acc/**
+!/engine/diffusion/migration/helpers/backups/
+!/engine/diffusion/migration/helpers/backups/**
+
 *.log
 .DS_Store
 

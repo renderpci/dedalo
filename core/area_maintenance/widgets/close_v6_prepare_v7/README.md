@@ -85,9 +85,23 @@ never ship. All unused **top-level files** are stripped too (docs, `composer.*`,
 state. Historically their files only reached the branch through `git add -f`, so any new file went
 missing without a word. The package `.gitignore` re-includes them (`!**/config/`, `!**/config/**`)
 and then re-ignores the generated, secret-bearing ones (`config.php`, `config_*.php`, `.env*`,
-`config/bootstrap/`). **Order matters**: every runtime/secret pattern must stay *below* the two
+`config/bootstrap/`). **Order matters**: every runtime/secret pattern must stay *below* the
 negation lines, or it stops applying inside `config/`. `verify_package.sh` still asserts that a
 runtime `config_db.php`/`.env*`, if present, is git-ignored.
+
+Two more root rules swallowed package source the same way and are re-included alongside it:
+`acc` (root line 25) hid `engine/core/db/acc/` — the legacy v6 record classes `build_package.sh`
+ships (`RecordObj_dd`, `JSON_RecordObj_matrix`, `RecordDataBoundObject`, `RecordObj_time_machine`,
+`search_v6`) — and `backups` (root line 101) hid
+`engine/diffusion/migration/helpers/backups/`, the hand-written parity-baseline restore SQL
+(`helpers/.gitignore` ignores only `out/` and `baseline/`, so `backups/` was always meant to be
+source). The package-root `/backups/` quarantine stays ignored — different path, and it holds the
+imported v6 config, i.e. the DB password.
+
+**Adding anything to the package?** Check `git check-ignore -v <path>` before assuming it is in
+the branch. The root `.gitignore` is written for a v6 *install*, not for a vendored engine, and it
+also carries `des`, `temp`, `write`, `tpl`, `test`, `*.data` and `str_data*` — any of which can
+silently eat a future file here.
 
 Per-module client assets `core/*/css` and `core/*/js` are stripped too (no PHP reads them; the
 CLI migration serves no UI), as are the UI modules `core/area*` and `core/button*` (not on the
