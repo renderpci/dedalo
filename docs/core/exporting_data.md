@@ -313,7 +313,7 @@ needing a bespoke override. Coverage is `value`, `grid_value` with all three
 breakdown modes, `dedalo_raw`, multi-hop paths, NDJSON streaming, and
 media/image cells — pinned by `test/parity/tool_export_differential.test.ts`,
 `test/parity/tool_export_breakdown_differential.test.ts` and
-`test/parity/tool_export_dataframe_differential.test.ts`. A genuinely new
+`test/unit/tool_export_relation_dataframe_fanout_native.test.ts`. A genuinely new
 component shape that the shared resolver cannot express needs its own case
 added to the walkers rather than an override method.
 

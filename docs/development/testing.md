@@ -68,9 +68,15 @@ A parity gate replays one request against the engine in-process (`dispatchRqo()`
 cutover and frozen in `test/parity/fixtures/oracle_harvest/` — **76 gate files, 449
 recorded interactions**, matched by a canonical hash of the request.
 
-This store is the read-path baseline of record. It is pinned to the DB snapshot taken at
-the same instant as the final harvest: parity is only meaningful against DB state
-compatible with the harvest, so restore-test against that pair and never mix.
+This store is the read-path baseline of record — and it is **corpus-bound**: every gate
+was harvested against one real install's records (`entity: monedaiberica`). The suite
+database is built from vendored files only and holds none of those records, so on it
+the tier is red by construction (measured 2026-08-18: 173 pass / 208 fail; 186 reds are
+corpus absence). That is not a reason to restore the harvest DB — a gate that passes only
+against one install's records tests that install, not the engine. The rule now in force is
+that **a test uses the generic `test` TLD and builds the situation it tests**; each
+corpus-bound differential is being replaced by a test-TLD twin proving the same contract
+and then deleted (`engineering/ORACLE_HARVEST.md`, "Generic-TLD replacement map").
 
 ### `ORACLE_MODE`
 
@@ -88,9 +94,10 @@ decommissioned, so **a re-harvest is impossible by definition**. Any change to a
 from here on is a deliberate contract edit and needs its `engineering/wire_contract/`
 entry in the same change.
 
-Consequence for you: `bun test test/parity/` **runs green on a fresh clone with no
-credentials at all**. It still needs the shared Postgres and the normal `../private/.env`
-config, because the engine half of every diff runs for real.
+Consequence for you: `bun test test/parity/` needs no credentials, but it is **not green
+on the suite database** until the corpus-bound gates are replaced (see above). It still
+needs Postgres and the normal `../private/.env` config, because the engine half of every
+diff runs for real. New parity gates are written on the generic `test` TLD from day one.
 
 ### The green-suite trap
 
