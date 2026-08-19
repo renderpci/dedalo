@@ -10,8 +10,10 @@
 * - Bootstrap global DOM event listeners (visibilitychange, save) via events_init().
 * - Derive the page-wide unsaved-data flag (window.unsaved_data) from the
 *   unsaved-instances registry (register_unsaved_instance /
-*   deregister_unsaved_instance / reset_unsaved_data) plus the coarse
-*   instance-less set_before_unload() assertion.
+*   deregister_unsaved_instance / reset_unsaved_data), the uncommitted-typing
+*   node registry (armed by the document-level 'input' listener in events_init,
+*   for views that only commit on blur) plus the coarse instance-less
+*   set_before_unload() assertion.
 * - Provide DOM-readiness utilities (when_in_dom, when_in_viewport) used by
 *   components such as maps and media players that require the node to be in
 *   layout before they can initialise.
@@ -21,7 +23,8 @@
 *   configuration objects via set_tool_event().
 *
 * Exports: events_init, set_before_unload, register_unsaved_instance,
-*          deregister_unsaved_instance, reset_unsaved_data, when_in_dom,
+*          deregister_unsaved_instance, register_uncommitted_input,
+*          deregister_uncommitted_input, reset_unsaved_data, when_in_dom,
 *          when_in_viewport, dd_request_idle_callback, set_tool_event.
 *          yield_to_main is a module-private helper (not exported).
 */
@@ -74,6 +77,75 @@ if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 // every component save completion — and by reset_unsaved_data().
 	let unsaved_asserted = false
 
+// uncommitted_nodes. Edit-mode form fields the user is TYPING INTO RIGHT NOW,
+// before the field committed its value to its component instance. Components
+// only learn about an edit when their own commit event fires: component_text_area
+// debounces on keystrokes (500ms) and therefore registers itself, but
+// component_input_text (and every other view built on the native 'change' event:
+// input_text line/colorpicker, select, date parts, …) commits ONLY on blur.
+// Reloading or closing the tab does NOT blur the focused input in Chrome, so the
+// component never registered, window.unsaved_data stayed false, and the typed
+// text was dropped with no prompt — the exact data loss this registry exists to
+// prevent. Keyed by the DOM node (identity), armed by the document-level 'input'
+// listener in events_init and retired on 'change'/'focusout' (by then the
+// component either registered itself as dirty or the value was back at db_data).
+	const uncommitted_nodes = new Set()
+
+/**
+* PRUNE_UNCOMMITTED_NODES
+* Drop entries whose node left the document (a save or a refresh re-renders the
+* component and throws the old input away). Without this a detached node would
+* pin the guard armed forever. Called from update_unsaved_data, so every
+* recompute sees only live nodes.
+*/
+const prune_uncommitted_nodes = function() {
+
+	if (uncommitted_nodes.size===0 || typeof document==='undefined' || !document.contains) {
+		return
+	}
+	for (const node of uncommitted_nodes) {
+		if (node && node.nodeType===1 && !document.contains(node)) {
+			uncommitted_nodes.delete(node)
+		}
+	}
+}//end prune_uncommitted_nodes
+
+
+
+/**
+* REGISTER_UNCOMMITTED_INPUT
+* Arm the guard for a field being typed into whose value has not reached its
+* component instance yet. Exported for tests and for any view that owns an
+* editor the document-level listener cannot see (e.g. a shadow-DOM editor).
+*
+* @param {HTMLElement} node - The form field holding uncommitted typing
+* @returns {boolean} The recomputed window.unsaved_data value (true here)
+*/
+export const register_uncommitted_input = function(node) {
+
+	uncommitted_nodes.add(node)
+
+	return update_unsaved_data()
+}//end register_uncommitted_input
+
+
+
+/**
+* DEREGISTER_UNCOMMITTED_INPUT
+* Retire ONE field's uncommitted-typing entry — its value just committed
+* ('change') or it lost focus ('focusout'), so from here on the component
+* instance registry owns the verdict. Never touches other entries.
+*
+* @param {HTMLElement} node - The form field to retire
+* @returns {boolean} The recomputed window.unsaved_data value
+*/
+export const deregister_uncommitted_input = function(node) {
+
+	uncommitted_nodes.delete(node)
+
+	return update_unsaved_data()
+}//end deregister_uncommitted_input
+
 
 
 /**
@@ -89,7 +161,9 @@ if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 */
 const update_unsaved_data = function() {
 
-	window.unsaved_data = (unsaved_instances.size > 0 || unsaved_asserted===true)
+	prune_uncommitted_nodes()
+
+	window.unsaved_data = (unsaved_instances.size > 0 || uncommitted_nodes.size > 0 || unsaved_asserted===true)
 
 	return window.unsaved_data
 }//end update_unsaved_data
@@ -149,6 +223,7 @@ export const deregister_unsaved_instance = function(instance) {
 export const reset_unsaved_data = function() {
 
 	unsaved_instances.clear()
+	uncommitted_nodes.clear()
 	unsaved_asserted = false
 
 	return update_unsaved_data()
@@ -184,6 +259,48 @@ export const events_init = function() {
 			}
 		}
 		document.addEventListener('visibilitychange', visibility_change);
+
+	// uncommitted typing guard (data-loss protection)
+	// Document-level, capture phase, so ONE pair of listeners covers every
+	// edit-mode field of every component — including the ones whose views only
+	// commit on the native 'change' event (blur). Reload/close does not blur, so
+	// without this the typed-but-not-blurred value was lost silently.
+		const is_guarded_edit_field = (node) => {
+
+			if (!node || node.nodeType!==1 || typeof node.closest!=='function') {
+				return false
+			}
+			// only real editors, and never a disabled/read-only one
+			const tag = node.tagName
+			const is_editor = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT' ||
+							  node.isContentEditable===true
+			if (!is_editor || node.disabled===true || node.readOnly===true) {
+				return false
+			}
+			// only fields inside a component rendered in EDIT mode: search forms,
+			// list filters and tool inspectors are not unsaved record data.
+			// (!) The NEAREST component wrapper decides, not the nearest EDIT one:
+			// an autocomplete/search field nested inside an edit-mode portal sits
+			// in its own search-mode wrapper and is NOT record data — matching
+			// '.wrapper_component.edit' directly would skip past it and arm the
+			// guard on every keystroke of a lookup box.
+			const wrapper = node.closest('.wrapper_component')
+			return wrapper!==null && wrapper.classList.contains('edit')
+		}
+		const input_handler = (e) => {
+			if (is_guarded_edit_field(e.target)) {
+				register_uncommitted_input(e.target)
+			}
+		}
+		const commit_handler = (e) => {
+			// 'change' → the view's own handler (running after this capture-phase
+			// listener) hands the verdict to the component registry;
+			// 'focusout'  → covers type-then-revert, where 'change' never fires.
+			deregister_uncommitted_input(e.target)
+		}
+		document.addEventListener('input', input_handler, {capture: true})
+		document.addEventListener('change', commit_handler, {capture: true})
+		document.addEventListener('focusout', commit_handler, {capture: true})
 
 	// save
 		const save_handler = (result) => {

@@ -315,6 +315,82 @@ inserts on `requestAnimationFrame`, and deduplicate by selector.
 | `toggle_theme()` | ✓ | Flip between light and dark. |
 | `THEME_KEY` (const) | ✓ | The localStorage key, `'dedalo_theme'`. |
 
+## Unsaved-work guard
+
+The page owns the last line of defence between a half-typed record and a closed
+tab: the derived flag `window.unsaved_data`. It is read by
+`check_unsaved_data()` (auto-save sweep + the discard prompt on navigation,
+modal close and component activation) and by the page's own `beforeunload`
+listener, which sets `event.returnValue` so the browser shows its native
+"leave site?" dialog.
+
+### The flag is DERIVED, never assigned
+
+`client/dedalo/core/common/js/events.js` owns it and recomputes it from three
+sources. No other file may write it — a direct assignment is silently
+overwritten by the next recompute.
+
+| source | armed by | retired by | what it covers |
+| --- | --- | --- | --- |
+| component-instance registry | `register_unsaved_instance(instance)` | `deregister_unsaved_instance(instance)` | a component whose current value differs from its `db_data` snapshot (the verdict in `set_changed_data`) |
+| uncommitted-typing registry | `register_uncommitted_input(node)` | `deregister_uncommitted_input(node)` | a field being typed into **right now**, before its view commits the value |
+| coarse assertion | `set_before_unload(true)` | `set_before_unload(false)` | keystroke guards with no component instance to register |
+
+An entry may only ever retire **itself**. This is the point of the registries:
+one component reverting its own edit must not disarm the guard for every other
+dirty component on the page. Only `reset_unsaved_data()` clears everything, and
+only from `check_unsaved_data`'s two resolutions — "everything was just flushed
+by the auto-save sweep" and "the user accepted the loss".
+
+### Why typing has its own registry
+
+A component only learns about an edit when its view **commits** a value.
+`component_text_area` debounces on keystrokes, so it registers itself while the
+user is still typing. Every view built on the native `change` event —
+`component_input_text`, `component_date`, `component_number`,
+`component_password`, `component_email`, `component_geolocation` and the rest —
+commits only on **blur**, and reloading or closing a tab never blurs the focused
+field. Without the typing registry those components never reached the guard at
+all: the flag stayed `false`, `beforeunload` returned early, and the typed text
+was dropped with no prompt, no save and no log line.
+
+So `events_init()` (called once from `index.js`) attaches one document-level,
+**capture-phase** listener trio:
+
+- `input` → arm the field, before any commit.
+- `change` → retire the field. Capture phase runs *before* the view's own
+  handler, so the component's verdict is what survives.
+- `focusout` → retire the field. Covers type-then-revert, where `change` never
+  fires at all.
+
+!!! warning "Only edit-mode record fields are guarded"
+    A field is guarded when its **nearest** `.wrapper_component` ancestor carries
+    the `edit` mode class. List cells, search forms and a lookup/autocomplete box
+    nested inside an edit-mode portal (it lives in its own search-mode wrapper)
+    are not unsaved record data, and typing in them must not arm the guard —
+    otherwise every lookup would prompt on reload.
+
+Entries whose node has left the document — a save or a refresh re-renders the
+component and throws the old input away — are pruned on every recompute, so a
+detached field cannot pin the guard armed forever.
+
+### The `beforeunload` step
+
+The handler **blurs the active element before reading the flag**. That makes the
+focused field commit synchronously: a genuine edit registers its component
+instance (guard armed, prompt shown, and the auto-save sweep can see the value),
+while a typed-then-reverted value deregisters itself and produces no false
+prompt.
+
+!!! note "Gates"
+    The registry contract and the wiring shape are pinned by
+    `test/unit/client_unsaved_registry.test.ts` (no server, no browser). The
+    end-to-end property — *typing into an edit-mode field of any component model
+    arms the guard before any commit* — is pinned per model by the browser suite
+    `test_unsaved_guard`, driven off the client test `elements.js` list so a new
+    component model inherits the gate automatically. Models with no typable edit
+    field are declared there by name with a reason.
+
 ## How it fits with the rest of Dédalo
 
 - **Server `start` action** — `page.build()` calls the Dédalo API `start` action

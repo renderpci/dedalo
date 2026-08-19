@@ -57,6 +57,8 @@ type EventsModule = {
 	set_before_unload: (value: boolean) => boolean | undefined;
 	register_unsaved_instance: (instance: object) => boolean;
 	deregister_unsaved_instance: (instance: object) => boolean;
+	register_uncommitted_input: (node: object) => boolean;
+	deregister_uncommitted_input: (node: object) => boolean;
 	reset_unsaved_data: () => boolean;
 };
 
@@ -152,6 +154,53 @@ describe('derived unsaved-data flag', () => {
 	});
 });
 
+describe('H. uncommitted typing (blur-committed views)', () => {
+	/**
+	 * WHY. component_text_area debounces on keystrokes and registers ITSELF, so
+	 * it was protected. Every view built on the native 'change' event —
+	 * component_input_text (oh14), component_date (oh57), select, … — commits
+	 * only on blur, and a reload/tab-close never blurs the focused field. The
+	 * component therefore never registered, the derived flag stayed false, and
+	 * the typed text was dropped with no prompt: the reported data loss.
+	 */
+
+	test('H1. a field being typed into arms the guard before its component knows', () => {
+		expect(unsaved()).toBe(false);
+
+		const input = {}; // a DOM node — the registry keys on identity only
+		events.register_uncommitted_input(input);
+		expect(unsaved(), 'typing into a blur-committed field left the guard disarmed').toBe(true);
+
+		events.deregister_uncommitted_input(input);
+		expect(unsaved()).toBe(false);
+	});
+
+	test('H2. one field committing cannot disarm another field still being typed into', () => {
+		const field_a = {};
+		const field_b = {};
+		events.register_uncommitted_input(field_a);
+		events.register_uncommitted_input(field_b);
+
+		events.deregister_uncommitted_input(field_b);
+
+		expect(unsaved(), 'committing one field disarmed the guard for another dirty field').toBe(true);
+	});
+
+	test('H3. set_before_unload(false) cannot disarm uncommitted typing', () => {
+		events.register_uncommitted_input({});
+
+		events.set_before_unload(false);
+
+		expect(unsaved(), 'a save elsewhere cleared typing it does not own').toBe(true);
+	});
+
+	test('H4. reset_unsaved_data clears the typing registry too', () => {
+		events.register_uncommitted_input({});
+		events.reset_unsaved_data();
+		expect(unsaved()).toBe(false);
+	});
+});
+
 describe('G. call-site shape', () => {
 	const strip_comments = (src: string) =>
 		src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
@@ -171,6 +220,33 @@ describe('G. call-site shape', () => {
 			fn.includes('set_before_unload(false)'),
 			'set_changed_data clears the page-wide flag again — this IS the data-loss defect',
 		).toBe(false);
+	});
+
+	test('events_init arms the guard from the live input event, in capture phase', () => {
+		const src = strip_comments(readFileSync(EVENTS_PATH, 'utf8'));
+		const body = src.slice(src.indexOf('export const events_init'));
+		const fn = body.slice(0, body.indexOf('}//end events_init'));
+
+		// capture phase: the component's own 'change' handler must run AFTER the
+		// document-level commit handler, so its verdict wins.
+		expect(fn, "no document-level 'input' listener — blur-committed views stay unprotected").toMatch(
+			/addEventListener\(\s*'input'[\s\S]*capture:\s*true/,
+		);
+		expect(fn).toMatch(/addEventListener\(\s*'change'[\s\S]*capture:\s*true/);
+		expect(fn, "'focusout' is what covers type-then-revert, where 'change' never fires").toContain("'focusout'");
+		expect(fn).toContain('register_uncommitted_input');
+		expect(fn).toContain('deregister_uncommitted_input');
+	});
+
+	test('the beforeunload handler blurs the active element before reading the flag', () => {
+		const src = strip_comments(readFileSync(join(CLIENT_ROOT, 'core', 'page', 'js', 'page.js'), 'utf8'));
+		const body = src.slice(src.indexOf('self.beforeunload_handler = function'));
+		const fn = body.slice(0, body.indexOf("window.addEventListener('beforeunload'"));
+
+		const blur_at = fn.indexOf('.blur()');
+		const read_at = fn.indexOf('const unsaved_data');
+		expect(blur_at, 'beforeunload no longer forces the focused field to commit').toBeGreaterThan(-1);
+		expect(blur_at, 'the blur must happen BEFORE window.unsaved_data is read').toBeLessThan(read_at);
 	});
 
 	test('no client file outside events.js assigns window.unsaved_data directly', () => {

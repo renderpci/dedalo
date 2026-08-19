@@ -1214,6 +1214,23 @@ page.prototype.add_events = function() {
 					}
 				}
 
+			// force the focused field to COMMIT before reading the flag. A reload
+			// or tab close does not blur the active element, so a view that only
+			// commits on the native 'change' event (component_input_text and
+			// friends) would never hand its typing to its component instance.
+			// blur() fires change synchronously: a genuine edit registers the
+			// instance (guard armed, prompt shown) and a typed-then-reverted value
+			// deregisters it (no false prompt).
+				try {
+					const active_element = document.activeElement
+					if (active_element && typeof active_element.blur==='function' && active_element!==document.body) {
+						active_element.blur()
+					}
+				} catch (e) {
+					// never let the guard throw: the unsaved-typing registry
+					// (events.js) already armed the flag on the first keystroke
+				}
+
 			const unsaved_data = typeof window.unsaved_data!=='undefined'
 				? window.unsaved_data
 				: false

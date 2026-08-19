@@ -33,6 +33,7 @@ export const generic_suites_green = [
 	'test_delete_instance',
 	'test_instances_lifecycle',
 	'test_event_manager',
+	'test_unsaved_guard',             // THE data-loss guard, per model: typing into an edit-mode field must arm window.unsaved_data BEFORE any commit/blur. Driven off elements.js so a new component model inherits the gate. Regression for the blur-committed views (component_input_text, component_date, select, …) that reached no registry until blur, so a reload dropped the typing with no prompt — component_text_area was immune only because it debounces on keystrokes.
 	'test_events',                    // when_in_dom shared-observer gate: sync fast path + return forwarding, exactly-once deferred fire, multi-callback per node, drain→re-arm lifecycle, throw isolation, re-entrant registration (events.js JSDoc invariants)
 	'test_components_activate',      // green after component fixes (was flaky, now stable 3/3)
 	'test_components_data_changes', // green after save-response DataItem-shape fix (dispatch.ts)
