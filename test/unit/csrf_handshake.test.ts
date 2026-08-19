@@ -11,6 +11,10 @@
  *
  * Exercised over the real HTTP layer (handleRequest with Request objects +
  * session cookie), i.e. the exact path a browser takes.
+ *
+ * WC-2026-08-19-rqo-body-csrf-token: the token may also ride IN the RQO for the
+ * one transport that cannot set a header — the beforeunload lock-release beacon.
+ * The last two tests are that entry's gate.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -32,6 +36,19 @@ function apiRequest(body: unknown, cookie: string, csrfToken?: string): Request 
 	return new Request('http://localhost/dedalo/core/api/v1/json/', {
 		method: 'POST',
 		headers,
+		body: JSON.stringify(body),
+	});
+}
+
+/**
+ * The beforeunload lock-release transport: navigator.sendBeacon. NO header of
+ * any kind is settable on it, and its Blob carries `text/plain` to stay a
+ * CORS-simple request (page.js beforeunload_handler).
+ */
+function beaconRequest(body: unknown, cookie: string): Request {
+	return new Request('http://localhost/dedalo/core/api/v1/json/', {
+		method: 'POST',
+		headers: { 'Content-Type': 'text/plain', Cookie: cookie },
 		body: JSON.stringify(body),
 	});
 }
@@ -110,5 +127,51 @@ describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {
 		// The start response hands the client its first token + the environment.
 		expect(typeof body.csrf_token).toBe('string');
 		expect(body.environment).toBeDefined();
+	});
+	test('beforeunload beacon: the body token is accepted when no header can be set', async () => {
+		// navigator.sendBeacon cannot set headers, so page.js ships the token in
+		// the RQO body (`csrf_token`) on the beforeunload lock release. Without the
+		// body fallback every tab close died as auth.csrf_failed and the component
+		// lock lingered until LOCK_TTL_SECONDS.
+		//
+		// Shaped like the REAL beacon: no CSRF header, and `text/plain` — the
+		// content-type sendBeacon uses to stay a CORS-simple request. If a
+		// content-type gate is ever added in front of the JSON branch this test
+		// is what fails, instead of the beacon silently dying in production.
+		const token = createSession(-1, 'root', true);
+		const cookie = `dedalo_ts_session=${token}`;
+		const csrf = getSession(token)?.csrfToken as string;
+
+		// No header, wrong-in-body → still refused.
+		const refused = await handleRequest(
+			beaconRequest({ ...READ_RQO, csrf_token: 'stale-token' }, cookie),
+			context,
+		);
+		expect(refused.status).toBe(403);
+
+		// No header, right-in-body → traverses the gate.
+		const accepted = await handleRequest(
+			beaconRequest({ ...READ_RQO, csrf_token: csrf }, cookie),
+			context,
+		);
+		expect(accepted.status).toBe(200);
+	});
+
+	test('beacon with a null token stays a csrf refusal, never a malformed RQO', async () => {
+		// page.js emits `csrf_token: page_globals.csrf_token || null`, so an unload
+		// inside the bootstrap window sends an explicit null. That must keep failing
+		// as `auth.csrf_failed` (the honest, expected outcome); a schema that
+		// rejected null would turn it into a 400 `request.invalid_rqo` — a worse,
+		// less diagnosable failure than the one the body fallback exists to cure.
+		const token = createSession(-1, 'root', true);
+		const cookie = `dedalo_ts_session=${token}`;
+
+		const response = await handleRequest(
+			beaconRequest({ ...READ_RQO, csrf_token: null }, cookie),
+			context,
+		);
+		expect(response.status).toBe(403);
+		const body = (await response.json()) as { error: { code: string } };
+		expect(body.error.code).toBe('auth.csrf_failed');
 	});
 });

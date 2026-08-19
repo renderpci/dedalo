@@ -971,7 +971,11 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			clientIp: clientIpFromRequest(request),
 			session: sessionToken !== undefined ? getSession(sessionToken) : null,
 			sessionToken: sessionToken ?? null,
-			csrfCandidate: request.headers.get('x-dedalo-csrf-token'),
+			// Header first; the body token is the fallback for sendBeacon, which
+			// cannot set headers (beforeunload lock release, page.js).
+			// WC-2026-08-19-rqo-body-csrf-token.
+			csrfCandidate:
+				request.headers.get('x-dedalo-csrf-token') ?? parsedRqo.data.csrf_token ?? null,
 			reportTokenCandidate: request.headers.get('x-dedalo-report-token'),
 			bodyByteLength: parseContentLength(request.headers.get('content-length')),
 			startedAt: context.startedAt,
