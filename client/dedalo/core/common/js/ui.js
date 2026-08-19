@@ -1872,8 +1872,8 @@ export const ui = {
 		// element_type. A element. Set href only when explicitly provided.
 		// SEC-CSP-001: 'javascript:' URLs are blocked by script-src without
 		// 'unsafe-hashes'; omitting href entirely is the CSP-safe default.
-			if(element_type==='a') {
-				element.href = options.href || 'javascript:;'
+			if(element_type==='a' && options.href) {
+				element.href = options.href
 			}
 
 		// src. Source for images etc.
