@@ -1293,16 +1293,32 @@ export const get_json_langs = function () {
 		}
 
 	// calculate from server
+	// NOTE only a USABLE payload is cached. A failure envelope (`ok:false`) or a
+	// network/parse error must never become the permanent page global: doing so
+	// would freeze every later caller on the failed state for the life of the
+	// page, with no retry. On failure the singleton is released and null is
+	// returned (every call site already handles it with `|| []`), so the next
+	// call re-fetches.
 		_json_langs_promise = data_manager.request({
 			url		: DEDALO_CORE_URL + '/common/js/lang.json',
 			method	: 'GET',
 			cache	: 'force-cache' // force use cache because the file do not changes
 		})
 		.then(json_langs => {
+			if (!json_langs || json_langs.ok===false || typeof json_langs!=='object') {
+				dd_console('[get_json_langs] Unable to load lang.json', 'ERROR', json_langs)
+				_json_langs_promise = null
+				return null
+			}
 			// fix as page global
 			window['json_langs'] = json_langs
 			_json_langs_promise = null
 			return json_langs
+		})
+		.catch(error => {
+			dd_console('[get_json_langs] Error loading lang.json', 'ERROR', error)
+			_json_langs_promise = null
+			return null
 		})
 
 	return _json_langs_promise
