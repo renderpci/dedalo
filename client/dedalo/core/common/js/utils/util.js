@@ -1282,8 +1282,10 @@ export function time_unit_auto(total_ms) {
 let _json_langs_promise = null
 export const get_json_langs = function () {
 
-	// return from page global value
-		if (window['json_langs']) {
+	// return from page global value. Shape-checked, not merely truthy: nothing
+	// else in the tree writes this global, but the cache is served for the life
+	// of the page, so an unusable value must never be handed out as a hit.
+		if (Array.isArray(window['json_langs']) && window['json_langs'].length>0) {
 			return Promise.resolve(window['json_langs'])
 		}
 
@@ -1293,19 +1295,22 @@ export const get_json_langs = function () {
 		}
 
 	// calculate from server
-	// NOTE only a USABLE payload is cached. A failure envelope (`ok:false`) or a
-	// network/parse error must never become the permanent page global: doing so
-	// would freeze every later caller on the failed state for the life of the
-	// page, with no retry. On failure the singleton is released and null is
-	// returned (every call site already handles it with `|| []`), so the next
-	// call re-fetches.
+	// NOTE only a USABLE payload is cached, and usable means what every consumer
+	// actually does with it: a NON-EMPTY ARRAY of language records, which they
+	// call .find() on. A failure envelope (`ok:false`), a 200 serving the wrong
+	// body, an empty array or a network/parse error must never become the
+	// permanent page global: the early return above never revalidates, so one
+	// bad answer would freeze every later caller for the life of the page with
+	// no retry. On anything unusable the singleton is released and null is
+	// returned, so the next call re-fetches. Callers must treat null as "not
+	// available" — they all guard the value with `|| []` before reading it.
 		_json_langs_promise = data_manager.request({
 			url		: DEDALO_CORE_URL + '/common/js/lang.json',
 			method	: 'GET',
 			cache	: 'force-cache' // force use cache because the file do not changes
 		})
 		.then(json_langs => {
-			if (!json_langs || json_langs.ok===false || typeof json_langs!=='object') {
+			if (!Array.isArray(json_langs) || json_langs.length<1) {
 				dd_console('[get_json_langs] Unable to load lang.json', 'ERROR', json_langs)
 				_json_langs_promise = null
 				return null

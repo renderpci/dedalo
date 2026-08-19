@@ -150,6 +150,11 @@ component_common.prototype.init = async function(options) {
 	// optional vars
 		self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
 		self.data			= options.data		|| null // current specific data of this component
+		// data_degraded: true when the API answer did NOT carry this instance's
+		// record and the previous data model was kept instead of being emptied
+		// (see do_build / save). A degraded instance is still usable; it just
+		// has not been re-synced with the server.
+		self.data_degraded	= false
 		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 		self.is_temporal	= options.is_temporal ?? false // temporal data (used in tools, etc.)
 		// temporal_scope (WC-079): the OWNING TOOL of a temporal instance whose
@@ -411,11 +416,27 @@ const do_build = async (self, autoload) => {
 				}
 
 			// data
+			// NOTE a miss is NOT a valid answer. Adopting `{}` would drop the
+			// instance identity (tipo, section_tipo, section_id) and `entries`
+			// AND the `changed_data` array installed above, leaving a component
+			// that looks alive, whose get_value() is undefined and whose saves
+			// carry a garbage shape. Keep the placeholder, stamp the identity so
+			// downstream lookups still match, and mark the instance degraded.
 				const data = datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
 				if(!data){
-					console.warn("data not found in api_response:",api_response);
+					console.error(`Error: data not found in api_response for ${self.tipo} (${self.section_tipo}/${self.section_id}):`, api_response);
+					// keep whatever model the instance already has (the
+					// {entries:null} placeholder installed above, or the data
+					// passed in options) EXACTLY as it is: it may be the very
+					// object shared through self.datum, so nothing is stamped
+					// onto it here — a corrected identity would be written into
+					// shared state, and a stale one would survive the stamp
+					// anyway. The instance is marked degraded instead.
+					self.data_degraded		= true
+				}else{
+					self.data			= data
+					self.data_degraded	= false
 				}
-				self.data = data || {}
 
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
@@ -646,7 +667,13 @@ component_common.prototype.save = async function(new_changed_data) {
 		}
 
 	// Optimization: check if data has actually changed (only for action='update' items)
-		const update_items = changed_data.filter(el => el.action === 'update')
+	// (!) NEVER on a degraded instance: db_data is then the last baseline the
+	// server actually confirmed, and the local model has moved past it, so
+	// "unchanged" here would mean "silently refuse to retry the save that the
+	// server never acknowledged". A degraded instance always goes to the wire.
+		const update_items = self.data_degraded===true
+			? []
+			: changed_data.filter(el => el.action === 'update')
 		if (update_items.length > 0) {
 
 			const all_items_unchanged = update_items.every(item => {
@@ -781,16 +808,33 @@ component_common.prototype.save = async function(new_changed_data) {
 			}
 
 			// Update Data Model
-				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
+			// NOTE the save SUCCEEDED; a record missing from the response is a
+			// server-side anomaly, never an instruction to empty the model.
+			// Overwriting self.data with `{}` here loses tipo/section_tipo/
+			// section_id/entries and, one line below, empties the db_data
+			// change-detection baseline — so every later edit reads as changed
+			// and get_value() returns undefined while the component still looks
+			// alive. Keep the model that was just saved, log unconditionally
+			// (the old warning was invisible outside SHOW_DEBUG) and mark the
+			// instance degraded so a refresh can re-sync it.
+				const result_data = Array.isArray(result?.data) ? result.data : []
+				const data = result_data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
 				if(!data){
-					if(SHOW_DEBUG===true) {
-						console.warn(`Warn: data not found for ${self.tipo} in API result.`, result);
-					}
+					console.error(`Error: data not found for ${self.tipo} in API save result. Keeping the previous data model.`, result);
+					self.data_degraded = true
+				}else{
+					self.data			= data
+					self.data_degraded	= false
 				}
-				self.data = data || {}
 
 			// Update DB Data snapshot (for future change detection)
-				if (self.model !== 'component_password') {
+			// (!) NOT when the answer omitted this record: advancing the
+			// baseline to a value the server never confirmed would assert the
+			// edit is stored, and the no-change short-circuit above would then
+			// refuse every later attempt to save it. Leaving db_data on the last
+			// CONFIRMED value keeps change detection pessimistic, so the next
+			// save is really sent.
+				if (self.model !== 'component_password' && self.data_degraded!==true) {
 					self.db_data = clone(self.data)
 				}
 
