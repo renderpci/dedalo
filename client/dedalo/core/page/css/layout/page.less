@@ -41,11 +41,14 @@
 			margin-top: 0px;
 			align-items: flex-start;
 			padding-top: 1rem;
+			// first line box is exactly the spinner height, so both share a centre
+			line-height: 2rem;
 
 			// the spinner is absolutely positioned and centres itself on the box;
-			// in a viewport-tall box it must stay on the label's line instead.
+			// in a viewport-tall box it must stay on the label's line instead:
+			// top = padding-top, since line box height == spinner height.
 			>.spinner {
-				top: 0.85rem;
+				top: 1rem;
 			}
 		}
 	}

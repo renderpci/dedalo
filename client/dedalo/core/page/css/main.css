@@ -6224,9 +6224,10 @@ dd-modal.dd_confirm .body.content {
   margin-top: 0px;
   align-items: flex-start;
   padding-top: 1rem;
+  line-height: 2rem;
 }
 .page > .content_data > .container_placeholder:not(.menu_placeholder) > .spinner {
-  top: 0.85rem;
+  top: 1rem;
 }
 .page > .bubbles_notification_container {
   z-index: 999 !important;
