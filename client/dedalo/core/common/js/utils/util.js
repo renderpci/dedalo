@@ -1,10 +1,11 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global Promise, structuredClone, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, DEDALO_TOOLS_URLS */
+/* global Promise, structuredClone, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, DEDALO_TOOLS_URLS, get_label */
 /*eslint no-undef: "error"*/
 
 
 
 import {data_manager} from '../../js/data_manager.js'
+import {event_manager} from '../../js/event_manager.js'
 import {get_instance} from '../../js/instances.js'
 
 
@@ -807,8 +808,10 @@ export function is_equal(el1, el2) {
 * @param {string|null} [options.features] - Raw window.open features string, or 'new_tab'
 * @param {Function|null} [options.on_blur] - Callback fired when the opener window
 *   regains focus (i.e. the user switches back from the new window)
-* @returns {Window} The opened window object; returns the current window when
-*   the Safari redirect path is taken
+* @returns {Window|null} The opened window object; the current window when the
+*   Safari redirect path is taken; null when the browser refused to open the
+*   window (pop-up blocker, window-count limit). Every caller that dereferences
+*   the result MUST branch on null — see the guard in the body.
 */
 export function open_window(options) {
 
@@ -856,10 +859,40 @@ export function open_window(options) {
 				target,
 				window_features
 			)
-			// window.open returns null when the popup is blocked; bail out gracefully
-			// instead of throwing a TypeError that would abort the caller.
-			new_window.resizeTo(width, height); // needed for Firefox
-			new_window.focus()
+
+			// (!) window.open returns null when the browser refuses the pop-up
+			// (blocker, window-count limit, an about:blank refusal). Dereferencing
+			// it threw a TypeError that escaped open_window and aborted the caller
+			// mid-operation — and callers get here with work already done and not
+			// undoable (open_records_in_window has already pinned a server-session
+			// filter by this point). So: tell the user, and hand the caller a null
+			// it can branch on instead of an exception it cannot.
+				if (!new_window) {
+					event_manager.publish('notification', {
+						msg			: (typeof get_label!=='undefined' && get_label.unable_to_open_window) || 'The browser blocked the new window. Allow pop-ups for this site and try again.',
+						type		: 'error',
+						remove_time	: 10000
+					})
+					return null
+				}
+
+			// (!) resizeTo is NOT on the cross-origin WindowProxy allow-list (only
+			// close/closed/focus/blur/frames/length/opener/parent/postMessage/top/
+			// self/window and the location setter are): once an external-engine URL
+			// has committed its own origin, touching it throws SecurityError — the
+			// same escaping-throw defect in a different coat. focus() IS allowed
+			// cross-origin, so it gets its own attempt rather than being skipped by
+			// a resize refusal. Both are cosmetic: the window IS open either way.
+				try {
+					new_window.resizeTo(width, height) // needed for Firefox
+				} catch (error) {
+					console.warn('open_window: resizeTo refused by the browser:', error);
+				}
+				try {
+					new_window.focus()
+				} catch (error) {
+					console.warn('open_window: focus refused by the browser:', error);
+				}
 
 			// on_blur optional action callback
 				if (typeof on_blur==='function') {
@@ -934,7 +967,9 @@ export function prevent_open_new_window() {
 * @param {number} [options.height=900] - Window height in pixels
 * @param {number} [options.left=0] - Horizontal screen offset
 * @param {number} [options.top=0] - Vertical screen offset
-* @returns {Promise<boolean>} Resolves to true once the window has been opened
+* @returns {Promise<boolean>} Resolves to true once the window has been opened;
+*   false when the browser refused it (the session filter stays pinned — see the
+*   note at the open_window call)
 */
 export const open_records_in_window = async function( options ) {
 
@@ -1006,11 +1041,23 @@ export const open_records_in_window = async function( options ) {
 	// open a new window without additional params.
 		// Note that the new window will be use the session value fixed in server
 		// for this section tipo by the previous dummy section build
-		open_window({
+		const new_window = open_window({
 			url			: `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`,
 			target		: target_window,
 			features	: features
 		})
+
+		// (!) The expensive, irreversible half already ran: the dummy section was
+		// built (which is what pinned the SQO filter in the server session for this
+		// section_tipo) and destroyed. If the window did not open, that filter stays
+		// pinned with nothing showing it, so NEVER answer true here — the caller
+		// would report success for records the user never saw. open_window has
+		// already told the user why; this is the machine-readable half of the same
+		// report.
+		if (!new_window) {
+			console.warn('open_records_in_window: window refused; the session filter stays pinned for section_tipo:', section_tipo);
+			return false
+		}
 
 
 	return true
