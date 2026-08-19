@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {dd_request_idle_callback, deregister_unsaved_instance} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_inserted_rules} from '../../page/js/css.js'
 	import {render_stream} from '../../common/js/render_common.js'
@@ -920,8 +920,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 *  4. Destroys `self.inspector` if present.
 *  5. Destroys `self.filter` if present.
 *  6. Removes the instance from the global instances map via delete_instance(self.id).
-*  7. Removes self from `self.caller.ar_instances` to prevent stale references.
-*  8. Nullifies heavy properties (context, data, datum, ar_instances, events_tokens,
+*  7. Retires any unsaved-data registration via deregister_unsaved_instance(self),
+*     so a destroyed dirty instance cannot keep the derived window.unsaved_data
+*     guard armed forever.
+*  8. Removes self from `self.caller.ar_instances` to prevent stale references.
+*  9. Nullifies heavy properties (context, data, datum, ar_instances, events_tokens,
 *     caller, request_config) to release memory held by closures.
 *
 * @param {Object} self - The Dédalo instance being destroyed
@@ -993,6 +996,13 @@ const do_delete_self = async function (self) {
 	// self.id is equivalent to the intances_map key
 	// delete_instance returns false if the instance was not found because is already removed.
 	const result = delete_instance( self.id )
+
+	// unsaved-data registry. Retire any unsaved registration this instance
+	// holds: window.unsaved_data is DERIVED from the events.js registry, and a
+	// destroyed dirty instance left registered would keep the navigation guard
+	// armed forever with no component left to save or revert. No-op when the
+	// instance never registered (Set semantics).
+		deregister_unsaved_instance(self)
 
 	// delete caller instance reference (ar_instances)
 		if (self.caller?.ar_instances) {

@@ -47,7 +47,7 @@
 // imports
 	import { clone, dd_console, is_equal } from '../../common/js/utils/index.js'
 	import { event_manager } from '../../common/js/event_manager.js'
-	import { set_before_unload,dd_request_idle_callback } from '../../common/js/events.js'
+	import { set_before_unload, register_unsaved_instance, deregister_unsaved_instance, reset_unsaved_data, dd_request_idle_callback } from '../../common/js/events.js'
 	import { data_manager } from '../../common/js/data_manager.js'
 	import { get_instance, get_all_instances } from '../../common/js/instances.js'
 	import { set_context_vars, create_source } from '../../common/js/common.js'
@@ -585,7 +585,9 @@ export const init_events_subscription = function(self) {
 *  4. Clear 'modified' + set 'saving'/'loading', then clone self.data, inject
 *     changed_data, build an RQO and POST via data_manager.
 *  5. On success: update self.data + self.db_data from the server response, run
-*     the success animation, and reset the before-unload warning.
+*     the success animation, and retire this instance's unsaved registration
+*     plus the coarse before-unload assertion (window.unsaved_data is DERIVED
+*     from the events.js registry; other dirty components keep it armed).
 *     On error: restore 'modified' (data is still unsaved) and set 'error'.
 *  6. On auth failure ('auth.not_logged'): subscribe to 'login_successful' and
 *     retry the save automatically when the user logs back in.
@@ -658,7 +660,13 @@ component_common.prototype.save = async function(new_changed_data) {
 				if(SHOW_DEBUG===true) {
 					console.warn(get_label.data_was_not_modified_save_canceled || 'The data has not been modified. Saving canceled');
 				}
-				// reset page unload warning
+				// reset page unload warning: retire OWN unsaved registration only —
+				// window.unsaved_data is DERIVED (events.js registry) and stays
+				// armed while OTHER components are still dirty. The coarse
+				// instance-less assertion (filter_records/security_access
+				// keystroke guards, which save through this same prototype) is
+				// cleared too, as a completed save round always did.
+				deregister_unsaved_instance(self)
 				set_before_unload(false)
 
 				self.saving = false
@@ -791,7 +799,13 @@ component_common.prototype.save = async function(new_changed_data) {
 					ui.component.exec_save_successfully_animation(self)
 				}
 
-			// Reset page unload warning
+			// Reset page unload warning: retire OWN unsaved registration only —
+			// window.unsaved_data is DERIVED (events.js registry) and stays
+			// armed while OTHER components are still dirty. The coarse
+			// instance-less assertion (filter_records/security_access keystroke
+			// guards, which save through this same prototype) is cleared too,
+			// as a completed save always did.
+				deregister_unsaved_instance(self)
 				set_before_unload(false)
 
 			// (!) no 'modified' removal here: it was already cleared when the
@@ -1726,11 +1740,14 @@ component_common.prototype.change_mode = async function(options) {
 *
 * Side effects:
 *  - When the value is unchanged (is_equal returns true):
-*      · resets the before-unload navigation warning (set_before_unload(false))
+*      · retires this instance's OWN unsaved registration
+*        (deregister_unsaved_instance); the derived window.unsaved_data flag
+*        stays armed while other instances are still dirty
 *      · removes the 'modified' CSS class from self.node
 *      · returns false
 *  - When the value is genuinely new:
-*      · activates the before-unload warning (set_before_unload(true))
+*      · registers this instance as unsaved (register_unsaved_instance),
+*        arming the derived before-unload navigation warning
 *      · adds the 'modified' CSS class to self.node
 *      · returns true
 *
@@ -1773,13 +1790,21 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 			// console.log('is_equal:', is_equal(clone(new_value), clone(original_value)));
 
 		if (is_equal(new_value, original_value)) {
-			set_before_unload(false)
+			// this instance is back at its last-saved value: retire its OWN
+			// unsaved registration only. (!) Never clear the page-wide flag from
+			// here: window.unsaved_data is DERIVED from the events.js registry,
+			// and the previous set_before_unload(false) at this spot disarmed
+			// the unsaved-work guard for every OTHER dirty component on the page
+			// — a one-character type-and-delete in a second field silently
+			// dropped a debounced text_area edit on navigation (data loss).
+			deregister_unsaved_instance(self)
 			self.node.classList.remove('modified')
 			return false
 		}
 
-	// prevents user navigate loosing changes without warning
-		set_before_unload(true)
+	// prevents user navigate loosing changes without warning: register this
+	// instance as genuinely unsaved (window.unsaved_data derives from the registry)
+		register_unsaved_instance(self)
 
 	// add style modified to wrapper node
 		if (!self.node.classList.contains('modified')) {
@@ -1806,9 +1831,14 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 *     any component instances that still carry non-empty changed_data. This handles
 *     the common text-area debounce window (500 ms delay before the component marks
 *     itself changed) where the user navigates faster than the debounce fires.
-*  2. After the auto-save pass, if window.unsaved_data is still true (e.g. a save
-*     failed or a component could not be auto-saved), show a browser confirm() dialog.
-*     Returning false signals the caller to abort the navigation.
+*     After the sweep the whole unsaved registry and the coarse assertion are
+*     cleared via reset_unsaved_data() — "everything was just flushed"
+*     (window.unsaved_data is DERIVED from the events.js registry; this function
+*     never assigns the boolean directly).
+*  2. After the auto-save pass, if window.unsaved_data is true again (an edit
+*     landed while the sweep's saves were awaited), show a browser confirm()
+*     dialog. Returning false signals the caller to abort the navigation; an
+*     acceptance resets the registry again — "the user accepted the loss".
 *
 * Called from:
 *   page.js        — beforeunload, mousedown, user_navigation events
@@ -1833,8 +1863,13 @@ export const check_unsaved_data = async function(options={}) {
 		if (typeof window.unsaved_data!=='undefined' && window.unsaved_data===true) {
 			// look in all component instances for unsaved data
 			await save_unsaved_components()
-			// reset unsaved_data value (unsaved component data will be saved before)
-			window.unsaved_data = false
+			// reset unsaved_data state: every dirty component was just flushed by
+			// the sweep (each save() already retired its own registration), so
+			// clear the whole registry plus the coarse assertion. (!) Direct
+			// window.unsaved_data assignment is retired — the flag is DERIVED
+			// (events.js registry) and only reset_unsaved_data() may clear
+			// unsaved state page-wide.
+			reset_unsaved_data()
 		}
 
 	// unsaved_data value check
@@ -1845,8 +1880,10 @@ export const check_unsaved_data = async function(options={}) {
 				return false
 			}
 
-			// reset unsaved_data state by the user
-			window.unsaved_data = false
+			// reset unsaved_data state by the user: the user explicitly accepted
+			// losing the remaining changes, so clear the whole registry and the
+			// coarse assertion (derived flag goes false)
+			reset_unsaved_data()
 		}
 
 	return true

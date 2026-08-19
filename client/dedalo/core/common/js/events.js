@@ -8,7 +8,10 @@
 *
 * Responsibilities:
 * - Bootstrap global DOM event listeners (visibilitychange, save) via events_init().
-* - Track unsaved-data state through window.unsaved_data and set_before_unload().
+* - Derive the page-wide unsaved-data flag (window.unsaved_data) from the
+*   unsaved-instances registry (register_unsaved_instance /
+*   deregister_unsaved_instance / reset_unsaved_data) plus the coarse
+*   instance-less set_before_unload() assertion.
 * - Provide DOM-readiness utilities (when_in_dom, when_in_viewport) used by
 *   components such as maps and media players that require the node to be in
 *   layout before they can initialise.
@@ -17,8 +20,9 @@
 * - Attach keyboard shortcuts and other global event bindings defined in tool
 *   configuration objects via set_tool_event().
 *
-* Exports: events_init, set_before_unload, when_in_dom, when_in_viewport,
-*          dd_request_idle_callback, set_tool_event.
+* Exports: events_init, set_before_unload, register_unsaved_instance,
+*          deregister_unsaved_instance, reset_unsaved_data, when_in_dom,
+*          when_in_viewport, dd_request_idle_callback, set_tool_event.
 *          yield_to_main is a module-private helper (not exported).
 */
 
@@ -35,6 +39,120 @@
 if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 	window.unsaved_data = false
 }
+
+
+
+/**
+* UNSAVED-DATA REGISTRY
+* (!) window.unsaved_data is DERIVED state: after module init its ONLY writer
+* is update_unsaved_data() below. It used to be a single page-wide boolean
+* assigned directly by every component, so ANY component could set it to false
+* purely because ITS OWN current value matched its db_data snapshot
+* (set_changed_data's revert branch) — silently disarming the unsaved-work
+* guard for every OTHER dirty component on the page. Concretely: edit a
+* debounced component_text_area, type-and-delete one character in a second
+* field, close the tab — the text_area edit was dropped with no save, no
+* prompt and no log line. Now each component instance registers itself while
+* it holds a genuine unsaved change and can only deregister ITSELF (on
+* revert, save success or destroy); the boolean is recomputed from the
+* registry plus the coarse instance-less assertion, so one component's revert
+* cannot disarm another's guard.
+*/
+
+// unsaved_instances. Component instances currently holding a genuine unsaved
+// change, keyed by instance identity and driven by the EQUALITY VERDICT in
+// component_common.set_changed_data (NOT by changed_data.length). A plain Set
+// — a WeakSet cannot be counted — with explicit removal on instance teardown
+// (common.js do_delete_self), so a destroyed dirty instance cannot pin the
+// flag forever.
+	const unsaved_instances = new Set()
+
+// unsaved_asserted. The coarse instance-less "something is dirty" assertion,
+// kept for callers that guard raw keystrokes without a component registration
+// (view_default_edit_filter_records, view_default_edit_security_access) via
+// set_before_unload(true). Cleared by set_before_unload(false) — called on
+// every component save completion — and by reset_unsaved_data().
+	let unsaved_asserted = false
+
+
+
+/**
+* UPDATE_UNSAVED_DATA
+* Recompute the derived window.unsaved_data boolean: true while at least one
+* instance is registered as unsaved OR the coarse assertion is active.
+* Every registry/assertion mutation funnels through here, so no code path can
+* write the boolean behind the registry's back. Readers (page.js beforeunload,
+* component_common check_unsaved_data, events_init) keep reading a plain
+* boolean, unchanged.
+*
+* @returns {boolean} The recomputed window.unsaved_data value
+*/
+const update_unsaved_data = function() {
+
+	window.unsaved_data = (unsaved_instances.size > 0 || unsaved_asserted===true)
+
+	return window.unsaved_data
+}//end update_unsaved_data
+
+
+
+/**
+* REGISTER_UNSAVED_INSTANCE
+* Mark the given component instance as holding a genuine unsaved change (its
+* current value differs from its db_data snapshot, per the is_equal verdict
+* in component_common.set_changed_data) and re-derive window.unsaved_data.
+* Registering an already registered instance is a no-op (Set semantics).
+*
+* @param {Object} instance - The component instance with unsaved data
+* @returns {boolean} The recomputed window.unsaved_data value (true here)
+*/
+export const register_unsaved_instance = function(instance) {
+
+	unsaved_instances.add(instance)
+
+	return update_unsaved_data()
+}//end register_unsaved_instance
+
+
+
+/**
+* DEREGISTER_UNSAVED_INSTANCE
+* Retire the given instance's own unsaved registration — because its value is
+* back to the db_data snapshot, its save succeeded, or it is being destroyed —
+* and re-derive window.unsaved_data. (!) This only ever removes the CALLER'S
+* entry: other registered instances keep the guard armed, which is the whole
+* point of the registry (see the header above). An unregistered instance is a
+* no-op.
+*
+* @param {Object} instance - The component instance to deregister
+* @returns {boolean} The recomputed window.unsaved_data value
+*/
+export const deregister_unsaved_instance = function(instance) {
+
+	unsaved_instances.delete(instance)
+
+	return update_unsaved_data()
+}//end deregister_unsaved_instance
+
+
+
+/**
+* RESET_UNSAVED_DATA
+* Clear the WHOLE registry and the coarse assertion, then re-derive
+* window.unsaved_data (false). This is the deliberate page-wide reset for
+* check_unsaved_data's two resolutions ONLY: "every dirty component was just
+* flushed by the auto-save sweep" and "the user explicitly accepted losing
+* the remaining changes". Nothing else may clear state it does not own.
+*
+* @returns {boolean} The recomputed window.unsaved_data value (false here)
+*/
+export const reset_unsaved_data = function() {
+
+	unsaved_instances.clear()
+	unsaved_asserted = false
+
+	return update_unsaved_data()
+}//end reset_unsaved_data
 
 
 
@@ -84,21 +202,31 @@ export const events_init = function() {
 
 /**
 * SET_BEFORE_UNLOAD
-* Toggle the global unsaved-data flag and (when active) the beforeunload guard.
+* Toggle the coarse instance-less unsaved-data assertion and re-derive
+* window.unsaved_data.
 *
-* Components call this with true as soon as the user edits content, and with
-* false once the data has been saved. The flag is stored on window.unsaved_data
-* so other parts of the application (e.g. events_init's visibilitychange
-* handler) can read it without importing this module.
+* (!) This no longer assigns window.unsaved_data directly: the flag is DERIVED
+* (see the unsaved-data registry above), so set_before_unload(false) clears
+* only the coarse assertion — it CANNOT disarm the guard while component
+* instances are still registered as dirty. Components no longer call this for
+* their own edit state (they register/deregister themselves via
+* register_unsaved_instance / deregister_unsaved_instance); the remaining
+* callers are keystroke guards with no component registration
+* (view_default_edit_filter_records, view_default_edit_security_access) with
+* true, and component_common.save() with false once a save completed. The flag
+* stays on window.unsaved_data so other parts of the application (e.g.
+* events_init's visibilitychange handler) can read it without importing this
+* module.
 *
 * The beforeunload listener block is currently commented out (see dead code below);
-* only the flag assignment is active. When the listener is re-enabled it will
+* only the derived flag is maintained. When the listener is re-enabled it will
 * show the browser's native "leave page?" dialog on navigation while unsaved
 * data exists.
 *
-* @param {boolean} value - true to signal unsaved changes; false to clear the guard.
-* @returns {boolean|undefined} true when the flag was changed; undefined when
-*   the flag already matched value (no-op fast path).
+* @param {boolean} value - true to assert unsaved changes exist outside any
+*   component registration; false to retract that assertion.
+* @returns {boolean|undefined} The recomputed window.unsaved_data value when the
+*   assertion changed; undefined when it already matched value (no-op fast path).
 */
 export const set_before_unload = function(value) {
 	if(SHOW_DEBUG===true) {
@@ -106,12 +234,12 @@ export const set_before_unload = function(value) {
 	}
 
 	// already fixed current value (true/false)
-		if (value===window.unsaved_data) {
+		if (value===unsaved_asserted) {
 			return
 		}
 
-	// fix value
-		window.unsaved_data = value
+	// fix value. The derived window.unsaved_data is recomputed at the return below
+		unsaved_asserted = value
 
 	// add/remove listener
 		// if (value===true) {
@@ -124,7 +252,7 @@ export const set_before_unload = function(value) {
 		// 	// window.unsaved_data = false
 		// }
 
-	return true
+	return update_unsaved_data()
 }//end set_before_unload
 
 
