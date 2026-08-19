@@ -13,6 +13,11 @@
  * scoped search — so `get_data`/`resolve_data`/MCP writes must NOT leak them.
  * Read-only against the live DB (record 1 is never mutated).
  */
+// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { routeSectionRead } from '../../src/core/section/read_facade.ts';

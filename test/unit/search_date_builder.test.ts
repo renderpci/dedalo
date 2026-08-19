@@ -25,6 +25,11 @@
  * moved TOWARD the oracle, not away from it. Ledger:
  * WC-036 addendum 2026-08-09.
  */
+// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import { conformTmFilter, type ParamSink } from '../../src/core/resolve/tm_filter.ts';

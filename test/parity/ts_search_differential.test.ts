@@ -7,6 +7,11 @@
  * The orchestrator owns the full sweep (deep hit, root hit, shared-branch dedup,
  * pinned hierarchy_terms, non-admin filtering); this pins the keyword-hit path.
  */
+// BINDS INSTALL TLDs: tchi — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';

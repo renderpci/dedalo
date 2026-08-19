@@ -25,6 +25,11 @@
  * object as an atom that record_ir.ts valueIrToString stringifies onto the
  * wire. All three are asserted here together.
  */
+// BINDS INSTALL TLDs: numisdata, tchi — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import type { MatrixRecord } from '../../src/core/db/matrix.ts';

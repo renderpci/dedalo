@@ -29,6 +29,11 @@
  * The remaining half (the CLIENT poll handler must not COMPUTE the URL for an
  * engine that does not need it) is in `tools/tool_transcription/server/index.ts`.
  */
+// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import {

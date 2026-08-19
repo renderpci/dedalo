@@ -291,7 +291,6 @@
 		"test/unit/tm_range_filter_barrier.test.ts": ["rsc"],
 		"test/unit/tm_scope_authz_native.test.ts": ["oh", "rsc"],
 		"test/unit/tm_sort_policy.test.ts": ["rsc"],
-		"test/unit/tm_wallclock.test.ts": ["numisdata"],
 		"test/unit/tool_dev_template.test.ts": ["oh"],
 		"test/unit/tool_error_report.test.ts": ["oh"],
 		"test/unit/tool_import_dedalo_csv.test.ts": ["numisdata", "oh"],
@@ -321,9 +320,9 @@
 		"test/unit/zz_scratch_verify.test.ts": ["numisdata"]
 	},
 	"summary": {
-		"files": 302,
+		"files": 301,
 		"by_tld": {
-			"numisdata": 154,
+			"numisdata": 153,
 			"rsc": 148,
 			"oh": 63,
 			"zenon": 14,

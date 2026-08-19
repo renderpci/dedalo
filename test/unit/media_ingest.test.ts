@@ -3,6 +3,11 @@
  * files_info) with a REAL image, and the supervised job manager (concurrency
  * cap, progress, stop, status frames). Scratch media root — never the shared dir.
  */
+// BINDS INSTALL TLDs: libx, rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';

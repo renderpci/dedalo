@@ -8,6 +8,11 @@
  * component_section_id (the record's own id — rsc559 under rsc424) resolves,
  * and a genuinely-uncovered model stays LEDGERED (null + unresolved note).
  */
+// BINDS INSTALL TLDs: ich, rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import { resolveCellValue } from '../../src/core/resolve/relation_list.ts';

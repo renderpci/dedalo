@@ -8,6 +8,11 @@
  * with an injected save. Full tool_request→DB drive is ledgered (media not
  * synced here), matching the media_tools.test.ts convention.
  */
+// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';

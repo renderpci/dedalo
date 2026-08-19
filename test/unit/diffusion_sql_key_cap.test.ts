@@ -6,6 +6,11 @@
  * (diffusion_mysql::generate_keys) capped secondary indexes at 50; we match it
  * and apply the SAME cap to the additive-ALTER path (which the oracle did not).
  */
+// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import type { FieldPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';

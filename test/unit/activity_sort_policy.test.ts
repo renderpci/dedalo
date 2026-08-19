@@ -16,6 +16,11 @@
  * The dd542 rows of list_column_sortable_differential are history (ledgered
  * there); THIS gate pins the new contract.
  */
+// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import { ACTIVITY_SECTION_TIPO, ACTIVITY_WHEN_TIPO } from '../../src/core/concepts/section.ts';

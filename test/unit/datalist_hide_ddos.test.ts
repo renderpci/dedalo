@@ -27,6 +27,11 @@
  * and swept in afterAll; the datalist cache is cleared around them so neither
  * this gate nor its neighbours serve a stale list.
  */
+// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';

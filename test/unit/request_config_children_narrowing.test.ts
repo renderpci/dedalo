@@ -11,6 +11,11 @@
  * ddo_map is [rsc20, rsc19, rsc23, rsc62, rsc36, rsc35] — the narrowed show map
  * and the portal sort leaf (order path step 2) must both follow the caller.
  */
+// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import type { Ddo } from '../../src/core/concepts/ddo.ts';

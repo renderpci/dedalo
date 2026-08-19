@@ -17,6 +17,11 @@
  * process-GLOBAL and `mock.restore()` does not revert it — the real exports are
  * snapshotted at import and re-installed (dedalo-ts-testing).
  */
+// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, afterEach, describe, expect, mock, test } from 'bun:test';
 import { ok } from '../../src/core/errors/convert.ts';

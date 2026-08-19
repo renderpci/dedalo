@@ -16,6 +16,11 @@
  * preset_scope.js is a dependency-free leaf module precisely so this rule can be
  * unit-tested without the browser/client import chain.
  */
+// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import { preset_scope_tipo } from '../../client/dedalo/core/search/js/preset_scope.js';

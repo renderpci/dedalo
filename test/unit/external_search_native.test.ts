@@ -13,6 +13,11 @@
  * `assertPublicUrlImpl` through the transport's declared seams; a case that
  * must prove "no request was made" counts the calls on that stub.
  */
+// BINDS INSTALL TLDs: zenon — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';

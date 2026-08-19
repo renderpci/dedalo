@@ -10,6 +10,11 @@
  *
  * dd1758 writes are avoided (logActivity=false); the DB is never mutated.
  */
+// BINDS INSTALL TLDs: numisdata, rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import type { NativeSqlDeleteTarget } from '../../src/core/diffusion_bridge/diffusion_delete.ts';

@@ -14,6 +14,11 @@
  * Real ffmpeg against a SCRATCH media root + a scratch test3 record (the suite's
  * one write surface); both are cleaned up. '240' is the cheapest ladder tier.
  */
+// BINDS INSTALL TLDs: libx — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';

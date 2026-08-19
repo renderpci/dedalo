@@ -46,6 +46,11 @@
  * translatable → the `string` column). Rows + TM audit rows are cleaned before
  * and after.
  */
+// BINDS INSTALL TLDs: numisdata, oh, rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';

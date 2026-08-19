@@ -22,6 +22,11 @@
  * NO NETWORK, ever: the request build and the value mapping are pure, and the
  * one end-to-end case injects its fetch.
  */
+// BINDS INSTALL TLDs: zenon — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import zenonData from '../../src/core/components/component_external/samples/zenon_data.json';

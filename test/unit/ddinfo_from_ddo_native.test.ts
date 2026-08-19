@@ -14,6 +14,11 @@
  * 3. The lang-fallback face counts as a value: terms stored only in another
  *    lang arrive as `fallback_value` and must still produce their breadcrumb.
  */
+// BINDS INSTALL TLDs: object, tchi — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { describe, expect, test } from 'bun:test';
 import type { Ddo } from '../../src/core/concepts/ddo.ts';

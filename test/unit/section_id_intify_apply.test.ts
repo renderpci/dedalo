@@ -9,6 +9,11 @@
  * restore-path normalization (normalizeRestoredSectionIds against the live
  * test playground, whose test3 IS an external zenon section).
  */
+// BINDS INSTALL TLDs: oh, zenon — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { type SurfaceStats, sweepSurface } from '../../scripts/migrate_section_id_locators.ts';
