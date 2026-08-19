@@ -18,6 +18,12 @@
  * their own cache invalidation. Modeled on the proven-working rsc170 (Image)
  * section / rsc30 (text_area) / test31 (geolocation) rows.
  *
+ * GENERALIZED 2026-08-19 as `./situations/situation.ts` (ensureSituation /
+ * dropSituation on a reserved zz* TLD) — the standard way for ANY test to build
+ * its structure + data. This file stays because the client suite hard-codes
+ * the dmm480/dmm507/dmm506 tipos; new tests use situations, never a hand-rolled
+ * upsert list like this one.
+ *
  * Idempotent: safe to call on every client-test run (scripts/client_test_runner.ts),
  * exactly like the canonical test3 reseed (seed.ts) — the suite must not depend
  * on whatever demo data a given installation happens to carry.

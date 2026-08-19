@@ -2,8 +2,9 @@
  * SECTION_SPEC §7.2 gate: the relation_list cell-value contract covers every
  * component model that appears as a real relation_list column in the ontology.
  *
- * The full-grid byte-parity is gated by relation_list_differential (numisdata6
- * columns). This unit gate pins the two column models that gate does not reach:
+ * The full grid (context columns, cell values, paging) is gated by
+ * relation_list_grid_native.test.ts, which BUILDS its own situation. This unit
+ * gate pins the two column models that gate does not reach:
  * component_section_id (the record's own id — rsc559 under rsc424) resolves,
  * and a genuinely-uncovered model stays LEDGERED (null + unresolved note).
  */

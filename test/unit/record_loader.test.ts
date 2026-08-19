@@ -12,8 +12,9 @@
  *   for requested-but-missing ids, and skips junk locators without throwing.
  *
  * Byte-parity of the emitted cells is NOT asserted here — that stays with the
- * portal/relation parity gates (portal_differential, complex_relation_sweep,
- * model_coverage_sweep), which exercise the same call sites.
+ * portal/relation gates (portal_list_cell_pagination_native,
+ * complex_relation_sweep, model_coverage_sweep), which exercise the same call
+ * sites.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';

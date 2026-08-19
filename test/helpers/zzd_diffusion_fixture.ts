@@ -10,9 +10,12 @@
  * names. These gates provision their OWN elements instead, so every branch of
  * deleteDiffusionRecord is reachable and each assertion is exact.
  *
- * SHAPE (all under the configured DEDALO_DIFFUSION_DOMAIN node — a missing
- * domain THROWS, it never skips):
+ * SHAPE — built by src/core/test_data/situations (2026-08-19; before that
+ * these were raw INSERTs bound to whatever domain node the ambient ontology
+ * carried). The domain node is PROVISIONED (zzd0), named after the configured
+ * DEDALO_DIFFUSION_DOMAIN; an unset variable THROWS, it never skips:
  *
+ *   zzd0  diffusion_domain  <DEDALO_DIFFUSION_DOMAIN>   (parent dd1190)
  *   zzd1  diffusion_element  {"diffusion":{"type":"sql"}}
  *     zzd2  database  'zzd_probe_db'
  *     zzd3  table     'zzd_probe_table'      → section test3
@@ -30,8 +33,12 @@
  */
 
 import { readEnv } from '../../src/config/env.ts';
-import { sql } from '../../src/core/db/postgres.ts';
-import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	residueOf,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
 /** The section whose targets are the two scratch sql elements. */
 export const SQL_SECTION = 'test3';
@@ -44,107 +51,115 @@ export const SQL_KEY_ONE = 'zzd_probe_db|zzd_probe_table';
 export const SQL_KEY_TWO = 'zzd_probe_db_two|zzd_probe_table_two';
 
 /**
- * Resolve the configured diffusion domain node. THROWS when it is absent —
- * a fixture that cannot be provisioned must redden the file, never skip it.
+ * The domain node is PART OF THE SITUATION (zzd0, under dd1190, named after
+ * the configured DEDALO_DIFFUSION_DOMAIN). Before 2026-08-19 the fixture
+ * looked the domain up in the ambient ontology and threw when the configured
+ * name matched no node — i.e. the gates were red on every install whose
+ * `.env` named a domain that install did not carry (measured: the suite DB
+ * with DEDALO_DIFFUSION_DOMAIN=mht). The engine matches the domain by NAME
+ * (diffusion_map.ts resolveDomainTipo), so provisioning a node with that
+ * name is exactly the situation the gates need, on any install. An UNSET
+ * variable still throws: without a name there is no situation to build.
  */
-async function requireDomainTipo(): Promise<string> {
+function requireDomainName(): string {
 	const domainName = readEnv('DEDALO_DIFFUSION_DOMAIN');
 	if (domainName === undefined || domainName === '') {
 		throw new Error(
 			'DEDALO_DIFFUSION_DOMAIN is unset — the diffusion delete gates cannot be provisioned',
 		);
 	}
-	const rows = (await sql.unsafe(
-		`SELECT tipo, term FROM dd_ontology WHERE parent = 'dd1190' AND model = 'diffusion_domain'`,
-	)) as { tipo: string; term: Record<string, string> | null }[];
-	for (const row of rows) {
-		const term = row.term ?? {};
-		const label = term['lg-spa'] ?? Object.values(term).find((value) => value !== '') ?? null;
-		if (label === domainName) return row.tipo;
-	}
-	throw new Error(
-		`no diffusion_domain node named '${domainName}' under dd1190 in this database — fixture unprovisionable`,
-	);
+	return domainName;
+}
+
+function buildZzdSituation() {
+	const domainName = requireDomainName();
+	const sql = (type: string) => ({ diffusion: { type } });
+	return situation({
+		name: 'zzd diffusion fixture',
+		tld: 'zzd',
+		nodes: [
+			{ tipo: 'zzd0', parent: 'dd1190', model: 'diffusion_domain', term: { 'lg-spa': domainName } },
+			{
+				tipo: 'zzd1',
+				parent: 'zzd0',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzd sql element' },
+				properties: sql('sql'),
+			},
+			{ tipo: 'zzd2', parent: 'zzd1', model: 'database', term: { 'lg-spa': 'zzd_probe_db' } },
+			{
+				tipo: 'zzd3',
+				parent: 'zzd1',
+				model: 'table',
+				term: { 'lg-spa': 'zzd_probe_table' },
+				relations: [{ tipo: 'test3' }],
+			},
+			{
+				tipo: 'zzd4',
+				parent: 'zzd0',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzd sql element two' },
+				properties: sql('sql'),
+			},
+			{ tipo: 'zzd5', parent: 'zzd4', model: 'database', term: { 'lg-spa': 'zzd_probe_db_two' } },
+			{
+				tipo: 'zzd6',
+				parent: 'zzd4',
+				model: 'table',
+				term: { 'lg-spa': 'zzd_probe_table_two' },
+				relations: [{ tipo: 'test3' }],
+			},
+			{
+				tipo: 'zzd7',
+				parent: 'zzd0',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzd rdf element' },
+				properties: sql('rdf'),
+			},
+			{
+				tipo: 'zzd11',
+				parent: 'zzd7',
+				model: 'table',
+				term: { 'lg-spa': 'zzd_rdf_child' },
+				relations: [{ tipo: 'zzd9' }],
+			},
+			{
+				tipo: 'zzd8',
+				parent: 'zzd0',
+				model: 'diffusion_element',
+				term: { 'lg-spa': 'zzd xml element' },
+				properties: { diffusion: { type: 'xml', service_name: 'testsvc' } },
+			},
+			{
+				tipo: 'zzd10',
+				parent: 'zzd8',
+				model: 'owl:Class',
+				term: { 'lg-spa': 'nmo:TestClass' },
+				relations: [{ tipo: 'zzd9' }],
+			},
+			{ tipo: 'zzd9', parent: 'test1', model: 'section', term: { 'lg-spa': 'zzd probe section' } },
+		],
+	});
 }
 
 /** Remove every `zzd` ontology row and drop the derived caches. */
 export async function dropZzdOntology(): Promise<void> {
-	await sql.unsafe(`DELETE FROM dd_ontology WHERE tld = 'zzd'`);
-	await clearOntologyDerivedCaches();
+	await dropSituation(buildZzdSituation());
 }
 
 /**
- * Provision the fixture. Pre-existing `zzd` rows are cleared first and the
- * pre-count is asserted zero by the caller (see the gates' beforeAll).
+ * Provision the fixture (idempotent). Pre-existing `zzd` rows are cleared first
+ * and the pre-count is asserted zero by the caller (see the gates' beforeAll).
  */
 export async function seedZzdOntology(): Promise<{ domainTipo: string; preCount: number }> {
-	await sql.unsafe(`DELETE FROM dd_ontology WHERE tld = 'zzd'`);
-	const preRows = (await sql.unsafe(
-		`SELECT count(*)::int AS n FROM dd_ontology WHERE tld = 'zzd'`,
-	)) as { n: number }[];
-	const preCount = preRows[0]?.n ?? -1;
-	const domainTipo = await requireDomainTipo();
-
-	const rows: [string, string, string, string, string | null][] = [
-		// tipo, parent, model, term json, properties json
-		[
-			'zzd1',
-			domainTipo,
-			'diffusion_element',
-			'{"lg-spa":"zzd sql element"}',
-			'{"diffusion":{"type":"sql"}}',
-		],
-		['zzd2', 'zzd1', 'database', '{"lg-spa":"zzd_probe_db"}', null],
-		['zzd3', 'zzd1', 'table', '{"lg-spa":"zzd_probe_table"}', null],
-		[
-			'zzd4',
-			domainTipo,
-			'diffusion_element',
-			'{"lg-spa":"zzd sql element two"}',
-			'{"diffusion":{"type":"sql"}}',
-		],
-		['zzd5', 'zzd4', 'database', '{"lg-spa":"zzd_probe_db_two"}', null],
-		['zzd6', 'zzd4', 'table', '{"lg-spa":"zzd_probe_table_two"}', null],
-		[
-			'zzd7',
-			domainTipo,
-			'diffusion_element',
-			'{"lg-spa":"zzd rdf element"}',
-			'{"diffusion":{"type":"rdf"}}',
-		],
-		['zzd11', 'zzd7', 'table', '{"lg-spa":"zzd_rdf_child"}', null],
-		[
-			'zzd8',
-			domainTipo,
-			'diffusion_element',
-			'{"lg-spa":"zzd xml element"}',
-			'{"diffusion":{"type":"xml","service_name":"testsvc"}}',
-		],
-		['zzd10', 'zzd8', 'owl:Class', '{"lg-spa":"nmo:TestClass"}', null],
-		['zzd9', 'test1', 'section', '{"lg-spa":"zzd probe section"}', null],
-	];
-	for (const [tipo, parent, model, term, properties] of rows) {
-		await sql.unsafe(
-			`INSERT INTO dd_ontology (tipo, parent, model, term, tld, is_model, is_translatable, is_main, order_number, properties)
-			 VALUES ($1, $2, $3, $4::text::jsonb, 'zzd', false, false, false, 1, $5::text::jsonb)`,
-			[tipo, parent, model, term, properties],
-		);
-	}
-	// relations: the nodes that bind an element to a section
-	await sql.unsafe(
-		`UPDATE dd_ontology SET relations = '[{"tipo":"test3"}]'::jsonb WHERE tipo IN ('zzd3','zzd6')`,
-	);
-	await sql.unsafe(
-		`UPDATE dd_ontology SET relations = '[{"tipo":"zzd9"}]'::jsonb WHERE tipo IN ('zzd11','zzd10')`,
-	);
-	await clearOntologyDerivedCaches();
-	return { domainTipo, preCount };
+	const s = buildZzdSituation();
+	await dropSituation(s);
+	const preCount = await residueOf(s);
+	await ensureSituation(s);
+	return { domainTipo: 'zzd0', preCount };
 }
 
 /** Residue check for afterAll — must be 0. */
 export async function countZzdOntology(): Promise<number> {
-	const rows = (await sql.unsafe(
-		`SELECT count(*)::int AS n FROM dd_ontology WHERE tld = 'zzd'`,
-	)) as { n: number }[];
-	return rows[0]?.n ?? -1;
+	return residueOf(buildZzdSituation());
 }

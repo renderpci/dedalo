@@ -13,6 +13,9 @@
  *     ONE legitimate non-rebuild caller, `ontology_write.ts` `setRecordsInDdOntology`, which
  *     deletes a tld's nodes when the tld goes INACTIVE (a different operation, not a rebuild).
  *     Anyone else deleting a tld's nodes is wipe-and-rebuilding outside the single writer.
+ *     ONE named exemption (2026-08-19): `src/core/test_data/situations/situation.ts`
+ *     tears down TEST SITUATIONS on reserved `zz*` TLDs — nodes with no matrix_ontology
+ *     source, so no projection exists to be rebuilt; the module refuses non-`zz*` TLDs.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -28,6 +31,12 @@ const DELETE_TLD_ALLOWLIST = new Set([
 	'src/core/db/dd_ontology.ts', // defines it
 	'src/core/ontology/ontology_state.ts', // the rebuild authority
 	'src/core/ontology/ontology_write.ts', // setRecordsInDdOntology: inactive-tld deactivation
+	// dropSituation: teardown of a TEST SITUATION on a reserved `zz*` TLD
+	// (2026-08-19). Not a second rebuild authority: a situation's nodes are
+	// not a projection of matrix_ontology — they have NO source records, are
+	// born through upsertDdOntologyNode and die with the test. situation()
+	// refuses any TLD outside /^zz[a-z]*$/, so this door cannot reach a real TLD.
+	'src/core/test_data/situations/situation.ts',
 ]);
 
 function sourceFiles(): string[] {

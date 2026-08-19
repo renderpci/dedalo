@@ -1,0 +1,6582 @@
+{
+	"_doc": "Generic `test` TLD ontology — derived FROM install/db/dedalo_install.pgsql.gz by scripts/export_test_tld_ontology.ts (seed → JSON, never the reverse). Reviewable twin of what every install ships in its Test area; test/unit/test_tld_ontology_gate.test.ts asserts seed ≡ this file. Same node shape a situation takes (src/core/test_data/situations). DO NOT hand-edit: change the seed, re-export.",
+	"tld": "test",
+	"node_count": 217,
+	"nodes": [
+		{
+			"tipo": "test0",
+			"parent": "ontologytype5",
+			"term": {
+				"lg-eng": "Test | test",
+				"lg-spa": "Test | test"
+			},
+			"model": "section",
+			"order_number": null,
+			"relations": [
+				{
+					"tipo": "ontology1"
+				},
+				{
+					"tipo": "dd1201"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"color": "#2d8894",
+				"main_tld": "test"
+			},
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": true,
+			"propiedades": null
+		},
+		{
+			"tipo": "test1",
+			"parent": "dd770",
+			"term": {
+				"lg-eng": "Test area (TESTS)",
+				"lg-spa": "Area de pruebas (TESTS)"
+			},
+			"model": "area",
+			"order_number": 8,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd4",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test2",
+			"parent": "test1",
+			"term": {
+				"lg-eng": "Test section reference cases",
+				"lg-spa": "Test section reference cases"
+			},
+			"model": "section",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test24"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"info": "identification - section_group",
+										"tipo": "test44",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".content_data": {
+													"grid-template-columns": "repeat(20, 1fr)"
+												}
+											}
+										},
+										"section_tipo": "self"
+									},
+									{
+										"info": "id - component_section_id",
+										"tipo": "hierarchy22",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test44"
+									},
+									{
+										"info": "Countermarks case - section_group",
+										"tipo": "test4",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".content_data": {
+													"grid-template-columns": "repeat(20, 1fr)"
+												}
+											}
+										},
+										"section_tipo": "self"
+									},
+									{
+										"info": "Reverse countermark text - component_text_area",
+										"tipo": "numisdata197",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 10",
+													"add_selector": "viewing_glyphs"
+												},
+												".content_data .editor_container": {
+													"font-size": "3rem !important",
+													"line-height": "3rem"
+												},
+												".content_data .editor_container .svg": {
+													"height": "3rem"
+												},
+												".content_data .editor_container .svg img": {
+													"height": "3rem",
+													"opacity": "1 !important"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test4"
+									},
+									{
+										"info": "Reverse countermark - component_portal",
+										"tipo": "numisdata575",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 10"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test4"
+									},
+									{
+										"info": "Observer case - section_group",
+										"tipo": "test49",
+										"parent": "self",
+										"properties": {},
+										"section_tipo": "self"
+									},
+									{
+										"info": "Location - component_portal",
+										"tipo": "tchi21",
+										"parent": "self",
+										"properties": {},
+										"section_tipo": "self",
+										"parent_grouper": "test49"
+									},
+									{
+										"info": "Geolocation - component_geolocation",
+										"tipo": "tchi25",
+										"parent": "self",
+										"properties": {},
+										"section_tipo": "self",
+										"parent_grouper": "test49"
+									},
+									{
+										"info": "Import images cases - section_group",
+										"tipo": "test48",
+										"parent": "self",
+										"properties": {},
+										"section_tipo": "self"
+									},
+									{
+										"info": "Images TCH - component_portal",
+										"tipo": "tch66",
+										"parent": "self",
+										"properties": {},
+										"section_tipo": "self",
+										"parent_grouper": "test48"
+									},
+									{
+										"info": "state_of_component Deprecated/alternative cases - section_group",
+										"tipo": "test40",
+										"parent": "self",
+										"properties": {},
+										"section_tipo": "self"
+									},
+									{
+										"info": "Alt: Residence town - alternative - component_input_text",
+										"tipo": "rsc499",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 5"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test40"
+									},
+									{
+										"info": "Handling, transport, exposure specifications - deprecated - component_text_area",
+										"tipo": "tch147",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 5"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test40"
+									},
+									{
+										"info": "CSS verifications - section_group",
+										"tipo": "test15",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".content_data": {
+													"grid-template-columns": "repeat(10, 1fr)"
+												}
+											}
+										},
+										"section_tipo": "self"
+									},
+									{
+										"info": "Portal audiovisual - component_portal",
+										"tipo": "oh25",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 10"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test15"
+									},
+									{
+										"info": "Portal bibliography - component_portal",
+										"tipo": "numisdata163",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 5"
+												},
+												".wrapper_component .view_text": {
+													"padding": "0px"
+												},
+												".wrapper_component > .list_body": {
+													"grid-template-columns": "auto 7fr 1fr 1fr auto"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test15"
+									},
+									{
+										"info": "Portal authorship - component_portal",
+										"tipo": "numisdata1281",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 5"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test15"
+									},
+									{
+										"info": "Portal Bibliography edit - component_portal",
+										"tipo": "tchi29",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 5"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test15"
+									},
+									{
+										"info": "Portal coins inverse - component_portal",
+										"tipo": "numisdata11",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 10"
+												},
+												".wrapper_component >.list_body >.content_data .list_body": {
+													"height": "auto",
+													"display": "flex",
+													"flex-wrap": "wrap"
+												},
+												".wrapper_component .section_record .column_component_portal": {
+													"flex": "initial"
+												},
+												".wrapper_component .wrapper_service_autocomplete .section_record": {
+													"display": "flex",
+													"justify-content": "space-between"
+												},
+												"DES_.wrapper_component >.list_body >.content_data .section_record .component_image": {
+													"width": "7.2rem",
+													"height": "7.2rem"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test15"
+									},
+									{
+										"info": "CSS Dates - section_group",
+										"tipo": "test216",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".content_data": {
+													"grid-template-columns": "repeat(10, 1fr)"
+												}
+											}
+										},
+										"section_tipo": "self"
+									},
+									{
+										"info": "Date date_mode:date - component_date",
+										"tipo": "dmm259",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Date date_mode:range - component_date",
+										"tipo": "tch56",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Date date_mode:period - component_date",
+										"tipo": "dmm265",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Date date_mode:time - component_date",
+										"tipo": "mdcat2775",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Date date_mode:date_time - component_date",
+										"tipo": "dd547",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Text default - component_input_text",
+										"tipo": "test52",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Text transliterable - component_input_text",
+										"tipo": "rsc116",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "User name unique - component_input_text",
+										"tipo": "dd132",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Number int - component_number",
+										"tipo": "rsc664",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Number float - component_number",
+										"tipo": "test211",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									},
+									{
+										"info": "Portal legends - component_portal",
+										"tipo": "numisdata71",
+										"parent": "self",
+										"properties": {
+											"css": {
+												".wrapper_component": {
+													"grid-column": "span 2"
+												}
+											}
+										},
+										"section_tipo": "self",
+										"parent_grouper": "test216"
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test3",
+			"parent": "test1",
+			"term": {
+				"lg-eng": "Test Unit (data on matrix_test)",
+				"lg-spa": "Unit Test Section (using matrix_test table)"
+			},
+			"model": "section",
+			"order_number": 1,
+			"relations": [
+				{
+					"tipo": "test24"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"a": 2,
+				"api_config": {
+					"entity": "zenon",
+					"api_url": "https://zenon.dainst.org/api/v1/record",
+					"ui_base_url": "https://zenon.dainst.org/Record/",
+					"response_map": [
+						{
+							"local": "ar_records",
+							"remote": "records"
+						},
+						{
+							"local": "msg",
+							"remote": "status"
+						}
+					],
+					"api_url_search": "https://zenon.dainst.org/api/v1/search"
+				},
+				"search_engine": "search_zenon"
+			},
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test4",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "Countermarks case (service_autocomplete) render_grid_choose"
+			},
+			"model": "section_group",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test5",
+			"parent": "test42",
+			"term": {
+				"lg-eng": "Web CUNY Teach",
+				"lg-spa": "Web CUNY Teach"
+			},
+			"model": "diffusion_element",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"diffusion": {
+					"class_name": "diffusion_mysql"
+				}
+			},
+			"model_tipo": "dd1743",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": "{\"diffusion\":{\"class_name\":\"diffusion_mysql\"}}"
+		},
+		{
+			"tipo": "test6",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "select"
+			},
+			"model": "field_text",
+			"order_number": 29,
+			"relations": [
+				{
+					"tipo": "test91"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test7",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "audiovisual"
+			},
+			"model": "table_alias",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "rsc275"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test8",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "informant"
+			},
+			"model": "table_alias",
+			"order_number": 6,
+			"relations": [
+				{
+					"tipo": "rsc267"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test9",
+			"parent": "test95",
+			"term": {
+				"lg-spa": "location for map"
+			},
+			"model": "component_autocomplete_hi",
+			"order_number": 4,
+			"relations": [
+				{
+					"tipo": "test100"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": [2],
+										"source": "hierarchy_types"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "Term (component input text)",
+										"tipo": "hierarchy25",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 5
+								},
+								"fields_separator": ", ",
+								"value_with_parents": true
+							}
+						}
+					]
+				},
+				"target_geolocation_tipo": "hierarchy31"
+			},
+			"model_tipo": "dd442",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test10",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "email"
+			},
+			"model": "field_text",
+			"order_number": 6,
+			"relations": [
+				{
+					"tipo": "test208"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test11",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "filter_records"
+			},
+			"model": "field_text",
+			"order_number": 10,
+			"relations": [
+				{
+					"tipo": "test69"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test12",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "select_lang"
+			},
+			"model": "field_text",
+			"order_number": 30,
+			"relations": [
+				{
+					"tipo": "test89"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test13",
+			"parent": "test65",
+			"term": {
+				"lg-spa": "Nuevo"
+			},
+			"model": "button_new",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"test": 2
+			},
+			"model_tipo": "dd177",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test14",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "section_id2"
+			},
+			"model": "field_text",
+			"order_number": 27,
+			"relations": [
+				{
+					"tipo": "test102"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test15",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "CSS verifications"
+			},
+			"model": "section_group",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test16",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "image"
+			},
+			"model": "table_alias",
+			"order_number": 4,
+			"relations": [
+				{
+					"tipo": "rsc264"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test17",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "text_area"
+			},
+			"model": "component_text_area",
+			"order_number": 35,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test18",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "json"
+			},
+			"model": "component_json",
+			"order_number": 18,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"css": {
+					".wrapper_component >.content_data": {
+						"max-height": "40rem",
+						"min-height": "40vh"
+					}
+				}
+			},
+			"model_tipo": "dd580",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test19",
+			"parent": "test158",
+			"term": {
+				"lg-eng": "Order as number",
+				"lg-spa": "Orden como number"
+			},
+			"model": "component_number",
+			"order_number": 38,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test20",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "portals (section group portal variants)"
+			},
+			"model": "section_group",
+			"order_number": 21,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"css": {
+					".content_data": {
+						"style": {}
+					},
+					".wrap_component": {
+						"mixin": [".vertical", ".width_33", ".line_top"],
+						"style": {
+							"clear": "left"
+						}
+					}
+				},
+				"source_DES": {
+					"mode_DES": "tree",
+					"value_DES": "[2,3,7]"
+				}
+			},
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test21",
+			"parent": "oh88",
+			"term": {
+				"lg-spa": "unit_test_diffusion"
+			},
+			"model": "table_alias",
+			"order_number": 16,
+			"relations": [
+				{
+					"tipo": "test209"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test22",
+			"parent": "test45",
+			"term": {
+				"lg-eng": "Order",
+				"lg-spa": "Orden"
+			},
+			"model": "component_number",
+			"order_number": 36,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"a": 1
+			},
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test24",
+			"parent": "dd627",
+			"term": {
+				"lg-spa": "matrix_test"
+			},
+			"model": "matrix_table",
+			"order_number": 19,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"info": "This table is automatically added as 'relationable' when SHOW_DEBUG is enabled.",
+				"inverse_relations": false
+			},
+			"model_tipo": "dd626",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"inverse_relations\":false}"
+		},
+		{
+			"tipo": "test25",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "relation_index"
+			},
+			"model": "component_relation_index",
+			"order_number": 26,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"mode": "external"
+				}
+			},
+			"model_tipo": "dd432",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test26",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "3d"
+			},
+			"model": "component_3d",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"max_items_folder": 1000
+			},
+			"model_tipo": "dd1741",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test27",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "filter"
+			},
+			"model": "field_text",
+			"order_number": 8,
+			"relations": [
+				{
+					"tipo": "test101"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test28",
+			"parent": "test115",
+			"term": {
+				"lg-eng": "Components list of values",
+				"lg-spa": "Componentes con listas de valores"
+			},
+			"model": "section_group",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test29",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "filter_master"
+			},
+			"model": "field_text",
+			"order_number": 9,
+			"relations": [
+				{
+					"tipo": "test70"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test30",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "input_text"
+			},
+			"model": "field_text",
+			"order_number": 13,
+			"relations": [
+				{
+					"tipo": "test52"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test31",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "geolocation"
+			},
+			"model": "component_geolocation",
+			"order_number": 9,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_geo",
+							"perform": {
+								"function": "load_tag_into_geo_editor"
+							}
+						},
+						"component_tipo": "test32"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test32"
+					}
+				]
+			},
+			"model_tipo": "dd66",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"click_tag_geo\",\"perform\":\"load_tag_into_geo_editor\",\"component_tipo\":\"test32\"},{\"event\":\"key_up_f2\",\"perform\":\"get_data_tag\",\"component_tipo\":\"test32\"}]}"
+		},
+		{
+			"tipo": "test32",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "text_area"
+			},
+			"model": "component_text_area",
+			"order_number": 36,
+			"relations": [
+				{
+					"tipo": "test31"
+				},
+				{
+					"tipo": "test175"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"info": " ",
+						"client": {
+							"event": "geo_change_tag",
+							"perform": {
+								"function": "update_tag"
+							}
+						},
+						"component_tipo": "test31"
+					},
+					{
+						"info": " ",
+						"client": {
+							"event": "draw_change_tag",
+							"perform": {
+								"function": "update_tag"
+							}
+						},
+						"component_tipo": "test175"
+					},
+					{
+						"info": " ",
+						"client": {
+							"event": "pdf_change_tag",
+							"perform": {
+								"function": "update_tag"
+							}
+						},
+						"component_tipo": "test171"
+					}
+				],
+				"auto_init_editor": true
+			},
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"geo_change_tag\",\"perform\":\"update_tag\",\"component_tipo\":\"test31\"},{\"event\":\"draw_change_tag\",\"perform\":\"update_tag\",\"component_tipo\":\"test175\"},{\"event\":\"pdf_change_tag\",\"perform\":\"update_tag\",\"component_tipo\":\"test171\"}]}"
+		},
+		{
+			"tipo": "test33",
+			"parent": "test2",
+			"term": {
+				"lg-eng": "Delete",
+				"lg-spa": "Borrar"
+			},
+			"model": "button_delete",
+			"order_number": 10,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd183",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test34",
+			"parent": "test115",
+			"term": {
+				"lg-eng": "text input components",
+				"lg-spa": "Componentes de texto"
+			},
+			"model": "section_group",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test35",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "template_map"
+			},
+			"model": "table_alias",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "dd600"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test36",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "check_box"
+			},
+			"model": "field_text",
+			"order_number": 4,
+			"relations": [
+				{
+					"tipo": "test88"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test37",
+			"parent": "test20",
+			"term": {
+				"lg-spa": "autocomplete hi all options"
+			},
+			"model": "component_portal",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"operator": "$or",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": [2],
+										"source": "hierarchy_types"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy41",
+										"parent": "test37",
+										"section_tipo": "self",
+										"value_with_parents": true
+									},
+									{
+										"tipo": "hierarchy25",
+										"parent": "test37",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 5,
+									"operator": "$or"
+								},
+								"fields_separator": ", "
+							},
+							"choose": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy41",
+										"parent": "test37",
+										"section_tipo": "self",
+										"value_with_parents": true
+									},
+									{
+										"tipo": "hierarchy25",
+										"parent": "test37",
+										"section_tipo": "self"
+									},
+									{
+										"tipo": "hierarchy27",
+										"parent": "test37",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 30
+								},
+								"fields_separator": ", "
+							},
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy25",
+										"parent": "test37",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"search_engine": "dedalo_engine"
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test38",
+			"parent": "test1",
+			"term": {
+				"lg-spa": "Test list section"
+			},
+			"model": "section",
+			"order_number": 6,
+			"relations": [
+				{
+					"tipo": "test24"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test39",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "interview"
+			},
+			"model": "table_alias",
+			"order_number": 5,
+			"relations": [
+				{
+					"tipo": "oh66"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test40",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "State of component deprecated/alternative"
+			},
+			"model": "section_group",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test41",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "Proyecto"
+			},
+			"model": "component_filter",
+			"order_number": 8,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd247",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test42",
+			"parent": "test43",
+			"term": {
+				"lg-eng": "Web Teach cuny (DG)",
+				"lg-spa": "Web Teach cuny (DG)"
+			},
+			"model": "diffusion_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd18",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test43",
+			"parent": "dd1190",
+			"term": {
+				"lg-spa": "test"
+			},
+			"model": "diffusion_domain",
+			"order_number": 22,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd17",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test44",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "Identification"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test45",
+			"parent": "test3",
+			"term": {
+				"lg-spa": "components a-z"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test46",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "date"
+			},
+			"model": "field_text",
+			"order_number": 5,
+			"relations": [
+				{
+					"tipo": "test145"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test47",
+			"parent": "test2",
+			"term": {
+				"lg-eng": "New",
+				"lg-spa": "Nuevo"
+			},
+			"model": "button_new",
+			"order_number": 9,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd177",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test48",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "Import images cases"
+			},
+			"model": "section_group",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test49",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "Observe cases (properties defined events)"
+			},
+			"model": "section_group",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test50",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "svg"
+			},
+			"model": "field_text",
+			"order_number": 31,
+			"relations": [
+				{
+					"tipo": "test177"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test51",
+			"parent": "test190",
+			"term": {
+				"lg-eng": "Order",
+				"lg-spa": "Orden"
+			},
+			"model": "component_number",
+			"order_number": 7,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test52",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "input_text"
+			},
+			"model": "component_input_text",
+			"order_number": 14,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test53",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "geolocation"
+			},
+			"model": "field_text",
+			"order_number": 11,
+			"relations": [
+				{
+					"tipo": "test100"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test54",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "relation_related"
+			},
+			"model": "component_relation_related",
+			"order_number": 29,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test52",
+										"parent": "test54",
+										"section_tipo": "self"
+									}
+								]
+							}
+						}
+					]
+				},
+				"config_relation": {
+					"relation_type": "dd89",
+					"relation_type_rel": "dd620"
+				}
+			},
+			"model_tipo": "dd431",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test55",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "select"
+			},
+			"model": "component_select",
+			"order_number": 31,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd11",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test56",
+			"parent": "test57",
+			"term": {
+				"lg-spa": "related equivalent"
+			},
+			"model": "component_relation_related",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test52",
+										"parent": "test56",
+										"section_tipo": "self"
+									}
+								]
+							}
+						}
+					]
+				},
+				"config_relation": {
+					"relation_type": "dd47",
+					"relation_type_rel": "dd621"
+				}
+			},
+			"model_tipo": "dd431",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test57",
+			"parent": "test115",
+			"term": {
+				"lg-eng": "Thesaurus portal components",
+				"lg-spa": "Components de portal para tesauros"
+			},
+			"model": "section_group",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test58",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "ts_web"
+			},
+			"model": "table_alias",
+			"order_number": 1,
+			"relations": [
+				{
+					"tipo": "dd622"
+				},
+				{
+					"tipo": "ww1"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test59",
+			"parent": "test63",
+			"term": {
+				"lg-spa": "ts_thematic"
+			},
+			"model": "table_alias",
+			"order_number": 7,
+			"relations": [
+				{
+					"tipo": "hierarchy65"
+				},
+				{
+					"tipo": "ts1"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test60",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "dataframe"
+			},
+			"model": "component_dataframe",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd198",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test61",
+			"parent": "test20",
+			"term": {
+				"lg-spa": "autocomplete Zenon"
+			},
+			"model": "box elements",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["zenon1"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "zenon3",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									},
+									{
+										"tipo": "zenon4",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									},
+									{
+										"tipo": "zenon5",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									},
+									{
+										"tipo": "zenon6",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									}
+								]
+							},
+							"api_engine": "zenon"
+						}
+					]
+				}
+			},
+			"model_tipo": "dd440",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test62",
+			"parent": "test20",
+			"term": {
+				"lg-spa": "autocomplete filter by list"
+			},
+			"model": "component_portal",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["test65"],
+										"source": "section"
+									}
+								],
+								"filter_by_list": [
+									{
+										"section_tipo": "test65",
+										"component_tipo": "test55"
+									},
+									{
+										"section_tipo": "test65",
+										"component_tipo": "test144"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "test62",
+										"section_tipo": "test65"
+									},
+									{
+										"tipo": "test166",
+										"parent": "test62",
+										"section_tipo": "test65"
+									}
+								],
+								"sqo_config": {
+									"limit": 20
+								}
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test63",
+			"parent": "test5",
+			"term": {
+				"lg-spa": "web_cuny_dev"
+			},
+			"model": "database",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1259",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test64",
+			"parent": "test20",
+			"term": {
+				"lg-spa": "autocomplete hi with hierarchy_terms"
+			},
+			"model": "component_portal",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"fixed_filter": [
+									{
+										"value": [
+											{
+												"recursive": true,
+												"section_id": "941",
+												"section_tipo": "ts1"
+											}
+										],
+										"source": "hierarchy_terms",
+										"operator": "$or"
+									}
+								],
+								"section_tipo": [
+									{
+										"value": [1],
+										"source": "hierarchy_types"
+									},
+									{
+										"value": ["ts1"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy25",
+										"parent": "test78",
+										"section_tipo": "self",
+										"value_with_parents": true
+									}
+								],
+								"sqo_config": {
+									"limit": 20
+								}
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test65",
+			"parent": "test1",
+			"term": {
+				"lg-eng": "Test section",
+				"lg-spa": "Test section"
+			},
+			"model": "section",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "test24"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test66",
+			"parent": "test65",
+			"term": {
+				"lg-spa": "List"
+			},
+			"model": "section_list",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "test159"
+				},
+				{
+					"tipo": "test139"
+				},
+				{
+					"tipo": "test146"
+				},
+				{
+					"tipo": "test144"
+				},
+				{
+					"tipo": "test145"
+				},
+				{
+					"tipo": "test172"
+				},
+				{
+					"tipo": "test173"
+				},
+				{
+					"tipo": "test174"
+				},
+				{
+					"tipo": "test32"
+				},
+				{
+					"tipo": "test170"
+				},
+				{
+					"tipo": "test81"
+				},
+				{
+					"tipo": "test175"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test67",
+			"parent": "test65",
+			"term": {
+				"lg-spa": "Exclude"
+			},
+			"model": "exclude_elements",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1129",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test68",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "inverse"
+			},
+			"model": "component_inverse",
+			"order_number": 15,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"inverse_show": {
+					"section_id": true,
+					"section_tipo": false,
+					"section_label": true,
+					"component_tipo": false,
+					"component_label": false
+				}
+			},
+			"model_tipo": "dd487",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"inverse_show\":{\"section_id\":true,\"section_tipo\":false,\"section_label\":true,\"component_tipo\":false,\"component_label\":false}}"
+		},
+		{
+			"tipo": "test69",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "filter_records"
+			},
+			"model": "component_filter_records",
+			"order_number": 10,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd479",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test70",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "filter_master"
+			},
+			"model": "component_filter_master",
+			"order_number": 9,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd163",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test71",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "relation_parent"
+			},
+			"model": "component_relation_parent",
+			"order_number": 28,
+			"relations": [
+				{
+					"tipo": "test201"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"source": "self"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test52",
+										"parent": "self",
+										"section_tipo": "self",
+										"value_with_parents": true
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd429",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test72",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "security_access"
+			},
+			"model": "field_text",
+			"order_number": 28,
+			"relations": [
+				{
+					"tipo": "test157"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test73",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "relation_parent"
+			},
+			"model": "component_relation_parent",
+			"order_number": 27,
+			"relations": [
+				{
+					"tipo": "test156"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"operator": "or",
+					"type_map": {
+						"test159": ["string"]
+					},
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"type": "internal",
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"section_tipo": [
+								{
+									"source": "self"
+								}
+							]
+						}
+					],
+					"filter_by_list XXX": [
+						{
+							"section_tipo": "self",
+							"component_tipo": "test159"
+						}
+					],
+					"section_to_search XXX": ["self"]
+				},
+				"max_records": 5,
+				"fields_separator": " | "
+			},
+			"model_tipo": "dd429",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"source\":{\"operator\":\"or\",\"type_map\":{\"test159\":[\"string\"]},\"records_mode\":\"list\",\"config_context\":[{\"show\":[\"test159\"],\"type\":\"internal\",\"search\":[\"test159\"],\"select\":[\"test159\"],\"section_tipo\":\"self\"}],\"filter_by_list XXX\":[{\"section_tipo\":\"self\",\"component_tipo\":\"test159\"}],\"section_to_search XXX\":[\"self\"]},\"divisor\":\" | \",\"max_records\":5}"
+		},
+		{
+			"tipo": "test74",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "listado"
+			},
+			"model": "section_list",
+			"order_number": 11,
+			"relations": [
+				{
+					"tipo": "test44"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test75",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "3d"
+			},
+			"model": "field_text",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test26"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test76",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "image"
+			},
+			"model": "field_text",
+			"order_number": 12,
+			"relations": [
+				{
+					"tipo": "test99"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test77",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "av"
+			},
+			"model": "field_text",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "test94"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test78",
+			"parent": "test20",
+			"term": {
+				"lg-spa": "autocomplete_hi topo"
+			},
+			"model": "component_portal",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"mode": "tree",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": [2],
+										"source": "hierarchy_types"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy25",
+										"parent": "test78",
+										"section_tipo": "self",
+										"value_with_parents": true
+									},
+									{
+										"tipo": "hierarchy27",
+										"parent": "test78",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 30
+								},
+								"fields_separator": ", "
+							},
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy25",
+										"parent": "test78",
+										"section_tipo": "self"
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test79",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "relation_related"
+			},
+			"model": "field_text",
+			"order_number": 26,
+			"relations": [
+				{
+					"tipo": "test54"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test80",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "portal"
+			},
+			"model": "component_portal",
+			"order_number": 22,
+			"relations": [
+				{
+					"tipo": "test3"
+				},
+				{
+					"tipo": "test52"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["test3"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "component_input_text traducible",
+										"mode": "list",
+										"tipo": "test52",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "test52",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 30
+								},
+								"fields_separator": ", "
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test81",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "av"
+			},
+			"model": "component_av",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"info": " ",
+						"client": {
+							"event": "click_tag_tc",
+							"perform": {
+								"function": "go_to_time"
+							}
+						},
+						"component_tipo": "test161"
+					},
+					{
+						"info": " ",
+						"client": {
+							"event": "key_up_esc",
+							"perform": {
+								"function": "play_pause"
+							}
+						},
+						"component_tipo": "test161"
+					},
+					{
+						"info": " ",
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test161"
+					}
+				]
+			},
+			"model_tipo": "dd722",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"click_tag_tc\",\"perform\":\"go_to_time\",\"component_tipo\":\"test161\"},{\"event\":\"key_up_esc\",\"perform\":\"play_pause\",\"component_tipo\":\"test161\"},{\"event\":\"key_up_f2\",\"perform\":\"get_data_tag\",\"component_tipo\":\"test161\"}]}"
+		},
+		{
+			"tipo": "test82",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "text_area"
+			},
+			"model": "field_text",
+			"order_number": 32,
+			"relations": [
+				{
+					"tipo": "test17"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test83",
+			"parent": "test65",
+			"term": {
+				"lg-eng": "Section map",
+				"lg-spa": "Mapa de la sección"
+			},
+			"model": "section_map",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"thesaurus": {
+					"term": "test159",
+					"order": "test19",
+					"parent": "test73",
+					"is_indexable": false,
+					"is_descriptor": false
+				}
+			},
+			"model_tipo": "dd441",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test84",
+			"parent": "test95",
+			"term": {
+				"lg-eng": "Text area for geolocation",
+				"lg-spa": "Text area para geolocation"
+			},
+			"model": "component_text_area",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "test100"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "updated_layer_data",
+							"perform": {
+								"function": "updated_layer_data"
+							}
+						},
+						"component_tipo": "test100"
+					}
+				],
+				"auto_init_editor": true
+			},
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test85",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "pdf"
+			},
+			"model": "component_pdf",
+			"order_number": 21,
+			"relations": [
+				{
+					"tipo": "test97"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_pdf",
+							"perform": {
+								"function": "go_to_page"
+							}
+						},
+						"component_tipo": "test97"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test97"
+					}
+				],
+				"max_items_folder": 1000
+			},
+			"model_tipo": "dd1018",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test86",
+			"parent": "test115",
+			"term": {
+				"lg-eng": "Info components",
+				"lg-spa": "Componentes de información"
+			},
+			"model": "section_group",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test87",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "radio_button"
+			},
+			"model": "component_radio_button",
+			"order_number": 24,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd57",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test88",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "check_box"
+			},
+			"model": "component_check_box",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd80",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test89",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "select_lang"
+			},
+			"model": "component_select_lang",
+			"order_number": 33,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": "lg1",
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"mode": "list",
+										"tipo": "hierarchy25",
+										"view": null,
+										"label": "Term",
+										"model": "component_input_text",
+										"parent": "self",
+										"section_tipo": "lg1"
+									}
+								]
+							},
+							"type": "main",
+							"api_engine": "dedalo"
+						}
+					]
+				}
+			},
+			"model_tipo": "dd904",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test90",
+			"parent": "test115",
+			"term": {
+				"lg-eng": "Portal components",
+				"lg-spa": "Components Portal"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test91",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "select"
+			},
+			"model": "component_select",
+			"order_number": 32,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd11",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test92",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "publication"
+			},
+			"model": "component_publication",
+			"order_number": 23,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd339",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test93",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "date"
+			},
+			"model": "component_date",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd635",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"b\":879897}"
+		},
+		{
+			"tipo": "test94",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "av"
+			},
+			"model": "component_av",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test96"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_tc",
+							"perform": {
+								"function": "go_to_time"
+							}
+						},
+						"component_tipo": "test17"
+					},
+					{
+						"event": "key_up_esc",
+						"client": {
+							"event": "key_up_esc",
+							"perform": {
+								"function": "play_pause"
+							}
+						},
+						"perform": "play_pause",
+						"component_tipo": "test17"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test17"
+					}
+				],
+				"max_items_folder": 1000
+			},
+			"model_tipo": "dd722",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test95",
+			"parent": "test115",
+			"term": {
+				"lg-eng": "Media components",
+				"lg-spa": "Componentes de media"
+			},
+			"model": "section_group",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test96",
+			"parent": "test3",
+			"term": {
+				"lg-eng": "Delete",
+				"lg-spa": "Borrar"
+			},
+			"model": "button_delete",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd183",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test97",
+			"parent": "test95",
+			"term": {
+				"lg-eng": "Text area for pdf",
+				"lg-spa": "Text area para pdf"
+			},
+			"model": "component_text_area",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test85"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "pdf_change_tag",
+							"perform": {
+								"function": "update_tag"
+							}
+						},
+						"component_tipo": "test97"
+					}
+				]
+			},
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test98",
+			"parent": "test95",
+			"term": {
+				"lg-eng": "Text area for image",
+				"lg-spa": "text área para imagen"
+			},
+			"model": "component_text_area",
+			"order_number": 1,
+			"relations": [
+				{
+					"tipo": "test99"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "draw_change_tag",
+							"perform": {
+								"function": "update_tag"
+							}
+						},
+						"component_tipo": "test99"
+					}
+				]
+			},
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test99",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "image"
+			},
+			"model": "component_image",
+			"order_number": 12,
+			"relations": [
+				{
+					"tipo": "test98"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"event": "click_tag_draw",
+						"client": {
+							"event": "click_tag_draw",
+							"perform": {
+								"function": "load_tag_into_vector_editor"
+							}
+						},
+						"perform": "load_tag_into_vector_editor",
+						"component_tipo": "test98"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test98"
+					}
+				],
+				"max_items_folder": 1000
+			},
+			"model_tipo": "dd749",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test100",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "geolocation"
+			},
+			"model": "component_geolocation",
+			"order_number": 11,
+			"relations": [
+				{
+					"tipo": "test84"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"css": {
+					".wrapper_component >.content_data": {
+						"min-height": "500px"
+					}
+				},
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_geo",
+							"perform": {
+								"function": "load_tag_into_geo_editor"
+							}
+						},
+						"component_tipo": "test84"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test84"
+					},
+					{
+						"client": {
+							"event": "editor_tag_geo_change",
+							"perform": {
+								"function": "layer_data_change"
+							}
+						},
+						"component_tipo": "test84"
+					},
+					{
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "map_update_coordinates"
+							}
+						},
+						"component_tipo": "test9"
+					}
+				]
+			},
+			"model_tipo": "dd66",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test101",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "filter"
+			},
+			"model": "component_filter",
+			"order_number": 8,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd247",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test102",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "section_id"
+			},
+			"model": "component_section_id",
+			"order_number": 30,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1747",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test103",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "relation_parent"
+			},
+			"model": "field_text",
+			"order_number": 25,
+			"relations": [
+				{
+					"tipo": "test71"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test104",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "external"
+			},
+			"model": "field_text",
+			"order_number": 7,
+			"relations": [
+				{
+					"tipo": "test215"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test105",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "relation_model"
+			},
+			"model": "field_text",
+			"order_number": 24,
+			"relations": [
+				{
+					"tipo": "test169"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test106",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "iri"
+			},
+			"model": "field_text",
+			"order_number": 15,
+			"relations": [
+				{
+					"tipo": "test140"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test107",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "image"
+			},
+			"model": "table_alias",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "rsc264"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test108",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "interview"
+			},
+			"model": "table_alias",
+			"order_number": 4,
+			"relations": [
+				{
+					"tipo": "oh66"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test109",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "audiovisual"
+			},
+			"model": "table_alias",
+			"order_number": 5,
+			"relations": [
+				{
+					"tipo": "rsc275"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test110",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "informant"
+			},
+			"model": "table_alias",
+			"order_number": 6,
+			"relations": [
+				{
+					"tipo": "rsc267"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test111",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "ts_themes"
+			},
+			"model": "table_alias",
+			"order_number": 7,
+			"relations": [
+				{
+					"tipo": "hierarchy65"
+				},
+				{
+					"tipo": "ts1"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test112",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "template_map"
+			},
+			"model": "table_alias",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "dd600"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test113",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "tp_spain"
+			},
+			"model": "table_alias",
+			"order_number": 8,
+			"relations": [
+				{
+					"tipo": "hierarchy65"
+				},
+				{
+					"tipo": "es1"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test114",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "email"
+			},
+			"model": "component_email",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd227",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"mixin\":[\".vertical\"],\"style\":{\"width\":\"10%\"}}}}"
+		},
+		{
+			"tipo": "test115",
+			"parent": "test3",
+			"term": {
+				"lg-spa": "disable box elements"
+			},
+			"model": "box elements",
+			"order_number": 9,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd440",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test116",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "filter_records"
+			},
+			"model": "component_filter_records",
+			"order_number": 8,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd479",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"mixin\":[\".vertical\"],\"style\":{\"clear\":\"left\",\"width\":\"25%\"}}}}"
+		},
+		{
+			"tipo": "test117",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "iri"
+			},
+			"model": "component_iri",
+			"order_number": 16,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd500",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"mixin\":[\".vertical\"],\"style\":{\"width\":\"25%\"}}}}"
+		},
+		{
+			"tipo": "test118",
+			"parent": "test3",
+			"term": {
+				"lg-spa": "section_list_thesaurus_indexation"
+			},
+			"model": "section_list_thesaurus_indexation",
+			"order_number": 6,
+			"relations": [
+				{
+					"tipo": "test52"
+				},
+				{
+					"tipo": "test99"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"0": {
+					"tipo": "test52",
+					"type": "term"
+				},
+				"1": {
+					"tipo": "test99",
+					"type": "img"
+				}
+			},
+			"model_tipo": "dd434",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test119",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "inverse"
+			},
+			"model": "component_inverse",
+			"order_number": 15,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd487",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"mixin\":[\".vertical\"],\"style\":{\"width\":\"25%\"}}},\"multi_value\":true}"
+		},
+		{
+			"tipo": "test120",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "password"
+			},
+			"model": "component_password",
+			"order_number": 19,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd225",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"mixin\":[\".vertical\"],\"style\":{\"width\":\"15%\"}}},\"mandatory\":true}"
+		},
+		{
+			"tipo": "test121",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "filter_master"
+			},
+			"model": "component_filter_master",
+			"order_number": 7,
+			"relations": [
+				{
+					"tipo": "rsc197"
+				},
+				{
+					"tipo": "rsc85"
+				},
+				{
+					"tipo": "rsc86"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd163",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"mixin\":[\".vertical\"],\"style\":{\"width\":\"50%\"}}}}"
+		},
+		{
+			"tipo": "test122",
+			"parent": "test163",
+			"term": {
+				"lg-eng": "Projects",
+				"lg-spa": "Proyecto"
+			},
+			"model": "component_filter",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd247",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test123",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "inverse"
+			},
+			"model": "field_text",
+			"order_number": 14,
+			"relations": [
+				{
+					"tipo": "test68"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test124",
+			"parent": "test153",
+			"term": {
+				"lg-spa": "Web Dédalo edu"
+			},
+			"model": "diffusion_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd18",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test125",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "security_access"
+			},
+			"model": "component_security_access",
+			"order_number": 30,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd149",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test126",
+			"parent": "test3",
+			"term": {
+				"lg-eng": "New",
+				"lg-spa": "Nuevo"
+			},
+			"model": "button_new",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd177",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test127",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "relation_index"
+			},
+			"model": "field_text",
+			"order_number": 23,
+			"relations": [
+				{
+					"tipo": "test25"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test128",
+			"parent": "test217",
+			"term": {
+				"lg-eng": "RECYCLE TEST",
+				"lg-spa": "semantic_node"
+			},
+			"model": "component_semantic_node",
+			"order_number": 34,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd353",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test129",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "relation_children"
+			},
+			"model": "field_text",
+			"order_number": 22,
+			"relations": [
+				{
+					"tipo": "test201"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test130",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "radio_button"
+			},
+			"model": "field_text",
+			"order_number": 21,
+			"relations": [
+				{
+					"tipo": "test87"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test131",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "portal"
+			},
+			"model": "field_text",
+			"order_number": 20,
+			"relations": [
+				{
+					"tipo": "test80"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test132",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "pdf"
+			},
+			"model": "field_text",
+			"order_number": 19,
+			"relations": [
+				{
+					"tipo": "test85"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test133",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "password"
+			},
+			"model": "field_text",
+			"order_number": 18,
+			"relations": [
+				{
+					"tipo": "test152"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test134",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "number"
+			},
+			"model": "field_text",
+			"order_number": 17,
+			"relations": [
+				{
+					"tipo": "test211"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test135",
+			"parent": "test34",
+			"term": {
+				"lg-spa": "html_text"
+			},
+			"model": "component_html_text",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd318",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test136",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "json"
+			},
+			"model": "field_text",
+			"order_number": 16,
+			"relations": [
+				{
+					"tipo": "test18"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1231",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test137",
+			"parent": "test3",
+			"term": {
+				"lg-spa": "section_map"
+			},
+			"model": "section_map",
+			"order_number": 7,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"thesaurus": {
+					"term": "test52",
+					"model": "test169",
+					"order": "test22",
+					"parent": "test71",
+					"is_descriptor": "test88"
+				}
+			},
+			"model_tipo": "dd441",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test138",
+			"parent": "test3",
+			"term": {
+				"lg-spa": "relation_list"
+			},
+			"model": "relation_list",
+			"order_number": 8,
+			"relations": [
+				{
+					"tipo": "test52"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd58",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test139",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "number"
+			},
+			"model": "component_number",
+			"order_number": 18,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observers": [
+					{
+						"info": "Coins. Property used for server side only",
+						"section_tipo": "test158",
+						"component_tipo": "test178"
+					},
+					{
+						"section_tipo": "test158",
+						"component_tipo": "test179"
+					}
+				],
+				"multi_value": true
+			},
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observers\":[{\"section_tipo\":\"test158\",\"component_tipo\":\"test178\"},{\"section_tipo\":\"test158\",\"component_tipo\":\"test179\"}],\"multi_value\":true}"
+		},
+		{
+			"tipo": "test140",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "iri"
+			},
+			"model": "component_iri",
+			"order_number": 17,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd500",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test141",
+			"parent": "test38",
+			"term": {
+				"lg-spa": "listdo"
+			},
+			"model": "section_list",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test164"
+				},
+				{
+					"tipo": "test202"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test142",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "section_id"
+			},
+			"model": "component_section_id",
+			"order_number": 29,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1747",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test143",
+			"parent": "test124",
+			"term": {
+				"lg-spa": "Web pública edu"
+			},
+			"model": "diffusion_element",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1743",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"diffusion\":{\"class_name\":\"diffusion_mysql\"},\"publication_schema\":{\"image\":\"image\",\"images\":\"image\",\"informant\":\"informant\",\"audiovisual\":\"audiovisual\"}}"
+		},
+		{
+			"tipo": "test144",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "radio_button"
+			},
+			"model": "component_radio_button",
+			"order_number": 23,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd57",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test145",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "date"
+			},
+			"model": "component_date",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"css": {
+					"css_DES": {
+						"label": ["singular"],
+						"wrapper": ["singular"],
+						"content_data": ["singular"]
+					}
+				},
+				"multi_value": true
+			},
+			"model_tipo": "dd635",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test146",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "check box"
+			},
+			"model": "component_check_box",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "hierarchy13"
+				},
+				{
+					"tipo": "hierarchy16"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd80",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test147",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "select_lang"
+			},
+			"model": "component_select_lang",
+			"order_number": 33,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": "lg1",
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"mode": "list",
+										"tipo": "hierarchy25",
+										"view": null,
+										"label": "Term",
+										"model": "component_input_text",
+										"parent": "self",
+										"section_tipo": "lg1"
+									}
+								]
+							},
+							"type": "main",
+							"api_engine": "dedalo"
+						}
+					]
+				}
+			},
+			"model_tipo": "dd904",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test148",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "Público"
+			},
+			"model": "component_publication",
+			"order_number": 22,
+			"relations": [
+				{
+					"tipo": "dd64"
+				},
+				{
+					"tipo": "dd62"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd339",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test149",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "relation_index"
+			},
+			"model": "component_relation_index",
+			"order_number": 25,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"mode": "external"
+				},
+				"max_records": 10,
+				"fields_separator": " | "
+			},
+			"model_tipo": "dd432",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"source\":{\"operator\":\"or\",\"type_map\":{\"test159\":[\"string\"]},\"records_mode\":\"list\",\"config_context\":[{\"show\":[\"test159\"],\"type\":\"internal\",\"search\":[\"test159\"],\"select\":[\"test159\"],\"section_tipo\":\"test65\"}],\"filter_by_listXX\":[{\"section_tipo\":\"test65\",\"component_tipo\":\"test159\"}],\"section_to_search XXX\":[\"test65\"]},\"divisor\":\" | \",\"max_records\":10}"
+		},
+		{
+			"tipo": "test150",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "json"
+			},
+			"model": "component_json",
+			"order_number": 17,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd580",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test151",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "Proyecto"
+			},
+			"model": "component_filter",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"css": {
+					".wrap_component": {
+						"style": {
+							"width": "50%"
+						}
+					}
+				}
+			},
+			"model_tipo": "dd247",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"css\":{\".wrap_component\":{\"style\":{\"width\":\"50%\"}}}}"
+		},
+		{
+			"tipo": "test152",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "password"
+			},
+			"model": "component_password",
+			"order_number": 20,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd225",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test153",
+			"parent": "dd1190",
+			"term": {
+				"lg-spa": "dedalo_edu"
+			},
+			"model": "diffusion_domain",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd17",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test154",
+			"parent": "test155",
+			"term": {
+				"lg-spa": "ts_web"
+			},
+			"model": "table_alias",
+			"order_number": 1,
+			"relations": [
+				{
+					"tipo": "dd622"
+				},
+				{
+					"tipo": "ww1"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd347",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test155",
+			"parent": "test143",
+			"term": {
+				"lg-spa": "web_dedalo_education"
+			},
+			"model": "database",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1259",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test156",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "relation_children"
+			},
+			"model": "component_relation_children",
+			"order_number": 24,
+			"relations": [
+				{
+					"tipo": "test73"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"operator": "or",
+					"type_map": {
+						"test159": ["string"]
+					},
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"type": "internal",
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"section_tipo": [
+								{
+									"source": "self"
+								}
+							]
+						}
+					],
+					"filter_by_list XXX": [
+						{
+							"section_tipo": "self",
+							"component_tipo": "test159"
+						}
+					],
+					"section_to_search XXX": ["self"],
+					"OLD_request_config XXX": [
+						{
+							"show": ["test159"],
+							"type": "internal",
+							"search": ["test159"],
+							"select": ["test159"],
+							"section_tipo": "self"
+						}
+					]
+				},
+				"max_records": 3,
+				"fields_separator": " | "
+			},
+			"model_tipo": "dd352",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"source\":{\"operator\":\"or\",\"type_map\":{\"test159\":[\"string\"]},\"records_mode\":\"list\",\"config_context\":[{\"show\":[\"test159\"],\"type\":\"internal\",\"search\":[\"test159\"],\"select\":[\"test159\"],\"section_tipo\":\"self\"}],\"filter_by_list XXX\":[{\"section_tipo\":\"self\",\"component_tipo\":\"test159\"}],\"section_to_search XXX\":[\"self\"]},\"divisor\":\" | \",\"max_records\":3}"
+		},
+		{
+			"tipo": "test157",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "security_access"
+			},
+			"model": "component_security_access",
+			"order_number": 31,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd149",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test158",
+			"parent": "test65",
+			"term": {
+				"lg-spa": "section group uno"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test159",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "input_text"
+			},
+			"model": "component_input_text",
+			"order_number": 13,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"multi_value": true
+			},
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": "{\"multi_value\":true}"
+		},
+		{
+			"tipo": "test160",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "input_text (unique)"
+			},
+			"model": "component_input_text",
+			"order_number": 14,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"unique": true
+			},
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"unique\":true}"
+		},
+		{
+			"tipo": "test161",
+			"parent": "test176",
+			"term": {
+				"lg-spa": "text area 2"
+			},
+			"model": "component_text_area",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test162",
+			"parent": "test34",
+			"term": {
+				"lg-eng": "input text non translatable",
+				"lg-spa": "input text no traducible"
+			},
+			"model": "component_input_text",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test163",
+			"parent": "test38",
+			"term": {
+				"lg-spa": "agrupados"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test164",
+			"parent": "test163",
+			"term": {
+				"lg-spa": "input text 6"
+			},
+			"model": "component_input_text",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test165",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "relation_model"
+			},
+			"model": "component_relation_model",
+			"order_number": 26,
+			"relations": [
+				{
+					"tipo": "hierarchy20"
+				},
+				{
+					"tipo": "hierarchy25"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"mode": "autocomplete",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": []
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy25",
+										"parent": "self",
+										"section_tipo": "self",
+										"value_with_parents": false
+									}
+								],
+								"fields_separator": ", "
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd428",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test166",
+			"parent": "test34",
+			"term": {
+				"lg-eng": "input text NT with_lang_versions",
+				"lg-spa": "input text no traducible con lang_versions"
+			},
+			"model": "component_input_text",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"with_lang_versions": true
+			},
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test167",
+			"parent": "test176",
+			"term": {
+				"lg-spa": "input text 9"
+			},
+			"model": "component_input_text",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test168",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "relation_related"
+			},
+			"model": "component_relation_related",
+			"order_number": 28,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"operator": "or",
+					"type_map": {
+						"test159": ["string"]
+					},
+					"records_mode": "list",
+					"filter_by_list": [
+						{
+							"section_tipo": "self",
+							"component_tipo": "test159"
+						},
+						{
+							"section_tipo": "es1",
+							"component_tipo": "hierarchy25"
+						}
+					],
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"type": "internal",
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "self",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"section_tipo": [
+								{
+									"source": "self"
+								}
+							]
+						}
+					],
+					"config_context XXXX": [
+						{
+							"show": ["test159"],
+							"type": "internal",
+							"search": ["test159"],
+							"select": ["test159"],
+							"section_tipo": "self"
+						},
+						{
+							"show": ["hierarchy25"],
+							"type": "internal",
+							"search": ["hierarchy25"],
+							"select": ["hierarchy25"],
+							"section_tipo": "es1"
+						}
+					],
+					"section_to_search XXX": ["self"]
+				},
+				"max_records": 5,
+				"config_relation": {
+					"relation_type": "dd47",
+					"relation_type_rel": "dd621"
+				},
+				"fields_separator": " | "
+			},
+			"model_tipo": "dd431",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"source\":{\"operator\":\"or\",\"type_map\":{\"test159\":[\"string\"]},\"records_mode\":\"list\",\"config_context\":[{\"show\":[\"test159\"],\"type\":\"internal\",\"search\":[\"test159\"],\"select\":[\"test159\"],\"section_tipo\":\"self\"},{\"show\":[\"hierarchy25\"],\"type\":\"internal\",\"search\":[\"hierarchy25\"],\"select\":[\"hierarchy25\"],\"section_tipo\":\"es1\"}],\"filter_by_list\":[{\"section_tipo\":\"self\",\"component_tipo\":\"test159\"},{\"section_tipo\":\"es1\",\"component_tipo\":\"hierarchy25\"}],\"section_to_search XXX\":[\"self\"]},\"divisor\":\" | \",\"max_records\":5,\"config_relation\":{\"relation_type\":\"dd47\",\"relation_type_rel\":\"dd621\"}}"
+		},
+		{
+			"tipo": "test169",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "relation_model"
+			},
+			"model": "component_relation_model",
+			"order_number": 27,
+			"relations": [
+				{
+					"tipo": "dd924"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"mode": "autocomplete",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": []
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "dd924",
+										"parent": "self",
+										"section_tipo": "self",
+										"value_with_parents": false
+									}
+								],
+								"fields_separator": ", "
+							}
+						}
+					]
+				},
+				"target_mode": "free",
+				"target_values": ["dd922"]
+			},
+			"model_tipo": "dd428",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test170",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "svg"
+			},
+			"model": "component_svg",
+			"order_number": 35,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd686",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test171",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "pdf"
+			},
+			"model": "component_pdf",
+			"order_number": 20,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_pdf",
+							"perform": {
+								"function": "go_to_page"
+							}
+						},
+						"component_tipo": "test32"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test32"
+					}
+				]
+			},
+			"model_tipo": "dd1018",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"click_tag_pdf\",\"perform\":\"go_to_page\",\"component_tipo\":\"test32\"},{\"event\":\"key_up_f2\",\"perform\":\"get_data_tag\",\"component_tipo\":\"test32\"}]}"
+		},
+		{
+			"tipo": "test172",
+			"parent": "test34",
+			"term": {
+				"lg-eng": "Date range",
+				"lg-spa": "Rango de fechas"
+			},
+			"model": "component_date",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"date_mode": "range"
+			},
+			"model_tipo": "dd635",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test173",
+			"parent": "test34",
+			"term": {
+				"lg-eng": "Date period",
+				"lg-spa": "Periodo"
+			},
+			"model": "component_date",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"date_mode": "period"
+			},
+			"model_tipo": "dd635",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test174",
+			"parent": "test34",
+			"term": {
+				"lg-eng": "Date time",
+				"lg-spa": "Tiempo"
+			},
+			"model": "component_date",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"date_mode": "time"
+			},
+			"model_tipo": "dd635",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test175",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "image"
+			},
+			"model": "component_image",
+			"order_number": 10,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_draw",
+							"perform": {
+								"function": "load_tag_into_vector_editor"
+							}
+						},
+						"component_tipo": "test32"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test32"
+					}
+				],
+				"max_items_folder": 1000
+			},
+			"model_tipo": "dd749",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"click_tag_draw\",\"perform\":\"load_tag_into_vector_editor\",\"component_tipo\":\"test32\"},{\"event\":\"key_up_f2\",\"perform\":\"get_data_tag\",\"component_tipo\":\"test32\"}]}"
+		},
+		{
+			"tipo": "test176",
+			"parent": "test65",
+			"term": {
+				"lg-spa": "section group dos"
+			},
+			"model": "section_group",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test177",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "svg"
+			},
+			"model": "component_svg",
+			"order_number": 34,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"max_items_folder": 1000
+			},
+			"model_tipo": "dd686",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test178",
+			"parent": "test176",
+			"term": {
+				"lg-spa": "componen info"
+			},
+			"model": "component_info",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"css": {
+					".wrapper_component >.content_data": {
+						"min-height": "80px"
+					}
+				},
+				"observe": [
+					{
+						"info": "Observes 'number' component_number value changes to update this calculated value",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"filter": false
+						},
+						"component_tipo": "test139"
+					}
+				],
+				"widgets": [
+					{
+						"ipo": [
+							{
+								"input": {
+									"value": "sum",
+									"filter": false,
+									"components": [
+										{
+											"tipo": "test139",
+											"var_name": "numero"
+										},
+										{
+											"tipo": "test139",
+											"var_name": "numero2"
+										}
+									],
+									"section_id": "current",
+									"section_tipo": "current"
+								},
+								"output": [
+									{
+										"id": "total",
+										"value": "float",
+										"label_after": "euros"
+									}
+								],
+								"process": {
+									"fn": "to_euros",
+									"file": "/mdcat/calculation/mdcat.php",
+									"engine": "php",
+									"options": {
+										"days": true,
+										"total": false,
+										"years": true
+									}
+								}
+							}
+						],
+						"path": "/calculation",
+						"widget_info": "sum calc.",
+						"widget_name": "calculation"
+					}
+				]
+			},
+			"model_tipo": "dd52",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"update_data\",\"filter\":false,\"perform\":\"update_data\",\"component_tipo\":\"test139\"}],\"widgets\":[{\"ipo\":[{\"input\":{\"value\":\"sum\",\"filter\":false,\"components\":[{\"tipo\":\"test139\",\"var_name\":\"numero\"},{\"tipo\":\"test139\",\"var_name\":\"numero2\"}],\"section_id\":\"current\",\"section_tipo\":\"current\"},\"output\":[{\"id\":\"total\",\"value\":\"float\",\"label_after\":\"euros\"}],\"process\":{\"fn\":\"to_euros\",\"file\":\"\\/mdcat\\/calculation\\/mdcat.php\",\"engine\":\"php\",\"options\":{\"days\":true,\"total\":false,\"years\":true}}}],\"path\":\"\\/calculation\",\"widget_info\":\"sum calc.\",\"widget_name\":\"calculation\"}]}"
+		},
+		{
+			"tipo": "test179",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "info calculation"
+			},
+			"model": "component_info",
+			"order_number": 11,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"css": {
+					".wrapper_component >.content_data": {
+						"min-height": "80px"
+					}
+				},
+				"observe": [
+					{
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"filter": false
+						},
+						"component_tipo": "test139"
+					}
+				],
+				"widgets": [
+					{
+						"ipo": [
+							{
+								"input": {
+									"filter": false,
+									"components": [
+										{
+											"tipo": "test139",
+											"var_name": "total_days"
+										}
+									],
+									"section_id": "current",
+									"section_tipo": "current"
+								},
+								"output": [
+									{
+										"id": "years",
+										"value": "int",
+										"separator": ", ",
+										"label_after": "anyos",
+										"label_after_singular": "anyo"
+									},
+									{
+										"id": "months",
+										"value": "int",
+										"separator": ", ",
+										"label_after": "meses",
+										"label_after_singular": "mes"
+									},
+									{
+										"id": "days",
+										"value": "int",
+										"label_after": "dias",
+										"label_after_singular": "dia"
+									}
+								],
+								"process": {
+									"fn": "calculate_period",
+									"file": "/mdcat/calculation/mdcat.php",
+									"engine": "php",
+									"options": {
+										"days": true,
+										"label": true,
+										"total": false,
+										"years": true,
+										"months": true,
+										"separator": ", "
+									}
+								}
+							}
+						],
+						"path": "/calculation",
+						"widget_info": "sum calc.",
+						"widget_name": "calculation"
+					}
+				]
+			},
+			"model_tipo": "dd52",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"update_data\",\"filter\":false,\"perform\":\"update_data\",\"component_tipo\":\"test139\"}],\"widgets\":[{\"ipo\":[{\"input\":{\"filter\":false,\"components\":[{\"tipo\":\"test139\",\"var_name\":\"total_days\"}],\"section_id\":\"current\",\"section_tipo\":\"current\"},\"output\":[{\"id\":\"years\",\"value\":\"int\",\"separator\":\", \",\"label_after\":\"anyos\",\"label_after_singular\":\"anyo\"},{\"id\":\"months\",\"value\":\"int\",\"separator\":\", \",\"label_after\":\"meses\",\"label_after_singular\":\"mes\"},{\"id\":\"days\",\"value\":\"int\",\"label_after\":\"dias\",\"label_after_singular\":\"dia\"}],\"process\":{\"fn\":\"calculate_period\",\"file\":\"\\/mdcat\\/calculation\\/mdcat.php\",\"engine\":\"php\",\"options\":{\"days\":true,\"label\":true,\"total\":false,\"years\":true,\"months\":true,\"separator\":\", \"}}}],\"path\":\"\\/calculation\",\"widget_info\":\"sum calc.\",\"widget_name\":\"calculation\"}]}"
+		},
+		{
+			"tipo": "test180",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "info status"
+			},
+			"model": "component_info",
+			"order_number": 12,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"info": "Observes 'select' component_select value changes to update this calculated value. Property used for server side only",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"filter": false
+						},
+						"component_tipo": "test181"
+					},
+					{
+						"info": "Observes 'check_box observers' component_check_box value changes to update this calculated value. Property used for server side only",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"filter": false
+						},
+						"component_tipo": "test182"
+					}
+				],
+				"widgets": [
+					{
+						"ipo": [
+							{
+								"input": {
+									"type": "locator",
+									"paths": [
+										[
+											{
+												"var_name": "transcription",
+												"section_tipo": "test65",
+												"component_tipo": "test181"
+											}
+										],
+										[
+											{
+												"var_name": "transcription",
+												"section_tipo": "test65",
+												"component_tipo": "test182"
+											}
+										]
+									],
+									"source": [
+										{
+											"section_id": "current",
+											"section_tipo": "current"
+										}
+									]
+								},
+								"output": [
+									{
+										"id": "transcription",
+										"value": "int"
+									}
+								],
+								"process": null
+							}
+						],
+						"path": "/state",
+						"widget_info": "state of the select.",
+						"widget_name": "state"
+					}
+				]
+			},
+			"model_tipo": "dd52",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observe\":[{\"event\":\"update_data\",\"filter\":false,\"perform\":\"update_data\",\"component_tipo\":\"test181\"},{\"event\":\"update_data\",\"filter\":false,\"perform\":\"update_data\",\"component_tipo\":\"test182\"}],\"widgets\":[{\"ipo\":[{\"input\":{\"type\":\"locator\",\"paths\":[[{\"var_name\":\"transcription\",\"section_tipo\":\"test65\",\"component_tipo\":\"test181\"}],[{\"var_name\":\"transcription\",\"section_tipo\":\"test65\",\"component_tipo\":\"test182\"}]],\"source\":[{\"section_id\":\"current\",\"section_tipo\":\"current\"}]},\"output\":[{\"id\":\"transcription\",\"value\":\"int\"}],\"process\":null}],\"path\":\"\\/state\",\"widget_info\":\"state of the select.\",\"widget_name\":\"state\"}]}"
+		},
+		{
+			"tipo": "test181",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "select (with observers)"
+			},
+			"model": "component_select",
+			"order_number": 32,
+			"relations": [
+				{
+					"tipo": "dd501"
+				},
+				{
+					"tipo": "dd503"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"css": {
+					".wrapper_component >.content_data": {
+						"min-height": "90px"
+					}
+				},
+				"observers": [
+					{
+						"info": "Coins. Property used for server side only",
+						"section_tipo": "test65",
+						"component_tipo": "test180"
+					}
+				]
+			},
+			"model_tipo": "dd11",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observers\":[{\"section_tipo\":\"test65\",\"component_tipo\":\"test180\"}]}"
+		},
+		{
+			"tipo": "test182",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "check_box observers"
+			},
+			"model": "component_check_box",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "dd174"
+				},
+				{
+					"tipo": "dd185"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"observers": [
+					{
+						"info": "Coins. Property used for server side only",
+						"section_tipo": "test65",
+						"component_tipo": "test180"
+					}
+				]
+			},
+			"model_tipo": "dd80",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"observers\":[{\"section_tipo\":\"test65\",\"component_tipo\":\"test180\"}]}"
+		},
+		{
+			"tipo": "test183",
+			"parent": "test1",
+			"term": {
+				"lg-spa": "Test autocomplete"
+			},
+			"model": "section",
+			"order_number": 4,
+			"relations": [
+				{
+					"tipo": "test24"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test184",
+			"parent": "test183",
+			"term": {
+				"lg-spa": "grupo 2"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test185",
+			"parent": "test184",
+			"term": {
+				"lg-spa": "autocomplete"
+			},
+			"model": "component_portal",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["test38"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test164",
+										"parent": "test185",
+										"section_tipo": "test38"
+									}
+								],
+								"sqo_config": {
+									"limit": 20
+								}
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test186",
+			"parent": "test183",
+			"term": {
+				"lg-spa": "listado"
+			},
+			"model": "section_list",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test185"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test187",
+			"parent": "test184",
+			"term": {
+				"lg-spa": "gato"
+			},
+			"model": "component_input_text",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test188",
+			"parent": "test20",
+			"term": {
+				"lg-spa": "autocomple busca en autocomplete DES"
+			},
+			"model": "box elements",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": ["test185"]
+							},
+							"search": {
+								"ddo_map": [
+									{
+										"f_path": ["test183", "test185", "test38", "test164"]
+									}
+								],
+								"sqo_config": {
+									"limit": 20
+								}
+							},
+							"section_tipo": [
+								{
+									"value": ["test183"],
+									"source": "section"
+								}
+							]
+						}
+					]
+				},
+				"observers": [
+					{
+						"info": "Coins. Property used for server side only",
+						"section_tipo": "test183",
+						"component_tipo": "test199"
+					}
+				]
+			},
+			"model_tipo": "dd440",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test189",
+			"parent": "dd1190",
+			"term": {
+				"lg-spa": "test diffusion domain"
+			},
+			"model": "diffusion_domain",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd17",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test190",
+			"parent": "test189",
+			"term": {
+				"lg-spa": "identificación"
+			},
+			"model": "section_group",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test191",
+			"parent": "test190",
+			"term": {
+				"lg-spa": "termino"
+			},
+			"model": "component_input_text",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd9",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test192",
+			"parent": "test190",
+			"term": {
+				"lg-spa": "hijos"
+			},
+			"model": "component_relation_children",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test195"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test191",
+										"parent": "test192",
+										"section_tipo": "self"
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd352",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test193",
+			"parent": "test189",
+			"term": {
+				"lg-spa": "listado"
+			},
+			"model": "section_list",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test191"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test194",
+			"parent": "test189",
+			"term": {
+				"lg-spa": "mapa"
+			},
+			"model": "section_map",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"thesaurus": {
+					"term": "test191",
+					"order": "test51"
+				}
+			},
+			"model_tipo": "dd441",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test195",
+			"parent": "test190",
+			"term": {
+				"lg-spa": "padre"
+			},
+			"model": "component_relation_parent",
+			"order_number": 3,
+			"relations": [
+				{
+					"tipo": "test192"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test191",
+										"parent": "test195",
+										"section_tipo": "self"
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd429",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test196",
+			"parent": "test190",
+			"term": {
+				"lg-spa": "termino relacionado"
+			},
+			"model": "component_relation_related",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test191",
+										"parent": "test196",
+										"section_tipo": "self"
+									}
+								]
+							},
+							"section_tipo": [
+								{
+									"source": "self"
+								}
+							]
+						}
+					]
+				},
+				"config_relation": {
+					"relation_type": "dd89",
+					"relation_type_rel": "dd620"
+				}
+			},
+			"model_tipo": "dd431",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test197",
+			"parent": "test190",
+			"term": {
+				"lg-spa": "termino equivalente"
+			},
+			"model": "component_relation_related",
+			"order_number": 5,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test191",
+										"parent": "test197",
+										"section_tipo": "self"
+									}
+								]
+							}
+						}
+					]
+				},
+				"config_relation": {
+					"relation_type": "dd47",
+					"relation_type_rel": "dd621"
+				}
+			},
+			"model_tipo": "dd431",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test198",
+			"parent": "test190",
+			"term": {
+				"lg-spa": "indexaciones"
+			},
+			"model": "component_relation_index",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"source": "self"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test191",
+										"parent": "test198",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 10
+								},
+								"fields_separator": " | "
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd432",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test199",
+			"parent": "test184",
+			"term": {
+				"lg-spa": "external"
+			},
+			"model": "component_portal",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"mode": "external",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["test65"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "test199",
+										"section_tipo": "self",
+										"value_with_parents": true
+									},
+									{
+										"tipo": "test55",
+										"parent": "test199",
+										"section_tipo": "self",
+										"value_with_parents": true
+									}
+								],
+								"sqo_config": {
+									"limit": 10
+								}
+							},
+							"search": {
+								"ddo_map": [
+									{
+										"tipo": "test159",
+										"parent": "test199",
+										"section_tipo": "self",
+										"value_with_parents": true
+									}
+								],
+								"sqo_config": {
+									"limit": 10
+								}
+							}
+						}
+					],
+					"data_from_field": ["test200"],
+					"section_to_search": ["test65"],
+					"component_to_search": ["test188"]
+				},
+				"observe": [
+					{
+						"info": "Observes 'equivalents para external' component_relation_related value changes to update this calculated value",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"config": {
+								"use_self_section": true,
+								"use_observable_dato": true
+							},
+							"perform": {
+								"params": {
+									"save": true,
+									"changed": false,
+									"current_dato": false,
+									"references_limit": 0
+								},
+								"function": "set_dato_external"
+							}
+						},
+						"component_tipo": "test200"
+					},
+					{
+						"info": "Observes 'autocomple busca en autocomplete' component_autocomplete value changes to update this calculated value",
+						"client": {
+							"event": "update_value",
+							"perform": {
+								"function": "refresh"
+							}
+						},
+						"server": {
+							"config": {
+								"use_self_section": false,
+								"use_observable_dato": true
+							},
+							"filter": {
+								"$and": [
+									{
+										"q": "",
+										"path": [
+											{
+												"section_tipo": "test183",
+												"component_tipo": "test199"
+											}
+										]
+									}
+								]
+							},
+							"perform": {
+								"params": {
+									"save": true,
+									"changed": false,
+									"current_dato": false,
+									"references_limit": 0
+								},
+								"function": "set_dato_external"
+							}
+						},
+						"component_tipo": "test188"
+					}
+				]
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test200",
+			"parent": "test184",
+			"term": {
+				"lg-spa": "equivalents para external"
+			},
+			"model": "component_relation_related",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test187",
+										"parent": "test200",
+										"section_tipo": "test183"
+									}
+								]
+							}
+						}
+					]
+				},
+				"observers": [
+					{
+						"info": "Property used for server side only",
+						"section_tipo": "test183",
+						"component_tipo": "test199"
+					}
+				],
+				"config_relation": {
+					"relation_type": "dd47",
+					"relation_type_rel": "dd621"
+				}
+			},
+			"model_tipo": "dd431",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test201",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "relation_children"
+			},
+			"model": "component_relation_children",
+			"order_number": 25,
+			"relations": [
+				{
+					"tipo": "test71"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"records_mode": "list",
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"source": "self"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "test52",
+										"parent": "self",
+										"section_tipo": "self",
+										"value_with_parents": true
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd352",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test202",
+			"parent": "test163",
+			"term": {
+				"lg-spa": "soy autocomplete_hi"
+			},
+			"model": "component_autocomplete_hi",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test38"
+				},
+				{
+					"tipo": "test164"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": [2],
+										"source": "hierarchy_types"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "hierarchy100",
+										"parent": "test202",
+										"section_tipo": "self"
+									},
+									{
+										"tipo": "rsc368",
+										"parent": "hierarchy100",
+										"section_tipo": "rsc332"
+									},
+									{
+										"tipo": "rsc219",
+										"parent": "rsc368",
+										"section_tipo": "rsc205"
+									},
+									{
+										"tipo": "rsc473",
+										"parent": "hierarchy100",
+										"section_tipo": "rsc332"
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd442",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test203",
+			"parent": "test3",
+			"term": {
+				"lg-eng": "List",
+				"lg-spa": "listado"
+			},
+			"model": "section_list",
+			"order_number": 2,
+			"relations": [
+				{
+					"tipo": "test52"
+				},
+				{
+					"tipo": "test17"
+				},
+				{
+					"tipo": "test211"
+				},
+				{
+					"tipo": "test145"
+				},
+				{
+					"tipo": "test91"
+				},
+				{
+					"tipo": "test85"
+				},
+				{
+					"tipo": "test177"
+				},
+				{
+					"tipo": "test26"
+				},
+				{
+					"tipo": "test94"
+				},
+				{
+					"tipo": "test99"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd91",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test204",
+			"parent": "test90",
+			"term": {
+				"lg-spa": "portal v6 thesaurus bibliography"
+			},
+			"model": "component_portal",
+			"order_number": 1,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": [2],
+										"source": "hierarchy_types"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "Portal Bibliography",
+										"tipo": "hierarchy100",
+										"parent": "self",
+										"section_tipo": "self"
+									},
+									{
+										"info": "Bibliography publication (component portal)",
+										"tipo": "rsc368",
+										"parent": "hierarchy100",
+										"section_tipo": "rsc332"
+									},
+									{
+										"info": "Editor (input text)",
+										"tipo": "rsc219",
+										"parent": "rsc368",
+										"section_tipo": "rsc205"
+									},
+									{
+										"info": "Note (component text area)",
+										"mode": "list",
+										"tipo": "rsc473",
+										"parent": "hierarchy100",
+										"section_tipo": "rsc332"
+									}
+								]
+							}
+						},
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": ["zenon1"],
+										"source": "section"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"tipo": "zenon3",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									},
+									{
+										"tipo": "zenon4",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									},
+									{
+										"tipo": "zenon5",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									},
+									{
+										"tipo": "zenon6",
+										"parent": "zenon1",
+										"section_tipo": "zenon1"
+									}
+								]
+							},
+							"api_engine": "zenon"
+						}
+					]
+				}
+			},
+			"model_tipo": "dd592",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test205",
+			"parent": "test90",
+			"term": {
+				"lg-spa": "autocomplete_hi with parents V6 config"
+			},
+			"model": "component_autocomplete_hi",
+			"order_number": 2,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"source": {
+					"request_config": [
+						{
+							"sqo": {
+								"section_tipo": [
+									{
+										"value": [2],
+										"source": "hierarchy_types"
+									}
+								]
+							},
+							"show": {
+								"ddo_map": [
+									{
+										"info": "Term (component input text)",
+										"tipo": "hierarchy25",
+										"parent": "test205",
+										"section_tipo": "self"
+									}
+								],
+								"sqo_config": {
+									"limit": 5
+								},
+								"fields_separator": ", ",
+								"value_with_parents": true
+							}
+						}
+					]
+				}
+			},
+			"model_tipo": "dd442",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test206",
+			"parent": "test163",
+			"term": {
+				"lg-eng": "transcription",
+				"lg-spa": "transcripción"
+			},
+			"model": "component_text_area",
+			"order_number": 3,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test207",
+			"parent": "test163",
+			"term": {
+				"lg-spa": "av"
+			},
+			"model": "component_av",
+			"order_number": 4,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_tc",
+							"perform": {
+								"function": "go_to_time"
+							}
+						},
+						"component_tipo": "test206"
+					},
+					{
+						"client": {
+							"event": "key_up_esc",
+							"perform": {
+								"function": "play_pause"
+							}
+						},
+						"component_tipo": "test206"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test206"
+					}
+				]
+			},
+			"model_tipo": "dd722",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test208",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "email"
+			},
+			"model": "component_email",
+			"order_number": 6,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd227",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test209",
+			"parent": "dd348",
+			"term": {
+				"lg-spa": "unit_test_diffusion"
+			},
+			"model": "table",
+			"order_number": 9,
+			"relations": [
+				{
+					"tipo": "test3"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1229",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test210",
+			"parent": "test209",
+			"term": {
+				"lg-spa": "publication"
+			},
+			"model": "field_enum",
+			"order_number": 1,
+			"relations": [
+				{
+					"tipo": "test92"
+				}
+			],
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd1233",
+			"is_model": false,
+			"is_translatable": true,
+			"is_main": false,
+			"propiedades": "{\"enum\":{\"1\":\"si\",\"2\":\"no\"},\"info\":\"For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue\",\"exclude_column\":true,\"data_to_be_used\":\"dato\"}"
+		},
+		{
+			"tipo": "test211",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "number"
+			},
+			"model": "component_number",
+			"order_number": 19,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"type": "float",
+				"precision": 4
+			},
+			"model_tipo": "dd43",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test212",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "info"
+			},
+			"model": "component_info",
+			"order_number": 13,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"widgets": [
+					{
+						"ipo": [
+							{
+								"input": {
+									"type": "component_data",
+									"source": [
+										{
+											"section_id": "current",
+											"section_tipo": "current",
+											"component_tipo": "test52"
+										}
+									]
+								},
+								"output": [
+									{
+										"id": "test_value"
+									},
+									{
+										"id": "test_label"
+									}
+								],
+								"process": {}
+							}
+						],
+						"path": "/test/test_info",
+						"widget_info": "Test widget",
+						"widget_name": "test_info"
+					}
+				]
+			},
+			"model_tipo": "dd52",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": "{\"widgets\":[{\"ipo\":[{\"input\":{\"value\":\"sum\",\"filter\":false,\"components\":[{\"tipo\":\"test211\",\"var_name\":\"numero\"},{\"tipo\":\"test211\",\"var_name\":\"numero2\"}],\"section_id\":\"current\",\"section_tipo\":\"current\"},\"output\":[{\"id\":\"total\",\"value\":\"float\",\"label_after\":\"euros\"}],\"process\":{\"fn\":\"to_euros\",\"file\":\"\\/mdcat\\/calculation\\/mdcat.php\",\"engine\":\"php\",\"options\":{\"days\":true,\"total\":false,\"years\":true}}}],\"path\":\"\\/calculation\",\"widget_info\":\"sum calc.\",\"widget_name\":\"calculation\"}]}"
+		},
+		{
+			"tipo": "test213",
+			"parent": "test3",
+			"term": {
+				"lg-spa": "section list thesaurus"
+			},
+			"model": "section_list_thesaurus",
+			"order_number": 5,
+			"relations": [
+				{
+					"tipo": "test52"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"show": {
+					"ddo_map": [
+						{
+							"tipo": "test52",
+							"type": "term"
+						},
+						{
+							"tipo": "test99",
+							"type": "img"
+						}
+					]
+				}
+			},
+			"model_tipo": "dd144",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test214",
+			"parent": "test158",
+			"term": {
+				"lg-spa": "radio_button rating"
+			},
+			"model": "component_radio_button",
+			"order_number": 37,
+			"relations": [
+				{
+					"tipo": "dd889"
+				},
+				{
+					"tipo": "dd891"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"view": "rating"
+			},
+			"model_tipo": "dd57",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test215",
+			"parent": "test45",
+			"term": {
+				"lg-spa": "external"
+			},
+			"model": "component_external",
+			"order_number": 7,
+			"relations": null,
+			"tld": "test",
+			"properties": {
+				"fields_map": [
+					{
+						"local": "dato",
+						"format": "zenon_authors",
+						"remote": "authors"
+					}
+				]
+			},
+			"model_tipo": "dd79",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test216",
+			"parent": "test2",
+			"term": {
+				"lg-spa": "CSS Dates"
+			},
+			"model": "section_group",
+			"order_number": 7,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd8",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test217",
+			"parent": "render59",
+			"term": {
+				"lg-eng": "RECYCLE TEST",
+				"lg-spa": "ip"
+			},
+			"model": "component_ip",
+			"order_number": 16,
+			"relations": null,
+			"tld": "test",
+			"properties": null,
+			"model_tipo": "dd633",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		}
+	]
+}
