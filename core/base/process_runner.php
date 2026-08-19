@@ -11,7 +11,22 @@
 	$start_time = hrtime(true);
 
 // data
-	$data = json_decode($argv[1], true);
+// The argument could be the JSON data itself or, when it is prefixed with '@', the path
+// to a file that contains the JSON data. The file notation is used to avoid huge command
+// lines that exceed the kernel argv limits and make the fork fail
+// @see exec_::request_cli
+	$raw_data = $argv[1] ?? '';
+	if (strpos($raw_data, '@')===0) {
+		$payload_path = substr($raw_data, 1);
+		$raw_data = file_exists($payload_path)
+			? file_get_contents($payload_path)
+			: '';
+		// remove the temporary payload file as soon as it is read
+		if (file_exists($payload_path)) {
+			unlink($payload_path);
+		}
+	}
+	$data = json_decode($raw_data, true);
 	if (empty($data)) {
 		die('Invalid data');
 	}

@@ -342,8 +342,31 @@ class exec_ {
 		// process_runner. File to sh execute that manage given vars calling desired class and method
 			$process_runner	= DEDALO_CORE_PATH . '/base/process_runner.php';
 
+		// payload file. The server vars JSON is written to a file instead of being passed
+		// as a shell argument. Big requests (like a sqo filter with thousands of section_id)
+		// generate a huge argv that hits the kernel limits (MAX_ARG_STRLEN, ARG_MAX) and
+		// increases the memory needed by the fork, causing 'exec(): Unable to fork'
+		// @see process_runner.php that resolves the '@file' notation
+			$payload_path = $file_path . '.json';
+			if (file_put_contents($payload_path, $server_vars)===false) {
+				debug_log(__METHOD__
+					." Error on write process payload file " . PHP_EOL
+					.' payload_path: ' . to_string($payload_path)
+					, logger::ERROR
+				);
+				$response = new stdClass();
+					$response->result	= false;
+					$response->pid		= 0;
+					$response->pfile	= $pfile;
+					$response->msg		= 'Error. Unable to create the process payload file';
+				return $response;
+			}
+			// the payload contains the session_id. Restrict it to the owner as the
+			// sessions directory could be shared with other processes
+			@chmod($payload_path, 0600);
+
 		// command composition
-			$cmd		= PHP_BIN_PATH . " $process_runner " . escapeshellarg($server_vars);
+			$cmd		= PHP_BIN_PATH . " $process_runner " . escapeshellarg('@'.$payload_path);
 			// $command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
 			$command	= "nohup nice -n 19 $cmd >$file_path & echo $!";
 
@@ -357,6 +380,26 @@ class exec_ {
 		// process creation
 			$process	= new process($command);
 			$pid		= $process->getPid();
+
+		// pid check. When the fork fails (server resources limits, too big command, etc.)
+		// exec returns an empty output and the pid is zero. Without this check, a non
+		// existing process is registered and the client polls it forever
+			if ($pid < 1) {
+				if (file_exists($payload_path)) {
+					unlink($payload_path);
+				}
+				debug_log(__METHOD__
+					." Error on create the background process. Unable to get a valid PID " . PHP_EOL
+					.' command: ' . to_string($command)
+					, logger::ERROR
+				);
+				$response = new stdClass();
+					$response->result	= false;
+					$response->pid		= 0;
+					$response->pfile	= $pfile;
+					$response->msg		= 'Error. Unable to create the background process. Check the server resources limits';
+				return $response;
+			}
 
 		// store process info
 			processes::add(
@@ -414,7 +457,10 @@ class process {
 		}
 
         exec($command, $output);
-        $this->pid = (int)$output[0];
+        // when the fork fails, output is empty and there is no PID to read
+        $this->pid = isset($output[0])
+            ? (int)$output[0]
+            : 0;
     }
 
     public function setPid($pid){
