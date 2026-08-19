@@ -157,6 +157,15 @@ const client_failure = (api_error) => ({
 * and resolves the API envelope.
 *
 * Algorithm:
+*  0. Coalescing (READS ONLY): a request carrying
+*     `cache_handler:{handler:'localdb', id}` — the caller's explicit declaration
+*     that this is an idempotent, cacheable read — joins the in-flight request
+*     for the same `cache_handler.id` instead of issuing a second identical
+*     round-trip. Writes are NEVER coalesced: they carry no cache_handler, so
+*     they cannot even reach the registry. Requests with a caller `signal` and
+*     the internal `_csrf_retried` resend bypass coalescing (see
+*     `in_flight_requests`). Joined callers on success receive a structuredClone
+*     of the envelope, never the leader's object.
 *  1. Merge options over the safe defaults (5 retries, 500 ms base delay,
 *     5 000 ms timeout) — every default is overridable per call.
 *  2. CSRF header from `page_globals.csrf_token` unless the caller set one.
@@ -205,7 +214,90 @@ const client_failure = (api_error) => ({
 */
 data_manager.request = async function(options) {
 
-	const self = this
+	// coalescing key. ONLY a request the caller explicitly declared cacheable
+	// (`cache_handler:{handler:'localdb', id}`) is eligible: that declaration is
+	// the caller's statement that the call is an idempotent READ, and the id is
+	// already a complete fingerprint of the query (see get_section_elements_context
+	// in common.js). Keying on the id — never on a hash of the body — makes it
+	// structurally impossible to coalesce a write: two saves that happen to
+	// serialize identically are two distinct operations and must both run.
+	// Excluded on purpose:
+	// - `options.signal`: a joined caller would inherit the leader's abort (and
+	//   the leader the follower's non-abort); an abortable read runs alone.
+	// - `options._csrf_retried`: the transparent CSRF resend fires INSIDE the
+	//   leader's own execution while its promise is still registered — joining
+	//   would await itself and deadlock.
+	const coalesce_key = (
+		options.cache_handler?.handler==='localdb'
+		&& options.cache_handler.id
+		&& !options.signal
+		&& !options._csrf_retried
+	)
+		? options.cache_handler.id
+		: null
+
+	if (!coalesce_key) {
+		return execute_request(options)
+	}
+
+	// join an in-flight identical read
+	const in_flight = in_flight_requests.get(coalesce_key)
+	if (in_flight) {
+		const envelope = await in_flight
+		// every joined caller gets its OWN success envelope (structuredClone),
+		// mirroring the IndexedDB hit path, where each read returns an
+		// independent structured clone — callers mutate what they get back
+		// (context patching, response_data storage), so sharing one object
+		// instance would cross-contaminate them. Failure envelopes are returned
+		// shared: they carry an ApiError class instance (not cloneable without
+		// losing its prototype) and callers only read them.
+		return (envelope && envelope.ok===true)
+			? structuredClone(envelope)
+			: envelope
+	}
+
+	// leader: register the promise, clear it when it settles — success AND
+	// failure — so a later call can retry after an error and the registry never
+	// grows. The window closes at settle time, BEFORE the idle localdb
+	// write-through lands; a caller arriving in that gap re-fetches (a missed
+	// optimisation, never staleness) — keeping the entry longer would leave the
+	// key live past the delete_local_db_data invalidation paths, which do not
+	// know about this registry (the two-places hazard instances.js documents).
+	const request_promise = execute_request(options)
+	in_flight_requests.set(coalesce_key, request_promise)
+	try {
+		return await request_promise
+	} finally {
+		in_flight_requests.delete(coalesce_key)
+	}
+}//end request
+
+
+
+/**
+* IN_FLIGHT_REQUESTS
+* Module-level registry of in-flight cacheable READ requests, keyed by
+* `cache_handler.id` → the pending envelope Promise. See the coalescing notes
+* on `data_manager.request` (step 0 of the algorithm). Entries live only while
+* the request is in flight; they are cleared on settle in `request` itself.
+* @type {Map<string, Promise<Object>>}
+*/
+const in_flight_requests = new Map()
+
+
+
+/**
+* EXECUTE_REQUEST
+* The single-request execution body behind `data_manager.request` (steps 1-10 of
+* the algorithm documented there). Module-private: every caller goes through
+* `request`, which decides whether to coalesce; the internal CSRF resend
+* re-enters `request` with `_csrf_retried` set, which routes straight back here.
+* @param {Object} options - same shape as `data_manager.request`
+* @returns {Promise<Object>} the API envelope
+*/
+const execute_request = async function(options) {
+
+	const self = data_manager
 
 	const default_options = {
 		url			: options.url || self.url,
@@ -243,7 +335,7 @@ data_manager.request = async function(options) {
 	// cache_handler
 	const cache_handler = options.cache_handler || null
 	if (cache_handler?.handler==='localdb') {
-		const cached_data = await this.get_local_db_data(
+		const cached_data = await self.get_local_db_data(
 			cache_handler.id,
 			'data' // string table
 		);
@@ -432,7 +524,7 @@ data_manager.request = async function(options) {
 	if (cache_handler?.handler==='localdb' && json?.ok === true) {
 		dd_request_idle_callback(
 			() => {
-				this.set_local_db_data(
+				self.set_local_db_data(
 					{
 						id		: cache_handler.id,
 						value	: json
@@ -444,7 +536,7 @@ data_manager.request = async function(options) {
 	}
 
 	return json
-}//end request
+}//end execute_request
 
 
 
