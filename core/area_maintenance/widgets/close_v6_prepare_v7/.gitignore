@@ -8,14 +8,28 @@
 /sessions/
 /backups/
 # ^ config-migration quarantine: holds the imported v6 config, i.e. the DB password
+
+# --- re-include the package's config/ directories -----------------------------
+# The repo-root .gitignore carries a blanket `config/*` rule (a v6 install keeps its
+# secrets in config/). Inside this package the config/ directories are SOURCE, not
+# per-install state: engine/config/ is the engine entry point (bootstrap.php, the
+# sample.* templates, nginx.conf.sample) and engine/core/base/config/ is the config
+# catalog. Without these negations their files are invisible to git and only ever
+# reach the branch through `git add -f`, so new ones silently never sync.
+# Everything below this block is re-ignored on top of the negation — keep the
+# runtime/secret patterns AFTER it, or they stop applying inside config/.
+!**/config/
+!**/config/**
+
 *.log
 .DS_Store
 
 # generated at runtime by the widget: a literal snapshot of the live v6 config (0600),
 # and the shim the engine's config migration writes next to it
-/engine/config/config_db.php
 /engine/config/config.php
-/engine/config/config_core.php
-/engine/config/config_areas.php
+/engine/config/config_*.php
+/engine/config/.env
+/engine/config/.env.*
+/engine/config/bootstrap/
 /engine/.env
 /engine/.env.*

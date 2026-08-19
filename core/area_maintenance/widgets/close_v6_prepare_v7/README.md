@@ -79,6 +79,16 @@ never ship. All unused **top-level files** are stripped too (docs, `composer.*`,
 `core/**/index.php` stay). The engine top level is therefore ONLY the load-bearing dirs:
 **`config`, `core`, `shared`, `install`, `diffusion`** (no top-level files).
 
+**Why this package carries its own `.gitignore`:** the repo-root `.gitignore` has a blanket
+`config/*` rule (a v6 install keeps its secrets in `config/`), which would swallow this package's
+`engine/config/` and `engine/core/base/config/` — both of which are *source*, not per-install
+state. Historically their files only reached the branch through `git add -f`, so any new file went
+missing without a word. The package `.gitignore` re-includes them (`!**/config/`, `!**/config/**`)
+and then re-ignores the generated, secret-bearing ones (`config.php`, `config_*.php`, `.env*`,
+`config/bootstrap/`). **Order matters**: every runtime/secret pattern must stay *below* the two
+negation lines, or it stops applying inside `config/`. `verify_package.sh` still asserts that a
+runtime `config_db.php`/`.env*`, if present, is git-ignored.
+
 Per-module client assets `core/*/css` and `core/*/js` are stripped too (no PHP reads them; the
 CLI migration serves no UI), as are the UI modules `core/area*` and `core/button*` (not on the
 migration path — reformat routes by model string and never instantiates them; the boot-loaded
