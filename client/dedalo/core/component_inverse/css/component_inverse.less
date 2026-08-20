@@ -31,6 +31,25 @@
 		}
 	}//end .edit
 
+	// search: read-only, informational. component_inverse is unsearchable
+	// (no matrix value, no searchBuilder), so the cell must not read as an input.
+	&.search {
+
+		>.content_data {
+			max-height: 12rem;
+			overflow: auto;
+
+			>.content_value {
+				cursor: default;
+
+				>.inverse_show_section_id {
+					font-weight: 700;
+					letter-spacing: .05em;
+				}
+			}
+		}
+	}//end .search
+
 	&.view_line {
 		display: inline-block;
 	}

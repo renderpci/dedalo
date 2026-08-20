@@ -22,8 +22,8 @@
 * This module follows the standard Dédalo prototype-assignment pattern:
 * the constructor is a no-op placeholder; its prototype is the carrier for
 * the edit() method that component_inverse.prototype.edit is wired to
-* (see component_inverse.js).  The 'search' mode alias also points here
-* (component_inverse.prototype.search = render_edit_component_inverse.prototype.edit).
+* (see component_inverse.js).  Search mode is NO LONGER aliased here: it has its
+* own read-only renderer, render_search_component_inverse.js.
 *
 * Exports:
 *   render_edit_component_inverse — constructor / prototype carrier
@@ -57,7 +57,7 @@ export const render_edit_component_inverse = function() {
 
 /**
 * EDIT
-* Render node for use in edit (and search) modes.
+* Render node for use in edit mode.
 *
 * Dispatches to the appropriate view renderer based on self.context.view.
 * Because component_inverse never writes data, all views are effectively

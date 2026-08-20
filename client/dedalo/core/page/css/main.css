@@ -21136,6 +21136,17 @@ body.inspector_resizing {
   width: 100%;
   text-align: center;
 }
+.component_inverse.search > .content_data {
+  max-height: 12rem;
+  overflow: auto;
+}
+.component_inverse.search > .content_data > .content_value {
+  cursor: default;
+}
+.component_inverse.search > .content_data > .content_value > .inverse_show_section_id {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
 .component_inverse.view_line {
   display: inline-block;
 }
