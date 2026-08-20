@@ -193,6 +193,54 @@ describe(`COMPONENT_CHECK_BOX DATA OPERATIONS`, function() {
 	let instance	= null
 	let node		= null
 
+	// The record's stored state when the suite starts. The data-operation cases
+	// WRITE: change_handler calls change_value, which is a real save on
+	// test3/test88. A suite that leaves the record in a different state makes the
+	// NEXT run's precondition false — that is how this suite goes red on its own
+	// after a run without the runner's canonical-test3 reseed. Captured here,
+	// restored by the `restore initial record state` case below.
+	let initial_checked	= null
+
+	/**
+	* TOGGLE
+	* Drive ONE datalist slot through the component's own change_handler and
+	* AWAIT it, so the save has landed before the next assertion. Dispatching a
+	* DOM 'change' event reaches the same handler but returns nothing to await:
+	* the assertions then race the save.
+	*/
+	const toggle = async (i, checked) => {
+
+		const input_checkbox = node.querySelectorAll('input[type="checkbox"]')[i]
+		const datalist_value = (instance.data.datalist || [])[i]?.value
+
+		input_checkbox.checked = checked
+		await instance.change_handler({
+			self			: instance,
+			// the handler calls e.preventDefault() (component_check_box.js:223)
+			e				: { preventDefault : () => {}, stopPropagation : () => {} },
+			i				: i,
+			datalist_value	: datalist_value,
+			input_checkbox	: input_checkbox
+		})
+
+		return input_checkbox
+	}
+
+	/**
+	* HAS_LOCATOR
+	* Is a datalist option's locator among the component's stored entries?
+	* This — not `changed_data` — is the durable outcome of a check/uncheck:
+	* change_value RESETS data.changed_data to [] the moment the save lands
+	* (component_common.js:1384), so an assertion on changed_data after an
+	* awaited save reads the wrong side of the write. (The changed_data ITEM
+	* shape is covered by the build_changed_data_item cases below.)
+	*/
+	const has_locator = (entries, value) => (entries || []).some(entry =>
+		entry &&
+		String(entry.section_id)===String(value.section_id) &&
+		entry.section_tipo===value.section_tipo
+	)
+
 
 
 	it(`init → build → render (edit mode, permissions=2)`, async function() {
@@ -220,6 +268,9 @@ describe(`COMPONENT_CHECK_BOX DATA OPERATIONS`, function() {
 		assert.isOk(instance.context, 'context expected')
 		assert.isOk(instance.data, 'data expected')
 		assert.isOk(Array.isArray(instance.data.entries), 'data.entries expected array')
+
+		// snapshot for the restore case
+			initial_checked = Array.from(node.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked)
 	});
 
 
@@ -237,37 +288,42 @@ describe(`COMPONENT_CHECK_BOX DATA OPERATIONS`, function() {
 			const datalist = instance.data.datalist || []
 			assert.isAbove(datalist.length, 0, 'datalist expected to offer options')
 
-			const unchecked = Array.from(checkboxes).find(cb => !cb.checked)
-			assert.isOk(unchecked, 'an unchecked checkbox expected to check')
+		// target slot 0, WHATEVER the record's stored state. Hunting for an
+		// already-unchecked box made the case depend on the record: with every
+		// option checked there was nothing to find and the suite failed for a
+		// reason that had nothing to do with the insert path. If slot 0 is
+		// checked, uncheck it first (a real, awaited save) so the insert path
+		// is the one under test.
+			if (checkboxes[0].checked) {
+				await toggle(0, false)
+			}
+			await toggle(0, true)
 
-			// simulate check
-			unchecked.checked = true
-			unchecked.dispatchEvent(new Event('change', { bubbles: true }))
-
-			// verify changed_data was set
-			assert.isOk(instance.data.changed_data, 'changed_data expected after checkbox check')
-			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
-			assert.equal(instance.data.changed_data[0].action, 'insert', 'changed_data action expected insert')
+			// verify the locator is now stored
+			assert.isOk(
+				has_locator(instance.data.entries, datalist[0].value),
+				'the checked option locator expected in data.entries after insert'
+			)
+			assert.isOk(checkboxes[0].checked, 'slot 0 expected checked')
 	});
 
 
 
 	it(`checkbox uncheck (remove)`, async function() {
 
-		// find a checked checkbox. The previous case checked one, so its absence
-		// is a failure, not a reason to pass silently.
+		// slot 0 is the one the previous case checked: its state is known, not
+		// discovered. Its absence would be a failure, not a reason to skip.
 			const checkboxes = node.querySelectorAll('input[type="checkbox"]')
-			const checked = Array.from(checkboxes).find(cb => cb.checked)
-			assert.isOk(checked, 'a checked checkbox expected to uncheck')
+			assert.isOk(checkboxes[0]?.checked, 'slot 0 expected checked by the previous case')
 
-			// simulate uncheck
-			checked.checked = false
-			checked.dispatchEvent(new Event('change', { bubbles: true }))
+			await toggle(0, false)
 
-			// verify changed_data action is remove
-			assert.isOk(instance.data.changed_data, 'changed_data expected after checkbox uncheck')
-			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
-			assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on uncheck')
+			// verify the locator is gone from the stored entries
+			assert.isNotOk(
+				has_locator(instance.data.entries, (instance.data.datalist || [])[0].value),
+				'the unchecked option locator expected absent from data.entries after remove'
+			)
+			assert.isNotOk(checkboxes[0].checked, 'slot 0 expected unchecked')
 	});
 
 
@@ -343,6 +399,26 @@ describe(`COMPONENT_CHECK_BOX DATA OPERATIONS`, function() {
 		const result = instance.focus_first_input()
 
 		assert.equal(result, true, 'focus_first_input expected to return true')
+	});
+
+
+
+	it(`restore initial record state`, async function() {
+
+		// (!) Runs BEFORE the destroy case on purpose: it needs the live node.
+		// Every write this suite made goes back, so a run outside the runner's
+		// reseed leaves test3/test88 exactly as it found it.
+			assert.isOk(initial_checked, 'initial state expected captured')
+
+			const checkboxes = node.querySelectorAll('input[type="checkbox"]')
+			for (let i = 0; i < checkboxes.length; i++) {
+				if (checkboxes[i].checked !== initial_checked[i]) {
+					await toggle(i, initial_checked[i])
+				}
+			}
+
+			const restored = Array.from(node.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked)
+			assert.deepEqual(restored, initial_checked, 'record expected restored to its initial state')
 	});
 
 
