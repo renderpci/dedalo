@@ -1002,12 +1002,15 @@ section.prototype.build = async function(autoload=false) {
 			? searchParams.get('initiator')
 			: self.caller!==null
 				? self.caller.id
-				: false
+				: null
 		// fix initiator
 		// Strip any '#fragment' appended to the id (e.g. from URL hash navigation)
-			self.initiator = initiator
+		// (!) Absence is ALWAYS null, never false: consumers test it with
+		// `self.initiator?.includes(...)` and optional chaining does not
+		// short-circuit on false (`false.includes` -> not a function).
+			self.initiator = typeof initiator==='string'
 				? initiator.split('#')[0]
-				: initiator
+				: null
 
 	// paginator
 		if (self.paginator===null) {
