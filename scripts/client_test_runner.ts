@@ -170,9 +170,10 @@ async function ensureMapOfGrapesFixture(): Promise<void> {
 /**
  * Suites that are RED TODAY, each with what it actually asserts when it fails.
  *
- * MEASURED 2026-08-17 through THIS runner (which reseeds canonical test3 before
- * the run) against the :4000 dev listener on dedalo7_mht: 125 suites, 123 pass,
- * 2 fail, 0 pending, 4 deferred. Two consecutive runs agree on these two.
+ * MEASURED 2026-08-20 through THIS runner (which reseeds canonical test3 before
+ * the run) against the :4000 dev listener: 131 suites, 131 pass, 0 fail, 0
+ * pending, 0 deferred — the whole inventory runs. Two consecutive runs agree,
+ * and a `--strict` run is identical because the list below is empty.
  *
  * (!) Measure the baseline WITH the reseed. A hand-driven run against a polluted
  * test3 showed NINE failures — seven of them were leftover state from earlier

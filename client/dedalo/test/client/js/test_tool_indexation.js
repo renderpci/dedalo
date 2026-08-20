@@ -67,7 +67,10 @@ describe('TOOL_INDEXATION CLIENT TEST', function() {
 		assert.equal(typeof tool_indexation.prototype.render_indexation_note, 'function', 'expected render_indexation_note wired')
 		assert.equal(typeof tool_indexation.prototype.render_empty_note, 'function', 'expected render_empty_note wired')
 		assert.equal(typeof tool_indexation.prototype.render_note, 'function', 'expected render_note wired')
-		assert.equal(typeof tool_indexation.prototype.new_tag_note, 'function', 'expected new_tag_note wired')
+		// the mixin is EXACTLY those three (tool_indexation.js:182-184). `new_tag_note`
+		// is a module-private helper inside tag_note.js and must NOT leak onto the
+		// prototype — asserting it did was asserting the opposite of the contract.
+		assert.equal(typeof tool_indexation.prototype.new_tag_note, 'undefined', 'new_tag_note expected module-private, not on the prototype')
 	})
 
 })

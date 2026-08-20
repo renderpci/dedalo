@@ -57,19 +57,17 @@ export const generic_suites_green = [
 	'test_job_tray',                  // the LONG-PROCESS monitoring surface: format_elapsed's boundaries (the readout an operator watches during an hour-long transcode), the shared #floating_dock reuse law, and THE CONNECTION-RELEASE law (a cancelled follower must close its stream — six abandoned ones starve the origin's six HTTP/1.1 slots and freeze the whole page). Backend-free: pure/DOM + a stubbed request_stream — a rendered tray needs a logged-in backend with live jobs.
 	'test_thesaurus_pane',            // the picker SURFACE: the thesaurus mounted inline in the caller's own wrapper. Separate from test_thesaurus_picker because it DOES import component_portal (that file's not importing it is one of its assertions). Pins the liveness rule — reuse is decided by asking the area instance, never by a "built" flag, because the refresh() every pick triggers destroys it through ar_instances.
 	'test_thesaurus_picker',          // the relation view:'tree' term picker — the shared picker module (selection set, capacity, per-node selectability) and the in-page host's teardown. Backend-free: pure/DOM against a synthetic caller, no component_portal in scope (that isolation is itself an assertion — it is what lets edit-in-list add a host rather than a second picker).
+	'test_diffusion',                // green after the selector fix: the inspector's diffusion opener is a SPAN (`.button.diffusion`), never a `button.diffusion` — nothing else was wrong. Its Publish cases now assert the button renders and is confirm-gated, and ANSWER THE CONFIRM WITH NO: a confirmed click fires a real publish to the configured target and returns before the stream ends, so the old click asserted nothing while writing to a live target every run.
 	'test_additional_text_area'      // green after (1) dispatch catches handler throws → graceful result:false (was raw 500), (2) the dmm480 "map of grapes" demo ontology (src/core/test_data/dmm_map_of_grapes_fixture.ts, auto-provisioned by scripts/client_test_runner.ts pre-run) with dmm506's key_up_f2 observe, (3) the text_area edit-mode features.av_player port (structure_context.ts) that binds F2→build_tag. Matches the PHP oracle client 16/16.
 ]
 
 /**
- * Generic-group suites that are DEFERRED against TS: they are named "generic" but
- * actually sweep every component/special model, so they fail on the subset not yet
- * ported (Phase 6). Kept here (and in docs/client_tests.md, with per-failure
- * reasons + file:line) so nothing is silently dropped — move each back into
- * generic_suites_green once its underlying TS gap closes.
+ * Generic-group suites DEFERRED against TS. EMPTY since 2026-08-20: the last row
+ * (test_diffusion) was never a port gap — it asserted a selector that matched no
+ * element. Anything added here needs a reason that names the TS gap, and it must
+ * be a gap, not a stale assertion.
  */
-export const generic_suites_deferred = [
-	'test_diffusion'                 // PHP-BROKEN selector: asserts `button.diffusion`, but the only client producers are the inspector's `span.diffusion` (PHP source identical — span) and the section tool `button.warning.tool_diffusion` (model 'tool_diffusion' per live-PHP capture). Neither is a `button.diffusion` → fails on PHP too. (Inspector also not rendered in TS — separate gap, would not fix the selector.)
-]
+export const generic_suites_deferred = []
 
 /** Full generic inventory (green + deferred) — back-compat export. */
 export const generic_suites = [...generic_suites_green, ...generic_suites_deferred]
@@ -112,29 +110,20 @@ export const lifecycle_suites_green = [
 	'test_component_svg',
 	'test_component_relation_children',  // green after children-insert target-existence validation (save_component.ts)
 	'test_component_portal',            // green after save auto-creates the missing host record (PHP set_dato upsert parity)
-	'test_component_filter_records'     // green after get_datalist port (authorized sections datalist, dispatch.ts)
+	'test_component_filter_records',    // green after get_datalist port (authorized sections datalist, dispatch.ts)
+	'test_component_date'               // green after the period tipo fix: the suite named test218, which exists in NO ontology; the test3 period-date component is test173 (test3 → test115 → test34). It was never a provisioning gap.
 ]
 
 /**
- * Life-cycle suites DEFERRED against TS — they fail on the broader mode/view
- * matrix (esp. SEARCH-mode render) and/or save round-trip parity for models not
- * yet complete in Phase 6. NOTE: the parameterized `component` group below
- * (test_component_full, edit-focused matrix) passes for many of these same
- * models — the dedicated life-cycle suite is stricter. Per-suite reasons +
- * file:line live in docs/client_tests.md. Move each here → _green as its gap closes.
+ * Life-cycle suites DEFERRED against TS — a model whose broader mode/view matrix
+ * (esp. SEARCH-mode render) or save round-trip is not complete. EMPTY since
+ * 2026-08-20: the last row (test_component_date) was ledgered as an ontology
+ * PROVISIONING gap ("add test218 period-date to test3"), but test218 exists in no
+ * ontology on any instance — the test3 period component is test173 and always
+ * was. A deferral reason that names a missing thing is worth re-checking before
+ * it is believed.
  */
-export const lifecycle_suites_deferred = [
-	// test_component_date now OWNS test3/11 (elements.js date_section_id, a clone
-	// of record 1 the save-sweep no longer poisons) — WC-021 record isolation is
-	// in place and the shared-test3/1 date pollution is gone. It is STILL deferred
-	// for a DIFFERENT, deterministic reason surfaced by the isolation work: its
-	// period-mode block (tipo_period 'test218') fails 4/49 even in ISOLATION —
-	// test218 is ABSENT from the test3 ontology subtree on this instance, so
-	// component_date.get_date_mode (component_date.js:563) reads null.properties.
-	// That is an ontology-provisioning gap (add test218 period-date to test3),
-	// NOT a harness/record-pollution issue, so record isolation cannot promote it.
-	'test_component_date'
-]
+export const lifecycle_suites_deferred = []
 
 /** Full life-cycle inventory (green + deferred) — back-compat export. */
 export const lifecycle_suites = [...lifecycle_suites_green, ...lifecycle_suites_deferred]
@@ -178,14 +167,17 @@ export const tool_suites_green = [
 	'test_tool_transcription',
 	'test_tool_update_cache',
 	'test_tool_upload',
-	'test_tool_user_admin'
+	'test_tool_user_admin',
+	'test_tool_diffusion',   // green after the assertion fix: it required a prototype `get_diffusion_status`, the PHP-era API ACTION name. WC-076 moved the engine in-process and the client method is get_engine_advisory; no client method ever carried the old name.
+	'test_tool_indexation'   // green after the assertion fix: it required `new_tag_note` on the prototype, but that is a module-private helper inside tag_note.js — the mixin is exactly render_indexation_note / render_empty_note / render_note. It asserted the opposite of the contract.
 ]
 
-/** Tool suites still failing (module load/structural gaps) — see docs/client_tests.md. */
-export const tool_suites_deferred = [
-	'test_tool_diffusion',   // diffusion tool structural/module gap
-	'test_tool_indexation'   // indexation tool structural/module gap
-]
+/**
+ * Tool suites still failing (module load/structural gaps). EMPTY since
+ * 2026-08-20: both rows were ledgered as "structural/module gaps" and neither
+ * was — each asserted ONE prototype name that does not exist by design.
+ */
+export const tool_suites_deferred = []
 
 /** Full tool inventory — back-compat export. */
 export const tool_suites = [...tool_suites_green, ...tool_suites_deferred]
@@ -243,13 +235,13 @@ export const test_groups = [
 	generic_group,   // Wave 1 — generic infra
 	lifecycle_group, // Wave 2 — per-component life-cycle, green subset
 	component_group, // parameterized component matrix, all 33 models green
-	tools_group      // Wave 3 — per-tool structural suites (32 green)
+	tools_group      // Wave 3 — per-tool structural suites (34 green)
 ]
 
 /**
- * No whole groups are deferred now (tools promoted, 32/34 green). Per-suite
- * deferrals live in generic_suites_deferred, lifecycle_suites_deferred, and
- * tool_suites_deferred — each with its reason. See docs/client_tests.md.
+ * No whole groups are deferred, and since 2026-08-20 no SUITES are either:
+ * generic_suites_deferred, lifecycle_suites_deferred and tool_suites_deferred
+ * are all empty, so the gate runs the whole inventory.
  */
 export const deferred_groups = []
 
