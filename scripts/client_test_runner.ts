@@ -188,13 +188,12 @@ async function ensureMapOfGrapesFixture(): Promise<void> {
  *
  * These are client/server bugs, not runner problems; each needs its own change.
  * Do NOT add a row to get a run green — a row costs the same reading as the fix.
+ *
+ * THE LIST IS EMPTY (2026-08-20). Every failure is red on its own, and a plain
+ * run is now equivalent to `--strict`. Keep it that way: the next red suite
+ * gets a fix, not a row.
  */
-const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([
-	[
-		'test_component_3d',
-		'"change_value remove expected response: expected false to be truthy" — the remove path answers false, then the suite times out waiting on the follow-up (20s)',
-	],
-]);
+const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([]);
 
 /**
  * KNOWN-FLAKY under run-all load (passes in isolation and in most runs). Not

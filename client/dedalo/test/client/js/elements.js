@@ -41,6 +41,7 @@ export const permissions	= 2
 export const date_section_id	= 11 // test_component_date owns test3/11
 export const iri_section_id		= 12 // test_component_iri owns test3/12
 export const geo_section_id		= 14 // test_component_geolocation owns test3/14
+export const media_3d_section_id = 15 // test_component_3d owns test3/15
 
 
 
@@ -49,11 +50,11 @@ export const geo_section_id		= 14 // test_component_geolocation owns test3/14
 		model				: 'component_3d',
 		tipo				: 'test26',
 		section_tipo		: section_tipo,
-		section_id			: section_id,
+		section_id			: media_3d_section_id, // own record (test3/15) — see per-suite isolation above
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_3d_value, // return array
-		new_value_params	: [section_tipo, section_id, 'test26'],
+		new_value_params	: [section_tipo, media_3d_section_id, 'test26'],
 		new_value_action	: 'set_data'
 		// test_save		: false
 	})

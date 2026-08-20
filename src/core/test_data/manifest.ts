@@ -45,6 +45,7 @@ export const SUITE_ISOLATION_RECORDS: Readonly<Record<number, string>> = {
 	12: 'test_component_iri — iri read/label-dataframe suite; own record hardens it against the save sweep (defensive, matches date)',
 	13: 'test_component_publication — write-heavy add/remove/update relation-locator suite; several of its cases add a stray test92 locator without cleanup or remove by index instead of by locator, permanently growing whatever record they target. Own record isolates that accumulation from the shared record 1 the generic component sweeps (test_component_full et al.) render, whose contract is zero-or-one value.',
 	14: 'test_component_geolocation — write-heavy suite whose saves append a new test100 entry whenever the targeted key holds no id, and whose removes leave a null in the slot. On the shared record 1 the geo array grew to [null,{…},null,…] across runs, after which the suite asserted entries[0] against a null hole and failed on run order alone. Own record + teardown keeps the growth out of the record the generic sweeps render.',
+	15: 'test_component_3d — write-heavy suite whose add/update/remove chain ends on a REMOVE with no teardown, leaving media.test26 as [] on whatever record it targets. On the shared record 1 that served an EMPTY 3d component to every generic sweep that renders it. Own record + teardown keeps the emptying out of the canonical record.',
 };
 
 /** The per-suite clone ids, ascending. */
