@@ -128,7 +128,13 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 						mode		: mode,
 						lang		: lang,
 						tool_object	: {},
-						caller		: {}
+						// minimal caller stub. `editors` is present because
+						// tool_dd_label.init resolves caller.editors[0] and takes its
+						// error path (self.error + console.error) without one; tools
+						// that do not read it are unaffected.
+						caller		: {
+							editors : [{ get : () => ({json:[]}) }]
+						}
 					},
 					model
 				);
