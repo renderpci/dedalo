@@ -204,6 +204,13 @@ After the response lands, `build` runs `set_context_vars(self)`, which wires
 assembles `show_interface` (merging the component override over
 `default_show_interface`), subscribes events, and publishes `built_<id>`.
 
+`show_interface` is always an object OWNED BY THE INSTANCE: the override is
+spread into a fresh object before the missing defaults are filled in, so the
+render paths that write into it (e.g. `view_indexation_edit_portal.js` forcing
+`button_delete_link_and_record = false`) can never mutate the
+`context.properties.show_interface` / `request_config_object.show.interface`
+they came from.
+
 ### 4. Render — ddo to standard DOM
 
 `common.prototype.render(options)` is the dispatcher. It:

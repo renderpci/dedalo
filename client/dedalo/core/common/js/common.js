@@ -214,6 +214,9 @@ common.prototype.build = async function(autoload=false) {
 * 3. Build `self.show_interface` by merging the component's context/request-config
 *    override with `default_show_interface`. Any key absent in the override is
 *    filled from the default, so callers can rely on every flag being present.
+*    The override is CLONED first: `show_interface` is instance-owned, so the
+*    render paths that write flags into it never mutate the source
+*    `context.properties.show_interface` / `request_config_object.show.interface`.
 * 4. Attach `self.rqo_test` as a lazy getter (via Object.defineProperty) that
 *    constructs a minimal debug RQO on first access without eagerly computing it.
 *
@@ -299,9 +302,12 @@ export const set_context_vars = function(self) {
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
 				? default_show_interface
 				: (()=>{
-					const new_show_interface = (self.context.properties.show_interface)
-						? self.context.properties.show_interface
-						: self.request_config_object.show.interface
+					// clone: never mutate the source context / request_config object
+					const new_show_interface = {
+						...((self.context.properties.show_interface)
+							? self.context.properties.show_interface
+							: self.request_config_object.show.interface)
+					}
 					// add missing keys
 					for (const [key, value] of Object.entries(default_show_interface)) {
 						if (new_show_interface[key]===undefined) {
