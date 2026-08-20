@@ -187,6 +187,25 @@ $updates->$v = new stdClass();
 			'matrix_users'
 		];
 
+		// SPLIT OF THE LEGACY 'datos' CLEANUP (two drop steps, see both below).
+		// $ar_tables_auth is everything the v6 UI needs to AUTHENTICATE and render the
+		// maintenance dashboard: the user record, the profile its permissions resolve
+		// through, and the activity log the login path writes an audit row into
+		// (logger_backend_activity -> matrix_activity). Their 'datos' survives to the
+		// very last step so the operator can log back in and watch a multi-hour run.
+		// $ar_tables_bulk is everything else — every table that actually holds records.
+		// Their 'datos' is dropped at the ORIGINAL mid-pipeline position, on purpose:
+		// once reformat_matrix_data has frozen the typed columns, a v6 save writes only
+		// 'datos' and would be silently destroyed by the final drop. Dropping the column
+		// early makes such a save fail LOUDLY with a SQL error instead of losing data.
+		// v6 is monitoring-only during the migration; this is what enforces it.
+		$ar_tables_auth = [
+			'matrix_users',
+			'matrix_profiles',
+			'matrix_activity'
+		];
+		$ar_tables_bulk = array_values(array_diff($ar_tables, $ar_tables_auth));
+
 		// Create the new table structure, with new columns for data type.
 		// Each ADD COLUMN … IF NOT EXISTS is idempotent: re-running the update
 		// on a partially-migrated database will not duplicate columns.
@@ -572,6 +591,23 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
+		// Cleanup [1/2]: drop legacy 'datos' from the RECORD tables, at the original
+		// mid-pipeline position. Everything from here on reads the v7 typed columns, so
+		// nothing below needs 'datos' — and keeping it on the record tables through the
+		// hours-long tail would give a still-logged-in v6 user a way to "save" a record
+		// into a column that the final drop then deletes, with no error and no trace.
+		// The auth tables are deliberately excluded and dropped last (see [2/2]).
+		// stop_on_error=false: the IF EXISTS guard in the method makes a re-run a no-op.
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'DROP legacy "datos" column in the record matrix tables (keeps the auth tables until the end)',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'drop_legacy_datos_column',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+					$ar_tables_bulk
+				] // Note that only ONE argument encoded is sent
+			];
+
 	// Load class with update methods
 		require_once dirname(dirname(__FILE__)) .'/upgrade/class.dataframe_v7_migration.php';
 
@@ -687,28 +723,27 @@ $updates->$v = new stdClass();
 			] // Note that only ONE argument encoded is sent
 		];
 
-	// Cleanup: Remove the legacy 'datos' column from the matrix tables.
-	// (!) MUST BE THE VERY LAST STEP OF THE DESCRIPTOR — it is what makes the
-	// install v6-unusable, so nothing that takes real time may run after it.
+	// Cleanup [2/2]: drop legacy 'datos' from the AUTH tables only.
+	// (!) MUST BE THE VERY LAST STEP OF THE DESCRIPTOR — this is what finally makes
+	// the install v6-unusable, so nothing that takes real time may run after it.
 	// The v7 typed columns (data/relation/string/…) are ADDED alongside 'datos',
-	// never renamed over it, so until this step runs the v6 code still reads its
-	// own column and the v6 UI can still authenticate. On a large install the
-	// tail of this pipeline (dataframe migration → section_id intify → the search
-	// and relation-index backfills) runs for hours; dropping 'datos' before it,
-	// as this step used to, locked the operator out for the whole of that window
-	// — the browser session expires and matrix_users can no longer be read by v6,
-	// so the migration cannot even be monitored. Ordered here, v6 login survives
-	// until the migration is genuinely finished.
-	// Everything after reformat_matrix_data reads the typed columns, so no later
-	// step depends on 'datos'; keeping it only costs disk until this point.
+	// never renamed over it, so until this runs v6 can still read matrix_users and
+	// authenticate. On a large install the tail of this pipeline (dataframe
+	// migration → section_id intify → the search and relation-index backfills) runs
+	// for hours; dropping this before it locked the operator out for the whole
+	// window — the browser session expires and matrix_users can no longer be read
+	// by v6, so the migration could not even be monitored.
+	// The record tables lost their 'datos' back at [1/2], so this window allows
+	// logging in and watching, NOT editing: a v6 record save errors out instead of
+	// writing to a column that is about to be deleted.
 	// stop_on_error=false: if the column was already dropped the IF EXISTS guard
 	// in the method makes this a no-op; the pipeline should still complete.
 		$updates->$v->run_scripts[] = (object)[
-			'info'			=> 'DROP legacy "datos" column in matrix tables (Final cleanup)',
+			'info'			=> 'DROP legacy "datos" column in the auth matrix tables (Final cleanup — ends v6 login)',
 			'script_class'	=> 'v6_to_v7',
 			'script_method'	=> 'drop_legacy_datos_column',
 			'stop_on_error'	=> false,
 			'script_vars'	=> [
-				$ar_tables
+				$ar_tables_auth
 			] // Note that only ONE argument encoded is sent
 		];

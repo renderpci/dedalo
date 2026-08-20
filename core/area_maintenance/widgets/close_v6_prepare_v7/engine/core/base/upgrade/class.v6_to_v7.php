@@ -3020,7 +3020,19 @@ class v6_to_v7 {
 		$changed_rows	= 0;
 		$scanned_rows	= 0;
 		$findings		= []; // class => ['count'=>n, 'samples'=>[...]]
-		$batch_size		= 500;
+		// Batch size is ADAPTIVE on bytes, not just rows. A fixed row count with an
+		// unbounded payload size is a foreseeable OOM on exactly the large installs this
+		// sweep targets: the scan ships every matching jsonb column of the batch (the
+		// old per-column shape shipped one), and $writes then holds a second encoded
+		// copy. A PHP memory fatal is an Error, which update::run_scripts' catch
+		// (Exception) does NOT catch, so it would kill phase 2 hours in. Starting lower
+		// and adapting to the measured payload keeps a batch near the budget whatever
+		// the row width; the open transaction rolls back and the step is idempotent, so
+		// the worst case stays a re-run rather than a half-written table.
+		$batch_size			= 250;
+		$batch_size_max		= 1000;
+		$batch_size_min		= 25;
+		$batch_bytes_budget	= 64 * 1024 * 1024;
 		$started		= microtime(true);
 
 		// THROUGHPUT. This is a bulk rewrite, not transactional business work, and on a
@@ -3077,15 +3089,31 @@ class v6_to_v7 {
 				}
 
 			$escaped_table	= pg_escape_identifier($conn, $table);
-			// dd_ontology has no serial `id`; page on its primary tipo instead
-			$pk				= ($table==='dd_ontology') ? 'tipo' : 'id';
+			// (!) EVERY swept table pages on `id`, dd_ontology included. Its `id` IS a
+			// NOT NULL PRIMARY KEY (create_dd_ontology_table: ALTER id SET NOT NULL +
+			// ADD CONSTRAINT dd_ontology_id_pkey PRIMARY KEY (id)); `tipo` is only
+			// UNIQUE, and UNIQUE is not NOT NULL — it is CTAS'd from the nullable
+			// jer_dd.terminoID and never constrained afterwards, so an old install can
+			// carry NULL-tipo rows. Paging on a nullable key breaks three ways:
+			// `NULL > 'x'` is NULL so such a row is silently never swept (yet the
+			// success marker is still written); if it lands in a write batch the
+			// `WHERE t.tipo = v.pk` matches 0 rows and the affected-rows assert aborts
+			// the migration; and in dry-run `$last_pk` becomes null, which resets the
+			// keyset to TRUE and re-fetches the same batch forever.
+			$pk				= 'id';
 			$escaped_pk		= pg_escape_identifier($conn, $pk);
-			$pk_cast		= ($pk==='tipo') ? 'text' : 'bigint';
+			$pk_cast		= 'bigint';
 
 			// Candidate test. A string-typed address serialises as
 			// "section_id": "…" / "section_id_key": "…" / "parent_section_id": "…"
 			// (!) jsonb::text renders a space after the colon, hence the \s*.
-				$rx = '\'"(section_id|section_id_key|parent_section_id)":\s*"\'';
+				// (!) POSIX class, NOT \s. A backslash inside a plain SQL string literal is
+				// reinterpreted when standard_conforming_strings is off (legal, still
+				// settable per-cluster/per-role in PG17): `\s` degrades to `s` with only a
+				// WARNING, every candidate test then fails, and the sweep reports success
+				// and writes the section_id_int_normalize marker having converted nothing.
+				// [[:space:]] is the same matcher with no escape to lose.
+				$rx = '\'"(section_id|section_id_key|parent_section_id)":[[:space:]]*"\'';
 
 			// The CASE is evaluated inside a LATERAL closed with OFFSET 0 — an
 			// optimisation fence that stops the planner flattening the subquery, so each
@@ -3132,7 +3160,8 @@ class v6_to_v7 {
 				}
 
 				// signature => ['cols'=>[column,…], 'rows'=>[[pk, json, …], …]]
-				$writes = [];
+				$writes			= [];
+				$batch_bytes	= 0;
 
 				foreach ($rows as $row) {
 
@@ -3146,6 +3175,7 @@ class v6_to_v7 {
 						if ($payload===null) {
 							continue; // no string-typed address in this column
 						}
+						$batch_bytes += strlen($payload);
 						$decoded = json_handler::decode($payload);
 						if ($decoded===null) {
 							continue;
@@ -3180,7 +3210,14 @@ class v6_to_v7 {
 					if (empty($row_changed)) {
 						continue;
 					}
-					$changed_rows++;
+					// (!) COUNTED PER (row, column), NOT per row. The marker row written
+					// below is a shared contract: the v7 sibling writer
+					// (scripts/migrate_section_id_locators.ts) sweeps one table.column
+					// "surface" at a time and increments its changedRows per surface, so
+					// a row fixed in two columns counts twice there. Counting once per
+					// row here would silently make the two writers of the same
+					// section_id_int_normalize marker disagree.
+					$changed_rows += count($row_changed);
 					if ($save!==true) {
 						continue;
 					}
@@ -3244,11 +3281,23 @@ class v6_to_v7 {
 						}
 
 						if (pg_query($conn, 'COMMIT')===false) {
+							// ROLLBACK first: a failed COMMIT can leave the session in an
+							// aborted transaction, where every further statement — including
+							// the RESET below — is discarded, and the connection would go
+							// back to the runner with synchronous_commit still off.
+							pg_query($conn, 'ROLLBACK');
 							$response->msg = "intify_section_id_locators: COMMIT failed on $table: " . pg_last_error($conn);
 							debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
 							if ($sync_commit_off===true) { pg_query($conn, 'RESET synchronous_commit'); }
 							return $response;
 						}
+					}
+
+				// adapt the next batch to the payload weight actually observed
+					if ($batch_bytes > $batch_bytes_budget && $batch_size > $batch_size_min) {
+						$batch_size = max($batch_size_min, intdiv($batch_size, 2));
+					} else if ($batch_bytes < intdiv($batch_bytes_budget, 4) && $batch_size < $batch_size_max) {
+						$batch_size = min($batch_size_max, $batch_size * 2);
 					}
 
 				// CLI feedback (rate included: this step is long enough that the
