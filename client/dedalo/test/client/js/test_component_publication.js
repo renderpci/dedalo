@@ -114,7 +114,8 @@ async function cleanup_publication_record(section_id) {
 		}))
 		await instance.change_value({
 			changed_data	: changed_data,
-			refresh		: false
+			refresh			: false,
+			remove_dialog 	: () => true
 		})
 	}
 
@@ -594,10 +595,11 @@ describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 					value	: updated_locator
 				})]
 
-				const api_response = await instance.change_value({
-					changed_data	: changed_data,
-					refresh		: false
-				})
+const api_response = await instance.change_value({
+				changed_data	: changed_data,
+				refresh			: false,
+				remove_dialog 	: () => true
+			})
 
 				assert.notEqual(api_response, null, 'api_response must not be null on update')
 			}
@@ -804,7 +806,8 @@ describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 
 				const remove_resp = await instance.change_value({
 					changed_data	: remove_data,
-					refresh		: false
+					refresh			: false,
+					remove_dialog 	: () => true
 				})
 
 				assert.notEqual(remove_resp, null, 'REMOVE: api_response must not be null')

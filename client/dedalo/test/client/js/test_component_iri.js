@@ -293,7 +293,8 @@ describe(`COMPONENT_IRI DATA OPERATIONS`, function() {
 
 			await instance.change_value({
 				changed_data	: changed_data,
-				refresh		: true
+				refresh			: true,
+				remove_dialog 	: () => true
 			})
 		}
 	});
