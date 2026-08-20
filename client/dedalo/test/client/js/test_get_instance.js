@@ -84,7 +84,6 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 
 			const tools = [
 				'tool_cataloging',
-				'tool_common',
 				'tool_dd_label',
 				'tool_dev_template',
 				'tool_diffusion',
@@ -99,7 +98,6 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 				'tool_indexation',
 				'tool_lang',
 				'tool_lang_multi',
-				'tool_leaflet_special_tools',
 				'tool_media_versions',
 				'tool_numisdata_epigraphy',
 				'tool_numisdata_order_coins',
