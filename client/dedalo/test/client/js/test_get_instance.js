@@ -144,7 +144,7 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 							section_id		: '1',
 							rqo				: { source : {}, sqo : { section_tipo : 'test3', limit : 10 } },
 							context			: { type : 'component', features : {} },
-							data			: { value : [] },
+							data			: { value : [{ offset : 0 }] },
 							editors			: [{ get : () => ({json:[]}) }]
 						}
 					},
