@@ -40,6 +40,7 @@ export const permissions	= 2
 // SUITE_ISOLATION_RECORDS). Read-only suites keep the shared section_id (1).
 export const date_section_id	= 11 // test_component_date owns test3/11
 export const iri_section_id		= 12 // test_component_iri owns test3/12
+export const geo_section_id		= 14 // test_component_geolocation owns test3/14
 
 
 
@@ -174,7 +175,7 @@ export const iri_section_id		= 12 // test_component_iri owns test3/12
 		model				: 'component_geolocation',
 		tipo				: 'test100',
 		section_tipo		: section_tipo,
-		section_id			: section_id,
+		section_id			: geo_section_id, // own record (test3/14) — see per-suite isolation above
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_geolocation,

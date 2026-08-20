@@ -223,20 +223,23 @@ describe(`COMPONENT_SELECT DATA OPERATIONS`, function() {
 			assert.isOk(select_el, 'expected select element in DOM')
 
 		// get datalist options
+		// An empty datalist, or one with no usable option, is not a reason to
+		// skip: it is the exact condition that leaves the widget unable to save
+		// anything. Assert it instead of guarding it away.
 			const datalist = instance.data.datalist || []
-			if (datalist.length > 0) {
-				// find a non-empty datalist item
-				const datalist_item = datalist.find(el => el.value !== null)
-				if (datalist_item) {
-					// simulate change event by setting select value and dispatching
-					select_el.value = JSON.stringify(datalist_item.value)
-					select_el.dispatchEvent(new Event('change', { bubbles: true }))
-					// verify changed_data was set
-					assert.isOk(instance.data.changed_data, 'changed_data expected after select change')
-					assert.equal(instance.data.changed_data[0].action, 'update', 'changed_data action expected update')
+			assert.isAbove(datalist.length, 0, 'datalist expected to offer options')
 
-				}
-			}
+			const datalist_item = datalist.find(el => el.value !== null)
+			assert.isOk(datalist_item, 'datalist expected to offer an option with a value')
+
+			// simulate change event by setting select value and dispatching
+			select_el.value = JSON.stringify(datalist_item.value)
+			select_el.dispatchEvent(new Event('change', { bubbles: true }))
+
+			// verify changed_data was set
+			assert.isOk(instance.data.changed_data, 'changed_data expected after select change')
+			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
+			assert.equal(instance.data.changed_data[0].action, 'update', 'changed_data action expected update')
 	});
 
 
@@ -250,10 +253,12 @@ describe(`COMPONENT_SELECT DATA OPERATIONS`, function() {
 		select_el.value = ''
 		select_el.dispatchEvent(new Event('change', { bubbles: true }))
 
-		// verify changed_data action is remove
-		if (instance.data.changed_data) {
-			assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on empty select')
-		}
+		// verify changed_data action is remove. A missing/empty changed_data is a
+		// FAILURE here (the previous case left a value selected), not a reason to
+		// pass silently.
+		assert.isOk(instance.data.changed_data, 'changed_data expected after emptying the select')
+		assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
+		assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on empty select')
 	});
 
 

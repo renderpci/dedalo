@@ -194,10 +194,6 @@ const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([
 		'test_component_3d',
 		'"change_value remove expected response: expected false to be truthy" — the remove path answers false, then the suite times out waiting on the follow-up (20s)',
 	],
-	[
-		'test_component_publication',
-		'"the api_response payload must not be null: expected undefined to not equal null" on ADD — the server refuses the link with error.code relation.insert_refused, so the payload never arrives',
-	],
 ]);
 
 /**
@@ -205,6 +201,11 @@ const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([
  * excused — named so a red run can be read honestly, and so the next person
  * re-runs it alone before believing it. `test_component_select_lang` failed in
  * one of two consecutive baseline runs with no code change between them.
+ * This list ANNOTATES a red run — it never excuses one: a flaky suite that fails
+ * is still an unexpected failure. (`test_component_geolocation` was listed here
+ * for a day; its "flakiness" was record pollution — its saves appended and its
+ * removes left null holes in the SHARED record — and it now owns test3/14 with a
+ * teardown, so it is deterministic and off the list.)
  */
 const KNOWN_FLAKY: readonly string[] = ['test_component_select_lang'];
 

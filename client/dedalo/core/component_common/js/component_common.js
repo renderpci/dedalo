@@ -1316,8 +1316,14 @@ component_common.prototype.change_value = async function(options) {
 		// UIUX-01: changed_data items are objects ({action, ...}), not strings.
 		// The old `changed_data[0]==='remove'` was always false, so the accidental-
 		// delete confirmation never fired. Detect a remove action anywhere in the batch.
+		// UIUX-02: `remove_dialog: false` means NO PROMPT, as its callers document
+		// (component_select / component_radio_button clear a selection — that is an
+		// edit, not a record deletion). The resolver below only ever accepted a
+		// FUNCTION, so `false` fell through to the default confirm() and produced a
+		// modal on every cleared select/radio — the exact opposite of the intent.
+		// Only an explicit `false` skips; anything else keeps the default prompt.
 		const action = changed_data[0]?.action
-		if ( changed_data.some(el => el && el.action==='remove') ) {
+		if ( custom_remove_dialog!==false && changed_data.some(el => el && el.action==='remove') ) {
 
 			// generate default remove dialog to confirm the remove option is correct
 			// to overwrite this dialog use something as:

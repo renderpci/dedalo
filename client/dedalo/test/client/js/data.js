@@ -238,19 +238,21 @@ export const random_email_value = function() {
 
 	export const random_filter_records_value = function() {
 
+		// One ENTRY of component_filter_records, whose canonical shape is
+		// {id, tipo, value:[int]} — the shape view_default_edit_filter_records
+		// reads (entries.find(item => item.tipo===tipo), then item.value.join(',')).
+		// It used to return the CHANGED_DATA envelope instead ({id, value:[{tipo,
+		// value}]}), and since the sweep saves new_value as the entry value that
+		// wrote a malformed entry into the shared record — which is why the
+		// lifecycle suite's `data structure` case had to skip itself.
+
 		// randomly generated N = 40 length array 0 <= A[N] <= 39
 		const value = Array.from({length: 40}, () => Math.floor(Math.random() * 40));
 
-		const item = {
-			tipo : 'rsc167',
-			value : value
-		}
-
-		const result = [item]
-
 		const data_element = {
 			id : 1,
-			value : result
+			tipo : 'rsc167',
+			value : value
 		}
 
 		return data_element;

@@ -1,13 +1,10 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global it, describe, assert, page_globals, DD_TIPOS */
+/*global it, describe, before, after, assert, page_globals */
 /*eslint no-undef: "error"*/
 'use strict';
 
-import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-import {event_manager} from '../../../core/common/js/event_manager.js'
-import {data_manager} from '../../../core/common/js/data_manager.js'
+import {get_instance} from '../../../core/common/js/instances.js'
 import {ui} from '../../../core/common/js/ui.js'
-import {clone, pause} from '../../../core/common/js/utils/util.js'
 import {response_data} from '../../../core/common/js/api_error.js'
 
 
@@ -16,15 +13,20 @@ import {response_data} from '../../../core/common/js/api_error.js'
 const publication_model		= 'component_publication'
 const publication_tipo		= 'test92'
 const publication_section	= 'test3'
-// Isolation record (manifest.ts SUITE_ISOLATION_RECORDS[13]) — this suite's add/
-// remove/update cases mutate the record's test92 locator directly, several
-// without cleanup; record 1 is the shared canonical record other suites (the
-// generic component sweeps) render and expect a single zero-or-one value.
+// Isolation record (manifest.ts SUITE_ISOLATION_RECORDS[13]) — this suite's
+// change/remove cases mutate the record's test92 locator directly; record 1 is
+// the shared canonical record other suites (the generic component sweeps)
+// render and expect at its own value.
 const publication_section_id	= 13
 const publication_lang		= page_globals?.dedalo_data_nolan ?? 'lg-nolan'
 
+// publication states, as the ontology datalist models them:
+// section_id 1 = published (yes), 2 = unpublished (no).
+// @see render_edit_component_publication get_content_value
+const STATE_PUBLISHED	= 1
+const STATE_UNPUBLISHED	= 2
+
 // modes and views to test
-const ar_modes		= ['edit', 'list', 'search']
 const ar_views_edit	= ['default', 'line']
 const ar_views_list	= ['default', 'line', 'mini', 'text']
 
@@ -68,54 +70,93 @@ async function get_publication_instance(mode, view, section_id) {
 
 
 /**
-* MAKE_LOCATOR
-* Creates a locator object for publication data operations
-* @param {number|string} section_id - Target section ID
-* @param {string} section_tipo - Target section tipo
-* @return {object} Locator object
+* GET_ENTRIES
+* The component data model is an OBJECT — {entries, datalist, q_operator} —
+* never an array. `entries` holds at most one locator (publication is a binary
+* switch); `datalist` is the full resolved option list.
+* @see component_publication class docblock
+* @param {object} instance
+* @return {array} Stored locators (empty array when nothing is set)
 */
-function make_locator(section_id, section_tipo) {
+function get_entries(instance) {
 
-	section_tipo = section_tipo || publication_section
+	return instance.data?.entries ?? []
+}//end get_entries
 
-	return {
-		section_tipo			: section_tipo,
-		section_id				: String(section_id),
-		from_component_tipo		: publication_tipo,
-		type					: DD_TIPOS?.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
-	}
-}//end make_locator
+
+
+/**
+* GET_STATE_LOCATOR
+* Resolves the locator of a publication state from the component's OWN
+* datalist, exactly as the edit switcher does. A synthetic locator (a made-up
+* section_id, or the host section_tipo) is refused by the server with
+* relation.insert_refused/off_target: test92's ontology target section is the
+* publication vocabulary, not `test3`.
+* @see render_edit_component_publication get_content_value
+* @param {object} instance
+* @param {number} state - STATE_PUBLISHED | STATE_UNPUBLISHED
+* @return {object} Locator value posted verbatim to the server
+*/
+function get_state_locator(instance, state) {
+
+	const datalist	= instance.data?.datalist ?? []
+	const option	= datalist.find(el => el.section_id==state)
+
+	assert.ok(option, `datalist must offer the publication state ${state}`)
+
+	return option.value
+}//end get_state_locator
+
+
+
+/**
+* SET_PUBLICATION_STATE
+* Saves a publication state through the exact path the switcher uses: action
+* 'update', id recovered from the current entry (null when never saved).
+* @param {object} instance
+* @param {number} state - STATE_PUBLISHED | STATE_UNPUBLISHED
+* @return {Promise<object|false>} The api_response of the save
+*/
+async function set_publication_state(instance, state) {
+
+	const entries = get_entries(instance)
+
+	const changed_data = [Object.freeze({
+		action	: 'update',
+		id		: entries[0]?.id ?? null,
+		value	: get_state_locator(instance, state)
+	})]
+
+	return await instance.change_value({
+		changed_data	: changed_data,
+		refresh			: false
+	})
+}//end set_publication_state
 
 
 
 /**
 * CLEANUP_PUBLICATION_RECORD
-* Removes every test92 locator from the working record.
-* component_publication is a BINARY switch (one locator max: section_id "1"=yes,
-* "2"=no). The add/change/remove cases below insert DISTINCT synthetic locators
-* (9001…9060) via change_value and their conditional removes frequently no-op,
-* so without this teardown the record accumulates one stray toggle per run
-* (see manifest.ts SUITE_ISOLATION_RECORDS[13]). Called from `after` hooks to
-* keep record 13 at its zero-value baseline.
+* Removes every test92 locator from the working record, returning it to its
+* zero-value baseline so the shared record never carries a state this suite set.
 * @param {number|string} [section_id=publication_section_id] - Target record
 * @return {Promise<void>}
 */
 async function cleanup_publication_record(section_id) {
 
-	const instance = await get_publication_instance('edit', 'default', section_id ?? publication_section_id)
+	const instance	= await get_publication_instance('edit', 'default', section_id ?? publication_section_id)
+	const entries	= get_entries(instance)
 
-	// instance.data is the array of current test92 locators (each with an .id)
-	const entries = Array.isArray(instance.data) ? instance.data : []
 	if (entries.length > 0) {
 		const changed_data = entries.map(el => Object.freeze({
 			action	: 'remove',
-			id		: el.id,
+			id		: el.id ?? null,
 			value	: null
 		}))
 		await instance.change_value({
 			changed_data	: changed_data,
 			refresh			: false,
-			remove_dialog 	: () => true
+			remove_dialog	: () => true
 		})
 	}
 
@@ -230,14 +271,27 @@ describe(`COMPONENT_PUBLICATION LIFECYCLE`, async function() {
 			await instance.destroy(true, true, true)
 		})
 
-		it(`${publication_model} build sets publication-specific properties`, async function() {
+		it(`${publication_model} build serves the binary datalist`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default')
 
-			// asserts on publication-specific build properties
-			assert.notEqual(instance.context, null, 'context must not be null after build')
-			assert.notEqual(instance.data, null, 'data must not be null after build')
-			assert.notEqual(instance.permissions, null, 'permissions must not be null after build')
+			// The switcher resolves the locator it saves from data.datalist; without
+			// both states the toggle can only ever save undefined.
+			const datalist = instance.data?.datalist ?? []
+			assert.ok(Array.isArray(datalist), 'data.datalist must be an array')
+			assert.ok(
+				datalist.some(el => el.section_id==STATE_PUBLISHED),
+				'datalist must carry the published option (section_id 1)'
+			)
+			assert.ok(
+				datalist.some(el => el.section_id==STATE_UNPUBLISHED),
+				'datalist must carry the unpublished option (section_id 2)'
+			)
+
+			// entries is the stored-locator array, and publication is binary
+			const entries = get_entries(instance)
+			assert.ok(Array.isArray(entries), 'data.entries must be an array')
+			assert.ok(entries.length <= 1, 'publication holds at most one locator')
 
 			await instance.destroy(true, true, true)
 		})
@@ -325,7 +379,7 @@ describe(`COMPONENT_PUBLICATION LIFECYCLE`, async function() {
 		it(`${publication_model} destroy without removing DOM`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default')
-			const node = await instance.render()
+			await instance.render()
 
 			const destroy_result = await instance.destroy(
 				true,  // delete_self
@@ -344,16 +398,15 @@ describe(`COMPONENT_PUBLICATION LIFECYCLE`, async function() {
 
 
 // ─────────────────────────────────────────────
-// 2. DATA OPERATIONS: ADD / CHANGE / REMOVE
+// 2. DATA OPERATIONS: SET / CHANGE / REMOVE
 // ─────────────────────────────────────────────
 
 describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 
 	this.timeout(30000)
 
-	// Teardown: the add/remove/update cases below insert stray test92 locators
-	// (9001…9030) whose conditional removes frequently no-op; clear the record
-	// so the binary publication switch never accumulates extra toggles.
+	// Teardown: these cases write a real publication state on the isolation
+	// record; clear it so the binary switch is back at its zero-value baseline.
 	after(async function() {
 		this.timeout(30000)
 		await cleanup_publication_record()
@@ -361,79 +414,86 @@ describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 
 
 
-	// ─── ADD DATA (change_value with insert) ─────────
+	// ─── SET DATA (change_value) ─────────────────
 
-	describe(`ADD DATA`, function() {
+	describe(`SET DATA`, function() {
 
-		it(`${publication_model} add locator via change_value`, async function() {
+		it(`${publication_model} set published state via change_value`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default', publication_section_id)
 			await instance.render()
 
-			// get initial data count
-			const data_before = Array.isArray(instance.data) ? instance.data : []
-			const count_before = data_before.length
-
-			// create locator to add
-			const locator = make_locator(9001)
-
-			// add via change_value
-			const changed_data = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator
-			})]
-
-			const api_response = await instance.change_value({
-				changed_data	: changed_data,
-				refresh		: false
-			})
+			const api_response = await set_publication_state(instance, STATE_PUBLISHED)
 
 			// asserts
 			assert.notEqual(api_response, null, 'api_response must not be null')
 			assert.notEqual(response_data(api_response), null, 'the api_response payload must not be null')
 
+			const entries = get_entries(instance)
+			assert.equal(entries.length, 1, 'publication must hold exactly one locator')
+			assert.equal(entries[0].section_id, STATE_PUBLISHED, 'the stored locator must be the published option')
+
 			await instance.destroy(true, true, true)
 		})
 
-		it(`${publication_model} change_handler in edit mode`, async function() {
+		it(`${publication_model} change_handler saves the state in edit mode`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default', publication_section_id)
 			await instance.render()
 
-			// add a locator via change_handler
-			const locator = make_locator(9002)
-			const result = await instance.change_handler({
-				value		: locator,
-				action		: 'update',
-				index		: 0
+			const locator	= get_state_locator(instance, STATE_UNPUBLISHED)
+			const entries	= get_entries(instance)
+			const result	= await instance.change_handler({
+				value	: locator,
+				action	: 'update',
+				index	: 0
 			})
 
-			// asserts
+			// asserts. change_handler answers true unconditionally, so the state
+			// it left behind — not its return value — is what proves the save.
 			assert.equal(result, true, 'change_handler must return true')
+
+			const entries_after = get_entries(instance)
+			assert.equal(entries_after.length, 1, 'publication must hold exactly one locator')
+			assert.equal(entries_after[0].section_id, STATE_UNPUBLISHED, 'the stored locator must be the unpublished option')
+			assert.equal(entries_after.length, Math.max(entries.length, 1), 'a toggle must replace, never accumulate')
 
 			await instance.destroy(true, true, true)
 		})
 
-		it(`${publication_model} change_handler in search mode`, async function() {
+		it(`${publication_model} change_handler in search mode does not save`, async function() {
+
+			// the stored state, read before the search-mode change, is the witness
+			const before		= await get_publication_instance('edit', 'default', publication_section_id)
+			const stored_before	= get_entries(before).map(el => el.section_id)
+			await before.destroy(true, true, true)
 
 			const instance = await get_publication_instance('search', 'default', publication_section_id)
 			await instance.render()
 
-			// add a locator via change_handler in search mode
-			const locator = make_locator(9003)
-			const result = await instance.change_handler({
-				value		: locator,
-				action		: 'update',
-				index		: 0
+			const locator	= get_state_locator(instance, STATE_PUBLISHED)
+			const result	= await instance.change_handler({
+				value	: locator,
+				action	: 'update',
+				index	: 0
 			})
 
-			// asserts - search mode updates data without saving
+			// asserts — search mode updates the in-memory data only
 			assert.equal(result, true, 'change_handler must return true in search mode')
 
+			const entries = get_entries(instance)
+			assert.equal(entries.length, 1, 'search data must carry the selected option')
+			assert.equal(entries[0].section_id, STATE_PUBLISHED, 'search data must carry the published option')
+
 			await instance.destroy(true, true, true)
+
+			// the search selection must NOT have reached the record
+			const check		= await get_publication_instance('edit', 'default', publication_section_id)
+			const stored	= get_entries(check).map(el => el.section_id)
+			assert.deepEqual(stored, stored_before, 'a search-mode change must not be persisted')
+			await check.destroy(true, true, true)
 		})
-	})//end describe ADD DATA
+	})//end describe SET DATA
 
 
 
@@ -446,104 +506,66 @@ describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 			const instance = await get_publication_instance('edit', 'default', publication_section_id)
 			await instance.render()
 
-			// add a locator to ensure there's something to remove
-			const locator = make_locator(9010)
-			const add_data = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator
-			})]
-			const add_resp = await instance.change_value({
-				changed_data	: add_data,
-				refresh		: false
-			})
-			await instance.refresh({
-				build_autoload		: true,
-				tmp_api_response	: add_resp
-			})
+			// ensure there is something to remove
+			await set_publication_state(instance, STATE_PUBLISHED)
 
-			const data_after_add = Array.isArray(instance.data) ? instance.data : []
-
-			// skip test if data couldn't be added
-			if (data_after_add.length === 0) {
-				console.log('Skipping remove test - could not add test data')
-				await instance.destroy(true, true, true)
-				return
-			}
-
-			// find the locator we just added
-			const target = data_after_add.find(el =>
-				String(el.section_id) === '9010' && el.section_tipo === publication_section
-			)
-
-			// if target not found, try any existing locator
-			const remove_target = target || data_after_add[0]
-
-			if (!remove_target) {
-				console.log('Skipping remove test - no data available to remove')
-				await instance.destroy(true, true, true)
-				return
-			}
+			const entries = get_entries(instance)
+			assert.equal(entries.length, 1, 'setup: the state must be set before removing it')
 
 			// remove using change_value
 			const changed_data = [Object.freeze({
 				action	: 'remove',
-				id		: remove_target.id,
+				id		: entries[0].id ?? null,
 				value	: null
 			})]
 
 			const api_response = await instance.change_value({
 				changed_data	: changed_data,
-				refresh		: false
+				refresh			: false,
+				remove_dialog	: () => true
 			})
 
 			// asserts
 			assert.notEqual(api_response, null, 'api_response must not be null on remove')
+			assert.notEqual(api_response, false, 'the remove dialog must not have cancelled the remove')
+			assert.equal(get_entries(instance).length, 0, 'the locator must be gone after remove')
 
 			await instance.destroy(true, true, true)
+
+			// and it must be gone on the record, not only in memory
+			const check = await get_publication_instance('edit', 'default', publication_section_id)
+			assert.equal(get_entries(check).length, 0, 'the removed locator must not come back from the server')
+			await check.destroy(true, true, true)
 		})
 
-		it(`${publication_model} change_handler with remove action`, async function() {
+		it(`${publication_model} change_handler with remove action (search mode)`, async function() {
 
-			const instance = await get_publication_instance('edit', 'default', publication_section_id)
+			// The ONLY caller of change_handler's remove branch is the search
+			// render's radio uncheck (render_search_component_publication:257).
+			// Search mode never reaches change_value, so no remove_dialog is
+			// involved; the edit remove path is covered above through
+			// change_value, which takes the dialog as an argument. change_handler
+			// takes none, so exercising its EDIT remove branch would raise the
+			// client's native confirm() — a modal the suite must not depend on.
+			const instance = await get_publication_instance('search', 'default', publication_section_id)
 			await instance.render()
 
-			// add a locator first
-			const locator = make_locator(9020)
-			const add_data = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator
-			})]
-			const add_resp = await instance.change_value({
-				changed_data	: add_data,
-				refresh		: false
+			// stage a selection, then unselect it
+			await instance.change_handler({
+				value	: get_state_locator(instance, STATE_PUBLISHED),
+				action	: 'update',
+				index	: 0
 			})
-			await instance.refresh({
-				build_autoload		: true,
-				tmp_api_response	: add_resp
+			assert.equal(get_entries(instance).length, 1, 'setup: the option must be staged before removing it')
+
+			const result = await instance.change_handler({
+				value	: null,
+				action	: 'remove',
+				index	: 0
 			})
 
-			// remove using change_handler
-			const data = Array.isArray(instance.data) ? instance.data : []
-
-			// skip if no data available
-			if (data.length === 0) {
-				console.log('Skipping change_handler remove test - no data available')
-				await instance.destroy(true, true, true)
-				return
-			}
-
-			const target = data.find(el => String(el.section_id) === '9020')
-			if (target) {
-				const result = await instance.change_handler({
-					value		: null,
-					action		: 'remove',
-					index		: 0
-				})
-
-				assert.equal(result, true, 'change_handler remove must return true')
-			}
+			assert.equal(result, true, 'change_handler remove must return true')
+			assert.equal(get_entries(instance).length, 0, 'the staged option must be gone after change_handler remove')
 
 			await instance.destroy(true, true, true)
 		})
@@ -551,58 +573,28 @@ describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 
 
 
-	// ─── CHANGE DATA (update) ─────────────────────
+	// ─── CHANGE DATA (toggle) ─────────────────────
 
 	describe(`CHANGE DATA`, function() {
 
-		it(`${publication_model} update locator via change_value`, async function() {
+		it(`${publication_model} toggling the state replaces the locator`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default', publication_section_id)
 			await instance.render()
 
-			// add a locator first
-			const locator = make_locator(9030)
-			const add_data = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator
-			})]
-			const add_resp = await instance.change_value({
-				changed_data	: add_data,
-				refresh		: false
-			})
-			await instance.refresh({
-				build_autoload		: true,
-				tmp_api_response	: add_resp
-			})
+			// published…
+			await set_publication_state(instance, STATE_PUBLISHED)
+			assert.equal(get_entries(instance)[0]?.section_id, STATE_PUBLISHED, 'setup: must be published')
 
-			// update using change_value
-			const updated_locator = make_locator(9031)
-			const data = Array.isArray(instance.data) ? instance.data : []
+			// …then unpublished, through the same update path
+			const api_response = await set_publication_state(instance, STATE_UNPUBLISHED)
 
-			// skip if no data available
-			if (data.length === 0) {
-				console.log('Skipping update test - no data available')
-				await instance.destroy(true, true, true)
-				return
-			}
+			assert.notEqual(api_response, null, 'api_response must not be null on update')
+			assert.notEqual(response_data(api_response), null, 'the api_response payload must not be null on update')
 
-			const target = data.find(el => String(el.section_id) === '9030')
-			if (target) {
-				const changed_data = [Object.freeze({
-					action	: 'update',
-					id		: target.id,
-					value	: updated_locator
-				})]
-
-const api_response = await instance.change_value({
-				changed_data	: changed_data,
-				refresh			: false,
-				remove_dialog 	: () => true
-			})
-
-				assert.notEqual(api_response, null, 'api_response must not be null on update')
-			}
+			const entries = get_entries(instance)
+			assert.equal(entries.length, 1, 'the binary switch must never hold two locators')
+			assert.equal(entries[0].section_id, STATE_UNPUBLISHED, 'the locator must be the unpublished option')
 
 			await instance.destroy(true, true, true)
 		})
@@ -622,20 +614,18 @@ describe(`COMPONENT_PUBLICATION SPECIFIC METHODS`, async function() {
 
 
 
-
-
-
 	// ─── GET_VALUE ───────────────────────────────
 
 	describe(`GET_VALUE`, function() {
 
-		it(`${publication_model} get_value returns data`, async function() {
+		it(`${publication_model} get_value returns data.entries`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default', publication_section_id)
 
 			const result = instance.get_value()
 
-			assert.ok(Array.isArray(result) || result === null, 'get_value must return array or null')
+			assert.ok(Array.isArray(result), 'get_value must return the entries array')
+			assert.equal(result, instance.data.entries, 'get_value must return data.entries itself')
 
 			await instance.destroy(true, true, true)
 		})
@@ -647,77 +637,45 @@ describe(`COMPONENT_PUBLICATION SPECIFIC METHODS`, async function() {
 
 	describe(`SET_VALUE`, function() {
 
-		it(`${publication_model} set_value updates data`, async function() {
+		it(`${publication_model} set_value updates data (in memory, no save)`, async function() {
 
 			const instance = await get_publication_instance('edit', 'default', publication_section_id)
 
-			const locator = make_locator(9040)
-			const result = instance.set_value([locator])
+			const locator	= get_state_locator(instance, STATE_PUBLISHED)
+			const result	= instance.set_value([locator])
 
 			assert.equal(result, true, 'set_value must return true')
+			assert.deepEqual(instance.get_value(), [locator], 'set_value must round-trip through get_value')
 
+			// set_value writes only the in-memory model — the record is untouched
 			await instance.destroy(true, true, true)
+
+			const check = await get_publication_instance('edit', 'default', publication_section_id)
+			assert.equal(get_entries(check).length, 0, 'set_value must not have persisted anything')
+			await check.destroy(true, true, true)
 		})
 	})//end describe SET_VALUE
-
-
-
-	// ─── CHANGE_HANDLER ───────────────────────────
-
-	describe(`CHANGE_HANDLER`, function() {
-
-		it(`${publication_model} change_handler with update action`, async function() {
-
-			const instance = await get_publication_instance('edit', 'default', publication_section_id)
-
-			const locator = make_locator(9050)
-			const result = await instance.change_handler({
-				value		: locator,
-				action		: 'update',
-				index		: 0
-			})
-
-			assert.equal(result, true, 'change_handler must return true')
-
-			await instance.destroy(true, true, true)
-		})
-
-		it(`${publication_model} change_handler with remove action`, async function() {
-
-			const instance = await get_publication_instance('edit', 'default', publication_section_id)
-
-			const result = await instance.change_handler({
-				value		: null,
-				action		: 'remove',
-				index		: 0
-			})
-
-			assert.equal(result, true, 'change_handler remove must return true')
-
-			await instance.destroy(true, true, true)
-		})
-	})//end describe CHANGE_HANDLER
 
 })//end describe COMPONENT_PUBLICATION SPECIFIC METHODS
 
 
 
 // ─────────────────────────────────────────────
-// 4. FULL LIFECYCLE: CREATE → ADD → CHANGE → REMOVE → DESTROY
+// 4. FULL LIFECYCLE: CREATE → SET → CHANGE → REMOVE → DESTROY
 // ─────────────────────────────────────────────
 
 describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 
 	this.timeout(60000)
 
-	// Teardown: the complete-lifecycle case inserts locator 9060 and its
-	// conditional remove can no-op; clear the record to its zero-value baseline.
+	// Teardown: the complete-lifecycle case writes a real publication state;
+	// clear the record back to its zero-value baseline.
 	after(async function() {
 		this.timeout(30000)
 		await cleanup_publication_record()
 	})
 
-	it(`${publication_model} complete lifecycle: init → build → render → add → change → remove → destroy`, async function() {
+	it(`${publication_model} complete lifecycle: init → build → render → set → change → remove → destroy`, async function() {
 
 		// INIT
 			const options = {
@@ -748,70 +706,39 @@ describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 			assert.equal(instance.status, 'rendered', 'RENDER: status must be rendered')
 			assert.notEqual(node, null, 'RENDER: node must not be null')
 
-		// get initial data count
-			const data_before = Array.isArray(instance.data) ? instance.data : []
-			const count_before = data_before.length
+		// SET DATA — publish
+			const set_resp = await set_publication_state(instance, STATE_PUBLISHED)
 
-		// ADD DATA - insert locator
-			const locator1 = make_locator(9060)
-			const add_data = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator1
-			})]
-			const add_resp = await instance.change_value({
-				changed_data	: add_data,
-				refresh		: false
-			})
-			await instance.refresh({
-				build_autoload		: true,
-				tmp_api_response	: add_resp
-			})
+			assert.notEqual(set_resp, null, 'SET: api_response must not be null')
+			assert.notEqual(response_data(set_resp), null, 'SET: the api_response payload must not be null')
+			assert.equal(get_entries(instance)[0]?.section_id, STATE_PUBLISHED, 'SET: must be published')
 
-			assert.notEqual(add_resp, null, 'ADD: api_response must not be null')
-			assert.notEqual(response_data(add_resp), null, 'ADD: the api_response payload must not be null')
+		// CHANGE DATA — unpublish
+			const change_resp = await set_publication_state(instance, STATE_UNPUBLISHED)
 
-		// CHANGE DATA - update locator
-			const data_before_change = Array.isArray(instance.data) ? instance.data : []
-			const target = data_before_change.find(el => String(el.section_id) === '9060')
-			if (target) {
-				const updated_locator = make_locator(9062)
-				const change_data = [Object.freeze({
-					action	: 'update',
-					id		: target.id,
-					value	: updated_locator
-				})]
-
-				const change_resp = await instance.change_value({
-					changed_data	: change_data,
-					refresh		: false
-				})
-
-				assert.notEqual(change_resp, null, 'CHANGE: api_response must not be null')
-			}
+			assert.notEqual(change_resp, null, 'CHANGE: api_response must not be null')
+			assert.equal(get_entries(instance).length, 1, 'CHANGE: must hold exactly one locator')
+			assert.equal(get_entries(instance)[0].section_id, STATE_UNPUBLISHED, 'CHANGE: must be unpublished')
 
 		// GET_VALUE
 			const value = instance.get_value()
-			assert.ok(Array.isArray(value) || value === null, 'CHANGE: get_value must return array|null')
+			assert.ok(Array.isArray(value), 'GET_VALUE: must return the entries array')
 
-		// REMOVE DATA - remove locator
-			const data_before_remove = Array.isArray(instance.data) ? instance.data : []
-			const remove_target = data_before_remove.find(el => String(el.section_id) === '9062')
-			if (remove_target) {
-				const remove_data = [Object.freeze({
+		// REMOVE DATA
+			const remove_target = get_entries(instance)[0]
+			const remove_resp = await instance.change_value({
+				changed_data	: [Object.freeze({
 					action	: 'remove',
-					id		: remove_target.id,
+					id		: remove_target.id ?? null,
 					value	: null
-				})]
+				})],
+				refresh			: false,
+				remove_dialog	: () => true
+			})
 
-				const remove_resp = await instance.change_value({
-					changed_data	: remove_data,
-					refresh			: false,
-					remove_dialog 	: () => true
-				})
-
-				assert.notEqual(remove_resp, null, 'REMOVE: api_response must not be null')
-			}
+			assert.notEqual(remove_resp, null, 'REMOVE: api_response must not be null')
+			assert.notEqual(remove_resp, false, 'REMOVE: the dialog must not have cancelled the remove')
+			assert.equal(get_entries(instance).length, 0, 'REMOVE: no locator must remain')
 
 		// DESTROY
 			const destroy_result = await instance.destroy(true, true, true)

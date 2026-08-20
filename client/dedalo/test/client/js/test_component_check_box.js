@@ -231,39 +231,43 @@ describe(`COMPONENT_CHECK_BOX DATA OPERATIONS`, function() {
 			assert.isOk(checkboxes.length > 0, 'expected checkbox inputs in DOM')
 
 		// get datalist
+		// An empty datalist, or a form with nothing left to check, is not a reason
+		// to skip: it is the exact condition that leaves the widget unable to save
+		// anything. Assert it instead of guarding it away.
 			const datalist = instance.data.datalist || []
-			if (datalist.length > 0) {
-				// find an unchecked checkbox
-				const unchecked = Array.from(checkboxes).find(cb => !cb.checked)
-				if (unchecked) {
-					// simulate check
-					unchecked.checked = true
-					unchecked.dispatchEvent(new Event('change', { bubbles: true }))
+			assert.isAbove(datalist.length, 0, 'datalist expected to offer options')
 
-					// verify changed_data was set
-					assert.isOk(instance.data.changed_data, 'changed_data expected after checkbox check')
-					assert.equal(instance.data.changed_data[0].action, 'insert', 'changed_data action expected insert')
-				}
-			}
+			const unchecked = Array.from(checkboxes).find(cb => !cb.checked)
+			assert.isOk(unchecked, 'an unchecked checkbox expected to check')
+
+			// simulate check
+			unchecked.checked = true
+			unchecked.dispatchEvent(new Event('change', { bubbles: true }))
+
+			// verify changed_data was set
+			assert.isOk(instance.data.changed_data, 'changed_data expected after checkbox check')
+			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
+			assert.equal(instance.data.changed_data[0].action, 'insert', 'changed_data action expected insert')
 	});
 
 
 
 	it(`checkbox uncheck (remove)`, async function() {
 
-		// find a checked checkbox
+		// find a checked checkbox. The previous case checked one, so its absence
+		// is a failure, not a reason to pass silently.
 			const checkboxes = node.querySelectorAll('input[type="checkbox"]')
 			const checked = Array.from(checkboxes).find(cb => cb.checked)
-			if (checked) {
-				// simulate uncheck
-				checked.checked = false
-				checked.dispatchEvent(new Event('change', { bubbles: true }))
+			assert.isOk(checked, 'a checked checkbox expected to uncheck')
 
-				// verify changed_data action is remove
-				if (instance.data.changed_data) {
-					assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on uncheck')
-				}
-			}
+			// simulate uncheck
+			checked.checked = false
+			checked.dispatchEvent(new Event('change', { bubbles: true }))
+
+			// verify changed_data action is remove
+			assert.isOk(instance.data.changed_data, 'changed_data expected after checkbox uncheck')
+			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
+			assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on uncheck')
 	});
 
 

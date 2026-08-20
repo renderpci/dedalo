@@ -44,6 +44,7 @@ export const SUITE_ISOLATION_RECORDS: Readonly<Record<number, string>> = {
 	11: 'test_component_date — run-order-flaky date read suite (client_tests.md); its own record removes the shared-test3/1 date pollution that stalled its render',
 	12: 'test_component_iri — iri read/label-dataframe suite; own record hardens it against the save sweep (defensive, matches date)',
 	13: 'test_component_publication — write-heavy add/remove/update relation-locator suite; several of its cases add a stray test92 locator without cleanup or remove by index instead of by locator, permanently growing whatever record they target. Own record isolates that accumulation from the shared record 1 the generic component sweeps (test_component_full et al.) render, whose contract is zero-or-one value.',
+	14: 'test_component_geolocation — write-heavy suite whose saves append a new test100 entry whenever the targeted key holds no id, and whose removes leave a null in the slot. On the shared record 1 the geo array grew to [null,{…},null,…] across runs, after which the suite asserted entries[0] against a null hole and failed on run order alone. Own record + teardown keeps the growth out of the record the generic sweeps render.',
 };
 
 /** The per-suite clone ids, ascending. */
