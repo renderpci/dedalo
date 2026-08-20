@@ -128,12 +128,24 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 						mode		: mode,
 						lang		: lang,
 						tool_object	: {},
-						// minimal caller stub. `editors` is present because
-						// tool_dd_label.init resolves caller.editors[0] and takes its
-						// error path (self.error + console.error) without one; tools
-						// that do not read it are unaffected.
+						// caller stub. These tests only assert that the instance is
+						// built, but several tools reach into the caller during init
+						// and take their error path (self.error + console.error)
+						// without it: tool_export calls caller.build() and
+						// reads caller.rqo, tool_dd_label resolves caller.editors[0],
+						// tool_tc reads caller.lang, tool_upload caller.context.
+						// Tools that do not read a given key are unaffected.
 						caller		: {
-							editors : [{ get : () => ({json:[]}) }]
+							build			: async () => {},
+							lang			: lang,
+							mode			: mode,
+							tipo			: 'test52',
+							section_tipo	: 'test3',
+							section_id		: '1',
+							rqo				: { source : {}, sqo : { section_tipo : 'test3', limit : 10 } },
+							context			: { type : 'component', features : {} },
+							data			: { value : [] },
+							editors			: [{ get : () => ({json:[]}) }]
 						}
 					},
 					model
