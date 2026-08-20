@@ -572,22 +572,6 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// Cleanup: Remove legacy 'datos' column from matrix tables
-		// The final cleanup step drops the original v6 'datos' column now that all
-		// data has been migrated to the typed-column layout. Runs last so any
-		// preceding script can still fall back to 'datos' if a step was re-run.
-		// stop_on_error=false: if the column was already dropped the IF EXISTS guard
-		// in the method makes this a no-op; the pipeline should still complete.
-			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'DROP legacy "datos" column in matrix tables (Final cleanup)',
-				'script_class'	=> 'v6_to_v7',
-				'script_method'	=> 'drop_legacy_datos_column',
-				'stop_on_error'	=> false,
-				'script_vars'	=> [
-					$ar_tables
-				] // Note that only ONE argument encoded is sent
-			];
-
 	// Load class with update methods
 		require_once dirname(dirname(__FILE__)) .'/upgrade/class.dataframe_v7_migration.php';
 
@@ -700,5 +684,31 @@ $updates->$v = new stdClass();
 			'script_method'	=> 'create_relation_index_store',
 			'stop_on_error'	=> true,
 			'script_vars'	=> [
+			] // Note that only ONE argument encoded is sent
+		];
+
+	// Cleanup: Remove the legacy 'datos' column from the matrix tables.
+	// (!) MUST BE THE VERY LAST STEP OF THE DESCRIPTOR — it is what makes the
+	// install v6-unusable, so nothing that takes real time may run after it.
+	// The v7 typed columns (data/relation/string/…) are ADDED alongside 'datos',
+	// never renamed over it, so until this step runs the v6 code still reads its
+	// own column and the v6 UI can still authenticate. On a large install the
+	// tail of this pipeline (dataframe migration → section_id intify → the search
+	// and relation-index backfills) runs for hours; dropping 'datos' before it,
+	// as this step used to, locked the operator out for the whole of that window
+	// — the browser session expires and matrix_users can no longer be read by v6,
+	// so the migration cannot even be monitored. Ordered here, v6 login survives
+	// until the migration is genuinely finished.
+	// Everything after reformat_matrix_data reads the typed columns, so no later
+	// step depends on 'datos'; keeping it only costs disk until this point.
+	// stop_on_error=false: if the column was already dropped the IF EXISTS guard
+	// in the method makes this a no-op; the pipeline should still complete.
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'DROP legacy "datos" column in matrix tables (Final cleanup)',
+			'script_class'	=> 'v6_to_v7',
+			'script_method'	=> 'drop_legacy_datos_column',
+			'stop_on_error'	=> false,
+			'script_vars'	=> [
+				$ar_tables
 			] // Note that only ONE argument encoded is sent
 		];

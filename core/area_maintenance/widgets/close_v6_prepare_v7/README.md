@@ -381,6 +381,24 @@ dry run.
 
 ## Notes / limits
 
+- **v6 stays usable until the migration really finishes.** The v7 typed columns
+  (`data`/`relation`/`string`/…) are ADDED next to the legacy `datos`, never renamed over it, so
+  v6 can still read its own column. `drop_legacy_datos_column` is what ends that, and it is
+  ordered as the **very last** step of the descriptor — after the dataframe migrations, the
+  section_id intify sweep and the search/relation-index backfills. On a large install that tail
+  runs for hours: dropping `datos` before it (as it used to) meant the browser session expired
+  mid-run and nobody could log back in to watch the migration, because `matrix_users` was no
+  longer readable by v6. Nothing after `reformat_matrix_data` reads `datos`; keeping it only
+  costs disk. If you add a step, add it BEFORE the drop.
+- **`intify_section_id_locators` throughput.** The section_id→int sweep is normally the longest
+  step. It reads each table ONCE (all candidate jsonb columns in the same row, matched inside a
+  `LATERAL … OFFSET 0` fence so each column is detoasted once), and writes each batch as a single
+  multi-row `UPDATE … FROM (VALUES …)` inside one transaction with `synchronous_commit` off.
+  The earlier shape scanned once per column and committed once per row — measured on a 50 000-row
+  fixture that is 50 245 transactions vs 213, which is why it used to crawl at a few dozen
+  rows/second on a box with slow fsync. The CLI line reports a live rows/s figure. The step is
+  idempotent, so if a crash loses the async-commit tail, re-run it.
+
 - Only **6.9.1+ → 7.0.0** is supported (the single descriptor in `engine/core/base/update/updates.php`,
   read as a minimum — see Prerequisites).
 - The runner is spawned with the **PHP CLI** binary from `PHP_BIN_PATH` (the v6 config constant, same

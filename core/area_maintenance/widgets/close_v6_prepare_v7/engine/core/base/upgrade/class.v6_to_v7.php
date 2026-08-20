@@ -3018,7 +3018,31 @@ class v6_to_v7 {
 		$total_converted= 0;
 		$total_purged	= 0;
 		$changed_rows	= 0;
+		$scanned_rows	= 0;
 		$findings		= []; // class => ['count'=>n, 'samples'=>[...]]
+		$batch_size		= 500;
+		$started		= microtime(true);
+
+		// THROUGHPUT. This is a bulk rewrite, not transactional business work, and on a
+		// large install it is the longest step of the whole migration. Three properties
+		// of the loop below are what make it finish (the naive shape ran at a few dozen
+		// rows/second, i.e. >24h for 2M rows and weeks for 50-100M):
+		//   1. ONE pass per TABLE, not one per column. All candidate columns are read in
+		//      the same row, so the table is scanned (and its jsonb detoasted) once
+		//      instead of 11 times, and a row needing several columns fixed produces ONE
+		//      new row version instead of up to 11 — far less WAL, bloat and index churn.
+		//   2. Writes are grouped per batch into a single multi-row
+		//      UPDATE … FROM (VALUES …) per changed-column signature: one round trip per
+		//      batch instead of one per row.
+		//   3. Each batch is ONE explicit transaction, with synchronous_commit off.
+		//      Row-at-a-time autocommit means one fsync per row, which is the actual
+		//      ceiling in the old shape. The step is idempotent and runs after the
+		//      phase-1 backup, so the async-commit window (a host crash can lose the
+		//      last commits) costs at most a re-run of this same step.
+			$sync_commit_off = false;
+			if ($save===true) {
+				$sync_commit_off = (pg_query($conn, 'SET synchronous_commit = off')!==false);
+			}
 
 		foreach ($tables as $table) {
 
@@ -3036,65 +3060,93 @@ class v6_to_v7 {
 				? ['data']
 				: (($table==='dd_ontology') ? ['relations'] : $jsonb_columns);
 
-			$escaped_table = pg_escape_identifier($conn, $table);
-			// dd_ontology has no serial `id`; page on its primary tipo instead
-			$pk = ($table==='dd_ontology') ? 'tipo' : 'id';
-
-			foreach ($columns as $column) {
-
-				// column present?
+			// keep only the columns this installation actually has
+				$present = [];
+				foreach ($columns as $column) {
 					$col_result = pg_query_params(
 						$conn,
 						"SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 AND column_name=$2",
 						[$table, $column]
 					);
-					if ($col_result===false || pg_num_rows($col_result)===0) {
-						continue;
+					if ($col_result!==false && pg_num_rows($col_result)>0) {
+						$present[] = $column;
 					}
+				}
+				if (empty($present)) {
+					continue;
+				}
 
-				$escaped_column = pg_escape_identifier($conn, $column);
+			$escaped_table	= pg_escape_identifier($conn, $table);
+			// dd_ontology has no serial `id`; page on its primary tipo instead
+			$pk				= ($table==='dd_ontology') ? 'tipo' : 'id';
+			$escaped_pk		= pg_escape_identifier($conn, $pk);
+			$pk_cast		= ($pk==='tipo') ? 'text' : 'bigint';
 
-				// Keyset pagination over the PREFILTERED rows only: a string-typed
-				// address serializes as "section_id":"…" / "section_id_key":"…" /
-				// "parent_section_id":"…" — rows without any of the three never
-				// need decoding (the LIKE runs on the toasted text once per batch,
-				// which is the same trade reformat_matrix_data already makes).
-					// (!) jsonb::text renders `"key": "value"` WITH a space after the
-				// colon — a naive LIKE '%"section_id":"%' never matches. Cheap LIKE
-				// on the bare key first, then a regex anchored to a STRING value.
-				$like = "($escaped_column::text LIKE '%\"section_id\"%'
-						OR $escaped_column::text LIKE '%\"section_id_key\"%'
-						OR $escaped_column::text LIKE '%\"parent_section_id\"%')
-						AND $escaped_column::text ~ '\"(section_id|section_id_key|parent_section_id)\":\\s*\"'";
+			// Candidate test. A string-typed address serialises as
+			// "section_id": "…" / "section_id_key": "…" / "parent_section_id": "…"
+			// (!) jsonb::text renders a space after the colon, hence the \s*.
+				$rx = '\'"(section_id|section_id_key|parent_section_id)":\s*"\'';
 
-				$last_pk = null;
-				while (true) {
+			// The CASE is evaluated inside a LATERAL closed with OFFSET 0 — an
+			// optimisation fence that stops the planner flattening the subquery, so each
+			// column is detoasted and matched ONCE per row and the very same value feeds
+			// both the WHERE and the target list. Non-matching columns come back NULL and
+			// are never shipped to PHP, which is what keeps the payload transfer small.
+				$select_parts	= [];
+				$any_parts		= [];
+				foreach ($present as $i => $column) {
+					$c = 't.' . pg_escape_identifier($conn, $column);
+					$select_parts[]	= "CASE WHEN $c::text ~ $rx THEN $c::text END AS c$i";
+					$any_parts[]	= "x.c$i IS NOT NULL";
+				}
+				$lateral	= 'SELECT ' . implode(', ', $select_parts) . ' OFFSET 0';
+				$any_sql	= '(' . implode(' OR ', $any_parts) . ')';
+				$sel_out	= [];
+				foreach ($present as $i => $column) {
+					$sel_out[] = "x.c$i";
+				}
 
-					$where_pk = ($last_pk===null) ? 'TRUE' : "$pk > \$1";
-					$params   = ($last_pk===null) ? [] : [$last_pk];
-					$sql_query = "
-						SELECT $pk AS pk, $escaped_column::text AS payload
-						FROM $escaped_table
-						WHERE $escaped_column IS NOT NULL
-						  AND $where_pk
-						  AND $like
-						ORDER BY $pk ASC
-						LIMIT 500";
-					$batch_result = pg_query_params($conn, $sql_query, $params);
-					if ($batch_result===false) {
-						$response->msg = "intify_section_id_locators: batch read failed on $table.$column: " . pg_last_error($conn);
-						debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
-						return $response;
-					}
-					$rows = pg_fetch_all($batch_result) ?: [];
-					if (count($rows)===0) {
-						break;
-					}
+			$last_pk = null;
+			while (true) {
 
-					foreach ($rows as $row) {
+				$where_pk	= ($last_pk===null) ? 'TRUE' : "t.$escaped_pk > \$1";
+				$params		= ($last_pk===null) ? [] : [$last_pk];
+				$sql_query	= "
+					SELECT t.$escaped_pk AS pk, " . implode(', ', $sel_out) . "
+					FROM $escaped_table AS t
+					CROSS JOIN LATERAL ($lateral) AS x
+					WHERE $where_pk
+					  AND $any_sql
+					ORDER BY t.$escaped_pk ASC
+					LIMIT $batch_size";
+				$batch_result = pg_query_params($conn, $sql_query, $params);
+				if ($batch_result===false) {
+					$response->msg = "intify_section_id_locators: batch read failed on $table: " . pg_last_error($conn);
+					debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
+					if ($sync_commit_off===true) { pg_query($conn, 'RESET synchronous_commit'); }
+					return $response;
+				}
+				$rows = pg_fetch_all($batch_result) ?: [];
+				if (count($rows)===0) {
+					break;
+				}
 
-						$last_pk = $row['pk'];
-						$decoded = json_handler::decode($row['payload']);
+				// signature => ['cols'=>[column,…], 'rows'=>[[pk, json, …], …]]
+				$writes = [];
+
+				foreach ($rows as $row) {
+
+					$last_pk = $row['pk'];
+					$scanned_rows++;
+
+					$row_changed = []; // column => encoded json
+					foreach ($present as $i => $column) {
+
+						$payload = $row['c'.$i] ?? null;
+						if ($payload===null) {
+							continue; // no string-typed address in this column
+						}
+						$decoded = json_handler::decode($payload);
 						if ($decoded===null) {
 							continue;
 						}
@@ -3121,40 +3173,108 @@ class v6_to_v7 {
 						if ($changed!==true) {
 							continue;
 						}
-						$total_converted += $stats->converted;
-						$changed_rows++;
+						$total_converted	+= $stats->converted;
+						$row_changed[$column]= json_handler::encode($decoded);
+					}
 
-						if ($save===true) {
-							$encoded = json_handler::encode($decoded);
-							$update_result = pg_query_params(
-								$conn,
-								"UPDATE $escaped_table SET $escaped_column = \$1::jsonb WHERE $pk = \$2 AND $escaped_column IS NOT NULL",
-								[$encoded, $row['pk']]
-							);
-							if ($update_result===false || pg_affected_rows($update_result)===0) {
-								$response->msg = "intify_section_id_locators: UPDATE failed (0 rows) on $table.$column $pk=".$row['pk'].' — aborting';
+					if (empty($row_changed)) {
+						continue;
+					}
+					$changed_rows++;
+					if ($save!==true) {
+						continue;
+					}
+
+					$signature = implode(',', array_keys($row_changed));
+					if (!isset($writes[$signature])) {
+						$writes[$signature] = ['cols'=>array_keys($row_changed), 'rows'=>[]];
+					}
+					$writes[$signature]['rows'][] = array_merge([$row['pk']], array_values($row_changed));
+				}
+
+				// flush the batch: one transaction, one UPDATE per changed-column signature
+					if ($save===true && !empty($writes)) {
+
+						if (pg_query($conn, 'BEGIN')===false) {
+							$response->msg = "intify_section_id_locators: BEGIN failed on $table: " . pg_last_error($conn);
+							debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
+							if ($sync_commit_off===true) { pg_query($conn, 'RESET synchronous_commit'); }
+							return $response;
+						}
+
+						foreach ($writes as $signature => $write) {
+
+							$set_parts	= [];
+							$value_cols	= ['pk'];
+							foreach ($write['cols'] as $j => $column) {
+								$set_parts[]	= pg_escape_identifier($conn, $column) . " = v.v$j::jsonb";
+								$value_cols[]	= "v$j";
+							}
+
+							$tuples		= [];
+							$up_params	= [];
+							$n			= 1;
+							foreach ($write['rows'] as $write_row) {
+								$placeholders	= ['$' . $n++ . '::' . $pk_cast];
+								$total_cols		= count($write['cols']);
+								for ($j=0; $j<$total_cols; $j++) {
+									$placeholders[] = '$' . $n++ . '::text';
+								}
+								$tuples[] = '(' . implode(',', $placeholders) . ')';
+								foreach ($write_row as $write_value) {
+									$up_params[] = $write_value;
+								}
+							}
+
+							$sql_update = "UPDATE $escaped_table AS t
+								SET " . implode(', ', $set_parts) . "
+								FROM (VALUES " . implode(',', $tuples) . ") AS v(" . implode(',', $value_cols) . ")
+								WHERE t.$escaped_pk = v.pk";
+							$update_result = pg_query_params($conn, $sql_update, $up_params);
+							if ($update_result===false || pg_affected_rows($update_result)!==count($write['rows'])) {
+								pg_query($conn, 'ROLLBACK');
+								$response->msg = "intify_section_id_locators: batch UPDATE failed on $table ($signature)"
+									. ' — expected ' . count($write['rows']) . ' rows, affected '
+									. ($update_result===false ? 'ERROR' : pg_affected_rows($update_result))
+									. ' — aborting';
 								debug_log(__METHOD__ . ' ' . $response->msg . ' ' . pg_last_error($conn), logger::ERROR);
+								if ($sync_commit_off===true) { pg_query($conn, 'RESET synchronous_commit'); }
 								return $response;
 							}
 						}
+
+						if (pg_query($conn, 'COMMIT')===false) {
+							$response->msg = "intify_section_id_locators: COMMIT failed on $table: " . pg_last_error($conn);
+							debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
+							if ($sync_commit_off===true) { pg_query($conn, 'RESET synchronous_commit'); }
+							return $response;
+						}
 					}
 
-					// CLI feedback
-						if ( running_in_cli()===true ) {
-							if (!isset(common::$pdata)) {
-								common::$pdata = new stdClass();
-							}
-							common::$pdata->msg = ' intify_section_id_locators'
-								. ' | ' . ($save===true ? 'APPLY' : 'DRY-RUN')
-								. ' | ' . $table . '.' . $column
-								. ' | last ' . $pk . ': ' . $last_pk
-								. ' | converted: ' . $total_converted
-								. ' | changed rows: ' . $changed_rows;
-							print_cli(common::$pdata);
+				// CLI feedback (rate included: this step is long enough that the
+				// operator needs to see it is progressing and how fast)
+					if ( running_in_cli()===true ) {
+						if (!isset(common::$pdata)) {
+							common::$pdata = new stdClass();
 						}
-				}
+						$elapsed	= max(0.001, microtime(true) - $started);
+						common::$pdata->msg = ' intify_section_id_locators'
+							. ' | ' . ($save===true ? 'APPLY' : 'DRY-RUN')
+							. ' | ' . $table
+							. ' | last ' . $pk . ': ' . $last_pk
+							. ' | candidate rows: ' . $scanned_rows
+							. ' | converted: ' . $total_converted
+							. ' | changed rows: ' . $changed_rows
+							. ' | ' . round($scanned_rows / $elapsed, 1) . ' rows/s';
+						print_cli(common::$pdata);
+					}
 			}
 		}
+
+			if ($sync_commit_off===true) {
+				pg_query($conn, 'RESET synchronous_commit');
+			}
+
 
 		// report
 			$findings_report = new stdClass();
