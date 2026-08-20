@@ -221,6 +221,18 @@ assembles `show_interface` (merging the component override over
 4. Publishes `render_<id>` with the result node and, in edit mode, schedules
    `ui.activate_tooltips`.
 
+!!! warning "The queued render must re-enter with status `built`"
+    A queued (last-write-wins) render is handed off by the `render_<id>`
+    subscriber, which sets the status back and re-calls `render()`. That status
+    MUST be `built` — the only value that falls through the status machine into
+    a real render. Restoring the status the *queued* call saw (`rendering`)
+    sends it back into the waiter branch, where it parks its options and waits
+    for a `render_<id>` event that nothing will publish, because no render is
+    running: the instance's render pipeline wedges permanently and the newest
+    options are never applied.
+    Gate: `test/unit/client_render_queue_deadlock.test.ts` (it fails by timing
+    out on the deadlock).
+
 `render_level` is `full` (build the whole wrapper into `self.node`,
 `replaceWith` the old node) or `content` (regenerate only
 `self.node.content_data` and splice it in — used by `refresh`).

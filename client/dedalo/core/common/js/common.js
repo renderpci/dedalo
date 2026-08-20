@@ -472,8 +472,9 @@ common.prototype.render = async function (options={}) {
 							self._pending_render_options = null;
 
 							if (pending_options) {
-								// Trigger next queued render using previous_status to avoid 'rendered' status issues
-								self.status = previous_status;
+								// Trigger next queued render. Force 'built' (previous_status here is
+								// 'rendering', which would re-enter the waiter case and deadlock)
+								self.status = 'built';
 								resolve(self.render(pending_options));
 							} else {
 								resolve(result_node);
