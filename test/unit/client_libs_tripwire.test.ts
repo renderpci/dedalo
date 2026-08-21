@@ -546,3 +546,92 @@ describe('client libs — the registry is a chokepoint, not a passthrough', () =
 		expect(response.status).toBe(404);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// PACKAGING: a registered lib must survive the install that ships it
+// ---------------------------------------------------------------------------
+
+/**
+ * WHY THIS EXISTS (2026-08-21). The registry says WHERE a lib's bytes are; it
+ * cannot say whether the deployed image HAS them. The container installs with
+ * `bun install --frozen-lockfile --production`, which drops every
+ * devDependency — so `mocha` and `chai` (both `devOnly`) were simply absent,
+ * and every harness script came back as the route's JSON 404 envelope. The
+ * browser reports that as "MIME type ('application/json') is not executable",
+ * which names neither the missing package nor the flag that dropped it.
+ *
+ * The two halves of the invariant, and the direction each one fails in:
+ *   devOnly  ⇒ devDependency — otherwise the production image carries a test
+ *              harness it must never serve.
+ *   npm, not devOnly ⇒ dependency — otherwise `--production` drops a lib the
+ *              CLIENT LOADS AT RUNTIME and the widget 404s in production only,
+ *              which is the worst place to find out.
+ *
+ * The `dev` build target is what puts the devDependencies back; the assertions
+ * below pin its two load-bearing properties, because both are invisible until a
+ * deploy goes wrong: the reinstall must NOT carry `--production` (or the target
+ * is a no-op), and `production` must be the LAST stage (Docker builds the last
+ * stage when none is named — if `dev` ever drifted to the end, every untargeted
+ * build would silently ship the test harness).
+ */
+
+const packageJson = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
+	dependencies?: Record<string, string>;
+	devDependencies?: Record<string, string>;
+};
+
+/** node_modules/<name> → the package name a lib's base points at. */
+function packageNameOf(base: string): string | null {
+	if (!base.startsWith('node_modules/')) return null;
+	const rest = base.slice('node_modules/'.length).split('/');
+	// Scoped packages are two segments (@huggingface/transformers).
+	return rest[0]?.startsWith('@') ? `${rest[0]}/${rest[1]}` : (rest[0] ?? null);
+}
+
+describe('client libs — packaging: the install that ships a lib keeps it', () => {
+	test('a devOnly lib is a devDependency, and a runtime lib is not', () => {
+		const wrong: string[] = [];
+		for (const [id, lib] of Object.entries(CLIENT_LIBS)) {
+			if (lib.source !== 'npm') continue; // vendor/ is committed; no install drops it
+			const name = packageNameOf(lib.base);
+			if (name === null) {
+				wrong.push(`${id}: source=npm but base is not under node_modules/ (${lib.base})`);
+				continue;
+			}
+			const isDev = packageJson.devDependencies?.[name] !== undefined;
+			const isRuntime = packageJson.dependencies?.[name] !== undefined;
+			if (!isDev && !isRuntime) {
+				wrong.push(`${id}: "${name}" is in NEITHER dependencies nor devDependencies`);
+			} else if (lib.devOnly === true && !isDev) {
+				wrong.push(`${id}: devOnly, so "${name}" must be a devDependency, not a runtime one`);
+			} else if (lib.devOnly !== true && !isRuntime) {
+				wrong.push(
+					`${id}: served in production, so "${name}" must be a dependency — a devDependency is dropped by \`bun install --production\` and the lib 404s on a deploy host`,
+				);
+			}
+		}
+		expect(wrong).toEqual([]);
+	});
+
+	test('the Dockerfile has a dev target that restores the devDependencies', () => {
+		const dockerfile = readFileSync(join(REPO_ROOT, 'Dockerfile'), 'utf8');
+		const devStage = dockerfile.slice(dockerfile.indexOf('\nFROM runtime AS dev'));
+		expect(devStage, 'Dockerfile must define a `dev` stage built on `runtime`').not.toBe('');
+		const install = devStage.split('\n').find((line) => line.includes('bun install'));
+		expect(install, 'the dev stage must reinstall the dependency tree').toBeDefined();
+		// The whole point of the target: a `--production` reinstall restores nothing.
+		expect(install ?? '').not.toContain('--production');
+	});
+
+	test('the DEFAULT build target is production — the last stage is never `dev`', () => {
+		const stages = [
+			...readFileSync(join(REPO_ROOT, 'Dockerfile'), 'utf8').matchAll(/^FROM\s+\S+\s+AS\s+(\S+)/gm),
+		].map((match) => match[1]);
+		expect(stages.length, 'the Dockerfile must be multi-stage with named stages').toBeGreaterThan(
+			1,
+		);
+		// Docker builds the LAST stage when none is named, and both production
+		// compose files use a bare `build: .`.
+		expect(stages.at(-1)).toBe('production');
+	});
+});

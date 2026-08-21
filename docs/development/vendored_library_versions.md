@@ -68,12 +68,37 @@ byte-identical** to what shipped before this migration.
 | iro | `@jaames/iro` | 5.5.2 | |
 | codex-tooltip | `codex-tooltip` | 1.0.5 | |
 | json-view | *(vendor)* | — | See below. |
-| mocha | `mocha` | 11.1.0 | **devDependency** — client test harness. |
-| chai | `chai` | 4.3.8 | **devDependency** — client test harness. |
+| mocha | `mocha` | 11.8.0 | **devDependency** — client test harness. |
+| chai | `chai` | 6.2.2 | **devDependency** — client test harness. |
 
 Two files are not byte-identical to the old copies, both benignly: `highlightjs`
 differs by the build hash in its banner (same 11.9.0 release), and the old `chai`
-was a CDN build where npm ships an equivalent UMD bundle — and it is test-only.
+was a CDN UMD build where the package has been ESM-only since chai 5 — the test
+harness loads it through an import map, and it is test-only either way.
+
+## `devOnly` libs, and the install that ships them
+
+Two entries are marked **`devOnly`** in the registry: `mocha` and `chai`, the
+browser test harness. The route refuses them outright unless `DEDALO_DEV_MODE` is
+`true`, so a production deployment cannot serve a test harness even by accident.
+
+That flag has to agree with **where the package comes from**, and the two halves
+fail in opposite directions:
+
+* `devOnly` ⇒ a `devDependency`, so the production image never carries it;
+* served in production ⇒ a runtime `dependency`, because a deploy host installs
+  with `bun install --frozen-lockfile --production` and a `devDependency` would
+  simply not be there. The lib then `404`s **in production only**.
+
+`test/unit/client_libs_tripwire.test.ts` asserts both directions, so getting this
+wrong is a red gate rather than a blank widget.
+
+To run the harness *inside a container*, the image needs the devDependencies
+back: build the Dockerfile's **`dev` target** (the production image plus a full
+`bun install`) and set `DEDALO_DEV_MODE=true`. Both, or the harness stays
+unreachable — see
+[the troubleshooting entry](../install/troubleshooting.md) for the misleading
+`MIME type` error this produces.
 
 ## svgedit — upgraded off the vendor tree (2026-07-12)
 
