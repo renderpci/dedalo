@@ -371,7 +371,8 @@ describe('the install/suite split (materializeTestTldOntology scope)', () => {
 			for (const referenced of JSON.stringify(node).match(/test[a-z]*\d+/g) ?? []) {
 				// A reference this file does not define is seed-shipped (dd/rsc/…) and
 				// already present on any install; only an omitted SIBLING dangles.
-				if (defined.has(referenced) && !kept.has(referenced)) dangling.push(`${node.tipo} -> ${referenced}`);
+				if (defined.has(referenced) && !kept.has(referenced))
+					dangling.push(`${node.tipo} -> ${referenced}`);
 			}
 		}
 		expect(
@@ -404,13 +405,11 @@ describe('the install/suite split (materializeTestTldOntology scope)', () => {
 		const targets = new Set(Object.values(cloneMap.map).map((entry) => entry.target));
 		const keptClones = core.filter((node) => targets.has(node.tipo)).map((node) => node.tipo);
 		const coreOnly = core.filter((node) => !targets.has(node.tipo));
-		const named = new Set(
-			(JSON.stringify(coreOnly).match(/test[a-z]*\d+/g) ?? []),
-		);
+		const named = new Set(JSON.stringify(coreOnly).match(/test[a-z]*\d+/g) ?? []);
 		const unreferenced = keptClones.filter((tipo) => !named.has(tipo));
 		// Transitive: a clone may be named by another kept clone rather than by a
 		// hand-authored node, so only report ones nothing in the core names at all.
-		const allNamed = new Set((JSON.stringify(core).match(/test[a-z]*\d+/g) ?? []));
+		const allNamed = new Set(JSON.stringify(core).match(/test[a-z]*\d+/g) ?? []);
 		expect(unreferenced.filter((tipo) => !allNamed.has(tipo))).toEqual([]);
 	});
 });

@@ -37,7 +37,11 @@ import {
 	installAclIdentityFixture,
 	removeAclIdentityFixture,
 } from '../helpers/acl_identity_fixture.ts';
-import { cleanScratchRecord, createScratchRecord, ensureCanonicalTest3 } from '../helpers/test_data.ts';
+import {
+	cleanScratchRecord,
+	createScratchRecord,
+	ensureCanonicalTest3,
+} from '../helpers/test_data.ts';
 
 /** The project-gated section and the component_filter that gates it. */
 const GATED_SECTION = 'test3';

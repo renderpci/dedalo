@@ -118,6 +118,7 @@ async function phpElementEntry(
 	// has gone stale, and it would take the leftover scan's teeth with it
 	// (review 2026-08-20).
 	expect(typeof entry.parent_grouper).toBe('string');
+	// biome-ignore lint/performance/noDelete: the key must be GONE, not undefined — the leftover scan below walks own keys.
 	delete entry.parent_grouper;
 	// WC-2026-08-19-test-tld-replay: the frozen install-term entry read back in
 	// test terms — css blocks are KEYED by tipo-built selectors, so the walk has

@@ -48,14 +48,18 @@ describe('scope derivation from the SQO', () => {
 	test('a component history is COMPONENT scope (locator carries a tipo)', () => {
 		expect(
 			resolveTimeMachineScope({
-				filter_by_locators: [{ section_tipo: 'test6813', section_id: 7, tipo: 'test6837', lang: 'lg-spa' }],
+				filter_by_locators: [
+					{ section_tipo: 'test6813', section_id: 7, tipo: 'test6837', lang: 'lg-spa' },
+				],
 			}),
 		).toEqual({ kind: 'component', sectionTipo: 'test6813', tipo: 'test6837' });
 	});
 
 	test('a record history is RECORD scope (locator carries no tipo)', () => {
 		expect(
-			resolveTimeMachineScope({ filter_by_locators: [{ section_tipo: 'test6813', section_id: 7 }] }),
+			resolveTimeMachineScope({
+				filter_by_locators: [{ section_tipo: 'test6813', section_id: 7 }],
+			}),
 		).toEqual({ kind: 'record', sectionTipo: 'test6813' });
 	});
 
@@ -92,7 +96,11 @@ describe('scope derivation from the SQO', () => {
 
 describe('the columns each scope derives', () => {
 	test('COMPONENT: meta + annotation + the component itself', async () => {
-		const columns = await tmListColumns({ kind: 'component', sectionTipo: 'test6813', tipo: 'test6837' });
+		const columns = await tmListColumns({
+			kind: 'component',
+			sectionTipo: 'test6813',
+			tipo: 'test6837',
+		});
 		expect(tipos(columns)).toEqual([...META, TM_NOTES_TEXT, 'test6837']);
 	});
 

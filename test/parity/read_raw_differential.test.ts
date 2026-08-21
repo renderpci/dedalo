@@ -121,6 +121,7 @@ function stripInstallDiffusionInfo(body: Record<string, unknown>): number {
 		const data = (row as Record<string, unknown>).data;
 		if (data === null || typeof data !== 'object') continue;
 		if (Object.hasOwn(data as Record<string, unknown>, 'diffusion_info')) {
+			// biome-ignore lint/performance/noDelete: the key must be GONE, not undefined — the comparison below is against a body that never had it.
 			delete (data as Record<string, unknown>).diffusion_info;
 			removed += 1;
 		}

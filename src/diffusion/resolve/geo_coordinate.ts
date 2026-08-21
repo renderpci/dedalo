@@ -105,7 +105,7 @@ export function phpNumberFormat16RoundTrip(value: number): number {
 	const fixed = d.toFixed(16);
 
 	// Minus sign is dropped when the rounded value is 0.
-	const literal = isNegative && d !== 0 ? '-' + fixed : fixed;
+	const literal = isNegative && d !== 0 ? `-${fixed}` : fixed;
 
 	// json_decode: zend_strtod, correctly rounded nearest double == Number().
 	return Number(literal);

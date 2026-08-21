@@ -59,10 +59,8 @@ const EXTERNAL_ONTOLOGY_PRESENT = await (async (): Promise<boolean> => {
 	`) as { properties?: { source?: { request_config?: Record<string, unknown>[] } } }[];
 	const items = rows[0]?.properties?.source?.request_config ?? [];
 	const external = items.find((item) => (item.api_engine ?? 'dedalo') !== 'dedalo');
-	const target = (
-		(external?.sqo as { section_tipo?: { value?: string[] }[] } | undefined)?.section_tipo?.[0]
-			?.value ?? []
-	)[0];
+	const target = ((external?.sqo as { section_tipo?: { value?: string[] }[] } | undefined)
+		?.section_tipo?.[0]?.value ?? [])[0];
 	if (typeof target !== 'string') return false;
 	const hit = (await sql`
 		SELECT tipo FROM dd_ontology WHERE tipo = ${target} LIMIT 1
@@ -195,8 +193,7 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 			config.phpReference.password as string,
 		);
 		const { body } = await client.call(structuredClone(READ_RQO));
-		const phpContext = (adoptFrozen(body).result as { context: Record<string, unknown>[] })
-			.context;
+		const phpContext = (adoptFrozen(body).result as { context: Record<string, unknown>[] }).context;
 		const phpPortal = phpContext.find((entry) => entry.tipo === PORTAL);
 		phpConfig = (phpPortal?.request_config as Record<string, unknown>[]) ?? [];
 		expect(installTokensIn(phpConfig)).toEqual([]);

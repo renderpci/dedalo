@@ -170,7 +170,7 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
  * of these, and counting it would have meant extending the ratchet upward for a
  * file that never compares a locator at all.
  */
-const TYPEOF_RESULT = String.raw`(?:string|number|object|undefined|boolean|bigint|symbol|function)`;
+const TYPEOF_RESULT = '(?:string|number|object|undefined|boolean|bigint|symbol|function)';
 const INLINE_PATTERNS: readonly RegExp[] = [
 	// Presence/emptiness checks (null / undefined / '') are NOT matchers.
 	new RegExp(

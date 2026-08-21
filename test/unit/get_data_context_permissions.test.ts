@@ -57,8 +57,16 @@ describe('resolveComponentContextPermission — search-mode special grants', () 
 	});
 	test("synthetic 'search_<n>' / zero section_id grants level 2 (PHP (int) cast)", async () => {
 		expect(
-			await resolveComponentContextPermission(someUser, 'test6813', 'test6836', 'search_1', 'search'),
+			await resolveComponentContextPermission(
+				someUser,
+				'test6813',
+				'test6836',
+				'search_1',
+				'search',
+			),
 		).toBe(2);
-		expect(await resolveComponentContextPermission(someUser, 'test6813', 'test6836', 0, 'search')).toBe(2);
+		expect(
+			await resolveComponentContextPermission(someUser, 'test6813', 'test6836', 0, 'search'),
+		).toBe(2);
 	});
 });

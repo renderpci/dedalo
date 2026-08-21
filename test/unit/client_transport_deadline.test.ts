@@ -116,7 +116,11 @@ const timed_call = async (
 	const started = performance.now();
 	const hung = Symbol('hung');
 	const result = await Promise.race([
-		fetch_api('https://stub.invalid/api/v1/json/', { method: 'POST' }, { on_wait: on_wait_spy, ...options }),
+		fetch_api(
+			'https://stub.invalid/api/v1/json/',
+			{ method: 'POST' },
+			{ on_wait: on_wait_spy, ...options },
+		),
 		new Promise<typeof hung>((resolve) => setTimeout(() => resolve(hung), hang_after_ms)),
 	]);
 	if (result === hung) return null;
@@ -146,12 +150,21 @@ beforeEach(() => {
 describe('fetch_api attempt deadline', () => {
 	test('A. a busy server that then stalls still ends the attempt', async () => {
 		// probe at 100ms finds the server alive; the request never answers.
-		const call = await timed_call({ timeout_ms: 200, retries: 1, base_delay: 100, busy_grace_ms: 100 });
+		const call = await timed_call({
+			timeout_ms: 200,
+			retries: 1,
+			base_delay: 100,
+			busy_grace_ms: 100,
+		});
 
-		expect(call, 'the request hung: the busy probe removed the deadline instead of extending it').not.toBeNull();
-		expect(waits.some((w) => w.reason === 'busy'), 'the busy probe never fired — this test proved nothing').toBe(
-			true,
-		);
+		expect(
+			call,
+			'the request hung: the busy probe removed the deadline instead of extending it',
+		).not.toBeNull();
+		expect(
+			waits.some((w) => w.reason === 'busy'),
+			'the busy probe never fired — this test proved nothing',
+		).toBe(true);
 		expect(call?.result.api_error?.code).toBe('client.timeout');
 		expect(call?.result.api_error?.retryable).toBe(true);
 		// ~100ms to the probe + (100ms remaining + 100ms grace). A build that
@@ -164,12 +177,21 @@ describe('fetch_api attempt deadline', () => {
 		// 1000ms budget, probed at ~500ms, 50ms grace. Additive lands near 1050ms;
 		// re-arming at the grace alone would abort near 550ms — SHORTER than the
 		// caller's own timeout, which is the make_backup regression.
-		const call = await timed_call({ timeout_ms: 1000, retries: 1, base_delay: 100, busy_grace_ms: 50 });
+		const call = await timed_call({
+			timeout_ms: 1000,
+			retries: 1,
+			base_delay: 100,
+			busy_grace_ms: 50,
+		});
 
-		expect(call, 'the request hung: the busy probe removed the deadline instead of extending it').not.toBeNull();
-		expect(waits.some((w) => w.reason === 'busy'), 'the busy probe never fired — this test proved nothing').toBe(
-			true,
-		);
+		expect(
+			call,
+			'the request hung: the busy probe removed the deadline instead of extending it',
+		).not.toBeNull();
+		expect(
+			waits.some((w) => w.reason === 'busy'),
+			'the busy probe never fired — this test proved nothing',
+		).toBe(true);
 		expect(call?.result.api_error?.code).toBe('client.timeout');
 		expect(call!.ms).toBeGreaterThan(900);
 		expect(call!.ms).toBeLessThan(3000);
@@ -177,10 +199,18 @@ describe('fetch_api attempt deadline', () => {
 
 	test('C. a dead server keeps the plain, unextended deadline', async () => {
 		health_alive = false;
-		const call = await timed_call({ timeout_ms: 300, retries: 1, base_delay: 100, busy_grace_ms: 5000 });
+		const call = await timed_call({
+			timeout_ms: 300,
+			retries: 1,
+			base_delay: 100,
+			busy_grace_ms: 5000,
+		});
 
 		expect(call).not.toBeNull();
-		expect(waits.some((w) => w.reason === 'busy'), 'a dead server must not earn a busy extension').toBe(false);
+		expect(
+			waits.some((w) => w.reason === 'busy'),
+			'a dead server must not earn a busy extension',
+		).toBe(false);
 		expect(call?.result.api_error?.code).toBe('client.timeout');
 		// the 5000ms grace must NOT have been granted
 		expect(call!.ms).toBeLessThan(1500);
@@ -196,7 +226,12 @@ describe('fetch_api attempt deadline', () => {
 	});
 
 	test('E. on_wait reports the extension it actually granted', async () => {
-		const call = await timed_call({ timeout_ms: 400, retries: 1, base_delay: 100, busy_grace_ms: 100 });
+		const call = await timed_call({
+			timeout_ms: 400,
+			retries: 1,
+			base_delay: 100,
+			busy_grace_ms: 100,
+		});
 
 		expect(call).not.toBeNull();
 		const busy = waits.find((w) => w.reason === 'busy');

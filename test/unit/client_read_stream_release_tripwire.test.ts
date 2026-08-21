@@ -108,7 +108,8 @@ const run_stream = (stream: ReadableStream, timeout_ms = 3000) =>
 	});
 
 beforeAll(async () => {
-	for (const key of ['page_globals', 'SHOW_DEBUG', 'window', 'DEDALO_API_URL']) saved[key] = globals[key];
+	for (const key of ['page_globals', 'SHOW_DEBUG', 'window', 'DEDALO_API_URL'])
+		saved[key] = globals[key];
 
 	globals.page_globals = { dedalo_data_lang: 'lg-eng', stream_readers: [] };
 	globals.SHOW_DEBUG = false;
@@ -116,7 +117,10 @@ beforeAll(async () => {
 	globals.window = globalThis;
 
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
-		ui: { create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }), show_message: () => {} },
+		ui: {
+			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+			show_message: () => {},
+		},
 	}));
 
 	data_manager = ((await import(DATA_MANAGER_PATH)) as { data_manager: DataManager }).data_manager;
@@ -163,7 +167,8 @@ describe('read_stream — a failed read still ends the stream (B)', () => {
 
 		const result = await new Promise<unknown>((resolve, reject) => {
 			const timer = setTimeout(
-				() => reject(new Error('TIMEOUT: on_done never fired after a read failure — the pre-fix hang')),
+				() =>
+					reject(new Error('TIMEOUT: on_done never fired after a read failure — the pre-fix hang')),
 				3000,
 			);
 			data_manager.read_stream(

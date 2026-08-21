@@ -156,13 +156,13 @@ function typeLinkDeps(overrides: Partial<IdentifyTypeLinkDeps> = {}): IdentifyTy
 describe('A1 — a foreign section’s component is never offered as the Type link', () => {
 	test('typeLinkCandidates only reveals criteria that ENTER on the asked-for section', () => {
 		// The coin section: only its own criterion reveals a link component.
-		expect(
-			typeLinkCandidates(twoSectionProfile(), 'test6100').map((c) => c.componentTipo),
-		).toEqual(['test6230']);
+		expect(typeLinkCandidates(twoSectionProfile(), 'test6100').map((c) => c.componentTipo)).toEqual(
+			['test6230'],
+		);
 		// The inventory section: only ITS own. The two never cross.
-		expect(
-			typeLinkCandidates(twoSectionProfile(), 'test6103').map((c) => c.componentTipo),
-		).toEqual(['test6473']);
+		expect(typeLinkCandidates(twoSectionProfile(), 'test6103').map((c) => c.componentTipo)).toEqual(
+			['test6473'],
+		);
 	});
 
 	test('resolve_type_link never emits the other section’s component as writable', async () => {

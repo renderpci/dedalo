@@ -43,10 +43,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { getCounters } from '../../src/core/api/counters.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { getNode } from '../../src/core/ontology/resolver.ts';
+import { getMatrixTableFromTipo, getNode } from '../../src/core/ontology/resolver.ts';
 import type { RelatedGraphIO, RelatedReference } from '../../src/core/relations/related.ts';
 import {
 	buildExternalSeed,
@@ -55,7 +54,6 @@ import {
 	recomputeExternalRelation,
 } from '../../src/core/section/record/observers.ts';
 import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
-import installDataFromFieldJson from './fixtures/observer_seed/install_data_from_field.json';
 import {
 	dropObserverTerm,
 	ensureObserverTerm,
@@ -64,7 +62,8 @@ import {
 	REF_SECTION,
 	SEED_TERM,
 	TERM_SECTION,
-	} from '../helpers/observer_term_seed.ts';
+} from '../helpers/observer_term_seed.ts';
+import installDataFromFieldJson from './fixtures/observer_seed/install_data_from_field.json';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const kernelSource = readFileSync(join(REPO_ROOT, 'src/core/section/record/observers.ts'), 'utf-8');
@@ -419,7 +418,9 @@ describe('D3 seed law (hermetic, table-driven over the declared users)', () => {
 
 	test('no data_from_field → the seed is exactly the single target locator (pre-D3 shape)', async () => {
 		const seed = await collectExternalSeed({}, INDEXER, TERM_SECTION, 58);
-		expect(seed).toEqual([{ section_tipo: TERM_SECTION, section_id: 58, from_component_tipo: INDEXER }]);
+		expect(seed).toEqual([
+			{ section_tipo: TERM_SECTION, section_id: 58, from_component_tipo: INDEXER },
+		]);
 	});
 
 	test('buildExternalSeed: malformed peers dropped+counted, duplicates collapsed, target always first', () => {

@@ -184,7 +184,12 @@ const fake_indexedDB = {
 	deleteDatabase(_name: string) {
 		journal.deletes++;
 		journal.order.push('deleteDatabase');
-		const req: Record<string, unknown> = { onsuccess: null, onerror: null, onblocked: null, result: null };
+		const req: Record<string, unknown> = {
+			onsuccess: null,
+			onerror: null,
+			onblocked: null,
+			result: null,
+		};
 		fire(() => {
 			const cb = req.onsuccess as ((e: unknown) => void) | null;
 			if (cb) cb({ target: { result: null } });
@@ -204,7 +209,10 @@ beforeAll(async () => {
 	globals.window = globalThis;
 
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
-		ui: { create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }), show_message: () => {} },
+		ui: {
+			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+			show_message: () => {},
+		},
 	}));
 
 	data_manager = ((await import(DATA_MANAGER_PATH)) as { data_manager: DataManager }).data_manager;

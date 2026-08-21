@@ -98,48 +98,54 @@ const menuSituation = (root: string) =>
 		tld: 'zzmenu',
 		name: 'menu tree_datalist walk',
 		nodes: [
-		// order_number decides sibling order, NOT the order they are declared in
-		// here — B is declared second and must come FIRST. High numbers keep the
-		// pair AFTER whatever the ambient root already carries.
-		{ tipo: AREA_A, model: 'area', parent: root, order_number: 9002, term: term('Area A') },
-		{ tipo: AREA_B, model: 'area', parent: root, order_number: 9001, term: term('Area B') },
-		{ tipo: SECTION_A, model: 'section', parent: AREA_A, order_number: 1, term: term('Section A') },
-		{
-			tipo: NOT_A_MENU_MODEL,
-			model: 'section_list',
-			parent: AREA_A,
-			order_number: 2,
-			term: term('Not a menu model'),
-		},
-		{
-			tipo: BEHIND_THE_WALL,
-			model: 'section',
-			parent: NOT_A_MENU_MODEL,
-			order_number: 1,
-			term: term('Behind the wall'),
-		},
-		{
-			tipo: SKIPPED_WRAPPER,
-			model: 'area',
-			parent: AREA_B,
-			order_number: 1,
-			term: term('Skipped wrapper'),
-		},
-		{
-			tipo: REPARENTED,
-			model: 'section',
-			parent: SKIPPED_WRAPPER,
-			order_number: 1,
-			term: term('Reparented'),
-		},
-		{ tipo: DENIED, model: 'area', parent: AREA_B, order_number: 2, term: term('Denied') },
-		{
-			tipo: DENIED_CHILD,
-			model: 'section',
-			parent: DENIED,
-			order_number: 1,
-			term: term('Denied child'),
-		},
+			// order_number decides sibling order, NOT the order they are declared in
+			// here — B is declared second and must come FIRST. High numbers keep the
+			// pair AFTER whatever the ambient root already carries.
+			{ tipo: AREA_A, model: 'area', parent: root, order_number: 9002, term: term('Area A') },
+			{ tipo: AREA_B, model: 'area', parent: root, order_number: 9001, term: term('Area B') },
+			{
+				tipo: SECTION_A,
+				model: 'section',
+				parent: AREA_A,
+				order_number: 1,
+				term: term('Section A'),
+			},
+			{
+				tipo: NOT_A_MENU_MODEL,
+				model: 'section_list',
+				parent: AREA_A,
+				order_number: 2,
+				term: term('Not a menu model'),
+			},
+			{
+				tipo: BEHIND_THE_WALL,
+				model: 'section',
+				parent: NOT_A_MENU_MODEL,
+				order_number: 1,
+				term: term('Behind the wall'),
+			},
+			{
+				tipo: SKIPPED_WRAPPER,
+				model: 'area',
+				parent: AREA_B,
+				order_number: 1,
+				term: term('Skipped wrapper'),
+			},
+			{
+				tipo: REPARENTED,
+				model: 'section',
+				parent: SKIPPED_WRAPPER,
+				order_number: 1,
+				term: term('Reparented'),
+			},
+			{ tipo: DENIED, model: 'area', parent: AREA_B, order_number: 2, term: term('Denied') },
+			{
+				tipo: DENIED_CHILD,
+				model: 'section',
+				parent: DENIED,
+				order_number: 1,
+				term: term('Denied child'),
+			},
 		],
 	});
 

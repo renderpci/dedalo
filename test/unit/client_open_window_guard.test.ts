@@ -48,7 +48,10 @@ type UtilModule = {
 const globals = globalThis as unknown as Record<string, unknown>;
 const saved: Record<string, unknown> = {};
 let util: UtilModule;
-let event_manager: { subscribe: (name: string, cb: (data: unknown) => void) => string; unsubscribe: (t: string) => void };
+let event_manager: {
+	subscribe: (name: string, cb: (data: unknown) => void) => string;
+	unsubscribe: (t: string) => void;
+};
 
 /** what the next window.open answers */
 let open_answer: unknown = null;
@@ -59,10 +62,15 @@ let notifications: unknown[] = [];
 let notification_token: string;
 
 beforeAll(async () => {
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label']) saved[key] = globals[key];
+	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
+		saved[key] = globals[key];
 
 	globals.window = globalThis;
-	globals.page_globals = { dedalo_data_lang: 'lg-eng', dedalo_data_nolan: 'lg-nolan', stream_readers: [] };
+	globals.page_globals = {
+		dedalo_data_lang: 'lg-eng',
+		dedalo_data_nolan: 'lg-nolan',
+		stream_readers: [],
+	};
 	globals.SHOW_DEBUG = false;
 	globals.DEDALO_CORE_URL = '/dedalo/core';
 	globals.get_label = {};
@@ -73,18 +81,24 @@ beforeAll(async () => {
 	};
 
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
-		ui: { create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }) },
+		ui: {
+			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+		},
 	}));
 
 	util = (await import(UTIL_PATH)) as unknown as UtilModule;
-	event_manager = ((await import(join(CLIENT_COMMON, 'event_manager.js'))) as { event_manager: typeof event_manager })
-		.event_manager;
+	event_manager = (
+		(await import(join(CLIENT_COMMON, 'event_manager.js'))) as {
+			event_manager: typeof event_manager;
+		}
+	).event_manager;
 	notification_token = event_manager.subscribe('notification', (data) => notifications.push(data));
 });
 
 afterAll(() => {
 	event_manager.unsubscribe(notification_token);
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label']) globals[key] = saved[key];
+	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
+		globals[key] = saved[key];
 });
 
 beforeEach(() => {

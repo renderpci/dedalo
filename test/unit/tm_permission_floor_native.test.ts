@@ -29,12 +29,12 @@
 
 import { describe, expect, test } from 'bun:test';
 import { resolveTimeMachineScopeSection } from '../../src/core/section/list_definitions/time_machine_list.ts';
-import { TM_NOTES_TEXT } from '../../src/core/tm_record/tm_record.ts';
 import {
 	currentTimeMachineScopeSection,
 	runWithTimeMachineScope,
 } from '../../src/core/section/list_definitions/tm_scope_context.ts';
 import { getPermissions, type Principal } from '../../src/core/security/permissions.ts';
+import { TM_NOTES_TEXT } from '../../src/core/tm_record/tm_record.ts';
 
 const TM = 'dd15';
 
@@ -44,7 +44,9 @@ const plainUser: Principal = { userId: 43, isGlobalAdmin: false, isDeveloper: fa
 describe('TM scope resolution (the input to the floor)', () => {
 	test('a per-component history scopes to its locator section', () => {
 		const scope = resolveTimeMachineScopeSection({
-			filter_by_locators: [{ section_tipo: 'test6813', section_id: 7, tipo: 'test6837', lang: 'lg-spa' }],
+			filter_by_locators: [
+				{ section_tipo: 'test6813', section_id: 7, tipo: 'test6837', lang: 'lg-spa' },
+			],
 		});
 		expect(scope).toEqual({ sectionTipo: 'test6813', mixed: false });
 	});
@@ -122,7 +124,9 @@ describe('the TM scope is request-scoped, never module state', () => {
 describe('the dd15 permission floor', () => {
 	test('a global admin reads dd15 columns, scoped or not', async () => {
 		expect(await getPermissions(admin, TM, 'dd559')).toBe(1);
-		expect(await runWithTimeMachineScope('test6813', () => getPermissions(admin, TM, 'dd559'))).toBe(1);
+		expect(
+			await runWithTimeMachineScope('test6813', () => getPermissions(admin, TM, 'dd559')),
+		).toBe(1);
 	});
 
 	test('a global admin is never granted more than READ on dd15', async () => {

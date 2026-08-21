@@ -60,10 +60,7 @@ import { readTimeMachineData, tmReadSource } from '../../src/core/resolve/read_t
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import {
-	TM_NOTES_SECTION_TIPO,
-	TM_NOTES_TEXT,
-} from '../../src/core/tm_record/tm_record.ts';
+import { TM_NOTES_SECTION_TIPO, TM_NOTES_TEXT } from '../../src/core/tm_record/tm_record.ts';
 import { createScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION_TIPO = 'test65'; // real section, no TM residue (see header)

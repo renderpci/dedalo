@@ -45,16 +45,15 @@ import { componentTextAreaApiActions } from '../../src/core/api/handlers/dd_comp
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { Session } from '../../src/core/security/session_store.ts';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import {
 	dropSituation,
 	ensureSituation,
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
 import { mustGet } from '../helpers/assert.ts';
-
 
 const SECTION = 'zztags1'; // the host section (its own matrix_table → matrix_test)
 const SECTION_ID = 934100; // scratch band 934100-934199

@@ -27,6 +27,7 @@ import { getCounters } from '../../src/core/api/counters.ts';
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
 import {
 	classifyReconcileOutcome,
 	type ExternalRecomputeOutcome,

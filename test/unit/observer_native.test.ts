@@ -100,7 +100,6 @@ const TERM_CHAIN: [number, number | null][] = [
 	[2, 1],
 	[1, null],
 ];
-const TERM_IDS = TERM_CHAIN.map(([id]) => id);
 
 /**
  * relation_search[INDEXER] after an INDEXER save targeting TERM — the ancestor
@@ -557,10 +556,10 @@ describe('observer DEFAULT self-refresh TS-native (TAG_TEXT → TAG_INDEX relati
 			expect(await relationSearchOf(id, TAG_INDEX)).toBeNull();
 		} finally {
 			await deleteSectionRecord(REF_SECTION, id, -1);
-			await sql.unsafe(
-				`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
-				[REF_SECTION, id],
-			);
+			await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
+				REF_SECTION,
+				id,
+			]);
 			await sql.unsafe(
 				`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
 				[REF_SECTION, id],

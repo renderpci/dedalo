@@ -24,10 +24,7 @@ import { routeSectionRead } from '../../src/core/section/read_facade.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import { isRecordInScope, principalCanAccessRecord } from '../../src/core/security/record_scope.ts';
-import {
-	dropTestCorpus,
-	ensureTestCorpus,
-} from '../../src/core/test_data/test_corpus/ensure.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 
 // Snapshot the REAL module exports before any mock.module swap. Bun's
 // mock.module is process-global and mock.restore() does NOT revert it, so the

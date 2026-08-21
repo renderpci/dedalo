@@ -88,13 +88,19 @@ const stub_fetch = async (url: string | URL, init?: RequestInit): Promise<Respon
 	if (csrf_fail_next_fetch) {
 		csrf_fail_next_fetch = false;
 		return new Response(
-			JSON.stringify({ ok: false, error: { code: 'auth.csrf_failed', message: 'CSRF token mismatch (stub)' } }),
+			JSON.stringify({
+				ok: false,
+				error: { code: 'auth.csrf_failed', message: 'CSRF token mismatch (stub)' },
+			}),
 			{ status: 403, headers: { 'Content-Type': 'application/json' } },
 		);
 	}
 	if (fail_envelope_fetches) {
 		return new Response(
-			JSON.stringify({ ok: false, error: { code: 'server.error', message: 'stub failure envelope' } }),
+			JSON.stringify({
+				ok: false,
+				error: { code: 'server.error', message: 'stub failure envelope' },
+			}),
 			{ status: 200, headers: { 'Content-Type': 'application/json' } },
 		);
 	}
@@ -108,14 +114,22 @@ beforeAll(async () => {
 	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_API_URL', 'fetch'])
 		saved[key] = globals[key];
 
-	globals.page_globals = { dedalo_data_lang: 'lg-eng', stream_readers: [], recovery_mode: false, request_message: null };
+	globals.page_globals = {
+		dedalo_data_lang: 'lg-eng',
+		stream_readers: [],
+		recovery_mode: false,
+		request_message: null,
+	};
 	globals.SHOW_DEBUG = false;
 	globals.DEDALO_API_URL = '/api/v1/json/';
 	globals.window = globalThis;
 	globals.fetch = stub_fetch;
 
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
-		ui: { create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }), show_message: () => {} },
+		ui: {
+			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+			show_message: () => {},
+		},
 	}));
 
 	data_manager = ((await import(DATA_MANAGER_PATH)) as { data_manager: DataManager }).data_manager;

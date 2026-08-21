@@ -37,17 +37,16 @@
 // built situation (src/core/test_data/situations) or the generic `test` TLD, then
 // regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import {
 	exceedsShrinkBudget,
 	type ReconcileRecord,
 	reconcileObserverMirrors,
 } from '../../src/core/section/record/observer_reconcile.ts';
 import {
-	dropObserverTerm,
 	ensureObserverTerm,
 	INDEXER,
 	MIRROR,

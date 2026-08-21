@@ -22,7 +22,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, rmSync, symlinkSync } from 'node:fs';
+import { rmSync, symlinkSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { getLoadedTool, loadToolModules } from '../../src/core/tools/loader.ts';
 import { getRoots, resolveToolAssetPath } from '../../src/core/tools/paths.ts';

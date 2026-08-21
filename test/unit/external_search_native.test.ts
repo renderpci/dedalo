@@ -23,12 +23,12 @@
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
+import { getAlpha2FromCode } from '../../src/core/resolve/lang_names.ts';
 import {
 	dropSituation,
 	ensureSituation,
 	situation,
 } from '../../src/core/test_data/situations/situation.ts';
-import { getAlpha2FromCode } from '../../src/core/resolve/lang_names.ts';
 import type { ExternalSearchResult } from '../../src/external/api/types.ts';
 import { resetBreakerForOrigin } from '../../src/external/breaker.ts';
 import type { ExternalServiceModel } from '../../src/external/descriptor_types.ts';
@@ -732,7 +732,12 @@ const EXTERNAL_SITUATION = situation({
 	tld: 'zzxs',
 	name: 'external search target resolution',
 	nodes: [
-		{ tipo: EXT.section, model: 'section', parent: 'dd14', properties: { api_config: EXTERNAL_API_CONFIG } },
+		{
+			tipo: EXT.section,
+			model: 'section',
+			parent: 'dd14',
+			properties: { api_config: EXTERNAL_API_CONFIG },
+		},
 		externalDdoNode(EXT.ddos[0], 'id'),
 		externalDdoNode(EXT.ddos[1], 'title'),
 		externalDdoNode(EXT.ddos[2], 'authors'),

@@ -310,7 +310,10 @@ export async function dropSituation(s: Situation): Promise<number> {
 }
 
 /** Rows still present for this situation (nodes + records). 0 = clean. */
-export async function residueOf(s: Situation, known?: ReadonlyMap<string, string>): Promise<number> {
+export async function residueOf(
+	s: Situation,
+	known?: ReadonlyMap<string, string>,
+): Promise<number> {
 	let total = (await searchDdOntology({ tld: s.tld })).length;
 	// `known` is the map dropSituation resolved BEFORE it deleted the nodes.
 	// Without it (a direct call, nodes still present) resolve now; a section that

@@ -96,9 +96,7 @@ const COMMITTED_DIR = join(TEST_DATA, 'test_corpus');
  * to stop trusting.
  */
 const CHECK = process.argv.includes('--check');
-const OUT_DIR = CHECK
-	? mkdtempSync(join(tmpdir(), 'dedalo_corpus_check_'))
-	: COMMITTED_DIR;
+const OUT_DIR = CHECK ? mkdtempSync(join(tmpdir(), 'dedalo_corpus_check_')) : COMMITTED_DIR;
 
 /**
  * The install-invariant TLDs. Phase 2 clones nothing from them (a test node
@@ -2288,7 +2286,11 @@ Bun.spawnSync(['bunx', 'biome', 'format', '--write', OUT_DIR], {
 
 if (CHECK) {
 	const listJson = (dir: string): string[] =>
-		existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith('.json')).sort() : [];
+		existsSync(dir)
+			? readdirSync(dir)
+					.filter((n) => n.endsWith('.json'))
+					.sort()
+			: [];
 	const drift: string[] = [];
 	for (const sub of ['', 'pending']) {
 		const fresh = join(OUT_DIR, sub);

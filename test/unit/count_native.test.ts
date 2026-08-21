@@ -305,9 +305,7 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 			relatedCountRqo({ group_by: ['section_tipo'] }) as never,
 			adminContext as never,
 		);
-		expect(dataOf(adminGrouped.body).totals_group).toEqual([
-			{ key: [SECTION], value: 2 },
-		]);
+		expect(dataOf(adminGrouped.body).totals_group).toEqual([{ key: [SECTION], value: 2 }]);
 	});
 
 	test('the read SOURCE owns the count: dd15 counts TM rows, the default counts records', async () => {

@@ -35,12 +35,12 @@ import {
 	deleteMatrixRecord,
 	insertMatrixRecordWithCounter,
 } from '../../src/core/db/matrix_write.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import {
 	clearSelectLangCache,
 	getLangCodeBySectionId,
 	getLangSectionIdByCode,
 } from '../../src/core/relations/select_lang.ts';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { buildGetDataContext, readSection } from '../../src/core/section/read.ts';
 import {
 	dropSituation,

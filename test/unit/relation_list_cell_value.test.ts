@@ -109,7 +109,13 @@ describe('relation_list cell value contract (SECTION_SPEC §7.2)', () => {
 		).not.toBeNull();
 
 		const unresolved: string[] = [];
-		const value = await resolveCellValue(SECTION, RECORD_ID, UNCOVERED_COLUMN, 'lg-spa', unresolved);
+		const value = await resolveCellValue(
+			SECTION,
+			RECORD_ID,
+			UNCOVERED_COLUMN,
+			'lg-spa',
+			unresolved,
+		);
 		expect(value).toBeNull();
 		expect(unresolved.length).toBeGreaterThan(0);
 	});

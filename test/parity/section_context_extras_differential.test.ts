@@ -122,6 +122,7 @@ describe.if(hasPhpCredentials())('section context extras differential (SECTION_S
 			// has gone stale and silently widens what the leftover scan accepts
 			// (review 2026-08-20).
 			expect(rawContext.some((entry) => typeof entry.parent_grouper === 'string')).toBe(true);
+			// biome-ignore lint/performance/noDelete: the key must be GONE, not undefined — the leftover scan below walks own keys.
 			for (const entry of rawContext) delete entry.parent_grouper;
 			const adopted = adoptTipoIdMap(rawContext, 'section_context_extras_differential');
 			// Assert the leftovers too: a refusal must name the install token it

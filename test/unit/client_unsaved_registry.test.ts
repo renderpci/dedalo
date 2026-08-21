@@ -51,7 +51,13 @@ import { join } from 'node:path';
 const CLIENT_ROOT = join(import.meta.dir, '..', '..', 'client', 'dedalo');
 const CLIENT_COMMON = join(CLIENT_ROOT, 'core', 'common', 'js');
 const EVENTS_PATH = join(CLIENT_COMMON, 'events.js');
-const COMPONENT_COMMON_PATH = join(CLIENT_ROOT, 'core', 'component_common', 'js', 'component_common.js');
+const COMPONENT_COMMON_PATH = join(
+	CLIENT_ROOT,
+	'core',
+	'component_common',
+	'js',
+	'component_common.js',
+);
 
 type EventsModule = {
 	set_before_unload: (value: boolean) => boolean | undefined;
@@ -66,7 +72,8 @@ const globals = globalThis as unknown as Record<string, unknown>;
 const saved: Record<string, unknown> = {};
 let events: EventsModule;
 
-const unsaved = () => (globalThis as unknown as { window: { unsaved_data: boolean } }).window.unsaved_data;
+const unsaved = () =>
+	(globalThis as unknown as { window: { unsaved_data: boolean } }).window.unsaved_data;
 
 beforeAll(async () => {
 	for (const key of ['window', 'SHOW_DEBUG']) saved[key] = globals[key];
@@ -106,7 +113,9 @@ describe('derived unsaved-data flag', () => {
 		// …and deletes it again: this field is back at its stored value
 		events.deregister_unsaved_instance(other_field);
 
-		expect(unsaved(), 'reverting one field disarmed the guard for a still-dirty component').toBe(true);
+		expect(unsaved(), 'reverting one field disarmed the guard for a still-dirty component').toBe(
+			true,
+		);
 	});
 
 	test('C. set_before_unload(false) cannot disarm a registered instance', () => {
@@ -115,7 +124,10 @@ describe('derived unsaved-data flag', () => {
 
 		events.set_before_unload(false);
 
-		expect(unsaved(), 'the coarse retraction cleared a component registration it does not own').toBe(true);
+		expect(
+			unsaved(),
+			'the coarse retraction cleared a component registration it does not own',
+		).toBe(true);
 	});
 
 	test('D. set_before_unload(true) still arms the guard with no instance at all', () => {
@@ -229,24 +241,33 @@ describe('G. call-site shape', () => {
 
 		// capture phase: the component's own 'change' handler must run AFTER the
 		// document-level commit handler, so its verdict wins.
-		expect(fn, "no document-level 'input' listener — blur-committed views stay unprotected").toMatch(
-			/addEventListener\(\s*'input'[\s\S]*capture:\s*true/,
-		);
+		expect(
+			fn,
+			"no document-level 'input' listener — blur-committed views stay unprotected",
+		).toMatch(/addEventListener\(\s*'input'[\s\S]*capture:\s*true/);
 		expect(fn).toMatch(/addEventListener\(\s*'change'[\s\S]*capture:\s*true/);
-		expect(fn, "'focusout' is what covers type-then-revert, where 'change' never fires").toContain("'focusout'");
+		expect(fn, "'focusout' is what covers type-then-revert, where 'change' never fires").toContain(
+			"'focusout'",
+		);
 		expect(fn).toContain('register_uncommitted_input');
 		expect(fn).toContain('deregister_uncommitted_input');
 	});
 
 	test('the beforeunload handler blurs the active element before reading the flag', () => {
-		const src = strip_comments(readFileSync(join(CLIENT_ROOT, 'core', 'page', 'js', 'page.js'), 'utf8'));
+		const src = strip_comments(
+			readFileSync(join(CLIENT_ROOT, 'core', 'page', 'js', 'page.js'), 'utf8'),
+		);
 		const body = src.slice(src.indexOf('self.beforeunload_handler = function'));
 		const fn = body.slice(0, body.indexOf("window.addEventListener('beforeunload'"));
 
 		const blur_at = fn.indexOf('.blur()');
 		const read_at = fn.indexOf('const unsaved_data');
-		expect(blur_at, 'beforeunload no longer forces the focused field to commit').toBeGreaterThan(-1);
-		expect(blur_at, 'the blur must happen BEFORE window.unsaved_data is read').toBeLessThan(read_at);
+		expect(blur_at, 'beforeunload no longer forces the focused field to commit').toBeGreaterThan(
+			-1,
+		);
+		expect(blur_at, 'the blur must happen BEFORE window.unsaved_data is read').toBeLessThan(
+			read_at,
+		);
 	});
 
 	test('no client file outside events.js assigns window.unsaved_data directly', () => {

@@ -51,7 +51,8 @@ const DASHBOARD_PATH = join(
 );
 
 /** comments stripped so prose describing the old defect is not itself a finding */
-const strip_comments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+const strip_comments = (src: string) =>
+	src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 /**
  * An HTML-sink assignment whose right-hand side is anything but an empty string
@@ -76,14 +77,23 @@ describe('dashboard.js render sinks', () => {
 		expect(source.length).toBeGreaterThan(10_000);
 		expect(code).toContain('render_activity_timeline');
 
-		const offender = "row.innerHTML = `<span>${user_label_map[uid]}</span>`";
-		expect(offender.match(SINK_WITH_CONTENT), 'the sink matcher no longer catches the original defect').not.toBeNull();
-		expect("host.innerHTML = ''".match(SINK_WITH_CONTENT), 'a container reset must not be a finding').toBeNull();
+		const offender = 'row.innerHTML = `<span>${user_label_map[uid]}</span>`';
+		expect(
+			offender.match(SINK_WITH_CONTENT),
+			'the sink matcher no longer catches the original defect',
+		).not.toBeNull();
+		expect(
+			"host.innerHTML = ''".match(SINK_WITH_CONTENT),
+			'a container reset must not be a finding',
+		).toBeNull();
 	});
 
 	test('A. no HTML sink carries content — only literal container resets', () => {
 		const found = code.match(SINK_WITH_CONTENT) ?? [];
-		expect(found, 'record data must never be parsed as HTML here — build nodes and use textContent').toEqual([]);
+		expect(
+			found,
+			'record data must never be parsed as HTML here — build nodes and use textContent',
+		).toEqual([]);
 		expect(code.match(INSERT_ADJACENT) ?? []).toEqual([]);
 	});
 
@@ -94,13 +104,18 @@ describe('dashboard.js render sinks', () => {
 		const block = code.slice(code.indexOf('area_dashboard_activity_user_row'));
 		const row_render = block.slice(0, block.indexOf('user_table.appendChild'));
 
-		expect(row_render, 'the user name is no longer written as text').toMatch(/user_name\.textContent\s*=/);
-		expect(row_render, 'the activity count is no longer written as text').toMatch(/user_count\.textContent\s*=/);
+		expect(row_render, 'the user name is no longer written as text').toMatch(
+			/user_name\.textContent\s*=/,
+		);
+		expect(row_render, 'the activity count is no longer written as text').toMatch(
+			/user_count\.textContent\s*=/,
+		);
 	});
 
 	test('C. no inner_html option is passed to the shared DOM factory', () => {
-		expect(code, 'ui.create_dom_element inner_html routes to insertAdjacentHTML — the same sink').not.toMatch(
-			/inner_html\s*:/,
-		);
+		expect(
+			code,
+			'ui.create_dom_element inner_html routes to insertAdjacentHTML — the same sink',
+		).not.toMatch(/inner_html\s*:/);
 	});
 });

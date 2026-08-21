@@ -37,34 +37,52 @@ const saved: Record<string, unknown> = {};
 let set_context_vars: SetContextVars;
 
 beforeAll(async () => {
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label']) saved[key] = globals[key];
+	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
+		saved[key] = globals[key];
 	globals.window = globalThis;
-	globals.page_globals = { dedalo_data_lang: 'lg-eng', dedalo_data_nolan: 'lg-nolan', stream_readers: [] };
+	globals.page_globals = {
+		dedalo_data_lang: 'lg-eng',
+		dedalo_data_nolan: 'lg-nolan',
+		stream_readers: [],
+	};
 	globals.SHOW_DEBUG = false;
 	globals.DEDALO_CORE_URL = '/dedalo/core';
 	globals.get_label = {};
 
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
-		ui: { create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }) },
+		ui: {
+			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+		},
 	}));
-	mock.module(join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'page', 'js', 'css.js'), () => ({
-		get_inserted_rules: () => [],
-	}));
+	mock.module(
+		join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'page', 'js', 'css.js'),
+		() => ({
+			get_inserted_rules: () => [],
+		}),
+	);
 
-	set_context_vars = ((await import(COMMON_PATH)) as { set_context_vars: SetContextVars }).set_context_vars;
+	set_context_vars = ((await import(COMMON_PATH)) as { set_context_vars: SetContextVars })
+		.set_context_vars;
 });
 
 afterAll(() => {
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label']) globals[key] = saved[key];
+	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_CORE_URL', 'get_label'])
+		globals[key] = saved[key];
 });
 
 /** the minimum `self` shape set_context_vars touches */
 const fake_self = (
 	context: Record<string, unknown> = {},
-	request_config_object?: Record<string, unknown>
+	request_config_object?: Record<string, unknown>,
 ): Record<string, any> => ({
 	id: 'ddo_test',
-	context: { type: 'component', model: 'component_input_text', tipo: 'test1', permissions: 2, ...context },
+	context: {
+		type: 'component',
+		model: 'component_input_text',
+		tipo: 'test1',
+		permissions: 2,
+		...context,
+	},
 	request_config_object,
 });
 

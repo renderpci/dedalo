@@ -86,7 +86,11 @@ describe('the manifest lists tool_common exactly once, in the PHP position', () 
 
 	test('no duplicate url anywhere in the manifest', () => {
 		const seen = new Set<string>();
-		const duplicates = urls.filter((url) => (seen.has(url) ? true : (seen.add(url), false)));
+		const duplicates = urls.filter((url) => {
+			if (seen.has(url)) return true;
+			seen.add(url);
+			return false;
+		});
 		expect(
 			[...new Set(duplicates)],
 			'Duplicated manifest entries. The most likely cause: the core walk in dedalo_files.ts stopped skipping TOOLS_COMMON_REL, so the tools_common block emits every file a second time.',

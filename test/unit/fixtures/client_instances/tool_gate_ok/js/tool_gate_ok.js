@@ -8,7 +8,7 @@
 export function tool_gate_ok() {
 	globalThis.__gate_counters.constructed++;
 }
-tool_gate_ok.prototype.init = async function(options) {
+tool_gate_ok.prototype.init = async function (options) {
 	globalThis.__gate_counters.init_started++;
 	// span real async time so a concurrent second caller lands INSIDE the build
 	// window (between the cache miss and instances_map.set)

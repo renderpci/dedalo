@@ -93,7 +93,11 @@ function coin(
 }
 
 /** A raw thesaurus row with hierarchy49 children. */
-function tsRow(sectionId: unknown, children: unknown[] = [], sectionTipo = 'test1026'): ThesaurusRow {
+function tsRow(
+	sectionId: unknown,
+	children: unknown[] = [],
+	sectionTipo = 'test1026',
+): ThesaurusRow {
 	return {
 		section_id: sectionId,
 		section_tipo: sectionTipo,

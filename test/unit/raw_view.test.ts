@@ -24,10 +24,7 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import {
-	dropTestCorpus,
-	ensureTestCorpus,
-} from '../../src/core/test_data/test_corpus/ensure.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { handleRequest } from '../../src/server.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 

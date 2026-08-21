@@ -170,10 +170,10 @@ async function mirrorBag(): Promise<unknown[] | null> {
 
 async function sweepScratch(): Promise<void> {
 	for (const id of [REFERENCER_ID, REFERENCER_ID2]) {
-		await sql.unsafe(
-			`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
-			[REF_SECTION, id],
-		);
+		await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
+			REF_SECTION,
+			id,
+		]);
 		await sql.unsafe(
 			`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
 			[REF_SECTION, id],
@@ -291,10 +291,10 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		// one — EQUAL length before/after. The adjudication is MEMBERSHIP-based
 		// (the historic length-only guard could not even see this), and since
 		// 2026-08-06 the full law persists: BOTH halves land in one write.
-		await sql.unsafe(
-			`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
-			[REF_SECTION, REFERENCER_ID],
-		);
+		await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
+			REF_SECTION,
+			REFERENCER_ID,
+		]);
 		await insertReferencer(REFERENCER_ID2);
 		const refusedBefore = getCounters().observers_shrink_refused ?? 0;
 		const outcome = await recomputeExternalRelation(
@@ -328,10 +328,10 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		// THE REGRESSION GUARD for the reported bug. Until 2026-08-06 a pure
 		// shrink was withheld unconditionally, so an unlinked reference stayed
 		// mirrored forever and only an operator flag could clear it.
-		await sql.unsafe(
-			`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
-			[REF_SECTION, REFERENCER_ID2],
-		);
+		await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
+			REF_SECTION,
+			REFERENCER_ID2,
+		]);
 		const diff = await recomputeExternalRelation(
 			MIRROR,
 			SEED_TERM.section_tipo,
@@ -431,10 +431,10 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			// THE MASKED SWAP: one referencer bypass-deleted, one bypass-inserted,
 			// so the law drops exactly one entry and appends exactly one — before
 			// === after, and a length-delta census would report ZERO drops.
-			await sql.unsafe(
-				`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
-				[REF_SECTION, REFERENCER_ID],
-			);
+			await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
+				REF_SECTION,
+				REFERENCER_ID,
+			]);
 			await insertReferencer(REFERENCER_ID2);
 
 			const records: unknown[] = [];

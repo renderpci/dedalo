@@ -4,37 +4,22 @@
 		{
 			"tipo": "numisdata77",
 			"cts": "numisdata161",
-			"dff": [
-				"numisdata36"
-			],
-			"sts": [
-				"numisdata4"
-			]
+			"dff": ["numisdata36"],
+			"sts": ["numisdata4"]
 		},
 		{
 			"tipo": "numisdata203",
 			"cts": "numisdata161",
-			"dff": [
-				"numisdata36"
-			],
-			"sts": [
-				"numisdata4"
-			]
+			"dff": ["numisdata36"],
+			"sts": ["numisdata4"]
 		},
 		{
 			"tipo": "tch33",
 			"cts": "tch241",
-			"dff": [
-				"tch40"
-			],
-			"sts": [
-				"tch1",
-				"tch178"
-			]
+			"dff": ["tch40"],
+			"sts": ["tch1", "tch178"]
 		}
 	],
-	"snapshot_only_carriers": [
-		"numisdata629"
-	],
+	"snapshot_only_carriers": ["numisdata629"],
 	"_snapshot_doc": "Carriers a suite-DB SNAPSHOT holds that the live app ontology no longer does (verified absent from the app database 2026-08-02; same shape as its pinned sibling). Tolerated by the reverse census so a stale snapshot does not read as a new 5th user."
 }

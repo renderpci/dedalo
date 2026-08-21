@@ -110,7 +110,11 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 		const { remoteFields, ddos } = await hydrateExternalSearchDdos(
 			'test61',
 			'test7342',
-			[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342'), ddoRef('test7346', 'test7342')],
+			[
+				ddoRef('test7344', 'test7342'),
+				ddoRef('test7345', 'test7342'),
+				ddoRef('test7346', 'test7342'),
+			],
 			load,
 		);
 		expect(remoteFields).toEqual(['id', 'title', 'authors']);

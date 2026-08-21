@@ -67,7 +67,8 @@ const with_timeout = <T>(promise: Promise<T>, ms: number, label: string): Promis
 		promise,
 		new Promise<never>((_resolve, reject) => {
 			const timer = setTimeout(
-				() => reject(new Error(`TIMEOUT ${ms}ms: ${label} never settled — the pre-fix hang defect`)),
+				() =>
+					reject(new Error(`TIMEOUT ${ms}ms: ${label} never settled — the pre-fix hang defect`)),
 				ms,
 			);
 			// let the process exit even if the race is won
@@ -145,7 +146,11 @@ describe('get_instance — in-flight build de-duplication (A)', () => {
 		const p1 = instances.get_instance(options_a);
 		const p2 = instances.get_instance(options_b);
 
-		const [i1, i2] = await with_timeout(Promise.all([p1, p2]), 3000, 'concurrent get_instance pair');
+		const [i1, i2] = await with_timeout(
+			Promise.all([p1, p2]),
+			3000,
+			'concurrent get_instance pair',
+		);
 
 		expect(i1).not.toBeNull();
 		expect(i1).toBeInstanceOf(Object);

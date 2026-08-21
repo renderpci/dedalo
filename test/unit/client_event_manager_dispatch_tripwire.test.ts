@@ -33,7 +33,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:tes
 import { join } from 'node:path';
 
 const EM_PATH = join(
-	import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'event_manager.js',
+	import.meta.dir,
+	'..',
+	'..',
+	'client',
+	'dedalo',
+	'core',
+	'common',
+	'js',
+	'event_manager.js',
 );
 
 type EventManager = {

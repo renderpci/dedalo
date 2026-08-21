@@ -508,7 +508,10 @@ describe('rule 4 — the installer is the only bypass', () => {
 		expect(occurrences, 'the installer may bypass the marker exactly once').toBe(1);
 		const flagAt = source.indexOf('allowAnyDatabase');
 		const doorAt = source.lastIndexOf('materializeTestTldOntology(', flagAt);
-		expect(doorAt, '`allowAnyDatabase` is not inside a materializeTestTldOntology call').toBeGreaterThan(-1);
+		expect(
+			doorAt,
+			'`allowAnyDatabase` is not inside a materializeTestTldOntology call',
+		).toBeGreaterThan(-1);
 		// Nothing closes that call between the door and the flag.
 		expect(source.slice(doorAt, flagAt)).not.toContain(')');
 	});

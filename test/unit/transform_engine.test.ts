@@ -175,7 +175,10 @@ describe('executor dry-run smoke (no writes; queries must be valid)', () => {
 		// ontology7 (untouchable here), and matrix_ontology's UNIQUE (section_id,
 		// section_tipo) makes the bulk UPDATE abort part-way — with no transaction
 		// and no rollback in this executor, that is an unrecoverable half-rename.
-		await executeChangesInTipos([{ old: 'zznex0', new: 'zzq0', type: 'section', perform: [] }], rec);
+		await executeChangesInTipos(
+			[{ old: 'zznex0', new: 'zzq0', type: 'section', perform: [] }],
+			rec,
+		);
 
 		const errors = rec.errors.join(' | ');
 		expect(errors).toContain('ontology root section');

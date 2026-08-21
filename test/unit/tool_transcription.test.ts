@@ -53,8 +53,8 @@ import {
 	type ScheduleRepair,
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
-import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_transcription_${process.pid}`;

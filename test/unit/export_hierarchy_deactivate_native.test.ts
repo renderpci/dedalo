@@ -21,11 +21,11 @@
 // (scripts/lib/tld_census.ts) from reading them as records this gate reads.
 
 import { describe, expect, test } from 'bun:test';
-import { HIERARCHY_IMPORT_DIR } from '../../src/core/install/paths.ts';
 import {
 	shouldDeactivate,
 	widget,
 } from '../../src/core/area_maintenance/widgets/export_hierarchy.ts';
+import { HIERARCHY_IMPORT_DIR } from '../../src/core/install/paths.ts';
 
 const SOURCE_FILE = `${import.meta.dir}/../../src/core/area_maintenance/widgets/export_hierarchy.ts`;
 

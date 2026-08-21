@@ -24,8 +24,8 @@ import { getDashboardData } from '../../src/core/area/dashboard.ts';
 import { isMatrixTable } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
-import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { countSectionRecords } from '../../src/core/search/count.ts';
+import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 
 const TM_SECTION = 'dd15';
 /** A real record section — the countable contrast. */

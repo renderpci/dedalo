@@ -358,10 +358,7 @@ async function sweepScratch(): Promise<void> {
 	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo LIKE 'test9992%' AND tld = 'test'`);
 	await sql.unsafe(
 		`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
-		[
-			REF_SECTION,
-			[REF_A, REF_EQUIV, REF_TX, REF_ON, W11_RECORD, REF_TRANSITIVE].join(','),
-		],
+		[REF_SECTION, [REF_A, REF_EQUIV, REF_TX, REF_ON, W11_RECORD, REF_TRANSITIVE].join(',')],
 	);
 	await sql.unsafe(
 		`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
@@ -371,10 +368,10 @@ async function sweepScratch(): Promise<void> {
 		],
 	);
 	await sql.unsafe(`DELETE FROM matrix_time_machine WHERE tipo LIKE 'test9992%'`, []);
-	await sql.unsafe(
-		`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
-		[REF_SECTION, W11_RECORD],
-	);
+	await sql.unsafe(`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`, [
+		REF_SECTION,
+		W11_RECORD,
+	]);
 }
 
 beforeAll(async () => {
@@ -577,7 +574,13 @@ const SAVED_ITEMS = [{ section_tipo: TERM_SECTION, section_id: TERM_A }];
 describe('unconditional cascade — the flagship chain shape', () => {
 	test('A saves → relay B (write:none) → C recomputes at the target AND at the payload equivalent', async () => {
 		const relayBagBefore = JSON.stringify(await bagOf(RELAY, TERM_A));
-		await propagateToObservers(OBSERVED, REF_SECTION, REF_A, { saved: SAVED_ITEMS, removed: [] }, -1);
+		await propagateToObservers(
+			OBSERVED,
+			REF_SECTION,
+			REF_A,
+			{ saved: SAVED_ITEMS, removed: [] },
+			-1,
+		);
 
 		// C's mirror landed at the relay TARGET (self, use_self_section:true)…
 		expect(await bagOf(MIRROR, TERM_A)).toEqual([mirrorEntry(1, REF_A)]);
@@ -764,10 +767,10 @@ describe('runObserverCascadeHop ambient-transaction refusal (B6)', () => {
 			chain: [`${OBSERVED}@${REF_SECTION}/${REF_A}`, `${RELAY}@${TERM_SECTION}/${TERM_A}`],
 		};
 		await expect(
-			withTransaction(() => runObserverCascadeHop(RELAY, TERM_SECTION, TERM_A, -1, new Date(), guard)),
-		).rejects.toThrow(
-			new RegExp(`ambient transaction.*${RELAY}@${TERM_SECTION}/${TERM_A}`, 's'),
-		);
+			withTransaction(() =>
+				runObserverCascadeHop(RELAY, TERM_SECTION, TERM_A, -1, new Date(), guard),
+			),
+		).rejects.toThrow(new RegExp(`ambient transaction.*${RELAY}@${TERM_SECTION}/${TERM_A}`, 's'));
 	});
 });
 
@@ -823,7 +826,13 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 	test('inside an ambient transaction the real failure surfaces to the tx owner', async () => {
 		await expect(
 			withTransaction(async () => {
-				await propagateToObservers(RELAY, TERM_SECTION, TERM_A, { saved: brokenItems, removed: [] }, -1);
+				await propagateToObservers(
+					RELAY,
+					TERM_SECTION,
+					TERM_A,
+					{ saved: brokenItems, removed: [] },
+					-1,
+				);
 			}),
 		).rejects.toThrow(/ambient transaction \(B6\)/);
 	});
@@ -889,7 +898,10 @@ describe('W11: deletePortalLocator lock', () => {
 		});
 		await sql.unsafe(
 			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${REF_SECTION}', $2::text::jsonb)`,
-			[W11_RECORD, JSON.stringify({ [W11_PORTAL]: [locator(1, 999999941), locator(2, 999999942)] })],
+			[
+				W11_RECORD,
+				JSON.stringify({ [W11_PORTAL]: [locator(1, 999999941), locator(2, 999999942)] }),
+			],
 		);
 		const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
 		const remove = (targetId: number) =>

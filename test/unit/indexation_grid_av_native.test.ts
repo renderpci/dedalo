@@ -377,7 +377,7 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 			'"model":"tool_indexation"',
 			'"model":"tool_transcription"',
 			// the component_av posterframe media cell (head row) — in ADOPTED terms:
-		// the golden is compared after translation, so the marker must be too
+			// the golden is compared after translation, so the marker must be too
 			`/dedalo/media/av/posterframe/${seed('rsc', 35)}_test3_${SCRATCH_ID}.jpg`,
 		]) {
 			expect(goldenJson).toContain(marker);

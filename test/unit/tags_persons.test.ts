@@ -45,8 +45,8 @@ import {
 	deleteMatrixRecord,
 	insertMatrixRecordWithCounter,
 } from '../../src/core/db/matrix_write.ts';
-import { buildRelatedSections } from '../../src/core/resolve/related_sections.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { buildRelatedSections } from '../../src/core/resolve/related_sections.ts';
 import { buildGetDataContext, readSection } from '../../src/core/section/read.ts';
 import {
 	dropSituation,

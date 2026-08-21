@@ -44,8 +44,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -84,8 +84,20 @@ let TABLE = '';
 
 /** The value the snapshot holds — two main items, one frame each. */
 const MAIN_A = [
-	{ id: 1, type: 'dd151', section_id: '501', section_tipo: PORTAL_TARGET, from_component_tipo: MAIN },
-	{ id: 2, type: 'dd151', section_id: '502', section_tipo: PORTAL_TARGET, from_component_tipo: MAIN },
+	{
+		id: 1,
+		type: 'dd151',
+		section_id: '501',
+		section_tipo: PORTAL_TARGET,
+		from_component_tipo: MAIN,
+	},
+	{
+		id: 2,
+		type: 'dd151',
+		section_id: '502',
+		section_tipo: PORTAL_TARGET,
+		from_component_tipo: MAIN,
+	},
 ];
 const FRAMES_A = [
 	{
@@ -124,7 +136,13 @@ const FRAMES_A_STORED = intAddresses(FRAMES_A);
 /** TODAY's value — one main item, and a frame paired to an item that the
  * restore removes (`id_key: 9`): the orphan the old restore left behind. */
 const MAIN_B = [
-	{ id: 1, type: 'dd151', section_id: '901', section_tipo: PORTAL_TARGET, from_component_tipo: MAIN },
+	{
+		id: 1,
+		type: 'dd151',
+		section_id: '901',
+		section_tipo: PORTAL_TARGET,
+		from_component_tipo: MAIN,
+	},
 ];
 const FRAMES_B = [
 	{

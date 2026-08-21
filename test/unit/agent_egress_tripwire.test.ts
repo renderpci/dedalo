@@ -109,9 +109,19 @@ describe('agent egress tripwire (mechanical classification of every read tool)',
 		const egress = { external: true, policy };
 		const { allowed, removed } = await filterEgressHits(egress, [
 			// group chunk whose deep-resolved text came from the forbidden test6099
-			{ section_tipo: 'test6813', section_id: 1, component_tipo: 'rag:card', contributors: ['test6099'] },
+			{
+				section_tipo: 'test6813',
+				section_id: 1,
+				component_tipo: 'rag:card',
+				contributors: ['test6099'],
+			},
 			// group chunk fed only by its own section — passes
-			{ section_tipo: 'test6813', section_id: 2, component_tipo: 'rag:card', contributors: ['test6813'] },
+			{
+				section_tipo: 'test6813',
+				section_id: 2,
+				component_tipo: 'rag:card',
+				contributors: ['test6813'],
+			},
 		]);
 		expect(allowed.map((h) => h.section_id)).toEqual([2]);
 		expect(removed).toBe(1);

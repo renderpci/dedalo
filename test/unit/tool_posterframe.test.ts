@@ -31,8 +31,8 @@ import {
 import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
-import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_posterframe_${process.pid}`;

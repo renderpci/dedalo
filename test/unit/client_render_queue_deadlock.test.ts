@@ -52,7 +52,14 @@ function make_node(): Record<string, any> {
 }
 
 beforeAll(() => {
-	for (const key of ['page_globals', 'Node', 'get_label', 'SHOW_DEBUG', 'SHOW_DEVELOPER', 'window']) {
+	for (const key of [
+		'page_globals',
+		'Node',
+		'get_label',
+		'SHOW_DEBUG',
+		'SHOW_DEVELOPER',
+		'window',
+	]) {
 		saved_globals[key] = g[key];
 	}
 	// client modules decorate `window` at import time

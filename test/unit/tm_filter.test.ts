@@ -64,7 +64,10 @@ describe('conformTmFilter — string columns (tipo/section_tipo)', () => {
 			sql: 'section_tipo NOT ILIKE $1',
 			params: ['%test6099%'],
 		});
-		expect(one('dd1772', ['test6099'], '')).toEqual({ sql: 'section_tipo = $1', params: ['test6099'] });
+		expect(one('dd1772', ['test6099'], '')).toEqual({
+			sql: 'section_tipo = $1',
+			params: ['test6099'],
+		});
 	});
 	test('wildcard → ILIKE, existence', () => {
 		expect(one('dd1772', ['*test*'], '')).toEqual({

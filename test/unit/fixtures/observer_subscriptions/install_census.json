@@ -19,15 +19,9 @@
 		"rsc1531->rsc1214"
 	],
 	"wildcards_install": {
-		"numisdata250": [
-			"numisdata282->numisdata250"
-		],
-		"numisdata257": [
-			"numisdata1451->numisdata257"
-		],
-		"tch557": [
-			"tch555->tch557"
-		]
+		"numisdata250": ["numisdata282->numisdata250"],
+		"numisdata257": ["numisdata1451->numisdata257"],
+		"tch557": ["tch555->tch557"]
 	},
 	"single_declaration_install": {
 		"observed": "rsc19",
@@ -37,11 +31,7 @@
 	"reused_component_install": {
 		"observed": "rsc387",
 		"observer": "hierarchy93",
-		"hosts": [
-			"dc1",
-			"on1",
-			"ts1"
-		],
+		"hosts": ["dc1", "on1", "ts1"],
 		"not_host": "hierarchy20"
 	},
 	"runtime_dispatch_install": {
@@ -51,10 +41,7 @@
 	},
 	"virtual_real_pair_install": {
 		"observed": "numisdata1373",
-		"observers": [
-			"numisdata1478",
-			"numisdata1479"
-		],
+		"observers": ["numisdata1478", "numisdata1479"],
 		"host": "numisdata5",
 		"own_real_section": "numisdata276"
 	}

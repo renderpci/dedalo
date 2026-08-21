@@ -158,10 +158,9 @@ describe('tool_dev_template exemplar — the seams a scaffolded tool copies', ()
 	test('sectionTipos extracts every batch target and stays fail-closed on junk', () => {
 		const extract = tool.apiActions.batch_demo?.sectionTipos;
 		expect(typeof extract).toBe('function');
-		expect(extract?.({ items: [{ section_tipo: 'test3' }, { section_tipo: 'test6099' }] })).toEqual([
-			'test3',
-			'test6099',
-		]);
+		expect(extract?.({ items: [{ section_tipo: 'test3' }, { section_tipo: 'test6099' }] })).toEqual(
+			['test3', 'test6099'],
+		);
 		// No items → an EMPTY target list, which assertActionPermission denies.
 		expect(extract?.({})).toEqual([]);
 		expect(extract?.({ items: 'not-an-array' })).toEqual([]);

@@ -163,10 +163,7 @@ describe('dd_rag_api embed_groups', () => {
 	});
 
 	test('opted-in section (test6099 descriptor) returns its group ids', async () => {
-		const res = await ragApiActions.embed_groups(
-			rqo({ section_tipo: 'test6099' }),
-			ctx(SUPERUSER),
-		);
+		const res = await ragApiActions.embed_groups(rqo({ section_tipo: 'test6099' }), ctx(SUPERUSER));
 		const result = res.body.result as { groups: string[] };
 		// The live descriptor on numisdata316 declares the 'card' group; if that
 		// data ever changes, the assertion is on the SHAPE (array of slugs).

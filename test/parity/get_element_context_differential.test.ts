@@ -144,6 +144,7 @@ describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate
 				// `parent_grouper` is outside the subset this gate compares.
 				expect(rawPhpEntry.parent_grouper).toBe(`numis${'data1'}`);
 				expect(tsEntry.parent_grouper).toBe(CLONE_ROOT_PARENT);
+				// biome-ignore lint/performance/noDelete: the key must be GONE, not undefined — the leftover scan below walks own keys.
 				delete rawPhpEntry.parent_grouper;
 			}
 			// WC-2026-08-19-test-tld-replay: the frozen install-term entry, read in

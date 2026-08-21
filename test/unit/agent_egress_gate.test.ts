@@ -61,14 +61,19 @@ describe('gateAgentToolCall (pre-execution)', () => {
 	test('structure tools pass regardless of policy', async () => {
 		expect(await gateAgentToolCall(RESTRICT_ALL, 'dedalo_list_sections', {})).toBeNull();
 		expect(
-			await gateAgentToolCall(RESTRICT_ALL, 'dedalo_describe_section', { section_tipo: 'test6813' }),
+			await gateAgentToolCall(RESTRICT_ALL, 'dedalo_describe_section', {
+				section_tipo: 'test6813',
+			}),
 		).toBeNull();
 		expect(await gateAgentToolCall(RESTRICT_ALL, 'dedalo_resolve', { name: 'People' })).toBeNull();
 	});
 
 	test('local conversations are never gated (policy not consulted)', async () => {
 		expect(
-			await gateAgentToolCall(LOCAL, 'dedalo_read_record', { section_tipo: 'test6813', section_id: 1 }),
+			await gateAgentToolCall(LOCAL, 'dedalo_read_record', {
+				section_tipo: 'test6813',
+				section_id: 1,
+			}),
 		).toBeNull();
 	});
 
@@ -113,7 +118,10 @@ describe('gateAgentToolCall (pre-execution)', () => {
 		};
 		const refusal = await gateAgentToolCall(selective, 'dedalo_search_records', {
 			section_tipo: 'test6813',
-			raw_sqo: { section_tipo: 'test6813', filter: { q: 'x', path: [{ section_tipo: 'memory9' }] } },
+			raw_sqo: {
+				section_tipo: 'test6813',
+				filter: { q: 'x', path: [{ section_tipo: 'memory9' }] },
+			},
 		});
 		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 	});
@@ -152,7 +160,10 @@ describe('gateAgentToolResult (post-execution — portal-resolved labels)', () =
 				section_tipo: 'test6813',
 				section_id: 5,
 				components: [
-					{ tipo: 'test6836', value: [{ section_tipo: 'secret7', section_id: 9, label: 'Informant' }] },
+					{
+						tipo: 'test6836',
+						value: [{ section_tipo: 'secret7', section_id: 9, label: 'Informant' }],
+					},
 				],
 			},
 		};
