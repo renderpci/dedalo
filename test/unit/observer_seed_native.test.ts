@@ -191,7 +191,16 @@ describe('D3 declared data_from_field users (ontology cross-check)', () => {
 				?.config_relation?.relation_type_rel;
 			expect(typeRel).toBe('dd621');
 		}
-		expect(present).toBeGreaterThanOrEqual(2); // numisdata36 + test200
+		// The GENERIC peers must all be present — that is the anti-vacuity floor,
+		// and unlike the old `>= 2` it does not require an installation's ontology
+		// to be in this database. (The `>= 2` reached its count only because the
+		// suite DB happened to carry a vendored install ontology; the moment that
+		// fixture went, so did the assertion — measured 2026-08-21.)
+		const genericPeers = [...new Set(DECLARED_USERS_GENERIC.flatMap((user) => [...user.dff]))];
+		for (const peerTipo of genericPeers) {
+			expect(await getNode(peerTipo), `${peerTipo} must be declared`).not.toBeNull();
+		}
+		expect(present).toBeGreaterThanOrEqual(genericPeers.length);
 	});
 });
 

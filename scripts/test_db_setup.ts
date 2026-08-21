@@ -21,10 +21,15 @@
  *      src/core/test_data/test_tld_ontology.json through the engine's doors
  *      (records → rebuildOntology), so the suite runs on the REVIEWABLE source
  *      and not on whatever the binary seed happens to hold;
- *   5. the numisdata TEST ONTOLOGY (test/fixtures/ontology/numisdata_ontology.copy.gz) —
- *      DEFINITIONS ONLY, no records. The gates needing it create their own rows at
- *      reserved-high scratch ids; they only ever lacked the ontology to resolve against.
- *      Measured: this alone takes the unit suite from 183 failures to 109.
+ * It installs NO installation's ontology. It used to load one
+ * (`test/fixtures/ontology/numisdata_ontology.copy.gz`) because ~46 gates
+ * needed that install's definitions to resolve against; the generic-`test`-TLD
+ * migration replaced every one of them with a `test` clone, and that step was
+ * dropped on 2026-08-21 after measuring that its absence moves nothing (see
+ * below). The fixture FILE stays in the repo — it is the input
+ * `scripts/clone_into_test_tld.ts` reads to mint twins, and deleting it would
+ * make future cloning impossible from a clone of this repo. It is simply no
+ * longer poured into the test database.
  *
  * DEFINITIONS, NOT RECORDS. Every step above installs ONTOLOGY (and the tool
  * registry an install cannot boot without). No fixture RECORDS are seeded here
@@ -62,14 +67,6 @@ import { rebuildTestMediaRoot } from '../test/helpers/test_media_root.ts';
 const REPO = join(import.meta.dir, '..');
 const SEED = join(REPO, 'install', 'db', 'dedalo_install.pgsql.gz');
 const HIERARCHY_DIR = join(REPO, 'install', 'import', 'hierarchy');
-const ONTOLOGY = join(REPO, 'test', 'fixtures', 'ontology', 'numisdata_ontology.copy.gz');
-const ONTOLOGY_COLUMNS = join(
-	REPO,
-	'test',
-	'fixtures',
-	'ontology',
-	'numisdata_ontology.columns.txt',
-);
 
 const appDb = readEnv('DB_NAME') ?? readEnv('DEDALO_DATABASE_CONN') ?? '';
 const testDb = testDatabaseName();
@@ -215,23 +212,19 @@ console.log(
 
 // 4. The numisdata TEST ontology — definitions only, no records.
 //
-// PHASE 5/6 DELETES THIS STEP (generic-`test`-TLD migration): every gate that
-// needs this structure gets a `test` clone of it instead, and the fixture
-// test/fixtures/ontology/numisdata_ontology.copy.gz goes with it. Kept until
-// the parity/unit sweeps have moved off the numisdata tipos.
-if (!existsSync(ONTOLOGY)) throw new Error(`ontology fixture not found: ${ONTOLOGY}`);
-const columns = readFileSync(ONTOLOGY_COLUMNS, 'utf8').trim();
-const ontologyCopy = join(tmpdir(), `dedalo_test_numisdata_${process.pid}.copy`);
-writeFileSync(ontologyCopy, gunzipSync(readFileSync(ONTOLOGY)));
-try {
-	await psql(testDb, ['-c', `\\copy dd_ontology (${columns}) FROM '${ontologyCopy}'`]);
-	const n = (
-		await psql(testDb, ['-tAc', "SELECT count(*) FROM dd_ontology WHERE tld='numisdata'"])
-	).trim();
-	console.log(`[test-db] numisdata test ontology loaded (${n} nodes, no records)`);
-} finally {
-	rmSync(ontologyCopy, { force: true });
-}
+// The vendored `numisdata` ontology fixture was REMOVED here on 2026-08-21,
+// the step this file always said phase 5/6 would delete. It existed because
+// ~46 gates needed one installation's ontology to resolve against; after the
+// generic-`test`-TLD migration the census is 2 files, both unmigratable by
+// construction and neither needing this.
+//
+// MEASURED, not assumed, before deleting: the whole tier was run with the 1537
+// ontology rows present and again with them dropped. Parity was identical
+// (263 pass / 105 fail both ways) and exactly ONE unit assertion moved —
+// observer_seed_native's "every declared peer is dd621 MULTIDIRECTIONAL",
+// whose `>= 2` floor reached its count only because this fixture happened to
+// be here. It now floors on the GENERIC peers, so it states the same law
+// without requiring an installation's ontology to be in the database.
 
 // 5. Hierarchies + tools, through the INSTALLER'S OWN code paths, from repo-vendored data —
 // the tools/tree/virtual-section gates need a complete install, not a bare seed.
@@ -261,8 +254,10 @@ console.log(`[test-db] tools registered (ok: ${tools.ok})`);
 // corpus calls `ensureTestCorpus(scope)` in its own `beforeAll` and
 // `dropTestCorpus(scope)` in `afterAll` (test/unit/test_corpus_fixture.test.ts
 // is the reference; test/helpers/zzd_diffusion_fixture.ts is the same pattern
-// for the diffusion ontology). The ONTOLOGY above is the opposite case and does
-// belong here: definitions cost nothing to have present, records do.
+// for the diffusion ontology). The generic `test` ontology above is the
+// opposite case and does
+// belong here: definitions cost nothing to have present, records do — but they
+// must be the REPO's definitions, never a copy of some installation's.
 //
 // To materialize it by hand for a debugging session:
 //   bun -e "await (await import('./src/core/test_data/test_corpus/ensure.ts')).ensureTestCorpus()"
