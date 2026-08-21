@@ -6,7 +6,12 @@
 # and that pin in lockstep — the engine is coupled to version-specific runtime
 # behaviour, and a silent drift is a data-corruption class, not a performance
 # regression.
-FROM oven/bun:1.3.9-debian
+#
+# THREE STAGES, one lineage — see "Build targets" at the foot of this file:
+#   runtime     the image, production dependencies only
+#   dev         runtime + the devDependencies (client test harness, less, linters)
+#   production  the DEFAULT target; a bare alias of `runtime`
+FROM oven/bun:1.3.9-debian AS runtime
 
 # --- OS packages -------------------------------------------------------------
 # The image MUST ship a `psql` that is NOT OLDER than the PostgreSQL server it
@@ -74,3 +79,46 @@ EXPOSE 3600
 # see it.
 ENTRYPOINT ["/bin/sh", "-c", "umask 0000; exec \"$@\"", "--"]
 CMD ["bun", "run", "src/server.ts"]
+
+# --- Build targets -----------------------------------------------------------
+# DEV: the same image with the devDependencies put BACK. `--production` above
+# drops mocha and chai, and both are registered client libs
+# (src/core/client_libs/registry.ts, `devOnly`) — without them the browser test
+# harness at /dedalo/test/client/ loads nothing and every script 404s as a JSON
+# error envelope ("MIME type ('application/json') is not executable"). `less`
+# comes back too, so `bun run dev` (with the LESS watcher) works here.
+#
+# It is a LAYER ON TOP of the finished runtime stage, not a fork of it: there is
+# exactly one copy of the OS packages, the source copy and the runtime settings,
+# so a dev image can never drift from what production runs.
+#
+# Reinstalling needs to write into the root-owned node_modules, hence the
+# root/bun sandwich; the chown keeps the tree owned by the user that runs it,
+# and the cache root installed into is dropped in the SAME layer (a separate RUN
+# would delete nothing — the bytes would already be committed).
+#
+#   docker compose -f docker-compose.simple.yml \
+#                  -f deploy/docker-compose.qnap-dev.yml build
+#
+# DEV_MODE IS SEPARATE. This target only puts the bytes on disk; the SERVING
+# guard (src/core/client_libs/serving.ts, `lib.devOnly === true && !isDevMode()`)
+# still refuses a dev-only lib unless DEDALO_DEV_MODE=true, which the dev compose
+# overlay sets. Both are required.
+FROM runtime AS dev
+USER root
+RUN bun install --frozen-lockfile \
+ && chown -R bun:bun /opt/dedalo/master_dedalo/node_modules \
+ && rm -rf /root/.bun
+USER bun
+
+# PRODUCTION: the default target, because Docker builds the LAST stage when none
+# is named — and that must never be `dev`. Keep this stage last, and keep it
+# empty; `docker compose build` on the production/simple stacks names no target
+# and lands here, inheriting every runtime setting (ENTRYPOINT, CMD, USER, ENV,
+# EXPOSE) through the FROM.
+#
+# On BuildKit (the default since Docker 23) an untargeted build resolves the
+# graph and never executes `dev`. A LEGACY builder — possible on an old Container
+# Station — runs every stage in file order instead: the image is still correct,
+# it just pays for the dev install on the way past.
+FROM runtime AS production

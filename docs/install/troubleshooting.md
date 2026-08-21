@@ -286,6 +286,32 @@ uploads in ~4 MB chunks.
 **Fix.** `client_max_body_size 300m;` (Apache's default is unlimited — nothing to
 do there).
 
+### A script 404s with `MIME type ('application/json') is not executable`
+
+**Cause.** Nothing to do with MIME types. `/dedalo/lib/<id>/…` is the
+[client-library route](../development/vendored_library_versions.md), and when it cannot resolve
+a file it answers with the standard JSON error envelope. The browser refuses to
+execute a `404`'s JSON body as a script and reports *that*, naming neither the
+missing library nor the reason.
+
+Two reasons it will not resolve, and a container usually has **both** at once:
+
+* the library is marked `devOnly` (the test harness: `mocha`, `chai`) and
+  `DEDALO_DEV_MODE` is not `true`, so the route refuses it before touching disk;
+* its package is a `devDependency`, and the image was built with
+  `bun install --frozen-lockfile --production`, which drops those.
+
+**Fix.** For the test harness, build the Dockerfile's `dev` target *and* set
+`DEDALO_DEV_MODE=true` — both are required, and a dev compose overlay does the
+two together. Rebuilding is not enough on a stack that keeps `node_modules` in an
+anonymous volume: Compose reattaches the old volume when it recreates the
+container, so bring it up with `--force-recreate -V`.
+
+For any **other** library this is a real packaging bug, not a configuration one:
+a library the client loads in production must be a runtime `dependency`. The
+`client_libs` tripwire asserts exactly that, so a red gate is the expected way to
+find out.
+
 ### `/health` answers `503 {"db":"down"}`
 
 **Cause.** PostgreSQL is unreachable or the connection pool is wedged. The health
