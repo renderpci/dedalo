@@ -415,11 +415,40 @@ Return the service-worker pre-cache manifest.
 
 ### Returns
 
-`{ result: [...], dedalo_version: string, msg: string }` — the exact shape the client's `sw.js` / `worker_cache.js` read.
+The manifest rides in the standard envelope: `data` carries the `{type, url}[]`
+list and `dedalo_version` rides beside it as an extension key. The clients read
+`response_data(api_response)` for the list and `api_response.dedalo_version` for
+the cache key — there is no top-level `result` or `msg` on the wire.
 
 ### Usage
 
 Authenticated read (a session is required) but CSRF-exempt: the service worker calls it without the page's token.
+
+### What the client does with it
+
+`dedalo_version` is **the cache key**, not a display string: it carries the engine
+version plus a signature of the client bytes on disk, so editing any manifested file
+moves the key and the browser re-fetches. The service worker names its cache
+`dedalo_files_<dedalo_version>` and owns every key with that prefix.
+
+A cache pass follows a fixed **commit order** — fetch every file, write the manifest
+record *inside* the cache, purge the superseded caches, then swap the worker's
+in-memory state. The manifest record is the *commit marker*: it means "this cache is
+whole". A worker killed mid-pass leaves an unmarked cache, which is ignored, so the
+last complete cache keeps serving. A pass that stores too little refuses to write the
+marker at all, leaving the previous cache authoritative rather than replacing a
+working cache with an empty one.
+
+Because a service worker is killed whenever it goes idle and its module state dies
+with it, a revived worker rebuilds that state from the marker with no network call,
+and re-checks the version periodically so a deploy is picked up without a new login.
+
+The worker reports progress to the login page as `ready`, `loading`, `waiting` and
+`finish` messages. `finish` is what the login navigates on, and it is always sent —
+success or failure, with an `error` field — because a missing `finish` does not
+degrade the login, it hangs it. The login also runs its own watchdog and continues
+anyway if every cache path goes silent. That message seam is frozen by the wire
+contract ledger entry `WC-2026-08-21-files-cache-finish-message`.
 
 ## get_job_events
 

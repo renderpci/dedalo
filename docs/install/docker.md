@@ -271,6 +271,16 @@ docker compose build
 Slow the first time: the media toolchain and the PostgreSQL client are a large
 apt transaction. Re-builds after a source change reuse the dependency layer.
 
+The Dockerfile is multi-stage and this command builds `production` — the
+default, production dependencies only. There is one other target, `dev`, which
+is that same image with the devDependencies put back (the browser test harness
+and the LESS compiler); it exists for a development box and is not part of any
+install path. `docker compose build` takes no `--target` flag: the target comes
+from the compose file (a dev overlay sets it), or from a plain
+`docker build --target dev .`. That overlay also sets `DEDALO_DEV_MODE=true`, and
+the test harness needs BOTH — the serving guard refuses a dev-only library
+outside dev mode however present its files are.
+
 ??? tip "Check the runtime pin if the build behaves oddly"
     ```shell
     cat .bun-version

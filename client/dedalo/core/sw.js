@@ -76,20 +76,76 @@ let cache_name = null
 let files_list
 // Set files_set. For O(1) lookup in fetch handler
 let files_set
+// string manifest_url. Synthetic in-scope URL under which the resolved manifest is
+// STORED INSIDE the cache itself. A service worker is killed whenever it goes idle
+// and its module scope dies with it, but `update_files` is posted ONLY by the login
+// (login.js run_service_worker). Without this record a revived worker had no
+// cache_name and no files_set, so cache_first fell through to the network for every
+// request: the cache was populated at login and then never read again.
+const manifest_url = './__dedalo_files_manifest__'
+// Promise|null restore_promise. Memoizes restore_state() so concurrent fetch events
+// do not each re-open the caches.
+let restore_promise = null
+// number next_revalidate. A worker that stays alive for hours must not be pinned to
+// the bundle it restored, and must not ask the API on every single request either.
+// number next_revalidate. Earliest timestamp at which the fetch path may ask the
+// server for the manifest again.
+let next_revalidate = 0
+const revalidate_interval_ms	= 300000	// 5 min — steady state, nothing is wrong
+const revalidate_retry_ms		= 30000		// 30 s — after a FAILED check: revalidate is
+											// the only self-heal, and the state it
+											// recovers from is "no usable cache at all"
+const file_fetch_timeout_ms		= 60000		// ceiling for ONE cached file
+const heartbeat_interval_ms		= 15000		// keeps the login's watchdog re-armed
+// Floor under which a pass REFUSES to commit: the cache it would publish is worse
+// than the one it would delete. Not a tuning knob — the reason is at the check.
+const min_cached_ratio			= 0.5
+// Promise|null pass_promise. SINGLE-FLIGHT lock over the cache pass. Two passes
+// overlapping is not merely wasteful: each one purges 'every key but mine', so a
+// purge from the slower pass can delete the cache the faster one just committed and
+// leave the worker with no complete cache at all. A timestamp throttles STARTS; it
+// cannot serialize a pass that outlives the interval, which a few hundred file
+// fetches on a slow link easily do.
+let pass_promise = null
 
 
 
 /**
- * LOAD_FILES_LIST
- * Call API to get a list of the Dédalo main javascript files
- * to cache and fix the value in 'files_list' var
- * @return array|null files_list
+ * MANIFEST_RECORD_URL
+ * Absolute URL of the in-cache manifest record. Synthetic: it is never served by
+ * the server and, having no '.js' ending, is never intercepted by the fetch handler
+ * nor present in files_set.
+ * @return string
  */
-const load_files_list = async () => {
+const manifest_record_url = () => {
+	return new URL(manifest_url, self.location.href).href
+}//end manifest_record_url
 
-	if (files_list) {
-		return files_list
-	}
+
+
+/**
+ * DEDALO_VERSION_OF
+ * The server's `dedalo_version` back out of a cache key ('dedalo_files_<version>').
+ * @param string key
+ * @return string
+ */
+const dedalo_version_of = (key) => {
+	return key.startsWith(cache_prefix + '_')
+		? key.slice(cache_prefix.length + 1)
+		: key
+}//end dedalo_version_of
+
+
+
+/**
+ * FETCH_MANIFEST
+ * Call API to get the list of Dédalo main javascript files to cache, plus the
+ * cache key derived from the served code. Pure read: it does NOT touch the module
+ * state, so a background revalidation can compare versions without disturbing the
+ * cache the fetch handler is serving from.
+ * @return Promise<Object|null> {files_list, cache_name}
+ */
+const fetch_manifest = async () => {
 
 	// get_dedalo_files from API
 		const api_response = await api_request({
@@ -102,47 +158,128 @@ const load_files_list = async () => {
 
 	// API error case (an ApiError under `error`; nothing to do inside a SW but log)
 		const files = response_data(api_response)
-		if (api_response.error || !Array.isArray(files)) {
+		if (api_response.error || !Array.isArray(files) || files.length<1) {
 			console.error('Error on get api response:', api_response);
 			return null
 		}
 
-	// fix values
-		files_list = files.map(el => el.url)
-		// build a Set with absolute URLs for fast lookups in the fetch handler
-		files_set = new Set(files_list.map(url => new URL(url, self.location.origin).href))
+	return {
+		files_list	: files.map(el => el.url),
 		// the cache is named after the served code (see cache_name above)
-		cache_name = cache_prefix + '_' + (api_response.dedalo_version || 'unknown')
+		cache_name	: cache_prefix + '_' + (api_response.dedalo_version || 'unknown')
+	}
+}//end fetch_manifest
 
 
-	return files_list
-}//end load_files_list
 
+/**
+ * COMMIT_STATE
+ * Swap the module state to a cache that is FULLY built. Assignment happens in one
+ * synchronous step: a fetch handler either sees the whole old state or the whole
+ * new one, never `cache_name` pointing at a cache that has not been filled yet.
+ * @param object manifest - {files_list, cache_name}
+ * @return void
+ */
+const commit_state = (manifest) => {
+
+	files_list	= manifest.files_list
+	// build a Set with absolute URLs for fast lookups in the fetch handler
+	files_set	= new Set(manifest.files_list.map(url => new URL(url, self.location.origin).href))
+	cache_name	= manifest.cache_name
+	// the in-memory state is now authoritative; drop any memoized restore
+	restore_promise = null
+}//end commit_state
 
 
 
 /**
  * ADD_RESOURCES_TO_CACHE
- * Load file list from API
- * Put files_list in cache sending a message for each file load
- * @param object options
- * @return void
+ * Read the manifest and fill the cache named after the served code, sending a
+ * message for each file load.
+ *
+ * COMMIT ORDER (this is the whole crash-safety story — a service worker can be
+ * killed at ANY await):
+ *   1. fetch every file into the new cache
+ *   2. write the manifest record — the commit marker
+ *   3. purge the superseded caches
+ *   4. swap the module state
+ * A worker killed before step 2 leaves a half-built cache with NO marker, which
+ * restore_state() ignores, and the previous cache still carries its own marker, so a
+ * revived worker keeps serving the last COMPLETE version.
+ *
+ * (!) The purge must come AFTER the marker, never before. Purging first opens a
+ * window with ZERO marked caches — the old one deleted, the new one not yet marked —
+ * and a worker revived inside it can restore nothing. Marking first can at worst
+ * leave TWO marked caches, which the next pass resolves; zero is not recoverable by
+ * inspection at all, only by a full pass.
+ *
+ * @param object options - {manifest, load_file_handler}
+ * @return Promise<bool> false when the manifest could not be read
  */
 const add_resources_to_cache = async (options) => {
+
+	// SINGLE FLIGHT. Passes are serialized, never run side by side: each one ends by
+	// deleting every OTHER dedalo cache, so two in flight delete each other's work.
+	// A caller that arrives mid-pass waits for it and then runs its own — it must
+	// not simply join, because the running pass may be working from an older
+	// manifest than the caller just triggered (a login after a deploy).
+	// (!) The reverse ordering also exists and is NOT prevented here: a queued pass
+	// can carry an OLDER manifest than the one that ran while it waited (a deploy
+	// landing between this caller's manifest read and its turn). It then republishes
+	// the older key. Nothing is served wrong — the files were fetched with
+	// cache:'reload', so they are the current bytes — and the next revalidate sees
+	// the key mismatch and re-converges. The cost is one wasted pass.
+	const previous = pass_promise
+	const current = (async () => {
+		if (previous) {
+			await previous.catch(() => {})
+		}
+		return run_cache_pass(options)
+	})()
+	pass_promise = current
+
+	try {
+		return await current
+	} finally {
+		// release only if nobody queued behind us
+		if (pass_promise===current) {
+			pass_promise = null
+		}
+	}
+}//end add_resources_to_cache
+
+
+
+/**
+ * RUN_CACHE_PASS
+ * The pass itself. Never call directly — go through add_resources_to_cache, which
+ * holds the single-flight lock.
+ * @param object options - {manifest, load_file_handler}
+ * @return Promise<bool>
+ */
+const run_cache_pass = async (options) => {
 
 	// options unpack
 	const {
 		load_file_handler
 	} = options
 
-	// fire load files from API
-	const list = await load_files_list()
-	if (!list) {
-		return // API error already logged in load_files_list
+	// fire load files from API (or reuse the one the caller already read)
+	const manifest = options.manifest || await fetch_manifest()
+	if (!manifest) {
+		// API error already logged in fetch_manifest. Report it: the login blocks
+		// on the 'finish' message and has no other way to learn the pass failed.
+		return false
 	}
 
+	// (!) locals only until the commit at the end. Never assign the module state
+	// here: an in-flight cache_first must not be redirected to a cache that is
+	// still being filled.
+	const target_cache_name	= manifest.cache_name
+	const target_files_list	= manifest.files_list
+
 	// open cache interface
-	const cache = await caches.open( cache_name );
+	const cache = await caches.open( target_cache_name );
 
 	// headers for js files (built once, reused for every fetch)
 	const js_headers = new Headers();
@@ -153,15 +290,29 @@ const add_resources_to_cache = async (options) => {
 	const custom_cache_add = async (url) => {
 		try {
 
+			// (!) AbortSignal: a bare fetch has NO timeout. One stalled connection
+			// left Promise.all below pending forever, which left the single-flight
+			// lock held forever — no revalidation for the rest of the worker's life
+			// and every later caller (a login included) queued behind a dead pass.
+			// api_request gets its ceiling from fetch_api; these fetches need their own.
+			// Feature-detected: AbortSignal.timeout lands in Chromium 103, and this
+			// file's stated floor is the module-SW floor (Chromium 91). Calling it
+			// where it does not exist throws PER FILE — which, before the pass learned
+			// to refuse an empty result, meant every file failed and the worker
+			// committed an empty cache over a good one.
 			const response = await fetch(url, {
 				headers	: js_headers,
 				method	: 'GET',
-				cache	: 'reload'
+				cache	: 'reload',
+				signal	: typeof AbortSignal.timeout==='function'
+					? AbortSignal.timeout( file_fetch_timeout_ms )
+					: undefined
 			})
 			if (!response.ok) {
 				throw new TypeError("bad response status");
 			}
-			return cache.put(url, response);
+			await cache.put(url, response);
+			return true
 
 		} catch (error) {
 			console.log('Failed fetch file. URL:', url);
@@ -171,31 +322,77 @@ const add_resources_to_cache = async (options) => {
 		return false
 	}
 
-	// add files in parallel, tracking completion with an atomic counter
+	// 1. add files in parallel, tracking completion with an atomic counter
+	// (!) The counter moves on a file that was actually STORED. custom_cache_add
+	// never rejects — it catches and fulfils with false — so counting fulfilments
+	// drove the login's progress ring to 100% for a pass in which every single file
+	// had failed.
 	let loaded_count = 0
 	const ar_promises = []
-	const files_list_length = files_list.length
+	const files_list_length = target_files_list.length
 	for (let i = 0; i < files_list_length; i++) {
 
-		const ad_promise = custom_cache_add( files_list[i] );
+		const ad_promise = custom_cache_add( target_files_list[i] );
 
 		ar_promises.push(ad_promise)
 
 		// notify file is loaded into cache (for files loader circle using loading handler)
-		ad_promise.then(()=>{
-			loaded_count++
-			load_file_handler(loaded_count, files_list_length)
+		ad_promise.then((stored)=>{
+			if (stored===true) {
+				loaded_count++
+				load_file_handler(loaded_count, files_list_length)
+			}
 		})
 	}
-	await Promise.all(ar_promises)
+	const results		= await Promise.all(ar_promises)
+	const cached_count	= results.filter(el => el===true).length
 
-	// Drop every SUPERSEDED cache. The current one is keyed by the served code, so
+	// 1b. REFUSE A CACHE WORSE THAN THE ONE IT WOULD REPLACE.
+	// The marker means "this cache is whole", and writing it is what makes the pass
+	// destructive: the purge then deletes the previous, WORKING cache and the new key
+	// becomes the one the server's version agrees with — so revalidate() will never
+	// rebuild it (the key matches; only the contents are missing). A pass on a dead
+	// link therefore turned a good cache into a permanently empty one that survives
+	// every restart and defeats every self-heal path.
+	// Below the floor: no marker, no purge. The previous cache stays authoritative
+	// and the next pass retries. Above it, a partial cache is still an improvement —
+	// a miss falls through to the network (cache_first), it never serves a hole.
+	if (cached_count < Math.ceil(files_list_length * min_cached_ratio)) {
+		console.error(')) cache pass REFUSED: only ' + cached_count + ' of ' + files_list_length + ' files stored. Keeping the previous cache.')
+		return false
+	}
+
+	// 2. COMMIT MARKER. Record the resolved manifest INSIDE the cache, so a worker
+	// revived after an idle kill can rebuild cache_name/files_set with no network
+	// (restore_state). Written before the purge: see COMMIT ORDER above.
+	await cache.put(
+		manifest_record_url(),
+		new Response(
+			JSON.stringify({
+				dedalo_version	: dedalo_version_of( target_cache_name ),
+				files_list		: target_files_list,
+				// diagnostic only: restore_state does not read it
+				cached_count	: cached_count
+			}),
+			{headers: {'Content-Type': 'application/json'}}
+		)
+	)
+
+	// 3. Drop every SUPERSEDED cache. The current one is keyed by the served code, so
 	// any other key is a previous version of the client and must not linger: it
 	// would keep occupying storage and, if it were ever consulted, answer with the
 	// old file. (delete_old_caches existed but nothing ever called it — which is
 	// why every client version a browser had ever seen stayed on disk.)
-	await delete_old_caches( cache_name )
-}//end add_resources_to_cache
+	await delete_old_caches( target_cache_name )
+
+	// 4. swap the module state
+	commit_state({
+		files_list	: target_files_list,
+		cache_name	: target_cache_name
+	})
+
+	return true
+}//end run_cache_pass
 
 
 
@@ -212,20 +409,200 @@ const delete_cache = async (key) => {
 
 
 /**
+ * IS_DEDALO_CACHE_KEY
+ * True for the keys this worker owns: the legacy fixed name and every versioned
+ * one. Everything else in Cache Storage belongs to somebody else on this origin
+ * and must not be touched.
+ * @param string key
+ * @return bool
+ */
+const is_dedalo_cache_key = (key) => {
+	return key===cache_prefix || key.startsWith(cache_prefix + '_')
+}//end is_dedalo_cache_key
+
+
+
+/**
  * DELETE_OLD_CACHES
- * Delete whole caches except the given name
+ * Delete every SUPERSEDED Dédalo files cache, keeping the given one.
+ * (!) Scoped by cache_prefix on purpose: it used to delete every cache in the
+ * origin, wiping any other Cache Storage user on the same host.
  * @param string keep_name
  * @return void
  */
 const delete_old_caches = async (keep_name) => {
 
-	console.log(')) deleting cache:', keep_name);
-
-	const cacheKeepList		= [keep_name];
 	const keyList			= await caches.keys();
-	const cachesToDelete	= keyList.filter((key) => !cacheKeepList.includes(key));
-	await Promise.all(cachesToDelete.map(delete_cache));
+	const cachesToDelete	= keyList.filter((key) => is_dedalo_cache_key(key) && key!==keep_name);
+	if (cachesToDelete.length>0) {
+		console.log(')) deleting superseded caches:', cachesToDelete);
+		await Promise.all(cachesToDelete.map(delete_cache));
+	}
 }//end delete_old_caches
+
+
+
+/**
+ * RESTORE_STATE
+ * Rebuild cache_name / files_list / files_set from the cache itself, with NO network
+ * call, so a worker revived after an idle kill can serve from cache before (or
+ * without) any `update_files` message. Returns false when there is nothing usable —
+ * the caller then goes straight to the network.
+ *
+ * Only a cache carrying the COMMIT MARKER (the manifest record, written last by
+ * add_resources_to_cache) is eligible: a half-built cache left by a worker the
+ * browser killed mid-pass has none, so it is ignored rather than served from.
+ * @return Promise<bool>
+ */
+const restore_state = async () => {
+
+	if (cache_name && files_set) {
+		return true
+	}
+
+	if (!restore_promise) {
+		// (!) The memo holds only while the read is IN FLIGHT, and only survives a
+		// SUCCESSFUL restore. Caching a `false` for the worker's lifetime meant a
+		// worker that woke inside a mid-pass window kept answering "nothing to
+		// restore" even after another tab's pass committed a cache.
+		restore_promise = (async () => {
+			try {
+				const keys = (await caches.keys()).filter(is_dedalo_cache_key)
+				const record_url = manifest_record_url()
+
+				// keep only the COMPLETE ones (commit marker present)
+				const committed = []
+				for (const key of keys) {
+					// has() first: a key a concurrent purge just deleted must not be
+					// re-created here as an empty cache (see cache_first)
+					if (!(await caches.has(key))) {
+						continue
+					}
+					const cache		= await caches.open(key)
+					const stored	= await cache.match(record_url)
+					if (stored) {
+						committed.push({key: key, stored: stored})
+					}
+				}
+				if (committed.length!==1) {
+					// 0 = nothing committed yet; >1 = a purge that did not finish.
+					// Either way only the server can say which key is current, so
+					// serve from the network until the next pass settles it.
+					if (committed.length>1) {
+						console.log(')) restore_state: ambiguous caches, serving from network', committed.map(el => el.key))
+					}
+					return false
+				}
+
+				const manifest = await committed[0].stored.json()
+				if (!Array.isArray(manifest?.files_list) || manifest.files_list.length<1) {
+					return false
+				}
+
+				// (!) Re-check before committing. A cache pass can run to completion
+				// while this read is awaiting stored.json(): it writes the new marker,
+				// purges the old cache and commits. Committing here unconditionally
+				// would then overwrite that fresh state with the OLD manifest and a
+				// key that no longer exists — every request missing until the next
+				// revalidate noticed and re-downloaded everything.
+				if (cache_name && files_set) {
+					return true
+				}
+
+				commit_state({
+					files_list	: manifest.files_list,
+					cache_name	: committed[0].key
+				})
+				return true
+			} catch (error) {
+				console.error(')) restore_state failed:', error)
+				return false
+			}
+		})()
+	}
+
+	const restored = await restore_promise
+	if (!restored) {
+		restore_promise = null
+	}
+
+	return restored
+}//end restore_state
+
+
+
+/**
+ * SHOULD_REVALIDATE
+ * Synchronous, cheap gate asked BEFORE scheduling any work. The fetch handler
+ * consults it on every intercepted request, and an event.waitUntil scheduled on
+ * every request would keep the worker alive indefinitely — defeating the very idle
+ * kill the restore machinery exists to survive.
+ * @return bool
+ */
+const should_revalidate = () => {
+	return pass_promise===null && Date.now() >= next_revalidate
+}//end should_revalidate
+
+
+
+/**
+ * REVALIDATE
+ * A restored state is only as fresh as the last completed cache pass: the key moves
+ * with the served bytes, but nothing tells a running worker that a deploy happened.
+ * Ask the API at most once every revalidate_interval_ms and re-run the cache pass
+ * when the version moved OR when there is no usable state at all.
+ *
+ * (!) NOT gated on restore_state() succeeding. A worker that cannot restore is
+ * exactly the one that most needs to re-fetch: gating the rebuild behind a
+ * successful restore made every unrestorable state permanent until the next full
+ * logout+login, since this is the only path that ever asks the server anything
+ * outside `update_files`.
+ *
+ * (!) The caller MUST hand this to event.waitUntil: a pass the browser kills halfway
+ * leaves an uncommitted cache behind (harmless, see COMMIT ORDER) but a pass that is
+ * never allowed to finish never refreshes anything.
+ * @return Promise<void>
+ */
+const revalidate = async () => {
+
+	if (!should_revalidate()) {
+		return
+	}
+	// claimed synchronously, before any await: two fetch events in the same tick
+	// must not both start a check
+	next_revalidate = Date.now() + revalidate_interval_ms
+
+	try {
+		const manifest = await fetch_manifest()
+		if (!manifest) {
+			// no session or server down: keep whatever we have, but come back SOON —
+			// this worker may be serving nothing from cache at all
+			next_revalidate = Date.now() + revalidate_retry_ms
+			return
+		}
+		if (cache_name && manifest.cache_name===cache_name) {
+			// nothing changed: keep serving the current cache untouched
+			return
+		}
+		// Either the served code moved, or there is NO usable state at all (nothing
+		// restorable — e.g. a worker revived inside a window where no cache carried
+		// the commit marker). Both are fixed by running the pass.
+		console.log(')) revalidate: rebuilding cache', cache_name, '->', manifest.cache_name)
+		const rebuilt = await add_resources_to_cache({
+			manifest			: manifest,
+			load_file_handler	: () => {}
+		})
+		if (rebuilt!==true) {
+			// the pass REFUSED (too few files stored) or could not read a manifest.
+			// This is the state the short retry exists for — the worker may be
+			// serving nothing from cache at all — so do not sit on the 5 min interval.
+			next_revalidate = Date.now() + revalidate_retry_ms
+		}
+	} catch (error) {
+		next_revalidate = Date.now() + revalidate_retry_ms
+		console.error(')) revalidate failed:', error)
+	}
+}//end revalidate
 
 
 
@@ -239,8 +616,21 @@ const delete_old_caches = async (keep_name) => {
  * 	fetch promise
  */
 const cache_first = async (request) => {
+	// resolve the in-memory state from the cache when this worker was revived
+	// after an idle kill (no update_files message in this lifetime)
+	if (!cache_name || !files_set) {
+		await restore_state()
+	}
 	// only check cache for files we actually cached
 	if (cache_name && files_set && files_set.has(request.url)) {
+		// (!) has() before open(): caches.open CREATES the cache when the key is
+		// absent. After the logout purge the worker still controls already-loaded
+		// clients for a moment, and one intercepted request was enough to resurrect
+		// the key as an empty shell that outlived the session with no worker left to
+		// collect it — a residue of the very leak this file exists to stop.
+		if (!(await caches.has(cache_name))) {
+			return fetch(request);
+		}
 		// Scoped to the CURRENT cache on purpose: caches.match() searches every
 		// cache in the origin, so a superseded one would keep answering with the
 		// stale file even after the key moved.
@@ -299,6 +689,24 @@ self.addEventListener('message', (event) => {
 					});
 				}
 
+			// heartbeat for the WHOLE pass, queue included. Passes are single-flight, so
+			// a login arriving mid-revalidation waits — emitting no 'loading' message
+			// the whole time, because those come from inside the pass. The login's
+			// watchdog is armed on SILENCE, so a long wait made it fire and navigate
+			// with a cold cache. 'waiting' carries no payload: the login has no case
+			// for it and simply re-arms. It keeps ticking during normal loading too;
+			// interleaving it with 'loading' is harmless and not worth gating.
+				const heartbeat = setInterval(
+					() => {
+						if (event.source) {
+							event.source.postMessage({
+								status : 'waiting'
+							});
+						}
+					},
+					heartbeat_interval_ms
+				)
+
 			// load files updating existing ones
 				const load_file_handler = (loaded_count, total_files) => {
 					// on_load_file
@@ -311,16 +719,48 @@ self.addEventListener('message', (event) => {
 						})
 					}
 				}
-				await add_resources_to_cache({
-					load_file_handler : load_file_handler
-				})
+			// load files. 'finish' is posted whatever happens: the login waits on it to
+			// navigate, so a swallowed failure here left the user on the progress ring
+			// forever (WC-002 warns about exactly this stall).
+			// (!) The manifest is read HERE, not inside the pass, so `total_files`
+			// describes THIS pass. Reading it off the module state reported the count
+			// of a previously RESTORED bundle whenever the pass failed.
+				let cached		= false
+				let failure		= null
+				let manifest	= null
+				try {
+					manifest = await fetch_manifest()
+					if (manifest) {
+						cached = await add_resources_to_cache({
+							manifest			: manifest,
+							load_file_handler	: load_file_handler
+						})
+					}
+				} catch (error) {
+					failure = error
+					console.error(')) add_resources_to_cache failed:', error)
+				} finally {
+					// (!) finally, not the straight-line path. A leaked heartbeat keeps
+					// posting and RE-ARMS the login's watchdog every 15s — the one
+					// message that can defeat the guard — so the login would wait on a
+					// 'finish' that is never coming, forever.
+					clearInterval(heartbeat)
+				}
 
-			// all files are loaded. Notify finish
-				if (event.source && files_list) {
+			// all files are loaded (or the pass failed). Notify finish
+				if (event.source) {
 					event.source.postMessage({
 						status		: 'finish',
-						total_files	: files_list.length,
-						time		: performance.now()-t1
+						total_files	: manifest ? manifest.files_list.length : 0,
+						time		: performance.now()-t1,
+						error		: (cached===true && !failure)
+							? null
+							: failure
+								? String(failure)
+								: manifest
+									// the manifest read fine; the pass refused to commit
+									? 'Cache pass refused: too few files stored'
+									: 'Error on get api response'
 					});
 				}
 		})());
@@ -347,6 +787,12 @@ self.addEventListener('fetch', (event) => {
 		event.respondWith(
 			cache_first(event.request)
 		);
+		// keep the bundle honest without blocking the response. waitUntil so the
+		// browser does not kill the worker mid-pass (see revalidate), but only when
+		// there is actually something to do — see should_revalidate.
+		if (should_revalidate()) {
+			event.waitUntil( revalidate() );
+		}
 	}
 });
 

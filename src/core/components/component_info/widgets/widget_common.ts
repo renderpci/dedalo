@@ -12,6 +12,7 @@
  * tripwire).
  */
 
+import { isMatrixTable } from '../../../db/matrix.ts';
 import { memoizedReadMatrixRecord } from '../../../db/record_memo.ts';
 import { DedaloError } from '../../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../../ontology/resolver.ts';
@@ -238,6 +239,11 @@ export async function readWidgetComponentData(
 ): Promise<unknown[]> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
+	// A VIRTUAL section whose declared matrix_table is not a readable record
+	// store (dd15 Time Machine -> matrix_time_machine, flat columns, rejected by
+	// the identifier allowlist) has NO record to read: serve the empty value the
+	// same way section/read.ts serves its no-record branch, never a 500.
+	if (!isMatrixTable(table)) return [];
 	const record = await memoizedReadMatrixRecord(table, sectionTipo, Number(sectionId));
 	if (record === null) return [];
 	const model = await getModelByTipo(componentTipo);

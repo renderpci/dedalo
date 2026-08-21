@@ -119,7 +119,11 @@ export type InfoWidgetDescriptor =
 
 Every widget reads its inputs through `readWidgetComponentData(sectionTipo,
 sectionId, componentTipo)` — the full stored item array, **no** lang
-filtering. It never touches the matrix directly.
+filtering. It never touches the matrix directly. It answers `[]` — never an
+error — when the record cannot exist: an unknown section, or a section whose
+declared `matrix_table` is not a readable record store (`dd15` Time Machine
+maps to `matrix_time_machine`, flat columns, off the matrix identifier
+allowlist). That mirrors the no-record branch of the section read.
 `resolveCurrent(declared, own)` maps the `'current'`/undefined
 sentinels to this record's values; `findTyped(input, type)` scans an array-shape
 input for the last entry of a `type`; the shared rounding helper applies
