@@ -48,6 +48,7 @@ probe_*.ts
 # symlink, so these must name the REAL path — `.claude/...` rules would be dead.
 .agents/settings.local.json
 .agents/scheduled_tasks.lock
+.clinerules
 
 # Local-only foundation audits (security analysis etc.) — not version-controlled
 audits/
