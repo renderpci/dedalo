@@ -644,6 +644,7 @@
 	"translation": "Translation",
 	"type": "Type",
 	"type_root_password": "Type and retype your desired superuser password and keep it in a safe place. Use a strong password from 8 to 32 characters containing, at least, an upper-case letter, a lower-case letter, and a number. Identical characters in sequential order are not allowed ('aa', '11', 'BB', etc.). Numerical ('123', '345', etc.) nor alphabetical ('aBC', 'hIjK', etc.) order are allowed.",
+	"unable_to_open_window": "The browser blocked the new window. Allow pop-ups for this site and try again.",
 	"unsaved_changes": "Unsaved changes!",
 	"update": "Update",
 	"update_mode_mandatory": "Update mode is mandatory",
