@@ -72,6 +72,14 @@ beforeAll(async () => {
 		model: 'section',
 		tld: TLD,
 		term: { 'lg-eng': 'Alias gate section' },
+		// The `test24` matrix_table relation, so this scratch section stores in
+		// `matrix_test`. Without it `getMatrixTableFromTipo` falls back to the PHP
+		// default — `matrix`, the INSTALLATION's own table — and because this file
+		// both writes and reads with raw SQL, it stayed self-consistent and GREEN
+		// while putting scratch rows there (found 2026-08-21 sweeping for exactly
+		// this). `situation()` grants the relation automatically; this file
+		// provisions by hand, so it has to say it.
+		relations: [{ tipo: 'test24' }],
 	});
 	await upsertDdOntologyNode({
 		tipo: TARGET,
@@ -242,12 +250,12 @@ describe('data identity — read round-trip on a scratch record (WC-020)', () =>
 		// a bare ::jsonb binds the string as a jsonb STRING scalar and the
 		// relation_search trigger's jsonb_each explodes.
 		await sql.unsafe(
-			'INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)',
+			'INSERT INTO matrix_test (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)',
 			[RECORD_ID, SECTION, JSON.stringify({ [TARGET]: LOCATORS })],
 		);
 	});
 	afterAll(async () => {
-		await sql.unsafe('DELETE FROM matrix WHERE section_tipo = $1', [SECTION]);
+		await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1', [SECTION]);
 		await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [SECTION]);
 	});
 
@@ -310,7 +318,7 @@ describe('data identity — read round-trip on a scratch record (WC-020)', () =>
 		// NOT exist (stored data never contains the alias tipo — WC-020).
 		const rows = (await sql.unsafe(
 			`SELECT relation->'${TARGET}' AS target_items, relation ? '${ALIAS}' AS alias_key
-			 FROM matrix WHERE section_tipo = $1 AND section_id = $2`,
+			 FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
 			[SECTION, RECORD_ID],
 		)) as { target_items: unknown[]; alias_key: boolean }[];
 		expect(rows[0]?.alias_key).toBe(false);
