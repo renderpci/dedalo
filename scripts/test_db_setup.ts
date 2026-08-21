@@ -17,10 +17,22 @@
  *   2. hierarchies (install/import/hierarchy/*.copy.gz) via the installer's own
  *      installHierarchies() — the tools/tree/virtual-section gates need them;
  *   3. the registered tools, via the installer's own registerInstallTools();
- *   4. the numisdata TEST ONTOLOGY (test/fixtures/ontology/numisdata_ontology.copy.gz) —
+ *   4. the generic `test` TLD ontology, materialized from
+ *      src/core/test_data/test_tld_ontology.json through the engine's doors
+ *      (records → rebuildOntology), so the suite runs on the REVIEWABLE source
+ *      and not on whatever the binary seed happens to hold;
+ *   5. the numisdata TEST ONTOLOGY (test/fixtures/ontology/numisdata_ontology.copy.gz) —
  *      DEFINITIONS ONLY, no records. The gates needing it create their own rows at
  *      reserved-high scratch ids; they only ever lacked the ontology to resolve against.
  *      Measured: this alone takes the unit suite from 183 failures to 109.
+ *
+ * DEFINITIONS, NOT RECORDS. Every step above installs ONTOLOGY (and the tool
+ * registry an install cannot boot without). No fixture RECORDS are seeded here
+ * beyond the seed's own — in particular NOT the derived test corpus
+ * (src/core/test_data/test_corpus/): that is a situation, and ambient records
+ * change the answer for every census, emptiness and row-count gate in the
+ * suite. A gate that needs the corpus ensures and drops it itself; see step 6
+ * at the bottom of this file.
  *
  * The ontology fixture carries NO `id` column, so ids come from the sequence and cannot
  * collide with the seed's own rows.
@@ -31,6 +43,12 @@
  *
  * Re-runnable: it drops and rebuilds. It refuses to run when the test database name
  * resolves to the application's, so a fat-fingered env cannot drop your install.
+ *
+ * AND IT STAMPS THE DATABASE. Right after CREATE DATABASE + seed restore it
+ * writes the `dedalo_test_marker` row (step 2b, src/core/test_data/test_database_marker.ts).
+ * That row — not this script's name check, and not the `_test` suffix — is what
+ * every test-data writer in the tree asks before it moves a single row. This is
+ * the ONLY producer of that row anywhere.
  */
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -39,6 +57,7 @@ import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { readEnv } from '../src/config/env.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
+import { rebuildTestMediaRoot } from '../test/helpers/test_media_root.ts';
 
 const REPO = join(import.meta.dir, '..');
 const SEED = join(REPO, 'install', 'db', 'dedalo_install.pgsql.gz');
@@ -82,6 +101,22 @@ if (testDb === appDb || testDb === '') {
 // this — connFromConfig(), the pool, the installer helpers — resolves to the test DB.
 process.env.DB_NAME = testDb;
 process.env.DEDALO_DATABASE_CONN = testDb;
+
+// AND THE MEDIA ROOT, in the same breath and for the same reason. The database is
+// not the only surface the suite shared with the installation: `MEDIA_PATH` was,
+// so a client-suite upload, an `ensureMediaKit` and every derivative a gate built
+// landed in the install's media tree. `DEDALO_TEST_MEDIA_ROOT` repoints the root
+// AND arms the `.dedalo_test_media` guard (src/core/media/test_media_root.ts) —
+// one key, so a run cannot be armed at the wrong root or repointed with the guard
+// asleep. The tree is SWEPT and rebuilt here, beside the database it belongs to:
+// the two are ONE fixture (files_info rows name files in it) — which is why the
+// SUITE DATABASE NAME is passed EXPLICITLY: the tree is keyed by it, and the
+// derivation (`<DB_NAME>_test`) has just been invalidated by the repoint above.
+const mediaRoot = rebuildTestMediaRoot(testDb);
+process.env.DEDALO_TEST_MEDIA_ROOT = mediaRoot;
+console.log(
+	`[test-db] test media root rebuilt: ${mediaRoot} (marked '.dedalo_test_media'; the installation's media tree is never touched)`,
+);
 
 const host = readEnv('DB_HOST') ?? readEnv('DEDALO_HOSTNAME_CONN') ?? 'localhost';
 const portRaw = readEnv('DB_PORT') ?? readEnv('DEDALO_DB_PORT_CONN') ?? '';
@@ -130,7 +165,60 @@ try {
 	rmSync(seedSql, { force: true });
 }
 
-// 3. The numisdata TEST ontology — definitions only, no records.
+// 2b. THE TEST-DATABASE MARKER — the mechanical half of "tests never write
+// production data" (src/core/test_data/test_database_marker.ts).
+//
+// It is written HERE, on a database this script has just DROPPED and CREATED,
+// and nowhere else in the tree: that provenance is what the row means. Every
+// step below this line, and every test-data writer in the suite, REFUSES on a
+// database that does not carry it — the name guard above is a claim about a
+// database, this row is the database itself saying it is disposable.
+//
+// It carries the provenance a stale test DB is diagnosed by: when it was
+// built, from which checkout, from which seed, and from which `test` TLD
+// ontology.
+const { writeTestDatabaseMarker } = await import('../src/core/test_data/test_database_marker.ts');
+const gitRev = await (async (): Promise<string> => {
+	const proc = Bun.spawn(['git', '-C', REPO, 'rev-parse', 'HEAD'], {
+		stdout: 'pipe',
+		stderr: 'ignore',
+	});
+	const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+	return code === 0 ? out.trim() : 'unknown';
+})();
+const sha256 = (path: string): string =>
+	new Bun.CryptoHasher('sha256').update(readFileSync(path)).digest('hex');
+const marker = await writeTestDatabaseMarker({
+	build_stamp: new Date().toISOString(),
+	git_rev: gitRev,
+	seed_sha256: sha256(SEED),
+	ontology_sha256: sha256(join(REPO, 'src', 'core', 'test_data', 'test_tld_ontology.json')),
+});
+console.log(
+	`[test-db] marker written: ${marker.database_name} @ ${marker.build_stamp} (git ${marker.git_rev.slice(0, 12)}) — every test-data writer refuses without it`,
+);
+
+// 3. The generic `test` TLD ontology, from its ONE source
+// (src/core/test_data/test_tld_ontology.json) through the engine's own doors:
+// matrix_ontology `test0` records, then rebuildOntology('test') derives
+// dd_ontology. The seed still carries its own copy of those rows today; this
+// OVERWRITES them from the reviewable JSON, so the suite database matches the
+// file a human reviews. Once scripts/strip_test_tld_from_seed.ts is applied the
+// seed carries only the bootstrap rows and this step is the sole source.
+const { materializeTestTldOntology } = await import(
+	'../src/core/test_data/test_tld_materialize.ts'
+);
+const testTld = await materializeTestTldOntology({ expectDatabase: testDb });
+console.log(
+	`[test-db] test TLD ontology materialized from JSON: ${testTld.nodes} records in ${testTld.tlds.join(', ')} — ${testTld.rebuilt.join('; ')}${testTld.strays.length > 0 ? ` (STRAY records not in the JSON: ${testTld.strays.join(', ')})` : ''}`,
+);
+
+// 4. The numisdata TEST ontology — definitions only, no records.
+//
+// PHASE 5/6 DELETES THIS STEP (generic-`test`-TLD migration): every gate that
+// needs this structure gets a `test` clone of it instead, and the fixture
+// test/fixtures/ontology/numisdata_ontology.copy.gz goes with it. Kept until
+// the parity/unit sweeps have moved off the numisdata tipos.
 if (!existsSync(ONTOLOGY)) throw new Error(`ontology fixture not found: ${ONTOLOGY}`);
 const columns = readFileSync(ONTOLOGY_COLUMNS, 'utf8').trim();
 const ontologyCopy = join(tmpdir(), `dedalo_test_numisdata_${process.pid}.copy`);
@@ -145,7 +233,7 @@ try {
 	rmSync(ontologyCopy, { force: true });
 }
 
-// 4. Hierarchies + tools, through the INSTALLER'S OWN code paths, from repo-vendored data —
+// 5. Hierarchies + tools, through the INSTALLER'S OWN code paths, from repo-vendored data —
 // the tools/tree/virtual-section gates need a complete install, not a bare seed.
 const tlds = [
 	...new Set(
@@ -164,5 +252,20 @@ const { registerInstallTools } = await import('../src/core/install/register_tool
 const tools = await registerInstallTools();
 console.log(`[test-db] tools registered (ok: ${tools.ok})`);
 
-console.log(`[test-db] ready — 'bun test' now uses '${testDb}' automatically.`);
+// 6. THE TEST CORPUS IS **NOT** SEEDED HERE — and that is the design, not an
+// omission. The corpus (src/core/test_data/test_corpus/, 446 records over 36
+// sections) is a SITUATION, and this database is the empty stage every gate
+// builds its situation on: ambient rows are not free, because a census gate, a
+// scratch-surface emptiness check and a "count the rows this save appended"
+// assertion all read whatever the database holds. So a gate that needs the
+// corpus calls `ensureTestCorpus(scope)` in its own `beforeAll` and
+// `dropTestCorpus(scope)` in `afterAll` (test/unit/test_corpus_fixture.test.ts
+// is the reference; test/helpers/zzd_diffusion_fixture.ts is the same pattern
+// for the diffusion ontology). The ONTOLOGY above is the opposite case and does
+// belong here: definitions cost nothing to have present, records do.
+//
+// To materialize it by hand for a debugging session:
+//   bun -e "await (await import('./src/core/test_data/test_corpus/ensure.ts')).ensureTestCorpus()"
+
+console.log(`[test-db] ready — 'bun test' now uses '${testDb}' and '${mediaRoot}' automatically.`);
 process.exit(0);

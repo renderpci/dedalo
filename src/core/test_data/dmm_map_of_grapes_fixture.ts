@@ -33,12 +33,20 @@ import { upsertDdOntologyNode } from '../db/dd_ontology.ts';
 import { deleteMatrixRecord, insertMatrixRecordWithExplicitId } from '../db/matrix_write.ts';
 import { withTransaction } from '../db/postgres.ts';
 import { fireSaveEvent } from '../section_record/save_event.ts';
+import { assertTestDatabase } from './test_database_marker.ts';
 
 const SECTION_TIPO = 'dmm480';
 const SECTION_TABLE = 'matrix';
 const RECORD_SECTION_ID = 1;
 
 export async function ensureMapOfGrapesFixture(): Promise<void> {
+	// GUARDED SINCE 2026-08-19. This used to be the ONE test-data writer with a
+	// standing exemption, because the client suite drove a server on the
+	// APPLICATION's database. That hole is closed: `bun run test:client` now
+	// starts its own server on the suite database (scripts/client_test_server.ts),
+	// so this fixture is a test-only writer like every other and asks the marker
+	// first — outside the transaction, before a single row moves.
+	await assertTestDatabase('ensureMapOfGrapesFixture');
 	await withTransaction(async () => {
 		// Section dmm480 — a plain section under the resource area (dd14), like
 		// rsc170. Empty relations → get_matrix_table_from_tipo falls back to the
