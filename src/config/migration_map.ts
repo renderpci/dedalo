@@ -241,6 +241,11 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_UPLOAD_TMP_URL',
 			'ONTOLOGY_DATA_IO_URL',
 			'ONTOLOGY_DOWNLOAD_DIR',
+			// The hierarchy export destination is no longer an operator choice: the
+			// only useful target is the directory the IMPORT half already reads, so
+			// the widget derives it from the repo root (HIERARCHY_IMPORT_DIR) —
+			// src/core/area_maintenance/widgets/export_hierarchy.ts.
+			'EXPORT_HIERARCHY_PATH',
 			'DEDALO_BACKUP_PATH_DB',
 			'DEDALO_BACKUP_PATH_ONTOLOGY',
 			'DEDALO_BACKUP_PATH_TEMP',
