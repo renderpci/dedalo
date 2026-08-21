@@ -155,7 +155,16 @@ beforeAll(async () => {
 			make_column_responsive: () => true,
 		},
 	}));
+	// OVERRIDE, NEVER REPLACE. `mock.module` is process-global and bun test
+	// shares one process, so a mock that returns only the exports THIS file
+	// happens to use silently truncates the module for every other file that
+	// imports it — they then fail at import with "Export named 'x' not found",
+	// nowhere near the cause. Measured 2026-08-21: this mock hid
+	// `dd_request_idle_callback` from client_upload_queue_render. Spreading the
+	// real module keeps the surface whole and still stubs what this file needs.
+	const real_events = (await import(EVENTS_PATH)) as Record<string, unknown>;
 	mock.module(EVENTS_PATH, () => ({
+		...real_events,
 		when_in_dom: () => true,
 	}));
 

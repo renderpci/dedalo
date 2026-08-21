@@ -184,7 +184,12 @@ describe('a real dump of a scratch tipo', () => {
 		for (const line of text.split('\n').filter((l) => l !== '')) {
 			expect(line.split('\t')[1]).toBe(SCRATCH_TIPO);
 		}
-	});
+		// 30 s, not the 5 s default: this case SPAWNS pg_dump and gzips its output.
+		// The default budget fitted an idle machine and nothing else — it timed out
+		// under load, alone as well as after a neighbour (measured 2026-08-21), which
+		// is a flake reporting "export is broken" when export is fine. The budget is
+		// still bounded: a dump that really hangs still reddens this gate.
+	}, 30000);
 
 	test('an invalid tipo is an error LINE and writes nothing — the valid one still lands', async () => {
 		const response = await exportHierarchy(
@@ -195,7 +200,8 @@ describe('a real dump of a scratch tipo', () => {
 		expect(response.errors?.[0]).toContain('Ignored invalid section tipo: bad tipo');
 		expect((response.extend as { files: unknown[] }).files).toHaveLength(1);
 		expect(existsSync(join(outDir, 'bad tipo.copy.gz'))).toBe(false);
-	});
+		// Same reason as above: a real pg_dump subprocess, not a 5 s unit of work.
+	}, 30000);
 
 	test('an unusable destination refuses the whole run without throwing', async () => {
 		const response = await exportHierarchy(

@@ -57,13 +57,24 @@ async function waitForHealth(timeoutMs: number): Promise<Response> {
 	throw new Error(`server never answered /health: ${String(lastError)}`);
 }
 
-afterAll(() => {
+afterAll(async () => {
 	// ALWAYS kill the child — a leaked subprocess keeps the scratch socket and
 	// the bun process alive across runs. SIGKILL: there is nothing to drain.
 	try {
 		server?.kill('SIGKILL');
 	} catch {
 		/* already gone */
+	}
+	// AND WAIT FOR IT TO ACTUALLY GO. `kill` only delivers the signal; without
+	// awaiting `exited` this file returns while a server process is still dying,
+	// and the NEXT file starts against a machine that is still busy. Measured
+	// 2026-08-21: export_hierarchy_export_native (a real pg_dump, 5 s budget)
+	// timed out only when it ran straight after this file, and passed alone.
+	// A test that leaves work running is a test that fails its neighbours.
+	try {
+		await server?.exited;
+	} catch {
+		/* already reaped */
 	}
 	rmSync(scratch, { recursive: true, force: true });
 });

@@ -313,17 +313,27 @@ beforeAll(async () => {
 	(fake_document as unknown as Record<string, unknown>).body = new FakeNode('body');
 	globals.document = fake_document;
 
-	globals.URL = {
-		createObjectURL: () => {
+	// STUB THE STATICS, KEEP THE CONSTRUCTOR. Replacing `globalThis.URL` with a
+	// plain object holding these two functions breaks `new URL(...)` for
+	// EVERYTHING else in the process — bun test shares one process, so any engine
+	// code that parses a URL while this file is in scope throws "Object is not a
+	// constructor". Measured 2026-08-21: it turned external_transport_native's
+	// `blocked_host` refusals into `bad_config` ("unparseable request URL"), i.e.
+	// a security gate reporting the wrong reason, in a file that mocks nothing.
+	// Subclassing keeps `new URL()` working for everyone while this file gets the
+	// two statics it needs.
+	class StubURL extends (globals.URL as typeof URL) {
+		static override createObjectURL = (): string => {
 			url_sequence++;
 			const url = `blob:fake/${url_sequence}`;
 			created_urls.push(url);
 			return url;
-		},
-		revokeObjectURL: (url: string) => {
+		};
+		static override revokeObjectURL = (url: string): void => {
 			revoked.push(url);
-		},
-	};
+		};
+	}
+	globals.URL = StubURL;
 	globals.Option = class {
 		text: string;
 		value: string;
@@ -379,6 +389,10 @@ afterAll(() => {
 		if (value === undefined) delete globals[key];
 		else globals[key] = value;
 	}
+	// The module mock is PROCESS-GLOBAL (bun test shares one process), so a file
+	// that installs one and never restores hands its stub to every later file
+	// that imports the same module.
+	mock.restore();
 });
 
 /** A minimal service_upload stand-in: exactly the properties the renderer reads. */

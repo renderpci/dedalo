@@ -115,6 +115,7 @@ const TRIPWIRES = [
 	'test/unit/client_error_contract_tripwire.test.ts',
 	'test/unit/migration_shared_row_tripwire.test.ts',
 	'test/unit/generic_tld_tripwire.test.ts',
+	'test/unit/mock_isolation_tripwire.test.ts',
 	'test/unit/test_tld_ontology_gate.test.ts',
 	'test/unit/test_db_marker_tripwire.test.ts',
 	'test/unit/test_media_root_tripwire.test.ts',
