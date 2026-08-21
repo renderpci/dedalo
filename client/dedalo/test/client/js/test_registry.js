@@ -47,7 +47,7 @@ export const generic_suites_green = [
 	'test_ts_object',
 	'test_ts_object_extended',
 	'test_component_common_changed_data',
-	'test_section_record',
+	'test_section_record',           // the row engine between the section's shared datum and its children: the two child-build error paths (edit must not HANG on a rejected child; the list waiter must reset so a retry can rebuild) plus the whole backend-free surface — init defaults/double-init guard, get_component_data (identity tuple, stubs, section_group, component_dataframe id_key pairing ladder), get_component_info, the edit context filter (dataframe in/out by caller model) and the list column build (order, dedup, search ddo_map fallback, missing-context skip, one shared build pass, fixed_mode). Children are FAKE instances pre-registered under the exact key build_instance will ask for, so a built child PROVES the key contract.
 	'test_open_related_data',         // the "open relationships" dialog's SQO scoping — the edit-mode found-set offset used to skip the single pinned row, so read_raw returned nothing and no window opened; backend-free (data_manager.request patched on the shared singleton)
 	'test_ui_render_edit_modal',      // the per-cell edit modal's caller chain — the surface that makes component tools reachable from a section LIST (WC-059 sibling work); backend-free (fake instance pre-registered in the shared registry)
 	'test_service_autocomplete',
