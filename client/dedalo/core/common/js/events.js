@@ -8,7 +8,12 @@
 *
 * Responsibilities:
 * - Bootstrap global DOM event listeners (visibilitychange, save) via events_init().
-* - Track unsaved-data state through window.unsaved_data and set_before_unload().
+* - Derive the page-wide unsaved-data flag (window.unsaved_data) from the
+*   unsaved-instances registry (register_unsaved_instance /
+*   deregister_unsaved_instance / reset_unsaved_data), the uncommitted-typing
+*   node registry (armed by the document-level 'input' listener in events_init,
+*   for views that only commit on blur) plus the coarse instance-less
+*   set_before_unload() assertion.
 * - Provide DOM-readiness utilities (when_in_dom, when_in_viewport) used by
 *   components such as maps and media players that require the node to be in
 *   layout before they can initialise.
@@ -17,8 +22,10 @@
 * - Attach keyboard shortcuts and other global event bindings defined in tool
 *   configuration objects via set_tool_event().
 *
-* Exports: events_init, set_before_unload, when_in_dom, when_in_viewport,
-*          dd_request_idle_callback, set_tool_event.
+* Exports: events_init, set_before_unload, register_unsaved_instance,
+*          deregister_unsaved_instance, register_uncommitted_input,
+*          deregister_uncommitted_input, reset_unsaved_data, when_in_dom,
+*          when_in_viewport, dd_request_idle_callback, set_tool_event.
 *          yield_to_main is a module-private helper (not exported).
 */
 
@@ -35,6 +42,192 @@
 if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 	window.unsaved_data = false
 }
+
+
+
+/**
+* UNSAVED-DATA REGISTRY
+* (!) window.unsaved_data is DERIVED state: after module init its ONLY writer
+* is update_unsaved_data() below. It used to be a single page-wide boolean
+* assigned directly by every component, so ANY component could set it to false
+* purely because ITS OWN current value matched its db_data snapshot
+* (set_changed_data's revert branch) — silently disarming the unsaved-work
+* guard for every OTHER dirty component on the page. Concretely: edit a
+* debounced component_text_area, type-and-delete one character in a second
+* field, close the tab — the text_area edit was dropped with no save, no
+* prompt and no log line. Now each component instance registers itself while
+* it holds a genuine unsaved change and can only deregister ITSELF (on
+* revert, save success or destroy); the boolean is recomputed from the
+* registry plus the coarse instance-less assertion, so one component's revert
+* cannot disarm another's guard.
+*/
+
+// unsaved_instances. Component instances currently holding a genuine unsaved
+// change, keyed by instance identity and driven by the EQUALITY VERDICT in
+// component_common.set_changed_data (NOT by changed_data.length). A plain Set
+// — a WeakSet cannot be counted — with explicit removal on instance teardown
+// (common.js do_delete_self), so a destroyed dirty instance cannot pin the
+// flag forever.
+	const unsaved_instances = new Set()
+
+// unsaved_asserted. The coarse instance-less "something is dirty" assertion,
+// kept for callers that guard raw keystrokes without a component registration
+// (view_default_edit_filter_records, view_default_edit_security_access) via
+// set_before_unload(true). Cleared by set_before_unload(false) — called on
+// every component save completion — and by reset_unsaved_data().
+	let unsaved_asserted = false
+
+// uncommitted_nodes. Edit-mode form fields the user is TYPING INTO RIGHT NOW,
+// before the field committed its value to its component instance. Components
+// only learn about an edit when their own commit event fires: component_text_area
+// debounces on keystrokes (500ms) and therefore registers itself, but
+// component_input_text (and every other view built on the native 'change' event:
+// input_text line/colorpicker, select, date parts, …) commits ONLY on blur.
+// Reloading or closing the tab does NOT blur the focused input in Chrome, so the
+// component never registered, window.unsaved_data stayed false, and the typed
+// text was dropped with no prompt — the exact data loss this registry exists to
+// prevent. Keyed by the DOM node (identity), armed by the document-level 'input'
+// listener in events_init and retired on 'change'/'focusout' (by then the
+// component either registered itself as dirty or the value was back at db_data).
+	const uncommitted_nodes = new Set()
+
+/**
+* PRUNE_UNCOMMITTED_NODES
+* Drop entries whose node left the document (a save or a refresh re-renders the
+* component and throws the old input away). Without this a detached node would
+* pin the guard armed forever. Called from update_unsaved_data, so every
+* recompute sees only live nodes.
+*/
+const prune_uncommitted_nodes = function() {
+
+	if (uncommitted_nodes.size===0 || typeof document==='undefined' || !document.contains) {
+		return
+	}
+	for (const node of uncommitted_nodes) {
+		if (node && node.nodeType===1 && !document.contains(node)) {
+			uncommitted_nodes.delete(node)
+		}
+	}
+}//end prune_uncommitted_nodes
+
+
+
+/**
+* REGISTER_UNCOMMITTED_INPUT
+* Arm the guard for a field being typed into whose value has not reached its
+* component instance yet. Exported for tests and for any view that owns an
+* editor the document-level listener cannot see (e.g. a shadow-DOM editor).
+*
+* @param {HTMLElement} node - The form field holding uncommitted typing
+* @returns {boolean} The recomputed window.unsaved_data value (true here)
+*/
+export const register_uncommitted_input = function(node) {
+
+	uncommitted_nodes.add(node)
+
+	return update_unsaved_data()
+}//end register_uncommitted_input
+
+
+
+/**
+* DEREGISTER_UNCOMMITTED_INPUT
+* Retire ONE field's uncommitted-typing entry — its value just committed
+* ('change') or it lost focus ('focusout'), so from here on the component
+* instance registry owns the verdict. Never touches other entries.
+*
+* @param {HTMLElement} node - The form field to retire
+* @returns {boolean} The recomputed window.unsaved_data value
+*/
+export const deregister_uncommitted_input = function(node) {
+
+	uncommitted_nodes.delete(node)
+
+	return update_unsaved_data()
+}//end deregister_uncommitted_input
+
+
+
+/**
+* UPDATE_UNSAVED_DATA
+* Recompute the derived window.unsaved_data boolean: true while at least one
+* instance is registered as unsaved OR the coarse assertion is active.
+* Every registry/assertion mutation funnels through here, so no code path can
+* write the boolean behind the registry's back. Readers (page.js beforeunload,
+* component_common check_unsaved_data, events_init) keep reading a plain
+* boolean, unchanged.
+*
+* @returns {boolean} The recomputed window.unsaved_data value
+*/
+const update_unsaved_data = function() {
+
+	prune_uncommitted_nodes()
+
+	window.unsaved_data = (unsaved_instances.size > 0 || uncommitted_nodes.size > 0 || unsaved_asserted===true)
+
+	return window.unsaved_data
+}//end update_unsaved_data
+
+
+
+/**
+* REGISTER_UNSAVED_INSTANCE
+* Mark the given component instance as holding a genuine unsaved change (its
+* current value differs from its db_data snapshot, per the is_equal verdict
+* in component_common.set_changed_data) and re-derive window.unsaved_data.
+* Registering an already registered instance is a no-op (Set semantics).
+*
+* @param {Object} instance - The component instance with unsaved data
+* @returns {boolean} The recomputed window.unsaved_data value (true here)
+*/
+export const register_unsaved_instance = function(instance) {
+
+	unsaved_instances.add(instance)
+
+	return update_unsaved_data()
+}//end register_unsaved_instance
+
+
+
+/**
+* DEREGISTER_UNSAVED_INSTANCE
+* Retire the given instance's own unsaved registration — because its value is
+* back to the db_data snapshot, its save succeeded, or it is being destroyed —
+* and re-derive window.unsaved_data. (!) This only ever removes the CALLER'S
+* entry: other registered instances keep the guard armed, which is the whole
+* point of the registry (see the header above). An unregistered instance is a
+* no-op.
+*
+* @param {Object} instance - The component instance to deregister
+* @returns {boolean} The recomputed window.unsaved_data value
+*/
+export const deregister_unsaved_instance = function(instance) {
+
+	unsaved_instances.delete(instance)
+
+	return update_unsaved_data()
+}//end deregister_unsaved_instance
+
+
+
+/**
+* RESET_UNSAVED_DATA
+* Clear the WHOLE registry and the coarse assertion, then re-derive
+* window.unsaved_data (false). This is the deliberate page-wide reset for
+* check_unsaved_data's two resolutions ONLY: "every dirty component was just
+* flushed by the auto-save sweep" and "the user explicitly accepted losing
+* the remaining changes". Nothing else may clear state it does not own.
+*
+* @returns {boolean} The recomputed window.unsaved_data value (false here)
+*/
+export const reset_unsaved_data = function() {
+
+	unsaved_instances.clear()
+	uncommitted_nodes.clear()
+	unsaved_asserted = false
+
+	return update_unsaved_data()
+}//end reset_unsaved_data
 
 
 
@@ -67,6 +260,48 @@ export const events_init = function() {
 		}
 		document.addEventListener('visibilitychange', visibility_change);
 
+	// uncommitted typing guard (data-loss protection)
+	// Document-level, capture phase, so ONE pair of listeners covers every
+	// edit-mode field of every component — including the ones whose views only
+	// commit on the native 'change' event (blur). Reload/close does not blur, so
+	// without this the typed-but-not-blurred value was lost silently.
+		const is_guarded_edit_field = (node) => {
+
+			if (!node || node.nodeType!==1 || typeof node.closest!=='function') {
+				return false
+			}
+			// only real editors, and never a disabled/read-only one
+			const tag = node.tagName
+			const is_editor = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT' ||
+							  node.isContentEditable===true
+			if (!is_editor || node.disabled===true || node.readOnly===true) {
+				return false
+			}
+			// only fields inside a component rendered in EDIT mode: search forms,
+			// list filters and tool inspectors are not unsaved record data.
+			// (!) The NEAREST component wrapper decides, not the nearest EDIT one:
+			// an autocomplete/search field nested inside an edit-mode portal sits
+			// in its own search-mode wrapper and is NOT record data — matching
+			// '.wrapper_component.edit' directly would skip past it and arm the
+			// guard on every keystroke of a lookup box.
+			const wrapper = node.closest('.wrapper_component')
+			return wrapper!==null && wrapper.classList.contains('edit')
+		}
+		const input_handler = (e) => {
+			if (is_guarded_edit_field(e.target)) {
+				register_uncommitted_input(e.target)
+			}
+		}
+		const commit_handler = (e) => {
+			// 'change' → the view's own handler (running after this capture-phase
+			// listener) hands the verdict to the component registry;
+			// 'focusout'  → covers type-then-revert, where 'change' never fires.
+			deregister_uncommitted_input(e.target)
+		}
+		document.addEventListener('input', input_handler, {capture: true})
+		document.addEventListener('change', commit_handler, {capture: true})
+		document.addEventListener('focusout', commit_handler, {capture: true})
+
 	// save
 		const save_handler = (result) => {
 			if(SHOW_DEBUG===true) {
@@ -84,21 +319,31 @@ export const events_init = function() {
 
 /**
 * SET_BEFORE_UNLOAD
-* Toggle the global unsaved-data flag and (when active) the beforeunload guard.
+* Toggle the coarse instance-less unsaved-data assertion and re-derive
+* window.unsaved_data.
 *
-* Components call this with true as soon as the user edits content, and with
-* false once the data has been saved. The flag is stored on window.unsaved_data
-* so other parts of the application (e.g. events_init's visibilitychange
-* handler) can read it without importing this module.
+* (!) This no longer assigns window.unsaved_data directly: the flag is DERIVED
+* (see the unsaved-data registry above), so set_before_unload(false) clears
+* only the coarse assertion — it CANNOT disarm the guard while component
+* instances are still registered as dirty. Components no longer call this for
+* their own edit state (they register/deregister themselves via
+* register_unsaved_instance / deregister_unsaved_instance); the remaining
+* callers are keystroke guards with no component registration
+* (view_default_edit_filter_records, view_default_edit_security_access) with
+* true, and component_common.save() with false once a save completed. The flag
+* stays on window.unsaved_data so other parts of the application (e.g.
+* events_init's visibilitychange handler) can read it without importing this
+* module.
 *
 * The beforeunload listener block is currently commented out (see dead code below);
-* only the flag assignment is active. When the listener is re-enabled it will
+* only the derived flag is maintained. When the listener is re-enabled it will
 * show the browser's native "leave page?" dialog on navigation while unsaved
 * data exists.
 *
-* @param {boolean} value - true to signal unsaved changes; false to clear the guard.
-* @returns {boolean|undefined} true when the flag was changed; undefined when
-*   the flag already matched value (no-op fast path).
+* @param {boolean} value - true to assert unsaved changes exist outside any
+*   component registration; false to retract that assertion.
+* @returns {boolean|undefined} The recomputed window.unsaved_data value when the
+*   assertion changed; undefined when it already matched value (no-op fast path).
 */
 export const set_before_unload = function(value) {
 	if(SHOW_DEBUG===true) {
@@ -106,12 +351,12 @@ export const set_before_unload = function(value) {
 	}
 
 	// already fixed current value (true/false)
-		if (value===window.unsaved_data) {
+		if (value===unsaved_asserted) {
 			return
 		}
 
-	// fix value
-		window.unsaved_data = value
+	// fix value. The derived window.unsaved_data is recomputed at the return below
+		unsaved_asserted = value
 
 	// add/remove listener
 		// if (value===true) {
@@ -124,7 +369,7 @@ export const set_before_unload = function(value) {
 		// 	// window.unsaved_data = false
 		// }
 
-	return true
+	return update_unsaved_data()
 }//end set_before_unload
 
 
@@ -153,6 +398,46 @@ export const set_before_unload = function(value) {
 
 
 
+// pending registry: node -> array of callbacks awaiting that node's insertion
+	const when_in_dom_pending = new Map()
+
+// shared observer: lazily created, disconnected whenever the registry is empty
+	let when_in_dom_observer = null
+
+/**
+* WHEN_IN_DOM_CHECK_PENDING
+* Shared-observer callback: on each mutation batch, sweep the pending registry
+* ONCE, fire and remove the entries whose node is now in the document, and
+* disconnect the observer when nothing remains pending. A throwing callback is
+* isolated (try/catch + console.error) so it cannot block the other pending
+* callbacks or corrupt the registry.
+*/
+const when_in_dom_check_pending = function() {
+
+	for (const [node, callbacks] of when_in_dom_pending) {
+		if (document.contains(node)) {
+			// remove BEFORE firing so a callback that mutates the DOM
+			// (triggering a re-entrant batch) cannot fire the entry twice
+			when_in_dom_pending.delete(node)
+			const callbacks_length = callbacks.length
+			for (let i = 0; i < callbacks_length; i++) {
+				try {
+					callbacks[i]()
+				} catch (error) {
+					console.error('when_in_dom callback error. node:', node, error);
+				}
+			}
+		}
+	}
+
+	// disconnect when idle; re-connected by the next deferred registration
+	if (when_in_dom_pending.size===0 && when_in_dom_observer) {
+		when_in_dom_observer.disconnect()
+	}
+}//end when_in_dom_check_pending
+
+
+
 /**
 * WHEN_IN_DOM
 * Execute a callback the first time the given node is attached to the document.
@@ -160,16 +445,24 @@ export const set_before_unload = function(value) {
 * Many third-party components (Leaflet maps, canvas renderers, media players)
 * must query layout metrics that are only available once the element is part of
 * the live DOM. This helper either fires the callback immediately (if the node
-* is already present) or defers until a MutationObserver detects insertion.
+* is already present) or defers until a shared MutationObserver detects insertion.
 *
-* The observer watches the entire document subtree and disconnects itself after
-* the first successful detection to avoid memory leaks.
+* All deferred registrations share ONE module-level MutationObserver watching the
+* document subtree (a per-call observer made a 200-row list render quadratic:
+* every observer was notified of every mutation of the same render). The shared
+* observer is created lazily on the first pending registration and disconnected
+* as soon as the pending registry empties; it re-connects on the next pending
+* registration. Registering the same node twice with different callbacks fires
+* both. Fired entries are removed immediately; a node that is NEVER inserted
+* into the document stays pending (and retained) by design — exactly as the old
+* per-call observer did — so only register nodes that will be attached.
 *
 * @param {HTMLElement} node - The element to watch for DOM insertion.
 * @param {Function} callback - Called with no arguments once the node is in the DOM.
 *   When the node is already present, the callback's own return value is forwarded.
-* @returns {MutationObserver|*} The live MutationObserver when deferred, or the
-*   callback's return value when the node was already in the DOM.
+* @returns {*} The callback's return value when the node was already in the DOM;
+*   undefined when deferred. (Previously returned the per-call MutationObserver;
+*   no caller used it and it no longer exists.)
 */
 export const when_in_dom = function(node, callback) {
 
@@ -177,18 +470,21 @@ export const when_in_dom = function(node, callback) {
 		return callback()
 	}
 
-	const observer = new MutationObserver(function(mutations) {
-		if (document.contains(node)) {
-			// console.log("It's in the DOM!");
-			observer.disconnect();
-
-			callback()
+	// register pending callback (same node may accumulate several callbacks)
+		const existing = when_in_dom_pending.get(node)
+		if (existing) {
+			existing.push(callback)
+			return
 		}
-	});
+		when_in_dom_pending.set(node, [callback])
 
-	observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
-
-	return observer
+	// (re)connect the shared observer. Calling observe() again on an already
+	// observing observer with the same target/options is a no-op, so this is
+	// safe on every first-registration-after-idle path.
+		if (!when_in_dom_observer) {
+			when_in_dom_observer = new MutationObserver(when_in_dom_check_pending)
+		}
+		when_in_dom_observer.observe(document, {attributes: false, childList: true, characterData: false, subtree:true});
 }//end when_in_dom
 
 

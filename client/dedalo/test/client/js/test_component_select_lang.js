@@ -225,19 +225,23 @@ describe(`COMPONENT_SELECT_LANG DATA OPERATIONS`, function() {
 			assert.isOk(select_el, 'expected select element in DOM')
 
 		// get datalist options
+		// An empty datalist, or one with no usable language, is not a reason to
+		// skip: it is the exact condition that leaves the widget unable to save
+		// anything. Assert it instead of guarding it away.
 			const datalist = instance.data.datalist || []
-			if (datalist.length > 0) {
-				// find a non-empty datalist item (a language)
-				const datalist_item = datalist.find(el => el.value !== null)
-				if (datalist_item) {
-					// simulate change event by setting select value and dispatching
-					select_el.value = JSON.stringify(datalist_item.value)
-					select_el.dispatchEvent(new Event('change', { bubbles: true }))
-					// verify changed_data was set
-					assert.isOk(instance.data.changed_data, 'changed_data expected after select change')
-					assert.equal(instance.data.changed_data[0].action, 'update', 'changed_data action expected update')
-				}
-			}
+			assert.isAbove(datalist.length, 0, 'datalist expected to offer languages')
+
+			const datalist_item = datalist.find(el => el.value !== null)
+			assert.isOk(datalist_item, 'datalist expected to offer a language with a value')
+
+			// simulate change event by setting select value and dispatching
+			select_el.value = JSON.stringify(datalist_item.value)
+			select_el.dispatchEvent(new Event('change', { bubbles: true }))
+
+			// verify changed_data was set
+			assert.isOk(instance.data.changed_data, 'changed_data expected after select change')
+			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
+			assert.equal(instance.data.changed_data[0].action, 'update', 'changed_data action expected update')
 	});
 
 
@@ -251,10 +255,12 @@ describe(`COMPONENT_SELECT_LANG DATA OPERATIONS`, function() {
 		select_el.value = ''
 		select_el.dispatchEvent(new Event('change', { bubbles: true }))
 
-		// verify changed_data action is remove
-		if (instance.data.changed_data) {
-			assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on empty select')
-		}
+		// verify changed_data action is remove. A missing/empty changed_data is a
+		// FAILURE here (the previous case left a language selected), not a reason
+		// to pass silently.
+		assert.isOk(instance.data.changed_data, 'changed_data expected after emptying the select')
+		assert.isAbove(instance.data.changed_data.length, 0, 'changed_data expected at least 1 item')
+		assert.equal(instance.data.changed_data[0].action, 'remove', 'changed_data action expected remove on empty select')
 	});
 
 
@@ -462,11 +468,9 @@ describe(`COMPONENT_SELECT_LANG SPECIFIC BEHAVIORS`, function() {
 		assert.isOk(datalist.length > 0, 'datalist should have language options')
 
 		// each datalist item should have value (locator) and label
-		if (datalist.length > 0) {
-			const first_item = datalist[0]
-			assert.isOk(first_item.value !== undefined, 'datalist item should have value property')
-			assert.isOk(first_item.label !== undefined, 'datalist item should have label property')
-		}
+		const first_item = datalist[0]
+		assert.isOk(first_item.value !== undefined, 'datalist item should have value property')
+		assert.isOk(first_item.label !== undefined, 'datalist item should have label property')
 
 		await instance.destroy(true)
 	});
@@ -500,20 +504,22 @@ describe(`COMPONENT_SELECT_LANG SPECIFIC BEHAVIORS`, function() {
 		}
 		event_manager.subscribe('set_lang_value_' + instance.id_base, event_handler)
 
-		// find select element and change value
+		// find select element and change value. A missing select, or a datalist
+		// with no usable language, is the condition that breaks the widget —
+		// assert it rather than skipping the whole case.
 		const select_el = node.querySelector('.select')
-		if (select_el) {
-			const datalist = instance.data.datalist || []
-			const datalist_item = datalist.find(el => el.value !== null)
-			if (datalist_item) {
-				select_el.value = JSON.stringify(datalist_item.value)
-				select_el.dispatchEvent(new Event('change', { bubbles: true }))
+		assert.isOk(select_el, 'expected select element in DOM')
 
-				// event should be received (async, so wait a tick)
-				await new Promise(resolve => setTimeout(resolve, 100))
-				assert.isOk(event_received, 'set_lang_value event should be published on change')
-			}
-		}
+		const datalist = instance.data.datalist || []
+		const datalist_item = datalist.find(el => el.value !== null)
+		assert.isOk(datalist_item, 'datalist expected to offer a language with a value')
+
+		select_el.value = JSON.stringify(datalist_item.value)
+		select_el.dispatchEvent(new Event('change', { bubbles: true }))
+
+		// event should be received (async, so wait a tick)
+		await new Promise(resolve => setTimeout(resolve, 100))
+		assert.isOk(event_received, 'set_lang_value event should be published on change')
 
 		// cleanup
 		event_manager.unsubscribe('set_lang_value_' + instance.id_base, event_handler)

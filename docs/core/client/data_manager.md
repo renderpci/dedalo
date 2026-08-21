@@ -236,9 +236,10 @@ resource](#the-connection-is-the-resource).
 
 ### Local caching (IndexedDB)
 
-`get_local_db()` opens the `dedalo` database at schema version **11**. Its
-`onupgradeneeded` handler is idempotent (creates only missing stores) and drops
-the legacy `sqo` store. Object stores:
+`get_local_db()` returns **the** connection to the `dedalo` database at schema
+version **11**, opening it on first call. Its `onupgradeneeded` handler is
+idempotent (creates only missing stores) and drops the legacy `sqo` store.
+Object stores:
 
 | store | holds |
 | --- | --- |
@@ -256,10 +257,47 @@ successful call. The `*_local_db*` helpers
 (`get_local_db_data`, `set_local_db_data`, `delete_local_db_data`,
 `delete_local_db_data_by_prefix`, `clear_local_db_table`,
 `delete_whole_local_db`) manage reads, writes, prefix-bulk deletes and resets.
-`get_local_db_data` can cache the open DB handle per table (`use_cache=true`,
-backed by a module-level `db_table_cache` map). If IndexedDB is unavailable
-(blocked / private browsing) the helpers resolve `false` and Dédalo runs without
-cache — callers must guard for a falsy result.
+If IndexedDB is unavailable (blocked / private browsing) the helpers resolve
+`false` and Dédalo runs without cache — callers must guard for a falsy result.
+
+!!! note "One connection per page, not one per operation"
+    The connection is memoized (`local_db_promise`) and shared by every store
+    and every helper; concurrent first callers await a single `open()`. Do not
+    call `close()` on the handle you receive — it is not yours. The memo is
+    dropped automatically when the connection stops being usable (`close`, or a
+    `versionchange` raised by another tab upgrading or deleting the database, in
+    which case this page steps aside by closing so the other tab is not blocked),
+    and a failed open is never memoized, so the next call retries.
+
+    A blocked open is a special case: `blocked` does **not** end the request —
+    the browser keeps it pending and may complete it after the blocking tab
+    goes away. `get_local_db()` resolves `false` so callers are not stranded,
+    and the connection that arrives later is closed on arrival rather than left
+    unreferenced, where it would pin the database open for the rest of the
+    page's life.
+
+    `get_local_db_data`'s third argument `use_cache` is **ignored**. It used to
+    opt into a per-table handle cache; with one shared connection there is
+    nothing left to opt into. It remains in the signature because several call
+    sites still pass `true`.
+
+!!! tip "Reads are readonly, writes are readwrite"
+    `get_local_db_data` opens a **readonly** transaction. IndexedDB serialises
+    overlapping readwrite transactions on a store and lets readonly ones run
+    concurrently, so a read declared readwrite queues behind every other
+    operation on that store — which for the request cache means behind every
+    other lookup and every idle write-through on `data`. Ordering between reads
+    and writes is untouched in both directions — overlapping transactions of
+    conflicting modes cannot run concurrently, so a read created after a write
+    waits for it to finish, and a write created after a read cannot overtake it.
+    Only read-vs-read becomes concurrent, which nothing can observe.
+
+!!! warning "Close before deleting"
+    An open connection blocks `deleteDatabase`. `delete_whole_local_db()` closes
+    this page's connection first (`close_local_db`); `onblocked` can still fire
+    when **another tab** holds the database open, and that is the only case it
+    now reports. `clear_local_db_table()` runs on the shared connection too — it
+    no longer opens a second, version-less one of its own.
 
 ### Streaming
 
@@ -281,7 +319,8 @@ For payloads delivered incrementally:
   consumers read frames with `normalize_stream_error`), and invoking
   `on_read` / `on_done` callbacks. It **returns the reader** driving the stream.
   Each reader is also registered in `page_globals.stream_readers` so navigation
-  can abort all in-flight readers.
+  can abort all in-flight readers, and `read_stream` releases its own reader from
+  that registry when the stream ends — see below.
 - **`release_stream_reader(reader, reason)`** cancels one reader and splices it
   out of that registry. It is the teardown for any consumer that stops following
   a stream **before** the page unloads.
@@ -312,6 +351,26 @@ Both streaming methods also attach the CSRF header.
     `move_*` widgets, `tool_diffusion`, the unit-test runner and the job
     followers — emptying it releases other consumers' readers too.
 
+!!! note "`on_done` fires exactly once, however the stream ends"
+    `on_done(true)` on normal completion, `on_done(false)` on an abnormal end —
+    a read failure, or a throw out of your own `on_read`. Either way
+    `read_stream` releases its own reader first, so a stream that ends by itself
+    neither leaks a registry entry nor holds its connection. A consumer that
+    gives up EARLY still has to release its own reader — that is what the
+    warning above is about.
+
+    A throw out of `on_done` itself is reported as a consumer bug and never
+    re-enters it. That guard is not cosmetic: the internal failure handler shares
+    a promise chain with the success path, so without it your throwing `on_done`
+    would be called a second time, with a console line blaming a transport
+    failure that never happened.
+
+    The failure half matters as much as the tidy-up. A read error used to be
+    logged and nothing else, so `on_done` never ran; `job_follow` calls its
+    `finish()` from `on_done`, which meant a dropped connection mid-job left the
+    caller with no outcome and no error — indistinguishable from a job still
+    running, forever.
+
 ## JS files and functions
 
 All in `core/common/js/data_manager.js` unless noted.
@@ -334,7 +393,7 @@ All in `core/common/js/data_manager.js` unless noted.
 | `get_page_element(options)` | method | fully rendered page element (`get_page_element` action) |
 | `request_stream` / `request_fetch_stream` / `read_stream` | methods | SSE / NDJSON streaming (`read_stream` returns its reader) |
 | `release_stream_reader(reader, reason)` | exported | cancel one reader and splice it out of `page_globals.stream_readers` — the teardown that gives the connection back |
-| `get_local_db()` | method | open/upgrade the `dedalo` IndexedDB (v11) |
+| `get_local_db()` | method | the shared, memoized `dedalo` IndexedDB connection (v11); opens/upgrades on first call |
 | `get_local_db_data` / `set_local_db_data` / `delete_local_db_data` / `delete_local_db_data_by_prefix` / `clear_local_db_table` / `delete_whole_local_db` | methods | IndexedDB read / write / delete / prefix-delete / clear / drop |
 | `download_url(url, filename)` / `download_data(data, filename)` | exported | browser-download helpers (blob → temporary `<a>`) |
 

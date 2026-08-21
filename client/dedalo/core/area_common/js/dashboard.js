@@ -1753,8 +1753,29 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 				for (const [uid, total] of sorted) {
 					const row = document.createElement('div')
 					row.classList.add('area_dashboard_activity_user_row')
-					row.innerHTML = `<span class="area_dashboard_activity_user_name">${user_label_map[uid] || ('User #' + uid)}</span>`
-						+ `<span class="area_dashboard_activity_user_count">${format_number(total)}</span>`
+					// SEC-XSS-013 (!) STORED RECORD DATA — NEVER AN HTML SINK.
+					// `user_label_map[uid]` is the wire value of `activity.users[].label`,
+					// which the server builds in src/core/area/dashboard.ts::resolveUsername()
+					// by joining the RAW dd132 username straight out of matrix_users. It is
+					// record data an authenticated user can write, not a program string, and
+					// it is NOT escaped server-side (escaping belongs at the sink, and the
+					// wire shape is contract-pinned). The previous innerHTML template parsed
+					// it as markup, so a username containing tags ran in the browser of every
+					// user opening the area dashboard, with the viewer's session. Build the
+					// two spans as DOM + textContent instead: the structure below is
+					// byte-identical to the old template (same tags, classes, order), the
+					// only difference being that the label can no longer be parsed as HTML.
+					// Same rule as the chart legend ~40 lines above (`lbl.textContent`).
+					const user_name = document.createElement('span')
+					user_name.classList.add('area_dashboard_activity_user_name')
+					user_name.textContent = user_label_map[uid] || ('User #' + uid)
+					row.appendChild(user_name)
+
+					const user_count = document.createElement('span')
+					user_count.classList.add('area_dashboard_activity_user_count')
+					user_count.textContent = format_number(total)
+					row.appendChild(user_count)
+
 					user_table.appendChild(row)
 				}
 				chart_container.appendChild(user_table)

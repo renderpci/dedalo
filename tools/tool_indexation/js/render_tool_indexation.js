@@ -7,7 +7,7 @@
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {request_failed} from '../../../core/common/js/api_error.js'
-	import {when_in_viewport} from '../../../core/common/js/events.js'
+	import {when_in_viewport, set_before_unload} from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import Split from '../../../lib/split/dist/split.es.js'
 
@@ -591,7 +591,8 @@ const get_content_data_edit = async function(self) {
 *     (built in tool_indexation.prototype.init).  On change it calls
 *     self.transcription_component.update_tag() with type 'indexIn', which the
 *     text area expands to update both the indexIn and indexOut markers.
-*     After success it sets window.unsaved_data = true to signal pending edits.
+*     After success it calls set_before_unload(true) to signal pending edits
+*     (window.unsaved_data is derived state — see the events.js registry).
 *   • button_delete      : triggers self.delete_tag(tag_id).  On success the
 *     panel is hidden again (class 'hide' added).
 *
@@ -680,7 +681,14 @@ const get_tag_info = function(self) {
 						}
 					})
 					// self.transcription_component
-					window.unsaved_data = true
+					// (!) Assert through set_before_unload, never by assigning
+					// window.unsaved_data: that flag is DERIVED from the events.js
+					// unsaved registry, so a direct write is silently overwritten by
+					// the next recompute (any component register/deregister/save on
+					// the page). This tool has no component instance to register —
+					// the edit lives in the transcription text area — so the coarse
+					// instance-less assertion is the right channel.
+					set_before_unload(true)
 				})
 			})
 

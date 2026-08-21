@@ -230,14 +230,12 @@ describe(`COMPONENT_FILTER_RECORDS DATA OPERATIONS`, function() {
 		// entries is array of {id, tipo, value} objects
 		assert.isOk(Array.isArray(entries), 'entries expected array')
 
-		if (entries.length > 0) {
-			const entry = entries[0]
-			// the seed record (test3/1/test69) may hold non-canonical data; skip the
-			// shape checks rather than false-fail when it lacks the {id,tipo,value} shape
-			if (!entry.hasOwnProperty('tipo')) {
-				this.skip()
-				return
-			}
+		// Every entry must carry the canonical {id, tipo, value:[int]} shape — the
+		// one view_default_edit_filter_records reads. A malformed entry used to be
+		// skipped here, which hid the fixture bug that wrote it (data.js
+		// random_filter_records_value returned the changed_data envelope).
+		for (const entry of entries) {
+			assert.isOk(entry.hasOwnProperty('tipo'), 'entry expected tipo property')
 			assert.isOk(entry.hasOwnProperty('value'), 'entry expected value property')
 			assert.isOk(Array.isArray(entry.value), 'entry.value expected array')
 		}
@@ -246,11 +244,12 @@ describe(`COMPONENT_FILTER_RECORDS DATA OPERATIONS`, function() {
 		const datalist = instance.data.datalist || []
 		assert.isOk(Array.isArray(datalist), 'datalist expected array')
 
-		if (datalist.length > 0) {
-			assert.isOk(datalist[0].hasOwnProperty('tipo'), 'datalist item expected tipo')
-			assert.isOk(datalist[0].hasOwnProperty('label'), 'datalist item expected label')
-			assert.isOk(datalist[0].hasOwnProperty('permissions'), 'datalist item expected permissions')
-		}
+		// An empty datalist renders no filter rows at all, so assert it rather
+		// than passing silently.
+		assert.isAbove(datalist.length, 0, 'datalist expected to offer authorized sections')
+		assert.isOk(datalist[0].hasOwnProperty('tipo'), 'datalist item expected tipo')
+		assert.isOk(datalist[0].hasOwnProperty('label'), 'datalist item expected label')
+		assert.isOk(datalist[0].hasOwnProperty('permissions'), 'datalist item expected permissions')
 	});
 
 
@@ -259,18 +258,25 @@ describe(`COMPONENT_FILTER_RECORDS DATA OPERATIONS`, function() {
 
 		// simulate adding a new entry via change_handler
 		const inputs = node.querySelectorAll('input[type="text"].input_value')
+		assert.isAbove(inputs.length, 0, 'expected filter value inputs in DOM')
 
-		if (inputs.length > 0) {
-			const input = inputs[0]
-			input.value = '1,2,3'
-			input.dispatchEvent(new Event('change', { bubbles: true }))
+		// row i renders datalist[i], so the entry to look for is keyed by its tipo
+		const row_tipo = (instance.data.datalist || [])[0]?.tipo
+		assert.isOk(row_tipo, 'the first datalist row expected to carry a tipo')
 
-			// change_handler calls change_value which saves automatically
-			// wait for async save
-			await new Promise(resolve => setTimeout(resolve, 500))
+		const input = inputs[0]
+		input.value = '1,2,3'
+		input.dispatchEvent(new Event('change', { bubbles: true }))
 
-			assert.isOk(instance.data, 'data expected after change')
-		}
+		// change_handler calls change_value which saves automatically
+		// wait for async save
+		await new Promise(resolve => setTimeout(resolve, 500))
+
+		// `data expected` was always true and proved nothing — assert the value
+		// actually landed in the model.
+		const entry = (instance.data.entries || []).find(el => el.tipo===row_tipo)
+		assert.isOk(entry, `an entry for ${row_tipo} expected after the change`)
+		assert.deepEqual(entry.value.map(Number), [1,2,3], 'the typed ids expected in the entry value')
 	});
 
 
@@ -278,16 +284,20 @@ describe(`COMPONENT_FILTER_RECORDS DATA OPERATIONS`, function() {
 	it(`change data via change_value (update)`, async function() {
 
 		const inputs = node.querySelectorAll('input[type="text"].input_value')
+		assert.isAbove(inputs.length, 0, 'expected filter value inputs in DOM')
 
-		if (inputs.length > 0) {
-			const input = inputs[0]
-			input.value = '5,10,15'
-			input.dispatchEvent(new Event('change', { bubbles: true }))
+		const row_tipo = (instance.data.datalist || [])[0]?.tipo
+		assert.isOk(row_tipo, 'the first datalist row expected to carry a tipo')
 
-			await new Promise(resolve => setTimeout(resolve, 500))
+		const input = inputs[0]
+		input.value = '5,10,15'
+		input.dispatchEvent(new Event('change', { bubbles: true }))
 
-			assert.isOk(instance.data, 'data expected after update')
-		}
+		await new Promise(resolve => setTimeout(resolve, 500))
+
+		const entry = (instance.data.entries || []).find(el => el.tipo===row_tipo)
+		assert.isOk(entry, `an entry for ${row_tipo} expected after the update`)
+		assert.deepEqual(entry.value.map(Number), [5,10,15], 'the updated ids expected in the entry value')
 	});
 
 
@@ -295,17 +305,22 @@ describe(`COMPONENT_FILTER_RECORDS DATA OPERATIONS`, function() {
 	it(`remove data via change_value (remove)`, async function() {
 
 		const inputs = node.querySelectorAll('input[type="text"].input_value')
+		assert.isAbove(inputs.length, 0, 'expected filter value inputs in DOM')
 
-		if (inputs.length > 0) {
-			const input = inputs[0]
-			// empty value triggers remove action
-			input.value = ''
-			input.dispatchEvent(new Event('change', { bubbles: true }))
+		const row_tipo = (instance.data.datalist || [])[0]?.tipo
+		assert.isOk(row_tipo, 'the first datalist row expected to carry a tipo')
 
-			await new Promise(resolve => setTimeout(resolve, 500))
+		const input = inputs[0]
+		// empty value triggers remove action. change_handler overrides
+		// change_value's destructive-delete confirm() (clearing a field is not a
+		// record deletion), so this path must complete without any native dialog.
+		input.value = ''
+		input.dispatchEvent(new Event('change', { bubbles: true }))
 
-			assert.isOk(instance.data, 'data expected after remove')
-		}
+		await new Promise(resolve => setTimeout(resolve, 500))
+
+		const entry = (instance.data.entries || []).find(el => el.tipo===row_tipo)
+		assert.isNotOk(entry, `no entry for ${row_tipo} expected after clearing the input`)
 	});
 
 

@@ -39,7 +39,7 @@ import {ui} from '../../../core/common/js/ui.js'
 // mode/view matrix for component_inverse
 // edit: default, mini, print
 // list: default, mini, text
-// search: default (uses edit render)
+// search: default (own read-only render, emits no search criterion)
 	const mode_view_pairs = [
 		{ mode: 'edit',	view: 'default'	},
 		{ mode: 'edit',	view: 'mini'	},
@@ -156,9 +156,17 @@ describe(`COMPONENT_INVERSE LIFECYCLE`, function() {
 					}
 
 					if (pair.mode==='search') {
-						// search: uses edit render, content_data with content_values
+						// search: own read-only render (render_search_component_inverse)
 						const content_data = node.querySelector('.content_data')
 						assert.isOk(content_data, 'expected content_data in search/default')
+						assert.isOk(node.classList.contains('search'), 'expected search class in search/default')
+						assert.isOk(node.classList.contains('read_only'), 'expected read_only class in search/default')
+						assert.isOk(node.classList.contains('disabled_component'), 'expected disabled_component class in search/default')
+						// no input element: this view never accepts a search argument
+						assert.equal(node.querySelectorAll('input, textarea, select').length, 0, 'expected no input elements in search/default')
+						// unsearchable server-side: the collector hook must yield nothing
+						assert.equal(typeof instance.get_search_value, 'function', 'expected get_search_value hook')
+						assert.deepEqual(instance.get_search_value(), [], 'expected get_search_value() to be empty')
 					}
 			});
 

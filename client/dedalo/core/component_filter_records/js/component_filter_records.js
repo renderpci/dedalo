@@ -234,9 +234,17 @@ component_filter_records.prototype.change_handler = async function(options) {
 		// force to save on every change
 		// (!) refresh:false prevents a full server round-trip render; we manually
 		// synchronise the input value below instead of relying on a re-render.
+		// (!) remove_dialog: CLEARING the input builds action 'remove'
+		// (build_changed_data_item, value===null). Without this override
+		// change_value raises its default destructive-delete confirm() — a modal
+		// on every emptied filter field, which this component never intends: the
+		// user is editing a value, not deleting a record. Every sibling
+		// select-family component overrides it the same way.
+		// @see component_check_box.change_handler
 			await self.change_value({
 				changed_data	: changed_data,
-				refresh		: false
+				refresh			: false,
+				remove_dialog	: () => true
 			})
 
 		// update safe value in input text

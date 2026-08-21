@@ -480,18 +480,31 @@ export async function exportHierarchy(
 	return exportResponse(files, errors, entries);
 }
 
+/**
+ * The panel value the client render reads (`value.export_hierarchy_path`).
+ *
+ * A getValue must EXIST whatever this widget can do: without one the panel
+ * refuses to load (maintenance.widget_unavailable) and even the sync form
+ * becomes unreachable (paired with the client binding in 2f7bd86370). The
+ * client render treats a falsy path as "exporting not enabled" and shows only
+ * the sync form.
+ *
+ * It reports the real directory because export IS implemented on this engine
+ * now (ported natively in d22c7279c9): the action no longer writes into the
+ * PHP tree, so it is no longer engineDenied and the path is not null.
+ */
 async function exportHierarchyGetValue(): Promise<WidgetResponse> {
 	return { data: { export_hierarchy_path: HIERARCHY_IMPORT_DIR } };
 }
 
 export const widget: WidgetModule = {
+	getValue: exportHierarchyGetValue,
 	spec: {
 		id: 'export_hierarchy',
 		category: 'data',
 		class: 'success width_100',
 		label: { kind: 'label', key: 'export_hierarchy' },
 	},
-	getValue: exportHierarchyGetValue,
 	apiActions: {
 		sync_hierarchy_active_status: exportHierarchySyncActiveStatus,
 		export_hierarchy: (options) => exportHierarchy(options),

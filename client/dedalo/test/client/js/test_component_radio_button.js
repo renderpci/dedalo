@@ -242,34 +242,34 @@ describe(`COMPONENT_RADIO_BUTTON DATA OPERATIONS`, function() {
 			assert.isAbove(radio_inputs.length, 0, 'expected radio inputs in DOM')
 
 		// get datalist options
+		// An empty datalist, or one with no usable option, is not a reason to
+		// skip: it is the exact condition that leaves the widget unable to save
+		// anything. Assert it instead of guarding it away.
 			const datalist = instance.data.datalist || []
-			if (datalist.length > 0) {
-				// find a datalist item with a value
-				const datalist_item = datalist.find(el => el.value !== null && el.value !== undefined)
-				if (datalist_item) {
-					// simulate change event on the matching radio input
-					const target_input = Array.from(radio_inputs).find(input => {
-						return input.name === instance.id
-					})
-					if (target_input) {
-						target_input.checked = true
-						target_input.dispatchEvent(new Event('change', { bubbles: true }))
+			assert.isAbove(datalist.length, 0, 'datalist expected to offer options')
 
-						// check changed_data IMMEDIATELY after dispatchEvent
-						// (change_value resets changed_data=[] after API response)
-						assert.isOk(instance.data.changed_data, 'changed_data expected after radio change')
-						assert.isAbove(instance.data.changed_data.length, 0, 'changed_data should have at least 1 item')
-						assert.equal(instance.data.changed_data[0].action, 'update', 'changed_data action expected update')
+			const datalist_item = datalist.find(el => el.value !== null && el.value !== undefined)
+			assert.isOk(datalist_item, 'datalist expected to offer an option with a value')
 
-						// wait for async change_value to complete and verify final state
-						await new Promise(resolve => setTimeout(resolve, 500))
+			// simulate change event on the matching radio input
+			const target_input = Array.from(radio_inputs).find(input => input.name === instance.id)
+			assert.isOk(target_input, 'a radio input bound to this instance expected')
 
-						// verify entries were updated
-						const entries = instance.data.entries || []
-						assert.isAbove(entries.length, 0, 'entries expected after radio change')
-					}
-				}
-			}
+			target_input.checked = true
+			target_input.dispatchEvent(new Event('change', { bubbles: true }))
+
+			// check changed_data IMMEDIATELY after dispatchEvent
+			// (change_value resets changed_data=[] after API response)
+			assert.isOk(instance.data.changed_data, 'changed_data expected after radio change')
+			assert.isAbove(instance.data.changed_data.length, 0, 'changed_data should have at least 1 item')
+			assert.equal(instance.data.changed_data[0].action, 'update', 'changed_data action expected update')
+
+			// wait for async change_value to complete and verify final state
+			await new Promise(resolve => setTimeout(resolve, 500))
+
+			// verify entries were updated
+			const entries = instance.data.entries || []
+			assert.isAbove(entries.length, 0, 'entries expected after radio change')
 	});
 
 
@@ -315,7 +315,21 @@ describe(`COMPONENT_RADIO_BUTTON DATA OPERATIONS`, function() {
 
 		// find the reset button
 			const reset_button = node.querySelector('.button.reset')
-			if (reset_button) {
+			assert.isOk(reset_button, 'expected the reset button in edit mode')
+
+		// The reset button is the ONE publication/selection path where the
+		// destructive-delete confirm() is the DESIGNED behaviour (it even names the
+		// value being cleared), so it cannot be avoided by passing a remove_dialog.
+		// Answer it here instead of leaning on the runner auto-accepting a native
+		// modal, which would block any browser driving this suite by hand.
+			const native_confirm = window.confirm
+			let confirm_asked = false
+			window.confirm = function() {
+				confirm_asked = true
+				return true
+			}
+
+			try {
 				reset_button.click()
 
 				// poll for the async remove/save to settle — a fixed delay is flaky
@@ -323,17 +337,15 @@ describe(`COMPONENT_RADIO_BUTTON DATA OPERATIONS`, function() {
 				for (let i=0; i<40 && (instance.data.entries||[]).length>0; i++) {
 					await new Promise(resolve => setTimeout(resolve, 50))
 				}
-
-				// verify data was removed
-				const entries = instance.data.entries || []
-				assert.equal(entries.length, 0, 'expected empty entries after reset')
-			}else{
-				// if no reset button, manually test remove via build_changed_data_item
-				const current_id = instance.data.entries?.[0]?.id ?? null
-				const {changed_data_item} = build_changed_data_item(null, current_id)
-				assert.equal(changed_data_item.action, 'remove', 'expected remove action for null value')
-				assert.equal(changed_data_item.value, null, 'expected null value for remove action')
+			} finally {
+				window.confirm = native_confirm
 			}
+
+			assert.isOk(confirm_asked, 'the reset button must ask before clearing the value')
+
+			// verify data was removed
+			const entries = instance.data.entries || []
+			assert.equal(entries.length, 0, 'expected empty entries after reset')
 	});
 
 
@@ -403,18 +415,20 @@ describe(`COMPONENT_RADIO_BUTTON SEARCH DATA OPERATIONS`, function() {
 		assert.isAbove(radio_inputs.length, 0, 'expected radio inputs in search mode')
 
 		const datalist = instance.data.datalist || []
-		if (datalist.length > 0) {
-			const datalist_item = datalist.find(el => el.value !== null && el.value !== undefined)
-			if (datalist_item) {
-				// click on the first radio input
-				const first_radio = radio_inputs[0]
-				first_radio.checked = true
-				first_radio.dispatchEvent(new Event('change', { bubbles: true }))
+		assert.isAbove(datalist.length, 0, 'search datalist expected to offer options')
 
-				// verify search data was updated
-				assert.isOk(instance.data, 'data expected after search selection')
-			}
-		}
+		const datalist_item = datalist.find(el => el.value !== null && el.value !== undefined)
+		assert.isOk(datalist_item, 'search datalist expected to offer an option with a value')
+
+		// click on the first radio input
+		const first_radio = radio_inputs[0]
+		first_radio.checked = true
+		first_radio.dispatchEvent(new Event('change', { bubbles: true }))
+
+		// verify the selection reached the in-memory search data (search mode
+		// never saves). `data expected` was always true and proved nothing.
+		const search_entries = instance.data.entries || []
+		assert.isAbove(search_entries.length, 0, 'the staged search option expected in data.entries')
 	});
 
 

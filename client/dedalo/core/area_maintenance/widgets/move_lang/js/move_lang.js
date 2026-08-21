@@ -40,6 +40,7 @@
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {area_maintenance} from '../../../js/area_maintenance.js'
 	import {render_move_lang} from './render_move_lang.js'
 
 
@@ -98,6 +99,12 @@ export const move_lang = function() {
 	move_lang.prototype.build	= widget_common.prototype.build
 	move_lang.prototype.render	= widget_common.prototype.render
 	move_lang.prototype.destroy	= widget_common.prototype.destroy
+	// data: the panel value (explanation body + the definition files to
+	// pick from) is served by the widget's server getValue and fetched
+	// LAZILY on panel-open by the unified widget load(). Without this
+	// assignment widget_common.load() no-ops and the panel renders with
+	// no body and an EMPTY file list — the transform is unusable.
+	move_lang.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	move_lang.prototype.edit		= render_move_lang.prototype.list
 	move_lang.prototype.list		= render_move_lang.prototype.list

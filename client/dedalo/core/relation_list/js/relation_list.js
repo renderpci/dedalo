@@ -456,7 +456,9 @@ relation_list.prototype.get_related_records = async function(section_tipo) {
 * @param {string} section_tipo - ontology tipo of the section to open
 * @param {Array} ar_section_id - array of section_id numbers to filter by
 * @param {string|null} target_window - window.open target name; null reuses existing
-* @returns {Promise<boolean>} resolves to true when the window has been opened
+* @returns {Promise<boolean>} resolves to true when the window has been opened,
+*   false when the browser refused it (pop-up blocker); the user is notified by
+*   open_window itself
 */
 relation_list.prototype.open_related_records = async function(section_tipo, ar_section_id, target_window) {
 

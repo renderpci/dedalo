@@ -24,8 +24,10 @@
 *     the record's model, tipo, mode, and view.
 *   - Attach mouse-enter/leave row-highlight behaviour for desktop viewports
 *     when the immediate caller is a section (not a nested portal).
-*   - Delegate column layout to `get_content_data`, which renders all
-*     `columns_map` entries in parallel and populates a DocumentFragment.
+*   - Delegate column layout to `get_content_data`, which renders every
+*     `columns_map` entry concurrently (callback columns included) and then
+*     assembles the resulting nodes into a DocumentFragment in columns_map
+*     order.
 *
 * Exports:
 *   - `view_default_list_section_record`  — stub constructor / namespace carrier
@@ -37,9 +39,10 @@
 * Rendering pipeline (per row):
 *   render()
 *     └─ get_content_data(self)
-*           ├─ render_callback()          — for columns whose definition carries `.callback`
-*           └─ [instance.render() | column.render_callback(instance)] in parallel
-*                 └─ render_column_node() — creates the per-column <div>
+*           └─ render_column() — one per columns_map entry, all concurrent
+*                 ├─ render_callback()          — for columns whose definition carries `.callback`
+*                 └─ [instance.render() | column.render_callback(instance)] in parallel
+*                       └─ render_column_node() — creates the per-column <div>
 */
 
 
@@ -230,15 +233,29 @@ const hilite_row = function(wrapper) {
 * Render all columns defined in `self.columns_map` and collect the resulting
 * DOM nodes into a single DocumentFragment.
 *
-* Column types handled in order of priority:
+* Every `columns_map` entry is rendered CONCURRENTLY via `render_column` (a
+* row's latency is the max of its columns, not the sum).  `Promise.allSettled`
+* is used rather than `Promise.all` so that a single failing column does not
+* abort the rest of the row's RENDER phase; a rejected column falls back to an
+* empty placeholder node.
+* (!) That isolation covers RENDER only.  The child-instance BUILD happens
+* earlier, in the awaited `self.get_ar_columns_instances_list()` below, OUTSIDE
+* the allSettled: a rejecting child build still rejects this row — and, through
+* the section-level `Promise.all` over rows in view_default_list_section.js,
+* the whole list page.  That is the pinned contract (see the reject-then-retry
+* gate in test/client/js/test_section_record.js), not an oversight here.
+* Fragment order is enforced structurally: each column's
+* nodes resolve into `settled[i]` and are appended in a second pass that walks
+* the results in `columns_map` index order.
+*
+* Column types (handled inside `render_column`, in order of priority):
 *
 *   1. Callback columns (`column.callback` is a Function):
 *      The column definition carries a fully custom render function (e.g. a
 *      tool_time_machine "id" column or a delete button column).  The function
 *      is invoked via `render_callback`, which supplies it with a context object
-*      built from the current section_record instance.  The returned node is
-*      appended to the fragment; non-Node return values fall back to an empty
-*      column placeholder and log an error.
+*      built from the current section_record instance; non-Node return values
+*      fall back to an empty column placeholder and log an error.
 *
 *   2. Zero-instance columns (user has no access or no data):
 *      When `ar_columns_instances` contains no instances for the current column
@@ -259,7 +276,9 @@ const hilite_row = function(wrapper) {
 *
 * Performance note:
 *   In debug mode (`SHOW_DEBUG === true`), column render times exceeding 25 ms
-*   are logged as warnings to help identify slow components during development.
+*   are logged as warnings.  Because columns now overlap, the measured time is
+*   the column's own start-to-settle wall clock, which includes time spent
+*   yielded to sibling columns — treat it as an upper bound, not exclusive cost.
 *
 * @param {Object} self - The section_record instance.
 *   Accessed: self.columns_map, self.get_ar_columns_instances_list().
@@ -275,119 +294,163 @@ const get_content_data = async function(self) {
 	// fragment
 		const fragment = new DocumentFragment()
 
-	// render the columns
+	// render all columns concurrently. Each promise resolves to the ordered
+	// array of column nodes for its columns_map entry; results are indexed by
+	// columns_map position, which is what guarantees the fragment order below
+		const column_promises = columns_map.map(
+			(current_column) => render_column(self, current_column, ar_columns_instances)
+		)
+		const settled = await Promise.allSettled(column_promises)
+
+	// assemble the fragment in columns_map order (explicit second pass)
 		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
-			const t = performance.now()
-
-			const current_column = columns_map[i]
-
-			// callback column case
-			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
-				if(current_column.callback && typeof current_column.callback==='function'){
-					const column_node = await render_callback(self, current_column)
-					if (column_node instanceof Node || column_node instanceof DocumentFragment) {
-						fragment.appendChild(column_node)
-					}else{
-						console.error('Ignored non valid DOM node on render callback: ', column_node);
-						fragment.appendChild( render_empty_column_node(current_column, self) )
-					}
-					continue;
+			const result = settled[i]
+			if (result.status==='fulfilled') {
+				const ar_nodes			= result.value
+				const ar_nodes_length	= ar_nodes.length
+				for (let j = 0; j < ar_nodes_length; j++) {
+					fragment.appendChild(ar_nodes[j])
 				}
-
-			// get the specific instances for the current column
-				const column_instances			= ar_columns_instances.filter(el => el.column_id === current_column.id)
-				const column_instances_length	= column_instances.length
-
-			// case zero (user don't have enough privileges cases)
-				if (column_instances_length===0) {
-					// empty column case
-					const column_node = render_empty_column_node(current_column, self)
-					fragment.appendChild(column_node)
-					continue;
-				}
-
-			// loop the instances for select the parent node
-
-			// render all instances in parallel before create the columns nodes (to get the internal nodes)
-				const promises = column_instances.map(async (instance, index) => {
-
-					// Already rendered case
-					if (instance.node !== null) {
-						return { success: true, index };
-					}
-
-					// render the instance
-					// if the column has defined a render_callback use it to render the instance
-					// else use the common render
-					// render_callback allow to add event listeners to the instance nodes
-					const instance_node = (current_column.render_callback && typeof current_column.render_callback==='function')
-						? await current_column.render_callback(instance)
-						: await instance.render()
-
-					// Validate the returned node
-					if (!instance_node) {
-						console.error('Invalid instance_node at index', index, 'model:', instance.model, 'tipo:', instance.tipo, 'node pointer:', instance.node);
-						return { success: false, index, error: 'Invalid instance node' };
-					}
-
-					return { success: true, index, node: instance_node };
-				});
-
-				// nodes. Await all instances are parallel rendered
-				await Promise.allSettled(promises)// render work done safely
-
-			// create the column nodes and assign the instances nodes to it.
-				const ar_column_nodes = []
-				for (let j = 0; j < column_instances_length; j++) {
-
-					const current_instance = column_instances[j]
-
-					// check instance
-						if (!current_instance) {
-							console.error("Undefined current_instance:", current_instance, j, column_instances);
-							continue;
-						}
-						// check if the current_instance has column_id. If not, an error was occur on common creating the columns.
-						if (!current_instance.column_id) {
-							console.error("current_instance column_id not found:",current_instance);
-							continue;
-						}
-
-					// ar_sub_columns_map
-						const ar_sub_columns_map = current_instance.columns_map || column_instances
-
-					// column_node. If column already exists, place the component node into the column.
-					// Else, creates a new column and place it into the fragment
-						const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
-						const column_node	= found_node
-							? found_node
-							: (()=>{
-								const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
-								// push column in ar_column_nodes
-								ar_column_nodes.push(new_column_node)
-								// add node to fragment
-								fragment.appendChild(new_column_node)
-
-								return new_column_node
-							  })()
-						// append current_instance wrapper node
-						if (current_instance.node) column_node.appendChild( current_instance.node );
-				}//end for (let j = 0; j < column_instances_length; j++)
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					const time = performance.now() - t
-					if (time > 25) {
-						console.warn('current_column render time is big: ', time, current_column);
-					}
-				}
+			}else{
+				// one failing column must not abort the row; keep the grid structure
+				console.error('Error rendering column:', columns_map[i], result.reason);
+				fragment.appendChild( render_empty_column_node(columns_map[i], self) )
+			}
 		}//end for (let i = 0; i < columns_map_length; i++)
 
 
 	return fragment
 }//end get_content_data
+
+
+
+/**
+* RENDER_COLUMN
+* Render ONE columns_map entry and return its column node(s) as an ordered
+* array, without touching the shared fragment (get_content_data appends them
+* in columns_map order).  All mutable state here is column-local, so multiple
+* render_column calls run safely in parallel.
+*
+* @param {Object} self - The section_record instance.
+* @param {Object} current_column - The columns_map entry to render.
+* @param {Array} ar_columns_instances - All row instances; filtered here by column id.
+* @returns {Promise<Array>} Ordered array of column <div> nodes for this entry
+*   (normally exactly one).
+*/
+const render_column = async function(self, current_column, ar_columns_instances) {
+
+	const t = performance.now()
+
+	// ar_result_nodes. Ordered nodes to be appended to the fragment by the caller
+		const ar_result_nodes = []
+
+	// callback column case
+	// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
+		if(current_column.callback && typeof current_column.callback==='function'){
+			const column_node = await render_callback(self, current_column)
+			if (column_node instanceof Node || column_node instanceof DocumentFragment) {
+				ar_result_nodes.push(column_node)
+			}else{
+				console.error('Ignored non valid DOM node on render callback: ', column_node);
+				ar_result_nodes.push( render_empty_column_node(current_column, self) )
+			}
+			return ar_result_nodes;
+		}
+
+	// get the specific instances for the current column
+		const column_instances			= ar_columns_instances.filter(el => el.column_id === current_column.id)
+		const column_instances_length	= column_instances.length
+
+	// case zero (user don't have enough privileges cases)
+		if (column_instances_length===0) {
+			// empty column case
+			ar_result_nodes.push( render_empty_column_node(current_column, self) )
+			return ar_result_nodes;
+		}
+
+	// loop the instances for select the parent node
+
+	// render all instances in parallel before create the columns nodes (to get the internal nodes)
+		const promises = column_instances.map(async (instance, index) => {
+
+			// Already rendered case
+			if (instance.node !== null) {
+				return { success: true, index };
+			}
+
+			// render the instance
+			// if the column has defined a render_callback use it to render the instance
+			// else use the common render
+			// render_callback allow to add event listeners to the instance nodes
+			const instance_node = (current_column.render_callback && typeof current_column.render_callback==='function')
+				? await current_column.render_callback(instance)
+				: await instance.render()
+
+			// Validate the returned node
+			if (!instance_node) {
+				console.error('Invalid instance_node at index', index, 'model:', instance.model, 'tipo:', instance.tipo, 'node pointer:', instance.node);
+				return { success: false, index, error: 'Invalid instance node' };
+			}
+
+			return { success: true, index, node: instance_node };
+		});
+
+		// nodes. Await all instances are parallel rendered
+		await Promise.allSettled(promises)// render work done safely
+
+	// create the column nodes and assign the instances nodes to it.
+		const ar_column_nodes = []
+		for (let j = 0; j < column_instances_length; j++) {
+
+			const current_instance = column_instances[j]
+
+			// check instance
+				if (!current_instance) {
+					console.error("Undefined current_instance:", current_instance, j, column_instances);
+					continue;
+				}
+				// check if the current_instance has column_id. If not, an error was occur on common creating the columns.
+				if (!current_instance.column_id) {
+					console.error("current_instance column_id not found:",current_instance);
+					continue;
+				}
+
+			// ar_sub_columns_map
+				const ar_sub_columns_map = current_instance.columns_map || column_instances
+
+			// column_node. If column already exists, place the component node into the column.
+			// Else, creates a new column and place it into the result list
+				const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
+				const column_node	= found_node
+					? found_node
+					: (()=>{
+						const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
+						// push column in ar_column_nodes
+						ar_column_nodes.push(new_column_node)
+						// add node to result list (the caller appends it to the fragment)
+						ar_result_nodes.push(new_column_node)
+
+						return new_column_node
+					  })()
+				// append current_instance wrapper node
+				if (current_instance.node) column_node.appendChild( current_instance.node );
+		}//end for (let j = 0; j < column_instances_length; j++)
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			// wall clock from this column's start to settle; columns overlap, so
+			// this includes time yielded to sibling columns (upper bound, not exclusive cost)
+			const time = performance.now() - t
+			if (time > 25) {
+				console.warn('current_column render time is big: ', time, current_column);
+			}
+		}
+
+
+	return ar_result_nodes
+}//end render_column
 
 
 

@@ -2,11 +2,149 @@
 
 Last modification date:
 
-2026-07-25T00:00:00+01:00
+2026-08-19T00:00:00+02:00
 
 Dédalo version
 
 7.0.0
+
+---
+
+## [Unreleased] - A save that comes back incomplete no longer empties the field
+
+### Fixed
+- **A field whose save comes back without its record keeps its value instead of
+  emptying itself.** When the answer to a save did not carry the record back —
+  the save itself having succeeded — the field threw away everything it knew
+  about what it was editing: the value on screen, and the copy it keeps to
+  decide whether anything has changed since. From that point the field looked
+  perfectly normal but had nothing left to save, every later edit was reported
+  as a change whether or not it was one, and the only notice of it was a console
+  line that appeared solely with developer mode on.
+
+    The field now keeps what it was editing, records that it is out of step with
+    the server, and says so unconditionally. While it is in that state it also
+    stops trusting its own record of what the server holds: its next save is
+    always sent, rather than being skipped as *nothing has changed* — so the
+    edit the server never confirmed is retried instead of being quietly dropped.
+    Tests hold all of this, including that the retry really goes out.
+
+- **A missing language list no longer disables language selection for the rest
+  of the session.** The list of languages is fetched once and kept for the whole
+  page. A failed fetch was kept in exactly the same way: the failure itself was
+  stored as if it were the list, every later request for languages was answered
+  with it, and nothing ever tried again. A map field would then fail outright
+  and the rich-text editor would silently load in the wrong language. Only a
+  usable list is kept now; anything else leaves nothing behind, so the next
+  request for languages asks the server again.
+
+---
+
+## [Unreleased] - Reloading the page no longer discards what you were typing
+
+### Fixed
+- **Text you have typed but not yet confirmed is now protected when you reload
+  or close the tab.** Typing into a field and reloading the page dropped the
+  typing with no warning: no prompt, no save, nothing in the console. It
+  happened in most field types — plain text, dates, numbers, e-mail, passwords,
+  coordinates — while long text fields were unaffected, which is what made the
+  loss look arbitrary.
+
+    The page only counted a field as unsaved once the field had *confirmed* its
+    value, and most fields confirm on leaving the field. Reloading or closing a
+    tab never leaves the field, so the page believed there was nothing to
+    protect. Unconfirmed typing now counts from the first keystroke, and leaving
+    the page forces the field you are in to confirm first — so a real edit
+    raises the browser's leave-page warning and can still be saved, while typing
+    you have already undone raises nothing.
+
+    Only fields that hold record data in edit mode are watched: search boxes,
+    list cells and the lookup box inside a related-records field are not your
+    unsaved work and never trigger the warning. A test now types into every kind
+    of field, for every component, and fails if any of them can be reloaded away
+    unnoticed.
+
+---
+
+## [Unreleased] - Unsaved edits are no longer dropped when another field is corrected
+
+### Fixed
+- **Editing one field and then correcting a typo in another no longer loses the
+  first edit.** A long text field commits its change half a second after you
+  stop typing. If, inside that window, you typed a character in any other field
+  and deleted it again, the page concluded that nothing was unsaved: closing the
+  tab or moving to another record then discarded the text field's edit with no
+  warning, no save and nothing in the console.
+
+    The page tracked unsaved work as a single yes/no answer for the whole
+    screen, and every field was allowed to write it. A field returning to its
+    stored value answered *no* on behalf of every other field, including ones
+    still holding work. Each field now reports only for itself, and the page
+    answers *yes* while any of them still has something unsaved — so the
+    save-before-leaving sweep and the confirmation prompt both run when they
+    should. A test now holds that a field may only ever retire its own answer.
+
+---
+
+## [Unreleased] - Windows that would not open, and requests that never ended
+
+### Fixed
+- **A blocked pop-up now says so instead of breaking the action that opened
+  it.** Opening a tool, a record, an ontology page or a related-records list in
+  a new window failed silently when the browser refused the pop-up: no window
+  appeared and the action behind it stopped half way, with nothing on screen to
+  explain why. The refusal is now reported to the user, and *open related
+  records* no longer claims success for a list nobody saw.
+
+- **A request to a slow server can no longer wait forever.** While a request is
+  in flight the page asks the server whether it is still alive, so that a slow
+  answer is not mistaken for a dead server. That check *removed* the request's
+  time limit instead of extending it: a server that answered the check and then
+  stopped responding left the page waiting indefinitely — the *awaiting for busy
+  server* notice dismissed itself, the panel stayed empty, and no error was ever
+  raised. A busy server now buys the request more time, and the notice stays
+  visible for as long as the wait it describes.
+
+    Long operations keep their own limit. The extra time is added to whatever is
+    left of the original allowance rather than replacing it, so a database
+    backup still gets its full hour.
+
+---
+
+## [Unreleased] - A user name can no longer inject markup into the dashboard
+
+### Security
+- **The activity panel of the area dashboard renders user names as text.** That
+  panel lists the most active users by the name recorded in the users section.
+  The name was inserted into the page as markup, so a name containing HTML was
+  interpreted by the browser of everyone who opened the dashboard instead of
+  being displayed. Names — and the counts beside them — are now written as text,
+  as the chart legend on the same panel already did.
+
+---
+
+## [Unreleased] - Maintenance panels that would not open, and panels that opened empty
+
+### Fixed
+- **The *Export hierarchy* maintenance panel opens again.** Selecting it in the
+  maintenance area refused with *"The 'export_hierarchy' panel is not available
+  on this engine"* and rendered nothing — which also put its working
+  *Sync hierarchy active status* action out of reach, since the whole card dies
+  with the failed value load. The panel now reports that hierarchy EXPORTING is
+  not offered by this engine (it wrote install dump files) and renders the sync
+  form, which is the operation it actually has.
+
+- **The five migration panels (*Move TLD*, *Move locator*, *Move to portal*,
+  *Move to table*, *Move lang*) show their definition files again.** Each opened
+  with no explanation text and an EMPTY file list, so there was nothing to
+  select and the transform could not be run at all. The engine had been serving
+  the body and the file list all along — the panel simply never asked for it.
+
+    Both bugs are the same invariant broken from opposite sides: a panel's value
+    load is a PAIR (the widget serves a value, the panel asks for it) and either
+    half alone is a broken panel. A gate now checks the pairing in both
+    directions for every maintenance widget, so a half-wired panel fails the
+    test suite instead of an operator's browser.
 
 ---
 

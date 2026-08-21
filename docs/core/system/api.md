@@ -161,8 +161,9 @@ flowchart TD
 A JSON POST reaches `src/server.ts` on the unix socket. The server matches the API
 path, parses the body, validates it into one `Rqo`, resolves the session from the
 cookie, and builds an `ApiRequestContext` (request id, client IP from
-`X-Forwarded-For`, the session, the raw session token, and the CSRF candidate from
-the `X-Dedalo-Csrf-Token` header). It then calls `dispatchRqo()`.
+`X-Forwarded-For`, the session, the raw session token, and the CSRF candidate —
+the `X-Dedalo-Csrf-Token` header, falling back to the RQO's own `csrf_token` key).
+It then calls `dispatchRqo()`.
 
 Inside the dispatcher the RQO passes the gates **in order** — the `(dd_api,
 action)` registry allowlist, the login check (with a small `NO_LOGIN_ACTIONS`
@@ -221,8 +222,11 @@ The *policy* — who may call what — lives one layer down, in `dispatch.ts`.
 
 CSRF verification is `verifyCsrf(session, candidate)` (constant-time, in
 `session_store.ts`). The client echoes the token back via the
-`X-Dedalo-Csrf-Token` header — or a `csrf_token` query parameter for multipart
-uploads. Read and count are **not** exempt. On a CSRF failure the dispatcher
+`X-Dedalo-Csrf-Token` header — or, for the two transports that cannot set a
+header, in the payload itself: the `csrf_token` form field on a multipart upload
+(`media/ingest/upload_endpoint.ts`) and the `csrf_token` RQO key on the
+`beforeunload` lock-release beacon (`navigator.sendBeacon`). The header always
+wins when both are present. Read and count are **not** exempt. On a CSRF failure the dispatcher
 returns `403` with `error.code = "auth.csrf_failed"`, and the body carries the
 session's **current** `csrf_token`, so the client's transparent single retry can
 succeed.
@@ -294,7 +298,7 @@ const apiContext: ApiRequestContext = {
     clientIp: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local',
     session: sessionToken !== undefined ? getSession(sessionToken) : null,
     sessionToken: sessionToken ?? null,
-    csrfCandidate: request.headers.get('x-dedalo-csrf-token'),
+    csrfCandidate: request.headers.get('x-dedalo-csrf-token') ?? parsedRqo.data.csrf_token ?? null,
 };
 
 const outcome = await dispatchRqo(parsedRqo.data, apiContext); // gates + handler + csrf_token

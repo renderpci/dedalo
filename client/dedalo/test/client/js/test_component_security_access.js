@@ -231,12 +231,13 @@ describe(`COMPONENT_SECURITY_ACCESS DATA OPERATIONS`, function() {
 			assert.isOk(entries[0].value !== undefined, 'entry expected value property')
 		}
 
-		// datalist should be present (ontology tree)
-		if (datalist.length > 0) {
-			assert.isOk(datalist[0].tipo !== undefined, 'datalist item expected tipo property')
-			assert.isOk(datalist[0].section_tipo !== undefined, 'datalist item expected section_tipo property')
-			assert.isOk(datalist[0].model !== undefined, 'datalist item expected model property')
-		}
+		// datalist should be present (ontology tree). An empty one leaves the
+		// permission tree with nothing to render, so assert it rather than
+		// passing silently.
+		assert.isAbove(datalist.length, 0, 'datalist expected to carry the ontology tree')
+		assert.isOk(datalist[0].tipo !== undefined, 'datalist item expected tipo property')
+		assert.isOk(datalist[0].section_tipo !== undefined, 'datalist item expected section_tipo property')
+		assert.isOk(datalist[0].model !== undefined, 'datalist item expected model property')
 	});
 
 
@@ -274,13 +275,13 @@ describe(`COMPONENT_SECURITY_ACCESS DATA OPERATIONS`, function() {
 	it(`get_parents method works`, async function() {
 
 		const datalist = instance.data.datalist || []
-		if (datalist.length > 0) {
-			const item = datalist.find(el => el.ar_parent && el.ar_parent.length > 0)
-			if (item) {
-				const parents = instance.get_parents(item)
-				assert.isOk(Array.isArray(parents), 'get_parents expected array return')
-			}
-		}
+		assert.isAbove(datalist.length, 0, 'datalist expected to carry the ontology tree')
+
+		const item = datalist.find(el => el.ar_parent && el.ar_parent.length > 0)
+		assert.isOk(item, 'datalist expected to carry an item with ar_parent')
+
+		const parents = instance.get_parents(item)
+		assert.isOk(Array.isArray(parents), 'get_parents expected array return')
 	});
 
 
@@ -288,14 +289,14 @@ describe(`COMPONENT_SECURITY_ACCESS DATA OPERATIONS`, function() {
 	it(`get_children method works`, async function() {
 
 		const datalist = instance.data.datalist || []
-		if (datalist.length > 0) {
-			// find an area/section item (tipo===section_tipo) that likely has children
-			const item = datalist.find(el => el.tipo===el.section_tipo)
-			if (item) {
-				const children = instance.get_children(item)
-				assert.isOk(Array.isArray(children), 'get_children expected array return')
-			}
-		}
+		assert.isAbove(datalist.length, 0, 'datalist expected to carry the ontology tree')
+
+		// find an area/section item (tipo===section_tipo), the ones that have children
+		const item = datalist.find(el => el.tipo===el.section_tipo)
+		assert.isOk(item, 'datalist expected to carry a section-level item')
+
+		const children = instance.get_children(item)
+		assert.isOk(Array.isArray(children), 'get_children expected array return')
 	});
 
 

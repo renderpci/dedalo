@@ -87,6 +87,9 @@ const instances_map = new Map();
 // that instance. Concurrent get_instance() calls for the same key await this shared
 // Promise instead of each constructing + init-ing a duplicate instance (which would
 // overwrite the first in instances_map and leak its event subscriptions).
+// The window opens at key computation (the key is only known after the async
+// model/lang resolution) and closes when the build Promise settles.
+const in_flight_builds = new Map();
 
 
 
@@ -118,7 +121,11 @@ const key_order = ['model','tipo','section_tipo','section_id','mode','lang','par
 *      hint when transliteration or multi-lang rules apply).  The resolved
 *      context is also injected into `options.context` when not already set,
 *      avoiding a second server call during `init`.
-*   2. Module import — the ES module for the resolved model is dynamically
+*   2. In-flight de-dup — if another concurrent call is already building the
+*      same key, its shared build Promise is returned instead of constructing
+*      a second instance; the entry is cleared once the build settles (success
+*      or failure) so the key can be rebuilt after delete_instance.
+*   3. Module import — the ES module for the resolved model is dynamically
 *      imported from a path derived from the model's naming prefix:
 *        • `tool_*`    → tools root (absolute URL if the tool lives in an
 *                         additional DEDALO_TOOLS_URLS root, relative otherwise)
@@ -126,10 +133,10 @@ const key_order = ['model','tipo','section_tipo','section_id','mode','lang','par
 *        • default     → core/<model>/js/<model>.js
 *      The path logic is inlined here (not delegated to util_base_url) to
 *      avoid a circular import: utils/util.js itself imports this module.
-*   3. Construction — the module's named export matching `model` is
+*   4. Construction — the module's named export matching `model` is
 *      instantiated with `new`, assigned `id` (canonical key) and `id_base`,
 *      then asynchronously initialised via `instance.init(options)`.
-*   4. Registration — the new instance is stored in `instances_map` before
+*   5. Registration — the new instance is stored in `instances_map` before
 *      the Promise resolves, so concurrent callers that await the same key
 *      will receive the cached instance on their next tick.
 *
@@ -252,9 +259,17 @@ export const get_instance = async function(options) {
 	// in-flight de-dup. If another concurrent call is already building this key,
 	// await its Promise instead of constructing a second instance (prevents the
 	// double-construct/double-init race that orphans and leaks the first instance).
+	// The window starts here, at key computation: the key only exists after the
+	// async model/lang resolution above, so this is the earliest point a build
+	// can be registered — and it is sufficient, because everything between here
+	// and instances_map.set() is covered by the registered Promise.
+		const in_flight = in_flight_builds.get(key)
+		if (in_flight) {
+			return in_flight;
+		}
 
-	// Return a promise that resolves the instance
-	return new Promise(function(resolve) {
+	// Build a promise that resolves the instance
+	const build_promise = new Promise(function(resolve) {
 
 		// module path resolution
 		// Determine module path.
@@ -289,7 +304,7 @@ export const get_instance = async function(options) {
 
 				if (typeof instance_element !== 'object') {
 					console.warn(`Module "${model}" is not an valid object.`);
-					return null;
+					return resolve(null);
 				}
 
 			// serialize element id
@@ -309,6 +324,15 @@ export const get_instance = async function(options) {
 			// during a subsequent microtask tick receives the cached instance.
 				instances_map.set(key, instance_element)
 
+			// hand off from the in-flight registry to the cache SYNCHRONOUSLY, in the
+			// same slice as the set() above and before resolve() wakes any awaiter.
+			// The `finally` below would clear this too, but only two microtasks later —
+			// and in that gap the key is live in BOTH maps, so a delete_instance(key)
+			// followed by a get_instance(key) would miss the (correctly emptied) cache
+			// and be served the just-deleted instance out of the stale in-flight entry.
+			// Clearing here means no awaiter can ever observe that overlap.
+				in_flight_builds.delete(key)
+
 			// return the new created instance
 				resolve(instance_element)
 		})
@@ -321,6 +345,17 @@ export const get_instance = async function(options) {
 
 	// register the in-flight build and clear it once settled so the key can be
 	// rebuilt later (e.g. after delete_instance) and the registry does not grow.
+	// The success path clears the entry itself (above); this `finally` is the
+	// catch-all that covers every FAILURE path — import error, wrong-named export,
+	// non-object construct, a throwing init() — none of which reach that line.
+	// (!) A never-settling init() therefore pins the key for the page's lifetime;
+	// that is a deliberate limit, not an oversight — see the note on this function.
+		in_flight_builds.set(key, build_promise)
+		build_promise.finally(() => {
+			in_flight_builds.delete(key)
+		})
+
+	return build_promise
 }//end get_instance
 
 

@@ -113,13 +113,18 @@ to obtain a live element. It:
    values in the fixed `key_order` sequence:
    `model, tipo, section_tipo, section_id, mode, lang, parent, matrix_id, id_variant, column_id`.
 3. Returns the cached entry from the module-private `instances_map` on a hit.
-4. On a miss, dynamically `import()`s the ES module from a model-prefix-derived
+4. On a miss, checks the **in-flight builds** registry: if another caller is
+   already building this key, its build Promise is returned as-is and nothing
+   is constructed. See [Client instances](instances.md) for the full contract,
+   including whose `options` win when callers race.
+5. On a miss with no build in flight, dynamically `import()`s the ES module from a model-prefix-derived
    path — `tool_*` → tools root (or a `DEDALO_TOOLS_URLS` absolute URL),
    `service_*` → `core/services/<model>/js/<model>.js`, else
    `core/<model>/js/<model>.js`. It `new`-constructs the export **named exactly
    like the model**, sets `instance.id = key` and
    `instance.id_base = [section_tipo, section_id, tipo].join('_')`, `await`s
-   `instance.init(options)`, registers it in `instances_map`, then resolves.
+   `instance.init(options)`, registers it in `instances_map`, releases the
+   in-flight entry, then resolves.
 
 `common.init` (in `common.js`) seeds the baseline properties from options
 (`model` / `tipo` / `section_tipo` / `section_id` / `mode` / `lang` /
@@ -199,6 +204,13 @@ After the response lands, `build` runs `set_context_vars(self)`, which wires
 assembles `show_interface` (merging the component override over
 `default_show_interface`), subscribes events, and publishes `built_<id>`.
 
+`show_interface` is always an object OWNED BY THE INSTANCE: the override is
+spread into a fresh object before the missing defaults are filled in, so the
+render paths that write into it (e.g. `view_indexation_edit_portal.js` forcing
+`button_delete_link_and_record = false`) can never mutate the
+`context.properties.show_interface` / `request_config_object.show.interface`
+they came from.
+
 ### 4. Render — ddo to standard DOM
 
 `common.prototype.render(options)` is the dispatcher. It:
@@ -215,6 +227,18 @@ assembles `show_interface` (merging the component override over
    to `list` when no method matches.
 4. Publishes `render_<id>` with the result node and, in edit mode, schedules
    `ui.activate_tooltips`.
+
+!!! warning "The queued render must re-enter with status `built`"
+    A queued (last-write-wins) render is handed off by the `render_<id>`
+    subscriber, which sets the status back and re-calls `render()`. That status
+    MUST be `built` — the only value that falls through the status machine into
+    a real render. Restoring the status the *queued* call saw (`rendering`)
+    sends it back into the waiter branch, where it parks its options and waits
+    for a `render_<id>` event that nothing will publish, because no render is
+    running: the instance's render pipeline wedges permanently and the newest
+    options are never applied.
+    Gate: `test/unit/client_render_queue_deadlock.test.ts` (it fails by timing
+    out on the deadlock).
 
 `render_level` is `full` (build the whole wrapper into `self.node`,
 `replaceWith` the old node) or `content` (regenerate only

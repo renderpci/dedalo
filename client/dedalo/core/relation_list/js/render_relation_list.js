@@ -424,7 +424,7 @@ const build_grid_html = function(self, context, columns, data, count_data, CSS_s
 * Pagination state is computed from self.offset, self.limit, and
 * self.total. Page arithmetic:
 *   current_page = (offset + limit) / limit   → 1-based
-*   final_page   = floor(total / limit) + 1
+*   final_page   = ceil(total / limit)
 *
 * The paginator is inserted as the first child of wrapper (above the
 * content grids) via insertBefore.
@@ -457,7 +457,7 @@ const parse_paginator_html = async function(self, wrapper) {
 
 	// calculate the current page (offset + limit)/limit and the last page that paginator can show with the current configuration
 		const current_page	= (current_offset + current_limit)/current_limit
-		const final_page	= Math.floor(total_records_count/current_limit) + 1
+		const final_page	= Math.ceil(total_records_count/current_limit)
 
 	// create a paginator content
 	// get_label['total'] resolves the i18n label for the key 'total' from the
@@ -569,7 +569,7 @@ const next_records = function(self) {
 
 	// calculate the current and the final page
 		const current_page	= (current_offset + current_limit)/current_limit
-		const final_page	= Math.floor(current_total/current_limit) + 1
+		const final_page	= Math.ceil(current_total/current_limit)
 
 	// if the paginator is NOT in the last page the button can navigate to the next page
 		if(current_page < final_page){

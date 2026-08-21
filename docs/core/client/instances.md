@@ -56,6 +56,36 @@ caller already knows `model`, no network call is made, the key is built, and a
 `init`. Only on a cache miss does the factory go to work (resolve model, import
 module, construct, `init`, register).
 
+### Concurrent callers share one build
+
+A cache miss is not instantaneous: the build spans a dynamic `import()` **and**
+an `await instance.init(options)`. Two callers asking for the same key in that
+window would both miss the cache and both build. So the factory keeps a second,
+module-private registry — the **in-flight builds** map, key → the build Promise
+currently running for it. The first caller to reach a fresh key registers its
+Promise there synchronously; any other caller arriving before that build settles
+is handed **the same Promise** and constructs nothing.
+
+The entry is released the moment the build settles: on the success path it is
+cleared in the same synchronous slice as the `instances_map` write, before any
+awaiting caller is resumed, so no caller can ever observe the key living in both
+registries. Failure paths are covered by a `finally`.
+
+!!! warning "The winning caller's options are the ones that count"
+    Concurrent callers for one key all receive the instance built from the
+    **first** caller's `options` — a later caller's `context`, `data`, `datum`
+    or `caller` are not applied. This is the same semantics a cache hit has
+    always had, which is why `component_common.change_mode` re-asserts `caller`
+    after `get_instance` returns. Re-assert any per-caller property yourself
+    instead of assuming your options shaped the instance.
+
+!!! note "A build that never settles pins its key"
+    The in-flight entry is cleared when the Promise settles. An `init()` that
+    neither resolves nor rejects therefore leaves the key pinned for the life of
+    the page and every later `get_instance` for it returns the same hung
+    Promise. This is a deliberate limit — the factory imposes no build timeout —
+    so an `init()` must always settle, including on its own error paths.
+
 ### Registry, not graph
 
 Instances do **not** hold direct references to each other for discovery. They
@@ -74,13 +104,16 @@ flowchart TD
     C --> D["key = key_instances_builder(options)"]
     D --> E{"instances_map.get(key)?"}
     E -- hit --> F["return cached instance"]
-    E -- miss --> G["resolve module_path from model prefix"]
+    E -- miss --> E2{"in_flight_builds.get(key)?"}
+    E2 -- hit --> F2["return the in-flight build Promise<br/>(construct nothing)"]
+    E2 -- miss --> G["resolve module_path from model prefix"]
     G --> H["import(module_path)"]
     H --> I["new module[model]()"]
     I --> J["instance.id = key<br/>instance.id_base = section_tipo_section_id_tipo"]
     J --> K["await instance.init(options)"]
     K --> L["instances_map.set(key, instance)"]
-    L --> M["resolve(instance)"]
+    L --> L2["in_flight_builds.delete(key)"]
+    L2 --> M["resolve(instance)"]
 ```
 
 The miss path resolves the module path **from the model's naming prefix**
@@ -100,8 +133,10 @@ The miss path resolves the module path **from the model's naming prefix**
 
 `get_instance` returns `Promise<Object|null>`. It resolves to `null` (and logs)
 when `tipo` is absent and `model` cannot be resolved, when the element-context
-API returns no model, when the module cannot be imported, or when the export
-does not match the model name.
+API returns no model, when the module cannot be imported, when the export
+does not match the model name, or when that export constructs to something that
+is not an object. **Every** failure path settles — none of them leaves the
+returned Promise pending.
 
 ## Exported API
 

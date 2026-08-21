@@ -219,9 +219,10 @@ async function ensureSuiteLogin(): Promise<void> {
 /**
  * Suites that are RED TODAY, each with what it actually asserts when it fails.
  *
- * MEASURED 2026-08-17 through THIS runner (which reseeds canonical test3 before
- * the run) against the :4000 dev listener on dedalo7_mht: 125 suites, 123 pass,
- * 2 fail, 0 pending, 4 deferred. Two consecutive runs agree on these two.
+ * MEASURED 2026-08-20 through THIS runner (which reseeds canonical test3 before
+ * the run) against the :4000 dev listener: 131 suites, 131 pass, 0 fail, 0
+ * pending, 0 deferred — the whole inventory runs. Two consecutive runs agree,
+ * and a `--strict` run is identical because the list below is empty.
  *
  * (!) Measure the baseline WITH the reseed. A hand-driven run against a polluted
  * test3 showed NINE failures — seven of them were leftover state from earlier
@@ -237,23 +238,23 @@ async function ensureSuiteLogin(): Promise<void> {
  *
  * These are client/server bugs, not runner problems; each needs its own change.
  * Do NOT add a row to get a run green — a row costs the same reading as the fix.
+ *
+ * THE LIST IS EMPTY (2026-08-20). Every failure is red on its own, and a plain
+ * run is now equivalent to `--strict`. Keep it that way: the next red suite
+ * gets a fix, not a row.
  */
-const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([
-	[
-		'test_component_3d',
-		'"change_value remove expected response: expected false to be truthy" — the remove path answers false, then the suite times out waiting on the follow-up (20s)',
-	],
-	[
-		'test_component_publication',
-		'"the api_response payload must not be null: expected undefined to not equal null" on ADD — the server refuses the link with error.code relation.insert_refused, so the payload never arrives',
-	],
-]);
+const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([]);
 
 /**
  * KNOWN-FLAKY under run-all load (passes in isolation and in most runs). Not
  * excused — named so a red run can be read honestly, and so the next person
  * re-runs it alone before believing it. `test_component_select_lang` failed in
  * one of two consecutive baseline runs with no code change between them.
+ * This list ANNOTATES a red run — it never excuses one: a flaky suite that fails
+ * is still an unexpected failure. (`test_component_geolocation` was listed here
+ * for a day; its "flakiness" was record pollution — its saves appended and its
+ * removes left null holes in the SHARED record — and it now owns test3/14 with a
+ * teardown, so it is deterministic and off the list.)
  */
 const KNOWN_FLAKY: readonly string[] = ['test_component_select_lang'];
 

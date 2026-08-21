@@ -107,7 +107,7 @@ tool_pdf_extractor.prototype.init = async function(options) {
 	try {
 
 		// get the pages offset to set the page tags between pages
-		const offset = self.caller?.data?.value?.[0].offset || 0
+		const offset = self.caller?.data?.value?.[0]?.offset || 0
 
 		// specific init variables
 		self.config = {

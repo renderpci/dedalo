@@ -86,7 +86,8 @@ describe(`COMPONENT_TEXT_AREA DATA`, function() {
 				action: 'remove',
 				id: 1,
 				value: null
-			}]
+			}],
+			remove_dialog: () => true
 		})
 		assert.equal(component.data.entries.length, 0)
 	});

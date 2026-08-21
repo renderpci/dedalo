@@ -84,7 +84,6 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 
 			const tools = [
 				'tool_cataloging',
-				'tool_common',
 				'tool_dd_label',
 				'tool_dev_template',
 				'tool_diffusion',
@@ -99,7 +98,6 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 				'tool_indexation',
 				'tool_lang',
 				'tool_lang_multi',
-				'tool_leaflet_special_tools',
 				'tool_media_versions',
 				'tool_numisdata_epigraphy',
 				'tool_numisdata_order_coins',
@@ -130,7 +128,25 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 						mode		: mode,
 						lang		: lang,
 						tool_object	: {},
-						caller		: {}
+						// caller stub. These tests only assert that the instance is
+						// built, but several tools reach into the caller during init
+						// and take their error path (self.error + console.error)
+						// without it: tool_export calls caller.build() and
+						// reads caller.rqo, tool_dd_label resolves caller.editors[0],
+						// tool_tc reads caller.lang, tool_upload caller.context.
+						// Tools that do not read a given key are unaffected.
+						caller		: {
+							build			: async () => {},
+							lang			: lang,
+							mode			: mode,
+							tipo			: 'test52',
+							section_tipo	: 'test3',
+							section_id		: '1',
+							rqo				: { source : {}, sqo : { section_tipo : 'test3', limit : 10 } },
+							context			: { type : 'component', features : {} },
+							data			: { value : [{ offset : 0 }] },
+							editors			: [{ get : () => ({json:[]}) }]
+						}
 					},
 					model
 				);

@@ -19,8 +19,12 @@
 *   (honoured over the backoff) — NEVER from a status list — and, once out of
 *   attempts, returns {json, api_error, response} (response null when the
 *   network never answered). The loop emits NO UI: `on_wait(attempt, delay,
-*   reason)` is the only hook ('busy' = the health probe answered while the
-*   request is still running; 'retry' = sleeping before the next attempt).
+*   reason)` is the only hook ('busy' = the health probe found the server alive
+*   mid-attempt and EXTENDED the deadline by that many ms; 'retry' = sleeping
+*   before the next attempt).
+*
+* (!) Every attempt holds a live deadline at all times. A busy server buys the
+* attempt more time; it never removes the timer (see `busy_grace` below).
 */
 
 // imports
@@ -103,6 +107,8 @@ const retry_after_ms = (response) => {
 *   base_delay  {number}   backoff base in ms (default 500): delay = base_delay * 2^(attempt-1)
 *   on_wait     {Function} (attempt, delay_ms, reason:'busy'|'retry') — UI hook, optional
 *   health_url  {string}   liveness endpoint for the mid-attempt probe (default '/health')
+*   busy_grace_ms {number} extra time granted ONCE per attempt when that probe finds
+*                          the server alive (default: the attempt's backoff delay + 3000)
 * @return Promise<{json:*, api_error:ApiError|null, response:Response|null}>
 */
 export const fetch_api = async (url, init = {}, options = {}) => {
@@ -112,6 +118,7 @@ export const fetch_api = async (url, init = {}, options = {}) => {
 	const base_delay	= options.base_delay ?? 500
 	const on_wait		= typeof options.on_wait==='function' ? options.on_wait : null
 	const health_url	= options.health_url ?? '/health'
+	const busy_grace_ms	= options.busy_grace_ms ?? null // null = derive per attempt (delay + 3000)
 	const caller_signal	= init.signal || null
 
 	let attempt		= 0
@@ -121,6 +128,9 @@ export const fetch_api = async (url, init = {}, options = {}) => {
 		attempt++
 		const delay				= base_delay * Math.pow(2, attempt - 1)
 		const current_timeout	= attempt===1 ? timeout_ms : timeout_ms + delay
+		// the ONE extension a busy server earns; also the value on_wait reports, so
+		// the notice and the wait it describes expire together
+		const busy_grace		= busy_grace_ms ?? (delay + 3000)
 
 		// one controller per attempt; the caller's signal aborts it too
 		const controller	= new AbortController()
@@ -131,15 +141,40 @@ export const fetch_api = async (url, init = {}, options = {}) => {
 			if (caller_signal.aborted) controller.abort()
 			else caller_signal.addEventListener('abort', on_caller_abort, {once:true})
 		}
-		const timeout_id = setTimeout(() => { timed_out = true; controller.abort() }, current_timeout)
-		// mid-attempt health probe: an answering server is BUSY, not dead — let the
-		// request finish instead of aborting it, and tell the UI why it is waiting.
+		// THE deadline for this attempt. In a `let` because the busy probe below
+		// REPLACES it — the one thing it may never do is leave the attempt without one.
+		// `attempt_started` is monotonic (performance.now, available in window, worker
+		// and service worker alike) so the probe can extend the deadline additively.
+		const attempt_started	= performance.now()
+		const fire_timeout		= () => { timed_out = true; controller.abort() }
+		let timeout_id			= setTimeout(fire_timeout, current_timeout)
+		// mid-attempt health probe: an answering server is BUSY, not dead — so it
+		// buys the attempt more time instead of being aborted at the deadline, and
+		// the UI is told why it is waiting.
+		// (!) It buys TIME, not IMMUNITY. This used to `clearTimeout(timeout_id)`
+		// and never re-arm, so from the first successful probe the request had NO
+		// timeout at all: a server that answered /health and then stalled left the
+		// promise pending for the life of the page — busy toast already
+		// auto-dismissed, frozen widget, no error path, and only a caller-supplied
+		// AbortSignal (which almost no caller passes) could still end it.
+		// ONE grant per attempt is deliberate: a server still busy when the grace
+		// runs out fails this attempt and the retry loop hands the next one a larger
+		// budget (timeout_ms + delay), which is where longer waits belong.
 		const health_id = setTimeout(async () => {
 			const alive = await check_health(health_url)
 			// the probe may resolve after the request itself did — say nothing then
 			if (alive && !settled) {
+				// (!) ADDITIVE, never a replacement: re-arm at whatever is LEFT of the
+				// original budget PLUS the grace, so a busy answer can only ever push
+				// the deadline later. Re-arming at `busy_grace` alone would SHORTEN it
+				// for every caller whose timeout exceeds twice the grace — make_backup
+				// passes 3_600_000 ms for pg_dump, so a probe at the 30-minute mark
+				// would have killed the backup 3.5 s later instead of at the hour.
+				const remaining	= Math.max(0, current_timeout - (performance.now() - attempt_started))
+				const extension	= remaining + busy_grace
 				clearTimeout(timeout_id)
-				if (on_wait) on_wait(attempt, delay + 3000, 'busy')
+				timeout_id = setTimeout(fire_timeout, extension)
+				if (on_wait) on_wait(attempt, extension, 'busy')
 			}
 		}, Math.floor(current_timeout / 2))
 

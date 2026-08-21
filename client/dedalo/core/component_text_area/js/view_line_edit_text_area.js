@@ -17,7 +17,7 @@
 * VIEW_LINE_EDIT_TEXT_AREA
 * Compact single-line rich-text editor view for component_text_area.
 *
-* This module implements the 'line' and 'print' display variants used when a
+* This module implements the 'line' display variant used when a
 * text-area component is rendered inside a list row or other space-constrained
 * context (e.g. edit_in_list mode). It differs from view_default_edit_text_area
 * in that:
@@ -28,9 +28,8 @@
 *   - Editor initialisation is deferred to first mousedown (or immediate if
 *     auto_init_editor === true or render_level === 'content').
 *
-* The 'print' case is handled upstream in render_edit_component_text_area by
-* forcing self.permissions = 1 before calling this module, so get_content_value
-* will fall back to the read-only path transparently.
+* The 'print' view is NOT handled here: it routes to the default view (it must
+* keep its header label), read-only via self.permissions = 1 set upstream.
 *
 * Exported symbol:
 *   view_line_edit_text_area  — static namespace; only the .render() method is
@@ -48,7 +47,7 @@ export const view_line_edit_text_area = function() {
 * Render node for use in modes: edit, edit_in_list
 *
 * Entry point called by render_edit_component_text_area.prototype.edit when
-* self.context.view === 'line' (or 'print', after permissions are clamped to 1).
+* self.context.view === 'line'.
 *
 * When render_level === 'content' the function returns the bare content_data
 * node (an HTMLElement with per-entry child nodes) so the caller can splice it

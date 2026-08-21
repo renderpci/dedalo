@@ -21,7 +21,11 @@
 // (scripts/lib/tld_census.ts) from reading them as records this gate reads.
 
 import { describe, expect, test } from 'bun:test';
-import { shouldDeactivate } from '../../src/core/area_maintenance/widgets/export_hierarchy.ts';
+import { HIERARCHY_IMPORT_DIR } from '../../src/core/install/paths.ts';
+import {
+	shouldDeactivate,
+	widget,
+} from '../../src/core/area_maintenance/widgets/export_hierarchy.ts';
 
 const SOURCE_FILE = `${import.meta.dir}/../../src/core/area_maintenance/widgets/export_hierarchy.ts`;
 
@@ -93,5 +97,37 @@ describe('the extraction is REWIRED, not duplicated', () => {
 		// and each predicate survives EXACTLY ONCE in the file, inside the extraction
 		expect(source.split(`row.target === '${PEOPLE}'`).length - 1).toBe(1);
 		expect(source.split("row.active_ts === '1'").length - 1).toBe(1);
+	});
+});
+
+describe('the panel value', () => {
+	test('getValue exists — without it the panel refuses to open at all', () => {
+		expect(typeof widget.getValue).toBe('function');
+	});
+
+	test('reports the export path, because export is implemented on this engine', async () => {
+		// RESTATED at the 2026-08-21 merge. This case used to assert `null`, on the
+		// premise stated in its own comment: "exporting writes install dump files
+		// and is engine-denied here". That premise ended when export was ported
+		// natively (d22c7279c9) — the action no longer writes into the PHP tree, so
+		// it is no longer engineDenied and a null path would now be a LIE that hides
+		// a working feature from the client (which renders the export form only for
+		// a truthy path).
+		//
+		// The half of the original that still holds is kept above: a getValue must
+		// EXIST or the panel refuses to open and even the sync form is unreachable.
+		const response = await widget.getValue?.({}, {} as never);
+		expect(response?.data).toEqual({ export_hierarchy_path: HIERARCHY_IMPORT_DIR });
+	});
+
+	test('the panel offers both operations, and export is a real handler', () => {
+		expect(Object.keys(widget.apiActions ?? {}).sort()).toEqual([
+			'export_hierarchy',
+			'sync_hierarchy_active_status',
+		]);
+		// Not a denial stub: the ported action is a live function. (A denied action
+		// is also a function, so this is a floor, not a proof — the export
+		// behaviour itself is gated by the cases above in this file.)
+		expect(typeof widget.apiActions?.export_hierarchy).toBe('function');
 	});
 });

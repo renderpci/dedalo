@@ -17,6 +17,30 @@ const model		= url_vars.model
 // element is an object with the instance options
 	const element	= elements.find(el => el.model===model)
 
+/**
+* CONTENT_DATA_OF
+* The component's content node. Every model but one family renders it as a
+* DIRECT child of the wrapper; the PORTAL FAMILY (component_portal and the
+* four component_relation_* models, all built by view_default_edit_portal.js)
+* nests it one level down: wrapper > .list_body > header + .content_data.
+* Do NOT use a loose `querySelector('.content_data')` here — the paginator
+* renders its own `.content_data` first in document order, so a loose lookup
+* passes on the wrong node.
+*/
+const content_data_of = (node) =>
+	node.querySelector(':scope >.content_data') ||
+	node.querySelector(':scope >.list_body >.content_data')
+
+/**
+* IS_PORTAL_FAMILY
+* Judged from the RENDERED wrapper (`add_styles: ['portal']` in
+* view_default_edit_portal.js), not from a hand-kept list of model names —
+* the relation_* models are portal-rendered and were missing from the old
+* name-based carve-out, so their `.label` in line view read as a failure.
+*/
+const is_portal_family = (instance) =>
+	instance.node instanceof Element && instance.node.classList.contains('portal')
+
 // events
 	// page click
 		window.addEventListener('mousedown', fn_deactivate_components)
@@ -31,11 +55,20 @@ const model		= url_vars.model
 
 /**
 * MAKE_ELEMENT_TEST
+* Builds, renders and asserts one (mode, view, permissions) permutation.
+*
+* (!) This is an ASYNC FUNCTION and every `it` MUST `await` it. It used to
+* wrap the body in `new Promise(async function(resolve){...})` and be called
+* without await: an assertion throwing inside that async executor became an
+* UNHANDLED REJECTION — the promise never settled, mocha's `it` had already
+* returned, and the suite went green with failing asserts. 16 real assertion
+* failures hid there. Keep the plain async shape: a throw must reach mocha.
+*
 * @param object options
 * @return promise
-* 	resolve element instance
+* 	resolves to the element instance; REJECTS when an assert fails
 */
-function make_element_test(options) {
+async function make_element_test(options) {
 
 	// options
 		const element		= options.element
@@ -51,10 +84,8 @@ function make_element_test(options) {
 		const section_id	= element.section_id
 		const lang			= element.lang
 
-	return new Promise(async function(resolve){
+	{
 		const start = performance.now()
-		// it('responds with matching records', async function () {
-		// describe(`${model}-${mode}-${view}-${permissions}`, async function() {
 
 			// instantiate element
 			const new_instance = await get_instance({
@@ -103,17 +134,12 @@ function make_element_test(options) {
 				}
 
 			// asserts
-				// try {
-					fn_asserts(new_instance)
-				// } catch (error) {
-				// 	console.error(error)
-				// }
+			// awaited: fn_asserts is async, and an un-awaited rejection is
+			// invisible to mocha (see the note above).
+				await fn_asserts(new_instance)
 
-			// console.log(`-> ${model} ${mode}-${view}-${new_instance.permissions}`, new_instance);
-
-			resolve(new_instance)
-		// })
-	})
+			return new_instance
+	}
 }//end make_element_test
 
 
@@ -130,7 +156,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -159,7 +185,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -188,7 +214,7 @@ function make_element_test(options) {
 					'buttons_container should not exist when permissions are 1'
 				);
 				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data'),
+					content_data_of(new_instance.node),
 					null,
 					'content_data must necessarily exist'
 				);
@@ -208,7 +234,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -237,7 +263,7 @@ function make_element_test(options) {
 					'buttons_container must necessarily exist (edit-default-2)'
 				);
 				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data') || new_instance.node.querySelector(':scope >.list_body >.content_data'),
+					content_data_of(new_instance.node),
 					null,
 					'content_data must necessarily exist'
 				);
@@ -263,7 +289,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -292,7 +318,7 @@ function make_element_test(options) {
 					'buttons_container must necessarily exist (edit-default-2)'
 				);
 				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data'),
+					content_data_of(new_instance.node),
 					null,
 					'content_data must necessarily exist'
 				);
@@ -318,7 +344,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -336,7 +362,9 @@ function make_element_test(options) {
 					null,
 					'Main node not could be null'
 				);
-				if (element.model !== 'component_portal' && element.model !== 'component_external') {
+				// the portal family and component_external DO render a label in
+				// line view; every other model must not.
+				if (!is_portal_family(new_instance) && element.model !== 'component_external') {
 					assert.equal(
 						new_instance.node.querySelector(':scope >.label'),
 						null,
@@ -349,7 +377,7 @@ function make_element_test(options) {
 				// 	'buttons_container must necessarily exist (edit-line-2)'
 				// );
 				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data'),
+					content_data_of(new_instance.node),
 					null,
 					'content_data must necessarily exist'
 				);
@@ -374,7 +402,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -403,7 +431,7 @@ function make_element_test(options) {
 					'buttons_container should not exist in view print'
 				);
 				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data'),
+					content_data_of(new_instance.node),
 					null,
 					'content_data must necessarily exist'
 				);
@@ -433,7 +461,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -492,7 +520,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -551,7 +579,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -613,7 +641,7 @@ function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		make_element_test({
+		await make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -639,7 +667,7 @@ function make_element_test(options) {
 				// Check content data
 				if(element.model!=='component_password') {
 					assert.notEqual(
-						new_instance.node.querySelector(':scope >.content_data'),
+						content_data_of(new_instance.node),
 						null,
 						'content_data must necessarily exist'
 					);

@@ -333,7 +333,8 @@ describe(`COMPONENT_IMAGE DATA OPERATIONS`, function() {
 
 			const response = await instance.change_value({
 				changed_data	: changed_data,
-				refresh			: false
+				refresh			: false,
+				remove_dialog 	: () => true
 			})
 
 			assert.isOk(response, 'change_value remove expected response')

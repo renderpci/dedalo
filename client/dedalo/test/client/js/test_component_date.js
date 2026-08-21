@@ -21,7 +21,11 @@ import {change_handler} from '../../../core/component_date/js/render_edit_compon
 	const section_tipo	= element.section_tipo
 	const section_id	= element.section_id
 	const tipo_date		= element.tipo  // test145 (date_mode: date)
-	const tipo_period	= 'test218'     // test218 (date_mode: period)
+	// test173 (date_mode: period) — test3 → test115 → test34 → test173. The suite
+	// used to name test218, which exists in NO ontology on any instance; that
+	// missing tipo made get_date_mode read null.properties and was the whole of
+	// this suite's deferral. The period component was there all along.
+	const tipo_period	= 'test173'
 	const lang			= element.lang
 
 

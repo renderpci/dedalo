@@ -665,11 +665,20 @@ export const publish_link_terms = function(linker, terms) {
 			return false
 		}
 
-	// publish. event_manager.publish returns false when nothing is subscribed
+	// publish. Two ways the pick can fail to land, and BOTH must be loud:
+	//  - `false`        : nothing is subscribed to the channel.
+	//  - empty array [] : subscribers existed but every one of them THREW. The bus
+	//                     isolates subscribers (each runs in its own try/catch), so
+	//                     a failing handler no longer propagates an exception up to
+	//                     here — the empty result set is the only evidence left.
+	//                     Without this branch a thrown-away pick reported SUCCESS.
 		const result = window_base.event_manager.publish(PICKER_LINK_CHANNEL_PREFIX + linker.id, payload)
-		if (result===false) {
+		if (result===false || result.length===0) {
 			console.error(
-				`(!) [publish_link_terms] nothing is subscribed to ${PICKER_LINK_CHANNEL_PREFIX}${linker.id}.`
+				`(!) [publish_link_terms] no subscriber took the pick on ${PICKER_LINK_CHANNEL_PREFIX}${linker.id}`
+				+ (result===false
+					? ' (nothing is subscribed).'
+					: ' (every subscriber threw — see the [event_manager] error above).')
 				+ ' The pick was LOST.'
 			);
 			return false

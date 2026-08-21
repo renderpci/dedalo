@@ -6224,9 +6224,10 @@ dd-modal.dd_confirm .body.content {
   margin-top: 0px;
   align-items: flex-start;
   padding-top: 1rem;
+  line-height: 2rem;
 }
 .page > .content_data > .container_placeholder:not(.menu_placeholder) > .spinner {
-  top: 0.85rem;
+  top: 1rem;
 }
 .page > .bubbles_notification_container {
   z-index: 999 !important;
@@ -21134,6 +21135,17 @@ body.inspector_resizing {
   color: var(--color_white);
   width: 100%;
   text-align: center;
+}
+.component_inverse.search > .content_data {
+  max-height: 12rem;
+  overflow: auto;
+}
+.component_inverse.search > .content_data > .content_value {
+  cursor: default;
+}
+.component_inverse.search > .content_data > .content_value > .inverse_show_section_id {
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 .component_inverse.view_line {
   display: inline-block;

@@ -15,8 +15,8 @@
 *   save / load_data) and RQO construction to the shared component_common and
 *   common prototypes — no custom logic is defined here.
 * - Exposes four render entry-points (list / tm / edit / search) that are
-*   implemented by the render_edit_component_inverse and
-*   render_list_component_inverse sub-modules.
+*   implemented by the render_edit_component_inverse, render_list_component_inverse
+*   and render_search_component_inverse sub-modules.
 *
 * This component is intentionally thin: all relationship resolution is
 * performed server-side by class.component_inverse.php via
@@ -47,6 +47,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_inverse} from '../../component_inverse/js/render_edit_component_inverse.js'
 	import {render_list_component_inverse} from '../../component_inverse/js/render_list_component_inverse.js'
+	import {render_search_component_inverse} from '../../component_inverse/js/render_search_component_inverse.js'
 
 
 
@@ -98,7 +99,8 @@ export const component_inverse = function(){
 *   refresh     — common            — destroy + build + render cycle
 *   list / tm   — render_list_component_inverse — renders in list / time-machine mode
 *   edit        — render_edit_component_inverse — renders in edit mode (view: default | mini | print)
-*   search      — render_edit_component_inverse — reuses the edit renderer in search context
+*   search      — render_search_component_inverse — read-only search view; emits NO
+*                 search criterion (component_inverse is unsearchable server-side)
 */
 // prototypes assign
 	component_inverse.prototype.init		= component_common.prototype.init
@@ -113,7 +115,10 @@ export const component_inverse = function(){
 	component_inverse.prototype.refresh		= common.prototype.refresh
 	component_inverse.prototype.list		= render_list_component_inverse.prototype.list
 	component_inverse.prototype.edit		= render_edit_component_inverse.prototype.edit
-	component_inverse.prototype.search		= render_edit_component_inverse.prototype.edit  // search reuses the edit renderer
+	component_inverse.prototype.search		= render_search_component_inverse.prototype.search
+	// get_search_value. Read by search.js serialize_filter_model. Always [] —
+	// component_inverse owns no stored value and conform.ts refuses a leaf on it.
+	component_inverse.prototype.get_search_value = render_search_component_inverse.prototype.get_search_value
 
 
 

@@ -266,6 +266,54 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 	let instance	= null
 	let node		= null
 
+	// The canonical single entry of test100 on this suite's own record (test3/14,
+	// manifest.ts SUITE_ISOLATION_RECORDS[14]).
+	const canonical_entry = {
+		alt		: 0,
+		lat		: 39.45952823913757,
+		lon		: -0.3274998574173816,
+		zoom	: 16
+	}
+
+	/**
+	* SET_SINGLE_ENTRY
+	* Puts the component back to EXACTLY one entry via 'set_data'.
+	* The write cases below address key 0, and a save whose target key holds no id
+	* APPENDS while a remove leaves a null hole — so without this the geo array
+	* grows [null,{…},null,…] across runs and key 0 eventually reads null. Used as
+	* both the precondition of the write chain and its teardown.
+	*/
+	async function set_single_entry(target, value) {
+		await target.change_value({
+			changed_data	: [Object.freeze({
+				action	: 'set_data',
+				value	: [ {...value} ]
+			})],
+			refresh			: false
+		})
+	}
+
+	after(async function() {
+		this.timeout(15000)
+		// on its OWN instance: the last case of this block destroys `instance`, so
+		// a teardown reusing it would silently no-op and leave the record holding
+		// the cleared slot the remove case wrote.
+		const cleaner = await get_instance({
+			model			: 'component_geolocation',
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: lang,
+			mode			: 'edit',
+			view			: 'default',
+			id_variant		: 'data_ops_teardown_' + Math.random()
+		})
+		await cleaner.build(true)
+		cleaner.permissions = 2
+		await set_single_entry(cleaner, canonical_entry)
+		await cleaner.destroy(true, true, true)
+	})
+
 
 
 	it(`init → build → render (edit mode, permissions=2)`, async function() {
@@ -344,9 +392,14 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 
 	it(`add data via change_value (set_data)`, async function() {
 
+		// start from EXACTLY one entry, so key 0 addresses a real slot: an update
+		// against a key that holds no id appends instead, and the case would then
+		// assert key 0 while the value landed at the end of the array.
+		await set_single_entry(instance, canonical_entry)
+
 		const key	= 0
-		const data	= instance.data || {}
-		const entries = data.entries || []
+		const entries = instance.data.entries || []
+		assert.isOk(entries[key], 'setup: exactly one stored entry expected at key 0')
 
 		const new_value = {
 			lat		: 40.416775,
@@ -369,6 +422,7 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 		// verify entries updated
 		const updated_entries = instance.data.entries
 		assert.isOk(updated_entries, 'entries expected after change_value')
+		assert.equal(updated_entries.length, 1, 'an update must REPLACE the entry, never append a second one')
 		assert.equal(updated_entries[0].lat, 40.416775, 'expected lat 40.416775 after change')
 		assert.equal(updated_entries[0].lon, -3.703790, 'expected lon -3.703790 after change')
 	});
@@ -378,12 +432,10 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 	it(`change data via change_value (update)`, async function() {
 
 		const key	= 0
-		const data	= instance.data || {}
-		const entries = data.entries || []
+		const entries = instance.data.entries || []
+		assert.isOk(entries[key], 'setup: the previous case must have left one entry at key 0')
 
-		const item = entries[key]
-			? JSON.parse(JSON.stringify(entries[key]))
-			: {}
+		const item = JSON.parse(JSON.stringify(entries[key]))
 		item.lat = 41.3851
 		item.lon = 2.1734
 
@@ -399,6 +451,7 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 		})
 
 		const updated_entries = instance.data.entries
+		assert.equal(updated_entries.length, 1, 'an update must REPLACE the entry, never append a second one')
 		assert.equal(updated_entries[0].lat, 41.3851, 'expected lat 41.3851 after update')
 		assert.equal(updated_entries[0].lon, 2.1734, 'expected lon 2.1734 after update')
 	});
@@ -408,8 +461,8 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 	it(`remove data via change_value (remove)`, async function() {
 
 		const key	= 0
-		const data	= instance.data || {}
-		const entries = data.entries || []
+		const entries = instance.data.entries || []
+		assert.isOk(entries[key], 'setup: the previous case must have left one entry at key 0')
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -421,6 +474,13 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 			changed_data	: [changed_data_item],
 			refresh			: false
 		})
+
+		// the case used to assert NOTHING. A null value clears the slot, so the
+		// stored coordinate must be gone — not merely "the call returned".
+		assert.isNotOk(
+			(instance.data.entries || []).some(el => el && el.lat!==undefined),
+			'no stored coordinate expected after the remove'
+		)
 	});
 
 

@@ -263,6 +263,17 @@ export const rqoSchema = z
 		options: z.record(z.string(), z.unknown()).optional(),
 		/** Pretty-print the JSON response (dev aid). */
 		pretty_print: z.boolean().optional(),
+		/**
+		 * CSRF token carried IN THE BODY, for the one transport that cannot set
+		 * a header: navigator.sendBeacon on beforeunload (page.js lock release).
+		 * server.ts uses it only as a FALLBACK when X-Dedalo-Csrf-Token is absent.
+		 * NULLABLE on purpose: the beacon emits `csrf_token: page_globals.csrf_token
+		 * || null`, so a bootstrap-window unload sends an explicit null. Before this
+		 * key was declared, `.passthrough()` absorbed it; a bare `z.string()` would
+		 * turn that beacon into a 400 `request.invalid_rqo` — a WORSE failure than
+		 * the csrf refusal this fallback exists to cure.
+		 */
+		csrf_token: z.string().nullable().optional(),
 	})
 	.passthrough();
 

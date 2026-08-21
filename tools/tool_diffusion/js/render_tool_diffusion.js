@@ -49,7 +49,7 @@
 *    .resolve_levels              {number}  default ontology resolution depth.
 *    .skip_publication_state_check {number} 1 = bypass component_publication check.
 *
-*  self.bun_status  {Object} — result of dd_diffusion_api::get_diffusion_status.
+*  self.bun_status  {Object} — result of dd_diffusion_api::get_engine_advisory.
 *    .result  {boolean}  true when the Bun engine is reachable.
 *    .msg     {string}   human-readable status message.
 *

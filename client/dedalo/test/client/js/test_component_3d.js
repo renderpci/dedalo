@@ -190,6 +190,36 @@ describe(`COMPONENT_3D DATA OPERATIONS`, function() {
 	let instance	= null
 	let node		= null
 
+	// Teardown: the write chain below ENDS on a remove, so without this the
+	// record is left with media.test26 = [] and the next run's read cases (and
+	// any sweep rendering it) see an empty 3d component. Restores the canonical
+	// single entry on this suite's own record (test3/15, manifest.ts
+	// SUITE_ISOLATION_RECORDS[15]) via 'set_data', on its OWN instance because
+	// the last case of this block destroys `instance`.
+	after(async function() {
+		this.timeout(15000)
+		const cleaner = await get_instance({
+			model			: 'component_3d',
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: lang,
+			mode			: 'edit',
+			view			: 'default',
+			id_variant		: 'data_ops_teardown_' + Math.random()
+		})
+		await cleaner.build(true)
+		cleaner.permissions = 2
+		await cleaner.change_value({
+			changed_data	: [Object.freeze({
+				action	: 'set_data',
+				value	: element.new_value(element.new_value_params)
+			})],
+			refresh			: false
+		})
+		await cleaner.destroy(true, true, true)
+	})
+
 
 
 	it(`init → build → render (edit mode, permissions=2)`, async function() {
@@ -223,18 +253,21 @@ describe(`COMPONENT_3D DATA OPERATIONS`, function() {
 
 	it(`data structure has files_info`, async function() {
 
+		// An empty entries array is not a reason to skip: this suite owns its record
+		// (test3/15) and the canonical fixture populates test26, so emptiness means
+		// a previous run left the record cleared — the very pollution the isolation
+		// record + teardown exist to prevent.
 		const entries = instance.data.entries || []
+		assert.isAbove(entries.length, 0, 'a stored 3d entry expected on the canonical record')
 
-		if (entries.length > 0) {
-			const entry = entries[0]
-			assert.isOk(entry.files_info, 'entry expected files_info property')
-			assert.isOk(Array.isArray(entry.files_info), 'files_info expected array')
+		const entry = entries[0]
+		assert.isOk(entry.files_info, 'entry expected files_info property')
+		assert.isOk(Array.isArray(entry.files_info), 'files_info expected array')
 
-			// each file_info should have quality
-			for (const file_info of entry.files_info) {
-				assert.isOk(file_info.quality, 'file_info expected quality property')
-				assert.isOk(file_info.extension, 'file_info expected extension property')
-			}
+		// each file_info should have quality
+		for (const file_info of entry.files_info) {
+			assert.isOk(file_info.quality, 'file_info expected quality property')
+			assert.isOk(file_info.extension, 'file_info expected extension property')
 		}
 	});
 
@@ -272,50 +305,62 @@ describe(`COMPONENT_3D DATA OPERATIONS`, function() {
 
 	it(`change data via change_value (update)`, async function() {
 
+		// the previous case set the value, so an empty array here is a failure
 		const entries = instance.data.entries || []
+		assert.isAbove(entries.length, 0, 'the previous case must have left one entry')
 
-		if (entries.length > 0) {
-			// modify existing entry
-			const updated_entry = {...entries[0]}
-			updated_entry.original_file_name = 'updated_test_file.glb'
+		// modify existing entry
+		const updated_entry = {...entries[0]}
+		updated_entry.original_file_name = 'updated_test_file.glb'
 
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				id		: updated_entry.id || 1,
-				value	: updated_entry
-			})]
+		const changed_data = [Object.freeze({
+			action	: 'update',
+			id		: updated_entry.id || 1,
+			value	: updated_entry
+		})]
 
-			const response = await instance.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
+		const response = await instance.change_value({
+			changed_data	: changed_data,
+			refresh			: false
+		})
 
-			assert.isOk(response, 'change_value update expected response')
-		}
+		assert.isOk(response, 'change_value update expected response')
+		assert.equal(
+			(instance.data.entries || [])[0]?.original_file_name,
+			'updated_test_file.glb',
+			'the updated name expected in the model'
+		)
 	});
 
 
 
 	it(`remove data via change_value (remove)`, async function() {
 
+		// the previous cases left one entry, so an empty array here is a failure
 		const entries = instance.data.entries || []
+		assert.isAbove(entries.length, 0, 'the previous cases must have left one entry')
 
-		if (entries.length > 0) {
-			const entry_to_remove = entries[entries.length - 1]
+		const entry_to_remove = entries[entries.length - 1]
+		const count_before = entries.length
 
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				id		: entry_to_remove.id || 1,
-				value	: null
-			})]
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			id		: entry_to_remove.id || 1,
+			value	: null
+		})]
 
-			const response = await instance.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
+		const response = await instance.change_value({
+			changed_data	: changed_data,
+			refresh			: false,
+			remove_dialog 	: () => true
+		})
 
-			assert.isOk(response, 'change_value remove expected response')
-		}
+		assert.isOk(response, 'change_value remove expected response')
+		assert.equal(
+			(instance.data.entries || []).length,
+			count_before - 1,
+			'the removed entry expected gone from the model'
+		)
 	});
 
 
@@ -507,6 +552,33 @@ describe(`COMPONENT_3D VIEWER`, function() {
 
 
 
+	it(`ensure_viewer resolves null when no viewer ever mounts`, async function() {
+
+		const instance = await get_instance({
+			model			: 'component_3d',
+			mode			: 'edit',
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: lang,
+			permissions		: 2
+		})
+		await instance.build(true)
+
+		// The viewer loads lazily and publishes 'viewer_ready_<id>', so
+		// ensure_viewer WAITS for it (default 20000ms) before giving up. Pass a
+		// short window: the contract under test is "gives up and resolves null",
+		// not the length of the wait.
+		instance.viewer = null
+		const viewer = await instance.ensure_viewer(100)
+
+		assert.equal(viewer, null, 'expected ensure_viewer to resolve null after its wait window')
+
+		await instance.destroy(true)
+	});
+
+
+
 	it(`create_posterframe refuses without a viewer`, async function() {
 
 		const instance = await get_instance({
@@ -523,7 +595,13 @@ describe(`COMPONENT_3D VIEWER`, function() {
 		// No viewer mounted (the component was never rendered into the viewport):
 		// the capture must refuse rather than upload an empty frame over the
 		// record's existing posterframe.
+		// create_posterframe takes no timeout, so it inherits ensure_viewer's full
+		// 20000ms wait — the same as this suite's mocha timeout, which is why this
+		// case timed out instead of asserting (the standing KNOWN_FAILING row).
+		// The wait itself is covered by the case above; here the collaborator is
+		// answered immediately so the REFUSAL is what gets tested.
 		instance.viewer = null
+		instance.ensure_viewer = () => Promise.resolve(null)
 		const result = await instance.create_posterframe()
 
 		assert.equal(result, false, 'expected create_posterframe to refuse with no viewer')

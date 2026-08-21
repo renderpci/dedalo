@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {dd_request_idle_callback, deregister_unsaved_instance} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_inserted_rules} from '../../page/js/css.js'
 	import {render_stream} from '../../common/js/render_common.js'
@@ -214,6 +214,9 @@ common.prototype.build = async function(autoload=false) {
 * 3. Build `self.show_interface` by merging the component's context/request-config
 *    override with `default_show_interface`. Any key absent in the override is
 *    filled from the default, so callers can rely on every flag being present.
+*    The override is CLONED first: `show_interface` is instance-owned, so the
+*    render paths that write flags into it never mutate the source
+*    `context.properties.show_interface` / `request_config_object.show.interface`.
 * 4. Attach `self.rqo_test` as a lazy getter (via Object.defineProperty) that
 *    constructs a minimal debug RQO on first access without eagerly computing it.
 *
@@ -299,9 +302,12 @@ export const set_context_vars = function(self) {
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
 				? default_show_interface
 				: (()=>{
-					const new_show_interface = (self.context.properties.show_interface)
-						? self.context.properties.show_interface
-						: self.request_config_object.show.interface
+					// clone: never mutate the source context / request_config object
+					const new_show_interface = {
+						...((self.context.properties.show_interface)
+							? self.context.properties.show_interface
+							: self.request_config_object.show.interface)
+					}
 					// add missing keys
 					for (const [key, value] of Object.entries(default_show_interface)) {
 						if (new_show_interface[key]===undefined) {
@@ -472,8 +478,9 @@ common.prototype.render = async function (options={}) {
 							self._pending_render_options = null;
 
 							if (pending_options) {
-								// Trigger next queued render using previous_status to avoid 'rendered' status issues
-								self.status = previous_status;
+								// Trigger next queued render. Force 'built' (previous_status here is
+								// 'rendering', which would re-enter the waiter case and deadlock)
+								self.status = 'built';
 								resolve(self.render(pending_options));
 							} else {
 								resolve(result_node);
@@ -920,8 +927,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 *  4. Destroys `self.inspector` if present.
 *  5. Destroys `self.filter` if present.
 *  6. Removes the instance from the global instances map via delete_instance(self.id).
-*  7. Removes self from `self.caller.ar_instances` to prevent stale references.
-*  8. Nullifies heavy properties (context, data, datum, ar_instances, events_tokens,
+*  7. Retires any unsaved-data registration via deregister_unsaved_instance(self),
+*     so a destroyed dirty instance cannot keep the derived window.unsaved_data
+*     guard armed forever.
+*  8. Removes self from `self.caller.ar_instances` to prevent stale references.
+*  9. Nullifies heavy properties (context, data, datum, ar_instances, events_tokens,
 *     caller, request_config) to release memory held by closures.
 *
 * @param {Object} self - The Dédalo instance being destroyed
@@ -993,6 +1003,13 @@ const do_delete_self = async function (self) {
 	// self.id is equivalent to the intances_map key
 	// delete_instance returns false if the instance was not found because is already removed.
 	const result = delete_instance( self.id )
+
+	// unsaved-data registry. Retire any unsaved registration this instance
+	// holds: window.unsaved_data is DERIVED from the events.js registry, and a
+	// destroyed dirty instance left registered would keep the navigation guard
+	// armed forever with no component left to save or revert. No-op when the
+	// instance never registered (Set semantics).
+		deregister_unsaved_instance(self)
 
 	// delete caller instance reference (ar_instances)
 		if (self.caller?.ar_instances) {
@@ -2372,11 +2389,33 @@ common.prototype.load_data_from_datum = function() {
 
 
 /**
+* SECTION_ELEMENTS_CONTEXT_PROMISES
+* Module-level shared cache of get_section_elements_context results, keyed by the
+* SAME complete fingerprint the localdb cache_handler id uses (section_tipo +
+* application lang + options fingerprint) and holding the request PROMISE, stored
+* synchronously BEFORE the first await — so N concurrent callers (same instance
+* or different instances) share one request instead of N, and two instances
+* asking the same question after page build share one answer.
+* The resolved components array is shared by design: every call site treats it as
+* read-only (render/find/map), and the previous per-instance cache already
+* returned the same array to every repeat caller on one instance.
+* A promise that settles empty/failed is evicted so a later call can retry.
+* Lang is part of the key, so a language switch can never serve a foreign-lang
+* entry even before its page reload clears module state.
+* @type {Map<string, Promise<Array<Object>|null>>}
+*/
+const section_elements_context_promises = new Map()
+
+
+
+/**
 * GET_SECTION_ELEMENTS_CONTEXT
 * Fetch the context list of components associated with a section tipo from the API.
-* Results are cached on `self.components_list[section_tipo]` for the lifetime of the
-* instance, and additionally via the data_manager's 'localdb' cache handler keyed by
-* section_tipo and the current application language.
+* Results are cached in the module-level `section_elements_context_promises` map
+* (shared across instances, keyed by the full query fingerprint), mirrored onto
+* `self.components_list[section_tipo]` for the direct readers of that property
+* (e.g. render_search), and additionally via the data_manager's 'localdb' cache
+* handler under the same fingerprint.
 *
 * Used by section-level features (e.g. section_record column resolution, inspector
 * panel) that need to know which components belong to a section before rendering.
@@ -2408,60 +2447,97 @@ common.prototype.get_section_elements_context = async function(options) {
 			console.error('Forced add missing self.components_list:', self.components_list);
 		}
 
+	// cache key. The COMPLETE query fingerprint — the server answers differently
+	// per ar_components_exclude list (search excludes media models, tool_export
+	// only component_password, tool_update_cache none), per use_real_sections and
+	// per skip_permissions, so every one of them is in the key; an incomplete
+	// fingerprint poisons the entry for every other caller of the same
+	// section+lang. The same id keys the localdb cache_handler below, so the
+	// persisted and in-memory layers can never disagree on identity.
+	// (The previous in-memory cache keyed on section_tipo ALONE, so one instance
+	// asking twice with different options got the first answer's shape back;
+	// skip_permissions was also missing from the persisted fingerprint.)
+		const options_fingerprint = (Array.isArray(ar_components_exclude)
+			? [...ar_components_exclude].sort().join(',')
+			: 'default')
+			+ (use_real_sections===true ? '_real' : '')
+			+ (skip_permissions===true ? '_skipperm' : '')
+		const cache_key = 'section_cache_elements_context_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang + '_' + options_fingerprint
+
+	// shared cache hit. Concurrent callers arriving before the first request
+	// resolves join its promise (it is stored below BEFORE any await); later
+	// callers get the settled one. Cross-instance by design.
+		const cached_promise = section_elements_context_promises.get(cache_key)
+		if (cached_promise) {
+			const components = await cached_promise
+			// mirror for the direct self.components_list readers (render_search)
+			self.components_list[section_tipo] = components
+			return components
+		}
+
 	// components
 		const get_components = async () => {
-			if (self.components_list[section_tipo]) {
 
-				return self.components_list[section_tipo]
+			const source = create_source(self, null)
 
-			}else{
-
-				const source = create_source(self, null)
-
-				// load data
-					const rqo = {
-						action			: 'get_section_elements_context',
-						prevent_lock	: true,
-						source			: source,
-						options			: {
-							context_type			: 'simple',
-							ar_section_tipo			: section_tipo,
-							use_real_sections		: use_real_sections,
-							ar_components_exclude	: ar_components_exclude,
-							skip_permissions		: skip_permissions
-						}
+			// load data
+				const rqo = {
+					action			: 'get_section_elements_context',
+					prevent_lock	: true,
+					source			: source,
+					options			: {
+						context_type			: 'simple',
+						ar_section_tipo			: section_tipo,
+						use_real_sections		: use_real_sections,
+						ar_components_exclude	: ar_components_exclude,
+						skip_permissions		: skip_permissions
 					}
+				}
 
-					// cache_handler. Cache section elements API response for speed.
-					// The id carries an options fingerprint: callers request different
-					// ar_components_exclude lists (search excludes media models,
-					// tool_export only component_password, tool_update_cache none) and
-					// use_real_sections values, and the server answers each differently —
-					// without the fingerprint whichever caller cached first would poison
-					// the entry for every other caller of the same section+lang.
-					const options_fingerprint = (Array.isArray(ar_components_exclude)
-						? [...ar_components_exclude].sort().join(',')
-						: 'default')
-						+ (use_real_sections===true ? '_real' : '')
-					const cache_handler = (section_tipo)
-						? {
-							handler	: 'localdb',
-							id		: 'section_cache_elements_context_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang + '_' + options_fingerprint
-						  }
-						  : null;
+				// cache_handler. Cache section elements API response for speed.
+				// Same id as the in-memory key above — one identity, two layers.
+				const cache_handler = (section_tipo)
+					? {
+						handler	: 'localdb',
+						id		: cache_key
+					  }
+					  : null;
 
-					const api_response = await data_manager.request({
-						body			: rqo,
-						cache_handler	: cache_handler
-					})
+				const api_response = await data_manager.request({
+					body			: rqo,
+					cache_handler	: cache_handler
+				})
 
-				// fix
-					self.components_list[section_tipo] = response_data(api_response)
-
-				return self.components_list[section_tipo]
-			}
+			return response_data(api_response)
 		}
-		const components = get_components()
+
+	// register the promise SYNCHRONOUSLY (before its first await runs) so every
+	// caller in the same tick joins it; evict a settled failure/empty result so
+	// a later call can retry instead of caching the outage forever.
+		const components_promise = get_components()
+		section_elements_context_promises.set(cache_key, components_promise)
+		components_promise.then(
+			(components) => {
+				// EMPTY is an outage, not an answer: a transient `ok:true, result:[]`
+				// (e.g. mid ontology edit) would otherwise pin [] in this module-level
+				// map for the rest of the page session, and every later caller — search
+				// panel, tool_print, tool_export — would render "nothing to render" until
+				// a full reload. `length===0` is the same emptiness test render_components_list
+				// applies. The per-instance cache this map replaced refetched on a new
+				// instance, so pinning [] would be a staleness this change INTRODUCED.
+				if (!components || components.length===0) {
+					section_elements_context_promises.delete(cache_key)
+				}
+			},
+			() => {
+				section_elements_context_promises.delete(cache_key)
+			}
+		)
+
+	const components = await components_promise
+
+	// mirror for the direct self.components_list readers (render_search)
+	self.components_list[section_tipo] = components
 
 
 	return components

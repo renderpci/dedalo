@@ -55,12 +55,15 @@ describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 		);
 	});
 
-	it(`Open Tool transcription`, async function() {
+	it(`Open Tool diffusion`, async function() {
 
 		await pause(100)
 
-		// button diffusion
-		const button_diffusion = document.querySelector('button.diffusion')
+		// The inspector's diffusion opener is a SPAN with class
+		// "button block_icon light diffusion" (render_inspector.js), not a <button>
+		// — the old `button.diffusion` selector matched nothing, which is the whole
+		// of this suite's deferral. Select on the class, tag-agnostic.
+		const button_diffusion = document.querySelector('.button.diffusion')
 
 		assert.equal(
 			(button_diffusion instanceof Element),
@@ -71,21 +74,42 @@ describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 		button_diffusion.dispatchEvent(new Event('mousedown'));
 	});
 
-	it(`Publish record`, async function() {
+	it(`Publish button renders and is confirm-gated`, async function() {
 
 		await pause(400)
 
-		// button diffusion
 		const publication_button = document.querySelector('button.publication_button')
 
-		// the test ontology has no diffusion publication config, so the button is
-		// not rendered; skip rather than false-fail when it's absent
-		if (!(publication_button instanceof Element)) {
-			this.skip()
-			return
+		assert.equal(
+			(publication_button instanceof Element),
+			true,
+			`node expected DOM for publication_button`
+		);
+
+		// DELIBERATELY NOT PUBLISHED. A click that is confirmed fires a real
+		// diffusion publish of this record to the configured target and returns
+		// before the SSE stream finishes, so the old case asserted nothing while
+		// writing to a live target on every run. Answer the confirm with NO: that
+		// proves the button is gated (the gate is the contract here) and leaves
+		// the target untouched.
+		const native_confirm = window.confirm
+		let confirm_asked = false
+		window.confirm = function() {
+			confirm_asked = true
+			return false
+		}
+		try {
+			publication_button.dispatchEvent(new Event('click'));
+		} finally {
+			window.confirm = native_confirm
 		}
 
-		publication_button.dispatchEvent(new Event('click'));
+		assert.equal(confirm_asked, true, 'the publish button must ask before publishing')
+		assert.equal(
+			publication_button.classList.contains('loading'),
+			false,
+			'a cancelled confirm must not start the publication'
+		);
 	});
 
 });//end describe(`COMPONENT PORTAL PAGINATION TEST`
@@ -132,12 +156,15 @@ describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 		);
 	});
 
-	it(`Open Tool transcription`, async function() {
+	it(`Open Tool diffusion`, async function() {
 
 		await pause(100)
 
-		// button diffusion
-		const button_diffusion = document.querySelector('button.diffusion')
+		// The inspector's diffusion opener is a SPAN with class
+		// "button block_icon light diffusion" (render_inspector.js), not a <button>
+		// — the old `button.diffusion` selector matched nothing, which is the whole
+		// of this suite's deferral. Select on the class, tag-agnostic.
+		const button_diffusion = document.querySelector('.button.diffusion')
 
 		assert.equal(
 			(button_diffusion instanceof Element),
@@ -148,21 +175,42 @@ describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 		button_diffusion.dispatchEvent(new Event('mousedown'));
 	});
 
-	it(`Publish record`, async function() {
+	it(`Publish button renders and is confirm-gated`, async function() {
 
 		await pause(400)
 
-		// button diffusion
 		const publication_button = document.querySelector('button.publication_button')
 
-		// the test ontology has no diffusion publication config, so the button is
-		// not rendered; skip rather than false-fail when it's absent
-		if (!(publication_button instanceof Element)) {
-			this.skip()
-			return
+		assert.equal(
+			(publication_button instanceof Element),
+			true,
+			`node expected DOM for publication_button`
+		);
+
+		// DELIBERATELY NOT PUBLISHED. A click that is confirmed fires a real
+		// diffusion publish of this record to the configured target and returns
+		// before the SSE stream finishes, so the old case asserted nothing while
+		// writing to a live target on every run. Answer the confirm with NO: that
+		// proves the button is gated (the gate is the contract here) and leaves
+		// the target untouched.
+		const native_confirm = window.confirm
+		let confirm_asked = false
+		window.confirm = function() {
+			confirm_asked = true
+			return false
+		}
+		try {
+			publication_button.dispatchEvent(new Event('click'));
+		} finally {
+			window.confirm = native_confirm
 		}
 
-		publication_button.dispatchEvent(new Event('click'));
+		assert.equal(confirm_asked, true, 'the publish button must ask before publishing')
+		assert.equal(
+			publication_button.classList.contains('loading'),
+			false,
+			'a cancelled confirm must not start the publication'
+		);
 	});
 
 });//end describe(`COMPONENT PORTAL PAGINATION TEST`
@@ -255,7 +303,7 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 		);
 	});
 
-	it(`Open Tool transcription`, async function() {
+	it(`Open Tool diffusion`, async function() {
 
 		await pause(100)
 
@@ -271,21 +319,42 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 		button_diffusion.dispatchEvent(new Event('mousedown'));
 	});
 
-	it(`Publish record`, async function() {
+	it(`Publish button renders and is confirm-gated`, async function() {
 
 		await pause(400)
 
-		// button diffusion
 		const publication_button = document.querySelector('button.publication_button')
 
-		// the test ontology has no diffusion publication config, so the button is
-		// not rendered; skip rather than false-fail when it's absent
-		if (!(publication_button instanceof Element)) {
-			this.skip()
-			return
+		assert.equal(
+			(publication_button instanceof Element),
+			true,
+			`node expected DOM for publication_button`
+		);
+
+		// DELIBERATELY NOT PUBLISHED. A click that is confirmed fires a real
+		// diffusion publish of this record to the configured target and returns
+		// before the SSE stream finishes, so the old case asserted nothing while
+		// writing to a live target on every run. Answer the confirm with NO: that
+		// proves the button is gated (the gate is the contract here) and leaves
+		// the target untouched.
+		const native_confirm = window.confirm
+		let confirm_asked = false
+		window.confirm = function() {
+			confirm_asked = true
+			return false
+		}
+		try {
+			publication_button.dispatchEvent(new Event('click'));
+		} finally {
+			window.confirm = native_confirm
 		}
 
-		publication_button.dispatchEvent(new Event('click'));
+		assert.equal(confirm_asked, true, 'the publish button must ask before publishing')
+		assert.equal(
+			publication_button.classList.contains('loading'),
+			false,
+			'a cancelled confirm must not start the publication'
+		);
 	});
 
 });//end describe(`COMPONENT PORTAL PAGINATION TEST`

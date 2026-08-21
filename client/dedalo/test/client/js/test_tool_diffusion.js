@@ -8,7 +8,7 @@
  * Client-side coverage for the diffusion tool.
  *
  * The tool's deeper build/render path fires live API requests to the Bun
- * diffusion server (get_diffusion_info / get_diffusion_status / list_processes)
+ * diffusion server (get_diffusion_info / get_engine_advisory / list_processes)
  * and needs a host section with diffusion targets, neither of which is available
  * in the headless harness. This suite therefore asserts the reliable, fixture-free
  * contract that every tool shares:
@@ -62,7 +62,10 @@ describe('TOOL_DIFFUSION CLIENT TEST', function() {
 		assert.equal(typeof tool_diffusion.prototype.export, 'function', 'expected export defined')
 		assert.equal(typeof tool_diffusion.prototype.get_active_processes, 'function', 'expected get_active_processes defined')
 		assert.equal(typeof tool_diffusion.prototype.on_close_actions, 'function', 'expected on_close_actions defined')
-		assert.equal(typeof tool_diffusion.prototype.get_diffusion_status, 'function', 'expected get_diffusion_status defined')
+		// get_engine_advisory, NOT the PHP-era `get_diffusion_status`: WC-076 moved
+		// the engine INSIDE the server process, and the advisory replaced the
+		// daemon-status call. No client method ever carried the old name.
+		assert.equal(typeof tool_diffusion.prototype.get_engine_advisory, 'function', 'expected get_engine_advisory defined')
 		assert.equal(typeof tool_diffusion.prototype.retry_pending_deletions, 'function', 'expected retry_pending_deletions defined')
 	})
 
