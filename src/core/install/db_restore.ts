@@ -98,8 +98,15 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 			// allowAnyDatabase: a fresh install's database IS the application's —
 			// the door's test-database guard exists for the suite, not for here,
 			// and this runs on a database this step just restored from the seed.
+			// scope 'core': the hand-authored Test area and its closure — NOT the
+			// 8225 phase-2 clone twins, which exist so the SUITE can replay a frozen
+			// store naming one installation and have no business in a customer's
+			// ontology (405 nodes instead of 8474, measured 2026-08-21).
 			const { materializeTestTldOntology } = await import('../test_data/test_tld_materialize.ts');
-			const testTld = await materializeTestTldOntology({ allowAnyDatabase: true });
+			const testTld = await materializeTestTldOntology({
+				allowAnyDatabase: true,
+				scope: 'core',
+			});
 			return {
 				ok: true,
 				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) — OK`,

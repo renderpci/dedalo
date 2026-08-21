@@ -507,7 +507,59 @@ async function straySectionIds(
 }
 
 /**
- * Write the whole JSON ontology into the database and derive dd_ontology from
+ * The INSTALL half of the ontology: the hand-authored `test` Test area, plus
+ * the transitive closure of whatever it references, and nothing else.
+ *
+ * WHY THE SPLIT EXISTS. Until 2026-08-21 a fresh install materialized the WHOLE
+ * file. That was proportionate when the `test` TLD was the small hand-authored
+ * playground; after the phase-2 clone it is 8474 nodes across 33 TLDs — twins
+ * of OTHER installations' ontologies (`testmint`, `testimmovable`,
+ * `testheritagecatalog`…), which exist so the SUITE can replay a frozen store
+ * that names one install. A customer's database has no use for them, and
+ * shipping ~8000 test-only nodes into every production ontology is a cost with
+ * no return.
+ *
+ * DERIVED, NOT HAND-LISTED. The partition is computed from the committed,
+ * append-only clone map: a node is a CLONE if it is a target in that map. The
+ * core is then closed over what it actually needs — a hand-authored node whose
+ * parent or whose properties name a clone drags that clone in, because an
+ * install must not receive a subtree that dangles. Measured 2026-08-21: 217
+ * hand-authored nodes close to 405, against 8474 for the whole file.
+ *
+ * A second JSON would have been the obvious move and the wrong one: two files
+ * carrying the same nodes is a fork waiting to drift, and this repo's law is
+ * link, never duplicate. One source, one derivation.
+ */
+export async function coreClosure(all: readonly DdOntologyNode[]): Promise<DdOntologyNode[]> {
+	const { readFile } = await import('node:fs/promises');
+	const mapPath = new URL('./test_tld_tipo_map.json', import.meta.url);
+	const cloneMap = JSON.parse(await readFile(mapPath, 'utf8')) as {
+		map: Record<string, { target: string }>;
+	};
+	const cloneTargets = new Set(Object.values(cloneMap.map).map((entry) => entry.target));
+	const byTipo = new Map(all.map((node) => [node.tipo, node]));
+
+	const keep = new Set<string>();
+	const stack = all
+		.filter((node) => node.tld === 'test' && !cloneTargets.has(node.tipo))
+		.map((node) => node.tipo);
+	while (stack.length > 0) {
+		const tipo = stack.pop() as string;
+		if (keep.has(tipo)) continue;
+		const node = byTipo.get(tipo);
+		if (node === undefined) continue; // seed-shipped (dd/rsc/hierarchy/…): already installed
+		keep.add(tipo);
+		// Anything this node NAMES and this file DEFINES has to come along, or the
+		// install receives a reference it cannot resolve.
+		for (const referenced of JSON.stringify(node).match(/test[a-z]*\d+/g) ?? []) {
+			if (!keep.has(referenced) && byTipo.has(referenced)) stack.push(referenced);
+		}
+	}
+	return all.filter((node) => keep.has(node.tipo));
+}
+
+/**
+ * Write the JSON ontology into the database and derive dd_ontology from
  * it, one TLD at a time. IDEMPOTENT: each record is deleted and re-inserted
  * from the JSON, and the rebuild rewrites the TLD's dd_ontology rows wholesale,
  * so a second run leaves no drift.
@@ -520,12 +572,23 @@ export async function materializeTestTldOntology(
 		allowAnyDatabase?: boolean;
 		/** Override the JSON source (tests). */
 		doc?: TestTldOntologyDoc;
+		/**
+		 * WHICH HALF to materialize (see coreClosure):
+		 *   'all'  — the whole file: the hand-authored Test area PLUS the 8225
+		 *            clone twins the SUITE replays the frozen store against.
+		 *            The default, and what a test database gets.
+		 *   'core' — the hand-authored Test area and nothing else that is not
+		 *            needed to make it resolve. What an INSTALLATION gets.
+		 */
+		scope?: 'all' | 'core';
 	} = {},
 ): Promise<MaterializeResult> {
 	await assertAllowedDatabase(options);
 	const doc = options.doc ?? (await loadTestTldOntologyDoc());
+	const nodes =
+		options.scope === 'core' ? await coreClosure(doc.nodes) : doc.nodes;
 
-	const byTld = groupNodesByTld(doc.nodes);
+	const byTld = groupNodesByTld(nodes);
 	const result: MaterializeResult = { tlds: [...byTld.keys()], nodes: 0, rebuilt: [], strays: [] };
 
 	for (const [tld, nodes] of byTld) {
