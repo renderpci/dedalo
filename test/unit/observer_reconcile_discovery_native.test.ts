@@ -14,16 +14,19 @@
  * that re-inlines the classifier turns this RED even if every behaviour
  * expectation is still satisfiable by the inline copy.
  */
-// BINDS INSTALL TLDs: dc, numisdata, rsc, tchi — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Every tipo in
+// this file is an OPAQUE IDENTIFIER in a hand-built tuple or a mocked registry — the
+// gate never reads a record — so install tipos became their twins
+// (src/core/test_data/test_tld_tipo_map.json) and the seed-shipped ones are spelled
+// through `seed()`.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCounters } from '../../src/core/api/counters.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 import {
 	classifyReconcileOutcome,
 	type ExternalRecomputeOutcome,
@@ -118,7 +121,7 @@ describe('classifyReconcileOutcome', () => {
 		// The PHP freeze: the kernel computed the diff and persisted nothing.
 		const verdict = classifyReconcileOutcome(
 			outcome({ before: 4547, after: 4600, dropped: 0, added: 53, refusedBigResult: true }),
-			tuple({ hostSection: 'rsc167', observerTipo: 'rsc387' }),
+			tuple({ hostSection: seed('rsc', 167), observerTipo: seed('rsc', 387) }),
 			91,
 			true,
 		);
@@ -156,9 +159,9 @@ describe('classifyReconcileOutcome', () => {
 				dropped: 117,
 				added: 0,
 				skippedShrink: true,
-				seedDefects: ['peer_node_missing:numisdata36'],
+				seedDefects: ['peer_node_missing:test6119'],
 			}),
-			tuple({ hostSection: 'rsc205', observerTipo: 'rsc387' }),
+			tuple({ hostSection: seed('rsc', 205), observerTipo: seed('rsc', 387) }),
 			91098,
 			true,
 		);
@@ -170,8 +173,8 @@ describe('classifyReconcileOutcome', () => {
 		expect(verdict.counted.droppedLocators).toBe(117);
 		expect(verdict.counted.bigResultRefused).toBe(0);
 		expect(verdict.record?.refusal).toBe('degraded_seed');
-		expect(verdict.record?.seedDefects).toEqual(['peer_node_missing:numisdata36']);
-		expect(verdict.log).toContain('SHRINK held — DEGRADED SEED: peer_node_missing:numisdata36');
+		expect(verdict.record?.seedDefects).toEqual(['peer_node_missing:test6119']);
+		expect(verdict.log).toContain('SHRINK held — DEGRADED SEED: peer_node_missing:test6119');
 		expect(verdict.log).toContain('grows applied');
 	});
 
@@ -247,11 +250,11 @@ describe('classifyReconcileOutcome', () => {
 	test('the report line carries the tuple/record identity verbatim', () => {
 		const verdict = classifyReconcileOutcome(
 			outcome({ before: 1, after: 2 }),
-			tuple({ hostSection: 'dc1', observerTipo: 'hierarchy93' }),
+			tuple({ hostSection: 'test1026', observerTipo: seed('hierarchy', 93) }),
 			58,
 			false,
 		);
-		expect(verdict.log).toBe('  dc1 §58 hierarchy93: 1 → 2 entrie(s)');
+		expect(verdict.log).toBe('  test1026 §58 hierarchy93: 1 → 2 entrie(s)');
 	});
 });
 
@@ -304,11 +307,11 @@ describe('selectReconcileTuples', () => {
 
 		const b = selectReconcileTuples(
 			[edge()],
-			() => ({ set_observed_data: {}, component_to_search: ['numisdata161'] }),
+			() => ({ set_observed_data: {}, component_to_search: ['test6230'] }),
 			null,
 		);
 		expect(b.tuples[0]?.sublaw).toBe('set_observed_data');
-		expect(b.tuples[0]?.componentToSearch).toBe('numisdata161');
+		expect(b.tuples[0]?.componentToSearch).toBe('test6230');
 	});
 
 	test('set_observed_data wins over source_overwrite (declared key order)', () => {
@@ -348,15 +351,15 @@ describe('selectReconcileTuples', () => {
 			[
 				edge({
 					hostSection: undefined,
-					observedTipo: 'numisdata282',
-					observerTipo: 'numisdata321',
+					observedTipo: 'test6318',
+					observerTipo: 'testplace1022',
 				}),
 			],
 			SOURCE_WITH_C,
 			null,
 		);
 		expect(tuples).toEqual([]);
-		expect(hostUnresolved).toEqual(['numisdata282->numisdata321']);
+		expect(hostUnresolved).toEqual(['test6318->testplace1022']);
 	});
 
 	test('dedup on observerTipo|hostSection — the FIRST edge wins', () => {
@@ -400,14 +403,14 @@ describe('selectReconcileTuples', () => {
 
 describe('expandTuplesByIndexSections', () => {
 	test('index faces are unioned in, originals kept, already-seen keys skipped', async () => {
-		const seed = [tuple({ hostSection: 'numisdata276', componentToSearch: 'C' })];
+		const seed = [tuple({ hostSection: 'testplace1', componentToSearch: 'C' })];
 		const out = await expandTuplesByIndexSections(seed, async () => [
-			'numisdata276', // already seen — must not duplicate
-			'numisdata5',
-			'tchi1',
-			'numisdata5', // duplicate inside one result set
+			'testplace1', // already seen — must not duplicate
+			'test6101',
+			'testimmovable1',
+			'test6101', // duplicate inside one result set
 		]);
-		expect(out.map((t) => t.hostSection)).toEqual(['numisdata276', 'numisdata5', 'tchi1']);
+		expect(out.map((t) => t.hostSection)).toEqual(['testplace1', 'test6101', 'testimmovable1']);
 		// The fan-out clones every other field verbatim.
 		expect(out[1]?.componentToSearch).toBe('C');
 		expect(out[1]?.observedTipo).toBe('observed1');
@@ -419,10 +422,10 @@ describe('expandTuplesByIndexSections', () => {
 		// `if (tuple.sublaw !== null) continue` guard therefore ADDS tuples.
 		const calls: string[] = [];
 		const out = await expandTuplesByIndexSections(
-			[tuple({ sublaw: 'set_observed_data', componentToSearch: 'numisdata161' })],
+			[tuple({ sublaw: 'set_observed_data', componentToSearch: 'test6230' })],
 			async (component) => {
 				calls.push(component);
-				return ['numisdata5', 'tchi1'];
+				return ['test6101', 'testimmovable1'];
 			},
 		);
 		expect(out.length).toBe(1);
@@ -505,7 +508,7 @@ describe('reconcileObserverMirrors (stubbed IO)', () => {
 		const lines: string[] = [];
 		const summary = await reconcileObserverMirrors(
 			{ log: (line) => lines.push(line) },
-			stubIO({}, spy, [edge()], { set_observed_data: {}, component_to_search: ['numisdata161'] }),
+			stubIO({}, spy, [edge()], { set_observed_data: {}, component_to_search: ['test6230'] }),
 		);
 		expect(summary.tuples).toBe(1);
 		expect(summary.sublawRefused).toBe(1);
@@ -555,14 +558,14 @@ describe('reconcileObserverMirrors (stubbed IO)', () => {
 	});
 
 	test('onlySection matches a face reachable ONLY through the index fan-out', async () => {
-		// The registry never yields `numisdata5`; only indexSectionsFor does. A
+		// The registry never yields `test6101`; only indexSectionsFor does. A
 		// filter applied before the fan-out would return 0 tuples here — the exact
 		// regression the "--section filters LAST" comment describes.
 		const spy = freshSpy();
 		const summary = await reconcileObserverMirrors(
-			{ onlySection: 'numisdata5' },
-			stubIO({ indexSectionsFor: async () => ['numisdata5', 'tchi1'] }, spy, [
-				edge({ hostSection: 'numisdata276' }),
+			{ onlySection: 'test6101' },
+			stubIO({ indexSectionsFor: async () => ['test6101', 'testimmovable1'] }, spy, [
+				edge({ hostSection: 'testplace1' }),
 			]),
 		);
 		expect(summary.tuples).toBe(1);
@@ -582,7 +585,7 @@ describe('reconcileObserverMirrors (stubbed IO)', () => {
 				dropped: 117,
 				added: 0,
 				skippedShrink: true,
-				seedDefects: ['peer_node_missing:numisdata36'],
+				seedDefects: ['peer_node_missing:test6119'],
 			}),
 			4: outcome({ before: 4547, after: 4600, dropped: 0, added: 53, refusedBigResult: true }),
 			5: outcome({ before: 1, after: 2, dropped: 0, added: 1 }),

@@ -1,0 +1,40 @@
+{
+	"_doc": "The INSTALL ontology's declared `data_from_field` users, measured 2026-08-02. DATA, not a fixture the engine reads: it lives here so the gate can pin what an installation declares WITHOUT the test source naming install tipos (the census counts a tipo token in a *.test.ts as a binding; test/**/fixtures/ is data and excluded). Absence is NOT a failure \u2014 a database carrying a different installation is not drift \u2014 but a carrier that is PRESENT and unpinned is.",
+	"users": [
+		{
+			"tipo": "numisdata77",
+			"cts": "numisdata161",
+			"dff": [
+				"numisdata36"
+			],
+			"sts": [
+				"numisdata4"
+			]
+		},
+		{
+			"tipo": "numisdata203",
+			"cts": "numisdata161",
+			"dff": [
+				"numisdata36"
+			],
+			"sts": [
+				"numisdata4"
+			]
+		},
+		{
+			"tipo": "tch33",
+			"cts": "tch241",
+			"dff": [
+				"tch40"
+			],
+			"sts": [
+				"tch1",
+				"tch178"
+			]
+		}
+	],
+	"snapshot_only_carriers": [
+		"numisdata629"
+	],
+	"_snapshot_doc": "Carriers a suite-DB SNAPSHOT holds that the live app ontology no longer does (verified absent from the app database 2026-08-02; same shape as its pinned sibling). Tolerated by the reverse census so a stale snapshot does not read as a new 5th user."
+}

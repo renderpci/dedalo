@@ -24,16 +24,33 @@
  * reported numisdata36 equivalence bug. The only remaining withholder is a
  * DEGRADED SEED, gated in the failsafe file.
  *
- * Environment: suite DB — the on1 anchor + section node come from the shared
- * seed helper (observer_term_seed.ts); referencers are scratch matrix rows
- * swept in afterAll, and crashed-run residue referencers are swept in
- * beforeAll (planted ⇒ suite DB ⇒ scratch by construction).
+ * Environment: suite DB. Every section, component and record is built by this
+ * file — a reserved `zzobs` scratch ontology (situations/situation.ts) whose
+ * records land in whatever table the section's own `matrix_table` resolves to —
+ * and `dropSituation` sweeps it whole in afterAll, with the residue ASSERTED 0.
  */
-// BINDS INSTALL TLDs: on, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+// shipped edge this drove — hierarchy93 ← rsc387, hosted at the install section
+// `on1` (matrix_hierarchy, planted by test/helpers/observer_term_seed.ts) with
+// referencers on `rsc205` (matrix) — is rebuilt here as MIRROR ← INDEXER on two
+// scratch sections carrying the `test24` matrix_table relation, so every record
+// lands in `matrix_test`. The observer properties are copied field for field
+// from the shipped pair (component_autocomplete_hi + config_relation dd96 on
+// one side; component_autocomplete + use_observable_dato + set_dato_external on
+// the other).
+//
+// The `--section` narrowing case needed a MULTI-HOST observer, which it took
+// from hierarchy93's three shipped forward specs (on1/ts1/dc1) — a fact of one
+// install's ontology. INDEXER now declares TWO forward specs of its own
+// (TERM_SECTION and TERM_SECTION_B), so the multi-tuple/one-tuple contrast is
+// built rather than borrowed.
+//
+// The `planted` guard and skipUnlessPlanted() went with the migration. They
+// existed because on a restored live snapshot `on1/58` is a REAL record whose
+// mirror a repair write would silently rewrite; the sections here exist because
+// this file created them, so there is no such record and no case may skip.
+// skipUnlessSuiteDb() below is UNCHANGED — it guards dd_ontology writes, which
+// is a different hazard.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -41,59 +58,125 @@ import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { getCounters } from '../../src/core/api/counters.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { recomputeExternalRelation } from '../../src/core/section/record/observers.ts';
 import {
-	SEED_TERM,
-	seedTermChainIfAbsent,
-	sweepSeedTermReferencerResidue,
-	sweepTermChain,
-	type TermSeedHandle,
-} from '../helpers/observer_term_seed.ts';
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
-const REFERENCER_ID = 91070; // scratch rsc205 rows, clear of every other band
+// --- the situation this file BUILDS (reserved scratch TLD `zzobs`) ---------
+// `situation()` refuses a tld that is not `zz*` (src/core/test_data/situations/
+// situation.ts RESERVED_TLD): a scratch ontology must be unmistakably scratch,
+// so it can be dropped whole. The observer PROPERTIES below are copied field
+// for field from the shipped pair this gate used to drive (hierarchy93 ←
+// rsc387), which is what keeps the law under test the shipped one.
+/** The observer's HOST section — the term whose mirror is reconciled. */
+const TERM_SECTION = 'zzobs1';
+/** A SECOND host, so INDEXER is a genuinely multi-host observer (--section). */
+const TERM_SECTION_B = 'zzobs2';
+/** The referencing section (the `rsc205` role). */
+const REF_SECTION = 'zzobs3';
+/** component_autocomplete_hi, dd96 — the observed (the `rsc387` role). */
+const INDEXER = 'zzobs4';
+/** component_autocomplete, set_dato_external — the observer (`hierarchy93`). */
+const MIRROR = 'zzobs5';
+
+/** The term whose mirror every case below reconciles. */
+const SEED_TERM = { section_tipo: TERM_SECTION, section_id: 58 };
+
+const REFERENCER_ID = 91070; // scratch REF_SECTION rows, clear of every other band
 const REFERENCER_ID2 = 91071;
 
-let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
 /**
- * The whole suite runs ONLY when the seed was actually planted (suite DB).
- * On a restored live snapshot on1/58 is a REAL record — writing a recompute
- * there would silently drop legacy mirror entries (the exact --allow-shrink
- * ambiguity) with no restore. Tests early-return loudly instead.
+ * Where the scratch sections store. RESOLVED, never assumed: the engine places
+ * a record by the section's own `matrix_table` relation, and a gate that
+ * hard-codes the wrong table writes somewhere the engine would never look.
  */
-let planted = false;
+let SCRATCH_TABLE = 'matrix';
 
-/**
- * The early return of a behavioural case, made AUDIBLE (2026-08-08). A silently
- * returning test reads as a passing test: this file measured 0% coverage of the
- * reconcile kernel while showing green, and the wholesale skip was half the
- * reason. Every skipped case now names ITSELF on stderr, so a CI log makes the
- * difference between "8 gates ran" and "8 gates declined to run" visible.
- * The skip itself is NOT weakened — on a restored live snapshot on1/58 is a
- * real record and a repair write there is unrecoverable.
- */
-function skipUnlessPlanted(caseName: string): boolean {
-	if (planted) return false;
-	console.warn(
-		`observer_reconcile_native: NOT RUN — "${caseName}" (on1/58 pre-exists: live-snapshot DB, a repair write would mutate a real mirror)`,
-	);
-	return true;
-}
+const SITUATION = situation({
+	tld: 'zzobs',
+	name: 'observer mirror reconcile law',
+	nodes: [
+		{ tipo: TERM_SECTION, model: 'section', parent: 'dd14' },
+		{ tipo: TERM_SECTION_B, model: 'section', parent: 'dd14' },
+		{ tipo: REF_SECTION, model: 'section', parent: 'dd14' },
+		{
+			// The OBSERVED side: an indexer whose relation type is dd96 and which
+			// declares its forward observer specs. TWO hosts, so the `--section`
+			// narrowing case has a real multi-tuple set to narrow (the shipped
+			// rsc387 took its three from on1/ts1/dc1 — one install's ontology).
+			tipo: INDEXER,
+			model: 'component_autocomplete_hi',
+			parent: REF_SECTION,
+			properties: {
+				config_relation: { relation_type: 'dd96' },
+				observers: [
+					{ section_tipo: TERM_SECTION, component_tipo: MIRROR },
+					{ section_tipo: TERM_SECTION_B, component_tipo: MIRROR },
+				],
+			},
+		},
+		{
+			// The OBSERVER side: the mirror slot, fed from the referencing
+			// section. `use_observable_dato` + `set_dato_external` are the two
+			// fields the reconcile law reads.
+			tipo: MIRROR,
+			model: 'component_autocomplete',
+			parent: TERM_SECTION,
+			properties: {
+				source: {
+					mode: 'external',
+					request_config: [
+						{
+							sqo: { section_tipo: [{ value: [REF_SECTION], source: 'section' }] },
+							show: { sqo_config: { limit: 10 } },
+						},
+					],
+					section_to_search: [REF_SECTION],
+					component_to_search: [INDEXER],
+				},
+				observe: [
+					{
+						component_tipo: INDEXER,
+						server: {
+							config: { use_self_section: false, use_observable_dato: true },
+							perform: {
+								function: 'set_dato_external',
+								params: { save: true, changed: false, current_dato: false, references_limit: 0 },
+							},
+						},
+					},
+				],
+			},
+		},
+	],
+	records: [
+		{ section_tipo: TERM_SECTION, section_id: SEED_TERM.section_id },
+		{ section_tipo: TERM_SECTION_B, section_id: SEED_TERM.section_id },
+	],
+});
 
 async function mirrorBag(): Promise<unknown[] | null> {
 	const rows = (await sql.unsafe(
-		`SELECT relation->'hierarchy93' AS bag FROM matrix_hierarchy
+		`SELECT relation->($3::text) AS bag FROM ${SCRATCH_TABLE}
 		 WHERE section_tipo = $1 AND section_id = $2`,
-		[SEED_TERM.section_tipo, SEED_TERM.section_id],
+		[SEED_TERM.section_tipo, SEED_TERM.section_id, MIRROR],
 	)) as { bag: unknown[] | null }[];
 	return rows[0]?.bag ?? null;
 }
 
 async function sweepScratch(): Promise<void> {
 	for (const id of [REFERENCER_ID, REFERENCER_ID2]) {
-		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [id]);
 		await sql.unsafe(
-			`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = $1`,
-			[id],
+			`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
+			[REF_SECTION, id],
+		);
+		await sql.unsafe(
+			`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
+			[REF_SECTION, id],
 		);
 	}
 }
@@ -101,17 +184,17 @@ async function sweepScratch(): Promise<void> {
 /** The bypass write: a raw referencer INSERT (import/migration shape). */
 async function insertReferencer(id: number): Promise<void> {
 	await sql.unsafe(
-		`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${REF_SECTION}', $2::text::jsonb)`,
 		[
 			id,
 			JSON.stringify({
-				rsc387: [
+				[INDEXER]: [
 					{
 						id: 1,
 						type: 'dd96',
 						section_id: String(SEED_TERM.section_id),
 						section_tipo: SEED_TERM.section_tipo,
-						from_component_tipo: 'rsc387',
+						from_component_tipo: INDEXER,
 					},
 				],
 			}),
@@ -128,25 +211,14 @@ function mirrorEntry(itemId: number, referencerId: number): Record<string, unkno
 		id: itemId,
 		type: 'dd151',
 		section_id: referencerId,
-		section_tipo: 'rsc205',
-		from_component_tipo: 'hierarchy93',
+		section_tipo: REF_SECTION,
+		from_component_tipo: MIRROR,
 	};
 }
 
 beforeAll(async () => {
-	termSeed = await seedTermChainIfAbsent();
-	planted = termSeed.seededChain;
-	if (!planted) {
-		console.warn(
-			'observer_reconcile_native: on1/58 pre-exists (live-snapshot DB) — suite SKIPPED, a repair write would mutate a real mirror',
-		);
-		return;
-	}
-	// Residue tolerance (review 2026-08-02): crashed observer-gate runs leave
-	// scratch rsc205 referencers of on1/58 behind, inflating every recompute
-	// on the next run (the observed first-run flake). planted ⇒ suite DB ⇒
-	// they are scratch by construction.
-	await sweepSeedTermReferencerResidue();
+	await ensureSituation(SITUATION);
+	SCRATCH_TABLE = (await getMatrixTableFromTipo(TERM_SECTION)) ?? 'matrix';
 	await sweepScratch();
 	// Bypass write: indexed by the matrix_relation_index trigger, invisible to
 	// the cascade.
@@ -154,16 +226,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	if (!planted) return;
 	await sweepScratch();
-	await sweepTermChain(termSeed);
+	// Residue asserted, not trusted: a situation that half-tore-down would leave
+	// scratch ontology behind for the next run to trip over.
+	expect(await dropSituation(SITUATION)).toBe(0);
 });
 
 describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	test('dry-run detects the bypass drift WITHOUT writing', async () => {
-		if (skipUnlessPlanted('dry-run detects the bypass drift WITHOUT writing')) return;
 		const diff = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -177,21 +249,17 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('repair writes the exact mirror shape + the TM audit pair, then converges', async () => {
-		if (
-			skipUnlessPlanted('repair writes the exact mirror shape + the TM audit pair, then converges')
-		)
-			return;
 		const tmCountBefore = async (): Promise<number> => {
 			const rows = (await sql.unsafe(
 				`SELECT count(*)::int AS n FROM matrix_time_machine
-				 WHERE section_tipo = $1 AND section_id = $2 AND tipo = 'hierarchy93'`,
-				[SEED_TERM.section_tipo, SEED_TERM.section_id],
+				 WHERE section_tipo = $1 AND section_id = $2 AND tipo = ($3::text)`,
+				[SEED_TERM.section_tipo, SEED_TERM.section_id, MIRROR],
 			)) as { n: number }[];
 			return rows[0]?.n ?? 0;
 		};
 		const tmBefore = await tmCountBefore();
 		const outcome = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -207,7 +275,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 
 		// Idempotent: truth already mirrored → no further change, no TM noise.
 		const again = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -218,19 +286,19 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('a MASKED SWAP (1 stale drop + 1 new add) applies BOTH halves — membership, not length', async () => {
-		if (skipUnlessPlanted('a MASKED SWAP (1 stale drop + 1 new add) applies BOTH halves')) return;
 		// Bypass-delete referencer 1 (its mirror entry goes stale) and
 		// bypass-insert referencer 2: the law wants to drop one entry and add
 		// one — EQUAL length before/after. The adjudication is MEMBERSHIP-based
 		// (the historic length-only guard could not even see this), and since
 		// 2026-08-06 the full law persists: BOTH halves land in one write.
-		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
-			REFERENCER_ID,
-		]);
+		await sql.unsafe(
+			`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
+			[REF_SECTION, REFERENCER_ID],
+		);
 		await insertReferencer(REFERENCER_ID2);
 		const refusedBefore = getCounters().observers_shrink_refused ?? 0;
 		const outcome = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -246,7 +314,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		expect(await mirrorBag()).toEqual([mirrorEntry(2, REFERENCER_ID2)]);
 		// Idempotent: a second pass finds no drift.
 		const again = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -257,18 +325,15 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('a bypass DELETE makes the recompute a pure shrink, and the shrink APPLIES', async () => {
-		if (
-			skipUnlessPlanted('a bypass DELETE makes the recompute a pure shrink, and the shrink APPLIES')
-		)
-			return;
 		// THE REGRESSION GUARD for the reported bug. Until 2026-08-06 a pure
 		// shrink was withheld unconditionally, so an unlinked reference stayed
 		// mirrored forever and only an operator flag could clear it.
-		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
-			REFERENCER_ID2,
-		]);
+		await sql.unsafe(
+			`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
+			[REF_SECTION, REFERENCER_ID2],
+		);
 		const diff = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -282,7 +347,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		expect(diff.skippedShrink).toBeUndefined();
 
 		const applied = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -332,7 +397,6 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('the drop census counts MEMBERSHIP, never a length delta (executed sweep)', async () => {
-		if (skipUnlessPlanted('the drop census counts MEMBERSHIP, never a length delta')) return;
 		// A regression that drops N genuine locators and appends N wrong ones has
 		// an equal length. `before - after` reports 0 and sails through the
 		// budget — which is the exact shape the budget exists to catch. The
@@ -348,7 +412,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		);
 		const recompute = async (): Promise<void> => {
 			await recomputeExternalRelation(
-				'hierarchy93',
+				MIRROR,
 				SEED_TERM.section_tipo,
 				SEED_TERM.section_id,
 				-1,
@@ -367,15 +431,16 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			// THE MASKED SWAP: one referencer bypass-deleted, one bypass-inserted,
 			// so the law drops exactly one entry and appends exactly one — before
 			// === after, and a length-delta census would report ZERO drops.
-			await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
-				REFERENCER_ID,
-			]);
+			await sql.unsafe(
+				`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
+				[REF_SECTION, REFERENCER_ID],
+			);
 			await insertReferencer(REFERENCER_ID2);
 
 			const records: unknown[] = [];
 			const summary = await reconcileObserverMirrors({
 				// dry run (the default): the census must be readable WITHOUT writing.
-				onlyObserver: 'hierarchy93',
+				onlyObserver: MIRROR,
 				onlySection: SEED_TERM.section_tipo,
 				onlyId: SEED_TERM.section_id,
 				onRecord: (record) => records.push(record),
@@ -383,7 +448,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			expect(summary.drifted).toBe(1);
 			expect(records).toEqual([
 				{
-					observerTipo: 'hierarchy93',
+					observerTipo: MIRROR,
 					hostSection: SEED_TERM.section_tipo,
 					sectionId: SEED_TERM.section_id,
 					before: 1,
@@ -484,15 +549,13 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('duplicate STRIPS the covered-observer mirror slot from the copy (empty by construction)', async () => {
-		if (skipUnlessPlanted('duplicate STRIPS the covered-observer mirror slot from the copy'))
-			return;
 		// Re-grow the term's mirror so there is a non-empty bag to (not) copy —
 		// the pre-fix byte-copy would have handed it to the duplicate wholesale
 		// (for unported-sub-law nodes: ~1,000 phantom locators with no repair
 		// path — review 2026-08-02).
 		await insertReferencer(REFERENCER_ID2);
 		await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
@@ -513,9 +576,9 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		try {
 			copyId = await duplicateSectionRecord(SEED_TERM.section_tipo, SEED_TERM.section_id, -1);
 			const rows = (await sql.unsafe(
-				`SELECT (relation ? 'hierarchy93') AS has_mirror FROM matrix_hierarchy
+				`SELECT (relation ? $3) AS has_mirror FROM ${SCRATCH_TABLE}
 				 WHERE section_tipo = $1 AND section_id = $2`,
-				[SEED_TERM.section_tipo, copyId],
+				[SEED_TERM.section_tipo, copyId, MIRROR],
 			)) as { has_mirror: boolean }[];
 			expect(rows.length).toBe(1);
 			expect(rows[0]?.has_mirror).toBe(false); // the mirror slot was STRIPPED
@@ -524,7 +587,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		} finally {
 			if (copyId !== 0) {
 				await sql.unsafe(
-					'DELETE FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id = $2',
+					`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 					[SEED_TERM.section_tipo, copyId],
 				);
 				await sql.unsafe(
@@ -562,15 +625,15 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
  * Fixture: a scratch REVERSE-ONLY observer edge (test999… namespace, the
  * registry's suite-DB diagnostics carve-out) whose `data_from_field` names a
  * peer with no ontology node — the measured degraded-seed shape — plus one
- * scratch rsc205 record holding a stale mirror entry nothing references. That
+ * scratch REF_SECTION record holding a stale mirror entry nothing references. That
  * makes the sweep's answer deterministic (1 tuple, 1 candidate, 1 withheld
  * drop) instead of hostage to whatever the suite ontology happens to carry.
  * Every call here is a DRY RUN: the fold and the narrowing are readable
  * without writing, and a mutant that writes is the thing we are guarding.
  */
-const SCRATCH_OBSERVER = 'test99930'; // own band — the failsafe gate owns test9990x
+const SCRATCH_OBSERVER = 'test99935'; // own band — the failsafe gate owns test9990x
 const SCRATCH_MISSING_PEER = 'test99939_no_such_node';
-const SCRATCH_HOST = 'rsc205';
+const SCRATCH_HOST = REF_SECTION;
 const SCRATCH_HOLDER_ID = 91098; // clear of REFERENCER_ID/2 above and of the failsafe band
 /** The id the stale entry POINTS AT: a real-looking neighbour that is neither a
  * referenced target nor a mirror holder — exactly the record an `--id` filter
@@ -592,7 +655,7 @@ function skipUnlessSuiteDb(caseName: string): boolean {
 
 async function sweepScratchObserverFixture(): Promise<void> {
 	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo = $1 AND tld = 'test'`, [SCRATCH_OBSERVER]);
-	await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2`, [
+	await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
 		SCRATCH_HOST,
 		SCRATCH_HOLDER_ID,
 	]);
@@ -624,7 +687,7 @@ describe('reconcile sweep: --section / --id narrowing and the degraded-seed cens
 					// (resolution step 1), so the tuple is deterministic.
 					observe: [
 						{
-							component_tipo: 'rsc387',
+							component_tipo: INDEXER,
 							section_tipo: SCRATCH_HOST,
 							server: {
 								config: { use_observable_dato: true },
@@ -635,7 +698,7 @@ describe('reconcile sweep: --section / --id narrowing and the degraded-seed cens
 					source: {
 						data_from_field: [SCRATCH_MISSING_PEER], // ← degrades the seed
 						section_to_search: [SCRATCH_HOST],
-						component_to_search: ['rsc387'],
+						component_to_search: [INDEXER],
 					},
 				}),
 			],
@@ -647,7 +710,7 @@ describe('reconcile sweep: --section / --id narrowing and the degraded-seed cens
 		// The holder: one stale mirror entry, nothing references it → the law
 		// wants to drop it, and the degraded seed withholds exactly that drop.
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
+			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
 			[
 				SCRATCH_HOLDER_ID,
 				SCRATCH_HOST,
@@ -728,7 +791,7 @@ describe('reconcile sweep: --section / --id narrowing and the degraded-seed cens
 		).toHaveLength(1);
 		// A dry run persisted nothing: the stale entry is still stored.
 		const rows = (await sql.unsafe(
-			`SELECT relation->$3 AS bag FROM matrix WHERE section_tipo = $1 AND section_id = $2`,
+			`SELECT relation->($3::text) AS bag FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[SCRATCH_HOST, SCRATCH_HOLDER_ID, SCRATCH_OBSERVER],
 		)) as { bag: unknown[] | null }[];
 		expect(rows[0]?.bag).toHaveLength(1);
@@ -785,11 +848,11 @@ describe('reconcile sweep: --section / --id narrowing and the degraded-seed cens
 		// Every call passes a non-candidate --id so no candidate is ever swept:
 		// this case is about DISCOVERY, and it must not cost a corpus recompute.
 		const noSweep = 999_999_901;
-		// The scratch edge is DECLARED at rsc205, and the index fan-out seeds it
-		// at every section rsc387 actually points into (the sections the tests
-		// above plant referencers for, on1 among them) — so unfiltered it is a
-		// multi-tuple observer, and --section rsc205 must cut it to the declared
-		// one. (Measured correction 2026-08-08: an earlier draft asserted
+		// The scratch edge is DECLARED at REF_SECTION, and the index fan-out
+		// seeds it at every section INDEXER actually points into (TERM_SECTION,
+		// where the tests above plant referencers) — so unfiltered it is a
+		// multi-tuple observer, and --section REF_SECTION must cut it to the
+		// declared one. (Measured correction 2026-08-08: an earlier draft asserted
 		// `--section on1` finds 0 tuples for this edge; it finds 1, because the
 		// fan-out is the point — the filter narrows the UNION, it does not
 		// replace it.)
@@ -819,11 +882,11 @@ describe('reconcile sweep: --section / --id narrowing and the degraded-seed cens
 		// bug lived in: the filter has to run AFTER the index fan-out, but it
 		// does have to run.
 		const allHosts = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlyId: noSweep,
 		});
 		const oneHost = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: noSweep,
 		});

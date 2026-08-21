@@ -23,9 +23,17 @@
  *                                      dd515 → dd64/2 (No)
  *                                      dd1725 → dd234/930012 (reader profile)
  *                                      dd170  → dd153/930021 (one project)
- *   930011  matrix_profiles  admin profile  — misc.dd774 grants test3 = 3
- *   930012  matrix_profiles  reader profile — misc.dd774 grants test3 = 1
+ *   930011  matrix_profiles  admin profile  — misc.dd774 grants test3 = 3,
+ *                                      test3.test92 = 3, dd88 = 2;
+ *                                      dd1067 → the derived tool_export row
+ *   930012  matrix_profiles  reader profile — misc.dd774 grants test3 = 1,
+ *                                      test3.test92 = 1, dd88 = 2
  *   930021  matrix_projects  the one scratch project the non-admin may see
+ *
+ * The grants are VERIFIED, not merely written: `acl_identity_fixture_native`
+ * reads them back through the REAL doors (`getSectionPermissions`,
+ * `getPermissions`, `ddoIsAuthorized`, `getUserTools`), so a fixture that
+ * claims a level it does not actually confer reddens there.
  *
  * The shapes are copied from the REAL rows in the suite DB (user `-1` carries
  * `dd244`/`dd1725` locators of exactly this form; profile `2` carries
@@ -69,6 +77,7 @@ import {
 	clearPrincipalCache,
 	clearUserProjectsCache,
 } from '../../src/core/security/permissions.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 // --- the reserved ids (band 930000-930999) ---------------------------------
 
@@ -84,25 +93,77 @@ export const ACL_NON_ADMIN_PROFILE_ID = 930012;
 export const ACL_PROJECT_ID = 930021;
 
 /**
- * The dd1324 registry row of the tool the ADMIN profile grants and the reader
- * profile does not (`tool_export`).
+ * The tool the ADMIN profile grants and the reader profile does not.
  *
  * The grant is EXPLICIT because the tool ACL has no role shortcut: only the
  * SUPERUSER id receives the unfiltered tool list (registry.ts getUserTools —
  * audit OH1 finding 5), so a global admin sees exactly the tools their profile
  * names plus the always_active ones, like everyone else. A fixture admin
  * without this locator authorizes no restricted tool at all.
- *
- * The id is the SUITE DB's row for that name (asserted below by the fixture's
- * own gate, so a re-seeded registry fails loudly instead of granting whatever
- * tool happens to sit at this id).
  */
-export const ACL_GRANTED_TOOL_REGISTRY_ID = 21;
-/** Its `dd1326` name — what a caller asks for as `source.model`. */
 export const ACL_GRANTED_TOOL_NAME = 'tool_export';
+
+/**
+ * Its dd1324 registry `section_id`, DERIVED — never pinned.
+ *
+ * A hardcoded id is a bet on one database's seed order, and it lost: the id
+ * this constant used to hold (21) is `tool_import_marc21` on the suite DB
+ * (`tool_export` is 22 there), so the fixture threw on every install and no
+ * consumer could get a principal at all. The registry is addressable BY NAME
+ * through its own door — `getActiveToolMetaBySectionId()`, the same map the
+ * dd1067 datalist hydration reads — so ask it instead of guessing.
+ *
+ * Three refusals, because a silently-wrong grant is the failure mode this
+ * replaces: the name must resolve, it must resolve UNIQUELY, and the tool must
+ * NOT be `always_active` (an always-active tool is granted to every profile by
+ * `getUserTools`, so granting it would make the admin/reader contrast vacuous).
+ */
+export async function resolveAclGrantedToolRegistryId(): Promise<number> {
+	const { getActiveToolMetaBySectionId } = await import('../../src/core/tools/registry.ts');
+	const registry = await getActiveToolMetaBySectionId();
+	const matches = [...registry.entries()].filter(([, meta]) => meta.name === ACL_GRANTED_TOOL_NAME);
+	if (matches.length !== 1) {
+		throw new Error(
+			`acl_identity_fixture: the ACTIVE tool registry holds ${matches.length} rows named '${ACL_GRANTED_TOOL_NAME}' (expected exactly 1) out of ${registry.size} active tools — the grant cannot be addressed.` +
+				(registry.size === 0
+					? " The registry is EMPTY: this database's tool step has not run. Build it with 'bun run test:db:setup'."
+					: ''),
+		);
+	}
+	const [sectionId, meta] = matches[0] as [number, { always_active: boolean }];
+	if (meta.always_active) {
+		throw new Error(
+			`acl_identity_fixture: '${ACL_GRANTED_TOOL_NAME}' is always_active, so every profile authorizes it — the fixture's granted/denied contrast would be vacuous. Pick a restricted tool.`,
+		);
+	}
+	return sectionId;
+}
 
 /** The section the grants are written for — the real playground section. */
 export const ACL_GRANTED_SECTION = 'test3';
+/**
+ * A COMPONENT of {@link ACL_GRANTED_SECTION} both profiles grant (admin at
+ * {@link ACL_ADMIN_LEVEL}, reader at {@link ACL_NON_ADMIN_LEVEL}).
+ *
+ * A section grant alone is NOT a readable section: `ddoIsAuthorized` — the
+ * per-component gate every read door runs, and the one the component `get_data`
+ * facade self-gates with — reads `getPermissions(section, COMPONENT)`, whose
+ * key is `test3_test92`, not `test3_test3`. It has NO global-admin bypass
+ * either (only the superuser short-circuits), so a fixture with section grants
+ * only serves the empty shell to BOTH identities and any "the reader can read
+ * this component" assertion is vacuous at empty-vs-empty. Real profiles carry
+ * per-component dd774 rows; so does this one now.
+ *
+ * `test92` is test3's own `component_publication` (the seeded playground
+ * ontology) — the component the publication search-filter gate reads.
+ */
+export const ACL_GRANTED_COMPONENT = 'test92';
+/**
+ * A component of the SAME section NEITHER profile grants — the negative half of
+ * the component contrast, so "granted" can be told from "the gate never ran".
+ * `test91` is test3's `component_select`.
+ */
+export const ACL_DENIED_COMPONENT = 'test91';
 /** Grant level held by the admin's profile on {@link ACL_GRANTED_SECTION}. */
 export const ACL_ADMIN_LEVEL = 3;
 /** Grant level held by the non-admin's profile on {@link ACL_GRANTED_SECTION}. */
@@ -212,29 +273,12 @@ export function clearAclIdentityCaches(): void {
  * Mint the fixture. Idempotent: a crashed previous run's rows are swept first
  * (leniently — nothing to delete is the normal case here).
  */
-/**
- * The dd1067 grant addresses the registry by section_id, so a re-seeded or
- * re-ordered dd1324 registry would silently move the grant onto a DIFFERENT
- * tool and every consumer would still be green while testing the wrong thing.
- * Assert the pair instead of trusting it.
- */
-async function assertGrantedToolRow(): Promise<void> {
-	const rows = (await sql.unsafe(
-		`SELECT string->'dd1326'->0->>'value' AS name FROM matrix_tools
-		 WHERE section_tipo = $1 AND section_id = $2`,
-		[TOOLS_REGISTER_SECTION, ACL_GRANTED_TOOL_REGISTRY_ID],
-	)) as { name: string | null }[];
-	const name = rows[0]?.name ?? null;
-	if (name !== ACL_GRANTED_TOOL_NAME) {
-		throw new Error(
-			`acl_identity_fixture: dd1324/${ACL_GRANTED_TOOL_REGISTRY_ID} is '${name}', expected '${ACL_GRANTED_TOOL_NAME}' — the tool registry moved; re-read the id and update ACL_GRANTED_TOOL_REGISTRY_ID.`,
-		);
-	}
-}
-
 export async function installAclIdentityFixture(): Promise<void> {
+	// This fixture writes USERS, PROFILES and PROJECTS rows — the identity
+	// tables of an installation. The database must say it is disposable first.
+	await assertTestDatabase('installAclIdentityFixture');
 	assertScratchIds();
-	await assertGrantedToolRow();
+	const grantedToolRegistryId = await resolveAclGrantedToolRegistryId();
 	await purge({ strict: false });
 
 	// The one project the non-admin is scoped to.
@@ -249,7 +293,7 @@ export async function installAclIdentityFixture(): Promise<void> {
 		// rows), the ONLY thing that authorizes a restricted tool for a
 		// non-superuser. See ACL_GRANTED_TOOL_REGISTRY_ID.
 		relation: {
-			dd1067: [recordLocator('dd1067', TOOLS_REGISTER_SECTION, ACL_GRANTED_TOOL_REGISTRY_ID)],
+			dd1067: [recordLocator('dd1067', TOOLS_REGISTER_SECTION, grantedToolRegistryId)],
 		},
 		misc: {
 			dd774: [
@@ -269,6 +313,13 @@ export async function installAclIdentityFixture(): Promise<void> {
 					section_tipo: AREA_MAINTENANCE,
 					value: ACL_MAINTENANCE_GRANT,
 				},
+				// The per-COMPONENT row — see ACL_GRANTED_COMPONENT.
+				{
+					id: 3,
+					tipo: ACL_GRANTED_COMPONENT,
+					section_tipo: ACL_GRANTED_SECTION,
+					value: ACL_ADMIN_LEVEL,
+				},
 			],
 		},
 	});
@@ -287,6 +338,12 @@ export async function installAclIdentityFixture(): Promise<void> {
 					tipo: AREA_MAINTENANCE,
 					section_tipo: AREA_MAINTENANCE,
 					value: ACL_MAINTENANCE_GRANT,
+				},
+				{
+					id: 3,
+					tipo: ACL_GRANTED_COMPONENT,
+					section_tipo: ACL_GRANTED_SECTION,
+					value: ACL_NON_ADMIN_LEVEL,
 				},
 			],
 		},
@@ -326,6 +383,7 @@ export async function installAclIdentityFixture(): Promise<void> {
  * matrix delete (strict mode) — a filter that matches nothing is the bug.
  */
 export async function removeAclIdentityFixture(): Promise<void> {
+	await assertTestDatabase('removeAclIdentityFixture');
 	await purge({ strict: true });
 	clearAclIdentityCaches();
 }

@@ -31,7 +31,7 @@
  *
  *     TERM_X --stores--> TERM_Y --stores--> TERM_Z
  *       ^                  ^                  ^
- *     REF_X              REF_Y              REF_Z      (rsc205, via EQ_REF)
+ *     REF_X              REF_Y              REF_Z      (REF_SECTION, via EQ_REF)
  *
  * With all three in one class every mirror holds all three referencers.
  * Removing the Y—Z edge splits it into {X,Y} and {Z} — and TERM_X, which the
@@ -39,15 +39,23 @@
  *
  * Environment: suite DB. Scratch band test9994x / 9999999 5x (distinct from
  * observer_failsafe test9990x, observer_seed test9991x, observer_cascade
- * test9992x). The on1 anchor comes from the shared seed helper; the whole
- * suite runs ONLY when that seed was actually planted, so a restored live
- * snapshot is never written.
+ * test9992x).
  */
-// BINDS INSTALL TLDs: on, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The two
+// install SECTION carriers are gone: the term section `on1` (matrix_hierarchy,
+// seeded by test/helpers/observer_term_seed.ts) and the referencer section
+// `rsc205` (matrix) are now TERM_SECTION/REF_SECTION — scratch `section` nodes
+// this file builds itself, each carrying the `test24` matrix_table relation so
+// every record lands in `matrix_test`. The observer COMPONENT tipos stay in the
+// `test999…` band on purpose: it is the scratch namespace
+// observer_subscriptions.ts `touchesScratchObserverNamespace` excludes from the
+// contract diagnostics.
+//
+// The `planted` guard went with it. It existed because the shared helper would
+// not seed `on1` on a restored live snapshot, and EVERY case in this file then
+// returned early — a whole suite that could report green having asserted
+// nothing. The sections this file now builds exist because it built them, so
+// there is no such state and no case may skip.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -56,20 +64,23 @@ import { getCounters } from '../../src/core/api/counters.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { recomputeExternalRelation } from '../../src/core/section/record/observers.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
-import {
-	seedTermChainIfAbsent,
-	sweepTermChain,
-	type TermSeedHandle,
-} from '../helpers/observer_term_seed.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const KERNEL_FILE = 'src/core/section/record/observers.ts';
 const kernelSource = readFileSync(join(REPO_ROOT, KERNEL_FILE), 'utf-8');
 
+// --- the two SCRATCH SECTIONS this file builds (2026-08-20 migration) --------
+/** The TERM section holding the equivalence class (was the install `on1`). */
+const TERM_SECTION = 'test999490';
+/** The REFERENCER section (was the install `rsc205`). */
+const REF_SECTION = 'test999491';
+/** Where both store — the `test24` matrix_table term. */
+const SCRATCH_TABLE = 'matrix_test';
+
 // --- scratch band -----------------------------------------------------------
 const EQ_PEER = 'test99940'; // dd621 equivalents (the numisdata36 shape)
 const EQ_MIRROR = 'test99941'; // set_dato_external observer (the numisdata77 shape)
-const EQ_REF = 'test99942'; // the referencing component in rsc205 (numisdata161 shape)
+const EQ_REF = 'test99942'; // the referencing component in REF_SECTION (numisdata161 shape)
 
 const TERM_X = 999999951;
 const TERM_Y = 999999952;
@@ -81,9 +92,6 @@ const REF_Z = 999999956;
 const TERMS = [TERM_X, TERM_Y, TERM_Z];
 const REFS = [REF_X, REF_Y, REF_Z];
 
-let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
-let planted = false;
-
 const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, unknown> }[] = [
 	{
 		// The observed component. dd621 = MULTIDIRECTIONAL, so its references are
@@ -93,7 +101,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 		model: 'component_relation_related',
 		properties: {
 			config_relation: { relation_type_rel: 'dd621' },
-			observers: [{ section_tipo: 'on1', component_tipo: EQ_MIRROR }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: EQ_MIRROR }],
 		},
 	},
 	{
@@ -116,7 +124,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 			],
 			source: {
 				data_from_field: [EQ_PEER],
-				section_to_search: ['rsc205'],
+				section_to_search: [REF_SECTION],
 				component_to_search: [EQ_REF],
 			},
 		},
@@ -132,8 +140,8 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
  */
 async function mirrorRefs(termId: number): Promise<number[]> {
 	const rows = (await sql.unsafe(
-		'SELECT relation->$1 AS bag FROM matrix_hierarchy WHERE section_tipo = $2 AND section_id = $3',
-		[EQ_MIRROR, 'on1', termId],
+		`SELECT relation->$1 AS bag FROM ${SCRATCH_TABLE} WHERE section_tipo = $2 AND section_id = $3`,
+		[EQ_MIRROR, TERM_SECTION, termId],
 	)) as { bag: { section_id?: string }[] | null }[];
 	return (rows[0]?.bag ?? []).map((entry) => Number(entry.section_id)).sort((a, b) => a - b);
 }
@@ -141,8 +149,8 @@ async function mirrorRefs(termId: number): Promise<number[]> {
 /** Point `termId`'s equivalence bag at `peerIds` (raw — the stored half). */
 async function setEquivalents(termId: number, peerIds: number[]): Promise<void> {
 	await sql.unsafe(
-		`UPDATE matrix_hierarchy SET relation = jsonb_set(COALESCE(relation, '{}'::jsonb), $1::text[], $2::text::jsonb)
-		 WHERE section_tipo = 'on1' AND section_id = $3`,
+		`UPDATE ${SCRATCH_TABLE} SET relation = jsonb_set(COALESCE(relation, '{}'::jsonb), $1::text[], $2::text::jsonb)
+		 WHERE section_tipo = '${TERM_SECTION}' AND section_id = $3`,
 		[
 			`{${EQ_PEER}}`,
 			JSON.stringify(
@@ -151,7 +159,7 @@ async function setEquivalents(termId: number, peerIds: number[]): Promise<void> 
 					type: 'dd47',
 					type_rel: 'dd621',
 					section_id: String(peerId),
-					section_tipo: 'on1',
+					section_tipo: TERM_SECTION,
 					from_component_tipo: EQ_PEER,
 				})),
 			),
@@ -163,24 +171,24 @@ async function setEquivalents(termId: number, peerIds: number[]): Promise<void> 
 /** Recompute every term's mirror so the class starts converged. */
 async function converge(): Promise<void> {
 	for (const termId of TERMS) {
-		await recomputeExternalRelation(EQ_MIRROR, 'on1', termId, -1, new Date(), {});
+		await recomputeExternalRelation(EQ_MIRROR, TERM_SECTION, termId, -1, new Date(), {});
 	}
 }
 
 async function sweepScratch(): Promise<void> {
 	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo LIKE 'test9994%' AND tld = 'test'`);
 	await sql.unsafe(
-		`DELETE FROM matrix_hierarchy WHERE section_tipo = 'on1' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[TERMS.join(',')],
+		`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[TERM_SECTION, TERMS.join(',')],
 	);
 	await sql.unsafe(
-		`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[REFS.join(',')],
+		`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[REF_SECTION, REFS.join(',')],
 	);
 	await sql.unsafe(`DELETE FROM matrix_time_machine WHERE tipo LIKE 'test9994%'`, []);
 	await sql.unsafe(
-		`DELETE FROM matrix_time_machine WHERE section_tipo = 'on1' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[TERMS.join(',')],
+		`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[TERM_SECTION, TERMS.join(',')],
 	);
 }
 
@@ -198,7 +206,7 @@ async function resetToFullChain(): Promise<void> {
 	await setEquivalents(TERM_Z, []);
 	for (const termId of TERMS) {
 		await sql.unsafe(
-			`UPDATE matrix_hierarchy SET relation = relation - $1 WHERE section_tipo = 'on1' AND section_id = $2`,
+			`UPDATE ${SCRATCH_TABLE} SET relation = relation - $1 WHERE section_tipo = '${TERM_SECTION}' AND section_id = $2`,
 			[EQ_MIRROR, termId],
 		);
 	}
@@ -206,15 +214,20 @@ async function resetToFullChain(): Promise<void> {
 }
 
 beforeAll(async () => {
-	termSeed = await seedTermChainIfAbsent();
-	planted = termSeed.seededChain;
-	if (!planted) {
-		console.warn(
-			'observer_equivalence_native: on1 anchor pre-exists (live-snapshot DB) — suite SKIPPED, these gates WRITE mirrors',
-		);
-		return;
-	}
 	await sweepScratch();
+	// The two scratch SECTIONS. `test24` is the matrix_table node whose term is
+	// `matrix_test`, so every record below lands there.
+	for (const sectionTipo of [TERM_SECTION, REF_SECTION]) {
+		await sql.unsafe(
+			`INSERT INTO dd_ontology (id, tipo, parent, model, tld, relations, term)
+			 VALUES ((SELECT COALESCE(MAX(id), 0) + 1400 FROM dd_ontology), $1, 'test1', 'section', 'test', $2::text::jsonb, $3::text::jsonb)`,
+			[
+				sectionTipo,
+				JSON.stringify([{ tipo: 'test24' }]),
+				JSON.stringify({ 'lg-eng': `observer equivalence scratch ${sectionTipo}` }),
+			],
+		);
+	}
 	for (const node of SCRATCH_NODES) {
 		await sql.unsafe(
 			`INSERT INTO dd_ontology (id, tipo, parent, model, tld, properties)
@@ -223,10 +236,16 @@ beforeAll(async () => {
 		);
 	}
 	await clearResolverCaches();
+	// PROVEN, not assumed: SCRATCH_TABLE is hard-coded in every raw statement
+	// here, so a section that failed to pick up `test24` would leave its rows
+	// where nothing reads them and every mirror would read back empty.
+	const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+	expect(await getMatrixTableFromTipo(TERM_SECTION)).toBe(SCRATCH_TABLE);
+	expect(await getMatrixTableFromTipo(REF_SECTION)).toBe(SCRATCH_TABLE);
 	// The three class members …
 	for (const termId of TERMS) {
 		await sql.unsafe(
-			`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', '{}'::jsonb)`,
 			[termId],
 		);
 	}
@@ -235,7 +254,7 @@ beforeAll(async () => {
 	// law searches).
 	for (const [index, refId] of REFS.entries()) {
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
+			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${REF_SECTION}', $2::text::jsonb)`,
 			[
 				refId,
 				JSON.stringify({
@@ -244,7 +263,7 @@ beforeAll(async () => {
 							id: 1,
 							type: 'dd151',
 							section_id: String(TERMS[index]),
-							section_tipo: 'on1',
+							section_tipo: TERM_SECTION,
 							from_component_tipo: EQ_REF,
 						},
 					],
@@ -255,15 +274,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	if (!planted) return;
 	await sweepScratch();
 	await clearResolverCaches();
-	await sweepTermChain(termSeed);
 });
 
 describe('equivalence-class targets (dd621 closure)', () => {
 	test('the chain starts as ONE class: every member mirrors all three referencers', async () => {
-		if (!planted) return;
 		await resetToFullChain();
 		// X reaches Z only TRANSITIVELY (X stores Y, Y stores Z) — if the seed
 		// were one hop this would be [REF_X, REF_Y].
@@ -273,7 +289,6 @@ describe('equivalence-class targets (dd621 closure)', () => {
 	}, 30000);
 
 	test('a chain SPLIT recomputes the THIRD record, which the save never mentions', async () => {
-		if (!planted) return;
 		await resetToFullChain();
 		// Remove Y—Z at Y through the ORDINARY save door. This is the reported
 		// user action, and it is the only path that exercises the pre-save
@@ -281,7 +296,7 @@ describe('equivalence-class targets (dd621 closure)', () => {
 		// would not.
 		const result = await saveComponentData({
 			componentTipo: EQ_PEER,
-			sectionTipo: 'on1',
+			sectionTipo: TERM_SECTION,
 			sectionId: TERM_Y,
 			lang: 'lg-nolan',
 			changedData: [{ action: 'set_data', key: 0, value: [] }],
@@ -300,14 +315,13 @@ describe('equivalence-class targets (dd621 closure)', () => {
 	}, 30000);
 
 	test('a chain MERGE also recomputes the third record (the expansion is not remove-only)', async () => {
-		if (!planted) return;
 		// Start SPLIT: {X,Y} and {Z}.
 		await setEquivalents(TERM_X, [TERM_Y]);
 		await setEquivalents(TERM_Y, []);
 		await setEquivalents(TERM_Z, []);
 		for (const termId of TERMS) {
 			await sql.unsafe(
-				`UPDATE matrix_hierarchy SET relation = relation - $1 WHERE section_tipo = 'on1' AND section_id = $2`,
+				`UPDATE ${SCRATCH_TABLE} SET relation = relation - $1 WHERE section_tipo = '${TERM_SECTION}' AND section_id = $2`,
 				[EQ_MIRROR, termId],
 			);
 		}
@@ -318,7 +332,7 @@ describe('equivalence-class targets (dd621 closure)', () => {
 		// Add Y—Z at Y: the two classes merge into one.
 		const result = await saveComponentData({
 			componentTipo: EQ_PEER,
-			sectionTipo: 'on1',
+			sectionTipo: TERM_SECTION,
 			sectionId: TERM_Y,
 			lang: 'lg-nolan',
 			changedData: [
@@ -331,7 +345,7 @@ describe('equivalence-class targets (dd621 closure)', () => {
 							type: 'dd47',
 							type_rel: 'dd621',
 							section_id: String(TERM_Z),
-							section_tipo: 'on1',
+							section_tipo: TERM_SECTION,
 							from_component_tipo: EQ_PEER,
 						},
 					],
@@ -348,12 +362,11 @@ describe('equivalence-class targets (dd621 closure)', () => {
 	}, 30000);
 
 	test('a legitimate removal is mirrored WITHOUT any shrink refusal', async () => {
-		if (!planted) return;
 		await resetToFullChain();
 		const refusedBefore = getCounters().observers_shrink_refused_degraded_seed ?? 0;
 		await saveComponentData({
 			componentTipo: EQ_PEER,
-			sectionTipo: 'on1',
+			sectionTipo: TERM_SECTION,
 			sectionId: TERM_Y,
 			lang: 'lg-nolan',
 			changedData: [{ action: 'set_data', key: 0, value: [] }],
@@ -365,7 +378,6 @@ describe('equivalence-class targets (dd621 closure)', () => {
 	}, 30000);
 
 	test('the removal is AUDITED: every recomputed member gets a TM row', async () => {
-		if (!planted) return;
 		await resetToFullChain();
 		const before = (await sql.unsafe(
 			`SELECT count(*)::int AS c FROM matrix_time_machine WHERE tipo = $1`,
@@ -373,7 +385,7 @@ describe('equivalence-class targets (dd621 closure)', () => {
 		)) as { c: number }[];
 		await saveComponentData({
 			componentTipo: EQ_PEER,
-			sectionTipo: 'on1',
+			sectionTipo: TERM_SECTION,
 			sectionId: TERM_Y,
 			lang: 'lg-nolan',
 			changedData: [{ action: 'set_data', key: 0, value: [] }],

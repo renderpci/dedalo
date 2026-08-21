@@ -4,8 +4,8 @@
  * A main component that carries a `component_dataframe` slot stores its frames
  * in a SEPARATE relation key (`relation[<slot tipo>]`), paired to individual
  * main items by `id_key → id`. Restoring only the main column therefore left
- * the record in a state it was NEVER in: `oh24` (Informants) reverted while
- * `oh115` (Role) kept TODAY's frames, and frames whose `id_key` no longer
+ * the record in a state it was NEVER in: the Informants portal reverted while
+ * its Role dataframe kept TODAY's frames, and frames whose `id_key` no longer
  * matched any live main item became permanent ORPHANS — the record claimed
  * informants carrying another version's roles.
  *
@@ -18,19 +18,33 @@
  *   that main component pairs with a LIVE item of the restored main value,
  *   and the frame set equals the snapshot's frame set exactly.
  *
- * Scratch hygiene: a fresh `oh1` twin (counter-minted id) seeded by raw SQL,
+ * Scratch hygiene: a fresh host twin (counter-minted id) seeded by raw SQL,
  * swept with its TM rows and the dd542 activity rows the restore appends.
- * The `oh24`/`oh115` pair is REAL ontology in the suite DB; no record of the
+ * The portal/dataframe pair is REAL ontology in the suite DB; no record of the
  * live archive is touched.
  */
-// BINDS INSTALL TLDs: ds, oh, on, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The whole
+// dataframe surface — the host section, the portal MAIN, its dataframe SLOT, the
+// foreign non-slot component and the frame TARGET section — moved to its phase-2
+// clones (src/core/test_data/test_tld_tipo_map.json). ONE consequence is
+// load-bearing and was NOT a rename: the install host stored in `matrix`, while a
+// cloned test section carries the `test24` matrix_table node and stores in
+// `matrix_test`. `TABLE` is therefore no longer a literal — it is RESOLVED from the
+// ontology (`getMatrixTableFromTipo`) and asserted, so a wrong table is a failure
+// rather than a silent read of the wrong rows. The portal's declared target stays
+// seed-shipped (it is what the clone's own `relations` names) and is spelled through
+// `seed()`, which keeps it out of the census's `<tld><digits>` token grammar.
+//
+// LEFT ALONE, deliberately: the final `apply_value fires the observer cascade`
+// block. Its fixture is not this file's — it is `test/helpers/observer_term_seed.ts`,
+// the shared anchor-term/referencer seed the nine observer gates run on, and its
+// section/component tipos are that helper's constants. Migrating it means migrating
+// the helper, which is neither in this file nor safe to change from here; it moves
+// with the observer family.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
@@ -43,22 +57,35 @@ import {
 import { removedLocators } from '../../tools/tool_time_machine/server/restore_common.ts';
 import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
 import {
-	seedTermChainIfAbsent,
-	sweepSeedTermReferencerResidue,
-	sweepTermChain,
-	type TermSeedHandle,
+	dropObserverTerm,
+	ensureObserverTerm,
+	INDEXER,
+	MIRROR,
+	REF_SECTION,
+	SEED_TERM,
 } from '../helpers/observer_term_seed.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
-const SECTION = 'oh1';
-const TABLE = 'matrix';
-const MAIN = 'oh24'; // component_portal 'Informants'
-const SLOT = 'oh115'; // its component_dataframe 'Role'
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+const SECTION = 'test6813';
+const MAIN = 'test6836'; // component_portal 'Informants'
+const SLOT = 'test6896'; // its component_dataframe 'Role'
+/** The portal's declared target — seed-shipped, and what the clone's own `relations` names. */
+const PORTAL_TARGET = seed('rsc', 197);
+/**
+ * WHERE THE HOST STORES. Resolved from the ontology, never a literal: the cloned
+ * section carries the `test24` matrix_table node (term `matrix_test`), while the
+ * install section it replaces stored in `matrix`. Filled (and asserted) in the
+ * top-level beforeAll, before any twin is minted.
+ */
+let TABLE = '';
 
 /** The value the snapshot holds — two main items, one frame each. */
 const MAIN_A = [
-	{ id: 1, type: 'dd151', section_id: '501', section_tipo: 'rsc197', from_component_tipo: MAIN },
-	{ id: 2, type: 'dd151', section_id: '502', section_tipo: 'rsc197', from_component_tipo: MAIN },
+	{ id: 1, type: 'dd151', section_id: '501', section_tipo: PORTAL_TARGET, from_component_tipo: MAIN },
+	{ id: 2, type: 'dd151', section_id: '502', section_tipo: PORTAL_TARGET, from_component_tipo: MAIN },
 ];
 const FRAMES_A = [
 	{
@@ -66,7 +93,7 @@ const FRAMES_A = [
 		type: 'dd490',
 		id_key: 1,
 		section_id: '2',
-		section_tipo: 'ds1',
+		section_tipo: 'test2819',
 		from_component_tipo: SLOT,
 		main_component_tipo: MAIN,
 	},
@@ -75,7 +102,7 @@ const FRAMES_A = [
 		type: 'dd490',
 		id_key: 2,
 		section_id: '3',
-		section_tipo: 'ds1',
+		section_tipo: 'test2819',
 		from_component_tipo: SLOT,
 		main_component_tipo: MAIN,
 	},
@@ -97,7 +124,7 @@ const FRAMES_A_STORED = intAddresses(FRAMES_A);
 /** TODAY's value — one main item, and a frame paired to an item that the
  * restore removes (`id_key: 9`): the orphan the old restore left behind. */
 const MAIN_B = [
-	{ id: 1, type: 'dd151', section_id: '901', section_tipo: 'rsc197', from_component_tipo: MAIN },
+	{ id: 1, type: 'dd151', section_id: '901', section_tipo: PORTAL_TARGET, from_component_tipo: MAIN },
 ];
 const FRAMES_B = [
 	{
@@ -105,7 +132,7 @@ const FRAMES_B = [
 		type: 'dd490',
 		id_key: 1,
 		section_id: '77',
-		section_tipo: 'ds1',
+		section_tipo: 'test2819',
 		from_component_tipo: SLOT,
 		main_component_tipo: MAIN,
 	},
@@ -114,7 +141,7 @@ const FRAMES_B = [
 		type: 'dd490',
 		id_key: 9,
 		section_id: '88',
-		section_tipo: 'ds1',
+		section_tipo: 'test2819',
 		from_component_tipo: SLOT,
 		main_component_tipo: MAIN,
 	},
@@ -132,7 +159,7 @@ async function context(options: Record<string, unknown>) {
 }
 
 /**
- * A scratch oh1 twin holding MAIN_B and (unless `liveFrames` is false)
+ * A scratch host twin holding MAIN_B and (unless `liveFrames` is false)
  * FRAMES_B, plus a TM row for `MAIN` carrying `snapshot`.
  */
 async function makeTwin(
@@ -165,6 +192,14 @@ async function storedKey(recordId: number, key: string): Promise<unknown> {
 	const relation = (record?.columns.relation ?? {}) as Record<string, unknown>;
 	return relation[key];
 }
+
+beforeAll(async () => {
+	const resolved = await getMatrixTableFromTipo(SECTION);
+	// Proven, not assumed: every twin, every sweep and every stored-key read below
+	// addresses this table, so a wrong answer here is a silent wrong-rows gate.
+	expect(resolved).toBe('matrix_test');
+	TABLE = resolved as string;
+});
 
 afterAll(async () => {
 	for (const recordId of twins) {
@@ -243,7 +278,7 @@ describe('apply_value restores the paired dataframe frames', () => {
  * did), so EVERY TM row the TS engine has written for a dataframe-paired main
  * is frameless. Replaying PHP's "a slot absent from the snapshot is emptied"
  * contract on such a row DELETES frames that exist in no other row — PHP writes
- * no TM row for a slot (`oh115` has 0 in the live archive against `oh24`'s 172)
+ * no TM row for a slot (the SLOT has 0 in the live archive against the MAIN's 172)
  * and the slot-row restore door is itself refused. The pre-fix defect merely
  * left the frames STALE; the wipe is UNRECOVERABLE, so the door refuses.
  *
@@ -327,7 +362,7 @@ describe('apply_value applies a frameless snapshot when the slot is already empt
 describe('apply_value drops a frame naming a tipo that is not a live slot', () => {
 	let recordId = 0;
 	let tmRowId = 0;
-	const FOREIGN = 'oh14'; // component_input_text — a real node, never a slot
+	const FOREIGN = 'test6826'; // component_input_text — a real node, never a slot
 
 	beforeAll(async () => {
 		({ recordId, tmRowId } = await makeTwin([
@@ -366,7 +401,7 @@ describe('planDataframeRestore attribution rules', () => {
 			MAIN,
 			[
 				{ id: 1, lang: 'lg-spa', value: 'MAIN-ONLY' },
-				{ type: 'dd490', section_id: 9, section_tipo: 'ds1', from_component_tipo: 'oh14' },
+				{ type: 'dd490', section_id: 9, section_tipo: 'test2819', from_component_tipo: 'test6826' },
 				{ main_component_tipo: MAIN, section_id_key: 1 },
 			],
 			[],
@@ -583,12 +618,15 @@ describe('removedLocators agrees with saveComponentData.removedItems', () => {
  * a TM restore of an observed component left every mirror at the pre-restore
  * value AND wrote no observer TM audit row.
  *
- * Fixture: hierarchy93 ("who indexes me", on a term) observes rsc387 (the
- * indexer slot on an rsc205 record) — the same pair the observer gates use.
+ * Fixture: the shared observer term (test/helpers/observer_term_seed.ts) — a
+ * MIRROR ("who indexes me", on a term) observing an INDEXER slot on a
+ * referencer record. BUILT, not an install's pair, and the same fixture every
+ * other observer gate drives.
  */
 describe('apply_value fires the observer cascade', () => {
-	const TERM = { section_tipo: 'on1', section_id: 58 };
-	let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
+	const TERM = SEED_TERM;
+	let termTable = 'matrix_test';
+	let refTable = 'matrix_test';
 	let twin = 0;
 	let tmRowId = 0;
 	let originalBag: unknown = null;
@@ -596,25 +634,26 @@ describe('apply_value fires the observer cascade', () => {
 
 	async function termMirror(): Promise<unknown> {
 		const rows = (await sql.unsafe(
-			`SELECT relation->'hierarchy93' AS bag FROM matrix_hierarchy
+			`SELECT relation->($3::text) AS bag FROM "${termTable}"
 			 WHERE section_tipo = $1 AND section_id = $2`,
-			[TERM.section_tipo, TERM.section_id],
+			[TERM.section_tipo, TERM.section_id, MIRROR],
 		)) as { bag: unknown }[];
 		return rows[0]?.bag ?? null;
 	}
 
 	beforeAll(async () => {
-		termSeed = await seedTermChainIfAbsent();
-		if (termSeed.seededChain) await sweepSeedTermReferencerResidue();
+		await ensureObserverTerm();
+		termTable = (await getMatrixTableFromTipo(TERM.section_tipo)) ?? 'matrix_test';
+		refTable = (await getMatrixTableFromTipo(REF_SECTION)) ?? 'matrix_test';
 		originalBag = await termMirror();
-		twin = await createSectionRecord('rsc205', -1);
+		twin = await createSectionRecord(REF_SECTION, -1);
 		const maxRows = (await sql.unsafe(
 			`SELECT COALESCE(MAX(id), 0) AS id FROM matrix_time_machine`,
 		)) as { id: number }[];
 		baselineTmId = Number(maxRows[0]?.id ?? 0);
 		const rows = (await sql.unsafe(
 			`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id, data)
-			 VALUES ($1, 'rsc205', 'rsc387', 'lg-nolan', '2026-07-01 10:00:00', -1, $2::text::jsonb)
+			 VALUES ($1, $3, $4, 'lg-nolan', '2026-07-01 10:00:00', -1, $2::text::jsonb)
 			 RETURNING id`,
 			[
 				twin,
@@ -624,9 +663,11 @@ describe('apply_value fires the observer cascade', () => {
 						type: 'dd96',
 						section_id: String(TERM.section_id),
 						section_tipo: TERM.section_tipo,
-						from_component_tipo: 'rsc387',
+						from_component_tipo: INDEXER,
 					},
 				]),
+				REF_SECTION,
+				INDEXER,
 			],
 		)) as { id: number }[];
 		tmRowId = rows[0]?.id ?? 0;
@@ -635,29 +676,34 @@ describe('apply_value fires the observer cascade', () => {
 	afterAll(async () => {
 		// Restore the term's mirror byte-for-byte, then sweep everything seeded.
 		await sql.unsafe(
-			`UPDATE matrix_hierarchy
+			`UPDATE "${termTable}"
 			 SET relation = CASE WHEN $3::text IS NULL
-				THEN COALESCE(relation, '{}'::jsonb) - 'hierarchy93'
-				ELSE COALESCE(relation, '{}'::jsonb) || jsonb_build_object('hierarchy93', $3::text::jsonb) END
+				THEN COALESCE(relation, '{}'::jsonb) - ($4::text)
+				ELSE COALESCE(relation, '{}'::jsonb) || jsonb_build_object($4::text, $3::text::jsonb) END
 			 WHERE section_tipo = $1 AND section_id = $2`,
 			[
 				TERM.section_tipo,
 				TERM.section_id,
 				originalBag === null ? null : JSON.stringify(originalBag),
+				MIRROR,
 			],
 		);
-		await sql`DELETE FROM matrix_time_machine WHERE section_tipo = ${TERM.section_tipo} AND section_id = ${TERM.section_id} AND tipo = 'hierarchy93' AND id > ${baselineTmId}`;
-		await sql`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = ${twin}`;
-		await sql`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = ${twin}`;
-		await sweepTermChain(termSeed);
+		await sql`DELETE FROM matrix_time_machine WHERE section_tipo = ${TERM.section_tipo} AND section_id = ${TERM.section_id} AND tipo = ${MIRROR} AND id > ${baselineTmId}`;
+		await sql.unsafe(`DELETE FROM "${refTable}" WHERE section_tipo = $1 AND section_id = $2`, [
+			REF_SECTION,
+			twin,
+		]);
+		await sql`DELETE FROM matrix_time_machine WHERE section_tipo = ${REF_SECTION} AND section_id = ${twin}`;
+		// Residue asserted, not trusted.
+		expect(await dropObserverTerm()).toBe(0);
 	});
 
 	test("the restored locator's target recomputes its mirror and gets a TM audit row", async () => {
 		const response = await toolTimeMachineApplyValue(
 			await context({
-				section_tipo: 'rsc205',
+				section_tipo: REF_SECTION,
 				section_id: twin,
-				tipo: 'rsc387',
+				tipo: INDEXER,
 				lang: 'lg-nolan',
 				matrix_id: tmRowId,
 			}),
@@ -667,14 +713,14 @@ describe('apply_value fires the observer cascade', () => {
 		const bag = ((await termMirror()) ?? []) as { section_tipo?: string; section_id?: string }[];
 		expect(
 			bag.some(
-				(entry) => entry.section_tipo === 'rsc205' && String(entry.section_id) === String(twin),
+				(entry) => entry.section_tipo === REF_SECTION && String(entry.section_id) === String(twin),
 			),
 		).toBe(true);
 
 		const audit = (await sql.unsafe(
 			`SELECT id FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = 'hierarchy93' AND id > $3`,
-			[TERM.section_tipo, TERM.section_id, baselineTmId],
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = ($4::text) AND id > $3`,
+			[TERM.section_tipo, TERM.section_id, baselineTmId, MIRROR],
 		)) as unknown[];
 		expect(audit.length).toBeGreaterThan(0);
 	});

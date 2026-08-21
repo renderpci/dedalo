@@ -1,0 +1,61 @@
+{
+	"_doc": "The INSTALL ontology's one-sided observer declarations, measured 2026-08-02. DATA, not a fixture the engine reads: this file exists so the gate can pin what an installation happens to declare WITHOUT the test source naming install tipos (scripts/lib/tld_census.ts counts a tipo token in a *.test.ts as a binding; test/**/fixtures/ is data and excluded). The gate tolerates ABSENCE \u2014 a database carrying none of this ontology is not a failure, it is a different installation \u2014 but it refuses a declaration that is PRESENT and unpinned, which is the drift this census exists to catch.",
+	"reverse_only": [
+		"numisdata1373->numisdata1478",
+		"numisdata1373->numisdata1479",
+		"numisdata282->numisdata321",
+		"oh93->oh28",
+		"rsc19->oh28",
+		"rsc30->rsc1369",
+		"rsc36->rsc1368",
+		"rsc36->rsc860",
+		"rsc860->oh87"
+	],
+	"dead_forward": [
+		"rsc1139->rsc19",
+		"rsc1140->rsc19",
+		"rsc1401->rsc19",
+		"rsc1403->rsc19",
+		"rsc1531->rsc1214"
+	],
+	"wildcards_install": {
+		"numisdata250": [
+			"numisdata282->numisdata250"
+		],
+		"numisdata257": [
+			"numisdata1451->numisdata257"
+		],
+		"tch557": [
+			"tch555->tch557"
+		]
+	},
+	"single_declaration_install": {
+		"observed": "rsc19",
+		"observer": "oh28",
+		"host": "oh1"
+	},
+	"reused_component_install": {
+		"observed": "rsc387",
+		"observer": "hierarchy93",
+		"hosts": [
+			"dc1",
+			"on1",
+			"ts1"
+		],
+		"not_host": "hierarchy20"
+	},
+	"runtime_dispatch_install": {
+		"observed": "oh93",
+		"host_section": "oh1",
+		"observer": "oh28"
+	},
+	"virtual_real_pair_install": {
+		"observed": "numisdata1373",
+		"observers": [
+			"numisdata1478",
+			"numisdata1479"
+		],
+		"host": "numisdata5",
+		"own_real_section": "numisdata276"
+	}
+}
