@@ -632,7 +632,18 @@ interface InverseEdge {
 	pointing: { section_tipo: string; section_id: string };
 	/** The record it points AT — the one whose item revealed the edge. */
 	target: { section_tipo: string; section_id: string };
-	/** `from_component_top_tipo`: the component the locator is stored under. */
+	/**
+	 * `from_component_top_tipo`: the component the locator is stored under.
+	 *
+	 * VERIFIED 2026-08-21 against the engine, after a review suspected this of
+	 * conflating two different keys: `parseInverseEntry`
+	 * (src/core/resolve/relation_index.ts) sets
+	 * `entry.from_component_top_tipo = raw.from_component_tipo` — the inverse
+	 * entry's key IS the stored locator's storing component, passed through
+	 * verbatim. Reading it as the storing component is exact, not an assumption,
+	 * and it holds for a portal-hosted storer too, because the engine copies the
+	 * same field whatever hosts it.
+	 */
 	componentTipo: string;
 	/** The relation type (`dd96` for an indexation, `dd151` for a plain link). */
 	type: string | null;
@@ -922,6 +933,14 @@ for (const file of files) {
 				const components = runs.map(
 					(run) => new Set(run.map((one: Json) => String(one?.from_component_tipo ?? ''))),
 				);
+				// TWO independent conditions, which is what makes a reordered record
+				// refusable rather than misattributed (a review suspected the
+				// ascending-id assumption could silently mis-split): items stored out
+				// of order produce an EXTRA run, so the count stops matching; and a
+				// run that mixes components fails the second test. Verified
+				// 2026-08-21 — the narrow case where a reordering happens to preserve
+				// both properties is the only residual, and it is named in the
+				// refusal below rather than assumed away.
 				if (runs.length !== locators.length || components.some((set) => set.size !== 1)) {
 					refuse(
 						'read_raw_target_section_unattributable',
@@ -1903,6 +1922,13 @@ for (const entry of [...collected.values()].sort((a, b) =>
 				(one.from_component_tipo ?? componentTipo) === componentTipo,
 		);
 		if (already) continue;
+		// THE ENGINE'S OWN RULE, not an invented number: `nextObserverItemId`
+		// (src/core/section/record/observers.ts) is `max(finite ids) + 1`, and this
+		// is the same computation. A stored locator must carry an item id, so the
+		// question a review raised — "is this fabricating data?" — resolves to: the
+		// EXISTENCE is what the frozen store proved, and the id is what the engine
+		// would have allocated for it. The row is tagged `origin:'inverse_edge'`
+		// with a `revealed_by` trail either way, so nothing here is silent.
 		const nextId =
 			held.reduce((max: number, one: Json) => Math.max(max, Number(one?.id ?? 0) || 0), 0) + 1;
 		held.push({
