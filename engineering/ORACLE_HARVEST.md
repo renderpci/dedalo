@@ -375,3 +375,103 @@ staged as deleted — the row above is withheld until a review pass accepts it):
   at `structure_context.ts:1352` — no legacy-model component (autocomplete_hi /
   html_text) in the built situations (fix: add one under the grouper and pin
   its target_section_tipo + title/operators keyed by entry.model).
+
+## ADDENDUM 2026-08-19 — the store is REPLAYED UNDER THE `test` TLD (no re-harvest)
+
+**The store bytes are UNCHANGED and stay unchanged.** Since the generic-TLD
+migration's phase 4 a parity gate may be written entirely in the generic `test`
+TLD and still be compared against the install-term interaction PHP answered in
+2026-07, because the seam translates — never the fixture. This is the WC-001
+pattern (a gate-side transform, the frozen file untouched), applied to ontology
+identity instead of to a field shape, and it is the SECOND path out of
+corpus-boundness, beside the "retire and re-express as a TS-native twin" path
+of § Generic-TLD replacement map above:
+
+| Path | When | Result |
+|---|---|---|
+| Replay under the `test` TLD (this addendum) | The contract IS the PHP wire shape, and the situation can be built from the committed clone + corpus. | The gate SURVIVES with its fixture; only its terms change. |
+| Retire → TS-native twin (§ map above) | The contract is expressible without an oracle, or the fixture cannot answer it at all (write path, live-only). | The gate and its `<gate>.json` are DELETED. |
+
+**How the replay works** (contract: `WC-2026-08-19-test-tld-replay`):
+
+- `unmapRqo` (`test/parity/normalize.ts`, wired into `lookupInteraction` in
+  `test/parity/oracle_fixtures.ts`) rewrites a test-TLD RQO back into install
+  terms BEFORE `hashRequest`, so the gate's request finds the frozen
+  interaction. A miss still throws, and now names the unmapped request.
+- `adoptTipoIdMap(frozenBody, gate)` reads the frozen RESPONSE in test-TLD
+  terms through the committed, append-only, bijective
+  `src/core/test_data/test_tld_tipo_map.json` (+ `test_corpus/id_map.json` for
+  record addresses), and REFUSES rather than guesses: a TS-shaped body, a
+  surviving install token, a disagreement between the two maps. Every caller
+  asserts `matched === true` plus a `rewrites` floor.
+- The records come from `ensureTestCorpus` — owned by the gate, dropped after
+  it (records are a situation, not a backdrop).
+
+**No re-harvest, and none is possible.** Nothing in
+`test/parity/fixtures/oracle_harvest/` is edited by this change; the four
+pilots below replay the SAME interaction hashes they always did.
+
+**Pilots (2026-08-19).** `read_differential`, `context_differential`,
+`component_publication_search_differential` and
+`relation_index_get_data_differential` are ALL green on a suite database holding
+NO install data (the fourth went green with the corpus fixes below).
+
+Two REDUCTIONS were needed beyond the transform, both declared and enforced:
+
+- `CORPUS_SCALE_FIELDS` (`test/parity/normalize.ts`) — a value that counts rows
+  the corpus deliberately does not hold (`relation_index`'s unfiltered
+  `pagination.total` over the install). `stripCorpusScaleFields` REFUSES a
+  declared path that is not present, so a projection can never silently stop
+  projecting. A FILTERED total stays verbatim.
+- `UNCLONED_TOKENS` — an install token with no twin because the clone closure
+  stops at the section root (`context_differential`'s `parent_grouper`, the
+  install AREA node above the cloned section). Tolerated ONLY when declared,
+  REFUSED when the declared token is absent, and the declaring gate owes an
+  explicit assertion about the field (it asserts both sides of the seam).
+
+**Corpus gaps this exposed** — ALL THREE CLOSED 2026-08-19 (same day), kept
+here because the rules they produced are what phase 5 must build on:
+
+1. **Inverse edges ARE reconstructed now.** `relation_index_get_data_differential`
+   reads an inverse index: the frozen entries state that `rsc205/37,42,44,69,74`
+   point at the term through `rsc387`, and `derive_test_corpus.ts` used to
+   rebuild a record only from ITS OWN read projections, so those pointer
+   locators were absent and the index resolved 0 items. The deriver now reads
+   the computed inverse page a `component_relation_index` item reveals
+   (`{type, section_tipo, section_id, from_component_top_tipo}` — the exact
+   discriminator: `parseInverseEntry` is the only writer of that key, and a
+   STORED item always carries its own `id`) and materializes the locator on the
+   POINTING record, where the `matrix_*_relation_index_sync` trigger indexes it
+   exactly as a real save would. Six edges, audited per record as
+   `inverse_edges[]` (`origin: 'inverse_edge'` + the gate/record/component that
+   stated it); a record that exists only because of one is `edge_only: true`;
+   an edge whose pointing record has no ontology clone, whose component does
+   not store, or whose target is unmappable is REFUSED (`inverse_edge_*` in
+   `refused.json`), never approximated. The gate is GREEN (both cases). Its
+   `pagination.total` strip STAYS declared: the corpus holds 5 pointing
+   records, the install had 1 647 — a corpus that held all of them would be the
+   install.
+2. **A reconstructed record's value may be a LIST PROJECTION** (already
+   truncated), so reading it back through the list pipeline truncates twice.
+   `read_differential` therefore compares VALUES on raw records only
+   (`reconstructed: false`), and identity/order over the whole sequence. The
+   rule is now WHERE A SWEEPER SEES IT: every record declares
+   `component_sources: {tipo: 'raw'|'edit'|'list'}`, the corpus file header
+   states the rule, and the `dedalo-ts-testing` skill carries it. Census
+   2026-08-19 over 1 018 written (record, component) pairs: **16 raw · 170
+   edit · 832 list projections**; the deriver's richest-source preference is
+   exercised in both directions (10 upgrades, 88 poorer sources rejected).
+3. **`dd128` user records carry no `relation` column**, so no corpus principal
+   holds any grant and any ACL-shaped assertion is vacuous on the corpus alone.
+   The door for that situation is `test/helpers/acl_identity_fixture.ts`, and
+   it was RED for ONE reason: its `dd1324/21` tool-registry pin is
+   `tool_import_marc21` on this suite DB (`tool_export` is 22), so the fixture
+   THREW before writing anything — which is also why `getSectionPermissions`
+   read 0: there was no profile to read. The id is now DERIVED by name through
+   the registry's own door (`getActiveToolMetaBySectionId`), refusing a
+   non-unique or `always_active` match. The fixture also grants the
+   per-COMPONENT dd774 rows it always implied (`test3_test92`): `ddoIsAuthorized`
+   keys the matrix by `${section}_${component}` and has no global-admin bypass,
+   so section grants alone served the empty shell to BOTH identities. All of it
+   is verified through the real doors in `acl_identity_fixture_native`
+   (`getSectionPermissions`, `ddoIsAuthorized` both ways, `getUserTools`).
