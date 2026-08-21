@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 488,
-		"functions": 4017,
+		"files": 494,
+		"functions": 4148,
 		"functionsOverCap": 702,
 		"filesOverCap": 274
 	},
@@ -103,7 +103,7 @@
 		"src/core/install/config_persist.ts": 21,
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
-		"src/core/install/directories.ts": 13,
+		"src/core/install/directories.ts": 12,
 		"src/core/install/engine.ts": 19,
 		"src/core/install/gate.ts": 7,
 		"src/core/install/hierarchy_import.ts": 18,
