@@ -1,4 +1,14 @@
 /**
+ * ⚠ SUPERSEDED 2026-08-19 (generic-`test`-TLD migration phase 1). THE DIRECTION
+ * IS NOW THE OTHER WAY: `src/core/test_data/test_tld_ontology.json` is the
+ * SOURCE OF RECORD and the database is derived from it
+ * (`src/core/test_data/test_tld_materialize.ts`), so this exporter must NEVER be
+ * run again as a matter of routine — it would overwrite the source with
+ * whatever the seed still holds, and once
+ * `scripts/strip_test_tld_from_seed.ts` has been applied the seed holds NOTHING
+ * (it would write an empty node list). Kept only as the historical derivation
+ * and for its COPY-block reader, which the strip script's twin uses.
+ *
  * Export the generic `test` TLD ontology FROM THE INSTALL SEED to reviewable JSON.
  *
  *   bun run scripts/export_test_tld_ontology.ts          # rewrite the JSON

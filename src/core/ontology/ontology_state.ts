@@ -355,8 +355,17 @@ function propiedadesDiffer(a: string | null, b: string | null): boolean {
 	}
 }
 
-/** The columns whose value differs between the parsed node and the stored row. */
-function nodeDiffColumns(parsed: DdOntologyNode, stored: DdOntologyRow): string[] {
+/**
+ * The columns whose value differs between the parsed node and the stored row —
+ * the engine's OWN equality law for an ontology node (jsonb structurally, key
+ * order insignificant; `propiedades` by meaning, not whitespace).
+ *
+ * Exported because `test/unit/test_tld_ontology_gate.test.ts` compares the
+ * committed JSON source against dd_ontology and against the inverse parser's
+ * round trip: those gates must use THIS definition of "equal", never a second
+ * hand-written one that could disagree with what a rebuild considers drift.
+ */
+export function nodeDiffColumns(parsed: DdOntologyNode, stored: DdOntologyRow): string[] {
 	const diffs: string[] = [];
 	const scalar: (keyof DdOntologyNode)[] = [
 		'parent',

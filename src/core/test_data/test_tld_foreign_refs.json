@@ -1,0 +1,40 @@
+{
+	"_doc": "FROZEN, SHRINK-ONLY: the tipo-SHAPED tokens the shipped generic `test` TLD ontology (test_tld_ontology.json) still carries outside the allowed TLDs (dd, rsc, hierarchy, ontology, ontologytype, lg) and outside its own test/test* TLDs. Phase 2 (2026-08-19) retargeted every REAL install reference at a clone — the 28 tokens / 41 sites measured on 2026-08-19 are down to the 7 below, and every survivor is a FALSE POSITIVE: a CSS colour or class name, a widget input var_name, a typo inside a human note. Each is declared in src/core/test_data/test_tld_clone_manifest.json `exclude` with action keep_token and the same reason. test/unit/test_tld_ontology_gate.test.ts REFUSES a token that is not listed here and refuses a NEW site for a listed one — the list may only shrink. Kept as DATA, not as code in the gate, so the install-TLD census (scripts/lib/tld_census.ts, corpus `test/**`) does not read these tokens as a test binding an install.",
+	"probe_tipo": "numisdata6",
+	"probe_doc": "An install tipo that is NOT in the test ontology — the gate plants it on a synthetic node to prove the scanner still flags a foreign reference (anti-vacuity). It IS a clone SOURCE (it became the `testmint` thesaurus), which is exactly why no test node may name it any more.",
+	"tokens": {
+		"ad6738": {
+			"sites": ["test7031.properties"],
+			"reason": "FALSE POSITIVE: the CSS colour literal `#ad6738` in a cloned node`s properties.color — `ad` is not an ontology TLD (manifest exclude: keep_token)"
+		},
+		"bd2130": {
+			"sites": ["test7007.properties"],
+			"reason": "FALSE POSITIVE: the CSS colour literal `#bd2130` in a cloned css blob — `bd` is not an ontology TLD (manifest exclude: keep_token)"
+		},
+		"css999": {
+			"sites": [
+				"test6260.properties",
+				"test6261.properties",
+				"test6266.properties",
+				"test6379.properties"
+			],
+			"reason": "FALSE POSITIVE: the CSS class key `css999` in a cloned css blob — `css` is not an ontology TLD (manifest exclude: keep_token)"
+		},
+		"css9999": {
+			"sites": ["test6264.properties"],
+			"reason": "FALSE POSITIVE: the CSS class key `css9999` in a cloned css blob — `css` is not an ontology TLD (manifest exclude: keep_token)"
+		},
+		"ee9916": {
+			"sites": ["test1150.properties", "test1360.properties", "test5816.properties"],
+			"reason": "FALSE POSITIVE: the CSS colour literal `#ee9916` in a cloned css blob — `ee` is not an ontology TLD (manifest exclude: keep_token)"
+		},
+		"numero2": {
+			"sites": ["test178.properties", "test178.propiedades", "test212.propiedades"],
+			"reason": "FALSE POSITIVE: a widgets[].ipo input var_name, not a tipo (manifest exclude: keep_token)"
+		},
+		"numisadata161": {
+			"sites": ["test6230.properties"],
+			"reason": "FALSE POSITIVE: a typo of `numisdata161` inside a human note in properties.observers[].info (manifest exclude: keep_token)"
+		}
+	}
+}
