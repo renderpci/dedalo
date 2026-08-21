@@ -442,11 +442,21 @@ area_thesaurus.prototype.init = async function(options) {
 
 	// linker
 		// linker. Get component caller id from url (needed to link terms for DS callers)
+		// (!) The param is user-editable, so the parse is guarded like the sibling
+		// parse_picker_caller above: an undecodable value is dropped loudly and the
+		// area degrades to a browse-only tree instead of dying during init.
 		if (url_vars.initiator) {
-			const caller_id = JSON.parse(url_vars.initiator)
-			self.linker = {
-				id		: caller_id,
-				caller	: null // passed as null for DS call identification. Indexation callers have value here
+			let caller_id = null
+			try {
+				caller_id = JSON.parse(url_vars.initiator)
+			} catch (error) {
+				console.error('(!) Ignored malformed initiator URL param (not valid JSON):', url_vars.initiator, error);
+			}
+			if (caller_id!==null) {
+				self.linker = {
+					id		: caller_id,
+					caller	: null // passed as null for DS call identification. Indexation callers have value here
+				}
 			}
 		}
 
