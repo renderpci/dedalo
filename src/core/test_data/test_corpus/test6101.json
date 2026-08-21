@@ -1,0 +1,1429 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "test6101",
+	"source_section_tipo": "numisdata5",
+	"table": "matrix_test",
+	"kind": "test",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Puig de la Nau"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Puig de la Nau</p><p>&nbsp;</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "205",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 2,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "2"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Siurana d'Emporda"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Siurana</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "191",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 3,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "3"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Dénia"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Dénia</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 4,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "4"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "El Arahal"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Arahal</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 4,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 5,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "5"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"dd560": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "60",
+							"section_tipo": "dd1706",
+							"from_component_tipo": "dd560",
+							"main_component_tipo": "testplace1010"
+						}
+					],
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Empúries 1926"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Neápolis de Empúries"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Empúries, localización exacta</p>"
+						}
+					]
+				},
+				"iri": {
+					"testplace1010": [
+						{
+							"id": 1,
+							"iri": "https://www.museunacional.cat/es/colleccio/tesoro-de-la-neapolis-de-emporion/varias-autoridades/076000-cjt",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"dd560": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 2
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1010": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd560": "edit",
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1010": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 6,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "6"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Montgó"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Mongó"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Montgó</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 2
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 7,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "7"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Morella"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Morella</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 8,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "8"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Penedès"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Alt Penedès</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 9,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "9"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"dd560": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "60",
+							"section_tipo": "dd1706",
+							"from_component_tipo": "dd560",
+							"main_component_tipo": "testplace1010"
+						}
+					],
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Pont de Molins"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Pont de Molins</p>"
+						}
+					]
+				},
+				"iri": {
+					"testplace1010": [
+						{
+							"id": 1,
+							"iri": "https://www.museunacional.cat/es/colleccio/tesoro-de-pont-de-molins/diverses-autoritats/020495-cjt",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 9,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"dd560": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1010": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd560": "edit",
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1010": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 10,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "10"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"dd560": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "60",
+							"section_tipo": "dd1706",
+							"from_component_tipo": "dd560",
+							"main_component_tipo": "testplace1010"
+						}
+					],
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Roses"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Roses</p>"
+						}
+					]
+				},
+				"iri": {
+					"testplace1010": [
+						{
+							"id": 1,
+							"iri": "https://www.museunacional.cat/es/colleccio/tesoro-de-roses-hallazgo-de-fraccionarias-de-emporion/emporion/020520-cjt",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 10,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"dd560": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1010": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd560": "edit",
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1010": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 11,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "11"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"dd560": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "60",
+							"section_tipo": "dd1706",
+							"from_component_tipo": "dd560",
+							"main_component_tipo": "testplace1010"
+						}
+					],
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Tarragona"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Tarragona</p>"
+						}
+					]
+				},
+				"iri": {
+					"testplace1010": [
+						{
+							"id": 1,
+							"iri": "https://www.museunacional.cat/es/colleccio/tesoro-de-tarragona/diverses-autoritats/020517-cjt",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 11,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"dd560": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1010": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd560": "edit",
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1010": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 12,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "12"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Tortosa I"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Tortosa</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "62",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 12,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 13,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "13"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Trasovares"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Trasobares"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Trasovares</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "101",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 13,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 2
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 14,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "14"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Ribera d'Ebre"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Ribera d'Ebre</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "191",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 14,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 15,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "15"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Turó del Montgrós"
+						}
+					],
+					"testplace1007": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[geo-n-1-]\" src=\"../component_text_area/tag/?id=[geo-n-1-]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"[1]\"> Montseny</p>"
+						}
+					]
+				},
+				"relation": {
+					"testplace1015": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "191",
+							"section_tipo": "test1026",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "3",
+							"section_tipo": "test3127",
+							"from_component_tipo": "testplace1015"
+						},
+						{
+							"id": 3,
+							"type": "dd96",
+							"section_id": "994",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "testplace1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1015": [
+						{
+							"count": 3
+						}
+					],
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					],
+					"testplace1007": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list",
+				"testplace1007": "list",
+				"testplace1015": "list"
+			}
+		},
+		{
+			"section_id": 30,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "30"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Mazarrón"
+						}
+					]
+				},
+				"data": {
+					"section_id": 30,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list"
+			}
+		},
+		{
+			"section_id": 50,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "50"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Cuenca"
+						}
+					]
+				},
+				"data": {
+					"section_id": 50,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1006": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list"
+			}
+		},
+		{
+			"section_id": 52,
+			"source": {
+				"section_tipo": "numisdata5",
+				"section_id": "52"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testplace1006": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Valeria"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Valera de Arriba"
+						}
+					]
+				},
+				"data": {
+					"section_id": 52,
+					"section_tipo": "test6101"
+				},
+				"meta": {
+					"testplace1006": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testplace1006": "list"
+			}
+		}
+	]
+}

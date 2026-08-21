@@ -1,0 +1,5962 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "test6100",
+	"source_section_tipo": "numisdata4",
+	"table": "matrix_test",
+	"kind": "test",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"grouper_context_differential",
+				"section_context_extras_differential"
+			],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "15446",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6229": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "dd501",
+							"from_component_tipo": "test6229"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "426564",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "437640",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "437641",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					],
+					"test6228": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8202",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "test6228"
+						}
+					],
+					"test6318": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "testimmovable1",
+							"from_component_tipo": "test6318"
+						}
+					],
+					"test6139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6139"
+						}
+					],
+					"test6225": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "test6810",
+							"from_component_tipo": "test6225"
+						}
+					],
+					"test6226": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "test6337",
+							"from_component_tipo": "test6226"
+						}
+					],
+					"test6245": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "test6235",
+							"from_component_tipo": "test6245"
+						}
+					],
+					"test6254": [
+						{
+							"id": 1,
+							"type": "dd675",
+							"section_id": "1",
+							"section_tipo": "dd153",
+							"from_component_tipo": "test6254"
+						}
+					]
+				},
+				"number": {
+					"test6207": [
+						{
+							"id": 1,
+							"value": 0.6
+						}
+					],
+					"test6209": [
+						{
+							"id": 1,
+							"value": 9
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6229": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6228": [
+						{
+							"count": 1
+						}
+					],
+					"test6318": [
+						{
+							"count": 1
+						}
+					],
+					"test6139": [
+						{
+							"count": 1
+						}
+					],
+					"test6225": [
+						{
+							"count": 1
+						}
+					],
+					"test6226": [
+						{
+							"count": 1
+						}
+					],
+					"test6245": [
+						{
+							"count": 1
+						}
+					],
+					"test6254": [
+						{
+							"count": 1
+						}
+					],
+					"test6207": [
+						{
+							"count": 1
+						}
+					],
+					"test6209": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "edit",
+				"test6227": "edit",
+				"test6229": "edit",
+				"test6293": "edit",
+				"test6232": "edit",
+				"test6233": "edit",
+				"test6228": "edit",
+				"test6318": "edit",
+				"test6139": "edit",
+				"test6225": "edit",
+				"test6226": "edit",
+				"test6207": "edit",
+				"test6209": "edit",
+				"test6245": "edit",
+				"test6254": "edit"
+			}
+		},
+		{
+			"section_id": 2,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "2"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "157",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list"
+			}
+		},
+		{
+			"section_id": 6,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "6"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6137": [
+						{
+							"id": 1,
+							"type": "dd47",
+							"section_id": "61683",
+							"section_tipo": "test6100",
+							"from_component_tipo": "test6137"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "547",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6228": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1088",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6228"
+						}
+					],
+					"test6218": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "50",
+							"section_tipo": "test6101",
+							"from_component_tipo": "test6218"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "143",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "440242",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "440243",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6137": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6228": [
+						{
+							"count": 1
+						}
+					],
+					"test6218": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6137": "list",
+				"test6230": "list",
+				"test6228": "list",
+				"test6218": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 7,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "7"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6137": [
+						{
+							"id": 1,
+							"type": "dd47",
+							"section_id": "61690",
+							"section_tipo": "test6100",
+							"from_component_tipo": "test6137"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "554",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6228": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1088",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6228"
+						}
+					],
+					"test6218": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "30",
+							"section_tipo": "test6101",
+							"from_component_tipo": "test6218"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "146",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "440276",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "440277",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6137": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6228": [
+						{
+							"count": 1
+						}
+					],
+					"test6218": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6137": "list",
+				"test6230": "list",
+				"test6228": "list",
+				"test6218": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 8,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "8"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1972",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6228": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8195",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "test6228"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "437677",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "437678",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6228": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6228": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 12,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "12"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2028",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6228": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1088",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6228"
+						}
+					],
+					"test6218": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "52",
+							"section_tipo": "test6101",
+							"from_component_tipo": "test6218"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "41",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "43",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "44",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 12,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6228": [
+						{
+							"count": 1
+						}
+					],
+					"test6218": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6228": "list",
+				"test6218": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 20,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "20"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1990",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6228": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8195",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "test6228"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "71",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "438899",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "438900",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 20,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6228": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6228": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 21,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "21"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4459",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "6404",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "75",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "76",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "77",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "1015"
+						}
+					]
+				},
+				"data": {
+					"section_id": 21,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 22,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "22"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1753",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "878",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "78",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "79",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "80",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "33"
+						}
+					]
+				},
+				"data": {
+					"section_id": 22,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 23,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "23"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1568",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2333",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "81",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "82",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "83",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "25"
+						}
+					]
+				},
+				"data": {
+					"section_id": 23,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 24,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "24"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1568",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8576",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "84",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "86",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "85",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "2"
+						}
+					]
+				},
+				"data": {
+					"section_id": 24,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 25,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "25"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "18325",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "13481",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "87",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "88",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "89",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "115"
+						}
+					]
+				},
+				"data": {
+					"section_id": 25,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 26,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "26"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "940",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "6485",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "90",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "113920",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "113921",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "99"
+						}
+					]
+				},
+				"data": {
+					"section_id": 26,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 27,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "27"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2216",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3180",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "93",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "95",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "96",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "1"
+						}
+					]
+				},
+				"data": {
+					"section_id": 27,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 28,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "28"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "15508",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "13011",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "97",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "98",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "99",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "1038"
+						}
+					]
+				},
+				"data": {
+					"section_id": 28,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 29,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "29"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1825",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "6395",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "100",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "101",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "102",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "1"
+						}
+					]
+				},
+				"data": {
+					"section_id": 29,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 30,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "30"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2286",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8647",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "103",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "104",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "105",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "414"
+						}
+					]
+				},
+				"data": {
+					"section_id": 30,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 31,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "31"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "17779",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26795",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26906",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27017",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "210"
+						}
+					]
+				},
+				"data": {
+					"section_id": 31,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 32,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "32"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "10822",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26796",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26907",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27018",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "212"
+						}
+					]
+				},
+				"data": {
+					"section_id": 32,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 33,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "33"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "10765",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26797",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26908",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27019",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "215"
+						}
+					]
+				},
+				"data": {
+					"section_id": 33,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 34,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "34"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4401",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26798",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26909",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27020",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "216"
+						}
+					]
+				},
+				"data": {
+					"section_id": 34,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 35,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "35"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4832",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26799",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26910",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27021",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "219"
+						}
+					]
+				},
+				"data": {
+					"section_id": 35,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 36,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "36"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4832",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26800",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26911",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27022",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "221"
+						}
+					]
+				},
+				"data": {
+					"section_id": 36,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 37,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "37"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "15548",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26801",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26912",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "320078",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "222"
+						}
+					]
+				},
+				"data": {
+					"section_id": 37,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 38,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "38"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4819",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26802",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26913",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27024",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "223"
+						}
+					]
+				},
+				"data": {
+					"section_id": 38,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 40,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "40"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4197",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26804",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26915",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27026",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "226"
+						}
+					]
+				},
+				"data": {
+					"section_id": 40,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 41,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "41"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6230": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1483",
+							"section_tipo": "test6099",
+							"from_component_tipo": "test6230"
+						}
+					],
+					"test6217": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8496",
+							"section_tipo": "test6276",
+							"from_component_tipo": "test6217"
+						}
+					],
+					"test6293": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26805",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6293"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26916",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "27027",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"string": {
+					"test6221": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "227"
+						}
+					]
+				},
+				"data": {
+					"section_id": 41,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6230": [
+						{
+							"count": 1
+						}
+					],
+					"test6217": [
+						{
+							"count": 1
+						}
+					],
+					"test6293": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					],
+					"test6221": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6230": "list",
+				"test6217": "list",
+				"test6221": "list",
+				"test6293": "list",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 203,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "203"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_461.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;461&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 203,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 461,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "461"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_404.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;404&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 461,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 603,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "603"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_382.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;382&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 603,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 877,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "877"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_437.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;437&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 877,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 955,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "955"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_476.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;476&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 955,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 995,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "995"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_436.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;436&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\">"
+						}
+					]
+				},
+				"data": {
+					"section_id": 995,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 1167,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1167"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_81.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;81&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1167,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 1179,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1179"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_450.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;450&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1179,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 1186,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1186"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_382.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;382&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1186,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 1362,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1362"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_441.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;441&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1362,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 1363,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1363"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_248.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;248&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1363,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 1444,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1444"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_458.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;458&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1444,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 1624,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1624"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_243.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;243&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1624,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 1940,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "1940"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_15.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;15&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1940,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 2258,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "2258"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"grouper_context_differential",
+				"list_column_sortable_differential",
+				"multihop_search_differential",
+				"section_context_extras_differential",
+				"tool_component_read_differential"
+			],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "32891",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "32900",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2258,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 3147,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "3147"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_437.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;437&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3147,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 3240,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "3240"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><strong><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_395.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;395&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></strong></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3240,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 3316,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "3316"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_81.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;81&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3316,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 3384,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "3384"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "36804",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "36805",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3384,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 3726,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "3726"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_427.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;427&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3726,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 5282,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "5282"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_427.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;427&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5282,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 5402,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "5402"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_108.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;108&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5402,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 5675,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "5675"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_376.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;376&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5675,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 6310,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "6310"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_368.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;368&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6310,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 6605,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "6605"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"list_column_sortable_differential",
+				"multihop_search_differential"
+			],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "44705",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "44706",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6605,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 7354,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "7354"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_525.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;525&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7354,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 7712,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "7712"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6265": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_205.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;205&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7712,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6265": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6265": "list"
+			}
+		},
+		{
+			"section_id": 7834,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "7834"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_404.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;404&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7834,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 7941,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "7941"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_427.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;427&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7941,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 8008,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "8008"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_379.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;379&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8008,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 8030,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "8030"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_461.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;461&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8030,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 8047,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "8047"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_461.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;461&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8047,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 8053,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "8053"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-2-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_320.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"2\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;320&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8053,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 25524,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "25524"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "136459",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "136460",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 25524,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 27099,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "27099"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "149483",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "149484",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 27099,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 27103,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "27103"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "149493",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "149494",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 27103,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 29930,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "29930"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_379.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;379&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 29930,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 35811,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "35811"
+			},
+			"reconstructed": true,
+			"gates": ["multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "175848",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "175849",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 35811,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 53919,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "53919"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_379.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;379&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 53919,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 61138,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "61138"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3295",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3296",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 61138,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 61146,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "61146"
+			},
+			"reconstructed": true,
+			"gates": ["multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3311",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3312",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 61146,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 61683,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "61683"
+			},
+			"reconstructed": true,
+			"existence_only": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"data": {
+					"section_id": 61683,
+					"section_tipo": "test6100"
+				}
+			}
+		},
+		{
+			"section_id": 61690,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "61690"
+			},
+			"reconstructed": true,
+			"existence_only": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"data": {
+					"section_id": 61690,
+					"section_tipo": "test6100"
+				}
+			}
+		},
+		{
+			"section_id": 64018,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "64018"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8990",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8991",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 64018,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 70990,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "70990"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26654",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "26655",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 70990,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 71488,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "71488"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "tool_component_read_differential"],
+			"columns": {
+				"relation": {
+					"test6227": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "test6227"
+						}
+					],
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "35848",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "35849",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 71488,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6227": [
+						{
+							"count": 1
+						}
+					],
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6227": "edit",
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 74732,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "74732"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "70218",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "70219",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 74732,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 75137,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "75137"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_379.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;379&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 75137,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 86086,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "86086"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_379.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;379&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 86086,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 87294,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "87294"
+			},
+			"reconstructed": true,
+			"gates": ["list_column_sortable_differential", "multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "120998",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "120999",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 87294,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 87298,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "87298"
+			},
+			"reconstructed": true,
+			"gates": ["list_column_sortable_differential", "multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "121006",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "121007",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 87298,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 87301,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "87301"
+			},
+			"reconstructed": true,
+			"gates": ["multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "121012",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "121013",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 87301,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 99934,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "99934"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151492",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151493",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 99934,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 99936,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "99936"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151496",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151497",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 99936,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 99937,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "99937"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151500",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151501",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 99937,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 99985,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "99985"
+			},
+			"reconstructed": true,
+			"gates": ["list_column_sortable_differential", "multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151597",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "151598",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 99985,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 104390,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "104390"
+			},
+			"reconstructed": true,
+			"gates": ["multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "197468",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "197469",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 104390,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 133935,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "133935"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "337309",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "337310",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 133935,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 133944,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "133944"
+			},
+			"reconstructed": true,
+			"gates": ["multihop_search_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "337332",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "337333",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 133944,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 139063,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "139063"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"test6224": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p><img id=\"[svg-n-1-]\" src=\"/dedalo/media/svg/web/hierarchy95_sccmk1_379.svg\" class=\"svg\" data-type=\"svg\" data-tag_id=\"1\" data-state=\"n\" data-label=\"\" data-data=\"{&#039;section_tipo&#039;:&#039;sccmk1&#039;,&#039;section_id&#039;:&#039;379&#039;,&#039;component_tipo&#039;:&#039;hierarchy95&#039;}\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 139063,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6224": "list"
+			}
+		},
+		{
+			"section_id": 181455,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "181455"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "435141",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "435142",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 181455,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 181471,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "181471"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential"],
+			"columns": {
+				"relation": {
+					"test6232": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "435179",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6232"
+						}
+					],
+					"test6233": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "435180",
+							"section_tipo": "rsc170",
+							"from_component_tipo": "test6233"
+						}
+					]
+				},
+				"data": {
+					"section_id": 181471,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6232": [
+						{
+							"count": 1
+						}
+					],
+					"test6233": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6232": "list",
+				"test6233": "list"
+			}
+		},
+		{
+			"section_id": 182700,
+			"source": {
+				"section_tipo": "numisdata4",
+				"section_id": "182700"
+			},
+			"reconstructed": true,
+			"gates": ["info_observer_differential"],
+			"columns": {
+				"relation": {
+					"test6139": [
+						{
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"id": 1,
+							"type": "dd151",
+							"from_component_tipo": "test6139"
+						},
+						{
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "test6337",
+							"from_component_tipo": "test6139",
+							"id": 2
+						}
+					]
+				},
+				"data": {
+					"section_id": 182700,
+					"section_tipo": "test6100"
+				},
+				"meta": {
+					"test6139": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6139": "edit"
+			}
+		}
+	]
+}

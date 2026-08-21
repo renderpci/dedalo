@@ -1,0 +1,263 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "rsc167",
+	"source_section_tipo": "rsc167",
+	"table": "matrix",
+	"kind": "seed",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "rsc167",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"component_datalist_lifecycle_differential",
+				"relation_inverse_differential",
+				"section_context_extras_differential"
+			],
+			"columns": {
+				"media": {
+					"rsc35": [
+						{
+							"id": 1,
+							"lib_data": null,
+							"files_info": [
+								{
+									"quality": "original",
+									"extension": "mp4",
+									"file_name": "rsc35_rsc167_1.mp4",
+									"file_path": "/av/original/rsc35_rsc167_1.mp4",
+									"file_size": 1055736,
+									"file_time": {
+										"day": 5,
+										"hour": 18,
+										"time": 65133745133,
+										"year": 2026,
+										"month": 7,
+										"minute": 58,
+										"second": 53,
+										"timestamp": "2026-07-05 18:58:53"
+									},
+									"file_exist": true
+								},
+								{
+									"quality": "404",
+									"extension": "mp4",
+									"file_name": "rsc35_rsc167_1.mp4",
+									"file_path": "/av/404/rsc35_rsc167_1.mp4",
+									"file_size": 41330,
+									"file_time": {
+										"day": 4,
+										"hour": 23,
+										"time": 65133675530,
+										"year": 2026,
+										"month": 7,
+										"minute": 38,
+										"second": 50,
+										"timestamp": "2026-07-04 23:38:50"
+									},
+									"file_exist": true
+								}
+							],
+							"original_file_name": "SampleVideo_1280x720_1mb.mp4",
+							"original_upload_date": {
+								"day": 5,
+								"hour": 18,
+								"time": 65133745133,
+								"year": 2026,
+								"month": 7,
+								"minute": 58,
+								"second": 53,
+								"timestamp": "2026-07-05 18:58:53"
+							},
+							"original_normalized_name": "rsc35_rsc167_1.mp4"
+						}
+					]
+				},
+				"relation": {
+					"rsc20": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "rsc20"
+						}
+					],
+					"rsc860": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"tag_id": "58",
+							"section_id": "1024",
+							"section_tipo": "test2822",
+							"section_top_tipo": "test6813",
+							"section_top_id": "1",
+							"tag_component_tipo": "rsc36",
+							"from_component_tipo": "rsc860"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"tag_id": "58",
+							"section_id": "1072",
+							"section_tipo": "test2822",
+							"section_top_tipo": "test6813",
+							"section_top_id": "1",
+							"tag_component_tipo": "rsc36",
+							"from_component_tipo": "rsc860"
+						}
+					]
+				},
+				"string": {
+					"rsc23": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Introducción al Proyecto Moneda Iberica "
+						}
+					],
+					"rsc36": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><img id=\"[index-n-1-label in 1]\" src=\"../component_text_area/tag/?id=[index-n-1-label in 1]\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"1\" data-state=\"n\" data-label=\"label in 1\" data-data=\"\">aa<img id=\"[/index-n-1-label in 1]\" src=\"../component_text_area/tag/?id=[/index-n-1-label in 1]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"1\" data-state=\"n\" data-label=\"label in 1\" data-data=\"\"></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "rsc167"
+				},
+				"meta": {
+					"rsc20": [
+						{
+							"count": 1
+						}
+					],
+					"rsc860": [
+						{
+							"count": 2
+						}
+					],
+					"rsc23": [
+						{
+							"count": 1
+						}
+					],
+					"rsc36": [
+						{
+							"count": 1
+						}
+					],
+					"rsc35": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc35": "edit",
+				"rsc20": "edit",
+				"rsc860": "list",
+				"rsc23": "list",
+				"rsc36": "list"
+			}
+		},
+		{
+			"section_id": 2,
+			"source": {
+				"section_tipo": "rsc167",
+				"section_id": "2"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "component_datalist_lifecycle_differential"],
+			"columns": {
+				"relation": {
+					"rsc860": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"tag_id": "2",
+							"section_id": "1",
+							"section_tipo": "test1023",
+							"section_top_tipo": "test6813",
+							"section_top_id": "1",
+							"tag_component_tipo": "rsc36",
+							"from_component_tipo": "rsc860"
+						}
+					]
+				},
+				"media": {
+					"rsc35": [
+						{
+							"id": 1,
+							"files_info": [
+								{
+									"quality": "404",
+									"extension": "mp4",
+									"file_name": "rsc35_rsc167_2.mp4",
+									"file_path": "/av/404/rsc35_rsc167_2.mp4",
+									"file_size": 44055903,
+									"file_time": {
+										"day": 15,
+										"hour": 19,
+										"time": 64984618805,
+										"year": 2021,
+										"month": 11,
+										"minute": 0,
+										"second": 5,
+										"timestamp": "2021-11-15 19:00:05"
+									},
+									"file_exist": true
+								},
+								{
+									"quality": "thumb",
+									"extension": "jpg",
+									"file_name": "rsc35_rsc167_2.jpg",
+									"file_path": "/av/thumb/rsc35_rsc167_2.jpg",
+									"file_size": 2846,
+									"file_time": {
+										"day": 30,
+										"hour": 12,
+										"time": 65063563955,
+										"year": 2024,
+										"month": 4,
+										"minute": 12,
+										"second": 35,
+										"timestamp": "2024-04-30 12:12:35"
+									},
+									"file_exist": true
+								}
+							]
+						}
+					]
+				},
+				"data": {
+					"section_id": 2,
+					"section_tipo": "rsc167"
+				},
+				"meta": {
+					"rsc860": [
+						{
+							"count": 1
+						}
+					],
+					"rsc35": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc860": "list",
+				"rsc35": "list"
+			}
+		}
+	]
+}

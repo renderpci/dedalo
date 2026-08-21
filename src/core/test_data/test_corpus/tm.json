@@ -1,0 +1,566 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"rows": [
+		{
+			"id": 51071494,
+			"section_tipo": "rsc1242",
+			"section_id": 578,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-01 10:13:01",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc1242",
+				"section_id": "578",
+				"matrix_id": "51071494"
+			},
+			"gate": "tm_relation_filter_differential"
+		},
+		{
+			"id": 51071495,
+			"section_tipo": "rsc1242",
+			"section_id": 578,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-01 10:13:01",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc1242",
+				"section_id": "578",
+				"matrix_id": "51071495"
+			},
+			"gate": "tm_relation_filter_differential"
+		},
+		{
+			"id": 51071496,
+			"section_tipo": "rsc1242",
+			"section_id": 578,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-01 10:13:02",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc1242",
+				"section_id": "578",
+				"matrix_id": "51071496"
+			},
+			"gate": "tm_relation_filter_differential"
+		},
+		{
+			"id": 51071497,
+			"section_tipo": "rsc1242",
+			"section_id": 578,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-01 10:13:08",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc1242",
+				"section_id": "578",
+				"matrix_id": "51071497"
+			},
+			"gate": "tm_relation_filter_differential"
+		},
+		{
+			"id": 51104813,
+			"section_tipo": "rsc170",
+			"section_id": 1,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-09 23:21:22",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "1",
+				"matrix_id": "51104813"
+			},
+			"gate": "tm_component_value_differential"
+		},
+		{
+			"id": 51104814,
+			"section_tipo": "rsc170",
+			"section_id": 1,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-09 23:21:25",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "1",
+				"matrix_id": "51104814"
+			},
+			"gate": "tm_component_value_differential"
+		},
+		{
+			"id": 51104815,
+			"section_tipo": "rsc170",
+			"section_id": 1,
+			"tipo": "rsc20",
+			"tipo_known": true,
+			"lang": null,
+			"timestamp": "2026-07-09 23:21:34",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "1",
+				"matrix_id": "51104815"
+			},
+			"gate": "tm_component_value_differential"
+		},
+		{
+			"id": 51104816,
+			"section_tipo": "rsc170",
+			"section_id": 1,
+			"tipo": "rsc20",
+			"tipo_known": true,
+			"lang": null,
+			"timestamp": "2026-07-09 23:21:47",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "1",
+				"matrix_id": "51104816"
+			},
+			"gate": "tm_component_value_differential"
+		},
+		{
+			"id": 51107680,
+			"section_tipo": "rsc170",
+			"section_id": 1,
+			"tipo": "rsc20",
+			"tipo_known": true,
+			"lang": null,
+			"timestamp": "2026-07-10 12:15:15",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "1",
+				"matrix_id": "51107680"
+			},
+			"gate": "tm_component_value_differential"
+		},
+		{
+			"id": 51107681,
+			"section_tipo": "rsc170",
+			"section_id": 1,
+			"tipo": "rsc20",
+			"tipo_known": true,
+			"lang": null,
+			"timestamp": "2026-07-10 12:15:16",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "1",
+				"matrix_id": "51107681"
+			},
+			"gate": "tm_component_value_differential"
+		},
+		{
+			"id": 51112303,
+			"section_tipo": "test2966",
+			"section_id": 612,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:21",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "612",
+				"matrix_id": "51112303"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112304,
+			"section_tipo": "test2966",
+			"section_id": 612,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:21",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "612",
+				"matrix_id": "51112304"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112305,
+			"section_tipo": "test2966",
+			"section_id": 612,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:21",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "612",
+				"matrix_id": "51112305"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112306,
+			"section_tipo": "test2966",
+			"section_id": 613,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:21",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "613",
+				"matrix_id": "51112306"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112307,
+			"section_tipo": "test2966",
+			"section_id": 613,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:21",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "613",
+				"matrix_id": "51112307"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112328,
+			"section_tipo": "test2966",
+			"section_id": 614,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:33",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "614",
+				"matrix_id": "51112328"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112329,
+			"section_tipo": "test2966",
+			"section_id": 614,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:33",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "614",
+				"matrix_id": "51112329"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112330,
+			"section_tipo": "test2966",
+			"section_id": 614,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:33",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "ich135",
+				"section_id": "614",
+				"matrix_id": "51112330"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112355,
+			"section_tipo": "testimmovable1",
+			"section_id": 1354,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:44",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "tchi1",
+				"section_id": "1354",
+				"matrix_id": "51112355"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112370,
+			"section_tipo": "dd234",
+			"section_id": 2,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:18:47",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "dd234",
+				"section_id": "2",
+				"matrix_id": "51112370"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112421,
+			"section_tipo": "test6903",
+			"section_id": 58,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:20:42",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "on1",
+				"section_id": "58",
+				"matrix_id": "51112421"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112422,
+			"section_tipo": "test6903",
+			"section_id": 58,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:20:42",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "on1",
+				"section_id": "58",
+				"matrix_id": "51112422"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112423,
+			"section_tipo": "test6903",
+			"section_id": 58,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:20:42",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "on1",
+				"section_id": "58",
+				"matrix_id": "51112423"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112425,
+			"section_tipo": "test6903",
+			"section_id": 58,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:20:42",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "on1",
+				"section_id": "58",
+				"matrix_id": "51112425"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112427,
+			"section_tipo": "test6903",
+			"section_id": 58,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:20:42",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "on1",
+				"section_id": "58",
+				"matrix_id": "51112427"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112429,
+			"section_tipo": "test6903",
+			"section_id": 58,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:20:42",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "on1",
+				"section_id": "58",
+				"matrix_id": "51112429"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112456,
+			"section_tipo": "testimmovable1",
+			"section_id": 1359,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:21:30",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "tchi1",
+				"section_id": "1359",
+				"matrix_id": "51112456"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112457,
+			"section_tipo": "testimmovable1",
+			"section_id": 1360,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:21:30",
+			"user_id": -1,
+			"data": null,
+			"source": {
+				"section_tipo": "tchi1",
+				"section_id": "1360",
+				"matrix_id": "51112457"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112478,
+			"section_tipo": "rsc170",
+			"section_id": 990000456,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:22:14",
+			"user_id": 1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "990000456",
+				"matrix_id": "51112478"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112479,
+			"section_tipo": "rsc170",
+			"section_id": 990000456,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:22:14",
+			"user_id": 1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "990000456",
+				"matrix_id": "51112479"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112480,
+			"section_tipo": "rsc170",
+			"section_id": 990000456,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:22:14",
+			"user_id": 1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "990000456",
+				"matrix_id": "51112480"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112481,
+			"section_tipo": "rsc170",
+			"section_id": 990000456,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:22:14",
+			"user_id": 1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "990000456",
+				"matrix_id": "51112481"
+			},
+			"gate": "tm_bare_list_differential"
+		},
+		{
+			"id": 51112482,
+			"section_tipo": "rsc170",
+			"section_id": 990000456,
+			"tipo": null,
+			"tipo_known": false,
+			"lang": null,
+			"timestamp": "2026-07-11 10:22:14",
+			"user_id": 1,
+			"data": null,
+			"source": {
+				"section_tipo": "rsc170",
+				"section_id": "990000456",
+				"matrix_id": "51112482"
+			},
+			"gate": "tm_bare_list_differential"
+		}
+	]
+}

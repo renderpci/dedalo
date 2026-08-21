@@ -1,0 +1,2719 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "rsc205",
+	"source_section_tipo": "rsc205",
+	"table": "matrix",
+	"kind": "seed",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"model_coverage_sweep",
+				"relation_index_get_data_differential"
+			],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ancient Coinage of the Iberian Peninsula: Greek, Punic, Iberian, Roman / Les Monedes de l'Edat Antiga a la Península Ibèrica [= ACIP]"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"mode": "start",
+							"start": {
+								"time": 64635148800,
+								"year": 2011
+							}
+						}
+					]
+				},
+				"media": {
+					"rsc209": [
+						{
+							"id": 1,
+							"files_info": [
+								{
+									"quality": "web",
+									"extension": "pdf",
+									"file_name": "rsc209_rsc205_1.pdf",
+									"file_path": "/pdf/web/0/rsc209_rsc205_1.pdf",
+									"file_size": 84074694,
+									"file_time": {
+										"day": 7,
+										"hour": 17,
+										"time": 64935710078,
+										"year": 2020,
+										"month": 5,
+										"minute": 14,
+										"second": 38,
+										"timestamp": "2020-05-07 17:14:38"
+									},
+									"file_exist": true
+								},
+								{
+									"quality": "thumb",
+									"extension": "jpg",
+									"file_name": "rsc209_rsc205_1.jpg",
+									"file_path": "/pdf/thumb/0/rsc209_rsc205_1.jpg",
+									"file_size": 6596,
+									"file_time": {
+										"day": 30,
+										"hour": 22,
+										"time": 65063599754,
+										"year": 2024,
+										"month": 4,
+										"minute": 9,
+										"second": 14,
+										"timestamp": "2024-04-30 22:09:14"
+									},
+									"file_exist": true
+								}
+							]
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					],
+					"rsc209": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list",
+				"rsc224": "list",
+				"rsc209": "list"
+			}
+		},
+		{
+			"section_id": 2,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "2"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"dd560": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "5",
+							"section_tipo": "dd1706",
+							"from_component_tipo": "dd560",
+							"main_component_tipo": "rsc217"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Moneda Ibérica"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Valencia"
+						}
+					],
+					"rsc219": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Universitat de València - Museu de Prehistòria de València"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64988697600,
+								"year": 2022
+							}
+						}
+					]
+				},
+				"iri": {
+					"rsc217": [
+						{
+							"id": 1,
+							"iri": "https://monedaiberica.org/",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"dd560": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc219": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					],
+					"rsc217": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd560": "edit",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc219": "list",
+				"rsc224": "list",
+				"rsc217": "list"
+			}
+		},
+		{
+			"section_id": 3,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "3"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Monete puniche nelle collezioni italiane"
+						}
+					]
+				},
+				"relation": {
+					"rsc387": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "2",
+							"section_tipo": "testcult1",
+							"from_component_tipo": "rsc387"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc387": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			},
+			"inverse_edges": [
+				{
+					"origin": "inverse_edge",
+					"column": "relation",
+					"component_tipo": "rsc387",
+					"item_id": 1,
+					"type": "dd96",
+					"target": {
+						"section_tipo": "testcult1",
+						"section_id": 2
+					},
+					"revealed_by": {
+						"section_tipo": "cult1",
+						"section_id": "2",
+						"tipo": "hierarchy40",
+						"gate": "complex_relation_sweep"
+					}
+				}
+			]
+		},
+		{
+			"section_id": 4,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "4"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Les monnaies de l'Afrique Antique (400 av. J.C.-40 ap. J.C)"
+						}
+					]
+				},
+				"data": {
+					"section_id": 4,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 5,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "5"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Corpus nummum Hispaniae ante Augusti Aetatem"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 6,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "6"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Le monete Puniche della collezione L. Forteleoni"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 7,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "7"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Catalogo critico di una collezione di monete puniche della Sardegna"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 8,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "8"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Le monete della Sardegna Vandalica"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 9,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "9"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "6497",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "The Roman Imperial Coinage - Augustus to Vitellius"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "London"
+						}
+					],
+					"rsc219": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Spink and Son"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63767347200,
+								"year": 1984
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 9,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc219": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc219": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 24,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "24"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2014",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "1362",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						},
+						{
+							"id": 3,
+							"type": "dd151",
+							"section_id": "5790",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Roman Provincial Coinage- From the death of Caesar to the death of Vitellius (44 BC - AD 69) [= RPC]"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "London-Paris"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64024473600,
+								"year": 1992
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 24,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 3
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 28,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "28"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Sylloge nummorum Graecorum : [Great Britain]. Volume IX, The British Museum 2. Spain"
+						}
+					]
+				},
+				"data": {
+					"section_id": 28,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 34,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "34"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Sylloge Nummorum Graecorum España, Museo Arqueológico Nacional, Madrid, Volumen I. Hispania. Ciudades feno-púnicas, Parte 1: Gadir y Ebusus"
+						}
+					]
+				},
+				"data": {
+					"section_id": 34,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 35,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "35"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Sylloge Nummorum Graecorum España, Museo Arqueológico Nacional, Madrid, Volumen I. Hispania. Ciudades feno-púnicas, Parte 2: Acuñaciones cartaginesas en Iberia y emisiones ciudadanas (continuación)"
+						}
+					]
+				},
+				"data": {
+					"section_id": 35,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 37,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "37"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "relation_index_get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Sylloge Numorum Graecorum Italia. Sassari: Museo Archeologico G. A. Sanna. Vol. I. Sicilia - Zeugitana"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64056614400,
+								"year": 1993
+							}
+						}
+					]
+				},
+				"relation": {
+					"rsc387": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "1",
+							"section_tipo": "testcult1",
+							"from_component_tipo": "rsc387"
+						}
+					]
+				},
+				"data": {
+					"section_id": 37,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc387": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list",
+				"rsc224": "list"
+			},
+			"inverse_edges": [
+				{
+					"origin": "inverse_edge",
+					"column": "relation",
+					"component_tipo": "rsc387",
+					"item_id": 1,
+					"type": "dd96",
+					"target": {
+						"section_tipo": "testcult1",
+						"section_id": 1
+					},
+					"revealed_by": {
+						"section_tipo": "cult1",
+						"section_id": "1",
+						"tipo": "hierarchy40",
+						"gate": "complex_relation_sweep"
+					}
+				}
+			]
+		},
+		{
+			"section_id": 42,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "42"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "relation_index_get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "A Dictionary of Greek and Roman Mythology"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63574502400,
+								"year": 1978
+							}
+						}
+					]
+				},
+				"relation": {
+					"rsc387": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "1",
+							"section_tipo": "testcult1",
+							"from_component_tipo": "rsc387"
+						}
+					]
+				},
+				"data": {
+					"section_id": 42,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc387": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list",
+				"rsc224": "list"
+			},
+			"inverse_edges": [
+				{
+					"origin": "inverse_edge",
+					"column": "relation",
+					"component_tipo": "rsc387",
+					"item_id": 1,
+					"type": "dd96",
+					"target": {
+						"section_tipo": "testcult1",
+						"section_id": 1
+					},
+					"revealed_by": {
+						"section_tipo": "cult1",
+						"section_id": "1",
+						"tipo": "hierarchy40",
+						"gate": "relation_index_get_data_differential"
+					}
+				}
+			]
+		},
+		{
+			"section_id": 44,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "44"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "relation_index_get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ancient jewish coinage. Vol. II. The Israel Museum, Jerusalem"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63703065600,
+								"year": 1982
+							}
+						}
+					]
+				},
+				"relation": {
+					"rsc387": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "1",
+							"section_tipo": "testcult1",
+							"from_component_tipo": "rsc387"
+						}
+					]
+				},
+				"data": {
+					"section_id": 44,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc387": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list",
+				"rsc224": "list"
+			},
+			"inverse_edges": [
+				{
+					"origin": "inverse_edge",
+					"column": "relation",
+					"component_tipo": "rsc387",
+					"item_id": 1,
+					"type": "dd96",
+					"target": {
+						"section_tipo": "testcult1",
+						"section_id": 1
+					},
+					"revealed_by": {
+						"section_tipo": "cult1",
+						"section_id": "1",
+						"tipo": "hierarchy40",
+						"gate": "relation_index_get_data_differential"
+					}
+				}
+			]
+		},
+		{
+			"section_id": 69,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "69"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "relation_index_get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ripostigli del Museo Archeologico di Siracusa"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63928051200,
+								"year": 1989
+							}
+						}
+					]
+				},
+				"relation": {
+					"rsc387": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "1",
+							"section_tipo": "testcult1",
+							"from_component_tipo": "rsc387"
+						}
+					]
+				},
+				"data": {
+					"section_id": 69,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc387": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list",
+				"rsc224": "list"
+			},
+			"inverse_edges": [
+				{
+					"origin": "inverse_edge",
+					"column": "relation",
+					"component_tipo": "rsc387",
+					"item_id": 1,
+					"type": "dd96",
+					"target": {
+						"section_tipo": "testcult1",
+						"section_id": 1
+					},
+					"revealed_by": {
+						"section_tipo": "cult1",
+						"section_id": "1",
+						"tipo": "hierarchy40",
+						"gate": "relation_index_get_data_differential"
+					}
+				}
+			]
+		},
+		{
+			"section_id": 74,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "74"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "relation_index_get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Hispania Graeca (2 tomos)"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 62610278400,
+								"year": 1948
+							}
+						}
+					]
+				},
+				"relation": {
+					"rsc387": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "1",
+							"section_tipo": "testcult1",
+							"from_component_tipo": "rsc387"
+						}
+					]
+				},
+				"data": {
+					"section_id": 74,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc387": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list",
+				"rsc224": "list"
+			},
+			"inverse_edges": [
+				{
+					"origin": "inverse_edge",
+					"column": "relation",
+					"component_tipo": "rsc387",
+					"item_id": 1,
+					"type": "dd96",
+					"target": {
+						"section_tipo": "testcult1",
+						"section_id": 1
+					},
+					"revealed_by": {
+						"section_tipo": "cult1",
+						"section_id": "1",
+						"tipo": "hierarchy40",
+						"gate": "relation_index_get_data_differential"
+					}
+				}
+			]
+		},
+		{
+			"section_id": 76,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "76"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ancient History from coins"
+						}
+					]
+				},
+				"data": {
+					"section_id": 76,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 81,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "81"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Les dracmes emporitanes de principi del segle II a.C"
+						}
+					]
+				},
+				"data": {
+					"section_id": 81,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 94,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "94"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Symbolism on Greek Coins"
+						}
+					]
+				},
+				"data": {
+					"section_id": 94,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 102,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "102"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Eisphora. A Study of Direct Taxation in Ancient Athens"
+						}
+					]
+				},
+				"data": {
+					"section_id": 102,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 130,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "130"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Bosa. Le monete del Museo Civico"
+						}
+					]
+				},
+				"data": {
+					"section_id": 130,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 1436,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "1436"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential", "get_data_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2423",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Historia de las cecas de Hispania Antigua"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Madrid"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64185177600,
+								"year": 1997
+							}
+						}
+					]
+				},
+				"iri": {
+					"rsc217": [
+						{
+							"id": 1,
+							"iri": "https://dialnet.unirioja.es/servlet/extlib?codigo=52872",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1436,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					],
+					"rsc217": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc224": "list",
+				"rsc217": "list"
+			}
+		},
+		{
+			"section_id": 2387,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "2387"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3287",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "1813",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Diccionario de cecas y pueblos hispánicos: con una introducción a la numismática antigua de la Península Ibérica (2 vols.)"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Madrid"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64313740800,
+								"year": 2001
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 2387,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 2
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 2653,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "2653"
+			},
+			"reconstructed": true,
+			"gates": ["get_data_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1891",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Les monedes catalanes"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Barcelona"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 61324646400,
+								"year": 1908
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 2653,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 7987,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "7987"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1308",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Un divisor inédito de la ceca púnica de Abderat/Abdera (Adra, Almería)"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Sintra"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64281600000,
+								"year": 2000
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 7987,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 9049,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "9049"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "4391",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Las acuñaciones fenicias hispanas: aspectos históricos y económicos"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Madrid"
+						}
+					],
+					"rsc219": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "CSIC, Sociedade Portuguesa de Numismática"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64120896000,
+								"year": 1995
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 9049,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc219": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc219": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 9376,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "9376"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1308",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "La producción y circulación monetaria en el sudeste peninsular"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Madrid"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64281600000,
+								"year": 2000
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 9376,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 10712,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "10712"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1308",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					],
+					"rsc211": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "104",
+							"section_tipo": "rsc212",
+							"from_component_tipo": "rsc211"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Avance de la ordenación de las monedas de Abderat/Abdera (Adra, Almería)"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64153036800,
+								"year": 1996
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 10712,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc211": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc211": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 11993,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "11993"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1308",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					],
+					"rsc211": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "126",
+							"section_tipo": "rsc212",
+							"from_component_tipo": "rsc211"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Acuñaciones púnicas en Hispania"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63831628800,
+								"year": 1986
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 11993,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc211": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc211": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 14018,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "14018"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2316",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "4579",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					],
+					"rsc211": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "688",
+							"section_tipo": "rsc212",
+							"from_component_tipo": "rsc211"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "L'influence phénico-puniche sur l'iconographie des frappes locales de la Péninsule Ibérique"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64024473600,
+								"year": 1992
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 14018,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 2
+						}
+					],
+					"rsc211": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc211": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 15458,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "15458"
+			},
+			"reconstructed": true,
+			"gates": ["relation_inverse_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Notas sobre hallazgos numismáticos antiguos en Andalucía (siglo XVI)"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15458,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 15460,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "15460"
+			},
+			"reconstructed": true,
+			"gates": ["relation_inverse_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "La emisión bilingüe de Saitabi"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15460,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 15465,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "15465"
+			},
+			"reconstructed": true,
+			"gates": ["relation_inverse_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "El tesorillo de monedas de Ebusus de Pedreguer (Alicante)"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15465,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 15470,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "15470"
+			},
+			"reconstructed": true,
+			"gates": ["relation_inverse_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Posible testimonio de sacrificios de toros en las monedas de la Ulterior"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15470,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 15472,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "15472"
+			},
+			"reconstructed": true,
+			"gates": ["relation_inverse_differential"],
+			"columns": {
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Mesa redonda sobre las monedas de Ikalkusken"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15472,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc140": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc140": "list"
+			}
+		},
+		{
+			"section_id": 16651,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "16651"
+			},
+			"reconstructed": true,
+			"gates": ["get_data_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2110",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "La ceca de Abarildur y un nuevo tipo de moneda anepígrafa"
+						}
+					],
+					"rsc144": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Barcelona"
+						}
+					],
+					"rsc219": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Diputación Provincial de Barcelona, Instituto de Prehistoria y Arqueología"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63445939200,
+								"year": 1974
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 16651,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc144": [
+						{
+							"count": 1
+						}
+					],
+					"rsc219": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc144": "list",
+				"rsc219": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 17976,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "17976"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "get_data_differential", "request_config_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1371",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					],
+					"rsc211": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "154",
+							"section_tipo": "rsc212",
+							"from_component_tipo": "rsc211"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Abariltur"
+						}
+					],
+					"rsc219": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Asociación Numismática Española, Asociación Numismática Europea"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64763712000,
+								"year": 2015
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 17976,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc211": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc219": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc211": "list",
+				"rsc219": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 19226,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "19226"
+			},
+			"reconstructed": true,
+			"gates": ["component_datalist_lifecycle_differential"],
+			"columns": {
+				"relation": {
+					"rsc251": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "17344",
+							"section_tipo": "lg1",
+							"from_component_tipo": "rsc251"
+						}
+					]
+				},
+				"data": {
+					"section_id": 19226,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc251": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc251": "edit"
+			}
+		},
+		{
+			"section_id": 19575,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "19575"
+			},
+			"reconstructed": true,
+			"existence_only": true,
+			"gates": ["relation_inverse_differential"],
+			"columns": {
+				"data": {
+					"section_id": 19575,
+					"section_tipo": "rsc205"
+				}
+			}
+		},
+		{
+			"section_id": 19705,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "19705"
+			},
+			"reconstructed": true,
+			"gates": ["get_data_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "7942",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					],
+					"rsc211": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "124",
+							"section_tipo": "rsc212",
+							"from_component_tipo": "rsc211"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "La moneda antigua en Santa Magdalena de Polpís (Baix Maestrat Castelló) y la ceca de Abariltur"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64924416000,
+								"year": 2020
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 19705,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 1
+						}
+					],
+					"rsc211": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc211": "list",
+				"rsc224": "list"
+			}
+		},
+		{
+			"section_id": 19855,
+			"source": {
+				"section_tipo": "rsc205",
+				"section_id": "19855"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc139": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "8009",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "2036",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc139"
+						}
+					],
+					"rsc211": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "69",
+							"section_tipo": "rsc212",
+							"from_component_tipo": "rsc211"
+						}
+					]
+				},
+				"string": {
+					"rsc140": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Abdera. Excavaciones en el Cerro de Montecristo"
+						}
+					]
+				},
+				"date": {
+					"rsc224": [
+						{
+							"id": 1,
+							"start": {
+								"time": 63478080000,
+								"year": 1975
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 19855,
+					"section_tipo": "rsc205"
+				},
+				"meta": {
+					"rsc139": [
+						{
+							"count": 2
+						}
+					],
+					"rsc211": [
+						{
+							"count": 1
+						}
+					],
+					"rsc140": [
+						{
+							"count": 1
+						}
+					],
+					"rsc224": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc139": "list",
+				"rsc140": "list",
+				"rsc211": "list",
+				"rsc224": "list"
+			}
+		}
+	]
+}

@@ -1,0 +1,189 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "rsc1035",
+	"source_section_tipo": "rsc1035",
+	"table": "matrix",
+	"kind": "seed",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "rsc1035",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": ["model_coverage_sweep"],
+			"columns": {
+				"relation": {
+					"rsc1039": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "7942",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc1039"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "rsc1035"
+				},
+				"meta": {
+					"rsc1039": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc1039": "list"
+			}
+		},
+		{
+			"section_id": 3,
+			"source": {
+				"section_tipo": "rsc1035",
+				"section_id": "3"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"relation": {
+					"rsc1039": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "5790",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc1039"
+						}
+					],
+					"rsc1038": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "test7365",
+							"from_component_tipo": "rsc1038"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "test7365",
+							"from_component_tipo": "rsc1038"
+						}
+					]
+				},
+				"date": {
+					"rsc1040": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64988697600,
+								"year": 2022
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 3,
+					"section_tipo": "rsc1035"
+				},
+				"meta": {
+					"rsc1039": [
+						{
+							"count": 1
+						}
+					],
+					"rsc1038": [
+						{
+							"count": 2
+						}
+					],
+					"rsc1040": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc1039": "edit",
+				"rsc1038": "edit",
+				"rsc1040": "edit"
+			}
+		},
+		{
+			"section_id": 310,
+			"source": {
+				"section_tipo": "rsc1035",
+				"section_id": "310"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential", "model_coverage_sweep"],
+			"columns": {
+				"relation": {
+					"rsc1039": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "7959",
+							"section_tipo": "rsc197",
+							"from_component_tipo": "rsc1039"
+						}
+					],
+					"rsc1038": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "test7365",
+							"from_component_tipo": "rsc1038"
+						}
+					]
+				},
+				"date": {
+					"rsc1040": [
+						{
+							"id": 1,
+							"start": {
+								"time": 64994054400,
+								"year": 2022,
+								"month": 3
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 310,
+					"section_tipo": "rsc1035"
+				},
+				"meta": {
+					"rsc1039": [
+						{
+							"count": 1
+						}
+					],
+					"rsc1038": [
+						{
+							"count": 1
+						}
+					],
+					"rsc1040": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc1039": "edit",
+				"rsc1038": "edit",
+				"rsc1040": "edit"
+			}
+		}
+	]
+}
