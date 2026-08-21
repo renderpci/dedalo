@@ -8,6 +8,7 @@
 	import { is_filter_empty } from '../../search/js/search.js'
 	import { data_manager } from '../../common/js/data_manager.js'
 	import {
+		clone,
 		open_records_in_window,
 		printf
 	} from '../../common/js/utils/index.js'
@@ -246,7 +247,10 @@ export const render_open_list_with_direct_relations = ( options ) => {
 */
 const open_related_data = async function( options ){
 
-	const sqo				= options.sqo
+	// sqo. Note that a local copy is used here to avoid mutating the caller
+	// section rqo.sqo when limit/offset are changed below (it would break
+	// the caller section pagination)
+	const sqo				= clone(options.sqo)
 	const rqo_options		= options.rqo_options
 	const caller_label		= options.caller_label
 	const self_caller		= options.self_caller
