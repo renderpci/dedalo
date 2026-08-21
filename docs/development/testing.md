@@ -35,7 +35,10 @@ Discovery and timeouts come from `bunfig.toml`:
   contains view files whose names match Bun's default test globs
   (`core/widgets/test/…`), and without the confinement Bun would try to run them.
 - `timeout = 30000` — DB-touching gates get a generous budget.
-- Two **preloads** run before any test module is imported:
+- **Preloads** run before any test module is imported, and they matter because
+  `src/config/config.ts` freezes the database connection *and* the media root at
+  import: `test/preload/test_database.ts` repoints the suite at its own database,
+  `test/preload/test_media.ts` repoints it at its own media root (below),
   `test/preload/session_db.ts` points `DEDALO_SESSION_DB_PATH` at a throwaway sqlite
   store (a test run once wiped the live session store and logged everyone out —
   never bypass this by hardcoding a path), and `test/preload/component_registry.ts`
@@ -44,6 +47,89 @@ Discovery and timeouts come from `bunfig.toml`:
 
 The static gates are separate: `bunx tsc --noEmit` (strict, zero-new-errors) and
 `bun run lint` (Biome, `biome.jsonc`).
+
+### The suite database, and why it cannot be yours
+
+The suite runs on its own database, built from files vendored in the repository:
+
+```bash
+bun run test:db:setup          # drops and rebuilds <app db>_test (or DEDALO_TEST_DATABASE)
+```
+
+That script restores the install seed, materializes the generic `test` TLD ontology,
+imports the hierarchies and registers the tools — and then **stamps the database**
+with a `dedalo_test_marker` row: one row, pinned by database constraints, carrying
+the build stamp, the git revision that built it and the sha256 of both the seed and
+the `test` TLD ontology. It is the only producer of that row anywhere.
+
+Every writer of test data — the corpus loader, the situation builder, the media kit,
+the ontology materializer, the scratch-record helpers — calls `assertTestDatabase()`
+first and **refuses to write anything at all** on a database that does not carry the
+marker. This is the mechanical half of the rule: a database *name* is a claim someone
+made about a database (point `DEDALO_TEST_DATABASE` at a colleague's install and the
+name still looks right), while the marker is the database's own declaration that it is
+disposable. Dédalo runs in production with irreplaceable data, and the suite must be
+runnable at any moment; that guarantee cannot rest on anyone remembering.
+
+A refusal reads:
+
+```
+createScratchRecord: REFUSING to write test data into database 'dedalo_v7_mht' —
+it carries no 'dedalo_test_marker' row … Build the test database with
+'bun run test:db:setup'. Nothing was written.
+```
+
+The one bypass is the **installer**: a fresh, real installation has no marker and must
+still receive the `test` TLD ontology (definitions, no records), so `db_restore.ts`
+calls the materializer with `allowAnyDatabase`. Nothing else may.
+The gate over all of this is `test/unit/test_db_marker_tripwire.test.ts`.
+
+### The suite media root, and why it cannot be yours either
+
+The database is not the only thing a test can write to. Media derivatives, staged
+uploads, publication markers and the corpus's own image/av/pdf files all land on
+disk, and until 2026-08-19 they landed in the **installation's** media tree — beside
+the masters an institution cannot re-acquire.
+
+They now land in a tree of the suite's own:
+
+```
+<repo>/../private/test_media/<suite database name>/
+```
+
+`../private/` is already the home of this checkout's non-served, non-repo state (the
+`.env`, the session store, `processes/`), and keying the tree by the suite database
+name keeps the two together: `files_info.file_path` rows in that database name files
+in that tree, so they are one fixture and are rebuilt by one command.
+
+`bun run test:db:setup` **sweeps and rebuilds** the tree beside the database, and
+plants a `.dedalo_test_media` marker file in its root. `bun test` creates and marks it
+too, so a fresh clone works without the setup step.
+
+The seam is a single key, `DEDALO_TEST_MEDIA_ROOT`, and it does two things at once
+**on purpose**: it replaces the media root (it outranks `MEDIA_PATH`) *and* it arms
+the refusal. Neither half is settable without the other, so a run cannot be armed at
+the installation's root, nor repointed with the guard asleep. Three places set it —
+the `bun test` preload, `test:db:setup`, and `scripts/client_test_server.ts`, which
+hands it to the server it spawns for the browser suite.
+
+Armed, every door that resolves a media root demands the marker and refuses without
+it, naming itself:
+
+```
+requireMediaRoot REFUSED: the media root '/var/…/T/scratch' carries no
+'.dedalo_test_media' marker file, so it has not declared itself a disposable test
+root — it may be an installation's media tree. NOTHING WAS WRITTEN.
+```
+
+That applies to a **scratch root a gate makes for itself**, too — a path is a claim,
+and "it is under /tmp" is not a guarantee. A gate that needs one calls
+`markMediaRoot()` / `scratchMediaRoot()` / `resetMediaRoot()` from
+`test/helpers/media_scratch_root.ts`, which plants the declaration for it.
+
+The gate over all of this is `test/unit/test_media_root_tripwire.test.ts`: it derives
+the door inventory from the source, proves each door refuses an unmarked root *and*
+that the directory is still empty afterwards, and proves a marked root writes.
 
 ## Tier 1 — unit and DB gates (`test/unit/`)
 
@@ -255,26 +341,44 @@ bun run test:client        # scripts/client_test_runner.ts
 ```
 
 The vanilla-JS client keeps its own in-browser **Mocha + Chai** suites, served at
-`/dedalo/test/client/index.html` by a server running with `DEDALO_DEV_MODE=true`.
-`scripts/client_test_runner.ts` drives them headlessly with Puppeteer: it launches Chrome,
-opens the runner page, logs in through the client's own login form if
-`page_globals.is_logged` is not `true`, clicks **run all**, polls until the button
-re-enables, scrapes `window.global_stats` plus the per-group and per-suite DOM stats, and
+`/dedalo/test/client/index.html`. `scripts/client_test_runner.ts` drives them headlessly
+with Puppeteer: it **starts its own server on the test database**, launches Chrome, opens
+the runner page, logs in, clicks **run all**, polls until the button re-enables, scrapes
+`window.global_stats` plus the per-group and per-suite DOM stats, stops its server, and
 **exits non-zero on any failure *or* any pending suite** (a suite that never completed is
 not a pass).
+
+**The server is the run's own, on the test database.** This is a browser writing through a
+live server, so the marker every other test-data writer asks
+(`src/core/test_data/test_database_marker.ts`) cannot see those writes. The command
+therefore does not use anybody else's server: it starts one with the test database, a
+scratch unix socket, a scratch session store and a scratch state file, and stops it at the
+end. Build the database once with `bun run test:db:setup`; nothing else is needed to run
+the suite, and no client test can reach the application's records.
+
+**The target is verified, never assumed.** Before Chrome is launched the runner asks the
+server it is about to drive, over `/health`, for the fingerprint of its test-database
+marker — an opaque hash, served only in development mode, never the database name. A server
+that answers no fingerprint (it is on an application database) or a different one (another
+checkout's test database) is refused with an explanation. `--url` still points the run at a
+server you started yourself and is checked exactly the same way.
 
 It is deliberately **not** a `bun test` file — it needs a live server and a real browser,
 so it stays outside `bunfig.toml` discovery and is invoked explicitly.
 
 Operator facts:
 
-- **Options** (each with an env fallback): `--url` (`TEST_URL`; otherwise built from
-  `SERVER_TCP_PORT`, default `3500`), `--timeout` (`TEST_TIMEOUT`, default `300000` ms),
-  `--headless` (`HEADLESS`, default `true` — pass `--headless false` to watch it run),
-  `--user` / `--password` (`DEDALO_TEST_USER` / `DEDALO_TEST_PASSWORD`), and
-  `--no-reseed`.
-- **Credentials** resolve through the project env loader from `../private/.env`, exactly
-  like the rest of the config. No secret needs to reach the command line.
+- **Options** (each with an env fallback): `--port` (`TEST_PORT`, default `4390` — the
+  run's own listener; it walks upward to the first free port), `--url` (`TEST_URL`, a server
+  you started yourself), `--timeout` (`TEST_TIMEOUT`, default `300000` ms), `--headless`
+  (`HEADLESS`, default `true` — pass `--headless false` to watch it run), `--user` /
+  `--password` (`DEDALO_TEST_USER` / `DEDALO_TEST_PASSWORD`), `--auth`
+  (`cookie` default, `form`, `mint`), `--strict` and `--no-reseed`.
+- **Credentials.** The test database is disposable, so the run supplies its own: it sets
+  the login password on the seed's `root` user (which ships without one) and then performs
+  a real, password-verified login. `--user` / `--password` override it; `--auth form` drives
+  the client's own login UI; `--auth mint` mints a session without verifying any
+  credential and announces itself every run.
 - **Chrome** comes from `PUPPETEER_EXECUTABLE_PATH` if set, otherwise a system Chrome
   install via Puppeteer's `channel` — the bundled-Chromium download is deliberately not
   required.
@@ -283,12 +387,12 @@ Operator facts:
   (`src/core/test_data/`) **before and after** the run. Suppress with `--no-reseed`. The
   reseed is DB-only: a long-lived dev server may still hold stale `test3`-derived caches
   afterwards, so restart it when full cache coherence matters.
-- **In CI**, `scripts/ci/client_gate.sh` wraps all of this: it boots a server on port
-  `3510` with every stateful surface pointed at scratch (socket, session sqlite, engine
-  state file, diffusion job/activity tables), waits for `/health`, runs the suite, and
-  tears everything down. That is what lets the gate run on the same machine as an
-  interactive dev server without touching it. Note that `mocha` and `chai` are
-  devDependencies — a runner that installed with `--production` cannot serve the harness.
+- **In CI**, `scripts/ci/client_gate.sh` is now a one-line wrapper around the same command.
+  Every stateful surface it used to scope by hand (port, unix socket, session sqlite, engine
+  state file, diffusion job and activity tables) is scoped by the runner itself, so an
+  interactive dev server on the same machine is untouched whether the suite is started by CI
+  or by a developer. Note that `mocha` and `chai` are devDependencies — a runner that
+  installed with `--production` cannot serve the harness.
 
 ## Scratch-write hygiene
 
@@ -297,6 +401,8 @@ record.
 
 - **Never assert against a mutable production record.** Clone a **scratch twin**, exercise
   the real path against it, assert, and delete it — at both ends, not just in `afterAll`.
+- **The database must carry the marker** (above). Every helper below refuses without it,
+  so a suite pointed at an installation writes nothing rather than writing carefully.
 - DB writes go **only** to the scratch surfaces. The conventions live in one place,
   `test/helpers/test_data.ts` — do not invent new ones:
     - `test2` — a real ontology section resolving to `matrix_test`; use a reserved high

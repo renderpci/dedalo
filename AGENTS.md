@@ -31,14 +31,33 @@ The live-oracle era is over. The baselines of record are FROZEN:
 - **Invariants are tripwired or deleted** (DEC-12). If you state a rule in a   header/README, add a mechanical gate. Coverage-state lists live ONLY in   `rewrite/LEDGER.md` / `rewrite/STATUS.md` — headers may link, never duplicate   (S2-45). ONE carve-out (2026-07-11): the **tripwire index is a machine-read   contract** and lives in `engineering/TRIPWIRES.md`, because `rewrite/` is not   in the repo. 
 - **`rewrite/` is INTERNAL PROCESS and gitignored** — plans, status, history,   the closed COEXISTENCE ledger, the runbooks. It is not on a clone, so **no   gate, script or error message may read a path under it**. Anything mechanically   enforced, or that a consumer of the engine needs, belongs in `engineering/`   (permanent definitions) — that is the difference between the two directories. 
 - **Never silently narrow scope**: uncovered paths throw loudly and get a   ledger line — in `rewrite/LEDGER.md` if it is state, but next to the code (a   `reason` field, a named exemption) if a gate must verify it. 
-- **DB writes in tests only on scratch surfaces**; clean up after. 
+- **DB writes in tests only on scratch surfaces**; clean up after. And the
+  suite only writes to a database that SAYS it is one: `bun run test:db:setup`
+  stamps the `dedalo_test_marker` row, and every test-data writer
+  (`src/core/test_data/**`, `test/helpers/**`) calls `assertTestDatabase()`
+  before its first write — a database without the marker is refused, loudly and
+  without writing. The name (`<app db>_test`) is a convention; the marker is
+  the guarantee. One bypass exists, the installer's `allowAnyDatabase` on
+  `materializeTestTldOntology` (a fresh install gets the `test` TLD ONTOLOGY,
+  definitions only). Gate: `test/unit/test_db_marker_tripwire.test.ts`. 
+- **And FILE writes only into a media root that SAYS it is one.** The suite has
+  its own media tree, `../private/test_media/<suite db>` — swept and rebuilt by
+  `bun run test:db:setup`, created by `bun test`, marked with a
+  `.dedalo_test_media` file. ONE key, `DEDALO_TEST_MEDIA_ROOT`, both repoints
+  `config.media.rootPath` and ARMS the refusal, so a run cannot be armed at the
+  installation's root nor repointed with the guard asleep; armed, every door
+  that resolves a media root refuses one without the marker, names itself, and
+  writes nothing (`src/core/media/test_media_root.ts`). A gate's own scratch
+  root needs the declaration too — `test/helpers/media_scratch_root.ts`. Gate:
+  `test/unit/test_media_root_tripwire.test.ts`. 
 - **Tests use the generic `test` TLD and BUILD the situation they test.**   Never a specific install's TLD (`numisdata`, `oh`, `tch`, `rsc`, `ich`,   `mdcat`…): such a gate passes on one machine and nowhere else. Structure   comes from repo-owned node definitions materialized through the engine's   own write path (`src/core/test_data/` situations — `upsertDdOntologyNode`,   `zz*` scratch TLDs, torn down after); records are created at runtime, never   read from whatever the ambient DB happens to hold. Ratcheted by   `generic_tld_tripwire` (shrink-only). 
 
 ## Commands 
 
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
-- `bun run test:client` — the browser client suite (Mocha in headless Chrome)   against a running dev listener: `SERVER_TCP_PORT=4000 bun run test:client`   (the port is NOT in `../private/.env`; pass it or `--url`). It authenticates   by calling `login()` in-process and injecting the session cookie — the FORM   path is `--auth form`, and `--auth mint --user <existing>` is the dev-only,   no-password escape hatch for a DB whose `DEDALO_TEST_PASSWORD` is stale.   The baseline is IN the runner: `KNOWN_FAILING` (shrink-only, reasons   inline — a listed suite that PASSES is red too) and `--strict` ignores it.   Measured 2026-08-17: 125 suites, 123 pass, 2 known-fail, 4 deferred.   ALWAYS measure with the reseed on — a polluted test3 fakes ~7 failures. 
+- `bun run test:db:setup` — build the SUITE database (stamps `dedalo_test_marker`) AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
+- `bun run test:client` — the browser client suite (Mocha in headless Chrome).   It STARTS ITS OWN SERVER on the dedicated SUITE database and stops it again:   no dev server to start first, no port to pass, and no client test can reach   the application's data (`scripts/client_test_server.ts`; build the database   once with `bun run test:db:setup`). `--url <page>` still drives a server you   started yourself — VERIFIED, not trusted: any target must answer `/health`   with the fingerprint of the same `dedalo_test_marker` row this process reads   (dev-mode-only, an opaque hash, never the DB name), or the run refuses before   Chrome launches. `--port` moves the run's own listener (default 4390, next   free). It authenticates for real: the run sets the suite database's own   credential (`src/core/test_data/suite_login.ts` — the install seed ships   `root` passwordless) and then calls `login()` in-process and injects the   session cookie; `--auth form` uses the login UI, `--auth mint --user <existing>`   is the no-password escape hatch. The baseline is IN the runner: `KNOWN_FAILING`   (shrink-only, reasons inline — a listed suite that PASSES is red too) and   `--strict` ignores it. Measured 2026-08-19 on the suite database: 125 suites,   123 pass, 2 known-fail, 0 pending, 4 deferred. ALWAYS measure with the reseed   on — a polluted test3 fakes ~7 failures. 
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run lint` — biome (burn-down owned by a dedicated pass). 
 
