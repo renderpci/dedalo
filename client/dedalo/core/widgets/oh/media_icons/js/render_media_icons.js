@@ -238,8 +238,9 @@ const get_content_data_edit = async function(self) {
 *
 *   .value.id    — Numeric section_id, clickable. Opens the media record in a
 *                  new browser window using `open_window` (target: 'record_viewer').
-*                  The URL is built from DEDALO_CORE_URL with the media section's
-*                  section_tipo and section_id.  `session_save: false` prevents
+*                  The URL is built from DEDALO_CORE_URL as `tipo` (the media
+*                  section_tipo) + `id` (the section_id) — the page contract; a
+*                  stray `section_tipo` url var makes the page reject the target.  `session_save: false` prevents
 *                  overwriting the opener tab's stored session.
 *
 *   .value.av    — Icon button (font-icon .file_av). Opens the media viewer in a
@@ -324,7 +325,6 @@ const get_value_element = (i, data, self, current_ipo) => {
 				const height	= window.screen.height < 1024 ? window.screen.height : 1024;
 				const url		= DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: locator.section_tipo,
-					section_tipo	: locator.section_id,  // (!) section_tipo param receives section_id — review if intentional
 					id				: locator.section_id,
 					mode			: 'edit',
 					session_save	: false, // prevent to overwrite current section session
