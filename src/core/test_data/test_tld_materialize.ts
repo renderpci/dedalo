@@ -530,30 +530,38 @@ async function straySectionIds(
  * carrying the same nodes is a fork waiting to drift, and this repo's law is
  * link, never duplicate. One source, one derivation.
  */
-export async function coreClosure(all: readonly DdOntologyNode[]): Promise<DdOntologyNode[]> {
+/** The clone TARGETS: a node is a twin if the committed map mints it. */
+async function cloneTargets(): Promise<Set<string>> {
 	const { readFile } = await import('node:fs/promises');
 	const mapPath = new URL('./test_tld_tipo_map.json', import.meta.url);
 	const cloneMap = JSON.parse(await readFile(mapPath, 'utf8')) as {
 		map: Record<string, { target: string }>;
 	};
-	const cloneTargets = new Set(Object.values(cloneMap.map).map((entry) => entry.target));
-	const byTipo = new Map(all.map((node) => [node.tipo, node]));
+	return new Set(Object.values(cloneMap.map).map((entry) => entry.target));
+}
 
+/** Every `test*` tipo this node NAMES, anywhere in its JSON. */
+function namedTestTipos(node: DdOntologyNode): string[] {
+	return JSON.stringify(node).match(/test[a-z]*\d+/g) ?? [];
+}
+
+export async function coreClosure(all: readonly DdOntologyNode[]): Promise<DdOntologyNode[]> {
+	const targets = await cloneTargets();
+	const byTipo = new Map(all.map((node) => [node.tipo, node]));
 	const keep = new Set<string>();
 	const stack = all
-		.filter((node) => node.tld === 'test' && !cloneTargets.has(node.tipo))
+		.filter((node) => node.tld === 'test' && !targets.has(node.tipo))
 		.map((node) => node.tipo);
+
 	while (stack.length > 0) {
 		const tipo = stack.pop() as string;
-		if (keep.has(tipo)) continue;
-		const node = byTipo.get(tipo);
-		if (node === undefined) continue; // seed-shipped (dd/rsc/hierarchy/…): already installed
+		const node = keep.has(tipo) ? undefined : byTipo.get(tipo);
+		// Absent from this file = seed-shipped (dd/rsc/hierarchy/…), already installed.
+		if (node === undefined) continue;
 		keep.add(tipo);
-		// Anything this node NAMES and this file DEFINES has to come along, or the
-		// install receives a reference it cannot resolve.
-		for (const referenced of JSON.stringify(node).match(/test[a-z]*\d+/g) ?? []) {
-			if (!keep.has(referenced) && byTipo.has(referenced)) stack.push(referenced);
-		}
+		// Anything it NAMES and this file DEFINES comes along, or the install
+		// receives a reference it cannot resolve.
+		for (const referenced of namedTestTipos(node)) stack.push(referenced);
 	}
 	return all.filter((node) => keep.has(node.tipo));
 }
@@ -585,8 +593,7 @@ export async function materializeTestTldOntology(
 ): Promise<MaterializeResult> {
 	await assertAllowedDatabase(options);
 	const doc = options.doc ?? (await loadTestTldOntologyDoc());
-	const nodes =
-		options.scope === 'core' ? await coreClosure(doc.nodes) : doc.nodes;
+	const nodes = options.scope === 'core' ? await coreClosure(doc.nodes) : doc.nodes;
 
 	const byTld = groupNodesByTld(nodes);
 	const result: MaterializeResult = { tlds: [...byTld.keys()], nodes: 0, rebuilt: [], strays: [] };

@@ -498,7 +498,19 @@ describe('rule 4 — the installer is the only bypass', () => {
 
 	test('the installer uses it for the ontology door only', () => {
 		const source = stripComments(read('src/core/install/db_restore.ts'));
-		expect(source).toContain('materializeTestTldOntology({ allowAnyDatabase: true })');
+		// Checked by STRUCTURE, not by formatting. This used to pin the call as one
+		// exact line, so adding an argument to it (the install/suite `scope`, 2026-08-21)
+		// reddened a gate whose subject had not changed at all. What matters is that
+		// the bypass appears ONCE and appears INSIDE the ontology door's argument
+		// list — a second use, or one attached to any other call, is the thing this
+		// rule exists to catch.
+		const occurrences = source.split('allowAnyDatabase').length - 1;
+		expect(occurrences, 'the installer may bypass the marker exactly once').toBe(1);
+		const flagAt = source.indexOf('allowAnyDatabase');
+		const doorAt = source.lastIndexOf('materializeTestTldOntology(', flagAt);
+		expect(doorAt, '`allowAnyDatabase` is not inside a materializeTestTldOntology call').toBeGreaterThan(-1);
+		// Nothing closes that call between the door and the flag.
+		expect(source.slice(doorAt, flagAt)).not.toContain(')');
 	});
 });
 
