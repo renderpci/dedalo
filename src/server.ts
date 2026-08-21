@@ -621,6 +621,40 @@ async function checkDbHealth(): Promise<boolean> {
 	return dbHealth.ok;
 }
 
+/**
+ * THE TEST-DATABASE FINGERPRINT ON `/health` — how `bun run test:client` proves
+ * the SERVER IT DRIVES is on the suite database and not on the application's.
+ *
+ * The client suite is the one tier that writes through a live server instead of
+ * through the suite's own connection, so the marker guard every other writer
+ * calls (src/core/test_data/test_database_marker.ts) could not see it. The
+ * runner now owns its server and asks it, over the wire, to identify its
+ * database; a mismatch is a hard refusal before a browser is even launched.
+ *
+ * TWO THINGS KEEP THIS FROM BEING A LEAK:
+ *  - DEV MODE ONLY. On the production posture (DEDALO_DEV_MODE unset/false) the
+ *    key is absent from the payload and no query is made — `/health` is
+ *    anonymous, and production must not answer questions about its database.
+ *  - IT IS A HASH, NEVER THE NAME. Only a caller that can already read the same
+ *    marker row can recompute and compare it (see testDatabaseFingerprint).
+ * `null` means "this server is NOT on a marked test database" — which is
+ * exactly what the runner refuses on.
+ */
+const DEV_MODE_HEALTH_DB_IDENTITY = readEnv('DEDALO_DEV_MODE') === 'true';
+async function healthTestDatabaseFingerprint(): Promise<string | null> {
+	if (!DEV_MODE_HEALTH_DB_IDENTITY) return null;
+	try {
+		const { testDatabaseFingerprint } = await import('./core/test_data/test_database_marker.ts');
+		return await testDatabaseFingerprint();
+	} catch (error) {
+		// A refusing marker (one naming another database) must not take /health
+		// down: it is a liveness probe. The runner sees a missing fingerprint and
+		// refuses, which is the outcome that matters.
+		console.error('[health] test-database fingerprint failed:', (error as Error).message);
+		return null;
+	}
+}
+
 /** The admin counters endpoint paths (S2-37; gates live in core/api/counters.ts). */
 const COUNTERS_PATHS: ReadonlySet<string> = new Set([
 	'/api/v1/counters',
@@ -709,6 +743,10 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				result: dbOk ? 'ok' : 'error',
 				entity: config.entity,
 				db: dbOk ? 'ok' : 'down',
+				// Dev mode only, and an opaque hash even then (see above).
+				...(DEV_MODE_HEALTH_DB_IDENTITY && dbOk
+					? { test_database: await healthTestDatabaseFingerprint() }
+					: {}),
 				request_id: context.requestId,
 			},
 			dbOk ? 200 : 503,
