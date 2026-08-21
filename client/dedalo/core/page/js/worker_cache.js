@@ -35,8 +35,10 @@
  * Outbound messages (self → caller):
  *   { status: 'ready',   total_files: number }
  *   { status: 'loading', key: number, total_files: number, file_loaded: true }
- *   { status: 'finish',  total_files: number, time: number }
- *   { status: 'finish',  error: string }   (on API failure)
+ *   { status: 'finish',  total_files: number, time: number, error: string|null }
+ * The 'finish' shape is SHARED with core/sw.js (one login handler consumes both)
+ * and is ALWAYS sent, success or failure: the login navigates on it, so a
+ * swallowed failure leaves the user on the progress ring forever.
  *
  * This Worker does NOT import the full `core/common/js/data_manager.js` (that
  * module depends on page globals a Worker scope lacks); it uses the shared,
@@ -97,9 +99,13 @@ self.addEventListener('message', async (event) => {
 		const files = response_data(api_response)
 		if (api_response.error || !Array.isArray(files)) {
 			console.error('Error on get api response:', api_response);
+			// (!) Same 'finish' shape as core/sw.js: the login has ONE handler for both
+			// cache paths and navigates on this message. Keep the keys identical.
 			self.postMessage({
-				status	: 'finish',
-				error	: api_response.error?.code || 'Error on get api response'
+				status		: 'finish',
+				total_files	: 0,
+				time		: performance.now()-t1,
+				error		: api_response.error?.code || 'Error on get api response'
 			});
 			return
 		}
@@ -206,7 +212,8 @@ self.addEventListener('message', async (event) => {
 		self.postMessage({
 			status			: 'finish',
 			total_files		: api_response_result_length,
-			time			: performance.now()-t1
+			time			: performance.now()-t1,
+			error			: null
 		})
 
 	// debug

@@ -218,6 +218,66 @@ login.prototype.build = async function(autoload=false) {
 
 
 /**
+* DEDALO_CACHE_PREFIX
+* Prefix of every Cache Storage key owned by the service worker (core/sw.js).
+* (!) The cache is keyed by the SERVED CODE ('dedalo_files_<dedalo_version>'), so the
+* old fixed-name `caches.delete('dedalo_files')` deleted a key that is never created
+* any more — both the post-login purge and the logout purge were silent no-ops and the
+* file cache survived logout. Always sweep by prefix.
+*/
+const DEDALO_CACHE_PREFIX = 'dedalo_files'
+
+/**
+* SERVICE_WORKER_READY_TIMEOUT_MS
+* How long run_service_worker waits for navigator.serviceWorker.ready to yield an
+* ACTIVE worker before giving up and letting the caller fall back to run_worker_cache.
+*/
+const SERVICE_WORKER_READY_TIMEOUT_MS = 5000
+
+/**
+* FILES_CACHE_WATCHDOG_MS
+* Last-resort guard in action_dispatch: the login navigates anyway rather than
+* sitting forever on the progress ring.
+*
+* (!) It is armed on SILENCE, not on "nothing ever answered". The service worker
+* posts 'ready' the moment it receives 'update_files' — BEFORE the manifest call —
+* so a guard that disarmed on the first message would never fire for the stall that
+* actually happens (a manifest fetch that hangs, a worker killed mid-pass). Every
+* message re-arms the timer; the window is wider than the transport's own worst case
+* (api_transport: 30s timeout x 3 retries) so a merely slow server is not cut off.
+*/
+const FILES_CACHE_WATCHDOG_MS = 120000
+
+
+
+/**
+* DELETE_DEDALO_CACHES
+* Delete every Cache Storage entry owned by the Dédalo service worker (the legacy
+* fixed name plus every versioned one). Scoped by prefix: other Cache Storage users on
+* the same origin are left alone. Never rejects.
+* @return Promise<void>
+*/
+export const delete_dedalo_caches = async () => {
+
+	if (typeof caches==='undefined') {
+		return
+	}
+
+	try {
+		const keys = await caches.keys()
+		await Promise.all(
+			keys
+			.filter(key => key===DEDALO_CACHE_PREFIX || key.startsWith(DEDALO_CACHE_PREFIX + '_'))
+			.map(key => caches.delete(key))
+		)
+	} catch (error) {
+		console.error('delete_dedalo_caches failed:', error);
+	}
+}//end delete_dedalo_caches
+
+
+
+/**
 * LOGIN
 * Exec the login action against the API
 *
@@ -257,19 +317,13 @@ login.prototype.login = async function(options) {
 			console.log('login api_response:', api_response);
 		}
 
-	// delete dedalo_files caches (only HTTPS)
-	// Purge the service-worker file cache immediately after login so any
-	// updated assets are pulled through the new SW registration below.
-		if ('serviceWorker' in navigator) {
-			try {
-
-				// delete dedalo_files caches
-				await caches.delete('dedalo_files');
-
-			} catch (error) {
-				console.error('ServiceWorker delete caches failed:', error);
-			}
-		}
+	// (!) NO cache purge here. It used to delete 'dedalo_files' right after the API
+	// call — dead code once the cache became versioned, and actively wrong once the
+	// sweep works: it ran even on a FAILED login, and it opened a window where the
+	// page had no cache at all until the new pass finished. Superseding is the
+	// service worker's job (sw.js delete_old_caches, keyed by the served code) and
+	// the pass re-fetches with cache:'reload' anyway. The logout purge (quit) is the
+	// one that must actually delete.
 
 
 	return api_response
@@ -424,15 +478,20 @@ login.quit = async function() {
 				data_manager.delete_local_db_data(el, 'status')
 			})
 
-			// Check for SAML redirection first
-			// When the server signals a SAML single-logout redirect, follow it before
-			// doing any SW cleanup — the IdP redirect will navigate away regardless.
-			if (api_response.saml_redirect && api_response.saml_redirect.length > 2) {
-				window.location.href = api_response.saml_redirect;
-			}else{
-				// Handle service worker unregistration and cache cleanup
-				// Handle service worker unregistration if supported
-				// to allow update sw.js file and clean the cache
+			// SERVICE WORKER TEARDOWN — order matters, and both steps run BEFORE any
+			// branch, SAML included:
+			//   1. unregister, so no worker is left controlling the page
+			//   2. only then purge the caches
+			// Unregistering does not clear Cache Storage, so the purge is what
+			// actually removes the files. Purging first is worse: the worker sees an
+			// unrestorable state on the next intercepted request and REBUILDS the
+			// cache it was just relieved of (sw.js revalidate), so the logout would
+			// end with the files back on disk. (!) This order NARROWS that window, it
+			// does not close it — an unregistered worker keeps controlling clients
+			// already loaded until they unload, so it can still intercept until the
+			// redirect below lands. Closing the last milliseconds is not worth code.
+			// Doing neither on the SAML path — the old shape — leaked every versioned
+			// cache on a single-logout, with no login-side purge left to collect them.
 				if ('serviceWorker' in navigator) {
 					try {
 						// Get all existing service worker registrations
@@ -442,13 +501,21 @@ login.quit = async function() {
 							const unregistered = await registration.unregister();
 							console.log('Unregistered serviceWorker:', unregistered);
 						}
-						// Delete the cache once after all service workers are unregistered
-						await caches.delete('dedalo_files');
-
 					} catch (error) {
 						console.error('ServiceWorker unregistration failed:', error);
 					}
 				}
+				await delete_dedalo_caches()
+
+			// Check for SAML redirection
+			// When the server signals a SAML single-logout redirect, follow it: the
+			// IdP redirect navigates away regardless, so the teardown above had to
+			// happen first.
+			if (api_response.saml_redirect && api_response.saml_redirect.length > 2) {
+				window.location.href = api_response.saml_redirect;
+				// stop here: the idle callback below would race a second navigation
+				// against the IdP redirect
+				return
 			}
 
 			dd_request_idle_callback(
@@ -651,7 +718,20 @@ login.prototype.action_dispatch = async function(api_response) {
 					}
 				// finish handler. Fired when finish status is triggered in workers
 				// Usually when all files are loaded
+					// (!) Idempotent: the service worker and the run_worker_cache fallback
+					// can both report 'finish' (the watchdog may start the fallback while
+					// a slow worker is still running). Navigating twice races two
+					// location changes against each other.
+					let finished = false
+					// declared here, before finish_handler closes over it (arm_watchdog
+					// assigns it further down; both only ever RUN asynchronously)
+					let watchdog_timer = null
 					const finish_handler = () => {
+						if (finished) {
+							return
+						}
+						finished = true
+						clearTimeout(watchdog_timer)
 						// login continue
 						dd_request_idle_callback(
 							() => {
@@ -663,7 +743,17 @@ login.prototype.action_dispatch = async function(api_response) {
 			// Routes SW / worker message events to the appropriate handler above.
 			// The three expected statuses correspond to the worker's lifecycle stages.
 				const on_message = (event) => {
-					switch (event.data.status) {
+
+					const status = event?.data?.status
+					if (!status) {
+						// not a files-cache message (other SW senders share this channel)
+						return
+					}
+
+					// a cache path is alive: give it another window
+					arm_watchdog()
+
+					switch (status) {
 
 						case 'ready':
 							// set CSS styles and animations to start loading
@@ -675,13 +765,46 @@ login.prototype.action_dispatch = async function(api_response) {
 							loading_handler(event.data)
 							break;
 
+						case 'waiting':
+							// heartbeat from a pass QUEUED behind an in-flight one
+							// (sw.js). It carries no payload: arriving at all is the
+							// point — it re-armed the watchdog above. Explicit case so
+							// nobody "tidies" the sender's status string away; see
+							// WC-2026-08-21-files-cache-finish-message.
+							break;
+
 						case 'finish':
 							// The update_files if finish
 							// Then, we can continue the login normally
 							// reload or redirect the page
+							// (!) event.data.error is set when the cache pass failed;
+							// the login must continue regardless — a cold cache is a
+							// slow first page, a missing 'finish' is a dead login.
+							if (event.data.error) {
+								console.error('Files cache pass reported an error:', event.data.error);
+							}
 							finish_handler()
 							break;
 					}
+				}
+
+			// watchdog. Re-armed by every message from either cache path (see
+			// FILES_CACHE_WATCHDOG_MS); fires only on real silence.
+				const arm_watchdog = () => {
+					if (finished) {
+						return
+					}
+					clearTimeout(watchdog_timer)
+					watchdog_timer = setTimeout(
+						() => {
+							if (finished) {
+								return
+							}
+							console.error('Files cache silent for ' + FILES_CACHE_WATCHDOG_MS + 'ms. Continuing login without warming the cache.');
+							finish_handler()
+						},
+						FILES_CACHE_WATCHDOG_MS
+					)
 				}
 
 			// service worker registry (uses service worker as cache proxy)
@@ -715,6 +838,10 @@ login.prototype.action_dispatch = async function(api_response) {
 						}
 					})
 				}
+
+			// start the watchdog. load_finish() is the ONLY navigation and it hangs off
+			// a 'finish' message, so no cache path may be allowed to go silent.
+				arm_watchdog()
 
 		}//end if (response_data(api_response)===true)
 
@@ -754,50 +881,61 @@ export const run_service_worker = async (options) => {
 		on_message
 	} = options
 
-	if ('serviceWorker' in navigator) {
-		try {
-			// register serviceWorker
-			// Once registered, it will be loaded in every page load across the site
-			// {type:'module'}: sw.js imports the shared transport (core/common/js/
-			// api_transport.js) instead of carrying its own copy of the request
-			// algorithm. A classic SW cannot `import`; every supported browser
-			// (Chromium 91+, Firefox 114+, Safari 16.4+) runs module SWs.
-			const registration = await navigator.serviceWorker.register(
-				DEDALO_ROOT_WEB + '/core/sw.js',
-				{ type: 'module' }
-			);
+	if (!('serviceWorker' in navigator)) {
+		return false
+	}
 
-			// debug info about registration status
-			if (registration.installing) {
-				console.log('Service worker installing');
-			} else if (registration.waiting) {
-				console.log('Service worker installed');
-			} else if (registration.active) {
-				console.log('Service worker active');
-			}
+	try {
+		// register serviceWorker
+		// Once registered, it will be loaded in every page load across the site
+		// {type:'module'}: sw.js imports the shared transport (core/common/js/
+		// api_transport.js) instead of carrying its own copy of the request
+		// algorithm. A classic SW cannot `import`; every supported browser
+		// (Chromium 91+, Firefox 114+, Safari 16.4+) runs module SWs.
+		const registration = await navigator.serviceWorker.register(
+			DEDALO_ROOT_WEB + '/core/sw.js',
+			{ type: 'module' }
+		);
 
-			// serviceWorker is ready. Post message 'update_files' to
-			// force serviceWorker to reload the Dédalo main files
-			navigator.serviceWorker.ready.then((registration) => {
-				if (!registration.active) return;
-				console.log('Service worker is ready. Posting message update_files');
-				// posting 'update_files' message, tells serviceWorker that cache files
-				// must to be updated.
-				registration.active.postMessage('update_files')
-			});
+		// debug info about registration status
+		if (registration.installing) {
+			console.log('Service worker installing');
+		} else if (registration.waiting) {
+			console.log('Service worker installed');
+		} else if (registration.active) {
+			console.log('Service worker active');
+		}
 
-			// message event listener
-			navigator.serviceWorker.addEventListener('message', on_message);
-
-		} catch (error) {
-			console.error(`Registration failed with ${error}`);
+		// wait until a worker is actually ACTIVE before promising the caller that
+		// progress messages are coming.
+		// (!) This used to resolve true as soon as register() returned, and posted
+		// 'update_files' from a detached .then() that bailed out silently when there
+		// was no active worker. The caller then waited for a 'finish' message that
+		// nobody would ever send and the login stalled on the progress ring forever
+		// with the run_worker_cache fallback never firing.
+		const ready_registration = await Promise.race([
+			navigator.serviceWorker.ready,
+			new Promise(resolve => setTimeout(() => resolve(null), SERVICE_WORKER_READY_TIMEOUT_MS))
+		])
+		if (!ready_registration || !ready_registration.active) {
+			console.error('Service worker did not become active. Falling back.');
 			return false
 		}
 
-		return true
+		// message event listener. Attached BEFORE posting, so no message can be missed
+		navigator.serviceWorker.addEventListener('message', on_message);
+
+		// posting 'update_files' message, tells serviceWorker that cache files
+		// must to be updated.
+		console.log('Service worker is ready. Posting message update_files');
+		ready_registration.active.postMessage('update_files')
+
+	} catch (error) {
+		console.error(`Registration failed with ${error}`);
+		return false
 	}
 
-	return false
+	return true
 }//end run_service_worker
 
 
