@@ -4,6 +4,9 @@
  * (tool_export, tool_time_machine) and exercise the validator directly for the
  * failure modes (bad export, name mismatch, lifecycle hook in apiActions).
  */
+// Migrated to the generic `test` TLD 2026-08-19: the isAvailable probe only needs an
+// opaque section tipo, so it names `test3` (the generic test section) instead of an
+// install's.
 
 import { describe, expect, test } from 'bun:test';
 import { getLoadedTool, loadToolModules } from '../../src/core/tools/loader.ts';
@@ -30,8 +33,8 @@ describe('tool loader', () => {
 		expect(
 			isAvailable?.({
 				callerModel: 'component_relation_children',
-				tipo: 'rsc197',
-				sectionTipo: 'rsc197',
+				tipo: 'test3',
+				sectionTipo: 'test3',
 				isComponent: true,
 				mode: 'edit',
 			}),
@@ -39,8 +42,8 @@ describe('tool loader', () => {
 		expect(
 			isAvailable?.({
 				callerModel: 'section',
-				tipo: 'rsc197',
-				sectionTipo: 'rsc197',
+				tipo: 'test3',
+				sectionTipo: 'test3',
 				isComponent: false,
 				mode: 'list',
 			}),

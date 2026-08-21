@@ -1,8 +1,9 @@
 /**
  * search_operators (search-mode component tooltip) — pure unit gate + a DRIFT
  * GUARD so a newly-added component model can't silently ship without a
- * classification. The byte-for-byte parity with the live PHP oracle is pinned in
- * test/parity/section_elements_context_differential.test.ts; here we lock the
+ * classification. That the stamp actually reaches every search-mode component
+ * is pinned in test/unit/section_elements_context_native.test.ts (the retired
+ * differential's twin); here we lock the
  * HTML grammar, the [] vs {} wire shape, the label <mark> fallback, and the
  * "every canonical model is classified" invariant (no DB, no oracle).
  */
@@ -115,5 +116,45 @@ describe('buildSearchOptionsTitle HTML grammar', () => {
 		const html = buildSearchOptionsTitle('component_date', labels);
 		// The `>` operator lands raw inside the span (PHP concatenates unescaped).
 		expect(html).toContain('<span>></span><span>gt</span>');
+	});
+});
+
+/**
+ * SERVED-CATALOG CONTRACT — the tests above hand-feed a labels map, which is
+ * exactly how a real regression hid: WC-034 (commit 9bf8463882) removed
+ * `search_options` + `literal` from the catalog as "unused" while this module
+ * still resolved them, so every search-mode component shipped
+ * `<b><mark>search_options</mark>:</b>` to the browser and the unit tier stayed
+ * green (measured 2026-08-18: 8 red parity assertions). A test must build the
+ * situation it tests — here that means reading the SAME catalog the request
+ * path reads (structure_context.ts → getLabels(currentApplicationLang())).
+ *
+ * `strict_different_from` is the ONE pinned exemption: PHP never had a
+ * dictionary entry for it either, so the `<mark>` fallback IS the parity
+ * behaviour for that key (see the grammar test above).
+ */
+describe('search_operators labels are served by the real catalog', () => {
+	const PINNED_UNTRANSLATED: ReadonlySet<string> = new Set(['strict_different_from']);
+
+	test('every label key the tooltip resolves exists in the master catalog', async () => {
+		const { getLabels, MASTER_SOURCE_LANG } = await import('../../src/core/labels/catalog.ts');
+		const labels = await getLabels(MASTER_SOURCE_LANG);
+		const keys = new Set<string>(['search_options']);
+		for (const model of CLASSIFIED_SEARCH_OPERATOR_MODELS) {
+			for (const [, labelKey] of searchOperatorsInfo(model)) keys.add(labelKey);
+		}
+		const missing = [...keys].filter((k) => !(k in labels) && !PINNED_UNTRANSLATED.has(k));
+		expect(missing).toEqual([]);
+		// The exemption list is shrink-only: a pinned key that IS now served must
+		// leave the list, or the pin silently masks nothing.
+		for (const k of PINNED_UNTRANSLATED) expect(k in labels).toBe(false);
+	});
+
+	test('the served tooltip heading is a translation, never a <mark> placeholder', async () => {
+		const { getLabels, MASTER_SOURCE_LANG } = await import('../../src/core/labels/catalog.ts');
+		const labels = await getLabels(MASTER_SOURCE_LANG);
+		const html = buildSearchOptionsTitle('component_input_text', labels);
+		expect(html.startsWith('<b><mark>')).toBe(false);
+		expect(html.startsWith(`<b>${labels.search_options}:</b>`)).toBe(true);
 	});
 });

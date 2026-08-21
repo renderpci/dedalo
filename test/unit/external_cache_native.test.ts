@@ -17,6 +17,9 @@
  * reach). Inserted in beforeAll, swept in afterAll, pre-cleaned for crashed
  * runs. No matrix rows are written.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the external SECTION coordinate is now
+// the generic clone `test7342` (src/core/test_data/test_tld_tipo_map.json); the `zenon`
+// connector itself is an engine module, not an install's ontology, and stays.
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -98,7 +101,7 @@ describe('the cache key carries every identity the row depends on', () => {
 		const variants = {
 			service: { ...BASE_KEY_PARTS, service: 'wikidata' },
 			apiUrl: { ...BASE_KEY_PARTS, apiUrl: `${ORIGIN}/api/v2/record` },
-			sectionTipo: { ...BASE_KEY_PARTS, sectionTipo: 'zenon1' },
+			sectionTipo: { ...BASE_KEY_PARTS, sectionTipo: 'test7342' },
 			remoteId: { ...BASE_KEY_PARTS, remoteId: '001338683' },
 			dataLang: { ...BASE_KEY_PARTS, dataLang: 'lg-spa' },
 			remoteFields: { ...BASE_KEY_PARTS, remoteFields: ['id'] },

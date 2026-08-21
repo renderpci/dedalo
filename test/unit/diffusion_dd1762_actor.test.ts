@@ -12,8 +12,10 @@
  * the only DB writes are the dd1758 rows for a synthetic record id, reclaimed
  * in afterAll (diffusion_delete.test.ts hygiene pattern).
  */
+// Migrated to the generic `test` TLD 2026-08-19: the unpublish runs against the
+// PROVISIONED `zzd` diffusion elements, so the sql branch is reachable anywhere.
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
 	DIFFUSION_ACTIVITY_TABLE,
@@ -22,10 +24,16 @@ import {
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
+import {
+	countZzdOntology,
+	dropZzdOntology,
+	SQL_SECTION,
+	seedZzdOntology,
+} from '../helpers/zzd_diffusion_fixture.ts';
 
 /** Non-root actor: any positive user id ≠ DEDALO_SUPERUSER (−1). */
 const ACTOR_ID = 987654321;
-/** Synthetic record ids — never real numisdata6 records. */
+/** Synthetic record ids — never real records. */
 const PROBE_ID = 999999717;
 const NO_USER_PROBE_ID = 999999718;
 
@@ -35,14 +43,21 @@ async function reclaimProbeRows(): Promise<void> {
 			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb`,
-			[JSON.stringify([{ section_id: String(probeId), section_tipo: 'numisdata6' }])],
+			[JSON.stringify([{ section_id: probeId, section_tipo: SQL_SECTION }])],
 		);
 	}
 }
 
+beforeAll(async () => {
+	const { preCount } = await seedZzdOntology();
+	expect(preCount).toBe(0);
+});
+
 afterAll(async () => {
 	resetNativeDiffusionSqlDeleteForTests();
 	await reclaimProbeRows();
+	await dropZzdOntology();
+	expect(await countZzdOntology()).toBe(0);
 });
 
 describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
@@ -55,7 +70,7 @@ describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
 			errors: [],
 		}));
 		try {
-			const outcome = await deleteDiffusionRecord('numisdata6', PROBE_ID, true, ACTOR_ID);
+			const outcome = await deleteDiffusionRecord(SQL_SECTION, PROBE_ID, true, ACTOR_ID);
 			expect(outcome.deleted.length).toBeGreaterThan(0);
 		} finally {
 			resetNativeDiffusionSqlDeleteForTests();
@@ -64,12 +79,12 @@ describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
 		const rows = (await sql.unsafe(
 			`SELECT relation->'dd1762'->0->>'section_id' AS actor_id,
 			        relation->'dd1762'->0->>'section_tipo' AS actor_section,
-			        relation->'dd1767'->0->>'section_id' AS action
+			        relation->'dd1767'->0->>'diffusion_action' AS action
 			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb
 			 ORDER BY section_id`,
-			[JSON.stringify([{ section_id: String(PROBE_ID), section_tipo: 'numisdata6' }])],
+			[JSON.stringify([{ section_id: PROBE_ID, section_tipo: SQL_SECTION }])],
 		)) as { actor_id: string | null; actor_section: string | null; action: string }[];
 		expect(rows.length).toBeGreaterThan(0); // one per sql element
 		for (const row of rows) {
@@ -81,7 +96,7 @@ describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
 
 	test('no userId → dd1762 omitted entirely (PHP falsy shape), never -1', async () => {
 		await logDiffusionActivity({
-			sectionTipo: 'numisdata6',
+			sectionTipo: SQL_SECTION,
 			sectionId: NO_USER_PROBE_ID,
 			elementTipo: null,
 			action: 2,
@@ -92,7 +107,7 @@ describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
 			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb`,
-			[JSON.stringify([{ section_id: String(NO_USER_PROBE_ID), section_tipo: 'numisdata6' }])],
+			[JSON.stringify([{ section_id: NO_USER_PROBE_ID, section_tipo: SQL_SECTION }])],
 		)) as { has_actor: boolean; actor_id: string | null }[];
 		expect(rows.length).toBe(1);
 		expect(rows[0]?.has_actor).toBe(false);

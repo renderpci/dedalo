@@ -30,5 +30,5 @@
   `source.properties` override MECHANISM against numisdata77 via a frozen
   fixture (`test/parity/fixtures/coins_override_properties.json`). TS ground
   truth: `test/unit/component_alias.test.ts` (scratch contract + data/save
-  round-trip) and `test/unit/component_alias_numisdata203.test.ts`
+  round-trip) and `test/unit/component_alias_tool_ddo_map.test.ts`
   (post-migration, visibly gated on the DB state).

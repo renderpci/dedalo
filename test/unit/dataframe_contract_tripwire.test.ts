@@ -12,6 +12,26 @@
  *   which made every duplicate unique). The last test here fails if the
  *   constant ever goes back to having no consumer — at which point the honest
  *   move is to delete it, not to leave the prose standing.
+ *
+ * Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the
+ * install tipos of the defect that produced this gate were rewritten through
+ * src/core/test_data/test_tld_tipo_map.json (oh1→test6813, oh24→test6836,
+ * oh115→test6896). The clone keeps what the gate leans on —
+ * test6896 is still the component_dataframe under the portal test6836, and it
+ * still declares `properties.view: 'tree'`, so the last describe drives the
+ * same doors against sections that exist wherever the suite ontology does.
+ *
+ * ONE DELIBERATE DEPARTURE FROM THE MAP. The frame's TARGET is `test6100`, not
+ * the clone of `rolepos1` (`test7004`). `rolepos1` never existed in the suite
+ * ontology, so `validateRelationInsert`'s per-term selectability gate was
+ * exempt for the accidental reason that the target declared no contract; its
+ * clone IS a real thesaurus, and the same call now refuses with
+ * `term_not_selectable` for a term this file does not own and must not create
+ * (a situation's teardown deletes a section WHOLE, and `test7004` is shared
+ * clone structure). Per-term selectability is `relation_insert_target_native`'s
+ * subject, not this file's — this one is the normalizer contract. So the
+ * target is a section that declares NO selectability contract, and that is now
+ * ASSERTED below rather than assumed, so the exemption cannot go silent again.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -25,12 +45,12 @@ import {
 	normalizeDataframeEntry,
 } from '../../src/core/concepts/subdatum.ts';
 
-const PAIRING = { frameTipo: 'oh115', mainComponentTipo: 'oh24', idKey: 2 };
+const PAIRING = { frameTipo: 'test6896', mainComponentTipo: 'test6836', idKey: 2 };
 
-/** The oh1/368 payload, verbatim: what the client sends and the DB received. */
+/** The test6813/368 payload, verbatim: what the client sent and the DB received. */
 const RAW_CLIENT_LOCATOR = {
 	section_id: 4,
-	section_tipo: 'rolepos1',
+	section_tipo: 'test6100',
 	paginated_key: 0,
 };
 
@@ -42,9 +62,9 @@ describe('normalizeDataframeEntry — the persisted-frame contract', () => {
 			// WC-2026-08-10-section-id-int-canonical: the frame's record address is
 			// an INT (repeals the "stringified per the locator law" pin).
 			section_id: 4,
-			section_tipo: 'rolepos1',
-			from_component_tipo: 'oh115',
-			main_component_tipo: 'oh24',
+			section_tipo: 'test6100',
+			from_component_tipo: 'test6896',
+			main_component_tipo: 'test6836',
 		});
 	});
 
@@ -53,7 +73,7 @@ describe('normalizeDataframeEntry — the persisted-frame contract', () => {
 		// reader could never match. These two functions must never disagree.
 		const normalized = normalizeDataframeEntry(RAW_CLIENT_LOCATOR, PAIRING);
 		expect(isDataframeEntry(normalized)).toBe(true);
-		expect(dataframeEntryMatches(normalized, 'oh24', 2, 'oh115')).toBe(true);
+		expect(dataframeEntryMatches(normalized, 'test6836', 2, 'test6896')).toBe(true);
 	});
 
 	test('client-supplied pairing fields are OVERRIDDEN, never trusted', () => {
@@ -70,12 +90,12 @@ describe('normalizeDataframeEntry — the persisted-frame contract', () => {
 		const normalized = normalizeDataframeEntry(hostile, PAIRING);
 		expect(normalized.type).toBe(DATAFRAME_RELATION_TYPE);
 		expect(normalized.id_key).toBe(2);
-		expect(normalized.main_component_tipo).toBe('oh24');
-		expect(normalized.from_component_tipo).toBe('oh115');
+		expect(normalized.main_component_tipo).toBe('test6836');
+		expect(normalized.from_component_tipo).toBe('test6896');
 	});
 
 	test('transients and legacy pairing keys are stripped', () => {
-		const legacy = { ...RAW_CLIENT_LOCATOR, section_id_key: 7, section_tipo_key: 'oh24' };
+		const legacy = { ...RAW_CLIENT_LOCATOR, section_id_key: 7, section_tipo_key: 'test6836' };
 		const keys = Object.keys(normalizeDataframeEntry(legacy, PAIRING));
 		expect(keys).not.toContain('paginated_key');
 		expect(keys).not.toContain('section_id_key');
@@ -100,8 +120,8 @@ describe('dataframePairingOf — ONE validity rule for every door', () => {
 	// in exactly the unreadable shape the normalizer exists to prevent. These
 	// cases are the disagreements, pinned.
 	test('a complete pairing is accepted and id_key normalized to a NUMBER', () => {
-		expect(dataframePairingOf({ main_component_tipo: 'oh24', id_key: '2' })).toEqual({
-			main_component_tipo: 'oh24',
+		expect(dataframePairingOf({ main_component_tipo: 'test6836', id_key: '2' })).toEqual({
+			main_component_tipo: 'test6836',
 			id_key: 2,
 		});
 	});
@@ -112,14 +132,14 @@ describe('dataframePairingOf — ONE validity rule for every door', () => {
 			{ main_component_tipo: null, id_key: 2 },
 		],
 		['empty main_component_tipo', { main_component_tipo: '', id_key: 2 }],
-		['id_key 0 — item ids are 1-based', { main_component_tipo: 'oh24', id_key: 0 }],
-		['id_key null', { main_component_tipo: 'oh24', id_key: null }],
-		['id_key empty string', { main_component_tipo: 'oh24', id_key: '' }],
+		['id_key 0 — item ids are 1-based', { main_component_tipo: 'test6836', id_key: 0 }],
+		['id_key null', { main_component_tipo: 'test6836', id_key: null }],
+		['id_key empty string', { main_component_tipo: 'test6836', id_key: '' }],
 		[
 			'id_key non-numeric — used to reach Math.trunc(Number()) and write NaN',
-			{ main_component_tipo: 'oh24', id_key: 'abc' },
+			{ main_component_tipo: 'test6836', id_key: 'abc' },
 		],
-		['id_key fractional', { main_component_tipo: 'oh24', id_key: 1.5 }],
+		['id_key fractional', { main_component_tipo: 'test6836', id_key: 1.5 }],
 		['no caller at all', null],
 	])('REJECTS %s', (_label, caller) => {
 		expect(dataframePairingOf(caller as never)).toBeNull();
@@ -127,12 +147,12 @@ describe('dataframePairingOf — ONE validity rule for every door', () => {
 });
 
 describe('mergeCallerEntries — the last gate before the column is written', () => {
-	const SLOT = 'oh115';
-	const caller = { main_component_tipo: 'oh24', id_key: 1 };
+	const SLOT = 'test6896';
+	const caller = { main_component_tipo: 'test6836', id_key: 1 };
 	const stored = [
 		normalizeDataframeEntry(
-			{ section_id: '9', section_tipo: 'rolepos1' },
-			{ frameTipo: SLOT, mainComponentTipo: 'oh24', idKey: 2 },
+			{ section_id: '9', section_tipo: 'test6100' },
+			{ frameTipo: SLOT, mainComponentTipo: 'test6836', idKey: 2 },
 		),
 	];
 
@@ -179,7 +199,7 @@ describe('mergeCallerEntries — the last gate before the column is written', ()
 describe('dataframeEntriesEqual — frame IDENTITY', () => {
 	const base = normalizeDataframeEntry(RAW_CLIENT_LOCATOR, PAIRING);
 
-	test('`id` is NOT part of identity (the oh1/368 duplicate)', () => {
+	test('`id` is NOT part of identity (the test6813/368 duplicate)', () => {
 		// ids 2 and 3 on that record differed by nothing else. A JSON-signature
 		// dedup called them distinct; test_equal_properties calls them the same.
 		expect(dataframeEntriesEqual({ ...base, id: 2 }, { ...base, id: 3 })).toBe(true);
@@ -221,21 +241,28 @@ describe('DEC-12 — the invariant constants have mechanical consumers', () => {
 			mergeCallerEntries(
 				[],
 				[RAW_CLIENT_LOCATOR],
-				{ main_component_tipo: 'oh24', id_key: 2 },
-				'oh115',
+				{ main_component_tipo: 'test6836', id_key: 2 },
+				'test6896',
 			) ?? [];
 		expect(merged[0]).toEqual(normalizeDataframeEntry(RAW_CLIENT_LOCATOR, PAIRING));
 
-		// Door 2 — validateRelationInsert with a pairing. oh115 declares
+		// The door's per-term selectability gate must stay OUT of scope here: it
+		// is exempt exactly when the target declares no contract, and an
+		// unnoticed change of target would otherwise turn this into a
+		// thesaurus test. Pinned, not assumed (see the header).
+		const { declaresTermSelectability } = await import('../../src/core/ontology/section_map.ts');
+		expect(await declaresTermSelectability(RAW_CLIENT_LOCATOR.section_tipo)).toBe(false);
+
+		// Door 2 — validateRelationInsert with a pairing. test6896 declares
 		// `properties.view: 'tree'` (it is a picker caller), so the door's
 		// read-grant gate judges an ACTOR and is fail-closed without one — the
 		// principal is threaded explicitly, as save_component does from dispatch.
 		const { resolvePrincipal } = await import('../../src/core/security/permissions.ts');
 		const principal = await resolvePrincipal(-1);
 		const validated = await validateRelationInsert({ ...RAW_CLIENT_LOCATOR }, {
-			componentTipo: 'oh115',
+			componentTipo: 'test6896',
 			model: 'component_dataframe',
-			hostSectionTipo: 'oh1',
+			hostSectionTipo: 'test6813',
 			hostSectionId: 368,
 			translatable: false,
 			lang: 'lg-nolan',
@@ -248,9 +275,9 @@ describe('DEC-12 — the invariant constants have mechanical consumers', () => {
 		// …and it must DROP a duplicate by test_equal_properties, not by JSON
 		// signature (the `id` an insert mints would defeat a signature compare).
 		const duplicate = await validateRelationInsert({ ...RAW_CLIENT_LOCATOR }, {
-			componentTipo: 'oh115',
+			componentTipo: 'test6896',
 			model: 'component_dataframe',
-			hostSectionTipo: 'oh1',
+			hostSectionTipo: 'test6813',
 			hostSectionId: 368,
 			translatable: false,
 			lang: 'lg-nolan',
@@ -263,8 +290,10 @@ describe('DEC-12 — the invariant constants have mechanical consumers', () => {
 
 	test('the type marker is the single source of frame detection', () => {
 		expect(DATAFRAME_RELATION_TYPE).toBe('dd490');
-		expect(isDataframeEntry({ type: 'dd151', id_key: 1, main_component_tipo: 'oh24' })).toBe(false);
-		// The precise shape stored on oh1/368: pairing fields present, no marker.
-		expect(isDataframeEntry({ id_key: 1, main_component_tipo: 'oh24' })).toBe(false);
+		expect(isDataframeEntry({ type: 'dd151', id_key: 1, main_component_tipo: 'test6836' })).toBe(
+			false,
+		);
+		// The precise shape stored on test6813/368: pairing fields present, no marker.
+		expect(isDataframeEntry({ id_key: 1, main_component_tipo: 'test6836' })).toBe(false);
 	});
 });

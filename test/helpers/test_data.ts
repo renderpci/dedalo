@@ -14,12 +14,20 @@
  *                (base 1, 2, 27 + the per-suite isolation clones 10, 11, 12 —
  *                CANONICAL_RECORD_IDS in src/core/test_data/manifest.ts).
  * Every writer cleans up (cleanScratchRecord) in afterAll/finally.
+ *
+ * THE MARKER LAW. Every door below calls `assertTestDatabase()` first: a
+ * scratch id is a convention (900000+ is "clear of genuine records" only on the
+ * databases we have looked at), and the reserved-high convention is exactly
+ * what a suite pointed at an installation would trample. The database itself
+ * has to say it is disposable — see
+ * src/core/test_data/test_database_marker.ts.
  */
 
 import { MATRIX_JSONB_COLUMNS } from '../../src/core/db/matrix.ts';
 import { deleteMatrixRecord, updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { canonicalTest3Drift, restoreCanonicalTest3 } from '../../src/core/test_data/seed.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 /**
  * Self-heal the canonical test3 records (drift-check, surgical restore only
@@ -48,6 +56,7 @@ export async function createScratchRecord(
 	values: Record<string, unknown> = {},
 	options: { table?: string; rawText?: boolean } = {},
 ): Promise<void> {
+	await assertTestDatabase('createScratchRecord');
 	const table = options.table ?? 'matrix_test';
 	const bound: Record<string, string | null> = {};
 	for (const column of MATRIX_JSONB_COLUMNS) {
@@ -70,6 +79,7 @@ export async function cleanScratchRecord(
 	sectionId: number,
 	table = 'matrix_test',
 ): Promise<void> {
+	await assertTestDatabase('cleanScratchRecord');
 	await deleteMatrixRecord(table, sectionTipo, sectionId);
 	await sql`
 		DELETE FROM matrix_time_machine
@@ -82,6 +92,7 @@ export async function cleanScratchRecord(
  * sweeps) plus its TM rows and counter row.
  */
 export async function cleanScratchTipo(sectionTipo: string, table = 'matrix_test'): Promise<void> {
+	await assertTestDatabase('cleanScratchTipo');
 	await sql.unsafe(`DELETE FROM "${table}" WHERE section_tipo = $1`, [sectionTipo]);
 	await sql`DELETE FROM matrix_time_machine WHERE section_tipo = ${sectionTipo}`;
 	await sql`DELETE FROM matrix_counter WHERE tipo = ${sectionTipo}`;

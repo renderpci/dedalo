@@ -5,6 +5,10 @@
  * operator grammar (PHP search_tm + the _tm traits): number/date/string/json/
  * relation over the flat matrix_time_machine columns, values as bound $N params.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). Every
+// install tipo here was a search VALUE, not a binding: `conformTmFilter` is pure
+// (no DB, no ontology) and threads it straight into a bound $N param, so the
+// rename carries the whole migration and the asserted SQL is unchanged.
 
 import { describe, expect, test } from 'bun:test';
 import { conformTmFilter } from '../../src/core/resolve/tm_filter.ts';
@@ -52,20 +56,20 @@ describe('conformTmFilter — date column (timestamp, WC-036 span semantics)', (
 
 describe('conformTmFilter — string columns (tipo/section_tipo)', () => {
 	test('== exact, != not-contains, default exact', () => {
-		expect(one('dd1772', ['rsc197'], '==')).toEqual({
+		expect(one('dd1772', ['test6099'], '==')).toEqual({
 			sql: 'section_tipo = $1',
-			params: ['rsc197'],
+			params: ['test6099'],
 		});
-		expect(one('dd1772', ['rsc197'], '!=')).toEqual({
+		expect(one('dd1772', ['test6099'], '!=')).toEqual({
 			sql: 'section_tipo NOT ILIKE $1',
-			params: ['%rsc197%'],
+			params: ['%test6099%'],
 		});
-		expect(one('dd1772', ['rsc197'], '')).toEqual({ sql: 'section_tipo = $1', params: ['rsc197'] });
+		expect(one('dd1772', ['test6099'], '')).toEqual({ sql: 'section_tipo = $1', params: ['test6099'] });
 	});
 	test('wildcard → ILIKE, existence', () => {
-		expect(one('dd1772', ['*rsc*'], '')).toEqual({
+		expect(one('dd1772', ['*test*'], '')).toEqual({
 			sql: 'section_tipo ILIKE $1',
-			params: ['%rsc%'],
+			params: ['%test%'],
 		});
 		expect(one('dd577', null, '!*').sql).toBe("(tipo IS NULL OR tipo = '')");
 	});
@@ -73,9 +77,9 @@ describe('conformTmFilter — string columns (tipo/section_tipo)', () => {
 
 describe('conformTmFilter — json (data) and relation (user_id)', () => {
 	test('Value (dd1574) contains → CAST text ILIKE', () => {
-		expect(one('dd1574', ['rsc197'], '')).toEqual({
+		expect(one('dd1574', ['test6099'], '')).toEqual({
 			sql: 'CAST(data AS text) ILIKE $1',
-			params: ['%rsc197%'],
+			params: ['%test6099%'],
 		});
 	});
 	test('Who (dd578) = locator → user_id = section_id', () => {
@@ -94,13 +98,13 @@ describe('conformTmFilter — structure', () => {
 			{
 				$and: [
 					{ path: [{ component_tipo: 'dd1212' }], q: ['2'], q_operator: '=' },
-					{ path: [{ component_tipo: 'dd1772' }], q: ['rsc197'], q_operator: '==' },
+					{ path: [{ component_tipo: 'dd1772' }], q: ['test6099'], q_operator: '==' },
 				],
 			},
 			{ params },
 		);
 		expect(sql).toBe('(section_id = $1 AND section_tipo = $2)');
-		expect(params).toEqual([2, 'rsc197']);
+		expect(params).toEqual([2, 'test6099']);
 	});
 
 	test('no component clause → null (buildTmWhere falls back to all rows)', () => {

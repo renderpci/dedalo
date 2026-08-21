@@ -48,6 +48,7 @@ import { dirname, join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { getServerState } from '../resolve/server_state.ts';
+import { assertTestMediaRoot } from './test_media_root.ts';
 
 /**
  * The auth cookie NAME is fixed; only its VALUE rotates (daily). This is what lets the
@@ -119,10 +120,21 @@ export function overrideMediaProtectionPathsForTests(
 	cachedAuthCookie = null;
 }
 
-/** The media root, or null when unset (feature off — every function no-ops). */
+/**
+ * The media root, or null when unset (feature off — every function no-ops).
+ *
+ * A ROOT RESOLVER, so the test-media guard sits here too: this module WRITES
+ * inside the media tree (the `.publication` marker store, the auth marker dir,
+ * the generated web-server rule files), and it reaches the root without going
+ * through `path.ts`. Inert outside the test seam (core/media/test_media_root.ts);
+ * armed, it refuses an unmarked root — the tmp-only test override included, so a
+ * scratch tree is a DECLARED scratch tree.
+ */
 export function mediaRoot(): string | null {
-	if (pathOverridesForTests !== null) return pathOverridesForTests.mediaRoot;
-	return config.media.rootPath;
+	const root =
+		pathOverridesForTests !== null ? pathOverridesForTests.mediaRoot : config.media.rootPath;
+	if (root === null) return null;
+	return assertTestMediaRoot(root, 'media_protection.mediaRoot');
 }
 
 /** The marker store base. Shared with media_index.ts, which owns pub/ and dbs/. */

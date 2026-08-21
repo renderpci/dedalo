@@ -26,7 +26,7 @@
  *   3. static pins — the kernel searches with the D3 seed, limit:false and
  *      the pure-SQL PHP order (no silent revert to the single-locator seed);
  *   4. behavioral (suite DB, scratch) — end-to-end recompute through a real
- *      dd621 equivalence chain (on1/58 ≡ 59 ≡ 60), and the >2000 freeze
+ *      dd621 equivalence chain (term 58 ≡ 59 ≡ 60), and the >2000 freeze
  *      refusing the persist.
  *
  * Scratch hygiene: ontology nodes in the test999xx band (scratch by
@@ -34,10 +34,16 @@
  * swept in afterAll. Everything is presence-guarded on the seeded term chain
  * (a live-snapshot DB skips loudly, exactly like observer_reconcile_native).
  */
+// BINDS INSTALL TLDs: numisdata, on, rsc, tch — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { getCounters } from '../../src/core/api/counters.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getNode } from '../../src/core/ontology/resolver.ts';
@@ -48,13 +54,17 @@ import {
 	nextObserverItemId,
 	recomputeExternalRelation,
 } from '../../src/core/section/record/observers.ts';
+import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
+import installDataFromFieldJson from './fixtures/observer_seed/install_data_from_field.json';
 import {
+	dropObserverTerm,
+	ensureObserverTerm,
+	INDEXER,
+	MIRROR,
+	REF_SECTION,
 	SEED_TERM,
-	seedTermChainIfAbsent,
-	sweepSeedTermReferencerResidue,
-	sweepTermChain,
-	type TermSeedHandle,
-} from '../helpers/observer_term_seed.ts';
+	TERM_SECTION,
+	} from '../helpers/observer_term_seed.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const kernelSource = readFileSync(join(REPO_ROOT, 'src/core/section/record/observers.ts'), 'utf-8');
@@ -64,12 +74,33 @@ const kernelSource = readFileSync(join(REPO_ROOT, 'src/core/section/record/obser
 // `properties->'source' ? 'data_from_field'` — exactly these four; every
 // declared peer is component_relation_related with relation_type_rel dd621).
 // ---------------------------------------------------------------------------
-const DECLARED_USERS = [
-	{ tipo: 'numisdata77', cts: 'numisdata161', dff: ['numisdata36'], sts: ['numisdata4'] },
-	{ tipo: 'numisdata203', cts: 'numisdata161', dff: ['numisdata36'], sts: ['numisdata4'] },
-	{ tipo: 'tch33', cts: 'tch241', dff: ['tch40'], sts: ['tch1', 'tch178'] },
+/** The phase-2 source→target clone map (append-only; see the census below). */
+const CLONE_MAP = cloneMapJson as { map: Record<string, { target: string }> };
+
+/**
+ * The generic half — repo-owned `test` ontology, present wherever the suite
+ * runs, so this is the half that MUST be there.
+ */
+const DECLARED_USERS_GENERIC = [
 	{ tipo: 'test199', cts: 'test188', dff: ['test200'], sts: ['test65'] },
 ] as const;
+
+/**
+ * The install half, READ FROM DATA
+ * (fixtures/observer_seed/install_data_from_field.json). It used to be typed
+ * here, which bound this gate to one installation two ways: the census counted
+ * the tipos, and the floor below demanded that ontology be PRESENT — `present
+ * >= 3` could only ever hold on a database carrying `numisdata`. Now the pins
+ * are still enforced where the ontology exists, and its absence is what it
+ * actually is: a different installation.
+ */
+const DECLARED_USERS_INSTALL = (
+	installDataFromFieldJson as {
+		users: { tipo: string; cts: string; dff: string[]; sts: string[] }[];
+	}
+).users;
+
+const DECLARED_USERS = [...DECLARED_USERS_GENERIC, ...DECLARED_USERS_INSTALL];
 
 describe('D3 declared data_from_field users (ontology cross-check)', () => {
 	test('the pinned table matches the real dd_ontology declarations', async () => {
@@ -94,10 +125,13 @@ describe('D3 declared data_from_field users (ontology cross-check)', () => {
 			expect(source !== undefined && 'source_overwrite' in source).toBe(false);
 			expect(source !== undefined && 'set_observed_data' in source).toBe(false);
 		}
-		// ≥3 present in the suite DB (numisdata77/numisdata203/test199); a
-		// wholesale miss means the ontology drifted — fail loudly, never
-		// vacuous-green.
-		expect(present).toBeGreaterThanOrEqual(3);
+		// The GENERIC users must all be present — that is the anti-vacuity floor,
+		// and it holds on every database the suite can run against. (It used to be
+		// `>= 3`, which silently required the numisdata ontology.)
+		for (const user of DECLARED_USERS_GENERIC) {
+			expect(await getNode(user.tipo), `${user.tipo} must be declared`).not.toBeNull();
+		}
+		expect(present).toBeGreaterThanOrEqual(DECLARED_USERS_GENERIC.length);
 	});
 
 	test('reverse census: every data_from_field carrier in the DB is pinned (no 5th user ships silently)', async () => {
@@ -106,10 +140,26 @@ describe('D3 declared data_from_field users (ontology cross-check)', () => {
 		// carriers so a NEW data_from_field user cannot ship silently under the
 		// TS-only law. Exclusions: the test999* band (this file's own scratch
 		// observer test99910 declares data_from_field and is seeded by
-		// beforeAll), and numisdata629 — a suite-DB-snapshot-only row the app
+		// beforeAll), and the snapshot-only carriers listed in the install data —
+		// rows a suite-DB snapshot holds that the app
 		// ontology no longer carries (verified absent from dedalo_mib_v7
 		// 2026-08-02; same shape: peer numisdata36, cts numisdata161).
-		const allowed = new Set([...DECLARED_USERS.map((user) => user.tipo), 'numisdata629']);
+		// PLUS the phase-2 CLONES of those same carriers: the generic-`test`-TLD
+		// migration copies an install subtree verbatim into a `test*` TLD, so
+		// `numisdata77`'s twin carries `data_from_field` exactly as its source
+		// does. The allowance is DERIVED from the committed clone map
+		// (src/core/test_data/test_tld_tipo_map.json), never hand-typed: a
+		// carrier is tolerated only when its SOURCE is already pinned above, so
+		// a genuinely new 5th user — clone or not — still fails here.
+		const allowed = new Set([
+			...DECLARED_USERS.map((user) => user.tipo),
+			...((installDataFromFieldJson as { snapshot_only_carriers?: string[] })
+				.snapshot_only_carriers ?? []),
+		]);
+		for (const source of [...allowed]) {
+			const clone = CLONE_MAP.map[source]?.target;
+			if (clone !== undefined) allowed.add(clone);
+		}
 		const rows = (await sql.unsafe(
 			`SELECT tipo, properties->'source'->'data_from_field' AS dff FROM dd_ontology
 			 WHERE properties->'source' ? 'data_from_field' AND tipo NOT LIKE 'test999%'`,
@@ -141,7 +191,16 @@ describe('D3 declared data_from_field users (ontology cross-check)', () => {
 				?.config_relation?.relation_type_rel;
 			expect(typeRel).toBe('dd621');
 		}
-		expect(present).toBeGreaterThanOrEqual(2); // numisdata36 + test200
+		// The GENERIC peers must all be present — that is the anti-vacuity floor,
+		// and unlike the old `>= 2` it does not require an installation's ontology
+		// to be in this database. (The `>= 2` reached its count only because the
+		// suite DB happened to carry a vendored install ontology; the moment that
+		// fixture went, so did the assertion — measured 2026-08-21.)
+		const genericPeers = [...new Set(DECLARED_USERS_GENERIC.flatMap((user) => [...user.dff]))];
+		for (const peerTipo of genericPeers) {
+			expect(await getNode(peerTipo), `${peerTipo} must be declared`).not.toBeNull();
+		}
+		expect(present).toBeGreaterThanOrEqual(genericPeers.length);
 	});
 });
 
@@ -359,8 +418,8 @@ describe('D3 seed law (hermetic, table-driven over the declared users)', () => {
 	});
 
 	test('no data_from_field → the seed is exactly the single target locator (pre-D3 shape)', async () => {
-		const seed = await collectExternalSeed({}, 'rsc387', 'on1', 58);
-		expect(seed).toEqual([{ section_tipo: 'on1', section_id: 58, from_component_tipo: 'rsc387' }]);
+		const seed = await collectExternalSeed({}, INDEXER, TERM_SECTION, 58);
+		expect(seed).toEqual([{ section_tipo: TERM_SECTION, section_id: 58, from_component_tipo: INDEXER }]);
 	});
 
 	test('buildExternalSeed: malformed peers dropped+counted, duplicates collapsed, target always first', () => {
@@ -469,15 +528,16 @@ describe('nextObserverItemId (pure)', () => {
 // ---------------------------------------------------------------------------
 const OBSERVER_TIPO = 'test99910'; // scratch D3 observer (test999xx band)
 const PEER_TIPO = 'test99911'; // scratch dd621 relation_related peer
-const EQUIV_IDS = [59, 60]; // extra on1 records: 58 ≡ 59 ≡ 60 (chain via stored links)
-const REF_DIRECT = 91080; // rsc205 → on1/58 (direct)
-const REF_EQUIV = 91081; // rsc205 → on1/59 (one stored hop)
-const REF_TRANSITIVE = 91082; // rsc205 → on1/60 (two hops — recursion only)
-const FREEZE_BAND_START = 8400001; // 2001 rsc205 referencers for the freeze test
+const EQUIV_IDS = [59, 60]; // extra term records: 58 ≡ 59 ≡ 60 (chain via stored links)
+const REF_DIRECT = 91080; // referencer → term 58 (direct)
+const REF_EQUIV = 91081; // referencer → term 59 (one stored hop)
+const REF_TRANSITIVE = 91082; // referencer → term 60 (two hops — recursion only)
+const FREEZE_BAND_START = 8400001; // 2001 referencers for the freeze test
 const FREEZE_BAND_END = 8402001;
 
-let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
-let planted = false;
+/** Resolved once the fixture exists — the scratch sections own their tables. */
+let TERM_TABLE = 'matrix_test';
+let REF_TABLE = 'matrix_test';
 
 async function clearResolverCaches(): Promise<void> {
 	const { clearOntologyDerivedCaches } = await import(
@@ -492,12 +552,12 @@ async function sweepScratch(): Promise<void> {
 		PEER_TIPO,
 	]);
 	await sql.unsafe(
-		`DELETE FROM matrix WHERE section_tipo = 'rsc205'
+		`DELETE FROM "${REF_TABLE}" WHERE section_tipo = $6
 		 AND (section_id IN ($1, $2, $3) OR (section_id >= $4 AND section_id <= $5))`,
-		[REF_DIRECT, REF_EQUIV, REF_TRANSITIVE, FREEZE_BAND_START, FREEZE_BAND_END],
+		[REF_DIRECT, REF_EQUIV, REF_TRANSITIVE, FREEZE_BAND_START, FREEZE_BAND_END, REF_SECTION],
 	);
 	await sql.unsafe(
-		'DELETE FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id IN ($2, $3)',
+		`DELETE FROM "${TERM_TABLE}" WHERE section_tipo = $1 AND section_id IN ($2, $3)`,
 		[SEED_TERM.section_tipo, EQUIV_IDS[0], EQUIV_IDS[1]],
 	);
 	await sql.unsafe('DELETE FROM matrix_time_machine WHERE tipo IN ($1, $2)', [
@@ -506,15 +566,16 @@ async function sweepScratch(): Promise<void> {
 	]);
 }
 
-function rsc387Referencer(targetId: number): string {
+/** A referencer row: one INDEXER locator pointing at a term. */
+function indexerReferencer(targetId: number): string {
 	return JSON.stringify({
-		rsc387: [
+		[INDEXER]: [
 			{
 				id: 1,
 				type: 'dd96',
 				section_id: String(targetId),
 				section_tipo: SEED_TERM.section_tipo,
-				from_component_tipo: 'rsc387',
+				from_component_tipo: INDEXER,
 			},
 		],
 	});
@@ -529,21 +590,18 @@ function mirrorEntry(itemId: number, referencerId: number): Record<string, unkno
 		id: itemId,
 		type: 'dd151',
 		section_id: referencerId,
-		section_tipo: 'rsc205',
+		section_tipo: REF_SECTION,
 		from_component_tipo: OBSERVER_TIPO,
 	};
 }
 
 beforeAll(async () => {
-	termSeed = await seedTermChainIfAbsent();
-	planted = termSeed.seededChain;
-	if (!planted) {
-		console.warn(
-			'observer_seed_native: on1/58 pre-exists (live-snapshot DB) — behavioral tier SKIPPED (scratch writes would touch real records)',
-		);
-		return;
-	}
-	await sweepSeedTermReferencerResidue();
+	// The anchor is BUILT (test/helpers/observer_term_seed.ts), so the old
+	// "pre-exists ⇒ skip the behavioural tier" guard is gone with the install
+	// binding it protected: there is no real record here to touch.
+	await ensureObserverTerm();
+	TERM_TABLE = (await getMatrixTableFromTipo(TERM_SECTION)) ?? 'matrix_test';
+	REF_TABLE = (await getMatrixTableFromTipo(REF_SECTION)) ?? 'matrix_test';
 	await sweepScratch();
 	// Scratch ontology: the D3 observer (component_to_search rsc387 within
 	// rsc205, equivalents through PEER_TIPO) + the dd621 peer node.
@@ -555,8 +613,8 @@ beforeAll(async () => {
 			JSON.stringify({
 				source: {
 					mode: 'external',
-					section_to_search: ['rsc205'],
-					component_to_search: ['rsc387'],
+					section_to_search: [REF_SECTION],
+					component_to_search: [INDEXER],
 					data_from_field: [PEER_TIPO],
 				},
 			}),
@@ -571,7 +629,7 @@ beforeAll(async () => {
 	// The dd621 equivalence chain: 58 —stored→ 59 —stored→ 60 (each hop only
 	// discoverable from the previous node: 60 requires the RECURSIVE walk).
 	await sql.unsafe(
-		`UPDATE matrix_hierarchy SET relation = relation || $3::text::jsonb
+		`UPDATE "${TERM_TABLE}" SET relation = relation || $3::text::jsonb
 		 WHERE section_tipo = $1 AND section_id = $2`,
 		[
 			SEED_TERM.section_tipo,
@@ -604,7 +662,7 @@ beforeAll(async () => {
 						],
 					};
 		await sql.unsafe(
-			'INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)',
+			`INSERT INTO "${TERM_TABLE}" (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
 			[id, SEED_TERM.section_tipo, JSON.stringify(relation)],
 		);
 	}
@@ -615,22 +673,21 @@ beforeAll(async () => {
 		[REF_TRANSITIVE, EQUIV_IDS[1]],
 	] as const) {
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
-			[refId, rsc387Referencer(targetId as number)],
+			`INSERT INTO "${REF_TABLE}" (section_id, section_tipo, relation) VALUES ($1, $3, $2::text::jsonb)`,
+			[refId, indexerReferencer(targetId as number), REF_SECTION],
 		);
 	}
 });
 
 afterAll(async () => {
-	if (!planted) return;
 	await sweepScratch();
-	await sweepTermChain(termSeed);
+	// Residue asserted, not trusted.
+	expect(await dropObserverTerm()).toBe(0);
 	await clearResolverCaches();
 });
 
 describe('D3 end-to-end (suite DB scratch): equivalents contribute their referencers', () => {
-	test('recompute @ on1/58 mirrors referencers of 58 AND of its dd621 equivalents 59/60', async () => {
-		if (!planted) return;
+	test('recompute @ the anchor mirrors referencers of 58 AND of its dd621 equivalents 59/60', async () => {
 		// Dry run first: the full law sees all three referencers.
 		const diff = await recomputeExternalRelation(
 			OBSERVER_TIPO,
@@ -657,7 +714,7 @@ describe('D3 end-to-end (suite DB scratch): equivalents contribute their referen
 		expect(outcome.changed).toBe(true);
 		expect(outcome.after).toBe(3);
 		const rows = (await sql.unsafe(
-			'SELECT relation->$3 AS bag FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id = $2',
+			`SELECT relation->($3::text) AS bag FROM "${TERM_TABLE}" WHERE section_tipo = $1 AND section_id = $2`,
 			[SEED_TERM.section_tipo, SEED_TERM.section_id, OBSERVER_TIPO],
 		)) as { bag: unknown[] | null }[];
 		expect(rows[0]?.bag).toEqual([
@@ -670,19 +727,18 @@ describe('D3 end-to-end (suite DB scratch): equivalents contribute their referen
 
 describe('the >2000-reference freeze refuses the persist (PHP :2087 parity)', () => {
 	test('2001 referencers: computed, counted, NOT written — dry run flags it too', async () => {
-		if (!planted) return;
-		// 2001 bypass referencers of on1/8 (the term's PARENT — clear of the
-		// D3 chain assertions above; hierarchy93 has no data_from_field so the
-		// seed is the single target).
+		// 2001 bypass referencers of the term's PARENT (clear of the D3 chain
+		// assertions above; MIRROR has no data_from_field so the seed is the
+		// single target).
 		const targetId = 8;
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation)
-			 SELECT gs, 'rsc205', $1::text::jsonb FROM generate_series($2::int, $3::int) gs`,
-			[rsc387Referencer(targetId), FREEZE_BAND_START, FREEZE_BAND_END],
+			`INSERT INTO "${REF_TABLE}" (section_id, section_tipo, relation)
+			 SELECT gs, $4, $1::text::jsonb FROM generate_series($2::int, $3::int) gs`,
+			[indexerReferencer(targetId), FREEZE_BAND_START, FREEZE_BAND_END, REF_SECTION],
 		);
 		const counterBefore = getCounters().observers_big_result_refused ?? 0;
 		const outcome = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			targetId,
 			-1,
@@ -696,20 +752,20 @@ describe('the >2000-reference freeze refuses the persist (PHP :2087 parity)', ()
 		expect((getCounters().observers_big_result_refused ?? 0) - counterBefore).toBe(1);
 		// NOTHING persisted: no mirror bag, no TM audit rows.
 		const bag = (await sql.unsafe(
-			`SELECT (relation ? 'hierarchy93') AS has_mirror FROM matrix_hierarchy
+			`SELECT (relation ? $3) AS has_mirror FROM "${TERM_TABLE}"
 			 WHERE section_tipo = $1 AND section_id = $2`,
-			[SEED_TERM.section_tipo, targetId],
+			[SEED_TERM.section_tipo, targetId, MIRROR],
 		)) as { has_mirror: boolean }[];
 		expect(bag[0]?.has_mirror).toBe(false);
 		const tm = (await sql.unsafe(
 			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = 'hierarchy93' LIMIT 1`,
-			[SEED_TERM.section_tipo, targetId],
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = ($3::text) LIMIT 1`,
+			[SEED_TERM.section_tipo, targetId, MIRROR],
 		)) as unknown[];
 		expect(tm.length).toBe(0);
 		// Dry run reports the same refusal (an apply would refuse).
 		const dry = await recomputeExternalRelation(
-			'hierarchy93',
+			MIRROR,
 			SEED_TERM.section_tipo,
 			targetId,
 			-1,

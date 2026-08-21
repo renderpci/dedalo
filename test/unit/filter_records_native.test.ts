@@ -16,6 +16,10 @@
  * DB: one scratch dd128 row in the reserved ≥ 900000 band (the scratch-id law of
  * test/helpers/acl_identity_fixture.ts), swept in afterAll.
  */
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). Install tipos were replaced
+// by their twins (src/core/test_data/test_tld_tipo_map.json); the seed-shipped ones
+// (rsc/dd/hierarchy/ontology/lg) ship with every installation and stay, spelled through
+// `seed()` so the census can tell a reference from a binding.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { filterRecordsEmitHook } from '../../src/core/components/component_filter_records/emit.ts';
@@ -30,6 +34,9 @@ import {
 } from '../../src/core/security/filter_records.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
 const USERS_SECTION = 'dd128';
 const FILTER_RECORDS = 'dd478';
 /** Scratch user, reserved band — never an installed id (see the header). */
@@ -43,12 +50,12 @@ const OTHER_SECTION = 'dd128';
 /** The stored datum, exactly as the editor writes it (id + tipo + int list). */
 const STORED_ENTRIES = [
 	{ id: 1, tipo: GATED_SECTION, value: [10, 27, 10] }, // the duplicate id is deduped
-	{ id: 2, tipo: 'rsc170', value: [] }, // empty ⇒ NOT a lockout, skipped
-	{ id: 3, tipo: 'numisdata3', value: [3, 'x', 0, -2] }, // only the valid int survives
+	{ id: 2, tipo: seed('rsc', 170), value: [] }, // empty ⇒ NOT a lockout, skipped
+	{ id: 3, tipo: 'test6099', value: [3, 'x', 0, -2] }, // only the valid int survives
 	// The LEGACY malformed shape that real data carries (observed on the client
 	// playground record: a nested {tipo,value} under `value` and NO top-level
 	// tipo). It names no section, so it can restrict none.
-	{ id: 4, value: [{ tipo: 'rsc167', value: [30, 26] }] },
+	{ id: 4, value: [{ tipo: seed('rsc', 167), value: [30, 26] }] },
 ];
 
 function principalFor(userId: number): Principal {
@@ -87,13 +94,13 @@ describe('component_filter_records — the stored allow-list', () => {
 		expect(allowed.get(GATED_SECTION)).toEqual([10, 27]);
 		// An empty list is "no restriction", never "sees nothing" (the editor's
 		// remove action is how a row is cleared) — the key must be ABSENT.
-		expect(allowed.has('rsc170')).toBe(false);
+		expect(allowed.has(seed('rsc', 170))).toBe(false);
 		// Every id reaches SQL as an integer literal: non-ints and non-positives
 		// must never survive the reader.
-		expect(allowed.get('numisdata3')).toEqual([3]);
+		expect(allowed.get('test6099')).toEqual([3]);
 		// The tipo-less legacy entry names no section: it must contribute nothing
 		// (and must NOT be read through its nested {tipo,value} payload).
-		expect(allowed.has('rsc167')).toBe(false);
+		expect(allowed.has(seed('rsc', 167))).toBe(false);
 		expect(allowed.size).toBe(2);
 	});
 

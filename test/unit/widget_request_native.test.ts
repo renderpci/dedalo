@@ -60,6 +60,8 @@
  * synthetic test52 + one zztc2 matrix_counter row, synthetic matrix_activity
  * rows + the dd1521 aggregates they produce — all swept fail-loud.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -546,11 +548,11 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 
 		// the differential's exact 2-day provisioning
 		await insertActivity(dayA, 9, 1, 'dd542'); // login
-		await insertActivity(dayA, 9, 5, 'numisdata3'); // save
-		await insertActivity(dayA, 10, 5, 'numisdata3'); // save
-		await insertActivity(dayA, 10, 6, 'numisdata4'); // edit
-		await insertActivity(dayA, 11, 5, 'dd1223', { top_tipo: 'numisdata6' }); // publish
-		await insertActivity(dayB, 14, 7, 'numisdata3'); // list
+		await insertActivity(dayA, 9, 5, 'test6099'); // save
+		await insertActivity(dayA, 10, 5, 'test6099'); // save
+		await insertActivity(dayA, 10, 6, 'test6100'); // edit
+		await insertActivity(dayA, 11, 5, 'dd1223', { top_tipo: 'testmint1' }); // publish
+		await insertActivity(dayB, 14, 7, 'test6099'); // list
 		await insertActivity(dayB, 14, 8, 'dd271'); // where SKIPPED
 
 		body = await tsCall({
@@ -640,25 +642,25 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 		});
 
 		// day A: login + 3 saves (incl. the publish event's code 5) + 1 edit;
-		// where dd542/numisdata3×2/numisdata4 (dd1223 routed to publish);
-		// hours 9×2, 10×2, 11; one numisdata6 publish
+		// where dd542/test6099×2/test6100 (dd1223 routed to publish);
+		// hours 9×2, 10×2, 11; one testmint1 publish
 		const dayATotals = [
 			{ type: 'what', tipo: 'dd696', value: 1, label: labels.dd696 },
 			{ type: 'what', tipo: 'dd700', value: 3, label: labels.dd700 },
 			{ type: 'what', tipo: 'dd694', value: 1, label: labels.dd694 },
 			{ type: 'where', tipo: 'dd542', value: 1 },
-			{ type: 'where', tipo: 'numisdata3', value: 2 },
-			{ type: 'where', tipo: 'numisdata4', value: 1 },
+			{ type: 'where', tipo: 'test6099', value: 2 },
+			{ type: 'where', tipo: 'test6100', value: 1 },
 			{ type: 'when', hour: 9, value: 2 },
 			{ type: 'when', hour: 10, value: 2 },
 			{ type: 'when', hour: 11, value: 1 },
-			{ type: 'publish', tipo: 'numisdata6', value: 1 },
+			{ type: 'publish', tipo: 'testmint1', value: 1 },
 		];
 		// day B: list + search; the dd271 'where' is SKIPPED; hour 14×2
 		const dayBTotals = [
 			{ type: 'what', tipo: 'dd693', value: 1, label: labels.dd693 },
 			{ type: 'what', tipo: 'dd699', value: 1, label: labels.dd699 },
-			{ type: 'where', tipo: 'numisdata3', value: 1 },
+			{ type: 'where', tipo: 'test6099', value: 1 },
 			{ type: 'when', hour: 14, value: 2 },
 		];
 

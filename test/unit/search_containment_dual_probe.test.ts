@@ -15,6 +15,10 @@
  *      mixed-typed row containing all elements still matches;
  *   4. external-shaped (non-convertible) ids probe verbatim, single-variant.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -33,21 +37,21 @@ const COMPONENT = 'zzdp1';
 /** Scratch rows: one per storage form. */
 const ROWS: { id: number; entries: Record<string, unknown>[] }[] = [
 	// string-stored (pre-sweep form)
-	{ id: 920001, entries: [{ type: 'dd151', section_tipo: 'oh1', section_id: '7' }] },
+	{ id: 920001, entries: [{ type: 'dd151', section_tipo: 'test6813', section_id: '7' }] },
 	// int-stored (post-sweep / new-writer form)
-	{ id: 920002, entries: [{ type: 'dd151', section_tipo: 'oh1', section_id: 7 }] },
+	{ id: 920002, entries: [{ type: 'dd151', section_tipo: 'test6813', section_id: 7 }] },
 	// MIXED array: element A string, element B int
 	{
 		id: 920003,
 		entries: [
-			{ type: 'dd151', section_tipo: 'oh1', section_id: '7' },
-			{ type: 'dd151', section_tipo: 'oh1', section_id: 9 },
+			{ type: 'dd151', section_tipo: 'test6813', section_id: '7' },
+			{ type: 'dd151', section_tipo: 'test6813', section_id: 9 },
 		],
 	},
 	// a different target — must NEVER match q=7
-	{ id: 920004, entries: [{ type: 'dd151', section_tipo: 'oh1', section_id: 8 }] },
+	{ id: 920004, entries: [{ type: 'dd151', section_tipo: 'test6813', section_id: 8 }] },
 	// external-shaped (zero-padded) — verbatim probes only
-	{ id: 920005, entries: [{ type: 'dd151', section_tipo: 'zenon1', section_id: '007' }] },
+	{ id: 920005, entries: [{ type: 'dd151', section_tipo: 'test7342', section_id: '007' }] },
 ];
 
 /** Run a composed containment clause against the scratch tipo; return ids. */
@@ -109,7 +113,7 @@ describe('positive containment (law 1)', () => {
 		const { bind, params } = binder();
 		const clause = composeContains(
 			'relation',
-			relationProbeGroups(COMPONENT, [{ type: 'dd151', section_tipo: 'oh1', section_id: 7 }]),
+			relationProbeGroups(COMPONENT, [{ type: 'dd151', section_tipo: 'test6813', section_id: 7 }]),
 			bind,
 		);
 		expect(await matchedIds(clause, params)).toEqual([920001, 920002, 920003]);
@@ -119,7 +123,9 @@ describe('positive containment (law 1)', () => {
 		const { bind, params } = binder();
 		const clause = composeContains(
 			'relation',
-			relationProbeGroups(COMPONENT, [{ type: 'dd151', section_tipo: 'oh1', section_id: '7' }]),
+			relationProbeGroups(COMPONENT, [
+				{ type: 'dd151', section_tipo: 'test6813', section_id: '7' },
+			]),
 			bind,
 		);
 		expect(await matchedIds(clause, params)).toEqual([920001, 920002, 920003]);
@@ -130,8 +136,8 @@ describe('positive containment (law 1)', () => {
 		const clause = composeContains(
 			'relation',
 			relationProbeGroups(COMPONENT, [
-				{ type: 'dd151', section_tipo: 'oh1', section_id: 7 },
-				{ type: 'dd151', section_tipo: 'oh1', section_id: 9 },
+				{ type: 'dd151', section_tipo: 'test6813', section_id: 7 },
+				{ type: 'dd151', section_tipo: 'test6813', section_id: 9 },
 			]),
 			bind,
 		);
@@ -146,7 +152,7 @@ describe('negated containment (law 2 — polarity)', () => {
 		const { bind, params } = binder();
 		const clause = composeNotContains(
 			'relation',
-			relationProbeGroups(COMPONENT, [{ type: 'dd151', section_tipo: 'oh1', section_id: 7 }]),
+			relationProbeGroups(COMPONENT, [{ type: 'dd151', section_tipo: 'test6813', section_id: 7 }]),
 			bind,
 		);
 		// The WRONG composition — NOT(str) OR NOT(int) per variant — would match
@@ -160,8 +166,8 @@ describe('negated containment (law 2 — polarity)', () => {
 		const clause = composeNotContains(
 			'relation',
 			relationProbeGroups(COMPONENT, [
-				{ type: 'dd151', section_tipo: 'oh1', section_id: 7 },
-				{ type: 'dd151', section_tipo: 'oh1', section_id: 9 },
+				{ type: 'dd151', section_tipo: 'test6813', section_id: 7 },
+				{ type: 'dd151', section_tipo: 'test6813', section_id: 9 },
 			]),
 			bind,
 		);
@@ -174,7 +180,7 @@ describe('negated containment (law 2 — polarity)', () => {
 		const contains = composeContains(
 			'relation',
 			relationProbeGroups(COMPONENT, [
-				{ type: 'dd151', section_tipo: 'zenon1', section_id: '007' },
+				{ type: 'dd151', section_tipo: 'test7342', section_id: '007' },
 			]),
 			bind,
 		);

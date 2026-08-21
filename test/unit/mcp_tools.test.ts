@@ -4,14 +4,26 @@
  * more (REWRITE_SPEC §8: "respecting the same ACL as human access", §10: "AI
  * tools denied exactly where humans are denied").
  *
- * Fixture: numisdata267 is gated by component_filter numisdata21. Non-admin
- * user 16 holds project 7, so they see only project-7 records; the superuser
- * (-1) sees everything. We assert the MCP handlers reproduce that split for
- * both search (count + hits) and read (gated records read empty for the
- * non-admin, populated for the admin).
+ * THE SITUATION IS BUILT, NOT BORROWED (generic-`test`-TLD migration,
+ * 2026-08-19). The gate used to read an install's `numisdata267` records and
+ * user 16 — green on one machine, red on every other, and satisfiable at
+ * 0-versus-0 wherever those records are absent. It now BUILDS the split it
+ * asserts, out of two repo-owned pieces:
+ *
+ *   - the synthetic ACL identities (test/helpers/acl_identity_fixture.ts): a
+ *     non-admin holding exactly ONE project (ACL_PROJECT_ID) and a read grant
+ *     on `test3`, so "the gated user sees strictly fewer" cannot be vacuous;
+ *   - three scratch `test3` records in the reserved ≥900000 band — two carrying
+ *     the non-admin's project through test3's own component_filter (`test101`),
+ *     one carrying a project they do NOT hold.
+ *
+ * `test3` is project-gated for real: `getComponentFilterTipo('test3')` resolves
+ * `test101`, which is what buildProjectsFilter keys on. The canonical playground
+ * records carry project 1 (not the fixture's), so they count for the admin and
+ * are correctly invisible to the non-admin.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
 	describeOntologyNode,
 	readSectionRecord,
@@ -19,12 +31,67 @@ import {
 } from '../../src/ai/mcp/tools.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	ACL_PROJECT_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
+import { cleanScratchRecord, createScratchRecord, ensureCanonicalTest3 } from '../helpers/test_data.ts';
 
-const GATED_SECTION = 'numisdata267';
+/** The project-gated section and the component_filter that gates it. */
+const GATED_SECTION = 'test3';
+const FILTER_COMPONENT = 'test101';
+/** test3's own input_text — the searchable literal of the playground. */
+const TEXT_COMPONENT = 'test52';
+/** Projects live in dd153; the locator type the real records carry. */
+const PROJECTS_SECTION = 'dd153';
+const PROJECT_LOCATOR_TYPE = 'dd675';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
-/** Real non-admin whose dd170 projects resolve to [7] (see projects_filter test). */
-const NON_ADMIN: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
+/** The synthetic non-admin: one project (ACL_PROJECT_ID), read grant on test3. */
+const NON_ADMIN: Principal = {
+	userId: ACL_NON_ADMIN_USER_ID,
+	isGlobalAdmin: false,
+	isDeveloper: false,
+};
+
+/** Scratch records this gate owns (reserved ≥900000 band). */
+const VISIBLE_IDS = [941001, 941002];
+const HIDDEN_ID = 941003;
+/** A project the non-admin does NOT hold — what makes HIDDEN_ID hidden. */
+const OTHER_PROJECT_ID = 1;
+
+function projectLocator(projectId: number) {
+	return [
+		{
+			id: 1,
+			type: PROJECT_LOCATOR_TYPE,
+			section_id: String(projectId),
+			section_tipo: PROJECTS_SECTION,
+			from_component_tipo: FILTER_COMPONENT,
+		},
+	];
+}
+
+async function createGatedRecord(sectionId: number, projectId: number): Promise<void> {
+	await createScratchRecord(GATED_SECTION, sectionId, {
+		relation: { [FILTER_COMPONENT]: projectLocator(projectId) },
+		string: { [TEXT_COMPONENT]: [{ id: 1, lang: 'lg-eng', value: `acl scratch ${sectionId}` }] },
+	});
+}
+
+beforeAll(async () => {
+	await ensureCanonicalTest3();
+	await installAclIdentityFixture();
+	for (const id of VISIBLE_IDS) await createGatedRecord(id, ACL_PROJECT_ID);
+	await createGatedRecord(HIDDEN_ID, OTHER_PROJECT_ID);
+});
+
+afterAll(async () => {
+	for (const id of [...VISIBLE_IDS, HIDDEN_ID]) await cleanScratchRecord(GATED_SECTION, id);
+	await removeAclIdentityFixture();
+});
 
 describe('MCP tools — ACL parity (Phase 8 gate)', () => {
 	test('search: non-admin count/hits are a gated subset of the admin view', async () => {
@@ -42,36 +109,36 @@ describe('MCP tools — ACL parity (Phase 8 gate)', () => {
 		expect(userResult.total).toBeGreaterThan(0);
 		expect(userResult.total).toBeLessThan(adminResult.total);
 
-		// Every non-admin hit must be a real project-7 record (no over-return).
-		const projectSeven = new Set(
+		// Every non-admin hit must be a real project record (no over-return).
+		const inProject = new Set(
 			(
 				(await sql`
-					SELECT section_id FROM matrix
+					SELECT section_id FROM matrix_test
 					WHERE section_tipo = ${GATED_SECTION}
 					  AND EXISTS (
-						SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e
-						WHERE e->>'section_id' = '7'
+						SELECT 1 FROM jsonb_array_elements(relation->${FILTER_COMPONENT}) e
+						WHERE e->>'section_id' = ${String(ACL_PROJECT_ID)}
 					)
 				`) as { section_id: number }[]
 			).map((row) => Number(row.section_id)),
 		);
-		expect(projectSeven.size).toBeGreaterThan(0);
+		expect(inProject.size).toBeGreaterThan(0);
 		for (const hit of userResult.hits) {
 			expect(hit.section_tipo).toBe(GATED_SECTION);
-			expect(projectSeven.has(hit.section_id)).toBe(true);
+			expect(inProject.has(hit.section_id)).toBe(true);
 		}
 	});
 
 	test("read: a record outside the user's projects reads empty for them, full for admin", async () => {
-		// Find a gated record the non-admin must NOT see (no project-7 relation).
+		// The scratch record built with a project the non-admin does NOT hold.
 		const hiddenRows = (await sql`
-			SELECT section_id FROM matrix
+			SELECT section_id FROM matrix_test
 			WHERE section_tipo = ${GATED_SECTION}
+			  AND section_id = ${HIDDEN_ID}
 			  AND NOT EXISTS (
-				SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e
-				WHERE e->>'section_id' = '7'
+				SELECT 1 FROM jsonb_array_elements(relation->${FILTER_COMPONENT}) e
+				WHERE e->>'section_id' = ${String(ACL_PROJECT_ID)}
 			)
-			ORDER BY section_id LIMIT 1
 		`) as { section_id: number }[];
 		expect(hiddenRows.length).toBe(1);
 		const hiddenId = Number(hiddenRows[0]?.section_id);
@@ -102,52 +169,47 @@ describe('MCP tools — ACL parity (Phase 8 gate)', () => {
 	});
 
 	test('search: a component filter narrows results via the real search builders', async () => {
-		// numisdata6.numisdata16 (input_text, lg-spa) is the proven searchable
-		// fixture from sqo_differential. An exact-match filter must narrow the
-		// result below the section total and return exactly the records whose
-		// stored value equals the query — i.e. the MCP filter routes through the
-		// same per-component builder the web search uses.
-		const SEARCH_SECTION = 'numisdata6';
-		const TEXT_COMPONENT = 'numisdata16';
-		// Grab a real lg-spa value (the element whose lang == 'lg-spa'), so the
-		// lang-scoped filter matches what is actually stored.
+		// test3.test52 (input_text, lg-eng) is the playground's searchable
+		// literal. An exact-match filter must narrow the result below the
+		// section total and return exactly the records whose stored value equals
+		// the query — i.e. the MCP filter routes through the same per-component
+		// builder the web search uses.
 		const sample = (await sql`
 			SELECT (
 				SELECT e->>'value'
-				FROM jsonb_array_elements(string->'numisdata16') e
-				WHERE e->>'lang' = 'lg-spa' AND e->>'value' <> ''
+				FROM jsonb_array_elements(string->${TEXT_COMPONENT}) e
+				WHERE e->>'lang' = 'lg-eng' AND e->>'value' <> ''
 				LIMIT 1
 			) AS v
-			FROM matrix
-			WHERE section_tipo = ${SEARCH_SECTION}
-			  AND string->'numisdata16' IS NOT NULL
-			ORDER BY section_id
+			FROM matrix_test
+			WHERE section_tipo = ${GATED_SECTION}
+			  AND section_id = ${VISIBLE_IDS[0] as number}
 		`) as { v: string | null }[];
 		const value = sample.map((row) => row.v).find((v) => v !== null && v !== '');
 		expect(value).toBeTruthy();
 
 		const unfiltered = await searchSectionRecords(SUPERUSER, {
-			section_tipo: SEARCH_SECTION,
+			section_tipo: GATED_SECTION,
 			limit: 100,
 		});
 		const filtered = await searchSectionRecords(SUPERUSER, {
-			section_tipo: SEARCH_SECTION,
+			section_tipo: GATED_SECTION,
 			limit: 100,
-			filter: { component_tipo: TEXT_COMPONENT, query: `==${value}`, lang: 'lg-spa' },
+			filter: { component_tipo: TEXT_COMPONENT, query: `==${value}`, lang: 'lg-eng' },
 		});
 
 		expect(filtered.total).toBeGreaterThan(0);
 		expect(filtered.total).toBeLessThan(unfiltered.total);
 
-		// Ground truth: records whose lg-spa value equals `value` (exact match).
+		// Ground truth: records whose lg-eng value equals `value` (exact match).
 		const truth = new Set(
 			(
 				(await sql`
-					SELECT section_id FROM matrix
-					WHERE section_tipo = ${SEARCH_SECTION}
+					SELECT section_id FROM matrix_test
+					WHERE section_tipo = ${GATED_SECTION}
 					  AND EXISTS (
-						SELECT 1 FROM jsonb_array_elements(string->'numisdata16') e
-						WHERE e->>'lang' = 'lg-spa' AND e->>'value' = ${value}
+						SELECT 1 FROM jsonb_array_elements(string->${TEXT_COMPONENT}) e
+						WHERE e->>'lang' = 'lg-eng' AND e->>'value' = ${value}
 					)
 				`) as { section_id: number }[]
 			).map((row) => Number(row.section_id)),
@@ -165,7 +227,7 @@ describe('MCP tools — ACL parity (Phase 8 gate)', () => {
 
 	test('search: invalid section_tipo is rejected at the identifier chokepoint', async () => {
 		await expect(
-			searchSectionRecords(SUPERUSER, { section_tipo: "oh1'; DROP TABLE matrix; --" }),
+			searchSectionRecords(SUPERUSER, { section_tipo: "test3'; DROP TABLE matrix; --" }),
 		).rejects.toThrow();
 	});
 });

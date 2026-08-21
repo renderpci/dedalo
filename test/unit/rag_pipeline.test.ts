@@ -8,6 +8,9 @@
  * human API denies gets NOTHING from the same query. Everything created is
  * removed afterwards.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos
+// here are OPAQUE IDENTIFIERS — this gate builds and inspects a descriptor, it never
+// reads a record — so the migration is a rename.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type OntologyPort, RagConfig } from '../../src/ai/rag/config.ts';
@@ -35,14 +38,14 @@ beforeAll(async () => {
 	await indexComponentText({
 		section_tipo: SECTION_TIPO,
 		section_id: coinId,
-		component_tipo: 'numisdata16',
+		component_tipo: 'testmint1002',
 		lang: 'lg-spa',
 		text: 'Moneda ibérica de bronce acuñada en la ceca de Abariltur, con jinete y leyenda ibérica.',
 	});
 	await indexComponentText({
 		section_tipo: SECTION_TIPO,
 		section_id: shipId,
-		component_tipo: 'numisdata16',
+		component_tipo: 'testmint1002',
 		lang: 'lg-spa',
 		text: 'Naufragio de un barco fenicio con ánforas de aceite frente a la costa de Cartagena.',
 	});
@@ -79,7 +82,7 @@ describe('RAG pipeline (Phase 8 gate — offline deterministic provider)', () =>
 		await indexComponentText({
 			section_tipo: SECTION_TIPO,
 			section_id: createdIds[0] as number,
-			component_tipo: 'numisdata16',
+			component_tipo: 'testmint1002',
 			lang: 'lg-spa',
 			text: 'Moneda ibérica de bronce acuñada en la ceca de Abariltur, con jinete y leyenda ibérica.',
 		});

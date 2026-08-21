@@ -39,6 +39,11 @@
  * does NOT revert it — the real config module is re-installed in `afterAll`, and
  * this suite is kept away from the other media gates.
  */
+// NO INSTALL TLD IS BOUND HERE (checked 2026-08-19). The census entry for this
+// file is a FALSE POSITIVE: the only token it matches is `libx264`, the ffmpeg
+// H.264 ENCODER name, which is `<letters><digits>`-shaped and so indistinguishable
+// from a tipo to scripts/lib/tld_census.ts. `libx` is not an ontology TLD and
+// should leave INSTALL_TLDS; until it does, the entry stays frozen.
 
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test';
 import {
@@ -57,6 +62,7 @@ import * as REAL_CONFIG_MODULE from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_encode_integrity_${process.pid}`;
 const BIN = join(ROOT, 'bin');
@@ -239,6 +245,9 @@ function leftoversBeside(target: string): string[] {
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 	mkdirSync(BIN, { recursive: true });
 	installFakeFfmpeg();
 	installFakeFaststart();

@@ -33,6 +33,7 @@ import { scanFilesInfo } from '../../src/core/media/files_info.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import { regenerateSvg } from '../../src/core/media/processing.ts';
 import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_svg_thumb_${process.pid}`;
 const svg = mediaTypeOf('component_svg')!;
@@ -68,7 +69,7 @@ function plant(quality: string, content = SVG_SOURCE): string {
 	return path;
 }
 
-beforeAll(() => rmSync(ROOT, { recursive: true, force: true }));
+beforeAll(() => resetMediaRoot(ROOT));
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 describe('component_svg has a thumb tier at all', () => {
@@ -79,7 +80,7 @@ describe('component_svg has a thumb tier at all', () => {
 	});
 
 	test('the tier is scanned into files_info once the file exists', () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(svg.defaultQuality);
 		// A scan INVENTS NOTHING: no file, no entry (getQualityFileInfo emits one
 		// only for a file that exists). The panel draws its column from ar_quality,
@@ -118,7 +119,7 @@ describe('the rasterizer (librsvg, NOT ImageMagick)', () => {
 	});
 
 	test.if(HAVE_RSVG)('renders a vector to a real png', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const source = plant(svg.defaultQuality);
 		const target = `${ROOT}/render.png`;
 		await rasterizeSvg(source, target, 96);
@@ -127,7 +128,7 @@ describe('the rasterizer (librsvg, NOT ImageMagick)', () => {
 	});
 
 	test.if(HAVE_RSVG)('an unrenderable file fails LOUDLY, never silently', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const source = plant(svg.defaultQuality, 'this is not a vector at all');
 		await expect(rasterizeSvg(source, `${ROOT}/render.png`, 96)).rejects.toThrow(/rsvg-convert/);
 	});
@@ -135,7 +136,7 @@ describe('the rasterizer (librsvg, NOT ImageMagick)', () => {
 
 describe('build_version thumb (the panel gear)', () => {
 	test.if(HAVE_BOTH)('builds a thumb from a vector, within the thumb box', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(svg.defaultQuality);
 		const out = await buildVersionCore(svg, identity, pathOpts, config.media.thumb.quality);
 		expect(out.built).toEqual([thumbPath]);
@@ -151,7 +152,7 @@ describe('build_version thumb (the panel gear)', () => {
 	});
 
 	test.if(HAVE_BOTH)('leaves NO intermediate render beside the thumb', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(svg.defaultQuality);
 		await buildVersionCore(svg, identity, pathOpts, config.media.thumb.quality);
 		const files = readdirSync(`${ROOT}/svg/${config.media.thumb.quality}`);
@@ -161,7 +162,7 @@ describe('build_version thumb (the panel gear)', () => {
 	});
 
 	test.if(HAVE_BOTH)('builds from the ORIGINAL when there is no web copy yet', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(svg.originalQuality);
 		const out = await buildVersionCore(svg, identity, pathOpts, config.media.thumb.quality);
 		expect(out.built).toEqual([thumbPath]);
@@ -171,7 +172,7 @@ describe('build_version thumb (the panel gear)', () => {
 
 describe('regenerateSvg: web copy + thumb, thumb non-fatal', () => {
 	test.if(HAVE_BOTH)('writes both files from the original', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(svg.originalQuality);
 		const out = await regenerateSvg(svg, identity, pathOpts);
 		expect(out.errors).toEqual([]);
@@ -180,7 +181,7 @@ describe('regenerateSvg: web copy + thumb, thumb non-fatal', () => {
 	});
 
 	test.if(HAVE_RSVG)('a thumb that cannot be rendered costs the THUMB, not the copy', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(svg.originalQuality, 'this is not a vector at all');
 		const out = await regenerateSvg(svg, identity, pathOpts);
 		// The deliverable file landed…

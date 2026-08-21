@@ -38,6 +38,8 @@
  * join-back stays 1:1); their ROW-level equivalence is proven against a live DB
  * by activity_deep_offset_flip.test.ts.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the control section/component are
+// test-TLD nodes (no install corpus is read — this gate only builds SQL).
 
 import { describe, expect, test } from 'bun:test';
 import type { Sqo } from '../../src/core/concepts/sqo.ts';
@@ -45,7 +47,7 @@ import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 
 const ACTIVITY_TIPO = 'dd542';
 /** An ordinary section (its own matrix table) — the control. */
-const CONTROL_TIPO = 'oh1';
+const CONTROL_TIPO = 'test3';
 
 /** The composite order the assembler must emit for a dd542 structural sort. */
 const TIME_ORDER = (dir: 'ASC' | 'DESC'): RegExp =>

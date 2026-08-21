@@ -3,12 +3,25 @@
 > **CUTOVER EXECUTED 2026-07-11** (owner-authorized; `rewrite/CUTOVER_RUNBOOK.md`).
 > The PHP oracle is DECOMMISSIONED. This store IS the read-path
 > baseline-of-record (final harvest: 76 gates / 449 interactions; credless
-> proof 382 pass / 0 fail / 124 skip), pinned to the same-instant DB snapshot
-> `private/backups/db/2026-07-11_102750.….custom.backup`. `ORACLE_MODE` now
+> proof 382 pass / 0 fail / 124 skip — MEASURED AGAINST THE LIVE `dedalo_mib_v7`
+> DB), pinned to the same-instant DB snapshot
+> `../private/backups/db/2026-07-11_102750.….custom.backup`. `ORACLE_MODE` now
 > defaults to `fixtures`; the 23 fixture-exempt gates are RETIRED — the
 > DEC-14b punch list below maps each to its surviving TS-native twin. A
 > re-harvest is impossible by definition: any fixture change from here on is
 > a deliberate contract edit (`engineering/wire_contract/`).
+>
+> **STATUS 2026-08-19 — the store is CORPUS-BOUND and is being replaced.** On
+> the vendored suite DB (`scripts/test_db_setup.ts`, no install records) the
+> tier measures **173 pass / 13 skip / 208 fail** (2026-08-18); 186 reds are
+> corpus absence, 9 are landed changes the fixture predates, 8 were ONE real
+> regression (WC-034 addendum: `search_options`), 3 environment, 2 rolling
+> clock. All 76 gates carry `entity: monedaiberica`. The rule now in force
+> (AGENTS.md hard rules): tests use the generic `test` TLD and build the
+> situation they test. Each corpus-bound differential is replaced by a
+> test-TLD twin asserting the same contract and then deleted — the same
+> DEC-14b path as the 23 write-path gates and the 5 TM gates below. See
+> "§ Generic-TLD replacement map" at the end of this doc.
 
 The differential parity suite verified the TS engine against the **live PHP
 oracle** (`PHP_API_BASE_URL`, creds in `../private/.env`). That oracle was
@@ -183,9 +196,15 @@ WHY, precisely — the fixtures and the suite database drifted apart:
 - the TM fixtures were harvested 2026-07-11 against a **live shared DB**. Their
   rows exist ONLY in `dedalo7_mdcat` (`matrix_id` 51071497/96/95/94, caller
   `rsc1242`/578) — verified absent from every other local database;
-- the pinned `private/backups/db/2026-07-11_102750.….custom.backup` is GONE
-  (only `2026-07-16_161254/161317.dedalo7ts` survive, and `dedalo7ts` maxes at
-  TM id 63217);
+- ~~the pinned `private/backups/db/2026-07-11_102750.….custom.backup` is GONE~~
+  **CORRECTED 2026-08-19: it is NOT gone.** It is on disk at
+  `../private/backups/db/2026-07-11_102750.dedalo_mib_v7.…custom.backup`
+  (382 MB, `dbname: dedalo_mib_v7`, archived 2026-07-11 10:27:50 — the harvest
+  instant), and the harvest DB `dedalo_mib_v7` is itself still live locally.
+  This bullet was wrong when written; the retirement below stands on the
+  remaining three bullets alone, which are sufficient — and on the stronger
+  rule adopted 2026-08-19 that a corpus-bound gate is the wrong shape
+  regardless of whether its corpus can be restored;
 - `test/preload/test_database.ts` hard-points the WHOLE SUITE at `<app db>_test`
   and deliberately refuses to fall back to a real database (written after a gate
   deleted `test218` out of a live install);
@@ -304,3 +323,155 @@ diff against, so every entry below is a native contract, not a re-expression.
 The nine `external_*_tripwire` invariant gates are indexed in
 `engineering/TRIPWIRES.md`, not here — this table is contract coverage, that one
 is invariant enforcement.
+
+## § Generic-TLD replacement map (opened 2026-08-19)
+
+The rule (AGENTS.md hard rules): a test uses the generic `test` TLD and BUILDS
+the situation it tests. Every corpus-bound gate in this store is replaced by a
+test-TLD twin proving the SAME contract, then deleted together with its
+`oracle_harvest/<gate>.json`. Rows are appended as twins land — this table is
+the ledger of record for the migration; `rewrite/LEDGER.md` carries the
+measured counts between batches.
+
+Baseline 2026-08-18 (`ORACLE_MODE=fixtures bun test test/parity/`, suite DB):
+173 pass / 13 skip / 208 fail across 82 files; 51 files corpus-bound (class A).
+
+| Retired gate | Contract it proved | Twin | Landed |
+|---|---|---|---|
+| `test/parity/portal_differential.test.ts` | Portal subdatum in LIST mode through readSectionRows: for a record whose portal holds MORE locators than the list cell page, the portal item's entries are the paginated locator page (LIST limit chain: ddo-declared limit → the component's effective list config / section_list-substituted limit → PORTAL_LIST_LIMIT=1; autocomplete_hi shows all) and pagination = {total: FULL locator count, limit}; the child items (declared child ddo at the target section) come in locator order, one per paged locator, with identity (section_tipo, section_id of the target), entries = the target's stored value (WC-001: [] when empty, never null), and the subdatum stamps row_section_id = the OUTER record and parent_tipo = the portal tipo (section-read re-stamp — differs from get_data's target anchor). | `test/unit/portal_list_cell_pagination_native.test.ts` (situation `zzpl`) | 2026-08-19 |
+| `test/parity/relation_list_differential.test.ts` | get_relation_list (the Referencias panel): every record pointing AT the host (inverse index scan over 'all' owning sections, or the sqo.section_tipo-narrowed set) as a heterogeneous grid — context = per referencing section, on FIRST sight, an 'id' column entry then one entry per grid column (section_map relation_list scope term, else the section's legacy relation_list node relations) with component_label = the column's term in the request lang; data = per hit an id cell (no value key) + one cell per column whose `value` is the component's FLAT display string (string family lang-sliced joined ' \| ', relation models via datalist label resolution, dataframe frames folded), absent when null; sqo.limit/offset page the HITS, limit 0 = all; source.mode !== 'edit' returns the empty shell {context:[],data:[]}; host read permission gate. | `test/unit/relation_list_grid_native.test.ts` (situation `zzrl`) | 2026-08-19 |
+| `test/parity/tool_export_dataframe_differential.test.ts` | tool_export get_export_grid with a RELATION main (autocomplete/portal stored model → the fan-out path, NOT the WC-008 compact branch) carrying component_dataframe children: frames found on the OWNER record's relation column under the frame tipo, paired to each main locator by (type dd490, main_component_tipo, id_key = the main locator's stored id); grid_value default/rows/columns and value/default all mint a frame column and flow the frame VALUE into the framed record's cells; a frameless record still gets the column (mid-stream mint, empty cell); `unresolved` never contains 'component_dataframe' for this shape; columns/rows/end/meta.total consistent across formats. dedalo_raw (WC-2026-08-09): the frame slot is its OWN column `${section}_${frame}` after the main, every cell a bare {"dedalo_data": <array>} of dd490 locators with from_component_tipo=frame. A DECLARED dataframe path step stays LOUD: unresolved contains 'component_dataframe:declared-path'. | `test/unit/tool_export_relation_dataframe_fanout_native.test.ts` (situation `zzxd`) | 2026-08-19 |
+
+Blocked rows (a contract that could NOT be re-expressed generically) are
+recorded here with the reason inline, never dropped.
+
+Batch 1 (2026-08-19) — rows NOT ACCEPTED (twin refuted twice in review; the
+in-tree state at the time of writing is: twin file present, old gate + fixture
+staged as deleted — the row above is withheld until a review pass accepts it):
+
+- `test/parity/portal_edit_subdatum_differential.test.ts` — twin
+  `test/unit/portal_edit_subdatum_native.test.ts` (situation `zzpe`).
+  Reason (verbatim): "Rebuild completed; all three contract-fidelity gaps and
+  the surviving lang mutation are fixed and mutation-verified." Refutations on
+  record: (1) CONTRACT-FIDELITY — the context surface kept 7 of the old gate's
+  10 byte-compared keys (`lang`, `label`, `translatable` dropped; a
+  `translatable: false` mutation at `structure_context.ts:417` stayed green);
+  (2) MUTATION — get_data effective-limit CONFIG chain (`read.ts:1101-1111`)
+  never exercised because every rqo sent a numeric `sqo.limit` (fix: a
+  `limit: null` read asserting the LAST config item's limit wins).
+- `test/parity/section_elements_context_differential.test.ts` — twin
+  `test/unit/section_elements_context_native.test.ts` (situation `zzsec`).
+  Reason (verbatim): "Contract expressible generically; the twin landed and the
+  old gate + fixture are deleted (both staged as D)." Refutations on record:
+  (1) CONTRACT-FIDELITY — `search_operators_info` + `search_options_title`
+  gated behind a hand-written `OPERATORS_BY_MODEL` lookup with an
+  `if (pairs === undefined) continue` escape hatch; seven panel models
+  (component_section_id, iri, json, select_lang, filter_master,
+  filter_records, relation_model) asserted nowhere — deleting
+  `[',', 'sequence']` from SECTION_ID_OPERATORS stayed green; ontology1 /
+  hierarchy1 target-source coverage delegated to a currently-red gate;
+  (2) MUTATION — 6/72 survivors, two real: `getModelByTipo` canonicalization
+  at `section_elements_context.ts:93` and `buildSearchOptionsTitle(core.model)`
+  at `structure_context.ts:1352` — no legacy-model component (autocomplete_hi /
+  html_text) in the built situations (fix: add one under the grouper and pin
+  its target_section_tipo + title/operators keyed by entry.model).
+
+## ADDENDUM 2026-08-19 — the store is REPLAYED UNDER THE `test` TLD (no re-harvest)
+
+**The store bytes are UNCHANGED and stay unchanged.** Since the generic-TLD
+migration's phase 4 a parity gate may be written entirely in the generic `test`
+TLD and still be compared against the install-term interaction PHP answered in
+2026-07, because the seam translates — never the fixture. This is the WC-001
+pattern (a gate-side transform, the frozen file untouched), applied to ontology
+identity instead of to a field shape, and it is the SECOND path out of
+corpus-boundness, beside the "retire and re-express as a TS-native twin" path
+of § Generic-TLD replacement map above:
+
+| Path | When | Result |
+|---|---|---|
+| Replay under the `test` TLD (this addendum) | The contract IS the PHP wire shape, and the situation can be built from the committed clone + corpus. | The gate SURVIVES with its fixture; only its terms change. |
+| Retire → TS-native twin (§ map above) | The contract is expressible without an oracle, or the fixture cannot answer it at all (write path, live-only). | The gate and its `<gate>.json` are DELETED. |
+
+**How the replay works** (contract: `WC-2026-08-19-test-tld-replay`):
+
+- `unmapRqo` (`test/parity/normalize.ts`, wired into `lookupInteraction` in
+  `test/parity/oracle_fixtures.ts`) rewrites a test-TLD RQO back into install
+  terms BEFORE `hashRequest`, so the gate's request finds the frozen
+  interaction. A miss still throws, and now names the unmapped request.
+- `adoptTipoIdMap(frozenBody, gate)` reads the frozen RESPONSE in test-TLD
+  terms through the committed, append-only, bijective
+  `src/core/test_data/test_tld_tipo_map.json` (+ `test_corpus/id_map.json` for
+  record addresses), and REFUSES rather than guesses: a TS-shaped body, a
+  surviving install token, a disagreement between the two maps. Every caller
+  asserts `matched === true` plus a `rewrites` floor.
+- The records come from `ensureTestCorpus` — owned by the gate, dropped after
+  it (records are a situation, not a backdrop).
+
+**No re-harvest, and none is possible.** Nothing in
+`test/parity/fixtures/oracle_harvest/` is edited by this change; the four
+pilots below replay the SAME interaction hashes they always did.
+
+**Pilots (2026-08-19).** `read_differential`, `context_differential`,
+`component_publication_search_differential` and
+`relation_index_get_data_differential` are ALL green on a suite database holding
+NO install data (the fourth went green with the corpus fixes below).
+
+Two REDUCTIONS were needed beyond the transform, both declared and enforced:
+
+- `CORPUS_SCALE_FIELDS` (`test/parity/normalize.ts`) — a value that counts rows
+  the corpus deliberately does not hold (`relation_index`'s unfiltered
+  `pagination.total` over the install). `stripCorpusScaleFields` REFUSES a
+  declared path that is not present, so a projection can never silently stop
+  projecting. A FILTERED total stays verbatim.
+- `UNCLONED_TOKENS` — an install token with no twin because the clone closure
+  stops at the section root (`context_differential`'s `parent_grouper`, the
+  install AREA node above the cloned section). Tolerated ONLY when declared,
+  REFUSED when the declared token is absent, and the declaring gate owes an
+  explicit assertion about the field (it asserts both sides of the seam).
+
+**Corpus gaps this exposed** — ALL THREE CLOSED 2026-08-19 (same day), kept
+here because the rules they produced are what phase 5 must build on:
+
+1. **Inverse edges ARE reconstructed now.** `relation_index_get_data_differential`
+   reads an inverse index: the frozen entries state that `rsc205/37,42,44,69,74`
+   point at the term through `rsc387`, and `derive_test_corpus.ts` used to
+   rebuild a record only from ITS OWN read projections, so those pointer
+   locators were absent and the index resolved 0 items. The deriver now reads
+   the computed inverse page a `component_relation_index` item reveals
+   (`{type, section_tipo, section_id, from_component_top_tipo}` — the exact
+   discriminator: `parseInverseEntry` is the only writer of that key, and a
+   STORED item always carries its own `id`) and materializes the locator on the
+   POINTING record, where the `matrix_*_relation_index_sync` trigger indexes it
+   exactly as a real save would. Six edges, audited per record as
+   `inverse_edges[]` (`origin: 'inverse_edge'` + the gate/record/component that
+   stated it); a record that exists only because of one is `edge_only: true`;
+   an edge whose pointing record has no ontology clone, whose component does
+   not store, or whose target is unmappable is REFUSED (`inverse_edge_*` in
+   `refused.json`), never approximated. The gate is GREEN (both cases). Its
+   `pagination.total` strip STAYS declared: the corpus holds 5 pointing
+   records, the install had 1 647 — a corpus that held all of them would be the
+   install.
+2. **A reconstructed record's value may be a LIST PROJECTION** (already
+   truncated), so reading it back through the list pipeline truncates twice.
+   `read_differential` therefore compares VALUES on raw records only
+   (`reconstructed: false`), and identity/order over the whole sequence. The
+   rule is now WHERE A SWEEPER SEES IT: every record declares
+   `component_sources: {tipo: 'raw'|'edit'|'list'}`, the corpus file header
+   states the rule, and the `dedalo-ts-testing` skill carries it. Census
+   2026-08-19 over 1 018 written (record, component) pairs: **16 raw · 170
+   edit · 832 list projections**; the deriver's richest-source preference is
+   exercised in both directions (10 upgrades, 88 poorer sources rejected).
+3. **`dd128` user records carry no `relation` column**, so no corpus principal
+   holds any grant and any ACL-shaped assertion is vacuous on the corpus alone.
+   The door for that situation is `test/helpers/acl_identity_fixture.ts`, and
+   it was RED for ONE reason: its `dd1324/21` tool-registry pin is
+   `tool_import_marc21` on this suite DB (`tool_export` is 22), so the fixture
+   THREW before writing anything — which is also why `getSectionPermissions`
+   read 0: there was no profile to read. The id is now DERIVED by name through
+   the registry's own door (`getActiveToolMetaBySectionId`), refusing a
+   non-unique or `always_active` match. The fixture also grants the
+   per-COMPONENT dd774 rows it always implied (`test3_test92`): `ddoIsAuthorized`
+   keys the matrix by `${section}_${component}` and has no global-admin bypass,
+   so section grants alone served the empty shell to BOTH identities. All of it
+   is verified through the real doors in `acl_identity_fixture_native`
+   (`getSectionPermissions`, `ddoIsAuthorized` both ways, `getUserTools`).

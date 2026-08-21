@@ -7,6 +7,27 @@
  * label (same generated dictionary), background flag, and the item's
  * envelope fields. Also asserts the non-admin denial (PHP maintenance is an
  * admin area).
+ *
+ * NOT A TLD-BOUND GATE (checked 2026-08-19): it names only seed-shipped `dd`
+ * ontology and creates no record, so it needs no generic-TLD migration and no
+ * corpus.
+ *
+ * ── MEASURED 2026-08-19: STILL RED, on ONE class, and it is a deliberate
+ * engine-side change, not a defect ──
+ * Every remaining difference in the catalog is the widget `label`, and the
+ * whole of it is the LABEL SUBSYSTEM MOVE (WC-033/WC-034: program strings left
+ * the per-install dd_ontology label rows for repo-owned catalogs in
+ * src/core/labels/). Two sub-classes, measured:
+ *   - SIX slots where the frozen side is `<mark>key</mark>` — the engine's
+ *     missing-label rendering, i.e. an ABSENCE, not a label. Handled below,
+ *     with both sides asserted and the count required to be non-zero.
+ *   - NINE slots where the frozen label is the PHP-era ALL-CAPS term
+ *     ("DATABASE INFO", "DEDALO COUNTERS STATUS") and the repo catalog now
+ *     serves sentence case with correct diacritics ("Database info", "Dédalo
+ *     counters status"). That is a real, visible wire change with no TLD or
+ *     corpus component: it wants a `engineering/wire_contract/` entry from the
+ *     labels owner, NOT a wider exclusion here. Until that entry exists this
+ *     gate is red BY DESIGN — the ledger is the fix, silence is not.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -98,6 +119,8 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 			(item) => !TS_ONLY_WIDGET_IDS.has((item as { id?: string }).id ?? ''),
 		);
 		expect(tsList.length).toBe(phpList.length);
+		/** Slots where the FROZEN side carries the missing-label marker (see below). */
+		let untranslatedLabels = 0;
 		for (let index = 0; index < phpList.length; index++) {
 			// `value` is EXCLUDED: 11 widgets embed a per-widget payload computed
 			// by their own PHP widget class (migration form catalogs, sequence
@@ -117,17 +140,42 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 			// rather than php_info's 'violet fit width_100' iframe styling. Every other
 			// metadata field still matches.
 			const isRuntimeInfo = (phpList[index] as { id?: unknown }).id === 'php_info';
+			// THE UNTRANSLATED-LABEL SLOT (WC-033/WC-034, repo-owned label
+			// catalogs). `<mark>key</mark>` is the engine's MISSING-LABEL rendering:
+			// at the 2026-07-11 freeze the install's label store had no lg-spa entry
+			// for these widget keys, and the TS catalog — which is repo-owned and
+			// shipped, not per-install — has since gained one. The frozen side is
+			// therefore not stating a label at all, it is stating an absence, and
+			// comparing it would pin the engine to a translation gap. Both sides are
+			// asserted below (marker on the frozen side, a REAL non-marker string on
+			// the TS side) and the count is required to be non-zero, so the
+			// exclusion can never quietly widen.
+			const phpLabel = (phpList[index] as { label?: unknown }).label;
+			const isUntranslatedLabel =
+				typeof phpLabel === 'string' && /^<mark>[^<]*<\/mark>$/.test(phpLabel);
+			if (isUntranslatedLabel) {
+				const tsLabel = (tsList[index] as { label?: unknown }).label;
+				expect(typeof tsLabel).toBe('string');
+				expect(tsLabel).not.toMatch(/^<mark>/);
+				expect(String(tsLabel).length).toBeGreaterThan(0);
+				untranslatedLabels++;
+			}
 			const omit = isDiffusionControl
 				? ['value', 'label']
 				: isRuntimeInfo
 					? ['value', 'id', 'label', 'class']
-					: ['value'];
+					: isUntranslatedLabel
+						? ['value', 'label']
+						: ['value'];
 			const strip = (item: Record<string, unknown>): Record<string, unknown> =>
 				Object.fromEntries(Object.entries(item).filter(([key]) => !omit.includes(key)));
 			const phpMeta = strip(phpList[index] as Record<string, unknown>);
 			const tsMeta = strip(tsList[index] as Record<string, unknown>);
 			expect(JSON.stringify(tsMeta)).toBe(JSON.stringify(phpMeta));
 		}
+		// Exercised-or-refused: a declaration that matches nothing is a stale
+		// exemption, and would mean this gate stopped comparing labels for free.
+		expect(untranslatedLabels).toBeGreaterThan(0);
 	});
 
 	test('the read returns a non-empty context matching PHP (client render contract)', () => {

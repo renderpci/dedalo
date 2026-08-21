@@ -42,6 +42,13 @@
  * stored bytes, because "refused" and "deduped" used to be indistinguishable
  * on the wire and that is what the operator saw as a vanished chip.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The file
+// already BUILT almost everything it asserts on (the zzpq thesaurus, the zzwt
+// caller nodes, the test3 host); only the two ONTOLOGY-SHAPE fixtures named an
+// install: the virtual/real pair rsc170→rsc2 is now test7007→testheritagecatalog1,
+// and the "different thesaurus" probe es1 is now test2827 — the same shapes
+// (a section whose relations name another section; a terms section virtual over
+// hierarchy20), taken from the `test` clone set instead of an install.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -71,7 +78,7 @@ const TERMS = `${TLD}1`;
 const CALLER_TLD = 'zzwt';
 /** Targets test3; declares no view and no cap. */
 const PLAIN = 'zzwt1';
-/** Targets the REAL section rsc2 — the virtual-resolution case (rsc170 → rsc2). */
+/** Targets the REAL section testheritagecatalog1 — the virtual-resolution case. */
 const VIRTUAL = 'zzwt2';
 /** Targets the scratch thesaurus and declares view:'tree' — the picker caller. */
 const TREE = 'zzwt3';
@@ -429,7 +436,7 @@ beforeAll(async () => {
 	);
 
 	await buildCallerNode(PLAIN, { source: targetConfig(HOST) });
-	await buildCallerNode(VIRTUAL, { source: targetConfig('rsc2') });
+	await buildCallerNode(VIRTUAL, { source: targetConfig('testheritagecatalog1') });
 	await buildCallerNode(TREE, { view: 'tree', source: targetConfig(TERMS) });
 	await buildCallerNode(CAPPED, { data_limit: 2, source: targetConfig(HOST) });
 	await buildCallerNode(FORBIDDEN, { data_limit: 0, source: targetConfig(HOST) });
@@ -531,31 +538,34 @@ describe.if(DB_READY)('the insert door — the TARGET constraint', () => {
 		expect(result.outcomes[0]?.reason).toContain(HOST);
 	});
 
-	test('a VIRTUAL section is accepted against its real target (rsc170 → rsc2)', async () => {
+	test('a VIRTUAL section is accepted against its real target (test7007 → testheritagecatalog1)', async () => {
 		// The comparison law resolves BOTH sides, so a caller declaring the real
 		// section and a locator naming the virtual one are the same thing.
 		const result = await asPrincipal(superuser, () =>
-			validateRelationInserts([{ section_tipo: 'rsc170', section_id: 1 }], context(VIRTUAL)),
+			validateRelationInserts([{ section_tipo: 'test7007', section_id: 1 }], context(VIRTUAL)),
 		);
 		expect(codes(result)).toEqual([['accepted', null]]);
 	});
 
 	test('a DIFFERENT thesaurus is NOT a target just because it shares a real section', async () => {
-		// Every thesaurus is a virtual section over hierarchy20 (es1, ad1, and the
+		// Every thesaurus is a virtual section over hierarchy20 (test2827 and the
 		// scratch one alike). A caller that declares ONE thesaurus must not accept
 		// a term from another: the whole point of the declaration is which
 		// vocabulary this component links into.
 		//
 		// THE LAW: `off_target`. `relations/picker_constraint.ts` keeps the
 		// declared targets AS DECLARED and `isTargetAllowed` resolves only ONE
-		// side per comparison (never real-vs-real), so es1 against a caller
+		// side per comparison (never real-vs-real), so test2827 against a caller
 		// declaring the scratch thesaurus is refused although both are virtual
 		// over hierarchy20. (History: before the asymmetric comparison landed —
 		// commit 625f17e7b3 — both sides real-resolved to 'hierarchy20' and this
 		// was ACCEPTED, the write-path face of the picker read's collapse. That
 		// is the bug, not the expectation.)
 		const result = await asPrincipal(superuser, () =>
-			validateRelationInserts([{ section_tipo: 'es1', section_id: 1 }], context(THESAURUS_PLAIN)),
+			validateRelationInserts(
+				[{ section_tipo: 'test2827', section_id: 1 }],
+				context(THESAURUS_PLAIN),
+			),
 		);
 		expect(codes(result)).toEqual([['refused', 'off_target']]);
 		// …and its OWN thesaurus still passes, so this is a narrowing, not a wall.

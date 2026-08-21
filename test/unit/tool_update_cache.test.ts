@@ -4,8 +4,11 @@
  * update_cache regenerates stored component data via a re-save drive — verified
  * scratch-twin (create a record, regenerate, data intact, delete).
  */
+// Migrated to the generic `test` TLD 2026-08-19: the scratch twin was already on the
+// `test3` playground; the refusal tests' target (a tipo the gate never resolves) and the
+// media identity of the twin-pass fixture now name generic `test` nodes.
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, statSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
@@ -26,9 +29,10 @@ import { saveComponentData } from '../../src/core/section/record/save_component.
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
-const SECTION = 'numisdata4';
+const SECTION = 'test2';
 /**
  * The scratch surface is the canonical test3 playground (matrix_test), the ONE
  * write surface the suite owns — the preload re-seeds it before every run and
@@ -178,7 +182,7 @@ describe('tool_update_cache module', () => {
 				principal,
 				userId: -1,
 				background: true,
-				options: { section_tipo: SECTION, components_selection: [{ tipo: 'numisdata79' }] },
+				options: { section_tipo: SECTION, components_selection: [{ tipo: 'test52' }] },
 			}),
 		);
 		expect(refusal.code).toBe('request.invalid_options');
@@ -478,8 +482,8 @@ describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
 	const image = mediaTypeOf('component_image')!;
 	const HAVE_MAGICK = existsSync(resolveMagick());
 	const identity: MediaIdentity = {
-		componentTipo: 'rsc29',
-		sectionTipo: 'rsc170',
+		componentTipo: 'test99',
+		sectionTipo: 'test3',
 		sectionId: 60,
 		lang: null,
 	};
@@ -493,7 +497,7 @@ describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
 	const higher = derivedTwinQualities(image).find((quality) => quality !== image.defaultQuality);
 
 	function pathOf(quality: string, extension: string): string {
-		return `${MEDIA_ROOT}/image/${quality}/rsc29_rsc170_60.${extension}`;
+		return `${MEDIA_ROOT}/image/${quality}/test99_test3_60.${extension}`;
 	}
 	async function place(quality: string, extension: string, color: string): Promise<string> {
 		const absolute = pathOf(quality, extension);
@@ -505,6 +509,9 @@ describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
 		return absolute;
 	}
 
+	// DECLARE the scratch media root — the media doors refuse an unmarked one under
+	// the test-media seam (src/core/media/test_media_root.ts).
+	beforeAll(() => markMediaRoot(MEDIA_ROOT));
 	afterAll(() => rmSync(MEDIA_ROOT, { recursive: true, force: true }));
 
 	test.if(HAVE_MAGICK)(
@@ -572,10 +579,10 @@ describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
 			// whose edit view renders nothing.
 			expect(
 				existsSync(
-					`${MEDIA_ROOT}/image/${config.media.thumb.quality}/rsc29_rsc170_60.${config.media.thumb.extension}`,
+					`${MEDIA_ROOT}/image/${config.media.thumb.quality}/test99_test3_60.${config.media.thumb.extension}`,
 				),
 			).toBe(true);
-			expect(existsSync(`${MEDIA_ROOT}/image/svg/rsc29_rsc170_60.svg`)).toBe(true);
+			expect(existsSync(`${MEDIA_ROOT}/image/svg/test99_test3_60.svg`)).toBe(true);
 		},
 	);
 });

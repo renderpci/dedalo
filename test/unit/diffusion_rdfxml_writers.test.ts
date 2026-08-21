@@ -8,7 +8,7 @@
  *   sanitizePublishedFileName — the two verbatim ports must never drift),
  *   EasyRdf envelope/namespace/indent fragments pinned against a REAL
  *   PHP-published file (media_monedaiberica/rdf/nomisma/
- *   nmonumismaticobject-numisdata4-1-*.rdf), xml:lang alpha2 literals, null
+ *   nmonumismaticobject-test6100-1-*.rdf), xml:lang alpha2 literals, null
  *   column omission, rdf:about override, unknown-prefix loudness, legacy
  *   '{base}_*.rdf' removal, merge+zip products, abort cleanup;
  * - xml: {section_tipo}_{section_id}.xml delete-side grammar, PHP
@@ -23,6 +23,9 @@
  * NEVER touched (the real published fixtures above are READ as pinned
  * string fragments only, copied here verbatim).
  */
+// Migrated to the generic `test` TLD 2026-08-19: the plans/rows are fabricated and
+// every path is under the temp root — the tipos are their test-TLD twins (the pinned
+// PHP fragments are copied strings, rewritten to match).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -91,7 +94,7 @@ function plan(
 ): PublicationPlan {
 	return {
 		planId: `rdfxml_test_${format}`,
-		elementTipo: 'numisdata1024',
+		elementTipo: 'test6112',
 		format,
 		serviceName,
 		target: { kind: 'files', serviceName },
@@ -118,7 +121,7 @@ function row(
  * rdf predicates, skos labels).
  */
 function rdfSection(): SectionPlan {
-	return section('nmo:NumismaticObject', 'numisdata4', [
+	return section('nmo:NumismaticObject', 'test6100', [
 		field('dc:title'),
 		field('dc:identifier'),
 		field('nmo:hasMaterial'),
@@ -214,8 +217,8 @@ describe('writer registry (spec §4.3: rdf/xml registered, unknown stays LOUD)',
 describe('rdf file name grammar (delete-side lockstep)', () => {
 	test('sanitizeRdfFileName is byte-equal to diffusion_delete.ts sanitizePublishedFileName', () => {
 		const samples = [
-			'nmo:NumismaticObject_numisdata4_1',
-			'nmo:TypeSeriesItem_numisdata5_42',
+			'nmo:NumismaticObject_test6100_1',
+			'nmo:TypeSeriesItem_test6101_42',
 			'Ítem raro (2ª parte)… ¡ya!_sec1_7',
 			'skos:prefLabel__double__underscores_x_9',
 			'..dots..and--dashes.._t_3',
@@ -226,11 +229,11 @@ describe('rdf file name grammar (delete-side lockstep)', () => {
 	});
 
 	test('rdfRecordFileName matches the REAL published canonical base name', () => {
-		// Real PHP-published files: nmonumismaticobject-numisdata4-1-*.rdf
+		// Real PHP-published files: nmonumismaticobject-test6100-1-*.rdf
 		// (media_monedaiberica/rdf/nomisma) — canonical deterministic name is
-		// sanitize('nmo:NumismaticObject_numisdata4_1') + '.rdf'.
-		expect(rdfRecordFileName(rdfSection(), 1)).toBe('nmonumismaticobject-numisdata4-1.rdf');
-		expect(rdfRecordFileName(rdfSection(), 56)).toBe('nmonumismaticobject-numisdata4-56.rdf');
+		// sanitize('nmo:NumismaticObject_test6100_1') + '.rdf'.
+		expect(rdfRecordFileName(rdfSection(), 1)).toBe('nmonumismaticobject-test6100-1.rdf');
+		expect(rdfRecordFileName(rdfSection(), 56)).toBe('nmonumismaticobject-test6100-56.rdf');
 	});
 });
 
@@ -276,11 +279,11 @@ describe('rdf writer', () => {
 		const summary = await session.close();
 
 		const dir = `${ROOT}/rdf/svc_rdf`;
-		const doc = readFileSync(`${dir}/nmonumismaticobject-numisdata4-1.rdf`, 'utf-8');
-		expect(existsSync(`${dir}/nmonumismaticobject-numisdata4-2.rdf`)).toBe(true);
+		const doc = readFileSync(`${dir}/nmonumismaticobject-test6100-1.rdf`, 'utf-8');
+		expect(existsSync(`${dir}/nmonumismaticobject-test6100-2.rdf`)).toBe(true);
 
 		// ---- REAL-FILE PINS (byte fragments from the PHP-published fixture
-		// media_monedaiberica/rdf/nomisma/nmonumismaticobject-numisdata4-1-*.rdf):
+		// media_monedaiberica/rdf/nomisma/nmonumismaticobject-test6100-1-*.rdf):
 		// EasyRdf declaration (space before '?>')
 		expect(doc.startsWith('<?xml version="1.0" encoding="utf-8" ?>\n')).toBe(true);
 		// envelope opening + 9-space xmlns continuation indent
@@ -295,7 +298,7 @@ describe('rdf writer', () => {
 		expect(doc.trimEnd().endsWith('</rdf:RDF>')).toBe(true);
 
 		// deterministic urn subject (no dd1010 I/O in writers — ledgered)
-		expect(doc).toContain('rdf:about="urn:dedalo:record:numisdata4:1"');
+		expect(doc).toContain('rdf:about="urn:dedalo:record:test6100:1"');
 		// escaping
 		expect(doc).toContain('silver &amp; &lt;bronze&gt;');
 		// null column omitted; excludeColumn never emitted
@@ -306,7 +309,7 @@ describe('rdf writer', () => {
 		assertWellFormedXml(doc);
 
 		// record 2: skos emitted, nmo:hasMaterial omitted
-		const doc2 = readFileSync(`${dir}/nmonumismaticobject-numisdata4-2.rdf`, 'utf-8');
+		const doc2 = readFileSync(`${dir}/nmonumismaticobject-test6100-2.rdf`, 'utf-8');
 		expect(doc2).toContain('<skos:prefLabel xml:lang="es">moneda</skos:prefLabel>');
 		expect(doc2).not.toContain('nmo:hasMaterial>');
 		assertWellFormedXml(doc2);
@@ -330,7 +333,7 @@ describe('rdf writer', () => {
 	});
 
 	test('rdf:about column overrides the urn subject and is not emitted as predicate', () => {
-		const sectionPlan = section('nmo:NumismaticObject', 'numisdata4', [
+		const sectionPlan = section('nmo:NumismaticObject', 'test6100', [
 			field('rdf:about'),
 			field('dc:title'),
 		]);
@@ -377,12 +380,12 @@ describe('rdf writer', () => {
 		await session.writeRows(sectionPlan, rows2records2langs.slice(0, 2));
 		const dir = `${ROOT}/rdf/svc_rdf_rm`;
 		// plant a legacy timestamped variant (pre-deterministic naming era)
-		const legacy = `${dir}/nmonumismaticobject-numisdata4-1_2019-01-01.rdf`;
+		const legacy = `${dir}/nmonumismaticobject-test6100-1_2019-01-01.rdf`;
 		writeFileSync(legacy, 'legacy');
 
 		const first = await session.removeRecords(sectionPlan, [1]);
 		expect(first).toEqual({ written: 0, deleted: 2 }); // canonical + legacy
-		expect(existsSync(`${dir}/nmonumismaticobject-numisdata4-1.rdf`)).toBe(false);
+		expect(existsSync(`${dir}/nmonumismaticobject-test6100-1.rdf`)).toBe(false);
 		expect(existsSync(legacy)).toBe(false);
 
 		// second removal: nothing left — idempotent success, zero deletions
@@ -416,8 +419,8 @@ describe('rdf writer', () => {
 		const zip = readZipStructure(`${dir}/diffusion_rdf.zip`);
 		expect(zip.names.sort()).toEqual([
 			'diffusion_rdf_merged.rdf',
-			'nmonumismaticobject-numisdata4-1.rdf',
-			'nmonumismaticobject-numisdata4-2.rdf',
+			'nmonumismaticobject-test6100-1.rdf',
+			'nmonumismaticobject-test6100-2.rdf',
 		]);
 
 		// consolidated paths ride the summary as prefixed zero-count entries
@@ -440,7 +443,7 @@ describe('rdf writer', () => {
 		await session.abort();
 		expect(tempFilesIn(dir)).toEqual([]);
 		// finalized per-record file stays (idempotent re-publish overwrites it)
-		expect(existsSync(`${dir}/nmonumismaticobject-numisdata4-1.rdf`)).toBe(true);
+		expect(existsSync(`${dir}/nmonumismaticobject-test6100-1.rdf`)).toBe(true);
 		expect(existsSync(`${dir}/diffusion_rdf_merged.rdf`)).toBe(false);
 	});
 
@@ -456,7 +459,7 @@ describe('rdf writer', () => {
 
 describe('xml writer', () => {
 	function xmlSection(): SectionPlan {
-		return section('Coins_DES', 'numisdata5', [
+		return section('Coins_DES', 'test6101', [
 			field('title'),
 			field('inventory'),
 			field('secret', true),
@@ -488,11 +491,11 @@ describe('xml writer', () => {
 		const dir = `${ROOT}/xml/svc_xml`;
 		// EXACT delete-side grammar: {section_tipo}_{section_id}.xml
 		// (diffusion_delete.ts:367-369 / PHP class.diffusion_xml.php:565)
-		const doc = readFileSync(`${dir}/numisdata5_5777.xml`, 'utf-8');
-		expect(existsSync(`${dir}/numisdata5_5778.xml`)).toBe(true);
+		const doc = readFileSync(`${dir}/test6101_5777.xml`, 'utf-8');
+		expect(existsSync(`${dir}/test6101_5778.xml`)).toBe(true);
 
 		// PHP DOMDocument declaration (real v6-published fixture pin:
-		// media_mib/xml/numisdata5_5777_*.xml)
+		// media_mib/xml/test6101_5777_*.xml)
 		expect(doc.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n')).toBe(true);
 		expect(doc).toContain('<Coins_DES>');
 		expect(doc.trimEnd().endsWith('</Coins_DES>')).toBe(true);
@@ -505,7 +508,7 @@ describe('xml writer', () => {
 		assertWellFormedXml(doc);
 
 		// record with all-null title lang still renders the valued lang only
-		const doc2 = readFileSync(`${dir}/numisdata5_5778.xml`, 'utf-8');
+		const doc2 = readFileSync(`${dir}/test6101_5778.xml`, 'utf-8');
 		expect(doc2).toContain('<es>Solo español</es>');
 		expect(doc2).not.toContain('<en>');
 		expect(doc2).not.toContain('<inventory');
@@ -520,7 +523,7 @@ describe('xml writer', () => {
 	});
 
 	test('lang-null rows render inline values (nolan single-lang PHP case)', () => {
-		const sectionPlan = section('Coins_DES', 'numisdata5', [field('title'), field('empty')]);
+		const sectionPlan = section('Coins_DES', 'test6101', [field('title'), field('empty')]);
 		const doc = renderXmlRecord(sectionPlan, [row(9, null, { title: 'plain', empty: '' })]);
 		expect(doc).toContain('  <title>plain</title>');
 		// empty string renders an empty element (PHP createElement, no text child)
@@ -536,7 +539,7 @@ describe('xml writer', () => {
 
 		const first = await session.removeRecords(sectionPlan, [3]);
 		expect(first).toEqual({ written: 0, deleted: 1 });
-		expect(existsSync(`${ROOT}/xml/svc_xml_rm/numisdata5_3.xml`)).toBe(false);
+		expect(existsSync(`${ROOT}/xml/svc_xml_rm/test6101_3.xml`)).toBe(false);
 
 		const second = await session.removeRecords(sectionPlan, [3, 99]);
 		expect(second).toEqual({ written: 0, deleted: 0 });
@@ -568,8 +571,8 @@ describe('xml writer', () => {
 		const zip = readZipStructure(`${dir}/diffusion_xml.zip`);
 		expect(zip.names.sort()).toEqual([
 			'diffusion_xml_merged.xml',
-			'numisdata5_1.xml',
-			'numisdata5_2.xml',
+			'test6101_1.xml',
+			'test6101_2.xml',
 		]);
 
 		const consolidatedNames = summary.tables.slice(1).map((t) => t.table_name);
@@ -589,7 +592,7 @@ describe('xml writer', () => {
 		writeFileSync(`${dir}/diffusion_xml_merged.xml.tmp-crashed`, 'partial');
 		await session.abort();
 		expect(tempFilesIn(dir)).toEqual([]);
-		expect(existsSync(`${dir}/numisdata5_1.xml`)).toBe(true);
+		expect(existsSync(`${dir}/test6101_1.xml`)).toBe(true);
 	});
 
 	test('mergeXmlParts: empty → "", single part untouched', () => {

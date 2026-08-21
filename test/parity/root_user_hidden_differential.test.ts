@@ -13,16 +13,21 @@
  * select component targeting dd128 to compare over the wire.)
  */
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-const USERS = 'dd128';
+/** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The Users section — SEED-SHIPPED: every installation has it. */
+const USERS = seed('dd', 128);
 
 const LIST_RQO = {
 	action: 'read',
@@ -123,9 +128,16 @@ let php: PhpApiClient;
 
 describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () => {
 	beforeAll(async () => {
+		// The users population comes from the COMMITTED corpus, never from
+		// whatever the ambient database happens to hold.
+		await ensureTestCorpus([USERS]);
 		if (!hasPhpCredentials()) return;
 		php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
+	});
+
+	afterAll(async () => {
+		expect(await dropTestCorpus([USERS])).toBe(0);
 	});
 
 	test('the -1 row physically exists (anchor against vacuous greens)', async () => {

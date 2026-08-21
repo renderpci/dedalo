@@ -9,12 +9,16 @@
  *
  * Fixtures are REAL ontology rows of the shared dedalo_mib_v7 install — the
  * RELATIONS_SPEC §7 corpus components that carry NO source.request_config:
- *   numisdata967 (radio_button)      relations [dd501, dd503]
- *   numisdata71  (autocomplete)      relations [numisdata41, numisdata43, numisdata195]
- *   numisdata1562 (select)           relations [numisdata1554, numisdata1557]
- *   numisdata55  (relation_related)  legacy `source` object, relations
- *                                    [numisdata4, numisdata130, numisdata159, numisdata147]
+ *   test6480 (radio_button)      relations [dd501, dd503]
+ *   test6151  (autocomplete)      relations [test6124, test6126, test6263]
+ *   test6807 (select)           relations [test6799, test6802]
+ *   test6137  (relation_related)  legacy `source` object, relations
+ *                                    [test6100, test6204, test6228, test6217]
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { selectRequestConfigStrategy } from '../../src/core/concepts/request_config.ts';
@@ -35,28 +39,28 @@ const editContext = (ownerTipo: string, ownerSectionTipo: string): RequestConfig
 
 describe('selectRequestConfigStrategy (the class.common.php:3502 branch)', () => {
 	test('no-source components select implicit', async () => {
-		for (const tipo of ['numisdata967', 'numisdata71', 'numisdata1562']) {
+		for (const tipo of ['test6480', 'test6151', 'test6807']) {
 			const node = await getNode(tipo);
 			expect(selectRequestConfigStrategy(node?.properties ?? null)).toBe('implicit');
 		}
 	});
 
-	test('a legacy source object WITHOUT request_config still selects implicit (numisdata55)', async () => {
-		const node = await getNode('numisdata55');
+	test('a legacy source object WITHOUT request_config still selects implicit (test6137)', async () => {
+		const node = await getNode('test6137');
 		expect(selectRequestConfigStrategy(node?.properties ?? null)).toBe('implicit');
 	});
 
-	test('an explicit request_config selects explicit (numisdata161)', async () => {
-		const node = await getNode('numisdata161');
+	test('an explicit request_config selects explicit (test6230)', async () => {
+		const node = await getNode('test6230');
 		expect(selectRequestConfigStrategy(node?.properties ?? null)).toBe('explicit');
 	});
 });
 
 describe('buildImplicitComponentListConfig — graph-walk target + ddo derivation', () => {
-	test('numisdata967: first section relation (dd501) is the target, stripped from ddos', async () => {
+	test('test6480: first section relation (dd501) is the target, stripped from ddos', async () => {
 		const config = await buildImplicitComponentListConfig(
-			'numisdata967',
-			editContext('numisdata967', 'numisdata3'),
+			'test6480',
+			editContext('test6480', 'test6099'),
 		);
 		expect(config).toHaveLength(1);
 		expect(extractSqoSectionTipos(config[0])).toEqual(['dd501']);
@@ -65,41 +69,41 @@ describe('buildImplicitComponentListConfig — graph-walk target + ddo derivatio
 		// Implicit legacy shape: SCALAR section_tipo on the ddo, mode forced 'list'.
 		expect(config[0]?.show?.ddo_map[0]?.section_tipo).toBe('dd501');
 		expect(config[0]?.show?.ddo_map[0]?.mode).toBe('list');
-		expect(config[0]?.show?.ddo_map[0]?.parent).toBe('numisdata967');
+		expect(config[0]?.show?.ddo_map[0]?.parent).toBe('test6480');
 	});
 
-	test('numisdata71: target numisdata41, ddos [numisdata43, numisdata195]', async () => {
+	test('test6151: target test6124, ddos [test6126, test6263]', async () => {
 		const config = await buildImplicitComponentListConfig(
-			'numisdata71',
-			editContext('numisdata71', 'numisdata3'),
+			'test6151',
+			editContext('test6151', 'test6099'),
 		);
-		expect(extractSqoSectionTipos(config[0])).toEqual(['numisdata41']);
+		expect(extractSqoSectionTipos(config[0])).toEqual(['test6124']);
 		expect((config[0]?.show?.ddo_map ?? []).map((ddo) => ddo.tipo)).toEqual([
-			'numisdata43',
-			'numisdata195',
+			'test6126',
+			'test6263',
 		]);
 	});
 
-	test('numisdata1562: target numisdata1554, ddo numisdata1557', async () => {
+	test('test6807: target test6799, ddo test6802', async () => {
 		const config = await buildImplicitComponentListConfig(
-			'numisdata1562',
-			editContext('numisdata1562', 'numisdata3'),
+			'test6807',
+			editContext('test6807', 'test6099'),
 		);
-		expect(extractSqoSectionTipos(config[0])).toEqual(['numisdata1554']);
-		expect((config[0]?.show?.ddo_map ?? []).map((ddo) => ddo.tipo)).toEqual(['numisdata1557']);
+		expect(extractSqoSectionTipos(config[0])).toEqual(['test6799']);
+		expect((config[0]?.show?.ddo_map ?? []).map((ddo) => ddo.tipo)).toEqual(['test6802']);
 	});
 
-	test('numisdata55 (legacy source object): implicit walk over its relation nodes', async () => {
-		const node = await getNode('numisdata55');
+	test('test6137 (legacy source object): implicit walk over its relation nodes', async () => {
+		const node = await getNode('test6137');
 		const config = await buildRequestConfigForElement(
 			node?.properties ?? null,
-			editContext('numisdata55', 'numisdata4'),
+			editContext('test6137', 'test6100'),
 		);
-		expect(extractSqoSectionTipos(config[0])).toEqual(['numisdata4']);
+		expect(extractSqoSectionTipos(config[0])).toEqual(['test6100']);
 		expect((config[0]?.show?.ddo_map ?? []).map((ddo) => ddo.tipo)).toEqual([
-			'numisdata130',
-			'numisdata159',
-			'numisdata147',
+			'test6204',
+			'test6228',
+			'test6217',
 		]);
 	});
 
@@ -108,40 +112,40 @@ describe('buildImplicitComponentListConfig — graph-walk target + ddo derivatio
 	// section_list relation nodes VERBATIM — only the COMPONENT branch
 	// (resolve_ar_related_list_component :454-473) prepends a main related
 	// section. TS once ran the component fallback for section owners too, so
-	// numisdata5's columns were stamped with numisdata276 (its related
+	// test6101's columns were stamped with testplace1 (its related
 	// "Location" section). Every dd774 lookup then keyed
 	// numisdata276_<column> instead of numisdata5_<column>, missed, resolved 0
 	// and filterAuthorizedRelated dropped EVERY column — the list rendered with
 	// no components for real users while root sailed through getPermissions'
 	// superuser short-circuit.
 	test('a SECTION owner keeps itself as target — the related section never wins', async () => {
-		const config = await buildImplicitComponentListConfig('numisdata278', {
-			ownerTipo: 'numisdata5',
-			ownerSectionTipo: 'numisdata5',
+		const config = await buildImplicitComponentListConfig('test6315', {
+			ownerTipo: 'test6101',
+			ownerSectionTipo: 'test6101',
 			mode: 'list',
 			ownerIsSection: true,
 		});
-		expect(extractSqoSectionTipos(config[0])).toEqual(['numisdata5']);
+		expect(extractSqoSectionTipos(config[0])).toEqual(['test6101']);
 		const ddoMap = config[0]?.show?.ddo_map ?? [];
 		expect(ddoMap.map((ddo) => ddo.tipo)).toEqual([
-			'numisdata500',
-			'numisdata211',
-			'numisdata219',
-			'numisdata212',
-			'numisdata215',
-			'numisdata260',
-			'numisdata1100',
+			'testplace1024',
+			'testplace1006',
+			'testplace1012',
+			'testplace1007',
+			'testplace1010',
+			'testplace1015',
+			'testplace1035',
 		]);
 		// The permission key every column is checked under.
 		for (const ddo of ddoMap) {
-			expect(ddo.section_tipo).toBe('numisdata5');
+			expect(ddo.section_tipo).toBe('test6101');
 		}
 	});
 
 	test('api_engine/type wrap matches the explicit shape (single dedalo main item)', async () => {
 		const config = await buildImplicitComponentListConfig(
-			'numisdata967',
-			editContext('numisdata967', 'numisdata3'),
+			'test6480',
+			editContext('test6480', 'test6099'),
 		);
 		expect(config[0]?.api_engine).toBe('dedalo');
 		expect(config[0]?.type).toBe('main');
@@ -154,7 +158,7 @@ describe('explicit-config-required models (PHP trait.request_config_v5.php:88)',
 		// path directly — PHP throws regardless of whether the live node carries
 		// an explicit config. The error text is PHP-verbatim (keeps "v5").
 		expect(
-			buildImplicitComponentListConfig('hierarchy49', editContext('hierarchy49', 'ts1')),
+			buildImplicitComponentListConfig('hierarchy49', editContext('hierarchy49', 'test7289')),
 		).rejects.toThrow(/v5 resolution fallback is no longer supported/);
 	});
 });

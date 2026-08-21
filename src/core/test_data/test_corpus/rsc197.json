@@ -1,0 +1,983 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "rsc197",
+	"source_section_tipo": "rsc197",
+	"table": "matrix",
+	"kind": "seed",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": ["section_context_extras_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Anonymus"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list"
+			}
+		},
+		{
+			"section_id": 1308,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "1308"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alfaro Asins"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Carmen"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1308,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 1362,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "1362"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Amandry"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Michel"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1362,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 1371,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "1371"
+			},
+			"reconstructed": true,
+			"gates": ["complex_relation_sweep", "get_data_differential", "request_config_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Amela"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Luis"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1371,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 1813,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "1813"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Blázquez Cerrato"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "María de las Cruces"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1813,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 1891,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "1891"
+			},
+			"reconstructed": true,
+			"gates": ["get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Botet i Sisó"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Joaquim"
+						}
+					]
+				},
+				"data": {
+					"section_id": 1891,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 2014,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "2014"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Burnett"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Andrew"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2014,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 2036,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "2036"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Caballero Zoreda"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Luis"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2036,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 2110,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "2110"
+			},
+			"reconstructed": true,
+			"gates": ["get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Campo Díaz"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Marta"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2110,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 2316,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "2316"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Chaves Tristán"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francisca"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2316,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 2423,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "2423"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential", "get_data_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Collantes Pérez-Ardá"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Esteban"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2423,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 3287,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "3287"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "García-Bellido"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "María Paz"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3287,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 4391,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "4391"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "López Castro"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "José Luis"
+						}
+					]
+				},
+				"data": {
+					"section_id": 4391,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 4579,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "4579"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Marín Ceballos"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "María Cruz"
+						}
+					]
+				},
+				"data": {
+					"section_id": 4579,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 5790,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "5790"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential", "list_column_sortable_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ripollès Alegre"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pere Pau"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5790,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 6497,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "6497"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Sutherland"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Carol Humphrey Vivian"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6497,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 7942,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "7942"
+			},
+			"reconstructed": true,
+			"gates": ["get_data_differential", "model_coverage_sweep"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Cerdà Insa"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pablo"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7942,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 7959,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "7959"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential", "model_coverage_sweep"],
+			"columns": {
+				"string": {
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Carlos"
+						}
+					],
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Gómez Bellard"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7959,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc85": [
+						{
+							"count": 1
+						}
+					],
+					"rsc86": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc85": "list",
+				"rsc86": "list"
+			}
+		},
+		{
+			"section_id": 8009,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "8009"
+			},
+			"reconstructed": true,
+			"gates": ["component_section_id_differential"],
+			"columns": {
+				"string": {
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Fernández Miranda"
+						}
+					],
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "M."
+						}
+					]
+				},
+				"data": {
+					"section_id": 8009,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc86": [
+						{
+							"count": 1
+						}
+					],
+					"rsc85": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc86": "list",
+				"rsc85": "list"
+			}
+		},
+		{
+			"section_id": 8195,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "8195"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ramón"
+						}
+					],
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Tur"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8195,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc85": [
+						{
+							"count": 1
+						}
+					],
+					"rsc86": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc85": "list",
+				"rsc86": "list"
+			}
+		},
+		{
+			"section_id": 8202,
+			"source": {
+				"section_tipo": "rsc197",
+				"section_id": "8202"
+			},
+			"reconstructed": true,
+			"gates": ["grouper_context_differential", "section_context_extras_differential"],
+			"columns": {
+				"string": {
+					"rsc85": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Sergio"
+						}
+					],
+					"rsc86": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Vela"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8202,
+					"section_tipo": "rsc197"
+				},
+				"meta": {
+					"rsc85": [
+						{
+							"count": 1
+						}
+					],
+					"rsc86": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"rsc85": "list",
+				"rsc86": "list"
+			}
+		}
+	]
+}

@@ -192,12 +192,28 @@ describe('SEARCH_STORE_BACKFILLS row filter — the trigger twin', () => {
 	test('FIDELITY (primary): the backfill SELECT and the trigger-maintained store agree on matrix_test', async () => {
 		// The behavioural twin check the textual one only approximates: what the
 		// backfill WOULD insert for matrix_test vs what the triggers actually put
-		// in the store for that table's section_tipo.
+		// in the store for that table.
+		//
+		// BOTH SIDES OVER A POPULATION THE SUITE OWNS. This used to compare the
+		// WHOLE-TABLE backfill against the stored rows of `test3` alone, which
+		// was only ever right while test3 was the only section in matrix_test.
+		// Two things broke that: the generic-TLD migration (2026-08-19) makes
+		// EVERY cloned `test*` section store here, and any residue a crashed run
+		// leaves behind lands here too — measured on 2026-08-20, two leftover
+		// `test38` records carried DUPLICATED store rows, so the two sides
+		// disagreed by 2 and the gate reddened on somebody else's litter rather
+		// than on a backfill/trigger divergence.
+		//
+		// So both sides are scoped to the canonical test3 playground, which the
+		// preload re-seeds before every run (test/preload/canonical_test3.ts) —
+		// a population that is guaranteed to exist and guaranteed to be current.
+		// The twin check is unchanged in kind: the same SELECT, the same rows,
+		// just over records the suite controls instead of whatever is ambient.
 		const insertSql = stringStore.insert('matrix_test');
 		const selectSql = insertSql.slice(insertSql.indexOf('SELECT'));
 		const wouldInsert = (await sql.unsafe(
-			`SELECT count(*)::int AS n FROM (${selectSql}) AS q`,
-			[],
+			`SELECT count(*)::int AS n FROM (${selectSql}) AS q WHERE q.section_tipo = $1`,
+			['test3'],
 		)) as { n: number }[];
 		const stored = (await sql.unsafe(
 			`SELECT count(*)::int AS n FROM matrix_string_search WHERE section_tipo = $1`,

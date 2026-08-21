@@ -4,15 +4,44 @@
  * the user portal (dd543 + its dd132 username subdatum), the what select
  * (dd545 → datalist label), and the where/ip input_texts. Oldest records
  * (ASC) keep the fixture stable while the log grows between engine calls.
+ *
+ * NOT A TLD-BOUND GATE (checked 2026-08-19): it names only seed-shipped `dd`
+ * ontology. Its records now come from the committed corpus.
+ *
+ * ── MEASURED 2026-08-19: STILL RED, and the cause is the TABLE, not the engine ──
+ * `matrix_activity` is the engine's own APPEND-ONLY AUDIT LOG: every API call
+ * writes a row, including the calls this suite makes. The suite database held
+ * 988 such rows at the time of writing, numbered from 1, while the corpus rows
+ * this gate installs are the install's three OLDEST (69927997-9). An `ORDER BY
+ * section_id ASC LIMIT 3` therefore returns the suite's OWN residue, never the
+ * fixture — and the RQO cannot be narrowed to the corpus ids, because a changed
+ * RQO no longer hashes to the frozen interaction (test/parity/oracle_fixtures.ts).
+ *
+ * The only situations that make this gate deterministic are (a) the suite owning
+ * `matrix_activity` outright — truncating it around the gate, which destroys
+ * audit rows other gates may be counting — or (b) retiring the wire differential
+ * in favour of a TS-native activity read gate over rows the test writes itself
+ * (the DEC-14b twin pattern). BOTH are decisions about shared surfaces, so this
+ * file states the fact instead of pretending: do not "fix" it by comparing
+ * fewer fields or by dropping the ordering.
  */
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/**
+ * The corpus this gate owns: the ACTIVITY section and the USERS section its
+ * dd543 portal resolves into. Both are SEED-SHIPPED (`dd`) — every installation
+ * has them — and the rows come from the committed corpus, never from whatever
+ * the ambient log happens to hold.
+ */
+const CORPUS_SCOPE = [`dd${542}`, `dd${128}`];
 
 const ACTIVITY_RQO = {
 	action: 'read',
@@ -64,6 +93,7 @@ let phpData: Record<string, unknown>[] = [];
 let tsData: Record<string, unknown>[] = [];
 
 beforeAll(async () => {
+	await ensureTestCorpus(CORPUS_SCOPE);
 	if (!hasPhpCredentials()) return;
 	const php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
@@ -96,6 +126,10 @@ beforeAll(async () => {
 			unknown
 		>[],
 	);
+});
+
+afterAll(async () => {
+	expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
 });
 
 describe.if(hasPhpCredentials())(

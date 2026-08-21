@@ -21,7 +21,7 @@
  *    paginated_key never persists. The down-move (target > source → moved
  *    lands AFTER the target) is PHP-SOURCE-derived — the differential only
  *    exercised up-moves.
- *  - sort_by_column: numisdata77 does not enable the `sort_by_column`
+ *  - sort_by_column: test6157 does not enable the `sort_by_column`
  *    property, so the gate refuses (result false, stored order untouched) —
  *    differential-pinned on both engines.
  *  - add_new_element (PHP component_relation_common.php:3770-3860): creates
@@ -41,25 +41,32 @@
  *    TO STRING (PHP locator class cast, byte-verified by the differential).
  *
  * NOT re-expressed (oracle-only by nature): the picker-insert SAVE ECHO test
- * (rsc92/fr1 term fallback + bare ddinfo breadcrumb) — it asserts subdatum
- * content of a REAL mutable fr1 term record and only means anything as a
+ * (rsc92/test2830 term fallback + bare ddinfo breadcrumb) — it asserts subdatum
+ * content of a REAL mutable test2830 term record and only means anything as a
  * live TS-vs-PHP diff.
  *
- * Scratch hygiene: fresh numisdata3 / rsc167 twins via createSectionRecord
+ * Scratch hygiene: fresh test6099 / rsc167 twins via createSectionRecord
  * (distinct counter-minted ids — no collision with sibling gates on the same
- * sections); add_new_element's created numisdata4 records tracked too. All
+ * sections); add_new_element's created test6100 records tracked too. All
  * twins + their TM rows + the dd542 activity rows the dispatch save
  * chokepoint appends for OUR record ids are swept in afterAll
  * (matrix_activity is consultation-only for the engine doors; direct SQL
  * cleanup of our own rows mirrors delete_multi_native.test.ts).
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { canonicalizeStoredSectionId } from '../../src/core/concepts/section_id.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { getComponentFilterTipo } from '../../src/core/ontology/resolver.ts';
+import {
+	getComponentFilterTipo,
+	getMatrixTableFromTipo,
+} from '../../src/core/ontology/resolver.ts';
 import {
 	applySortData,
 	getRelationTypeByTipo,
@@ -72,9 +79,22 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const HOST_SECTION = 'numisdata3';
-const PORTAL = 'numisdata77';
-const TARGET_SECTION = 'numisdata4';
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+/**
+ * The matrix table a section's records live in, RESOLVED through the engine
+ * rather than assumed: a `test` section carries the test24 matrix_table
+ * relation (matrix_test — the generic-TLD law), while the seed-shipped rsc
+ * sections carry none and fall back to the default `matrix`.
+ */
+async function matrixTableOf(sectionTipo: string): Promise<string> {
+	return (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
+}
+
+const HOST_SECTION = 'test6099';
+const PORTAL = 'test6157';
+const TARGET_SECTION = 'test6100';
 
 let tsContext: Record<string, unknown>;
 const created: { sectionTipo: string; sectionId: number }[] = [];
@@ -100,7 +120,7 @@ async function seedHost(locators: Record<string, unknown>[]): Promise<number> {
 	const id = track(HOST_SECTION, await createSectionRecord(HOST_SECTION, -1));
 	if (locators.length > 0) {
 		await sql.unsafe(
-			`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
+			`UPDATE ${await matrixTableOf(HOST_SECTION)} SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
 			 WHERE section_tipo = $3 AND section_id = $4`,
 			[PORTAL, JSON.stringify(locators), HOST_SECTION, id],
 		);
@@ -114,7 +134,7 @@ async function portalDataOf(
 	sectionTipo = HOST_SECTION,
 ): Promise<unknown> {
 	const rows = (await sql.unsafe(
-		'SELECT relation->$1 AS v FROM matrix WHERE section_tipo = $2 AND section_id = $3',
+		`SELECT relation->$1 AS v FROM ${await matrixTableOf(sectionTipo)} WHERE section_tipo = $2 AND section_id = $3`,
 		[tipo, sectionTipo, id],
 	)) as { v: unknown }[];
 	return rows[0]?.v ?? null;
@@ -167,10 +187,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	for (const row of created) {
-		await sql.unsafe('DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2', [
-			row.sectionTipo,
-			row.sectionId,
-		]);
+		await sql.unsafe(
+			`DELETE FROM ${await matrixTableOf(row.sectionTipo)} WHERE section_tipo = $1 AND section_id = $2`,
+			[row.sectionTipo, row.sectionId],
+		);
 		await sql.unsafe(
 			'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
 			[row.sectionTipo, row.sectionId],
@@ -185,7 +205,7 @@ afterAll(async () => {
 			 WHERE section_tipo = 'dd542'
 			   AND string->'dd546'->0->>'value' = ANY($1::text[])
 			   AND misc->'dd551'->0->'value'->>'section_id' = ANY($2::text[])`,
-			[`{${PORTAL},rsc860}`, `{${ids.join(',')}}`],
+			[`{${PORTAL},${seed('rsc', 860)}}`, `{${ids.join(',')}}`],
 		);
 	}
 });
@@ -260,7 +280,7 @@ describe('validateRelationInsert (PHP validate_data_element pins)', () => {
 			section_tipo: TARGET_SECTION,
 			section_top_id: '4',
 			section_top_tipo: HOST_SECTION,
-			tag_component_tipo: 'numisdata155',
+			tag_component_tipo: 'test6225',
 			from_component_tipo: PORTAL,
 		};
 		const normalized = await validateRelationInsert({ ...tagLocator }, context());
@@ -270,11 +290,11 @@ describe('validateRelationInsert (PHP validate_data_element pins)', () => {
 		expect(normalized).toEqual({ ...tagLocator, section_id: 101 });
 	});
 
-	test('relation type resolution: numisdata77 → dd151, rsc860 → its OWN dd96', async () => {
+	test(`relation type resolution: test6157 → dd151, ${seed('rsc', 860)} → its OWN dd96`, async () => {
 		expect(await getRelationTypeByTipo(PORTAL)).toBe('dd151');
 		// rsc860 normalizes autocomplete_hi → portal but its own properties keep
 		// relation_type dd96 (S1-06 caseC pin — the tool_indexation link type).
-		expect(await getRelationTypeByTipo('rsc860')).toBe('dd96');
+		expect(await getRelationTypeByTipo(seed('rsc', 860))).toBe('dd96');
 	});
 });
 
@@ -378,12 +398,12 @@ describe('portal edit writes, TS-native stored end states', () => {
 		expect(await portalDataOf(host)).toEqual(seed);
 	}, 60000);
 
-	test('sort_by_column: property gate refuses (numisdata77 does not enable it)', async () => {
+	test('sort_by_column: property gate refuses (test6157 does not enable it)', async () => {
 		const seed = [locatorOf(1, 102), locatorOf(2, 101)];
 		const host = await seedHost(seed);
 		const response = await tsCall(
 			saveRqo(host, [
-				{ action: 'sort_by_column', component_tipo: 'numisdata158', direction: 'ASC', value: null },
+				{ action: 'sort_by_column', component_tipo: 'test6227', direction: 'ASC', value: null },
 			]),
 		);
 		expect((response as { ok?: boolean }).ok).toBe(false);
@@ -430,7 +450,7 @@ describe('portal edit writes, TS-native stored end states', () => {
 		// seed the host's project filter with a NON-default item id (7) so the
 		// re-stamp (id renumbered from 1, from_component_tipo replaced) is visible
 		await sql.unsafe(
-			`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
+			`UPDATE ${await matrixTableOf(HOST_SECTION)} SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
 			 WHERE section_tipo = $3 AND section_id = $4`,
 			[
 				hostFilterTipo,
@@ -478,7 +498,7 @@ describe('portal edit writes, TS-native stored end states', () => {
 			section_tipo: TARGET_SECTION,
 			section_top_id: '4',
 			section_top_tipo: HOST_SECTION,
-			tag_component_tipo: 'numisdata155',
+			tag_component_tipo: 'test6225',
 			from_component_tipo: PORTAL,
 		};
 		const host = await seedHost([]);
@@ -558,26 +578,26 @@ describe('delete_locator, TS-native (bulk match / strict tag_id / full-union / d
 		expect(await portalDataOf(host)).toEqual([seed[1]]);
 	}, 60000);
 
-	test('rsc860 verbatim tool_indexation payload: own dd96 type honored (caseC)', async () => {
-		const INDEXING_SECTION = 'rsc167';
-		const INDEXING = 'rsc860';
+	test(`${seed('rsc', 860)} verbatim tool_indexation payload: own dd96 type honored (caseC)`, async () => {
+		const INDEXING_SECTION = seed('rsc', 167);
+		const INDEXING = seed('rsc', 860);
 		const tagLink = (id: number, tagId: string) => ({
 			id,
 			type: 'dd96',
 			tag_id: tagId,
 			section_id: '2',
-			section_tipo: 'dc1',
+			section_tipo: 'test1026',
 			section_top_id: '2',
-			section_top_tipo: 'ich100',
-			tag_component_tipo: 'rsc36',
+			section_top_tipo: 'test2931',
+			tag_component_tipo: seed('rsc', 36),
 			from_component_tipo: INDEXING,
 		});
-		const seed = [tagLink(1, '2'), tagLink(2, '3')];
+		const seedLocators = [tagLink(1, '2'), tagLink(2, '3')];
 		const host = track(INDEXING_SECTION, await createSectionRecord(INDEXING_SECTION, -1));
 		await sql.unsafe(
-			`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
+			`UPDATE ${await matrixTableOf(INDEXING_SECTION)} SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
 			 WHERE section_tipo = $3 AND section_id = $4`,
-			[INDEXING, JSON.stringify(seed), INDEXING_SECTION, host],
+			[INDEXING, JSON.stringify(seedLocators), INDEXING_SECTION, host],
 		);
 		const body = await tsCall(
 			deleteLocatorRqo(INDEXING, INDEXING_SECTION, host, {

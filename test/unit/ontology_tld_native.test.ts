@@ -1,15 +1,15 @@
 /**
  * ONT-TLD — `ontology7` is DERIVED from the section, never typed. TS-native write-path contract.
  *
- * THE BUG THIS CLOSES. An administrator creating a record in an ontology section (`actv0`,
- * `rsc0`, …) had to know, and retype, the section's own tld. `ontology7` is MANDATORY —
+ * THE BUG THIS CLOSES. An administrator creating a record in an ontology section (`test0`,
+ * `testmint0`, …) had to know, and retype, the section's own tld. `ontology7` is MANDATORY —
  * `parseSectionRecordToOntologyNode` returns null without it — so a record created without one
  * writes no `dd_ontology` row and never appears in the ontology tree. No error, no warning: the
  * record is simply lost. The mirror failure is a typo, which files the record under ANOTHER
  * tld's namespace (`ontology_state`'s `foreign` drift).
  *
- * Neither is information a human holds: a record of section `actv0` parses into node tipo
- * `actv<section_id>`, so `actv` is the only tld it can ever carry. The invariant, and the one
+ * Neither is information a human holds: a record of section `test0` parses into node tipo
+ * `test<section_id>`, so `test` is the only tld it can ever carry. The invariant, and the one
  * place it is expressed, is `ontology/tld.ts requiredOntologyTld`.
  *
  * FOUR LAYERS, each pinned here, because no single one covers every door:
@@ -23,6 +23,10 @@
  *
  * Scratch: tld 'zztl' (section 'zztl0') and 'zztm'. Both swept; this file leaves zero residue.
  */
+// Migrated to the generic `test` TLD 2026-08-20: the subject is the ONT-TLD
+// grammar, so every example is an engine-shipped or `test`-TLD node — `test0`
+// and `testmint0` for the governed `<tld>0` sections, `test6813`/`test6099` for
+// the ungoverned data sections.
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -100,9 +104,9 @@ afterAll(sweep);
 
 describe('requiredOntologyTld — the one expression of ONT-TLD', () => {
 	test('governs every `<tld>0` ontology node section', () => {
-		expect(requiredOntologyTld('actv0')).toBe('actv');
+		expect(requiredOntologyTld('test0')).toBe('test');
 		expect(requiredOntologyTld('dd0')).toBe('dd');
-		expect(requiredOntologyTld('rsc0')).toBe('rsc');
+		expect(requiredOntologyTld('testmint0')).toBe('testmint');
 		// The grouper sections are ordinary <tld>0 sections and already satisfy the rule.
 		expect(requiredOntologyTld('ontologytype0')).toBe('ontologytype');
 		expect(requiredOntologyTld('hierarchytype0')).toBe('hierarchytype');
@@ -110,7 +114,7 @@ describe('requiredOntologyTld — the one expression of ONT-TLD', () => {
 	});
 
 	test('EXEMPTS localontology0 — its records declare a foreign tld ON PURPOSE', () => {
-		// A localontology record OVERRIDES a canonical node (e.g. rsc12), so its ontology7
+		// A localontology record OVERRIDES a canonical node (e.g. dd12), so its ontology7
 		// names the OVERRIDDEN node's tld. Governing it would refuse the only value it may
 		// legitimately hold.
 		expect(requiredOntologyTld('localontology0')).toBeNull();
@@ -122,9 +126,9 @@ describe('requiredOntologyTld — the one expression of ONT-TLD', () => {
 	});
 
 	test('leaves DATA sections alone — only section_id 0 is an ontology node section', () => {
-		expect(requiredOntologyTld('rsc170')).toBeNull();
+		expect(requiredOntologyTld('test6813')).toBeNull();
 		expect(requiredOntologyTld('dd1201')).toBeNull();
-		expect(requiredOntologyTld('numisdata3')).toBeNull();
+		expect(requiredOntologyTld('test6099')).toBeNull();
 	});
 
 	test('matches the `<tld>0` shape EXACTLY — a prefix match would govern the wrong sections', () => {
@@ -298,7 +302,7 @@ describe('layer 2 — the save refusal', () => {
 				ontologyTldRefusal(req([{ action: 'remove', value: null }], 'localontology0')),
 			).toBeNull();
 			expect(ontologyTldRefusal(req([{ action: 'remove', value: null }], 'ontology35'))).toBeNull();
-			expect(ontologyTldRefusal(req([{ action: 'remove', value: null }], 'rsc170'))).toBeNull();
+			expect(ontologyTldRefusal(req([{ action: 'remove', value: null }], 'test6813'))).toBeNull();
 			expect(
 				ontologyTldRefusal({
 					...req([{ action: 'set_data', value: [] }]),
@@ -329,7 +333,7 @@ describe('layer 3 — the read-only display stamp', () => {
 		// EXACTLY 1 is the mechanism: component_input_text renders a static
 		// div.content_value.read_only there, and an <input> at anything higher.
 		expect((await build(TLD_COMPONENT, 'dd0'))?.permissions).toBe(1);
-		expect((await build(TLD_COMPONENT, 'rsc0'))?.permissions).toBe(1);
+		expect((await build(TLD_COMPONENT, 'test0'))?.permissions).toBe(1);
 	});
 
 	test('leaves every OTHER component of the same section editable', async () => {

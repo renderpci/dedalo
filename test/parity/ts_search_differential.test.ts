@@ -7,22 +7,39 @@
  * The orchestrator owns the full sweep (deep hit, root hit, shared-branch dedup,
  * pinned hierarchy_terms, non-admin filtering); this pins the keyword-hit path.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay). The search
+// RQO is written in `test`-TLD terms (`testimmovable1` + its input_text
+// `testimmovable1013`, the clone of tchi1/tchi15) and reaches the frozen
+// install-term interaction through `unmapRqo`; the frozen body is read back in
+// test terms through `adoptTipoIdMap`. Records come from the committed corpus.
+//
+// STILL RED, and NOT a TLD binding: of the two records the frozen search found,
+// only 602 is in the corpus — `tchi1/452` is `never_revealed`
+// (src/core/test_data/test_corpus/refused.json) — and 602's reconstructed
+// string item carries no `lang`, so its term comes back through the
+// untranslated-lang fallback (`<mark>Tarragona</mark>`). Both are corpus
+// fidelity, fixed in derive_test_corpus.ts, never by relaxing the comparison.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { normalizeApiResponse, normalizeSectionIdTypes } from './normalize.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap, normalizeApiResponse, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-// The area tipo of a thesaurus area whose properties gate the tchi hierarchy.
+// The area tipo of the thesaurus area (a SEED-shipped `dd` node — it stays).
 const AREA_TIPO = 'dd100';
+/** The cloned immovables thesaurus and the input_text the filter path walks. */
+const SECTION = 'testimmovable1';
+const TERM_COMPONENT = 'testimmovable1013';
 
 let php: PhpApiClient;
 let tsContext: Parameters<typeof dispatchRqo>[1];
 
 beforeAll(async () => {
+	await ensureTestCorpus([SECTION]);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
@@ -38,6 +55,10 @@ beforeAll(async () => {
 	} as never;
 }, 120000);
 
+afterAll(async () => {
+	expect(await dropTestCorpus([SECTION])).toBe(0);
+});
+
 describe.if(hasPhpCredentials())('area_thesaurus ts_search injection differential', () => {
 	// Two live round-trips (PHP + TS) exceed the default 5s per-test budget.
 	test('keyword search embeds a matching ts_search tree', async () => {
@@ -49,14 +70,18 @@ describe.if(hasPhpCredentials())('area_thesaurus ts_search injection differentia
 			prevent_lock: true,
 			options: {},
 			sqo: {
-				section_tipo: ['tchi1'],
+				section_tipo: [SECTION],
 				limit: 5,
 				filter: {
 					$and: [
 						{
 							q: 'Tarragona',
 							path: [
-								{ section_tipo: 'tchi1', component_tipo: 'tchi15', model: 'component_input_text' },
+								{
+									section_tipo: SECTION,
+									component_tipo: TERM_COMPONENT,
+									model: 'component_input_text',
+								},
 							],
 						},
 					],
@@ -73,11 +98,17 @@ describe.if(hasPhpCredentials())('area_thesaurus ts_search injection differentia
 				lang: 'lg-spa',
 			},
 		};
-		const phpItem = (
-			(await php.call(structuredClone(rqo))).body as {
-				result?: { data?: { ts_search?: unknown }[] };
-			}
-		).result?.data?.[0]?.ts_search;
+		// WC-2026-08-19-test-tld-replay: the frozen install-term body, read in test
+		// terms. `matched` + a non-zero rewrite floor keep the adoption honest.
+		const adoptedFrozen = adoptTipoIdMap(
+			(await php.call(structuredClone(rqo))).body,
+			'ts_search_differential',
+		);
+		expect(adoptedFrozen.matched).toBe(true);
+		expect(adoptedFrozen.rewrites.tipos).toBeGreaterThan(0);
+		expect(adoptedFrozen.rewrites.ids).toBeGreaterThan(0);
+		const phpItem = (adoptedFrozen.body as { result?: { data?: { ts_search?: unknown }[] } }).result
+			?.data?.[0]?.ts_search;
 		const tsItem = (
 			(await dispatchRqo(structuredClone(rqo) as never, tsContext)).body as {
 				data?: { data?: { ts_search?: unknown }[] };

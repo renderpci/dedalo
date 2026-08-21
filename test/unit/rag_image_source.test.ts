@@ -6,6 +6,9 @@
  * the end-to-end ingest test rather than here; what lives here is the pure logic
  * that guards the archival masters and the cache key.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos
+// here are OPAQUE IDENTIFIERS — this gate builds and inspects a descriptor, it never
+// reads a record — so the migration is a rename.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -55,12 +58,12 @@ describe('qualityIsEmbeddable', () => {
 });
 
 describe('embeddingMediaIdentity (which media components are indexable at all)', () => {
-	const input = { componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 42 };
+	const input = { componentTipo: 'test99', sectionTipo: 'test3', sectionId: 42 };
 
 	test('a plain media component reads its file with no lang suffix', () => {
 		expect(embeddingMediaIdentity({ ...input, translatable: false })).toEqual({
-			componentTipo: 'rsc29',
-			sectionTipo: 'rsc170',
+			componentTipo: 'test99',
+			sectionTipo: 'test3',
 			sectionId: 42,
 			lang: null,
 		});
@@ -83,7 +86,7 @@ describe('embeddingMediaIdentity (which media components are indexable at all)',
 			console.error = original;
 		}
 		expect(errors).toHaveLength(1);
-		expect(errors[0]).toContain('rsc29');
+		expect(errors[0]).toContain('test99');
 		expect(errors[0]).toContain('TRANSLATABLE');
 	});
 });

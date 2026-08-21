@@ -125,10 +125,17 @@ over `../private/.env` (readEnv precedence). The jobs and
 |---|---|---|
 | `DIFFUSION_JOBS_TABLE` | `dedalo_ts_test_ci_diffusion_jobs` | live/dev diffusion job queue (scheduler cross-claiming) |
 | `DIFFUSION_ACTIVITY_TABLE` | `dedalo_ts_test_ci_activity_diffusion` | live activity rows (the dd1758 starvation class) |
-| `SERVER_TCP_PORT` | `3510` (client gate only) | dev server on 3500 |
-| `SERVER_UNIX_SOCKET` | scratch path (client gate only) | `/tmp/dedalo_ts.sock` double-start guard |
-| `DEDALO_SESSION_DB_PATH` | scratch sqlite (client gate; `bun test` preload mkdtemps its own) | the live session store |
-| `DEDALO_TS_STATE_PATH` | scratch json (client gate) | real maintenance-mode state |
+| `SERVER_TCP_PORT` | `4390`+ (client run; set by the runner for the server it owns) | dev server on 3500 |
+| `SERVER_UNIX_SOCKET` | scratch path (set by the runner) | `/tmp/dedalo_ts.sock` double-start guard |
+| `DEDALO_SESSION_DB_PATH` | scratch sqlite (set by the runner; `bun test` preload mkdtemps its own) | the live session store |
+| `DEDALO_TS_STATE_PATH` | scratch json (set by the runner) | real maintenance-mode state |
+| `DB_NAME` / `DEDALO_DATABASE_CONN` | the SUITE database (set by the runner) | **the application's records** — the client suite writes through a live server, so its server must be on the test database (`scripts/client_test_server.ts`) |
+| `DEDALO_TEST_MEDIA_ROOT` | `../private/test_media/<suite db>` (set by the runner; `bun test` preload sets the same path) | **the installation's media tree** — the same argument one surface over: uploads, derivatives and publication markers made through that server must land in the suite's own tree. The key also ARMS the `.dedalo_test_media` refusal, so an unmarked root writes nothing (`src/core/media/test_media_root.ts`) |
+
+Since 2026-08-19 the client gate sets NONE of these itself: `scripts/client_test_runner.ts`
+starts its own server with all of them, so a developer typing `bun run test:client` gets the
+same isolation CI gets — including the database. `scripts/ci/client_gate.sh` is a one-line
+wrapper kept for the nightly workflow.
 
 The `dedalo_ts_test_` table prefix is schema-enforced. Proven 2026-07-09: the
 client gate ran green on :3510 while the dev server served :3500.

@@ -49,6 +49,7 @@ import {
 	writeRuleFiles,
 } from '../../src/core/media/protection.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 let scratch: string;
 let mediaRoot: string;
@@ -61,7 +62,9 @@ beforeEach(() => {
 	scratch = mkdtempSync(join(tmpdir(), 'dedalo_media_prot_'));
 	mediaRoot = join(scratch, 'media');
 	authStore = join(scratch, 'private', 'media_auth.json');
-	mkdirSync(mediaRoot, { recursive: true });
+	// DECLARE the scratch media root — media_protection.mediaRoot() refuses an
+	// unmarked one under the test-media seam (src/core/media/test_media_root.ts).
+	markMediaRoot(mediaRoot);
 	overrideMediaProtectionPathsForTests({ mediaRoot, authStorePath: authStore });
 	// DEDALO_TS_STATE_PATH already points at a per-run scratch file (test/preload), so
 	// touching the override here can never reach the live server state.

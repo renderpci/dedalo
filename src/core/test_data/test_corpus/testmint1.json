@@ -1,0 +1,4659 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "testmint1",
+	"source_section_tipo": "numisdata6",
+	"table": "matrix_test",
+	"kind": "test",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "1"
+			},
+			"reconstructed": false,
+			"gates": [
+				"buttons_differential",
+				"component_tools_differential",
+				"context_differential",
+				"list_column_sortable_differential",
+				"model_coverage_sweep",
+				"read_differential",
+				"read_raw_differential",
+				"replay",
+				"resolve_data_differential",
+				"section_context_extras_differential",
+				"section_tools_differential",
+				"sqo_differential"
+			],
+			"columns": {
+				"relation": {
+					"dd197": [],
+					"dd200": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd128",
+							"from_component_tipo": "dd200"
+						}
+					],
+					"dd1224": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd128",
+							"from_component_tipo": "dd1224"
+						}
+					],
+					"dd1225": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd128",
+							"from_component_tipo": "dd1225"
+						}
+					],
+					"testmint1013": [
+						{
+							"id": 1,
+							"type": "dd675",
+							"section_id": "1",
+							"section_tipo": "dd153",
+							"from_component_tipo": "testmint1013"
+						},
+						{
+							"id": 2,
+							"type": "dd675",
+							"section_id": "2",
+							"section_tipo": "dd153",
+							"from_component_tipo": "testmint1013"
+						},
+						{
+							"id": 3,
+							"type": "dd675",
+							"section_id": "5",
+							"section_tipo": "dd153",
+							"from_component_tipo": "testmint1013"
+						}
+					],
+					"testmint1017": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd501",
+							"from_component_tipo": "testmint1017"
+						}
+					],
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					],
+					"testmint1023": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "test7374",
+							"from_component_tipo": "testmint1023"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Desconocida"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Añadir MIB enlace</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Abariltur es conocida únicamente a través de los escasos divisores que acuñó, pues no aparece en las fuentes clásicas ninguna mención a un emplazamiento con este nombre. En el siglo XIX se empezó a proponer una posible ubicación para este taller en Catalunya siguiendo el estilo de las piezas (Heiss 1870: 287), aunque también se sugirió que pudo estar en tierras valencianas (Delgado 1876: 20). En el siglo XX, siguiendo parte de los trabajos anteriores, la ceca también fue situada en Cataluña por diferentes autores como Botet y Sisó, quien dijo conocer el hallazgo de tres monedas en el yacimiento de Emporion (Botet y Sisó 1908: 66). Más tarde se documentó otra pieza en Burriac (Ripollès 1982: 72) y otra en Pollentia (Ripollès 1982: 90). Además, la adscripción catalana de la ceca también quedó amparada por el estilo de los retratos, clasificándolos algunos autores como pertenecientes al grupo ibérico catalán antiguo (Villaronga 1979: 212; Campo 1974: 225).<br>Actualmente, por diferentes hallazgos, la ubicación de Abariltur se ha reconducido hacia tierras valencianas. Se han documentado bastantes monedas de esta ceca en el Baix Maestrat, pues ha aparecido una moneda en el yacimiento del Pouaig (Peníscola), cuatro en Peníscola, una en Alcalà de Xivert, una en Xert, otra en Ares, dos en Càlig y otras dos en Canet lo Roig (Oliver 2019: 53). Pero es en Santa Magdalena de Polpís donde se aprecia la mayor concentración de hallazgos, documentando ocho monedas en su término municipal. Esto sugiere que la ubicación del taller pudo estar próxima a esta zona, aunque no podemos descartar, por la dispersión de las monedas, que la ceca se encontrase entre Alcalà de Xivert y Vinaròs (Cerdà 2020: 114-115).<br>Los valores metrológicos de las monedas son algo controvertidos. Villaronga obtuvo un peso medio para las mitades de 4,41 g (<i>ACIP</i> 2062), 4,67 g (<i>ACIP</i> 2064) y 3,72 g (<i>ACIP</i> 2067), proporcionando un hipotético patrón de 9 g para la unidad. Para el cuarto (<i>ACIP</i> 2065) obtuvo un peso medio de 3,00 g, que correspondería a un peso teórico de 12 g para las unidades. Finalmente, para los sextos, se observa una gran oscilación metrológica pues el peso medio del tipo <i>ACIP</i> 2063 es de 1,52 g; el del 2066 de 1,44 g; el del 2069 de 2,27 g y el del 2070 de 2,88 g. Según esto, las unidades resultantes de los pesos medios de los sextos estarían situadas entre 9,12 g (<i>ACIP</i> 2063) y 17,28 g (<i>ACIP</i> 2070), lo cual no parece coherente. El sexto <i>ACIP</i> 2068 (=&nbsp;<a href=\"../../../../type/2068\"><i>MIB</i> 9</a>)&nbsp;está realizado con cuños modernos y no corresponde a ninguna emisión original. Las denominaciones que aporta Villaronga no son muy exactas, por ello, proponemos que los sextos de mayor peso (<i>ACIP</i> 2069 y 2070) pudieron ser cuartos y los sextos más pequeños (<i>ACIP</i> 2063 y 2066) octavos. Este taller no fue sistemático ajustando los valores metrológicos, cosa que quizá fue difícil por el reducido peso de los cospeles.<br>La tipología de las monedas fue diversa. Todas las piezas muestran en anverso una cabeza masculina, que puede estar desnuda o tocada con una diadema o una pluma/espiga. Los reversos son variados puesto que en algunos casos se emplea más de un diseño dentro de una misma denominación. Las medias unidades, muestran en anverso una cabeza masculina a derecha peinada con rizos de gancho. En reverso hay un toro, aunque el pequeño tamaño de las piezas y la baja calidad de las que se conocen impide asegurarlo (Campo 1974: 224), aceptándose también la idea de que pueda ser un perro (Cores y Ripollès 2014: 217). Los cuartos no utilizaron siempre los mismos diseños de reverso, ya que los tipos <i>MIB</i> 4 y <i>MIB</i> 7 muestran la figura de un caballo galopando a derecha, pero el tipo <i>MIB</i> 8 representa un delfín. Finalmente, los octavos tampoco son sistemáticos con la figura del reverso, pues el tipo <i>MIB</i> 2 muestra un toro y el <i>MIB</i> 5 medio caballo. Todos los tipos acuñados por el taller, excepto dos (<i>MIB</i> 1-2), muestran la leyenda <i>abaŕiltur</i> completa o abreviada y en algún caso añaden la inscripción&nbsp;<i>ban</i> en anverso (<i>MIB</i> 3, 6 y 7).<br>No existen argumentos sólidos para establecer la cronología de estos divisores. Inicialmente, las monedas se fecharon entre los siglos III a.C. y II a.C., por su similitud estilística con las piezas más antiguas de Kese (Campo 1974: 226); sin embargo, parece más acertado atribuir la producción al siglo II a.C., quizás a la segunda mitad de dicha centuria, por la metrología e iconografía de los tipos estudiados (<i>ACIP</i>&nbsp;p. 400).</p>"
+						}
+					]
+				},
+				"date": {
+					"dd199": [
+						{
+							"id": 1,
+							"start": {
+								"day": 25,
+								"hour": 11,
+								"time": 64830108146,
+								"year": 2017,
+								"month": 1,
+								"minute": 22,
+								"second": 26
+							}
+						}
+					],
+					"dd201": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"start": {
+								"day": 4,
+								"hour": 12,
+								"time": 65133636511,
+								"year": 2026,
+								"month": 7,
+								"minute": 48,
+								"second": 31
+							}
+						}
+					],
+					"dd271": [
+						{
+							"id": 1,
+							"start": {
+								"day": 11,
+								"hour": 18,
+								"time": 64914631939,
+								"year": 2019,
+								"month": 9,
+								"minute": 12,
+								"second": 19
+							}
+						}
+					],
+					"dd1223": [
+						{
+							"id": 1,
+							"start": {
+								"day": 2,
+								"hour": 23,
+								"time": 64962084904,
+								"year": 2021,
+								"month": 3,
+								"minute": 35,
+								"second": 4
+							}
+						}
+					]
+				},
+				"geo": {
+					"testmint1015": [
+						{
+							"id": 1,
+							"alt": 16,
+							"lat": 39.51015384544963,
+							"lon": -0.42494547493860063,
+							"zoom": 13,
+							"lib_data": [
+								{
+									"layer_id": 1,
+									"layer_data": {
+										"type": "FeatureCollection",
+										"features": []
+									}
+								}
+							]
+						}
+					]
+				},
+				"data": {
+					"label": "Cecas",
+					"created_date": "2017-01-25 11:22:26",
+					"modified_date": "2025-07-10 21:11:36",
+					"created_by_user_id": 2,
+					"modified_by_userID": 2,
+					"section_id": 1,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"dd200": [
+						{
+							"count": 1
+						}
+					],
+					"dd1224": [
+						{
+							"count": 1
+						}
+					],
+					"dd1225": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1013": [
+						{
+							"count": 3
+						}
+					],
+					"testmint1017": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1023": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					],
+					"dd199": [
+						{
+							"count": 1
+						}
+					],
+					"dd201": [
+						{
+							"count": 1
+						}
+					],
+					"dd271": [
+						{
+							"count": 1
+						}
+					],
+					"dd1223": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1015": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd197": "raw",
+				"dd200": "raw",
+				"dd1224": "raw",
+				"dd1225": "raw",
+				"testmint1013": "raw",
+				"testmint1017": "raw",
+				"testmint1021": "raw",
+				"testmint1023": "raw",
+				"testmint1002": "raw",
+				"testmint1003": "raw",
+				"testmint1004": "raw",
+				"dd199": "raw",
+				"dd201": "raw",
+				"dd271": "raw",
+				"dd1223": "raw",
+				"testmint1015": "raw"
+			}
+		},
+		{
+			"section_id": 2,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "2"
+			},
+			"reconstructed": false,
+			"gates": [
+				"complex_relation_sweep",
+				"context_differential",
+				"datalist_differential",
+				"default_ddo_map_differential",
+				"get_data_differential",
+				"list_column_sortable_differential",
+				"model_coverage_sweep",
+				"read_differential",
+				"read_raw_differential",
+				"request_config_differential",
+				"sqo_differential"
+			],
+			"columns": {
+				"relation": {
+					"testmint1014": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "40507",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "40531",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 3,
+							"type": "dd151",
+							"section_id": "40504",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 4,
+							"type": "dd151",
+							"section_id": "41924",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 5,
+							"type": "dd151",
+							"section_id": "43297",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 6,
+							"type": "dd151",
+							"section_id": "40535",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 7,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 8,
+							"type": "dd151",
+							"section_id": "39058",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 9,
+							"type": "dd151",
+							"section_id": "40525",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 10,
+							"type": "dd151",
+							"section_id": "43207",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 11,
+							"type": "dd151",
+							"section_id": "40524",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 12,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 13,
+							"type": "dd151",
+							"section_id": "40526",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 14,
+							"type": "dd151",
+							"section_id": "40532",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 15,
+							"type": "dd151",
+							"section_id": "40533",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 16,
+							"type": "dd151",
+							"section_id": "40530",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 17,
+							"type": "dd151",
+							"section_id": "40534",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 18,
+							"type": "dd151",
+							"section_id": "41982",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 19,
+							"type": "dd151",
+							"section_id": "40506",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 20,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 21,
+							"type": "dd151",
+							"section_id": "40528",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 22,
+							"type": "dd151",
+							"section_id": "40529",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						}
+					],
+					"testmint1017": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "dd501",
+							"from_component_tipo": "testmint1017"
+						}
+					],
+					"testmint1021": [
+						{
+							"id": 1,
+							"section_id": "1",
+							"section_tipo": "dd64"
+						}
+					],
+					"testmint1006": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "142",
+							"section_tipo": "testterr1",
+							"from_component_tipo": "testmint1006"
+						},
+						{
+							"id": 2,
+							"type": "dd96",
+							"section_id": "2",
+							"section_tipo": "test7374",
+							"from_component_tipo": "testmint1006"
+						}
+					],
+					"testmint1036": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "4",
+							"section_tipo": "rsc1379",
+							"from_component_tipo": "testmint1036",
+							"main_component_tipo": "testmint1014"
+						}
+					],
+					"testmint1028": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "rsc1035",
+							"from_component_tipo": "testmint1028"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Abariltur"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Visto MAN colección general y Sastre</p><p>Lauren</p><p>&nbsp;</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Abariltur es conocida únicamente a través de los escasos divisores que acuñó, pues no aparece en las fuentes...</p>"
+						}
+					],
+					"testmint1027": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "35"
+						}
+					]
+				},
+				"geo": {
+					"testmint1015": [
+						{
+							"id": 1,
+							"alt": 0,
+							"lat": 40.39005108583859,
+							"lon": 0.5233188704774117,
+							"zoom": 9,
+							"lib_data": [
+								{
+									"layer_id": 1,
+									"layer_data": {
+										"type": "FeatureCollection",
+										"features": [
+											{
+												"type": "Feature",
+												"geometry": {
+													"type": "Polygon",
+													"coordinates": [
+														[
+															[0.279138, 40.257369],
+															[0.195345, 40.293292],
+															[0.170276, 40.317143],
+															[0.20187, 40.359058],
+															[0.267151, 40.416037],
+															[0.37567, 40.547788],
+															[0.504107, 40.502854],
+															[0.420314, 40.399812],
+															[0.365368, 40.32282],
+															[0.279138, 40.257369]
+														]
+													]
+												},
+												"properties": {
+													"color": "#3388ff",
+													"layer_id": 1
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					]
+				},
+				"data": {
+					"section_id": 2,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1014": [
+						{
+							"count": 22
+						}
+					],
+					"testmint1017": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1006": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1036": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1028": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1027": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1015": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1014": "raw",
+				"testmint1017": "edit",
+				"testmint1021": "edit",
+				"testmint1006": "list",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list",
+				"testmint1036": "list",
+				"testmint1015": "list",
+				"testmint1027": "list",
+				"testmint1028": "list"
+			}
+		},
+		{
+			"section_id": 3,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "3"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"component_section_id_differential",
+				"list_column_sortable_differential",
+				"model_coverage_sweep",
+				"read_differential",
+				"sqo_differential"
+			],
+			"columns": {
+				"relation": {
+					"testmint1006": [
+						{
+							"id": 1,
+							"type": "dd96",
+							"section_id": "143",
+							"section_tipo": "testterr1",
+							"from_component_tipo": "testmint1006"
+						}
+					],
+					"testmint1014": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "7",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "10",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 3,
+							"type": "dd151",
+							"section_id": "6",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 4,
+							"type": "dd151",
+							"section_id": "4",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 5,
+							"type": "dd151",
+							"section_id": "44171",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 6,
+							"type": "dd151",
+							"section_id": "11",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 7,
+							"type": "dd151",
+							"section_id": "43298",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 8,
+							"type": "dd151",
+							"section_id": "44174",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 9,
+							"type": "dd151",
+							"section_id": "42085",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 10,
+							"type": "dd151",
+							"section_id": "8",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						}
+					],
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					],
+					"testmint1017": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "dd501",
+							"from_component_tipo": "testmint1017"
+						}
+					],
+					"testmint1023": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "56",
+							"section_tipo": "test2827",
+							"from_component_tipo": "testmint1023"
+						}
+					],
+					"dd560": [
+						{
+							"id": 1,
+							"type": "dd490",
+							"id_key": 1,
+							"section_id": "72",
+							"section_tipo": "dd1706",
+							"from_component_tipo": "dd560",
+							"main_component_tipo": "testmint1016"
+						}
+					],
+					"testmint1028": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "310",
+							"section_tipo": "rsc1035",
+							"from_component_tipo": "testmint1028"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "3",
+							"section_tipo": "rsc1035",
+							"from_component_tipo": "testmint1028"
+						}
+					],
+					"testmint1013": [
+						{
+							"id": 1,
+							"type": "dd675",
+							"section_id": "1",
+							"section_tipo": "dd153",
+							"from_component_tipo": "testmint1013"
+						},
+						{
+							"id": 2,
+							"type": "dd675",
+							"section_id": "2",
+							"section_tipo": "dd153",
+							"from_component_tipo": "testmint1013"
+						},
+						{
+							"id": 3,
+							"type": "dd675",
+							"section_id": "5",
+							"section_tipo": "dd153",
+							"from_component_tipo": "testmint1013"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Abdera"
+						}
+					],
+					"testmint1027": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "12"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La primera factoría fenicia de la zona se estableció en la desembocadura del río de Adra, donde existió una ensenada con buenas condiciones de fondeo. En una de las colinas circundantes se fundó Abdera. Como era habitual, la abundancia de agua y madera y la riqueza mineral (hierro y plomo) en la cercana Sierra de Gádor favorecieron el crecimiento del lugar. Sin embargo las labores agrícolas y el desarrollo urbano de Adra han destruido una parte sustancial del registro arqueológico. Intervenciones de cierta importancia en 1970-71 documentaron estructuras púnicas de los siglos IV-III a.C., y las de 1986 y 2004 niveles de finales del siglo VII y del VI a.C. Hay pues constancia de una continuidad en el tiempo de lo que fue sin duda un importante puerto comercial, otro más en esas costas, como indican claramente los materiales importados.<br>La producción monetaria de Abdera se inició un poco más tarde que la de las ciudades púnicas e ibéricas de su entorno, ya que las primeras emisiones se fechan <i>ca</i>. 120-90 a.C. Las primeras acuñaciones son monedas con una calidad de grabado mediocre en las que se representó en anverso una cabeza masculina acompañada de una clava, que generalmente se identifica con Melqart; en el reverso se muestra un delfín y un atún contrapuestos, acompañados de dos puntos cuyo significado se ignora, aunque Alfaro (2000: 111) propuso identificar como una marca de valor; entre ellos&nbsp;se lee&nbsp;<i>‘bdrt</i> en escritura neopúnica muy esquemática.<br>De estas primeras emisiones destaca el hecho de que la mayoría de ellas fueron reacuñadas sobre monedas de Castulo, algunas del tipo símbolo mano (<a href=\"../../../../type/2142\"><i>MIB</i> 39a</a> - <a href=\"../../../../type/2143\">39b</a> ), acuñadas <i>ca</i>. 130-80, y de Obulco, con los nombres personales urkailtu - neseltuko (<a href=\"../../../../type/2194\"><i>MIB</i> 15a</a>), emitidas <i>ca</i>. 165-110 a.C. Todas las monedas reacuñadas tuvieron un diámetro y un peso más elevado del que se supone que deberían tener de acuerdo con el diámetro de los cuños, aunque creemos que la elección de las monedas pesadas para los tipos <i>MIB</i> 1 y <i>MIB</i> 2 fue intencionada. De hecho, en los tipos <i>MIB</i> 4 y <i>MIB</i> 5 los cospeles ya se fabricaron con un menor peso y un diámetro más ajustado. De este grupo de acuñaciones, desde el punto de vista metrológico, también se conocen mitades y cuartos. Las mitades mantuvieron los mismos diseños que los tipos que reacuñaron monedas de Castulo y Obulco. &nbsp;Aunque los diseños sean similares la diferencia de peso entre ellas es tan evidente que con seguridad se valoraron como unidades y mitades. Los cuartos mantuvieron el mismo diseño en anverso, pero en reverso sólo se grabó un delfín y cuatro puntos; de nuevo, Alfaro consideró que los puntos debían interpretarse como una marca de valor, en el sentido de que cuatro piezas conformarían una unidad.<br>En una fecha posterior, quizás entre <i>ca</i>. 90-40 a.C., Abdera continuó sus acuñaciones, esta vez con un cambio de diseño y ajustándose a un patrón de peso de 10 g, un poco más ligero que el anterior, que era de <i>ca</i>. 16 g. Para el anverso se eligió un templo tetrástilo sobre grada y para el reverso dos atunes invertidos, con la leyenda neopúnica entre ellos. Estas acuñaciones se acompañan de divisores; mitades con una cabeza masculina con casco a dcha. y un atún y un delfín contrapuesto, con el nombre de la ciudad entre ellos; cuartos con un delfín y la leyenda neopúnica; y también octavos con un delfín, pero anepigráficos.<br>La cronología del grupo de acuñaciones con diseños templo y atunes debe situarse dentro de la franja de <i>ca</i>. 90-40 a.C., aunque no se descarta que pudiera rebasar esa fecha, aproximándose a los últimos decenios del siglo I a.C.<br>Durante el reinado del emperador Tiberio (14-37 d.C.) la ciudad volvió a acuñar moneda de bronce, en las que inicialmente mantuvo en una de sus caras el templo tetrástilo y el topónimo en neopúnico (<i>RPC</i> 124); posteriormente las monedas fueron bilingües (<i>RPC</i> 125) y en último lugar prevaleció el nombre latino de la ciudad, Abdera (<i>RPC</i> 126).</p>"
+						}
+					],
+					"testmint1005": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>[geo-n-1--data:[1]:data]</p>"
+						}
+					]
+				},
+				"geo": {
+					"testmint1015": [
+						{
+							"id": 1,
+							"alt": 0,
+							"lat": 36.752020386621666,
+							"lon": -3.0336380135518364,
+							"zoom": 14,
+							"lib_data": [
+								{
+									"layer_id": 1,
+									"layer_data": {
+										"type": "FeatureCollection",
+										"features": [
+											{
+												"type": "Feature",
+												"geometry": {
+													"type": "Point",
+													"coordinates": [-3.019523, 36.748788]
+												},
+												"properties": {
+													"layer_id": 1
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					]
+				},
+				"iri": {
+					"testmint1016": [
+						{
+							"id": 1,
+							"iri": "http://tesauros.mecd.es/tesauros/toponimiahistorica/1211430.html",
+							"lang": "lg-nolan"
+						},
+						{
+							"id": 2,
+							"iri": "http://nomisma.org/id/abdera_hispania",
+							"lang": "lg-nolan"
+						}
+					],
+					"testmint1032": [
+						{
+							"id": 1,
+							"iri": "https://rpc.ashmus.ox.ac.uk/search/browse?city_id=920",
+							"lang": "lg-nolan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1006": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1014": [
+						{
+							"count": 10
+						}
+					],
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1017": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1023": [
+						{
+							"count": 1
+						}
+					],
+					"dd560": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1028": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1013": [
+						{
+							"count": 3
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1027": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1005": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1016": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1032": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1015": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1006": "edit",
+				"testmint1014": "edit",
+				"testmint1021": "edit",
+				"testmint1002": "edit",
+				"testmint1027": "edit",
+				"testmint1017": "edit",
+				"testmint1023": "edit",
+				"testmint1004": "edit",
+				"testmint1005": "edit",
+				"testmint1015": "edit",
+				"dd560": "edit",
+				"testmint1016": "edit",
+				"testmint1028": "edit",
+				"testmint1013": "edit",
+				"testmint1032": "edit"
+			}
+		},
+		{
+			"section_id": 4,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "4"
+			},
+			"reconstructed": true,
+			"gates": ["list_column_sortable_differential", "read_differential", "sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Abra"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>imprimir 23mm, inferior (salto línea)</p><p>&nbsp;</p><p>Ceca de localización incierta en la provincia de Jaén. Por los hallazgos monetarios debe...</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Abra es el nombre de una población de la que se desconoce su localización exacta. No obstante, la similitud de los diseños con...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 4,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 5,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "5"
+			},
+			"reconstructed": true,
+			"gates": ["list_column_sortable_differential", "read_differential", "sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Acci"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Guadix, Granada.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 6,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "6"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Acinipo"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p><p>Obtuvo el estatuto jurídico de municipio romano presumiblemente durante el reinado de...</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Fue una ciudad localizada en la Beturia céltica (Plin. <i>N.H.&nbsp;</i>3.14-15; Ptol.&nbsp;3.4.11), en un punto estratégico en las...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 7,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "7"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Anaipora"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Aipora"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La leyenda ANAIPORA -también leída como AIPORA o <u>MVN</u> AIPORA- designa a un taller muy pequeño conocido únicamente por una rara...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 8,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "8"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Alaun"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Alaun se ha ubicado tradicionalmente en la localidad de Alagón, Zaragoza, lugar donde confluyen los ríos Jalón y...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 9,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "9"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Albatha"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Alba"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Denominada también Alba (Alfaro 1993 y 1997: 114; <i>DCPH&nbsp;</i>II: 24-25), se conoce por diversas inscripciones latinas. Identificada...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 9,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 10,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "10"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Aratikos"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Su localización no es segura, aunque en la actualidad prevalece la idea de que la ciudad de Aratis estuvo localizada en el...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 10,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 11,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "11"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arekorata"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Arekoratas"
+						},
+						{
+							"id": 3,
+							"lang": "lg-spa",
+							"value": "Arekorataz"
+						},
+						{
+							"id": 4,
+							"lang": "lg-spa",
+							"value": "Areikorataz"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span><span>Visto MAN colección general y Sastre</p><p></p><p>Jesús Vico | 2017-03-09 | 147, lote 12. Esta es una pieza manipulada y no existen garantía...</p></span></span>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La existencia de la ciudad de Arekorata sólo se conoce a través de las leyendas monetales y de su mención en dos téseras de...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 11,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 4
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 12,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "12"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arkailikos"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ciudad que acuñó monedas con la leyenda <i>arkailikos</i> debe identificarse con la <i>Usama Argaila</i> de Ptolomeo (2.6.55) y la <i>Uxama...</i></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 12,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 13,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "13"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arketurki"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Arketurki solo se conoce por unas escasas emisiones de monedas de bronce. Por el momento, su localización es...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 13,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 14,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "14"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arsa"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Fue una ciudad localizada en la Beturia túrdula, según Plinio (<i>N.H</i>. 3.14). El emplazamiento exacto no es totalmente seguro. Se...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 14,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 15,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "15"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arsakos"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Arzakoz"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</p><p></p><p>También <em>arsakoson</em>. Localización desconocida en el N de Aragón o Navarra. Debió acuñarse...</p></span>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Arsakos / Arsakoson no está localizada, pero las características de las monedas permiten una aproximación. Los...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 16,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "16"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arsaos"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Arzaoz"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</p><p></p><p>Ceca del grupo berón-vascón de localización desconocida dentro de la actual Navarra....</p></span>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Arsaos tuvo asociados en el tiempo, uno o varios talleres de acuñación que produjeron una importante emisión de...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 16,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 17,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "17"
+			},
+			"reconstructed": true,
+			"gates": [
+				"complex_relation_sweep",
+				"grouper_context_differential",
+				"section_context_extras_differential",
+				"sqo_differential"
+			],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Arse"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Saguntum"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Lauren</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Arse-Saguntum se localiza en el yacimiento ibérico del Tossal del Castell (Sagunt). La ocupación más antigua del...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 17,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 27,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "27"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Baria"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La antigua Baria se encuentra bajo la actual Villaricos (Almería). La fundación fenicia data del siglo VII a.C., y el lugar...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 27,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 28,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "28"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Baskunes"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Barskunes"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span><span>La afirmación que aparece en la entrada sobre la ceca de Ba(r)skunes, que atribuye su identificación con el oppidum de La...</span></span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Baśkunes<i> </i>estuvo activa durante la segunda mitad del siglo II y los inicios del siglo I a.C., caracterizándose por...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 28,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 34,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "34"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Betarratis NO USAR"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Beterra"
+						}
+					]
+				},
+				"data": {
+					"section_id": 34,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 35,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "35"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Bilbiliz"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Bilbilis"
+						}
+					]
+				},
+				"data": {
+					"section_id": 35,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 40,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "40"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Tarmeskom"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Bormeskom"
+						},
+						{
+							"id": 3,
+							"lang": "lg-spa",
+							"value": "Borneskon"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La leyenda <i>tarmeskom</i> alude a una ciudad que no se cita en las fuentes clásicas. Su localización es incierta, aunque siempre se...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 40,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 3
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 42,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "42"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Burzau"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Bursau"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Hesperia</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Se localiza en Borja (Zaragoza), en&nbsp;los cabezos de \"El Castillo\", \"La Corona\", \"La Cueva Esquilar\" y zonas aledañas del casco...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 42,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 45,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "45"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Carbula"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span><em></em></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Según Plinio <i>(N.H.</i> 3.10), un <i>oppidum&nbsp;</i>llamado Carbula estuvo situado en la ribera del Guadalquivir. En la actualidad se...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 45,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 46,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "46"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Carisa"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Carissa"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Ver reacuñaciones sobre castulo en G-B, Castulo, 1982</p><p>ARÉVALO GONZÁLEZ, A. (2011): “Algunas evidencias sobre la fabricación...</p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ciudad turdetana de Carisa (Ptol. 2.4.10) se localiza en la cima de un cerro, que divide en la actualidad los términos...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 46,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 47,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "47"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Carmo"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Fue una de las ciudades más importantes de la Turdetania, con niveles arqueológicos que atestiguan materiales de época...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 47,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 48,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "48"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Carteia"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span><em></em></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La colonia latina de Carteia fue fundada en el año 171 a.C. (Liv. 43.3), en la desembocadura del río Guadarranque (Roldán <i>et...</i></p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 48,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 49,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "49"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 49,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 50,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "50"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Carthago Nova"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Cartagena, Murcia.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 50,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 51,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "51"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Castulo"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Kastilo"
+						}
+					]
+				},
+				"data": {
+					"section_id": 51,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 53,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "53"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Caudillos galos"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Betarratis"
+						},
+						{
+							"id": 3,
+							"lang": "lg-spa",
+							"value": "Beterra"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>Desde mediados del siglo XIX se han venido localizando en Béziers las acuñaciones con leyenda BHTARRATIC, atendiendo a la...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 53,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 3
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 59,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "59"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Cunbaria"
+						}
+					],
+					"testmint1003": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p><span>Visto MAN colección general y Sastre</span></p>"
+						}
+					],
+					"testmint1004": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "<p>La ceca de Conubaria aparece mencionada en las fuentes clásicas como <i>Colobana</i> (Plin.&nbsp;<i>N.H.</i>&nbsp;3.3.11). Mora (2007) ha estudiado...</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 59,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1003": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1004": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list",
+				"testmint1003": "list",
+				"testmint1004": "list"
+			}
+		},
+		{
+			"section_id": 71,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "71"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 71,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 75,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "75"
+			},
+			"reconstructed": false,
+			"gates": [
+				"complex_relation_sweep",
+				"grouper_context_differential",
+				"list_column_sortable_differential",
+				"multihop_search_differential",
+				"read_raw_differential",
+				"section_context_extras_differential"
+			],
+			"columns": {
+				"relation": {
+					"testmint1014": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "195",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 2,
+							"type": "dd151",
+							"section_id": "44340",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 3,
+							"type": "dd151",
+							"section_id": "197",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 4,
+							"type": "dd151",
+							"section_id": "198",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 5,
+							"type": "dd151",
+							"section_id": "223",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 6,
+							"type": "dd151",
+							"section_id": "203",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 7,
+							"type": "dd151",
+							"section_id": "202",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 8,
+							"type": "dd151",
+							"section_id": "201",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 9,
+							"type": "dd151",
+							"section_id": "200",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 10,
+							"type": "dd151",
+							"section_id": "50536",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 11,
+							"type": "dd151",
+							"section_id": "204",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 12,
+							"type": "dd151",
+							"section_id": "206",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 13,
+							"type": "dd151",
+							"section_id": "199",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 14,
+							"type": "dd151",
+							"section_id": "222",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 15,
+							"type": "dd151",
+							"section_id": "205",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 16,
+							"type": "dd151",
+							"section_id": "194",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 17,
+							"type": "dd151",
+							"section_id": "42413",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 18,
+							"type": "dd151",
+							"section_id": "207",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 19,
+							"type": "dd151",
+							"section_id": "42201",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 20,
+							"type": "dd151",
+							"section_id": "224",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 21,
+							"type": "dd151",
+							"section_id": "208",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 22,
+							"type": "dd151",
+							"section_id": "210",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 23,
+							"type": "dd151",
+							"section_id": "191",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 24,
+							"type": "dd151",
+							"section_id": "209",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 25,
+							"type": "dd151",
+							"section_id": "211",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 26,
+							"type": "dd151",
+							"section_id": "212",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 27,
+							"type": "dd151",
+							"section_id": "50535",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 28,
+							"type": "dd151",
+							"section_id": "227",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 29,
+							"type": "dd151",
+							"section_id": "196",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 30,
+							"type": "dd151",
+							"section_id": "192",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 31,
+							"type": "dd151",
+							"section_id": "193",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 32,
+							"type": "dd151",
+							"section_id": "221",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 33,
+							"type": "dd151",
+							"section_id": "40511",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 34,
+							"type": "dd151",
+							"section_id": "190",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 35,
+							"type": "dd151",
+							"section_id": "220",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 36,
+							"type": "dd151",
+							"section_id": "218",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 37,
+							"type": "dd151",
+							"section_id": "219",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 38,
+							"type": "dd151",
+							"section_id": "50508",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 39,
+							"type": "dd151",
+							"section_id": "215",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 40,
+							"type": "dd151",
+							"section_id": "226",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 41,
+							"type": "dd151",
+							"section_id": "216",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 42,
+							"type": "dd151",
+							"section_id": "213",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 43,
+							"type": "dd151",
+							"section_id": "214",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 44,
+							"type": "dd151",
+							"section_id": "225",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						},
+						{
+							"id": 45,
+							"type": "dd151",
+							"section_id": "43852",
+							"section_tipo": "rsc332",
+							"from_component_tipo": "testmint1014"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Emporion"
+						}
+					]
+				},
+				"data": {
+					"section_id": 75,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1014": [
+						{
+							"count": 45
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1014": "raw",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 81,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "81"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Gadir"
+						}
+					]
+				},
+				"data": {
+					"section_id": 81,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 82,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "82"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 82,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 87,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "87"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 87,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 90,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "90"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Cecas inciertas. Hispano-cartaginesas"
+						}
+					]
+				},
+				"data": {
+					"section_id": 90,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 108,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "108"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Ilturir"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Iliberri"
+						},
+						{
+							"id": 3,
+							"lang": "lg-spa",
+							"value": "Ilberir"
+						},
+						{
+							"id": 4,
+							"lang": "lg-spa",
+							"value": "Florentia"
+						}
+					]
+				},
+				"data": {
+					"section_id": 108,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 4
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 114,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "114"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 114,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 116,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "116"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Ceca incierta. Imitaciones de Roma"
+						}
+					]
+				},
+				"data": {
+					"section_id": 116,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 119,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "119"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 119,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 134,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "134"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Kaiskata"
+						}
+					]
+				},
+				"data": {
+					"section_id": 134,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 138,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "138"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Kelin"
+						}
+					]
+				},
+				"data": {
+					"section_id": 138,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 139,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "139"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Kelse"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Celsa"
+						}
+					]
+				},
+				"data": {
+					"section_id": 139,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 142,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "142"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Kolounioku"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Clounioq"
+						}
+					]
+				},
+				"data": {
+					"section_id": 142,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 152,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "152"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Lascuta"
+						}
+					]
+				},
+				"data": {
+					"section_id": 152,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 173,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "173"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Ibolka"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Obulco"
+						}
+					]
+				},
+				"data": {
+					"section_id": 173,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 2
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 198,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "198"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Ceca incierta. Emisiones de la República Romana"
+						}
+					]
+				},
+				"data": {
+					"section_id": 198,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 203,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "203"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Saiti"
+						},
+						{
+							"id": 2,
+							"lang": "lg-spa",
+							"value": "Saitabi"
+						},
+						{
+							"id": 3,
+							"lang": "lg-spa",
+							"value": "Saetabi"
+						}
+					]
+				},
+				"data": {
+					"section_id": 203,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 3
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 232,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "232"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 232,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 236,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "236"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 236,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 301,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "301"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Roma"
+						}
+					]
+				},
+				"data": {
+					"section_id": 301,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 328,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "328"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Roma. República"
+						}
+					]
+				},
+				"data": {
+					"section_id": 328,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 330,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "330"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 330,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		},
+		{
+			"section_id": 346,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "346"
+			},
+			"reconstructed": true,
+			"gates": ["autocomplete_search_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Ceca oriental republicana"
+						}
+					]
+				},
+				"data": {
+					"section_id": 346,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 370,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "370"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Abdera provincial"
+						}
+					]
+				},
+				"data": {
+					"section_id": 370,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 372,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "372"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Carteia provincial"
+						}
+					]
+				},
+				"data": {
+					"section_id": 372,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 373,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "373"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Á la croix"
+						}
+					]
+				},
+				"data": {
+					"section_id": 373,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 377,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "377"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Abra - Obulco"
+						}
+					]
+				},
+				"data": {
+					"section_id": 377,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 420,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "420"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Acci"
+						}
+					]
+				},
+				"data": {
+					"section_id": 420,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 451,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "451"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"string": {
+					"testmint1002": [
+						{
+							"id": 1,
+							"lang": "lg-spa",
+							"value": "Adonis"
+						}
+					]
+				},
+				"data": {
+					"section_id": 451,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					],
+					"testmint1002": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit",
+				"testmint1002": "list"
+			}
+		},
+		{
+			"section_id": 561,
+			"source": {
+				"section_tipo": "numisdata6",
+				"section_id": "561"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"testmint1021": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "testmint1021"
+						}
+					]
+				},
+				"data": {
+					"section_id": 561,
+					"section_tipo": "testmint1"
+				},
+				"meta": {
+					"testmint1021": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"testmint1021": "edit"
+			}
+		}
+	]
+}

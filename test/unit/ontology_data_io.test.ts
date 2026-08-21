@@ -13,6 +13,10 @@
  *   - the LLM-map shape on a small injected fixture (per-section
  *     catch-and-continue skip collection).
  */
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 import { describe, expect, test } from 'bun:test';
 import { existsSync, rmSync } from 'node:fs';
@@ -34,6 +38,9 @@ import {
 	runExportOntologies,
 } from '../../tools/tool_ontology_parser/server/tool_ontology_parser.ts';
 import { refusalOf } from '../helpers/refusal.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 function makeContext(options: Record<string, unknown>, isDeveloper = true): ToolActionContext {
 	return {
@@ -94,7 +101,7 @@ describe('COMP-06 identifier validation', () => {
 
 	test('isSafeSectionTipo accepts only bare identifiers', () => {
 		expect(isSafeSectionTipo('dd0')).toBe(true);
-		expect(isSafeSectionTipo('rsc170')).toBe(true);
+		expect(isSafeSectionTipo(seed('rsc', 170))).toBe(true);
 		for (const bad of ["dd0'", 'dd0;--', 'dd 0', '', "dd0' TO PROGRAM"]) {
 			expect(isSafeSectionTipo(bad)).toBe(false);
 		}
@@ -388,7 +395,7 @@ describe('buildLlmMap shape (PHP export_llm_map)', () => {
 				fieldNode('zz6', 'component_date', { 'lg-eng': 'Date' }),
 			],
 			linkTargetSections: async (componentTipo) =>
-				componentTipo === 'zz5' ? ['rsc197', 'rsc176'] : [],
+				componentTipo === 'zz5' ? [seed('rsc', 197), seed('rsc', 176)] : [],
 		});
 		expect(skipped).toEqual([]);
 		expect(map).toEqual([
@@ -405,7 +412,7 @@ describe('buildLlmMap shape (PHP export_llm_map)', () => {
 						tipo: 'zz5',
 						label: { 'lg-eng': 'Informant' },
 						type: 'link',
-						target_sections: ['rsc197', 'rsc176'],
+						target_sections: [seed('rsc', 197), seed('rsc', 176)],
 					},
 					{ tipo: 'zz6', label: { 'lg-eng': 'Date' }, type: 'date' },
 				],

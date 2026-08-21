@@ -4,10 +4,11 @@
  *
  * THE BUG THIS GATE EXISTS FOR: no TS door seeded the project locator
  * (component_filter) or the ontology-declared `properties.dato_default` on a
- * newly created record. A non-global-admin cataloguer's fresh `oh1` therefore
+ * newly created record. A non-global-admin cataloguer's fresh record therefore
  * fell OUTSIDE the projects ACL — invisible in list/search, and every save on
- * it answered 403 "Record is out of the user scope". All 76 PHP-era oh1
- * records carry `oh22`; the one TS-created record did not.
+ * it answered 403 "Record is out of the user scope". Every PHP-era record of
+ * the audited section carried its project locator; the one TS-created record
+ * did not.
  *
  * PHP behaviour being restored (live v7 mechanism):
  *  - component_filter::set_data_default + get_default_data_for_user
@@ -24,9 +25,20 @@
  * for create/import/ts_api/portal-"+" instead of a render side-effect.
  *
  * Scratch hygiene: one scratch dd128 user (id band 9999987x) carrying a dd170
- * project locator, plus counter-minted oh1 twins. Rows + their TM/activity
- * rows are swept in afterAll. Suite DB only.
+ * project locator, plus counter-minted twins of the audited section. Rows +
+ * their TM/activity rows are swept in afterAll. Suite DB only.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): every
+// install section and component was rewritten through
+// src/core/test_data/test_tld_tipo_map.json (oh1→test6813, oh22→test6834,
+// oh21→test6833, oh93→test6889, oh32→test6844, oh29→test6841,
+// numisdata3→test6099, numisdata77→test6157, numisdata4→test6100,
+// dmm263→test1226, and the virtual pair rsc170→rsc2 replaced by the `test`
+// virtual pair test7007→testheritagecatalog1). The carrier TABLE is no longer
+// the hard-coded `matrix`: a cloned `test` section carries the test24
+// matrix_table node, so the table is RESOLVED from the ontology in beforeAll
+// and pinned to `matrix_test` — writing to `matrix` here would have been a
+// silent wrong-table write.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -35,7 +47,10 @@ import { config } from '../../src/config/config.ts';
 import { allComponentModels } from '../../src/core/components/registry.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
-import { getComponentFilterTipo } from '../../src/core/ontology/resolver.ts';
+import {
+	getComponentFilterTipo,
+	getMatrixTableFromTipo,
+} from '../../src/core/ontology/resolver.ts';
 import { applyAddNewElement, deletePortalLocator } from '../../src/core/relations/save.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import {
@@ -59,13 +74,18 @@ import { runWithRequestContext } from '../../src/core/security/request_context.t
 
 const REPO_ROOT = dirname(dirname(import.meta.dir));
 
-const SECTION = 'oh1';
-const TABLE = 'matrix';
-const FILTER_TIPO = 'oh22';
+const SECTION = 'test6813';
+const FILTER_TIPO = 'test6834';
 /** The portal "+" fixture triple (same as portal_edit_writes_native). */
-const HOST_SECTION = 'numisdata3';
-const PORTAL = 'numisdata77';
-const TARGET_SECTION = 'numisdata4';
+const HOST_SECTION = 'test6099';
+const PORTAL = 'test6157';
+const TARGET_SECTION = 'test6100';
+/**
+ * WHERE these sections store. Resolved from the ontology in beforeAll (a `test`
+ * clone carries the test24 matrix_table node → `matrix_test`) and asserted
+ * there, never assumed: every raw SQL string below interpolates it.
+ */
+let TABLE = '';
 /** A scratch dd128 user: no dd244 flag ⇒ NOT a global admin. */
 const SCRATCH_USER = 99999871;
 /** A scratch dd128 user with NO dd170 projects and NO profile ⇒ level 0. */
@@ -137,6 +157,12 @@ async function sweepScratchFixtures(): Promise<void> {
 }
 
 beforeAll(async () => {
+	// The table the ONTOLOGY resolves for each section under test — proven, not
+	// hard-coded. All three are phase-2 clones, so all three land in matrix_test.
+	for (const tipo of [SECTION, HOST_SECTION, TARGET_SECTION]) {
+		expect(await getMatrixTableFromTipo(tipo)).toBe('matrix_test');
+	}
+	TABLE = 'matrix_test';
 	await sweepScratchFixtures();
 	// A profile granting level 2 on the portal host section (PHP dd774 matrix).
 	await sql.unsafe(
@@ -219,7 +245,7 @@ describe('B1: a record created by a NON-global-admin is born inside their projec
 		expect(SCRATCH_PROJECT).not.toBe(config.features.defaultProject);
 	});
 
-	test('the created oh1 carries the caller OWN project locator, and is in their read scope', async () => {
+	test('the created record carries the caller OWN project locator, and is in their read scope', async () => {
 		const twin = track(SECTION, await createSectionRecord(SECTION, SCRATCH_USER));
 
 		expect(await relationOf(twin, FILTER_TIPO)).toEqual([
@@ -274,34 +300,35 @@ describe('B1: a record created by a NON-global-admin is born inside their projec
 // ---------------------------------------------------------------------------
 
 describe('generic properties.dato_default seeding', () => {
-	test('oh1 receives its ontology-declared oh21 / oh93 / oh32 defaults, normalized', async () => {
+	test('the section receives its ontology-declared test6833 / test6889 / test6844 defaults, normalized', async () => {
 		const twin = track(SECTION, await createSectionRecord(SECTION, -1));
-		// oh21 Quality → dd889/5 ; oh93 Review status → dd501/1 ; oh32 publication → dd64/2.
-		expect(await relationOf(twin, 'oh21')).toEqual([
+		// test6833 Quality → dd889/5 ; test6889 Review status → dd501/1 ;
+		// test6844 publication → dd64/2 (the clone keeps the declared dato_default).
+		expect(await relationOf(twin, 'test6833')).toEqual([
 			{
 				id: 1,
 				type: 'dd151',
 				section_id: 5,
 				section_tipo: 'dd889',
-				from_component_tipo: 'oh21',
+				from_component_tipo: 'test6833',
 			},
 		]);
-		expect(await relationOf(twin, 'oh93')).toEqual([
+		expect(await relationOf(twin, 'test6889')).toEqual([
 			{
 				id: 1,
 				type: 'dd151',
 				section_id: 1,
 				section_tipo: 'dd501',
-				from_component_tipo: 'oh93',
+				from_component_tipo: 'test6889',
 			},
 		]);
-		expect(await relationOf(twin, 'oh32')).toEqual([
+		expect(await relationOf(twin, 'test6844')).toEqual([
 			{
 				id: 1,
 				type: 'dd151',
 				section_id: 2,
 				section_tipo: 'dd64',
-				from_component_tipo: 'oh32',
+				from_component_tipo: 'test6844',
 			},
 		]);
 	}, 60000);
@@ -331,15 +358,15 @@ describe('generic properties.dato_default seeding', () => {
 	test('an unsupported dato_default shape THROWS instead of narrowing silently', () => {
 		// PHP resolves {"method": …} through component_common::get_method; no
 		// ontology row uses it today, so the path is UNPORTED and must be loud.
-		expect(() => normalizeDatoDefault({ method: 'get_today_date' }, 'oh29')).toThrow(
+		expect(() => normalizeDatoDefault({ method: 'get_today_date' }, 'test6841')).toThrow(
 			/dato_default.*method/i,
 		);
 	});
 
 	test('an empty dato_default is a no-op (PHP !empty gate)', () => {
-		expect(normalizeDatoDefault([], 'oh21')).toEqual([]);
-		expect(normalizeDatoDefault('', 'oh21')).toEqual([]);
-		expect(normalizeDatoDefault(null, 'oh21')).toEqual([]);
+		expect(normalizeDatoDefault([], 'test6833')).toEqual([]);
+		expect(normalizeDatoDefault('', 'test6833')).toEqual([]);
+		expect(normalizeDatoDefault(null, 'test6833')).toEqual([]);
 	});
 });
 
@@ -356,26 +383,28 @@ describe('generic properties.dato_default seeding', () => {
 
 describe('generic set_data normalization — every model, no whitelist', () => {
 	test('component_date: the declared object is kept VERBATIM, id added, NO lang', async () => {
-		// dedalo7_mdcat dmm263/dmm264/dmm265 (section dmm1). PHP: not a relation,
+		// the component_date default cloned from dedalo7_mdcat dmm263. PHP: not a relation,
 		// supports_translation=false ⇒ base validate_data_element returns it as-is
 		// with only the counter id. Stored twin verified against real
 		// component_date rows: {id, start:{…}} — an id plus the model's own keys.
-		const { items, counter } = await normalizeDefaultItems('dmm263', 'component_date', [
+		const { items, counter } = await normalizeDefaultItems('test1226', 'component_date', [
 			{ period: { time: 0, month: 1 } },
 		]);
 		expect(items).toEqual([{ period: { time: 0, month: 1 }, id: 1 }]);
 		expect(counter).toBe(1);
 	});
 
-	test('component_json: an OBJECT dato_default survives whole (nexus52)', async () => {
-		// dedalo7_mht/mdcat nexus52 declares a request_config source object. PHP
-		// wraps the non-array into [obj] (set_data_default :828-833) and stores it
-		// with an id. Nothing about it is a locator and nothing is lang-tagged.
+	test('component_json: an OBJECT dato_default survives whole', async () => {
+		// The shape comes from a shipped component_json that declares a
+		// request_config source OBJECT. PHP wraps the non-array into [obj]
+		// (set_data_default :828-833) and stores it with an id. Nothing about it is
+		// a locator and nothing is lang-tagged. The tipo is OPAQUE here — the model
+		// is passed in — so a generic one carries the same meaning.
 		const declared = normalizeDatoDefault(
 			{ source: { request_config: [{ sqo: { section_tipo: [] } }] } },
-			'nexus52',
+			'test9052',
 		);
-		const { items } = await normalizeDefaultItems('nexus52', 'component_json', declared);
+		const { items } = await normalizeDefaultItems('test9052', 'component_json', declared);
 		expect(items).toEqual([
 			{ source: { request_config: [{ sqo: { section_tipo: [] } }] } as unknown, id: 1 },
 		]);
@@ -396,7 +425,7 @@ describe('generic set_data normalization — every model, no whitelist', () => {
 	});
 
 	test('an explicit id in the declaration is honoured and raises the counter (PHP has_id)', async () => {
-		const { items, counter } = await normalizeDefaultItems('nexus52', 'component_json', [
+		const { items, counter } = await normalizeDefaultItems('test9052', 'component_json', [
 			{ k: 'a', id: 7 },
 			{ k: 'b' },
 		]);
@@ -413,14 +442,14 @@ describe('generic set_data normalization — every model, no whitelist', () => {
 		// FALSE for a locator without section_id/section_tipo — the element is
 		// dropped with an ERROR log and the record is still created. Throwing here
 		// would make the whole section uncreatable through every door.
-		const { items } = await normalizeDefaultItems('oh93', 'component_radio_button', [
+		const { items } = await normalizeDefaultItems('test6889', 'component_radio_button', [
 			{ nonsense: true },
 		]);
 		expect(items).toEqual([]);
 	});
 
 	test('a relation default declared twice is deduped (PHP locator_lookup_map)', async () => {
-		const { items } = await normalizeDefaultItems('oh93', 'component_radio_button', [
+		const { items } = await normalizeDefaultItems('test6889', 'component_radio_button', [
 			{ section_id: '1', section_tipo: 'dd501' },
 			{ section_id: 1, section_tipo: 'dd501' },
 		]);
@@ -440,7 +469,7 @@ describe('generic set_data normalization — every model, no whitelist', () => {
 			// Alias-only stubs store nothing under their own name (no column).
 			if (descriptor.column === undefined) continue;
 			try {
-				const { items } = await normalizeDefaultItems('oh93', descriptor.model, [probe]);
+				const { items } = await normalizeDefaultItems('test6889', descriptor.model, [probe]);
 				if (items.length !== 1) failures.push(`${descriptor.model}: dropped the default`);
 			} catch (error) {
 				failures.push(`${descriptor.model}: ${(error as Error).message}`);
@@ -476,9 +505,9 @@ describe('generic set_data normalization — every model, no whitelist', () => {
 // ---------------------------------------------------------------------------
 
 describe('virtual sections inherit the REAL section defaults', () => {
-	test('rsc170 (virtual → rsc2) seeds the same components rsc2 does', async () => {
-		const virtualSpec = await getSectionDefaultsSpec('rsc170');
-		const realSpec = await getSectionDefaultsSpec('rsc2');
+	test('test7007 (virtual → testheritagecatalog1) seeds the same components the real section does', async () => {
+		const virtualSpec = await getSectionDefaultsSpec('test7007');
+		const realSpec = await getSectionDefaultsSpec('testheritagecatalog1');
 		expect(realSpec.items.length).toBeGreaterThan(0); // the pin is not vacuous
 		// The virtual section's own children are exclude_elements/section_list/
 		// buttons — never components — so the borrowed set is the real one MINUS
@@ -705,7 +734,7 @@ describe('deletePortalLocator permission gate (PHP assert_section_permission …
 		let refusal: DedaloError | null = null;
 		try {
 			await deletePortalLocator(
-				projectlessNonAdmin, // no profile ⇒ level 0 on numisdata3
+				projectlessNonAdmin, // no profile ⇒ level 0 on the host section
 				{ tipo: PORTAL, section_tipo: HOST_SECTION, section_id: host },
 				{ locator: link(1, 101), ar_properties: ['section_tipo', 'section_id'] },
 			);

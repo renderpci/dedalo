@@ -42,10 +42,17 @@ const ROOT = { userId: -1, isGlobalAdmin: true };
 // media access mode is now TS-native runtime state (ts_state.json) and the engine owns
 // BOTH generated web-server rule files — there is no PHP install config to write. See
 // src/core/media/protection.ts + engineering/MEDIA_PROTECTION.md (closes MEDIA-01).
+//
+// 2026-08-19: export_hierarchy.export_hierarchy LEFT this boundary with its port.
+// The denial's premise ("it writes install hierarchy dump files into the PHP
+// tree") stopped being true at the cutover: the destination is now the ENGINE's
+// own install/import/hierarchy directory — a fixed, repo-root-derived constant
+// (HIERARCHY_IMPORT_DIR), the very directory add_hierarchy already imports from.
+// PHP took it from an EXPORT_HIERARCHY_PATH constant that was never carried over;
+// see config/migration_map.ts for the retired-constant record.
 const DENIED: [string, string][] = [
 	['update_ontology', 'export_to_translate'],
 	['update_ontology', 'rebuild_lang_files'],
-	['export_hierarchy', 'export_hierarchy'],
 	['build_database_version', 'build_install_version'],
 	['build_database_version', 'build_matrix_hierarchy_main_sql'],
 ];

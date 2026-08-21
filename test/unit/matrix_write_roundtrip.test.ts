@@ -1,8 +1,8 @@
 /**
  * Phase 2 gate (plan A3): full WRITE round-trip through the TS write path.
  *
- * Clones a real PHP-written record's columns into matrix_test (the dedicated
- * test table, dev DB) under a reserved test section_tipo, reads it back, and
+ * Clones a real, component-rich record's columns into matrix_test (the
+ * dedicated test table) under a reserved test section_tipo, reads it back, and
  * requires every jsonb column's canonical ::text to be byte-identical to the
  * source. Exercises: UPDATE→INSERT upsert fallback, raw-text passthrough,
  * codec-encoded writes, delete.
@@ -10,15 +10,26 @@
  * Cleanup runs before AND after — a crashed previous run must not poison the
  * next one.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the clone SOURCE is the gate's
+// own `testmint1` corpus record (provisioned/dropped here), not whatever record
+// an install happens to hold.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { deleteMatrixRecord, updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import {
+	dropTestCorpus,
+	ensureTestCorpus,
+	TEST_CORPUS_TABLE,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 /** Reserved coordinates in matrix_test — 'testrt1' matches the tipo grammar and collides with nothing. */
-const TEST_TABLE = 'matrix_test';
+const TEST_TABLE = TEST_CORPUS_TABLE;
+/** The clone SOURCE: a corpus record this gate provisions itself. */
+const SOURCE_SECTION_TIPO = 'testmint1';
+const SOURCE_SECTION_ID = 1;
 const TEST_SECTION_TIPO = 'testrt1';
 const TEST_SECTION_ID = 900001;
 
@@ -27,12 +38,18 @@ async function cleanupTestRecord(): Promise<void> {
 }
 
 describe('matrix write round-trip (Phase 2 gate, real DB)', () => {
-	beforeAll(cleanupTestRecord);
-	afterAll(cleanupTestRecord);
+	beforeAll(async () => {
+		await ensureTestCorpus([SOURCE_SECTION_TIPO]);
+		await cleanupTestRecord();
+	});
+	afterAll(async () => {
+		await cleanupTestRecord();
+		expect(await dropTestCorpus([SOURCE_SECTION_TIPO])).toBe(0);
+	});
 
 	test('clone a real record via raw-text passthrough → byte-identical columns', async () => {
-		// A real, component-rich record (verified to exist during scaffolding).
-		const source = await readMatrixRecord('matrix', 'numisdata6', 1);
+		// A real, component-rich record — the gate's own corpus row.
+		const source = await readMatrixRecord(TEST_TABLE, SOURCE_SECTION_TIPO, SOURCE_SECTION_ID);
 		expect(source).not.toBeNull();
 
 		// Build the write payload from the source's raw canonical text.

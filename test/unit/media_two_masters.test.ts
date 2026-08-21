@@ -17,6 +17,10 @@
  * visually distinct flat colours, so "the derived tier came from the modified"
  * is a pixel value, not a file listing.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs';
@@ -46,6 +50,7 @@ import {
 import { svgOverlayLocation } from '../../src/core/media/svg_overlay.ts';
 import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
 import { buildVersionCore, deleteAndResyncCore } from '../../src/core/media/tools/versions.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_two_masters_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -62,7 +67,7 @@ const DERIVED = image.defaultQuality;
 let sectionId = 0;
 function nextIdentity(): MediaIdentity {
 	sectionId += 1;
-	return { componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId, lang: null };
+	return { componentTipo: 'test99', sectionTipo: 'test3', sectionId, lang: null };
 }
 
 function pathOf(identity: MediaIdentity, quality: string, extension: string): string {
@@ -126,6 +131,9 @@ async function depicts(path: string): Promise<'red' | 'blue' | 'green' | 'other'
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 	mkdirSync(ROOT, { recursive: true });
 });
 afterAll(() => {
@@ -600,7 +608,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		// …and the operator's file is one move away, under the No-hard-delete name.
 		const deletedDir = `${higherPath.slice(0, higherPath.lastIndexOf('/'))}/deleted`;
 		// The tier dir is shared by every identity in this file, so filter by stem.
-		const stem = `rsc29_rsc170_${identity.sectionId}_deleted_`;
+		const stem = `test99_test3_${identity.sectionId}_deleted_`;
 		const backups = readdirSync(deletedDir).filter((name) => name.startsWith(stem));
 		expect(backups.length).toBe(1);
 		expect(await depicts(`${deletedDir}/${backups[0]}`)).toBe('green');
@@ -662,7 +670,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		const churn = existsSync(deletedDir)
 			? readdirSync(deletedDir).filter(
 					(name) =>
-						name.startsWith(`rsc29_rsc170_${identity.sectionId}_deleted_`) &&
+						name.startsWith(`test99_test3_${identity.sectionId}_deleted_`) &&
 						name.endsWith(`.${alternate}`),
 				)
 			: [];
@@ -691,7 +699,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		const deletedDir = `${twin.slice(0, twin.lastIndexOf('/'))}/deleted`;
 		const backups = readdirSync(deletedDir).filter(
 			(name) =>
-				name.startsWith(`rsc29_rsc170_${identity.sectionId}_deleted_`) &&
+				name.startsWith(`test99_test3_${identity.sectionId}_deleted_`) &&
 				name.endsWith(`.${alternate}`),
 		);
 		expect(backups.length).toBe(1);
@@ -721,7 +729,7 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		const deletedDir = `${orphan.slice(0, orphan.lastIndexOf('/'))}/deleted`;
 		const retired = readdirSync(deletedDir).filter(
 			(name) =>
-				name.startsWith(`rsc29_rsc170_${identity.sectionId}_deleted_`) &&
+				name.startsWith(`test99_test3_${identity.sectionId}_deleted_`) &&
 				name.endsWith(`.${alternate}`),
 		);
 		expect(retired.length).toBe(1);
@@ -792,7 +800,7 @@ describe.if(HAVE_MAGICK)('noteOutrankingMaster only speaks when it must', () => 
 			captured.restore();
 		}
 		expect(captured.lines.length).toBe(1);
-		expect(captured.lines[0]).toContain(`rsc29_rsc170_${identity.sectionId}`);
+		expect(captured.lines[0]).toContain(`test99_test3_${identity.sectionId}`);
 		expect(captured.lines[0]).toContain(MODIFIED);
 	});
 });

@@ -18,6 +18,7 @@
  * preload); inserted rows are tracked and deleted in afterAll with a loud
  * 0-rows guard (the info_widget leak lesson).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the reported section is an opaque wire string, rewritten to its phase-2 `test` clone (src/core/test_data/test_tld_tipo_map.json).
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -71,8 +72,8 @@ function anon(
 function validWirePayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
 		description: 'The section list renders blank after saving.',
-		page_url: '/dedalo/core/page/?tipo=oh1',
-		section_tipo: 'oh1',
+		page_url: '/dedalo/core/page/?tipo=test6813',
+		section_tipo: 'test6813',
 		section_id: '1',
 		user_agent: 'test-agent',
 		js_errors: [
@@ -214,7 +215,7 @@ describe('error-report intake (WC-017)', () => {
 	});
 
 	test('identifier chokepoint: a non-tipo section_tipo is refused', async () => {
-		const result = await post(validWirePayload({ section_tipo: 'oh1; DROP TABLE x' }));
+		const result = await post(validWirePayload({ section_tipo: 'test6813; DROP TABLE x' }));
 		expect(result.status).toBe(400);
 		expect((result.body.error as { message: string }).message).toBe(INVALID_REPORT);
 	});

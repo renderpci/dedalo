@@ -16,6 +16,7 @@ import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const scratch = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_'));
 
@@ -277,7 +278,10 @@ describe('persist_config (P2)', () => {
 	 * root belongs to the web-server user.
 	 */
 	test('check_directories creates + verifies the private tree (never the live media root)', () => {
-		const mediaRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_media_'));
+		// DECLARE the scratch media root: checkDirectories mkdirs it, and a media-root
+		// door refuses an undeclared one under the test-media seam
+		// (src/core/media/test_media_root.ts).
+		const mediaRoot = markMediaRoot(mkdtempSync(join(tmpdir(), 'dedalo_install_p2_media_')));
 		try {
 			const r = checkDirectories({ create: true, mediaRoot });
 			expect(r.ok).toBe(true);

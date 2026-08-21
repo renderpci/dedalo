@@ -4,7 +4,7 @@
  *
  * WHY THIS FILE EXISTS. The widget's only other gates are the two goldens in
  * info_widget_native.test.ts, and they assert almost nothing about this logic:
- * the test DB carries no dc1 chronology, so the "passing" one is a degenerate
+ * the test DB carries no test1026 chronology, so the "passing" one is a degenerate
  * all-'?' result (every coin falls to the catch-all) and the routing, the
  * parent roll-up and the array_filter wire shape are never exercised. These
  * cases are pure: no DB, no network, no fixtures.
@@ -41,6 +41,10 @@
  * would CHANGE THE EMITTED COUNTS. If that ratchet entry is ever retired, this
  * test must be revisited together with an engineering/wire_contract/ entry.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -55,15 +59,15 @@ import {
 
 const WIDGET_SOURCE_PATH = `${import.meta.dir}/../../src/core/components/component_info/widgets/numisdata/get_coins_by_period.ts`;
 
-const PERIOD_TIPO = 'numisdata1373';
-const DUPLICATED_TIPO = 'numisdata1372';
+const PERIOD_TIPO = 'test6669';
+const DUPLICATED_TIPO = 'test6668';
 
 /** One projected thesaurus term. section_id stays whatever the caller passes
  * (string vs number is load-bearing for the strict match). */
 function entry(
 	sectionId: unknown,
 	extra: Partial<HierarchyEntry> = {},
-	sectionTipo: unknown = 'dc1',
+	sectionTipo: unknown = 'test1026',
 ): HierarchyEntry {
 	return {
 		section_id: sectionId,
@@ -89,7 +93,7 @@ function coin(
 }
 
 /** A raw thesaurus row with hierarchy49 children. */
-function tsRow(sectionId: unknown, children: unknown[] = [], sectionTipo = 'dc1'): ThesaurusRow {
+function tsRow(sectionId: unknown, children: unknown[] = [], sectionTipo = 'test1026'): ThesaurusRow {
 	return {
 		section_id: sectionId,
 		section_tipo: sectionTipo,
@@ -97,7 +101,7 @@ function tsRow(sectionId: unknown, children: unknown[] = [], sectionTipo = 'dc1'
 	};
 }
 
-const loc = (sectionId: unknown, sectionTipo = 'dc1') => ({
+const loc = (sectionId: unknown, sectionTipo = 'test1026') => ({
 	section_tipo: sectionTipo,
 	section_id: sectionId,
 });
@@ -287,7 +291,7 @@ describe('expandHierarchyChildren — DFS flatten + parent stamps', () => {
 		expect(out.map((el) => el.section_id)).toEqual(['10', '187']);
 	});
 
-	test('DIAMOND, two roots: dc1/187 is emitted TWICE (the guard is NOT a de-duplicator)', () => {
+	test('DIAMOND, two roots: test1026/187 is emitted TWICE (the guard is NOT a de-duplicator)', () => {
 		const rows = [tsRow('A', [loc('187')]), tsRow('B', [loc('187')]), tsRow('187')];
 		const out: ThesaurusRow[] = [];
 		expandHierarchyChildren(rows, loc('A'), null, out);

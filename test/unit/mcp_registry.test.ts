@@ -10,6 +10,8 @@
  *   - invalid input never reaches a handler (envelope, not a throw);
  *   - the agent-tool projection produces a JSON-schema object per tool.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the registry envelopes are asserted on
+// opaque tipos, so they now name generic `test` nodes.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -80,7 +82,7 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 			{ section_tipo: 'test2' },
 			{
 				allowWrite: true,
-				writableSections: new Set(['oh1']),
+				writableSections: new Set(['test3']),
 			},
 		);
 		expect(result.ok).toBe(false);
@@ -93,7 +95,7 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 		const spec = getToolSpec('dedalo_read_record');
 		if (spec === undefined) throw new Error('spec missing');
 		// section_id must be a number; a malformed call gets a coded envelope.
-		const result = await runTool(spec, SCOPED_USER, { section_tipo: 'oh1' });
+		const result = await runTool(spec, SCOPED_USER, { section_tipo: 'test3' });
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error.code).toBe('request.invalid');
@@ -103,7 +105,7 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 	test('a thrown identifier-gate error becomes an invalid_tipo envelope', async () => {
 		const spec = getToolSpec('dedalo_describe_node');
 		if (spec === undefined) throw new Error('spec missing');
-		const result = await runTool(spec, SCOPED_USER, { tipo: "oh1'; DROP TABLE matrix; --" });
+		const result = await runTool(spec, SCOPED_USER, { tipo: "test3'; DROP TABLE matrix; --" });
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error.code).toBe('request.invalid_tipo');

@@ -10,7 +10,7 @@
  *    [] for THAT ddo, leaving the rest of the field and every other field of
  *    the element publishable. The TS compiler aborted the element instead, so
  *    the real oral-history element `mht2` (4 bibliography fields pointing at
- *    the absent Zenon tipos zenon4/5/6/9) could not compile at all.
+ *    the absent Zenon tipos zzabsent4/5/6/9) could not compile at all.
  *    Degradation is per ddo ENTRY, recorded structurally on the plan, and
  *    surfaced on the run — never silent. It degrades the VALUE, never the
  *    SHAPE: the oracle derives a datum's `columns` from the FULL ddo_map
@@ -26,7 +26,7 @@
  *    the degradations gathered on the way.
  *
  * 3. An unported/unresolvable component ddo fn is a LOUD per-field error, not
- *    an empty emission. `map_section_id_to_subtitles_url` (rsc546, the AV
+ *    an empty emission. `map_section_id_to_subtitles_url` (zzc546, the AV
  *    subtitles URL) published silently empty — no atoms, no error, validate
  *    clean — which is the worst possible outcome: a publish that looks
  *    successful and is not.
@@ -57,6 +57,12 @@
  * Hardcoding them made the tier assertion pass only on an install whose AV
  * default quality happened to differ from the requested one.
  */
+// Migrated to the generic `test` TLD 2026-08-19. The suite is HERMETIC — the
+// ontology is INJECTED (a stub tree + resolveModelByTipo), so every tipo is a
+// label and nothing is looked up. The install names became scratch `zzc*`
+// (the component graph) and `zzabsent*` (the package NO install carries — the
+// dangling-ddo subject), and the record section is the generic `test6813`.
+// The prose keeps the historical install names: a comment is not a binding.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -172,7 +178,7 @@ function buildTree(fields: FieldSpec[]): VirtualDiffusionTree {
 			parents: pathItems(),
 			childrenTipos: fields.map((field) => field.tipo),
 			directChildrenTipos: fields.map((field) => field.tipo),
-			relatedSections: ['oh1'],
+			relatedSections: ['test6813'],
 		},
 	];
 
@@ -181,20 +187,20 @@ function buildTree(fields: FieldSpec[]): VirtualDiffusionTree {
 
 /**
  * The injected model resolver: the ontology this gate pretends to have. Any
- * tipo not listed is DANGLING (the zenon4/5/6/9 situation on the real mht2).
+ * tipo not listed is DANGLING (the zzabsent4/5/6/9 situation on the real mht2).
  */
 const MODELS: Record<string, string> = {
-	rsc36: 'component_text_area',
-	rsc175: 'component_section_id',
-	rsc35: 'component_av',
+	zzc36: 'component_text_area',
+	zzc175: 'component_section_id',
+	zzc35: 'component_av',
 	// CANONICAL models, i.e. what the injected resolver's real twin
-	// (ontology/resolver.ts getModelByTipo) returns: rsc368 is stored as the
+	// (ontology/resolver.ts getModelByTipo) returns: zzc368 is stored as the
 	// legacy `component_autocomplete`, whose descriptor aliases it to
 	// component_portal — and only the RESOLVED model makes it a relation hop.
-	rsc368: 'component_portal',
+	zzc368: 'component_portal',
 	// Real model of the live mht ontology (dd_ontology of dedalo7_mht), so the
 	// mht2 topology case reproduces a true chain.
-	rsc140: 'component_input_text',
+	zzc140: 'component_input_text',
 };
 
 const compileOptions = (fields: FieldSpec[]): CompileOptions => ({
@@ -232,11 +238,11 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
-				{ tipo: 'f_ok', label: 'title', process: { ddo_map: [ddo('rsc36')] } },
+				{ tipo: 'f_ok', label: 'title', process: { ddo_map: [ddo('zzc36')] } },
 				{
 					tipo: 'f_dangling',
 					label: 'ref_publications_title',
-					process: { ddo_map: [ddo('zenon4')] },
+					process: { ddo_map: [ddo('zzabsent4')] },
 				},
 			]),
 		);
@@ -257,7 +263,7 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 		expect(skipped?.sourceChain).toEqual([]);
 
 		// Skipped, never silent — but a WARNING now, not a PlanDegradation.
-		expect(plan.warnings).toContain('uninstalled-tld:zenon@f_dangling');
+		expect(plan.warnings).toContain('uninstalled-tld:zzabsent@f_dangling');
 		expect(plan.degradations).toEqual([]);
 	});
 
@@ -270,9 +276,9 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 					label: 'ref_publications_url',
 					process: {
 						ddo_map: [
-							ddo('rsc368'),
-							{ tipo: 'rsc36', parent: 'rsc368' },
-							{ tipo: 'zenon9', parent: 'rsc368' },
+							ddo('zzc368'),
+							{ tipo: 'zzc36', parent: 'zzc368' },
+							{ tipo: 'zzabsent9', parent: 'zzc368' },
 						],
 					},
 				},
@@ -282,30 +288,30 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 		// The skipped entry LEAVES the chain (no longer 1:1 with the ddo_map).
 		expect(
 			field?.sourceChain.map((step: ResolveStep) => ('tipo' in step ? step.tipo : '')),
-		).toEqual(['rsc368', 'rsc36']);
+		).toEqual(['zzc368', 'zzc36']);
 		expect(field?.sourceChain.map((step: ResolveStep) => step.kind)).toEqual([
 			'relation-hop',
 			'component',
 		]);
-		expect(plan.warnings).toContain('uninstalled-tld:zenon@f_mixed');
+		expect(plan.warnings).toContain('uninstalled-tld:zzabsent@f_mixed');
 	});
 
-	test('THE mht2 CASE: the skipped ddo loses its column — the ACCEPTED oracle divergence', async () => {
-		// rsc1194 of the live mht ontology, verbatim (dedalo7_mht dd_ontology):
-		// ddo_map [rsc368 (autocomplete hop), rsc140 under it, zenon4 under it],
+	test('THE degraded-element CASE: the skipped ddo loses its column — the ACCEPTED oracle divergence', async () => {
+		// zzc1194 of the live mht ontology, verbatim (dedalo7_mht dd_ontology):
+		// ddo_map [zzc368 (autocomplete hop), zzc140 under it, zzabsent4 under it],
 		// no explicit parser → the parser-less merge path, merge:'string' with
 		// `empty_columns` defaulting to TRUE.
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
 				{
-					tipo: 'f_rsc1194',
+					tipo: 'f_zzc1194',
 					label: 'ref_publications_title',
 					process: {
 						ddo_map: [
-							{ tipo: 'rsc368', section_tipo: 'self' },
-							{ tipo: 'rsc140', label: 'Term', parent: 'rsc368' },
-							{ tipo: 'zenon4', label: 'Term', parent: 'rsc368' },
+							{ tipo: 'zzc368', section_tipo: 'self' },
+							{ tipo: 'zzc140', label: 'Term', parent: 'zzc368' },
+							{ tipo: 'zzabsent4', label: 'Term', parent: 'zzc368' },
 						],
 					},
 				},
@@ -314,27 +320,27 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 		const field = plan.sections[0]?.fields[0];
 		if (field === undefined) throw new Error('no field compiled');
 
-		// PHP leaf rule (:1294): parents = {rsc368}; every other ddo is a column,
-		// INCLUDING zenon4 — the oracle never looks its tipo up, so IT publishes
+		// PHP leaf rule (:1294): parents = {zzc368}; every other ddo is a column,
+		// INCLUDING zzabsent4 — the oracle never looks its tipo up, so IT publishes
 		// two columns here. We publish one: the skipped ddo takes its column with
 		// it. That is the cost of the 2026-08-11 reversal, pinned here so it can
 		// never be mistaken for an accident.
 		expect(leafMergeColumns(field.sourceChain)).toEqual([
-			{ tipo: 'rsc140', model: 'component_input_text' },
+			{ tipo: 'zzc140', model: 'component_input_text' },
 		]);
 
 		// The divergence in published BYTES, stated exactly: the oracle joins
-		// 'Historia' with the empty zenon4 slot and emits 'Historia, '; this
+		// 'Historia' with the empty zzabsent4 slot and emits 'Historia, '; this
 		// engine emits 'Historia'. Only on an install missing the package.
 		const merged = merge(
 			[
 				{
 					id: null,
 					value: 'Historia',
-					tipo: 'rsc140',
+					tipo: 'zzc140',
 					lang: 'lg-spa',
 					section_id: '4649',
-					section_tipo: 'rsc2',
+					section_tipo: 'test3',
 				},
 			],
 			{ columns: leafMergeColumns(field.sourceChain), merge: 'string' },
@@ -357,34 +363,36 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 					label: 'ref_publications_url',
 					process: {
 						ddo_map: [
-							ddo('zenon9'),
-							{ tipo: 'rsc36', parent: 'zenon9' },
-							{ tipo: 'rsc368', parent: 'rsc36' },
+							ddo('zzabsent9'),
+							{ tipo: 'zzc36', parent: 'zzabsent9' },
+							{ tipo: 'zzc368', parent: 'zzc36' },
 						],
 					},
 				},
 			]),
 		);
-		expect(plan.warnings).toContain('uninstalled-tld:zenon@f_subtree');
+		expect(plan.warnings).toContain('uninstalled-tld:zzabsent@f_subtree');
 		const field = plan.sections[0]?.fields[0];
 		if (field === undefined) throw new Error('no field compiled');
 		// The orphan still POINTS at the skipped ddo — that is what keeps it out
-		// of the root bucket. If this ever became `undefined`, rsc36 would run
+		// of the root bucket. If this ever became `undefined`, zzc36 would run
 		// against the section itself and publish data the oracle never emits.
 		const orphan = field.sourceChain.find(
-			(step: ResolveStep) => step.kind !== 'system' && step.tipo === 'rsc36',
+			(step: ResolveStep) => step.kind !== 'system' && step.tipo === 'zzc36',
 		);
-		expect(orphan !== undefined && orphan.kind !== 'system' ? orphan.parent : null).toBe('zenon9');
-		// Leaf columns unchanged: rsc36 is still a parent, rsc368 still the one leaf.
-		expect(leafMergeColumns(field.sourceChain).map((column) => column.tipo)).toEqual(['rsc368']);
+		expect(orphan !== undefined && orphan.kind !== 'system' ? orphan.parent : null).toBe(
+			'zzabsent9',
+		);
+		// Leaf columns unchanged: zzc36 is still a parent, zzc368 still the one leaf.
+		expect(leafMergeColumns(field.sourceChain).map((column) => column.tipo)).toEqual(['zzc368']);
 	});
 
 	test('a SKIPPED first ddo does not promote the second (no invented output_format)', async () => {
 		// PHP reads the model of ddo_map[0] for the output_format fallback; a
 		// tipo that is not in the ontology has none, so there is no fallback.
 		// This is the ONE place the 2026-08-11 reversal was NOT allowed to reach:
-		// the fallback reads ddo_map[0], never sourceChain[0], so skipping zenon5
-		// cannot promote the relation-family rsc368 and stamp a 'json' format the
+		// the fallback reads ddo_map[0], never sourceChain[0], so skipping zzabsent5
+		// cannot promote the relation-family zzc368 and stamp a 'json' format the
 		// oracle never picks. Delete that and this goes green->wrong silently.
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
@@ -392,7 +400,7 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 				{
 					tipo: 'f_first',
 					label: 'ref_publications_authors',
-					process: { ddo_map: [ddo('zenon5'), ddo('rsc368')] },
+					process: { ddo_map: [ddo('zzabsent5'), ddo('zzc368')] },
 				},
 			]),
 		);
@@ -403,19 +411,23 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
-				{ tipo: 'f_a', label: 'ref_publications_title', process: { ddo_map: [ddo('zenon4')] } },
-				{ tipo: 'f_b', label: 'ref_publications_authors', process: { ddo_map: [ddo('zenon5')] } },
-				{ tipo: 'f_c', label: 'ref_publications_date', process: { ddo_map: [ddo('zenon6')] } },
-				{ tipo: 'f_d', label: 'ref_publications_url', process: { ddo_map: [ddo('zenon9')] } },
+				{ tipo: 'f_a', label: 'ref_publications_title', process: { ddo_map: [ddo('zzabsent4')] } },
+				{
+					tipo: 'f_b',
+					label: 'ref_publications_authors',
+					process: { ddo_map: [ddo('zzabsent5')] },
+				},
+				{ tipo: 'f_c', label: 'ref_publications_date', process: { ddo_map: [ddo('zzabsent6')] } },
+				{ tipo: 'f_d', label: 'ref_publications_url', process: { ddo_map: [ddo('zzabsent9')] } },
 			]),
 		);
 		// One warning per FIELD, naming the package — four fields, four lines. The
 		// mht2 run reported nothing at all before any of this landed.
 		expect(plan.warnings.filter((warning) => warning.startsWith('uninstalled-tld:'))).toEqual([
-			'uninstalled-tld:zenon@f_a',
-			'uninstalled-tld:zenon@f_b',
-			'uninstalled-tld:zenon@f_c',
-			'uninstalled-tld:zenon@f_d',
+			'uninstalled-tld:zzabsent@f_a',
+			'uninstalled-tld:zzabsent@f_b',
+			'uninstalled-tld:zzabsent@f_c',
+			'uninstalled-tld:zzabsent@f_d',
 		]);
 	});
 
@@ -426,13 +438,13 @@ describe('a ddo of an uninstalled package is skipped, never fatal', () => {
 				{
 					tipo: 'f_dangling',
 					label: 'ref_publications_title',
-					process: { ddo_map: [ddo('zenon4')] },
+					process: { ddo_map: [ddo('zzabsent4')] },
 				},
 			]),
 		);
 		expect(validation.errors).toEqual([]);
 		expect(validation.result).not.toBeNull();
-		expect(validation.warnings).toContain('uninstalled-tld:zenon@f_dangling');
+		expect(validation.warnings).toContain('uninstalled-tld:zzabsent@f_dangling');
 	});
 });
 
@@ -444,7 +456,7 @@ describe('structural failures stay FATAL (the chokepoints are deliberate)', () =
 	test('an invalid SQL column identifier still refuses the whole element', async () => {
 		const promise = compileElementPlan(
 			ELEMENT_TIPO,
-			compileOptions([{ tipo: 'f_bad', label: '3d', process: { ddo_map: [ddo('rsc36')] } }]),
+			compileOptions([{ tipo: 'f_bad', label: '3d', process: { ddo_map: [ddo('zzc36')] } }]),
 		);
 		await expect(promise).rejects.toThrow(PlanCompileError);
 	});
@@ -456,7 +468,7 @@ describe('structural failures stay FATAL (the chokepoints are deliberate)', () =
 				{
 					tipo: 'f_parser',
 					label: 'title',
-					process: { ddo_map: [ddo('rsc36')], parser: [{ fn: 'nonesuch::method' }] },
+					process: { ddo_map: [ddo('zzc36')], parser: [{ fn: 'nonesuch::method' }] },
 				},
 			]),
 		);
@@ -470,16 +482,16 @@ describe('structural failures stay FATAL (the chokepoints are deliberate)', () =
 				{
 					tipo: 'f_dangling',
 					label: 'ref_publications_title',
-					process: { ddo_map: [ddo('zenon4')] },
+					process: { ddo_map: [ddo('zzabsent4')] },
 				},
-				{ tipo: 'f_bad', label: '3d', process: { ddo_map: [ddo('rsc36')] } },
+				{ tipo: 'f_bad', label: '3d', process: { ddo_map: [ddo('zzc36')] } },
 			]),
 		);
 		expect(validation.result).toBeNull();
 		expect(validation.errors.join(' ')).toMatch(/Invalid column identifier/);
 		// The skip that happened BEFORE the fatal field is still reported: an
 		// operator debugging the failure sees the whole picture, not just the throw.
-		expect(validation.warnings).toContain('uninstalled-tld:zenon@f_dangling');
+		expect(validation.warnings).toContain('uninstalled-tld:zzabsent@f_dangling');
 	});
 });
 
@@ -489,7 +501,7 @@ describe('structural failures stay FATAL (the chokepoints are deliberate)', () =
 
 /** A minimal loaded record (only what the pure fn dispatch reads). */
 function recordOf(sectionId: number, columns: MatrixRecord['columns'] = {}): MatrixRecord {
-	return { id: 1, section_id: sectionId, section_tipo: 'oh1', columns, rawText: {} };
+	return { id: 1, section_id: sectionId, section_tipo: 'test6813', columns, rawText: {} };
 }
 
 const fnEnv = {
@@ -505,7 +517,7 @@ const componentStep = (
 	kind: 'component',
 	tipo,
 	model,
-	sectionTipo: 'oh1',
+	sectionTipo: 'test6813',
 	fn,
 });
 
@@ -514,20 +526,20 @@ describe('a ddo fn either resolves or fails LOUDLY (never a silent empty publish
 		const atoms = await resolveComponentFnAtoms(
 			fnEnv,
 			recordOf(1),
-			componentStep('rsc175', 'component_section_id', 'map_section_id_to_subtitles_url'),
+			componentStep('zzc175', 'component_section_id', 'map_section_id_to_subtitles_url'),
 		);
 		expect(atoms).toEqual([
 			{
 				kind: 'scalar',
 				value: '/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-spa',
 				lang: 'lg-spa',
-				meta: { tipo: 'rsc175' },
+				meta: { tipo: 'zzc175' },
 			},
 			{
 				kind: 'scalar',
 				value: '/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng',
 				lang: 'lg-eng',
-				meta: { tipo: 'rsc175' },
+				meta: { tipo: 'zzc175' },
 			},
 		]);
 	});
@@ -571,7 +583,7 @@ describe('a media ddo honours options.quality / options.extension', () => {
 	// component_av stores in the `media` jsonb column (getColumnNameByModel).
 	const mediaRecord = recordOf(7, {
 		media: {
-			rsc35: [
+			zzc35: [
 				{
 					files_info: [
 						{
@@ -595,9 +607,9 @@ describe('a media ddo honours options.quality / options.extension', () => {
 	const publishedUrlOf = (ddoOptions?: Record<string, unknown>): unknown => {
 		const atoms = defaultPublicationValue(
 			mediaRecord,
-			'rsc35',
+			'zzc35',
 			'component_av',
-			{ tipo: 'rsc35' },
+			{ tipo: 'zzc35' },
 			ddoOptions,
 		);
 		expect(atoms).toHaveLength(1);
@@ -620,9 +632,9 @@ describe('a media ddo honours options.quality / options.extension', () => {
 		expect(() =>
 			defaultPublicationValue(
 				mediaRecord,
-				'rsc35',
+				'zzc35',
 				'component_av',
-				{ tipo: 'rsc35' },
+				{ tipo: 'zzc35' },
 				{
 					avoid_cache: true,
 				},

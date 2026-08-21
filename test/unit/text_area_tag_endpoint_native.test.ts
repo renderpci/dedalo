@@ -22,6 +22,10 @@
  * store (already per-run scratch via test/preload/session_db.ts) and the
  * section_id namespace 935000-935999, which appears in a URL only.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule: a test uses
+// the generic `test` TLD and BUILDS the situation it tests). The tipos below are
+// OPAQUE IDENTIFIERS to this gate — it parses and renders them, it never reads a
+// record — so the migration is a rename: same grammar, no install in it.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -279,11 +283,11 @@ describe('handleTagRequest — 4. indistinguishability of every miss', () => {
 			['truncated json', callTag('{"section_tipo":"test3"', { cookie: sessionCookie })],
 			[
 				'sql-ish section tipo',
-				callTag(locatorId({ section_tipo: 'rsc1; DROP' }), { cookie: sessionCookie }),
+				callTag(locatorId({ section_tipo: 'test3; DROP' }), { cookie: sessionCookie }),
 			],
 			[
 				'sql-ish component tipo',
-				callTag(locatorId({ component_tipo: 'rsc1; DROP' }), { cookie: sessionCookie }),
+				callTag(locatorId({ component_tipo: 'test3; DROP' }), { cookie: sessionCookie }),
 			],
 			[
 				'empty component tipo',

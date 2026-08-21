@@ -22,6 +22,7 @@
  * These assertions are pure (no DB, no PHP oracle): the superuser permission
  * path and every engine guard resolve before any I/O.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the NON-consultation control section is the phase-2 `test` clone (src/core/test_data/test_tld_tipo_map.json); the registry itself is seed-shipped dd.
 
 import { describe, expect, test } from 'bun:test';
 // Preload the component-model registry so buildStructureContext can resolve
@@ -57,7 +58,7 @@ describe('consultation-only sections are read-only for every door', () => {
 		expect(CONSULTATION_ONLY_SECTIONS.size).toBeGreaterThanOrEqual(2);
 		expect(isConsultationOnlySection('dd542')).toBe(true);
 		expect(isConsultationOnlySection('dd15')).toBe(true);
-		expect(isConsultationOnlySection('oh1')).toBe(false);
+		expect(isConsultationOnlySection('test6813')).toBe(false);
 	});
 
 	test('getSectionPermissions caps every consultation-only section at read (1), even for the superuser', async () => {
@@ -73,7 +74,7 @@ describe('consultation-only sections are read-only for every door', () => {
 		// only in getSectionPermissions.
 		expect(await getPermissions(SUPERUSER, 'dd542', 'dd542')).toBe(3);
 		// A non-consultation section is never capped by getSectionPermissions.
-		expect(await getSectionPermissions(SUPERUSER, 'oh1')).toBe(3);
+		expect(await getSectionPermissions(SUPERUSER, 'test6813')).toBe(3);
 	});
 
 	// The engine backstops throw the TYPED refusal the API door throws

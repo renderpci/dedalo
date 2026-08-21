@@ -1,27 +1,92 @@
 /**
  * Phase 5c gate: projects filter (per-record ACL) differential.
  *
- * numisdata267 (15,114 records) is gated by component_filter numisdata21; each
- * record references a project (dd153). A non-admin principal with project [7]
- * must see EXACTLY the records whose numisdata21 relation contains project 7 —
- * the same set a direct EXISTS query returns. Admins and internal (no
- * principal) searches see everything.
+ * `testmint1` is gated by its component_filter `testmint1013`; each record may
+ * reference one or more projects (`dd153`). A non-admin principal must see
+ * EXACTLY the records referencing one of THEIR projects — the same set a direct
+ * EXISTS query returns. Admins and internal (no principal) searches see
+ * everything.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// This gate never had a PHP oracle: it compares the TS search engine with a
+// DIRECT SQL ground truth over the SAME rows, so migrating it is a matter of
+// building the situation instead of borrowing an install's. It now does:
+//  - the gated/virtual/second-gated sections and the non-admin USER come from
+//    the committed test corpus (`ensureTestCorpus`, dropped after);
+//  - the UNGATED case builds its own records, because NO corpus section is
+//    ungated (measured 2026-08-19: every one resolves a component_filter,
+//    thesaurus clones through the virtual→real fallback) — `test183` is a
+//    generic `test` section with no component_filter, and this gate writes and
+//    removes the two records it needs there;
+//  - the project ids are READ from the non-admin's own user record instead of
+//    being a hand-copied install constant.
+// The scale-bound page assertions ('a 200-row page of a 15k section comes back
+// full') are restated as what they were actually pinning: an unfiltered search
+// returns the section's WHOLE record set, which is a stronger statement over a
+// situation whose size the gate knows.
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
+import {
+	deleteMatrixRecord,
+	insertMatrixRecordWithExplicitId,
+} from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getComponentFilterTipo } from '../../src/core/ontology/resolver.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 import { matrixReadSource } from '../../src/core/section/read_source.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { getUserProjects } from '../../src/core/security/permissions.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 
-const GATED_SECTION = 'numisdata267';
-const PROJECT_ID = 7;
+/** Every `test` section stores here (test_corpus/ensure.ts, plan decision 1). */
+const TEST_TABLE = 'matrix_test';
 
-/** A synthetic non-admin principal whose projects we control directly. */
+/** The project-gated section under test, and its component_filter. */
+const GATED_SECTION = 'testmint1';
+const GATED_FILTER = 'testmint1013';
+
+/**
+ * A SECOND gated section with a DIFFERENT filter tipo — the multi-section ACL
+ * is only meaningful when the two predicates cannot be confused.
+ */
+const OTHER_GATED_SECTION = 'test6100';
+const OTHER_GATED_FILTER = 'test6254';
+
+/**
+ * A VIRTUAL section: `test6101`'s ontology relations name `testplace1`, whose
+ * model is `section`, so its component_filter is resolved through the REAL
+ * section (`testplace1014`). Until 2026-07-19 the TS lookup was strict
+ * own-subtree and FAILED OPEN here.
+ */
+const VIRTUAL_SECTION = 'test6101';
+
+/** A generic `test` section with NO component_filter — records built below. */
+const UNGATED_SECTION = 'test183';
+/** Scratch ids for the two ungated records (reserved ≥ 900000 band). */
+const UNGATED_IDS = [940101, 940102] as const;
+
+/**
+ * The non-admin: corpus user `dd128`/2, whose `dd170` names real projects. The
+ * ids are never hard-coded — `getUserProjects` reads them the way the engine
+ * does, so a corpus change cannot leave this gate asserting against a project
+ * nobody holds.
+ */
+const NON_ADMIN_USER_ID = 2;
+/** A user with NO `dd170` at all: every gated section must be empty for them. */
+const PROJECTLESS_USER_ID = 999999;
+
+const CORPUS_SECTIONS = [GATED_SECTION, OTHER_GATED_SECTION, VIRTUAL_SECTION, 'dd128'] as const;
+
+/** The non-admin's projects, read once from the provisioned corpus. */
+let projects: number[] = [];
+
+/** A synthetic non-admin principal (admin-ness is forced; projects are read). */
 function nonAdmin(userId: number): Principal {
 	return { userId, isGlobalAdmin: false, isDeveloper: false };
 }
+
+const admin: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
 async function runSearchIds(
 	sqoInput: Record<string, unknown>,
@@ -35,119 +100,137 @@ async function runSearchIds(
 	return new Set(rows.map((row) => Number(row.section_id)));
 }
 
-describe('projects filter differential (Phase 5c gate)', () => {
-	test('non-admin with project 7 sees exactly the project-7 records', async () => {
-		// Ground truth: the records numisdata21 → project 7 (limit parity with the search).
-		const truth = (await sql`
-			SELECT section_id FROM matrix
-			WHERE section_tipo = ${GATED_SECTION}
-			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e
-				WHERE e->>'section_id' = '7'
-			)
-			ORDER BY section_id LIMIT 500
-		`) as { section_id: number }[];
-		const truthIds = new Set(truth.map((r) => Number(r.section_id)));
-		expect(truthIds.size).toBeGreaterThan(0);
+/** Every record of a section, straight from its table. */
+async function allIds(sectionTipo: string): Promise<Set<number>> {
+	const rows = (await sql.unsafe(
+		`SELECT DISTINCT section_id FROM ${TEST_TABLE} WHERE section_tipo = $1`,
+		[sectionTipo],
+	)) as { section_id: number }[];
+	return new Set(rows.map((row) => Number(row.section_id)));
+}
 
-		// Monkeypatch the user's projects to [7] by using a principal whose
-		// projects we seed via the DB-backed reader is not possible here, so we
-		// assert the SQL SHAPE result equals the truth by running the filter with
-		// a principal whose getUserProjects resolves to [7]. user 16 has project 7.
+/** The records a user holding `projects` may see on a gated section. */
+async function gatedTruth(sectionTipo: string, filterTipo: string): Promise<Set<number>> {
+	const rows = (await sql.unsafe(
+		`SELECT DISTINCT section_id FROM ${TEST_TABLE}
+		 WHERE section_tipo = $1
+		   AND EXISTS (
+			SELECT 1 FROM jsonb_array_elements(relation -> $2) e
+			WHERE (e->>'section_id') = ANY($3::text[])
+		)`,
+		[sectionTipo, filterTipo, `{${projects.join(',')}}`],
+	)) as { section_id: number }[];
+	return new Set(rows.map((row) => Number(row.section_id)));
+}
+
+beforeAll(async () => {
+	await ensureTestCorpus([...CORPUS_SECTIONS]);
+	projects = await getUserProjects(NON_ADMIN_USER_ID);
+	// Fixture guard: a projects-less "non-admin" would make every gated
+	// assertion below satisfiable at zero versus zero.
+	expect(projects.length).toBeGreaterThan(0);
+
+	// The ungated situation, built (no corpus section is ungated).
+	expect(await getComponentFilterTipo(UNGATED_SECTION)).toBe(null);
+	for (const id of UNGATED_IDS) {
+		await deleteMatrixRecord(TEST_TABLE, UNGATED_SECTION, id);
+		await insertMatrixRecordWithExplicitId(TEST_TABLE, UNGATED_SECTION, id, {
+			data: { section_id: id, section_tipo: UNGATED_SECTION },
+		});
+	}
+}, 120000);
+
+afterAll(async () => {
+	for (const id of UNGATED_IDS) {
+		expect(await deleteMatrixRecord(TEST_TABLE, UNGATED_SECTION, id)).toBe(1);
+	}
+	expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
+});
+
+describe('projects filter differential (Phase 5c gate)', () => {
+	test('non-admin sees exactly the records in their own projects', async () => {
+		const truthIds = await gatedTruth(GATED_SECTION, GATED_FILTER);
+		const total = await allIds(GATED_SECTION);
+		// Fixture guards: the situation must be genuinely PARTIAL, or a
+		// fail-open build would pass this test.
+		expect(truthIds.size).toBeGreaterThan(0);
+		expect(truthIds.size).toBeLessThan(total.size);
+
 		const searched = await runSearchIds(
 			{ section_tipo: [GATED_SECTION], limit: 500, offset: 0 },
-			nonAdmin(16), // real user whose dd170 = project 7
+			nonAdmin(NON_ADMIN_USER_ID),
 		);
-		// Every searched id must be in truth (no over-return); and the counts
-		// match within the shared limit window.
-		for (const id of searched) {
-			expect(truthIds.has(id)).toBe(true);
-		}
+		// No over-return…
+		for (const id of searched) expect(truthIds.has(id)).toBe(true);
+		// …and no under-return (the whole set fits one page).
 		expect(searched.size).toBe(truthIds.size);
 	});
 
 	test('admin sees everything (filter skipped)', async () => {
+		const total = await allIds(GATED_SECTION);
 		const adminIds = await runSearchIds(
-			{ section_tipo: [GATED_SECTION], limit: 200, offset: 0 },
-			{ userId: -1, isGlobalAdmin: true, isDeveloper: true },
+			{ section_tipo: [GATED_SECTION], limit: 500, offset: 0 },
+			admin,
 		);
-		const total = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix WHERE section_tipo = ${GATED_SECTION}
-		`) as { n: number }[];
-		// 200-row page of a 15k section: full page returned, unfiltered.
-		expect(adminIds.size).toBe(200);
-		expect((total[0]?.n as number) > 200).toBe(true);
+		expect(adminIds).toEqual(total);
+		// The contrast is real: the non-admin sees strictly fewer.
+		expect((await gatedTruth(GATED_SECTION, GATED_FILTER)).size).toBeLessThan(total.size);
 	});
 
 	test('internal search (no principal) skips the filter', async () => {
-		const ids = await runSearchIds({ section_tipo: [GATED_SECTION], limit: 50, offset: 0 });
-		expect(ids.size).toBe(50);
+		const ids = await runSearchIds({ section_tipo: [GATED_SECTION], limit: 500, offset: 0 });
+		expect(ids).toEqual(await allIds(GATED_SECTION));
 	});
 
 	test('non-admin with NO projects sees nothing on a gated section', async () => {
-		// user id 999999 has no dd170 data → impossible clause.
+		expect(await getUserProjects(PROJECTLESS_USER_ID)).toEqual([]);
 		const ids = await runSearchIds(
 			{ section_tipo: [GATED_SECTION], limit: 50, offset: 0 },
-			nonAdmin(999999),
+			nonAdmin(PROJECTLESS_USER_ID),
 		);
 		expect(ids.size).toBe(0);
 	});
 
 	test('non-gated section is unaffected by the projects filter', async () => {
-		// dmm480 has NO component_filter anywhere (own subtree AND no real-section
-		// fallback: relations is empty) → non-admin sees its full record set. It is
-		// the only genuinely ungated data section in this ontology — see the
-		// VIRTUAL test below for why numisdata5 no longer qualifies.
-		const ids = await runSearchIds({ section_tipo: ['dmm480'], limit: 5, offset: 0 }, nonAdmin(16));
-		const total = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix WHERE section_tipo = 'dmm480'
-		`) as { n: number }[];
-		expect(ids.size).toBe(total[0]?.n as number);
-		expect(ids.size).toBeGreaterThan(0);
+		// test183 has NO component_filter (asserted in beforeAll) and is not on a
+		// projects-exempt table → a non-admin sees its full record set.
+		const ids = await runSearchIds(
+			{ section_tipo: [UNGATED_SECTION], limit: 50, offset: 0 },
+			nonAdmin(NON_ADMIN_USER_ID),
+		);
+		expect(ids).toEqual(new Set(UNGATED_IDS));
 	});
 
-	test('VIRTUAL section is gated through its REAL section (numisdata5 → numisdata276 → numisdata221)', async () => {
+	test('VIRTUAL section is gated through its REAL section (test6101 → testplace1)', async () => {
 		// Records of a virtual section are STORED under the virtual tipo but gated
-		// by the real section's component_filter — PHP resolve_virtual=true
-		// (trait.where.php build_sql_projects_filter). Until 2026-07-19 the TS
-		// lookup was strict own-subtree and FAILED OPEN here (non-admins saw all
-		// 441 numisdata5 records / all 438k rsc170 images).
-		const truth = (await sql`
-			SELECT DISTINCT section_id FROM matrix
-			WHERE section_tipo = 'numisdata5'
-			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(relation->'numisdata221') e
-				WHERE e->>'section_id' = ${String(PROJECT_ID)}
-			)
-		`) as { section_id: number }[];
-		const truthIds = new Set(truth.map((r) => Number(r.section_id)));
+		// by the REAL section's component_filter — PHP resolve_virtual=true
+		// (trait.where.php build_sql_projects_filter). A strict own-subtree lookup
+		// FAILS OPEN here: it would return the whole section.
+		const truthIds = await gatedTruth(VIRTUAL_SECTION, 'testplace1014');
+		const total = await allIds(VIRTUAL_SECTION);
+		expect(total.size).toBeGreaterThan(0); // the situation exists…
 		const ids = await runSearchIds(
-			{ section_tipo: ['numisdata5'], limit: 500, offset: 0 },
-			nonAdmin(16),
+			{ section_tipo: [VIRTUAL_SECTION], limit: 500, offset: 0 },
+			nonAdmin(NON_ADMIN_USER_ID),
 		);
-		expect(ids.size).toBe(truthIds.size);
-		for (const id of ids) expect(truthIds.has(id)).toBe(true);
-		// Fixture guard: the section is genuinely gated — the full set (441) must
-		// NOT be visible, or this test would vacuously pass on a fail-open build.
-		const all = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix WHERE section_tipo = 'numisdata5'
-		`) as { n: number }[];
-		expect(ids.size).toBeLessThan(all[0]?.n as number);
+		expect(ids).toEqual(truthIds);
+		// …and it is genuinely gated: the fail-open answer is the full set.
+		expect(ids.size).toBeLessThan(total.size);
+		expect(await runSearchIds({ section_tipo: [VIRTUAL_SECTION], limit: 500 }, admin)).toEqual(
+			total,
+		);
 	});
 
-	test('gated section deep under a section_group is still filtered (numisdata6/numisdata127)', async () => {
-		// user 16 (project 7); numisdata6 records reference projects 1,2,3,5,6,9,10
-		// — none is 7 — so the non-admin correctly sees zero.
+	test('a second gated section is scoped by its OWN filter tipo', async () => {
+		const truthIds = await gatedTruth(OTHER_GATED_SECTION, OTHER_GATED_FILTER);
+		const total = await allIds(OTHER_GATED_SECTION);
+		expect(truthIds.size).toBeGreaterThan(0);
+		expect(truthIds.size).toBeLessThan(total.size);
 		const ids = await runSearchIds(
-			{ section_tipo: ['numisdata6'], limit: 20, offset: 0 },
-			nonAdmin(16),
+			{ section_tipo: [OTHER_GATED_SECTION], limit: 500, offset: 0 },
+			nonAdmin(NON_ADMIN_USER_ID),
 		);
-		const truth = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix
-			WHERE section_tipo = 'numisdata6'
-			  AND EXISTS (SELECT 1 FROM jsonb_array_elements(relation->'numisdata127') e WHERE e->>'section_id' = '7')
-		`) as { n: number }[];
-		expect(ids.size).toBe(truth[0]?.n as number);
+		expect(ids).toEqual(truthIds);
 	});
 });
 
@@ -161,13 +244,6 @@ describe('projects filter differential (Phase 5c gate)', () => {
  * fail-OPEN there (gated sections leak unfiltered). These cases assert TS
  * ground-truth sets, NOT PHP equality — running them against PHP would (and
  * should) diverge on the fail-open case.
- *
- * Fixture census (probed 2026-07-09, re-probed 2026-07-19): numisdata267 =
- * 15,114 records, of which 103 reference project 7 (ids 4223-14752).
- * numisdata5 = 441 records — VIRTUAL over gated numisdata276 (filter
- * numisdata221) since the 2026-07-19 virtual-resolution fix, so a non-admin
- * sees only its project-scoped subset, computed live below. user 16 →
- * project 7; everything fits one 1000-row page.
  */
 describe('multi-section projects filter (per-section ACL, WC-011)', () => {
 	/** Keyed runner: section_ids collide across sections, so key by tipo/id. */
@@ -184,97 +260,89 @@ describe('multi-section projects filter (per-section ACL, WC-011)', () => {
 		return new Set(rows.map((row) => `${row.section_tipo}/${row.section_id}`));
 	}
 
-	async function gatedTruth(sectionTipo: string, filterTipo: string): Promise<Set<string>> {
-		const truth = (await sql`
-			SELECT DISTINCT section_id FROM matrix
-			WHERE section_tipo = ${sectionTipo}
-			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(relation -> ${filterTipo}) e
-				WHERE e->>'section_id' = ${String(PROJECT_ID)}
-			)
-		`) as { section_id: number }[];
-		return new Set(truth.map((r) => `${sectionTipo}/${Number(r.section_id)}`));
-	}
-
-	const project7GatedTruth = () => gatedTruth(GATED_SECTION, 'numisdata21');
-	// numisdata5 is VIRTUAL over gated numisdata276 → filter numisdata221.
-	const project7VirtualTruth = () => gatedTruth('numisdata5', 'numisdata221');
+	const keyed = (sectionTipo: string, ids: Set<number>) =>
+		new Set([...ids].map((id) => `${sectionTipo}/${id}`));
 
 	const countBy = (keys: Set<string>, tipo: string) =>
 		[...keys].filter((key) => key.startsWith(`${tipo}/`)).length;
 
 	test('mixed sections: each scoped by its OWN filter (incl. the virtual one)', async () => {
-		const truthGated = await project7GatedTruth();
-		const truthVirtual = await project7VirtualTruth();
+		const truthGated = await gatedTruth(GATED_SECTION, GATED_FILTER);
+		const truthVirtual = await gatedTruth(VIRTUAL_SECTION, 'testplace1014');
 		expect(truthGated.size).toBeGreaterThan(0); // fixture guard
 
 		const keys = await runSearchKeys(
-			{ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 1000, offset: 0 },
-			nonAdmin(16),
+			{ section_tipo: [GATED_SECTION, VIRTUAL_SECTION], limit: 1000, offset: 0 },
+			nonAdmin(NON_ADMIN_USER_ID),
 		);
-		// No over-return: every key is in its section's project-7 truth set…
-		for (const key of keys) {
-			if (key.startsWith(`${GATED_SECTION}/`)) expect(truthGated.has(key)).toBe(true);
-			if (key.startsWith('numisdata5/')) expect(truthVirtual.has(key)).toBe(true);
-		}
-		// …no under-return: both scoped sets fit the 1000-row page.
-		expect(countBy(keys, GATED_SECTION)).toBe(truthGated.size);
-		expect(countBy(keys, 'numisdata5')).toBe(truthVirtual.size);
+		// No over-return, no under-return, on BOTH sections at once.
+		expect(keys).toEqual(
+			new Set([...keyed(GATED_SECTION, truthGated), ...keyed(VIRTUAL_SECTION, truthVirtual)]),
+		);
 	});
 
 	test('other section FIRST still filters the gated one (the PHP fail-open case)', async () => {
 		// PHP keys the projects filter off the FIRST section's filter tipo: with a
-		// differently-gated section first, numisdata267 would be scoped by the
+		// differently-gated section first, the gated one would be scoped by the
 		// WRONG tipo (or leak). TS must return the identical set regardless of
 		// section_tipo order.
-		const truthGated = await project7GatedTruth();
+		const truthGated = await gatedTruth(GATED_SECTION, GATED_FILTER);
 		const keys = await runSearchKeys(
-			{ section_tipo: ['numisdata5', GATED_SECTION], limit: 1000, offset: 0 },
-			nonAdmin(16),
+			{ section_tipo: [VIRTUAL_SECTION, GATED_SECTION], limit: 1000, offset: 0 },
+			nonAdmin(NON_ADMIN_USER_ID),
 		);
 		for (const key of keys) {
-			if (key.startsWith(`${GATED_SECTION}/`)) expect(truthGated.has(key)).toBe(true);
+			if (key.startsWith(`${GATED_SECTION}/`))
+				expect(truthGated.has(Number(key.split('/')[1]))).toBe(true);
 		}
-		expect(countBy(keys, GATED_SECTION)).toBe(truthGated.size); // 103, not 15k
+		expect(countBy(keys, GATED_SECTION)).toBe(truthGated.size);
 	});
 
 	test('two gated sections with DIFFERENT filter tipos are each scoped by their own', async () => {
-		// user 16: project 7 → 103 numisdata267 records, ZERO numisdata6 records
-		// (numisdata6 references projects 1,2,3,5,6,9,10 via numisdata127).
-		const truthGated = await project7GatedTruth();
+		const truthGated = await gatedTruth(GATED_SECTION, GATED_FILTER);
+		const truthOther = await gatedTruth(OTHER_GATED_SECTION, OTHER_GATED_FILTER);
 		const keys = await runSearchKeys(
-			{ section_tipo: [GATED_SECTION, 'numisdata6'], limit: 1000, offset: 0 },
-			nonAdmin(16),
+			{ section_tipo: [GATED_SECTION, OTHER_GATED_SECTION], limit: 1000, offset: 0 },
+			nonAdmin(NON_ADMIN_USER_ID),
 		);
-		expect(countBy(keys, GATED_SECTION)).toBe(truthGated.size);
-		expect(countBy(keys, 'numisdata6')).toBe(0);
+		expect(keys).toEqual(
+			new Set([...keyed(GATED_SECTION, truthGated), ...keyed(OTHER_GATED_SECTION, truthOther)]),
+		);
+		// The two predicates are not interchangeable: the sets differ.
+		expect(truthGated.size).not.toBe(0);
+		expect(truthOther.size).not.toBe(0);
 	});
 
-	test('admin multi-section bypasses the filter (full unfiltered page)', async () => {
+	test('admin multi-section bypasses the filter (the whole record set)', async () => {
 		const keys = await runSearchKeys(
-			{ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 1000, offset: 0 },
-			{ userId: -1, isGlobalAdmin: true, isDeveloper: true },
+			{ section_tipo: [GATED_SECTION, VIRTUAL_SECTION], limit: 1000, offset: 0 },
+			admin,
 		);
-		expect(keys.size).toBe(1000); // 15,114 + 441 records → page filled, unfiltered
+		expect(keys).toEqual(
+			new Set([
+				...keyed(GATED_SECTION, await allIds(GATED_SECTION)),
+				...keyed(VIRTUAL_SECTION, await allIds(VIRTUAL_SECTION)),
+			]),
+		);
 	});
 
 	test('projects-less non-admin: both gated sections empty (virtual gates too)', async () => {
 		const keys = await runSearchKeys(
-			{ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 1000, offset: 0 },
-			nonAdmin(999999),
+			{ section_tipo: [GATED_SECTION, VIRTUAL_SECTION], limit: 1000, offset: 0 },
+			nonAdmin(PROJECTLESS_USER_ID),
 		);
 		expect(countBy(keys, GATED_SECTION)).toBe(0);
-		expect(countBy(keys, 'numisdata5')).toBe(0);
+		expect(countBy(keys, VIRTUAL_SECTION)).toBe(0);
 	});
 
 	test('multi-section count: no throw, total = per-section scoped sum', async () => {
 		// The count engine shares buildSearchSql (and shared the removed throw).
-		const truthGated = await project7GatedTruth();
-		const truthVirtual = await project7VirtualTruth();
+		const truthGated = await gatedTruth(GATED_SECTION, GATED_FILTER);
+		const truthVirtual = await gatedTruth(VIRTUAL_SECTION, 'testplace1014');
 		const sqo = sanitizeClientSqo(
-			structuredClone({ section_tipo: [GATED_SECTION, 'numisdata5'], limit: 10, offset: 0 }),
+			structuredClone({ section_tipo: [GATED_SECTION, VIRTUAL_SECTION], limit: 10, offset: 0 }),
 		);
-		const total = await matrixReadSource.count(sqo, nonAdmin(16));
+		const total = await matrixReadSource.count(sqo, nonAdmin(NON_ADMIN_USER_ID));
 		expect(total).toBe(truthGated.size + truthVirtual.size);
 	});
 });

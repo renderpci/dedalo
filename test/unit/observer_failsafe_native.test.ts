@@ -48,6 +48,15 @@
  * section 'zzz-none' has no matrix table either way). The degraded-seed test
  * DOES need a row, so it seeds and sweeps one on a scratch section.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+// install section `rsc205` and component `rsc387` were used two ways here, and
+// each moved accordingly: as OPAQUE source tokens in `section_to_search` /
+// `component_to_search` (never resolved — every refusal under test fires before
+// the search) they became SEARCH_SECTION/SEARCH_COMPONENT in this file's own
+// scratch band; as the RECORD CARRIER of the degraded-seed gate, `rsc205`
+// (table `matrix`, id 91078) became DEGRADED_SECTION — a scratch `section` node
+// this file builds, carrying the `test24` matrix_table relation so its row
+// lands in `matrix_test`.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -308,6 +317,17 @@ describe('removal plumbing (static)', () => {
 // 2. Behavioral gates — unported sub-laws refused, never-narrow skip counted.
 // ---------------------------------------------------------------------------
 
+/**
+ * The scratch SECTION the degraded-seed gate stores its record on, and the two
+ * opaque source tokens. `test24` is the matrix_table node whose term is
+ * `matrix_test`.
+ */
+const DEGRADED_SECTION = 'test99905';
+/** `source.section_to_search` — an opaque token: no refusal here reaches a search. */
+const SEARCH_SECTION = DEGRADED_SECTION;
+/** `source.component_to_search` — likewise opaque. */
+const SEARCH_COMPONENT = 'test99906';
+
 /** Scratch dd_ontology nodes: covered observe shape + the poisoned source. */
 const SCRATCH_NODES: { tipo: string; source: Record<string, unknown> }[] = [
 	{
@@ -315,8 +335,8 @@ const SCRATCH_NODES: { tipo: string; source: Record<string, unknown> }[] = [
 		source: {
 			// sub-law (b) — the numisdata679/965 shape that armed the wipe
 			source_overwrite: { data_from_field: 'test1' },
-			section_to_search: ['rsc205'],
-			component_to_search: ['rsc387'],
+			section_to_search: [SEARCH_SECTION],
+			component_to_search: [SEARCH_COMPONENT],
 		},
 	},
 	{
@@ -324,14 +344,14 @@ const SCRATCH_NODES: { tipo: string; source: Record<string, unknown> }[] = [
 		source: {
 			// sub-law (a)
 			set_observed_data: 'test1',
-			section_to_search: ['rsc205'],
-			component_to_search: ['rsc387'],
+			section_to_search: [SEARCH_SECTION],
+			component_to_search: [SEARCH_COMPONENT],
 		},
 	},
 	{
 		tipo: 'test99903',
 		// never-narrow guard: covered shape but NO component_to_search
-		source: { section_to_search: ['rsc205'] },
+		source: { section_to_search: [SEARCH_SECTION] },
 	},
 	{
 		tipo: 'test99904',
@@ -342,21 +362,22 @@ const SCRATCH_NODES: { tipo: string; source: Record<string, unknown> }[] = [
 		// half must not persist.
 		source: {
 			data_from_field: ['test99999_no_such_node'],
-			section_to_search: ['rsc205'],
-			component_to_search: ['rsc387'],
+			section_to_search: [SEARCH_SECTION],
+			component_to_search: [SEARCH_COMPONENT],
 		},
 	},
 ];
 
-/** Scratch matrix row for the degraded-seed gate (its own band, swept below). */
-const DEGRADED_SECTION = 'rsc205';
+/** Scratch matrix_test row for the degraded-seed gate (its own band, swept below). */
 const DEGRADED_ID = 91078;
+/** Where DEGRADED_SECTION stores — the `test24` matrix_table term. */
+const SCRATCH_TABLE = 'matrix_test';
 /** A stale mirror entry: nothing references DEGRADED_ID, so the law wants 0. */
 const DEGRADED_STALE_ENTRY = {
 	id: 1,
 	type: 'dd151',
 	section_id: '91079',
-	section_tipo: 'rsc205',
+	section_tipo: DEGRADED_SECTION,
 	from_component_tipo: 'test99904',
 };
 
@@ -372,7 +393,7 @@ async function sweepScratchNodes(): Promise<void> {
 }
 
 async function sweepScratchRows(): Promise<void> {
-	await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2`, [
+	await sql.unsafe(`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
 		DEGRADED_SECTION,
 		DEGRADED_ID,
 	]);
@@ -388,6 +409,17 @@ beforeAll(async () => {
 	// must never turn these gates vacuous-green (see header).
 	await sweepScratchNodes();
 	await sweepScratchRows();
+	// The scratch SECTION the degraded-seed record lives on. `test24` puts it in
+	// `matrix_test` — asserted below, never assumed.
+	await sql.unsafe(
+		`INSERT INTO dd_ontology (id, tipo, parent, model, tld, relations, term)
+		 VALUES ((SELECT COALESCE(MAX(id), 0) + 1200 FROM dd_ontology), $1, 'test1', 'section', 'test', $2::text::jsonb, $3::text::jsonb)`,
+		[
+			DEGRADED_SECTION,
+			JSON.stringify([{ tipo: 'test24' }]),
+			JSON.stringify({ 'lg-eng': 'observer failsafe scratch section' }),
+		],
+	);
 	for (const node of SCRATCH_NODES) {
 		await sql.unsafe(
 			`INSERT INTO dd_ontology (id, tipo, parent, model, tld, properties)
@@ -396,6 +428,11 @@ beforeAll(async () => {
 		);
 	}
 	await clearResolverCaches();
+	// SCRATCH_TABLE is hard-coded in the raw statements below; a section that
+	// failed to pick up `test24` would put the row where nothing reads it and
+	// the degraded-seed gate would assert against an absent bag.
+	const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+	expect(await getMatrixTableFromTipo(DEGRADED_SECTION)).toBe(SCRATCH_TABLE);
 });
 
 afterAll(async () => {
@@ -437,7 +474,7 @@ describe('degraded seed refuses the drop half (behavioral)', () => {
 		// This is THE gate that made retiring grow-only landable. Without it, a
 		// partially-installed ontology turns every save into a mass delete.
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
+			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
 			[DEGRADED_ID, DEGRADED_SECTION, JSON.stringify({ test99904: [DEGRADED_STALE_ENTRY] })],
 		);
 		const seedMissingBefore = getCounters().observers_seed_peer_node_missing ?? 0;
@@ -466,7 +503,7 @@ describe('degraded seed refuses the drop half (behavioral)', () => {
 
 		// The stored bag is byte-untouched.
 		const rows = (await sql.unsafe(
-			`SELECT relation->'test99904' AS bag FROM matrix WHERE section_tipo = $1 AND section_id = $2`,
+			`SELECT relation->'test99904' AS bag FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[DEGRADED_SECTION, DEGRADED_ID],
 		)) as { bag: unknown[] | null }[];
 		expect(rows[0]?.bag).toEqual([DEGRADED_STALE_ENTRY]);

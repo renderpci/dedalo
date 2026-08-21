@@ -17,6 +17,7 @@
  * asserted here on shape INCLUDING the contributor rule (a `rag:` group
  * chunk's snippet carries deep-resolved text from OTHER sections).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the hits are FABRICATED (no DB): the host section and its component are the phase-2 `test` clones, and the forbidden contributor is a second `test` section — the filter still sees two distinct tipos with opposite policies.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -95,7 +96,7 @@ describe('agent egress tripwire (mechanical classification of every read tool)',
 
 	test('the loop-local RAG tools are covered by the per-hit filter', async () => {
 		const { allowed, removed } = await filterEgressHits(RESTRICT_ALL, [
-			{ section_tipo: 'oh1', section_id: 1 },
+			{ section_tipo: 'test6813', section_id: 1 },
 		]);
 		expect(allowed).toEqual([]);
 		expect(removed).toBe(1);
@@ -104,13 +105,13 @@ describe('agent egress tripwire (mechanical classification of every read tool)',
 	test('CONTRIBUTOR rule: a public host leaking a forbidden contributor is dropped', async () => {
 		// policy: host section public, contributor section restricted
 		const policy = async (sectionTipo: string) =>
-			sectionTipo === 'oh1' ? ('public' as const) : ('restricted' as const);
+			sectionTipo === 'test6813' ? ('public' as const) : ('restricted' as const);
 		const egress = { external: true, policy };
 		const { allowed, removed } = await filterEgressHits(egress, [
-			// group chunk whose deep-resolved text came from the forbidden rsc99
-			{ section_tipo: 'oh1', section_id: 1, component_tipo: 'rag:card', contributors: ['rsc99'] },
+			// group chunk whose deep-resolved text came from the forbidden test6099
+			{ section_tipo: 'test6813', section_id: 1, component_tipo: 'rag:card', contributors: ['test6099'] },
 			// group chunk fed only by its own section — passes
-			{ section_tipo: 'oh1', section_id: 2, component_tipo: 'rag:card', contributors: ['oh1'] },
+			{ section_tipo: 'test6813', section_id: 2, component_tipo: 'rag:card', contributors: ['test6813'] },
 		]);
 		expect(allowed.map((h) => h.section_id)).toEqual([2]);
 		expect(removed).toBe(1);
@@ -119,9 +120,9 @@ describe('agent egress tripwire (mechanical classification of every read tool)',
 	test('FAIL-CLOSED: a rag: group chunk with NO contributor metadata is dropped', async () => {
 		const egress = { external: true, policy: async () => 'public' as const };
 		const { allowed, removed } = await filterEgressHits(egress, [
-			{ section_tipo: 'oh1', section_id: 1, component_tipo: 'rag:card', contributors: [] },
+			{ section_tipo: 'test6813', section_id: 1, component_tipo: 'rag:card', contributors: [] },
 			// non-group chunk (image path / pre-group) with no contributors passes on host alone
-			{ section_tipo: 'oh1', section_id: 2, component_tipo: 'oh23' },
+			{ section_tipo: 'test6813', section_id: 2, component_tipo: 'test6835' },
 		]);
 		expect(allowed.map((h) => h.section_id)).toEqual([2]);
 		expect(removed).toBe(1);

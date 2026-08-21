@@ -10,7 +10,7 @@
  *      Only counts > 0 land in `dangling_by_target_section` (the `if (n > 0)`
  *      guard) and each one is added to `dangling_targets_total`.
  *   2. A reference whose target record EXISTS contributes nothing. The seed puts
- *      FOUR references in the rsc170 bucket — two distinct missing targets (one
+ *      FOUR references in the zzdbinfo2 bucket — two distinct missing targets (one
  *      of them referenced twice, from two components) and one live target — so
  *      the bucket must read exactly 2. A reversed anti-join reads 1; no target
  *      check at all, or a dropped DISTINCT, reads 3. A FIFTH reference
@@ -47,11 +47,10 @@
  * emits is a whole-database aggregate, and other agents write matrix_test at the
  * same time, so NOTHING here asserts a total, and the delta assertions are made
  * attributable rather than merely differenced:
- *   - The dangling cases ride on `rsc170`, chosen because it resolves (to
- *     `matrix`, through the virtual-section fallback), has live records to point
- *     at, and has ZERO rows in the store as a target — asserted as a
- *     pre-condition. No other agent can move that bucket: it would take a write
- *     to `matrix`, which no test performs.
+ *   - The dangling cases ride on `zzdbinfo2`, a section this file BUILDS: it
+ *     resolves, it holds one live record to point at, and it has ZERO rows in
+ *     the store as a target — asserted as a pre-condition. No other agent can
+ *     move that bucket, because no other agent knows the name.
  *   - The non-numeric case cannot escape the shared `matrix_test` key, so its
  *     foreign contribution is measured directly, immediately after each report
  *     run (the non-numeric sweep is the report's LAST loop, so the two readings
@@ -63,13 +62,22 @@
  * rows the sync trigger derives from them and the matrix_time_machine tail (raw
  * SQL writes no TM row; the sweep asserts that stays true). Cleaned, fail-loud,
  * before AND after. No production record is written or read for mutation — the
- * live rsc170 target is a read-only lookup.
+ * live zzdbinfo2 target is a read-only lookup.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
+// identifiers threaded through the unit under test — a generic `test` section carries
+// the same meaning here as the install one did.
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { widget } from '../../src/core/area_maintenance/widgets/database_info.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
 /** The handler ignores its principal; the maintenance area gates the call. */
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as Principal;
@@ -83,14 +91,18 @@ const SCRATCH_TIPOS = ['test3', 'test2', 'test38'];
 const SOURCE_TIPO = 'test3';
 const SOURCE_ID = 930001;
 /**
- * The target section for the dangling/live pair: resolves to `matrix` and, as
- * `beforeAll` asserts, is absent from the store — so its bucket is this file's
- * alone.
+ * The target section for the dangling/live pair. It is BUILT (below), not
+ * borrowed, and that is the whole point: the bucket has to be this file's alone,
+ * and the residue check counts every reference in the database whose TARGET is
+ * this tipo. The install section this gate used to ride on satisfied that by
+ * accident — it resolved to `matrix`, which no test writes. No cloned `test`
+ * section can inherit that property, because they all share `matrix_test` and
+ * the whole suite writes there; a section nobody else can NAME does inherit it.
  */
-const TARGET_TIPO = 'rsc170';
+const TARGET_TIPO = 'zzdbinfo2';
 /**
- * TWO rsc170 records that do NOT exist — the dangling case. Two, not one,
- * because the seed also carries one LIVE rsc170 reference: with a 1/1 split the
+ * TWO zzdbinfo2 records that do NOT exist — the dangling case. Two, not one,
+ * because the seed also carries one LIVE zzdbinfo2 reference: with a 1/1 split the
  * bucket reads 1 whether the probe counts the missing target or the present one,
  * and a reversed anti-join would sail through. 2 ≠ 1 separates them.
  */
@@ -111,6 +123,22 @@ const COLLISION_ID = 930904;
 /** A target section tipo with no dd_ontology node — the unverifiable case. */
 const BOGUS_TIPO = 'zzdbinfo1';
 const BOGUS_TARGET_ID = 930902;
+
+/** The live record the dangling/live pair points at, and its table. */
+const LIVE_TARGET_ID = 930905;
+let TARGET_TABLE = 'matrix_test';
+
+/**
+ * The target section, built. One live record so the "live half" of the pair has
+ * something real to resolve to; nothing else in the suite names this tipo, so
+ * the bucket cannot be moved by a concurrent gate.
+ */
+const TARGET_SITUATION = situation({
+	tld: 'zzdbinfo',
+	name: 'database_info dangling/live target',
+	nodes: [{ tipo: TARGET_TIPO, model: 'section', parent: 'dd14' }],
+	records: [{ section_tipo: TARGET_TIPO, section_id: LIVE_TARGET_ID }],
+});
 
 const UNVERIFIABLE_LINE = `target section '${BOGUS_TIPO}' resolves to no matrix table — its references are unverifiable`;
 
@@ -205,10 +233,12 @@ let foreignNonNumericBefore = 0;
 let foreignNonNumericAfter = 0;
 
 beforeAll(async () => {
+	await ensureSituation(TARGET_SITUATION);
+	TARGET_TABLE = (await getMatrixTableFromTipo(TARGET_TIPO)) ?? 'matrix_test';
 	await cleanScratch();
 	const residue = await scratchResidue();
 	if (residue !== 0) {
-		// Also fires if the corpus grew rsc170 references of its own — in which
+		// Also fires if anything grew zzdbinfo2 references of its own — in which
 		// case the dangling bucket is no longer this file's alone and the fixture
 		// must be re-based, not silently weakened.
 		throw new Error(`scratch surface not empty before seeding: ${residue} row(s)`);
@@ -216,12 +246,14 @@ beforeAll(async () => {
 	// The live half of the dangling/live pair. A missing target section here is a
 	// broken corpus: fail, never skip.
 	const liveRows = (await sql.unsafe(
-		`SELECT section_id FROM matrix WHERE section_tipo = $1 ORDER BY section_id LIMIT 1`,
+		`SELECT section_id FROM "${TARGET_TABLE}" WHERE section_tipo = $1 ORDER BY section_id LIMIT 1`,
 		[TARGET_TIPO],
 	)) as { section_id: number }[];
 	const liveTargetId = liveRows[0]?.section_id;
 	if (liveTargetId === undefined) {
-		throw new Error(`no ${TARGET_TIPO} record in matrix — the live-target case has no fixture`);
+		throw new Error(
+			`no ${TARGET_TIPO} record in ${TARGET_TABLE} — the live-target case has no fixture`,
+		);
 	}
 	// The cross-tipo collision fixture: a record that EXISTS in matrix_test under
 	// `test3`, referenced below as `test2`/<same id>. Both tipos resolve to
@@ -289,9 +321,13 @@ beforeAll(async () => {
 afterAll(async () => {
 	await cleanScratch();
 	const residue = await scratchResidue();
+	// The target section goes LAST: scratchResidue() counts references into it,
+	// so dropping it first would hide a leak instead of reporting one.
+	const situationResidue = await dropSituation(TARGET_SITUATION);
 	if (residue !== 0) {
 		throw new Error(`scratch surface left ${residue} row(s) behind`);
 	}
+	expect(situationResidue).toBe(0);
 }, 120000);
 
 test('a reference to a missing record is counted as dangling for its target section', () => {
@@ -305,7 +341,7 @@ test('a reference to a missing record is counted as dangling for its target sect
 });
 
 test('a reference to a live record is not counted, though it shares the target section', () => {
-	// All four rsc170 references sit in one bucket; only the two missing targets
+	// All four test3 references sit in one bucket; only the two missing targets
 	// may be counted. Each wrong probe lands on a different number:
 	//   1 → the anti-join was reversed (only the live target counted)
 	//   3 → the target table stopped being consulted, or the DISTINCT was dropped

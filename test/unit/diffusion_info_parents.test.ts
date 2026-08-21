@@ -14,6 +14,8 @@
  * `?? 'unknown'` fallback (:345-352). `realTipo` is a TS-only alias memo the
  * oracle never had and must NOT reach the client.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the path items are fabricated in
+// full (toWirePathItem is pure), so the tipos are their test-TLD twins.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -25,13 +27,13 @@ const ROOT = join(import.meta.dir, '..', '..');
 const read = (relative: string): string => readFileSync(join(ROOT, relative), 'utf8');
 
 const groupItem: VirtualPathItem = {
-	tipo: 'mdcat595',
+	tipo: 'test3418',
 	model: 'diffusion_group',
 	label: 'Web',
 	realTipo: null,
 };
 const elementItem: VirtualPathItem = {
-	tipo: 'mdcat353',
+	tipo: 'test3411',
 	model: 'diffusion_element',
 	label: 'Image',
 	realTipo: null,
@@ -59,7 +61,7 @@ describe('get_diffusion_info parents[] — the path item the client reads', () =
 	});
 
 	test('the TS-only realTipo memo NEVER reaches the client', () => {
-		for (const item of [groupItem, elementItem, { ...elementItem, realTipo: 'mdcat999' }]) {
+		for (const item of [groupItem, elementItem, { ...elementItem, realTipo: 'test3660' }]) {
 			expect(Object.keys(toWirePathItem(item))).not.toContain('realTipo');
 		}
 	});

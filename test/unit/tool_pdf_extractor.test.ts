@@ -11,6 +11,8 @@
  *  - the method allowlist and the pdf-only model check, both of which must fail
  *    with an envelope rather than throwing.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the "not a media component" probe only
+// needs a literal component, so it now names the generic `test52` (input_text).
 
 import { describe, expect, test } from 'bun:test';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -34,7 +36,7 @@ const contextOf = (
 ): ToolActionContext =>
 	({ principal, userId: principal.userId, options, background: false }) as ToolActionContext;
 
-// test85 is the test-tree component_pdf (parent test45); numisdata16 is a literal.
+// test85 is the test-tree component_pdf (parent test45); test52 is a literal.
 const PDF_TIPO = 'test85';
 const PDF_SECTION = 'test45';
 
@@ -84,7 +86,7 @@ describe('tool_pdf_extractor gates', () => {
 		expect(
 			run(
 				contextOf({
-					tipo: 'numisdata16',
+					tipo: 'test52',
 					section_tipo: 'test2',
 					section_id: 1,
 					method: 'text',

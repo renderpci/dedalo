@@ -4,6 +4,10 @@
  * The scanner's dd_date/size/path shape is pinned; the byte-equal-to-live gate
  * runs read-only over the shared dir in the parity suite.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
@@ -18,6 +22,7 @@ import {
 } from '../../src/core/media/file_ops.ts';
 import { ddDateFromMtime, scanFilesInfo } from '../../src/core/media/files_info.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_fi_${process.pid}`;
 /** The repo root — a child bun process is booted from it (see the pdf-cover gate). */
@@ -25,8 +30,8 @@ const REPO_ROOT = join(import.meta.dir, '../..');
 const image = mediaTypeOf('component_image')!;
 const pdf = mediaTypeOf('component_pdf')!;
 const identity: MediaIdentity = {
-	componentTipo: 'rsc29',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test99',
+	sectionTipo: 'test3',
 	sectionId: 5,
 	lang: null,
 };
@@ -42,16 +47,19 @@ function place(relative: string, content: string, mtime?: Date): void {
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 	// default (1.5MB) + thumb exist; original raw tif twin present.
-	place('/image/1.5MB/rsc29_rsc170_5.jpg', 'jpeg-web', new Date('2024-06-25T19:25:40'));
-	place('/image/thumb/rsc29_rsc170_5.jpg', 'thumb', new Date('2024-06-25T19:25:41'));
-	place('/image/original/rsc29_rsc170_5.jpg', 'norm-original');
-	place('/image/original/rsc29_rsc170_5.tif', 'raw-original');
+	place('/image/1.5MB/test99_test3_5.jpg', 'jpeg-web', new Date('2024-06-25T19:25:40'));
+	place('/image/thumb/test99_test3_5.jpg', 'thumb', new Date('2024-06-25T19:25:41'));
+	place('/image/original/test99_test3_5.jpg', 'norm-original');
+	place('/image/original/test99_test3_5.tif', 'raw-original');
 	// Record 7 is the EXTENSION-ORDER fixture: one derived tier holding its own
 	// normalized file plus every other extension the scan walks (see the order gate).
-	place('/image/1.5MB/rsc29_rsc170_7.jpg', 'jpeg-web');
+	place('/image/1.5MB/test99_test3_7.jpg', 'jpeg-web');
 	for (const extension of ORDER_FIXTURE_EXTENSIONS) {
-		place(`/image/1.5MB/rsc29_rsc170_7.${extension}`, `web-${extension}`);
+		place(`/image/1.5MB/test99_test3_7.${extension}`, `web-${extension}`);
 	}
 });
 
@@ -62,7 +70,7 @@ afterAll(() => {
 describe('files_info scanner (Index law)', () => {
 	test('projects existing quality/extension files, skips absent', () => {
 		const info = scanFilesInfo(image, identity, pathOpts, {
-			originalNormalizedName: 'rsc29_rsc170_5.jpg',
+			originalNormalizedName: 'test99_test3_5.jpg',
 		});
 		const byQuality = new Map(info.map((e) => [`${e.quality}.${e.extension}`, e]));
 		// present tiers
@@ -94,7 +102,7 @@ describe('files_info scanner (Index law)', () => {
 	test('file_size + file_time reproduce the on-disk file', () => {
 		const info = scanFilesInfo(image, identity, pathOpts, {});
 		const web = info.find((e) => e.quality === '1.5MB' && e.extension === 'jpg')!;
-		const stats = statSync(`${ROOT}/image/1.5MB/rsc29_rsc170_5.jpg`);
+		const stats = statSync(`${ROOT}/image/1.5MB/test99_test3_5.jpg`);
 		expect(web.file_size).toBe(stats.size);
 		expect(web.file_time).toEqual(ddDateFromMtime(stats.mtime));
 	});
@@ -102,14 +110,14 @@ describe('files_info scanner (Index law)', () => {
 
 describe('file ops — no-hard-delete + duplication + deleted-scan', () => {
 	test('moveToDeleted → deleted/<stem>_deleted_<Y-m-d_Hi>.<ext>', () => {
-		place('/image/6MB/rsc29_rsc170_5.jpg', 'to-delete');
-		const target = moveToDeleted(`${ROOT}/image/6MB/rsc29_rsc170_5.jpg`, {
+		place('/image/6MB/test99_test3_5.jpg', 'to-delete');
+		const target = moveToDeleted(`${ROOT}/image/6MB/test99_test3_5.jpg`, {
 			now: new Date('2024-11-15T14:30:00'),
 			mediaRoot: ROOT,
 		});
-		expect(target).toContain('/image/6MB/deleted/rsc29_rsc170_5_deleted_2024-11-15_1430.jpg');
+		expect(target).toContain('/image/6MB/deleted/test99_test3_5_deleted_2024-11-15_1430.jpg');
 		expect(existsSync(target as string)).toBe(true);
-		expect(existsSync(`${ROOT}/image/6MB/rsc29_rsc170_5.jpg`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/6MB/test99_test3_5.jpg`)).toBe(false);
 	});
 
 	test('moveToDeleted on an absent file is a no-op (null)', () => {
@@ -117,14 +125,14 @@ describe('file ops — no-hard-delete + duplication + deleted-scan', () => {
 	});
 
 	test('renameOldFiles backs up before overwrite', () => {
-		place('/image/100MB/rsc29_rsc170_5.jpg', 'old');
+		place('/image/100MB/test99_test3_5.jpg', 'old');
 		const backup = renameOldFiles(
-			`${ROOT}/image/100MB/rsc29_rsc170_5.jpg`,
+			`${ROOT}/image/100MB/test99_test3_5.jpg`,
 			new Date('2024-11-15T14:31:00'),
 			ROOT,
 		);
 		expect(backup).toContain('/image/100MB/deleted/');
-		expect(existsSync(`${ROOT}/image/100MB/rsc29_rsc170_5.jpg`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/100MB/test99_test3_5.jpg`)).toBe(false);
 	});
 
 	test('duplicateMediaFiles copies every quality/ext to the target id', () => {
@@ -135,14 +143,14 @@ describe('file ops — no-hard-delete + duplication + deleted-scan', () => {
 			target: targetOpts,
 		});
 		expect(created.length).toBeGreaterThan(0);
-		expect(existsSync(`${ROOT}/image/1.5MB/rsc29_rsc170_99.jpg`)).toBe(true);
-		expect(existsSync(`${ROOT}/image/thumb/rsc29_rsc170_99.jpg`)).toBe(true);
-		expect(existsSync(`${ROOT}/image/original/rsc29_rsc170_99.tif`)).toBe(true);
+		expect(existsSync(`${ROOT}/image/1.5MB/test99_test3_99.jpg`)).toBe(true);
+		expect(existsSync(`${ROOT}/image/thumb/test99_test3_99.jpg`)).toBe(true);
+		expect(existsSync(`${ROOT}/image/original/test99_test3_99.tif`)).toBe(true);
 	});
 
 	test('listDeletedVersions natural-sorts recovered files', () => {
-		place('/image/25MB/deleted/rsc29_rsc170_5_deleted_2024-01-01_0900.jpg', 'a');
-		place('/image/25MB/deleted/rsc29_rsc170_5_deleted_2024-02-01_0900.jpg', 'b');
+		place('/image/25MB/deleted/test99_test3_5_deleted_2024-01-01_0900.jpg', 'a');
+		place('/image/25MB/deleted/test99_test3_5_deleted_2024-02-01_0900.jpg', 'b');
 		const versions = listDeletedVersions(image, identity, '25MB', 'jpg', pathOpts);
 		expect(versions.length).toBe(2);
 		expect(versions[versions.length - 1]).toContain('2024-02-01');
@@ -237,7 +245,7 @@ describe('files_info scans the pdf cover independently of the config', () => {
 		"const pdf = mediaTypeOf('component_pdf');",
 		'const info = scanFilesInfo(',
 		'\tpdf,',
-		"\t{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },",
+		"\t{ componentTipo: 'test85', sectionTipo: 'test3', sectionId: 5, lang: null },",
 		"\t{ initialMediaPath: '', maxItemsFolder: null, mediaRoot: process.env.PROBE_MEDIA_ROOT },",
 		'\t{},',
 		');',
@@ -275,8 +283,8 @@ describe('files_info scans the pdf cover independently of the config', () => {
 	}
 
 	beforeAll(() => {
-		place('/pdf/web/rsc37_rsc176_5.pdf', 'the document');
-		place('/pdf/web/rsc37_rsc176_5.jpg', 'the cover');
+		place('/pdf/web/test85_test3_5.pdf', 'the document');
+		place('/pdf/web/test85_test3_5.jpg', 'the cover');
 	});
 
 	test('the cover survives an EMPTIED DEDALO_PDF_ALTERNATIVE_EXTENSIONS', () => {
@@ -303,13 +311,13 @@ describe('files_info scans the pdf cover independently of the config', () => {
 		for (const cover of pdf.coverExtensions) expect(pdf.managedExtensions).toContain(cover);
 		const withCover = scanFilesInfo(
 			{ ...pdf, alternateExtensions: [], managedExtensions: ['pdf', 'jpg'] },
-			{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },
+			{ componentTipo: 'test85', sectionTipo: 'test3', sectionId: 5, lang: null },
 			pathOpts,
 			{},
 		);
 		const withoutCover = scanFilesInfo(
 			{ ...pdf, alternateExtensions: [], coverExtensions: [], managedExtensions: ['pdf'] },
-			{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },
+			{ componentTipo: 'test85', sectionTipo: 'test3', sectionId: 5, lang: null },
 			pathOpts,
 			{},
 		);

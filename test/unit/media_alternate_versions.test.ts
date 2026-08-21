@@ -30,6 +30,10 @@
  * one, the thumb never gets one) cannot be quietly turned into builds later.
  * Each says so at its own describe block — they are not dead weight.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
@@ -68,6 +72,7 @@ import { regenerateMissingDerivatives } from '../../src/core/media/repair.ts';
 import { svgOverlayLocation } from '../../src/core/media/svg_overlay.ts';
 import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
 import { buildVersionCore, deleteAndResyncCore } from '../../src/core/media/tools/versions.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_alternate_versions_${process.pid}`;
 const image = mediaTypeOf('component_image') as MediaTypeSpec;
@@ -153,11 +158,11 @@ const UNWRITABLE = 'jxl';
 let sectionId = 0;
 function nextIdentity(): MediaIdentity {
 	sectionId += 1;
-	return { componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId, lang: null };
+	return { componentTipo: 'test99', sectionTipo: 'test3', sectionId, lang: null };
 }
 function nextPdfIdentity(): MediaIdentity {
 	sectionId += 1;
-	return { componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId, lang: null };
+	return { componentTipo: 'test85', sectionTipo: 'test3', sectionId, lang: null };
 }
 
 function pathOf(identity: MediaIdentity, quality: string, extension: string): string {
@@ -293,7 +298,7 @@ function deletedTwins(tierFile: string, identity: MediaIdentity, extension: stri
 	// The tier dir is shared by every identity in this file, so filter by stem.
 	return readdirSync(deleted).filter(
 		(name) =>
-			name.startsWith(`rsc29_rsc170_${String(identity.sectionId)}_deleted_`) &&
+			name.startsWith(`test99_test3_${String(identity.sectionId)}_deleted_`) &&
 			name.endsWith(`.${extension}`),
 	);
 }
@@ -311,6 +316,9 @@ const HIGHER = HAVE_MAGICK ? higherTier() : '';
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 	mkdirSync(ROOT, { recursive: true });
 });
 afterAll(() => {
@@ -592,7 +600,7 @@ describe.if(HAVE_MAGICK)('A7-A10 — replacement, failure and backup policy', ()
 
 		// Loud, not silent: the refusal reaches the caller.
 		expect(outcome.errors.length).toBeGreaterThan(0);
-		const stem = `rsc29_rsc170_${String(identity.sectionId)}`;
+		const stem = `test99_test3_${String(identity.sectionId)}`;
 		for (const quality of [...image.qualities, THUMB]) {
 			const dir = dirOf(pathOf(identity, quality, image.defaultExtension));
 			if (!existsSync(dir)) continue;

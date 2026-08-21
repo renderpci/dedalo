@@ -16,7 +16,7 @@
  * Routing the flat map through the shared flattener made hide leak into it.
  * 58 live nodes in dedalo_mib_v7 declare a hide ddo, ALL with `parent: 'self'`
  * so the consumers' parent filter passes every one:
- *   - 49 component_dataframe frames declare rsc1246 in BOTH maps (show mode
+ *   - 49 component_dataframe frames declare the rating in BOTH maps (show mode
  *     'edit', hide mode 'solved' — the rating colour the widget resolves
  *     without rendering). The structural dedup keeps both, so the flat cell
  *     printed the rating TWICE: "Alta, Alta".
@@ -33,6 +33,12 @@
  *
  * Ontology-only: no matrix row is read and nothing is written.
  */
+// Migrated to the generic `test` TLD 2026-08-19: ontology-only, so the two nodes are now
+// their phase-2 clones (test6256, testmint1023 — src/core/test_data/test_tld_tipo_map.json).
+// The hidden/shown COMPONENTS stay as they are: `hierarchy31` is install-invariant, and
+// the rating component ships in the seed, so it is composed through `seed()` to keep the
+// install-TLD census's token grammar (scripts/lib/tld_census.ts) off a node that is not a
+// corpus binding.
 
 import { describe, expect, test } from 'bun:test';
 import { flattenConfigDdoMaps } from '../../src/core/relations/config_ddo_map.ts';
@@ -42,11 +48,14 @@ import {
 	resolveOwnConfigMap,
 } from '../../src/core/section/list_definitions/section_list.ts';
 
-/** A dataframe frame declaring rsc1246 in show (mode 'edit') AND hide ('solved'). */
-const RATING_FRAME = 'numisdata188';
-const RATING = 'rsc1246';
+/** A seed-shipped tipo, kept out of the census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** A dataframe frame declaring the rating in show (mode 'edit') AND hide ('solved'). */
+const RATING_FRAME = 'test6256';
+const RATING = seed('rsc', 1246);
 /** An autocomplete_hi hiding hierarchy31 (component_geolocation — no flat value). */
-const GEO_HIDER = 'numisdata585';
+const GEO_HIDER = 'testmint1023';
 const GEOLOCATION = 'hierarchy31';
 /** The one EXTERNAL-ONLY node: its single config item declares `zenon`. */
 const EXTERNAL_ONLY = 'test61';
@@ -74,8 +83,8 @@ describe('the flat/export map is SHOW-ONLY', () => {
 
 	test('the EMISSION map still carries hide (PHP full_ddo_map)', async () => {
 		// The carve-out is per CONSUMER, not a global drop: the client widgets
-		// read these (numisdata585's hierarchy31 feeds the map observer;
-		// rsc1246 'solved' is the rating colour).
+		// read these (the autocomplete_hi's hierarchy31 feeds the map observer;
+		// the rating's 'solved' entry is the rating colour).
 		const cell = await resolveListCellMap(RATING_FRAME);
 		expect(count(cell.rawDdos, RATING)).toBe(2);
 		expect(count((await resolveListCellMap(GEO_HIDER)).rawDdos, GEOLOCATION)).toBe(1);
@@ -103,8 +112,19 @@ describe('cell paging is a LOCAL concern', () => {
 		// adapter declares capabilities.pagination = false. Negotiating that
 		// threw ExternalEngineConcernUnsupportedError uncaught through
 		// expandPortal and 500-ed the whole section list.
+		//
+		// The four ddos are `test7344`-`test7347`, the phase-2 clones of
+		// `zenon3`-`zenon6` (src/core/test_data/test_tld_tipo_map.json): test61
+		// is a hand-authored `test` node, so the clone repaired its references
+		// to the test ontology's own zenon twin. `api_engine` is a STRING, not
+		// a tipo — it still reads 'zenon', which is what this gate is about.
 		const cell = await resolveListCellMap(EXTERNAL_ONLY);
-		expect(cell.rawDdos?.map((ddo) => ddo.tipo)).toEqual(['zenon3', 'zenon4', 'zenon5', 'zenon6']);
+		expect(cell.rawDdos?.map((ddo) => ddo.tipo)).toEqual([
+			'test7344',
+			'test7345',
+			'test7346',
+			'test7347',
+		]);
 		// No sqo_config.limit declared → the caller's own default applies.
 		expect(cell.cellLimit).toBeNull();
 	});

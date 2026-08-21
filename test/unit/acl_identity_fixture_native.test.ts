@@ -34,16 +34,22 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
+	ddoIsAuthorized,
 	getPermissions,
+	getSectionPermissions,
 	getUserProjects,
 	resolvePrincipal,
 	resolveProfileId,
 } from '../../src/core/security/permissions.ts';
+import { getUserTools } from '../../src/core/tools/registry.ts';
 import {
 	ACL_ADMIN_LEVEL,
 	ACL_ADMIN_PROFILE_ID,
 	ACL_ADMIN_USER_ID,
+	ACL_DENIED_COMPONENT,
+	ACL_GRANTED_COMPONENT,
 	ACL_GRANTED_SECTION,
+	ACL_GRANTED_TOOL_NAME,
 	ACL_MAINTENANCE_GRANT,
 	ACL_NON_ADMIN_LEVEL,
 	ACL_NON_ADMIN_PROFILE_ID,
@@ -52,6 +58,7 @@ import {
 	AREA_MAINTENANCE,
 	installAclIdentityFixture,
 	removeAclIdentityFixture,
+	resolveAclGrantedToolRegistryId,
 } from '../helpers/acl_identity_fixture.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 
@@ -95,6 +102,64 @@ describe.if(DB_READY)('ACL identity fixture — the contrast is non-degenerate',
 		// identity that does not exist. Pin the LOW side above zero too.
 		expect(nonAdminLevel).toBeGreaterThan(0);
 		expect(adminLevel).toBeGreaterThan(nonAdminLevel);
+	});
+
+	/**
+	 * THE SECTION-LEVEL DOOR, not just the raw matrix read. Consumers ask
+	 * `getSectionPermissions`, which caps a consultation-only section — so the
+	 * fixture's claim ("the reader reaches test3") has to hold THERE, through
+	 * the function production calls, or the claim is about a different number.
+	 */
+	test('getSectionPermissions confers what the fixture claims on test3', async () => {
+		const admin = await resolvePrincipal(ACL_ADMIN_USER_ID);
+		const nonAdmin = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+		expect(await getSectionPermissions(nonAdmin, ACL_GRANTED_SECTION)).toBe(ACL_NON_ADMIN_LEVEL);
+		expect(await getSectionPermissions(admin, ACL_GRANTED_SECTION)).toBe(ACL_ADMIN_LEVEL);
+		expect(await getSectionPermissions(nonAdmin, ACL_GRANTED_SECTION)).toBeGreaterThan(0);
+	});
+
+	/**
+	 * THE PER-COMPONENT GRANT. A section grant alone does NOT open a component:
+	 * `ddoIsAuthorized` keys the matrix by `${section}_${component}`, and it has
+	 * no global-admin bypass — so before the fixture carried per-component dd774
+	 * rows, EVERY component read through the get_data facade returned the empty
+	 * shell for both identities and any "the reader sees it" assertion was
+	 * empty-vs-empty. Both halves are pinned: the granted component authorizes,
+	 * the ungranted one does not (for the admin too).
+	 */
+	test('the granted COMPONENT authorizes for both identities; an ungranted one does not', async () => {
+		const admin = await resolvePrincipal(ACL_ADMIN_USER_ID);
+		const nonAdmin = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+		expect(await getPermissions(nonAdmin, ACL_GRANTED_SECTION, ACL_GRANTED_COMPONENT)).toBe(
+			ACL_NON_ADMIN_LEVEL,
+		);
+		expect(await getPermissions(admin, ACL_GRANTED_SECTION, ACL_GRANTED_COMPONENT)).toBe(
+			ACL_ADMIN_LEVEL,
+		);
+		expect(await ddoIsAuthorized(nonAdmin, ACL_GRANTED_SECTION, ACL_GRANTED_COMPONENT)).toBe(true);
+		expect(await ddoIsAuthorized(admin, ACL_GRANTED_SECTION, ACL_GRANTED_COMPONENT)).toBe(true);
+		// The negative half — otherwise "authorized" could just mean "the gate
+		// never ran".
+		expect(await ddoIsAuthorized(nonAdmin, ACL_GRANTED_SECTION, ACL_DENIED_COMPONENT)).toBe(false);
+		expect(await ddoIsAuthorized(admin, ACL_GRANTED_SECTION, ACL_DENIED_COMPONENT)).toBe(false);
+	});
+
+	/**
+	 * THE TOOL GRANT, ADDRESSED BY NAME. The dd1067 locator names a dd1324
+	 * registry section_id, and that id is DERIVED from the registry (see
+	 * `resolveAclGrantedToolRegistryId`) because the pinned one was wrong on the
+	 * suite DB — it addressed `tool_import_marc21`, so the fixture threw on
+	 * install and no consumer ever got an identity. Assert the end state through
+	 * `getUserTools`: the admin's profile authorizes the tool, the reader's does
+	 * not.
+	 */
+	test('the dd1067 grant is derived by NAME and authorizes exactly the admin', async () => {
+		const registryId = await resolveAclGrantedToolRegistryId();
+		expect(Number.isInteger(registryId)).toBe(true);
+		const adminTools = (await getUserTools(ACL_ADMIN_USER_ID)).map((tool) => tool.model);
+		const readerTools = (await getUserTools(ACL_NON_ADMIN_USER_ID)).map((tool) => tool.model);
+		expect(adminTools).toContain(ACL_GRANTED_TOOL_NAME);
+		expect(readerTools).not.toContain(ACL_GRANTED_TOOL_NAME);
 	});
 
 	test('flag alone, grants held EQUAL: dd88 is 2 for the admin and 0 for the non-admin', async () => {

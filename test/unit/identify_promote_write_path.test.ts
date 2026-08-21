@@ -47,6 +47,10 @@
  *
  * WRITES NOTHING: every server case runs on injected fakes.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -97,7 +101,7 @@ const criterion = (overrides: Partial<Criterion> & Pick<Criterion, 'id' | 'path'
 
 /**
  * A MULTI-SECTION profile — the shape that makes A1 reachable, and an ordinary
- * one: 'numisdata9' (the inventory entries) and 'numisdata4' (the coins) are
+ * one: 'test6103' (the inventory entries) and 'test6100' (the coins) are
  * identified by the same curatorial rules and share one descriptor, so a
  * criterion may legitimately enter on EITHER of them.
  */
@@ -105,26 +109,26 @@ function twoSectionProfile(overrides: Partial<IdentificationProfile> = {}): Iden
 	return {
 		id: 'coins',
 		label: 'Coins',
-		sectionTipos: ['numisdata4', 'numisdata9'],
-		typeSectionTipo: 'numisdata3',
+		sectionTipos: ['test6100', 'test6103'],
+		typeSectionTipo: 'test6099',
 		previewComponent: null,
 		thresholds: { sameType: 0.8, candidate: 0.5 },
 		exactSetIdentity: false,
 		criteria: [
-			// enters on the COIN section — a real Type link for numisdata4
+			// enters on the COIN section — a real Type link for test6100
 			criterion({
 				id: 'obverse_legend',
 				path: [
-					{ section_tipo: 'numisdata4', component_tipo: 'numisdata161' },
-					{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+					{ section_tipo: 'test6100', component_tipo: 'test6230' },
+					{ section_tipo: 'test6099', component_tipo: 'test6123' },
 				],
 			}),
-			// enters on the INVENTORY section — numisdata4 has no such component
+			// enters on the INVENTORY section — test6100 has no such component
 			criterion({
 				id: 'entry_type',
 				path: [
-					{ section_tipo: 'numisdata9', component_tipo: 'numisdata900' },
-					{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+					{ section_tipo: 'test6103', component_tipo: 'test6473' },
+					{ section_tipo: 'test6099', component_tipo: 'test6123' },
 				],
 			}),
 		],
@@ -153,23 +157,23 @@ describe('A1 — a foreign section’s component is never offered as the Type li
 	test('typeLinkCandidates only reveals criteria that ENTER on the asked-for section', () => {
 		// The coin section: only its own criterion reveals a link component.
 		expect(
-			typeLinkCandidates(twoSectionProfile(), 'numisdata4').map((c) => c.componentTipo),
-		).toEqual(['numisdata161']);
+			typeLinkCandidates(twoSectionProfile(), 'test6100').map((c) => c.componentTipo),
+		).toEqual(['test6230']);
 		// The inventory section: only ITS own. The two never cross.
 		expect(
-			typeLinkCandidates(twoSectionProfile(), 'numisdata9').map((c) => c.componentTipo),
-		).toEqual(['numisdata900']);
+			typeLinkCandidates(twoSectionProfile(), 'test6103').map((c) => c.componentTipo),
+		).toEqual(['test6473']);
 	});
 
 	test('resolve_type_link never emits the other section’s component as writable', async () => {
 		const handler = buildResolveTypeLink(typeLinkDeps());
-		const res = await handler(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		const res = await handler(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		const links = body(res).links as Record<string, unknown>[];
-		// THE SCENARIO: a criterion that enters through numisdata9's portal must
-		// not be handed to the panel as the field thirty numisdata4 records will
+		// THE SCENARIO: a criterion that enters through test6103's portal must
+		// not be handed to the panel as the field thirty test6100 records will
 		// be written into — those records do not have it.
-		expect(links.map((link) => link.component_tipo)).toEqual(['numisdata161']);
-		expect(links.every((link) => link.section_tipo === 'numisdata4')).toBe(true);
+		expect(links.map((link) => link.component_tipo)).toEqual(['test6230']);
+		expect(links.every((link) => link.section_tipo === 'test6100')).toBe(true);
 	});
 
 	test('a profile whose ONLY Type criterion belongs to a sibling section refuses, it does not guess', async () => {
@@ -181,8 +185,8 @@ describe('A1 — a foreign section’s component is never offered as the Type li
 							criterion({
 								id: 'entry_type',
 								path: [
-									{ section_tipo: 'numisdata9', component_tipo: 'numisdata900' },
-									{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+									{ section_tipo: 'test6103', component_tipo: 'test6473' },
+									{ section_tipo: 'test6099', component_tipo: 'test6123' },
 								],
 							}),
 						],
@@ -190,7 +194,7 @@ describe('A1 — a foreign section’s component is never offered as the Type li
 			}),
 		);
 		// ENVELOPE v2: the decline is a THROWN `identify.no_link_component` (400).
-		const outcome = await handler(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)).then(
+		const outcome = await handler(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER)).then(
 			(value) => ({ threw: false as const, value }),
 			(error: unknown) => ({ threw: true as const, error }),
 		);
@@ -206,7 +210,7 @@ describe('A1 — a foreign section’s component is never offered as the Type li
 describe('A2 — a hand-typed Type id is verified before it can arm a confirm', () => {
 	test('no check asked, no answer invented', async () => {
 		const handler = buildResolveTypeLink(typeLinkDeps());
-		const res = await handler(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		const res = await handler(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		expect(body(res).type_record).toBeNull();
 	});
 
@@ -215,7 +219,7 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 		// "yes, you may see it" about a record that was never created.
 		const handler = buildResolveTypeLink(typeLinkDeps({ recordExists: async () => false }));
 		const res = await handler(
-			rqo({ section_tipo: 'numisdata4', check_type_id: 4321 }),
+			rqo({ section_tipo: 'test6100', check_type_id: 4321 }),
 			ctx(SUPERUSER),
 		);
 		const check = body(res).type_record as Record<string, unknown>;
@@ -229,7 +233,7 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 			typeLinkDeps({ recordExists: async () => true, scopeRecords: async () => [] }),
 		);
 		const res = await handler(
-			rqo({ section_tipo: 'numisdata4', check_type_id: 432 }),
+			rqo({ section_tipo: 'test6100', check_type_id: 432 }),
 			ctx(SUPERUSER),
 		);
 		const check = body(res).type_record as Record<string, unknown>;
@@ -242,12 +246,12 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 	test('a real, readable record: exists:true and NAMED, so the confirm quotes a title', async () => {
 		const handler = buildResolveTypeLink(typeLinkDeps());
 		const res = await handler(
-			rqo({ section_tipo: 'numisdata4', check_type_id: '432' }),
+			rqo({ section_tipo: 'test6100', check_type_id: '432' }),
 			ctx(SUPERUSER),
 		);
 		const check = body(res).type_record as Record<string, unknown>;
 		expect(check).toMatchObject({
-			section_tipo: 'numisdata3',
+			section_tipo: 'test6099',
 			section_id: 432,
 			exists: true,
 			label: 'Athena / palm',
@@ -259,7 +263,7 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 		const handler = buildResolveTypeLink(typeLinkDeps());
 		for (const raw of ['abc', 0, -3, '4.5.6']) {
 			const res = await handler(
-				rqo({ section_tipo: 'numisdata4', check_type_id: raw }),
+				rqo({ section_tipo: 'test6100', check_type_id: raw }),
 				ctx(SUPERUSER),
 			);
 			const check = body(res).type_record as Record<string, unknown>;
@@ -278,7 +282,7 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 				},
 			}),
 		);
-		await handler(rqo({ section_tipo: 'numisdata4', check_type_id: 432 }), ctx(SUPERUSER));
+		await handler(rqo({ section_tipo: 'test6100', check_type_id: 432 }), ctx(SUPERUSER));
 		// exactly one record scoped: the Type being checked
 		expect(surveyed).toBe(1);
 	});
@@ -289,7 +293,7 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 describe('A3 — attach_outcome reports what the save DID, not that it returned', () => {
 	// envelope v2 (ERRORS_SPEC §3): the payload is `data`, the component rows are
 	// `data.data[]` — the compat `result` mirror is gone from the client reads.
-	const ok = (total: number, tipo = 'numisdata161') => ({
+	const ok = (total: number, tipo = 'test6230') => ({
 		ok: true,
 		data: { data: [{ tipo, pagination: { total, limit: 10, offset: 0 } }] },
 	});
@@ -301,7 +305,7 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 		expect(
 			attach_outcome({
 				api_response: ok(47),
-				component_tipo: 'numisdata161',
+				component_tipo: 'test6230',
 				total_before: 47,
 			}),
 		).toMatchObject({ status: 'already' });
@@ -311,7 +315,7 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 		expect(
 			attach_outcome({
 				api_response: ok(48),
-				component_tipo: 'numisdata161',
+				component_tipo: 'test6230',
 				total_before: 47,
 			}),
 		).toEqual({ status: 'attached', detail: '' });
@@ -319,8 +323,8 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 
 	test('a truthy result with NO reported total is unconfirmed — never attached', () => {
 		const outcome = attach_outcome({
-			api_response: { ok: true, data: { data: [{ tipo: 'numisdata161' }] } },
-			component_tipo: 'numisdata161',
+			api_response: { ok: true, data: { data: [{ tipo: 'test6230' }] } },
+			component_tipo: 'test6230',
 			total_before: 47,
 		});
 		expect(outcome.status).toBe('unconfirmed');
@@ -331,7 +335,7 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 		expect(
 			attach_outcome({
 				api_response: ok(48, 'some_other_component'),
-				component_tipo: 'numisdata161',
+				component_tipo: 'test6230',
 				total_before: 47,
 			}).status,
 		).toBe('unconfirmed');
@@ -341,7 +345,7 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 		expect(
 			attach_outcome({
 				api_response: ok(1),
-				component_tipo: 'numisdata161',
+				component_tipo: 'test6230',
 				total_before: null,
 			}).status,
 		).toBe('unconfirmed');
@@ -351,7 +355,7 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 		expect(
 			attach_outcome({
 				api_response: ok(0),
-				component_tipo: 'numisdata161',
+				component_tipo: 'test6230',
 				total_before: 0,
 			}).status,
 		).toBe('failed');
@@ -370,12 +374,12 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 						retryable: false,
 					},
 				},
-				component_tipo: 'numisdata161',
+				component_tipo: 'test6230',
 				total_before: 3,
 			}),
 		).toEqual({ status: 'failed', detail: 'Record is out of the user scope' });
 		expect(
-			attach_outcome({ api_response: false, component_tipo: 'numisdata161', total_before: 3 }),
+			attach_outcome({ api_response: false, component_tipo: 'test6230', total_before: 3 }),
 		).toEqual({ status: 'failed', detail: 'the save was cancelled' });
 	});
 

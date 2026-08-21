@@ -16,9 +16,16 @@
  * preset_scope.js is a dependency-free leaf module precisely so this rule can be
  * unit-tested without the browser/client import chain.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { preset_scope_tipo } from '../../client/dedalo/core/search/js/preset_scope.js';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 describe('preset_scope_tipo', () => {
 	test('normal list search: caller == target → the section itself', () => {
@@ -34,10 +41,10 @@ describe('preset_scope_tipo', () => {
 		).toBe('ontologytype0');
 	});
 
-	test('thesaurus/portal picker (rsc197 host → rsc75 searched)', () => {
-		expect(preset_scope_tipo({ section_tipo: 'rsc197', target_section_tipo: ['rsc75'] })).toBe(
-			'rsc75',
-		);
+	test(`thesaurus/portal picker (${seed('rsc', 197)} host → ${seed('rsc', 75)} searched)`, () => {
+		expect(
+			preset_scope_tipo({ section_tipo: seed('rsc', 197), target_section_tipo: [seed('rsc', 75)] }),
+		).toBe(seed('rsc', 75));
 	});
 
 	test('tolerates [{tipo}] element shape', () => {

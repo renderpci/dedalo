@@ -107,6 +107,7 @@ import {
 	mediaTypeOf,
 	thumbQuality,
 } from '../concepts/media.ts';
+import { assertTestMediaRoot } from '../media/test_media_root.ts';
 import { dirIsWritable } from './dir_probe.ts';
 
 /**
@@ -560,7 +561,9 @@ export function provisionMediaTree(options: ProvisionMediaTreeOptions = {}): Med
 			'Cannot provision the media tree: MEDIA_PATH is not configured (config.media.rootPath is null)',
 		);
 	}
-	const root = resolve(configured);
+	// A DIRECTORY-CREATING door on the media root: guarded like every other root
+	// resolver (inert outside the test seam — core/media/test_media_root.ts).
+	const root = assertTestMediaRoot(resolve(configured), 'provisionMediaTree');
 	const create = options.create !== false;
 	const created: string[] = [];
 	const problems: MediaTreeProblem[] = [];

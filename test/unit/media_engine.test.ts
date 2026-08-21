@@ -4,6 +4,11 @@
  * argv arrays WITHOUT spawning any binary — the recipe is the parity contract;
  * the actual binary output is gated in Phase C against ffprobe/identify.
  */
+// NO INSTALL TLD IS BOUND HERE (checked 2026-08-19). The census entry for this
+// file is a FALSE POSITIVE: the only token it matches is `libx264`, the ffmpeg
+// H.264 ENCODER name, which is `<letters><digits>`-shaped and so indistinguishable
+// from a tipo to scripts/lib/tld_census.ts. `libx` is not an ontology TLD and
+// should leave INSTALL_TLDS; until it does, the entry stays frozen.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

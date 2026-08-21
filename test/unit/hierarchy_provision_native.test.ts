@@ -30,6 +30,9 @@
  * re-derives the ontologytype/hierarchytype/hierarchymtype grouper registrations
  * idempotently — those are canonical rows both engines rebuild the same way.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
+// identifiers threaded through the unit under test — a generic `test` section carries
+// the same meaning here as the install one did.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -46,7 +49,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 
 const TLD = 'zznt'; // synthetic scratch TLD — swept by the zz% hygiene query
-const REAL_SECTION = 'rsc167'; // model 'section' (same source the differential uses)
+const REAL_SECTION = 'test3'; // model 'section' (same source the differential uses)
 const NAME = `${TLD} native`;
 
 let hierarchyId: number | undefined;
@@ -268,7 +271,7 @@ describe('generate_virtual_section — TS-native provisioning of a scratch TLD',
 	test('the grant expands to the sections’ elements, keyed by the virtual section', async () => {
 		const grants = await granteeGrants();
 
-		// Elements are read from the REAL source section (rsc167) but keyed by the
+		// Elements are read from the REAL source section (test3) but keyed by the
 		// section AS ADDRESSED (zznt1/zznt2) — that pairing is the whole point:
 		// permissions.ts looks grants up as `${section_tipo}_${tipo}`.
 		for (const virtualSection of [`${TLD}1`, `${TLD}2`]) {
@@ -278,7 +281,7 @@ describe('generate_virtual_section — TS-native provisioning of a scratch TLD',
 			expect(elements.length).toBeGreaterThan(0);
 			expect(elements.every((entry) => entry.value === 2)).toBe(true);
 			// The elements are the source section's components, never the source
-			// section tipo itself (which would grant rsc167 wholesale).
+			// section tipo itself (which would grant test3 wholesale).
 			expect(elements.some((entry) => entry.tipo === REAL_SECTION)).toBe(false);
 		}
 	});

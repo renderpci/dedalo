@@ -37,11 +37,24 @@
  * browser, so it stays out of the `bunfig.toml` (root=test) discovery and is run
  * explicitly via `bun run test:client`.
  *
+ * THE SERVER IS THE RUN'S OWN, ON THE SUITE DATABASE (2026-08-19). This runner
+ * used to drive whatever `bun run dev` was already serving — which is the
+ * APPLICATION's database by default, so the reseed, the demo-ontology fixture
+ * and ~125 browser suites wrote into real records. It now starts its own server
+ * on the dedicated suite database and tears it down, and it VERIFIES the target
+ * over the wire before Chrome is launched (`/health` must answer the
+ * fingerprint of the same `dedalo_test_marker` row this process reads). The
+ * mechanism, the alternatives weighed, and the refusal live in
+ * scripts/client_test_server.ts. `--url` still points at a server you started
+ * yourself — it is checked exactly the same way, never trusted.
+ *
  * Usage:
  *   bun run scripts/client_test_runner.ts [options]
  *
  * Options (env var fallback in parens):
- *   --url <url>        Runner page URL           (TEST_URL; else built from SERVER_TCP_PORT)
+ *   --url <url>        Runner page of a server YOU started (TEST_URL) — verified
+ *                      to be on the suite database like any other target
+ *   --port <n>         Port for the run's own server     (default 4390, next free)
  *   --auth <mode>      cookie (default) | form   (TEST_AUTH)
  *   --timeout <ms>     Max run wait, ms          (TEST_TIMEOUT; default 300000)
  *   --headless <bool>  Headless                  (HEADLESS; default true)
@@ -57,6 +70,23 @@
 
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { readEnv } from '../src/config/env.ts';
+import {
+	assertServedDatabase,
+	type ClientTestServer,
+	findFreePort,
+	localSuiteFingerprint,
+	originOf,
+	probeServedDatabase,
+	repointProcessToSuiteDatabase,
+	resolveSuiteDatabase,
+	startClientTestServer,
+	suiteServerPaths,
+} from './client_test_server.ts';
+
+/** The install seed's own user, and the credential the suite database gets. */
+const SUITE_LOGIN_USER = 'root';
+/** Kept in step with src/core/test_data/suite_login.ts (imported lazily below). */
+const SUITE_LOGIN_PASSWORD = 'dedalo_suite_client_tests';
 
 // ---------------------------------------------------------------------------
 // CLI / env argument resolution (mirrors the PHP runner's getArg helper).
@@ -80,36 +110,36 @@ const error = (message: string): void => {
 	process.stderr.write(`ERROR: ${message}\n`);
 };
 
-/**
- * Default runner URL: the local TCP dev listener the browser can reach.
- *
- * NO FALLBACK PORT. This used to default to 3500, which is not where anything
- * listens on a dev box — the dev server's port comes from the SHELL env of
- * whoever started it (`SERVER_TCP_PORT=4000 bun run dev`), not from
- * ../private/.env, so the default produced a connection failure dressed up as
- * a page-load error. Refuse loudly and name both ways to say it instead.
- */
-function defaultRunnerUrl(): string {
-	const port = readEnv('SERVER_TCP_PORT');
-	if (port === undefined || port === '') {
-		error('No runner URL: SERVER_TCP_PORT is unset and --url was not given.');
-		error(
-			'The dev listener port is not in ../private/.env — it is exported when the server is started. Pass --url http://localhost:<port>/dedalo/test/client/index.html, or run with SERVER_TCP_PORT=<port>.',
-		);
-		process.exit(1);
-	}
-	return `http://localhost:${port}/dedalo/test/client/index.html`;
+/** The runner page, given an origin. */
+function runnerPageUrl(origin: string): string {
+	return `${origin}/dedalo/test/client/index.html`;
 }
 
 const headlessArg = getArg('--headless', 'HEADLESS', 'true');
 const headless = headlessArg !== 'false';
 
-const testUrl = getArg('--url', 'TEST_URL') ?? defaultRunnerUrl();
+/**
+ * An EXTERNAL server to drive, or undefined = the run starts its own. Either
+ * way the target is probed: `--url` buys you a server you can watch, never a
+ * server that is taken on trust.
+ */
+const externalUrl = getArg('--url', 'TEST_URL');
+const preferredPort = Number.parseInt(getArg('--port', 'TEST_PORT', '4390') as string, 10);
 const timeout = Number.parseInt(getArg('--timeout', 'TEST_TIMEOUT', '300000') as string, 10);
 // Credentials: prefer DEDALO_TEST_*, fall back to the PHP reference creds already
 // in ../private/.env (same shared DB, so the same user authenticates on TS).
-const username = getArg('--user', 'DEDALO_TEST_USER') ?? readEnv('PHP_API_USERNAME') ?? '';
-const password = getArg('--password', 'DEDALO_TEST_PASSWORD') ?? readEnv('PHP_API_PASSWORD') ?? '';
+//
+// USERNAME: the seed's own `root` unless told otherwise — the suite database is
+// built from install/db/dedalo_install.pgsql.gz, which is where that user comes
+// from. PASSWORD: whatever is configured, else the SUITE CONSTANT
+// (src/core/test_data/suite_login.ts). The seed ships root with NO password, so
+// before the browser logs in the runner MAKES this credential true on the
+// disposable database (ensureSuiteLogin below) — that is how the run keeps
+// exercising a real, password-verified login instead of falling back to
+// `--auth mint`, which verifies nothing.
+const username =
+	getArg('--user', 'DEDALO_TEST_USER') ?? readEnv('PHP_API_USERNAME') ?? SUITE_LOGIN_USER;
+const password = getArg('--password', 'DEDALO_TEST_PASSWORD') ?? SUITE_LOGIN_PASSWORD;
 
 const reseedEnabled = !args.includes('--no-reseed');
 const strict = args.includes('--strict');
@@ -161,6 +191,25 @@ async function ensureMapOfGrapesFixture(): Promise<void> {
 	);
 	await ensure();
 	log('Map of grapes fixture (dmm480/507/506): ensured.');
+}
+
+/**
+ * Make the run's credential true on the suite database (a no-op when it already
+ * is). Guarded by the marker like every other test-data write, so it can only
+ * ever touch a database that declares itself disposable.
+ */
+async function ensureSuiteLogin(): Promise<void> {
+	const { ensureSuiteLoginPassword, SUITE_LOGIN_PASSWORD: constant } = await import(
+		'../src/core/test_data/suite_login.ts'
+	);
+	if (constant !== SUITE_LOGIN_PASSWORD) {
+		error(
+			`the suite login constant drifted (${SUITE_LOGIN_PASSWORD} here vs ${constant} in src/core/test_data/suite_login.ts)`,
+		);
+		process.exit(1);
+	}
+	const outcome = await ensureSuiteLoginPassword(username, password);
+	log(`Suite login for '${username}': ${outcome}.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -232,15 +281,88 @@ interface RunResults {
 	suites: SuiteResult[];
 }
 
+/**
+ * STEP ZERO, BEFORE ANY ENGINE IMPORT — point this process at the suite
+ * database and get the fingerprint of its marker row (what every target is
+ * then checked against).
+ *
+ * Order is load-bearing twice over: src/config/config.ts freezes the connection
+ * at import, so the repoint must happen before the first dynamic import of
+ * anything under src/core/ (the static imports at the top of this file are
+ * puppeteer and src/config/env.ts, neither of which connects); and the
+ * fingerprint must exist before a server is spawned, because it is what the
+ * spawned server is checked against.
+ *
+ * `localSuiteFingerprint` calls `assertTestDatabase('client_test_runner')`, so
+ * the runner's own writes (the test3 reseed, the map-of-grapes fixture) are
+ * refused on an unmarked database by the same door as every other test-data
+ * writer — the guarantee no longer depends on this file being careful.
+ */
+async function prepareSuiteDatabase(): Promise<{ suiteDb: string; fingerprint: string }> {
+	const { suiteDb, appDb } = resolveSuiteDatabase();
+	// The per-run session store must be in place BEFORE the first engine import:
+	// src/core/security/session_store.ts resolves its path once, at import. Only
+	// when the run owns its server — an external --url server reads its own
+	// default store, and the runner must mint into that one.
+	// (suiteServerPaths is pid-derived, so the spawn below computes the same.)
+	repointProcessToSuiteDatabase(
+		suiteDb,
+		externalUrl === undefined ? suiteServerPaths().sessionDbPath : undefined,
+	);
+	log(`Suite database: ${suiteDb} (the application database '${appDb}' is never served).`);
+	return { suiteDb, fingerprint: await localSuiteFingerprint() };
+}
+
+/**
+ * The verified target: the run's own server, or the one `--url` names — checked
+ * the same way either way.
+ *
+ * CALLED AFTER THE FIXTURES, deliberately. The runner writes them on its OWN
+ * connection, so a server that was already up would be holding caches built
+ * before those rows existed (that is what the "restart the TS server once"
+ * caveat used to be about). A server started AFTER them has no such history —
+ * it reads the reseeded playground and the demo ontology at boot. Nothing can
+ * be done about that for an external `--url` server, where the caveat stands.
+ */
+async function openTarget(options: {
+	suiteDb: string;
+	fingerprint: string;
+}): Promise<{ url: string; server?: ClientTestServer }> {
+	if (externalUrl !== undefined) {
+		const origin = originOf(externalUrl);
+		log(`Verifying the server you started at ${origin}...`);
+		const served = await probeServedDatabase(origin);
+		assertServedDatabase({ origin, expected: options.fingerprint, served });
+		log("Verified: that server is on this checkout's suite database.");
+		return { url: externalUrl };
+	}
+	const port = await findFreePort(preferredPort);
+	const server = await startClientTestServer({
+		suiteDb: options.suiteDb,
+		expectedFingerprint: options.fingerprint,
+		port,
+		log,
+	});
+	return { url: runnerPageUrl(server.origin), server };
+}
+
 async function main(): Promise<void> {
 	let browser: Browser | undefined;
+	let server: ClientTestServer | undefined;
 	let exitCode = 1;
 
 	try {
+		const suite = await prepareSuiteDatabase();
+		if (authMode !== 'mint') {
+			await ensureSuiteLogin();
+		}
 		if (reseedEnabled) {
 			await reseedCanonicalTest3('pre-run');
 			await ensureMapOfGrapesFixture();
 		}
+		const target = await openTarget(suite);
+		const testUrl = target.url;
+		server = target.server;
 		log(`Navigating to ${testUrl}...`);
 		log(`Timeout set to ${timeout}ms`);
 
@@ -270,8 +392,10 @@ async function main(): Promise<void> {
 		const response = await page.goto(testUrl, { waitUntil: 'networkidle0', timeout: 30000 });
 		if (!response?.ok()) {
 			error(`Failed to load test page: ${response?.status()} ${response?.statusText()}`);
-			error('Make sure the TS server is running (bun run src/server.ts) with a SERVER_TCP_PORT.');
-			process.exit(1);
+			error(
+				"The run's own server answered /health but not the client page — check its output above.",
+			);
+			throw new Error('test page did not load');
 		}
 		log('Page loaded successfully.');
 
@@ -287,7 +411,7 @@ async function main(): Promise<void> {
 			if (!username || (!password && authMode !== 'mint')) {
 				error('Login required but credentials not provided.');
 				error(
-					'Set DEDALO_TEST_USER / DEDALO_TEST_PASSWORD (or PHP_API_USERNAME / PHP_API_PASSWORD) in ../private/.env, or pass --user/--password.',
+					'The suite database supplies its own credential; pass --user/--password only to override it.',
 				);
 				process.exit(1);
 			}
@@ -438,6 +562,16 @@ async function main(): Promise<void> {
 				await reseedCanonicalTest3('post-run');
 			} catch (err) {
 				error(`post-run reseed failed: ${(err as Error).message}`);
+			}
+		}
+		// The run owns its server: it must not outlive the run (an orphan holds
+		// the port and the next run picks a different one, silently).
+		if (server !== undefined) {
+			try {
+				await server.stop();
+				log("The run's own server stopped.");
+			} catch (err) {
+				error(`stopping the client-test server failed: ${(err as Error).message}`);
 			}
 		}
 		process.exit(exitCode);

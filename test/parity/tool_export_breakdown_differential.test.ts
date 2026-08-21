@@ -32,13 +32,62 @@
  *
  * READ-ONLY: every request is a read; no scratch records needed.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-tools-gates-test-tld).
+// The two exported sections and their bibliography portals are phase-2 clones
+// in the generic `test` TLD (src/core/test_data/test_tld_tipo_map.json); the
+// bibliography chain itself (publication section, its title/date/authorship
+// components) is SEED-SHIPPED ontology every installation carries, spelled
+// through `seed()`. The RQOs are written in test-TLD terms, `unmapRqo` finds the
+// frozen interactions under the install addresses PHP answered, and
+// `adoptTipoIdMap` reads the bodies back in test terms. The exported RECORDS
+// come from the committed test corpus.
+//
+// MEASURED 2026-08-19 after the migration: 0 pass / 21 fail — NOT ONE of them a
+// TLD binding. Same root cause as tool_export_differential: a tool_export
+// response is a flat grid of DISPLAY STRINGS and reveals no storable component
+// data, so scripts/derive_test_corpus.ts refuses this gate's records as
+// `never_revealed` (tagged `tool_export_breakdown_differential` in
+// test_corpus/refused.json) and the corpus holds neither the multi-author
+// publications nor the bibliography rows the whole gate is about. WHAT IT NEEDS:
+// those records in the corpus (a derive that can source them, or a built
+// situation that authors the multi-author bibliography this gate describes).
+// Nothing in this file can close it, and no assertion was relaxed to hide it.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The bibliography chain every installation ships. */
+const PUB_SECTION = seed('rsc', 332);
+const PUB_COMPONENT = seed('rsc', 368);
+const AUTHOR_SECTION = seed('rsc', 205);
+const TITLE = seed('rsc', 140);
+const DATE = seed('rsc', 224);
+const AUTHORSHIP = seed('rsc', 139);
+
+/** The corpus scope this gate owns: the exported sections + the chain's own. */
+const CORPUS_SCOPE = ['testmint1', 'test6099', PUB_SECTION, AUTHOR_SECTION] as const;
+
+/**
+ * The FROZEN grid, read in test-TLD terms
+ * (WC-2026-08-19-tools-gates-test-tld). The floor is the anti-vacuity check —
+ * every one of these responses names the exported section, its portal and the
+ * record addresses of the rows it returned.
+ */
+function adoptFrozen<T>(body: T): T {
+	const adopted = adoptTipoIdMap(body, 'tool_export_breakdown_differential');
+	expect(adopted.matched).toBe(true);
+	expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+	return adopted.body;
+}
 
 type Grid = {
 	meta?: Record<string, unknown>;
@@ -50,16 +99,16 @@ type Grid = {
 /** The two bibliography corpora: portal tipo differs per section. */
 const CORPUS = [
 	{
-		name: 'numisdata6 §2 (Mint, 22 refs, multi-author pubs)',
-		section: 'numisdata6',
+		name: 'testmint1 §2 (Mint, 22 refs, multi-author pubs)',
+		section: 'testmint1',
 		id: '2',
-		portal: 'numisdata163',
+		portal: 'testmint1014',
 	},
 	{
-		name: 'numisdata3 §1490 (Type, 3 refs, 2-author pub)',
-		section: 'numisdata3',
+		name: 'test6099 §1490 (Type, 3 refs, 2-author pub)',
+		section: 'test6099',
 		id: '1490',
-		portal: 'numisdata75',
+		portal: 'test6155',
 	},
 ] as const;
 
@@ -113,8 +162,8 @@ function buildRqo(
 		};
 	}
 	const STEP_PUB = {
-		section_tipo: 'rsc332',
-		component_tipo: 'rsc368',
+		section_tipo: PUB_SECTION,
+		component_tipo: PUB_COMPONENT,
 		model: 'component_autocomplete',
 		name: 'Publication',
 	};
@@ -135,8 +184,8 @@ function buildRqo(
 						STEP_PORTAL,
 						STEP_PUB,
 						{
-							section_tipo: 'rsc205',
-							component_tipo: 'rsc140',
+							section_tipo: AUTHOR_SECTION,
+							component_tipo: TITLE,
 							model: 'component_input_text',
 							name: 'Title',
 						},
@@ -147,8 +196,8 @@ function buildRqo(
 						STEP_PORTAL,
 						STEP_PUB,
 						{
-							section_tipo: 'rsc205',
-							component_tipo: 'rsc224',
+							section_tipo: AUTHOR_SECTION,
+							component_tipo: DATE,
 							model: 'component_date',
 							name: 'Date',
 						},
@@ -159,8 +208,8 @@ function buildRqo(
 						STEP_PORTAL,
 						STEP_PUB,
 						{
-							section_tipo: 'rsc205',
-							component_tipo: 'rsc139',
+							section_tipo: AUTHOR_SECTION,
+							component_tipo: AUTHORSHIP,
 							model: 'component_autocomplete',
 							name: 'Authorship',
 						},
@@ -187,6 +236,32 @@ const colProjection = (column: Record<string, unknown>): Record<string, unknown>
 	model: column.model,
 	after: column.after,
 });
+/**
+ * THE CLONE'S OWN LABEL, stated instead of compared. A phase-2 twin's section
+ * label carries a ` | <tld>` suffix so the 33 clones stay distinguishable in the
+ * tree — a fact about where the clone was cut, not about column identity, which
+ * is what this gate pins. The suffix is stripped from the TS side ONLY, and the
+ * counter below makes the strip non-vacuous: a run in which it never fired
+ * reddens instead of quietly comparing nothing.
+ */
+const CLONE_LABEL_SUFFIX = / \| test[a-z]*$/;
+let cloneLabelSuffixesStripped = 0;
+const stripCloneLabelSuffix = (value: unknown): unknown => {
+	if (typeof value !== 'string' || !CLONE_LABEL_SUFFIX.test(value)) return value;
+	cloneLabelSuffixesStripped += 1;
+	return value.replace(CLONE_LABEL_SUFFIX, '');
+};
+const tsColProjection = (column: Record<string, unknown>): Record<string, unknown> => {
+	const projected = colProjection(column);
+	return {
+		...projected,
+		label: stripCloneLabelSuffix(projected.label),
+		ar_labels: Array.isArray(projected.ar_labels)
+			? (projected.ar_labels as unknown[]).map(stripCloneLabelSuffix)
+			: projected.ar_labels,
+	};
+};
+
 const rowProjection = (row: Record<string, unknown>): Record<string, unknown> => ({
 	rec: String(row.rec),
 	sub: row.sub,
@@ -198,12 +273,17 @@ let session: ReturnType<typeof getSession>;
 let principal: Awaited<ReturnType<typeof resolvePrincipal>>;
 
 beforeAll(async () => {
+	await ensureTestCorpus([...CORPUS_SCOPE]);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	const token = createSession(-1, 'root', true);
 	session = getSession(token);
 	principal = await resolvePrincipal(-1);
+});
+
+afterAll(async () => {
+	expect(await dropTestCorpus([...CORPUS_SCOPE])).toBe(0);
 });
 
 describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () => {
@@ -215,7 +295,7 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 				const rqo = buildRqo(corpus, combo.format, combo.breakdown, combo.fill);
 
 				const phpGrid = ((
-					(await php.call(structuredClone(rqo) as Record<string, unknown>)).body as {
+					adoptFrozen((await php.call(structuredClone(rqo) as Record<string, unknown>)).body) as {
 						result?: Grid;
 					}
 				).result ?? {}) as Grid;
@@ -237,9 +317,13 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 				expect(phpGrid.rows?.length ?? 0).toBeGreaterThan(0);
 
 				// Columns: identity + labels + order hints.
-				expect((tsGrid.columns ?? []).map(colProjection)).toEqual(
-					(phpGrid.columns ?? []).map(colProjection),
-				);
+				const before = cloneLabelSuffixesStripped;
+				const tsProjected = (tsGrid.columns ?? []).map(tsColProjection);
+				expect(tsProjected).toEqual((phpGrid.columns ?? []).map(colProjection));
+				// Non-vacuous, asserted AFTER the compare so a real column diff is what
+				// gets reported: the exported section is a clone, so at least one label
+				// must have carried the twin suffix.
+				expect(cloneLabelSuffixesStripped).toBeGreaterThan(before);
 				// Rows: byte-equal cells.
 				expect((tsGrid.rows ?? []).map(rowProjection)).toEqual(
 					(phpGrid.rows ?? []).map(rowProjection),
@@ -266,7 +350,7 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 				if (!hasPhpCredentials()) return;
 				const rqo = buildRqo(corpus, 'grid_value', breakdown, true, true);
 				const phpGrid = ((
-					(await php.call(structuredClone(rqo) as Record<string, unknown>)).body as {
+					adoptFrozen((await php.call(structuredClone(rqo) as Record<string, unknown>)).body) as {
 						result?: Grid;
 					}
 				).result ?? {}) as Grid;
@@ -331,8 +415,8 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 			} as never,
 		);
 		const tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
-		// Three ddos share the numisdata75 top component → one column.
+		// Three ddos share the test6155 top component → one column.
 		expect(tsGrid.columns?.length).toBe(1);
-		expect(tsGrid.columns?.[0]?.key).toBe('numisdata3_numisdata75');
+		expect(tsGrid.columns?.[0]?.key).toBe(`${CORPUS[1].section}_${CORPUS[1].portal}`);
 	});
 });

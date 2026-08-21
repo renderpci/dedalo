@@ -24,6 +24,7 @@ import { config } from '../../../src/config/config.ts';
 import { BULK_PROCESS_TIPOS } from '../../../src/core/concepts/section.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { sanitizeSegment } from '../../../src/core/media/ingest/add_file.ts';
+import { assertTestMediaRoot } from '../../../src/core/media/test_media_root.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
@@ -103,8 +104,11 @@ function analyzeCsvOffLoop(text: string, delimiter?: string): Promise<CsvAnalysi
 
 /** The per-user CSV import dir (PHP DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH/<user>). */
 function importDir(userId: number): string {
-	const root = config.media.rootPath;
-	if (root === null || root === '') throw mediaRootMissing();
+	const configured = config.media.rootPath;
+	if (configured === null || configured === '') throw mediaRootMissing();
+	// This door mkdirs and WRITES inside the media tree without going through
+	// path.ts, so it asks the test-media guard itself (inert outside the seam).
+	const root = assertTestMediaRoot(configured, 'tool_import_dedalo_csv.importDir');
 	const dir = resolve(root, 'import/files', String(userId));
 	const base = resolve(root, 'import/files');
 	if (dir !== base && !dir.startsWith(base + sep)) {
@@ -260,8 +264,9 @@ async function processUploadedFile(ctx: ToolActionContext): Promise<ToolResponse
 	const keyDir = rawKeyDir === '' ? '' : sanitizeSegment(rawKeyDir);
 	const tmpName = sanitizeSegment(rawTmpName);
 	const fileName = String(fileData.file_name ?? tmpName);
-	const root = config.media.rootPath;
-	if (root === null) throw mediaRootMissing();
+	const configuredRoot = config.media.rootPath;
+	if (configuredRoot === null) throw mediaRootMissing();
+	const root = assertTestMediaRoot(configuredRoot, 'tool_import_dedalo_csv.stagedFile');
 	const staged = resolve(root, config.media.upload.tmpSubdir, String(ctx.userId), keyDir, tmpName);
 	const stagingBase = resolve(root, config.media.upload.tmpSubdir);
 	if (!staged.startsWith(stagingBase + sep)) {

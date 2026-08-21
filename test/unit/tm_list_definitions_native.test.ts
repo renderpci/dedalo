@@ -24,12 +24,19 @@
  *
  * Pure — no DB, no request scope.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). Two moves:
+// the install section/component tipos became their phase-2 clones (pure pass-through
+// tokens here — only the `snapshot` builder resolves a section, and this file drives
+// it through the pure resolver); and the ANNOTATION column stopped being spelled at
+// all — it is the engine's own constant (`TM_NOTES_TEXT`, src/core/tm_record), so the
+// gate now IMPORTS it instead of re-declaring the same string a second time.
 
 import { describe, expect, test } from 'bun:test';
 import {
 	resolveTimeMachineScope,
 	tmListColumns,
 } from '../../src/core/section/list_definitions/time_machine_list.ts';
+import { TM_NOTES_TEXT } from '../../src/core/tm_record/tm_record.ts';
 
 /** The meta block every scoped surface leads with, in display order. */
 const META = ['dd1371', 'dd559', 'dd578', 'dd577'];
@@ -41,23 +48,23 @@ describe('scope derivation from the SQO', () => {
 	test('a component history is COMPONENT scope (locator carries a tipo)', () => {
 		expect(
 			resolveTimeMachineScope({
-				filter_by_locators: [{ section_tipo: 'oh1', section_id: 7, tipo: 'oh25', lang: 'lg-spa' }],
+				filter_by_locators: [{ section_tipo: 'test6813', section_id: 7, tipo: 'test6837', lang: 'lg-spa' }],
 			}),
-		).toEqual({ kind: 'component', sectionTipo: 'oh1', tipo: 'oh25' });
+		).toEqual({ kind: 'component', sectionTipo: 'test6813', tipo: 'test6837' });
 	});
 
 	test('a record history is RECORD scope (locator carries no tipo)', () => {
 		expect(
-			resolveTimeMachineScope({ filter_by_locators: [{ section_tipo: 'oh1', section_id: 7 }] }),
-		).toEqual({ kind: 'record', sectionTipo: 'oh1' });
+			resolveTimeMachineScope({ filter_by_locators: [{ section_tipo: 'test6813', section_id: 7 }] }),
+		).toEqual({ kind: 'record', sectionTipo: 'test6813' });
 	});
 
 	test('a `tipo` column filter is SNAPSHOT scope (whole-record saves of a section)', () => {
 		expect(
-			resolveTimeMachineScope({ filter: { $and: [{ column_name: 'tipo', q: 'oh1' }] } }),
+			resolveTimeMachineScope({ filter: { $and: [{ column_name: 'tipo', q: 'test6813' }] } }),
 		).toEqual({
 			kind: 'snapshot',
-			sectionTipo: 'oh1',
+			sectionTipo: 'test6813',
 		});
 	});
 
@@ -75,8 +82,8 @@ describe('scope derivation from the SQO', () => {
 		expect(
 			resolveTimeMachineScope({
 				filter_by_locators: [
-					{ section_tipo: 'oh1', section_id: 7 },
-					{ section_tipo: 'rsc36', section_id: 3 },
+					{ section_tipo: 'test6813', section_id: 7 },
+					{ section_tipo: 'test6099', section_id: 3 },
 				],
 			}),
 		).toEqual({ kind: 'browse', sectionTipo: null });
@@ -85,8 +92,8 @@ describe('scope derivation from the SQO', () => {
 
 describe('the columns each scope derives', () => {
 	test('COMPONENT: meta + annotation + the component itself', async () => {
-		const columns = await tmListColumns({ kind: 'component', sectionTipo: 'oh1', tipo: 'oh25' });
-		expect(tipos(columns)).toEqual([...META, 'rsc329', 'oh25']);
+		const columns = await tmListColumns({ kind: 'component', sectionTipo: 'test6813', tipo: 'test6837' });
+		expect(tipos(columns)).toEqual([...META, TM_NOTES_TEXT, 'test6837']);
 	});
 
 	test('COMPONENT renders its value AND its annotation as flat text', async () => {
@@ -95,19 +102,19 @@ describe('the columns each scope derives', () => {
 		// (WC-2026-08-16-tm-tool-note-value) — the icon survives only in the
 		// inspector's narrow block.
 		const columns =
-			(await tmListColumns({ kind: 'component', sectionTipo: 'oh1', tipo: 'oh25' })) ?? [];
-		expect(columns.find((column) => column.tipo === 'oh25')?.view).toBe('text');
-		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('text');
+			(await tmListColumns({ kind: 'component', sectionTipo: 'test6813', tipo: 'test6837' })) ?? [];
+		expect(columns.find((column) => column.tipo === 'test6837')?.view).toBe('text');
+		expect(columns.find((column) => column.tipo === TM_NOTES_TEXT)?.view).toBe('text');
 	});
 
 	test('RECORD shows the annotation VALUE, not the note icon', async () => {
-		const columns = (await tmListColumns({ kind: 'record', sectionTipo: 'oh1' })) ?? [];
-		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('text');
+		const columns = (await tmListColumns({ kind: 'record', sectionTipo: 'test6813' })) ?? [];
+		expect(columns.find((column) => column.tipo === TM_NOTES_TEXT)?.view).toBe('text');
 	});
 
 	test('RECORD: meta + annotation, no component column', async () => {
-		const columns = await tmListColumns({ kind: 'record', sectionTipo: 'oh1' });
-		expect(tipos(columns)).toEqual([...META, 'rsc329']);
+		const columns = await tmListColumns({ kind: 'record', sectionTipo: 'test6813' });
+		expect(tipos(columns)).toEqual([...META, TM_NOTES_TEXT]);
 	});
 
 	test('INSPECTOR component block KEEPS the note icon', async () => {
@@ -116,10 +123,10 @@ describe('the columns each scope derives', () => {
 		const columns =
 			(await tmListColumns({
 				kind: 'inspector_component',
-				sectionTipo: 'oh1',
-				tipo: 'oh25',
+				sectionTipo: 'test6813',
+				tipo: 'test6837',
 			})) ?? [];
-		expect(columns.find((column) => column.tipo === 'rsc329')?.view).toBe('note');
+		expect(columns.find((column) => column.tipo === TM_NOTES_TEXT)?.view).toBe('note');
 	});
 
 	test('BROWSE returns NO server opinion — dd15 falls back to its own ontology', async () => {
@@ -130,8 +137,8 @@ describe('the columns each scope derives', () => {
 
 	test('every scoped surface leads with the meta block, in order', async () => {
 		for (const scope of [
-			{ kind: 'component' as const, sectionTipo: 'oh1', tipo: 'oh25' },
-			{ kind: 'record' as const, sectionTipo: 'oh1' },
+			{ kind: 'component' as const, sectionTipo: 'test6813', tipo: 'test6837' },
+			{ kind: 'record' as const, sectionTipo: 'test6813' },
 		]) {
 			expect(tipos(await tmListColumns(scope)).slice(0, META.length)).toEqual(META);
 		}
@@ -141,8 +148,8 @@ describe('the columns each scope derives', () => {
 		// The client's own synthetic Id column already shows the TM row id and
 		// carries the row action; a second one would be a duplicate.
 		for (const scope of [
-			{ kind: 'component' as const, sectionTipo: 'oh1', tipo: 'oh25' },
-			{ kind: 'record' as const, sectionTipo: 'oh1' },
+			{ kind: 'component' as const, sectionTipo: 'test6813', tipo: 'test6837' },
+			{ kind: 'record' as const, sectionTipo: 'test6813' },
 		]) {
 			expect(tipos(await tmListColumns(scope))).not.toContain('dd1573');
 		}

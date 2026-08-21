@@ -5,6 +5,11 @@
  * back; multi-record splitting is checked. The config-driven Dédalo mapping is
  * ledgered.
  */
+// NO INSTALL TLD IS BOUND HERE (checked 2026-08-19). The census entry for this
+// file is a FALSE POSITIVE: the only token it matches is the MODULE PATH
+// `src/core/tools/marc21.ts` — the MARC21 cataloguing standard, not an ontology
+// tipo. `marc` is not an install TLD and should leave INSTALL_TLDS; until it
+// does, the entry stays frozen.
 
 import { describe, expect, test } from 'bun:test';
 import { parseMarc, parseMarcRecord, splitMarcRecords } from '../../src/core/tools/marc21.ts';

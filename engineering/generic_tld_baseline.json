@@ -1,0 +1,16 @@
+{
+	"generated_by": "bun run scripts/generic_tld_baseline.ts (Glob().scanSync + readFileSync census of test via scripts/lib/tld_census.ts — never grep)",
+	"rule": "SHRINK-ONLY ratchet on the SET of test files that bind a specific-install ontology TLD (a `<tld><digits>` tipo token, comments excluded; the install TLD list is INSTALL_TLDS in scripts/lib/tld_census.ts). Each entry is that file frozen with the install TLDs it binds today; a file absent from the list may bind NONE. An entry may only lose TLDs or disappear. Adding a file, or a TLD to a file, is a new corpus binding: a deliberate act — the generator refuses it without --allow-regression, and the commit message MUST say why. A file now binding FEWER TLDs than its entry, or an entry for a deleted/moved file, is a GATE FAILURE (a stale entry lets the file quietly regress): re-freeze with the generator and commit this file in the same change. DO NOT hand-edit. Regenerate with: bun run scripts/generic_tld_baseline.ts Why (AGENTS.md hard rules 2026-08-19): a test uses the generic `test` TLD and BUILDS the situation it tests (src/core/test_data/situations); a gate bound to numisdata/rsc/oh/tch… records is green on one machine and red on every other. The migration ledger is engineering/ORACLE_HARVEST.md \"Generic-TLD replacement map\". summary.files and summary.by_tld are the frozen debt and are asserted exactly by test/unit/generic_tld_tripwire.test.ts.",
+	"files": {
+		"test/integration/diffusion_publish_e2e.test.ts": ["numisdata", "sccmk", "tchi"],
+		"test/parity/menu_differential.test.ts": ["numisdata"]
+	},
+	"summary": {
+		"files": 2,
+		"by_tld": {
+			"numisdata": 2,
+			"sccmk": 1,
+			"tchi": 1
+		}
+	}
+}

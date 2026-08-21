@@ -266,6 +266,19 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		owners: ['src/core/error_report/store.ts'],
 	},
 	{
+		family: 'test-database marker (2026-08-19)',
+		tablePattern: /dedalo_test_marker/,
+		owners: ['src/core/test_data/test_database_marker.ts'],
+		// NAME-ONLY exemptions (no SQL against the table): two test-data doors
+		// NAME the marker row in the comment that explains why they call
+		// `assertTestDatabase()` first — the guard is the owner's exported API,
+		// and naming the thing being asked for is what makes the comment useful.
+		exempt: [
+			'src/core/test_data/situations/situation.ts',
+			'src/core/test_data/test_tld_materialize.ts',
+		],
+	},
+	{
 		family: 'temporal scratch (WC-079)',
 		tablePattern: /dedalo_ts_temporal_scratch/,
 		owners: ['src/core/section/record/temporal_store.ts'],

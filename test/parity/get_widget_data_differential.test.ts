@@ -6,8 +6,8 @@
  * Compares the widget payload byte-for-byte (TS envelope v2 `data` vs the
  * frozen PHP `result`) and the REFUSALS by registry code (the PHP-era
  * {msg, errors} prose is not a v2 wire fact — ERRORS_SPEC §3):
- *  - state widget success (scratch rsc2 → REAL dd501/dd174 vocab records);
- *  - get_archive_weights success (scratch numisdata3 archive, 3 real coins);
+ *  - state widget success (a scratch record → REAL seed vocab records);
+ *  - get_archive_weights success (a scratch archive, 3 corpus coins);
  *  - unknown widget_name → PHP ' Empty widget_obj for widget <name>'
  *    ⇒ `widget.not_defined`;
  *  - a widgets-less tipo → PHP ' Empty defined widgets …' ⇒ `widget.empty`;
@@ -18,6 +18,16 @@
  * Scratch-twin hygiene: every created row is tracked and deleted (0-row
  * deletes fail loudly — the dd128 leak lesson).
  */
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// The archive/weights case is written in `test`-TLD terms (the cloned archive
+// section, its cloned COINS portal and its cloned component_info) and its
+// three coins are copied from a COMMITTED CORPUS record, not from whatever
+// archive the ambient database happens to hold. Everything else is
+// SEED-SHIPPED ontology every installation ships, spelled through `seed()`.
+// Every row this gate writes is scratch and swept in afterAll. The gate is
+// FIXTURE-EXEMPT (its PHP round-trips are real mutations, so it runs only
+// against a LIVE oracle, which the cutover decommissioned): the corpus is
+// materialized under exactly that condition.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -27,10 +37,42 @@ import { CATEGORY_STATUS, type ErrorCode, specOf } from '../../src/core/errors/r
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { adoptErrorEnvelopeV2 } from './normalize.ts';
 import { hasLivePhpOracle, PhpApiClient } from './php_client.ts';
 
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/* --- the cloned archive situation ----------------------------------------- */
+/** The cloned archive section, its COINS portal and its component_info. */
+const ARCHIVES = 'test6099';
+const ARCHIVE_COINS_PORTAL = 'test6157';
+const ARCHIVE_INFO = 'test6400';
+/** The COMMITTED CORPUS archive whose coin locators the scratch archive borrows. */
+const CORPUS_ARCHIVE_ID = 4;
+
+/* --- the seed-shipped state situation ------------------------------------- */
+const PERSONS = seed('rsc', 2);
+const PERSON_STATE_INFO = seed('rsc', 19);
+const PERSON_STATE_CHECK = seed('rsc', 156);
+const PERSON_ACCESS = seed('rsc', 80);
+/** A component of the persons section that defines NO widgets at all. */
+const WIDGETLESS = seed('rsc', 85);
+const STATE_TARGET = seed('dd', 501);
+const ACCESS_TARGET = seed('dd', 174);
+const RELATION_TYPE = seed('dd', 151);
+
 const created: { table: string; sectionTipo: string; sectionId: number }[] = [];
+
+/** The section's matrix table, RESOLVED from the ontology — never hardcoded. */
+async function matrixTableOf(sectionTipo: string): Promise<string> {
+	return (await getMatrixTableFromTipo(sectionTipo)) as string;
+}
 
 function track(sectionTipo: string, sectionId: number, table = 'matrix'): number {
 	created.push({ table, sectionTipo, sectionId });
@@ -39,7 +81,7 @@ function track(sectionTipo: string, sectionId: number, table = 'matrix'): number
 
 const locatorOf = (sectionTipo: string, sectionId: number | string, from: string, id = 1) => ({
 	id,
-	type: 'dd151',
+	type: RELATION_TYPE,
 	section_id: String(sectionId),
 	section_tipo: sectionTipo,
 	from_component_tipo: from,
@@ -52,8 +94,9 @@ async function setColumn(
 	componentTipo: string,
 	items: unknown[],
 ): Promise<void> {
+	const table = await matrixTableOf(sectionTipo);
 	await sql.unsafe(
-		`UPDATE matrix SET ${column} = COALESCE(${column}, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
+		`UPDATE ${table} SET ${column} = COALESCE(${column}, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
 		 WHERE section_tipo = $3 AND section_id = $4`,
 		[componentTipo, JSON.stringify(items), sectionTipo, sectionId],
 	);
@@ -63,9 +106,9 @@ let php: PhpApiClient;
 let tsContext: Record<string, unknown>;
 
 const fixtures = {
-	stateRecord: 0, // scratch rsc2 → REAL dd501/dd174 vocab records
-	archive: 0, // scratch numisdata3 with 3 coins from record 4
-	user: 0, // scratch dd128 (matrix_users) with synthetic stats + activity
+	stateRecord: 0, // a scratch persons record → REAL seed vocab records
+	archive: 0, // a scratch archive with 3 coins from the corpus archive
+	user: 0, // a scratch user (matrix_users) with synthetic stats + activity
 };
 
 function widgetRqo(
@@ -170,7 +213,10 @@ async function expectRefusalParity(rqo: Record<string, unknown>, code: ErrorCode
 }
 
 beforeAll(async () => {
+	// Fixture-exempt gate: the corpus is only needed (and only written) when a
+	// LIVE oracle makes the tests run at all.
 	if (!hasLivePhpOracle()) return;
+	await ensureTestCorpus([ARCHIVES]);
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	const token = createSession(-1, 'root', true);
@@ -184,25 +230,30 @@ beforeAll(async () => {
 		principal,
 	};
 
-	// state widget host: scratch rsc2 pointing at REAL dd501/dd174 vocab rows
-	fixtures.stateRecord = track('rsc2', await createSectionRecord('rsc2', -1));
-	await setColumn('rsc2', fixtures.stateRecord, 'relation', 'rsc156', [
-		locatorOf('dd501', 2, 'rsc156'),
+	// state widget host: a scratch persons record pointing at REAL seed vocab rows
+	fixtures.stateRecord = track(PERSONS, await createSectionRecord(PERSONS, -1));
+	await setColumn(PERSONS, fixtures.stateRecord, 'relation', PERSON_STATE_CHECK, [
+		locatorOf(STATE_TARGET, 2, PERSON_STATE_CHECK),
 	]);
-	await setColumn('rsc2', fixtures.stateRecord, 'relation', 'rsc80', [
-		locatorOf('dd174', 1, 'rsc80'),
+	await setColumn(PERSONS, fixtures.stateRecord, 'relation', PERSON_ACCESS, [
+		locatorOf(ACCESS_TARGET, 1, PERSON_ACCESS),
 	]);
 
-	// get_archive_weights host: scratch numisdata3 with 3 coins from record 4
-	fixtures.archive = track('numisdata3', await createSectionRecord('numisdata3', -1));
+	// get_archive_weights host: a scratch archive carrying 3 coins copied from
+	// the COMMITTED CORPUS archive (never from an ambient install record).
+	fixtures.archive = track(ARCHIVES, await createSectionRecord(ARCHIVES, -1));
+	const archivesTable = await matrixTableOf(ARCHIVES);
 	const coins = (await sql.unsafe(
-		`SELECT relation->'numisdata77' AS v FROM matrix WHERE section_tipo = 'numisdata3' AND section_id = 4`,
+		`SELECT relation->$1 AS v FROM ${archivesTable} WHERE section_tipo = $2 AND section_id = $3`,
+		[ARCHIVE_COINS_PORTAL, ARCHIVES, CORPUS_ARCHIVE_ID],
 	)) as { v: unknown[] }[];
+	// Non-vacuity: an empty borrow would make the weights case compute nothing.
+	expect((coins[0]?.v ?? []).length).toBeGreaterThan(0);
 	await setColumn(
-		'numisdata3',
+		ARCHIVES,
 		fixtures.archive,
 		'relation',
-		'numisdata77',
+		ARCHIVE_COINS_PORTAL,
 		(coins[0]?.v ?? []).slice(0, 3),
 	);
 
@@ -259,7 +310,7 @@ beforeAll(async () => {
 					lang: 'lg-nolan',
 					value: [
 						{ type: 'what', tipo: 'dd700', value: 3, label: 'Guardar' },
-						{ type: 'where', tipo: 'numisdata3', value: 2 },
+						{ type: 'where', tipo: ARCHIVES, value: 2 },
 						{ type: 'when', hour: 10, value: 5 },
 					],
 				},
@@ -290,7 +341,7 @@ beforeAll(async () => {
 					{ type: 'dd151', section_id: '6', section_tipo: 'dd42', from_component_tipo: 'dd545' },
 				],
 			}),
-			JSON.stringify({ dd546: [{ lang: 'lg-nolan', value: 'numisdata3' }] }),
+			JSON.stringify({ dd546: [{ lang: 'lg-nolan', value: ARCHIVES }] }),
 			JSON.stringify({
 				dd547: [
 					{
@@ -325,6 +376,7 @@ afterAll(async () => {
 			[row.sectionTipo, row.sectionId],
 		);
 	}
+	expect(await dropTestCorpus([ARCHIVES])).toBe(0);
 	if (leaked.length > 0) {
 		throw new Error(
 			`Scratch cleanup targeted the wrong matrix table — leaked: ${leaked.join(', ')}`,
@@ -333,30 +385,33 @@ afterAll(async () => {
 });
 
 describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential', () => {
-	test('state widget: single-widget compute envelope (scratch rsc2, real vocab)', async () => {
-		await expectEnvelopeParity(widgetRqo('rsc19', 'rsc2', fixtures.stateRecord, 'state'), {
-			nonEmpty: true,
-			expectStateItems: true,
-		});
+	test('state widget: single-widget compute envelope (scratch record, real vocab)', async () => {
+		await expectEnvelopeParity(
+			widgetRqo(PERSON_STATE_INFO, PERSONS, fixtures.stateRecord, 'state'),
+			{
+				nonEmpty: true,
+				expectStateItems: true,
+			},
+		);
 	});
 
 	test('get_archive_weights: single-widget compute envelope (scratch archive)', async () => {
 		await expectEnvelopeParity(
-			widgetRqo('numisdata595', 'numisdata3', fixtures.archive, 'get_archive_weights'),
+			widgetRqo(ARCHIVE_INFO, ARCHIVES, fixtures.archive, 'get_archive_weights'),
 			{ nonEmpty: true },
 		);
 	});
 
 	test('unknown widget_name: the PHP Empty-widget_obj refusal ⇒ widget.not_defined', async () => {
 		await expectRefusalParity(
-			widgetRqo('numisdata595', 'numisdata3', fixtures.archive, 'no_such_widget'),
+			widgetRqo(ARCHIVE_INFO, ARCHIVES, fixtures.archive, 'no_such_widget'),
 			'widget.not_defined',
 		);
 	});
 
 	test('widgets-less tipo: the PHP Empty-defined-widgets refusal ⇒ widget.empty', async () => {
 		await expectRefusalParity(
-			widgetRqo('rsc85', 'rsc2', fixtures.stateRecord, 'state'),
+			widgetRqo(WIDGETLESS, PERSONS, fixtures.stateRecord, 'state'),
 			'widget.empty',
 		);
 	});
@@ -388,7 +443,7 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 		// Session data lang on both engines (the root PHP session + tsContext).
 		const editLabel = await termByTipo('dd694', 'lg-spa');
 		const saveLabel = await termByTipo('dd700', 'lg-spa');
-		const whereLabel = await termByTipo('numisdata3', 'lg-spa');
+		const whereLabel = await termByTipo(ARCHIVES, 'lg-spa');
 		const zeroWhen = Array.from({ length: 24 }, (_, hour) => ({
 			key: hour,
 			label: String(hour).padStart(2, '0'),
@@ -398,7 +453,7 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 		// PHP: tier 1 dead → the zero canonical + ONLY today's activity merged.
 		const phpValue = phpBody.result?.[0]?.value as Record<string, unknown>;
 		expect(phpValue.what).toEqual([{ key: 'dd694', label: editLabel, value: 1 }] as never);
-		expect(phpValue.where).toEqual([{ key: 'numisdata3', label: whereLabel, value: 1 }] as never);
+		expect(phpValue.where).toEqual([{ key: ARCHIVES, label: whereLabel, value: 1 }] as never);
 		expect(phpValue.who).toEqual([] as never);
 		expect(phpValue.when).toEqual(
 			zeroWhen.map((entry) => (entry.key === 14 ? { ...entry, value: 1 } : entry)) as never,
@@ -411,7 +466,7 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 			{ key: 'dd700', label: saveLabel, value: 3 },
 			{ key: 'dd694', label: editLabel, value: 1 },
 		] as never);
-		expect(tsValue.where).toEqual([{ key: 'numisdata3', label: whereLabel, value: 3 }] as never);
+		expect(tsValue.where).toEqual([{ key: ARCHIVES, label: whereLabel, value: 3 }] as never);
 		expect(tsValue.who).toEqual([] as never);
 		expect(tsValue.when).toEqual(
 			zeroWhen.map((entry) =>

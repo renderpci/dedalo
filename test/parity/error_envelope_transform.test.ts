@@ -9,6 +9,12 @@
  * frozen (a re-harvest is impossible), so any change is a deliberate contract
  * edit and must move this number AND the table together.
  */
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// This gate binds to NO ontology: it walks the frozen store and the transform
+// table. Its one tipo was a made-up payload inside a SYNTHETIC success body
+// (`{result:[{tipo:…}]}`) — an opaque value the transform copies verbatim, so
+// it is now spelled with a generic `test` token. Nothing about the frozen
+// bodies themselves changed: the store is frozen and is never edited.
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -122,7 +128,7 @@ describe('error envelope v2 transform — anti-vacuity', () => {
 	});
 
 	test('a success body projects to ok:true with the frozen result as data', () => {
-		const data = [{ tipo: 'rsc2', value: 1 }];
+		const data = [{ tipo: 'test1', value: 1 }];
 		expect(adoptErrorEnvelopeV2({ result: data, msg: 'ok', errors: [] })).toEqual({
 			matched: true,
 			kind: 'ok',

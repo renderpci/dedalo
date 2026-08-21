@@ -6,6 +6,12 @@
  * records share a value (accent variance included), one is unique — both
  * engines must count exactly the duplicated pair.
  */
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// The gate already BUILT its situation on the generic `test2` section; the one
+// install tipo left was the COMPONENT the filter path names. It is now the
+// cloned twin (`testmint1002`), and the frozen PHP interaction is reached
+// through `unmapRqo` — the fixture lookup key stays the frozen one. The three
+// seeded rows are written to `matrix_test` and swept in afterAll.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -14,6 +20,9 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The cloned input_text component the '!!' filter path names. */
+const COMPONENT = 'testmint1002';
 
 const SEEDS: [number, string][] = [
 	[999911, 'DUP-Á'], // accent variant — f_unaccent must equate them
@@ -44,7 +53,7 @@ const COUNT_RQO = {
 				{
 					q: '!!',
 					lang: 'lg-spa',
-					path: [{ section_tipo: 'test2', component_tipo: 'numisdata16' }],
+					path: [{ section_tipo: 'test2', component_tipo: COMPONENT }],
 				},
 			],
 		},
@@ -56,7 +65,7 @@ beforeAll(async () => {
 		await sql.unsafe(
 			`INSERT INTO matrix_test (section_id, section_tipo, string)
 			 VALUES ($1, 'test2', $2::text::jsonb) ON CONFLICT DO NOTHING`,
-			[id, JSON.stringify({ numisdata16: [{ id: 1, lang: 'lg-spa', value }] })],
+			[id, JSON.stringify({ [COMPONENT]: [{ id: 1, lang: 'lg-spa', value }] })],
 		);
 	}
 });

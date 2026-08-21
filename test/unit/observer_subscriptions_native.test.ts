@@ -46,6 +46,11 @@
  * from diagnostics by the carve-out in observer_subscriptions.ts, so
  * crashed-run residue cannot flip these gates red.
  */
+// BINDS INSTALL TLDs: dc, numisdata, oh, on, rsc, tch — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -61,6 +66,11 @@ import {
 	validateSubscriptionContract,
 } from '../../src/core/section/record/observer_subscriptions.ts';
 import { propagateToObservers } from '../../src/core/section/record/observers.ts';
+import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
+import installCensusJson from './fixtures/observer_subscriptions/install_census.json';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 // ---------------------------------------------------------------------------
 // Fixture helpers (hermetic half — the laws over synthetic ontologies)
@@ -110,7 +120,7 @@ describe('single-declaration model (the defect generator closing — gate a)', (
 		expect(validateSubscriptionContract(index)).toEqual([]);
 	});
 
-	test('a reverse-only SQO edge resolves its host from the observer own section (rsc19->oh28 shape)', () => {
+	test('a reverse-only SQO edge resolves its host from the observer own section', () => {
 		const index = buildSubscriptionIndex(
 			[node('obs2', { observe: [{ component_tipo: 'src2', server: sqoServer('sec1') }] })],
 			hostCtx({ obs2: 'sec1' }),
@@ -234,7 +244,7 @@ describe('pass-2 first-match law + malformed server declarations (review 2026-08
 		expect(index.diagnostics.reverseOnly).toEqual([]);
 	});
 
-	test('duplicate same-tipo observe entries: server first → ONE subscription from the first entry (rsc36->rsc860 shape)', () => {
+	test('duplicate same-tipo observe entries: server first → ONE subscription from the first entry (the hi-family shape)', () => {
 		const index = buildSubscriptionIndex([
 			node('dupobs2', {
 				observe: [
@@ -300,8 +310,8 @@ describe('host-section resolution (the 4-step rule — gates c/d)', () => {
 
 	test('step 2: a REUSED component keeps each forward spec host — never retargeted to its own section (hierarchy93 shape)', () => {
 		// One observer declared ONCE, forward-declared by one observed component
-		// three times with different section scopes (rsc387 -> hierarchy93 with
-		// on1/ts1/dc1 while hierarchy93's own section is hierarchy20).
+		// three times with different section scopes, while the observer's own
+		// section is a different one entirely.
 		const index = buildSubscriptionIndex(
 			[
 				node('rsrc1', {
@@ -331,7 +341,7 @@ describe('host-section resolution (the 4-step rule — gates c/d)', () => {
 		expect(index.byObserved.get('ssrc1')?.[0]?.hostSection).toBe('ownsec1');
 	});
 
-	test('step 3 VIRTUAL↔REAL: a filter path naming the VIRTUAL face of the observer own REAL section resolves to the path face (numisdata5/numisdata276 shape)', () => {
+	test('step 3 VIRTUAL↔REAL: a filter path naming the VIRTUAL face of the observer own REAL section resolves to the path face', () => {
 		// vobs1's own ontology section is real276; its SQO filter path names
 		// virt5, whose relations[0].tipo is real276 — same section, and the
 		// PATH's face is the one the stored records carry, so it wins.
@@ -479,26 +489,94 @@ describe('wiring tripwires (DEC-12: header claims are gated, not prose)', () => 
  * spec — one not in this census — fails the live-contract gate the day it is
  * authored. Fixing these means an ONTOLOGY edit (add the observe half or
  * delete the stale spec), never a code pin. */
-const KNOWN_DEAD_FORWARD = new Set([
-	'rsc1139->rsc19',
-	'rsc1140->rsc19',
-	'rsc1401->rsc19',
-	'rsc1403->rsc19',
-	'rsc1531->rsc1214',
-]);
+/**
+ * The INSTALL ontology's censuses, READ FROM DATA
+ * (fixtures/observer_subscriptions/install_census.json). They used to be typed
+ * here, which bound this gate to one installation two ways: the census counted
+ * the tipos as bindings, and the assertions demanded that ontology be PRESENT —
+ * an exact-set equality that fails on any other database, including a fresh
+ * install. The pins are still enforced, but as "present ⇒ pinned", never
+ * "pinned ⇒ present".
+ */
+const INSTALL_CENSUS = installCensusJson as {
+	reverse_only: string[];
+	dead_forward: string[];
+	wildcards_install: Record<string, string[]>;
+	single_declaration_install: { observed: string; observer: string; host: string };
+	reused_component_install: {
+		observed: string;
+		observer: string;
+		hosts: string[];
+		not_host: string;
+	};
+	runtime_dispatch_install: { observed: string; host_section: string; observer: string };
+	virtual_real_pair_install: {
+		observed: string;
+		observers: string[];
+		host: string;
+		own_real_section: string;
+	};
+};
+const KNOWN_DEAD_FORWARD = new Set(INSTALL_CENSUS.dead_forward);
 
-/** The reverse-only server declarations measured on the live ontology
- * 2026-08-02 — under the ontology-decided rule ALL of these dispatch. */
-const KNOWN_REVERSE_ONLY = [
-	'numisdata1373->numisdata1478',
-	'numisdata1373->numisdata1479',
-	'numisdata282->numisdata321',
-	'oh93->oh28',
-	'rsc19->oh28',
-	'rsc30->rsc1369',
-	'rsc36->rsc1368',
-	'rsc36->rsc860',
-	'rsc860->oh87',
+/** The install half of the reverse-only census (data — see INSTALL_CENSUS). */
+const KNOWN_REVERSE_ONLY = INSTALL_CENSUS.reverse_only;
+
+/**
+ * The reverse-only declarations the GENERIC `test` TLD ontology adds (measured
+ * 2026-08-19, generic-`test`-TLD migration phase 2). Every one of them is a
+ * verbatim CLONE of an install declaration — `test6840` is `oh28`, the
+ * `test*1036` twenty-two are the `hierarchy93` autocomplete of each cloned
+ * thesaurus — which is why they are pinned SEPARATELY from the install census
+ * above instead of being folded into it: the two halves have different owners.
+ * A new entry here means the clone map grew (it is append-only), and the
+ * provenance test below refuses an entry whose observer is not actually a
+ * clone, so this list cannot be padded by hand to silence a real new edge.
+ */
+const KNOWN_REVERSE_ONLY_TEST_TLD = [
+	`${seed('rsc', 19)}->test2850`,
+	`${seed('rsc', 19)}->test6840`,
+	`${seed('rsc', 387)}->testaa1036`,
+	`${seed('rsc', 387)}->testcont1036`,
+	`${seed('rsc', 387)}->testcult1036`,
+	`${seed('rsc', 387)}->testculture1036`,
+	`${seed('rsc', 387)}->testeventype1036`,
+	`${seed('rsc', 387)}->testgrup1036`,
+	`${seed('rsc', 387)}->testicon1036`,
+	`${seed('rsc', 387)}->testperi1036`,
+	`${seed('rsc', 387)}->testrespathology1036`,
+	`${seed('rsc', 387)}->testsccmk1036`,
+	`${seed('rsc', 387)}->testscell1036`,
+	`${seed('rsc', 387)}->testsclat1036`,
+	`${seed('rsc', 387)}->testscsym1036`,
+	`${seed('rsc', 387)}->testsctxr1036`,
+	`${seed('rsc', 387)}->testscxibm1036`,
+	`${seed('rsc', 387)}->testscxibo1036`,
+	`${seed('rsc', 387)}->testscxpu1036`,
+	`${seed('rsc', 387)}->testseri1036`,
+	`${seed('rsc', 387)}->testtema1036`,
+	`${seed('rsc', 387)}->testterr1036`,
+	`${seed('rsc', 387)}->testuncertainty1036`,
+	`${seed('rsc', 387)}->testunit1036`,
+	`${seed('rsc', 860)}->test6883`,
+	'test1222->test1229',
+	'test1222->test1230',
+	'test1224->test1225',
+	'test1226->test1225',
+	'test1227->test1229',
+	'test1228->test1230',
+	'test3030->test2850',
+	'test4345->test4346',
+	'test4346->test4822',
+	'test4471->test4473',
+	'test4472->test4473',
+	'test4821->test4822',
+	'test6318->testplace1022',
+	'test6669->testplace1065',
+	'test6669->testplace1066',
+	'test6889->test6840',
+	'test7310->test7339',
+	'test7311->test7340',
 ];
 
 /** Scratch id for the end-to-end reverse-only recompute (oh1 record that does
@@ -507,8 +585,12 @@ const SCRATCH_OH1_ID = 999_999_955;
 
 afterAll(async () => {
 	await sql.unsafe(
-		`DELETE FROM matrix_time_machine WHERE section_tipo = 'oh1' AND section_id = $1 AND tipo = 'oh28'`,
-		[SCRATCH_OH1_ID],
+		`DELETE FROM matrix_time_machine WHERE section_tipo = $2 AND section_id = $1 AND tipo = ($3::text)`,
+		[
+			SCRATCH_OH1_ID,
+			INSTALL_CENSUS.runtime_dispatch_install.host_section,
+			INSTALL_CENSUS.runtime_dispatch_install.observer,
+		],
 	);
 });
 
@@ -531,48 +613,106 @@ describe('live-ontology gates (suite DB)', () => {
 		expect(registry.diagnostics.cycles).toEqual([]);
 	});
 
-	test('SINGLE-DECLARATION (gate a, live): rsc19->oh28 — the originally reported bug edge — is dispatchable with host oh1', async () => {
+	test('SINGLE-DECLARATION (gate a, live): the reported bug edge is dispatchable, host = the observer own section', async () => {
 		const registry = await getSubscriptionRegistry();
-		const sub = (registry.byObserved.get('rsc19') ?? []).find(
-			(candidate) => candidate.observerTipo === 'oh28',
+		// THE GENERIC TWIN IS THE SUBJECT: `test6840` is the phase-2 clone of the
+		// install component this bug was reported on, hosted by the clone of its
+		// section. It is present wherever the suite runs, so the 4-step host
+		// resolution is asserted unconditionally here.
+		const twin = (registry.byObserved.get(seed('rsc', 19)) ?? []).find(
+			(candidate) => candidate.observerTipo === 'test6840',
+		);
+		expect(twin, 'the cloned reverse-only edge must be registered').toBeDefined();
+		expect(twin?.hostSection).toBe('test6813');
+		// The INSTALL edge is checked only where that ontology exists: a database
+		// carrying a different installation is not a regression.
+		const install = INSTALL_CENSUS.single_declaration_install;
+		const sub = (registry.byObserved.get(install.observed) ?? []).find(
+			(candidate) => candidate.observerTipo === install.observer,
 		);
 		expect(sub).toBeDefined();
 		expect(sub?.declaration).toBe('reverse-only');
 		expect(sub?.entry?.server).toBeDefined(); // dispatches — no table gates it
-		// 4-step resolution: no entry scope, no forward spec → the observer's
-		// own section (oh28 → oh1), agreeing with the filter path's oh1.
-		expect(sub?.hostSection).toBe('oh1');
+		// 4-step resolution: no entry scope, no forward spec → the observer's own
+		// section, agreeing with the filter path.
+		if (sub !== undefined) expect(sub.hostSection).toBe(install.host);
 	});
 
 	test('the reverse-only census: every measured one-sided declaration is registered (and dispatches)', async () => {
 		const registry = await getSubscriptionRegistry();
-		expect([...registry.diagnostics.reverseOnly].sort()).toEqual(KNOWN_REVERSE_ONLY);
-		// And the virtual↔real pair resolved: numisdata1478/79's own section is
-		// numisdata276 (real) while the filter path names numisdata5 (virtual)
-		// — equivalent, the path face wins (that is where the records live).
-		for (const observer of ['numisdata1478', 'numisdata1479']) {
-			const sub = (registry.byObserved.get('numisdata1373') ?? []).find(
+		const measured = [...registry.diagnostics.reverseOnly].sort();
+		// THE GENERIC HALF IS EXACT: those nodes come from the repo-owned `test`
+		// ontology, so they are present wherever the suite runs and a new one must
+		// be pinned.
+		// The OBSERVER side decides: a generic declaration is one the repo-owned
+		// `test` ontology adds, and several of them are `<seed observed>-><test
+		// observer>` clones (rsc387 -> test*1036), so splitting on the left-hand
+		// side would file them under the install.
+		const observerOf = (key: string): string => key.split('->')[1] ?? '';
+		const generic = measured.filter((key) => observerOf(key).startsWith('test'));
+		expect(generic).toEqual([...KNOWN_REVERSE_ONLY_TEST_TLD].sort());
+		// THE INSTALL HALF IS "PRESENT ⇒ PINNED": whatever installation this
+		// database carries, every one-sided declaration it declares must be in the
+		// census — but carrying NONE of them is a different install, not a
+		// regression. (Exact-set equality here made the gate pass on one machine
+		// and fail everywhere else.)
+		const ambient = measured.filter((key) => !observerOf(key).startsWith('test'));
+		const pinned = new Set(KNOWN_REVERSE_ONLY);
+		expect(ambient.filter((key) => !pinned.has(key))).toEqual([]);
+		// And the virtual↔real pair resolved: the observers' own section is the
+		// REAL one while the filter path names the VIRTUAL face — equivalent, and
+		// the path face wins (that is where the records live). Install data, so
+		// asserted only where that ontology is present; the LAW itself is pinned
+		// unit-side in the "step 3 VIRTUAL↔REAL" case above, on a built fixture.
+		const pair = INSTALL_CENSUS.virtual_real_pair_install;
+		for (const observer of pair.observers) {
+			const sub = (registry.byObserved.get(pair.observed) ?? []).find(
 				(candidate) => candidate.observerTipo === observer,
 			);
-			expect(sub?.hostSection).toBe('numisdata5');
+			if (sub !== undefined) expect(sub.hostSection).toBe(pair.host);
 		}
 	});
 
-	test('REUSED COMPONENT (gate d, live): rsc387->hierarchy93 keeps each forward-spec host, never its own section', async () => {
+	test('REUSED COMPONENT (gate d, live): a reused observer keeps each forward-spec host, never its own section', async () => {
 		const registry = await getSubscriptionRegistry();
-		const hosts = (registry.byObserved.get('rsc387') ?? [])
-			.filter((sub) => sub.observerTipo === 'hierarchy93')
+		// GENERIC: the cloned thesauri each declare the same reused autocomplete,
+		// so the reuse law is asserted on nodes the repo owns. Every host is a
+		// cloned thesaurus, and none is the observer's own section.
+		const clonedHosts = (registry.byObserved.get(seed('rsc', 387)) ?? [])
+			.filter((sub) => sub.observerTipo.startsWith('test'))
 			.map((sub) => sub.hostSection);
-		expect([...hosts].sort()).toEqual(['dc1', 'on1', 'ts1']);
-		expect(hosts).not.toContain('hierarchy20'); // hierarchy93's own section
+		expect(clonedHosts.length).toBeGreaterThan(1);
+		expect(clonedHosts.every((host) => (host ?? '').startsWith('test'))).toBe(true);
+		expect(clonedHosts).not.toContain(seed('hierarchy', 20));
+		// INSTALL: same law, asserted only where that ontology is present.
+		const install = INSTALL_CENSUS.reused_component_install;
+		const hosts = (registry.byObserved.get(install.observed) ?? [])
+			.filter((sub) => sub.observerTipo === install.observer)
+			.map((sub) => sub.hostSection);
+		if (hosts.length > 0) {
+			expect([...hosts].sort()).toEqual([...install.hosts].sort());
+			expect(hosts).not.toContain(install.not_host);
+		}
 	});
 
 	test("'all' wildcards compile to their forward-declarers only (gate b, live)", async () => {
 		const registry = await getSubscriptionRegistry();
+		// The GENERIC wildcards — repo-owned, present wherever the suite runs, so
+		// these are the ones that must be there. Each is the phase-2 clone of an
+		// install wildcard; `testimmovable1002` is the twin of a wildcard the
+		// suite database never carried at all, which is now exercised for the
+		// first time BECAUSE it was cloned.
+		const expectedGeneric: Record<string, string[]> = {
+			testimmovable1000: ['test6318->testimmovable1000'],
+			testimmovable1001: ['testplace1049->testimmovable1001'],
+			testimmovable1002: ['testheritagecatalog1110->testimmovable1002'],
+		};
+		// The INSTALL wildcards are DATA and OPTIONAL: whichever installation this
+		// database carries, a wildcard it declares must match the census — but
+		// carrying none of them is a different install, not a regression.
 		const expected: Record<string, string[]> = {
-			numisdata250: ['numisdata282->numisdata250'],
-			numisdata257: ['numisdata1451->numisdata257'],
-			tch557: ['tch555->tch557'], // absent from the suite DB — asserted when present
+			...expectedGeneric,
+			...INSTALL_CENSUS.wildcards_install,
 		};
 		const mirrored = new Set(registry.diagnostics.mirroredServer);
 		for (const [observer, compiled] of registry.diagnostics.wildcardCompiled) {
@@ -583,12 +723,31 @@ describe('live-ontology gates (suite DB)', () => {
 			expect(expected[observer]).toBeDefined();
 			expect([...compiled].sort()).toEqual([...(expected[observer] ?? [])].sort());
 		}
-		// No NEW wildcard observer appeared without this gate learning about it.
-		for (const observer of Object.keys(expected)) {
-			if (registry.diagnostics.wildcardCompiled.has(observer)) continue;
-			// tch557 is allowed to be absent here (suite DB); the numisdata pair is not.
-			expect(observer).toBe('tch557');
+		// Every GENERIC wildcard must be present — that is the anti-vacuity floor,
+		// and it no longer depends on which installation the database holds.
+		for (const observer of Object.keys(expectedGeneric)) {
+			expect(
+				registry.diagnostics.wildcardCompiled.has(observer),
+				`${observer}: the cloned wildcard must compile`,
+			).toBe(true);
 		}
+	});
+
+	test('the test-TLD census is CLONE-DERIVED: every pinned entry observes a phase-2 clone', () => {
+		// The guard that keeps KNOWN_REVERSE_ONLY_TEST_TLD from becoming a
+		// dumping ground: an entry is admissible only when its OBSERVER tipo is
+		// a target of the committed, append-only clone map. An invented edge —
+		// or a real new install edge typed into the wrong list — has no source
+		// and fails here.
+		const cloneTargets = new Set(
+			Object.values((cloneMapJson as { map: Record<string, { target: string }> }).map).map(
+				(entry) => entry.target,
+			),
+		);
+		const notClones = KNOWN_REVERSE_ONLY_TEST_TLD.filter(
+			(key) => !cloneTargets.has(key.split('->')[1] as string),
+		);
+		expect(notClones).toEqual([]);
 	});
 
 	test('lifecycle: in-tx builds memoize per TRANSACTION and never seed the shared cache (S1-14 + import fix)', async () => {
@@ -611,16 +770,34 @@ describe('live-ontology gates (suite DB)', () => {
 		expect(await getSubscriptionRegistry()).toBe(outside);
 	});
 
-	test('runtime (gate a, end-to-end): a reverse-only edge DISPATCHES — oh93 save recomputes the oh28 state widget', async () => {
-		// oh93 declares NO forward observers; oh28 subscribes reverse-only with
-		// server:{filter:false} (component_state = component_info alias → the
-		// same-record recompute). Under forward-only discovery this edge was
-		// invisible; under the ontology-decided rule the save response carries
-		// the recomputed widget item and ONE TM row is written (scratch id,
+	test('runtime (gate a, end-to-end): a reverse-only edge DISPATCHES and writes its TM row', async () => {
+		// The observed declares NO forward observers; the observer subscribes
+		// reverse-only with server:{filter:false} (component_state = component_info
+		// alias → the same-record recompute). Under forward-only discovery this
+		// edge was invisible; under the ontology-decided rule the save response
+		// carries the recomputed widget item and ONE TM row is written (scratch id,
 		// swept in afterAll).
+		//
+		// Driven on the INSTALL edge when that ontology is present, and SKIPPED —
+		// loudly, never silently — when it is not: the generic twin of this pair
+		// has no records section of its own to save into, so there is nothing to
+		// dispatch on. The registry-level twin is asserted by the
+		// SINGLE-DECLARATION case above; what is install-only here is the runtime
+		// leg.
+		const install = INSTALL_CENSUS.runtime_dispatch_install;
+		const registry = await getSubscriptionRegistry();
+		const declared = (registry.byObserved.get(install.observed) ?? []).some(
+			(candidate) => candidate.observerTipo === install.observer,
+		);
+		if (!declared) {
+			console.warn(
+				`observer_subscriptions_native: runtime dispatch NOT RUN — this database declares no '${install.observed}' → '${install.observer}' edge (a different installation).`,
+			);
+			return;
+		}
 		const result = await propagateToObservers(
-			'oh93',
-			'oh1',
+			install.observed,
+			install.host_section,
 			SCRATCH_OH1_ID,
 			{ saved: [], removed: [] },
 			-1,
@@ -631,26 +808,26 @@ describe('live-ontology gates (suite DB)', () => {
 			section_tipo?: string;
 			section_id?: string | number;
 		};
-		expect(item.tipo).toBe('oh28');
-		expect(item.section_tipo).toBe('oh1');
+		expect(item.tipo).toBe(install.observer);
+		expect(item.section_tipo).toBe(install.host_section);
 		// WC-2026-08-10-section-id-int-canonical: the recomputed item's address
 		// is emitted int (observers.ts canonicalizeStoredSectionId).
 		expect(item.section_id).toBe(SCRATCH_OH1_ID);
 		const tmRows = (await sql.unsafe(
-			`SELECT 1 FROM matrix_time_machine WHERE section_tipo = 'oh1' AND section_id = $1 AND tipo = 'oh28'`,
-			[SCRATCH_OH1_ID],
+			`SELECT 1 FROM matrix_time_machine WHERE section_tipo = $2 AND section_id = $1 AND tipo = ($3::text)`,
+			[SCRATCH_OH1_ID, install.host_section, install.observer],
 		)) as unknown[];
 		expect(tmRows.length).toBeGreaterThan(0);
 	});
 
 	test('runtime: the hi-family reverse-only filter:false edges dispatch into the terminal no-op (nothing written)', async () => {
-		// rsc36 -> rsc860 / rsc1368 (autocomplete_hi, filter:false): dispatch
+		// The hi-family pair (autocomplete_hi, filter:false): dispatch
 		// reaches the entries (no skip filter exists any more) and lands on the
 		// oracle-pinned terminal no-op — the response stays empty and no error
 		// is thrown.
 		const result = await propagateToObservers(
-			'rsc36',
-			'rsc1',
+			seed('rsc', 36),
+			seed('rsc', 1),
 			999_999_991,
 			{ saved: [], removed: [] },
 			-1,

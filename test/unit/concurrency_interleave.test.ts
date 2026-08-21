@@ -24,6 +24,10 @@
  *     per call from lang-independent cached rows — an lg-eng request after an
  *     lg-spa build must receive English labels, never cache-owned objects.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -44,6 +48,14 @@ import {
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { getElementTools, resetRegistryCache } from '../../src/core/tools/registry.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 registerSessionCleanup();
 
@@ -140,15 +152,15 @@ function buildReadRqo(lang: string): Rqo {
 		action: 'read',
 		source: {
 			model: 'section',
-			tipo: 'numisdata6',
-			section_tipo: 'numisdata6',
+			tipo: 'testmint1',
+			section_tipo: 'testmint1',
 			mode: 'list',
 			lang,
 			action: 'search',
 		},
-		sqo: { section_tipo: ['numisdata6'], limit: 3, offset: 0 },
+		sqo: { section_tipo: ['testmint1'], limit: 3, offset: 0 },
 		show: {
-			ddo_map: [{ tipo: 'numisdata16', section_tipo: 'self', parent: 'self', mode: 'list', lang }],
+			ddo_map: [{ tipo: 'testmint1002', section_tipo: 'self', parent: 'self', mode: 'list', lang }],
 		},
 	} as unknown as Rqo;
 }
@@ -180,13 +192,13 @@ describe('request isolation — resolver lang read', () => {
 // --- Layer 4: grid-columns cache — application-lang keyed + hub-cleared (S1-12) --
 
 /**
- * rsc860 is the descriptors-grid component the oh87 widget targets: its
+ * rsc860 is the descriptors-grid component the test6883 widget targets: its
  * request_config carries show.get_ddo_map {model:'section_map'}, so its
  * dynamic columns resolve section_map term labels in the APPLICATION lang.
  * Ontology-only — no oral-history record data is needed to resolve columns.
  */
-const GRID_COMPONENT = 'rsc860';
-const GRID_OWNER_SECTION = 'oh1';
+const GRID_COMPONENT = seed('rsc', 860);
+const GRID_OWNER_SECTION = 'test6813';
 
 function gridLabels(lang: string): Promise<string[]> {
 	return runWithRequestLangs({ applicationLang: lang, dataLang: lang }, async () =>
@@ -237,7 +249,7 @@ describe('request isolation — tools registry cache (S1-13)', () => {
 	// through the PRODUCTION entry (structure_context stamps entry.tools with this).
 	const target = {
 		model: 'component_input_text',
-		tipo: 'oh24',
+		tipo: 'test6836',
 		isComponent: true,
 		translatable: true,
 		toolConfigKeys: [],

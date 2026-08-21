@@ -24,6 +24,11 @@
  * tm_session_sqo_isolation_native, the derived columns in
  * tm_list_definitions_native.)
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The two
+// section tipos became their phase-2 clones (src/core/test_data/test_tld_tipo_map.json):
+// `resolveTimeMachineScopeSection` is a pure function over the SQO's locators and
+// resolves neither, so the rename IS the whole migration and every asserted value
+// is unchanged. The fail-closed §7.4 half already ran on the generic `test65`.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -41,8 +46,8 @@ describe('refusal over reduction', () => {
 		expect(
 			resolveTimeMachineScopeSection({
 				filter_by_locators: [
-					{ section_tipo: 'oh1', section_id: 7 },
-					{ section_tipo: 'rsc36', section_id: 3 },
+					{ section_tipo: 'test6813', section_id: 7 },
+					{ section_tipo: 'test6099', section_id: 3 },
 				],
 			}),
 		).toEqual({ sectionTipo: null, mixed: true });
@@ -51,9 +56,9 @@ describe('refusal over reduction', () => {
 	test('a single-section read is scoped; the bare browse is not', () => {
 		expect(
 			resolveTimeMachineScopeSection({
-				filter_by_locators: [{ section_tipo: 'oh1', section_id: 7 }],
+				filter_by_locators: [{ section_tipo: 'test6813', section_id: 7 }],
 			}),
-		).toEqual({ sectionTipo: 'oh1', mixed: false });
+		).toEqual({ sectionTipo: 'test6813', mixed: false });
 		expect(resolveTimeMachineScopeSection({ section_tipo: ['dd15'] })).toEqual({
 			sectionTipo: null,
 			mixed: false,

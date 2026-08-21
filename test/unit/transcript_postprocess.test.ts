@@ -15,6 +15,9 @@
  * The load-bearing assertions are symmetrical: real repetition in speech SURVIVES,
  * decoder repetition DIES.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database
+// here: the tipos are opaque identifiers threaded through the unit under test, so the
+// migration is a rename.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -185,7 +188,7 @@ describe('clean_transcript', () => {
 	});
 });
 
-describe('non-speech noise (the rsc167/528 degeneration, 2026-07-29)', () => {
+describe('non-speech noise (the test3/528 degeneration, 2026-07-29)', () => {
 	// Captured VERBATIM from a live large-v3 run: over a non-speech stretch the
 	// model degenerated into a letter-spam chain, then punctuation cascades.
 	const SPAM =

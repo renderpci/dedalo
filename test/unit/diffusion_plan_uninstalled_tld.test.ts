@@ -16,13 +16,16 @@
  * The only DB read is getPopulatedTlds, and the two TLDs used are chosen so the
  * answer is install-independent:
  *   - 'zzzznotinstalled' — no Dédalo install has such rows (the package case);
- *   - 'rsc'              — the core model namespace, present in every install,
- *                          with a section_id no ontology reaches (the defect case).
+ *   - 'dd'                — the engine's own namespace, present in every install,
+ *                          with a number no ontology reaches (the defect case).
  *
  * getPopulatedTlds vs getActiveTlds matters here and has its own gate in
  * dd_ontology_write.test.ts: the install that surfaced this carried a bare
  * `zenon0` registry root, so check_active_tld called the package installed.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the INSTALLED-package half now
+// uses `dd` (the engine's own namespace, install-invariant) instead of an
+// install's TLD; the UNINSTALLED half was already a generic absent TLD.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -43,8 +46,8 @@ const TABLE_TIPO = 'ddgate2';
 const SECTION_TIPO = 'ddgate10';
 /** No install has this TLD in dd_ontology → "package not installed". */
 const ABSENT_TLD = 'zzzznotinstalled';
-/** 'rsc' IS installed everywhere; this node is not → authoring defect. */
-const MISSING_CORE_TIPO = 'rsc999999';
+/** 'dd' IS installed everywhere; this node is not → authoring defect. */
+const MISSING_CORE_TIPO = 'dd999999';
 
 /** Every parser fn is a runtime step here: this suite pins the ddo split only. */
 const runtimeClassifier: ParserClassifier = () => 'runtime';

@@ -9,6 +9,9 @@
  * FRESH instance on a rebuild — so eviction is observable via reference equality.
  * A ghost user (no profile row) resolves to an empty projects list every rebuild.
  */
+// Migrated to the generic `test` TLD 2026-08-20: the section/component pair is
+// only "some tipo that is NOT a security section", so it is now the `test`-TLD
+// clone (`testmint1` / `testmint1002`). Nothing is read from the database.
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
@@ -44,7 +47,7 @@ describe('permissions cache invalidation (H4)', () => {
 
 	test('an ordinary content write is a NO-OP for the caches', async () => {
 		const a = await getUserProjects(GHOST);
-		invalidatePermissionsForWrite('numisdata6', 'numisdata16', GHOST);
+		invalidatePermissionsForWrite('testmint1', 'testmint1002', GHOST);
 		expect(await getUserProjects(GHOST)).toBe(a); // still cached
 	});
 
@@ -56,7 +59,7 @@ describe('permissions cache invalidation (H4)', () => {
 
 	test('invalidateSecurityCachesForSection clears only on users/profiles sections', async () => {
 		const a = await getUserProjects(GHOST);
-		invalidateSecurityCachesForSection('numisdata6'); // not a security section → no-op
+		invalidateSecurityCachesForSection('testmint1'); // not a security section → no-op
 		expect(await getUserProjects(GHOST)).toBe(a);
 		invalidateSecurityCachesForSection('dd234'); // profiles → clear-all
 		expect(await getUserProjects(GHOST)).not.toBe(a);

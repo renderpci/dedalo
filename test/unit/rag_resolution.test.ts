@@ -1,3 +1,7 @@
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database:
+// this gate feeds a section_map descriptor in and reads the resolved config out, so
+// every tipo is an opaque identifier and the migration is a rename.
+
 import { describe, expect, test } from 'bun:test';
 import type { RagEmbedGroup } from '../../src/ai/rag/config.ts';
 import {
@@ -22,19 +26,19 @@ import { currentPrincipal } from '../../src/core/security/request_context.ts';
  * caller (a saving user) had.
  */
 
-const SECTION = 'rsc205'; // "virtual" host — records keyed by this tipo
+const SECTION = 'test205'; // "virtual" host — records keyed by this tipo
 const RECORD: MatrixRecord = {
 	id: 1,
 	section_id: 42,
 	section_tipo: SECTION,
 } as unknown as MatrixRecord;
 
-const TITLE_DDO: Ddo = { tipo: 'rsc140', section_tipo: 'self', mode: 'list' };
-const MINT_DDO: Ddo = { tipo: 'rsc138', section_tipo: 'self', mode: 'list' };
+const TITLE_DDO: Ddo = { tipo: 'test140', section_tipo: 'self', mode: 'list' };
+const MINT_DDO: Ddo = { tipo: 'test138', section_tipo: 'self', mode: 'list' };
 const MINT_TERM_DDO: Ddo = {
 	tipo: 'dd812',
 	section_tipo: 'dd810',
-	parent: 'rsc138',
+	parent: 'test138',
 	mode: 'list',
 };
 
@@ -45,7 +49,7 @@ const GROUP: RagEmbedGroup = {
 
 /** Values per (tipo, lang) the fake emit resolves. */
 const VALUES: Record<string, Record<string, string>> = {
-	rsc140: { 'lg-spa': 'Moneda de plata', 'lg-eng': 'Silver coin' },
+	test140: { 'lg-spa': 'Moneda de plata', 'lg-eng': 'Silver coin' },
 	dd812: { 'lg-spa': 'Ceca de Lugdunum', 'lg-eng': 'Mint of Lugdunum' },
 };
 
@@ -65,19 +69,19 @@ const fakeEmit: EmbedSourceDeps['emitDdo'] = async (
 	_callerTipo,
 	emission,
 ) => {
-	if (ddo.tipo === 'rsc140') {
-		const value = VALUES.rsc140?.[lang];
+	if (ddo.tipo === 'test140') {
+		const value = VALUES.test140?.[lang];
 		emission.items.push(
-			buildDataItem('rsc140', row.section_tipo, row.section_id, 'list', lang, [
+			buildDataItem('test140', row.section_tipo, row.section_id, 'list', lang, [
 				{ value: value ?? '' },
 			]),
 		);
 		return;
 	}
-	if (ddo.tipo === 'rsc138') {
+	if (ddo.tipo === 'test138') {
 		// relation MAIN item: locator entries — no harvestable string value
 		emission.items.push(
-			buildDataItem('rsc138', row.section_tipo, row.section_id, 'list', lang, [
+			buildDataItem('test138', row.section_tipo, row.section_id, 'list', lang, [
 				{ section_tipo: 'dd810', section_id: 7 },
 			]),
 		);
@@ -94,10 +98,10 @@ function fakeDeps(overrides: Partial<EmbedSourceDeps> = {}): EmbedSourceDeps {
 		emitDdo: fakeEmit,
 		readRecord: async () => RECORD,
 		resolveMatrixTable: async () => 'matrix',
-		isRelation: async (tipo) => tipo === 'rsc138', // the mint relation
+		isRelation: async (tipo) => tipo === 'test138', // the mint relation
 		entryUsesLangs: async () => true,
 		labelOf: async (tipo, lang) =>
-			tipo === 'rsc140' ? (lang === 'lg-spa' ? 'Título' : 'Title') : 'Mint',
+			tipo === 'test140' ? (lang === 'lg-spa' ? 'Título' : 'Title') : 'Mint',
 		...overrides,
 	};
 }
@@ -130,12 +134,12 @@ describe('resolveEmbedDocs', () => {
 	test('contributors carry the contributing component AND the deep target section', async () => {
 		const docs = await resolveEmbedDocs(INPUT, fakeDeps());
 		const spa = docs.find((d) => d.lang === 'lg-spa');
-		// rsc140's text came from the host; rsc138's harvested text came ONLY from
+		// test140's text came from the host; test138's harvested text came ONLY from
 		// the deep target dd810 (its MAIN locator entries contribute no text) —
 		// the host itself is egress-checked separately as the passage's section.
 		expect(spa!.contributors).toEqual([
-			{ componentTipo: 'rsc140', sectionTipos: [SECTION] },
-			{ componentTipo: 'rsc138', sectionTipos: ['dd810'] },
+			{ componentTipo: 'test140', sectionTipos: [SECTION] },
+			{ componentTipo: 'test138', sectionTipos: ['dd810'] },
 		]);
 	});
 
@@ -169,7 +173,7 @@ describe('resolveEmbedDocs', () => {
 				entryUsesLangs: async () => false,
 				emitDdo: async (_d, _m, _r, row, _mode, lang, _c, emission) => {
 					emission.items.push(
-						buildDataItem('rsc140', row.section_tipo, row.section_id, 'list', lang, [
+						buildDataItem('test140', row.section_tipo, row.section_id, 'list', lang, [
 							{ value: 'no-lang value' },
 						]),
 					);
@@ -185,9 +189,9 @@ describe('resolveEmbedDocs', () => {
 			INPUT,
 			fakeDeps({
 				emitDdo: async (ddo, _m, _r, row, _mode, lang, _c, emission) => {
-					if (ddo.tipo !== 'rsc140') return; // mint resolves to nothing
+					if (ddo.tipo !== 'test140') return; // mint resolves to nothing
 					emission.items.push(
-						buildDataItem('rsc140', row.section_tipo, row.section_id, 'list', lang, [
+						buildDataItem('test140', row.section_tipo, row.section_id, 'list', lang, [
 							{ value: lang === 'lg-spa' ? 'Solo español' : '' },
 						]),
 					);
@@ -197,7 +201,7 @@ describe('resolveEmbedDocs', () => {
 		// lg-eng resolved fully empty → no doc for it
 		expect(docs.map((d) => d.lang)).toEqual(['lg-spa']);
 		expect(docs[0]!.text).toBe('## Título\nSolo español');
-		expect(docs[0]!.contributors).toEqual([{ componentTipo: 'rsc140', sectionTipos: [SECTION] }]);
+		expect(docs[0]!.contributors).toEqual([{ componentTipo: 'test140', sectionTipos: [SECTION] }]);
 	});
 
 	test('a throwing entry is dropped deterministically; the rest of the doc survives', async () => {
@@ -205,7 +209,7 @@ describe('resolveEmbedDocs', () => {
 			INPUT,
 			fakeDeps({
 				emitDdo: async (ddo, m, r, row, mode, lang, c, emission) => {
-					if (ddo.tipo === 'rsc138') throw new Error('unknown ddo tipo');
+					if (ddo.tipo === 'test138') throw new Error('unknown ddo tipo');
 					return fakeEmit(ddo, m, r, row, mode, lang, c, emission);
 				},
 			}),
@@ -241,24 +245,24 @@ describe('resolveEmbedDocs', () => {
 		const bare: RagEmbedGroup = {
 			id: 'card',
 			ddoMap: [
-				{ tipo: 'rsc140', section_tipo: 'self' },
-				{ tipo: 'rsc138', section_tipo: 'self' },
-				{ tipo: 'dd812', section_tipo: 'dd810', parent: 'rsc138' },
+				{ tipo: 'test140', section_tipo: 'self' },
+				{ tipo: 'test138', section_tipo: 'self' },
+				{ tipo: 'dd812', section_tipo: 'dd810', parent: 'test138' },
 			],
 		};
 		await resolveEmbedDocs(
 			{ ...INPUT, groups: [bare], langs: ['lg-spa'] },
 			fakeDeps({ emitDdo: spyEmit }),
 		);
-		expect(seen.find((s) => s.tipo === 'rsc140')?.mode).toBe('edit'); // literal default
-		const mint = seen.find((s) => s.tipo === 'rsc138');
+		expect(seen.find((s) => s.tipo === 'test140')?.mode).toBe('edit'); // literal default
+		const mint = seen.find((s) => s.tipo === 'test138');
 		expect(mint?.mode).toBe('list'); // relation default
 		expect(mint?.childModes).toEqual(['edit']); // deep literal child defaulted too
 
 		// Explicit modes pass verbatim — even 'list' on a literal (author's call).
 		seen.length = 0;
 		await resolveEmbedDocs({ ...INPUT, langs: ['lg-spa'] }, fakeDeps({ emitDdo: spyEmit }));
-		expect(seen.find((s) => s.tipo === 'rsc140')?.mode).toBe('list'); // INPUT's map authors 'list'
+		expect(seen.find((s) => s.tipo === 'test140')?.mode).toBe('list'); // INPUT's map authors 'list'
 	});
 
 	test('missing record or no groups → []', async () => {
@@ -271,9 +275,9 @@ describe('resolveEmbedDocs', () => {
 			{ ...INPUT, langs: ['lg-spa'] },
 			fakeDeps({
 				emitDdo: async (ddo, _m, _r, row, _mode, lang, _c, emission) => {
-					if (ddo.tipo !== 'rsc140') return;
+					if (ddo.tipo !== 'test140') return;
 					emission.items.push(
-						buildDataItem('rsc140', row.section_tipo, row.section_id, 'list', lang, [
+						buildDataItem('test140', row.section_tipo, row.section_id, 'list', lang, [
 							{ value: '<p>Hola <strong>mundo</strong></p>' },
 						]),
 					);

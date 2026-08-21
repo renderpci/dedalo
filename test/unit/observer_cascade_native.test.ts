@@ -53,10 +53,21 @@
  *      (B6 — the owner must see the abort) and stays swallowed outside one.
  *
  * Scratch hygiene: ontology nodes in the test9992x band (tld 'test' — swept
- * BEFORE seeding, residue-tolerant); matrix rows in the 99999993x/99999994x
- * id bands on rsc205 (matrix) and on1 (matrix_hierarchy); TM rows swept by
- * tipo band + record band. Suite DB only — never the app DB.
+ * BEFORE seeding, residue-tolerant); matrix_test rows in the
+ * 99999993x/99999994x id bands on the two scratch SECTIONS this file builds;
+ * TM rows swept by tipo band + record band. Suite DB only — never the app DB.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The two
+// install SECTION carriers are gone: the term section `on1` (matrix_hierarchy,
+// seeded by test/helpers/observer_term_seed.ts) and the referencer section
+// `rsc205` (matrix) are now TERM_SECTION/REF_SECTION — scratch `section` nodes
+// this file builds itself, each carrying the `test24` matrix_table relation so
+// every record lands in `matrix_test` (which the relation-index trigger covers,
+// verified 2026-08-20). The seed portal `rsc387` the W11 gates drive became the
+// scratch component W11_PORTAL. The observer COMPONENT tipos stay in the
+// `test999…` band on purpose: it is the scratch namespace
+// observer_subscriptions.ts `touchesScratchObserverNamespace` excludes from the
+// contract diagnostics, so renaming them would redden the registry gate.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -70,21 +81,30 @@ import {
 	propagateToObservers,
 	runObserverCascadeHop,
 } from '../../src/core/section/record/observers.ts';
-import {
-	seedTermChainIfAbsent,
-	sweepTermChain,
-	type TermSeedHandle,
-} from '../helpers/observer_term_seed.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
+
+// ---------------------------------------------------------------------------
+// The two SCRATCH SECTIONS this file builds (2026-08-20 migration). Both carry
+// the `test24` matrix_table relation, so both store in `matrix_test` — the one
+// table every scratch record below is written to and read from.
+// ---------------------------------------------------------------------------
+/** The TERM section — the relay/mirror targets (was the install thesaurus `on1`). */
+const TERM_SECTION = 'test999290';
+/** The REFERENCER section — the records holding OBSERVED (was the install `rsc205`). */
+const REF_SECTION = 'test999291';
+/** The portal component the W11 removal door drives (was the seed `rsc387`). */
+const W11_PORTAL = 'test999293';
+/** Where both scratch sections store — the `test24` matrix_table term. */
+const SCRATCH_TABLE = 'matrix_test';
 
 // ---------------------------------------------------------------------------
 // Scratch bands (distinct from observer_failsafe test9990x and
 // observer_seed test9991x / 9108x / 84000xx).
 // ---------------------------------------------------------------------------
-const OBSERVED = 'test99920'; // the saved component (rsc205)
-const RELAY = 'test99921'; // relay observer (component_relation_related dd621, on1)
-const MIRROR = 'test99922'; // set_dato_external observer (on1)
+const OBSERVED = 'test99920'; // the saved component (REF_SECTION)
+const RELAY = 'test99921'; // relay observer (component_relation_related dd621, TERM_SECTION)
+const MIRROR = 'test99922'; // set_dato_external observer (TERM_SECTION)
 const FOURTH = 'test99923'; // observes MIRROR — no component_to_search (counted skip = hop detector)
 const DIAMOND_OBS = 'test99924'; // the diamond's saved component
 const CYCLE_X = 'test99925';
@@ -95,19 +115,19 @@ const RELAY_R = 'test99929'; // the converged node (reached via P AND Q)
 const BROKEN_TABLE_NODE = 'test999298'; // matrix_table term → a nonexistent table
 const BROKEN_SECTION = 'test999299'; // section whose matrix table does not exist (deterministic SQL error)
 
-const TERM_A = 999999931; // on1 — relay target
-const TERM_EQUIV = 999999932; // on1 — carried in the relay payload (B's bag)
-const CYCLE_TERM = 999999933; // on1 — the X ↔ Y ring record
-const TERM_TX = 999999934; // on1 — the ambient-tx (commit-lane) target
-const REF_A = 999999935; // rsc205 — references TERM_A through OBSERVED
-const REF_EQUIV = 999999936; // rsc205 — references TERM_EQUIV through OBSERVED
-const REF_TX = 999999937; // rsc205 — references TERM_TX through OBSERVED
-const TERM_ON = 999999938; // on1 — the wrote-gate target
-const REF_ON = 999999939; // rsc205 — references TERM_ON through OBSERVED
-const W11_RECORD = 999999940; // rsc205 — the concurrent-delete record
-const DIAMOND_TERM = 999999943; // on1 — the diamond record (P and Q bags both point here)
-const TERM_TRANSITIVE = 999999944; // on1 — reachable ONLY through the dd621 closure (TERM_EQUIV's bag)
-const REF_TRANSITIVE = 999999945; // rsc205 — references TERM_TRANSITIVE through OBSERVED
+const TERM_A = 999999931; // TERM_SECTION — relay target
+const TERM_EQUIV = 999999932; // TERM_SECTION — carried in the relay payload (B's bag)
+const CYCLE_TERM = 999999933; // TERM_SECTION — the X ↔ Y ring record
+const TERM_TX = 999999934; // TERM_SECTION — the ambient-tx (commit-lane) target
+const REF_A = 999999935; // REF_SECTION — references TERM_A through OBSERVED
+const REF_EQUIV = 999999936; // REF_SECTION — references TERM_EQUIV through OBSERVED
+const REF_TX = 999999937; // REF_SECTION — references TERM_TX through OBSERVED
+const TERM_ON = 999999938; // TERM_SECTION — the wrote-gate target
+const REF_ON = 999999939; // REF_SECTION — references TERM_ON through OBSERVED
+const W11_RECORD = 999999940; // REF_SECTION — the concurrent-delete record
+const DIAMOND_TERM = 999999943; // TERM_SECTION — the diamond record (P and Q bags both point here)
+const TERM_TRANSITIVE = 999999944; // TERM_SECTION — reachable ONLY through the dd621 closure (TERM_EQUIV's bag)
+const REF_TRANSITIVE = 999999945; // REF_SECTION — references TERM_TRANSITIVE through OBSERVED
 
 function observedReferencer(targetId: number): string {
 	return JSON.stringify({
@@ -116,7 +136,7 @@ function observedReferencer(targetId: number): string {
 				id: 1,
 				type: 'dd151',
 				section_id: String(targetId),
-				section_tipo: 'on1',
+				section_tipo: TERM_SECTION,
 				from_component_tipo: OBSERVED,
 			},
 		],
@@ -133,15 +153,25 @@ function mirrorEntry(itemId: number, referencerId: number): Record<string, unkno
 		id: itemId,
 		type: 'dd151',
 		section_id: referencerId,
-		section_tipo: 'rsc205',
+		section_tipo: REF_SECTION,
 		from_component_tipo: MIRROR,
 	};
 }
 
-async function bagOf(tipo: string, sectionId: number): Promise<unknown[] | null> {
+/**
+ * A component's stored bag on a scratch record. The table is SCRATCH_TABLE
+ * (`matrix_test`, the `test24` term) for both sections — asserted against the
+ * ontology in beforeAll rather than assumed, because a section whose records
+ * were read from the wrong table reads as an empty bag, not as an error.
+ */
+async function bagOf(
+	tipo: string,
+	sectionId: number,
+	sectionTipo: string = TERM_SECTION,
+): Promise<unknown[] | null> {
 	const rows = (await sql.unsafe(
-		'SELECT relation->$1 AS bag FROM matrix_hierarchy WHERE section_tipo = $2 AND section_id = $3',
-		[tipo, 'on1', sectionId],
+		`SELECT relation->$1 AS bag FROM ${SCRATCH_TABLE} WHERE section_tipo = $2 AND section_id = $3`,
+		[tipo, sectionTipo, sectionId],
 	)) as { bag: unknown[] | null }[];
 	return rows[0]?.bag ?? null;
 }
@@ -159,7 +189,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 		tipo: OBSERVED,
 		model: 'component_autocomplete',
 		properties: {
-			observers: [{ section_tipo: 'on1', component_tipo: RELAY }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: RELAY }],
 		},
 	},
 	{
@@ -179,7 +209,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 					server: { config: { use_self_section: false, use_observable_dato: true } },
 				},
 			],
-			observers: [{ section_tipo: 'on1', component_tipo: MIRROR }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: MIRROR }],
 		},
 	},
 	{
@@ -201,8 +231,8 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 					},
 				},
 			],
-			source: { section_to_search: ['rsc205'], component_to_search: [OBSERVED] },
-			observers: [{ section_tipo: 'on1', component_tipo: FOURTH }],
+			source: { section_to_search: [REF_SECTION], component_to_search: [OBSERVED] },
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: FOURTH }],
 		},
 	},
 	{
@@ -235,8 +265,8 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 		model: 'component_autocomplete',
 		properties: {
 			observers: [
-				{ section_tipo: 'on1', component_tipo: RELAY_P },
-				{ section_tipo: 'on1', component_tipo: RELAY_Q },
+				{ section_tipo: TERM_SECTION, component_tipo: RELAY_P },
+				{ section_tipo: TERM_SECTION, component_tipo: RELAY_Q },
 			],
 		},
 	},
@@ -250,7 +280,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 					server: { config: { use_self_section: false, use_observable_dato: true } },
 				},
 			],
-			observers: [{ section_tipo: 'on1', component_tipo: RELAY_R }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: RELAY_R }],
 		},
 	},
 	{
@@ -263,7 +293,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 					server: { config: { use_self_section: false, use_observable_dato: true } },
 				},
 			],
-			observers: [{ section_tipo: 'on1', component_tipo: RELAY_R }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: RELAY_R }],
 		},
 	},
 	{
@@ -282,7 +312,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 					server: { config: { use_self_section: false, use_observable_dato: true } },
 				},
 			],
-			observers: [{ section_tipo: 'on1', component_tipo: OBSERVED }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: OBSERVED }],
 		},
 	},
 	{
@@ -290,7 +320,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 		tipo: CYCLE_X,
 		model: 'component_relation_related',
 		properties: {
-			observers: [{ section_tipo: 'on1', component_tipo: CYCLE_Y }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: CYCLE_Y }],
 			observe: [
 				{
 					component_tipo: CYCLE_Y,
@@ -303,7 +333,7 @@ const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, u
 		tipo: CYCLE_Y,
 		model: 'component_relation_related',
 		properties: {
-			observers: [{ section_tipo: 'on1', component_tipo: CYCLE_X }],
+			observers: [{ section_tipo: TERM_SECTION, component_tipo: CYCLE_X }],
 			observe: [
 				{
 					component_tipo: CYCLE_X,
@@ -322,28 +352,32 @@ async function clearResolverCaches(): Promise<void> {
 }
 
 async function sweepScratch(): Promise<void> {
+	// The two scratch SECTION nodes (test999290/291) and the W11 portal
+	// (test999293) sit in the same `test9992%` band as the component nodes, so
+	// the one ontology sweep takes them all.
 	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo LIKE 'test9992%' AND tld = 'test'`);
 	await sql.unsafe(
-		`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[[REF_A, REF_EQUIV, REF_TX, REF_ON, W11_RECORD, REF_TRANSITIVE].join(',')],
+		`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[
+			REF_SECTION,
+			[REF_A, REF_EQUIV, REF_TX, REF_ON, W11_RECORD, REF_TRANSITIVE].join(','),
+		],
 	);
 	await sql.unsafe(
-		`DELETE FROM matrix_hierarchy WHERE section_tipo = 'on1' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[[TERM_A, TERM_EQUIV, CYCLE_TERM, TERM_TX, TERM_ON, DIAMOND_TERM, TERM_TRANSITIVE].join(',')],
+		`DELETE FROM ${SCRATCH_TABLE} WHERE section_tipo = $1 AND section_id = ANY(string_to_array($2, ',')::int[])`,
+		[
+			TERM_SECTION,
+			[TERM_A, TERM_EQUIV, CYCLE_TERM, TERM_TX, TERM_ON, DIAMOND_TERM, TERM_TRANSITIVE].join(','),
+		],
 	);
 	await sql.unsafe(`DELETE FROM matrix_time_machine WHERE tipo LIKE 'test9992%'`, []);
 	await sql.unsafe(
-		`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = $1`,
-		[W11_RECORD],
+		`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
+		[REF_SECTION, W11_RECORD],
 	);
 }
 
-let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
-
 beforeAll(async () => {
-	// on1 must resolve to matrix_hierarchy (a bare suite DB lacks the section
-	// node) — same environmental seed the observer_seed gates use.
-	termSeed = await seedTermChainIfAbsent();
 	// Residue-tolerant: sweep FIRST, then seed unconditionally (a crashed run
 	// must never turn these gates vacuous-green).
 	await sweepScratch();
@@ -354,6 +388,34 @@ beforeAll(async () => {
 			[node.tipo, node.model, JSON.stringify(node.properties)],
 		);
 	}
+	// The TWO SCRATCH SECTIONS (2026-08-20 migration). Each carries the `test24`
+	// matrix_table relation, whose term is `matrix_test` — the one place every
+	// record below lands. Named through the ontology, never assumed: the
+	// getMatrixTableFromTipo assertions after the seed prove it.
+	for (const sectionTipo of [TERM_SECTION, REF_SECTION]) {
+		await sql.unsafe(
+			`INSERT INTO dd_ontology (id, tipo, parent, model, tld, relations, term)
+			 VALUES ((SELECT COALESCE(MAX(id), 0) + 1300 FROM dd_ontology), $1, 'test1', 'section', 'test', $2::text::jsonb, $3::text::jsonb)`,
+			[
+				sectionTipo,
+				JSON.stringify([{ tipo: 'test24' }]),
+				JSON.stringify({ 'lg-eng': `observer cascade scratch ${sectionTipo}` }),
+			],
+		);
+	}
+	// The relation component the W11 removal door drives (was the seed
+	// `rsc387`), copied from it field for field: model `component_autocomplete_hi`
+	// (which decides the matrix COLUMN — `relation`) and, load-bearing,
+	// `config_relation.relation_type = 'dd96'`. deletePortalLocator's type guard
+	// compares the sent locator's `type` against getRelationTypeByTipo, which
+	// falls back to the MODEL default ('dd151') when no relation_type is
+	// configured — a scratch node without this key turns every dd96 removal
+	// below into a silent typeMismatch (removed: 0).
+	await sql.unsafe(
+		`INSERT INTO dd_ontology (id, tipo, parent, model, tld, properties)
+		 VALUES ((SELECT COALESCE(MAX(id), 0) + 1300 FROM dd_ontology), $1, $2, 'component_autocomplete_hi', 'test', $3::text::jsonb)`,
+		[W11_PORTAL, REF_SECTION, JSON.stringify({ config_relation: { relation_type: 'dd96' } })],
+	);
 	// The DETERMINISTIC-SQL-ERROR section (gate 11): a section node whose
 	// matrix_table term names a table that does not exist — any recompute
 	// targeting it fails with 42P01 inside whatever transaction it runs in.
@@ -371,7 +433,7 @@ beforeAll(async () => {
 	// equivalent, the ring record (self-pointing bags), the commit-lane target
 	// (empty bag) and the referencers.
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', $2::text::jsonb)`,
 		[
 			TERM_A,
 			JSON.stringify({
@@ -380,7 +442,7 @@ beforeAll(async () => {
 						id: 1,
 						type: 'dd151',
 						section_id: String(TERM_EQUIV),
-						section_tipo: 'on1',
+						section_tipo: TERM_SECTION,
 						from_component_tipo: RELAY,
 					},
 				],
@@ -391,7 +453,7 @@ beforeAll(async () => {
 	// TERM_A ONLY through the dd621 transitive closure (gate 9 — the relay
 	// payload must carry it; the stored bag alone never would).
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', $2::text::jsonb)`,
 		[
 			TERM_EQUIV,
 			JSON.stringify({
@@ -400,7 +462,7 @@ beforeAll(async () => {
 						id: 1,
 						type: 'dd151',
 						section_id: String(TERM_TRANSITIVE),
-						section_tipo: 'on1',
+						section_tipo: TERM_SECTION,
 						from_component_tipo: RELAY,
 					},
 				],
@@ -408,17 +470,17 @@ beforeAll(async () => {
 		],
 	);
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', '{}'::jsonb)`,
 		[TERM_TRANSITIVE],
 	);
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', '{}'::jsonb)`,
 		[TERM_ON],
 	);
 	// The diamond record: P's and Q's bags both point at THIS record, so each
 	// branch's relay payload carries it and both branches hop R here.
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', $2::text::jsonb)`,
 		[
 			DIAMOND_TERM,
 			JSON.stringify({
@@ -427,7 +489,7 @@ beforeAll(async () => {
 						id: 1,
 						type: 'dd151',
 						section_id: String(DIAMOND_TERM),
-						section_tipo: 'on1',
+						section_tipo: TERM_SECTION,
 						from_component_tipo: RELAY_P,
 					},
 				],
@@ -436,7 +498,7 @@ beforeAll(async () => {
 						id: 1,
 						type: 'dd151',
 						section_id: String(DIAMOND_TERM),
-						section_tipo: 'on1',
+						section_tipo: TERM_SECTION,
 						from_component_tipo: RELAY_Q,
 					},
 				],
@@ -444,7 +506,7 @@ beforeAll(async () => {
 		],
 	);
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', $2::text::jsonb)`,
 		[
 			CYCLE_TERM,
 			JSON.stringify({
@@ -453,7 +515,7 @@ beforeAll(async () => {
 						id: 1,
 						type: 'dd151',
 						section_id: String(CYCLE_TERM),
-						section_tipo: 'on1',
+						section_tipo: TERM_SECTION,
 						from_component_tipo: CYCLE_X,
 					},
 				],
@@ -462,7 +524,7 @@ beforeAll(async () => {
 						id: 1,
 						type: 'dd151',
 						section_id: String(CYCLE_TERM),
-						section_tipo: 'on1',
+						section_tipo: TERM_SECTION,
 						from_component_tipo: CYCLE_Y,
 					},
 				],
@@ -470,7 +532,7 @@ beforeAll(async () => {
 		],
 	);
 	await sql.unsafe(
-		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+		`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${TERM_SECTION}', '{}'::jsonb)`,
 		[TERM_TX],
 	);
 	for (const [refId, targetId] of [
@@ -481,21 +543,29 @@ beforeAll(async () => {
 		[REF_TRANSITIVE, TERM_TRANSITIVE],
 	] as const) {
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
+			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${REF_SECTION}', $2::text::jsonb)`,
 			[refId, observedReferencer(targetId)],
 		);
 	}
 	await clearResolverCaches();
+	// PROVE the storage table rather than assume it: SCRATCH_TABLE is hard-coded
+	// in every raw statement above, so a section whose `test24` relation failed
+	// to take would leave those rows in a table nothing reads — every bag would
+	// come back null and each gate below would pass or fail for the wrong
+	// reason. This is the check that was missing when the install sections
+	// carried the table implicitly.
+	const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+	expect(await getMatrixTableFromTipo(TERM_SECTION)).toBe(SCRATCH_TABLE);
+	expect(await getMatrixTableFromTipo(REF_SECTION)).toBe(SCRATCH_TABLE);
 });
 
 afterAll(async () => {
 	await sweepScratch();
-	await sweepTermChain(termSeed);
 	await clearResolverCaches();
 });
 
-// The saved data of OBSERVED at a rsc205 record: one locator to TERM_A.
-const SAVED_ITEMS = [{ section_tipo: 'on1', section_id: TERM_A }];
+// The saved data of OBSERVED at a REF_SECTION record: one locator to TERM_A.
+const SAVED_ITEMS = [{ section_tipo: TERM_SECTION, section_id: TERM_A }];
 
 // ---------------------------------------------------------------------------
 // 1. THE CASCADE IS UNCONDITIONAL — a declared edge always fires (this
@@ -507,7 +577,7 @@ const SAVED_ITEMS = [{ section_tipo: 'on1', section_id: TERM_A }];
 describe('unconditional cascade — the flagship chain shape', () => {
 	test('A saves → relay B (write:none) → C recomputes at the target AND at the payload equivalent', async () => {
 		const relayBagBefore = JSON.stringify(await bagOf(RELAY, TERM_A));
-		await propagateToObservers(OBSERVED, 'rsc205', REF_A, { saved: SAVED_ITEMS, removed: [] }, -1);
+		await propagateToObservers(OBSERVED, REF_SECTION, REF_A, { saved: SAVED_ITEMS, removed: [] }, -1);
 
 		// C's mirror landed at the relay TARGET (self, use_self_section:true)…
 		expect(await bagOf(MIRROR, TERM_A)).toEqual([mirrorEntry(1, REF_A)]);
@@ -541,9 +611,9 @@ describe('bounded dispatch on a planted CYCLE', () => {
 		const cycleBefore = getCounters().observers_cascade_cycle_refused ?? 0;
 		await propagateToObservers(
 			CYCLE_X,
-			'on1',
+			TERM_SECTION,
 			CYCLE_TERM,
-			{ saved: [{ section_tipo: 'on1', section_id: CYCLE_TERM }], removed: [] },
+			{ saved: [{ section_tipo: TERM_SECTION, section_id: CYCLE_TERM }], removed: [] },
 			-1,
 		);
 		// X → hop Y → hop X → hop Y REFUSED (already dispatched) — exactly one
@@ -565,9 +635,9 @@ describe('depth budget — the backstop refusal', () => {
 			maxDepth: MAX_CASCADE_DEPTH,
 			visited: new Set(),
 			recomputed: new Set(),
-			chain: [`synthetic-deep-chain@rsc205/${REF_A}`],
+			chain: [`synthetic-deep-chain@${REF_SECTION}/${REF_A}`],
 		};
-		await emitCascadeHop(guard, RELAY, 'relay', 'on1', TERM_A, -1, new Date());
+		await emitCascadeHop(guard, RELAY, 'relay', TERM_SECTION, TERM_A, -1, new Date());
 		// refused BEFORE dispatch: counted, cycle counter untouched, and the
 		// node was never marked visited (the refusal is not an execution).
 		expect((getCounters().observers_cascade_depth_exceeded ?? 0) - depthBefore).toBe(1);
@@ -591,9 +661,9 @@ describe('converged diamond — execute-once dedup', () => {
 		// (R is NOT on its own chain).
 		await propagateToObservers(
 			DIAMOND_OBS,
-			'on1',
+			TERM_SECTION,
 			DIAMOND_TERM,
-			{ saved: [{ section_tipo: 'on1', section_id: DIAMOND_TERM }], removed: [] },
+			{ saved: [{ section_tipo: TERM_SECTION, section_id: DIAMOND_TERM }], removed: [] },
 			-1,
 		);
 		expect((getCounters().observers_cascade_converged_skipped ?? 0) - convergedBefore).toBe(1);
@@ -614,9 +684,9 @@ describe('recompute hops are gated on wrote:true', () => {
 		const missingBefore = getCounters().observers_component_to_search_missing ?? 0;
 		await propagateToObservers(
 			RELAY,
-			'on1',
+			TERM_SECTION,
 			TERM_ON,
-			{ saved: [{ section_tipo: 'on1', section_id: TERM_ON }], removed: [] },
+			{ saved: [{ section_tipo: TERM_SECTION, section_id: TERM_ON }], removed: [] },
 			-1,
 		);
 		// the recompute persisted (fresh mirror) …
@@ -632,9 +702,9 @@ describe('recompute hops are gated on wrote:true', () => {
 		// no write → `wrote` absent → no hop → FOURTH never runs.
 		await propagateToObservers(
 			RELAY,
-			'on1',
+			TERM_SECTION,
 			TERM_ON,
-			{ saved: [{ section_tipo: 'on1', section_id: TERM_ON }], removed: [] },
+			{ saved: [{ section_tipo: TERM_SECTION, section_id: TERM_ON }], removed: [] },
 			-1,
 		);
 		expect(await bagOf(MIRROR, TERM_ON)).toEqual([mirrorEntry(1, REF_ON)]);
@@ -652,9 +722,9 @@ describe('ambient transaction — hops are commit-gated', () => {
 			withTransaction(async () => {
 				await propagateToObservers(
 					OBSERVED,
-					'rsc205',
+					REF_SECTION,
 					REF_TX,
-					{ saved: [{ section_tipo: 'on1', section_id: TERM_TX }], removed: [] },
+					{ saved: [{ section_tipo: TERM_SECTION, section_id: TERM_TX }], removed: [] },
 					-1,
 				);
 				throw new Error('forced rollback');
@@ -667,9 +737,9 @@ describe('ambient transaction — hops are commit-gated', () => {
 		await withTransaction(async () => {
 			await propagateToObservers(
 				OBSERVED,
-				'rsc205',
+				REF_SECTION,
 				REF_TX,
-				{ saved: [{ section_tipo: 'on1', section_id: TERM_TX }], removed: [] },
+				{ saved: [{ section_tipo: TERM_SECTION, section_id: TERM_TX }], removed: [] },
 				-1,
 			);
 			// still inside the outer tx: the hop has NOT run yet
@@ -691,11 +761,13 @@ describe('runObserverCascadeHop ambient-transaction refusal (B6)', () => {
 			maxDepth: MAX_CASCADE_DEPTH,
 			visited: new Set(),
 			recomputed: new Set(),
-			chain: [`${OBSERVED}@rsc205/${REF_A}`, `${RELAY}@on1/${TERM_A}`],
+			chain: [`${OBSERVED}@${REF_SECTION}/${REF_A}`, `${RELAY}@${TERM_SECTION}/${TERM_A}`],
 		};
 		await expect(
-			withTransaction(() => runObserverCascadeHop(RELAY, 'on1', TERM_A, -1, new Date(), guard)),
-		).rejects.toThrow(/ambient transaction.*test99921@on1\/999999931/s);
+			withTransaction(() => runObserverCascadeHop(RELAY, TERM_SECTION, TERM_A, -1, new Date(), guard)),
+		).rejects.toThrow(
+			new RegExp(`ambient transaction.*${RELAY}@${TERM_SECTION}/${TERM_A}`, 's'),
+		);
 	});
 });
 
@@ -725,9 +797,9 @@ describe('leaked continuation — the hop drop is loud', () => {
 					maxDepth: MAX_CASCADE_DEPTH,
 					visited: new Set(),
 					recomputed: new Set(),
-					chain: [`leak@rsc205/${REF_A}`],
+					chain: [`leak@${REF_SECTION}/${REF_A}`],
 				};
-				await emitCascadeHop(guard, RELAY, 'relay', 'on1', TERM_A, -1, new Date());
+				await emitCascadeHop(guard, RELAY, 'relay', TERM_SECTION, TERM_A, -1, new Date());
 			})();
 			await sql.unsafe('SELECT 1', []);
 		});
@@ -751,7 +823,7 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 	test('inside an ambient transaction the real failure surfaces to the tx owner', async () => {
 		await expect(
 			withTransaction(async () => {
-				await propagateToObservers(RELAY, 'on1', TERM_A, { saved: brokenItems, removed: [] }, -1);
+				await propagateToObservers(RELAY, TERM_SECTION, TERM_A, { saved: brokenItems, removed: [] }, -1);
 			}),
 		).rejects.toThrow(/ambient transaction \(B6\)/);
 	});
@@ -759,7 +831,7 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 	test('outside a transaction the same failure is swallowed (never throws)', async () => {
 		const result = await propagateToObservers(
 			RELAY,
-			'on1',
+			TERM_SECTION,
 			TERM_A,
 			{ saved: brokenItems, removed: [] },
 			-1,
@@ -793,8 +865,8 @@ describe('W11: deletePortalLocator lock', () => {
 		const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
 		const response = await deletePortalLocator(
 			{ isGlobalAdmin: true, userId: -1 },
-			{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: 999999949 }, // no such row
-			{ locator: { type: 'dd96', section_id: '1', section_tipo: 'on1' } },
+			{ tipo: W11_PORTAL, section_tipo: REF_SECTION, section_id: 999999949 }, // no such row
+			{ locator: { type: 'dd96', section_id: '1', section_tipo: TERM_SECTION } },
 		);
 		// same as the historical missing-record answer: nothing removed, and the
 		// narrative says why (it is an outcome, never a refusal).
@@ -803,32 +875,33 @@ describe('W11: deletePortalLocator lock', () => {
 	});
 
 	test('two CONCURRENT removals on one record both survive (no lost update)', async () => {
-		// rsc387 (dd96) on rsc205 — the same door observer_native drives. The
-		// two locators point at NONEXISTENT on1 targets so the observer
+		// W11_PORTAL (dd96) on REF_SECTION — the same door observer_native
+		// drives. The two locators point at NONEXISTENT TERM_SECTION targets so
+		// the observer
 		// recompute the door fires is a no-op (rows.length === 0), keeping this
 		// test independent of the mirror machinery above.
 		const locator = (id: number, targetId: number) => ({
 			id,
 			type: 'dd96',
 			section_id: String(targetId),
-			section_tipo: 'on1',
-			from_component_tipo: 'rsc387',
+			section_tipo: TERM_SECTION,
+			from_component_tipo: W11_PORTAL,
 		});
 		await sql.unsafe(
-			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
-			[W11_RECORD, JSON.stringify({ rsc387: [locator(1, 999999941), locator(2, 999999942)] })],
+			`INSERT INTO ${SCRATCH_TABLE} (section_id, section_tipo, relation) VALUES ($1, '${REF_SECTION}', $2::text::jsonb)`,
+			[W11_RECORD, JSON.stringify({ [W11_PORTAL]: [locator(1, 999999941), locator(2, 999999942)] })],
 		);
 		const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
 		const remove = (targetId: number) =>
 			deletePortalLocator(
 				{ isGlobalAdmin: true, userId: -1 },
-				{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: W11_RECORD },
+				{ tipo: W11_PORTAL, section_tipo: REF_SECTION, section_id: W11_RECORD },
 				{
 					locator: {
 						type: 'dd96',
 						section_id: String(targetId),
-						section_tipo: 'on1',
-						from_component_tipo: 'rsc387',
+						section_tipo: TERM_SECTION,
+						from_component_tipo: W11_PORTAL,
 					},
 					ar_properties: ['section_tipo', 'section_id', 'type', 'from_component_tipo'],
 				},
@@ -837,7 +910,7 @@ describe('W11: deletePortalLocator lock', () => {
 		expect(first.removed).toBe(1);
 		expect(second.removed).toBe(1);
 		const rows = (await sql.unsafe(
-			`SELECT relation->'rsc387' AS bag FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`,
+			`SELECT relation->'${W11_PORTAL}' AS bag FROM ${SCRATCH_TABLE} WHERE section_tipo = '${REF_SECTION}' AND section_id = $1`,
 			[W11_RECORD],
 		)) as { bag: unknown[] | null }[];
 		// BOTH removals persisted — the unlocked RMW lost one of them.

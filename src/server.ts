@@ -54,9 +54,11 @@ import {
 // reach it transitively — the seam must not depend on incidental import paths.
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
+import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/export_hierarchy.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
 import { DedaloError } from './core/errors/dedalo_error.ts';
+import { HIERARCHY_IMPORT_DIR } from './core/install/paths.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
 import {
 	getSession,
@@ -481,6 +483,49 @@ async function serveClientAsset(
 }
 
 /**
+ * Hierarchy EXPORT download: GET /dedalo/install/import/hierarchy/<file>.
+ *
+ * The companion of the export_hierarchy maintenance widget, which writes its
+ * `.copy.gz` dumps into HIERARCHY_IMPORT_DIR and hands the panel a link per
+ * file. Nothing serves that directory otherwise — the TS engine publishes no
+ * static `install/` tree.
+ *
+ * Unlike its ontology-snapshot sibling below, this is NOT a public master
+ * surface: a hierarchy dump is the complete contents of a thesaurus, so the
+ * route is gated on an authenticated GLOBAL-ADMIN session — the same principal
+ * the maintenance area requires — and answers 404 (never 403) to everyone else,
+ * so an anonymous probe cannot even confirm a file exists.
+ *
+ * Basenames are allowlisted to exactly the two shapes the exporter produces
+ * (`<tipo>.copy.gz` with safeExportTipo's tipo grammar, and the timestamped
+ * `all_…` whole-table dump), and the resolved path is confined under the
+ * directory — the vendored SEED files share those names, which is correct: they
+ * are the same kind of artifact, offered by the same panel.
+ */
+async function serveHierarchyExportFile(pathname: string, request: Request, requestId: string) {
+	const notFound = () => notFoundResponse(requestId);
+	const sessionToken = readCookie(request.headers.get('cookie') ?? '', SESSION_COOKIE);
+	const session = sessionToken !== undefined ? getSession(sessionToken) : null;
+	if (session === null || session.isGlobalAdmin !== true) return notFound();
+	const fileName = pathname.slice(HIERARCHY_EXPORT_URL_PREFIX.length);
+	if (!/^[a-z]{2,}[0-9]+\.copy\.gz$/.test(fileName) && !/^all_[0-9_-]+\.copy\.gz$/.test(fileName)) {
+		return notFound();
+	}
+	const fullPath = resolve(HIERARCHY_IMPORT_DIR, fileName);
+	if (!fullPath.startsWith(HIERARCHY_IMPORT_DIR + sep)) return notFound();
+	const file = Bun.file(fullPath);
+	if (!(await file.exists())) return notFound();
+	return new Response(file, {
+		headers: {
+			'Content-Type': 'application/gzip',
+			'Content-Disposition': `attachment; filename="${fileName}"`,
+			'Cache-Control': 'no-store',
+			...SECURITY_HEADERS,
+		},
+	});
+}
+
+/**
  * Ontology-master snapshot serving (UPDATE_PROCESS Phase 2): GET
  * /dedalo/install/import/ontology/<major.minor>/<file> — the PHP deployment
  * serves the IO dir as plain static files under DEDALO_INSTALL_URL; remote
@@ -576,6 +621,40 @@ async function checkDbHealth(): Promise<boolean> {
 	return dbHealth.ok;
 }
 
+/**
+ * THE TEST-DATABASE FINGERPRINT ON `/health` — how `bun run test:client` proves
+ * the SERVER IT DRIVES is on the suite database and not on the application's.
+ *
+ * The client suite is the one tier that writes through a live server instead of
+ * through the suite's own connection, so the marker guard every other writer
+ * calls (src/core/test_data/test_database_marker.ts) could not see it. The
+ * runner now owns its server and asks it, over the wire, to identify its
+ * database; a mismatch is a hard refusal before a browser is even launched.
+ *
+ * TWO THINGS KEEP THIS FROM BEING A LEAK:
+ *  - DEV MODE ONLY. On the production posture (DEDALO_DEV_MODE unset/false) the
+ *    key is absent from the payload and no query is made — `/health` is
+ *    anonymous, and production must not answer questions about its database.
+ *  - IT IS A HASH, NEVER THE NAME. Only a caller that can already read the same
+ *    marker row can recompute and compare it (see testDatabaseFingerprint).
+ * `null` means "this server is NOT on a marked test database" — which is
+ * exactly what the runner refuses on.
+ */
+const DEV_MODE_HEALTH_DB_IDENTITY = readEnv('DEDALO_DEV_MODE') === 'true';
+async function healthTestDatabaseFingerprint(): Promise<string | null> {
+	if (!DEV_MODE_HEALTH_DB_IDENTITY) return null;
+	try {
+		const { testDatabaseFingerprint } = await import('./core/test_data/test_database_marker.ts');
+		return await testDatabaseFingerprint();
+	} catch (error) {
+		// A refusing marker (one naming another database) must not take /health
+		// down: it is a liveness probe. The runner sees a missing fingerprint and
+		// refuses, which is the outcome that matters.
+		console.error('[health] test-database fingerprint failed:', (error as Error).message);
+		return null;
+	}
+}
+
 /** The admin counters endpoint paths (S2-37; gates live in core/api/counters.ts). */
 const COUNTERS_PATHS: ReadonlySet<string> = new Set([
 	'/api/v1/counters',
@@ -664,6 +743,10 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				result: dbOk ? 'ok' : 'error',
 				entity: config.entity,
 				db: dbOk ? 'ok' : 'down',
+				// Dev mode only, and an opaque hash even then (see above).
+				...(DEV_MODE_HEALTH_DB_IDENTITY && dbOk
+					? { test_database: await healthTestDatabaseFingerprint() }
+					: {}),
 				request_id: context.requestId,
 			},
 			dbOk ? 200 : 503,
@@ -802,6 +885,12 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// handler (the copied client tree has no tag/ directory).
 	if (request.method === 'GET' && url.pathname.endsWith('/core/component_text_area/tag/')) {
 		return handleTagRequest(request, url);
+	}
+
+	// Hierarchy export downloads (admin-session-gated). Same ordering reason as
+	// the ontology route: no client subtree serves this path.
+	if (request.method === 'GET' && url.pathname.startsWith(HIERARCHY_EXPORT_URL_PREFIX)) {
+		return serveHierarchyExportFile(url.pathname, request, context.requestId);
 	}
 
 	// Ontology-master snapshot files (fail-closed on IS_AN_ONTOLOGY_SERVER).

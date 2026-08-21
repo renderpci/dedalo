@@ -1,0 +1,4542 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "dd128",
+	"source_section_tipo": "dd128",
+	"table": "matrix_users",
+	"kind": "seed",
+	"records": [
+		{
+			"section_id": 1,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "1"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential", "tm_bare_list_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "render"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alejandro Peña & Juan Francisco Onielfa"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "alex@render.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Desarrolladores</p>"
+						}
+					]
+				},
+				"media": {
+					"dd522": [
+						{
+							"id": 1,
+							"files_info": [
+								{
+									"quality": "1.5MB",
+									"extension": "jpg",
+									"file_name": "dd522_dd128_1.jpg",
+									"file_path": "/image/1.5MB/dd522_dd128_1.jpg",
+									"file_size": 143362,
+									"file_time": {
+										"day": 24,
+										"hour": 9,
+										"time": 65079106483,
+										"year": 2024,
+										"month": 10,
+										"minute": 34,
+										"second": 43,
+										"timestamp": "2024-10-24 09:34:43"
+									},
+									"file_exist": true
+								},
+								{
+									"quality": "thumb",
+									"extension": "jpg",
+									"file_name": "dd522_dd128_1.jpg",
+									"file_path": "/image/thumb/dd522_dd128_1.jpg",
+									"file_size": 12346,
+									"file_time": {
+										"day": 24,
+										"hour": 9,
+										"time": 65079106483,
+										"year": 2024,
+										"month": 10,
+										"minute": 34,
+										"second": 43,
+										"timestamp": "2024-10-24 09:34:43"
+									},
+									"file_exist": true
+								}
+							]
+						}
+					]
+				},
+				"data": {
+					"section_id": 1,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					],
+					"dd522": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list",
+				"dd522": "list"
+			}
+		},
+		{
+			"section_id": 2,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "2"
+			},
+			"reconstructed": true,
+			"gates": ["component_datalist_lifecycle_differential", "root_user_hidden_differential"],
+			"columns": {
+				"relation": {
+					"dd170": [
+						{
+							"id": 1,
+							"type": "dd675",
+							"section_id": "1",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 2,
+							"type": "dd675",
+							"section_id": "2",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 3,
+							"type": "dd675",
+							"section_id": "3",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 4,
+							"type": "dd675",
+							"section_id": "4",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 5,
+							"type": "dd675",
+							"section_id": "5",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 6,
+							"type": "dd675",
+							"section_id": "7",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 7,
+							"type": "dd675",
+							"section_id": "8",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 8,
+							"type": "dd675",
+							"section_id": "9",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 9,
+							"type": "dd675",
+							"section_id": "10",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 10,
+							"type": "dd675",
+							"section_id": "11",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 11,
+							"type": "dd675",
+							"section_id": "12",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 12,
+							"type": "dd675",
+							"section_id": "13",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 13,
+							"type": "dd675",
+							"section_id": "14",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						},
+						{
+							"id": 14,
+							"type": "dd675",
+							"section_id": "15",
+							"section_tipo": "dd153",
+							"from_component_tipo": "dd170"
+						}
+					]
+				},
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Manuel"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Manuel Gozalbes Fernández de Palencia"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "ritmo4@gmail.com"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Museu de Prehistòria de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd170": [
+						{
+							"count": 14
+						}
+					],
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd170": "edit",
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 3,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "3"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pere Pau"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pere Pau Ripollès Alegre"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "ripolles@uv.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Universitat de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 4,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "4"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "test"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "test"
+						}
+					]
+				},
+				"data": {
+					"section_id": 4,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 5,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "5"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "JMT"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "José Manuel Torregrosa Yago"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "j.manuel.torregrosa@uv.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigador. Universitat de València. 2013-2017.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 5,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 6,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "6"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francis"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francisco Jesús Suarez de Hoyo"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigador independiente</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 7,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "7"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Numancia"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Javier García Martínez"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Colaborador</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 7,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 8,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "8"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Leilani"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Leilani Stajer"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Liubliana. 2017-2018.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 9,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "9"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jose Maria Pérez"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jose Maria Pérez"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "jmaria.perez@fnmt.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Colaborador</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 9,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 10,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "10"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Cores"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Maria Cruz Cores Gomendio"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigadora independiente</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 10,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 11,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "11"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "testf"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "test"
+						}
+					]
+				},
+				"data": {
+					"section_id": 11,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 12,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "12"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Enrique"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Enrique del Río (duplicado)"
+						}
+					]
+				},
+				"data": {
+					"section_id": 12,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 13,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "13"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Maria"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Maria Gozalbes"
+						}
+					]
+				},
+				"data": {
+					"section_id": 13,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 14,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "14"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francesco"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francesco Stefanelli"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigador. Universitat de València. 2011-2017</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 14,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 15,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "15"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Elena Tollardo"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Elena Tollardo"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Ferrara. 2018.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 15,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 16,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "16"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Josep Sanchis"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Josep Sanchis Llorca"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Alumno colaborador. Universitat de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 16,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 17,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "17"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Victor Belles"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Victor Bellés Blasco"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Alumno colaborador. Universitat de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 17,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 18,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "18"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Julia Ferriz"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Julia Ferriz"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Administrativa. Universitat de València.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 18,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 19,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "19"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francesca Fede"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francesca Fede"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigadora. Universitat de València. 2018-2019.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 19,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 20,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "20"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "cparisot"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Charles Parisot-Sillon"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "parisot.charles@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 20,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 21,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "21"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "eneko"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Eneko Hiriart"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "eneko.hiriart@u-bordeaux-montaigne.fr"
+						}
+					]
+				},
+				"data": {
+					"section_id": 21,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 22,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "22"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Agustin"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Agustín Diez Castillo"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "agustin.diez@uv.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Universitat de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 22,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 23,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "23"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Gaelle"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Gaëlle Thévenin"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "glthvn@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 23,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 24,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "24"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "LucaG"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Luca Genitori"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Messina. 2019.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 24,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 25,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "25"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Cmata"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Consuelo Mata Parreño"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Universitat de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 25,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 26,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "26"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Cgomez"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Carlos Gómez Bellard"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "bellard@uv.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Universitat de València</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 26,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 27,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "27"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jin"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jin Mori"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Oporto. 2019-2020.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 27,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 28,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "28"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "mmaura"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Mariangela Maura"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Roma Tor Vergata. 2019</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 28,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 29,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "29"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "MJSG"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "María José Sánchez García"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigadora independiente</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 29,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 30,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "30"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Lauren"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Lauren Hart"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. 2019-2020.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 30,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 31,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "31"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ecollado"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Eva Collado Mataix"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Contrato Proyecto ARCH. Universitat de València. 2018-2021.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 31,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 32,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "32"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "MarinaP"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Marina Peralta"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas Universitat de Valencia. 2019.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 32,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 33,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "33"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "JuditS"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Judit Serrano"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "juditserrano19@hotmail.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigadora. Universitat de València.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 33,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 34,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "34"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "VicenteB"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Vicente Blasco López"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas Universitat de València. 2019.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 34,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 35,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "35"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "mjestaran"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "María José Estarán Tolosa"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "mjestaran@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 35,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 36,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "36"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pablo Cerda"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pablo Cerdà Insa"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Investigador. Universitat de València.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 36,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 37,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "37"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "EnriqueDR"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Enrique del Rio Herrmann"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "oftaluni@yahoo.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Colaborador</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 37,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 38,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "38"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jandro"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alejandro Bernat"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Desarrollador. 2020-2021.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 38,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 39,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "39"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Aitor"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Aitor Cano Espí"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas. Universitat de València. 2021.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 39,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 40,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "40"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "PabloRuiz"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Pablo Ruiz de Assin Valverde"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas. Universitat de València. 2021.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 40,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 41,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "41"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alberto Strano"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alberto Strano"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Bolonia. 2021.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 41,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 42,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "42"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "FJPerez"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Francisco Javier Pérez Rodríguez"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "fjavier.perez@jcyl.es"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Director Museo de Palencia</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 42,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 43,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "43"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "AndreuD"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Andreu Domingo"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas Universitat de València. 2022.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 43,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 44,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "44"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Vasiliki"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Vasiliki Stalika"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Prácticas programa Erasmus +. Universidad de Ioannina. 2022.</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 44,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 45,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "45"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "MiquelS"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Miquel Sánchez Signes"
+						}
+					]
+				},
+				"data": {
+					"section_id": 45,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 46,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "46"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Miquel"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Miquel Sánchez Signes"
+						}
+					]
+				},
+				"data": {
+					"section_id": 46,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 47,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "47"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "ruth"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ruth Pliego"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "rpliego@us.es"
+						}
+					]
+				},
+				"data": {
+					"section_id": 47,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 48,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "48"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Martacarzap"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Marta Carrasco Zapata"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "martacarzap.numismatica@gmail.com"
+						}
+					]
+				},
+				"media": {
+					"dd522": [
+						{
+							"id": 1,
+							"files_info": [
+								{
+									"quality": "1.5MB",
+									"extension": "jpg",
+									"file_name": "dd522_dd128_48.jpg",
+									"file_path": "/image/1.5MB/dd522_dd128_48.jpg",
+									"file_size": 46212,
+									"file_time": {
+										"day": 21,
+										"hour": 19,
+										"time": 65003889553,
+										"year": 2022,
+										"month": 6,
+										"minute": 59,
+										"second": 13,
+										"timestamp": "2022-06-21 19:59:13"
+									},
+									"file_exist": true
+								},
+								{
+									"quality": "thumb",
+									"extension": "jpg",
+									"file_name": "dd522_dd128_48.jpg",
+									"file_path": "/image/thumb/dd522_dd128_48.jpg",
+									"file_size": 10867,
+									"file_time": {
+										"day": 30,
+										"hour": 12,
+										"time": 65063565736,
+										"year": 2024,
+										"month": 4,
+										"minute": 42,
+										"second": 16,
+										"timestamp": "2024-04-30 12:42:16"
+									},
+									"file_exist": true
+								}
+							]
+						}
+					]
+				},
+				"data": {
+					"section_id": 48,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd522": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd522": "list"
+			}
+		},
+		{
+			"section_id": 49,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "49"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Kris"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Kris Lockyear"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Noviodunum@hotmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 49,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 50,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "50"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "IsabelRC"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Isabel Rodríguez Casanova"
+						}
+					]
+				},
+				"data": {
+					"section_id": 50,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 51,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "51"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "AliceB"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alice Baeta"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "alice.baeta96@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 51,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 52,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "52"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "XavierS"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Xavier Sicart"
+						}
+					]
+				},
+				"data": {
+					"section_id": 52,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 53,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "53"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "OscarC"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Òscar Caldés Aquilué"
+						}
+					]
+				},
+				"data": {
+					"section_id": 53,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 54,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "54"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "JorgeSJ"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jorge San Juan"
+						}
+					]
+				},
+				"data": {
+					"section_id": 54,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 55,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "55"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "FNMT"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "FNMT consulta"
+						}
+					]
+				},
+				"data": {
+					"section_id": 55,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 56,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "56"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Maria Chatziparadeisi"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Maria Chatziparadeisi"
+						}
+					]
+				},
+				"data": {
+					"section_id": 56,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 57,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "57"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Emma Gomes"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Emma Gomes"
+						}
+					]
+				},
+				"data": {
+					"section_id": 57,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 58,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "58"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "rca"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Rahel"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "rahel.ackermann@fundmuenzen.ch"
+						}
+					]
+				},
+				"data": {
+					"section_id": 58,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 59,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "59"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "jvf"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Jonas von Felten"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "jonas.vonfelten@fundmuenzen.ch"
+						}
+					]
+				},
+				"data": {
+					"section_id": 59,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 60,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "60"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Victor"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Victor Sabaté Vidal"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "victor.sabate@uv.es"
+						}
+					]
+				},
+				"data": {
+					"section_id": 60,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 61,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "61"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "RaulGonzalez"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Raul Gonzalez"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "raul.glopez@hotmail.com"
+						}
+					],
+					"dd135": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "<p>Colaborador</p>"
+						}
+					]
+				},
+				"data": {
+					"section_id": 61,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					],
+					"dd135": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list",
+				"dd135": "list"
+			}
+		},
+		{
+			"section_id": 62,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "62"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "DarioPliego"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Darío Pliego Flores"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "dario@frankygarage.es"
+						}
+					]
+				},
+				"data": {
+					"section_id": 62,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 63,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "63"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Manuel Tristan"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Manuel Tristán Martín Ruiz"
+						}
+					]
+				},
+				"data": {
+					"section_id": 63,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 64,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "64"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "AlbaPons"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Alba Pons"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "albapons4@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 64,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 65,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "65"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "EsperanzaC"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Esperanza Caballero Banda"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "esperanzacaballerobanda@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 65,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 66,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "66"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "RaquelPC"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Raquel Pérez córdoba"
+						}
+					]
+				},
+				"data": {
+					"section_id": 66,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 67,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "67"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "ManuPliego"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Manuel Pliego"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "manuelpliegoart@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 67,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 68,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "68"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "CarlesBrianso"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Carles Brianso"
+						}
+					]
+				},
+				"data": {
+					"section_id": 68,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 69,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "69"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "rpliego"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Ruth Pliego"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "rpliego@us.es"
+						}
+					]
+				},
+				"data": {
+					"section_id": 69,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 70,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "70"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "rpvazquez"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "ruth@pliego.eu"
+						}
+					]
+				},
+				"data": {
+					"section_id": 70,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd134": "list"
+			}
+		},
+		{
+			"section_id": 71,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "71"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "VPrastaro"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Viola Prastaro"
+						}
+					]
+				},
+				"data": {
+					"section_id": 71,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 72,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "72"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "elisasicher"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Elisa Sicher"
+						}
+					]
+				},
+				"data": {
+					"section_id": 72,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 73,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "73"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Bartolome"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Bartolome Mora Serrano"
+						}
+					]
+				},
+				"data": {
+					"section_id": 73,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list"
+			}
+		},
+		{
+			"section_id": 74,
+			"source": {
+				"section_tipo": "dd128",
+				"section_id": "74"
+			},
+			"reconstructed": true,
+			"gates": ["root_user_hidden_differential"],
+			"columns": {
+				"string": {
+					"dd132": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "antoniomarquez"
+						}
+					],
+					"dd452": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "Antonio Márquez Árquez"
+						}
+					],
+					"dd134": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "antoniomarqeuzarquez@gmail.com"
+						}
+					]
+				},
+				"data": {
+					"section_id": 74,
+					"section_tipo": "dd128"
+				},
+				"meta": {
+					"dd132": [
+						{
+							"count": 1
+						}
+					],
+					"dd452": [
+						{
+							"count": 1
+						}
+					],
+					"dd134": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"dd132": "list",
+				"dd452": "list",
+				"dd134": "list"
+			}
+		}
+	]
+}

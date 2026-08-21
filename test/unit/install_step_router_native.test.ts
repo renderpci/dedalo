@@ -135,10 +135,18 @@ const CHECK_DIRS_SNIPPET = [
 ].join('\n');
 
 function runCheckDirsChild(): Record<string, unknown> {
+	// The child models a FRESH INSTALL, so it runs with the test-media seam OFF:
+	// DEDALO_TEST_MEDIA_ROOT outranks MEDIA_PATH (src/config/config.ts), and the
+	// suite's own root would therefore replace the scratch one this gate points at
+	// — the child would report every path as "escaped" and the cases would SKIP.
+	// Unsetting it is also the honest shape: this gate is about the installer on a
+	// box with no suite anywhere, where the media guard is inert by construction.
+	const childEnv: Record<string, string | undefined> = { ...process.env };
+	childEnv.DEDALO_TEST_MEDIA_ROOT = undefined;
 	const child = Bun.spawnSync(['bun', '-e', CHECK_DIRS_SNIPPET], {
 		cwd: ROOT,
 		env: {
-			...process.env,
+			...childEnv,
 			ZZI_SCRATCH_ROOT: SCRATCH_ROOT,
 			DEDALO_INSTALL_PRIVATE_DIR: join(SCRATCH_ROOT, 'private'),
 			MEDIA_PATH: join(SCRATCH_ROOT, 'media'),

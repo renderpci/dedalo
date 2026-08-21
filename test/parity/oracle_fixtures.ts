@@ -44,6 +44,7 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { unmapRqo } from './normalize.ts';
 
 export type OracleMode = 'live' | 'record' | 'fixtures';
 
@@ -287,18 +288,35 @@ export function fixtureStoreStats(): { files: number; interactions: number } {
 	return { files: loadedFileCount, interactions: store.size };
 }
 
-/** Serve one recorded interaction, or throw with re-harvest guidance. */
+/**
+ * Serve one recorded interaction, or throw with re-harvest guidance.
+ *
+ * THE TEST-TLD SEAM (WC-2026-08-19-test-tld-replay). A migrated gate writes its
+ * RQO in generic `test`-TLD terms, but the store is keyed by the request PHP
+ * actually answered — an install-term one. So the request travels back through
+ * the committed clone map (`unmapRqo`) BEFORE it is hashed. The transform is a
+ * no-op for a request that names no clone (every clone target lives in a
+ * `test*` TLD, above the hand-authored `test` band), so an unmigrated gate
+ * hashes exactly as it did before this seam existed — verified by the whole
+ * parity tier.
+ *
+ * A miss still throws, and now says WHICH request was hashed: a lookup that
+ * silently fell back to the un-mapped form would turn a mis-mapped gate into a
+ * gate asserting against the wrong interaction.
+ */
 export function lookupInteraction(
 	kind: 'json' | 'raw',
 	rqo: Record<string, unknown>,
 ): RecordedInteraction {
-	const hash = hashRequest(kind, rqo);
+	const unmapped = unmapRqo(rqo);
+	const hash = hashRequest(kind, unmapped);
 	const found = loadStore().get(hash);
 	if (!found) {
+		const mapped = canonicalJson(unmapped) !== canonicalJson(rqo);
 		throw new Error(
 			`ORACLE_MODE=fixtures: no recorded oracle response for ${kind} request action='${String(
 				rqo.action,
-			)}' (hash ${hash}). Either the gate issues a request that was never harvested (re-run \`bun run scripts/oracle_harvest.ts\` while the PHP oracle is alive), or the request is non-deterministic / side-effecting and the gate belongs in FIXTURE_EXEMPT_GATES (test/parity/oracle_fixtures.ts). See engineering/ORACLE_HARVEST.md.`,
+			)}' (hash ${hash}${mapped ? ', hashed after unmapRqo through src/core/test_data/test_tld_tipo_map.json' : ''}). Either the gate issues a request that was never harvested (re-run \`bun run scripts/oracle_harvest.ts\` while the PHP oracle is alive), or the request is non-deterministic / side-effecting and the gate belongs in FIXTURE_EXEMPT_GATES (test/parity/oracle_fixtures.ts). See engineering/ORACLE_HARVEST.md.${mapped ? `\nUnmapped request: ${canonicalJson(unmapped)}` : ''}`,
 		);
 	}
 	return found;

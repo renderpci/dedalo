@@ -24,6 +24,10 @@
  * truncated transfer), and it fails exactly where the layered TIFF failed — in
  * the probe/convert pass, after the move.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -40,6 +44,7 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_derivative_failure_${process.pid}`;
 const image = mustGet(mediaTypeOf('component_image'), 'component_image spec');
@@ -72,6 +77,9 @@ const scratchIds: number[] = [];
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 });
 afterAll(async () => {
 	rmSync(ROOT, { recursive: true, force: true });
@@ -96,8 +104,8 @@ afterAll(async () => {
 
 describe('processUploadedFile: the original is indexed even when the derivatives fail', () => {
 	const identity: MediaIdentity = {
-		componentTipo: 'rsc29',
-		sectionTipo: 'rsc170',
+		componentTipo: 'test99',
+		sectionTipo: 'test3',
 		sectionId: 90,
 		lang: null,
 	};
@@ -118,23 +126,23 @@ describe('processUploadedFile: the original is indexed even when the derivatives
 
 		// The failure is REPORTED, never swallowed — one message per failing pass.
 		expect(result.derivativeErrors.length).toBe(1);
-		expect(result.derivativeErrors[0]).toContain('rsc29_rsc170_90.jpg');
+		expect(result.derivativeErrors[0]).toContain('test99_test3_90.jpg');
 
 		// The index is intact: files_info describes the original that landed.
 		const original = result.filesInfo.find((entry) => entry.quality === image.originalQuality);
 		expect(original).toBeDefined();
 		expect(existsSync(`${ROOT}${mustGet(original, 'original entry').file_path}`)).toBe(true);
-		expect(result.originalFileName).toBe('rsc29_rsc170_90.jpg');
+		expect(result.originalFileName).toBe('test99_test3_90.jpg');
 
 		// The moved file is INTACT and the staged source is consumed — the move is
 		// irreversible, which is precisely why nothing after it may abort.
-		const stored = `${ROOT}/image/original/rsc29_rsc170_90.jpg`;
+		const stored = `${ROOT}/image/original/test99_test3_90.jpg`;
 		expect(readFileSync(stored, 'utf8')).toBe(BROKEN_BYTES);
 		expect(existsSync(`${stagingDir(USER, 'kdfail', ROOT)}/broken.jpg`)).toBe(false);
 
 		// The tiers that could not be built are absent — the record is honest about
 		// what exists rather than claiming a derivative it never wrote.
-		expect(existsSync(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_90.jpg`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/${image.defaultQuality}/test99_test3_90.jpg`)).toBe(false);
 		expect(result.filesInfo.some((entry) => entry.quality === 'thumb')).toBe(false);
 	});
 
@@ -190,7 +198,7 @@ describe('an UNWRITABLE configured twin is reported, never silently skipped', ()
 		"const spec = mediaTypeOf('component_image');",
 		'const result = await processUploadedFile({',
 		'\tspec,',
-		"\tidentity: { componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 92, lang: null },",
+		"\tidentity: { componentTipo: 'test99', sectionTipo: 'test3', sectionId: 92, lang: null },",
 		"\tpathOpts: { initialMediaPath: '', maxItemsFolder: null, mediaRoot: process.env.PROBE_MEDIA_ROOT },",
 		'\tuserId: -1,',
 		"\tkeyDir: 'kdjxl',",
@@ -254,7 +262,7 @@ describe('an UNWRITABLE configured twin is reported, never silently skipped', ()
 		// pass every post-condition, enter files_info and be served with the wrong
 		// MIME. Nothing named .jxl may exist anywhere under the media root.
 		expect(out.qualities.some((entry) => entry.endsWith('.jxl'))).toBe(false);
-		expect(existsSync(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_92.jxl`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/${image.defaultQuality}/test99_test3_92.jxl`)).toBe(false);
 	});
 });
 

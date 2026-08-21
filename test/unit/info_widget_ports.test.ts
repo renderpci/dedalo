@@ -13,6 +13,10 @@
  * humanizer. Reconcile against a live oracle when an instance exists
  * (rewrite/LEDGER.md component_info widgets row).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { get_archive_states } from '../../src/core/components/component_info/widgets/dmm/get_archive_states.ts';
@@ -23,7 +27,10 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 
 const created: { table: string; sectionTipo: string; sectionId: number }[] = [];
 
-function track(sectionTipo: string, sectionId: number, table = 'matrix'): number {
+// RESOLVED, not assumed: a cloned `test` section carries its own `matrix_table`
+// relation (→ `matrix_test`), so a hard-coded `matrix` writes where the engine
+// will never read.
+function track(sectionTipo: string, sectionId: number, table = 'matrix_test'): number {
 	created.push({ table, sectionTipo, sectionId });
 	return sectionId;
 }
@@ -36,7 +43,7 @@ async function setColumn(
 	items: unknown[],
 ): Promise<void> {
 	await sql.unsafe(
-		`UPDATE matrix SET ${column} = COALESCE(${column}, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
+		`UPDATE matrix_test SET ${column} = COALESCE(${column}, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
 		 WHERE section_tipo = $3 AND section_id = $4`,
 		[componentTipo, JSON.stringify(items), sectionTipo, sectionId],
 	);
@@ -46,7 +53,7 @@ async function setColumn(
  * Remove a component from a column entirely — "this record has NO datum here".
  *
  * Required because record BIRTH is not a blank slate: `createSectionRecord`
- * plants every `dato_default` the ontology declares, and `numisdata57`
+ * plants every `dato_default` the ontology declares, and `test6139`
  * declares one (`dato_default: [{section_tipo:'dd64', section_id:'1'}]`).
  * get_archive_states buckets purely on `section_id` (PHP
  * `array_column($ar_answer,'section_id')`), so that default lands in the
@@ -61,7 +68,7 @@ async function clearColumn(
 	componentTipo: string,
 ): Promise<void> {
 	await sql.unsafe(
-		`UPDATE matrix SET ${column} = COALESCE(${column}, '{}'::jsonb) - $1::text
+		`UPDATE matrix_test SET ${column} = COALESCE(${column}, '{}'::jsonb) - $1::text
 		 WHERE section_tipo = $2 AND section_id = $3`,
 		[componentTipo, sectionTipo, sectionId],
 	);
@@ -78,52 +85,52 @@ const locatorOf = (sectionTipo: string, sectionId: number, from: string, id = 1)
 const fixtures = { host: 0, coinA: 0, coinB: 0, coinC: 0 };
 
 function contextFor(sectionId: number): WidgetContext {
-	return { sectionTipo: 'numisdata3', sectionId, mode: 'list', lang: 'lg-spa' };
+	return { sectionTipo: 'test6099', sectionId, mode: 'list', lang: 'lg-spa' };
 }
 
 beforeAll(async () => {
 	// host archive with a 3-coin portal; coins carry radio_button states
-	// (numisdata57 'used' = answer / numisdata157 'duplicated' = closed) and
-	// date pairs (numisdata491 date_in / numisdata1371 date_out).
-	fixtures.host = track('numisdata3', await createSectionRecord('numisdata3', -1));
-	fixtures.coinA = track('numisdata4', await createSectionRecord('numisdata4', -1));
-	fixtures.coinB = track('numisdata4', await createSectionRecord('numisdata4', -1));
-	fixtures.coinC = track('numisdata4', await createSectionRecord('numisdata4', -1));
+	// (test6139 'used' = answer / test6226 'duplicated' = closed) and
+	// date pairs (test6374 date_in / test6667 date_out).
+	fixtures.host = track('test6099', await createSectionRecord('test6099', -1));
+	fixtures.coinA = track('test6100', await createSectionRecord('test6100', -1));
+	fixtures.coinB = track('test6100', await createSectionRecord('test6100', -1));
+	fixtures.coinC = track('test6100', await createSectionRecord('test6100', -1));
 	// Every coin starts from a DECLARED state, never from whatever record birth
 	// leaves behind: wipe the two state components on all three, then plant only
 	// what each scenario means (coinC stays wiped — it is the unanswered one).
 	for (const coin of [fixtures.coinA, fixtures.coinB, fixtures.coinC]) {
-		await clearColumn('numisdata4', coin, 'relation', 'numisdata57');
-		await clearColumn('numisdata4', coin, 'relation', 'numisdata157');
+		await clearColumn('test6100', coin, 'relation', 'test6139');
+		await clearColumn('test6100', coin, 'relation', 'test6226');
 	}
 	await setColumn(
-		'numisdata3',
+		'test6099',
 		fixtures.host,
 		'relation',
-		'numisdata77',
+		'test6157',
 		[fixtures.coinA, fixtures.coinB, fixtures.coinC].map((coin, index) =>
-			locatorOf('numisdata4', coin, 'numisdata77', index + 1),
+			locatorOf('test6100', coin, 'test6157', index + 1),
 		),
 	);
 	// coinA: answer affirmative, closed affirmative; dates 2020-01-01..2020-03-16
-	await setColumn('numisdata4', fixtures.coinA, 'relation', 'numisdata57', [
-		locatorOf('numisdata341', 1, 'numisdata57'),
+	await setColumn('test6100', fixtures.coinA, 'relation', 'test6139', [
+		locatorOf('test6337', 1, 'test6139'),
 	]);
-	await setColumn('numisdata4', fixtures.coinA, 'relation', 'numisdata157', [
-		locatorOf('numisdata341', 1, 'numisdata157'),
+	await setColumn('test6100', fixtures.coinA, 'relation', 'test6226', [
+		locatorOf('test6337', 1, 'test6226'),
 	]);
-	await setColumn('numisdata4', fixtures.coinA, 'date', 'numisdata491', [
+	await setColumn('test6100', fixtures.coinA, 'date', 'test6374', [
 		{ id: 1, start: { year: 2020, month: 1, day: 1 } },
 	]);
-	await setColumn('numisdata4', fixtures.coinA, 'date', 'numisdata1371', [
+	await setColumn('test6100', fixtures.coinA, 'date', 'test6667', [
 		{ id: 1, start: { year: 2020, month: 3, day: 16 } },
 	]);
 	// coinB: answer negative; date_in only (2021-05-10) and NOTHING later →
 	// +1 day estimate path
-	await setColumn('numisdata4', fixtures.coinB, 'relation', 'numisdata57', [
-		locatorOf('numisdata341', 2, 'numisdata57'),
+	await setColumn('test6100', fixtures.coinB, 'relation', 'test6139', [
+		locatorOf('test6337', 2, 'test6139'),
 	]);
-	await setColumn('numisdata4', fixtures.coinB, 'date', 'numisdata491', [
+	await setColumn('test6100', fixtures.coinB, 'date', 'test6374', [
 		{ id: 1, start: { year: 2021, month: 5, day: 10 } },
 	]);
 	// coinC: no states (explicitly cleared above), no dates — excluded from both
@@ -151,9 +158,9 @@ afterAll(async () => {
 const STATES_IPO = [
 	{
 		input: [
-			{ type: 'source', section_tipo: 'self', component_tipo: 'numisdata77' },
-			{ type: 'answer', section_tipo: 'current', component_tipo: 'numisdata57' },
-			{ type: 'closed', section_tipo: 'current', component_tipo: 'numisdata157' },
+			{ type: 'source', section_tipo: 'self', component_tipo: 'test6157' },
+			{ type: 'answer', section_tipo: 'current', component_tipo: 'test6139' },
+			{ type: 'closed', section_tipo: 'current', component_tipo: 'test6226' },
 		],
 		output: [
 			'closed_afirmative',
@@ -177,9 +184,9 @@ const STATES_IPO = [
 const SUM_DATES_IPO = [
 	{
 		input: [
-			{ type: 'source', section_tipo: 'self', component_tipo: 'numisdata77' },
-			{ type: 'date_in', section_tipo: 'current', component_tipo: 'numisdata491' },
-			{ type: 'date_out', section_tipo: 'current', component_tipo: 'numisdata1371' },
+			{ type: 'source', section_tipo: 'self', component_tipo: 'test6157' },
+			{ type: 'date_in', section_tipo: 'current', component_tipo: 'test6374' },
+			{ type: 'date_out', section_tipo: 'current', component_tipo: 'test6667' },
 		],
 		output: [
 			{ id: 'sum_intervals' },

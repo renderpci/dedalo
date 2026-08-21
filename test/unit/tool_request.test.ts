@@ -9,6 +9,8 @@
  * gates are asserted one by one: unknown tool, unregistered method,
  * non-admin denial (ledgered), target mismatch, missing params.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the restored component and the
+// mismatch probes are opaque tipos, so they now name generic `test` nodes.
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -23,7 +25,7 @@ import { cleanScratchRecord } from '../helpers/test_data.ts';
 const REAL_RECORD_SCOPE = { ...realRecordScope };
 
 const SECTION_TIPO = 'test2';
-const COMPONENT_TIPO = 'numisdata16'; // input_text (string column) — the standing test fixture tipo
+const COMPONENT_TIPO = 'test52'; // input_text (string column) — the standing test fixture tipo
 const LANG = 'lg-spa';
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
@@ -130,10 +132,10 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 		expect(mismatched.code).toBe('request.invalid_options');
 		expect(mismatched.publicMessage).toBe('matrix_id does not belong to the requested target');
 
-		// Same section+record, WRONG component tipo: a snapshot of numisdata16
+		// Same section+record, WRONG component tipo: a snapshot of test52
 		// must never be restorable into another component's slot.
 		const otherTipo = await refusalOf(
-			dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions({ tipo: 'numisdata17' })),
+			dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions({ tipo: 'test162' })),
 		);
 		expect(otherTipo.code).toBe('request.invalid_options');
 		expect(otherTipo.publicMessage).toBe('matrix_id does not belong to the requested target');
@@ -189,7 +191,7 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 		// (the shape a dataframe-paired component snapshot has).
 		const mixed = [
 			{ id: 1, lang: LANG, value: 'MAIN-ONLY' },
-			{ type: 'dd490', section_id: 9, section_tipo: 'numisdata9', from_component_tipo: 'x1' },
+			{ type: 'dd490', section_id: 9, section_tipo: 'test3', from_component_tipo: 'x1' },
 			{ main_component_tipo: COMPONENT_TIPO, section_id_key: 1 }, // legacy frame shape
 		];
 		const inserted = (await sql.unsafe(

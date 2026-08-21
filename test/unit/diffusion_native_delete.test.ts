@@ -10,8 +10,11 @@
  *
  * dd1758 writes are avoided (logActivity=false); the DB is never mutated.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the sql diffusion section is
+// PROVISIONED by the `zzd` situation, so the seam test no longer probes an
+// install's sections (and can no longer skip itself into a silent pass).
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { NativeSqlDeleteTarget } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import {
 	deleteDiffusionRecord,
@@ -20,71 +23,63 @@ import {
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import { executeSqlDeleteTargets } from '../../src/diffusion/targets/mariadb/delete_record.ts';
+import {
+	countZzdOntology,
+	dropZzdOntology,
+	SQL_KEY_ONE,
+	SQL_KEY_TWO,
+	SQL_SECTION,
+	seedZzdOntology,
+} from '../helpers/zzd_diffusion_fixture.ts';
 
-afterAll(() => {
-	resetNativeDiffusionSqlDeleteForTests();
+/** The two sql targets the fixture guarantees on SQL_SECTION. */
+const FIXTURE_KEYS = [SQL_KEY_ONE, SQL_KEY_TWO].sort();
+
+beforeAll(async () => {
+	const { preCount } = await seedZzdOntology();
+	expect(preCount).toBe(0);
 });
 
-/** Find a real section with ≥1 sql diffusion target (read-only). */
-async function findSqlDiffusionSection(): Promise<{
-	sectionTipo: string;
-	keys: string[];
-} | null> {
-	// The numisdata_mib domain publishes most numisdata sections; probe a few.
-	for (const sectionTipo of ['numisdata4', 'rsc197', 'numisdata3', 'numisdata57']) {
-		const targets = await getSectionDiffusionTargets(sectionTipo);
-		const keys = targets
-			.filter((target) => target.type === 'sql' || target.type === 'socrata')
-			.map((target) => `${target.database_name}|${target.table_name}`);
-		if (keys.length > 0) return { sectionTipo, keys };
-	}
-	return null;
-}
-
-// Fixture detection at COLLECTION time (top-level await) so a missing fixture
-// gates the tests via test.if → reported SKIP, never a silent fake PASS (the
-// old `if (found === null) return` pattern). Read-only probe.
-const found = await findSqlDiffusionSection().catch(() => null);
-if (found === null) {
-	console.warn('no sql diffusion section in this install — seam tests SKIPPED');
-}
-/** Fixture-gated test: SKIP (visibly) when no sql diffusion section exists. */
-const testIfSection = test.if(found !== null);
+afterAll(async () => {
+	resetNativeDiffusionSqlDeleteForTests();
+	await dropZzdOntology();
+	expect(await countZzdOntology()).toBe(0);
+});
 
 describe('native diffusion sql delete (registration seam)', () => {
-	testIfSection(
-		'registered executor receives the engine-wire targets; outcome splits by confirmation',
-		async () => {
-			// Deeper check stays loud: the gate above guarantees found, but a
-			// regression in the gating itself must throw, not quietly pass.
-			if (found === null) throw new Error('gated test ran without a fixture');
-			const seen: NativeSqlDeleteTarget[][] = [];
-			registerNativeDiffusionSqlDelete(async (targets) => {
-				seen.push(targets);
-				// Confirm all but the first target — exercises the pending split.
-				return {
-					deleted: targets.slice(1).map((t) => `${t.database_name}|${t.table_name}`),
-					errors: [],
-				};
-			});
+	test('the fixture section really carries the two sql targets', async () => {
+		const keys = (await getSectionDiffusionTargets(SQL_SECTION))
+			.filter((target) => target.type === 'sql' || target.type === 'socrata')
+			.map((target) => `${target.database_name}|${target.table_name}`)
+			.sort();
+		expect(keys).toEqual(FIXTURE_KEYS);
+	});
 
-			const outcome = await deleteDiffusionRecord(found.sectionTipo, 999999901, false);
+	test('registered executor receives the engine-wire targets; outcome splits by confirmation', async () => {
+		const seen: NativeSqlDeleteTarget[][] = [];
+		registerNativeDiffusionSqlDelete(async (targets) => {
+			seen.push(targets);
+			// Confirm all but the first target — exercises the pending split.
+			return {
+				deleted: targets.slice(1).map((t) => `${t.database_name}|${t.table_name}`),
+				errors: [],
+			};
+		});
 
-			expect(seen.length).toBe(1);
-			const call = seen[0] ?? [];
-			expect(call.length).toBe(found.keys.length);
-			for (const target of call) {
-				expect(typeof target.database_name).toBe('string');
-				expect(typeof target.table_name).toBe('string');
-				expect(target.section_ids).toEqual([999999901]);
-				expect(target.section_tipo).toBe(found.sectionTipo);
-			}
-			expect(outcome.pending).toContain(found.keys[0] ?? '');
-			for (const key of found.keys.slice(1)) {
-				expect(outcome.deleted).toContain(key);
-			}
-		},
-	);
+		const outcome = await deleteDiffusionRecord(SQL_SECTION, 999999901, false);
+
+		expect(seen.length).toBe(1);
+		const call = seen[0] ?? [];
+		const key = (t: NativeSqlDeleteTarget): string => `${t.database_name}|${t.table_name}`;
+		expect(call.map(key).sort()).toEqual(FIXTURE_KEYS);
+		for (const target of call) {
+			expect(target.section_ids).toEqual([999999901]);
+			expect(target.section_tipo).toBe(SQL_SECTION);
+		}
+		// the FIRST target was not confirmed → pending; the rest → deleted
+		expect(outcome.pending).toEqual([key(call[0] as NativeSqlDeleteTarget)]);
+		expect(outcome.deleted).toEqual(call.slice(1).map(key));
+	});
 
 	// (The 'explicit socketPath forces the legacy engine path' test retired at
 	// the 2026-07-11 cutover with the socket plumbing itself.)
@@ -92,7 +87,7 @@ describe('native diffusion sql delete (registration seam)', () => {
 	test('real executor: missing table and missing database are idempotent successes', async () => {
 		const result = await executeSqlDeleteTargets([
 			{
-				database_name: 'web_numisdata_mib',
+				database_name: 'zzd_probe_db',
 				table_name: 'dedalo_ts_never_created_table',
 				section_ids: [1],
 			},
@@ -103,7 +98,7 @@ describe('native diffusion sql delete (registration seam)', () => {
 			},
 		]);
 		expect(result.deleted).toEqual([
-			'web_numisdata_mib|dedalo_ts_never_created_table',
+			'zzd_probe_db|dedalo_ts_never_created_table',
 			'dedalo_ts_no_such_db|whatever',
 		]);
 		expect(result.errors).toEqual([]);
@@ -123,13 +118,13 @@ describe('native diffusion sql delete (registration seam)', () => {
 		overrideMediaIndexBaseForTests(base);
 		try {
 			await applyTableState(
-				'web_numisdata_mib',
+				'zzd_probe_db',
 				'zz_marker_probe_missing_table',
-				'rsc167',
+				SQL_SECTION,
 				[90001],
 				[],
 			);
-			const marker = join(base, 'pub/rsc167_90001');
+			const marker = join(base, `pub/${SQL_SECTION}_90001`);
 			expect(
 				await fs.access(marker).then(
 					() => true,
@@ -139,16 +134,16 @@ describe('native diffusion sql delete (registration seam)', () => {
 
 			const result = await executeSqlDeleteTargets([
 				{
-					database_name: 'web_numisdata_mib',
+					database_name: 'zzd_probe_db',
 					// NON-scratch name (the store's dedalo_ts_* guard would no-op the
 					// marker apply); still missing in MariaDB → errno-1146 tolerated,
 					// so the real database is never touched.
 					table_name: 'zz_marker_probe_missing_table',
 					section_ids: [90001],
-					section_tipo: 'rsc167',
+					section_tipo: SQL_SECTION,
 				},
 			]);
-			expect(result.deleted).toEqual(['web_numisdata_mib|zz_marker_probe_missing_table']);
+			expect(result.deleted).toEqual(['zzd_probe_db|zz_marker_probe_missing_table']);
 			expect(
 				await fs.access(marker).then(
 					() => true,
@@ -157,7 +152,7 @@ describe('native diffusion sql delete (registration seam)', () => {
 			).toBe(false);
 			expect(
 				await fs
-					.access(join(base, 'dbs/web_numisdata_mib/zz_marker_probe_missing_table/rsc167_90001'))
+					.access(join(base, `dbs/zzd_probe_db/zz_marker_probe_missing_table/${SQL_SECTION}_90001`))
 					.then(
 						() => true,
 						() => false,

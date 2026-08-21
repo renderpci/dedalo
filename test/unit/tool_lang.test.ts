@@ -4,6 +4,8 @@
  * quota/failure short-circuits are checked; both modules load and share the core.
  * The real Babel HTTP call + the DB write drive are ledgered (external engine).
  */
+// Migrated to the generic `test` TLD 2026-08-19: the translated component is an opaque
+// input_text tipo, so it now names the generic `test52`.
 
 import { afterAll, describe, expect, mock, test } from 'bun:test';
 import { isDedaloError } from '../../src/core/errors/index.ts';
@@ -127,7 +129,7 @@ describe('runAutomaticTranslation — gates and loud failures', () => {
 	}
 
 	const options = {
-		component_tipo: 'numisdata16',
+		component_tipo: 'test52',
 		section_tipo: 'test2',
 		section_id: 905301,
 		source_lang: 'lg-eng',

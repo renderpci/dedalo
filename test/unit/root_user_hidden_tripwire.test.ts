@@ -21,6 +21,10 @@
  * and the resolve_data injected-chip path must still reach -1, or the client
  * silently loses the "who = root" labels. Both directions are pinned here.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import '../../src/core/components/registry.ts';
@@ -159,7 +163,7 @@ describe('root user record stays resolvable by the direct-fetch paths (requires 
 	test('resolve_data keeps the root chip for a NON-admin while still dropping out-of-scope records', async () => {
 		// Without the read.ts exemption, the AUTHZ-02 loop would now drop the
 		// root chip (isRecordInScope is false post-filter) and "who = root"
-		// would silently vanish for non-admins. The gated numisdata267 record
+		// would silently vanish for non-admins. The gated test6310 record
 		// doubles as the control: AUTHZ-02 still drops what it always dropped.
 		const rqo = {
 			source: {
@@ -167,7 +171,7 @@ describe('root user record stays resolvable by the direct-fetch paths (requires 
 				tipo: 'dd578', // 'Who' — component_autocomplete → dd128
 				section_tipo: 'dd15',
 				lang: 'lg-nolan',
-				value: [ROOT_LOCATOR, { section_tipo: 'numisdata267', section_id: '1' }],
+				value: [ROOT_LOCATOR, { section_tipo: 'test6310', section_id: '1' }],
 			},
 		} as unknown as Rqo;
 		const data = await resolveSearchData(rqo, NO_PROJECTS);
@@ -175,6 +179,6 @@ describe('root user record stays resolvable by the direct-fetch paths (requires 
 		// WC-2026-08-10-section-id-int-canonical: the echo canonicalizes the
 		// record address to int, so the chip is "section_id":-1 (was '"-1"').
 		expect(emitted).toContain('"section_id":-1');
-		expect(emitted).not.toContain('numisdata267');
+		expect(emitted).not.toContain('test6310');
 	});
 });

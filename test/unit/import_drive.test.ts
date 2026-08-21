@@ -5,6 +5,10 @@
  * in afterAll) so no real record is mutated (scratch-twin hygiene). This closes
  * the previously-ledgered "CSV→DB execute drive".
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
@@ -15,8 +19,8 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { conformImportData, unwrapDedaloData } from '../../src/core/tools/import_data.ts';
 
-const SECTION = 'ich135';
-const INPUT_TEXT = 'ich137';
+const SECTION = 'test2966';
+const INPUT_TEXT = 'test2968';
 const USER = -1;
 
 let scratchId: number | null = null;

@@ -4,25 +4,45 @@
  * indexation_grid::build_indexation_grid). The thesaurus "show indexations"
  * grid: ts_object.js show_indexations → dd_grid view 'indexation'.
  *
- * The corpus exercises every indexation_list config shape live on this
- * install: rsc897 (rsc205 publications: head+row, image/date/portal-with-
- * children/select_lang cells + pdf-format text_area custom columns),
- * numisdata247 (numisdata5: section_id cells, leaf portals, default-
- * request-config recursion), tchi92 (thesaurus records with portal+image
- * sub-ddo), oh6 (rsc167 tag_id locators grouped under section_top oh1),
- * a MISSING config (rsc420 → group skipped), a section with no config at
- * all (numisdata6 → empty grid), multi-section grids and pagination.
- * The whole grid JSON must be DEEP-EQUAL to the oracle's.
+ * The corpus exercises every indexation_list config shape the clone carries:
+ * the rsc205 publications config (head+row, image/date/portal-with-children/
+ * select_lang cells + pdf-format text_area custom columns), test6101
+ * (section_id cells, leaf portals, default-request-config recursion),
+ * testimmovable1 (thesaurus records with portal+image sub-ddo), rsc167 tag_id
+ * locators grouped under a section_top, a MISSING config (rsc420 → group
+ * skipped), a section with no config at all (testmint1 → empty grid),
+ * multi-section grids and pagination. The whole grid JSON must be DEEP-EQUAL
+ * to the oracle's.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// Every term and every target section is addressed in `test`-TLD terms; the
+// frozen PHP interaction is reached through `unmapRqo` and its grid is read
+// back through `adoptTipoIdMap`. `rsc167`/`rsc205`/`rsc420` are SEED-SHIPPED
+// ontology (every installation has them) and are spelled through `seed()`.
+// STILL RED — and NOT for a TLD reason: see the CASES note below.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { CATEGORY_STATUS, specOf } from '../../src/core/errors/registry.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
-import { adoptErrorEnvelopeV2, normalizeSectionIdTypes } from './normalize.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptErrorEnvelopeV2, adoptTipoIdMap, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** Every section a grid below reads — this gate owns whatever the corpus holds. */
+const CORPUS_SECTIONS = [
+	seed('rsc', 205),
+	seed('rsc', 167),
+	'test6101',
+	'testimmovable1',
+	'testterr1',
+	'test1026',
+] as const;
 
 function adminContext(): ApiRequestContext {
 	return {
@@ -80,6 +100,7 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 	let client: PhpApiClient;
 
 	beforeAll(async () => {
+		await ensureTestCorpus([...CORPUS_SECTIONS]);
 		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		await client.login(
@@ -88,25 +109,40 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 		);
 	});
 
-	// [term_tipo, term_id, target_sections, limit?, offset?] — live corpus
-	// verified 2026-07-09 (~48k dd96 relations on this install).
+	afterAll(async () => {
+		expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
+	});
+
+	// [term_tipo, term_id, target_sections, limit?, offset?] — the terms and
+	// records the frozen interactions were harvested against, addressed by their
+	// clones.
+	//
+	// KNOWN RED, and not for a TLD reason: `derive_test_corpus.ts` reconstructed
+	// NO record for this gate (no corpus record lists `indexation_grid_differential`
+	// among its gates, and the grid's own projections land in refused.json under
+	// `list_projection_not_storable` / `never_revealed`). A grid is a function of
+	// the dd96 INDEX EDGES between a term and the indexed records, and the corpus
+	// holds neither the term records (testcont1/test1023/test2822/test2819 have no
+	// corpus file at all) nor those edges — so the cases below compare a populated
+	// frozen grid with an empty one. What they need is a corpus derive that
+	// materializes indexation edges; nothing in this file can supply it.
 	const CASES: [string, string, string[], number?, number?][] = [
 		// publications config (rsc897): head+row, portal-with-children, pdf text_area
-		['cont1', '10', ['rsc205']],
+		['testcont1', '10', [seed('rsc', 205)]],
 		// coin-type config (numisdata247): section_id cells, leaf portals
-		['dc1', '65', ['numisdata5']],
+		['test1026', '65', ['test6101']],
 		// numisdata6 declares NO indexation_list → whole grid empty
-		['terr1', '140', ['numisdata6']],
+		['testterr1', '140', ['testmint1']],
 		// tag_id locators on rsc167 grouped under section_top oh1 (oh6 config)
-		['cu1', '1', ['rsc167']],
-		['dz1', '1024', ['rsc167']],
+		['test1023', '1', [seed('rsc', 167)]],
+		['test2822', '1024', [seed('rsc', 167)]],
 		// TWO section groups in one grid (rsc205 + tchi1's tchi92 config with
 		// default-request-config portal recursion)
-		['cont1', '38', ['rsc205', 'tchi1']],
+		['testcont1', '38', [seed('rsc', 205), 'testimmovable1']],
 		// rsc420 has no indexation_list → its group is skipped, rsc205 renders
-		['ds1', '47', ['rsc205', 'rsc420']],
+		['test2819', '47', [seed('rsc', 205), seed('rsc', 420)]],
 		// pagination: cont1_31 has 8 hits → limit 3 offset 2
-		['cont1', '31', ['rsc205', 'tchi1'], 3, 2],
+		['testcont1', '31', [seed('rsc', 205), 'testimmovable1'], 3, 2],
 	];
 
 	for (const [termTipo, termId, target, limit, offset] of CASES) {
@@ -115,22 +151,27 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			const rqo = gridRqo(termTipo, termId, target, limit ?? 200, offset ?? 0);
 			const [ts, php] = [await tsGrid(rqo), await client.call(rqo)];
 			expect(ts.status).toBe(200);
+			// The frozen grid is install-term; read it in the `test` terms the RQO
+			// is written in. `matched` is the totality assertion — an unmapped
+			// install token would make the deep-equal below meaningless.
+			const adopted = adoptTipoIdMap(php.body.result, 'indexation_grid_differential');
+			expect(adopted.matched, adopted.detail ?? '').toBe(true);
 			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 			expect(normalizeSectionIdTypes(ts.body.data)).toEqual(
-				normalizeSectionIdTypes(php.body.result) as never,
+				normalizeSectionIdTypes(adopted.body) as never,
 			);
 		});
 	}
 
 	test('the gate is not vacuous: the rich case resolves real values', async () => {
 		if (!hasPhpCredentials()) return;
-		const ts = await tsGrid(gridRqo('cont1', '10', ['rsc205']));
+		const ts = await tsGrid(gridRqo('testcont1', '10', [seed('rsc', 205)]));
 		const json = JSON.stringify(ts.body.data);
 		// real record values, not just structure
 		expect(json).toContain('Ercávica celtibérica');
 		expect(json).toContain('component_portal');
 		expect(json).toContain('record_link');
-		expect(json).toContain('caption section rsc205');
+		expect(json).toContain(`caption section ${seed('rsc', 205)}`);
 	});
 
 	test('empty/invalid source → the SAME refusal, restated as envelope v2 (request.invalid_source, 400)', async () => {
@@ -139,7 +180,7 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			action: 'get_indexation_grid',
 			dd_api: 'dd_core_api',
 			prevent_lock: true,
-			source: { section_tipo: 'cont1' }, // tipo + section_id missing
+			source: { section_tipo: 'testcont1' }, // tipo + section_id missing
 			sqo: {},
 		};
 		const ts = await tsGrid(rqo);
@@ -177,7 +218,7 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 		};
 		const outcome = await runWithRequestLangs(
 			{ applicationLang: 'lg-spa', dataLang: 'lg-spa' },
-			() => dispatchRqo(gridRqo('cont1', '10', ['rsc205']) as unknown as Rqo, nonAdmin),
+			() => dispatchRqo(gridRqo('testcont1', '10', [seed('rsc', 205)]) as unknown as Rqo, nonAdmin),
 		);
 		expect(outcome.status).toBe(CATEGORY_STATUS[specOf('perm.denied').category]);
 		expect(outcome.body.ok).toBe(false);

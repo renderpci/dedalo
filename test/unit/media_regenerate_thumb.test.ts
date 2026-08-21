@@ -11,7 +11,7 @@
  * unavailable on this box.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,6 +19,7 @@ import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { regenerateMissingDerivatives } from '../../src/core/media/repair.ts';
 import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
+import { markMediaRoot, resetMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const spec = mediaTypeOf('component_image');
 const identity = { componentTipo: 'test99', sectionTipo: 'test3', sectionId: 1, lang: null };
@@ -33,12 +34,18 @@ const sampleDefault =
 
 function seedScratch(): boolean {
 	if (spec === null || sampleDefault === '' || !existsSync(sampleDefault)) return false;
-	rmSync(scratchRoot, { recursive: true, force: true });
+	resetMediaRoot(scratchRoot);
 	mkdirSync(join(scratchRoot, 'image/1.5MB/0'), { recursive: true });
 	copyFileSync(sampleDefault, join(scratchRoot, 'image/1.5MB/0/test99_test3_1.jpg'));
 	// Deliberately NO image/original tier — the partial-media-box shape.
 	return true;
 }
+
+// DECLARE the scratch root even for the cases that never seed it: the media doors
+// refuse an UNDECLARED root before they get as far as "there is no file here"
+// (src/core/media/test_media_root.ts), and an empty-but-declared root still
+// produces exactly the absence this file pins.
+beforeAll(() => markMediaRoot(scratchRoot));
 
 afterAll(() => {
 	rmSync(scratchRoot, { recursive: true, force: true });
@@ -66,7 +73,10 @@ describe('thumb builds from the default-quality file (no original needed)', () =
 
 	test('nothing to build from: absent default AND original is a clear error (versions tool)', async () => {
 		if (spec === null) return;
-		rmSync(scratchRoot, { recursive: true, force: true });
+		// Emptied AND re-declared: `rmSync(root, {recursive:true})` takes the
+		// `.dedalo_test_media` marker with it, and an undeclared root is refused by
+		// the media door BEFORE it can report the absence this test pins.
+		resetMediaRoot(scratchRoot);
 		mkdirSync(join(scratchRoot, 'image'), { recursive: true });
 		await expect(
 			buildVersionCore(spec, identity, pathOpts, config.media.thumb.quality),

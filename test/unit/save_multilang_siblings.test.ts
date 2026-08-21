@@ -20,28 +20,71 @@
  *    get_id_from_key) reuse the sibling's shared id instead of minting one —
  *    mirrored for BOTH the 'update'+key and 'insert'+key branches.
  *
- * Scratch surfaces only: 'test2' (test TLD section resolving to matrix_test,
- * the save_roundtrip fixture) at high reserved section_ids; numisdata16
- * (input_text, translatable, 'string' column) supplies the real ontology
- * resolution. Records seeded via updateMatrixRecord (no counter touched);
+ * Scratch surfaces only: a section this file BUILDS, at high reserved
+ * section_ids. Records seeded via updateMatrixRecord (no counter touched);
  * rows + TM audit rows cleaned before AND after.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The real
+// ontology resolution under test (component_input_text, translatable → the
+// `string` column) came from `numisdata16` on the shared `test2` section; the gate
+// now BUILDS both (`zzmls`: one section on matrix_test through the test24
+// matrix_table node + one translatable component_input_text), so the shapes it
+// asserts on are ones it authored.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { MATRIX_JSONB_COLUMNS } from '../../src/core/db/matrix.ts';
 import { updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
+/**
+ * Where the section's records live. STATED here and PROVEN in beforeAll
+ * against `getMatrixTableFromTipo` — the test24 relation is what puts them in
+ * `matrix_test`, and a gate that only assumed it would write to `matrix`.
+ */
 const TEST_TABLE = 'matrix_test';
-const TEST_SECTION_TIPO = 'test2';
-const COMPONENT_TIPO = 'numisdata16'; // input_text, translatable → 'string' column
+const TEST_SECTION_TIPO = 'zzmls1';
+/** input_text, translatable → 'string' column. */
+const COMPONENT_TIPO = 'zzmls2';
 /** Reserved high ids — clear of genuine test records and other suites' scratch. */
 const EDIT_ID = 917211;
 const UPDATE_KEY_ID = 917212;
 const INSERT_KEY_ID = 917213;
 const SCRATCH_IDS = [EDIT_ID, UPDATE_KEY_ID, INSERT_KEY_ID];
+/**
+ * An anchor record: dropSituation scopes its sweep to the sections the
+ * situation declares records for, so the section needs one to be torn down whole.
+ */
+const ANCHOR_ID = 917210;
+
+const SITUATION = situation({
+	tld: 'zzmls',
+	name: 'save_multilang_siblings',
+	nodes: [
+		{
+			tipo: TEST_SECTION_TIPO,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Hermanos multilingües', 'lg-eng': 'Multilang siblings' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: COMPONENT_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_input_text',
+			is_translatable: true,
+			term: { 'lg-spa': 'Texto', 'lg-eng': 'Text' },
+		},
+	],
+	records: [{ section_tipo: TEST_SECTION_TIPO, section_id: ANCHOR_ID }],
+});
 
 function cleanRecord(sectionId: number): Promise<void> {
 	return cleanScratchRecord(TEST_SECTION_TIPO, sectionId, TEST_TABLE);
@@ -85,11 +128,14 @@ async function storedItems(
 }
 
 beforeAll(async () => {
+	await ensureSituation(SITUATION);
+	expect(await getMatrixTableFromTipo(TEST_SECTION_TIPO)).toBe(TEST_TABLE);
 	for (const sectionId of SCRATCH_IDS) await cleanRecord(sectionId);
 });
 
 afterAll(async () => {
 	for (const sectionId of SCRATCH_IDS) await cleanRecord(sectionId);
+	expect(await dropSituation(SITUATION)).toBe(0);
 });
 
 describe('S1-01 offline twin — multi-lang siblings survive a single-lang save', () => {

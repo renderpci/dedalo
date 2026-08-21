@@ -7,11 +7,12 @@
  * uncompressed door would have sent. A compression change that alters the JSON
  * is a wire divergence, not an optimization.
  *
- * Measured motivation (numisdata3/1 edit read, 297,174 B of JSON):
+ * Measured motivation (test6099/1 edit read, 297,174 B of JSON):
  * level 1 → 31,831 B in 0.86 ms; level 9 → 21,734 B in 2.61 ms. Level 1 buys
  * 89% of the level-9 win for a third of the CPU. On a Fast-4G link (~200 KB/s
  * effective) the 265 KB it removes is over a second PER RECORD OPEN.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the compressible body's section is an opaque string, rewritten to its phase-2 `test` clone (src/core/test_data/test_tld_tipo_map.json).
 
 import { describe, expect, test } from 'bun:test';
 import { MIN_GZIP_BYTES } from '../../src/core/api/static_asset.ts';
@@ -21,7 +22,7 @@ import { jsonApiResponse } from '../../src/server.ts';
 function largeBody(): Record<string, unknown> {
 	return {
 		result: Array.from({ length: 400 }, (_, index) => ({
-			section_tipo: 'numisdata3',
+			section_tipo: 'test6099',
 			section_id: index,
 			tools: ['tool_time_machine', 'tool_export', 'tool_import'],
 			label: 'Repeated label text that compresses extremely well',

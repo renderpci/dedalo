@@ -1,0 +1,734 @@
+{
+	"_doc": "DERIVED — do not hand-edit. Regenerate with `bun run scripts/derive_test_corpus.ts`. Source: the frozen oracle-harvest store (test/parity/fixtures/oracle_harvest), remapped through src/core/test_data/test_tld_tipo_map.json + test_corpus/id_map.json. `reconstructed: true` = the row was rebuilt from read PROJECTIONS (list/edit reads), not from a raw row: a component absent here is UNKNOWN, not empty, and a component PRESENT here may be a projection of the stored value (list mode slices by lang, resolves labels and truncates), so a gate must not re-read it through the same pipeline and compare values. Only `reconstructed: false` rows carry stored bytes. `component_sources: {<component tipo>: \"raw\"|\"edit\"|\"list\"}` states, PER COMPONENT, which source the value came from. THE PREFERENCE RULE: when the store shows one component more than once the deriver keeps the RICHEST source it saw — raw (`read_raw`, the stored jsonb) over edit (`mode:\"edit\"`/`resolve_data`/ts node reads) over list (a lang-sliced, label-resolved, truncated projection) — and it is measured, not assumed: the run report prints how many components were UPGRADED to a richer source and how many poorer sources were REJECTED in favour of one already held. A `list` here therefore means the store never showed that component better anywhere; assert identity/order/presence on it, never values. `inverse_edges[]` = locators materialized from ANOTHER record's computed inverse page (origin `inverse_edge`): the statement is exact, but it was read from the far end. `edge_only: true` = the record exists ONLY because such an edge named it. `existence_only: true` = the row carries its IDENTITY and nothing else: the store proved the record exists but every value it revealed was unstorable (a media page, a computed model, a list projection) — present, contents unknown. files_info.json `file_size`/`file_time` are the FILE's own stat as the oracle read it, reproduced by ensureMediaKit() on the planted asset, because a media component emits both verbatim; null when the identity came from a derived-media URL, which is existence-checked but carries no stat.",
+	"section_tipo": "test6276",
+	"source_section_tipo": "numisdata224",
+	"table": "matrix_test",
+	"kind": "test",
+	"records": [
+		{
+			"section_id": 878,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "878"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "223",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 31,
+								"time": 64487750400,
+								"year": 2006,
+								"month": 5
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "188"
+						}
+					]
+				},
+				"data": {
+					"section_id": 878,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 2333,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "2333"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "244",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 8,
+								"time": 64456300800,
+								"year": 2005,
+								"month": 6
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "69"
+						}
+					]
+				},
+				"data": {
+					"section_id": 2333,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 3180,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "3180"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "266",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 25,
+								"time": 64021190400,
+								"year": 1991,
+								"month": 11
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "25"
+						}
+					]
+				},
+				"data": {
+					"section_id": 3180,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 6395,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "6395"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "301",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 27,
+								"time": 64385625600,
+								"year": 2003,
+								"month": 3
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "100 (lotes 1-3)"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6395,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 6404,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "6404"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "301",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 10,
+								"time": 64469865600,
+								"year": 2005,
+								"month": 11
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "109"
+						}
+					]
+				},
+				"data": {
+					"section_id": 6404,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 6485,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "6485"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "303",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 13,
+								"time": 64381737600,
+								"year": 2003,
+								"month": 2
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 6485,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list"
+			}
+		},
+		{
+			"section_id": 8496,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "8496"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "351",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 2,
+								"time": 64319184000,
+								"year": 2001,
+								"month": 3
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 8496,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list"
+			}
+		},
+		{
+			"section_id": 8576,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "8576"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "357",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"start": {
+								"day": 2,
+								"time": 63829036800,
+								"year": 1985,
+								"month": 12
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "16"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8576,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 8647,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "8647"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "359",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"end": {
+								"day": 30,
+								"time": 63935913600,
+								"year": 1989,
+								"month": 3
+							},
+							"start": {
+								"day": 29,
+								"time": 63935827200,
+								"year": 1989,
+								"month": 3
+							}
+						}
+					]
+				},
+				"string": {
+					"test6281": [
+						{
+							"id": 1,
+							"lang": "lg-nolan",
+							"value": "1"
+						}
+					]
+				},
+				"data": {
+					"section_id": 8647,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6281": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list",
+				"test6281": "list"
+			}
+		},
+		{
+			"section_id": 13011,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "13011"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "414",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"end": {
+								"day": 19,
+								"time": 63621590400,
+								"year": 1979,
+								"month": 6
+							},
+							"start": {
+								"day": 18,
+								"time": 63621504000,
+								"year": 1979,
+								"month": 6
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 13011,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list"
+			}
+		},
+		{
+			"section_id": 13481,
+			"source": {
+				"section_tipo": "numisdata224",
+				"section_id": "13481"
+			},
+			"reconstructed": true,
+			"gates": ["sqo_differential"],
+			"columns": {
+				"relation": {
+					"test6279": [
+						{
+							"id": 1,
+							"type": "dd151",
+							"section_id": "324",
+							"section_tipo": "rsc106",
+							"from_component_tipo": "test6279"
+						}
+					]
+				},
+				"date": {
+					"test6280": [
+						{
+							"id": 1,
+							"end": {
+								"time": 0
+							},
+							"start": {
+								"day": 23,
+								"time": 64481702400,
+								"year": 2006,
+								"month": 3
+							}
+						}
+					]
+				},
+				"data": {
+					"section_id": 13481,
+					"section_tipo": "test6276"
+				},
+				"meta": {
+					"test6279": [
+						{
+							"count": 1
+						}
+					],
+					"test6280": [
+						{
+							"count": 1
+						}
+					]
+				}
+			},
+			"component_sources": {
+				"test6279": "list",
+				"test6280": "list"
+			}
+		}
+	]
+}

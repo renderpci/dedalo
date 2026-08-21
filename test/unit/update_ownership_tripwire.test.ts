@@ -54,6 +54,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'menu_skip_tipos.save_menu_skip_tipos': 'TS-native runtime state (ts_state.json menu skip list)',
 	'export_hierarchy.sync_hierarchy_active_status':
 		'hierarchy active-status sync through the TS write path',
+	'export_hierarchy.export_hierarchy':
+		'psql dump of hierarchy sections into the ENGINE-owned install/import/hierarchy dir (the same directory add_hierarchy imports from) — no PHP-tree surface is written',
 	'add_hierarchy.install_hierarchies':
 		'imports + activates vendored hierarchy files into the engine-owned (configured) database — the wizard EXECUTE path, reachable post-seal only through this widget',
 	'add_hierarchy.reset_hierarchies':

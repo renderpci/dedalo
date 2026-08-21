@@ -6,26 +6,75 @@
  * this gate pins the section stamp fields PHP emits on the SECTION entry
  * (class.common.php :2056-2100) that the earlier ledger reported as UNCOVERED.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// Every section is named in `test`-TLD terms (the cloned mint/type/coin
+// sections and the cloned thesaurus-config section) or is SEED-SHIPPED
+// ontology every installation carries (rsc167, rsc197, hierarchy20);
+// `unmapRqo` finds the frozen install-term interaction and `adoptTipoIdMap`
+// reads its body back in test terms. This gate compares STRUCTURE CONTEXT
+// only, so it needs no records and builds no corpus.
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSection } from '../../src/core/section/read.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
+/** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
 /** The full SECTION_SPEC §12 corpus: object sections, an audiovisual + a people
- * section, a thesaurus-config section (cult1) and the Thesaurus section
+ * section, a thesaurus-config section (testcult1) and the Thesaurus section
  * (hierarchy20) — covering section_map present/absent, virtual sections
  * (rsc167 → rsc2), and relation_list present/absent. */
 const SECTIONS = [
-	'numisdata6',
-	'numisdata3',
-	'numisdata4',
-	'rsc167',
-	'rsc197',
-	'cult1',
-	'hierarchy20',
+	'testmint1',
+	'test6099',
+	'test6100',
+	seed('rsc', 167),
+	seed('rsc', 197),
+	'testcult1',
+	seed('hierarchy', 20),
 ];
+
+/** The cloned thesaurus-config section that carries the relation_model datapoint. */
+const THESAURUS_CONFIG = 'testcult1';
+/** Its component_relation_model — a SECTION-SCOPED clone (`cult1@hierarchy27`). */
+const RELATION_MODEL = 'testcult1007';
+
+/**
+ * The sections whose ontology is a CLONE. Every generic `test`-TLD section
+ * stores in `matrix_test` — the whole point: no test record can collide with
+ * an installation's rows — where the install section it was twinned from
+ * stored in `matrix`. That is a statement about where the clone lives, not
+ * about the section-context builder, so it is ASSERTED on both sides instead
+ * of compared. The seed-shipped sections in SECTIONS still compare verbatim.
+ */
+const CLONED_SECTIONS = new Set(['testmint1', 'test6099', 'test6100', THESAURUS_CONFIG]);
+const CLONE_TABLE = 'matrix_test';
+
+/**
+ * ── MEASURED 2026-08-19: the THESAURUS_CONFIG case is RED, and it is a CLONE-SET
+ * GAP, not an engine defect. READ BEFORE CHANGING ANYTHING BELOW ──
+ *
+ * The install's thesaurus-config section was twinned, but the THESAURUS SECTION
+ * IT MODELS was not: the phase-2 closure cut at `cult1` and never cloned
+ * `cult2`, so `src/core/test_data/test_tld_tipo_map.json` has no entry for it
+ * and `test_tld_ontology.json` has no `testcult2` node.
+ *
+ * Both sides then say the same thing about a section that does not exist:
+ *   - the frozen body still carries `target_sections: [{tipo:'cult2', …}]`, an
+ *     install token with no twin ⇒ `adoptTipoIdMap` REFUSES (leftover `cult2`);
+ *   - TS logs `[ontology/model_section] no model section for 'testcult1' —
+ *     rejected: 'testcult2' (tld fallback: model 'null')` and emits `[]`.
+ *
+ * Closing this needs the clone map + the generic ontology to carry a `cult2`
+ * twin — a change to SHARED, committed fixture artifacts, not to this gate.
+ * Do NOT drop the section from SECTIONS and do NOT relax the refusal: this is
+ * the ONE frozen component_relation_model datapoint in the whole store, and
+ * losing it is how the 2026-08-14 hierarchy27 regression stayed invisible.
+ */
 
 function readRqo(sectionTipo: string): Rqo {
 	return {
@@ -63,7 +112,25 @@ describe.if(hasPhpCredentials())('section context extras differential (SECTION_S
 			const { body } = await client.call(
 				structuredClone(rqo) as unknown as Record<string, unknown>,
 			);
-			const phpContext = (body.result as { context: Record<string, unknown>[] }).context;
+			// WC-2026-08-19-test-tld-replay: the frozen install-term CONTEXT, read
+			// back in test terms. Applied to `result.context` — the only thing this
+			// gate reads — because the envelope's section entry also carries the
+			// install AREA node in `parent_grouper`, a clone-root seam that is
+			// context_differential's subject.
+			const rawContext = (body.result as { context: Record<string, unknown>[] }).context;
+			// The strip must actually strip something: an exemption nothing matches
+			// has gone stale and silently widens what the leftover scan accepts
+			// (review 2026-08-20).
+			expect(rawContext.some((entry) => typeof entry.parent_grouper === 'string')).toBe(true);
+			for (const entry of rawContext) delete entry.parent_grouper;
+			const adopted = adoptTipoIdMap(rawContext, 'section_context_extras_differential');
+			// Assert the leftovers too: a refusal must name the install token it
+			// could not map, not just say `false`.
+			expect({ matched: adopted.matched, leftovers: adopted.leftovers }).toEqual({
+				matched: true,
+				leftovers: [],
+			});
+			const phpContext = adopted.body;
 			const tsContext = (await readSection(rqo)).context as unknown as Record<string, unknown>[];
 
 			const php = sectionEntry(phpContext, sectionTipo);
@@ -73,7 +140,12 @@ describe.if(hasPhpCredentials())('section context extras differential (SECTION_S
 			// declares none). PHP may omit the key entirely vs TS null — treat
 			// undefined and null as equivalent absence.
 			expect(ts.section_map ?? null).toEqual(php.section_map ?? null);
-			expect(ts.matrix_table ?? null).toEqual(php.matrix_table ?? null);
+			if (CLONED_SECTIONS.has(sectionTipo)) {
+				expect(php.matrix_table ?? null).toBe('matrix');
+				expect(ts.matrix_table ?? null).toBe(CLONE_TABLE);
+			} else {
+				expect(ts.matrix_table ?? null).toEqual(php.matrix_table ?? null);
+			}
 			const phpRelListTipo =
 				(php.config as { relation_list_tipo?: unknown } | undefined)?.relation_list_tipo ?? null;
 			const tsRelListTipo =
@@ -99,11 +171,11 @@ describe.if(hasPhpCredentials())('section context extras differential (SECTION_S
 			const phpRelationModels = phpContext.filter(
 				(entry) => entry.model === 'component_relation_model',
 			);
-			if (sectionTipo === 'cult1') {
+			if (sectionTipo === THESAURUS_CONFIG) {
 				// Non-vacuity pin: the ONE frozen relation_model datapoint lives in
-				// cult1's context (hierarchy27). If a fixture edit ever drained it,
+				// the thesaurus-config section's context. If a fixture edit ever drained it,
 				// this sweep would go silently green — fail loudly instead.
-				expect(phpRelationModels.map((entry) => entry.tipo)).toContain('hierarchy27');
+				expect(phpRelationModels.map((entry) => entry.tipo)).toContain(RELATION_MODEL);
 			}
 			for (const phpEntry of phpRelationModels) {
 				const tsEntry = tsContext.find(

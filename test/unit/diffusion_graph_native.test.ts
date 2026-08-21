@@ -11,6 +11,8 @@
  *
  * Scratch namespace: pure + stubbed DiffusionGraph. No DB writes, no DB reads.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the graph is a STUB (no DB at
+// all), so the section tipos are only labels — now generic test-TLD ones.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -645,8 +647,8 @@ describe('selectMediaIndexTargets', () => {
 			[real, alias],
 			[alias, real],
 		]) {
-			expect(selectMediaIndexTargets(new Map([['rsc197', list]]))).toEqual([
-				{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
+			expect(selectMediaIndexTargets(new Map([['test6099', list]]))).toEqual([
+				{ database_name: 'web_a', table_name: 'people', section_tipo: 'test6099' },
 			]);
 		}
 	});
@@ -654,7 +656,7 @@ describe('selectMediaIndexTargets', () => {
 	test('alias-only → the FIRST alias', () => {
 		const map = new Map([
 			[
-				'rsc197',
+				'test6099',
 				[
 					sqlTarget({ table_name: 'alias_one', table_is_alias: true }),
 					sqlTarget({ table_name: 'alias_two', table_is_alias: true }),
@@ -662,14 +664,14 @@ describe('selectMediaIndexTargets', () => {
 			],
 		]);
 		expect(selectMediaIndexTargets(map)).toEqual([
-			{ database_name: 'web_a', table_name: 'alias_one', section_tipo: 'rsc197' },
+			{ database_name: 'web_a', table_name: 'alias_one', section_tipo: 'test6099' },
 		]);
 	});
 
 	test('socrata counts as a publication target', () => {
-		const map = new Map([['rsc197', [sqlTarget({ type: 'socrata' })]]]);
+		const map = new Map([['test6099', [sqlTarget({ type: 'socrata' })]]]);
 		expect(selectMediaIndexTargets(map)).toEqual([
-			{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
+			{ database_name: 'web_a', table_name: 'people', section_tipo: 'test6099' },
 		]);
 	});
 
@@ -683,10 +685,10 @@ describe('selectMediaIndexTargets', () => {
 			['empty table', sqlTarget({ database_name: 'web_e', table_name: '' })],
 		];
 		for (const [name, negative] of negatives) {
-			const out = selectMediaIndexTargets(new Map([['rsc197', [negative, accepted]]]));
+			const out = selectMediaIndexTargets(new Map([['test6099', [negative, accepted]]]));
 			expect(`${name}: ${JSON.stringify(out)}`).toBe(
 				`${name}: ${JSON.stringify([
-					{ database_name: 'web_ok', table_name: 'ok_table', section_tipo: 'rsc197' },
+					{ database_name: 'web_ok', table_name: 'ok_table', section_tipo: 'test6099' },
 				])}`,
 			);
 		}
@@ -695,18 +697,18 @@ describe('selectMediaIndexTargets', () => {
 	test('different databases each contribute one entry; sections fold independently', () => {
 		const map = new Map([
 			[
-				'rsc197',
+				'test6099',
 				[
 					sqlTarget({ database_name: 'web_a', table_name: 'people' }),
 					sqlTarget({ database_name: 'web_b', table_name: 'people' }),
 				],
 			],
-			['rsc170', [sqlTarget({ database_name: 'web_a', table_name: 'images' })]],
+			['test6100', [sqlTarget({ database_name: 'web_a', table_name: 'images' })]],
 		]);
 		expect(selectMediaIndexTargets(map)).toEqual([
-			{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
-			{ database_name: 'web_b', table_name: 'people', section_tipo: 'rsc197' },
-			{ database_name: 'web_a', table_name: 'images', section_tipo: 'rsc170' },
+			{ database_name: 'web_a', table_name: 'people', section_tipo: 'test6099' },
+			{ database_name: 'web_b', table_name: 'people', section_tipo: 'test6099' },
+			{ database_name: 'web_a', table_name: 'images', section_tipo: 'test6100' },
 		]);
 	});
 
@@ -718,7 +720,7 @@ describe('selectMediaIndexTargets', () => {
 		// engineering/wire_contract/WC-2026-08-09-media-index-target-selection.md.
 		const map = new Map([
 			[
-				'rsc197',
+				'test6099',
 				[
 					sqlTarget({ table_name: 'people', table_is_alias: false }),
 					sqlTarget({ table_name: 'places', table_is_alias: false }),
@@ -726,15 +728,15 @@ describe('selectMediaIndexTargets', () => {
 			],
 		]);
 		expect(selectMediaIndexTargets(map)).toEqual([
-			{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
-			{ database_name: 'web_a', table_name: 'places', section_tipo: 'rsc197' },
+			{ database_name: 'web_a', table_name: 'people', section_tipo: 'test6099' },
+			{ database_name: 'web_a', table_name: 'places', section_tipo: 'test6099' },
 		]);
 	});
 
 	test('a real table SUPPRESSES the aliases of its database, and every real table is kept', () => {
 		const map = new Map([
 			[
-				'rsc197',
+				'test6099',
 				[
 					sqlTarget({ table_name: 'alias_one', table_is_alias: true }),
 					sqlTarget({ table_name: 'people', table_is_alias: false }),
@@ -745,8 +747,8 @@ describe('selectMediaIndexTargets', () => {
 		// D12 (fixed 2026-08-09): the alias drops out because the database has a
 		// real table; BOTH real tables are now kept (the second used to be lost).
 		expect(selectMediaIndexTargets(map)).toEqual([
-			{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
-			{ database_name: 'web_a', table_name: 'second_real', section_tipo: 'rsc197' },
+			{ database_name: 'web_a', table_name: 'people', section_tipo: 'test6099' },
+			{ database_name: 'web_a', table_name: 'second_real', section_tipo: 'test6099' },
 		]);
 	});
 });

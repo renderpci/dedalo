@@ -6,6 +6,10 @@
  * finding classes, purge discipline, string-scalar non-descent (D18),
  * idempotence, and section_id_key handling.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -17,6 +21,9 @@ import {
 	intifySectionIdsInValue,
 } from '../../src/core/update/transform/section_id_intify.ts';
 import vectors from './fixtures/section_id_conversion_vectors.json';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 const NO_EXTERNAL = { externalTipos: new Set<string>() };
 
@@ -37,7 +44,7 @@ describe('the shared conversion rule (vector file, both runtimes)', () => {
 				vector.convertible ? (vector.output as number) : vector.input,
 			);
 			// …and the kernel agrees, including the finding class.
-			const value: Record<string, unknown> = { section_tipo: 'oh1', section_id: vector.input };
+			const value: Record<string, unknown> = { section_tipo: 'test6813', section_id: vector.input };
 			const result = intifySectionIdsInValue(value, NO_EXTERNAL);
 			if (vector.convertible) {
 				expect(value.section_id).toBe(vector.output as number);
@@ -70,28 +77,28 @@ describe('walk shape', () => {
 	test('converts at arbitrary nesting depth and across all address keys', () => {
 		// biome-ignore format: fixture shape mirrors stored jsonb
 		const value = {
-			rsc197: [
+			[seed('rsc', 197)]: [
 				{
-					section_tipo: 'oh1',
+					section_tipo: 'test6813',
 					section_id: '7' as unknown,
-					section_tipo_key: 'rsc176',
+					section_tipo_key: seed('rsc', 176),
 					section_id_key: '12' as unknown,
 					subdata: { entries: [{ section_tipo: 'dd64', section_id: '1' as unknown }] },
 				},
 			],
-			meta: { parent_section_id: '3' as unknown, section_tipo: 'es1' },
+			meta: { parent_section_id: '3' as unknown, section_tipo: 'test2827' },
 		};
 		const result = intifySectionIdsInValue(value, NO_EXTERNAL);
-		expect(value.rsc197[0]?.section_id).toBe(7);
-		expect(value.rsc197[0]?.section_id_key).toBe(12);
-		expect(value.rsc197[0]?.subdata.entries[0]?.section_id).toBe(1);
+		expect(value[seed('rsc', 197)][0]?.section_id).toBe(7);
+		expect(value[seed('rsc', 197)][0]?.section_id_key).toBe(12);
+		expect(value[seed('rsc', 197)][0]?.subdata.entries[0]?.section_id).toBe(1);
 		expect(value.meta.parent_section_id).toBe(3);
 		expect(result.converted).toBe(4);
 		expect(result.changed).toBe(true);
 	});
 
 	test('already-canonical data is a no-op (idempotence)', () => {
-		const value = { rsc197: [{ section_tipo: 'oh1', section_id: 7 }] };
+		const value = { [seed('rsc', 197)]: [{ section_tipo: 'test6813', section_id: 7 }] };
 		const before = JSON.stringify(value);
 		const result = intifySectionIdsInValue(value, NO_EXTERNAL);
 		expect(result.changed).toBe(false);
@@ -101,7 +108,7 @@ describe('walk shape', () => {
 	});
 
 	test('second run over converted data reports zero (idempotence, full cycle)', () => {
-		const value = { rsc197: [{ section_tipo: 'oh1', section_id: '7' }] };
+		const value = { [seed('rsc', 197)]: [{ section_tipo: 'test6813', section_id: '7' }] };
 		expect(intifySectionIdsInValue(value, NO_EXTERNAL).converted).toBe(1);
 		const second = intifySectionIdsInValue(value, NO_EXTERNAL);
 		expect(second.changed).toBe(false);
@@ -110,11 +117,11 @@ describe('walk shape', () => {
 
 	test('string scalars are NEVER descended into (D18 — inline tag markers)', () => {
 		// A text value carrying serialized locator JSON must survive byte-for-byte.
-		const marker = '[data:{"section_id":"7","section_tipo":"rsc370"}]';
-		const value = { oh24: [{ value: marker, lang: 'lg-eng' }] };
+		const marker = `[data:{"section_id":"7","section_tipo":"${seed('rsc', 370)}"}]`;
+		const value = { test6836: [{ value: marker, lang: 'lg-eng' }] };
 		const result = intifySectionIdsInValue(value, NO_EXTERNAL);
 		expect(result.changed).toBe(false);
-		expect(value.oh24[0]?.value).toBe(marker);
+		expect(value.test6836[0]?.value).toBe(marker);
 	});
 
 	test('a TIPO-LESS section_id is user data, not a locator — untouched, no finding', () => {
@@ -122,15 +129,15 @@ describe('walk shape', () => {
 		// section_id. A component_json value whose user JSON happens to hold a
 		// 'section_id' key must survive byte-for-byte — converting it would be a
 		// semantic mutation of arbitrary user data.
-		const value = { oh26: [{ value: { config: { section_id: '7', mode: 'x' } } }] };
+		const value = { test6838: [{ value: { config: { section_id: '7', mode: 'x' } } }] };
 		const result = intifySectionIdsInValue(value, NO_EXTERNAL);
 		expect(result.changed).toBe(false);
 		expect(result.findings).toHaveLength(0);
-		expect(value.oh26[0]?.value.config.section_id).toBe('7');
+		expect(value.test6838[0]?.value.config.section_id).toBe('7');
 	});
 
 	test('null section_id (record metadata shape) is tallied, never touched', () => {
-		const value = { section_id: null, section_tipo: 'oh1' };
+		const value = { section_id: null, section_tipo: 'test6813' };
 		const result = intifySectionIdsInValue(value, NO_EXTERNAL);
 		expect(result.changed).toBe(false);
 		expect(result.findings[0]?.class).toBe('null-value');
@@ -139,12 +146,14 @@ describe('walk shape', () => {
 });
 
 describe('external skip (D15)', () => {
-	const EXTERNAL = { externalTipos: new Set(['zenon1']) };
+	const EXTERNAL = { externalTipos: new Set(['test7342']) };
 
 	test('zero-padded remote id on an external tipo is untouched', () => {
-		const value = { rsc368: [{ section_tipo: 'zenon1', section_id: '001338683' as unknown }] };
+		const value = {
+			[seed('rsc', 368)]: [{ section_tipo: 'test7342', section_id: '001338683' as unknown }],
+		};
 		const result = intifySectionIdsInValue(value, EXTERNAL);
-		expect(value.rsc368[0]?.section_id).toBe('001338683');
+		expect(value[seed('rsc', 368)][0]?.section_id).toBe('001338683');
 		expect(result.changed).toBe(false);
 		expect(result.findings[0]?.class).toBe('external-skip');
 	});
@@ -153,32 +162,38 @@ describe('external skip (D15)', () => {
 		// True remote ids are never convertible (zenon pads, wikidata is opaque);
 		// tipos carrying legacy api_config residue (rsc205) hold REAL records
 		// whose locators must sweep like any other. Adversarial round 2026-08-10.
-		const value = { rsc368: [{ section_tipo: 'zenon1', section_id: '1338683' as unknown }] };
+		const value = {
+			[seed('rsc', 368)]: [{ section_tipo: 'test7342', section_id: '1338683' as unknown }],
+		};
 		const result = intifySectionIdsInValue(value, EXTERNAL);
-		expect(value.rsc368[0]?.section_id).toBe(1338683);
+		expect(value[seed('rsc', 368)][0]?.section_id).toBe(1338683);
 		expect(result.converted).toBe(1);
 	});
 
 	test('the same value on a NON-external tipo converts', () => {
-		const value = { rsc368: [{ section_tipo: 'oh1', section_id: '1338683' as unknown }] };
+		const value = {
+			[seed('rsc', 368)]: [{ section_tipo: 'test6813', section_id: '1338683' as unknown }],
+		};
 		expect(intifySectionIdsInValue(value, EXTERNAL).converted).toBe(1);
-		expect(value.rsc368[0]?.section_id).toBe(1338683);
+		expect(value[seed('rsc', 368)][0]?.section_id).toBe(1338683);
 	});
 
 	test('leading zeros on a NON-external tipo are an integrity finding, never cast', () => {
-		const value = { rsc368: [{ section_tipo: 'oh1', section_id: '007' as unknown }] };
+		const value = {
+			[seed('rsc', 368)]: [{ section_tipo: 'test6813', section_id: '007' as unknown }],
+		};
 		const result = intifySectionIdsInValue(value, EXTERNAL);
-		expect(value.rsc368[0]?.section_id).toBe('007');
+		expect(value[seed('rsc', 368)][0]?.section_id).toBe('007');
 		expect(result.findings[0]?.class).toBe('leading-zero');
 	});
 });
 
 describe('purge classes (D17 — operator-adjudicated element deletion)', () => {
 	test('purges ONLY array elements of the requested classes', () => {
-		const value: { numisdata30: { section_tipo: string; section_id: unknown }[] } = {
-			numisdata30: [
-				{ section_tipo: 'numisdata6', section_id: '' }, // empty → purge
-				{ section_tipo: 'numisdata6', section_id: '5' }, // convertible → keep
+		const value: { test6113: { section_tipo: string; section_id: unknown }[] } = {
+			test6113: [
+				{ section_tipo: 'testmint1', section_id: '' }, // empty → purge
+				{ section_tipo: 'testmint1', section_id: '5' }, // convertible → keep
 				{ section_tipo: 'dd128', section_id: 'null' }, // null-literal → NOT requested
 			],
 		};
@@ -186,9 +201,9 @@ describe('purge classes (D17 — operator-adjudicated element deletion)', () => 
 			externalTipos: new Set(),
 			purgeClasses: new Set(['empty']),
 		});
-		expect(value.numisdata30).toHaveLength(2);
-		expect(value.numisdata30[0]?.section_id).toBe(5);
-		expect(value.numisdata30[1]?.section_id).toBe('null');
+		expect(value.test6113).toHaveLength(2);
+		expect(value.test6113[0]?.section_id).toBe(5);
+		expect(value.test6113[1]?.section_id).toBe('null');
 		expect(result.purged).toBe(1);
 		expect(result.converted).toBe(1);
 		// the null-literal is still reported (it was not purged)
@@ -196,14 +211,14 @@ describe('purge classes (D17 — operator-adjudicated element deletion)', () => 
 	});
 
 	test('without purgeClasses nothing is ever removed', () => {
-		const value = { numisdata30: [{ section_tipo: 'numisdata6', section_id: '' }] };
+		const value = { test6113: [{ section_tipo: 'testmint1', section_id: '' }] };
 		const result = intifySectionIdsInValue(value, NO_EXTERNAL);
-		expect(value.numisdata30).toHaveLength(1);
+		expect(value.test6113).toHaveLength(1);
 		expect(result.purged).toBe(0);
 	});
 
 	test('a keyed (non-array-element) junk object is reported, never removed', () => {
-		const value = { key: { section_tipo: 'numisdata6', section_id: '' } };
+		const value = { key: { section_tipo: 'testmint1', section_id: '' } };
 		const result = intifySectionIdsInValue(value, {
 			externalTipos: new Set(),
 			purgeClasses: new Set(['empty']),

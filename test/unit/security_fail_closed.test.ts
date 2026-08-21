@@ -7,6 +7,10 @@
  * against the shared matrix_users root account, session rotation, throttle
  * reset on success).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -182,7 +186,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 
 	test('unauthenticated read is denied; get_environment is not', async () => {
 		const readAttempt = await dispatchRqo(
-			{ action: 'read', dd_api: 'dd_core_api', source: { tipo: 'numisdata6' } } as Rqo,
+			{ action: 'read', dd_api: 'dd_core_api', source: { tipo: 'testmint1' } } as Rqo,
 			anonymousContext(),
 		);
 		expect(readAttempt.status).toBe(401);
@@ -328,7 +332,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 	});
 
 	test('read gate denies a non-admin on a section their profile does not grant', async () => {
-		// User 16 (profile 8) has no grant on numisdata6 → read must 403 at the
+		// User 16 (profile 8) has no grant on testmint1 → read must 403 at the
 		// dispatch gate, before any search runs.
 		const principal = await resolvePrincipal(16);
 		expect(principal.isGlobalAdmin).toBe(false);
@@ -350,8 +354,8 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 			{
 				action: 'read',
 				dd_api: 'dd_core_api',
-				source: { model: 'section', tipo: 'numisdata6', section_tipo: 'numisdata6', mode: 'list' },
-				sqo: { section_tipo: ['numisdata6'], limit: 5 },
+				source: { model: 'section', tipo: 'testmint1', section_tipo: 'testmint1', mode: 'list' },
+				sqo: { section_tipo: ['testmint1'], limit: 5 },
 			} as Rqo,
 			context,
 		);
@@ -381,17 +385,17 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 				dd_api: 'dd_core_api',
 				source: {
 					model: 'section',
-					tipo: 'numisdata6',
-					section_tipo: 'numisdata6',
+					tipo: 'testmint1',
+					section_tipo: 'testmint1',
 					mode: 'list',
 					lang: 'lg-spa',
 					action: 'search',
 				},
-				sqo: { section_tipo: ['numisdata6'], limit: 2 },
+				sqo: { section_tipo: ['testmint1'], limit: 2 },
 				show: {
 					ddo_map: [
 						{
-							tipo: 'numisdata16',
+							tipo: 'testmint1002',
 							section_tipo: 'self',
 							parent: 'self',
 							mode: 'list',

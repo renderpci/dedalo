@@ -7,15 +7,25 @@
  * - dedalo_list_sections is ACL-honest: a gated user sees a strict subset of
  *   the admin census (live DB);
  * - dedalo_describe_section maps fields with simplified types and resolves a
- *   real portal's target sections (numisdata3 → numisdata75 fixture);
+ *   real portal's target sections (test3 → test80 → test3);
  * - dedalo_resolve_path validates a real traversal and rejects a fake one;
  * - dedalo_search_records routes typed recursive filters through the same
  *   per-component builders as the web search (exact-match ground truth), and
  *   the raw_sqo escape hatch cannot smuggle an invalid identifier past the
  *   chokepoint.
+ *
+ * THE SITUATION IS BUILT, NOT BORROWED (generic-`test`-TLD migration,
+ * 2026-08-19). Every fixture used to be an install's record (`numisdata3`,
+ * `numisdata6`, `numisdata267`, user 16) — green on one machine only, and
+ * satisfiable at 0-versus-0 everywhere else. The gate now runs on the generic
+ * `test` playground: `test3` with its portal `test80`, its literal `test52`,
+ * and — for the ACL half — the synthetic identities of
+ * test/helpers/acl_identity_fixture.ts plus three scratch records this file
+ * creates and removes, two of them carrying the non-admin's project through
+ * test3's own component_filter `test101`.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
 	matchTerm,
 	normalizeLabel,
@@ -33,17 +43,74 @@ import { countRecords, searchRecords } from '../../src/ai/mcp/tools/search.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { labelByTipo } from '../../src/core/ontology/labels.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	ACL_PROJECT_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
+import {
+	cleanScratchRecord,
+	createScratchRecord,
+	ensureCanonicalTest3,
+} from '../helpers/test_data.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
-/** Real non-admin whose dd170 projects resolve to [7] (see mcp_tools gate). */
-const NON_ADMIN: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
+/** The synthetic non-admin: ONE project, a read grant on test3 (see the fixture). */
+const NON_ADMIN: Principal = {
+	userId: ACL_NON_ADMIN_USER_ID,
+	isGlobalAdmin: false,
+	isDeveloper: false,
+};
 
-/** Known fixtures (shared with dataframe_cascade_removal / mcp_tools gates). */
-const HOST_SECTION = 'numisdata3';
-const PORTAL_FIELD = 'numisdata75';
-const TEXT_SECTION = 'numisdata6';
-const TEXT_COMPONENT = 'numisdata16';
-const GATED_SECTION = 'numisdata267';
+/** Generic `test` playground fixtures (shared with the mcp_tools gate). */
+const HOST_SECTION = 'test3';
+/** test3's portal whose declared target is test3 itself. */
+const PORTAL_FIELD = 'test80';
+const TEXT_SECTION = 'test3';
+const TEXT_COMPONENT = 'test52';
+/** A section PORTAL_FIELD does NOT link — the negative half of resolve_path. */
+const UNLINKED_SECTION = 'test2';
+/** The project-gated section (component_filter test101) — test3 again. */
+const GATED_SECTION = 'test3';
+const FILTER_COMPONENT = 'test101';
+const PROJECTS_SECTION = 'dd153';
+const PROJECT_LOCATOR_TYPE = 'dd675';
+
+/** Scratch records this gate owns (reserved >= 900000 band). */
+const VISIBLE_IDS = [942001, 942002];
+const HIDDEN_ID = 942003;
+/** A project the non-admin does NOT hold — what makes HIDDEN_ID hidden. */
+const OTHER_PROJECT_ID = 1;
+
+async function createGatedRecord(sectionId: number, projectId: number): Promise<void> {
+	await createScratchRecord(GATED_SECTION, sectionId, {
+		relation: {
+			[FILTER_COMPONENT]: [
+				{
+					id: 1,
+					type: PROJECT_LOCATOR_TYPE,
+					section_id: String(projectId),
+					section_tipo: PROJECTS_SECTION,
+					from_component_tipo: FILTER_COMPONENT,
+				},
+			],
+		},
+		string: { [TEXT_COMPONENT]: [{ id: 1, lang: 'lg-eng', value: `acl scratch ${sectionId}` }] },
+	});
+}
+
+beforeAll(async () => {
+	await ensureCanonicalTest3();
+	await installAclIdentityFixture();
+	for (const id of VISIBLE_IDS) await createGatedRecord(id, ACL_PROJECT_ID);
+	await createGatedRecord(HIDDEN_ID, OTHER_PROJECT_ID);
+});
+
+afterAll(async () => {
+	for (const id of [...VISIBLE_IDS, HIDDEN_ID]) await cleanScratchRecord(GATED_SECTION, id);
+	await removeAclIdentityFixture();
+});
 
 describe('label resolution (pure)', () => {
 	test('normalizeLabel strips accents, case and extra whitespace', () => {
@@ -137,9 +204,12 @@ describe('MCP discovery tools (live ontology)', () => {
 		]);
 
 		// A traversal into a section the portal does NOT target fails loudly.
+		const unlinked = await describeSection(SUPERUSER, { section: UNLINKED_SECTION });
+		const unlinkedLeaf = unlinked.fields[0] as { tipo: string };
+		expect(unlinkedLeaf).toBeDefined();
 		await expect(
 			resolvePath(SUPERUSER, {
-				path: [HOST_SECTION, PORTAL_FIELD, TEXT_SECTION, TEXT_COMPONENT],
+				path: [HOST_SECTION, PORTAL_FIELD, UNLINKED_SECTION, unlinkedLeaf.tipo],
 			}),
 		).rejects.toMatchObject({
 			code: 'request.invalid',
@@ -149,18 +219,18 @@ describe('MCP discovery tools (live ontology)', () => {
 });
 
 describe('MCP search upgrade (live DB)', () => {
-	/** A stored lg-spa value of numisdata6.numisdata16 (proven searchable fixture). */
+	/** A stored lg-eng value of test3.test52 (the playground's searchable literal). */
 	async function sampleValue(): Promise<string> {
 		const rows = (await sql`
 			SELECT (
 				SELECT e->>'value'
-				FROM jsonb_array_elements(string->'numisdata16') e
-				WHERE e->>'lang' = 'lg-spa' AND e->>'value' <> ''
+				FROM jsonb_array_elements(string->${TEXT_COMPONENT}) e
+				WHERE e->>'lang' = 'lg-eng' AND e->>'value' <> ''
 				LIMIT 1
 			) AS v
-			FROM matrix
+			FROM matrix_test
 			WHERE section_tipo = ${TEXT_SECTION}
-			  AND string->'numisdata16' IS NOT NULL
+			  AND string->${TEXT_COMPONENT} IS NOT NULL
 			ORDER BY section_id
 		`) as { v: string | null }[];
 		const value = rows.map((row) => row.v).find((v) => v !== null && v !== '');
@@ -172,7 +242,7 @@ describe('MCP search upgrade (live DB)', () => {
 		const value = await sampleValue();
 		const result = await searchRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
-			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-spa' },
+			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-eng' },
 			full_count: true,
 			limit: 100,
 		});
@@ -181,11 +251,11 @@ describe('MCP search upgrade (live DB)', () => {
 		const truth = new Set(
 			(
 				(await sql`
-					SELECT section_id FROM matrix
+					SELECT section_id FROM matrix_test
 					WHERE section_tipo = ${TEXT_SECTION}
 					  AND EXISTS (
-						SELECT 1 FROM jsonb_array_elements(string->'numisdata16') e
-						WHERE e->>'lang' = 'lg-spa' AND e->>'value' = ${value}
+						SELECT 1 FROM jsonb_array_elements(string->${TEXT_COMPONENT}) e
+						WHERE e->>'lang' = 'lg-eng' AND e->>'value' = ${value}
 					)
 				`) as { section_id: number }[]
 			).map((row) => Number(row.section_id)),
@@ -200,15 +270,15 @@ describe('MCP search upgrade (live DB)', () => {
 		const value = await sampleValue();
 		const eqOnly = await searchRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
-			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-spa' },
+			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-eng' },
 			full_count: true,
 		});
 		const orWidened = await searchRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
 			filter: {
 				or: [
-					{ field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-spa' },
-					{ field: TEXT_COMPONENT, op: 'not_empty', lang: 'lg-spa' },
+					{ field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-eng' },
+					{ field: TEXT_COMPONENT, op: 'not_empty', lang: 'lg-eng' },
 				],
 			},
 			full_count: true,
@@ -219,7 +289,7 @@ describe('MCP search upgrade (live DB)', () => {
 
 		const counted = await countRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
-			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-spa' },
+			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-eng' },
 		});
 		expect(counted.total).toBe(eqOnly.pagination.total as number);
 	});
@@ -230,11 +300,11 @@ describe('MCP search upgrade (live DB)', () => {
 		expect(label).toBeTruthy();
 		const byTipo = await countRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
-			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-spa' },
+			filter: { field: TEXT_COMPONENT, op: 'eq', value, lang: 'lg-eng' },
 		});
 		const byLabel = await countRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
-			filter: { field: label as string, op: 'eq', value, lang: 'lg-spa' },
+			filter: { field: label as string, op: 'eq', value, lang: 'lg-eng' },
 		});
 		expect(byLabel.total).toBe(byTipo.total);
 	});
@@ -271,7 +341,7 @@ describe('MCP search upgrade (live DB)', () => {
 		// the validated argument.
 		const retargeted = await searchRecords(SUPERUSER, {
 			section_tipo: TEXT_SECTION,
-			raw_sqo: { filter: undefined, limit: 5, section_tipo: [GATED_SECTION] } as unknown,
+			raw_sqo: { filter: undefined, limit: 5, section_tipo: [UNLINKED_SECTION] } as unknown,
 		});
 		for (const hit of retargeted.data.hits) {
 			expect(hit.section_tipo).toBe(TEXT_SECTION);

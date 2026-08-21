@@ -17,6 +17,11 @@
  * proven separately via EXPLAIN); all seeded rows deleted in afterAll. The bare
  * browse counts EVERY row, so ground truth and acquisition see the same total.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The one
+// install tipo was the `tipo` COLUMN VALUE of the disposable matrix_time_machine
+// rows this gate seeds — never resolved, never read back by tipo — so it became
+// its phase-2 clone. The rows themselves already lived on a scratch section_tipo
+// of this file's own and are still swept whole in afterAll.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -61,7 +66,7 @@ beforeAll(async () => {
 	if (threshold < 0) return; // rewrite disabled — nothing to seed/exercise
 	await sql.unsafe(
 		`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id)
-		 SELECT g, $1, 'numisdata16', 'lg-spa', NOW(), '-1'
+		 SELECT g, $1, 'testmint1002', 'lg-spa', NOW(), '-1'
 		 FROM generate_series(1, $2) AS g`,
 		[SCRATCH_TIPO, SEED],
 	);

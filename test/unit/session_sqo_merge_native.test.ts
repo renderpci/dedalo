@@ -15,9 +15,21 @@
  *   merge — never mode/section_tipo;
  * - merged values are deep-cloned (no aliasing into the session store).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { mergeSessionSqo } from '../../src/core/concepts/sqo.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 const ID_FILTER = {
 	$and: [
@@ -25,8 +37,8 @@ const ID_FILTER = {
 			q: ['5,9,12'],
 			path: [
 				{
-					section_tipo: 'oh1',
-					component_tipo: 'oh4',
+					section_tipo: 'test6813',
+					component_tipo: 'test6816',
 					model: 'component_section_id',
 					name: 'Id',
 				},
@@ -37,13 +49,13 @@ const ID_FILTER = {
 
 describe('mergeSessionSqo: PHP received-case parity', () => {
 	test('absent client keys are filled from the stored SQO (all six)', () => {
-		const client: Record<string, unknown> = { section_tipo: ['oh1'] };
+		const client: Record<string, unknown> = { section_tipo: ['test6813'] };
 		const stored = {
 			filter: ID_FILTER,
 			order: [{ direction: 'ASC' }],
 			limit: 30,
 			offset: 60,
-			filter_by_locators: [{ section_tipo: 'oh1', section_id: '5' }],
+			filter_by_locators: [{ section_tipo: 'test6813', section_id: '5' }],
 			children_recursive: true,
 		};
 		mergeSessionSqo(client, stored);
@@ -51,7 +63,7 @@ describe('mergeSessionSqo: PHP received-case parity', () => {
 		expect(client.order).toEqual([{ direction: 'ASC' }]);
 		expect(client.limit).toBe(30);
 		expect(client.offset).toBe(60);
-		expect(client.filter_by_locators).toEqual([{ section_tipo: 'oh1', section_id: '5' }]);
+		expect(client.filter_by_locators).toEqual([{ section_tipo: 'test6813', section_id: '5' }]);
 		expect(client.children_recursive).toBe(true);
 	});
 
@@ -59,7 +71,7 @@ describe('mergeSessionSqo: PHP received-case parity', () => {
 		// The real client's first load sends limit/offset as explicit null;
 		// PHP property_exists(null) is true → config default path, NOT session.
 		const client: Record<string, unknown> = {
-			section_tipo: ['oh1'],
+			section_tipo: ['test6813'],
 			limit: null,
 			offset: 0,
 		};
@@ -70,7 +82,7 @@ describe('mergeSessionSqo: PHP received-case parity', () => {
 	});
 
 	test('a null stored value is skipped (PHP isset)', () => {
-		const client: Record<string, unknown> = { section_tipo: ['oh1'] };
+		const client: Record<string, unknown> = { section_tipo: ['test6813'] };
 		mergeSessionSqo(client, { filter: null, order: undefined, limit: 30 });
 		expect(Object.hasOwn(client, 'filter')).toBe(false);
 		expect(Object.hasOwn(client, 'order')).toBe(false);
@@ -78,15 +90,15 @@ describe('mergeSessionSqo: PHP received-case parity', () => {
 	});
 
 	test('only the six navigation keys merge — mode/section_tipo/id never', () => {
-		const client: Record<string, unknown> = { section_tipo: ['oh1'] };
+		const client: Record<string, unknown> = { section_tipo: ['test6813'] };
 		mergeSessionSqo(client, {
 			mode: 'edit',
-			section_tipo: ['rsc197'],
-			id: 'oh1',
+			section_tipo: [seed('rsc', 197)],
+			id: 'test6813',
 			parsed: true,
 			limit: 30,
 		});
-		expect(client.section_tipo).toEqual(['oh1']);
+		expect(client.section_tipo).toEqual(['test6813']);
 		expect(Object.hasOwn(client, 'mode')).toBe(false);
 		expect(Object.hasOwn(client, 'id')).toBe(false);
 		expect(Object.hasOwn(client, 'parsed')).toBe(false);
@@ -95,14 +107,14 @@ describe('mergeSessionSqo: PHP received-case parity', () => {
 
 	test('merged values are deep-cloned — mutating the result never reaches the store', () => {
 		const stored = { filter: structuredClone(ID_FILTER) };
-		const client: Record<string, unknown> = { section_tipo: ['oh1'] };
+		const client: Record<string, unknown> = { section_tipo: ['test6813'] };
 		mergeSessionSqo(client, stored);
 		(client.filter as { $and: unknown[] }).$and.length = 0;
 		expect(stored.filter.$and).toHaveLength(1);
 	});
 
 	test('non-object stored SQO is a no-op (corrupt session row tolerated)', () => {
-		const client: Record<string, unknown> = { section_tipo: ['oh1'] };
+		const client: Record<string, unknown> = { section_tipo: ['test6813'] };
 		expect(mergeSessionSqo(client, null)).toBe(client);
 		expect(mergeSessionSqo(client, 'garbage')).toBe(client);
 		expect(mergeSessionSqo(client, [1, 2])).toBe(client);
@@ -113,11 +125,11 @@ describe('mergeSessionSqo: PHP received-case parity', () => {
 		// The exact scenario the client relies on: dummy build stored a
 		// section_id filter; the new window sends the bare first-load SQO.
 		const firstLoad: Record<string, unknown> = {
-			section_tipo: ['oh1'],
+			section_tipo: ['test6813'],
 			limit: null,
 			offset: 0,
 		};
-		const dummyStored = { section_tipo: ['oh1'], limit: 1, offset: 0, filter: ID_FILTER };
+		const dummyStored = { section_tipo: ['test6813'], limit: 1, offset: 0, filter: ID_FILTER };
 		mergeSessionSqo(firstLoad, dummyStored);
 		expect(firstLoad.filter).toEqual(ID_FILTER); // the related-records filter arrives
 		expect(firstLoad.limit).toBeNull(); // pagination still resolves mode default

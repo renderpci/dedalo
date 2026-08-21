@@ -31,7 +31,7 @@
  *     errors:[]}` with the REAL test_info widget, whose placeholder value
  *     re-proves sectionTipo/sectionId threading without any mock.
  *  7. MODE ROUTING — `source.mode` rides verbatim into the WidgetContext and
- *     the oh87 `descriptors` widget is its live consumer: 'edit' emits the
+ *     the test6883 `descriptors` widget is its live consumer: 'edit' emits the
  *     `indexation` count + the `terms` grid, 'list' (and an ABSENT mode, the
  *     handler's :44 default) short-circuits to []
  *     (components/component_info/widgets/oh/descriptors.ts:23). That is the
@@ -44,19 +44,23 @@
  * (that is the read-path emit hook), so items carry `widget_id` and NO `id` —
  * asserted, so a future dualisation cannot land unnoticed. The terms grid's
  * COLUMN set resolves against live reference data (dd_ontology section_map +
- * the dc1 target records, absent here), so it is pinned STRUCTURALLY; the byte
+ * the test1026 target records, absent here), so it is pinned STRUCTURALLY; the byte
  * pin is the read-path golden's job (fixtures/info_widget_native/
- * entries.golden.json, cases.oh87 — untouched).
+ * entries.golden.json, cases.test6883 — untouched).
  *
  * Scratch surface (namespace: test3 ids 934000-934099): matrix_test test3/934000,
  * a component-less record, plus — in the SAME band but the DEFAULT `matrix`
- * table — the oh87 descriptors chain oh1/934010 (relation oh25 → the tape) and
+ * table — the test6883 descriptors chain test6813/934010 (relation test6837 → the tape) and
  * rsc167/934011 (relation rsc860 → two descriptor locators), the same shape
  * test/unit/info_widget_native.test.ts seeds at 900311. All direct INSERTs (no
  * counter bump). Every row is swept in afterAll together with its
  * matrix_time_machine tail, fail-loud on residue AND on a sweep that deletes
  * nothing (a wrong-table DELETE leaks). No dd_ontology write anywhere.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
@@ -74,6 +78,9 @@ import { mustGet } from '../helpers/assert.ts';
 const REAL_REGISTRY = { ...widget_registry };
 const REGISTRY_PATH = '../../src/core/components/component_info/widgets/registry.ts';
 
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
 const SECTION = 'test3'; // matrix_test
 const SECTION_ID = 934000; // scratch band 934000-934099
 const INFO_WITH_WIDGETS = 'test212'; // component_info, properties.widgets = [test_info]
@@ -81,13 +88,19 @@ const WIDGET_NAME = 'test_info';
 const NO_WIDGETS_TIPO = 'test52'; // component_input_text — no properties.widgets
 const UNKNOWN_TIPO = 'zzt_no_such_tipo_934000'; // getNode() → null
 
-// The oh87 descriptors chain, in the DEFAULT `matrix` table (oh1/rsc167 are
-// model 'section' with no matrix_table): oh1 --oh25--> rsc167 --rsc860--> terms.
-const OH_SECTION = 'oh1';
+// The test6883 descriptors chain: test6813 --test6837--> rsc167 --rsc860--> terms.
+// The two ends sit in DIFFERENT matrix tables and that is the point of the hop:
+// the `test` section carries the matrix_table relation test24 (matrix_test, the
+// generic-TLD law), while the tape is the SEED-SHIPPED rsc167 the cloned
+// ontology itself points test6837 at, which has no matrix_table relation and so
+// resolves to the default `matrix`.
+const OH_SECTION = 'test6813';
+const OH_TABLE = 'matrix_test';
 const OH_ID = 934010;
-const TAPE_SECTION = 'rsc167';
+const TAPE_SECTION = seed('rsc', 167);
+const TAPE_TABLE = 'matrix';
 const TAPE_ID = 934011;
-const INFO_OH = 'oh87'; // component_info, properties.widgets = [media_icons, descriptors]
+const INFO_OH = 'test6883'; // component_info, properties.widgets = [media_icons, descriptors]
 const DESCRIPTORS_WIDGET = 'descriptors';
 const MEDIA_ICONS_WIDGET = 'media_icons';
 
@@ -134,8 +147,8 @@ const getWidgetData = mustGet(componentInfoApiActions.get_widget_data, 'get_widg
 /** Every seeded scratch row — exact (table, section_tipo, section_id). */
 const SCRATCH_ROWS: { table: string; sectionTipo: string; sectionId: number }[] = [
 	{ table: 'matrix_test', sectionTipo: SECTION, sectionId: SECTION_ID },
-	{ table: 'matrix', sectionTipo: TAPE_SECTION, sectionId: TAPE_ID },
-	{ table: 'matrix', sectionTipo: OH_SECTION, sectionId: OH_ID },
+	{ table: TAPE_TABLE, sectionTipo: TAPE_SECTION, sectionId: TAPE_ID },
+	{ table: OH_TABLE, sectionTipo: OH_SECTION, sectionId: OH_ID },
 ];
 
 const scratchKey = (row: { table: string; sectionTipo: string; sectionId: number }) =>
@@ -179,14 +192,17 @@ beforeAll(async () => {
 	await insertRow('matrix_test', SECTION, SECTION_ID);
 	// The descriptors chain: the tape holds TWO rsc860 descriptor locators
 	// (indexation count 2, two grid rows) and the interview points at the tape
-	// through oh25 — the hop whose result is the item `locator`.
-	await insertRow('matrix', TAPE_SECTION, TAPE_ID, {
+	// through test6837 — the hop whose result is the item `locator`.
+	await insertRow(TAPE_TABLE, TAPE_SECTION, TAPE_ID, {
 		relation: {
-			rsc860: [locatorOf('dc1', 187, 'rsc860'), locatorOf('dc1', 3, 'rsc860', 2)],
+			[seed('rsc', 860)]: [
+				locatorOf('test1026', 187, seed('rsc', 860)),
+				locatorOf('test1026', 3, seed('rsc', 860), 2),
+			],
 		},
 	});
-	await insertRow('matrix', OH_SECTION, OH_ID, {
-		relation: { oh25: [locatorOf(TAPE_SECTION, TAPE_ID, 'oh25')] },
+	await insertRow(OH_TABLE, OH_SECTION, OH_ID, {
+		relation: { test6837: [locatorOf(TAPE_SECTION, TAPE_ID, 'test6837')] },
 	});
 });
 
@@ -487,7 +503,7 @@ describe('get_widget_data — success envelope (real registry)', () => {
 	});
 });
 
-describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', () => {
+describe('get_widget_data — test6883 descriptors: the MODE-ROUTED deferred load', () => {
 	/** The SAME request every time; only source.mode differs (or is absent). */
 	const descriptorsRqo = (mode?: string): Rqo =>
 		rqoOf(
@@ -519,10 +535,10 @@ describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', 
 		return body.data as WidgetItem[];
 	}
 
-	test("mode 'edit' ⇒ the indexation count and the terms grid, over the oh25 hop", async () => {
+	test("mode 'edit' ⇒ the indexation count and the terms grid, over the test6837 hop", async () => {
 		const items = await descriptorItems('edit');
 
-		// One IPO entry (oh87's descriptors block) × its single path × two
+		// One IPO entry (test6883's descriptors block) × its single path × two
 		// declared outputs — so `key` is 0 throughout and the ids are exactly
 		// the pair the client's render reads by widget_id.
 		expect(items.map((item) => item.widget_id)).toEqual(['indexation', 'terms']);
@@ -531,8 +547,8 @@ describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', 
 			expect(item.key).toBe(0);
 			// RAW channel: no WC-026 dualisation (that is the read-path emit hook).
 			expect(Object.hasOwn(item, 'id')).toBe(false);
-			// The oh25 hop actually ran: the item locator IS the tape locator.
-			expect(item.locator).toEqual(locatorOf(TAPE_SECTION, TAPE_ID, 'oh25'));
+			// The test6837 hop actually ran: the item locator IS the tape locator.
+			expect(item.locator).toEqual(locatorOf(TAPE_SECTION, TAPE_ID, 'test6837'));
 		}
 
 		// indexation = the number of rsc860 descriptor locators on the tape.
@@ -568,7 +584,7 @@ describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', 
 
 	test("mode 'list' is DESCRIPTORS-specific: media_icons on the same record still emits", async () => {
 		// What makes the case above a routing pin rather than 'this record has no
-		// data': the other widget declared by oh87 reads the same oh25 hop and
+		// data': the other widget declared by test6883 reads the same test6837 hop and
 		// returns rows in list mode.
 		const result = await getWidgetData(
 			rqoOf(

@@ -21,6 +21,10 @@
  *   - the type allowlist: 'index'/'reference' only, anything else refused with
  *     the type named.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The host is
+// `test3` (a section storing in matrix_test) and the text_area is `test17`, whose
+// `is_translatable` is TRUE in the shipped test ontology — which is the property
+// this gate rests on: without it there are no language slices to reach.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { componentTextAreaApiActions } from '../../src/core/api/handlers/dd_component_text_area_api.ts';
@@ -38,9 +42,15 @@ import { markPatternById } from '../../src/core/resolve/tr_marks.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { refusalOfSync } from '../helpers/refusal.ts';
 
-const TABLE = 'matrix';
-const HOST_SECTION = 'rsc167';
-const TEXT_AREA = 'rsc36'; // component_text_area, translatable
+/**
+ * RESOLVED, never assumed: a cloned `test` section carries its own
+ * `matrix_table` relation (test3 → `matrix_test`), so a gate that hard-codes
+ * `matrix` inserts where the engine will never look for it — every read then
+ * answers "record not found" and the gate reddens on its own fixture.
+ */
+const TABLE = 'matrix_test';
+const HOST_SECTION = 'test3';
+const TEXT_AREA = 'test17'; // component_text_area, translatable
 const SPA = 'lg-spa';
 const ENG = 'lg-eng';
 const USER_ID = 1; // the superuser the suite runs writes as
@@ -235,7 +245,7 @@ describe('dd_component_text_area_api::delete_tag envelope', () => {
 		session: null,
 		csrfCandidate: null,
 		// SUPERUSER: the canonical write gate resolves grants from the matrix, so a
-		// plain isGlobalAdmin principal with no grant on rsc167/rsc36 is DENIED
+		// plain isGlobalAdmin principal with no grant on test3/test17 is DENIED
 		// (verified — that denial is the gate working, see the permissions test).
 		principal: { userId: SUPERUSER_ID, isGlobalAdmin: true, isDeveloper: true },
 	};

@@ -16,6 +16,8 @@
  * The dd542 rows of list_column_sortable_differential are history (ledgered
  * there); THIS gate pins the new contract.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the non-activity control is a
+// test-TLD component_date in the `test3` playground section (no install corpus read).
 
 import { describe, expect, test } from 'bun:test';
 import { ACTIVITY_SECTION_TIPO, ACTIVITY_WHEN_TIPO } from '../../src/core/concepts/section.ts';
@@ -68,9 +70,9 @@ describe('activity sort policy (WC-044)', () => {
 		// Same model (component_date), different section — the mapping is
 		// dd542-scoped, not a component_date behavior change.
 		const path = await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
-			buildOrderPath('oh18', 'oh1'),
+			buildOrderPath('test145', 'test3'),
 		);
-		expect(path[0]?.component_tipo).toBe('oh18');
+		expect(path[0]?.component_tipo).toBe('test145');
 	});
 
 	test('dd542 context: only When is sortable; its path is section_id', async () => {

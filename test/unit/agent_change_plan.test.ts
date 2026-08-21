@@ -2,7 +2,7 @@
  * Gate: the agent write harness — images through the provider seam and the
  * propose→confirm→apply change-plan protocol (Phase 4 of the work-system MCP
  * foundation). Fully OFFLINE via the scripted provider; DB writes only on the
- * scratch section (test2 → matrix_test) and removed afterwards.
+ * scratch section (test183 → matrix_test) and removed afterwards.
  *
  * The load-bearing assertions:
  *   - a valid proposal ENDS the turn with a validated plan and ZERO writes;
@@ -12,8 +12,21 @@
  *     {ref} chaining, and reports partial failure precisely;
  *   - image entries map to Messages-API image blocks (pure toMessages).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). Two
+// bindings went:
+//   - the write surface is `test183` + its OWN component_input_text `test187`
+//     (a coherent section/component pair, matrix_test, present on every
+//     install). NOT `test3`, whose component_external `test215` would turn an
+//     edit read into an outbound request; `test187` is is_translatable, so the
+//     lg-* a plan asks for survives the round trip.
+//   - the out-of-scope half no longer reads whatever install records the
+//     database happens to hold (`expect(hiddenId).toBeGreaterThan(0)` was the
+//     file's one red on the suite DB). It BUILDS the split: the synthetic ACL
+//     identities (test/helpers/acl_identity_fixture.ts) plus one scratch
+//     `test3` record carrying a project the non-admin does NOT hold — test3 is
+//     project-gated for real through its component_filter `test101`.
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { toMessages } from '../../src/ai/agent/anthropic_provider.ts';
 import {
 	applyChangePlan,
@@ -29,22 +42,66 @@ import { runAgent } from '../../src/ai/agent/loop.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { cleanScratchRecord } from '../helpers/test_data.ts';
+import { principalCanAccessRecord } from '../../src/core/security/record_scope.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
+import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
-/** Non-admin scoped principal (the only kind write surfaces accept). */
-const SCOPED: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
+/**
+ * Non-admin scoped principal (the only kind write surfaces accept) — the
+ * SYNTHETIC identity, which really exists and really holds exactly one project.
+ */
+const SCOPED: Principal = {
+	userId: ACL_NON_ADMIN_USER_ID,
+	isGlobalAdmin: false,
+	isDeveloper: false,
+};
 
-const SCRATCH_SECTION = 'test2';
+const SCRATCH_SECTION = 'test183';
 const SCRATCH_TABLE = 'matrix_test';
-const TEXT_FIELD = 'numisdata16';
+const TEXT_FIELD = 'test187';
+
+/** The project-gated section of the out-of-scope half, and what gates it. */
+const GATED_SECTION = 'test3';
+const GATED_FILTER = 'test101'; // test3's component_filter — buildProjectsFilter keys on it
+const GATED_TEXT = 'test52'; // test3's own component_input_text
+/** The scratch record the scoped principal must NOT be able to name (≥900000). */
+const HIDDEN_ID = 941101;
+/** A project the scoped principal does NOT hold — what makes HIDDEN_ID hidden. */
+const OTHER_PROJECT_ID = 1;
+const PROJECTS_SECTION = 'dd153';
+const PROJECT_LOCATOR_TYPE = 'dd675';
 
 const createdIds: number[] = [];
+
+beforeAll(async () => {
+	await installAclIdentityFixture();
+	await createScratchRecord(GATED_SECTION, HIDDEN_ID, {
+		relation: {
+			[GATED_FILTER]: [
+				{
+					id: 1,
+					type: PROJECT_LOCATOR_TYPE,
+					section_id: String(OTHER_PROJECT_ID),
+					section_tipo: PROJECTS_SECTION,
+					from_component_tipo: GATED_FILTER,
+				},
+			],
+		},
+		string: { [GATED_TEXT]: [{ id: 1, lang: 'lg-eng', value: 'out-of-scope scratch' }] },
+	});
+});
 
 afterAll(async () => {
 	for (const id of createdIds) {
 		await cleanScratchRecord(SCRATCH_SECTION, id, SCRATCH_TABLE);
 	}
+	await cleanScratchRecord(GATED_SECTION, HIDDEN_ID);
+	await removeAclIdentityFixture();
 });
 
 class ScriptedProvider implements AgentLlmProvider {
@@ -151,7 +208,7 @@ describe('propose_change_plan (scripted loop, write mode)', () => {
 			SELECT section_id FROM matrix_test
 			WHERE section_tipo = ${SCRATCH_SECTION}
 			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(string->'numisdata16') e
+				SELECT 1 FROM jsonb_array_elements(string->'test187') e
 				WHERE e->>'value' LIKE ${`${unique}%`}
 			)
 		`) as { section_id: number }[];
@@ -310,7 +367,7 @@ describe('validate + hash + apply (live scratch writes)', () => {
 		await expect(
 			validateChangePlan(SUPERUSER, base, {
 				allowWrite: true,
-				writableSections: new Set(['oh1']),
+				writableSections: new Set([GATED_SECTION]),
 			}),
 		).rejects.toMatchObject({ code: 'perm.section_not_writable' });
 		// A denied user fails the permission dry-run before anything else runs.
@@ -335,19 +392,16 @@ describe('validate + hash + apply (live scratch writes)', () => {
 	});
 
 	test('scoped user cannot smuggle an out-of-scope record into a plan', async () => {
-		// numisdata267 record NOT in user 16's project (fixture family from the
-		// mcp_tools gate).
-		const hidden = (await sql`
-			SELECT section_id FROM matrix
-			WHERE section_tipo = 'numisdata267'
-			  AND NOT EXISTS (
-				SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e
-				WHERE e->>'section_id' = '7'
-			)
-			ORDER BY section_id LIMIT 1
-		`) as { section_id: number }[];
-		const hiddenId = Number(hidden[0]?.section_id);
-		expect(hiddenId).toBeGreaterThan(0);
+		// The record EXISTS and carries a project the scoped principal does not
+		// hold — built above, never borrowed from an install.
+		const visible = await sql`
+			SELECT section_id FROM matrix_test
+			WHERE section_tipo = ${GATED_SECTION} AND section_id = ${HIDDEN_ID}
+		`;
+		expect((visible as { section_id: number }[]).length).toBe(1);
+		// …and it is genuinely OUT of the principal's scope: the gate the plan
+		// validator consults says no, so the wall below cannot be vacuous.
+		expect(await principalCanAccessRecord(GATED_SECTION, HIDDEN_ID, SCOPED)).toBe(false);
 		try {
 			await validateChangePlan(
 				SCOPED,
@@ -359,9 +413,9 @@ describe('validate + hash + apply (live scratch writes)', () => {
 							op_id: 'op1',
 							tool: 'dedalo_set_field',
 							args: {
-								section_tipo: 'numisdata267',
-								section_id: hiddenId,
-								field: 'numisdata16',
+								section_tipo: GATED_SECTION,
+								section_id: HIDDEN_ID,
+								field: GATED_TEXT,
 								value: 'x',
 							},
 							summary: 'smuggle',

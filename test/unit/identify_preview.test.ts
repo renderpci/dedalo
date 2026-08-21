@@ -37,8 +37,11 @@ import {
 	mediaThumbUrl,
 } from '../../src/core/media/path.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
-const SCRATCH_ROOT = join(import.meta.dir, '..', '..', '.scratch_identify_preview');
+// DECLARED on creation — the media doors refuse an unmarked root under the
+// test-media seam (src/core/media/test_media_root.ts).
+const SCRATCH_ROOT = markMediaRoot(join(import.meta.dir, '..', '..', '.scratch_identify_preview'));
 
 const PATH_OPTIONS: MediaPathOptions = {
 	initialMediaPath: '',

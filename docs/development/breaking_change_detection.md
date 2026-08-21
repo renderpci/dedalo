@@ -10,8 +10,10 @@ The read-path wire shape is not re-derived on every run — it is **pinned to a 
 fixture store** under `test/parity/fixtures/oracle_harvest/`. Each fixture is a
 recorded `(request → response)` pair; a parity test replays the request against the
 server and diffs the response against the stored one. `ORACLE_MODE` defaults to
-`fixtures`, so `bun test test/parity/` runs offline, needs no credentials, and is
-green on a plain clone.
+`fixtures`, so `bun test test/parity/` runs offline and needs no credentials. It is
+**not** green on a plain clone today: the harvested store is bound to one install's
+records, and its corpus-bound gates are being replaced by generic-`test`-TLD twins
+(`engineering/ORACLE_HARVEST.md`).
 
 This makes every wire-shape change **loud and deliberate**. You cannot quietly alter
 a response: the fixture will not match, and the only way to make it match is to edit

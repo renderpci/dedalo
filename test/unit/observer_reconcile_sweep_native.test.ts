@@ -25,12 +25,19 @@
  * sub-law wholesale REFUSAL — the branch that exists so a wipe-armed node is
  * never reported as clean.
  *
- * Environment: suite DB. The on1/58 anchor comes from the shared seed helper
- * (observer_term_seed.ts); everything else is scratch — rsc205 rows 91070/91071
+ * Environment: suite DB. The anchor term comes from the shared fixture helper
+ * (observer_term_seed.ts, a BUILT scratch situation); everything else is scratch —
+ * referencer rows 91070/91071
  * and two `test9995x` dd_ontology observer nodes, all swept fail-loud in
  * afterAll. Nothing here asserts a table-global count.
  */
+// BINDS INSTALL TLDs: on, rsc — install-specific fixtures, grandfathered in
+// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
+// is meaningful only on a database holding those installs' records. Migrate it to a
+// built situation (src/core/test_data/situations) or the generic `test` TLD, then
+// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -40,15 +47,17 @@ import {
 	reconcileObserverMirrors,
 } from '../../src/core/section/record/observer_reconcile.ts';
 import {
+	dropObserverTerm,
+	ensureObserverTerm,
+	INDEXER,
+	MIRROR,
+	REF_SECTION,
 	SEED_TERM,
-	seedTermChainIfAbsent,
-	sweepSeedTermReferencerResidue,
-	sweepTermChain,
-	type TermSeedHandle,
+	TERM_SECTION,
 } from '../helpers/observer_term_seed.ts';
 
-/** Scratch rsc205 rows — this item's whole matrix namespace. */
-const REFERENCER_ID = 91070; // references on1/58 through rsc387 (the bypass write)
+/** Scratch referencer rows — this item's whole namespace. */
+const REFERENCER_ID = 91070; // references the anchor through INDEXER (the bypass write)
 const DEGRADED_HOLDER_ID = 91071; // holds one stale mirror entry for the scratch observer
 /** Ids nothing references and nothing mirrors — the non-candidate probes. They
  * are never written to; if the membership filter regressed they would be. */
@@ -59,36 +68,27 @@ const NON_CANDIDATE_TARGET = 999_999_702;
 const DEGRADED_OBSERVER = 'test99950';
 const MISSING_PEER = 'test99959_no_such_node';
 const SUBLAW_OBSERVER = 'test99951';
-const SCRATCH_HOST = 'rsc205';
+const SCRATCH_HOST = REF_SECTION;
 
-let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
+/** Resolved once the fixture exists — the scratch sections own their table. */
+let TERM_TABLE = 'matrix_test';
+let REF_TABLE = 'matrix_test';
 let seedHelperRan = false;
 let anchorRows = -1;
-/**
- * The sweep writes; on a restored LIVE snapshot on1/58 is a real record whose
- * mirror a repair write would rewrite unrecoverably. So the behavioural cases
- * run only when THIS run planted the anchor (⇒ suite DB ⇒ scratch by
- * construction).
- */
-let planted = false;
 
 /** Suite DB only for the ontology fixture: `test` is a REAL tld in production. */
 const onSuiteDb = config.db.database.endsWith('_test');
 
 /**
- * A skip that cannot be mistaken for a pass: it NAMES itself on stderr and it
- * ASSERTS the seed helper actually ran and the anchor is present. A DB outage
- * or a missing fixture therefore fails the case instead of silently greening
- * the whole file (the import_drive.test.ts anti-pattern).
+ * The fixture is ASSERTED, never skipped around. The old `skipUnlessPlanted`
+ * existed because the anchor might be a REAL install term whose mirror an apply
+ * sweep would rewrite; the anchor is now a scratch term this file builds
+ * (test/helpers/observer_term_seed.ts), so there is nothing to protect and no
+ * case may opt out. A missing fixture is a failure, not a skip.
  */
-function skipUnlessPlanted(caseName: string): boolean {
+function requireFixture(): void {
 	expect(seedHelperRan).toBe(true);
 	expect(anchorRows).toBe(1);
-	if (planted) return false;
-	console.warn(
-		`observer_reconcile_sweep_native: NOT RUN — "${caseName}" (on1/58 pre-exists: live-snapshot DB, an apply sweep would rewrite a real mirror)`,
-	);
-	return true;
 }
 
 function skipUnlessSuiteDb(caseName: string): boolean {
@@ -102,9 +102,9 @@ function skipUnlessSuiteDb(caseName: string): boolean {
 
 async function mirrorBag(): Promise<unknown[] | null> {
 	const rows = (await sql.unsafe(
-		`SELECT relation->'hierarchy93' AS bag FROM matrix_hierarchy
+		`SELECT relation->($3::text) AS bag FROM "${TERM_TABLE}"
 		 WHERE section_tipo = $1 AND section_id = $2`,
-		[SEED_TERM.section_tipo, SEED_TERM.section_id],
+		[SEED_TERM.section_tipo, SEED_TERM.section_id, MIRROR],
 	)) as { bag: unknown[] | null }[];
 	return rows[0]?.bag ?? null;
 }
@@ -114,30 +114,34 @@ async function mirrorBag(): Promise<unknown[] | null> {
  * reconciler's candidate query sees it while the save cascade never fired). */
 async function insertReferencer(id: number): Promise<void> {
 	await sql.unsafe(
-		`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
+		`INSERT INTO "${REF_TABLE}" (section_id, section_tipo, relation) VALUES ($1, $3, $2::text::jsonb)`,
 		[
 			id,
 			JSON.stringify({
-				rsc387: [
+				[INDEXER]: [
 					{
 						id: 1,
 						type: 'dd96',
 						section_id: String(SEED_TERM.section_id),
 						section_tipo: SEED_TERM.section_tipo,
-						from_component_tipo: 'rsc387',
+						from_component_tipo: INDEXER,
 					},
 				],
 			}),
+			REF_SECTION,
 		],
 	);
 }
 
 async function sweepScratchRows(): Promise<void> {
 	for (const id of [REFERENCER_ID, DEGRADED_HOLDER_ID]) {
-		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [id]);
+		await sql.unsafe(`DELETE FROM "${REF_TABLE}" WHERE section_tipo = $2 AND section_id = $1`, [
+			id,
+			REF_SECTION,
+		]);
 		await sql.unsafe(
-			`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = $1`,
-			[id],
+			`DELETE FROM matrix_time_machine WHERE section_tipo = $2 AND section_id = $1`,
+			[id, REF_SECTION],
 		);
 	}
 }
@@ -165,7 +169,7 @@ async function seedScratchOntology(): Promise<void> {
 			JSON.stringify({
 				observe: [
 					{
-						component_tipo: 'rsc387',
+						component_tipo: INDEXER,
 						section_tipo: SCRATCH_HOST,
 						server: {
 							config: { use_observable_dato: true },
@@ -176,7 +180,7 @@ async function seedScratchOntology(): Promise<void> {
 				source: {
 					data_from_field: [MISSING_PEER],
 					section_to_search: [SCRATCH_HOST],
-					component_to_search: ['rsc387'],
+					component_to_search: [INDEXER],
 				},
 			}),
 		],
@@ -191,7 +195,7 @@ async function seedScratchOntology(): Promise<void> {
 			JSON.stringify({
 				observe: [
 					{
-						component_tipo: 'rsc387',
+						component_tipo: INDEXER,
 						section_tipo: SCRATCH_HOST,
 						server: {
 							config: { use_observable_dato: true },
@@ -202,7 +206,7 @@ async function seedScratchOntology(): Promise<void> {
 				source: {
 					set_observed_data: true,
 					section_to_search: [SCRATCH_HOST],
-					component_to_search: ['rsc387'],
+					component_to_search: [INDEXER],
 				},
 			}),
 		],
@@ -228,8 +232,14 @@ async function seedDegradedHolder(): Promise<void> {
 		SCRATCH_HOST,
 		DEGRADED_HOLDER_ID,
 	]);
+	// Idempotent: the holder id is reused across cases, and a bare INSERT trips
+	// the (section_id, section_tipo) unique key on a re-plant.
+	await sql.unsafe(`DELETE FROM "${REF_TABLE}" WHERE section_tipo = $1 AND section_id = $2`, [
+		SCRATCH_HOST,
+		DEGRADED_HOLDER_ID,
+	]);
 	await sql.unsafe(
-		`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
+		`INSERT INTO "${REF_TABLE}" (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
 		[
 			DEGRADED_HOLDER_ID,
 			SCRATCH_HOST,
@@ -249,42 +259,38 @@ async function seedDegradedHolder(): Promise<void> {
 }
 
 beforeAll(async () => {
-	termSeed = await seedTermChainIfAbsent();
+	await ensureObserverTerm();
 	seedHelperRan = true;
-	planted = termSeed.seededChain;
+	TERM_TABLE = (await getMatrixTableFromTipo(TERM_SECTION)) ?? 'matrix_test';
+	REF_TABLE = (await getMatrixTableFromTipo(REF_SECTION)) ?? 'matrix_test';
 	const anchor = (await sql.unsafe(
-		'SELECT count(*)::int AS n FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id = $2',
+		`SELECT count(*)::int AS n FROM "${TERM_TABLE}" WHERE section_tipo = $1 AND section_id = $2`,
 		[SEED_TERM.section_tipo, SEED_TERM.section_id],
 	)) as { n: number }[];
 	anchorRows = anchor[0]?.n ?? 0;
-	if (planted) {
-		// Residue tolerance: a crashed observer-gate run leaves scratch rsc205
-		// referencers of on1/58 behind and they inflate every recompute. planted ⇒
-		// suite DB ⇒ they are scratch by construction.
-		await sweepSeedTermReferencerResidue();
-		await sweepScratchRows();
-		await insertReferencer(REFERENCER_ID);
-	}
+	// Residue tolerance: a crashed observer-gate run leaves scratch referencers
+	// of the anchor behind and they inflate every recompute. The section is this
+	// fixture's own, so every such row is scratch by construction.
+	await sweepScratchRows();
+	await insertReferencer(REFERENCER_ID);
 	if (onSuiteDb) {
 		await sweepScratchOntology();
-		if (!planted) await sweepScratchRows();
 		await seedScratchOntology();
 	}
 });
 
 afterAll(async () => {
-	if (planted) await sweepTermChain(termSeed);
 	await sweepScratchRows();
 	if (onSuiteDb) await sweepScratchOntology();
 	// FAIL LOUD: a cleanup that did not reach zero is a corrupted shared DB for
 	// every other gate, and it must not be discovered by them.
 	const leftMatrix = (await sql.unsafe(
-		`SELECT count(*)::int AS n FROM matrix WHERE section_tipo = 'rsc205' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[`${REFERENCER_ID},${DEGRADED_HOLDER_ID}`],
+		`SELECT count(*)::int AS n FROM "${REF_TABLE}" WHERE section_tipo = $2 AND section_id = ANY(string_to_array($1, ',')::int[])`,
+		[`${REFERENCER_ID},${DEGRADED_HOLDER_ID}`, REF_SECTION],
 	)) as { n: number }[];
 	const leftTm = (await sql.unsafe(
-		`SELECT count(*)::int AS n FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = ANY(string_to_array($1, ',')::int[])`,
-		[`${REFERENCER_ID},${DEGRADED_HOLDER_ID}`],
+		`SELECT count(*)::int AS n FROM matrix_time_machine WHERE section_tipo = $2 AND section_id = ANY(string_to_array($1, ',')::int[])`,
+		[`${REFERENCER_ID},${DEGRADED_HOLDER_ID}`, REF_SECTION],
 	)) as { n: number }[];
 	const leftOntology = (await sql.unsafe(
 		`SELECT count(*)::int AS n FROM dd_ontology WHERE tipo = ANY($1::text[])`,
@@ -303,11 +309,11 @@ afterAll(async () => {
 
 describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle', () => {
 	test('apply:false REPORTS the drift and writes NOTHING', async () => {
-		if (skipUnlessPlanted('apply:false REPORTS the drift and writes NOTHING')) return;
+		requireFixture();
 		const records: ReconcileRecord[] = [];
 		const lines: string[] = [];
 		const summary = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: SEED_TERM.section_id,
 			apply: false,
@@ -327,7 +333,7 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 		expect(summary.sublawRefused).toBe(0);
 		expect(records).toEqual([
 			{
-				observerTipo: 'hierarchy93',
+				observerTipo: MIRROR,
 				hostSection: SEED_TERM.section_tipo,
 				sectionId: SEED_TERM.section_id,
 				before: 0,
@@ -346,10 +352,10 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 	}, 30000);
 
 	test('apply:true REPAIRS the record and writes the exact mirror bag', async () => {
-		if (skipUnlessPlanted('apply:true REPAIRS the record and writes the exact mirror bag')) return;
+		requireFixture();
 		const lines: string[] = [];
 		const summary = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: SEED_TERM.section_id,
 			apply: true,
@@ -369,18 +375,18 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 				id: 1,
 				type: 'dd151',
 				section_id: REFERENCER_ID,
-				section_tipo: 'rsc205',
-				from_component_tipo: 'hierarchy93',
+				section_tipo: REF_SECTION,
+				from_component_tipo: MIRROR,
 			},
 		]);
 	}, 30000);
 
 	test('a third run CONVERGES: drifted 0, repaired 0, the bag untouched', async () => {
-		if (skipUnlessPlanted('a third run CONVERGES')) return;
+		requireFixture();
 		const bagBefore = await mirrorBag();
 		const records: ReconcileRecord[] = [];
 		const summary = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: SEED_TERM.section_id,
 			apply: true,
@@ -395,18 +401,19 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 	}, 30000);
 
 	test('a MASKED SWAP is reported by MEMBERSHIP and both halves are applied', async () => {
-		if (skipUnlessPlanted('a MASKED SWAP is reported by MEMBERSHIP')) return;
+		requireFixture();
 		// One referencer bypass-deleted, one bypass-inserted: the law drops exactly
 		// one entry and appends exactly one, so before === after and a census that
 		// read `before - after` would report ZERO drops — the corpus drop budget
 		// would then sail past the exact shape it exists to catch.
-		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
+		await sql.unsafe(`DELETE FROM "${REF_TABLE}" WHERE section_tipo = $2 AND section_id = $1`, [
 			REFERENCER_ID,
+			REF_SECTION,
 		]);
 		await insertReferencer(DEGRADED_HOLDER_ID);
 		const records: ReconcileRecord[] = [];
 		const dry = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: SEED_TERM.section_id,
 			onRecord: (record) => records.push(record),
@@ -414,7 +421,7 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 		expect(dry.drifted).toBe(1);
 		expect(records).toEqual([
 			{
-				observerTipo: 'hierarchy93',
+				observerTipo: MIRROR,
 				hostSection: SEED_TERM.section_tipo,
 				sectionId: SEED_TERM.section_id,
 				before: 1,
@@ -433,7 +440,7 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 			2,
 		);
 		const applied = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: SEED_TERM.section_id,
 			apply: true,
@@ -448,8 +455,8 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 				type: 'dd151',
 				// WC-2026-08-10-section-id-int-canonical: int address.
 				section_id: DEGRADED_HOLDER_ID,
-				section_tipo: 'rsc205',
-				from_component_tipo: 'hierarchy93',
+				section_tipo: REF_SECTION,
+				from_component_tipo: MIRROR,
 			},
 		]);
 	}, 30000);
@@ -457,13 +464,13 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 
 describe('reconcileObserverMirrors — candidate + tuple narrowing', () => {
 	test('--id narrows by MEMBERSHIP: a non-candidate id yields no candidate at all', async () => {
-		if (skipUnlessPlanted('--id narrows by MEMBERSHIP')) return;
+		requireFixture();
 		// NON_CANDIDATE_ID holds no mirror and is referenced by nothing, so it is
 		// NOT in the tuple's candidate union. An --id that trusted its argument
 		// would recompute it — and under --apply WRITE a record outside the set.
 		const records: ReconcileRecord[] = [];
 		const miss = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: NON_CANDIDATE_ID,
 			apply: true,
@@ -483,7 +490,7 @@ describe('reconcileObserverMirrors — candidate + tuple narrowing', () => {
 		// Positive control on the SAME tuple: the anchor is a member (through both
 		// halves of the union by now — referenced target and mirror holder).
 		const hit = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: SEED_TERM.section_id,
 		});
@@ -491,18 +498,18 @@ describe('reconcileObserverMirrors — candidate + tuple narrowing', () => {
 	}, 30000);
 
 	test('--section narrows the DISCOVERED tuple set (filtered after the index fan-out)', async () => {
-		if (skipUnlessPlanted('--section narrows the DISCOVERED tuple set')) return;
+		requireFixture();
 		// Every call passes a non-candidate --id: this case is about DISCOVERY and
 		// must not cost a corpus-wide recompute.
 		const unfiltered = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlyId: NON_CANDIDATE_ID,
 		});
-		// hierarchy93 is declared at on1/ts1/dc1 and the relation-index fan-out
-		// adds every section rsc387 actually points into.
+		// MIRROR is declared on the term section and the relation-index fan-out
+		// adds every section INDEXER actually points into.
 		expect(unfiltered.tuples).toBeGreaterThan(1);
 		const oneHost = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: SEED_TERM.section_tipo,
 			onlyId: NON_CANDIDATE_ID,
 		});
@@ -510,7 +517,7 @@ describe('reconcileObserverMirrors — candidate + tuple narrowing', () => {
 		// A section no tuple hosts at yields none: an operator's scope is a scope,
 		// not a hint (a pass-through filter would hand back the whole union).
 		const elsewhere = await reconcileObserverMirrors({
-			onlyObserver: 'hierarchy93',
+			onlyObserver: MIRROR,
 			onlySection: 'zzz-no-such-section',
 			onlyId: NON_CANDIDATE_ID,
 		});
@@ -573,7 +580,7 @@ describe('reconcileObserverMirrors — the refusal census (scratch ontology fixt
 		).toHaveLength(1);
 		// Withheld ⇒ still stored (and this was a dry run besides).
 		const rows = (await sql.unsafe(
-			`SELECT relation->$3 AS bag FROM matrix WHERE section_tipo = $1 AND section_id = $2`,
+			`SELECT relation->($3::text) AS bag FROM "${REF_TABLE}" WHERE section_tipo = $1 AND section_id = $2`,
 			[SCRATCH_HOST, DEGRADED_HOLDER_ID, DEGRADED_OBSERVER],
 		)) as { bag: unknown[] | null }[];
 		expect(rows[0]?.bag).toHaveLength(1);
@@ -595,7 +602,7 @@ describe('reconcileObserverMirrors — the refusal census (scratch ontology fixt
 		expect(summary.degradedSeedRecords).toBe(1);
 		expect(summary.repaired).toBe(0);
 		const rows = (await sql.unsafe(
-			`SELECT relation->$3 AS bag FROM matrix WHERE section_tipo = $1 AND section_id = $2`,
+			`SELECT relation->($3::text) AS bag FROM "${REF_TABLE}" WHERE section_tipo = $1 AND section_id = $2`,
 			[SCRATCH_HOST, DEGRADED_HOLDER_ID, DEGRADED_OBSERVER],
 		)) as { bag: unknown[] | null }[];
 		expect(rows[0]?.bag).toEqual([

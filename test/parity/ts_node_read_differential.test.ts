@@ -7,24 +7,53 @@
  * The orchestrator owns running/debugging the differential sweep; this file pins
  * the two highest-value shapes (single-node build + paginated children build).
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay). The RQOs are
+// written in `test`-TLD terms (`testimmovable1`, the clone of the old tchi1
+// thesaurus) and reach the frozen install-term interaction through `unmapRqo`;
+// the frozen body is read back in test terms through `adoptTipoIdMap`. The
+// records come from the committed test corpus, torn down after.
+//
+// STILL RED, and NOT a TLD binding — the corpus cannot speak for these records
+// (src/core/test_data/test_corpus/refused.json, kind `never_revealed`): the
+// frozen store never revealed `tchi1/620` nor its twelve children (612-631), so
+// get_children_data answers []; and the one node it did reveal (602) was
+// RECONSTRUCTED from a read projection whose string item carries no `lang`, so
+// the term resolves through the untranslated-lang fallback (`<mark>…</mark>`)
+// and its childless state flips has_descriptor_children / is_indexable / order.
+// The gate is left asserting the truth: it goes green when the corpus can hold
+// those rows (derive_test_corpus.ts), never by relaxing the comparison.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { adoptErrorEnvelopeV2, normalizeSectionIdTypes } from './normalize.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptErrorEnvelopeV2, adoptTipoIdMap, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-const NODE = { section_tipo: 'tchi1', section_id: 602 };
-const PARENT = { section_tipo: 'tchi1', section_id: 620, children_tipo: 'tchi40' };
+/** The cloned immovables thesaurus and its children component (was tchi1/tchi40). */
+const SECTION = 'testimmovable1';
+const NODE = { section_tipo: SECTION, section_id: 602 };
+const PARENT = { section_tipo: SECTION, section_id: 620, children_tipo: 'testimmovable1038' };
 
 let php: PhpApiClient;
 let tsContext: Parameters<typeof dispatchRqo>[1];
 
 async function callBoth(rqo: Record<string, unknown>) {
+	// WC-2026-08-19-test-tld-replay: the RQO travels back to install terms in
+	// `lookupInteraction` (unmapRqo), and the frozen body comes back through the
+	// clone map. `matched` + a non-zero rewrite floor are the anti-vacuity check:
+	// a body that needed no rewrite would mean this is not the migrated gate.
+	const adoptedFrozen = adoptTipoIdMap(
+		(await php.call(structuredClone(rqo))).body,
+		'ts_node_read_differential',
+	);
+	expect(adoptedFrozen.matched).toBe(true);
+	expect(adoptedFrozen.rewrites.tipos).toBeGreaterThan(0);
+	expect(adoptedFrozen.rewrites.ids).toBeGreaterThan(0);
 	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
-	const phpBody = normalizeSectionIdTypes((await php.call(structuredClone(rqo))).body);
+	const phpBody = normalizeSectionIdTypes(adoptedFrozen.body);
 	const tsBody = normalizeSectionIdTypes(
 		(await dispatchRqo(structuredClone(rqo) as never, tsContext)).body as Record<string, unknown>,
 	);
@@ -32,6 +61,7 @@ async function callBoth(rqo: Record<string, unknown>) {
 }
 
 beforeAll(async () => {
+	await ensureTestCorpus([SECTION]);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
@@ -46,6 +76,10 @@ beforeAll(async () => {
 		principal,
 	} as never;
 }, 120000);
+
+afterAll(async () => {
+	expect(await dropTestCorpus([SECTION])).toBe(0);
+});
 
 describe.if(hasPhpCredentials())('dd_ts_api.get_node_data differential', () => {
 	test('descriptor node payload matches PHP', async () => {

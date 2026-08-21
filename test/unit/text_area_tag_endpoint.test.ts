@@ -6,6 +6,10 @@
  *   - malformed id → fail-closed 404;
  *   - locator tag without a session → fail-closed 404 (no existence leak).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule: a test uses
+// the generic `test` TLD and BUILDS the situation it tests). The tipos below are
+// OPAQUE IDENTIFIERS to this gate — it parses and renders them, it never reads a
+// record — so the migration is a rename: same grammar, no install in it.
 
 import { describe, expect, test } from 'bun:test';
 import { handleRequest } from '../../src/server.ts';
@@ -82,7 +86,7 @@ describe('tag endpoint — fail closed', () => {
 
 	test('locator tag WITHOUT a valid session → 404 (no existence leak)', async () => {
 		const response = await handleRequest(
-			tagRequest('{"section_tipo":"rsc167","section_id":"29","component_tipo":"rsc170"}'),
+			tagRequest('{"section_tipo":"test3","section_id":"29","component_tipo":"test52"}'),
 			context,
 		);
 		expect(response.status).toBe(404);

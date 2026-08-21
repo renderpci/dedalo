@@ -3,10 +3,10 @@
  *
  * 1. SUPPRESSION: a value_with_parents ddo whose component resolved NO real
  *    value for the row emits NO ddinfo. A 'self' ddo resolves for EVERY
- *    searched section, so e.g. `hierarchy25` runs for a `tchi1` row where it
+ *    searched section, so e.g. `hierarchy25` runs for a `testimmovable1` row where it
  *    has no data (entries: [], fallback_value: [null]) and — before WC-052 —
  *    emitted a PHANTOM breadcrumb the picker rendered BEFORE the row's real
- *    term column (`tch555`). The frozen PHP oracle keeps the phantom;
+ *    term column (`testheritagecatalog1110`). The frozen PHP oracle keeps the phantom;
  *    deliberate divergence.
  * 2. STAMP: every emitted ddinfo carries `from_ddo_tipo` (the generating ddo)
  *    so the client can anchor each breadcrumb to its own term column
@@ -14,6 +14,10 @@
  * 3. The lang-fallback face counts as a value: terms stored only in another
  *    lang arrive as `fallback_value` and must still produce their breadcrumb.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import type { Ddo } from '../../src/core/concepts/ddo.ts';
@@ -117,22 +121,22 @@ describe('WC-052 rows ddinfo suppression + from_ddo_tipo stamp', () => {
 });
 
 describe('portal-cell ddinfo config trigger (portalCellEmitsDdinfo)', () => {
-	// The `tch555` own-config shape: user thesaurus `tchi1` lives in the
+	// The `testheritagecatalog1110` own-config shape: user thesaurus `testimmovable1` lives in the
 	// generic `matrix` table, so ONLY this config-driven trigger keeps its
 	// edit-cell breadcrumb.
 	const ddos = [
-		{ tipo: 'h25', section_tipo: ['es1', 'tchi1'], value_with_parents: true },
-		{ tipo: 't15', section_tipo: 'tchi1', value_with_parents: true },
-		{ tipo: 't13', section_tipo: 'tchi1' },
+		{ tipo: 'h25', section_tipo: ['es1', 'testimmovable1'], value_with_parents: true },
+		{ tipo: 't15', section_tipo: 'testimmovable1', value_with_parents: true },
+		{ tipo: 't13', section_tipo: 'testimmovable1' },
 	] as unknown as Ddo[];
 
 	test('a vwp child compatible with the target triggers', () => {
-		expect(portalCellEmitsDdinfo(ddos, 'tchi1')).toBe(true);
+		expect(portalCellEmitsDdinfo(ddos, 'testimmovable1')).toBe(true);
 		expect(portalCellEmitsDdinfo(ddos, 'es1')).toBe(true);
 	});
 
 	test('a target no vwp child declares does NOT trigger', () => {
-		expect(portalCellEmitsDdinfo(ddos, 'object1')).toBe(false);
+		expect(portalCellEmitsDdinfo(ddos, 'test6810')).toBe(false);
 	});
 
 	test("'self'/undeclared section_tipo pass; non-vwp children never trigger", () => {

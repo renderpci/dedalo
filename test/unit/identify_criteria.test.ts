@@ -16,6 +16,10 @@
  *     of the seed's Types" into "carries all of them", which returns almost
  *     nothing and looks like a data problem.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { sqoFilterLeafSchema, sqoFilterNodeSchema } from '../../src/core/concepts/sqo.ts';
@@ -23,8 +27,8 @@ import { criteriaToFilter, criterionToSqoLeaf } from '../../src/core/identify/cr
 import type { Criterion, CriterionValue, MatchMode } from '../../src/core/identify/types.ts';
 
 const PATH = [
-	{ section_tipo: 'numisdata4', component_tipo: 'numisdata161' },
-	{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+	{ section_tipo: 'test6100', component_tipo: 'test6230' },
+	{ section_tipo: 'test6099', component_tipo: 'test6123' },
 ];
 
 function criterion(mode: MatchMode, over: Partial<Criterion> = {}): Criterion {
@@ -51,13 +55,13 @@ describe('criterionToSqoLeaf — same_locator', () => {
 	test('ONE seed locator compiles to ONE leaf carrying the criterion path', () => {
 		const value: CriterionValue = {
 			kind: 'locators',
-			locators: [{ section_tipo: 'numisdata3', section_id: '27' }],
+			locators: [{ section_tipo: 'test6099', section_id: '27' }],
 		};
 		const compiled = criterionToSqoLeaf(criterion('same_locator'), value);
 		// section_id emits CANONICAL (int) even when the seed stored '27'
 		// (WC-2026-08-10-section-id-int-canonical).
 		expect(compiled).toEqual({
-			q: [{ section_tipo: 'numisdata3', section_id: 27 }],
+			q: [{ section_tipo: 'test6099', section_id: 27 }],
 			path: PATH,
 		});
 		expectValidSqo(compiled);
@@ -67,8 +71,8 @@ describe('criterionToSqoLeaf — same_locator', () => {
 		const value: CriterionValue = {
 			kind: 'locators',
 			locators: [
-				{ section_tipo: 'numisdata3', section_id: '27' },
-				{ section_tipo: 'numisdata3', section_id: '31' },
+				{ section_tipo: 'test6099', section_id: '27' },
+				{ section_tipo: 'test6099', section_id: '31' },
 			],
 		};
 		const compiled = criterionToSqoLeaf(criterion('same_locator'), value) as {
@@ -81,8 +85,8 @@ describe('criterionToSqoLeaf — same_locator', () => {
 		for (const leaf of compiled.$or) {
 			expect(leaf.q).toHaveLength(1);
 		}
-		expect(compiled.$or[0]?.q).toEqual([{ section_tipo: 'numisdata3', section_id: 27 }]);
-		expect(compiled.$or[1]?.q).toEqual([{ section_tipo: 'numisdata3', section_id: 31 }]);
+		expect(compiled.$or[0]?.q).toEqual([{ section_tipo: 'test6099', section_id: 27 }]);
+		expect(compiled.$or[1]?.q).toEqual([{ section_tipo: 'test6099', section_id: 31 }]);
 		expectValidSqo(compiled);
 	});
 
@@ -91,16 +95,16 @@ describe('criterionToSqoLeaf — same_locator', () => {
 			kind: 'locators',
 			locators: [
 				{
-					section_tipo: 'numisdata3',
+					section_tipo: 'test6099',
 					section_id: '27',
 					id: 4,
 					type: 'dd151',
-					from_component_tipo: 'numisdata161',
+					from_component_tipo: 'test6230',
 				},
 			],
 		};
 		const compiled = criterionToSqoLeaf(criterion('same_locator'), value) as { q: object[] };
-		expect(compiled.q[0]).toEqual({ section_tipo: 'numisdata3', section_id: 27 });
+		expect(compiled.q[0]).toEqual({ section_tipo: 'test6099', section_id: 27 });
 	});
 
 	test('section_id emits CANONICAL — int for addresses, verbatim for external ids (WC-2026-08-10)', () => {
@@ -118,7 +122,7 @@ describe('criterionToSqoLeaf — same_locator', () => {
 		// its stored bytes are the value and must survive untouched.
 		const asExternalRef = criterionToSqoLeaf(criterion('same_locator'), {
 			kind: 'locators',
-			locators: [{ section_tipo: 'zenon1', section_id: '001338683' }],
+			locators: [{ section_tipo: 'test7342', section_id: '001338683' }],
 		}) as { q: { section_id: unknown }[] };
 		expect(asString.q[0]?.section_id).toBe(27);
 		expect(asNumber.q[0]?.section_id).toBe(27);
@@ -379,7 +383,7 @@ describe('criteriaToFilter — the candidate-pool query', () => {
 		required: false,
 		role: 'descriptive',
 		tolerance: 0.5,
-		path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata90' }],
+		path: [{ section_tipo: 'test6100', component_tipo: 'test6170' }],
 	});
 
 	test('$and over the REQUIRED criteria only — ranking criteria never gate', () => {
@@ -404,7 +408,7 @@ describe('criteriaToFilter — the candidate-pool query', () => {
 	test('a required criterion the SEED lacks is SKIPPED, not turned into an impossible filter', () => {
 		const other = criterion('normalized_text', {
 			id: 'mint',
-			path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata12' }],
+			path: [{ section_tipo: 'test6100', component_tipo: 'test6106' }],
 		});
 		const filter = criteriaToFilter(
 			[legend, other],
@@ -437,13 +441,13 @@ describe('criteriaToFilter — the candidate-pool query', () => {
 	test('several required criteria all land in the $and, in profile order', () => {
 		const mint = criterion('same_locator', {
 			id: 'mint',
-			path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata12' }],
+			path: [{ section_tipo: 'test6100', component_tipo: 'test6106' }],
 		});
 		const filter = criteriaToFilter(
 			[legend, mint],
 			new Map<string, CriterionValue | null>([
 				['legend', { kind: 'text', values: ['ATHENA'] }],
-				['mint', { kind: 'locators', locators: [{ section_tipo: 'numisdata11', section_id: 7 }] }],
+				['mint', { kind: 'locators', locators: [{ section_tipo: 'test6105', section_id: 7 }] }],
 			]),
 		) as { $and: unknown[] };
 		expect(filter.$and).toHaveLength(2);

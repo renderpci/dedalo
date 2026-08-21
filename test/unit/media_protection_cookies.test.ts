@@ -20,7 +20,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -37,6 +37,7 @@ import {
 	SESSION_IDLE_TTL_SECONDS,
 } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -127,7 +128,8 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 
 	beforeEach(() => {
 		scratch = mkdtempSync(join(tmpdir(), 'dedalo_media_cookie_'));
-		mkdirSync(join(scratch, 'media'), { recursive: true });
+		// DECLARE the scratch media root (src/core/media/test_media_root.ts).
+		markMediaRoot(join(scratch, 'media'));
 		overrideMediaProtectionPathsForTests({
 			mediaRoot: join(scratch, 'media'),
 			authStorePath: join(scratch, 'private', 'media_auth.json'),

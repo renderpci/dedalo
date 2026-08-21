@@ -17,6 +17,10 @@
  * (`orderLocatorsByDeclaredColumns` → expandPortal) are exercised below + by the
  * relation read gates; here we lock the pure resolution.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -28,6 +32,9 @@ import {
 	orderedColumnsFromDdoMap,
 	rankLocatorsByColumns,
 } from '../../src/core/relations/order_locators.ts';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 // A resolved show.ddo_map (each entry may carry `order` / `sort_by_column`).
 const columns = (specs: { tipo: string; section_tipo?: string; order?: unknown }[]) =>
@@ -50,51 +57,53 @@ describe('locatorTargetSections', () => {
 	test('distinct locator section_tipos, non-string dropped', () => {
 		expect(
 			locatorTargetSections([
-				{ section_tipo: 'tch10', section_id: 1 },
-				{ section_tipo: 'tch10', section_id: 2 },
+				{ section_tipo: 'test7008', section_id: 1 },
+				{ section_tipo: 'test7008', section_id: 2 },
 				{ section_tipo: 'dd128', section_id: 3 },
 				{ section_id: 4 },
 			]),
-		).toEqual(['tch10', 'dd128']);
+		).toEqual(['test7008', 'dd128']);
 		expect(locatorTargetSections([])).toEqual([]);
 	});
 });
 
 describe('orderedColumnsFromDdoMap', () => {
 	test('one ordered column → its tipo + direction', () => {
-		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: 'asc' }]))).toEqual([
-			{ componentTipo: 'rsc20', direction: 'ASC' },
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: seed('rsc', 20), order: 'asc' }]))).toEqual([
+			{ componentTipo: seed('rsc', 20), direction: 'ASC' },
 		]);
 	});
 
 	test('DESC honored; boolean true = ASC', () => {
 		expect(
-			orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: 'desc' }]))[0]?.direction,
+			orderedColumnsFromDdoMap(columns([{ tipo: seed('rsc', 20), order: 'desc' }]))[0]?.direction,
 		).toBe('DESC');
-		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: true }]))[0]?.direction).toBe(
-			'ASC',
-		);
+		expect(
+			orderedColumnsFromDdoMap(columns([{ tipo: seed('rsc', 20), order: true }]))[0]?.direction,
+		).toBe('ASC');
 	});
 
 	test('columns WITHOUT order are skipped; declaration order = priority', () => {
 		expect(
 			orderedColumnsFromDdoMap(
 				columns([
-					{ tipo: 'rsc279' }, // no order → skipped
-					{ tipo: 'rsc29', order: 'desc' },
-					{ tipo: 'rsc20', order: 'asc' },
+					{ tipo: seed('rsc', 279) }, // no order → skipped
+					{ tipo: seed('rsc', 29), order: 'desc' },
+					{ tipo: seed('rsc', 20), order: 'asc' },
 				]),
 			),
 		).toEqual([
-			{ componentTipo: 'rsc29', direction: 'DESC' },
-			{ componentTipo: 'rsc20', direction: 'ASC' },
+			{ componentTipo: seed('rsc', 29), direction: 'DESC' },
+			{ componentTipo: seed('rsc', 20), direction: 'ASC' },
 		]);
 	});
 
 	test('invalid order value / no order / empty tipo → dropped', () => {
-		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20', order: 'sideways' }]))).toEqual([]);
+		expect(
+			orderedColumnsFromDdoMap(columns([{ tipo: seed('rsc', 20), order: 'sideways' }])),
+		).toEqual([]);
 		expect(orderedColumnsFromDdoMap([])).toEqual([]);
-		expect(orderedColumnsFromDdoMap(columns([{ tipo: 'rsc20' }]))).toEqual([]);
+		expect(orderedColumnsFromDdoMap(columns([{ tipo: seed('rsc', 20) }]))).toEqual([]);
 		expect(orderedColumnsFromDdoMap(columns([{ tipo: '', order: 'asc' }]))).toEqual([]);
 	});
 });
@@ -126,10 +135,10 @@ describe('hasDeclaredColumnOrder (cheap raw-properties gate)', () => {
 	});
 
 	test('true only when some request_config column carries a valid order', () => {
-		expect(hasDeclaredColumnOrder(props([{ tipo: 'rsc85', order: 'asc' }]))).toBe(true);
-		expect(hasDeclaredColumnOrder(props([{ tipo: 'rsc85', order: true }]))).toBe(true);
-		expect(hasDeclaredColumnOrder(props([{ tipo: 'rsc85' }]))).toBe(false);
-		expect(hasDeclaredColumnOrder(props([{ tipo: 'rsc85', order: 'nope' }]))).toBe(false);
+		expect(hasDeclaredColumnOrder(props([{ tipo: seed('rsc', 85), order: 'asc' }]))).toBe(true);
+		expect(hasDeclaredColumnOrder(props([{ tipo: seed('rsc', 85), order: true }]))).toBe(true);
+		expect(hasDeclaredColumnOrder(props([{ tipo: seed('rsc', 85) }]))).toBe(false);
+		expect(hasDeclaredColumnOrder(props([{ tipo: seed('rsc', 85), order: 'nope' }]))).toBe(false);
 		expect(hasDeclaredColumnOrder(null)).toBe(false);
 		expect(hasDeclaredColumnOrder({})).toBe(false);
 		expect(hasDeclaredColumnOrder({ source: { request_config: 'x' } })).toBe(false);

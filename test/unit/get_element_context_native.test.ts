@@ -75,8 +75,21 @@ function elementRqo(source: Record<string, unknown>) {
 	return { action: 'get_element_context', dd_api: 'dd_core_api', source };
 }
 
+/**
+ * ENVELOPE v2 READERS (ported 2026-08-19). This file used to read the PHP-era
+ * `body.result` / `body.msg`, which are GONE (ERRORS_SPEC §envelope v2:
+ * `{ok, request_id, data}` on success, `{ok:false, error:{code,…}}` on
+ * failure). Every one of those reads yielded `undefined`, and nobody noticed
+ * because the whole describe was blocked by a throwing `installAclIdentityFixture`
+ * — the file never ran a single assertion. Refusals are now pinned by CODE, not
+ * by the human message: the message is the disclosure-ladder's public string,
+ * the code is the contract.
+ */
 function entriesOf(body: Record<string, unknown>): Record<string, unknown>[] {
-	return body.result as Record<string, unknown>[];
+	return body.data as Record<string, unknown>[];
+}
+function errorCodeOf(body: Record<string, unknown>): string | undefined {
+	return (body.error as { code?: string } | undefined)?.code;
 }
 
 describe.if(DB_READY)('dd_core_api.get_element_context', () => {
@@ -127,8 +140,8 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 				nonAdminContext as never,
 			);
 			expect(refused.status).toBe(403);
-			expect(refused.body.result).toBe(false);
-			expect(refused.body.msg).toBe('Tool not authorized for current user');
+			expect(refused.body.ok).toBe(false);
+			expect(errorCodeOf(refused.body)).toBe('tool.not_authorized');
 		});
 
 		test('an always_active tool IS authorized for the non-admin (the check is per-tool, not per-role)', async () => {
@@ -145,8 +158,8 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 		test('a missing source.tipo is a named 400', async () => {
 			const result = await dispatchRqo(elementRqo({}) as never, adminContext as never);
 			expect(result.status).toBe(400);
-			expect(result.body.result).toBe(false);
-			expect(result.body.msg).toBe('get_element_context: source.tipo is required');
+			expect(result.body.ok).toBe(false);
+			expect(errorCodeOf(result.body)).toBe('request.invalid_source');
 		});
 
 		test('an uncovered model is a 400 that NAMES the model (never a 500)', async () => {
@@ -155,8 +168,15 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 				adminContext as never,
 			);
 			expect(result.status).toBe(400);
-			expect(result.body.msg).toBe(
-				`get_element_context: model '${UNCOVERED_MODEL}' not implemented (section/component/area only)`,
+			// ENVELOPE v2: the CODE is the contract; the model name survives on the
+			// disclosure-gated `error.debug.exception` (DEDALO_DEBUG_API_ERRORS is on
+			// in the test posture — asserted, so the naming half of this test cannot
+			// go vacuous if the ladder ever closes here).
+			expect(errorCodeOf(result.body)).toBe('request.invalid_model');
+			const debug = (result.body.error as { debug?: { exception?: string } }).debug;
+			expect(debug?.exception).toBeDefined();
+			expect(debug?.exception).toContain(
+				`model '${UNCOVERED_MODEL}' not implemented (section/component/area only)`,
 			);
 		});
 	});
@@ -185,7 +205,7 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 			// Ignoring source.section_tipo (checking (tipo, tipo) instead) makes
 			// this 200: a grant on one section reading an element of another.
 			expect(result.status).toBe(403);
-			expect(result.body.msg).toBe('Insufficient permissions to read');
+			expect(errorCodeOf(result.body)).toBe('perm.denied');
 		});
 
 		test('permission level 0 is 403 — and the identity holding the grant gets 200', async () => {
@@ -194,8 +214,8 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 				nonAdminContext as never,
 			);
 			expect(refused.status).toBe(403);
-			expect(refused.body.result).toBe(false);
-			expect(refused.body.msg).toBe('Insufficient permissions to read');
+			expect(refused.body.ok).toBe(false);
+			expect(errorCodeOf(refused.body)).toBe('perm.denied');
 
 			const allowed = await dispatchRqo(
 				elementRqo({ tipo: ADMIN_ONLY_AREA }) as never,

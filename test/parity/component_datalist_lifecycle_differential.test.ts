@@ -9,12 +9,25 @@
  *  - component_security_access: EDIT datalist node count + envelope.
  * See rewrite/STATUS.md "SIX-COMPONENT LIFECYCLE FIX".
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// The install case is written in `test`-TLD terms (numisdata54 → test6136,
+// its component_filter numisdata720 → test6437); every other case names
+// SEED-shipped ontology (the media/av/publication sections and the dd
+// permission tree), pinned as such and spelled through `seed()` where the
+// install-TLD census would read the literal as a binding. The frozen PHP
+// interactions are reached through `unmapRqo` (fixture lookup) +
+// `adoptTipoIdMap`, and the records come from the committed corpus.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData, readSection } from '../../src/core/section/read.ts';
-import { normalizeSectionIdTypes } from './normalize.ts';
+import {
+	dropTestCorpus,
+	ensureMediaKit,
+	ensureTestCorpus,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface DataItem {
@@ -27,16 +40,40 @@ interface DataItem {
 	[k: string]: unknown;
 }
 
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/**
+ * The corpus this gate OWNS: the four datalist subjects' sections, the av
+ * section, and the cloned section of the one install-owned case.
+ * `dd234` (the permissions profile) is NOT here — the install seed ships
+ * dd234/1 itself (`seed_shipped_record`, refused.json), so it is already in
+ * any database this suite runs against.
+ */
+const CORPUS_SCOPE = [seed('rsc', 170), seed('rsc', 205), seed('rsc', 167), 'dd128', 'test6136'];
+
 const client = new PhpApiClient();
 let ready = false;
 
 beforeAll(async () => {
+	await ensureTestCorpus(CORPUS_SCOPE);
+	// component_av asserts posterframe/quality URLs, which are existence-checked
+	// against the media root: plant the corpus media identities in the SUITE
+	// media root (marked `.dedalo_test_media`).
+	await ensureMediaKit();
 	if (!hasPhpCredentials()) return;
 	await client.login(
 		config.phpReference.username as string,
 		config.phpReference.password as string,
 	);
 	ready = true;
+});
+
+afterAll(async () => {
+	expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
 });
 
 async function both(
@@ -62,9 +99,17 @@ async function both(
 		sqo: { section_tipo: [sectionTipo] },
 	};
 	const { body } = await client.call(structuredClone(rqo) as Record<string, unknown>);
+	// WC-2026-08-19-test-tld-replay: the frozen install-term body, read in
+	// test-TLD terms. `detail === null` is `matched === true` carrying its own
+	// reason; the id resolutions are the anti-vacuity floor (a case that names
+	// only seed-shipped ontology needs no tipo rewritten at all).
+	const adopted = adoptTipoIdMap(body, 'component_datalist_lifecycle_differential');
+	expect(adopted.detail).toBeNull();
+	expect(adopted.matched).toBe(true);
+	expect(adopted.rewrites.ids).toBeGreaterThan(0);
 	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 	const php = normalizeSectionIdTypes(
-		((body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === tipo),
+		((adopted.body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === tipo),
 	);
 	const ts = normalizeSectionIdTypes(
 		((await readComponentData(rqo as unknown as Rqo)) as unknown as DataItem[]).find(
@@ -81,19 +126,25 @@ async function both(
 describe.if(hasPhpCredentials())('six-component get_data lifecycle differential', () => {
 	// Datalist family: edit datalist deep-equal + list value equal.
 	const DATALIST_CASES = [
-		{ name: 'publication', model: 'component_publication', tipo: 'rsc20', st: 'rsc170', id: '1' },
+		{
+			name: 'publication',
+			model: 'component_publication',
+			tipo: seed('rsc', 20),
+			st: seed('rsc', 170),
+			id: '1',
+		},
 		{
 			name: 'select_lang',
 			model: 'component_select_lang',
-			tipo: 'rsc251',
-			st: 'rsc205',
+			tipo: seed('rsc', 251),
+			st: seed('rsc', 205),
 			id: '19226',
 		},
 		{
 			name: 'filter',
 			model: 'component_filter',
-			tipo: 'numisdata720',
-			st: 'numisdata54',
+			tipo: 'test6437',
+			st: 'test6136',
 			id: '1267',
 		},
 		{
@@ -124,13 +175,13 @@ describe.if(hasPhpCredentials())('six-component get_data lifecycle differential'
 	// AV media envelope.
 	test('av: posterframe + subtitles (edit) match PHP', async () => {
 		if (!ready) return;
-		const { php, ts } = await both('component_av', 'rsc35', 'rsc167', '1', 'edit');
+		const { php, ts } = await both('component_av', seed('rsc', 35), seed('rsc', 167), '1', 'edit');
 		expect(ts?.posterframe_url).toEqual(php?.posterframe_url);
 		expect(ts?.subtitles).toEqual(php?.subtitles);
 	});
 	test('av: list value includes thumb quality (match PHP)', async () => {
 		if (!ready) return;
-		const { php, ts } = await both('component_av', 'rsc35', 'rsc167', '2', 'list');
+		const { php, ts } = await both('component_av', seed('rsc', 35), seed('rsc', 167), '2', 'list');
 		const q = (it: DataItem | undefined) =>
 			Array.isArray(it?.entries) ? (it.entries as { quality: string }[]).map((e) => e.quality) : [];
 		expect(q(ts)).toEqual(q(php));
@@ -176,7 +227,13 @@ describe.if(hasPhpCredentials())('six-component get_data lifecycle differential'
 			},
 		};
 		const { body } = await client.call(structuredClone(rqo) as Record<string, unknown>);
-		const php = ((body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === 'dd774');
+		// WC-2026-08-19-test-tld-replay (see `both` above).
+		const adopted = adoptTipoIdMap(body, 'component_datalist_lifecycle_differential');
+		expect(adopted.detail).toBeNull();
+		expect(adopted.matched).toBe(true);
+		const php = ((adopted.body.result as { data: DataItem[] }).data ?? []).find(
+			(d) => d.tipo === 'dd774',
+		);
 		const ts = ((await readSection(rqo as unknown as Rqo)).data as unknown as DataItem[]).find(
 			(d) => d.tipo === 'dd774',
 		);

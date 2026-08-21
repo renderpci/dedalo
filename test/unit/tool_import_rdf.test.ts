@@ -7,6 +7,8 @@
  * The guard tests are network-free by construction: a refused URI never reaches
  * fetch(), so every assertion here runs credless and offline.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the sectionTipos extractor is pure, so
+// its ontology tipo and locator are opaque — they now name generic `test` nodes.
 
 import { describe, expect, test } from 'bun:test';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -39,11 +41,12 @@ describe('tool_import_rdf module', () => {
 		// a fail-closed denial, i.e. the action was unreachable from the UI.
 		expect(
 			spec.sectionTipos?.({
-				ontology_tipo: 'numisdata1129',
+				// ontology_tipo is opaque to the extractor (only `locator` is read).
+				ontology_tipo: 'test6',
 				ar_values: ['http://viaf.org/viaf/1'],
-				locator: { section_tipo: 'rsc205', section_id: 1 },
+				locator: { section_tipo: 'test3', section_id: 1 },
 			}),
-		).toEqual(['rsc205']);
+		).toEqual(['test3']);
 		// No locator → no target → the 'section_list' gate denies (fail-closed).
 		expect(spec.sectionTipos?.({ ar_values: [] })).toEqual([]);
 	});

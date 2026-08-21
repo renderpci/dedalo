@@ -14,6 +14,9 @@
  *     section_map, section_id-component and children-tipo reads re-resolve
  *     fresh — exactly the reads that served stale values before this fix.
  */
+// Migrated to the generic `test` TLD 2026-08-20: the identity probes name the
+// `test`-TLD clones of the sections/components they used to borrow from an
+// install — the subject is cache identity across a hub fire, not either install.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { clearAreaWalkCache, collectAreaRows } from '../../src/core/api/handlers/menu.ts';
@@ -117,13 +120,13 @@ describe('hub registration census (S1-09)', () => {
 
 /** Object-valued cached getters: same ref on a hit, new ref after a hub fire. */
 const IDENTITY_CASES: [string, () => Promise<object | null>][] = [
-	['section_list resolveListCellMap', () => resolveListCellMap('numisdata16')],
-	['section_list resolveOwnConfigMap', () => resolveOwnConfigMap('numisdata16')],
-	['section_list getDataframeChildTipos', () => getDataframeChildTipos('numisdata16')],
-	['relation_index getRelatedListChildTipos', () => getRelatedListChildTipos('numisdata6')],
+	['section_list resolveListCellMap', () => resolveListCellMap('testmint1002')],
+	['section_list resolveOwnConfigMap', () => resolveOwnConfigMap('testmint1002')],
+	['section_list getDataframeChildTipos', () => getDataframeChildTipos('testmint1002')],
+	['relation_index getRelatedListChildTipos', () => getRelatedListChildTipos('testmint1')],
 	['labels/catalog getLabels', () => getLabels('lg-eng')],
 	['search_related getRelationTables', () => getRelationTables()],
-	['section_map getSectionMap', () => getSectionMap('oh1')],
+	['section_map getSectionMap', () => getSectionMap('test6813')],
 	// AUTHZ-06 made getUserAuthorizedProjects fail CLOSED without an ambient
 	// principal (a fresh [] each call — no identity to test), which left this
 	// case permanently red. Anchor a global-admin principal so the case tests
@@ -149,7 +152,7 @@ const IDENTITY_CASES: [string, () => Promise<object | null>][] = [
 	],
 	['request_config/explicit resolveOntologySections', () => resolveOntologySections()],
 	['handlers/menu collectAreaRows', () => collectAreaRows()],
-	['section/buttons sectionButtonRows', () => sectionButtonRows('oh1')],
+	['section/buttons sectionButtonRows', () => sectionButtonRows('test6813')],
 ];
 
 describe('object identity across a hub fire (S1-09)', () => {

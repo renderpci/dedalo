@@ -4,14 +4,17 @@
  *
  * - set_field append/replace literal semantics on the scratch section (test2 →
  *   matrix_test), including translation-preserving replace;
- * - portal link/unlink on a scratch host record (numisdata3 rows created and
- *   removed here — same pattern as dataframe_cascade_removal);
+ * - portal link/unlink on a scratch host record (test3 rows created and removed
+ *   here — same pattern as dataframe_cascade_removal);
  * - find_or_create: create → find (idempotent) → ambiguous_match with
  *   candidates;
  * - the write gate chain: a denied user is denied on EVERY new write tool;
  * - media source gating (pure): path source disabled without the import dir,
  *   traversal/symlink escapes rejected, base64 caps enforced.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the portal host is now the `test3`
+// playground section (its own portal `test80`, storing in matrix_test) and the literal
+// under test is `test52` — no install's records are read or written.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -33,13 +36,13 @@ const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper
 
 const SCRATCH_SECTION = 'test2';
 const SCRATCH_TABLE = 'matrix_test';
-const TEXT_FIELD = 'numisdata16'; // component_input_text (proven write fixture)
+const TEXT_FIELD = 'test52'; // component_input_text (proven write fixture)
 
 /** Scratch host for the portal round-trip (same fixture family as the
  *  dataframe cascade gate — rows created here, removed in afterAll). */
-const HOST_SECTION = 'numisdata3';
-const HOST_TABLE = 'matrix';
-const PORTAL_FIELD = 'numisdata75';
+const HOST_SECTION = 'test3';
+const HOST_TABLE = 'matrix_test';
+const PORTAL_FIELD = 'test80';
 
 const createdScratch: number[] = [];
 const createdHosts: number[] = [];
@@ -117,18 +120,21 @@ describe('dedalo_portal_link / dedalo_portal_unlink (scratch host)', () => {
 		const { createSectionRecord } = await import('../../src/core/section/record/create_record.ts');
 		const hostId = await createSectionRecord(HOST_SECTION, SUPERUSER.userId);
 		createdHosts.push(hostId);
-		const targetId = await createScratchRecord();
+		// The target MUST be a declared target of the portal — test80 declares
+		// test3 — or validateRelationInsert refuses the link (off_target).
+		const targetId = await createSectionRecord(HOST_SECTION, SUPERUSER.userId);
+		createdHosts.push(targetId);
 
 		await portalLink(SUPERUSER, {
 			section_tipo: HOST_SECTION,
 			section_id: hostId,
 			field: PORTAL_FIELD,
-			target: { section_tipo: SCRATCH_SECTION, section_id: targetId },
+			target: { section_tipo: HOST_SECTION, section_id: targetId },
 		});
 		let locators = await storedItems(HOST_TABLE, HOST_SECTION, hostId, 'relation', PORTAL_FIELD);
 		const written = locators.find(
 			(item) =>
-				(item as { section_tipo?: string }).section_tipo === SCRATCH_SECTION &&
+				(item as { section_tipo?: string }).section_tipo === HOST_SECTION &&
 				Number((item as { section_id?: unknown }).section_id) === targetId,
 		) as Record<string, unknown> | undefined;
 		expect(written).toBeDefined();
@@ -139,7 +145,7 @@ describe('dedalo_portal_link / dedalo_portal_unlink (scratch host)', () => {
 			section_tipo: HOST_SECTION,
 			section_id: hostId,
 			field: PORTAL_FIELD,
-			target: { section_tipo: SCRATCH_SECTION, section_id: targetId },
+			target: { section_tipo: HOST_SECTION, section_id: targetId },
 		});
 		expect(unlinked.unlinked).toBe(true);
 		locators = await storedItems(HOST_TABLE, HOST_SECTION, hostId, 'relation', PORTAL_FIELD);

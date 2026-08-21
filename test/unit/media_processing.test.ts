@@ -5,6 +5,10 @@
  * assert dimensions/format/colorspace via identify, pdftotext text content, and
  * ffprobe stream shape. Skipped honestly when a binary is absent.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -35,6 +39,7 @@ import {
 	resolveMasterSource,
 	shouldApplyMetaAlpha,
 } from '../../src/core/media/processing.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_proc_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -184,6 +189,9 @@ async function makeMultiPagePdf(relative: string, pages: number): Promise<void> 
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 });
 afterAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
@@ -191,8 +199,8 @@ afterAll(() => {
 
 describe('image processing (real ImageMagick)', () => {
 	const identity: MediaIdentity = {
-		componentTipo: 'rsc29',
-		sectionTipo: 'rsc170',
+		componentTipo: 'test99',
+		sectionTipo: 'test3',
 		sectionId: 5,
 		lang: null,
 	};
@@ -201,7 +209,7 @@ describe('image processing (real ImageMagick)', () => {
 		'regenerateImage builds default quality + thumb + svg envelope',
 		async () => {
 			// A large original well over the 1.5MB pixel budget.
-			await makeImage('/image/original/rsc29_rsc170_5.jpg', '3000x2000', 'red');
+			await makeImage('/image/original/test99_test3_5.jpg', '3000x2000', 'red');
 			const outcome = await regenerateImage(image, identity, pathOpts);
 			const created = outcome.created;
 			// default quality + thumb + the SVG envelope (the edit view's display
@@ -212,7 +220,7 @@ describe('image processing (real ImageMagick)', () => {
 			expect(created.length).toBe(3 + image.alternateExtensions.length);
 			expect(created.some((path) => path.endsWith('.svg'))).toBe(true);
 			for (const alternate of image.alternateExtensions) {
-				const twin = `${ROOT}/image/1.5MB/rsc29_rsc170_5.${alternate}`;
+				const twin = `${ROOT}/image/1.5MB/test99_test3_5.${alternate}`;
 				expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
 				expect([alternate, created.includes(twin)]).toEqual([alternate, true]);
 			}
@@ -223,7 +231,7 @@ describe('image processing (real ImageMagick)', () => {
 
 			// Default quality exists, is a REAL jpeg (not the source format under a .jpg
 			// name — the temp-extension guard), and is resized within the pixel budget.
-			const webPath = `${ROOT}/image/1.5MB/rsc29_rsc170_5.jpg`;
+			const webPath = `${ROOT}/image/1.5MB/test99_test3_5.jpg`;
 			expect(existsSync(webPath)).toBe(true);
 			const webResult = await runBinary([resolveMagick(), 'identify', '-format', '%m', webPath], {
 				nice: false,
@@ -234,14 +242,14 @@ describe('image processing (real ImageMagick)', () => {
 			expect(webDims.width).toBeLessThan(3000); // downscaled
 
 			// Thumb exists and fits within the thumb box (shrink-only).
-			const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_5.jpg`;
+			const thumbPath = `${ROOT}/image/thumb/test99_test3_5.jpg`;
 			expect(existsSync(thumbPath)).toBe(true);
 			const thumbDims = await getDimensions(thumbPath);
 			expect(thumbDims.width).toBeLessThanOrEqual(222);
 			expect(thumbDims.height).toBeLessThanOrEqual(148);
 
 			// The SVG envelope embeds the default-quality raster via xlink:href.
-			const svg = await Bun.file(`${ROOT}/image/svg/rsc29_rsc170_5.svg`).text();
+			const svg = await Bun.file(`${ROOT}/image/svg/test99_test3_5.svg`).text();
 			expect(svg).toContain('<image');
 			expect(svg).toContain('/1.5MB/');
 		},
@@ -249,16 +257,16 @@ describe('image processing (real ImageMagick)', () => {
 
 	test.if(HAVE_MAGICK)('never upscales: a small original stays small', async () => {
 		const smallId: MediaIdentity = { ...identity, sectionId: 6 };
-		await makeImage('/image/original/rsc29_rsc170_6.jpg', '100x80', 'blue');
+		await makeImage('/image/original/test99_test3_6.jpg', '100x80', 'blue');
 		await regenerateImage(image, smallId, pathOpts);
-		const dims = await getDimensions(`${ROOT}/image/1.5MB/rsc29_rsc170_6.jpg`);
+		const dims = await getDimensions(`${ROOT}/image/1.5MB/test99_test3_6.jpg`);
 		expect(dims.width).toBeLessThanOrEqual(100);
 		expect(dims.height).toBeLessThanOrEqual(80);
 	});
 
 	test.if(HAVE_MAGICK)('resolveMasterSource finds the original file', async () => {
 		expect(resolveMasterSource(image, identity, pathOpts)).toContain(
-			'/image/original/rsc29_rsc170_5.jpg',
+			'/image/original/test99_test3_5.jpg',
 		);
 		const absent: MediaIdentity = { ...identity, sectionId: 999 };
 		expect(resolveMasterSource(image, absent, pathOpts)).toBeNull();
@@ -275,8 +283,8 @@ describe('image processing (real ImageMagick)', () => {
  */
 describe('multi-image sources: layers, pages and frames (real ImageMagick)', () => {
 	const identity: MediaIdentity = {
-		componentTipo: 'rsc29',
-		sectionTipo: 'rsc170',
+		componentTipo: 'test99',
+		sectionTipo: 'test3',
 		sectionId: 20,
 		lang: null,
 	};
@@ -288,8 +296,8 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			// are smaller layers. Pre-fix this threw
 			// `ENOENT … rename …tmp.<pid>.<rand>.jpg -> ….jpg` and left three orphans.
 			const layered: MediaIdentity = { ...identity, sectionId: 20 };
-			const source = `${ROOT}/image/original/rsc29_rsc170_20.tif`;
-			await makeMagickFixture('/image/original/rsc29_rsc170_20.tif', [
+			const source = `${ROOT}/image/original/test99_test3_20.tif`;
+			await makeMagickFixture('/image/original/test99_test3_20.tif', [
 				'-size',
 				'300x200',
 				'xc:red',
@@ -313,8 +321,8 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			// (2026-08-07 — see the first regenerateImage gate in this file).
 			expect(created.length).toBe(3 + image.alternateExtensions.length);
 
-			const defaultPath = `${ROOT}/image/1.5MB/rsc29_rsc170_20.jpg`;
-			const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_20.jpg`;
+			const defaultPath = `${ROOT}/image/1.5MB/test99_test3_20.jpg`;
+			const thumbPath = `${ROOT}/image/thumb/test99_test3_20.jpg`;
 			expect(existsSync(defaultPath)).toBe(true);
 			expect(existsSync(thumbPath)).toBe(true);
 			// ONE image in each derivative: the source sequence was reduced, not split
@@ -328,7 +336,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			// it embeds, or the client renders the image at the wrong size (a blank or
 			// clipped box). It is sized from the default tier's CANVAS.
 			const dims = await getDimensions(defaultPath);
-			const svg = await Bun.file(`${ROOT}/image/svg/rsc29_rsc170_20.svg`).text();
+			const svg = await Bun.file(`${ROOT}/image/svg/test99_test3_20.svg`).text();
 			expect(svg).toContain(`width="${dims.width}" height="${dims.height}"`);
 		},
 	);
@@ -338,7 +346,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// full-canvas pages stacks them and yields the LAST one. tif is allow-listed
 		// for upload, so this is reachable in production, not a lab case.
 		const paged: MediaIdentity = { ...identity, sectionId: 21 };
-		await makeMagickFixture('/image/original/rsc29_rsc170_21.tif', [
+		await makeMagickFixture('/image/original/test99_test3_21.tif', [
 			'-size',
 			'200x150',
 			'xc:red', // page 1
@@ -351,7 +359,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		]);
 		// The fixture really holds three pages — a container writer that collapsed
 		// them would leave the colour assertions below proving nothing about selection.
-		const source = `${ROOT}/image/original/rsc29_rsc170_21.tif`;
+		const source = `${ROOT}/image/original/test99_test3_21.tif`;
 		expect((await probeImageSource(source)).sceneCount).toBe(3);
 		const thumb = await buildThumbVersion(image, paged, source, pathOpts);
 		expect((await probeImageSource(thumb)).sceneCount).toBe(1);
@@ -363,7 +371,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 
 	test.if(HAVE_MAGICK)('an ANIMATED GIF thumbnails FRAME 1, not the last frame', async () => {
 		const anim: MediaIdentity = { ...identity, sectionId: 22 };
-		await makeMagickFixture('/image/original/rsc29_rsc170_22.gif', [
+		await makeMagickFixture('/image/original/test99_test3_22.gif', [
 			'-size',
 			'200x150',
 			'xc:red',
@@ -374,7 +382,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			'200x150',
 			'xc:blue',
 		]);
-		const source = `${ROOT}/image/original/rsc29_rsc170_22.gif`;
+		const source = `${ROOT}/image/original/test99_test3_22.gif`;
 		// Same guard as the paged gate: three real frames, or the colour below is
 		// simply the only frame there is.
 		expect((await probeImageSource(source)).sceneCount).toBe(3);
@@ -410,7 +418,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// sharing a media identifier in this shared ROOT lets one be satisfied by the
 		// other's leftover derivatives.
 		const masked: MediaIdentity = { ...identity, sectionId: 28 };
-		await makeMagickFixture('/image/original/rsc29_rsc170_28.tif', [
+		await makeMagickFixture('/image/original/test99_test3_28.tif', [
 			'-size',
 			'300x200',
 			'xc:red',
@@ -440,14 +448,14 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// The fixture REALLY carries a meta channel. Without this guard a container
 		// writer that dropped the extra sample would make every assertion below pass
 		// for the wrong reason (no mask, no blue either way is not the claim).
-		const source = `${ROOT}/image/original/rsc29_rsc170_28.tif`;
+		const source = `${ROOT}/image/original/test99_test3_28.tif`;
 		const sourceProbe = await probeImageSource(source);
 		expect((await probeMetaChannels(source)).metaChannels).toBe(1);
 		expect(sourceProbe.scenes[0]?.hasAlpha).toBe(false);
 
 		await regenerateImage(image, masked, pathOpts, 'tif');
-		const defaultPath = `${ROOT}/image/1.5MB/rsc29_rsc170_28.jpg`;
-		const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_28.jpg`;
+		const defaultPath = `${ROOT}/image/1.5MB/test99_test3_28.jpg`;
+		const thumbPath = `${ROOT}/image/thumb/test99_test3_28.jpg`;
 
 		for (const [label, derivative] of [
 			['default tier', defaultPath],
@@ -517,7 +525,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 				},
 			];
 			for (const { id, name, base, mask } of cases) {
-				await makeMagickFixture(`/image/original/rsc29_rsc170_${String(id)}.tif`, [
+				await makeMagickFixture(`/image/original/test99_test3_${String(id)}.tif`, [
 					...base,
 					'-alpha',
 					'off',
@@ -527,13 +535,13 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 					'-channel-fx',
 					'| gray=>meta0',
 				]);
-				const source = `${ROOT}/image/original/rsc29_rsc170_${String(id)}.tif`;
+				const source = `${ROOT}/image/original/test99_test3_${String(id)}.tif`;
 				// The fixture really is the shape under test: one meta channel, no alpha —
 				// i.e. it PASSES every rule and is stopped only by the post-condition.
 				expect([name, (await probeMetaChannels(source)).metaChannels]).toEqual([name, 1]);
 
 				await regenerateImage(image, { ...identity, sectionId: id }, pathOpts, 'tif');
-				const derivative = `${ROOT}/image/1.5MB/rsc29_rsc170_${String(id)}.jpg`;
+				const derivative = `${ROOT}/image/1.5MB/test99_test3_${String(id)}.jpg`;
 				expect([name, existsSync(derivative)]).toEqual([name, true]);
 				// THE CLAIM: the tier still holds the picture. Unguarded, both of these
 				// derivatives are a uniform white rectangle.
@@ -558,7 +566,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 	 * supported" in a comment and then applied meta0 anyway; this refuses.
 	 */
 	test.if(HAVE_MAGICK)('a source with TWO meta channels is refused, not guessed at', async () => {
-		await makeMagickFixture('/image/original/rsc29_rsc170_31.tif', [
+		await makeMagickFixture('/image/original/test99_test3_31.tif', [
 			'-size',
 			'300x200',
 			'xc:red',
@@ -591,11 +599,11 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			'-channel-fx',
 			'| gray=>meta0 | gray=>meta1',
 		]);
-		const source = `${ROOT}/image/original/rsc29_rsc170_31.tif`;
+		const source = `${ROOT}/image/original/test99_test3_31.tif`;
 		expect((await probeMetaChannels(source)).metaChannels).toBe(2);
 
 		await regenerateImage(image, { ...identity, sectionId: 31 }, pathOpts, 'tif');
-		const derivative = `${ROOT}/image/1.5MB/rsc29_rsc170_31.jpg`;
+		const derivative = `${ROOT}/image/1.5MB/test99_test3_31.jpg`;
 		const dims = await getDimensions(derivative);
 		// NOTHING is masked: the derivative shows everything the master shows, blue
 		// half included. Promoting meta0 would have produced a white rectangle.
@@ -625,7 +633,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 	test.if(HAVE_MAGICK)('the COMPOSITE selection is refused the meta-alpha fx', async () => {
 		// A REAL source that qualifies on every other count: one meta channel, no
 		// alpha, a TIFF. Only the selection differs between the two calls.
-		await makeMagickFixture('/image/original/rsc29_rsc170_32.tif', [
+		await makeMagickFixture('/image/original/test99_test3_32.tif', [
 			'-size',
 			'300x200',
 			'xc:red',
@@ -643,7 +651,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			'-channel-fx',
 			'| gray=>meta0',
 		]);
-		const source = `${ROOT}/image/original/rsc29_rsc170_32.tif`;
+		const source = `${ROOT}/image/original/test99_test3_32.tif`;
 		const probe = await probeImageSource(source);
 		expect((await probeMetaChannels(source)).metaChannels).toBe(1);
 
@@ -669,7 +677,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 	 * authoritative call.
 	 */
 	test.if(HAVE_MAGICK)('a source with REAL alpha keeps it — the fx is refused', async () => {
-		await makeMagickFixture('/image/original/rsc29_rsc170_33.tif', [
+		await makeMagickFixture('/image/original/test99_test3_33.tif', [
 			'-size',
 			'300x200',
 			'xc:red',
@@ -693,7 +701,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			'-channel-fx',
 			'| gray=>meta0',
 		]);
-		const source = `${ROOT}/image/original/rsc29_rsc170_33.tif`;
+		const source = `${ROOT}/image/original/test99_test3_33.tif`;
 		const report = await probeMetaChannels(source);
 		// The fixture really is "alpha AND a meta channel" — the only shape that can
 		// exercise the rule.
@@ -715,7 +723,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 				['32a', '100x80', 'red'],
 				['32b', '300x200', 'lime'],
 			] as const) {
-				await makeMagickFixture(`/image/original/rsc29_rsc170_${name}.tif`, [
+				await makeMagickFixture(`/image/original/test99_test3_${name}.tif`, [
 					'-size',
 					size,
 					`xc:${fill}`,
@@ -730,12 +738,12 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 					'| gray=>meta0',
 				]);
 			}
-			await makeMagickFixture('/image/original/rsc29_rsc170_32c.tif', [
-				`${ROOT}/image/original/rsc29_rsc170_32a.tif`,
-				`${ROOT}/image/original/rsc29_rsc170_32b.tif`,
+			await makeMagickFixture('/image/original/test99_test3_32c.tif', [
+				`${ROOT}/image/original/test99_test3_32a.tif`,
+				`${ROOT}/image/original/test99_test3_32b.tif`,
 				'-adjoin',
 			]);
-			const stack = `${ROOT}/image/original/rsc29_rsc170_32c.tif`;
+			const stack = `${ROOT}/image/original/test99_test3_32c.tif`;
 			expect((await probeImageSource(stack)).sceneCount).toBe(2);
 
 			// Both through the SHIPPED convert recipe; only applyMetaAlpha differs.
@@ -761,7 +769,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// image that matches no frame the file actually declares. The probe point
 		// (60,50) sits inside that patch, so it is exactly where the two differ.
 		const delta: MediaIdentity = { ...identity, sectionId: 23 };
-		await makeMagickFixture('/image/original/rsc29_rsc170_23.gif', [
+		await makeMagickFixture('/image/original/test99_test3_23.gif', [
 			'-size',
 			'200x150',
 			'xc:red',
@@ -773,7 +781,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			'200x150+31+31',
 			')',
 		]);
-		const source = `${ROOT}/image/original/rsc29_rsc170_23.gif`;
+		const source = `${ROOT}/image/original/test99_test3_23.gif`;
 		const probe = await probeImageSource(source);
 		expect(probe.sceneCount).toBe(2);
 		expect(probe.hasRepresentativeScene).toBe(true); // frame 0 IS the full canvas
@@ -792,7 +800,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// NONDETERMINISTIC background (this fixture's is black; the reported file's
 		// was srgb(254,0,0)). Only `-background X -flatten` fixes it.
 		const alpha: MediaIdentity = { ...identity, sectionId: 24 };
-		await makeMagickFixture('/image/original/rsc29_rsc170_24.png', [
+		await makeMagickFixture('/image/original/test99_test3_24.png', [
 			'-size',
 			'300x200',
 			'xc:red',
@@ -801,7 +809,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		]);
 		await regenerateImage(image, alpha, pathOpts, 'png');
 		for (const tier of ['1.5MB', 'thumb']) {
-			const [r, g, b] = await pixelAt(`${ROOT}/image/${tier}/rsc29_rsc170_24.jpg`, 100, 74);
+			const [r, g, b] = await pixelAt(`${ROOT}/image/${tier}/test99_test3_24.jpg`, 100, 74);
 			expect([tier, r > 250, g > 250, b > 250]).toEqual([tier, true, true, true]);
 		}
 		// …AND THE ALPHA-CAPABLE TWIN KEEPS ITS TRANSPARENCY (2026-08-07). This is the
@@ -813,7 +821,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// (backgroundForTarget), which is why the twin needs no recipe of its own —
 		// and this is the assertion that the decision really reaches the file.
 		for (const alternate of image.alternateExtensions) {
-			const twin = `${ROOT}/image/1.5MB/rsc29_rsc170_24.${alternate}`;
+			const twin = `${ROOT}/image/1.5MB/test99_test3_24.${alternate}`;
 			expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
 			const opaque = await runBinary([resolveMagick(), twin, '-format', '%[opaque]', 'info:'], {
 				nice: false,
@@ -826,7 +834,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// The complement, so the pair above cannot pass because EVERYTHING is
 		// transparent: the tier's own jpg is opaque.
 		const tierOpaque = await runBinary(
-			[resolveMagick(), `${ROOT}/image/1.5MB/rsc29_rsc170_24.jpg`, '-format', '%[opaque]', 'info:'],
+			[resolveMagick(), `${ROOT}/image/1.5MB/test99_test3_24.jpg`, '-format', '%[opaque]', 'info:'],
 			{ nice: false },
 		);
 		expect(tierOpaque.stdout.trim()).toBe('True');
@@ -843,7 +851,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			//   thumb from the DEFAULT tier → exactly ONE warning (the tier build).
 			//   thumb from the RAW ORIGINAL → two, one naming the thumb quality.
 			const offset: MediaIdentity = { ...identity, sectionId: 25 };
-			await makeMagickFixture('/image/original/rsc29_rsc170_25.gif', [
+			await makeMagickFixture('/image/original/test99_test3_25.gif', [
 				'(',
 				'-size',
 				'60x40',
@@ -859,7 +867,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 				'200x150+0+0',
 				')',
 			]);
-			const source = `${ROOT}/image/original/rsc29_rsc170_25.gif`;
+			const source = `${ROOT}/image/original/test99_test3_25.gif`;
 			const probe = await probeImageSource(source);
 			expect(probe.sceneCount).toBe(2);
 			expect(probe.hasRepresentativeScene).toBe(false); // the fixture's whole job
@@ -882,7 +890,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 				expect(line).not.toContain(config.media.thumb.quality);
 			}
 			// And the thumb is still exactly one image.
-			const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_25.jpg`;
+			const thumbPath = `${ROOT}/image/thumb/test99_test3_25.jpg`;
 			expect((await probeImageSource(thumbPath)).sceneCount).toBe(1);
 			expect(writeDebrisUnder(ROOT)).toEqual([]);
 		},
@@ -899,8 +907,8 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			// this class on the representative branch, and the pixel below is where the
 			// two answers differ: page 2 covers the top-left corner.
 			const mixed: MediaIdentity = { ...identity, sectionId: 26 };
-			const source = `${ROOT}/image/original/rsc29_rsc170_26.tif`;
-			await makeMagickFixture('/image/original/rsc29_rsc170_26.tif', [
+			const source = `${ROOT}/image/original/test99_test3_26.tif`;
+			await makeMagickFixture('/image/original/test99_test3_26.tif', [
 				'-size',
 				'300x400',
 				'xc:red', // page 1, portrait
@@ -915,14 +923,14 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			expect([probe.canvasWidth, probe.canvasHeight]).toEqual([300, 400]);
 
 			await regenerateImage(image, mixed, pathOpts, 'tif');
-			const defaultPath = `${ROOT}/image/1.5MB/rsc29_rsc170_26.jpg`;
+			const defaultPath = `${ROOT}/image/1.5MB/test99_test3_26.jpg`;
 			const [r, g, b] = await pixelAt(defaultPath, 10, 10);
 			expect(r).toBeGreaterThan(200); // page 1 is RED here
 			expect(b).toBeLessThan(60); // a stamped page 2 would be BLUE
 			expect(g).toBeLessThan(60);
 			// And the envelope agrees with the raster it wraps.
 			const dims = await getDimensions(defaultPath);
-			const svg = await Bun.file(`${ROOT}/image/svg/rsc29_rsc170_26.svg`).text();
+			const svg = await Bun.file(`${ROOT}/image/svg/test99_test3_26.svg`).text();
 			expect(svg).toContain(`width="${dims.width}" height="${dims.height}"`);
 			expect(writeDebrisUnder(ROOT)).toEqual([]);
 		},
@@ -937,8 +945,8 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		// otherwise successful import. No argv-shape assertion can see that, which is
 		// why this gate runs the real recipe end to end.
 		const cmyk: MediaIdentity = { ...identity, sectionId: 27 };
-		const source = `${ROOT}/image/original/rsc29_rsc170_27.tif`;
-		await makeMagickFixture('/image/original/rsc29_rsc170_27.tif', [
+		const source = `${ROOT}/image/original/test99_test3_27.tif`;
+		await makeMagickFixture('/image/original/test99_test3_27.tif', [
 			'-size',
 			'300x200',
 			'gradient:red-blue',
@@ -952,7 +960,7 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 
 		await regenerateImage(image, cmyk, pathOpts, 'tif');
 		for (const tier of ['1.5MB', 'thumb']) {
-			const path = `${ROOT}/image/${tier}/rsc29_rsc170_27.jpg`;
+			const path = `${ROOT}/image/${tier}/test99_test3_27.jpg`;
 			expect([tier, existsSync(path)]).toEqual([tier, true]);
 			// A CMYK JPEG renders INVERTED in every browser: the tier must be sRGB.
 			const colorspace = (await probeImageSource(path)).colorspace;
@@ -1060,8 +1068,8 @@ describe('media write contract: a run must prove it produced ONE file', () => {
 
 describe('pdf processing (real pdf tools + ImageMagick)', () => {
 	const identity: MediaIdentity = {
-		componentTipo: 'rsc37',
-		sectionTipo: 'rsc176',
+		componentTipo: 'test85',
+		sectionTipo: 'test3',
 		sectionId: 5,
 		lang: null,
 	};
@@ -1071,15 +1079,15 @@ describe('pdf processing (real pdf tools + ImageMagick)', () => {
 	test.if(HAVE_MAGICK && HAVE_PDF && HAVE_GS)(
 		'regeneratePdf builds web copy + jpg cover + thumb',
 		async () => {
-			await makePdf('/pdf/original/rsc37_rsc176_5.pdf');
+			await makePdf('/pdf/original/test85_test3_5.pdf');
 			const outcome = await regeneratePdf(pdf, identity, pathOpts);
 			// A result object, not a path list (D9 applied to pdf): a non-fatal cover
 			// failure had nowhere to go and every caller reported a clean success.
 			expect(outcome.errors).toEqual([]);
 			expect(outcome.created.length).toBe(3);
-			expect(existsSync(`${ROOT}/pdf/web/rsc37_rsc176_5.pdf`)).toBe(true);
-			expect(existsSync(`${ROOT}/pdf/web/rsc37_rsc176_5.jpg`)).toBe(true); // cover
-			expect(existsSync(`${ROOT}/pdf/thumb/rsc37_rsc176_5.jpg`)).toBe(true);
+			expect(existsSync(`${ROOT}/pdf/web/test85_test3_5.pdf`)).toBe(true);
+			expect(existsSync(`${ROOT}/pdf/web/test85_test3_5.jpg`)).toBe(true); // cover
+			expect(existsSync(`${ROOT}/pdf/thumb/test85_test3_5.jpg`)).toBe(true);
 		},
 	);
 
@@ -1087,7 +1095,7 @@ describe('pdf processing (real pdf tools + ImageMagick)', () => {
 		'buildThumbVersion rasterizes ONLY the first page of a multi-page PDF (no -N split → no rename ENOENT)',
 		async () => {
 			const multiId: MediaIdentity = { ...identity, sectionId: 8 };
-			await makeMultiPagePdf('/pdf/original/rsc37_rsc176_8.pdf', 3);
+			await makeMultiPagePdf('/pdf/original/test85_test3_8.pdf', 3);
 			const source = resolveMasterSource(pdf, multiId, pathOpts, 'pdf');
 			expect(source).not.toBeNull();
 			// Before the fix this threw ENOENT: the recipe wrote <stem>-0/-1/-2.jpg
@@ -1109,12 +1117,12 @@ describe('pdf processing (real pdf tools + ImageMagick)', () => {
 	test.if(HAVE_MAGICK && HAVE_PDF && HAVE_GS)(
 		'pdftotext extracts the embedded text + page count',
 		async () => {
-			await makePdf('/pdf/original/rsc37_rsc176_7.pdf');
-			const text = await extractText(`${ROOT}/pdf/original/rsc37_rsc176_7.pdf`, `${ROOT}/out.txt`, {
+			await makePdf('/pdf/original/test85_test3_7.pdf');
+			const text = await extractText(`${ROOT}/pdf/original/test85_test3_7.pdf`, `${ROOT}/out.txt`, {
 				method: 'text',
 			});
 			expect(text).toContain('HELLO');
-			expect(await getPageCount(`${ROOT}/pdf/original/rsc37_rsc176_7.pdf`)).toBe(1);
+			expect(await getPageCount(`${ROOT}/pdf/original/test85_test3_7.pdf`)).toBe(1);
 		},
 	);
 });

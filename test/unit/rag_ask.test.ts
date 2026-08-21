@@ -1,3 +1,7 @@
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos
+// here are OPAQUE IDENTIFIERS — this gate builds and inspects a descriptor, it never
+// reads a record — so the migration is a rename.
+
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { ragApiActions } from '../../src/ai/rag/api.ts';
 import { type AskDeps, fitTokenBudget, RESTRICTED_MSG, runAsk } from '../../src/ai/rag/ask.ts';
@@ -29,7 +33,7 @@ const askRqo = (options: Record<string, unknown>) => ({ options }) as never;
 const passage = (over: Partial<RagPassageHit> = {}): RagPassageHit => ({
 	section_tipo: 'test2',
 	section_id: 1,
-	component_tipo: 'numisdata16',
+	component_tipo: 'testmint1002',
 	lang: 'lg-spa',
 	chunk_index: 0,
 	snippet: 'x'.repeat(40),
@@ -50,7 +54,7 @@ beforeAll(async () => {
 	await indexComponentText({
 		section_tipo: SECTION_TIPO,
 		section_id: coinId,
-		component_tipo: 'numisdata16',
+		component_tipo: 'testmint1002',
 		lang: 'lg-spa',
 		text: 'Moneda ibérica de bronce acuñada en la ceca de Abariltur, con jinete y leyenda ibérica.',
 	});

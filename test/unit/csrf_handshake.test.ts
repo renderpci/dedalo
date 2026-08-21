@@ -16,6 +16,10 @@
  * one transport that cannot set a header — the beforeunload lock-release beacon.
  * The last two tests are that entry's gate.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
@@ -60,13 +64,13 @@ const READ_RQO = {
 	prevent_lock: true,
 	source: {
 		model: 'section',
-		tipo: 'numisdata6',
-		section_tipo: 'numisdata6',
+		tipo: 'testmint1',
+		section_tipo: 'testmint1',
 		mode: 'list',
 		lang: 'lg-spa',
 		action: 'search',
 	},
-	sqo: { section_tipo: ['numisdata6'], limit: 1 },
+	sqo: { section_tipo: ['testmint1'], limit: 1 },
 };
 
 describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {

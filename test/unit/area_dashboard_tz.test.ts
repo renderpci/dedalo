@@ -8,13 +8,14 @@
  * UTC-11 — always different host calendar dates) must produce the IDENTICAL
  * window, equal to the DEDALO_TIMEZONE calendar date.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the probed section list is irrelevant to the date window (the metric is a time query); it is now the generic playground section test3.
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 
 const PROBE = `
 const { metricActivity } = await import('${import.meta.dir}/../../src/core/area/dashboard.ts');
-const payload = await metricActivity(['rsc167'], 30);
+const payload = await metricActivity(['test3'], 30);
 console.log(JSON.stringify({ date_from: payload?.date_from, date_to: payload?.date_to }));
 process.exit(0);
 `;

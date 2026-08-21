@@ -19,8 +19,11 @@
  * model, so component_autocomplete → component_portal → relation, etc., exactly
  * as PHP instantiates the replaced class in common.php:3915-22).
  *
- * Byte-verified against the live PHP oracle (lg-spa) for numisdata3 / rsc170 /
- * dd64 in test/parity/section_elements_context_differential.test.ts.
+ * The sets were byte-verified against the PHP oracle while it lived; that
+ * differential is retired (its corpus was one install's sections). The live
+ * gates are test/unit/search_operators.test.ts (grammar + classification) and
+ * test/unit/section_elements_context_native.test.ts (the stamp on every
+ * search-mode component of a situation it builds).
  */
 
 /** One row of a component's operator tooltip: [operator token, label KEY]. */

@@ -5,13 +5,79 @@
  * portal-resolved label. Columns compare on the stable identity fields
  * (key/label/cell_type/i); the enriched path internals stay PHP-side detail.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-tools-gates-test-tld).
+// Every section and component below is either a phase-2 clone in the generic
+// `test` TLD (src/core/test_data/test_tld_tipo_map.json) or SEED-SHIPPED
+// ontology spelled through `seed()` — the media section and its two components,
+// which every installation carries. The RQOs are written in test-TLD terms,
+// `unmapRqo` finds the frozen interactions under the install addresses PHP
+// answered, and `adoptTipoIdMap` reads the bodies back in test terms. The
+// exported RECORDS come from the committed test corpus.
+//
+// MEASURED 2026-08-19 after the migration: 1 pass / 14 fail, and NOT ONE of the
+// reds is a TLD binding — every one is CORPUS ABSENCE. A tool_export response is
+// a flat grid of DISPLAY STRINGS, so it reveals no storable component data:
+// scripts/derive_test_corpus.ts can only reconstruct a record from a body that
+// exposes its data, and it refuses these gates' records as `never_revealed` (68
+// of them, tagged `tool_export*` in test_corpus/refused.json). What survives is
+// whatever ANOTHER gate revealed — so the rows compare almost cell for cell and
+// diverge exactly where the corpus is thin: thesaurus labels the terms sections
+// do not carry, the media records rsc170/32891 + /32900 the image cells read,
+// and the partially reconstructed stored value behind the dedalo_raw case. WHAT
+// IT NEEDS: those records in the corpus (a derive that can source them, or a
+// built situation that authors them). Nothing in this file can close it, and no
+// assertion was relaxed to hide it.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The media section every installation ships, its image and its name field. */
+const MEDIA_SECTION = seed('rsc', 170);
+const MEDIA_IMAGE = seed('rsc', 29);
+const MEDIA_NAME = seed('rsc', 25);
+
+/**
+ * The corpus scope this gate owns: the two cloned sections it exports from, the
+ * media section its image cells read, and the thesauri the autocomplete_hi
+ * cells resolve their labels through (without them every hierarchy cell exports
+ * empty and the row compare reddens).
+ */
+const CORPUS_SCOPE = [
+	'testmint1',
+	'test6099',
+	MEDIA_SECTION,
+	'testcult1',
+	'testterr1',
+	'test7374',
+] as const;
+
+/**
+ * The FROZEN grid, read in test-TLD terms
+ * (WC-2026-08-19-tools-gates-test-tld). The floors are anti-vacuity checks:
+ * every one of these responses names the exported section, its components and
+ * the record addresses of the rows it returned, so a transform that stopped
+ * rewriting could not stay above them.
+ */
+function adoptFrozen<T>(body: T, tipos: 'rewritten' | 'none' = 'rewritten'): T {
+	const adopted = adoptTipoIdMap(body, 'tool_export_differential');
+	expect(adopted.matched).toBe(true);
+	// `none` is the SEED-SHIPPED case (the media export names rsc ontology only,
+	// which every installation carries): the zero is asserted exactly, so the day
+	// such a body starts carrying an install tipo the count moves and this
+	// reddens instead of the transform silently absorbing it.
+	if (tipos === 'none') expect(adopted.rewrites.tipos).toBe(0);
+	else expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+	return adopted.body;
+}
 
 const EXPORT_RQO = {
 	action: 'tool_request',
@@ -19,7 +85,7 @@ const EXPORT_RQO = {
 	prevent_lock: true,
 	source: { typo: 'source', model: 'tool_export', action: 'get_export_grid' },
 	options: {
-		section_tipo: 'numisdata6',
+		section_tipo: 'testmint1',
 		model: 'section',
 		data_format: 'rows',
 		breakdown: 'default',
@@ -27,8 +93,8 @@ const EXPORT_RQO = {
 			{
 				path: [
 					{
-						section_tipo: 'numisdata6',
-						component_tipo: 'numisdata16',
+						section_tipo: 'testmint1',
+						component_tipo: 'testmint1002',
 						model: 'component_input_text',
 						name: 'Ceca',
 					},
@@ -37,8 +103,8 @@ const EXPORT_RQO = {
 			{
 				path: [
 					{
-						section_tipo: 'numisdata6',
-						component_tipo: 'numisdata585',
+						section_tipo: 'testmint1',
+						component_tipo: 'testmint1023',
 						model: 'component_autocomplete_hi',
 						name: 'Topónimo',
 					},
@@ -46,12 +112,12 @@ const EXPORT_RQO = {
 			},
 		],
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 0,
 			offset: 0,
 			filter_by_locators: [
-				{ section_tipo: 'numisdata6', section_id: '1' },
-				{ section_tipo: 'numisdata6', section_id: '75' },
+				{ section_tipo: 'testmint1', section_id: '1' },
+				{ section_tipo: 'testmint1', section_id: '75' },
 			],
 		},
 	},
@@ -67,14 +133,15 @@ let phpGrid: Grid = {};
 let tsGrid: Grid = {};
 
 beforeAll(async () => {
+	await ensureTestCorpus([...CORPUS_SCOPE]);
 	if (!hasPhpCredentials()) return;
 	const php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	phpGrid =
 		(
-			(await php.call(structuredClone(EXPORT_RQO) as Record<string, unknown>)).body as {
-				result?: Grid;
-			}
+			adoptFrozen(
+				(await php.call(structuredClone(EXPORT_RQO) as Record<string, unknown>)).body,
+			) as { result?: Grid }
 		).result ?? {};
 
 	const token = createSession(-1, 'root', true);
@@ -91,6 +158,10 @@ beforeAll(async () => {
 		} as never,
 	);
 	tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
+});
+
+afterAll(async () => {
+	expect(await dropTestCorpus([...CORPUS_SCOPE])).toBe(0);
 });
 
 describe.if(hasPhpCredentials())('tool_export grid differential', () => {
@@ -121,14 +192,14 @@ describe.if(hasPhpCredentials())('tool_export grid differential', () => {
 
 // grid_value: per-locator atom explosion — breakdown rows/default (sub-rows)
 // and columns ('|n'-suffixed columns, height 1). The multi-target fixture is
-// numisdata20 (autocomplete_hi): record 2 targets terr1 AND utoponymy1.
+// testmint1006 (autocomplete_hi): record 2 targets terr1 AND utoponymy1.
 const GRID_VALUE_RQO = (breakdown: string): Record<string, unknown> => ({
 	action: 'tool_request',
 	dd_api: 'dd_tools_api',
 	prevent_lock: true,
 	source: { typo: 'source', model: 'tool_export', action: 'get_export_grid' },
 	options: {
-		section_tipo: 'numisdata6',
+		section_tipo: 'testmint1',
 		model: 'section',
 		data_format: 'grid_value',
 		breakdown,
@@ -136,8 +207,8 @@ const GRID_VALUE_RQO = (breakdown: string): Record<string, unknown> => ({
 			{
 				path: [
 					{
-						section_tipo: 'numisdata6',
-						component_tipo: 'numisdata16',
+						section_tipo: 'testmint1',
+						component_tipo: 'testmint1002',
 						model: 'component_input_text',
 						name: 'Ceca',
 					},
@@ -146,8 +217,8 @@ const GRID_VALUE_RQO = (breakdown: string): Record<string, unknown> => ({
 			{
 				path: [
 					{
-						section_tipo: 'numisdata6',
-						component_tipo: 'numisdata20',
+						section_tipo: 'testmint1',
+						component_tipo: 'testmint1006',
 						model: 'component_autocomplete_hi',
 						name: 'Cultura',
 					},
@@ -155,12 +226,12 @@ const GRID_VALUE_RQO = (breakdown: string): Record<string, unknown> => ({
 			},
 		],
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 0,
 			offset: 0,
 			filter_by_locators: [
-				{ section_tipo: 'numisdata6', section_id: '2' },
-				{ section_tipo: 'numisdata6', section_id: '75' },
+				{ section_tipo: 'testmint1', section_id: '2' },
+				{ section_tipo: 'testmint1', section_id: '75' },
 			],
 		},
 	},
@@ -176,7 +247,8 @@ describe.if(hasPhpCredentials())('tool_export grid_value breakdown differential'
 				config.phpReference.password as string,
 			);
 			const phpResult =
-				((await php.call(GRID_VALUE_RQO(breakdown))).body as { result?: Grid }).result ?? {};
+				(adoptFrozen((await php.call(GRID_VALUE_RQO(breakdown))).body) as { result?: Grid })
+					.result ?? {};
 
 			const token = createSession(-1, 'root', true);
 			const session = getSession(token);
@@ -233,10 +305,14 @@ describe.if(hasPhpCredentials())('tool_export ndjson_stream differential', () =>
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 		const phpRaw = await php.callRaw(structuredClone(rqo));
 		expect(phpRaw.contentType ?? '').toContain('application/x-ndjson');
-		const phpLines = phpRaw.text
-			.split('\n')
-			.filter((line) => line.trim() !== '')
-			.map((line) => JSON.parse(line) as Record<string, unknown>);
+		// The stream is adopted LINE BY LINE — the frozen text is one JSON object
+		// per line, and the transform is a body transform.
+		const phpLines = adoptFrozen(
+			phpRaw.text
+				.split('\n')
+				.filter((line) => line.trim() !== '')
+				.map((line) => JSON.parse(line) as Record<string, unknown>),
+		);
 
 		const token = createSession(-1, 'root', true);
 		const session = getSession(token);
@@ -283,17 +359,17 @@ describe.if(hasPhpCredentials())('tool_export ndjson_stream differential', () =>
 
 // dedalo_raw: the UNRESOLVED stored value per cell as a JSON string with the
 // dedalo_data wrapper; a main with dataframe entries ships
-// {dedalo_data:{dato, dataframe}} (numisdata34@15657 is the frame fixture).
+// {dedalo_data:{dato, dataframe}} (test6117@15657 is the frame fixture).
 describe.if(hasPhpCredentials())('tool_export dedalo_raw differential', () => {
 	const cases = [
 		{
-			section: 'numisdata3',
-			components: ['numisdata34', 'numisdata77'],
+			section: 'test6099',
+			components: ['test6117', 'test6157'],
 			ids: ['15657'],
 		},
 		{
-			section: 'numisdata6',
-			components: ['numisdata16', 'numisdata20', 'numisdata163'],
+			section: 'testmint1',
+			components: ['testmint1002', 'testmint1006', 'testmint1014'],
 			ids: ['2', '75'],
 		},
 	];
@@ -330,7 +406,8 @@ describe.if(hasPhpCredentials())('tool_export dedalo_raw differential', () => {
 				config.phpReference.password as string,
 			);
 			const phpResult =
-				((await php.call(structuredClone(rqo))).body as { result?: Grid }).result ?? {};
+				(adoptFrozen((await php.call(structuredClone(rqo))).body) as { result?: Grid }).result ??
+				{};
 
 			const token = createSession(-1, 'root', true);
 			const session = getSession(token);
@@ -374,16 +451,16 @@ describe.if(hasPhpCredentials())('tool_export dedalo_raw differential', () => {
 // Multi-hop export paths: the export-atoms recursion — the column is the
 // FIRST step; the value walks each hop's locators to the leaf. Separators:
 // first indexed level ' | ', deeper levels the component's declared
-// fields_separator (numisdata20 ', ', numisdata163 ' | '); iri values carry
+// fields_separator (testmint1006 ', ', testmint1014 ' | '); iri values carry
 // their dd560 label ('…, Zenon'); date ranges render 'start <> end'.
 describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () => {
 	const leaves = [
-		{ component_tipo: 'numisdata16', model: 'component_input_text' },
-		{ component_tipo: 'numisdata20', model: 'component_autocomplete_hi' },
-		{ component_tipo: 'numisdata163', model: 'component_portal' },
+		{ component_tipo: 'testmint1002', model: 'component_input_text' },
+		{ component_tipo: 'testmint1006', model: 'component_autocomplete_hi' },
+		{ component_tipo: 'testmint1014', model: 'component_portal' },
 	];
 	for (const leaf of leaves) {
-		test(`numisdata30 → ${leaf.component_tipo} rows match PHP byte-for-byte`, async () => {
+		test(`test6113 → ${leaf.component_tipo} rows match PHP byte-for-byte`, async () => {
 			if (!hasPhpCredentials()) return;
 			const rqo = {
 				action: 'tool_request',
@@ -391,7 +468,7 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 				prevent_lock: true,
 				source: { typo: 'source', model: 'tool_export', action: 'get_export_grid' },
 				options: {
-					section_tipo: 'numisdata3',
+					section_tipo: 'test6099',
 					model: 'section',
 					data_format: 'value',
 					breakdown: 'default',
@@ -399,22 +476,22 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 						{
 							path: [
 								{
-									section_tipo: 'numisdata3',
-									component_tipo: 'numisdata30',
+									section_tipo: 'test6099',
+									component_tipo: 'test6113',
 									model: 'component_portal',
 									name: 'Ceca',
 								},
-								{ section_tipo: 'numisdata6', ...leaf, name: leaf.component_tipo },
+								{ section_tipo: 'testmint1', ...leaf, name: leaf.component_tipo },
 							],
 						},
 					],
 					sqo: {
-						section_tipo: ['numisdata3'],
+						section_tipo: ['test6099'],
 						limit: 0,
 						offset: 0,
 						filter_by_locators: [
-							{ section_tipo: 'numisdata3', section_id: '1' },
-							{ section_tipo: 'numisdata3', section_id: '2' },
+							{ section_tipo: 'test6099', section_id: '1' },
+							{ section_tipo: 'test6099', section_id: '2' },
 						],
 					},
 				},
@@ -425,7 +502,8 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 				config.phpReference.password as string,
 			);
 			const phpResult =
-				((await php.call(structuredClone(rqo))).body as { result?: Grid }).result ?? {};
+				(adoptFrozen((await php.call(structuredClone(rqo))).body) as { result?: Grid }).result ??
+				{};
 
 			const token = createSession(-1, 'root', true);
 			const session = getSession(token);
@@ -458,7 +536,7 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 	}
 });
 
-// grid_value MULTI-HOP atoms: a 2-hop path (numisdata30 → numisdata20) —
+// grid_value MULTI-HOP atoms: a 2-hop path (test6113 → testmint1006) —
 // the index VECTOR places atoms per breakdown: 'default' explodes the FIRST
 // indexed level into sub-rows and suffixes deeper levels ('|1' columns);
 // 'rows' explodes every level vertically; 'columns' suffixes every level at
@@ -473,7 +551,7 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 				prevent_lock: true,
 				source: { typo: 'source', model: 'tool_export', action: 'get_export_grid' },
 				options: {
-					section_tipo: 'numisdata3',
+					section_tipo: 'test6099',
 					model: 'section',
 					data_format: 'grid_value',
 					breakdown,
@@ -481,8 +559,8 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 						{
 							path: [
 								{
-									section_tipo: 'numisdata3',
-									component_tipo: 'numisdata52',
+									section_tipo: 'test6099',
+									component_tipo: 'test6134',
 									model: 'component_input_text',
 									name: 'Ref',
 								},
@@ -491,14 +569,14 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 						{
 							path: [
 								{
-									section_tipo: 'numisdata3',
-									component_tipo: 'numisdata30',
+									section_tipo: 'test6099',
+									component_tipo: 'test6113',
 									model: 'component_portal',
 									name: 'Ceca',
 								},
 								{
-									section_tipo: 'numisdata6',
-									component_tipo: 'numisdata20',
+									section_tipo: 'testmint1',
+									component_tipo: 'testmint1006',
 									model: 'component_autocomplete_hi',
 									name: 'Cultura',
 								},
@@ -506,12 +584,12 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 						},
 					],
 					sqo: {
-						section_tipo: ['numisdata3'],
+						section_tipo: ['test6099'],
 						limit: 0,
 						offset: 0,
 						filter_by_locators: [
-							{ section_tipo: 'numisdata3', section_id: '1' },
-							{ section_tipo: 'numisdata3', section_id: '2' },
+							{ section_tipo: 'test6099', section_id: '1' },
+							{ section_tipo: 'test6099', section_id: '2' },
 						],
 					},
 				},
@@ -522,7 +600,8 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 				config.phpReference.password as string,
 			);
 			const phpResult =
-				((await php.call(structuredClone(rqo))).body as { result?: Grid }).result ?? {};
+				(adoptFrozen((await php.call(structuredClone(rqo))).body) as { result?: Grid }).result ??
+				{};
 			const token = createSession(-1, 'root', true);
 			const session = getSession(token);
 			const principal = await resolvePrincipal(-1);
@@ -574,7 +653,7 @@ describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 			prevent_lock: true,
 			source: { typo: 'source', model: 'tool_export', action: 'get_export_grid' },
 			options: {
-				section_tipo: 'rsc170',
+				section_tipo: MEDIA_SECTION,
 				model: 'section',
 				data_format: 'value',
 				breakdown: 'default',
@@ -582,8 +661,8 @@ describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 					{
 						path: [
 							{
-								section_tipo: 'rsc170',
-								component_tipo: 'rsc29',
+								section_tipo: MEDIA_SECTION,
+								component_tipo: MEDIA_IMAGE,
 								model: 'component_image',
 								name: 'Imagen',
 							},
@@ -592,8 +671,8 @@ describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 					{
 						path: [
 							{
-								section_tipo: 'rsc170',
-								component_tipo: 'rsc25',
+								section_tipo: MEDIA_SECTION,
+								component_tipo: MEDIA_NAME,
 								model: 'component_input_text',
 								name: 'Nombre',
 							},
@@ -601,12 +680,12 @@ describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 					},
 				],
 				sqo: {
-					section_tipo: ['rsc170'],
+					section_tipo: [MEDIA_SECTION],
 					limit: 0,
 					offset: 0,
 					filter_by_locators: [
-						{ section_tipo: 'rsc170', section_id: '32891' },
-						{ section_tipo: 'rsc170', section_id: '32900' },
+						{ section_tipo: MEDIA_SECTION, section_id: '32891' },
+						{ section_tipo: MEDIA_SECTION, section_id: '32900' },
 					],
 				},
 			},
@@ -614,7 +693,8 @@ describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 		const php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 		const phpResult =
-			((await php.call(structuredClone(rqo))).body as { result?: Grid }).result ?? {};
+			(adoptFrozen((await php.call(structuredClone(rqo))).body, 'none') as { result?: Grid })
+				.result ?? {};
 		const token = createSession(-1, 'root', true);
 		const session = getSession(token);
 		const principal = await resolvePrincipal(-1);

@@ -19,9 +19,13 @@
  *   - find_equal shape (search WITH section_id, empty show.ddo_map) → served
  *     by readSection, not readComponentData (PHP parity), no throw.
  *
- * DB-backed (monedaiberica fixtures numisdata3/numisdata77 → numisdata4);
+ * DB-backed (monedaiberica fixtures test6099/test6157 → test6100);
  * cases guard on a live-connection probe so the file is honest offline.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -33,12 +37,12 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const HOST_SECTION = 'numisdata3';
-const PORTAL = 'numisdata77';
-const TARGET_SECTION = 'numisdata4';
+const HOST_SECTION = 'test6099';
+const PORTAL = 'test6157';
+const TARGET_SECTION = 'test6100';
 // String-family components of the target section (the picker's filter fields).
-const Q_FIELD_A = 'numisdata154';
-const Q_FIELD_B = 'numisdata197';
+const Q_FIELD_A = 'test6224';
+const Q_FIELD_B = 'test6265';
 
 /** The exact RQO shape service_autocomplete's dedalo_engine sends (no section_id). */
 function autocompleteRqo(q: string): Rqo {

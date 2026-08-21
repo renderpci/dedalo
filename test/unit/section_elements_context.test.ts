@@ -7,6 +7,10 @@
  * per-element deep-diff vs the PHP oracle is a separate differential (needs the
  * PHP server up); this locks the shape + registration + auth.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { buildSectionElementsContext } from '../../src/core/resolve/section_elements_context.ts';
@@ -15,7 +19,7 @@ import { createSession, getSession } from '../../src/core/security/session_store
 import { handleRequest } from '../../src/server.ts';
 
 const context = { requestId: 'sec-elem-ctx', startedAt: 0 };
-const SECTION = 'numisdata4';
+const SECTION = 'test6100';
 
 function apiRequest(body: unknown, cookie?: string, csrf?: string): Request {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };

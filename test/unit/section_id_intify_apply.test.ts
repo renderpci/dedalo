@@ -9,6 +9,10 @@
  * restore-path normalization (normalizeRestoredSectionIds against the live
  * test playground, whose test3 IS an external zenon section).
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { type SurfaceStats, sweepSurface } from '../../scripts/migrate_section_id_locators.ts';
@@ -25,7 +29,7 @@ const SECTION_TIPO = 'zzsidint1';
 let nextId = 910800;
 const usedIds: number[] = [];
 
-const EXTERNAL = new Set(['zenon1']);
+const EXTERNAL = new Set(['test7342']);
 
 function freshStats(): SurfaceStats {
 	return { scanned: 0, changedRows: 0, converted: 0, purged: 0, findingsByClass: new Map() };
@@ -54,9 +58,9 @@ describe('sweepSurface — the write half, scope-restricted scratch surface', ()
 	test('APPLY converts string addresses, preserves external refs verbatim', async () => {
 		const sectionId = await seed({
 			zztest1: [
-				{ id: 1, type: 'dd151', section_tipo: 'oh1', section_id: '7' },
-				{ id: 2, type: 'dd151', section_tipo: 'zenon1', section_id: '001338683' },
-				{ id: 3, type: 'dd151', section_tipo: 'oh1', section_id: 12 },
+				{ id: 1, type: 'dd151', section_tipo: 'test6813', section_id: '7' },
+				{ id: 2, type: 'dd151', section_tipo: 'test7342', section_id: '001338683' },
+				{ id: 3, type: 'dd151', section_tipo: 'test6813', section_id: 12 },
 			],
 		});
 		const stats = freshStats();
@@ -83,7 +87,7 @@ describe('sweepSurface — the write half, scope-restricted scratch surface', ()
 
 	test('DRY-RUN reports but writes nothing', async () => {
 		const sectionId = await seed({
-			zztest1: [{ id: 1, type: 'dd151', section_tipo: 'oh1', section_id: '55' }],
+			zztest1: [{ id: 1, type: 'dd151', section_tipo: 'test6813', section_id: '55' }],
 		});
 		const stats = freshStats();
 		await sweepSurface(
@@ -109,9 +113,9 @@ describe('sweepSurface — the write half, scope-restricted scratch surface', ()
 	test('purge classes remove ONLY adjudicated junk elements (D17)', async () => {
 		const sectionId = await seed({
 			zztest1: [
-				{ id: 1, type: 'dd151', section_tipo: 'oh1', section_id: '' },
-				{ id: 2, type: 'dd151', section_tipo: 'oh1', section_id: '9' },
-				{ id: 3, type: 'dd151', section_tipo: 'oh1', section_id: 'tmp' },
+				{ id: 1, type: 'dd151', section_tipo: 'test6813', section_id: '' },
+				{ id: 2, type: 'dd151', section_tipo: 'test6813', section_id: '9' },
+				{ id: 3, type: 'dd151', section_tipo: 'test6813', section_id: 'tmp' },
 			],
 		});
 		const stats = freshStats();
@@ -143,7 +147,7 @@ describe('restore-path normalization (D6.2) + external resolution (D15)', () => 
 		const columns: Record<string, unknown> = {
 			relation: {
 				zztest1: [
-					{ id: 1, type: 'dd151', section_tipo: 'oh1', section_id: '7' },
+					{ id: 1, type: 'dd151', section_tipo: 'test6813', section_id: '7' },
 					{ id: 2, type: 'dd151', section_tipo: 'test3', section_id: '001338683' },
 				],
 			},

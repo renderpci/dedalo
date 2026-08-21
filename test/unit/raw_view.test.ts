@@ -13,14 +13,21 @@
  * The two DB-backed cases guard on a live-connection probe so the file is honest
  * on a machine without the shared database.
  */
+// Migrated to the generic `test` TLD 2026-08-20: the 200 case no longer hopes an
+// install's record is present — the gate OWNS `testmint1` §1 through the test
+// corpus and drops it again.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	dropTestCorpus,
+	ensureTestCorpus,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
 import { handleRequest } from '../../src/server.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
@@ -29,9 +36,10 @@ registerSessionCleanup();
 const context = { requestId: 'raw-view-test', startedAt: 0 };
 const RAW_URL = '/dedalo/core/api/v1/raw';
 
-// A known real record (same fixture the read_raw differential uses).
-const SAMPLE_SECTION_TIPO = 'numisdata6';
+// A record this gate OWNS: the `test`-TLD twin of the harvested corpus.
+const SAMPLE_SECTION_TIPO = 'testmint1';
 const SAMPLE_SECTION_ID = 1;
+const CORPUS_SCOPE = [SAMPLE_SECTION_TIPO];
 
 function rawRequest(query: string, sessionToken?: string): Request {
 	return new Request(`http://localhost${RAW_URL}?${query}`, {
@@ -47,6 +55,11 @@ beforeAll(async () => {
 	} catch {
 		dbReady = false; // no shared DB on this machine — DB-backed cases skip honestly
 	}
+	if (dbReady) await ensureTestCorpus(CORPUS_SCOPE);
+});
+
+afterAll(async () => {
+	if (dbReady) expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
 });
 
 describe('raw record data view (dedicated GET, fail-closed)', () => {
@@ -60,7 +73,7 @@ describe('raw record data view (dedicated GET, fail-closed)', () => {
 
 	test('invalid section_tipo → 404 before any SQL', async () => {
 		const token = createSession(-1, 'root', true); // superuser: no DB needed to pass the admin gate
-		for (const badTipo of ['rsc167; DROP TABLE matrix', 'RSC167', 'notatipo', '']) {
+		for (const badTipo of ['test167; DROP TABLE matrix', 'TEST167', 'notatipo', '']) {
 			const response = await handleRequest(
 				rawRequest(`section_tipo=${encodeURIComponent(badTipo)}&section_id=1`, token),
 				context,

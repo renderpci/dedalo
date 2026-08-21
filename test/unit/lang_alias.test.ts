@@ -14,6 +14,9 @@
  *      default gets a say.
  *   3. Languages outside every class behave exactly as before.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database
+// here: the tipos are opaque identifiers threaded through the unit under test, so the
+// migration is a rename.
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -65,13 +68,13 @@ describe('ontology labels (PHP lang::get_label_lang semantics)', () => {
 });
 
 describe('data fallback (symmetric — better than PHP, by design)', () => {
-	/** A record whose rsc36 transcript exists ONLY in Valencian. */
+	/** A record whose test17 transcript exists ONLY in Valencian. */
 	function recordWith(lang: string): MatrixRecord {
 		return {
-			sectionTipo: 'rsc167',
+			sectionTipo: 'test3',
 			sectionId: 1,
 			columns: {
-				string: { rsc36: [{ id: 1, value: '<p>Text</p>', lang }] },
+				string: { test17: [{ id: 1, value: '<p>Text</p>', lang }] },
 			},
 		} as unknown as MatrixRecord;
 	}
@@ -79,7 +82,7 @@ describe('data fallback (symmetric — better than PHP, by design)', () => {
 	test('a Catalan menu sees the Valencian-only transcript as its FIRST fallback', async () => {
 		const { value, fallbackValue } = await resolveComponentValue(
 			recordWith('lg-vlca'),
-			'rsc36',
+			'test17',
 			'component_text_area',
 			'lg-cat',
 		);
@@ -90,7 +93,7 @@ describe('data fallback (symmetric — better than PHP, by design)', () => {
 	test('and the other direction too', async () => {
 		const { fallbackValue } = await resolveComponentValue(
 			recordWith('lg-cat'),
-			'rsc36',
+			'test17',
 			'component_text_area',
 			'lg-vlca',
 		);
@@ -99,11 +102,11 @@ describe('data fallback (symmetric — better than PHP, by design)', () => {
 
 	test('the equivalent WINS over the install default when both exist', async () => {
 		const record = {
-			sectionTipo: 'rsc167',
+			sectionTipo: 'test3',
 			sectionId: 1,
 			columns: {
 				string: {
-					rsc36: [
+					test17: [
 						{ id: 1, value: '<p>Default-lang text</p>', lang: config.lang.dataLangDefault },
 						{ id: 1, value: '<p>Valencian text</p>', lang: 'lg-vlca' },
 					],
@@ -113,7 +116,7 @@ describe('data fallback (symmetric — better than PHP, by design)', () => {
 
 		const { fallbackValue } = await resolveComponentValue(
 			record,
-			'rsc36',
+			'test17',
 			'component_text_area',
 			'lg-cat',
 		);
@@ -123,7 +126,7 @@ describe('data fallback (symmetric — better than PHP, by design)', () => {
 	test('a non-member lang keeps the old chain untouched', async () => {
 		const { fallbackValue } = await resolveComponentValue(
 			recordWith(config.lang.dataLangDefault),
-			'rsc36',
+			'test17',
 			'component_text_area',
 			'lg-eng',
 		);

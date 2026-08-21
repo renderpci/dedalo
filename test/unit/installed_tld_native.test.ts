@@ -16,16 +16,23 @@
  * installed in the suite database is installed CONTENT, and pinning it is the
  * trap behind the 87 fixture-absent failures.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { installedTldFromSectionTipo } from '../../src/core/area_maintenance/widgets/add_hierarchy.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 const SOURCE_FILE = `${import.meta.dir}/../../src/core/area_maintenance/widgets/add_hierarchy.ts`;
 
 describe('installedTldFromSectionTipo — what is a term section', () => {
 	test('a real hierarchy term section yields its tld', () => {
 		expect(installedTldFromSectionTipo('hierarchy1')).toBe('hierarchy');
-		expect(installedTldFromSectionTipo('rsc1')).toBe('rsc');
+		expect(installedTldFromSectionTipo(seed('rsc', 1))).toBe('rsc');
 		expect(installedTldFromSectionTipo('es1')).toBe('es');
 	});
 
@@ -33,7 +40,7 @@ describe('installedTldFromSectionTipo — what is a term section', () => {
 		// The killer: `^([a-z]+)1` without `$` matches these and re-inflates the
 		// installed set (hierarchy125 is the ACTIVE-flag component, not a section).
 		expect(installedTldFromSectionTipo('hierarchy125')).toBeNull();
-		expect(installedTldFromSectionTipo('rsc170')).toBeNull();
+		expect(installedTldFromSectionTipo(seed('rsc', 170))).toBeNull();
 		expect(installedTldFromSectionTipo('dd1758')).toBeNull();
 		expect(installedTldFromSectionTipo('es10')).toBeNull();
 		expect(installedTldFromSectionTipo('hierarchy11')).toBeNull();
@@ -42,7 +49,7 @@ describe('installedTldFromSectionTipo — what is a term section', () => {
 	test('a non-1 section number is not a term section', () => {
 		expect(installedTldFromSectionTipo('test3')).toBeNull();
 		expect(installedTldFromSectionTipo('dd64')).toBeNull();
-		expect(installedTldFromSectionTipo('numisdata3')).toBeNull();
+		expect(installedTldFromSectionTipo('test6099')).toBeNull();
 	});
 
 	test('the leading anchor is REQUIRED', () => {

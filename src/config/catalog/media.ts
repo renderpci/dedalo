@@ -750,6 +750,22 @@ By default Dédalo writes them to \`processes/\` inside the private directory, w
 DEDALO_MEDIA_PROCESSES_DIR="/var/lib/dedalo/processes"
 \`\`\``,
 	},
+	DEDALO_TEST_MEDIA_ROOT: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: 'Test media root',
+		typeLabel: 'string',
+		doc: `Test seam, not a setting. When it is set it REPLACES the media root for the whole process (it outranks MEDIA_PATH) and, at the same time, ARMS the test-media guard: every door that resolves a media root then refuses a root that does not carry a \`.dedalo_test_media\` marker file, and writes nothing.
+
+One key does both on purpose. A separate "arm the guard" flag could be set without repointing the root — and a separate "repoint the root" key could be set without arming the guard; either half alone is the hole this closes, which is that a test run writes its derivatives, staged uploads and publication markers into the installation's media tree. Unset — every real installation — the guard is inert and the root resolves exactly as before.
+
+The suite sets it from \`test/preload/test_media.ts\`, \`scripts/test_db_setup.ts\` and \`scripts/client_test_server.ts\`, at a directory derived from the suite database name.
+
+\`\`\`bash
+DEDALO_TEST_MEDIA_ROOT="/srv/dedalo/../private/test_media/dedalo7_test"
+\`\`\``,
+	},
 	DEDALO_MEDIA_WEB_BASE: {
 		type: 'string',
 		scope: 'operator',

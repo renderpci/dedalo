@@ -24,6 +24,18 @@
  * loud, never silent — a swallowed restore that leaves stale data is the green-suite
  * trap this file exists to close.
  *
+ * WHAT THIS PRELOAD DOES **NOT** DO: it does not provision the derived test
+ * corpus (src/core/test_data/test_corpus/). That corpus is 446 records over 36
+ * sections, and ambient rows are not free — a census gate, a scratch-surface
+ * emptiness check or a "count the rows this save appended" assertion all read
+ * WHATEVER THE DATABASE HOLDS, so seeding the corpus for every test changed the
+ * situation under gates that never asked for it. The corpus is therefore
+ * EXPLICIT: a gate that needs it calls `ensureTestCorpus(scope)` in its own
+ * `beforeAll` and `dropTestCorpus(scope)` in `afterAll`, exactly like every
+ * other situation fixture (test/helpers/zzd_diffusion_fixture.ts). The
+ * canonical test3 playground stays here because it is the OPPOSITE case: seven
+ * records the suite already assumed were present, whose drift is the bug.
+ *
  * Escape hatch: DEDALO_TEST_SKIP_CANONICAL_RESTORE=true (for a run that deliberately
  * inspects drifted data — e.g. debugging the fixture itself).
  */

@@ -20,6 +20,10 @@
  * "retired, and the refusal names the browser gear". A future change that makes 3d
  * behave like av would be wrong, and this is what says so.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -32,6 +36,7 @@ import { scanFilesInfo } from '../../src/core/media/files_info.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import { rebuildThumb, resolveThumbSource, thumbIsMissing } from '../../src/core/media/thumb.ts';
 import { posterframeAbsolutePath } from '../../src/core/media/tools/posterframe.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_thumb_rule_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -42,25 +47,25 @@ const HAVE_BOTH = HAVE_FFMPEG && HAVE_MAGICK;
 
 const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: null, mediaRoot: ROOT };
 const avIdentity: MediaIdentity = {
-	componentTipo: 'rsc439',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test94',
+	sectionTipo: 'test3',
 	sectionId: 8,
 	lang: null,
 };
 const tdIdentity: MediaIdentity = {
-	componentTipo: 'rsc36',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test26',
+	sectionTipo: 'test3',
 	sectionId: 8,
 	lang: null,
 };
 const avCtx = () => ({ spec: av, identity: avIdentity, pathOpts });
 const tdCtx = () => ({ spec: threeD, identity: tdIdentity, pathOpts });
-const avThumb = `${ROOT}/av/${config.media.thumb.quality}/rsc439_rsc170_8.${config.media.thumb.extension}`;
-const tdThumb = `${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`;
+const avThumb = `${ROOT}/av/${config.media.thumb.quality}/test94_test3_8.${config.media.thumb.extension}`;
+const tdThumb = `${ROOT}/3d/${config.media.thumb.quality}/test26_test3_8.${config.media.thumb.extension}`;
 
 /** A real clip of `seconds` duration in the av original tier. */
 async function makeAv(seconds: number, withVideo = true): Promise<void> {
-	const abs = `${ROOT}/av/original/rsc439_rsc170_8.mp4`;
+	const abs = `${ROOT}/av/original/test94_test3_8.mp4`;
 	mkdirSync(abs.slice(0, abs.lastIndexOf('/')), { recursive: true });
 	const argv = withVideo
 		? [
@@ -126,12 +131,14 @@ async function stageAndIngest(
 	});
 }
 
-beforeAll(() => rmSync(ROOT, { recursive: true, force: true }));
+// DECLARE the scratch root — the media doors refuse an unmarked one under the
+// test-media seam (src/core/media/test_media_root.ts).
+beforeAll(() => resetMediaRoot(ROOT));
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 describe('the engine mints what it can (av), and says who can when it cannot (3d)', () => {
 	test.if(HAVE_BOTH)('av: a record with NO posterframe still gets a thumb', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		await makeAv(20);
 		expect(existsSync(posterframeAbsolutePath(av, avIdentity, pathOpts))).toBe(false);
 
@@ -149,7 +156,7 @@ describe('the engine mints what it can (av), and says who can when it cannot (3d
 		// PHP minted at a fixed t=10 and its own doc block flagged the flaw: on a
 		// 4-second clip that is past the end. A still nobody can see is not a
 		// thumbnail, so the timecode is clamped to the middle of the clip.
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		await makeAv(4);
 		const outcome = await rebuildThumb(avCtx());
 		expect(outcome.mintedPosterframe).not.toBeNull();
@@ -157,16 +164,16 @@ describe('the engine mints what it can (av), and says who can when it cannot (3d
 	});
 
 	test.if(HAVE_FFMPEG)('av: an AUDIO-ONLY record refuses, and says why', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		await makeAv(3, false);
 		await expect(rebuildThumb(avCtx())).rejects.toThrow(/audio-only|no video frame/i);
 		expect(existsSync(avThumb)).toBe(false);
 	});
 
 	test('3d: refuses with the BROWSER remedy — never a silent no-op', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		mkdirSync(`${ROOT}/3d/web`, { recursive: true });
-		writeFileSync(`${ROOT}/3d/web/rsc36_rsc170_8.glb`, 'glTF-not-an-image');
+		writeFileSync(`${ROOT}/3d/web/test26_test3_8.glb`, 'glTF-not-an-image');
 		const resolution = resolveThumbSource(tdCtx());
 		expect(resolution.source).toBeNull();
 		// `mintable:false` is the census fact that separates 3d from av.
@@ -178,7 +185,7 @@ describe('the engine mints what it can (av), and says who can when it cannot (3d
 
 describe('a thumb never outlives what it depicts', () => {
 	test.if(HAVE_BOTH)('av: replacing the master retires the stale pair, then rebuilds', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		await makeAv(20);
 		await rebuildThumb(avCtx());
 		const firstThumb = await Bun.file(avThumb).arrayBuffer();
@@ -208,7 +215,7 @@ describe('a thumb never outlives what it depicts', () => {
 	test.if(HAVE_BOTH)(
 		'3d: replacing the master retires the pair (nothing can re-render it)',
 		async () => {
-			rmSync(ROOT, { recursive: true, force: true });
+			resetMediaRoot(ROOT);
 			// A record with a posterframe + thumb already in place…
 			const poster = posterframeAbsolutePath(threeD, tdIdentity, pathOpts);
 			mkdirSync(poster.slice(0, poster.lastIndexOf('/')), { recursive: true });
@@ -246,7 +253,7 @@ describe('a thumb never outlives what it depicts', () => {
 
 describe('the repair sweep can restore any model’s thumb', () => {
 	test.if(HAVE_BOTH)('av: a deleted thumb comes back on the next sweep', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		await makeAv(20);
 		await rebuildThumb(avCtx());
 		rmSync(avThumb, { force: true });

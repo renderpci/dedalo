@@ -18,6 +18,10 @@
  * to nothing else. An EQUALITY filter is served outright by its `(col, id DESC)`
  * index — 4 ms measured — and barriering it would force a full range scan.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The two
+// install tipos here were never resolved: they are the VALUE a dd577 (What)
+// equality search carries, threaded straight into a bound $N param, so the
+// rename is the whole migration — `conformTmFilter` is pure and touches no DB.
 
 import { describe, expect, test } from 'bun:test';
 import type { ParamSink } from '../../src/core/resolve/tm_filter.ts';
@@ -42,7 +46,7 @@ describe('tm_filter range detection (drives the planner barrier)', () => {
 	});
 
 	test('a What (dd577) equality search is NOT a range', () => {
-		const { sql, sink } = conform(clause('dd577', 'rsc33'));
+		const { sql, sink } = conform(clause('dd577', 'test6099'));
 		expect(sql).not.toBeNull();
 		expect(sink.rangePredicate).toBeUndefined();
 	});
@@ -71,7 +75,7 @@ describe('tm_filter range detection (drives the planner barrier)', () => {
 
 	test('the flag survives nesting — a range inside $or still flags', () => {
 		const { sink } = conform({
-			$or: [clause('dd577', 'rsc33'), clause('dd559', '2026')],
+			$or: [clause('dd577', 'test6099'), clause('dd559', '2026')],
 		});
 		expect(sink.rangePredicate).toBe(true);
 	});

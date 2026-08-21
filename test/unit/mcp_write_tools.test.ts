@@ -11,6 +11,8 @@
  * Runs in the disposable test section (test2 → matrix_test); everything created
  * is removed afterwards.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the written literal is now the generic
+// `test52` (component_input_text) instead of an install's component.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { buildMcpServer } from '../../src/ai/mcp/server.ts';
@@ -77,7 +79,7 @@ describe('MCP write tools (Phase 8 gate)', () => {
 		// save (insert one literal item; id allocated from the meta counter)
 		const saved = await saveComponentValue(SUPERUSER, {
 			section_tipo: SECTION_TIPO,
-			tipo: 'numisdata16',
+			tipo: 'test52',
 			section_id,
 			lang: 'lg-spa',
 			action: 'insert',
@@ -85,7 +87,7 @@ describe('MCP write tools (Phase 8 gate)', () => {
 		});
 		expect(saved.ok).toBe(true);
 		const rows = (await sql.unsafe(
-			`SELECT string->'numisdata16' AS items FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
+			`SELECT string->'test52' AS items FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[SECTION_TIPO, section_id],
 		)) as { items: { value: string }[] }[];
 		expect(rows[0]?.items?.some((item) => item.value === 'mcp-written')).toBe(true);
@@ -118,7 +120,7 @@ describe('MCP write tools (Phase 8 gate)', () => {
 		await expect(
 			saveComponentValue(NO_ACCESS_USER, {
 				section_tipo: SECTION_TIPO,
-				tipo: 'numisdata16',
+				tipo: 'test52',
 				section_id: 1,
 				action: 'update',
 				value: { id: 1, lang: 'lg-spa', value: 'nope' },

@@ -12,96 +12,119 @@
  *   for requested-but-missing ids, and skips junk locators without throwing.
  *
  * Byte-parity of the emitted cells is NOT asserted here — that stays with the
- * portal/relation parity gates (portal_differential, complex_relation_sweep,
- * model_coverage_sweep), which exercise the same call sites.
+ * portal/relation gates (portal_list_cell_pagination_native,
+ * complex_relation_sweep, model_coverage_sweep), which exercise the same call
+ * sites.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The gate
+// used to PROBE the ambient `matrix` table for whatever record happened to sort
+// first and skipped every case when it found none — an install-shaped backdrop
+// AND a silent vacuity. It now BUILDS its situation (`zzrec`, one section on
+// matrix_test through the test24 matrix_table node, two records in the 9xxxxx
+// scratch band, torn down with an asserted residue of 0), so the record it
+// loads is a value this file wrote and no case can skip.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
-import { sql } from '../../src/core/db/postgres.ts';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { EmissionContext } from '../../src/core/resolve/component_data.ts';
 import { loadRecordCached, prefetchRecords } from '../../src/core/section/record_loader.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
-/** A real (section_tipo, section_id) discovered from the connected DB. */
-let probe: { sectionTipo: string; sectionId: number; table: string } | null = null;
+/** The section the loader reads through — its own scratch TLD. */
+const SECTION = 'zzrec1';
+/** The record every load/prefetch case addresses. */
+const RECORD_ID = 900601;
+/** A second record, so the batch prefetch has more than one hit to place. */
+const OTHER_ID = 900602;
+/** Far above any id the situation creates — the requested-but-missing case. */
+const MISSING_ID = 2147480000;
 
-beforeAll(async () => {
-	try {
-		const rows = (await sql`
-			SELECT section_tipo, section_id FROM matrix ORDER BY id LIMIT 1
-		`) as { section_tipo: string; section_id: number }[];
-		const first = rows[0];
-		if (first === undefined) return;
-		const table = await getMatrixTableFromTipo(first.section_tipo);
-		if (table === null) return;
-		probe = { sectionTipo: first.section_tipo, sectionId: Number(first.section_id), table };
-	} catch {
-		probe = null; // no DB on this machine — cases skip honestly
-	}
+/**
+ * One section carrying one translatable string component, and two records.
+ * `relations: [{ tipo: 'test24' }]` is the matrix_table node whose term is
+ * `matrix_test`: every record this gate creates lands there, never in the
+ * installation's `matrix`.
+ */
+const SITUATION = situation({
+	tld: 'zzrec',
+	name: 'record_loader',
+	nodes: [
+		{
+			tipo: SECTION,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Cargador de registros', 'lg-eng': 'Record loader' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{ tipo: 'zzrec2', parent: SECTION, model: 'component_input_text', is_translatable: true },
+	],
+	records: [
+		{ section_tipo: SECTION, section_id: RECORD_ID, columns: { data: { zzrec2: ['first'] } } },
+		{ section_tipo: SECTION, section_id: OTHER_ID, columns: { data: { zzrec2: ['second'] } } },
+	],
 });
 
-const MISSING_ID = 2147480000; // far above any real serial
+/** The table the ONTOLOGY resolves for the section — never a hard-coded name. */
+let table = '';
+
+beforeAll(async () => {
+	await ensureSituation(SITUATION);
+	const resolved = await getMatrixTableFromTipo(SECTION);
+	expect(resolved).toBe('matrix_test'); // the test24 relation, proven not assumed
+	table = resolved as string;
+});
+afterAll(async () => {
+	expect(await dropSituation(SITUATION)).toBe(0);
+});
 
 describe('per-read record loader', () => {
 	test('second load of the same record is the cached object (no re-query)', async () => {
-		if (probe === null) return;
 		const emission = new EmissionContext();
-		const first = await loadRecordCached(emission, probe.table, probe.sectionTipo, probe.sectionId);
-		const second = await loadRecordCached(
-			emission,
-			probe.table,
-			probe.sectionTipo,
-			probe.sectionId,
-		);
+		const first = await loadRecordCached(emission, table, SECTION, RECORD_ID);
+		const second = await loadRecordCached(emission, table, SECTION, RECORD_ID);
 		expect(first).not.toBeNull();
 		expect(second).toBe(first); // reference equality = served from the cache
 	});
 
 	test('a different EmissionContext does not share the cache', async () => {
-		if (probe === null) return;
-		const a = await loadRecordCached(
-			new EmissionContext(),
-			probe.table,
-			probe.sectionTipo,
-			probe.sectionId,
-		);
-		const b = await loadRecordCached(
-			new EmissionContext(),
-			probe.table,
-			probe.sectionTipo,
-			probe.sectionId,
-		);
+		const a = await loadRecordCached(new EmissionContext(), table, SECTION, RECORD_ID);
+		const b = await loadRecordCached(new EmissionContext(), table, SECTION, RECORD_ID);
 		expect(a).not.toBeNull();
 		expect(b).not.toBe(a); // fresh read per read-context — request isolation
 	});
 
 	test('missing record loads as null (bare-read contract preserved)', async () => {
-		if (probe === null) return;
 		const emission = new EmissionContext();
-		const missing = await loadRecordCached(emission, probe.table, probe.sectionTipo, MISSING_ID);
+		const missing = await loadRecordCached(emission, table, SECTION, MISSING_ID);
 		expect(missing).toBeNull();
 	});
 
 	test('prefetch seeds hits AND misses; later loads are cache-served', async () => {
-		if (probe === null) return;
 		const emission = new EmissionContext();
 		await prefetchRecords(emission, [
-			{ section_tipo: probe.sectionTipo, section_id: probe.sectionId },
-			{ section_tipo: probe.sectionTipo, section_id: String(probe.sectionId) }, // string id form
-			{ section_tipo: probe.sectionTipo, section_id: MISSING_ID },
+			{ section_tipo: SECTION, section_id: RECORD_ID },
+			{ section_tipo: SECTION, section_id: String(RECORD_ID) }, // string id form
+			{ section_tipo: SECTION, section_id: OTHER_ID },
+			{ section_tipo: SECTION, section_id: MISSING_ID },
 		]);
-		const hitA = await loadRecordCached(emission, probe.table, probe.sectionTipo, probe.sectionId);
-		const hitB = await loadRecordCached(emission, probe.table, probe.sectionTipo, probe.sectionId);
+		const hitA = await loadRecordCached(emission, table, SECTION, RECORD_ID);
+		const hitB = await loadRecordCached(emission, table, SECTION, RECORD_ID);
 		expect(hitA).not.toBeNull();
 		expect(hitB).toBe(hitA); // identity: served from the prefetched entry
-		const miss = await loadRecordCached(emission, probe.table, probe.sectionTipo, MISSING_ID);
+		const other = await loadRecordCached(emission, table, SECTION, OTHER_ID);
+		expect(other).not.toBeNull(); // the SAME batch read placed both hits
+		const miss = await loadRecordCached(emission, table, SECTION, MISSING_ID);
 		expect(miss).toBeNull(); // seeded null — the lazy path must not re-query
 	});
 
 	test('prefetch tolerates junk locators (non-numeric id, unknown tipo, non-object)', async () => {
 		const emission = new EmissionContext();
 		await prefetchRecords(emission, [
-			{ section_tipo: 'numisdata4', section_id: 'not-a-number' },
+			{ section_tipo: SECTION, section_id: 'not-a-number' },
 			{ section_tipo: 'no_such_tipo_xyz', section_id: 1 },
 			{ section_tipo: '', section_id: 3 },
 			{},

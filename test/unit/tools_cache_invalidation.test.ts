@@ -40,6 +40,8 @@
  *     forgetting to clear it here is the silent-staleness bug; this fails the day
  *     the reset is added, not the day a user notices a stale menu.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the negative half only needs section
+// tipos that are NOT a tool-cache trigger, so it names generic `test` sections.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -170,7 +172,7 @@ describe('save_event routes the three tool-owning sections into invalidateAllToo
 		// The negative half matters as much: if fireSaveEvent invalidated on every
 		// write the tests above would pass while the subsystem re-scanned the whole
 		// tools tree on every record save in the install.
-		for (const sectionTipo of ['test3', 'rsc197', 'ontology35', 'dd1244']) {
+		for (const sectionTipo of ['test3', 'test6099', 'ontology35', 'dd1244']) {
 			const stillCached = await primeCaches();
 			await fireSaveEvent(sectionTipo);
 			expect({ sectionTipo, cached: await stillCached() }).toEqual({ sectionTipo, cached: true });
@@ -184,7 +186,7 @@ describe('save_event routes the three tool-owning sections into invalidateAllToo
  * rather than at the source level.
  *
  * It exists because fetchActiveToolRows() is a constant query that every reader
- * calls — media_icons once per rendered list row, which cost 43ms per oh1 list
+ * calls — media_icons once per rendered list row, which cost 43ms per section list
  * read. Caching it moved gate 3 ("the tool must be ACTIVE in dd1324") from a
  * live read to a cached one, so the invalidation is now load-bearing for a
  * SECURITY gate: a deactivated tool that stays cached stays dispatchable. That

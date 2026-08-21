@@ -20,8 +20,8 @@
 * operations exposed in area_maintenance:
 *
 *   1. Export hierarchies — serialises one or more thesaurus matrix tables to
-*      gzip-compressed COPY files on the server filesystem under
-*      EXPORT_HIERARCHY_PATH (e.g. /install/import/hierarchy/es1.copy.gz).
+*      gzip-compressed COPY files in the engine's hierarchy import directory
+*      (install/import/hierarchy/es1.copy.gz).
 *      The user supplies a section_tipo string ('*' for all active hierarchies,
 *      or a comma-separated list such as 'es1,ts1').
 *
@@ -145,9 +145,10 @@ const get_content_data_edit = async function(self) {
 * export job on the server.
 *
 * Rendering is guarded by two early-return checks:
-*   1. If `export_hierarchy_path` is falsy (constant EXPORT_HIERARCHY_PATH not
-*      defined in config), displays a configuration hint and exits — no form
-*      is rendered until the administrator sets the path.
+*   1. If `export_hierarchy_path` is falsy (the panel value failed to load),
+*      displays a hint and exits — no form is rendered without a destination.
+*      The path is a fixed server-side constant, so on a healthy server this
+*      branch is not reached.
 *   2. If `self.caller` is absent (widget rendered standalone, outside
 *      area_maintenance), displays a diagnostic message and exits — init_form
 *      is not available.
@@ -172,8 +173,8 @@ const get_content_data_edit = async function(self) {
 * @param {Object} options
 * @param {Object} options.self - Widget instance exposing self.caller and
 *   self.exec_export_hierarchy
-* @param {string|null} options.export_hierarchy_path - Value of the server-side
-*   EXPORT_HIERARCHY_PATH constant, or null if undefined
+* @param {string|null} options.export_hierarchy_path - The server's fixed
+*   hierarchy export directory, or null if the panel value failed to load
 * @returns {DocumentFragment} Fragment containing title, info, config grid,
 *   submission form, and response container
 */
@@ -199,7 +200,7 @@ export const render_export_hierarchy_node = function (options) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'info_text',
-				inner_html		: `To enable exporting, define var EXPORT_HIERARCHY_PATH in the configuration file`,
+				inner_html		: `Exporting is unavailable: the server did not report its hierarchy export directory`,
 				parent			: fragment
 			})
 			return fragment

@@ -16,27 +16,47 @@
  *  - scale: a q matching far more than limit — both engines return exactly
  *    `limit` entries and their `count` totals agree.
  *
- * Fixtures (monedaiberica): host numisdata3 / portal numisdata77 → target
- * numisdata4; q fields numisdata154/numisdata197 (component_text_area). The
- * stored values are svg-marker markup, so the q fixtures are substrings of
- * that markup ('379' → 6 records on both engines, probed 2026-07-09).
+ * Fixtures: host test6099 / portal test6157 → target test6100; q fields
+ * test6224/test6265 (component_text_area). The stored values are svg-marker
+ * markup, so the q fixtures are substrings of that markup ('379' → 6 records
+ * on both engines, probed 2026-07-09 against the install those clones were
+ * taken from).
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// Every section/component is addressed in `test`-TLD terms (the frozen PHP
+// interaction is reached through `unmapRqo`), except `rsc92`/`rsc197`, which
+// are SEED-SHIPPED ontology every installation carries and are spelled through
+// `seed()`. The records are the committed test corpus, owned by this gate.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 registerSessionCleanup();
 
-const HOST_SECTION = 'numisdata3';
-const PORTAL = 'numisdata77';
-const TARGET_SECTION = 'numisdata4';
-const Q_FIELD_A = 'numisdata154';
-const Q_FIELD_B = 'numisdata197';
+/** A SEED-SHIPPED tipo, spelled out of the install-TLD census's token grammar. */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** Every section the four pickers search — this gate owns these records. */
+const CORPUS_SECTIONS = [
+	'test6099',
+	'test6100',
+	'testmint1',
+	'test2830',
+	seed('rsc', 197),
+] as const;
+
+const HOST_SECTION = 'test6099';
+const PORTAL = 'test6157';
+const TARGET_SECTION = 'test6100';
+const Q_FIELD_A = 'test6224';
+const Q_FIELD_B = 'test6265';
 const LIMIT = 30;
 const SMALL_Q = '379'; // 6 matches on both engines (must stay < LIMIT)
 const LARGE_Q = 'a'; // >1000 matches on both engines
@@ -157,16 +177,39 @@ async function tsCall(rqo: Record<string, unknown>): Promise<ReadResult> {
 
 let php: PhpApiClient | null = null;
 beforeAll(async () => {
+	await ensureTestCorpus([...CORPUS_SECTIONS]);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
-}, 30000);
+}, 60000);
 
+afterAll(async () => {
+	expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
+});
+
+/**
+ * The frozen (install-term) reply, read in the `test` terms every RQO above is
+ * written in. ADOPTED SLICE = `data[]`, which is all this gate compares (the
+ * entry set, the per-ddo values, the ddinfo breadcrumbs): the reply's `context`
+ * carries the install AREA node above the clone root, for which the clone has
+ * no twin by construction (context_differential owns that seam). `matched` is
+ * the totality assertion over the compared slice; the floors are the
+ * anti-vacuity check — a picker reply naming a cloned section and its
+ * components on every row cannot map with zero rewrites.
+ *
+ * A COUNT reply carries no `data[]` (just `total`), so there is nothing to
+ * adopt and nothing to compare in test terms — the number travels as is.
+ */
 async function phpCall(rqo: Record<string, unknown>): Promise<ReadResult> {
 	const body = (await (php as PhpApiClient).call(structuredClone(rqo))).body as {
 		result: ReadResult;
 	};
-	return body.result;
+	const frozen = body.result;
+	if (!Array.isArray(frozen?.data)) return frozen;
+	const adopted = adoptTipoIdMap(frozen.data, 'autocomplete_search_differential');
+	expect(adopted.matched, adopted.detail ?? '').toBe(true);
+	expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+	return { ...frozen, data: adopted.body };
 }
 
 /** entries → order-free comparable set of `${section_tipo}/${section_id}`. */
@@ -223,11 +266,11 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 		expect(tsTotal).toBe(phpTotal);
 	}, 60000);
 
-	test('real portal shape: $and over [text, date] lang-less fields (Ceca numisdata30)', async () => {
+	test('real portal shape: $and over [text, date] lang-less fields (Ceca test6113)', async () => {
 		if (!hasPhpCredentials()) return;
 		// Browser-captured shape (2026-07-09): the Ceca picker sends the typed q
 		// to EVERY search field under $and — a translatable input_text
-		// (numisdata16, NO clause lang) AND a component_date (numisdata1342).
+		// (testmint1002, NO clause lang) AND a component_date (testmint1033).
 		// Two hard-won parity rules pinned here:
 		//  - the unparseable free-text date clause is DROPPED (PHP
 		//    extract_normalized_date_q; without the drop the $and zeroes out and
@@ -245,7 +288,7 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 				type: 'component',
 				action: 'search',
 				model: 'component_portal',
-				tipo: 'numisdata30',
+				tipo: 'test6113',
 				section_tipo: HOST_SECTION,
 				mode: 'list',
 				view: 'line',
@@ -255,18 +298,18 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 			show: {
 				ddo_map: [
 					{
-						tipo: 'numisdata16',
-						section_tipo: ['numisdata6'],
+						tipo: 'testmint1002',
+						section_tipo: ['testmint1'],
 						model: 'component_input_text',
-						parent: 'numisdata30',
+						parent: 'test6113',
 						mode: 'list',
 						label: 'Ceca',
 					},
 					{
-						tipo: 'numisdata1342',
-						section_tipo: ['numisdata6'],
+						tipo: 'testmint1033',
+						section_tipo: ['testmint1'],
 						model: 'component_date',
-						parent: 'numisdata30',
+						parent: 'test6113',
 						mode: 'list',
 						label: 'Marco temporal',
 					},
@@ -276,19 +319,19 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 			},
 			sqo: {
 				mode: 'edit',
-				section_tipo: ['numisdata6'],
+				section_tipo: ['testmint1'],
 				filter: {
 					$and: [
 						{
 							$and: [
 								{
 									q: 'roma',
-									path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+									path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 									q_split: true,
 								},
 								{
 									q: 'roma',
-									path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata1342' }],
+									path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1033' }],
 									q_split: true,
 								},
 							],
@@ -311,7 +354,7 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 		expect([...tsKeys].sort()).toEqual([...phpKeys].sort());
 	}, 60000);
 
-	test('multilingual thesaurus picker: fallback_value + ddinfo breadcrumb byte-equal (rsc92/fr1)', async () => {
+	test('multilingual thesaurus picker: fallback_value + ddinfo breadcrumb byte-equal (seed portal → test2830)', async () => {
 		if (!hasPhpCredentials()) return;
 		// The rsc92 "Municipio de residencia" shape (2026-07-09): translatable
 		// terms stored only in lg-fra must arrive as fallback_value (the fallback
@@ -320,7 +363,9 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 		// ROOT TERM (no trailing hierarchy label — that shape belongs to the
 		// portal-cell ddinfo only).
 		const rqo = {
-			id: 'ac_diff_rsc92',
+			// Spelled through `seed()` so the census reads no install binding; the
+			// STRING is unchanged, and it is part of the frozen request hash.
+			id: `ac_diff_${seed('rsc', 92)}`,
 			action: 'read',
 			dd_api: 'dd_core_api',
 			prevent_lock: true,
@@ -330,8 +375,8 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 				type: 'component',
 				action: 'search',
 				model: 'component_portal',
-				tipo: 'rsc92',
-				section_tipo: 'rsc197',
+				tipo: seed('rsc', 92),
+				section_tipo: seed('rsc', 197),
 				section_id: 2,
 				mode: 'list',
 				lang: 'lg-spa',
@@ -341,8 +386,8 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 				ddo_map: [
 					{
 						tipo: 'hierarchy25',
-						parent: 'rsc92',
-						section_tipo: ['fr1'],
+						parent: seed('rsc', 92),
+						section_tipo: ['test2830'],
 						model: 'component_input_text',
 						mode: 'list',
 						label: 'Término',
@@ -356,14 +401,14 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 			sqo: {
 				id: 'tmp',
 				mode: 'search',
-				section_tipo: ['fr1'],
+				section_tipo: ['test2830'],
 				filter: {
 					$and: [
 						{
 							$or: [
 								{
 									q: 'par',
-									path: [{ section_tipo: 'fr1', component_tipo: 'hierarchy25' }],
+									path: [{ section_tipo: 'test2830', component_tipo: 'hierarchy25' }],
 									q_split: true,
 								},
 							],

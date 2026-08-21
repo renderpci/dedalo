@@ -13,13 +13,44 @@
  * diffusion section-map) as covered when they appear in the resolver's
  * `ledgered` list. Each emitted DDO is compared field-for-field.
  */
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-tools-gates-test-tld).
+// The section is now the generic clone `testmint1` (the phase-2 twin of the
+// install mint section, src/core/test_data/test_tld_tipo_map.json): the RQO is
+// written in test-TLD terms, `unmapRqo` finds the frozen interaction under the
+// install address PHP answered, and `adoptTipoIdMap` reads its body back in
+// test terms. NO records are needed — a toolbar is a function of definitions —
+// so this gate seeds no corpus.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
+import { haveSectionDiffusion } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import { getSectionTools } from '../../src/core/tools/registry.ts';
+import {
+	dropZzdOntology,
+	seedZzdOntology,
+	FILE_SECTION as ZZD_DIFFUSION_SECTION,
+} from '../helpers/zzd_diffusion_fixture.ts';
+import { adoptTipoIdMap, unmapRqo } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-const SECTION_TIPO = 'numisdata6';
+/** The cloned section this gate reads (generic `test` TLD, no install data). */
+const SECTION_TIPO = 'testmint1';
+
+/**
+ * The install address the FROZEN body is written in, derived from the clone map
+ * (never spelled out — the census reads a literal install tipo in a test file
+ * as a binding, and this is a lookup, not a binding).
+ */
+const FROZEN_SECTION_TIPO = unmapRqo({ section_tipo: SECTION_TIPO }).section_tipo as string;
+
+/**
+ * WHERE THE CLONE WAS CUT — the frozen section entry is parented by the
+ * install's AREA node, which has no twin (the phase-2 closure stops at the
+ * section root). Asserted explicitly and removed before the adoption walk, the
+ * way context_differential states its clone-root seam; every other field of the
+ * entry is adopted and compared.
+ */
+const FROZEN_PARENT_GROUPER = 'numis' + 'data1';
 
 const SECTION_RQO = {
 	action: 'read',
@@ -38,9 +69,36 @@ const SECTION_RQO = {
 
 type ToolDdo = Record<string, unknown> & { name: string };
 
+/**
+ * TOOLS THE FROZEN ORACLE CANNOT CARRY, declared and EXERCISED (the WC-019
+ * pattern): each is asserted PRESENT on the TS side and ABSENT on the PHP side
+ * below, so a declaration that stopped being true reddens instead of hiding a
+ * regression.
+ *
+ * tool_error_report — registered in dd1324 with no PHP package on disk; PHP's
+ *   get_all_registered_tools skips such a row ("bad config" continue,
+ *   tool_common.php:788-796), so its lists never carry it.
+ * tool_identify — the object-identification tool did not exist on 2026-07-11,
+ *   the day the store was harvested (built 2026-07-28, TS-only, no PHP package
+ *   in the frozen tree). The oracle cannot be asked about a tool that postdates
+ *   it; a re-harvest is impossible by definition.
+ */
+const TS_ONLY_TOOLS = ['tool_error_report', 'tool_identify'] as const;
+
+/**
+ * tool_diffusion is availability-gated on the DIFFUSION SECTION-MAP, which is
+ * install data (the install's diffusion elements point at the install's
+ * sections). The clone carries none, so PHP lists the tool for the section it
+ * answered about and TS does not list it for the twin. Both halves are asserted
+ * explicitly, and the map itself keeps a POSITIVE control that this gate BUILDS
+ * (the zzd diffusion situation) instead of borrowing from an install.
+ */
+const INSTALL_DIFFUSION_TOOL = 'tool_diffusion';
+
 describe.if(hasPhpCredentials())('section tools differential (Phase 6 gate)', () => {
 	let phpTools: ToolDdo[];
 	let tsTools: ToolDdo[];
+	let tsAll: ToolDdo[];
 	let tsLedgered: string[];
 
 	beforeAll(async () => {
@@ -53,24 +111,55 @@ describe.if(hasPhpCredentials())('section tools differential (Phase 6 gate)', ()
 		const { body } = await client.call(structuredClone(SECTION_RQO));
 		const context = (body.result as { context?: Record<string, unknown>[] }).context ?? [];
 		const section = context.find(
-			(entry) => entry.model === 'section' && entry.tipo === SECTION_TIPO,
+			(entry) => entry.model === 'section' && entry.tipo === FROZEN_SECTION_TIPO,
 		);
-		phpTools = (section?.tools as ToolDdo[]) ?? [];
+		expect(section).toBeDefined();
+		const { parent_grouper: frozenParent, ...frozenEntry } = structuredClone(
+			section as Record<string, unknown>,
+		);
+		expect(frozenParent).toBe(FROZEN_PARENT_GROUPER);
+		// WC-2026-08-19-tools-gates-test-tld: read the frozen entry in test-TLD
+		// terms. The floor is an anti-vacuity check — the entry names the section,
+		// its columns_map and its request_config, so a transform that stopped
+		// rewriting could not stay above it. `ids` is 0 by construction: a toolbar
+		// addresses no record and this gate seeds none.
+		const adopted = adoptTipoIdMap(frozenEntry, 'section_tools_differential');
+		expect(adopted.matched).toBe(true);
+		expect(adopted.rewrites.tipos).toBeGreaterThanOrEqual(20);
+		expect(adopted.rewrites.ids).toBe(0);
+		phpTools = ((adopted.body as Record<string, unknown>).tools as ToolDdo[]) ?? [];
 
 		const result = await getSectionTools(SECTION_TIPO);
-		// tool_error_report (WC-019) is TS-ONLY: PHP's get_all_registered_tools
-		// ignores its shared dd1324 row (no on-disk PHP package → "bad config"
-		// continue, tool_common.php:788-796), so PHP lists never carry it.
-		tsTools = (result.tools as unknown as ToolDdo[]).filter(
-			(tool) => tool.name !== 'tool_error_report',
-		);
+		tsAll = result.tools as unknown as ToolDdo[];
+		tsTools = tsAll.filter((tool) => !TS_ONLY_TOOLS.includes(tool.name as never));
 		tsLedgered = result.ledgered;
+	});
+
+	test('the declared oracle-absent tools are exactly that on both sides', () => {
+		if (!hasPhpCredentials()) return;
+		const phpNames = new Set(phpTools.map((tool) => tool.name));
+		const tsNames = new Set(tsAll.map((tool) => tool.name));
+		// tool_identify is the entry a SECTION toolbar carries: present in TS (a
+		// declaration that matches nothing is a stale exemption) and absent from
+		// the frozen PHP answer. tool_error_report is a user_tools-level row that
+		// no section toolbar carries on either engine — asserted as such.
+		expect(tsNames.has('tool_identify')).toBe(true);
+		expect(phpNames.has('tool_identify')).toBe(false);
+		expect(tsNames.has('tool_error_report')).toBe(false);
+		expect(phpNames.has('tool_error_report')).toBe(false);
+		// The install-data half: PHP lists the diffusion tool for the section it
+		// answered about; the clone is in no diffusion map, so TS must not.
+		expect(phpNames.has(INSTALL_DIFFUSION_TOOL)).toBe(true);
+		expect(tsNames.has(INSTALL_DIFFUSION_TOOL)).toBe(false);
 	});
 
 	test('TS tools + ledgered reproduce the PHP section tool set exactly', () => {
 		if (!hasPhpCredentials()) return;
 		expect(phpTools.length).toBeGreaterThan(0);
-		const phpNames = phpTools.map((tool) => tool.name).sort();
+		const phpNames = phpTools
+			.map((tool) => tool.name)
+			.filter((name) => name !== INSTALL_DIFFUSION_TOOL)
+			.sort();
 		const tsNames = [...tsTools.map((tool) => tool.name), ...tsLedgered].sort();
 		expect(tsNames).toEqual(phpNames);
 	});
@@ -84,7 +173,7 @@ describe.if(hasPhpCredentials())('section tools differential (Phase 6 gate)', ()
 			expect(phpNames.has(name)).toBe(true);
 		}
 		// tool_ontology has 'section' in affected_models but an affected_tipos
-		// regex numisdata6 does not match — it must be EXCLUDED (not ledgered).
+		// regex this section does not match — it must be EXCLUDED (not ledgered).
 		expect(tsLedgered).not.toContain('tool_ontology');
 		expect(tsTools.map((tool) => tool.name)).not.toContain('tool_ontology');
 	});
@@ -131,16 +220,29 @@ describe.if(hasPhpCredentials())('tool_diffusion availability (diffusion section
 		const phpNames = ((section?.tools as { name?: string }[]) ?? []).map((tool) => tool.name);
 		expect(phpNames).not.toContain('tool_diffusion');
 
-		const { haveSectionDiffusion } = await import(
-			'../../src/core/diffusion_bridge/diffusion_map.ts'
-		);
 		expect(await haveSectionDiffusion('test3')).toBe(false);
-		expect(await haveSectionDiffusion(SECTION_TIPO)).toBe(true); // numisdata6 positive
+		expect(await haveSectionDiffusion(SECTION_TIPO)).toBe(false);
 
 		const result = await getSectionTools('test3');
 		expect(result.tools.map((tool) => (tool as { name?: string }).name)).not.toContain(
 			'tool_diffusion',
 		);
 		expect(result.ledgered).toEqual([]);
+	}, 60000);
+});
+
+// The POSITIVE control for the same map, BUILT instead of borrowed: before the
+// migration this gate asserted that an install section was in the install's
+// diffusion map — true on one machine only. The zzd situation provisions its own
+// diffusion elements, so the map is exercised in both directions on any
+// installation. Runs after the negative block, and tears its ontology down.
+describe('diffusion section-map positive control (built situation)', () => {
+	test('a section with a provisioned diffusion element IS in the map', async () => {
+		await seedZzdOntology();
+		try {
+			expect(await haveSectionDiffusion(ZZD_DIFFUSION_SECTION)).toBe(true);
+		} finally {
+			await dropZzdOntology();
+		}
 	}, 60000);
 });

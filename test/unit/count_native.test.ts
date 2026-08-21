@@ -163,8 +163,24 @@ function relatedCountRqo(extra: Record<string, unknown> = {}) {
 	};
 }
 
+/**
+ * ENVELOPE v2 READERS (ported 2026-08-19). This file used to read the PHP-era
+ * `body.result` / `body.msg`, which are GONE (ERRORS_SPEC §envelope v2:
+ * `{ok, request_id, data}` on success, `{ok:false, error:{code,…}}` on
+ * failure). Every one of those reads yielded `undefined`, and nobody noticed
+ * because the whole describe was blocked by a throwing `installAclIdentityFixture`
+ * — the file never ran a single assertion. Refusals are now pinned by CODE, not
+ * by the human message: the message is the disclosure-ladder's public string,
+ * the code is the contract.
+ */
+function dataOf(body: Record<string, unknown>): { total: number; totals_group?: unknown } {
+	return body.data as { total: number; totals_group?: unknown };
+}
 function totalOf(body: Record<string, unknown>): number {
-	return (body.result as { total: number }).total;
+	return dataOf(body).total;
+}
+function errorCodeOf(body: Record<string, unknown>): string | undefined {
+	return (body.error as { code?: string } | undefined)?.code;
 }
 
 describe.if(DB_READY)('dd_core_api.count', () => {
@@ -223,8 +239,8 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 			adminContext as never,
 		);
 		expect(result.status).toBe(400);
-		expect(result.body.result).toBe(false);
-		expect(result.body.msg).toBe('count: rqo.sqo is required');
+		expect(result.body.ok).toBe(false);
+		expect(errorCodeOf(result.body)).toBe('request.invalid_source');
 	});
 
 	test('related mode: a host locator in a section the caller cannot read is 403 — and the caller who CAN read it gets 200', async () => {
@@ -239,7 +255,7 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 		};
 		const refused = await dispatchRqo(rqo as never, nonAdminContext as never);
 		expect(refused.status).toBe(403);
-		expect(refused.body.msg).toBe('Insufficient permissions to read');
+		expect(errorCodeOf(refused.body)).toBe('perm.denied');
 
 		// THE POSITIVE CONTROL. Without it a handler that 403s everything (or
 		// error-envelopes every call) passes the assertion above.
@@ -274,7 +290,7 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 			nonAdminContext as never,
 		);
 		expect(grouped.status).toBe(200);
-		const result = grouped.body.result as {
+		const result = dataOf(grouped.body) as {
 			total: number;
 			totals_group?: { key: string[]; value: number }[];
 		};
@@ -289,7 +305,7 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 			relatedCountRqo({ group_by: ['section_tipo'] }) as never,
 			adminContext as never,
 		);
-		expect((adminGrouped.body.result as { totals_group?: unknown }).totals_group).toEqual([
+		expect(dataOf(adminGrouped.body).totals_group).toEqual([
 			{ key: [SECTION], value: 2 },
 		]);
 	});
@@ -341,7 +357,7 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 			);
 		const refused = await countIn(UNREADABLE_FOR_NON_ADMIN);
 		expect(refused.status).toBe(403);
-		expect((refused.body as { msg?: string }).msg).toBe('Insufficient permissions to read');
+		expect(errorCodeOf(refused.body)).toBe('perm.denied');
 		// POSITIVE CONTROL: the same identity, a section it CAN read → 200.
 		const allowed = await countIn(SECTION);
 		expect(allowed.status).toBe(200);

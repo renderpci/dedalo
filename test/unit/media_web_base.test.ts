@@ -8,6 +8,10 @@
  * on the web server). The override branch needs a FRESH config import (config
  * freezes at first import), so it runs in a subprocess with the env injected.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -20,7 +24,7 @@ describe('media web base (DEDALO_MEDIA_WEB_BASE)', () => {
 
 	test('URL builders are rooted on webBase (subtitles as the canary)', () => {
 		const url = subtitlesUrl(
-			{ componentTipo: 'rsc36', sectionTipo: 'rsc170', sectionId: 1, lang: null },
+			{ componentTipo: 'test94', sectionTipo: 'test3', sectionId: 1, lang: null },
 			'lg-spa',
 		);
 		expect(url.startsWith(`${config.media.webBase}/`)).toBe(true);

@@ -346,6 +346,11 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_MAINTENANCE_MODE',
 			'DEDALO_NOTIFICATION',
 			'DEDALO_TEST_INSTALL',
+			// The KEY is gone, the FEATURE is live: recovery mode is a
+			// ServerState field (core/resolve/server_state.ts), flipped by the
+			// check_config widget's set_recovery_mode and emitted to the client
+			// by resolve/environment.ts. Never read "dropped" as "unported".
+			'DEDALO_RECOVERY_MODE',
 			// the *_CUSTOM twins a real install's config_core.php carries
 			'DEDALO_MAINTENANCE_MODE_CUSTOM',
 			'DEDALO_NOTIFICATION_CUSTOM',
@@ -446,9 +451,52 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_DIFFUSION_INTERNAL_TOKEN',
 			'STRUCTURE_SERVER_URL',
 			'STRUCTURE_SERVER_CODE',
+			// The extra accepted secrets of the same PHP endpoint (core/extras/
+			// str_manager accepted STRUCTURE_SERVER_CODE plus this optional array,
+			// for multi-tenant / migration setups). No endpoint, no secrets.
+			'STRUCTURE_SERVER_CODE_OTHERS',
 		],
 		NO_CONSUMER,
 	),
+
+	// The v6 "this install is the structure master" flag. It never configured a
+	// subsystem: PHP read it in ONE place, to show an export button on the
+	// ontology dd_list. v7's ontology-master ROLE is a real key — see
+	// IS_AN_ONTOLOGY_SERVER — so the capability is not lost, only renamed and
+	// given actual behaviour.
+	STRUCTURE_IS_MASTER: {
+		cls: 'DROPPED',
+		reason:
+			'v6 flag that only toggled an export button in the PHP ontology list; the v7 ontology-master role is IS_AN_ONTOLOGY_SERVER',
+	},
+
+	// PREVIOUS-MAJOR code-server pointers. A v6 code master could serve BOTH its
+	// own major and the one before it, so the config carried two parallel sets:
+	// DEDALO_CODE_* (this major) and DEDALO_6_CODE_* (the previous one). These are
+	// SEPARATE constants, NOT old spellings of the live DEDALO_CODE_FILES_DIR /
+	// DEDALO_CODE_SERVER_GIT_DIR — do not move them into RETIRED_ENV_KEYS, which
+	// would refuse the boot of an install that legitimately still sets both. v7
+	// serves one major, so the second set has nothing to point at.
+	...dropped(
+		[
+			'DEDALO_6_CODE_SERVER_GIT_DIR',
+			'DEDALO_6_CODE_FILES_DIR',
+			// Named in the retirement list; no PHP tree ever defined them. Declared
+			// anyway so the question is answered here instead of re-researched.
+			'DEDALO_6_SOURCE_VERSION_URL',
+			'DEDALO_6_SOURCE_VERSION_LOCAL_DIR',
+		],
+		'previous-major code-server pointer: v7 serves ONE major (the live keys are DEDALO_CODE_FILES_DIR / DEDALO_CODE_SERVER_GIT_DIR / DEDALO_SOURCE_VERSION_LOCAL_DIR)',
+	),
+
+	// PHP's pg_pconnect switch. v7 never opens a connection per request: Bun.sql
+	// holds ONE pool for the process, so "persistent" is not a mode to choose —
+	// it is the only mode there is. The tunable that replaced it is the pool size.
+	PERSISTENT_CONNECTION: {
+		cls: 'DROPPED',
+		reason:
+			'PHP pg_pconnect switch: the TS engine always holds a pooled Bun.sql connection set — size it with DB_POOL_MAX / DB_POOL_ACQUIRE_TIMEOUT_MS',
+	},
 };
 
 // ---------------------------------------------------------------------------
@@ -575,6 +623,10 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_SVG_THUMB_DPI',
 	'DEDALO_MEDIA_JOB_CONCURRENCY',
 	'DEDALO_MEDIA_PROCESSES_DIR',
+	// The test-media seam: repoints the media root AND arms the marker guard
+	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no
+	// dedicated test tier and no such guard.
+	'DEDALO_TEST_MEDIA_ROOT',
 	'MEDIA_DEV_ROUTE_ENABLED',
 	// The wall-clock budget of the per-BOOT media-tree pass. NEW_IN_V7 by
 	// construction: v6 re-ran the equivalent walk on every REQUEST and had no

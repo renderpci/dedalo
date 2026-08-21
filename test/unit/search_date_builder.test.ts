@@ -18,13 +18,17 @@
  * silently change non-TM sections. Its EXPECTED SHAPE MOVED on 2026-08-09: the
  * v0 single-point `@.start.time == t` predicate this file used to pin was
  * itself the bug (a partial date is a PERIOD, so a year-only search matched
- * only records stamped on 1 January — 0 of 29 matching `oh1` records on the
+ * only records stamped on 1 January — 0 of 29 matching `test6813` records on the
  * live install). PHP's ordinary-table handler
  * (trait.search_component_date.php `resolve_date_mode_date_range_sql`) always
  * emitted the INTERVAL OVERLAP the two assertions below now pin; the golden
  * moved TOWARD the oracle, not away from it. Ledger:
  * WC-036 addendum 2026-08-09.
  */
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { conformTmFilter, type ParamSink } from '../../src/core/resolve/tm_filter.ts';
@@ -143,7 +147,7 @@ describe('builder_date — time-machine tables (matrix_activity)', () => {
 });
 
 describe('builder_date — ordinary sections (JSONB, PHP interval overlap)', () => {
-	const ordinary = ctx({ alias: 'oh1', table: 'matrix', tipo: 'oh62' });
+	const ordinary = ctx({ alias: 'test6813', table: 'matrix', tipo: 'test6867' });
 
 	test('object q resolves to the PHP interval overlap (no longer dropped, no longer a point)', () => {
 		// GOLDEN MOVED 2026-08-09. This used to expect the single-point
@@ -161,7 +165,7 @@ describe('builder_date — ordinary sections (JSONB, PHP interval overlap)', () 
 		const result = buildDateFragment([{ start: { year: 2026, month: 6, day: 15 } }], '=', ordinary);
 		expect(result).toMatchObject({
 			sentence:
-				"oh1.date @? '$.oh62[*] ? ((@.start.time <= 65131862400 && @.end.time >= 65131862400)" +
+				"test6813.date @? '$.test6867[*] ? ((@.start.time <= 65131862400 && @.end.time >= 65131862400)" +
 				" || (@.start.time >= 65131862400 && @.start.time <= 65131948799))'",
 		});
 	});
@@ -171,18 +175,18 @@ describe('builder_date — ordinary sections (JSONB, PHP interval overlap)', () 
 		// instant: PHP's final_range is the last second of 2026
 		// (2027*372d − 1 = 65149401599), so a record dated 2026-06-25 matches.
 		// The retired expectation (`== 65117260800`) matched ONLY records stamped
-		// 2026-01-01 — the measured 0-of-29 under-return on `oh1`.
+		// 2026-01-01 — the measured 0-of-29 under-return on `test6813`.
 		const result = buildDateFragment(['2026'], '=', ordinary);
 		expect(result).toMatchObject({
 			sentence:
-				"oh1.date @? '$.oh62[*] ? ((@.start.time <= 65117260800 && @.end.time >= 65117260800)" +
+				"test6813.date @? '$.test6867[*] ? ((@.start.time <= 65117260800 && @.end.time >= 65117260800)" +
 				" || (@.start.time >= 65117260800 && @.start.time <= 65149401599))'",
 		});
 	});
 
 	test('existence operators keep the JSONB @? path', () => {
 		expect(buildDateFragment(null, '*', ordinary)).toMatchObject({
-			sentence: "(oh1.date @? '$.oh62[*]')",
+			sentence: "(test6813.date @? '$.test6867[*]')",
 		});
 	});
 });

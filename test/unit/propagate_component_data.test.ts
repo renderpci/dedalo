@@ -4,6 +4,9 @@
  * locator identity (section_tipo+section_id). The `changed` flag must be false on
  * no-ops so the caller skips the save (PHP `$save=false`).
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
+// identifiers threaded through the unit under test — a generic `test` section carries
+// the same meaning here as the install one did.
 
 import { describe, expect, test } from 'bun:test';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
@@ -42,23 +45,23 @@ describe('applyPropagation — delete', () => {
 	});
 	test('relations: matches by locator identity (section_tipo+section_id), ignores extra fields', () => {
 		const current = [
-			{ section_tipo: 'rsc197', section_id: 5, from_component_tipo: 'x' },
-			{ section_tipo: 'rsc197', section_id: 9 },
+			{ section_tipo: 'test2', section_id: 5, from_component_tipo: 'x' },
+			{ section_tipo: 'test2', section_id: 9 },
 		];
 		const out = applyPropagation(
 			current,
 			'delete',
-			[{ section_tipo: 'rsc197', section_id: 5 }],
+			[{ section_tipo: 'test2', section_id: 5 }],
 			true,
 		);
 		expect(out.changed).toBe(true);
-		expect(out.final).toEqual([{ section_tipo: 'rsc197', section_id: 9 }]);
+		expect(out.final).toEqual([{ section_tipo: 'test2', section_id: 9 }]);
 	});
 	test('relations: string/number section_id are treated equal', () => {
 		const out = applyPropagation(
-			[{ section_tipo: 'rsc197', section_id: '5' }],
+			[{ section_tipo: 'test2', section_id: '5' }],
 			'delete',
-			[{ section_tipo: 'rsc197', section_id: 5 }],
+			[{ section_tipo: 'test2', section_id: 5 }],
 			true,
 		);
 		expect(out.final).toEqual([]);
@@ -77,11 +80,11 @@ describe('applyPropagation — add', () => {
 		});
 	});
 	test('relations: dedup by locator identity', () => {
-		const current = [{ section_tipo: 'rsc197', section_id: 5 }];
+		const current = [{ section_tipo: 'test2', section_id: 5 }];
 		const out = applyPropagation(
 			current,
 			'add',
-			[{ section_tipo: 'rsc197', section_id: 5, extra: 1 }],
+			[{ section_tipo: 'test2', section_id: 5, extra: 1 }],
 			true,
 		);
 		expect(out.changed).toBe(false);

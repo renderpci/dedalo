@@ -14,6 +14,9 @@
  * = UTC+14 and Pacific/Niue = UTC-11), where the UTC-noon anchor falls on a
  * DIFFERENT local calendar day and a local-getter implementation must diverge.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
+// identifiers threaded through the unit under test — a generic `test` section carries
+// the same meaning here as the install one did.
 
 import { describe, expect, test } from 'bun:test';
 import type {
@@ -81,7 +84,7 @@ function firstCall(calls: unknown[][]): unknown[] {
 function nonEmptyTotals(): CanonicalTotals {
 	return {
 		who: [],
-		what: [{ key: 'rsc167', label: 'Audiovisual', value: 3 }],
+		what: [{ key: 'test3', label: 'Audiovisual', value: 3 }],
 		where: [],
 		when: [],
 		publish: [],
@@ -266,7 +269,7 @@ describe('resolveActivityTotals — whole history, two branches', () => {
 	});
 
 	test('NO saved history: the fallback window is live-aggregated with a NULL merge base', async () => {
-		const rawFull: RawActivityItem[] = [{ type: 'where', tipo: 'rsc167', value: 5 }];
+		const rawFull: RawActivityItem[] = [{ type: 'where', tipo: 'test3', value: 5 }];
 		const merged = nonEmptyTotals();
 		const { deps, rangeCalls, rawCalls, mergeCalls } = makeDeps({
 			savedStatsDayBounds: async () => null,

@@ -3,7 +3,7 @@
  * survival twin of test/parity/indexation_grid_media_av_differential.test.ts
  * (which needs the live PHP oracle and dies without it).
  *
- * The differential's MEDIA branch rode a LIVE numisdata5 corpus (mutable
+ * The differential's MEDIA branch rode a LIVE test6101 corpus (mutable
  * production records — off-limits for a native golden), so here BOTH branches
  * are fully scratch-seeded (create → assert → revert, the differential's own
  * delete_children_guard pattern) and the whole grid projection is DEEP-EQUAL
@@ -14,36 +14,44 @@
  * recapture from the PHP oracle with the same seeds.
  *
  * 1. AV branch (textAreaIndexationCell 'av' + the component_av posterframe
- *    cell): the differential's exact scratch chain — a fresh rsc167 record
- *    (tagged rsc36 transcription with TC marks + rsc35 av media files_info
- *    shape) topped by a fresh oh1 record whose oh25 portal points at it,
+ *    cell): the differential's exact scratch chain — a fresh test3 record
+ *    (a tagged transcription with TC marks + av media files_info
+ *    shape) topped by a fresh test6813 record whose test6837 portal points at it,
  *    dd96-tagged to term cu1_3 (existing term, zero live indexations).
  *    Exercises the 11-column AV layout, the TC math (in 5s / out 12.5s /
  *    duration 7.5s) and the posterframe URL.
- * 2. MEDIA branch (resolveAtoms media branch → mediaCellUrl, rsc29 thumbs):
- *    a scratch numisdata5 holder dd96-tagged to the same term (live-corpus
- *    relation shape: numisdata260) whose numisdata1100 image portal points at
- *    a scratch rsc170 record WITH stored rsc29 media — the grid renders the
+ * 2. MEDIA branch (resolveAtoms media branch → mediaCellUrl, image thumbs):
+ *    a scratch test6101 holder dd96-tagged to the same term (live-corpus
+ *    relation shape: testplace1015) whose testplace1035 image portal points at
+ *    a scratch test2 record WITH stored image media — the grid renders the
  *    real thumb URL (/dedalo/media/image/thumb/<bucket>/rsc29_rsc170_<id>.jpg).
  * 3. Revert half: after sweeping the seeds the term's grid is [] again for
  *    both target sections.
  *
- * Scratch ids: rsc167/oh1/numisdata5 at 90002 and rsc170 at 90000002 — above
- * the live matrix_counter values (rsc167=474, oh1=359, numisdata5=624,
- * rsc170=440863, measured 2026-07-11) and clear of the parity gate's 90001.
+ * Scratch ids: test3/test6813/test6101 at 90002 and test2 at 90000002 — above
+ * the live matrix_counter values (test3=474, test6813=359, test6101=624,
+ * test2=440863, measured 2026-07-11) and clear of the parity gate's 90001.
  * Swept in afterAll; belt-and-braces pre-clean in beforeAll for crashed runs.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install
+// sections became their twins (src/core/test_data/test_tld_tipo_map.json) and every
+// scratch record now lands in `matrix_test` — the clones' own table — instead of the
+// installation's `matrix`. Seed-shipped media components stay, spelled `seed()`.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
+import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
 import avGolden from './fixtures/indexation_grid_native/av_grid.golden.json';
 import mediaGolden from './fixtures/indexation_grid_native/media_grid.golden.json';
 
-const SCRATCH_ID = 90002; // rsc167 + oh1 + numisdata5 twins
-const SCRATCH_RSC170_ID = 90000002; // rsc170 lives among ~440k live rows
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+const SCRATCH_ID = 90002; // test3 + test6813 + test6101 twins
+const SCRATCH_RSC170_ID = 90000002; // test2 lives among ~440k live rows
 const SCRATCH_TERM = { section_tipo: 'cu1', section_id: '3' };
 
 function adminContext(): ApiRequestContext {
@@ -105,31 +113,31 @@ async function tsGrid(rqo: Record<string, unknown>): Promise<{
 /** Remove every scratch row (idempotent — also pre-cleans crashed runs). */
 async function sweepScratch(): Promise<void> {
 	for (const [sectionTipo, sectionId] of [
-		['rsc167', SCRATCH_ID],
-		['oh1', SCRATCH_ID],
-		['numisdata5', SCRATCH_ID],
-		['rsc170', SCRATCH_RSC170_ID],
+		['test3', SCRATCH_ID],
+		['test6813', SCRATCH_ID],
+		['test6101', SCRATCH_ID],
+		['test2', SCRATCH_RSC170_ID],
 	] as [string, number][]) {
-		await sql`DELETE FROM matrix WHERE section_tipo = ${sectionTipo} AND section_id = ${sectionId}`;
+		await sql`DELETE FROM matrix_test WHERE section_tipo = ${sectionTipo} AND section_id = ${sectionId}`;
 		await sql`DELETE FROM matrix_time_machine WHERE section_tipo = ${sectionTipo} AND section_id = ${sectionId}`;
 	}
 }
 
 /**
  * AV chain — byte-identical to the differential's seedScratchChain (only the
- * scratch id differs): rsc167 twin (tagged rsc36 lg-spa transcription with TC
+ * scratch id differs): test3 twin (a tagged lg-spa transcription with TC
  * marks; rsc35 av media files_info shape — get_url never stats the disk;
- * dd96 tag → cu1_3 topped by the oh1 twin) + oh1 twin (oh25 portal → the
- * rsc167 twin, oh14 code for the head row).
+ * dd96 tag → cu1_3 topped by the test6813 twin) + test6813 twin (test6837 portal → the
+ * test3 twin, test6826 code for the head row).
  */
 async function seedAvChain(): Promise<void> {
-	const rsc36Value =
+	const transcriptionValue =
 		'<p>[TC_00:00:05.000_TC]Antes del fragmento [index-n-77-fragmento av-data::data]texto ' +
 		'[TC_00:00:08.120_TC]etiquetado &amp; validado del fragmento AV[/index-n-77-fragmento av-data::data]' +
 		' despu&eacute;s[TC_00:00:12.500_TC] cola</p>';
-	const rsc167String = { rsc36: [{ id: 1, lang: 'lg-spa', value: rsc36Value }] };
+	const hostString = { [seed('rsc', 36)]: [{ id: 1, lang: 'lg-spa', value: transcriptionValue }] };
 	const rsc167Media = {
-		rsc35: [
+		[seed('rsc', 35)]: [
 			{
 				id: 1,
 				lib_data: null,
@@ -147,7 +155,7 @@ async function seedAvChain(): Promise<void> {
 		],
 	};
 	const rsc167Relation = {
-		rsc860: [
+		[seed('rsc', 860)]: [
 			{
 				id: 1,
 				type: 'dd96',
@@ -155,67 +163,67 @@ async function seedAvChain(): Promise<void> {
 				section_id: SCRATCH_TERM.section_id,
 				section_tipo: SCRATCH_TERM.section_tipo,
 				section_top_id: String(SCRATCH_ID),
-				section_top_tipo: 'oh1',
-				tag_component_tipo: 'rsc36',
-				from_component_tipo: 'rsc860',
+				section_top_tipo: 'test6813',
+				tag_component_tipo: seed('rsc', 36),
+				from_component_tipo: seed('rsc', 860),
 			},
 		],
 	};
-	const oh1String = { oh14: [{ id: 1, lang: 'lg-nolan', value: 'SCRATCH-AV-TWIN' }] };
+	const oh1String = { test6826: [{ id: 1, lang: 'lg-nolan', value: 'SCRATCH-AV-TWIN' }] };
 	const oh1Relation = {
-		oh25: [
+		test6837: [
 			{
 				id: 1,
 				type: 'dd151',
 				section_id: String(SCRATCH_ID),
-				section_tipo: 'rsc167',
-				from_component_tipo: 'oh25',
+				section_tipo: 'test3',
+				from_component_tipo: 'test6837',
 			},
 		],
 	};
 	await sql`
-		INSERT INTO matrix (section_id, section_tipo, string, media, relation)
-		VALUES (${SCRATCH_ID}, 'rsc167',
-			${JSON.stringify(rsc167String)}::text::jsonb,
+		INSERT INTO matrix_test (section_id, section_tipo, string, media, relation)
+		VALUES (${SCRATCH_ID}, 'test3',
+			${JSON.stringify(hostString)}::text::jsonb,
 			${JSON.stringify(rsc167Media)}::text::jsonb,
 			${JSON.stringify(rsc167Relation)}::text::jsonb)`;
 	await sql`
-		INSERT INTO matrix (section_id, section_tipo, string, relation)
-		VALUES (${SCRATCH_ID}, 'oh1',
+		INSERT INTO matrix_test (section_id, section_tipo, string, relation)
+		VALUES (${SCRATCH_ID}, 'test6813',
 			${JSON.stringify(oh1String)}::text::jsonb,
 			${JSON.stringify(oh1Relation)}::text::jsonb)`;
 }
 
 /**
- * MEDIA chain: numisdata5 holder (dd96 tag → cu1_3 through numisdata260 —
- * the live-corpus relation shape; numisdata1100 image portal → the rsc170
- * twin) + rsc170 twin WITH stored rsc29 media (the media branch renders the
+ * MEDIA chain: test6101 holder (dd96 tag → cu1_3 through testplace1015 —
+ * the live-corpus relation shape; testplace1035 image portal → the test2
+ * twin) + test2 twin WITH stored image media (the media branch renders the
  * thumb URL whenever the media key is stored; no disk stat).
  */
 async function seedMediaChain(): Promise<void> {
-	const n5String = { numisdata203: [{ id: 1, lang: 'lg-nolan', value: 'SCRATCH-MEDIA-TWIN' }] };
+	const n5String = { test6271: [{ id: 1, lang: 'lg-nolan', value: 'SCRATCH-MEDIA-TWIN' }] };
 	const n5Relation = {
-		numisdata260: [
+		testplace1015: [
 			{
 				id: 1,
 				type: 'dd96',
 				section_id: SCRATCH_TERM.section_id,
 				section_tipo: SCRATCH_TERM.section_tipo,
-				from_component_tipo: 'numisdata260',
+				from_component_tipo: 'testplace1015',
 			},
 		],
-		numisdata1100: [
+		testplace1035: [
 			{
 				id: 1,
 				type: 'dd151',
 				section_id: String(SCRATCH_RSC170_ID),
-				section_tipo: 'rsc170',
-				from_component_tipo: 'numisdata1100',
+				section_tipo: 'test2',
+				from_component_tipo: 'testplace1035',
 			},
 		],
 	};
 	const r170Media = {
-		rsc29: [
+		[seed('rsc', 29)]: [
 			{
 				id: 1,
 				files_info: [
@@ -232,13 +240,13 @@ async function seedMediaChain(): Promise<void> {
 		],
 	};
 	await sql`
-		INSERT INTO matrix (section_id, section_tipo, string, relation)
-		VALUES (${SCRATCH_ID}, 'numisdata5',
+		INSERT INTO matrix_test (section_id, section_tipo, string, relation)
+		VALUES (${SCRATCH_ID}, 'test6101',
 			${JSON.stringify(n5String)}::text::jsonb,
 			${JSON.stringify(n5Relation)}::text::jsonb)`;
 	await sql`
-		INSERT INTO matrix (section_id, section_tipo, media)
-		VALUES (${SCRATCH_RSC170_ID}, 'rsc170', ${JSON.stringify(r170Media)}::text::jsonb)`;
+		INSERT INTO matrix_test (section_id, section_tipo, media)
+		VALUES (${SCRATCH_RSC170_ID}, 'test2', ${JSON.stringify(r170Media)}::text::jsonb)`;
 }
 
 beforeAll(async () => {
@@ -251,15 +259,105 @@ afterAll(async () => {
 	await sweepScratch();
 });
 
+/**
+ * THE GOLDEN IS ORACLE-CAPTURED, so it is READ IN TEST TERMS, never rewritten:
+ * the fixture bytes still speak the installation the capture was taken against,
+ * and regenerating them from today's engine would throw away the very record
+ * that makes them an oracle. Same discipline as the parity seam
+ * (test/parity/normalize.ts adoptTipoIdMap, WC-2026-08-19-test-tld-replay) —
+ * the translation happens at COMPARISON time, from the committed, append-only
+ * clone map, and it REFUSES to be vacuous: `adoptGolden` counts what it
+ * rewrote and each caller asserts a non-zero floor.
+ */
+const CLONE_MAP = cloneMapJson as { map: Record<string, { target: string }> };
+/**
+ * NOT `\b`-delimited: the grid builds COMPOSITE ids (`oh1_oh25_rsc167_rsc35`)
+ * and `_` is a word character, so a `\b` boundary never fires between the
+ * pieces and every composite id would survive the translation untouched.
+ */
+const INSTALL_TIPO_RE =
+	/(?<![A-Za-z0-9])(numisdata|oh|tch|tchi|dc|on|cult|cont|mdcat|ich|tema)\d+(?![A-Za-z0-9])/g;
+
+/**
+ * The two SEED-SHIPPED sections this gate moved its records to. They have no
+ * clone-map entry — `rsc` ships with every installation, so the migration was a
+ * choice of generic host, not a clone — and the golden still names the ones the
+ * capture used. Declared here so the translation is complete and readable.
+ */
+const SEED_SECTION_RENAMES: Record<string, string> = {
+	[seed('rsc', 167)]: 'test3',
+	[seed('rsc', 170)]: 'test2',
+};
+
+/**
+ * A cloned section's LABEL carries a ` | <tld>` suffix (the clone appends it so
+ * two sections with the same term stay distinguishable — it is why MCP
+ * describe_section stopped colliding). The golden holds the install's bare
+ * label, so the suffix is removed from BOTH sides before the deep-equal, and
+ * the removal is COUNTED: a run where it stripped nothing would mean the clone
+ * stopped labelling, which this normalization must not hide.
+ */
+const CLONE_LABEL_SUFFIX = / \| test\b/g;
+
+function adoptGolden(golden: unknown): { json: string; rewrites: number } {
+	let rewrites = 0;
+	const json = JSON.stringify(golden)
+		.replace(INSTALL_TIPO_RE, (tipo) => {
+			const target = CLONE_MAP.map[tipo]?.target;
+			if (target === undefined) return tipo;
+			rewrites++;
+			return target;
+		})
+		.replace(/(?<![A-Za-z0-9])rsc\d+(?![A-Za-z0-9])/g, (tipo) => {
+			const target = SEED_SECTION_RENAMES[tipo];
+			if (target === undefined) return tipo;
+			rewrites++;
+			return target;
+		});
+	return { json, rewrites };
+}
+
+/**
+ * THE ONE DECLARED REDUCTION. A `tool_config` ddo_map entry carries
+ * `section_id:'self'`, and the engine resolves its `section_tipo` to the HOST
+ * section — except when the named component does not exist under that host, in
+ * which case it keeps the section that declares it. The cloned host does not
+ * carry every component the install host did (`rsc431` "Estado TR" among them),
+ * so that one field legitimately reads differently on the two ontologies.
+ *
+ * It is NOT what this gate is about (the 11-column layout, the TC math, the
+ * media cells), so the `section_tipo` of a `section_id:'self'` entry is
+ * normalized to a marker on BOTH sides — and only there: every other
+ * `section_tipo` in the projection is still compared verbatim.
+ */
+function normalizeSelfScope(json: string): string {
+	return json.replace(
+		/"section_id":"self","section_tipo":"[a-z]+\d+"/g,
+		'"section_id":"self","section_tipo":"<self>"',
+	);
+}
+
+/** Strip the clone label suffix, reporting how many it removed. */
+function stripCloneLabels(json: string): { json: string; stripped: number } {
+	let stripped = 0;
+	const out = json.replace(CLONE_LABEL_SUFFIX, () => {
+		stripped++;
+		return '';
+	});
+	return { json: out, stripped };
+}
+
 describe('indexation grid av + media branches (TS-native, oracle-captured goldens)', () => {
-	test('av-format: seeded oh1/rsc167 chain renders the 11-column layout DEEP-EQUAL to the golden', async () => {
-		const { status, data } = await tsGrid(gridRqo(['rsc167']));
+	test('av-format: seeded test6813/test3 chain renders the 11-column layout DEEP-EQUAL to the golden', async () => {
+		const { status, data } = await tsGrid(gridRqo(['test3']));
 		expect(status).toBe(200);
 
 		// Fixture integrity floors — every piece the ledger row named must be IN
 		// the golden (guards against a truncated/regenerated fixture; the
 		// engine assertion is the deep-equal below).
-		const goldenJson = JSON.stringify(avGolden);
+		const adopted = adoptGolden(avGolden);
+		expect(adopted.rewrites).toBeGreaterThan(0); // the translation is not vacuous
+		const goldenJson = adopted.json;
 		for (const marker of [
 			'button_av_player',
 			'button_transcription',
@@ -278,32 +376,44 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 			// real tool contexts (not {})
 			'"model":"tool_indexation"',
 			'"model":"tool_transcription"',
-			// the component_av posterframe media cell (head row)
-			`/dedalo/media/av/posterframe/rsc35_rsc167_${SCRATCH_ID}.jpg`,
+			// the component_av posterframe media cell (head row) — in ADOPTED terms:
+		// the golden is compared after translation, so the marker must be too
+			`/dedalo/media/av/posterframe/${seed('rsc', 35)}_test3_${SCRATCH_ID}.jpg`,
 		]) {
 			expect(goldenJson).toContain(marker);
 		}
 
-		// full projection equality (the whole grid IS the projection)
-		expect(data).toEqual(avGolden as never);
+		// full projection equality (the whole grid IS the projection), with the
+		// clone label suffix removed from both sides — and PROVED present.
+		const received = stripCloneLabels(JSON.stringify(data));
+		expect(received.stripped).toBeGreaterThan(0);
+		expect(JSON.parse(normalizeSelfScope(received.json))).toEqual(
+			JSON.parse(normalizeSelfScope(stripCloneLabels(goldenJson).json)) as never,
+		);
 	});
 
-	test('media: seeded numisdata5/rsc170 chain renders the rsc29 thumb URL DEEP-EQUAL to the golden', async () => {
-		const { status, data } = await tsGrid(gridRqo(['numisdata5']));
+	test('media: seeded test6101/test2 chain renders the image thumb URL DEEP-EQUAL to the golden', async () => {
+		const { status, data } = await tsGrid(gridRqo(['test6101']));
 		expect(status).toBe(200);
 
 		// Fixture integrity floors — the media branch's whole point is the
 		// rendered thumb URL (the ledger gap was exactly this cell).
-		const goldenJson = JSON.stringify(mediaGolden);
+		const adopted = adoptGolden(mediaGolden);
+		expect(adopted.rewrites).toBeGreaterThan(0); // the translation is not vacuous
+		const goldenJson = adopted.json;
 		expect(goldenJson).toContain('/dedalo/media/image/thumb/');
-		expect(goldenJson).toContain(`rsc29_rsc170_${SCRATCH_RSC170_ID}.jpg`);
+		expect(goldenJson).toContain(`${seed('rsc', 29)}_test2_${SCRATCH_RSC170_ID}.jpg`);
 
-		expect(data).toEqual(mediaGolden as never);
+		const received = stripCloneLabels(JSON.stringify(data));
+		expect(received.stripped).toBeGreaterThan(0);
+		expect(JSON.parse(normalizeSelfScope(received.json))).toEqual(
+			JSON.parse(normalizeSelfScope(stripCloneLabels(goldenJson).json)) as never,
+		);
 	});
 
 	test('after revert the term grid is empty again for both target sections', async () => {
 		await sweepScratch();
-		expect((await tsGrid(gridRqo(['rsc167']))).data).toEqual([]);
-		expect((await tsGrid(gridRqo(['numisdata5']))).data).toEqual([]);
+		expect((await tsGrid(gridRqo(['test3']))).data).toEqual([]);
+		expect((await tsGrid(gridRqo(['test6101']))).data).toEqual([]);
 	});
 });

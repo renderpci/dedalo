@@ -18,6 +18,12 @@
  * their own cache invalidation. Modeled on the proven-working rsc170 (Image)
  * section / rsc30 (text_area) / test31 (geolocation) rows.
  *
+ * GENERALIZED 2026-08-19 as `./situations/situation.ts` (ensureSituation /
+ * dropSituation on a reserved zz* TLD) — the standard way for ANY test to build
+ * its structure + data. This file stays because the client suite hard-codes
+ * the dmm480/dmm507/dmm506 tipos; new tests use situations, never a hand-rolled
+ * upsert list like this one.
+ *
  * Idempotent: safe to call on every client-test run (scripts/client_test_runner.ts),
  * exactly like the canonical test3 reseed (seed.ts) — the suite must not depend
  * on whatever demo data a given installation happens to carry.
@@ -27,12 +33,20 @@ import { upsertDdOntologyNode } from '../db/dd_ontology.ts';
 import { deleteMatrixRecord, insertMatrixRecordWithExplicitId } from '../db/matrix_write.ts';
 import { withTransaction } from '../db/postgres.ts';
 import { fireSaveEvent } from '../section_record/save_event.ts';
+import { assertTestDatabase } from './test_database_marker.ts';
 
 const SECTION_TIPO = 'dmm480';
 const SECTION_TABLE = 'matrix';
 const RECORD_SECTION_ID = 1;
 
 export async function ensureMapOfGrapesFixture(): Promise<void> {
+	// GUARDED SINCE 2026-08-19. This used to be the ONE test-data writer with a
+	// standing exemption, because the client suite drove a server on the
+	// APPLICATION's database. That hole is closed: `bun run test:client` now
+	// starts its own server on the suite database (scripts/client_test_server.ts),
+	// so this fixture is a test-only writer like every other and asks the marker
+	// first — outside the transaction, before a single row moves.
+	await assertTestDatabase('ensureMapOfGrapesFixture');
 	await withTransaction(async () => {
 		// Section dmm480 — a plain section under the resource area (dd14), like
 		// rsc170. Empty relations → get_matrix_table_from_tipo falls back to the

@@ -5,6 +5,9 @@
  * import_data / import_csv; the CSV→DB execute drive is exercised here against a
  * SCRATCH record in the test3 playground (created and removed by the test).
  */
+// Migrated to the generic `test` TLD 2026-08-19: the components list is resolved from
+// the `test3` playground section and the batch-target extractor takes generic `test`
+// section tipos — no install's ontology or records are read.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -17,7 +20,7 @@ import type { ImportFileReport, ImportProgressFrame } from '../../src/core/tools
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
 
-const SECTION = 'numisdata4';
+const SECTION = 'test3';
 
 describe('tool_import_dedalo_csv module', () => {
 	test('loads with the 6 actions + import_files backgroundRunnable', async () => {
@@ -72,11 +75,11 @@ describe('tool_import_dedalo_csv module', () => {
 			background_running: true,
 			time_machine_save: true,
 			files: [
-				{ file: 'a.csv', section_tipo: 'oh1', ar_columns_map: [] },
+				{ file: 'a.csv', section_tipo: 'test2', ar_columns_map: [] },
 				{ file: 'b.csv', section_tipo: SECTION, ar_columns_map: [] },
 			],
 		};
-		expect(spec.sectionTipos?.(options)).toEqual(['oh1', SECTION]);
+		expect(spec.sectionTipos?.(options)).toEqual(['test2', SECTION]);
 		// A batch with no files yields no targets → the gate denies (fail-closed).
 		expect(spec.sectionTipos?.({ files: [] })).toEqual([]);
 	});

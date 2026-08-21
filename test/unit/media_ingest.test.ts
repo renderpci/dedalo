@@ -3,6 +3,12 @@
  * files_info) with a REAL image, and the supervised job manager (concurrency
  * cap, progress, stop, status frames). Scratch media root — never the shared dir.
  */
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
+// The census entry that remains for this file is a FALSE POSITIVE: the token is
+// `libx264`, the ffmpeg H.264 encoder, not a tipo. `libx` is not an install TLD.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -30,6 +36,7 @@ import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_ingest_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -37,8 +44,8 @@ const av = mediaTypeOf('component_av')!;
 const HAVE_MAGICK = existsSync(resolveMagick());
 const HAVE_FFMPEG = Bun.which(config.media.binaries.ffmpeg) !== null;
 const identity: MediaIdentity = {
-	componentTipo: 'rsc29',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test99',
+	sectionTipo: 'test3',
 	sectionId: 42,
 	lang: null,
 };
@@ -141,6 +148,9 @@ async function awaitJob(jobId: string): Promise<void> {
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 });
 afterAll(async () => {
 	rmSync(ROOT, { recursive: true, force: true });
@@ -203,7 +213,7 @@ describe('add_file (SEC-063 confinement)', () => {
 			tmpName: 'up1.jpg',
 			extension: 'jpg',
 		});
-		expect(result.originalFilePath).toContain('/image/original/0/rsc29_rsc170_42.jpg');
+		expect(result.originalFilePath).toContain('/image/original/0/test99_test3_42.jpg');
 		expect(existsSync(result.originalFilePath)).toBe(true);
 	});
 
@@ -222,7 +232,7 @@ describe('add_file (SEC-063 confinement)', () => {
 			quality: image.defaultQuality,
 		});
 		expect(result.originalFilePath).toContain(
-			`/image/${image.defaultQuality}/0/rsc29_rsc170_60.jpg`,
+			`/image/${image.defaultQuality}/0/test99_test3_60.jpg`,
 		);
 		expect(existsSync(result.originalFilePath)).toBe(true);
 	});
@@ -476,8 +486,8 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 		try {
 			await expect(
 				fireMediaIngestEvent({
-					componentTipo: 'rsc29',
-					sectionTipo: 'rsc170',
+					componentTipo: 'test99',
+					sectionTipo: 'test3',
 					sectionId: 44,
 					model: 'component_image',
 				}),
@@ -491,8 +501,8 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 		registerMediaIngestHook(null);
 		await expect(
 			fireMediaIngestEvent({
-				componentTipo: 'rsc29',
-				sectionTipo: 'rsc170',
+				componentTipo: 'test99',
+				sectionTipo: 'test3',
 				sectionId: 45,
 				model: 'component_image',
 			}),

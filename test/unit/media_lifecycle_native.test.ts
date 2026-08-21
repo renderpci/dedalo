@@ -68,6 +68,7 @@ import {
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 const ROOT = join(tmpdir(), `dedalo_media_lifecycle_${process.pid}`);
@@ -118,7 +119,7 @@ afterAll(() => {
 describe('section media delete/restore round trip', () => {
 	test('every managed file AND the av posterframe move into deleted/, then come back', async () => {
 		if (image === null || av === null) throw new Error('media specs unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 
 		const imageDefault = buildMediaLocation(
 			image,
@@ -207,7 +208,7 @@ describe('section media delete/restore round trip', () => {
 
 	test('restore picks the NEWEST deleted version and leaves the older ones', async () => {
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const live = buildMediaLocation(
 			image,
 			imageIdentity,
@@ -235,7 +236,7 @@ describe('section media delete/restore round trip', () => {
 	});
 
 	test('an empty / absent media column is a silent no-op, and a non-media tipo is reported', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		mkdirSync(ROOT, { recursive: true });
 		const empty = await removeSectionMediaFiles(SECTION_TIPO, SECTION_ID, null, {
 			mediaRoot: ROOT,
@@ -265,7 +266,7 @@ describe('section media delete/restore round trip', () => {
 		// the caller passes what it read from the snapshot, and the sweep must use it
 		// rather than fall back to the numeric bucket and move nothing.
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const bucket = '/cession';
 		const named = { ...pathOpts, additionalPathOverride: bucket };
 		const live = buildMediaLocation(
@@ -395,7 +396,7 @@ describe('section media delete/restore round trip', () => {
 		// re-uploaded by then, and silently replacing the newer file with the
 		// pre-delete one is the single outcome nothing can undo.
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const live = buildMediaLocation(
 			image,
 			imageIdentity,
@@ -445,7 +446,7 @@ describe('section media delete/restore round trip', () => {
 		// landed, and the deleted/ scan keyed only on the STEM — so restoring the
 		// '.jpg' of a tier could hand back the '.avif' twin's bytes under a .jpg name.
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const live = buildMediaLocation(
 			image,
 			imageIdentity,
@@ -508,7 +509,7 @@ describe('dd_component_av_api::download_fragment', () => {
 
 	test('a watermark request with no watermark file on disk fails LOUDLY', async () => {
 		if (av === null) throw new Error('av spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(
 			buildMediaLocation(av, avIdentity, av.defaultQuality, av.defaultExtension, pathOpts)
 				.absolutePath,
@@ -530,7 +531,7 @@ describe('dd_component_av_api::download_fragment', () => {
 
 	test('an out-of-order or empty time range is refused before any spawn', async () => {
 		if (av === null) throw new Error('av spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		plant(
 			buildMediaLocation(av, avIdentity, av.defaultQuality, av.defaultExtension, pathOpts)
 				.absolutePath,
@@ -558,7 +559,7 @@ describe('dd_component_av_api::download_fragment', () => {
 				? ''
 				: join(config.media.rootPath, `av/${av.defaultQuality}/0/test94_test3_1.mp4`);
 		if (sample === '' || !existsSync(sample)) return '';
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const target = buildMediaLocation(
 			av,
 			avIdentity,
@@ -632,7 +633,7 @@ function annotatedEnvelope(rasterUrl: string, width = 100, height = 50): string 
 describe('component_image SVG envelope', () => {
 	test('writeSvgEnvelope persists the client layers at the envelope path', async () => {
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const svg = annotatedEnvelope('/dedalo/media/image/1.5MB/0/test99_test3_987654.jpg');
 		const written = await writeSvgEnvelope(image, imageIdentity, pathOpts, svg);
 		const location = svgOverlayLocation(image, imageIdentity, pathOpts);
@@ -646,7 +647,7 @@ describe('component_image SVG envelope', () => {
 
 	test('an envelope carrying active content is REFUSED, never written', async () => {
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const location = svgOverlayLocation(image, imageIdentity, pathOpts);
 		for (const hostile of [
 			'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
@@ -669,7 +670,7 @@ describe('component_image SVG envelope', () => {
 		// An attribute in an XML document is quoted or the document does not parse,
 		// which is what separates the two cases below.
 		if (image === null) throw new Error('image spec unavailable');
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const annotation =
 			'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">' +
 			'<text x="1" y="1">switch position on=off, lever on = up</text></svg>';
@@ -697,7 +698,7 @@ describe('component_image SVG envelope', () => {
 				? ''
 				: join(config.media.rootPath, 'image/1.5MB/0/test99_test3_1.jpg');
 		if (sample === '' || !existsSync(sample)) return; // honest skip (needs real dimensions)
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const raster = buildMediaLocation(
 			image,
 			imageIdentity,
@@ -730,7 +731,7 @@ describe('component_image SVG envelope', () => {
 				? ''
 				: join(config.media.rootPath, 'image/1.5MB/0/test99_test3_1.jpg');
 		if (sample === '' || !existsSync(sample)) return;
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const raster = buildMediaLocation(
 			image,
 			imageIdentity,
@@ -755,7 +756,7 @@ describe('component_image SVG envelope', () => {
 				? ''
 				: join(config.media.rootPath, 'image/1.5MB/0/test99_test3_1.jpg');
 		if (sample === '' || !existsSync(sample)) return;
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const raster = buildMediaLocation(
 			image,
 			imageIdentity,

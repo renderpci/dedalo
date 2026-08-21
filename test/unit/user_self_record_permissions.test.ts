@@ -17,6 +17,9 @@
  * The rules are a WRITE gate, not only a display stamp — dd_core_api::save must
  * consult them too, which is what the end-to-end block below pins.
  */
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
+// identifiers threaded through the unit under test — a generic `test` section carries
+// the same meaning here as the install one did.
 
 import { describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -69,7 +72,7 @@ describe('resolveOwnUserRecordPermission — the PHP dd128 table', () => {
 	});
 
 	test('a non-dd128 section is untouched', () => {
-		expect(resolveOwnUserRecordPermission(principal(7, false), 'rsc167', 'dd133', 7)).toBeNull();
+		expect(resolveOwnUserRecordPermission(principal(7, false), 'test3', 'dd133', 7)).toBeNull();
 	});
 
 	test('an absent section_id is untouched (PHP $section_id !== null)', () => {

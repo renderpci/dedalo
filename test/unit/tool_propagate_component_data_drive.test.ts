@@ -16,6 +16,8 @@
  *
  * The dd800 bulk-process record the run mints is deleted in afterAll.
  */
+// Migrated to the generic `test` TLD 2026-08-19: the propagated component is an opaque
+// input_text tipo, so it now names the generic `test52`.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -27,7 +29,7 @@ import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION_TIPO = 'test2';
-const COMPONENT_TIPO = 'numisdata16'; // component_input_text (string column)
+const COMPONENT_TIPO = 'test52'; // component_input_text (string column)
 const LANG = 'lg-spa';
 const IDS = [905101, 905102, 905103];
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
