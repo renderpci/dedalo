@@ -54,6 +54,7 @@ import { DedaloError } from '../../errors/index.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { clearOntologyDerivedCaches } from '../../ontology/cache_invalidation.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
+import { assertTestDatabase } from '../test_database_marker.ts';
 
 /** A record the situation creates: section + id + the jsonb columns to write. */
 export interface SituationRecord {
@@ -132,16 +133,41 @@ const NODE_DEFAULTS: Omit<DdOntologyNode, 'tipo' | 'model' | 'tld' | 'term'> = {
 	propiedades: null,
 };
 
+/**
+ * The `matrix_table` node naming `matrix_test` — the disposable records table.
+ *
+ * WHY EVERY SCRATCH SECTION MUST NAME IT. `getMatrixTableFromTipo` follows the
+ * PHP contract: a section carrying no explicit `matrix_table` relation falls
+ * back to **`matrix`** (resolver.ts :652-654). `matrix` is where an
+ * installation's own records live, so a scratch section that forgets the
+ * relation silently writes into the install-shaped table — and a gate's
+ * residue check, looking in `matrix_test`, reads 0 and calls it clean.
+ *
+ * That is exactly the accident this module exists to prevent, and "remember to
+ * add the relation" is not a guarantee, so a section node GETS it here unless
+ * its author names relations deliberately. Measured 2026-08-20: before this
+ * default, every `zz*` situation section in the suite resolved to `matrix`.
+ */
+const MATRIX_TEST_TABLE_TIPO = 'test24';
+
 /** One node: force the TLD, fill defaults (an explicit `undefined` still takes the default). */
 function normalizeNode(
 	n: Partial<DdOntologyNode> & { tipo: string; model: string },
 	tld: string,
 ): DdOntologyNode {
 	const given = Object.fromEntries(Object.entries(n).filter(([, v]) => v !== undefined));
+	// A section with no relations of its own stores in matrix_test, never in the
+	// installation's `matrix` (see MATRIX_TEST_TABLE_TIPO). An author who DOES
+	// name relations owns the choice — including the table.
+	const relations =
+		n.model === 'section' && given.relations === undefined
+			? [{ tipo: MATRIX_TEST_TABLE_TIPO }]
+			: undefined;
 	return {
 		...NODE_DEFAULTS,
 		term: { 'lg-eng': n.tipo },
 		...given,
+		...(relations === undefined ? {} : { relations }),
 		tipo: n.tipo,
 		model: n.model,
 		tld,
@@ -171,7 +197,20 @@ export function situation(descriptor: SituationDescriptor): Situation {
 	assertNodeTipos(name, tld, descriptor.nodes);
 	const nodes = descriptor.nodes.map((n) => normalizeNode(n, tld));
 	const records = descriptor.records ?? [];
-	const sectionTipos = [...new Set(records.map((r) => r.section_tipo))];
+	// EVERY section the situation defines, not merely the ones with DECLARED
+	// records. A gate typically creates its rows at runtime
+	// (insertMatrixRecordWithCounter), so deriving this from `records` alone left
+	// those rows, their time-machine tail and their `matrix_counter` entries
+	// unswept — and `residueOf`, walking the same empty list, answered 0, which
+	// made `expect(await dropSituation(s)).toBe(0)` vacuous. Measured 2026-08-20:
+	// counters for zztp1/zzti1/zzolang1/zzmip1 survived teardown and GREW on each
+	// re-run while every gate reported a clean sweep.
+	const sectionTipos = [
+		...new Set([
+			...nodes.filter((n) => n.model === 'section').map((n) => n.tipo),
+			...records.map((r) => r.section_tipo),
+		]),
+	];
 	return { tld, name, nodes, records, sectionTipos };
 }
 
@@ -187,6 +226,11 @@ export function loadSituationJson(path: string): Situation {
  * records where the engine itself would.
  */
 export async function ensureSituation(s: Situation): Promise<void> {
+	// The database must carry the `dedalo_test_marker` row before any node or
+	// record is written (src/core/test_data/test_database_marker.ts): a
+	// situation writes dd_ontology and matrix rows, which on an installation
+	// are the ontology and the collection.
+	await assertTestDatabase('ensureSituation');
 	// Resolve model_tipo OUTSIDE the transaction (resolver caches refuse to
 	// memoize inside one — S1-14 — and these are plain reads anyway).
 	const resolved: DdOntologyNode[] = [];
@@ -221,14 +265,40 @@ export async function ensureSituation(s: Situation): Promise<void> {
 }
 
 /**
+ * The table every scratch section stores in when the ontology can no longer say
+ * (its node is already gone). NEVER `matrix`: that is the installation's own
+ * table, and answering it here would make a sweep miss and a residue count lie.
+ */
+const SCRATCH_TABLE_FALLBACK = 'matrix_test';
+
+/** Resolve each section's table WHILE ITS NODE EXISTS. */
+async function tablesOf(sectionTipos: readonly string[]): Promise<Map<string, string>> {
+	const tables = new Map<string, string>();
+	for (const tipo of sectionTipos) {
+		tables.set(tipo, (await getMatrixTableFromTipo(tipo)) ?? SCRATCH_TABLE_FALLBACK);
+	}
+	return tables;
+}
+
+/**
  * Tear the situation down: every record of every section it declared (plus TM
  * + counter rows), then every node under its TLD. Safe to call on a situation
  * that was never ensured. Returns the residue count (0 on success) so a gate
  * can assert hermeticity instead of trusting the sweep.
  */
 export async function dropSituation(s: Situation): Promise<number> {
+	// Teardown deletes whole sections and a whole TLD's nodes — checked again,
+	// not inherited from the ensure (a `finally` runs on paths the ensure never
+	// reached).
+	await assertTestDatabase('dropSituation');
+	// Tables are resolved while the NODES STILL EXIST: once deleteTldNodes has
+	// run, `getMatrixTableFromTipo` answers null for every one of them, and a
+	// `?? 'matrix'` fallback would then sweep — and count — the installation's
+	// table instead of the scratch one. The resolved map is handed to residueOf
+	// for the same reason.
+	const tables = await tablesOf(s.sectionTipos);
 	for (const tipo of s.sectionTipos) {
-		const table = (await getMatrixTableFromTipo(tipo)) ?? 'matrix';
+		const table = tables.get(tipo) as string;
 		await sql.unsafe(`DELETE FROM "${table}" WHERE section_tipo = $1`, [tipo]);
 		await sql`DELETE FROM matrix_time_machine WHERE section_tipo = ${tipo}`;
 		await sql`DELETE FROM matrix_counter WHERE tipo = ${tipo}`;
@@ -236,19 +306,28 @@ export async function dropSituation(s: Situation): Promise<number> {
 	const ok = await deleteTldNodes(s.tld);
 	if (!ok) refuse(`'${s.name}': deleteTldNodes refused tld '${s.tld}'`, { tld: s.tld });
 	await clearOntologyDerivedCaches();
-	return residueOf(s);
+	return residueOf(s, tables);
 }
 
 /** Rows still present for this situation (nodes + records). 0 = clean. */
-export async function residueOf(s: Situation): Promise<number> {
+export async function residueOf(s: Situation, known?: ReadonlyMap<string, string>): Promise<number> {
 	let total = (await searchDdOntology({ tld: s.tld })).length;
+	// `known` is the map dropSituation resolved BEFORE it deleted the nodes.
+	// Without it (a direct call, nodes still present) resolve now; a section that
+	// resolves to nothing is counted in the scratch table, never in `matrix`.
+	const tables = known ?? (await tablesOf(s.sectionTipos));
 	for (const tipo of s.sectionTipos) {
-		const table = (await getMatrixTableFromTipo(tipo)) ?? 'matrix';
+		const table = tables.get(tipo) ?? SCRATCH_TABLE_FALLBACK;
 		const rows = (await sql.unsafe(
 			`SELECT count(*)::int AS n FROM "${table}" WHERE section_tipo = $1`,
 			[tipo],
 		)) as { n: number }[];
 		total += rows[0]?.n ?? 0;
+		const counters = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM matrix_counter WHERE tipo = $1`,
+			[tipo],
+		)) as { n: number }[];
+		total += counters[0]?.n ?? 0;
 	}
 	return total;
 }

@@ -110,7 +110,11 @@ describe('situation — materialized through the engine write path', () => {
 		await ensureSituation(S);
 		const children = await getChildrenNodes('zzsit1');
 		expect(children.length).toBe(2);
-		expect(await residueOf(S)).toBe(4); // 3 nodes + 1 record present, no more
+		// 3 nodes + 1 record + 1 matrix_counter row. The counter is part of the
+		// residue since 2026-08-20: a record created through the counter door
+		// leaves one behind, and counting only nodes and rows let those survive
+		// teardown and GROW on every re-run while the sweep reported clean.
+		expect(await residueOf(S)).toBe(5);
 	});
 
 	test('drop leaves ZERO residue — asserted, not trusted', async () => {
