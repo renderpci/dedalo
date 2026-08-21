@@ -28,6 +28,7 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
+import { assertTestMediaRoot } from '../media/test_media_root.ts';
 import { dirIsWritable } from './dir_probe.ts';
 import {
 	MEDIA_DIR_MODE,
@@ -86,9 +87,20 @@ export interface CheckDirectoriesResult {
 	mediaTree: MediaTreeReport | null;
 }
 
+/**
+ * A ROOT RESOLVER that mkdirs the media root itself, so it is guarded like the
+ * rest (inert outside the test seam — core/media/test_media_root.ts). It is its
+ * OWN function rather than two lines inside `checkDirectories` because that one
+ * is already at its frozen complexity ceiling.
+ */
+function resolveCheckedMediaRoot(override: string | undefined): string | null {
+	const configured = override ?? config.media.rootPath;
+	return configured === null ? null : assertTestMediaRoot(configured, 'checkDirectories');
+}
+
 /** Verify (optionally create) the install directories AND the media tree. */
 export function checkDirectories(options: CheckDirectoriesOptions): CheckDirectoriesResult {
-	const mediaRoot = options.mediaRoot ?? config.media.rootPath;
+	const mediaRoot = resolveCheckedMediaRoot(options.mediaRoot);
 	const reports: DirReport[] = [];
 	const notes: string[] = [];
 	for (const { label, path } of targetDirs(mediaRoot)) {

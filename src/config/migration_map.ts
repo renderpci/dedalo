@@ -623,6 +623,10 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_SVG_THUMB_DPI',
 	'DEDALO_MEDIA_JOB_CONCURRENCY',
 	'DEDALO_MEDIA_PROCESSES_DIR',
+	// The test-media seam: repoints the media root AND arms the marker guard
+	// (src/core/media/test_media_root.ts). NEW_IN_V7 by construction — v6 had no
+	// dedicated test tier and no such guard.
+	'DEDALO_TEST_MEDIA_ROOT',
 	'MEDIA_DEV_ROUTE_ENABLED',
 	// The wall-clock budget of the per-BOOT media-tree pass. NEW_IN_V7 by
 	// construction: v6 re-ran the equivalent walk on every REQUEST and had no

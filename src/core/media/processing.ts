@@ -48,6 +48,7 @@ import {
 	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
+	requireMediaRoot,
 } from './path.ts';
 
 /**
@@ -58,13 +59,13 @@ import {
 const PDF_THUMB_DENSITY = 72;
 const PDF_THUMB_QUALITY = 75;
 
-/** Resolve the media root for these path options (scratch override or config). */
+/**
+ * Resolve the media root for these path options (scratch override or config).
+ * Delegates to `requireMediaRoot` rather than re-reading the catalog, so this
+ * module cannot resolve a root the test-media guard never saw.
+ */
 function _rootOf(pathOpts: MediaPathOptions): string {
-	const root = pathOpts.mediaRoot ?? config.media.rootPath;
-	if (root === null || root === undefined) {
-		throw new DedaloError('media.not_configured', { message: 'MEDIA_PATH not configured' });
-	}
-	return root;
+	return requireMediaRoot(pathOpts.mediaRoot);
 }
 
 /**

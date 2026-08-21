@@ -13,16 +13,23 @@ root = "test"
 # (the same module-load side effect production boot performs — see
 # src/core/ontology/resolver.ts seam note).
 # ORDER MATTERS.
-# 1. test_database  — repoints DB_NAME at the dedicated test DB. MUST be first: it has to
+# 1. test_media    — sets DEDALO_TEST_MEDIA_ROOT, which repoints the media root AND arms
+#    the .dedalo_test_media guard. It is FIRST for a second reason on top of the freeze
+#    rule below: the tree is keyed by the SUITE DATABASE NAME, which it derives as
+#    `<DB_NAME>_test` — so it has to read DB_NAME while it still names the APPLICATION
+#    database, i.e. before test_database rewrites it.
+# 2. test_database — repoints DB_NAME at the dedicated test DB. Both of these have to
 #    rewrite process.env before any module imports src/config/config.ts, which freezes the
-#    connection at import. Everything below then talks to the test DB, never the app's.
-# 2. session_db     — per-run scratch sqlite / ts_state / diffusion tables (S1-18).
-# 3. component_registry — the model lookup production boot performs (S2-20).
-# 4. canonical_test3 — re-seeds the test3 playground FROM CODE, so a developer's edit to a
+#    connection AND the media root at import. Everything below then talks to the test DB
+#    and the test media tree, never the app's.
+# 3. session_db     — per-run scratch sqlite / ts_state / diffusion tables (S1-18).
+# 4. component_registry — the model lookup production boot performs (S2-20).
+# 5. canonical_test3 — re-seeds the test3 playground FROM CODE, so a developer's edit to a
 #    playground record cannot break the gates whose goldens pin its values.
 # The DB-touching preloads warn (never throw) when there is no Postgres — the hermetic tier
 # runs on a bare runner, and a throw here would take down all ~2000 tests.
 preload = [
+	"./test/preload/test_media.ts",
 	"./test/preload/test_database.ts",
 	"./test/preload/session_db.ts",
 	"./test/preload/component_registry.ts",

@@ -315,6 +315,17 @@ export interface MediaConfig {
 	 */
 	readonly rootPath: string | null;
 	/**
+	 * THE TEST-MEDIA SEAM (env DEDALO_TEST_MEDIA_ROOT), null on every real
+	 * installation. Set, it does TWO things at once, and that is the point:
+	 *   1. it BECOMES `rootPath` (it outranks MEDIA_PATH), so the process serving
+	 *      the tests resolves every media path inside the test root;
+	 *   2. it ARMS the guard in `core/media/test_media_root.ts`, which makes every
+	 *      media-root door refuse a root without a `.dedalo_test_media` marker.
+	 * Neither half is settable without the other, so a run cannot be armed at the
+	 * install's root, nor repointed with the guard asleep.
+	 */
+	readonly testRoot: string | null;
+	/**
 	 * Absolute-URL prefix for the media cells of export/relation lists — content
 	 * that LEAVES the application (env DEDALO_MEDIA_EXPORT_BASE). Same value shape
 	 * as `webBase` (origin + `/dedalo/<mediaDir>`; both are prefixed to the same
@@ -645,8 +656,17 @@ function buildMediaConfig(): MediaConfig {
 	// literal 'media' matches PHP: the folder NAME config (DEDALO_MEDIA_DIR) drives
 	// the URL, not this filesystem path.
 	const mediaPath = readEnv('MEDIA_PATH');
+	// The test seam outranks MEDIA_PATH — see MediaConfig.testRoot. It is read
+	// here, in the ONE place the root is decided, so no door can resolve a root
+	// the guard did not see.
+	const testRootRaw = readEnv('DEDALO_TEST_MEDIA_ROOT');
+	const testRoot = testRootRaw !== undefined && testRootRaw !== '' ? testRootRaw : null;
 	const mediaRoot =
-		mediaPath !== undefined && mediaPath !== '' ? mediaPath : join(projectRoot, 'media');
+		testRoot !== null
+			? testRoot
+			: mediaPath !== undefined && mediaPath !== ''
+				? mediaPath
+				: join(projectRoot, 'media');
 	// The `bin(key, name)` helper is gone: each binary key now declares its own computed
 	// default (`<DEDALO_BINARY_BASE>/<name>`) in src/config/catalog/media.ts, so the census
 	// can print it and readString resolves it.
@@ -669,6 +689,7 @@ function buildMediaConfig(): MediaConfig {
 			: undefined;
 	return Object.freeze({
 		rootPath: mediaRoot,
+		testRoot,
 		exportBase,
 		webBase,
 		image: Object.freeze({

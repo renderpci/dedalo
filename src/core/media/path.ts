@@ -27,6 +27,7 @@ import {
 } from '../concepts/media.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { assertValidTipo } from '../search/identifier_gate.ts';
+import { assertTestMediaRoot } from './test_media_root.ts';
 
 /** A media component instance's identity (the identifier inputs). */
 export interface MediaIdentity {
@@ -239,6 +240,13 @@ export function posterframeLocation(
 /**
  * The absolute media root: an explicit override (scratch/test) or the configured
  * MEDIA_PATH. Throws when neither is set (production must configure it).
+ *
+ * THE ONE ROOT RESOLVER, and therefore the place the test-media guard sits: every
+ * media path in the engine — quality files, segments, subtitles, the staging tree,
+ * `deleted/`, the thumb — is built on the value this returns, so a root that has
+ * not declared itself disposable is refused here rather than at the ~40 write call
+ * sites downstream. Inert unless DEDALO_TEST_MEDIA_ROOT is set
+ * (src/core/media/test_media_root.ts).
  */
 export function requireMediaRoot(override?: string): string {
 	const root = override ?? config.media.rootPath;
@@ -247,7 +255,7 @@ export function requireMediaRoot(override?: string): string {
 			message: 'MEDIA_PATH is not configured (config.media.rootPath is null)',
 		});
 	}
-	return resolve(root);
+	return assertTestMediaRoot(resolve(root), 'requireMediaRoot');
 }
 
 /**

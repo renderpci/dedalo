@@ -36,6 +36,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from '../../../config/config.ts';
+import { assertTestMediaRoot } from '../../../core/media/test_media_root.ts';
 import { escapeSqlIdentifier } from '../../plan/identifier.ts';
 import { getTargetPool, isMissingDatabaseError, isMissingTableError } from '../mariadb/db.ts';
 
@@ -67,11 +68,18 @@ export function overrideMediaIndexBaseForTests(base: string | null): void {
  * Returns null when unset (feature disabled).
  */
 export function markerStoreBase(): string | null {
+	// The override is a STORE base, not a media root (a tmp dir standing in for
+	// `<root>/.publication`), and its own tmp-only guard above already keeps it off
+	// a real tree — so it short-circuits before the media-root guard.
 	if (baseOverrideForTests !== null) return baseOverrideForTests;
 	const mediaPath = config.media.rootPath;
 	if (mediaPath === null || !path.isAbsolute(mediaPath)) {
 		return null;
 	}
+	// A ROOT RESOLVER: this module WRITES the publication marker store inside the
+	// media tree without going through path.ts, so the test-media guard sits here
+	// too (inert outside the test seam — core/media/test_media_root.ts).
+	assertTestMediaRoot(mediaPath, 'media_index.markerStoreBase');
 	return path.join(mediaPath, '.publication');
 }
 

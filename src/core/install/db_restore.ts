@@ -89,9 +89,20 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 		if (conn === undefined) {
 			const { resetTestSection } = await import('../test_data/seed.ts');
 			await resetTestSection();
+			// The generic `test` TLD STRUCTURE comes from its one reviewable
+			// source (src/core/test_data/test_tld_ontology.json), materialized
+			// through the engine's own doors: matrix_ontology `<tld>0` records,
+			// then rebuildOntology() derives dd_ontology. The seed ships only the
+			// bootstrap the rebuild needs (the ontology35 registry row), so this
+			// is what actually gives a fresh install its Test area.
+			// allowAnyDatabase: a fresh install's database IS the application's —
+			// the door's test-database guard exists for the suite, not for here,
+			// and this runs on a database this step just restored from the seed.
+			const { materializeTestTldOntology } = await import('../test_data/test_tld_materialize.ts');
+			const testTld = await materializeTestTldOntology({ allowAnyDatabase: true });
 			return {
 				ok: true,
-				msg: 'Database installed from seed + canonical test3 playground — OK',
+				msg: `Database installed from seed + canonical test3 playground + test TLD ontology (${testTld.nodes} nodes in ${testTld.tlds.join(', ')}) — OK`,
 			};
 		}
 		return {
