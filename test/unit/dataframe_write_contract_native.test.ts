@@ -28,19 +28,28 @@
  * needs to spell `type: 'dd490'` in an input, it has stopped testing the
  * contract.
  *
- * Scratch hygiene: a fresh numisdata3 twin (counter-minted id), swept with
+ * Scratch hygiene: a fresh test6099 twin (counter-minted id), swept with
  * its TM + dd542 activity rows in afterAll.
+ *
+ * Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+ * SURFACE the gate drives was rewritten through
+ * src/core/test_data/test_tld_tipo_map.json (numisdata3→test6099,
+ * numisdata34→test6117, numisdata1449→test6744); the DEFECT it narrates keeps
+ * its real coordinates (oh1/368, slot oh115) in prose, because that is
+ * history, not a binding — no oh tipo is addressed by any statement below.
+ * The hard-coded `matrix` table became the one the ontology resolves: the
+ * cloned section carries `test24`, so the twin lives in `matrix_test`, and a
+ * literal `matrix` would have seeded and asserted a row the engine never
+ * wrote. The frame's target section stays the seed-shipped `rsc1242` — that is
+ * what test6744's own request_config names — spelled through `seed()` so the
+ * install-TLD census can tell a seed tipo from an install one.
  */
-// BINDS INSTALL TLDs: numisdata, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { routeSectionRead } from '../../src/core/section/read_facade.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -49,14 +58,26 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const HOST_SECTION = 'numisdata3';
-const MAIN = 'numisdata34'; // component_autocomplete 'Denomination'
-const FRAME = 'numisdata1449'; // its component_dataframe slot (rsc1242 targets)
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+const HOST_SECTION = 'test6099';
+const MAIN = 'test6117'; // component_autocomplete 'Denomination'
+const FRAME = 'test6744'; // its component_dataframe slot
+/** The frame slot's declared target section — test6744's own request_config. */
+const FRAME_TARGET = seed('rsc', 1242);
+/** The MAIN autocomplete's declared target section (opaque to the frame save). */
+const MAIN_TARGET = 'test6810';
+/**
+ * The twin's storage table, RESOLVED not named: the cloned section carries the
+ * `test24` matrix_table node, so it is `matrix_test`.
+ */
+let TWIN_TABLE = '';
 
 /** Two MAIN items, so the per-item pairing is actually exercised. */
 const MAIN_SEED = [
-	{ id: 1, type: 'dd151', section_id: '1', section_tipo: 'numisdata87', from_component_tipo: MAIN },
-	{ id: 2, type: 'dd151', section_id: '2', section_tipo: 'numisdata87', from_component_tipo: MAIN },
+	{ id: 1, type: 'dd151', section_id: '1', section_tipo: MAIN_TARGET, from_component_tipo: MAIN },
+	{ id: 2, type: 'dd151', section_id: '2', section_tipo: MAIN_TARGET, from_component_tipo: MAIN },
 ];
 
 /**
@@ -68,7 +89,7 @@ const MAIN_SEED = [
  */
 const rawClientLocator = (targetId: number) => ({
 	section_id: targetId,
-	section_tipo: 'rsc1242',
+	section_tipo: FRAME_TARGET,
 	paginated_key: 0,
 });
 
@@ -127,7 +148,7 @@ async function insertRaw(idKey: number, targetId: number): Promise<void> {
 
 async function storedFrames(): Promise<Record<string, unknown>[]> {
 	const rows = (await sql.unsafe(
-		'SELECT relation->$1 AS frames FROM matrix WHERE section_tipo = $2 AND section_id = $3',
+		`SELECT relation->$1 AS frames FROM ${TWIN_TABLE} WHERE section_tipo = $2 AND section_id = $3`,
 		[FRAME, HOST_SECTION, twin],
 	)) as { frames: Record<string, unknown>[] | null }[];
 	return rows[0]?.frames ?? [];
@@ -145,9 +166,14 @@ beforeAll(async () => {
 		principal,
 	};
 
+	// Proven, not assumed: the clone's `test24` relation is what puts the twin
+	// in `matrix_test`, and every statement below addresses that table.
+	TWIN_TABLE = (await getMatrixTableFromTipo(HOST_SECTION)) ?? '';
+	expect(TWIN_TABLE).toBe('matrix_test');
+
 	twin = await createSectionRecord(HOST_SECTION, -1);
 	await sql.unsafe(
-		`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb)
+		`UPDATE ${TWIN_TABLE} SET relation = COALESCE(relation, '{}'::jsonb)
 			|| jsonb_build_object($1::text, $2::text::jsonb)
 		 WHERE section_tipo = $3 AND section_id = $4`,
 		[MAIN, JSON.stringify(MAIN_SEED), HOST_SECTION, twin],
@@ -165,7 +191,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	if (twin === 0) return;
-	await sql.unsafe('DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2', [
+	await sql.unsafe(`DELETE FROM ${TWIN_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
 		HOST_SECTION,
 		twin,
 	]);
@@ -198,7 +224,7 @@ describe('dataframe WRITE contract — a raw client locator is normalized, never
 			// WC-2026-08-10-section-id-int-canonical: the client sent the number
 			// 500 and it STAYS an int (repeals the "stored as string" pin).
 			section_id: 500,
-			section_tipo: 'rsc1242',
+			section_tipo: FRAME_TARGET,
 			from_component_tipo: FRAME, // forced to the slot tipo
 			main_component_tipo: MAIN, // from the caller context
 		});
@@ -288,7 +314,7 @@ describe('dataframe READ contract — get_data is PAIRED, not the whole slot', (
 		expect(own?.main_component_tipo).toBe(MAIN);
 	});
 
-	test('a frame that DECLARES a limit keeps it (numisdata1449 → 1)', async () => {
+	test('a frame that DECLARES a limit keeps it (test6744 → 1)', async () => {
 		const own = (await pairedRead(1)).find((item) => item.tipo === FRAME);
 		expect((own?.pagination as { limit?: unknown })?.limit).toBe(1);
 	});

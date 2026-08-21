@@ -30,29 +30,38 @@
  * SOFTENED vs the differential (oracle-only by nature): the three READ-ONLY
  * parity tests (§15657 / §7 / §14073 item projections) assert REAL mutable
  * records against PHP and stay in the parity gate. The seed here is a
- * synthetic §15657-SHAPED fixture (two main items + two dd490 frames onto
- * rsc1242) rather than the live record's bytes — the frame save treats the
- * main data as opaque, so its exact target values are not load-bearing; the
+ * synthetic §15657-SHAPED fixture (two main items + two dd490 frames onto the
+ * frame slot's declared target) rather than the live record's bytes — the
+ * frame save treats the main data as opaque, so its exact target values are not load-bearing; the
  * frame/locator property set (id, type dd490, id_key, section_id,
  * section_tipo, from_component_tipo, main_component_tipo) is the
  * differential's pinned shape.
  *
- * Scratch hygiene: fresh numisdata3 twin via createSectionRecord (distinct
+ * Scratch hygiene: fresh test6099 twin via createSectionRecord (distinct
  * counter-minted id — no collision with sibling gates); twin + TM rows + the
  * dd542 activity rows the dispatch save chokepoint appends for OUR twin are
  * swept in afterAll.
+ *
+ * Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+ * install tipos were rewritten through src/core/test_data/test_tld_tipo_map.json
+ * (numisdata3→test6099, numisdata34→test6117, numisdata1449→test6744) and the
+ * hard-coded `matrix` table was replaced by the one the ontology resolves: a
+ * cloned `test` section carries `test24`, so the twin lives in `matrix_test`
+ * and a literal `matrix` here would read a row this gate never wrote. Two
+ * addresses are NOT rewritten and are spelled through `seed()` so the census
+ * can tell them apart: the frame slot's declared target section is still the
+ * seed-shipped `rsc1242` (that is what test6744's own request_config names —
+ * it ships on every installation), and the MAIN items point at test6810, the
+ * section test6117's request_config actually targets. Neither is read here;
+ * both are opaque addresses inside a jsonb value asserted verbatim.
  */
-// BINDS INSTALL TLDs: numisdata, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { canonicalizeStoredSectionId } from '../../src/core/concepts/section_id.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
@@ -60,14 +69,27 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const HOST_SECTION = 'numisdata3';
-const MAIN = 'numisdata34'; // component_autocomplete 'Denomination'
-const FRAME = 'numisdata1449'; // its component_dataframe slot (rsc1242 targets)
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+const HOST_SECTION = 'test6099';
+const MAIN = 'test6117'; // component_autocomplete 'Denomination'
+const FRAME = 'test6744'; // its component_dataframe slot
+/** The frame slot's declared target section — test6744's own request_config. */
+const FRAME_TARGET = seed('rsc', 1242);
+/** The MAIN autocomplete's declared target section (opaque to the frame save). */
+const MAIN_TARGET = 'test6810';
+/**
+ * The twin's storage table, RESOLVED not named: the cloned section carries the
+ * `test24` matrix_table node, so it is `matrix_test`. A literal `matrix` would
+ * seed and assert a row the engine never touches.
+ */
+let TWIN_TABLE = '';
 
 /** §15657-shaped MAIN items (opaque to the frame save — asserted untouched). */
 const MAIN_SEED = [
-	{ id: 1, type: 'dd151', section_id: '1', section_tipo: 'numisdata87', from_component_tipo: MAIN },
-	{ id: 2, type: 'dd151', section_id: '2', section_tipo: 'numisdata87', from_component_tipo: MAIN },
+	{ id: 1, type: 'dd151', section_id: '1', section_tipo: MAIN_TARGET, from_component_tipo: MAIN },
+	{ id: 2, type: 'dd151', section_id: '2', section_tipo: MAIN_TARGET, from_component_tipo: MAIN },
 ];
 
 /** A frame locator in the differential's pinned property set. */
@@ -79,7 +101,7 @@ const frameOf = (id: number, idKey: number, targetId: string) => ({
 	type: 'dd490',
 	id_key: idKey,
 	section_id: canonicalizeStoredSectionId(targetId),
-	section_tipo: 'rsc1242',
+	section_tipo: FRAME_TARGET,
 	from_component_tipo: FRAME,
 	main_component_tipo: MAIN,
 });
@@ -131,7 +153,7 @@ function frameSaveRqo(
 async function twinState(): Promise<{ frames: unknown; main: string | null; counter: unknown }> {
 	const rows = (await sql.unsafe(
 		`SELECT relation->$1 AS frames_v, (relation->$2)::text AS main_v, meta->$1 AS counter_v
-		 FROM matrix WHERE section_tipo = $3 AND section_id = $4`,
+		 FROM ${TWIN_TABLE} WHERE section_tipo = $3 AND section_id = $4`,
 		[FRAME, MAIN, HOST_SECTION, twin],
 	)) as { frames_v: unknown; main_v: string | null; counter_v: unknown }[];
 	return {
@@ -153,9 +175,14 @@ beforeAll(async () => {
 		principal,
 	};
 
+	// Proven, not assumed: the clone's `test24` relation is what puts the twin
+	// in `matrix_test`, and every statement below addresses that table.
+	TWIN_TABLE = (await getMatrixTableFromTipo(HOST_SECTION)) ?? '';
+	expect(TWIN_TABLE).toBe('matrix_test');
+
 	twin = await createSectionRecord(HOST_SECTION, -1);
 	await sql.unsafe(
-		`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb)
+		`UPDATE ${TWIN_TABLE} SET relation = COALESCE(relation, '{}'::jsonb)
 			|| jsonb_build_object($1::text, $2::text::jsonb)
 			|| jsonb_build_object($3::text, $4::text::jsonb)
 		 WHERE section_tipo = $5 AND section_id = $6`,
@@ -164,14 +191,14 @@ beforeAll(async () => {
 	mainBefore = (await twinState()).main;
 
 	// The differential's three logical operations, in order:
-	// 1. UPDATE item-1's frame (id 1, id_key 1) to a different rsc1242 target;
+	// 1. UPDATE item-1's frame (id 1, id_key 1) to a different target record;
 	// 2. INSERT a second frame for item 2 WITHOUT id_key — the save must stamp
 	//    the caller's id_key (PHP :205-213) and mint the next item id;
 	// 3. REMOVE item-2's ORIGINAL frame (id 2) — its inserted sibling survives.
 	const insertedFrame = {
 		type: 'dd490',
 		section_id: '502',
-		section_tipo: 'rsc1242',
+		section_tipo: FRAME_TARGET,
 		from_component_tipo: FRAME,
 		main_component_tipo: MAIN,
 	};
@@ -193,7 +220,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	if (twin === 0) return;
-	await sql.unsafe('DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2', [
+	await sql.unsafe(`DELETE FROM ${TWIN_TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
 		HOST_SECTION,
 		twin,
 	]);

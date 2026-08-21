@@ -1,8 +1,6 @@
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database:
+// this gate feeds a section_map descriptor in and reads the resolved config out, so
+// every tipo is an opaque identifier and the migration is a rename.
 
 import { describe, expect, test } from 'bun:test';
 import { type OntologyPort, RagConfig } from '../../src/ai/rag/config.ts';
@@ -32,8 +30,8 @@ function fakeOntology(opts: {
 const CARD_GROUP = {
 	id: 'card',
 	ddo_map: [
-		{ tipo: 'rsc140', section_tipo: 'self', mode: 'list' },
-		{ tipo: 'rsc221', section_tipo: 'self', mode: 'list' },
+		{ tipo: 'test140', section_tipo: 'self', mode: 'list' },
+		{ tipo: 'test221', section_tipo: 'self', mode: 'list' },
 	],
 };
 
@@ -44,7 +42,7 @@ describe('RagConfig.getEmbedGroups (section_map rag.embed)', () => {
 		expect(groups.length).toBe(1);
 		expect(groups[0]?.id).toBe('card');
 		expect(groups[0]?.ddoMap.length).toBe(2);
-		expect(groups[0]?.ddoMap[0]?.tipo).toBe('rsc140');
+		expect(groups[0]?.ddoMap[0]?.tipo).toBe('test140');
 	});
 
 	test('drops malformed groups loudly and keeps valid ones', async () => {
@@ -84,7 +82,7 @@ describe('RagConfig.getEmbedGroups (section_map rag.embed)', () => {
 							{
 								id: 'default',
 								ddo_map: [
-									{ tipo: 'rsc140', section_tipo: 'self', mode: 'list' },
+									{ tipo: 'test140', section_tipo: 'self', mode: 'list' },
 									{ no_tipo: true }, // fails ddoSchema → dropped
 								],
 							},
@@ -152,7 +150,7 @@ describe('RagConfig.getGroupRagConfig', () => {
 							CARD_GROUP,
 							{
 								id: 'fulltext',
-								ddo_map: [{ tipo: 'rsc210', section_tipo: 'self', mode: 'list' }],
+								ddo_map: [{ tipo: 'test210', section_tipo: 'self', mode: 'list' }],
 								mode: 'long_document',
 								strategy: 'structural_semantic',
 								chunk: { max_tokens: 300, min_tokens: 80 },
@@ -192,62 +190,62 @@ describe('RagConfig.getContext (properties.rag.context — unchanged surface)', 
 	test('normalizes images (object + bare string), metadata, compare_scope', async () => {
 		const cfg = new RagConfig(
 			ctxOntology({
-				rsc170: {
+				test3: {
 					rag: {
 						enabled: true,
 						context: {
 							images: [
-								{ tipo: 'rsc29', view: 'obverse' },
-								'rsc30',
+								{ tipo: 'test99', view: 'obverse' },
+								'test30',
 								{ tipo: '', view: 'x' },
 								{ view: 'y' },
 							],
-							metadata: { typology: 'rsc40', material: 'rsc41', bad: '', other: 5 },
-							compare_scope: ['rsc170', 'rsc6', ''],
+							metadata: { typology: 'test26', material: 'test27', bad: '', other: 5 },
+							compare_scope: ['test3', 'test6', ''],
 						},
 					},
 				},
 			}),
 		);
-		const ctx = await cfg.getContext('rsc170');
+		const ctx = await cfg.getContext('test3');
 		expect(ctx).not.toBeNull();
 		expect(ctx!.images).toEqual([
-			{ tipo: 'rsc29', view: 'obverse' },
-			{ tipo: 'rsc30', view: null },
+			{ tipo: 'test99', view: 'obverse' },
+			{ tipo: 'test30', view: null },
 		]);
-		expect(ctx!.metadata).toEqual({ typology: 'rsc40', material: 'rsc41' });
-		expect(ctx!.compareScope).toEqual(['rsc170', 'rsc6']);
+		expect(ctx!.metadata).toEqual({ typology: 'test26', material: 'test27' });
+		expect(ctx!.compareScope).toEqual(['test3', 'test6']);
 	});
 
 	test('getContextImages / getContextMetadata / sectionHasImageContext', async () => {
 		const cfg = new RagConfig(
 			ctxOntology({
-				rsc170: { rag: { context: { images: ['rsc29'], metadata: { typology: 'rsc40' } } } },
+				test3: { rag: { context: { images: ['test99'], metadata: { typology: 'test26' } } } },
 			}),
 		);
-		expect(await cfg.sectionHasImageContext('rsc170')).toBe(true);
-		expect(await cfg.getContextImages('rsc170')).toEqual([{ tipo: 'rsc29', view: null }]);
-		expect(await cfg.getContextMetadata('rsc170')).toEqual({ typology: 'rsc40' });
+		expect(await cfg.sectionHasImageContext('test3')).toBe(true);
+		expect(await cfg.getContextImages('test3')).toEqual([{ tipo: 'test99', view: null }]);
+		expect(await cfg.getContextMetadata('test3')).toEqual({ typology: 'test26' });
 	});
 
 	test('getCompareScope defaults to [sectionTipo] when absent or not an array', async () => {
 		const cfg = new RagConfig(
 			ctxOntology({
-				rsc170: { rag: { context: { images: ['rsc29'], compare_scope: 'same_section' } } },
-				rsc6: { rag: { context: { images: ['rsc29'] } } },
+				test3: { rag: { context: { images: ['test99'], compare_scope: 'same_section' } } },
+				test6: { rag: { context: { images: ['test99'] } } },
 			}),
 		);
-		expect(await cfg.getCompareScope('rsc170')).toEqual(['rsc170']);
-		expect(await cfg.getCompareScope('rsc6')).toEqual(['rsc6']);
+		expect(await cfg.getCompareScope('test3')).toEqual(['test3']);
+		expect(await cfg.getCompareScope('test6')).toEqual(['test6']);
 	});
 
 	test('no context → null + empty getters + same_section scope', async () => {
-		const cfg = new RagConfig(ctxOntology({ rsc170: { rag: { enabled: true } } }));
-		expect(await cfg.getContext('rsc170')).toBeNull();
-		expect(await cfg.sectionHasImageContext('rsc170')).toBe(false);
-		expect(await cfg.getContextImages('rsc170')).toEqual([]);
-		expect(await cfg.getContextMetadata('rsc170')).toEqual({});
-		expect(await cfg.getCompareScope('rsc170')).toEqual(['rsc170']);
+		const cfg = new RagConfig(ctxOntology({ test3: { rag: { enabled: true } } }));
+		expect(await cfg.getContext('test3')).toBeNull();
+		expect(await cfg.sectionHasImageContext('test3')).toBe(false);
+		expect(await cfg.getContextImages('test3')).toEqual([]);
+		expect(await cfg.getContextMetadata('test3')).toEqual({});
+		expect(await cfg.getCompareScope('test3')).toEqual(['test3']);
 	});
 
 	test('context is cached per instance (one ontology read)', async () => {
@@ -255,16 +253,16 @@ describe('RagConfig.getContext (properties.rag.context — unchanged surface)', 
 		const ontology: OntologyPort = {
 			getProperties: async () => {
 				reads++;
-				return { rag: { context: { images: ['rsc29'] } } };
+				return { rag: { context: { images: ['test99'] } } };
 			},
 			getModelByTipo: async () => null,
 			getTranslatable: async () => false,
 			getSectionMapRag: async () => null,
 		};
 		const cfg = new RagConfig(ontology);
-		await cfg.getContext('rsc170');
-		await cfg.getContextImages('rsc170');
-		await cfg.getCompareScope('rsc170');
+		await cfg.getContext('test3');
+		await cfg.getContextImages('test3');
+		await cfg.getCompareScope('test3');
 		expect(reads).toBe(1);
 	});
 });

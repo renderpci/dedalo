@@ -21,11 +21,8 @@
  * the `section_list` target extractor (fail-closed) and the background-only
  * `publishProgress` / `signal` pair.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the sectionTipos extractor is pure, so
+// its targets are opaque tipos — they now name generic `test` sections.
 
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -161,9 +158,9 @@ describe('tool_dev_template exemplar — the seams a scaffolded tool copies', ()
 	test('sectionTipos extracts every batch target and stays fail-closed on junk', () => {
 		const extract = tool.apiActions.batch_demo?.sectionTipos;
 		expect(typeof extract).toBe('function');
-		expect(extract?.({ items: [{ section_tipo: 'oh1' }, { section_tipo: 'oh5' }] })).toEqual([
-			'oh1',
-			'oh5',
+		expect(extract?.({ items: [{ section_tipo: 'test3' }, { section_tipo: 'test6099' }] })).toEqual([
+			'test3',
+			'test6099',
 		]);
 		// No items → an EMPTY target list, which assertActionPermission denies.
 		expect(extract?.({})).toEqual([]);
@@ -202,7 +199,7 @@ describe('tool_dev_template exemplar — the seams a scaffolded tool copies', ()
 			expect(response.msg, name).toBeUndefined();
 		}
 		const batch = await tool.apiActions.batch_demo!.handler(
-			context({ items: [{ section_tipo: 'oh1' }] }),
+			context({ items: [{ section_tipo: 'test3' }] }),
 		);
 		expect(batch.data).toEqual({ batch: 1, gated: true });
 	});

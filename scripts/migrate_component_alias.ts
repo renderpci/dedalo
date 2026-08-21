@@ -361,5 +361,5 @@ for (const sectionId of touchedIds) {
 	}
 	console.log(`re-derived dd_ontology for numisdata${sectionId}`);
 }
-console.log('\nmigration applied. Run: bun test test/unit/component_alias_numisdata203.test.ts');
+console.log('\nmigration applied. Run: bun test test/unit/component_alias_tool_ddo_map.test.ts');
 process.exit(0);

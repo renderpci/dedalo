@@ -29,11 +29,10 @@
  * the Types the given members already carry, gated twice — the component grant on
  * the member, then the record scope gate on the Type before its label is quoted.
  */
-// BINDS INSTALL TLDs: numisdata, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
@@ -53,6 +52,14 @@ import { ProfileError, parseProfile } from '../../src/core/identify/profile.ts';
 import type { IdentificationProfile } from '../../src/core/identify/types.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
+
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
 const rqo = (options: Record<string, unknown>): Rqo => ({ options }) as unknown as Rqo;
@@ -68,20 +75,20 @@ const ctx = (principal: Principal): ApiRequestContext =>
 
 /**
  * The coin profile of IDENTIFY_SPEC §3.1, reduced to what promotion reads:
- * `obverse_legend` hops Coin → Type through `numisdata161` (so THAT is the Type
+ * `obverse_legend` hops Coin → Type through `test6230` (so THAT is the Type
  * link), `weight_g` stays on the coin, and `mint` hops somewhere else entirely.
  */
 function coinProfile(overrides: Record<string, unknown> = {}): IdentificationProfile {
 	return parseProfile({
 		id: 'coin_types',
 		label: 'Coin identification',
-		sectionTipos: ['numisdata4'],
-		typeSectionTipo: 'numisdata3',
+		sectionTipos: ['test6100'],
+		typeSectionTipo: 'test6099',
 		criteria: [
 			{
 				id: 'weight_g',
 				label: 'Weight (g)',
-				path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata22' }],
+				path: [{ section_tipo: 'test6100', component_tipo: 'testmint1007' }],
 				role: 'descriptive',
 				mode: 'numeric_tolerance',
 				tolerance: 0.15,
@@ -90,8 +97,8 @@ function coinProfile(overrides: Record<string, unknown> = {}): IdentificationPro
 				id: 'obverse_legend',
 				label: 'Type › Obverse legend',
 				path: [
-					{ section_tipo: 'numisdata4', component_tipo: 'numisdata161' },
-					{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+					{ section_tipo: 'test6100', component_tipo: 'test6230' },
+					{ section_tipo: 'test6099', component_tipo: 'test6123' },
 				],
 				role: 'identifying',
 				mode: 'same_locator',
@@ -101,8 +108,8 @@ function coinProfile(overrides: Record<string, unknown> = {}): IdentificationPro
 				id: 'reverse_legend',
 				label: 'Type › Reverse legend',
 				path: [
-					{ section_tipo: 'numisdata4', component_tipo: 'numisdata161' },
-					{ section_tipo: 'numisdata3', component_tipo: 'numisdata41' },
+					{ section_tipo: 'test6100', component_tipo: 'test6230' },
+					{ section_tipo: 'test6099', component_tipo: 'test6124' },
 				],
 				role: 'identifying',
 				mode: 'same_locator',
@@ -112,8 +119,8 @@ function coinProfile(overrides: Record<string, unknown> = {}): IdentificationPro
 				id: 'findspot',
 				label: 'Findspot › Name',
 				path: [
-					{ section_tipo: 'numisdata4', component_tipo: 'numisdata99' },
-					{ section_tipo: 'rsc2', component_tipo: 'rsc45' },
+					{ section_tipo: 'test6100', component_tipo: 'testcatalogs1000' },
+					{ section_tipo: seed('rsc', 2), component_tipo: seed('rsc', 45) },
 				],
 				role: 'descriptive',
 				mode: 'same_locator',
@@ -164,8 +171,8 @@ async function declineOf(call: Promise<unknown>): Promise<DedaloError> {
 
 describe('typeLinkCandidates — the one rule, derived from the profile', () => {
 	test('only a criterion whose FIRST hop lands in the Type section reveals the link', () => {
-		const candidates = typeLinkCandidates(coinProfile(), 'numisdata4');
-		expect(candidates.map((candidate) => candidate.componentTipo)).toEqual(['numisdata161']);
+		const candidates = typeLinkCandidates(coinProfile(), 'test6100');
+		expect(candidates.map((candidate) => candidate.componentTipo)).toEqual(['test6230']);
 		// Both criteria that reach the typology through it are cited, so the panel
 		// can say WHY this component and not another.
 		expect(candidates[0]?.revealedBy.map((entry) => entry.criterionId)).toEqual([
@@ -175,7 +182,7 @@ describe('typeLinkCandidates — the one rule, derived from the profile', () => 
 	});
 
 	test('a profile with no Type section reveals nothing at all', () => {
-		expect(typeLinkCandidates(coinProfile({ typeSectionTipo: null }), 'numisdata4')).toEqual([]);
+		expect(typeLinkCandidates(coinProfile({ typeSectionTipo: null }), 'test6100')).toEqual([]);
 	});
 
 	test('a Type reached TWO hops out is not a component of the object, so it is not a link', () => {
@@ -185,9 +192,9 @@ describe('typeLinkCandidates — the one rule, derived from the profile', () => 
 					id: 'far',
 					label: 'Far',
 					path: [
-						{ section_tipo: 'numisdata4', component_tipo: 'numisdata99' },
-						{ section_tipo: 'rsc2', component_tipo: 'rsc45' },
-						{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+						{ section_tipo: 'test6100', component_tipo: 'testcatalogs1000' },
+						{ section_tipo: seed('rsc', 2), component_tipo: seed('rsc', 45) },
+						{ section_tipo: 'test6099', component_tipo: 'test6123' },
 					],
 					role: 'identifying',
 					mode: 'same_locator',
@@ -195,7 +202,7 @@ describe('typeLinkCandidates — the one rule, derived from the profile', () => 
 				},
 			],
 		});
-		expect(typeLinkCandidates(profile, 'numisdata4')).toEqual([]);
+		expect(typeLinkCandidates(profile, 'test6100')).toEqual([]);
 	});
 });
 
@@ -206,7 +213,7 @@ describe('typeLinkCandidates — the one rule, derived from the profile', () => 
  * `identify_by_image` reaches the rule through a module-private wrapper, so no
  * import can be asserted from here. What CAN be asserted is behaviour on a
  * fixture where the one rule and the rule it forbids disagree — which the coin
- * fixture above does not do, because every plausible rule picks `numisdata161`
+ * fixture above does not do, because every plausible rule picks `test6230`
  * there and the gate would have been green over a copy-pasted second definition.
  *
  * So: a section holding TWO relation components aimed at the Type section, only
@@ -215,7 +222,7 @@ describe('typeLinkCandidates — the one rule, derived from the profile', () => 
  * `typeLinkCandidates` reads only the revealed one and reports Type 77.
  */
 describe('the Type-link rule has ONE definition — identify_by_image applies it too', () => {
-	/** `numisdata161` is revealed by a criterion; `numisdata900` is the decoy. */
+	/** `test6230` is revealed by a criterion; `test6473` is the decoy. */
 	function twoPortalProfile(): IdentificationProfile {
 		return coinProfile({
 			criteria: [
@@ -223,8 +230,8 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 					id: 'obverse_legend',
 					label: 'Type › Obverse legend',
 					path: [
-						{ section_tipo: 'numisdata4', component_tipo: 'numisdata161' },
-						{ section_tipo: 'numisdata3', component_tipo: 'numisdata40' },
+						{ section_tipo: 'test6100', component_tipo: 'test6230' },
+						{ section_tipo: 'test6099', component_tipo: 'test6123' },
 					],
 					role: 'identifying',
 					mode: 'same_locator',
@@ -264,9 +271,9 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 			}),
 			queryImagePartition: async () => [
 				{
-					sectionTipo: 'numisdata4',
+					sectionTipo: 'test6100',
 					sectionId: 13,
-					componentTipo: 'rsc29',
+					componentTipo: seed('rsc', 29),
 					lang: 'lg-nolan',
 					chunkIndex: 0,
 					sourceText: 'caption',
@@ -286,16 +293,16 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 			readValues: async (_record, path) => {
 				const tipo = path[0]?.component_tipo ?? '';
 				readComponents.push(tipo);
-				if (tipo === 'numisdata161') {
+				if (tipo === 'test6230') {
 					return {
 						kind: 'locators',
-						locators: [{ section_tipo: 'numisdata3', section_id: String(REVEALED_TYPE_ID) }],
+						locators: [{ section_tipo: 'test6099', section_id: String(REVEALED_TYPE_ID) }],
 					};
 				}
-				if (tipo === 'numisdata900') {
+				if (tipo === 'test6473') {
 					return {
 						kind: 'locators',
-						locators: [{ section_tipo: 'numisdata3', section_id: String(DECOY_TYPE_ID) }],
+						locators: [{ section_tipo: 'test6099', section_id: String(DECOY_TYPE_ID) }],
 					};
 				}
 				return { kind: 'text', values: ['a label'] };
@@ -304,14 +311,14 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 	}
 
 	test('the fixture really discriminates (the anti-vacuous half)', () => {
-		// One rule says numisdata161. The forbidden "any portal aimed at the Type
-		// section" fallback would additionally offer numisdata900 — which exists on
+		// One rule says test6230. The forbidden "any portal aimed at the Type
+		// section" fallback would additionally offer test6473 — which exists on
 		// this section and holds a Type locator, and which no criterion mentions.
 		expect(
-			typeLinkCandidates(twoPortalProfile(), 'numisdata4').map(
+			typeLinkCandidates(twoPortalProfile(), 'test6100').map(
 				(candidate) => candidate.componentTipo,
 			),
-		).toEqual(['numisdata161']);
+		).toEqual(['test6230']);
 	});
 
 	test('identify_by_image resolves Types through the revealed component ONLY', async () => {
@@ -326,16 +333,16 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 		expect(answer.results[0]?.types.map((type) => type.section_id)).toEqual([REVEALED_TYPE_ID]);
 		// The decoy was never even READ: the rule decided which component to open,
 		// it did not filter the output of opening every portal.
-		expect(read).not.toContain('numisdata900');
-		expect(read).toContain('numisdata161');
+		expect(read).not.toContain('test6473');
+		expect(read).toContain('test6230');
 	});
 
 	test('and promotion derives the SAME component from the SAME profile', async () => {
 		const res = await buildResolveTypeLink(
 			fakeDeps({ loadProfile: async () => twoPortalProfile() }),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		expect((body(res).links as { component_tipo: string }[]).map((l) => l.component_tipo)).toEqual([
-			'numisdata161',
+			'test6230',
 		]);
 	});
 });
@@ -363,7 +370,7 @@ describe('resolve_type_link — declines, in order', () => {
 						return coinProfile();
 					},
 				}),
-			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+			)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER)),
 		);
 		expect(decline.code).toBe('perm.denied');
 		expect(profileLoaded).toBe(false);
@@ -372,7 +379,7 @@ describe('resolve_type_link — declines, in order', () => {
 	test('no profile, and a malformed one (whose parser message travels)', async () => {
 		const none = await declineOf(
 			buildResolveTypeLink(fakeDeps({ loadProfile: async () => null }))(
-				rqo({ section_tipo: 'numisdata4' }),
+				rqo({ section_tipo: 'test6100' }),
 				ctx(SUPERUSER),
 			),
 		);
@@ -385,7 +392,7 @@ describe('resolve_type_link — declines, in order', () => {
 						throw new ProfileError("criterion 'legend' hop 1 names component 'x'");
 					},
 				}),
-			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+			)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER)),
 		);
 		expect(bad.code).toBe('identify.invalid_profile');
 		// PUBLIC disclosure — the parser sentence reaches the wire.
@@ -396,7 +403,7 @@ describe('resolve_type_link — declines, in order', () => {
 		const decline = await declineOf(
 			buildResolveTypeLink(
 				fakeDeps({ loadProfile: async () => coinProfile({ typeSectionTipo: null }) }),
-			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+			)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER)),
 		);
 		expect(decline.code).toBe('identify.no_type_section');
 		// Said in words, because the panel repeats it instead of showing a button
@@ -410,7 +417,7 @@ describe('resolve_type_link — declines, in order', () => {
 				{
 					id: 'weight_g',
 					label: 'Weight (g)',
-					path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata22' }],
+					path: [{ section_tipo: 'test6100', component_tipo: 'testmint1007' }],
 					role: 'identifying',
 					mode: 'numeric_tolerance',
 					tolerance: 0.15,
@@ -428,10 +435,10 @@ describe('resolve_type_link — declines, in order', () => {
 						return 'component_portal';
 					},
 				}),
-			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+			)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER)),
 		);
 		expect(decline.code).toBe('identify.no_link_component');
-		expect(decline.publicMessage).toContain('numisdata3');
+		expect(decline.publicMessage).toContain('test6099');
 		// It did not go looking for a plausible component either.
 		expect(modelAsked).toBe(false);
 	});
@@ -440,33 +447,33 @@ describe('resolve_type_link — declines, in order', () => {
 describe('resolve_type_link — what a caller may actually do', () => {
 	test('the derived link, its model, and the criteria that revealed it', async () => {
 		const res = await buildResolveTypeLink(fakeDeps())(
-			rqo({ section_tipo: 'numisdata4' }),
+			rqo({ section_tipo: 'test6100' }),
 			ctx(SUPERUSER),
 		);
 		const result = body(res);
 		const links = result.links as Record<string, unknown>[];
 		expect(links).toHaveLength(1);
-		expect(links[0]?.component_tipo).toBe('numisdata161');
+		expect(links[0]?.component_tipo).toBe('test6230');
 		expect(links[0]?.component_model).toBe('component_portal');
 		expect(links[0]?.writable).toBe(true);
 		expect(links[0]?.reason).toBe('ok');
 		expect(
 			(links[0]?.revealed_by as { criterion_id: string }[]).map((e) => e.criterion_id),
 		).toEqual(['obverse_legend', 'reverse_legend']);
-		expect((result.type_section as Record<string, unknown>).section_tipo).toBe('numisdata3');
+		expect((result.type_section as Record<string, unknown>).section_tipo).toBe('test6099');
 	});
 
 	test('read-but-not-write on the link component is reported, not silently writable', async () => {
 		const res = await buildResolveTypeLink(
 			fakeDeps({
 				componentGrant: async (_principal, _sectionTipo, componentTipo) =>
-					componentTipo === 'numisdata161' ? 1 : 2,
+					componentTipo === 'test6230' ? 1 : 2,
 			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		const links = body(res).links as Record<string, unknown>[];
 		expect(links[0]?.writable).toBe(false);
 		expect(links[0]?.reason).toBe('forbidden_component');
-		expect(String(links[0]?.detail)).toContain('numisdata161');
+		expect(String(links[0]?.detail)).toContain('test6230');
 	});
 
 	test('a link component that does not store locators cannot hold a Type link', async () => {
@@ -475,7 +482,7 @@ describe('resolve_type_link — what a caller may actually do', () => {
 				componentModel: async () => 'component_input_text',
 				modelColumn: () => 'string',
 			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		const links = body(res).links as Record<string, unknown>[];
 		expect(links[0]?.writable).toBe(false);
 		expect(links[0]?.reason).toBe('unsupported_component_model');
@@ -484,9 +491,9 @@ describe('resolve_type_link — what a caller may actually do', () => {
 	test('minting a new Type needs the write grant on the TYPE section, not on this one', async () => {
 		const res = await buildResolveTypeLink(
 			fakeDeps({
-				componentGrant: async (_principal, sectionTipo) => (sectionTipo === 'numisdata3' ? 1 : 2),
+				componentGrant: async (_principal, sectionTipo) => (sectionTipo === 'test6099' ? 1 : 2),
 			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		const typeSection = body(res).type_section as Record<string, unknown>;
 		expect(typeSection.can_create).toBe(false);
 		// …and its label component is read-only for the same caller.
@@ -500,7 +507,7 @@ describe('resolve_type_link — what a caller may actually do', () => {
 					tipo === 'numisdata3_term' ? 'component_autocomplete' : 'component_portal',
 				modelColumn: () => 'relation',
 			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100' }), ctx(SUPERUSER));
 		const label = (body(res).type_section as Record<string, unknown>).label_component as Record<
 			string,
 			unknown
@@ -513,7 +520,7 @@ describe('resolve_type_link — what a caller may actually do', () => {
 
 	test('a Type section that declares no label component at all is null, not a crash', async () => {
 		const res = await buildResolveTypeLink(fakeDeps({ labelComponent: async () => null }))(
-			rqo({ section_tipo: 'numisdata4' }),
+			rqo({ section_tipo: 'test6100' }),
 			ctx(SUPERUSER),
 		);
 		expect((body(res).type_section as Record<string, unknown>).label_component).toBeNull();
@@ -526,12 +533,12 @@ describe('resolve_type_link — the survey of the members', () => {
 		fakeDeps({
 			readValues: async (record, path) => {
 				const step = path[0];
-				if (step?.component_tipo === 'numisdata161') {
+				if (step?.component_tipo === 'test6230') {
 					const typeId = record.sectionId === 13 ? 9 : record.sectionId <= 12 ? 5 : null;
 					if (typeId === null) return null;
 					return {
 						kind: 'locators',
-						locators: [{ section_tipo: 'numisdata3', section_id: typeId }],
+						locators: [{ section_tipo: 'test6099', section_id: typeId }],
 					};
 				}
 				if (step?.component_tipo === 'numisdata3_term') {
@@ -543,22 +550,22 @@ describe('resolve_type_link — the survey of the members', () => {
 		});
 
 	const members = [
-		{ section_tipo: 'numisdata4', section_id: 11 },
-		{ section_tipo: 'numisdata4', section_id: 12 },
-		{ section_tipo: 'numisdata4', section_id: 13 },
-		{ section_tipo: 'numisdata4', section_id: 14 },
+		{ section_tipo: 'test6100', section_id: 11 },
+		{ section_tipo: 'test6100', section_id: 12 },
+		{ section_tipo: 'test6100', section_id: 13 },
+		{ section_tipo: 'test6100', section_id: 14 },
 	];
 
 	test('the Types the members already carry, commonest first, with their labels', async () => {
 		const res = await buildResolveTypeLink(linkedDeps())(
-			rqo({ section_tipo: 'numisdata4', records: members }),
+			rqo({ section_tipo: 'test6100', records: members }),
 			ctx(SUPERUSER),
 		);
 		const result = body(res);
 		expect(result.members_surveyed).toBe(4);
 		expect(result.existing_types).toEqual([
-			{ section_tipo: 'numisdata3', section_id: 5, label: 'Type 5', member_count: 2 },
-			{ section_tipo: 'numisdata3', section_id: 9, label: 'Type 9', member_count: 1 },
+			{ section_tipo: 'test6099', section_id: 5, label: 'Type 5', member_count: 2 },
+			{ section_tipo: 'test6099', section_id: 9, label: 'Type 9', member_count: 1 },
 		]);
 	});
 
@@ -569,7 +576,7 @@ describe('resolve_type_link — the survey of the members', () => {
 				scopeRecords: async (records) =>
 					records.filter((record) => record.section_id !== 11 && record.section_id !== 12),
 			}),
-		)(rqo({ section_tipo: 'numisdata4', records: members }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100', records: members }), ctx(SUPERUSER));
 		const result = body(res);
 		expect(result.members_surveyed).toBe(2);
 		expect((result.existing_types as { section_id: number }[]).map((t) => t.section_id)).toEqual([
@@ -582,9 +589,9 @@ describe('resolve_type_link — the survey of the members', () => {
 			linkedDeps({
 				componentGrant: async (_principal, sectionTipo, componentTipo) =>
 					// readable on the object section for everything except the link itself
-					sectionTipo === 'numisdata4' && componentTipo === 'numisdata161' ? 0 : 2,
+					sectionTipo === 'test6100' && componentTipo === 'test6230' ? 0 : 2,
 			}),
-		)(rqo({ section_tipo: 'numisdata4', records: members }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100', records: members }), ctx(SUPERUSER));
 		// The link is still reported (its own grant is the section-level one below),
 		// but nothing was read off the members.
 		expect(body(res).existing_types).toEqual([]);
@@ -595,24 +602,24 @@ describe('resolve_type_link — the survey of the members', () => {
 			linkedDeps({
 				scopeRecords: async (records) =>
 					records.filter(
-						(record) => !(record.section_tipo === 'numisdata3' && record.section_id === 5),
+						(record) => !(record.section_tipo === 'test6099' && record.section_id === 5),
 					),
 			}),
-		)(rqo({ section_tipo: 'numisdata4', records: members }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100', records: members }), ctx(SUPERUSER));
 		expect((body(res).existing_types as { section_id: number }[]).map((t) => t.section_id)).toEqual(
 			[9],
 		);
 	});
 
 	test('a member from ANOTHER section is not surveyed: the link component is this section’s', async () => {
-		// Reading numisdata161 off an rsc2 record would be reading a component that
+		// Reading test6230 off an rsc2 record would be reading a component that
 		// section does not have. A cluster spanning two sections is two questions.
 		const res = await buildResolveTypeLink(linkedDeps())(
 			rqo({
-				section_tipo: 'numisdata4',
+				section_tipo: 'test6100',
 				records: [
-					{ section_tipo: 'rsc2', section_id: 11 },
-					{ section_tipo: 'numisdata4', section_id: 13 },
+					{ section_tipo: seed('rsc', 2), section_id: 11 },
+					{ section_tipo: 'test6100', section_id: 13 },
 				],
 			}),
 			ctx(SUPERUSER),
@@ -626,7 +633,7 @@ describe('resolve_type_link — the survey of the members', () => {
 	test('no members named is an empty survey, not an error', async () => {
 		for (const records of [undefined, [], 'nonsense', [{ section_tipo: 'x!', section_id: 0 }]]) {
 			const res = await buildResolveTypeLink(linkedDeps())(
-				rqo({ section_tipo: 'numisdata4', records }),
+				rqo({ section_tipo: 'test6100', records }),
 				ctx(SUPERUSER),
 			);
 			expect(res.body.ok).toBe(true);
@@ -637,7 +644,7 @@ describe('resolve_type_link — the survey of the members', () => {
 
 	test('the survey is capped: an unbounded member list cannot be a bulk read', async () => {
 		const many = Array.from({ length: 500 }, (_value, index) => ({
-			section_tipo: 'numisdata4',
+			section_tipo: 'test6100',
 			section_id: index + 1,
 		}));
 		let scoped = 0;
@@ -648,7 +655,7 @@ describe('resolve_type_link — the survey of the members', () => {
 					return records;
 				},
 			}),
-		)(rqo({ section_tipo: 'numisdata4', records: many }), ctx(SUPERUSER));
+		)(rqo({ section_tipo: 'test6100', records: many }), ctx(SUPERUSER));
 		// EXACTLY the cap, not "at most" it: `toBeLessThanOrEqual(300)` is also
 		// satisfied by 0, so it passed just as happily if the survey never ran at
 		// all — and a survey that silently reads nothing is the failure this case

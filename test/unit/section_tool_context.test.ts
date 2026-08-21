@@ -6,11 +6,10 @@
  * oracle needed; the wire shape itself is pinned by
  * test/parity/section_tool_start_differential.test.ts and menu_differential.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -58,11 +57,11 @@ describe('enrichToolConfig (create_tool_simple_context semantics)', () => {
 		expect(typeof enriched.ddo_map[1]!.label).toBe('string');
 		expect((enriched.ddo_map[1]!.label as string).length).toBeGreaterThan(0);
 
-		const withSelf = (await enrichToolConfig(raw, 'oh1', 'oh1')) as {
+		const withSelf = (await enrichToolConfig(raw, 'test6813', 'test6813')) as {
 			ddo_map: Record<string, unknown>[];
 		};
-		expect(withSelf.ddo_map[0]!.tipo).toBe('oh1');
-		expect(withSelf.ddo_map[0]!.section_tipo).toBe('oh1');
+		expect(withSelf.ddo_map[0]!.tipo).toBe('test6813');
+		expect(withSelf.ddo_map[0]!.section_tipo).toBe('test6813');
 	});
 
 	test('NEVER mutates the input (the raw ontology row properties)', async () => {

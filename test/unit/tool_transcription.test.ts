@@ -8,11 +8,10 @@
  * with an injected save. Full tool_request→DB drive is ledgered (media not
  * synced here), matching the media_tools.test.ts convention.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the media identity lives in this file's
+// own scratch media root and the id-1-slot drive now writes to the `test3` playground
+// (matrix_test), so the tipos only have to be real nodes of the right model — they now
+// name generic `test` ones (test94 = component_av, test17 = component_text_area).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -54,6 +53,7 @@ import {
 	type ScheduleRepair,
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -61,8 +61,8 @@ const ROOT = `${tmpdir()}/dedalo_transcription_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
 const HAVE_FFMPEG = existsSync(config.media.binaries.ffmpeg);
 const identity: MediaIdentity = {
-	componentTipo: 'rsc439',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test94',
+	sectionTipo: 'test3',
 	sectionId: 7,
 	lang: null,
 };
@@ -70,7 +70,7 @@ const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: null,
 
 /** Make a scratch AV original: a short mp4 with an audio stream (sine tone). */
 async function makeAvOriginal(): Promise<void> {
-	const abs = `${ROOT}/av/original/rsc439_rsc170_7.mp4`;
+	const abs = `${ROOT}/av/original/test94_test3_7.mp4`;
 	mkdirSync(abs.slice(0, abs.lastIndexOf('/')), { recursive: true });
 	await runBinary(
 		[
@@ -88,7 +88,7 @@ async function makeAvOriginal(): Promise<void> {
 	);
 }
 
-beforeAll(() => rmSync(ROOT, { recursive: true, force: true }));
+beforeAll(() => resetMediaRoot(ROOT));
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 describe('tool_transcription local core', () => {
@@ -97,7 +97,7 @@ describe('tool_transcription local core', () => {
 		async () => {
 			await makeAvOriginal();
 			const rel = await ensureTranscribableAudio(av, identity, pathOpts);
-			expect(rel).toBe('/av/audio_tr/rsc439_rsc170_7.wav');
+			expect(rel).toBe('/av/audio_tr/test94_test3_7.wav');
 			expect(existsSync(transcribableAudioLocation(av, identity, pathOpts).absolutePath)).toBe(
 				true,
 			);
@@ -106,7 +106,7 @@ describe('tool_transcription local core', () => {
 
 	test.if(HAVE_FFMPEG)('ensure is idempotent — reuses the existing WAV', async () => {
 		const rel = await ensureTranscribableAudio(av, identity, pathOpts);
-		expect(rel).toBe('/av/audio_tr/rsc439_rsc170_7.wav');
+		expect(rel).toBe('/av/audio_tr/test94_test3_7.wav');
 	});
 
 	test.if(HAVE_FFMPEG)('delete removes it (true), then is a no-op (false)', () => {
@@ -238,7 +238,7 @@ function liveFailureEnvelope(): WireFailure {
 		'try{',
 		'const r=await t.module.apiActions.check_server_transcriber_status.handler({',
 		'principal:{userId:-1,isGlobalAdmin:true,isDeveloper:true},userId:-1,background:false,',
-		"options:{media_ddo:{component_tipo:'rsc35',section_tipo:'rsc167',section_id:1},",
+		"options:{media_ddo:{component_tipo:'test94',section_tipo:'test3',section_id:1},",
 		"transcriber_engine:'babel_transcriber',pid:4321}});",
 		'console.log(JSON.stringify(r));',
 		// The handler REFUSES BY THROWING now (ERRORS_SPEC §4); the wire body the
@@ -271,7 +271,7 @@ describe('check_server_transcriber_status handler', () => {
 				principal: stubPrincipal,
 				userId: 7,
 				options: {
-					media_ddo: { component_tipo: 'rsc439', section_tipo: 'bad tipo!', section_id: 1 },
+					media_ddo: { component_tipo: 'test94', section_tipo: 'bad tipo!', section_id: 1 },
 					transcriber_engine: 'babel_transcriber',
 					pid: 123,
 				},
@@ -347,7 +347,7 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 				principal: adminPrincipal,
 				userId: -1,
 				options: {
-					media_ddo: { component_tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 },
+					media_ddo: { component_tipo: 'test94', section_tipo: 'test3', section_id: 1 },
 					transcriber_engine: 'babel_transcriber',
 					pid: 4321,
 				},
@@ -595,7 +595,7 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 		return 0;
 	};
 	const self = {
-		media_component: { section_tipo: 'rsc167', section_id: 1 },
+		media_component: { section_tipo: 'test3', section_id: 1 },
 		transcription_component: {
 			refresh: () => {
 				refreshes.push(1);
@@ -692,7 +692,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 		// severity, and an outcome sharing the neutral grey of "the model is
 		// unverified" is an end the archivist has to infer.
 		expect(run.status_panel.reports.at(-1)?.severity).toBe('success');
-		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
+		expect(run.deleted).toEqual(['transcriber_process_test3_1']);
 		expect(run.scheduled).toEqual([4000]);
 		expect(run.busy).toEqual([false]);
 	});
@@ -700,7 +700,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	test('status 1 still clears the stale pid, reads Inactive and stops the spinner', async () => {
 		const run = await drivePoll({ ok: true, data: { status: 1 } });
 		expect(panelText(run.status_panel)).toBe('Inactive');
-		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
+		expect(run.deleted).toEqual(['transcriber_process_test3_1']);
 		expect(run.scheduled).toEqual([]);
 		expect(run.busy).toEqual([false]);
 	});
@@ -733,7 +733,7 @@ describe('saveTranscriptionResult — the id-1 slot contract', () => {
 	// explicitly. The id-less update this used to send relied on slice/sibling
 	// resolution and APPENDED with a minted id when nothing resolved — a
 	// finished 87-minute transcription landed invisible in item 2 while the
-	// editor showed the empty item 1 (rsc167/528, 2026-07-28).
+	// editor showed the empty item 1 (an install's rsc167/528, 2026-07-28).
 	test('an empty component receives the transcript as item id 1', async () => {
 		const { saveTranscriptionResult } = await import('../../src/core/tools/transcription_asr.ts');
 		const { insertMatrixRecordWithCounter, deleteMatrixRecord } = await import(
@@ -742,14 +742,14 @@ describe('saveTranscriptionResult — the id-1 slot contract', () => {
 		const { readMatrixRecord } = await import('../../src/core/db/matrix.ts');
 		const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
 
-		const table = (await getMatrixTableFromTipo('rsc167'))!;
-		const sectionId = await insertMatrixRecordWithCounter(table, 'rsc167', {});
+		const table = (await getMatrixTableFromTipo('test3'))!;
+		const sectionId = await insertMatrixRecordWithCounter(table, 'test3', {});
 		try {
 			const outcome = await saveTranscriptionResult({
 				lang: 'lg-eng',
 				transcriptionDdo: {
-					component_tipo: 'rsc36',
-					section_tipo: 'rsc167',
+					component_tipo: 'test17',
+					section_tipo: 'test3',
 					section_id: sectionId,
 				},
 				segments: [{ start: 0, end: 4, text: ' Hello world.' }],
@@ -757,8 +757,8 @@ describe('saveTranscriptionResult — the id-1 slot contract', () => {
 			});
 			expect(outcome.saved).toBe(true);
 
-			const record = await readMatrixRecord(table, 'rsc167', sectionId);
-			const items = (record?.columns.string as Record<string, unknown[]>)?.rsc36 as {
+			const record = await readMatrixRecord(table, 'test3', sectionId);
+			const items = (record?.columns.string as Record<string, unknown[]>)?.test17 as {
 				id?: unknown;
 				lang?: string;
 				value?: string;
@@ -768,7 +768,7 @@ describe('saveTranscriptionResult — the id-1 slot contract', () => {
 			expect(items[0]?.lang).toBe('lg-eng');
 			expect(items[0]?.value).toContain('Hello world.');
 		} finally {
-			await deleteMatrixRecord(table, 'rsc167', sectionId);
+			await deleteMatrixRecord(table, 'test3', sectionId);
 		}
 	});
 });
@@ -777,7 +777,7 @@ describe('remote ASR status seam', () => {
 	const statusRequest: TranscriberStatusRequest = {
 		uri: 'https://babel.example.org:8011/api/',
 		key: 'k',
-		avUrl: 'https://dedalo.example.org/dedalo/media/av/404/rsc35_rsc167_1.mp3',
+		avUrl: 'https://dedalo.example.org/dedalo/media/av/404/test94_test3_1.mp3',
 		engine: 'babel_transcriber',
 		userId: 7,
 		entityName: 'mib',
@@ -913,7 +913,7 @@ describe('ASR write-back (process_file port)', () => {
 			lang: 'lg-spa',
 		},
 		lang: 'lg-spa',
-		transcriptionDdo: { component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 1 },
+		transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
 		userId: 7,
 	};
 

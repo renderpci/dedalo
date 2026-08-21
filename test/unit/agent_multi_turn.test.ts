@@ -4,11 +4,7 @@
  * tool traffic is ever replayed), prepends the volatile context block to THIS
  * turn only, and returns the ready-to-resend history for the next turn.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the ui-context tipo is an opaque string here (no DB read), rewritten to the phase-2 `test` clone through src/core/test_data/test_tld_tipo_map.json.
 
 import { describe, expect, test } from 'bun:test';
 import type {
@@ -82,12 +78,12 @@ describe('multi-turn threading (stateless)', () => {
 	test('the context block rides on THIS turn only — never into history', async () => {
 		const provider = new ScriptedProvider([ANSWER]);
 		const run = await runAgent(SUPERUSER, 'what is in this record?', provider, {
-			uiContext: { section_tipo: 'oh1', section_id: 42, mode: 'edit' },
+			uiContext: { section_tipo: 'test6813', section_id: 42, mode: 'edit' },
 		});
 		const transcript = provider.seenTranscripts[0] as AgentTranscriptEntry[];
 		const sent = (transcript[0] as { text: string }).text;
 		expect(sent).toContain('<current_ui_context>');
-		expect(sent).toContain('section_tipo=oh1');
+		expect(sent).toContain('section_tipo=test6813');
 		expect(sent.endsWith('what is in this record?')).toBe(true);
 		// history keeps the BARE question (byte-stable resends = warm cache)
 		expect(run.history[0]).toEqual({ role: 'user', text: 'what is in this record?' });

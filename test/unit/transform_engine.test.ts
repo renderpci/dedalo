@@ -7,11 +7,10 @@
  * Portalize/locators EXECUTE against live sections is an operator drill
  * (ledgered) — the dry-run + the recorder logic are the automated surface.
  */
-// BINDS INSTALL TLDs: rsc, tch — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated off install TLDs 2026-08-20: the locator-rebase fixtures are pure
+// in-memory payloads, so their tipos are now synthetic `zzlr*` names, and the
+// refusal cases rename into the reserved scratch tld `zzq` — no install is named
+// anywhere in this file.
 
 import { afterAll, describe, expect, mock, test } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -35,37 +34,37 @@ afterAll(() => rmSync(SCRATCH_ROOT, { recursive: true, force: true }));
 describe('rebaseLocatorsInValue', () => {
 	test('rebases matching locators, offsets section_id, preserves shape', () => {
 		const value = {
-			rsc99: [
-				{ section_tipo: 'rsc194', section_id: 5, from_component_tipo: 'rsc99', type: 'dd151' },
-				{ section_tipo: 'rsc300', section_id: 7 }, // unrelated — untouched
+			zzlr9: [
+				{ section_tipo: 'zzlr1', section_id: 5, from_component_tipo: 'zzlr9', type: 'dd151' },
+				{ section_tipo: 'zzlr3', section_id: 7 }, // unrelated — untouched
 			],
-			nested: { deep: [{ section_tipo: 'rsc194', section_id: '12' }] },
+			nested: { deep: [{ section_tipo: 'zzlr1', section_id: '12' }] },
 		};
 		const changed = rebaseLocatorsInValue(value, {
-			oldTipo: 'rsc194',
-			newTipo: 'rsc197',
+			oldTipo: 'zzlr1',
+			newTipo: 'zzlr2',
 			baseCounter: 1000,
 		});
 		expect(changed).toBe(true);
-		expect(value.rsc99[0]).toEqual({
-			section_tipo: 'rsc197',
+		expect(value.zzlr9[0]).toEqual({
+			section_tipo: 'zzlr2',
 			section_id: 1005,
-			from_component_tipo: 'rsc99',
+			from_component_tipo: 'zzlr9',
 			type: 'dd151',
 		});
-		expect(value.rsc99[1]).toEqual({ section_tipo: 'rsc300', section_id: 7 });
+		expect(value.zzlr9[1]).toEqual({ section_tipo: 'zzlr3', section_id: 7 });
 		// string section_id stays a string
-		expect(value.nested.deep[0]).toEqual({ section_tipo: 'rsc197', section_id: '1012' });
+		expect(value.nested.deep[0]).toEqual({ section_tipo: 'zzlr2', section_id: '1012' });
 	});
 
 	test('rebases dataframe key pairs; returns false when nothing matches', () => {
 		const df = [
-			{ section_tipo_key: 'rsc194', section_id_key: 3, section_tipo: 'other', section_id: 1 },
+			{ section_tipo_key: 'zzlr1', section_id_key: 3, section_tipo: 'other', section_id: 1 },
 		];
 		expect(
-			rebaseLocatorsInValue(df, { oldTipo: 'rsc194', newTipo: 'rsc197', baseCounter: 100 }),
+			rebaseLocatorsInValue(df, { oldTipo: 'zzlr1', newTipo: 'zzlr2', baseCounter: 100 }),
 		).toBe(true);
-		expect(df[0]).toMatchObject({ section_tipo_key: 'rsc197', section_id_key: 103 });
+		expect(df[0]).toMatchObject({ section_tipo_key: 'zzlr2', section_id_key: 103 });
 		expect(rebaseLocatorsInValue({ a: 1 }, { oldTipo: 'x1', newTipo: 'y1', baseCounter: 5 })).toBe(
 			false,
 		);
@@ -163,7 +162,7 @@ describe('executor dry-run smoke (no writes; queries must be valid)', () => {
 		// demands digits: a bare tld lives in ontology7 as a plain string, which no
 		// tipo rewrite in this executor can reach. Loosening the regex to "support"
 		// this would silently half-rename every install that ran it.
-		await executeChangesInTipos([{ old: 'qdp', new: 'tch', type: 'section', perform: [] }], rec);
+		await executeChangesInTipos([{ old: 'zznex', new: 'zzq', type: 'section', perform: [] }], rec);
 
 		expect(rec.errors.join(' | ')).toContain('unsafe old/new tipo');
 		expect(Object.keys(rec.counts).length).toBe(0);
@@ -172,11 +171,11 @@ describe('executor dry-run smoke (no writes; queries must be valid)', () => {
 	test('an ONTOLOGY ROOT section (<tld>0) is REFUSED, pointing at the path that works', async () => {
 		if (!(await dbUp())) return;
 		const rec = new TransformRecorder(true);
-		// `qdp0` → `tch0` passes TIPO_RE but cannot work: the rows carry their tld in
+		// `qdp0` → `zzq0` passes TIPO_RE but cannot work: the rows carry their tld in
 		// ontology7 (untouchable here), and matrix_ontology's UNIQUE (section_id,
 		// section_tipo) makes the bulk UPDATE abort part-way — with no transaction
 		// and no rollback in this executor, that is an unrecoverable half-rename.
-		await executeChangesInTipos([{ old: 'qdp0', new: 'tch0', type: 'section', perform: [] }], rec);
+		await executeChangesInTipos([{ old: 'zznex0', new: 'zzq0', type: 'section', perform: [] }], rec);
 
 		const errors = rec.errors.join(' | ');
 		expect(errors).toContain('ontology root section');

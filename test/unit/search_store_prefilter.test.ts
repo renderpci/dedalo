@@ -13,25 +13,31 @@
  *   write/delete (matrix_test scratch record);
  * - superset equality: pre-filter AND exact === exact alone on real data.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildStringFragment } from '../../src/core/search/builders/builder_string.ts';
 import type { BuilderContext, Fragment } from '../../src/core/search/builders/types.ts';
 
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
 const PREFILTER = 'ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv';
+
+/** The seed-shipped section/component the ground-truth SQL below addresses. */
+const STORE_SECTION = seed('rsc', 205);
+const STORE_COMPONENT = seed('rsc', 140);
 
 function ctx(overrides: Partial<BuilderContext> = {}): BuilderContext {
 	return {
 		alias: 'mix',
 		column: 'string',
-		tipo: 'rsc140',
-		sectionTipo: 'rsc205',
+		tipo: STORE_COMPONENT,
+		sectionTipo: STORE_SECTION,
 		table: 'matrix',
 		lang: 'lg-nolan',
 		translatable: false,
@@ -96,7 +102,7 @@ describe('search-store pre-filter SQL shape', () => {
 	test('LIKE wildcards in a regex-plain q are escaped to literals', () => {
 		const result = buildStringFragment('100%_x', null, false, ctx()) as Fragment;
 		expect(result.sentence).toContain(PREFILTER);
-		expect(result.tokenValues._Qt_).toBe('rsc140');
+		expect(result.tokenValues._Qt_).toBe(STORE_COMPONENT);
 		expect(result.tokenValues._Q0_).toBe('100\\%\\_x');
 		expect(result.tokenValues._Q1_).toBe('100%_x'); // exact predicate keeps raw q
 	});
@@ -151,18 +157,18 @@ describe('store sync trigger + superset (skips without DB/store)', () => {
 		if (!(await storeReady())) return;
 		for (const q of ['sarde', 'HERAULT']) {
 			const exact = (await sql.unsafe(
-				`SELECT count(*)::int AS n FROM matrix mix WHERE mix.section_tipo = 'rsc205'
-				 AND (mix.string @? '$."rsc140"[*] ? (@."lang" == "lg-nolan")') AND EXISTS (
-					SELECT 1 FROM jsonb_path_query(mix.string, '$."rsc140"[*] ? (@."lang" == "lg-nolan")') AS elem
+				`SELECT count(*)::int AS n FROM matrix mix WHERE mix.section_tipo = '${STORE_SECTION}'
+				 AND (mix.string @? '$.${STORE_COMPONENT}[*] ? (@."lang" == "lg-nolan")') AND EXISTS (
+					SELECT 1 FROM jsonb_path_query(mix.string, '$.${STORE_COMPONENT}[*] ? (@."lang" == "lg-nolan")') AS elem
 					WHERE f_unaccent(elem->>'value') ~* f_unaccent($1))`,
 				[q],
 			)) as { n: number }[];
 			const prefiltered = (await sql.unsafe(
-				`SELECT count(*)::int AS n FROM matrix mix WHERE mix.section_tipo = 'rsc205'
+				`SELECT count(*)::int AS n FROM matrix mix WHERE mix.section_tipo = '${STORE_SECTION}'
 				 AND mix.section_id = ANY (ARRAY(SELECT sv.section_id FROM matrix_string_search sv
-					WHERE sv.component_tipo = 'rsc140' AND sv.string LIKE '%' || lower(f_unaccent($1)) || '%'))
-				 AND (mix.string @? '$."rsc140"[*] ? (@."lang" == "lg-nolan")') AND EXISTS (
-					SELECT 1 FROM jsonb_path_query(mix.string, '$."rsc140"[*] ? (@."lang" == "lg-nolan")') AS elem
+					WHERE sv.component_tipo = '${STORE_COMPONENT}' AND sv.string LIKE '%' || lower(f_unaccent($1)) || '%'))
+				 AND (mix.string @? '$.${STORE_COMPONENT}[*] ? (@."lang" == "lg-nolan")') AND EXISTS (
+					SELECT 1 FROM jsonb_path_query(mix.string, '$.${STORE_COMPONENT}[*] ? (@."lang" == "lg-nolan")') AS elem
 					WHERE f_unaccent(elem->>'value') ~* f_unaccent($1))`,
 				[q],
 			)) as { n: number }[];

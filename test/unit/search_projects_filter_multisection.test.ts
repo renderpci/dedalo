@@ -12,34 +12,66 @@
  * assertions live in test/parity/projects_filter_differential.test.ts; this
  * file pins the emitted SQL shape without needing the PHP oracle.
  *
- * Fixtures (monedaiberica ontology, same as the differential):
- *   numisdata267 gated by component_filter numisdata21
- *   numisdata6   gated by component_filter numisdata127
- *   dmm480       ungated (no component_filter, empty relations — the ONLY
- *                genuinely ungated data section; every virtual section in this
- *                ontology resolves to a GATED real section, e.g. numisdata5 →
- *                numisdata276 → numisdata221, rsc170 → rsc2 → rsc28)
- *   user 16 → project 7; user 999999 → no projects
+ * Fixtures (the generic `test` TLD clone + the seed's own ontology):
+ *   test6310  gated by component_filter test6107
+ *   testmint1 gated by component_filter testmint1013
+ *   test6369  ungated — one of the twenty cloned sections with no
+ *             component_filter anywhere on the virtual→real chain; the
+ *             "fixture assumptions" case re-derives that, so a clone that
+ *             later gains a filter reddens instead of passing vacuously
+ *   rsc170 → rsc2 → rsc28: the seed's own VIRTUAL image section, the
+ *             regression carrier for the virtual→real filter lookup
+ *   hierarchy20: the seed's Thesaurus section — GATED (hierarchy55) but in
+ *             matrix_hierarchy, so the table exemption must win over the gate
+ *
+ * IDENTITIES ARE MINTED, NOT ASSUMED. The suite database holds three `dd128`
+ * users and none of them has a project, so a "user 16 → project 7" fixture is
+ * satisfiable at zero-versus-zero (the green-suite trap). This gate installs
+ * the synthetic ACL identities (test/helpers/acl_identity_fixture.ts) and reads
+ * the non-admin's ONE project id back out of the emitted bound parameter.
  */
-// BINDS INSTALL TLDs: dmm, numisdata, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql as db } from '../../src/core/db/postgres.ts';
 import { getComponentFilterTipo } from '../../src/core/ontology/resolver.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	ACL_PROJECT_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
 
-const GATED_A = 'numisdata267'; // filter tipo numisdata21
-const GATED_A_FILTER = 'numisdata21';
-const GATED_B = 'numisdata6'; // filter tipo numisdata127
-const GATED_B_FILTER = 'numisdata127';
-const UNGATED = 'dmm480';
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
-const NON_ADMIN: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
+const GATED_A = 'test6310'; // filter tipo test6107
+const GATED_A_FILTER = 'test6107';
+const GATED_B = 'testmint1'; // filter tipo testmint1013
+const GATED_B_FILTER = 'testmint1013';
+const UNGATED = 'test6369';
+
+/** The seed's VIRTUAL image section and the real section whose filter gates it. */
+const VIRTUAL_SECTION = seed('rsc', 170);
+const VIRTUAL_REAL_FILTER = seed('rsc', 28);
+/** The seed's Thesaurus section: GATED, but in the exempt matrix_hierarchy. */
+const EXEMPT_TABLE_SECTION = seed('hierarchy', 20);
+
+/** The one project the minted non-admin may see. */
+const PROJECT_ID = String(ACL_PROJECT_ID);
+const projectsParam = (filterTipo: string): string =>
+	`{"${filterTipo}":[{"section_id":"${PROJECT_ID}"}]}`;
+
+const NON_ADMIN: Principal = {
+	userId: ACL_NON_ADMIN_USER_ID,
+	isGlobalAdmin: false,
+	isDeveloper: false,
+};
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_PROJECTS_USER: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 
@@ -54,7 +86,14 @@ beforeAll(async () => {
 		dbReady = true;
 	} catch {
 		dbReady = false; // no shared DB on this machine — cases skip honestly
+		return;
 	}
+	await installAclIdentityFixture();
+});
+
+afterAll(async () => {
+	if (!dbReady) return;
+	await removeAclIdentityFixture();
 });
 
 describe('multi-section projects filter (non-admin, per-section ACL)', () => {
@@ -74,10 +113,15 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 		// scan), keyed to the gated section's own filter tipo via a bound param.
 		expect(sql).toMatch(/mix\.relation @> \$\d+::text::jsonb/);
 		expect(sql).not.toContain('jsonb_array_elements');
-		expect(params).toContain(`{"${GATED_A_FILTER}":[{"section_id":"7"}]}`);
+		expect(params).toContain(projectsParam(GATED_A_FILTER));
 		// The predicate is a disjunction of section_tipo-guarded branches:
 		// (mix.section_tipo = $a AND (mix.relation @> …)) OR (mix.section_tipo = $b)
-		expect(sql).toMatch(/\(mix\.section_tipo = \$\d+::text AND \(mix\.relation @> /);
+		// The gated branch is the section guard AND the section-id DUAL PROBE
+		// (int-canonical + legacy string, WC-2026-08-10 — search_containment_dual_probe
+		// owns that contract), so the containment is a two-term disjunction.
+		expect(sql).toMatch(
+			/\(mix\.section_tipo = \$\d+::text AND \(\(mix\.relation @> \$\d+::text::jsonb OR mix\.relation @> \$\d+::text::jsonb\)\)\)/,
+		);
 		expect(sql).toMatch(/ OR \(mix\.section_tipo = \$\d+::text\)\)/);
 	});
 
@@ -86,8 +130,8 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 		const { params } = await buildSearchSql(sqoOver([GATED_A, GATED_B]), {
 			principal: NON_ADMIN,
 		});
-		expect(params).toContain(`{"${GATED_A_FILTER}":[{"section_id":"7"}]}`);
-		expect(params).toContain(`{"${GATED_B_FILTER}":[{"section_id":"7"}]}`);
+		expect(params).toContain(projectsParam(GATED_A_FILTER));
+		expect(params).toContain(projectsParam(GATED_B_FILTER));
 	});
 
 	test('ungated-FIRST ordering still filters the gated section (the PHP fail-open case)', async () => {
@@ -97,7 +141,7 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 		const { params } = await buildSearchSql(sqoOver([UNGATED, GATED_A]), {
 			principal: NON_ADMIN,
 		});
-		expect(params).toContain(`{"${GATED_A_FILTER}":[{"section_id":"7"}]}`);
+		expect(params).toContain(projectsParam(GATED_A_FILTER));
 	});
 
 	test('global admin bypasses the filter entirely', async () => {
@@ -110,16 +154,18 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 		expect(params.join('|')).not.toContain(GATED_A_FILTER);
 	});
 
-	test('VIRTUAL section resolves the REAL section filter tipo (rsc170 → rsc2 → rsc28; fail-open regression 2026-07-19)', async () => {
+	test('VIRTUAL section resolves the REAL section filter tipo (fail-open regression 2026-07-19)', async () => {
 		if (!dbReady) return;
-		// rsc170 (images) is virtual: records are STORED under rsc170 but gated
-		// by real section rsc2's component_filter rsc28. The strict own-subtree
+		// The seed's image section is VIRTUAL: records are STORED under it but
+		// gated by the real section's component_filter. The strict own-subtree
 		// lookup returned null here, silently disabling the projects ACL for
 		// every virtual section — non-admins saw the whole table.
-		expect(await getComponentFilterTipo('rsc170')).toBe('rsc28');
-		const { sql, params } = await buildSearchSql(sqoOver(['rsc170']), { principal: NON_ADMIN });
+		expect(await getComponentFilterTipo(VIRTUAL_SECTION)).toBe(VIRTUAL_REAL_FILTER);
+		const { sql, params } = await buildSearchSql(sqoOver([VIRTUAL_SECTION]), {
+			principal: NON_ADMIN,
+		});
 		expect(sql).toMatch(/relation @> \$\d+::text::jsonb/);
-		expect(params).toContain('{"rsc28":[{"section_id":"7"}]}');
+		expect(params).toContain(projectsParam(VIRTUAL_REAL_FILTER));
 	});
 
 	test('projects-less non-admin gets the impossible clause on gated sections only', async () => {
@@ -134,16 +180,22 @@ describe('multi-section projects filter (non-admin, per-section ACL)', () => {
 describe('projects-filter table exemption (PHP $ar_tables_skip_projects)', () => {
 	test('thesaurus/vocabulary sections are never project-gated (the empty-thesaurus regression, 2026-07-20)', async () => {
 		if (!dbReady) return;
-		// es1 is virtual over a gated real section — but it lives in
-		// matrix_hierarchy, which PHP auto-exempts from the projects filter.
-		// Before this rule was ported, non-admin autocomplete/thesaurus
-		// searches returned EMPTY once the virtual→real filter fallback landed.
-		const { sql } = await buildSearchSql(sqoOver(['es1']), { principal: NON_ADMIN });
+		// The seed's Thesaurus section CARRIES a component_filter — the gate is
+		// not vacuous — but it lives in matrix_hierarchy, which PHP auto-exempts
+		// from the projects filter. Before this rule was ported, non-admin
+		// autocomplete/thesaurus searches returned EMPTY once the virtual→real
+		// filter fallback landed.
+		expect(await getComponentFilterTipo(EXEMPT_TABLE_SECTION)).not.toBeNull();
+		const { sql } = await buildSearchSql(sqoOver([EXEMPT_TABLE_SECTION]), {
+			principal: NON_ADMIN,
+		});
 		expect(sql).not.toContain('relation @>');
 		expect(sql).not.toContain('IMPOSSIBLE VALUE');
 		// mixed matrix + hierarchy: only the matrix-table section is gated
-		const mixed = await buildSearchSql(sqoOver([GATED_A, 'es1']), { principal: NON_ADMIN });
-		expect(mixed.sql).toContain('relation @>'); // numisdata267 branch gated
-		expect(mixed.sql).toMatch(/\(mix\.section_tipo = \$\d+::text\)/); // es1 bare guard
+		const mixed = await buildSearchSql(sqoOver([GATED_A, EXEMPT_TABLE_SECTION]), {
+			principal: NON_ADMIN,
+		});
+		expect(mixed.sql).toContain('relation @>'); // the gated branch
+		expect(mixed.sql).toMatch(/\(mix\.section_tipo = \$\d+::text\)/); // the exempt bare guard
 	});
 });

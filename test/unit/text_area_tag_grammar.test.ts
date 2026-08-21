@@ -6,11 +6,10 @@
  * client twin (client/dedalo/core/common/js/tr.js) does, and that the SVG
  * renderer emits well-formed, XML-escaped, correctly-sized badges.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule: a test uses
+// the generic `test` TLD and BUILDS the situation it tests). The tipos below are
+// OPAQUE IDENTIFIERS to this gate — it parses and renders them, it never reads a
+// record — so the migration is a rename: same grammar, no install in it.
 
 import { describe, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
@@ -117,23 +116,23 @@ describe('parseTagId — short forms (what the endpoint receives)', () => {
 
 	test('locator {…} → parsed section/component tipos', () => {
 		expect(
-			parseTagId('{"section_tipo":"rsc167","section_id":"29","component_tipo":"rsc170"}'),
+			parseTagId('{"section_tipo":"test3","section_id":"29","component_tipo":"test52"}'),
 		).toMatchObject({
 			kind: 'locator',
-			section_tipo: 'rsc167',
+			section_tipo: 'test3',
 			// parsed representation is the canonical int; the inline MARKER byte
 			// form stays pinned (WC-2026-08-10-section-id-int-canonical)
 			section_id: 29,
-			component_tipo: 'rsc170',
+			component_tipo: 'test52',
 		});
 	});
 
 	test("locator tolerates single quotes (client's HTML5 dataset form)", () => {
 		expect(
-			parseTagId("{'section_tipo':'rsc167','section_id':'29','component_tipo':'rsc170'}"),
+			parseTagId("{'section_tipo':'test3','section_id':'29','component_tipo':'test52'}"),
 		).toMatchObject({
 			kind: 'locator',
-			section_tipo: 'rsc167',
+			section_tipo: 'test3',
 		});
 	});
 
@@ -148,7 +147,7 @@ describe('parseTagId — short forms (what the endpoint receives)', () => {
 describe('parseTagId — full in-text markup (with -data:…:data payload)', () => {
 	test('the optional data payload is tolerated and stripped', () => {
 		expect(
-			parseTagId("[person-a-1-JavNa-data:{'section_tipo':'rsc197','section_id':'2'}:data]"),
+			parseTagId("[person-a-1-JavNa-data:{'section_tipo':'test2','section_id':'2'}:data]"),
 		).toMatchObject({
 			kind: 'sprite',
 			type: 'person',
@@ -192,7 +191,7 @@ describe('parseTagId — full in-text markup (with -data:…:data payload)', () 
 
 describe('safeDecodeTagId (SEC-027)', () => {
 	test('leaves a JSON locator payload untouched', () => {
-		const locator = '{"section_tipo":"rsc167","section_id":"29"}';
+		const locator = '{"section_tipo":"test3","section_id":"29"}';
 		expect(safeDecodeTagId(locator)).toBe(locator);
 	});
 

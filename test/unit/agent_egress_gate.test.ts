@@ -8,11 +8,7 @@
  * (DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT unset ⇒ everything
  * restricted) and shares the RAG forbidden-sections list.
  */
-// BINDS INSTALL TLDs: numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): every tipo here is an OPAQUE STRING the egress gate classifies (the file already fabricates 'secret7'/'memory9' for the restricted side); the real ones are rewritten to their phase-2 `test` clones through src/core/test_data/test_tld_tipo_map.json, and the seed-shipped People section becomes a `test` clone too — no install records are read, and nothing here reaches the network.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -49,7 +45,7 @@ const LOCAL: AgentEgressOptions = {
 describe('gateAgentToolCall (pre-execution)', () => {
 	test('a gated tool on a restricted section is refused with the coded envelope', async () => {
 		const refusal = await gateAgentToolCall(RESTRICT_ALL, 'dedalo_read_record', {
-			section_tipo: 'oh1',
+			section_tipo: 'test6813',
 			section_id: 42,
 		});
 		expect(refusal).not.toBeNull();
@@ -65,21 +61,21 @@ describe('gateAgentToolCall (pre-execution)', () => {
 	test('structure tools pass regardless of policy', async () => {
 		expect(await gateAgentToolCall(RESTRICT_ALL, 'dedalo_list_sections', {})).toBeNull();
 		expect(
-			await gateAgentToolCall(RESTRICT_ALL, 'dedalo_describe_section', { section_tipo: 'oh1' }),
+			await gateAgentToolCall(RESTRICT_ALL, 'dedalo_describe_section', { section_tipo: 'test6813' }),
 		).toBeNull();
 		expect(await gateAgentToolCall(RESTRICT_ALL, 'dedalo_resolve', { name: 'People' })).toBeNull();
 	});
 
 	test('local conversations are never gated (policy not consulted)', async () => {
 		expect(
-			await gateAgentToolCall(LOCAL, 'dedalo_read_record', { section_tipo: 'oh1', section_id: 1 }),
+			await gateAgentToolCall(LOCAL, 'dedalo_read_record', { section_tipo: 'test6813', section_id: 1 }),
 		).toBeNull();
 	});
 
 	test('a public section on an external conversation passes', async () => {
 		expect(
 			await gateAgentToolCall(ALLOW_ALL, 'dedalo_read_record', {
-				section_tipo: 'oh1',
+				section_tipo: 'test6813',
 				section_id: 1,
 			}),
 		).toBeNull();
@@ -93,13 +89,13 @@ describe('gateAgentToolCall (pre-execution)', () => {
 			policy: async (sectionTipo) => (sectionTipo === 'secret7' ? 'restricted' : 'public'),
 		};
 		const refusal = await gateAgentToolCall(selective, 'dedalo_search_records', {
-			section_tipo: 'oh1',
+			section_tipo: 'test6813',
 			filter: {
 				and: [
 					{
 						q: 'Pujol',
 						path: [
-							{ section_tipo: 'oh1', component_tipo: 'oh24' },
+							{ section_tipo: 'test6813', component_tipo: 'test6836' },
 							{ section_tipo: 'secret7', component_tipo: 's7name' },
 						],
 					},
@@ -116,8 +112,8 @@ describe('gateAgentToolCall (pre-execution)', () => {
 			policy: async (sectionTipo) => (sectionTipo === 'memory9' ? 'restricted' : 'public'),
 		};
 		const refusal = await gateAgentToolCall(selective, 'dedalo_search_records', {
-			section_tipo: 'oh1',
-			raw_sqo: { section_tipo: 'oh1', filter: { q: 'x', path: [{ section_tipo: 'memory9' }] } },
+			section_tipo: 'test6813',
+			raw_sqo: { section_tipo: 'test6813', filter: { q: 'x', path: [{ section_tipo: 'memory9' }] } },
 		});
 		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 	});
@@ -125,8 +121,8 @@ describe('gateAgentToolCall (pre-execution)', () => {
 	test('a filter path within PUBLIC sections still passes', async () => {
 		expect(
 			await gateAgentToolCall(ALLOW_ALL, 'dedalo_search_records', {
-				section_tipo: 'oh1',
-				filter: { and: [{ q: 'x', path: [{ section_tipo: 'rsc197' }] }] },
+				section_tipo: 'test6813',
+				filter: { and: [{ q: 'x', path: [{ section_tipo: 'test6099' }] }] },
 			}),
 		).toBeNull();
 	});
@@ -153,10 +149,10 @@ describe('gateAgentToolResult (post-execution — portal-resolved labels)', () =
 		const envelope = {
 			ok: true,
 			data: {
-				section_tipo: 'oh1',
+				section_tipo: 'test6813',
 				section_id: 5,
 				components: [
-					{ tipo: 'oh24', value: [{ section_tipo: 'secret7', section_id: 9, label: 'Informant' }] },
+					{ tipo: 'test6836', value: [{ section_tipo: 'secret7', section_id: 9, label: 'Informant' }] },
 				],
 			},
 		};
@@ -168,7 +164,7 @@ describe('gateAgentToolResult (post-execution — portal-resolved labels)', () =
 	test('a result referencing only public sections passes', async () => {
 		const envelope = {
 			ok: true,
-			data: { section_tipo: 'oh1', related: [{ section_tipo: 'rsc197' }] },
+			data: { section_tipo: 'test6813', related: [{ section_tipo: 'test6099' }] },
 		};
 		expect(await gateAgentToolResult(ALLOW_ALL, 'dedalo_read_record', envelope)).toBeNull();
 	});
@@ -182,9 +178,9 @@ describe('gateAgentToolResult (post-execution — portal-resolved labels)', () =
 
 describe('filterEgressHits (semantic search, post-execution)', () => {
 	const hits = [
-		{ section_tipo: 'oh1', section_id: 1, snippet: 'public one' },
+		{ section_tipo: 'test6813', section_id: 1, snippet: 'public one' },
 		{ section_tipo: 'secret7', section_id: 2, snippet: 'private' },
-		{ section_tipo: 'oh1', section_id: 3, snippet: 'public two' },
+		{ section_tipo: 'test6813', section_id: 3, snippet: 'public two' },
 	];
 
 	test('restricted hits are dropped with an honest removed count', async () => {
@@ -207,7 +203,7 @@ describe('filterEgressHits (semantic search, post-execution)', () => {
 describe('buildAgentEgressPolicy (env, default-deny)', () => {
 	test('unset opt-in ⇒ EVERYTHING is restricted (fail-closed default)', async () => {
 		const policy = buildAgentEgressPolicy({});
-		expect(await policy('oh1', 1)).toBe('restricted');
+		expect(await policy('test6813', 1)).toBe('restricted');
 	});
 
 	test('opt-in true ⇒ public unless on the SHARED RAG forbidden list', async () => {
@@ -215,7 +211,7 @@ describe('buildAgentEgressPolicy (env, default-deny)', () => {
 			DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT: 'true',
 			DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS: 'secret7, memory9',
 		});
-		expect(await policy('oh1', 1)).toBe('public');
+		expect(await policy('test6813', 1)).toBe('public');
 		expect(await policy('secret7', 1)).toBe('restricted');
 		expect(await policy('memory9', 1)).toBe('restricted');
 	});
@@ -227,7 +223,7 @@ describe('buildAgentEgressPolicy (env, default-deny)', () => {
 				throw new Error('classifier down');
 			},
 		);
-		expect(await policy('oh1', 1)).toBe('restricted');
+		expect(await policy('test6813', 1)).toBe('restricted');
 	});
 });
 
@@ -253,7 +249,7 @@ describe('loop integration — external conversations get NO restricted record c
 					{
 						id: 't1',
 						name: 'dedalo_read_record',
-						input: { section_tipo: 'numisdata4', section_id: 1 },
+						input: { section_tipo: 'test3', section_id: 1 },
 					},
 				],
 				stop_reason: 'tool_use',
@@ -282,7 +278,7 @@ describe('loop integration — external conversations get NO restricted record c
 					{
 						id: 't1',
 						name: 'dedalo_search_section',
-						input: { section_tipo: 'numisdata4', limit: 1 },
+						input: { section_tipo: 'test3', limit: 1 },
 					},
 				],
 				stop_reason: 'tool_use',

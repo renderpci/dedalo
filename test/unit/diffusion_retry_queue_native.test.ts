@@ -1,8 +1,8 @@
 /**
  * The dd1758 diffusion ledger (logDiffusionActivity) and the pending-retry
  * loop (retryPendingDiffusion), against the SCRATCH `zzd` diffusion ontology
- * (test/helpers/zzd_diffusion_fixture.ts) — the live numisdata elements in
- * this database resolve type 'unknown', so a retry bound to them never reaches
+ * (test/helpers/zzd_diffusion_fixture.ts) — an install's live elements resolve
+ * type 'unknown' in this database, so a retry bound to them would never reach
  * the sql branch at all.
  *
  * ISOLATION. DIFFUSION_ACTIVITY_TABLE is pinned (before the module import,
@@ -13,11 +13,8 @@
  * flip foreign rows and make `total`/ordering assertions satisfiable by rows
  * this file never wrote.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the ledger's element tipo is now
+// the fixture's OWN `zzd` element (the dd1766 tld-split is pure string work).
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -137,7 +134,7 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 		await logDiffusionActivity({
 			sectionTipo: 'zzd9',
 			sectionId: 932030,
-			elementTipo: 'numisdata29',
+			elementTipo: 'zzd4',
 			action: DIFFUSION_ACTION.unpublishPending,
 			userId: 5,
 			now,
@@ -178,8 +175,8 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 			dd1766: [
 				{
 					type: 'dd151',
-					section_id: 29,
-					section_tipo: 'numisdata0',
+					section_id: 4,
+					section_tipo: 'zzd0',
 					from_component_tipo: 'dd1766',
 				},
 			],

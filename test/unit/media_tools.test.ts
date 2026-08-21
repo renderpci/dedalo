@@ -4,11 +4,10 @@
  * gates. Full tool_request→handler→DB drive is ledgered (media not synced to
  * this box); the operations are gated here at the core level.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
@@ -30,6 +29,7 @@ import {
 } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_tools_${process.pid}`;
@@ -57,8 +57,8 @@ const GS_BIN =
 	['/opt/homebrew/bin/gs', '/usr/local/bin/gs', '/usr/bin/gs'].find((p) => existsSync(p)) ?? 'gs';
 const HAVE_GS = GS_BIN !== 'gs';
 const identity: MediaIdentity = {
-	componentTipo: 'rsc29',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test99',
+	sectionTipo: 'test3',
 	sectionId: 5,
 	lang: null,
 };
@@ -88,20 +88,22 @@ async function makePdf(relative: string): Promise<void> {
 	);
 }
 
-beforeAll(() => rmSync(ROOT, { recursive: true, force: true }));
+// DECLARE the scratch root — the media doors refuse an unmarked one under the
+// test-media seam (src/core/media/test_media_root.ts).
+beforeAll(() => resetMediaRoot(ROOT));
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 describe('tool_media_versions core', () => {
 	test.if(HAVE_MAGICK)(
 		'build_version builds a tier from the original; the original is untouched',
 		async () => {
-			await makeImage('/image/original/rsc29_rsc170_5.jpg', '2000x1500');
-			const before = await getDimensions(`${ROOT}/image/original/rsc29_rsc170_5.jpg`);
+			await makeImage('/image/original/test99_test3_5.jpg', '2000x1500');
+			const before = await getDimensions(`${ROOT}/image/original/test99_test3_5.jpg`);
 			const built = await buildVersionCore(image, identity, pathOpts, '1.5MB');
 			expect(built.jobId).toBeNull();
-			expect(built.built[0]).toContain('/image/1.5MB/rsc29_rsc170_5.jpg');
+			expect(built.built[0]).toContain('/image/1.5MB/test99_test3_5.jpg');
 			// original unchanged
-			const after = await getDimensions(`${ROOT}/image/original/rsc29_rsc170_5.jpg`);
+			const after = await getDimensions(`${ROOT}/image/original/test99_test3_5.jpg`);
 			expect(after).toEqual(before);
 			// files_info now sees original + 1.5MB
 			const info = getFilesInfoCore(image, identity, pathOpts);
@@ -127,12 +129,12 @@ describe('tool_media_versions core', () => {
 		'build_version builds the tier COMPLETE: its file + every twin',
 		async () => {
 			const id13: MediaIdentity = { ...identity, sectionId: 13 };
-			await makeImage('/image/original/rsc29_rsc170_13.jpg', '2000x1500');
+			await makeImage('/image/original/test99_test3_13.jpg', '2000x1500');
 			const built = await buildVersionCore(image, id13, pathOpts, image.defaultQuality);
 			expect(built.errors).toEqual([]);
 			expect(built.built.length).toBe(1 + image.alternateExtensions.length);
 			for (const alternate of image.alternateExtensions) {
-				const twin = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_13.${alternate}`;
+				const twin = `${ROOT}/image/${image.defaultQuality}/test99_test3_13.${alternate}`;
 				expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
 			}
 		},
@@ -147,10 +149,10 @@ describe('tool_media_versions core', () => {
 				'this gate needs a configured alternate extension (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)',
 			).toBeDefined();
 			const id14: MediaIdentity = { ...identity, sectionId: 14 };
-			await makeImage('/image/original/rsc29_rsc170_14.jpg', '2000x1500');
+			await makeImage('/image/original/test99_test3_14.jpg', '2000x1500');
 			await buildVersionCore(image, id14, pathOpts, image.defaultQuality);
-			const tierFile = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_14.jpg`;
-			const twin = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_14.${alternate as string}`;
+			const tierFile = `${ROOT}/image/${image.defaultQuality}/test99_test3_14.jpg`;
+			const twin = `${ROOT}/image/${image.defaultQuality}/test99_test3_14.${alternate as string}`;
 			// The operator's work lives ONLY in the tier's own file, and recovering the
 			// twin must not cost it. (statSync, not bytes: an mtime+size pair changes on
 			// any re-encode.)
@@ -191,13 +193,13 @@ describe('tool_media_versions core', () => {
 			// every already-rotated tier, unattended.
 			const alternate = image.alternateExtensions[0];
 			const id15: MediaIdentity = { ...identity, sectionId: 15 };
-			await makeImage('/image/original/rsc29_rsc170_15.jpg', '2000x1500');
+			await makeImage('/image/original/test99_test3_15.jpg', '2000x1500');
 			await buildVersionCore(image, id15, pathOpts, image.defaultQuality);
-			const tierFile = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_15.jpg`;
-			const twin = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_15.${alternate as string}`;
+			const tierFile = `${ROOT}/image/${image.defaultQuality}/test99_test3_15.jpg`;
+			const twin = `${ROOT}/image/${image.defaultQuality}/test99_test3_15.${alternate as string}`;
 			// The rotation, simulated in the one way that matters to the check: the
 			// tier's own file is now portrait while its landscape master is untouched.
-			await makeImage(`/image/${image.defaultQuality}/rsc29_rsc170_15.jpg`, '600x900');
+			await makeImage(`/image/${image.defaultQuality}/test99_test3_15.jpg`, '600x900');
 			const tierBefore = statSync(tierFile);
 			rmSync(twin, { force: true });
 
@@ -234,7 +236,7 @@ describe('tool_media_versions core', () => {
 			// render "done" over a request that produced no file at all.
 			const alternate = image.alternateExtensions[0] as string;
 			const id15: MediaIdentity = { ...identity, sectionId: 15 };
-			await makeImage('/image/original/rsc29_rsc170_15.jpg', '800x600');
+			await makeImage('/image/original/test99_test3_15.jpg', '800x600');
 			const higher = image.qualities.find(
 				(quality) =>
 					!image.masterQualities.includes(quality) &&
@@ -244,7 +246,7 @@ describe('tool_media_versions core', () => {
 			await expect(
 				buildVersionCore(image, id15, pathOpts, higher, null, alternate),
 			).rejects.toThrow(/nothing to accompany/);
-			expect(existsSync(`${ROOT}/image/${higher}/rsc29_rsc170_15.${alternate}`)).toBe(false);
+			expect(existsSync(`${ROOT}/image/${higher}/test99_test3_15.${alternate}`)).toBe(false);
 		},
 	);
 
@@ -278,25 +280,25 @@ describe('tool_media_versions core', () => {
 	});
 
 	test.if(HAVE_MAGICK)('delete_version soft-deletes into deleted/', async () => {
-		await makeImage('/image/6MB/rsc29_rsc170_5.jpg', '400x300');
+		await makeImage('/image/6MB/test99_test3_5.jpg', '400x300');
 		const moved = deleteVersionCore(image, identity, pathOpts, '6MB', 'jpg');
 		expect(moved).toContain('/image/6MB/deleted/');
-		expect(existsSync(`${ROOT}/image/6MB/rsc29_rsc170_5.jpg`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/6MB/test99_test3_5.jpg`)).toBe(false);
 	});
 
 	test.if(HAVE_MAGICK)('delete_quality removes every extension of a quality', async () => {
 		const id9: MediaIdentity = { ...identity, sectionId: 9 };
 		// Two extensions of the same quality (jpg default + png alternate) on disk.
-		await makeImage('/image/1.5MB/rsc29_rsc170_9.jpg', '120x90');
-		await makeImage('/image/1.5MB/rsc29_rsc170_9.png', '120x90');
+		await makeImage('/image/1.5MB/test99_test3_9.jpg', '120x90');
+		await makeImage('/image/1.5MB/test99_test3_9.png', '120x90');
 		// Both are seen by the scanner before deletion.
 		const before = getFilesInfoCore(image, id9, pathOpts).filter((e) => e.quality === '1.5MB');
 		expect(before.map((e) => e.extension).sort()).toEqual(['jpg', 'png']);
 		// delete_quality moves BOTH into deleted/.
 		const moved = deleteQualityCore(image, id9, pathOpts, '1.5MB');
 		expect(moved.length).toBe(2);
-		expect(existsSync(`${ROOT}/image/1.5MB/rsc29_rsc170_9.jpg`)).toBe(false);
-		expect(existsSync(`${ROOT}/image/1.5MB/rsc29_rsc170_9.png`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/1.5MB/test99_test3_9.jpg`)).toBe(false);
+		expect(existsSync(`${ROOT}/image/1.5MB/test99_test3_9.png`)).toBe(false);
 		expect(getFilesInfoCore(image, id9, pathOpts).some((e) => e.quality === '1.5MB')).toBe(false);
 	});
 
@@ -304,16 +306,16 @@ describe('tool_media_versions core', () => {
 		'rotate (media_versions) rotates only the named quality, never the original',
 		async () => {
 			const id10: MediaIdentity = { ...identity, sectionId: 10 };
-			await makeImage('/image/original/rsc29_rsc170_10.jpg', '400x300');
-			await makeImage('/image/1.5MB/rsc29_rsc170_10.jpg', '400x300');
-			const origBefore = await getDimensions(`${ROOT}/image/original/rsc29_rsc170_10.jpg`);
+			await makeImage('/image/original/test99_test3_10.jpg', '400x300');
+			await makeImage('/image/1.5MB/test99_test3_10.jpg', '400x300');
+			const origBefore = await getDimensions(`${ROOT}/image/original/test99_test3_10.jpg`);
 			const outcome = await rotateVersionCore(image, id10, pathOpts, '1.5MB', 90);
 			expect(outcome.ok).toBe(true);
 			expect(outcome.errors).toEqual([]);
 			// the named tier swapped W/H; the original is untouched (Original law).
-			const webAfter = await getDimensions(`${ROOT}/image/1.5MB/rsc29_rsc170_10.jpg`);
+			const webAfter = await getDimensions(`${ROOT}/image/1.5MB/test99_test3_10.jpg`);
 			expect(Math.abs(webAfter.width - 300)).toBeLessThanOrEqual(2);
-			expect(await getDimensions(`${ROOT}/image/original/rsc29_rsc170_10.jpg`)).toEqual(origBefore);
+			expect(await getDimensions(`${ROOT}/image/original/test99_test3_10.jpg`)).toEqual(origBefore);
 		},
 	);
 
@@ -338,29 +340,29 @@ describe('tool_media_versions core', () => {
 		'conform_headers remuxes the av quality and preserves the original as *_untouched',
 		async () => {
 			const avId: MediaIdentity = {
-				componentTipo: 'rsc35',
-				sectionTipo: 'rsc167',
+				componentTipo: 'test94',
+				sectionTipo: 'test3',
 				sectionId: 7,
 				lang: null,
 			};
-			await makeMp4('/av/404/rsc35_rsc167_7.mp4');
+			await makeMp4('/av/404/test94_test3_7.mp4');
 			const ok = await conformHeadersCore(av, avId, pathOpts, '404');
 			expect(ok).toBe(true);
 			// the conformed file remains at the source path…
-			expect(existsSync(`${ROOT}/av/404/rsc35_rsc167_7.mp4`)).toBe(true);
+			expect(existsSync(`${ROOT}/av/404/test94_test3_7.mp4`)).toBe(true);
 			// …and the pre-conform file is preserved untouched, temp cleaned up.
-			expect(existsSync(`${ROOT}/av/404/rsc35_rsc167_7_untouched.mp4`)).toBe(true);
-			expect(existsSync(`${ROOT}/av/404/rsc35_rsc167_7_temp.mp4`)).toBe(false);
+			expect(existsSync(`${ROOT}/av/404/test94_test3_7_untouched.mp4`)).toBe(true);
+			expect(existsSync(`${ROOT}/av/404/test94_test3_7_temp.mp4`)).toBe(false);
 		},
 	);
 });
 
 describe('tool_image_rotation core', () => {
 	test.if(HAVE_MAGICK)('rotates non-original tiers, never the original', async () => {
-		await makeImage('/image/original/rsc29_rsc170_8.jpg', '400x300');
-		await makeImage('/image/1.5MB/rsc29_rsc170_8.jpg', '400x300');
+		await makeImage('/image/original/test99_test3_8.jpg', '400x300');
+		await makeImage('/image/1.5MB/test99_test3_8.jpg', '400x300');
 		const id8: MediaIdentity = { ...identity, sectionId: 8 };
-		const origBefore = await getDimensions(`${ROOT}/image/original/rsc29_rsc170_8.jpg`);
+		const origBefore = await getDimensions(`${ROOT}/image/original/test99_test3_8.jpg`);
 		const result = await applyRotationCore(
 			image,
 			id8,
@@ -376,11 +378,11 @@ describe('tool_image_rotation core', () => {
 		expect(result.rotated.some((p) => p.includes('original'))).toBe(false); // original untouched
 		// the 1.5MB tier swapped W/H after a 90° expanded rotate (±2px distort
 		// interpolation padding — realistic parity, not byte-equality).
-		const webAfter = await getDimensions(`${ROOT}/image/1.5MB/rsc29_rsc170_8.jpg`);
+		const webAfter = await getDimensions(`${ROOT}/image/1.5MB/test99_test3_8.jpg`);
 		expect(Math.abs(webAfter.width - 300)).toBeLessThanOrEqual(2);
 		expect(Math.abs(webAfter.height - 400)).toBeLessThanOrEqual(2);
 		// original dims unchanged
-		expect(await getDimensions(`${ROOT}/image/original/rsc29_rsc170_8.jpg`)).toEqual(origBefore);
+		expect(await getDimensions(`${ROOT}/image/original/test99_test3_8.jpg`)).toEqual(origBefore);
 	});
 
 	// The client (render_tool_image_crop.update_crop_area) sends crop_area in
@@ -390,9 +392,9 @@ describe('tool_image_rotation core', () => {
 	// re-scaled per tier, never fed to ImageMagick as if it were a 0..1 fraction.
 	test.if(HAVE_MAGICK)('crops every non-original tier from default-quality pixels', async () => {
 		const id11: MediaIdentity = { ...identity, sectionId: 11 };
-		await makeImage('/image/original/rsc29_rsc170_11.jpg', '800x600');
-		await makeImage(`/image/${image.defaultQuality}/rsc29_rsc170_11.jpg`, '400x300');
-		await makeImage('/image/thumb/rsc29_rsc170_11.jpg', '200x150');
+		await makeImage('/image/original/test99_test3_11.jpg', '800x600');
+		await makeImage(`/image/${image.defaultQuality}/test99_test3_11.jpg`, '400x300');
+		await makeImage('/image/thumb/test99_test3_11.jpg', '200x150');
 		const result = await applyRotationCore(
 			image,
 			id11,
@@ -407,16 +409,16 @@ describe('tool_image_rotation core', () => {
 		);
 		expect(result.errors).toEqual([]);
 		expect(result.cropped.some((p) => p.includes('original'))).toBe(false); // original untouched
-		expect(await getDimensions(`${ROOT}/image/original/rsc29_rsc170_11.jpg`)).toEqual({
+		expect(await getDimensions(`${ROOT}/image/original/test99_test3_11.jpg`)).toEqual({
 			width: 800,
 			height: 600,
 		});
 		// reference tier: exactly the requested pixel box
 		expect(
-			await getDimensions(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_11.jpg`),
+			await getDimensions(`${ROOT}/image/${image.defaultQuality}/test99_test3_11.jpg`),
 		).toEqual({ width: 200, height: 150 });
 		// thumb tier: the SAME proportion of its own (smaller) dimensions
-		expect(await getDimensions(`${ROOT}/image/thumb/rsc29_rsc170_11.jpg`)).toEqual({
+		expect(await getDimensions(`${ROOT}/image/thumb/test99_test3_11.jpg`)).toEqual({
 			width: 100,
 			height: 75,
 		});
@@ -426,7 +428,7 @@ describe('tool_image_rotation core', () => {
 	// answer it by silently clamping to a full-frame no-op. Refuse loudly.
 	test.if(HAVE_MAGICK)('refuses a crop box outside the reference frame', async () => {
 		const id12: MediaIdentity = { ...identity, sectionId: 12 };
-		await makeImage(`/image/${image.defaultQuality}/rsc29_rsc170_12.jpg`, '400x300');
+		await makeImage(`/image/${image.defaultQuality}/test99_test3_12.jpg`, '400x300');
 		const result = await applyRotationCore(
 			image,
 			id12,
@@ -439,17 +441,17 @@ describe('tool_image_rotation core', () => {
 		expect(result.errors[0]).toMatch(/falls outside/);
 		// the tier is left exactly as it was
 		expect(
-			await getDimensions(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_12.jpg`),
+			await getDimensions(`${ROOT}/image/${image.defaultQuality}/test99_test3_12.jpg`),
 		).toEqual({ width: 400, height: 300 });
 	});
 });
 
 describe('tool_pdf_extractor core', () => {
 	test.if(HAVE_GS)('extracts text from the web-quality PDF', async () => {
-		await makePdf('/pdf/web/rsc37_rsc176_5.pdf');
+		await makePdf('/pdf/web/test85_test3_5.pdf');
 		const text = await extractPdfCore(
 			pdf,
-			{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },
+			{ componentTipo: 'test85', sectionTipo: 'test3', sectionId: 5, lang: null },
 			pathOpts,
 			{ method: 'text' },
 		);
@@ -467,8 +469,8 @@ describe('tool_pdf_extractor core', () => {
  */
 describe('media tool handlers reject malformed destructive requests', () => {
 	const principal: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
-	const IMAGE = { tipo: 'rsc29', section_tipo: 'rsc170', section_id: 1 };
-	const AV = { tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 };
+	const IMAGE = { tipo: 'test99', section_tipo: 'test3', section_id: 1 };
+	const AV = { tipo: 'test94', section_tipo: 'test3', section_id: 1 };
 
 	async function drive(
 		toolName: string,
@@ -530,14 +532,14 @@ describe('media tool handlers reject malformed destructive requests', () => {
 			'conform_headers',
 			'rotate',
 		]) {
-			// rsc36 is a component_text_area — the media context resolve must refuse
+			// test17 is a component_text_area — the media context resolve must refuse
 			// it. That refusal is still an UNTYPED engine throw (tool_support.ts is
 			// a different sweep), so it reaches the chokepoint as internal.unexpected
 			// instead of a body the handler dresses up as a result.
 			expect(
 				drive('tool_media_versions', action, {
-					tipo: 'rsc36',
-					section_tipo: 'rsc167',
+					tipo: 'test17',
+					section_tipo: 'test3',
 					section_id: 1,
 					quality: '1.5MB',
 					degrees: 90,

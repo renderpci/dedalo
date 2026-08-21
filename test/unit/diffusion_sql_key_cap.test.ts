@@ -1,16 +1,13 @@
 /**
  * Regression: MariaDB allows at most 64 keys per table. A wide diffusion element
- * (e.g. image/resource section rsc170, 60+ indexable fields) must NOT emit a
+ * (an image/resource section with 60+ indexable fields) must NOT emit a
  * CREATE TABLE / ALTER chain that overflows the ceiling — otherwise publishing
  * fails with "Too many keys specified; max 64 keys allowed". The oracle
  * (diffusion_mysql::generate_keys) capped secondary indexes at 50; we match it
  * and apply the SAME cap to the additive-ALTER path (which the oracle did not).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the plan is fabricated in full
+// (no DB, no ontology read), so every tipo here is a generic test-TLD name.
 
 import { describe, expect, test } from 'bun:test';
 import type { FieldPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';
@@ -21,7 +18,7 @@ import {
 
 function field(i: number, fieldModel = 'field_varchar'): FieldPlan {
 	return {
-		id: `oh${i}`,
+		id: `test${i}`,
 		columnName: `col_${i}`,
 		sourceChain: [],
 		transform: [],
@@ -33,9 +30,9 @@ function field(i: number, fieldModel = 'field_varchar'): FieldPlan {
 
 function wideSection(fieldCount: number): SectionPlan {
 	return {
-		sectionTipo: 'rsc170',
-		tableName: 'test_rsc170',
-		tableTipo: 'ohT',
+		sectionTipo: 'test6099',
+		tableName: 'test_test6099',
+		tableTipo: 'testT',
 		fields: Array.from({ length: fieldCount }, (_, i) => field(i + 1)),
 	};
 }

@@ -16,19 +16,18 @@
  * on branches these inputs never reach (the model/tipo lookups fire for
  * relation models with a section target, not for a dd490 frame).
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { validateRelationInsert } from '../../src/core/relations/save.ts';
 
 const HOST = {
-	componentTipo: 'numisdata1530',
+	componentTipo: 'testmint1036',
 	model: 'component_dataframe',
-	hostSectionTipo: 'numisdata6',
+	hostSectionTipo: 'testmint1',
 	hostSectionId: 2,
 	translatable: false,
 	lang: 'lg-nolan',
@@ -37,12 +36,12 @@ const HOST = {
 /** A stored frame locator as the raw export writes it into the CSV. */
 function frame(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
-		section_tipo: 'numisdata34',
+		section_tipo: 'test6117',
 		section_id: '15657',
-		from_component_tipo: 'numisdata1530',
+		from_component_tipo: 'testmint1036',
 		type: 'dd490',
 		id_key: 1,
-		main_component_tipo: 'numisdata163',
+		main_component_tipo: 'testmint1014',
 		...overrides,
 	};
 }
@@ -50,7 +49,7 @@ function frame(overrides: Record<string, unknown> = {}): Record<string, unknown>
 describe('validateRelationInsert — frame identity with no caller pairing (import)', () => {
 	test('two frames on the SAME target from DIFFERENT main items are BOTH kept', async () => {
 		// THE REGRESSION. Under the generic key both hash to
-		// "15657|numisdata34|dd490|" and the second was dropped as "already
+		// "15657|test6117|dd490|" and the second was dropped as "already
 		// linked" — the other main item's framed content, gone with no issue row.
 		const kept: unknown[] = [];
 		for (const candidate of [frame({ id_key: 1 }), frame({ id_key: 2 })]) {
@@ -91,7 +90,7 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// either dedup gate (PHP-faithful, :1107-19). A payload claiming another
 		// slot is therefore rewritten to THIS slot and collapses into the existing
 		// frame — it does not sneak in as a second one.
-		const result = await validateRelationInsert(frame({ from_component_tipo: 'numisdata1531' }), {
+		const result = await validateRelationInsert(frame({ from_component_tipo: 'test6783' }), {
 			...HOST,
 			existingItems: [frame()],
 			pairing: null,
@@ -104,16 +103,16 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// which is the only way the slot can legitimately differ.
 		const result = await validateRelationInsert(frame(), {
 			...HOST,
-			componentTipo: 'numisdata1531',
+			componentTipo: 'test6783',
 			existingItems: [frame()],
 			pairing: null,
 		});
 		expect(result).not.toBeNull();
-		expect((result as Record<string, unknown>).from_component_tipo).toBe('numisdata1531');
+		expect((result as Record<string, unknown>).from_component_tipo).toBe('test6783');
 	});
 
 	test('a different main_component_tipo is a DISTINCT frame', async () => {
-		const result = await validateRelationInsert(frame({ main_component_tipo: 'numisdata999' }), {
+		const result = await validateRelationInsert(frame({ main_component_tipo: 'test6488' }), {
 			...HOST,
 			existingItems: [frame()],
 			pairing: null,
@@ -126,11 +125,11 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// main_component_tipo written by the raw export ARE the identity — that is
 		// what makes the export round trip.
 		const result = (await validateRelationInsert(
-			frame({ id_key: 7, main_component_tipo: 'numisdata163' }),
+			frame({ id_key: 7, main_component_tipo: 'testmint1014' }),
 			{ ...HOST, existingItems: [], pairing: null },
 		)) as Record<string, unknown>;
 		expect(result.id_key).toBe(7);
-		expect(result.main_component_tipo).toBe('numisdata163');
+		expect(result.main_component_tipo).toBe('testmint1014');
 		expect(result.type).toBe('dd490');
 	});
 
@@ -138,7 +137,7 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// The anti-overreach case: the new arm keys on type === 'dd490' only, so an
 		// ordinary relation with a stray id_key must still dedupe generically.
 		const ordinary = {
-			section_tipo: 'numisdata34',
+			section_tipo: 'test6117',
 			section_id: '15657',
 			type: 'dd67',
 			id_key: 1,
@@ -160,11 +159,11 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 			{
 				...HOST,
 				existingItems: [],
-				pairing: { frameTipo: 'numisdata1530', mainComponentTipo: 'numisdata163', idKey: 4 },
+				pairing: { frameTipo: 'testmint1036', mainComponentTipo: 'testmint1014', idKey: 4 },
 			},
 		)) as Record<string, unknown>;
 		expect(result.id_key).toBe(4);
-		expect(result.main_component_tipo).toBe('numisdata163');
+		expect(result.main_component_tipo).toBe('testmint1014');
 		expect(result.type).toBe('dd490');
 	});
 });

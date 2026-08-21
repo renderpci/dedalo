@@ -1,8 +1,6 @@
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos
+// here are OPAQUE IDENTIFIERS — this gate builds and inspects a descriptor, it never
+// reads a record — so the migration is a rename.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, unlinkSync } from 'node:fs';
@@ -83,7 +81,7 @@ process.env.DEDALO_RAG_MEDIA_ENABLED = 'true';
 
 const SECTION_TIPO = 'test2';
 /** A REAL component_image tipo in the ontology — the extractor needs a media model. */
-const IMAGE_TIPO = 'rsc29';
+const IMAGE_TIPO = 'test99';
 /** A REAL non-translatable component_input_text — the context summary's metadata role. */
 const CAPTION_TIPO = 'test162';
 const MODEL = 'deterministic-multimodal'; // buildMultimodalProvider default (no endpoint)
@@ -379,7 +377,7 @@ describe('RagCharacterizer (injected fakes, no DB)', () => {
 		const characterizer = new RagCharacterizer({
 			config: {
 				getCompareScope: async () => [SECTION_TIPO],
-				getContextMetadata: async () => ({ typology: 'rsc40' }),
+				getContextMetadata: async () => ({ typology: 'test26' }),
 			},
 			objectRetrieval: { findSimilarObjects: async () => neighbours },
 			roleReader: async () => ({ kind: 'categorical', value: 'denarius' }),
@@ -414,7 +412,7 @@ describe('RagCharacterizer (injected fakes, no DB)', () => {
 		const characterizer = new RagCharacterizer({
 			config: {
 				getCompareScope: async () => [SECTION_TIPO],
-				getContextMetadata: async () => ({ typology: 'rsc40' }),
+				getContextMetadata: async () => ({ typology: 'test26' }),
 			},
 			// The neighbour list is (in production) ACL-filtered on the image component;
 			// the fake returns it regardless so we isolate the role-component gate.
@@ -422,7 +420,7 @@ describe('RagCharacterizer (injected fakes, no DB)', () => {
 			// The reader would happily return a value — the gate must stop us BEFORE it.
 			roleReader: async () => ({ kind: 'categorical', value: 'denarius' }),
 		});
-		// NO_ACCESS (no profile) has level 0 on rsc40 in the non-public test section.
+		// NO_ACCESS (no profile) has level 0 on test26 in the non-public test section.
 		const result = await characterizer.characterize(NO_ACCESS, {
 			sectionTipo: SECTION_TIPO,
 			sectionId: 1,

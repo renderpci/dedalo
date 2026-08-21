@@ -9,13 +9,14 @@
  * API denies; the iteration cap ends runaway loops; the fail-closed
  * Anthropic provider refuses to construct without credentials.
  */
-// BINDS INSTALL TLDs: numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the
+// searched/described/RAG-scoped section is now the playground `test3`, whose
+// SEVEN canonical records the suite owns and restores (test/helpers/test_data.ts
+// ensureCanonicalTest3) — so `total > 0` is a fact of the repo, not of whichever
+// install the database happens to hold. The summarizer's tipo is an opaque
+// string, rewritten through src/core/test_data/test_tld_tipo_map.json.
 
-import { describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import type {
 	AgentAssistantTurn,
 	AgentLlmProvider,
@@ -23,8 +24,12 @@ import type {
 } from '../../src/ai/agent/llm_provider.ts';
 import { runAgent } from '../../src/ai/agent/loop.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { ensureCanonicalTest3 } from '../helpers/test_data.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+
+/** The searched section's records are OWNED by the suite, never ambient. */
+beforeAll(ensureCanonicalTest3);
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 
 /** Deterministic provider: plays back a fixed script of assistant turns. */
@@ -43,7 +48,7 @@ class ScriptedProvider implements AgentLlmProvider {
 	}
 }
 
-/** Script: search the Cecas section, then answer from the result. */
+/** Script: search the playground section, then answer from the result. */
 function searchThenAnswerScript(): AgentAssistantTurn[] {
 	return [
 		{
@@ -52,7 +57,7 @@ function searchThenAnswerScript(): AgentAssistantTurn[] {
 				{
 					id: 'toolu_1',
 					name: 'dedalo_search_section',
-					input: { section_tipo: 'numisdata4', limit: 3 },
+					input: { section_tipo: 'test3', limit: 3 },
 				},
 			],
 			stop_reason: 'tool_use',
@@ -64,7 +69,7 @@ function searchThenAnswerScript(): AgentAssistantTurn[] {
 describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 	test('executes real tool calls under the principal and feeds results back', async () => {
 		const provider = new ScriptedProvider(searchThenAnswerScript());
-		const run = await runAgent(SUPERUSER, 'How many cecas are there?', provider);
+		const run = await runAgent(SUPERUSER, 'How many playground records are there?', provider);
 
 		expect(run.stop).toBe('end_turn');
 		expect(run.answer).toBe('FINAL ANSWER');
@@ -88,7 +93,7 @@ describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 
 	test('a user the human API denies gets NOTHING from the same trajectory (DoD)', async () => {
 		const provider = new ScriptedProvider(searchThenAnswerScript());
-		const run = await runAgent(NO_ACCESS, 'How many cecas are there?', provider);
+		const run = await runAgent(NO_ACCESS, 'How many playground records are there?', provider);
 
 		const secondTranscript = provider.seenTranscripts[1] as AgentTranscriptEntry[];
 		const resultsEntry = secondTranscript.find((entry) => entry.role === 'tool_results') as {
@@ -132,7 +137,7 @@ describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 		const provider = new ScriptedProvider([
 			{
 				text: '',
-				tool_uses: [{ id: 't', name: 'dedalo_describe_node', input: { tipo: 'numisdata4' } }],
+				tool_uses: [{ id: 't', name: 'dedalo_describe_node', input: { tipo: 'test3' } }],
 				stop_reason: 'tool_use',
 			},
 		]);
@@ -155,8 +160,8 @@ describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 		const toolResult = events.find((event) => event.type === 'tool_result') as { ok: boolean };
 		expect(toolResult.ok).toBe(true);
 		// the human-readable summary helper is pure and capped
-		const summary = summarizeToolArgs({ section_tipo: 'oh1', query: 'x'.repeat(300) });
-		expect(summary).toContain('section_tipo=oh1');
+		const summary = summarizeToolArgs({ section_tipo: 'test6813', query: 'x'.repeat(300) });
+		expect(summary).toContain('section_tipo=test6813');
 		expect(summary.length).toBeLessThanOrEqual(140);
 	});
 
@@ -207,7 +212,7 @@ describe('agent loop — RAG tools (2026-07-22 scope/group + passages)', () => {
 		const provider = new ScriptedProvider(
 			ragScript('dedalo_semantic_search', {
 				query: 'guerra en el mundo ibérico',
-				section_tipo: 'rsc205',
+				section_tipo: 'test3',
 				group: 'card',
 				limit: 5,
 			}),
@@ -222,7 +227,7 @@ describe('agent loop — RAG tools (2026-07-22 scope/group + passages)', () => {
 		}[];
 		expect(Array.isArray(hits)).toBe(true);
 		for (const hit of hits) {
-			expect(hit.section_tipo).toBe('rsc205'); // scope pushdown respected
+			expect(hit.section_tipo).toBe('test3'); // scope pushdown respected
 			expect(hit.component_tipo).toBe('rag:card'); // facet respected
 		}
 	});
@@ -231,7 +236,7 @@ describe('agent loop — RAG tools (2026-07-22 scope/group + passages)', () => {
 		const provider = new ScriptedProvider(
 			ragScript('dedalo_retrieve_passages', {
 				query: 'guerra ibérica',
-				section_tipo: 'rsc205',
+				section_tipo: 'test3',
 				limit: 500, // must clamp to 20
 			}),
 		);

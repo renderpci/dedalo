@@ -15,11 +15,10 @@
  * (button_new), dd632 (button_delete). dd1244 exclude_elements (dd1479) excludes
  * dd648/dd641/dd1247 — none are buttons — so dd1244 inherits both.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -60,7 +59,7 @@ describe('virtual-section button enumeration (SECTION_SPEC §9)', () => {
 	});
 
 	test('a real section is unchanged (own buttons only)', async () => {
-		const rows = await sectionButtonRows('numisdata3');
-		expect(rows.map((row) => row.tipo)).toEqual(await ownButtonTipos('numisdata3'));
+		const rows = await sectionButtonRows('test6099');
+		expect(rows.map((row) => row.tipo)).toEqual(await ownButtonTipos('test6099'));
 	});
 });

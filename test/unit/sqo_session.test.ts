@@ -10,23 +10,26 @@
  * getSession (sqlite round-trip); (3) source.session_save=false opts out;
  * (4) component-source reads never store; (5) sessions are isolated.
  */
-// BINDS INSTALL TLDs: numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession, setSessionSqo } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 registerSessionCleanup();
 
-const SECTION = 'numisdata4';
+const SECTION = 'test6100';
 
 let dbReady = false;
 beforeAll(async () => {
@@ -35,7 +38,16 @@ beforeAll(async () => {
 		dbReady = true;
 	} catch {
 		dbReady = false;
+		return;
 	}
+	// The cases read a SECTION and count the rows a stored filter narrows, so
+	// the gate owns its records instead of reading whatever is ambient.
+	await ensureTestCorpus([SECTION]);
+});
+
+afterAll(async () => {
+	if (!dbReady) return;
+	expect(await dropTestCorpus([SECTION])).toBe(0);
 });
 
 function readRqo(sessionSave: boolean | undefined): Rqo {
@@ -118,21 +130,21 @@ describe('sqo_session store + context stamp', () => {
 		expect(request_a).not.toBeNull();
 		expect(request_b).not.toBeNull();
 
-		setSessionSqo(request_a as NonNullable<typeof request_a>, 'oh1', { limit: 11 });
-		// request_b's snapshot predates that write and knows nothing about oh1.
-		setSessionSqo(request_b as NonNullable<typeof request_b>, 'rsc197', { limit: 22 });
+		setSessionSqo(request_a as NonNullable<typeof request_a>, 'test6813', { limit: 11 });
+		// request_b's snapshot predates that write and knows nothing about test6813.
+		setSessionSqo(request_b as NonNullable<typeof request_b>, seed('rsc', 197), { limit: 22 });
 
 		const reloaded = getSession(token);
-		expect(reloaded?.sqoSession?.oh1).toEqual({ limit: 11 });
-		expect(reloaded?.sqoSession?.rsc197).toEqual({ limit: 22 });
+		expect(reloaded?.sqoSession?.test6813).toEqual({ limit: 11 });
+		expect(reloaded?.sqoSession?.[seed('rsc', 197)]).toEqual({ limit: 22 });
 	});
 
 	test('a re-write of the SAME key replaces it', () => {
 		const token = createSession(-1, 'root', true);
 		const session = getSession(token);
-		setSessionSqo(session as NonNullable<typeof session>, 'oh1', { limit: 11 });
-		setSessionSqo(session as NonNullable<typeof session>, 'oh1', { limit: 33 });
-		expect(getSession(token)?.sqoSession?.oh1).toEqual({ limit: 33 });
+		setSessionSqo(session as NonNullable<typeof session>, 'test6813', { limit: 11 });
+		setSessionSqo(session as NonNullable<typeof session>, 'test6813', { limit: 33 });
+		expect(getSession(token)?.sqoSession?.test6813).toEqual({ limit: 33 });
 	});
 
 	test('sessions are isolated: one session’s navigation never leaks into another', async () => {

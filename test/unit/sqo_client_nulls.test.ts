@@ -4,21 +4,20 @@
  * MUST accept these nulls, or every filtered search returns HTTP 400
  * ("Invalid RQO") and the list view breaks.
  *
- * Captured verbatim from the browser (numisdata6 "Id = 5" filter, reqid=423):
+ * Captured verbatim from the browser (testmint1 "Id = 5" filter, reqid=423):
  * the offending fields were `sqo.filter.$and[].q_operator = null` and
  * `sqo.filter_by_locators = null`. `limit`/`offset` null were already handled.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { rqoSchema } from '../../src/core/concepts/rqo.ts';
 import { CLIENT_MAX_LIMIT, sanitizeClientSqo, sqoSchema } from '../../src/core/concepts/sqo.ts';
 
-// The exact filtered-search RQO the client emits (Id = 5 over numisdata6).
+// The exact filtered-search RQO the client emits (Id = 5 over testmint1).
 const CLIENT_SEARCH_RQO = {
 	id: 'section_numisdata6_numisdata6_list_lg-spa',
 	action: 'read',
@@ -27,15 +26,15 @@ const CLIENT_SEARCH_RQO = {
 		type: 'section',
 		action: 'search',
 		model: 'section',
-		tipo: 'numisdata6',
-		section_tipo: 'numisdata6',
+		tipo: 'testmint1',
+		section_tipo: 'testmint1',
 		section_id: null,
 		mode: 'list',
 		view: null,
 		lang: 'lg-spa',
 	},
 	sqo: {
-		section_tipo: ['numisdata6'],
+		section_tipo: ['testmint1'],
 		limit: 10,
 		offset: 0,
 		filter: {
@@ -47,8 +46,8 @@ const CLIENT_SEARCH_RQO = {
 						{
 							name: 'Id',
 							model: 'component_section_id',
-							section_tipo: 'numisdata6',
-							component_tipo: 'numisdata15',
+							section_tipo: 'testmint1',
+							component_tipo: 'testmint1001',
 						},
 					],
 					q_split: false,
@@ -74,7 +73,7 @@ describe('SQO wire contract: client explicit nulls', () => {
 	});
 
 	test('null filter_by_locators is accepted', () => {
-		const parsed = sqoSchema.safeParse({ section_tipo: ['numisdata6'], filter_by_locators: null });
+		const parsed = sqoSchema.safeParse({ section_tipo: ['testmint1'], filter_by_locators: null });
 		expect(parsed.success).toBe(true);
 	});
 
@@ -90,14 +89,14 @@ describe('SQO wire contract: client explicit nulls', () => {
 		// Build a $and nested far past the depth ceiling.
 		let deep: Record<string, unknown> = { q: 'x' };
 		for (let i = 0; i < 200; i++) deep = { $and: [deep] };
-		expect(() => sanitizeClientSqo({ section_tipo: ['numisdata6'], filter: deep })).toThrow(
+		expect(() => sanitizeClientSqo({ section_tipo: ['testmint1'], filter: deep })).toThrow(
 			/depth/i,
 		);
 	});
 
 	test('L7: a normally-nested filter still passes the gate', () => {
 		const nested = { $and: [{ $or: [{ q: 'a' }, { q: 'b' }] }, { q: 'c' }] };
-		expect(() => sanitizeClientSqo({ section_tipo: ['numisdata6'], filter: nested })).not.toThrow();
+		expect(() => sanitizeClientSqo({ section_tipo: ['testmint1'], filter: nested })).not.toThrow();
 	});
 });
 
@@ -127,29 +126,29 @@ describe('SQO wire contract: malformed shapes are REJECTED', () => {
 
 	test('sanitizeClientSqo pins the numeric coercions (INJ-06)', () => {
 		const clean = sanitizeClientSqo({
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			offset: 'abc' as unknown as number,
 			limit: 0,
 		});
 		expect(clean.offset).toBe(0); // NaN offset → 0, never a raw string downstream
 		expect(clean.limit).toBe(CLIENT_MAX_LIMIT); // non-positive limit → ceiling
-		const negative = sanitizeClientSqo({ section_tipo: ['numisdata6'], offset: -5 });
+		const negative = sanitizeClientSqo({ section_tipo: ['testmint1'], offset: -5 });
 		expect(negative.offset).toBe(0); // negative offset clamped
 		const huge = sanitizeClientSqo({
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: CLIENT_MAX_LIMIT + 1,
 		});
 		expect(huge.limit).toBe(CLIENT_MAX_LIMIT); // over-ceiling clamped
 	});
 
 	test('sanitizeClientSqo forces parsed=false even when the client claims true', () => {
-		const clean = sanitizeClientSqo({ section_tipo: ['numisdata6'], parsed: true });
+		const clean = sanitizeClientSqo({ section_tipo: ['testmint1'], parsed: true });
 		expect(clean.parsed).toBe(false); // conform can never be skipped by the client
 	});
 
 	test('INJ-03: server-only keys are stripped CASE-INSENSITIVELY, recursively', () => {
 		const clean = sanitizeClientSqo({
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			SENTENCE: 'DROP TABLE matrix',
 			Column_Sql: 'evil',
 			filter: {
@@ -166,7 +165,7 @@ describe('SQO wire contract: malformed shapes are REJECTED', () => {
 
 	test('L7: the node-count ceiling rejects a WIDE tree (not just a deep one)', () => {
 		const wide = { $and: Array.from({ length: 10_001 }, (_, i) => ({ q: String(i) })) };
-		expect(() => sanitizeClientSqo({ section_tipo: ['numisdata6'], filter: wide })).toThrow(
+		expect(() => sanitizeClientSqo({ section_tipo: ['testmint1'], filter: wide })).toThrow(
 			/node count/i,
 		);
 	});

@@ -5,15 +5,15 @@
  * the oracle; the contracts it pinned survive HERE against the TS engine
  * alone).
  *
- * Re-expressed contracts (scratch numisdata179 twins — metal analyses):
- *  - SAVE: saving a metal number (numisdata182 = 40.5) through dispatchRqo
- *    persists to the `number` column while the numisdata1125 calculation
+ * Re-expressed contracts (scratch test6247 twins — metal analyses):
+ *  - SAVE: saving a metal number (test6250 = 40.5) through dispatchRqo
+ *    persists to the `number` column while the test6523 calculation
  *    output stays NULL in every candidate column — TS computes nothing at
  *    save time (DEC-06). This is the differential's byte-pinned end-state
  *    {input:[{id:1,value:40.5}], output:null} (equal on both engines: PHP's
  *    save-time compute is a pinned live defect — array_sum crashes AFTER the
  *    value persists, so the effective PHP outcome is the same);
- *  - READ, empty inputs: reading numisdata1125 on a fresh twin (no metals)
+ *  - READ, empty inputs: reading test6523 on a fresh twin (no metals)
  *    emits the golden [{widget:'calculation', key:0, id:'total',
  *    widget_id:'total', value:0}] — oracle-pinned by
  *    test/parity/info_widget_differential.test.ts ('summarize survives with
@@ -23,7 +23,7 @@
  *    oracle-pinned by info_widget_differential's calc twin.
  *
  * NOT re-expressed: the differential's stored-output READ pin
- * (numisdata179/17 → total 100.18) asserts a MUTABLE production record's
+ * (test6247/17 → total 100.18) asserts a MUTABLE production record's
  * stored widget value — forbidden natively; the empty-input golden above is
  * its survival shape.
  *
@@ -31,14 +31,14 @@
  * oracle-pinned — the PHP save died in the widget); the DB end-state is the
  * contract.
  *
- * Scratch hygiene: two fresh numisdata179 records (matrix), rows + TM swept
+ * Scratch hygiene: two fresh test6247 records (matrix_test — the clone's own
+ * table), rows + TM swept
  * fail-loud in afterAll.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -50,9 +50,9 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const SECTION = 'numisdata179'; // metal analyses (matrix)
-const INPUT = 'numisdata182'; // 'au' number
-const OUTPUT = 'numisdata1125'; // 'total' calculation
+const SECTION = 'test6247'; // metal analyses (stores in matrix_test)
+const INPUT = 'test6250'; // 'au' number
+const OUTPUT = 'test6523'; // 'total' calculation
 
 let savedId = 0;
 let emptyId = 0;
@@ -134,7 +134,7 @@ async function stateOf(id: number): Promise<Record<string, unknown>> {
 	const rows = (await sql.unsafe(
 		`SELECT number->$2 AS input,
 		        COALESCE(data->$3, number->$3, misc->$3) AS output
-		 FROM matrix WHERE section_tipo = $1 AND section_id = $4`,
+		 FROM matrix_test WHERE section_tipo = $1 AND section_id = $4`,
 		[SECTION, INPUT, OUTPUT, id],
 	)) as { input: unknown; output: unknown }[];
 	return { input: rows[0]?.input ?? null, output: rows[0]?.output ?? null };
@@ -163,7 +163,7 @@ afterAll(async () => {
 	for (const id of [savedId, emptyId]) {
 		if (id === 0) continue;
 		const deleted = (await sql.unsafe(
-			'DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2 RETURNING id',
+			'DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2 RETURNING id',
 			[SECTION, id],
 		)) as unknown[];
 		if (deleted.length === 0) leaked.push(`${SECTION}/${id}`);

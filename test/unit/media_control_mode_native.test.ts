@@ -27,7 +27,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { widget } from '../../src/core/area_maintenance/widgets/media_control.ts';
@@ -42,6 +42,7 @@ import {
 } from '../../src/core/media/protection.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 // Fail loud if the action is ever unregistered: a missing apiAction must break this
 // file, never make it silently vacuous.
@@ -73,7 +74,8 @@ beforeEach(() => {
 	htaccess = join(mediaRoot, '.htaccess');
 	nginxConf = join(mediaRoot, 'dedalo_media_protection.nginx.conf');
 	nginxMap = join(mediaRoot, 'dedalo_media_protection_map.nginx.conf');
-	mkdirSync(mediaRoot, { recursive: true });
+	// DECLARE the scratch media root (src/core/media/test_media_root.ts).
+	markMediaRoot(mediaRoot);
 	overrideMediaProtectionPathsForTests({ mediaRoot, authStorePath: authStore });
 	setServerState({ media_access_mode: null });
 });

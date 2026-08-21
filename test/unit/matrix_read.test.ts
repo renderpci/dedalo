@@ -1,22 +1,31 @@
 /**
- * Milestone gate: read one REAL record through the TS DB layer from the same
- * PostgreSQL database the PHP server uses (plan A4.4).
+ * Milestone gate: read one REAL record through the TS DB layer (plan A4.4).
  *
- * Uses a record known to exist in the dev DB (numisdata6 #1, seen via psql
- * during scaffolding). If your dev DB differs, adjust the constants — the
- * point is a real row, not a synthetic fixture.
+ * Migrated to the generic `test` TLD 2026-08-19: the row is no longer whatever
+ * an install happens to hold — the gate OWNS it, provisioning the `testmint1`
+ * corpus section (the derived twin of the harvested mint records) into
+ * `matrix_test` and dropping it again. Still a real, component-rich row read
+ * through the real DB layer, but one that exists on every machine.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord, readMatrixRecordBatch } from '../../src/core/db/matrix.ts';
+import {
+	dropTestCorpus,
+	ensureTestCorpus,
+	TEST_CORPUS_TABLE,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
 
-const KNOWN_SECTION_TIPO = 'numisdata6';
+const KNOWN_SECTION_TIPO = 'testmint1';
 const KNOWN_SECTION_ID = 1;
+const CORPUS_SCOPE = [KNOWN_SECTION_TIPO];
+
+beforeAll(async () => {
+	await ensureTestCorpus(CORPUS_SCOPE);
+});
+afterAll(async () => {
+	expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
+});
 
 // NOTE: no afterAll(closeDatabasePool) here — the pool is shared module state
 // across test files in one bun test process; closing it in one file breaks the
@@ -24,7 +33,7 @@ const KNOWN_SECTION_ID = 1;
 
 describe('matrix read (real DB)', () => {
 	test('reads a real record with parsed JSONB and raw ::text twins', async () => {
-		const record = await readMatrixRecord('matrix', KNOWN_SECTION_TIPO, KNOWN_SECTION_ID);
+		const record = await readMatrixRecord(TEST_CORPUS_TABLE, KNOWN_SECTION_TIPO, KNOWN_SECTION_ID);
 
 		expect(record).not.toBeNull();
 		expect(record?.section_tipo).toBe(KNOWN_SECTION_TIPO);
@@ -41,7 +50,7 @@ describe('matrix read (real DB)', () => {
 	});
 
 	test('returns null for a nonexistent record', async () => {
-		const missing = await readMatrixRecord('matrix', KNOWN_SECTION_TIPO, 99999999);
+		const missing = await readMatrixRecord(TEST_CORPUS_TABLE, KNOWN_SECTION_TIPO, 99999999);
 		expect(missing).toBeNull();
 	});
 
@@ -55,18 +64,18 @@ describe('matrix read (real DB)', () => {
 describe('matrix batch read (the list-page N+1 killer)', () => {
 	test('batch records are BYTE-IDENTICAL to single reads (rawText included)', async () => {
 		const wanted = [KNOWN_SECTION_ID, 2, 99999999]; // one guaranteed miss
-		const batch = await readMatrixRecordBatch('matrix', KNOWN_SECTION_TIPO, wanted);
+		const batch = await readMatrixRecordBatch(TEST_CORPUS_TABLE, KNOWN_SECTION_TIPO, wanted);
 
 		expect(batch.has(99999999)).toBe(false);
 		expect(batch.size).toBeGreaterThan(0);
 		for (const [sectionId, record] of batch) {
-			const single = await readMatrixRecord('matrix', KNOWN_SECTION_TIPO, sectionId);
+			const single = await readMatrixRecord(TEST_CORPUS_TABLE, KNOWN_SECTION_TIPO, sectionId);
 			expect(JSON.stringify(record)).toBe(JSON.stringify(single));
 		}
 	});
 
 	test('empty id set → empty map, no query', async () => {
-		const batch = await readMatrixRecordBatch('matrix', KNOWN_SECTION_TIPO, []);
+		const batch = await readMatrixRecordBatch(TEST_CORPUS_TABLE, KNOWN_SECTION_TIPO, []);
 		expect(batch.size).toBe(0);
 	});
 

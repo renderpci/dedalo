@@ -3,11 +3,10 @@
  * The transform clamps at zero and applies positive offsets in reverse order to
  * avoid collisions (PHP replace_tc_codes).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -85,24 +84,24 @@ describe('tool_tc change_all_timecodes validation', () => {
 	test('the locator triple AND lang are required', async () => {
 		const expected = 'component_tipo, section_tipo, a positive section_id and lang are required';
 		expect(await refusalMessage({})).toBe(expected);
-		expect(await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167' })).toBe(
+		expect(await refusalMessage({ component_tipo: 'test17', section_tipo: 'test3' })).toBe(
 			expected,
 		);
 		expect(
-			await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 0 }),
+			await refusalMessage({ component_tipo: 'test17', section_tipo: 'test3', section_id: 0 }),
 		).toBe(expected);
 		expect(
-			await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: -3 }),
+			await refusalMessage({ component_tipo: 'test17', section_tipo: 'test3', section_id: -3 }),
 		).toBe(expected);
 		// PHP `empty($lang)` — a missing/blank lang is a MALFORMED request, never a
 		// silent lg-nolan default (which would address a slice the caller never named).
 		expect(
-			await refusalMessage({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 3 }),
+			await refusalMessage({ component_tipo: 'test17', section_tipo: 'test3', section_id: 3 }),
 		).toBe(expected);
 		expect(
 			await refusalMessage({
-				component_tipo: 'rsc36',
-				section_tipo: 'rsc167',
+				component_tipo: 'test17',
+				section_tipo: 'test3',
 				section_id: 3,
 				lang: '',
 			}),
@@ -112,8 +111,8 @@ describe('tool_tc change_all_timecodes validation', () => {
 	test('a non-numeric offset is refused', async () => {
 		expect(
 			await refusalMessage({
-				component_tipo: 'rsc36',
-				section_tipo: 'rsc167',
+				component_tipo: 'test17',
+				section_tipo: 'test3',
 				section_id: 1,
 				lang: 'lg-spa',
 				offset_seconds: 'later',
@@ -128,7 +127,7 @@ describe('tool_tc change_all_timecodes validation', () => {
 			Promise.resolve(
 				drive({
 					component_tipo: 'nope999',
-					section_tipo: 'rsc167',
+					section_tipo: 'test3',
 					section_id: 1,
 					lang: 'lg-spa',
 				}),
@@ -138,8 +137,8 @@ describe('tool_tc change_all_timecodes validation', () => {
 		const missingRecord = await refusalOf(
 			Promise.resolve(
 				drive({
-					component_tipo: 'rsc36',
-					section_tipo: 'rsc167',
+					component_tipo: 'test17',
+					section_tipo: 'test3',
 					section_id: 99999999,
 					lang: 'lg-spa',
 				}),

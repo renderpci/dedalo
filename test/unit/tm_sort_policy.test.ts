@@ -23,13 +23,17 @@
  * header click on those used to THROW 'uncovered scope' (a 500), so refusing the
  * icon is strictly better than the previous behaviour. That leg is asserted too.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). Two of the
+// three install tipos were STRUCTURE, not tokens: the last two cases resolve a real
+// component through `buildStructureContext`, once as a dd15 column and once under
+// its own section, so the file now BUILDS that structure (`zztms`, one section on
+// matrix_test through the test24 matrix_table node + one input_text child, torn down
+// with an asserted residue of 0). That also let the two `if (entry === null) return`
+// vacuity guards go: the nodes are this file's own, so a null entry is now a FAILURE
+// rather than a silent skip. The third tipo was the dd15 annotation column, which is
+// the engine's own constant (`TM_NOTES_TEXT`) and is imported instead of re-spelled.
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
 	TIME_MACHINE_SECTION_TIPO,
 	TIME_MACHINE_SORTABLE_TIPOS,
@@ -38,6 +42,50 @@ import { buildTmOrderSql, TM_ORDER_COLUMN } from '../../src/core/resolve/read_tm
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { buildOrderPath } from '../../src/core/search/order_path.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
+import { TM_NOTES_TEXT } from '../../src/core/tm_record/tm_record.ts';
+
+/**
+ * The ordinary section + component the last two cases need: one that renders as a
+ * dd15 column WITHOUT a TM_ORDER_COLUMN mapping (so the policy must refuse the sort
+ * icon rather than throw 'uncovered scope'), and that KEEPS its sort under its own
+ * section. `relations: [{ tipo: 'test24' }]` is the matrix_table node whose term is
+ * `matrix_test` — this situation creates no records, but the section still declares
+ * where they would go, exactly as a cloned test section does.
+ */
+const ORDINARY_SECTION = 'zztms1';
+const ORDINARY_COMPONENT = 'zztms2';
+const SITUATION = situation({
+	tld: 'zztms',
+	name: 'tm_sort_policy',
+	nodes: [
+		{
+			tipo: ORDINARY_SECTION,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Política de orden TM', 'lg-eng': 'TM sort policy' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: ORDINARY_COMPONENT,
+			parent: ORDINARY_SECTION,
+			model: 'component_input_text',
+			term: { 'lg-spa': 'Directorio', 'lg-eng': 'Directory' },
+			is_translatable: true,
+		},
+	],
+});
+
+beforeAll(async () => {
+	await ensureSituation(SITUATION);
+});
+afterAll(async () => {
+	expect(await dropSituation(SITUATION)).toBe(0);
+});
 
 /** The dd15 meta columns the time-machine service requests (service_time_machine.js). */
 const TM_META_COLUMNS = [
@@ -49,7 +97,7 @@ const TM_META_COLUMNS = [
 	{ tipo: 'dd1212', label: 'Section id' },
 	{ tipo: 'dd1772', label: 'Section tipo' },
 	{ tipo: 'dd1574', label: 'Value' },
-	{ tipo: 'rsc329', label: 'Annotation' },
+	{ tipo: TM_NOTES_TEXT, label: 'Annotation' },
 ];
 
 async function tmColumnContext(tipo: string): Promise<{ sortable?: unknown } | null> {
@@ -163,12 +211,12 @@ describe('time machine (dd15) sort policy', () => {
 	}
 
 	test("a section's own component under dd15 is not sortable (was an 'uncovered scope' throw)", async () => {
-		// rsc33 is an ordinary component_input_text of a real section; in the
-		// record-snapshot list it renders as a dd15 column but has no TM_ORDER_COLUMN
-		// mapping, so a header click threw before this policy.
-		const entry = await tmColumnContext('rsc33');
-		if (entry === null) return;
-		expect(entry.sortable).toBe(false);
+		// An ordinary component_input_text of a real section (this file's own — see
+		// SITUATION); in the record-snapshot list it renders as a dd15 column but has
+		// no TM_ORDER_COLUMN mapping, so a header click threw before this policy.
+		const entry = await tmColumnContext(ORDINARY_COMPONENT);
+		expect(entry, 'the situation component resolved to no dd15 column').not.toBeNull();
+		expect(entry?.sortable).toBe(false);
 	});
 
 	test('the policy is scoped to dd15 — the same component sorts elsewhere', async () => {
@@ -176,15 +224,15 @@ describe('time machine (dd15) sort policy', () => {
 			{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
 			() =>
 				buildStructureContext({
-					tipo: 'rsc33',
-					sectionTipo: 'rsc170',
+					tipo: ORDINARY_COMPONENT,
+					sectionTipo: ORDINARY_SECTION,
 					mode: 'list',
 					lang: 'lg-eng',
 					permissions: 1,
-					parent: 'rsc170',
+					parent: ORDINARY_SECTION,
 				}),
 		)) as { sortable?: unknown } | null;
-		if (entry === null) return;
-		expect(entry.sortable).toBe(true);
+		expect(entry, 'the situation component resolved to no list column').not.toBeNull();
+		expect(entry?.sortable).toBe(true);
 	});
 });

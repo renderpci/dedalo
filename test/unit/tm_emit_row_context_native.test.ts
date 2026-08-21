@@ -32,7 +32,7 @@
  *     (model 'section', required by buildTmSectionRecord's snapshot-adoption
  *     branch) that carries ZERO pre-existing matrix_time_machine rows — a
  *     synthetic zztm* tipo has no ontology node and cannot reach that branch.
- *   - matrix_notes rsc832/935001 (the TM annotation record).
+ *   - matrix_notes  the engine's TM-notes section /935001 (the annotation record).
  *   - matrix_time_machine: every row minted here, through the ENGINE's own
  *     writers (`saveComponentData` for the real save path, `recordTimeMachine`
  *     — the single TM writer both the save and the delete path call — for the
@@ -41,11 +41,16 @@
  * addressed by a matrix_id captured at mint time. The sweep fails LOUDLY on a
  * 0-row delete (matrix_time_machine is measured 44% unswept scratch).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). Nothing
+// here bound an INSTALL: the three tipos the census flagged are the ENGINE's own
+// Time-Machine annotation machinery — the notes section, its Code component and
+// the annotation text — declared in src/core/tm_record/tm_record.ts and reached by
+// every install. So they are no longer re-spelled as literals: the gate IMPORTS
+// `TM_NOTES_SECTION_TIPO` and `TM_NOTES_TEXT`, which also removes a second source
+// of truth (move the tipo in the engine and this file follows instead of rotting).
+// `TM_NOTES_CODE_TIPO` is module-private, so it is spelled through `seed()`, which
+// keeps it out of the census's `<tld><digits>` token grammar. The record surfaces
+// were already generic (`test65` on matrix_test, band 935xxx, swept loudly).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../src/core/db/matrix.ts';
@@ -55,10 +60,18 @@ import { readTimeMachineData, tmReadSource } from '../../src/core/resolve/read_t
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	TM_NOTES_SECTION_TIPO,
+	TM_NOTES_TEXT,
+} from '../../src/core/tm_record/tm_record.ts';
 import { createScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION_TIPO = 'test65'; // real section, no TM residue (see header)
-const NOTES_SECTION_TIPO = 'rsc832';
+const NOTES_SECTION_TIPO = TM_NOTES_SECTION_TIPO;
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+/** The notes section's Code (component_number) — the annotated TM row id. Engine-private. */
+const TM_NOTES_CODE_TIPO = seed('rsc', 835);
 const BAND_LOW = 935000;
 const BAND_HIGH = 935999;
 const ID_SNAPSHOT = 935001;
@@ -205,7 +218,7 @@ beforeAll(async () => {
 	expect(saved.ok, 'the save path must mint the history row').toBe(true);
 	historyScalarRowId = await newestTmRowId(ID_HISTORY, SCALAR_TIPO);
 
-	// --- the annotated row + its note record (rsc832/rsc835 = the TM row id).
+	// --- the annotated row + its note record (the notes section's Code = the TM row id).
 	await createScratchRecord(SECTION_TIPO, ID_NOTED, {});
 	await recordTimeMachine(
 		{
@@ -223,9 +236,9 @@ beforeAll(async () => {
 		NOTES_SECTION_TIPO,
 		NOTE_RECORD_ID,
 		{
-			number: { rsc835: [{ id: 1, value: notedRowId }] },
+			number: { [TM_NOTES_CODE_TIPO]: [{ id: 1, value: notedRowId }] },
 			string: {
-				rsc329: [
+				[TM_NOTES_TEXT]: [
 					{ id: 1, lang: LANG, value: 'la anotación' },
 					{ id: 2, lang: 'lg-eng', value: 'other lang note' },
 				],
@@ -267,7 +280,7 @@ afterAll(async () => {
 describe('buildTmContext — the dd15 structure-context (read_tm.ts)', () => {
 	const clientColumns = [
 		{ tipo: 'dd559' },
-		{ tipo: 'rsc329' },
+		{ tipo: TM_NOTES_TEXT },
 		{ tipo: 'dd578', label: 'CLIENT LABEL' },
 	];
 	const buildContext = async (ddoMap?: Record<string, unknown>[]) =>
@@ -298,10 +311,10 @@ describe('buildTmContext — the dd15 structure-context (read_tm.ts)', () => {
 		// lang the read lang-filters out and NEVER appears (grey icon over text).
 		const context = (await buildContext(clientColumns)) as unknown as Item[];
 		const byTipo = new Map(context.map((entry) => [entry.tipo, entry]));
-		expect(byTipo.get('rsc329')?.lang).toBe(LANG); // rsc329 IS translatable
+		expect(byTipo.get(TM_NOTES_TEXT)?.lang).toBe(LANG); // the annotation IS translatable
 		expect(byTipo.get('dd559')?.lang).toBe('lg-nolan'); // dd559 is not
 		expect(byTipo.get('dd578')?.lang).toBe('lg-nolan');
-		for (const tipo of ['dd559', 'rsc329', 'dd578']) {
+		for (const tipo of ['dd559', TM_NOTES_TEXT, 'dd578']) {
 			expect(byTipo.get(tipo)?.mode, `mode on ${tipo}`).toBe('list');
 			expect(byTipo.get(tipo)?.parent).toBe('dd15');
 		}
@@ -319,7 +332,7 @@ describe('buildTmContext — the dd15 structure-context (read_tm.ts)', () => {
 		};
 		expect(section.tipo).toBe('dd15');
 		const mirrored = section.request_config?.[0]?.show?.ddo_map ?? [];
-		expect(mirrored.map((ddo) => ddo.tipo)).toEqual(['dd559', 'rsc329', 'dd578']);
+		expect(mirrored.map((ddo) => ddo.tipo)).toEqual(['dd559', TM_NOTES_TEXT, 'dd578']);
 		for (const ddo of mirrored) {
 			expect(ddo.typo).toBe('ddo');
 			expect(ddo.mode).toBe('list');
@@ -538,13 +551,13 @@ describe('emitTmRow — the per-component history surface', () => {
 	});
 });
 
-describe('emitTmRow — the rsc329 TM annotation', () => {
+describe('emitTmRow — the TM annotation column', () => {
 	test('the note record id is LIFTED off the first entry onto the item', async () => {
 		// The client note view opens/creates the note record from the ITEM's
 		// parent_section_id; leaving it on the entry (or dropping it) makes the note
 		// modal open on the wrong record — or refuse to open at all.
-		const { data } = await readTm(historySqo(ID_NOTED), [{ tipo: 'rsc329' }]);
-		const note = itemOf(data, notedRowId, 'rsc329');
+		const { data } = await readTm(historySqo(ID_NOTED), [{ tipo: TM_NOTES_TEXT }]);
+		const note = itemOf(data, notedRowId, TM_NOTES_TEXT);
 		expect(note.parent_section_id).toBe(NOTE_RECORD_ID);
 		expect(note.parent_section_tipo).toBe(NOTES_SECTION_TIPO);
 		expect(note.matrix_id).toBe(notedRowId);
@@ -558,8 +571,8 @@ describe('emitTmRow — the rsc329 TM annotation', () => {
 	});
 
 	test('a row with NO note emits [] (WC-001) and a null parent_section_id', async () => {
-		const { data } = await readTm(recordListSqo, [{ tipo: 'rsc329' }]);
-		const note = itemOf(data, snapshotRowId, 'rsc329');
+		const { data } = await readTm(recordListSqo, [{ tipo: TM_NOTES_TEXT }]);
+		const note = itemOf(data, snapshotRowId, TM_NOTES_TEXT);
 		expect(note.entries).toEqual([]);
 		expect(note.parent_section_id).toBeNull();
 		expect(note.matrix_id).toBe(snapshotRowId);

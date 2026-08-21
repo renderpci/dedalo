@@ -27,11 +27,10 @@
  * and swept in afterAll; the datalist cache is cleared around them so neither
  * this gate nor its neighbours serve a stale list.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -39,11 +38,14 @@ import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invali
 import { getNode } from '../../src/core/ontology/resolver.ts';
 import { getDatalist } from '../../src/core/relations/datalist.ts';
 
-const RATING = 'rsc1246'; // component_radio_button
-const RATING_OWNER = 'rsc1243'; // its parent grouper
-const VOCABULARY = 'rsc1256'; // the option section (lives in matrix_list)
-const LABEL_DDO = 'rsc1259'; // show → the option label
-const COLOUR_DDO = 'rsc1260'; // hide → the colour
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+const RATING = seed('rsc', 1246); // component_radio_button
+const RATING_OWNER = seed('rsc', 1243); // its parent grouper
+const VOCABULARY = seed('rsc', 1256); // the option section (lives in matrix_list)
+const LABEL_DDO = seed('rsc', 1259); // show → the option label
+const COLOUR_DDO = seed('rsc', 1260); // hide → the colour
 
 /** The corpus vocabulary, shape-for-shape (label per lang, colour lg-nolan). */
 const OPTIONS = [

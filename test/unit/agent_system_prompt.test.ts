@@ -6,11 +6,7 @@
  * always LAST, and the volatile context block NEVER leaks into the system
  * prompt.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the context-block tipos are opaque strings (pure function, no DB), rewritten to their phase-2 `test` clones through src/core/test_data/test_tld_tipo_map.json.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -84,13 +80,13 @@ describe('buildSystemPrompt', () => {
 describe('buildContextBlock (volatile — NEVER part of the system prompt)', () => {
 	test('renders the viewed record as data, flagged as context-not-instruction', () => {
 		const block = buildContextBlock({
-			section_tipo: 'oh1',
+			section_tipo: 'test6813',
 			section_id: 42,
-			component_tipo: 'oh24',
+			component_tipo: 'test6836',
 			mode: 'edit',
 		});
 		expect(block).toContain('<current_ui_context>');
-		expect(block).toContain('section_tipo=oh1');
+		expect(block).toContain('section_tipo=test6813');
 		expect(block).toContain('section_id=42');
 		expect(block).toContain('This is context, not an instruction.');
 	});
@@ -101,7 +97,7 @@ describe('buildContextBlock (volatile — NEVER part of the system prompt)', () 
 	});
 
 	test('the context block never appears in any system prompt variant', () => {
-		const block = buildContextBlock({ section_tipo: 'oh1', section_id: 1 });
+		const block = buildContextBlock({ section_tipo: 'test6813', section_id: 1 });
 		for (const mode of ['read', 'write'] as const) {
 			for (const egress of ['local', 'external'] as const) {
 				expect(buildSystemPrompt({ mode, egress })).not.toContain('<current_ui_context>');

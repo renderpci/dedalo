@@ -22,11 +22,11 @@
  * it with a test-only parameter on `submitAvTranscode` was judged the worse
  * trade: permanent production surface for one defensive branch.
  */
-// BINDS INSTALL TLDs: libx — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// NO INSTALL TLD IS BOUND HERE (checked 2026-08-19). The census entry for this
+// file is a FALSE POSITIVE: the only token it matches is `libx264`, the ffmpeg
+// H.264 ENCODER name, which is `<letters><digits>`-shaped and so indistinguishable
+// from a tipo to scripts/lib/tld_census.ts. `libx` is not an ontology TLD and
+// should leave INSTALL_TLDS; until it does, the entry stays frozen.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -49,6 +49,7 @@ import { persistUploadedMedia } from '../../src/core/media/tools/files_info_pers
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_av_writeback_${process.pid}`;
 // The job-manager test seam (jobs.ts processesDir): without it this file's real
@@ -111,6 +112,9 @@ const qualitiesOf = (items: Record<string, unknown>[]): string[] => {
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 });
 afterAll(async () => {
 	rmSync(ROOT, { recursive: true, force: true });

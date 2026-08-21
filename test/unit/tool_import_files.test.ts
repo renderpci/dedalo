@@ -9,11 +9,10 @@
  * gated at collection time via test.if(hasDb) so an offline run reports
  * SKIP, never a silent fake-pass (S2-40 posture).
  */
-// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the scratch twins were already on the
+// `test3` playground; the remaining install tipos were the CALLER section (a tipo that
+// only has to DIFFER from the target) and the ddo_map's target section/component, which
+// now name generic `test` nodes (`test2`, `test3`, `test99` = component_image).
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -173,8 +172,8 @@ describe('named-processor allowlist (SEC-053 collapse)', () => {
 describe('ddo_map pure logic (no DB)', () => {
 	test('destination routing: caller-section ddo → caller record, else the target record', () => {
 		// PHP set_components_data :1635.
-		expect(destinationSectionIdFor('oh1', 'oh1', 5, 99)).toBe(5);
-		expect(destinationSectionIdFor('rsc170', 'oh1', 5, 99)).toBe(99);
+		expect(destinationSectionIdFor('test2', 'test2', 5, 99)).toBe(5);
+		expect(destinationSectionIdFor('test3', 'test2', 5, 99)).toBe(99);
 	});
 
 	test('only_basename strips section_id prefix, field letter and extension', () => {
@@ -298,12 +297,12 @@ describe('tool_import_files module', () => {
 		expect(fromSource.permission).toBe('section_list');
 		expect(
 			fromSource.sectionTipos?.({
-				section_tipo: 'oh1',
+				section_tipo: 'test2',
 				section_id: 1,
 				target_section_tipo: FILENAME_SECTION,
 				full_name: 'x.jpg',
 			}),
-		).toEqual(['oh1', FILENAME_SECTION]);
+		).toEqual(['test2', FILENAME_SECTION]);
 	});
 
 	test('file_processor fails closed for an unregistered name', async () => {
@@ -351,9 +350,9 @@ describe('tool_import_files module', () => {
 				userId: -1,
 				background: true,
 				options: {
-					tool_config: { ddo_map: [{ role: 'target_filename', tipo: 'rsc398' }] },
-					section_tipo: 'oh1',
-					tipo: 'rsc29',
+					tool_config: { ddo_map: [{ role: 'target_filename', tipo: 'test52' }] },
+					section_tipo: 'test2',
+					tipo: 'test99',
 					files_data: [{ name: 'a.jpg' }],
 				},
 			}),
@@ -383,7 +382,7 @@ describe('tool_import_files module', () => {
 				tool_config: {
 					import_mode: 'section_resource',
 					ddo_map: [
-						{ role: 'target_component', tipo: 'rsc29', section_tipo: 'rsc170' },
+						{ role: 'target_component', tipo: 'test99', section_tipo: 'test3' },
 						{
 							role: 'input_component',
 							tipo: FILENAME_COMPONENT,
@@ -391,8 +390,8 @@ describe('tool_import_files module', () => {
 						},
 					],
 				},
-				section_tipo: 'rsc170',
-				tipo: 'rsc29',
+				section_tipo: 'test3',
+				tipo: 'test99',
 				files_data: [{ name: 'a.jpg' }],
 			},
 		});
@@ -412,7 +411,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			ddoMap: [
 				{ role: 'target_filename', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			],
-			sectionTipo: 'oh1', // caller differs → destination = targetSectionId
+			sectionTipo: 'test2', // caller differs → destination = targetSectionId
 			sectionId: 0,
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'photo.jpg',
@@ -439,7 +438,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			ddoMap: [
 				{ role: 'target_filename', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			],
-			sectionTipo: 'oh1',
+			sectionTipo: 'test2',
 			sectionId: 0,
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'OTHER.jpg',
@@ -469,7 +468,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 					only_basename: true,
 				},
 			],
-			sectionTipo: 'oh1',
+			sectionTipo: 'test2',
 			sectionId: 0,
 			targetSectionId: basenameScratchId as number,
 			currentFileName: '73-portrait-A.jpg',
@@ -566,7 +565,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			ddoMap: [
 				{ role: 'input_component', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			],
-			sectionTipo: 'oh1',
+			sectionTipo: 'test2',
 			sectionId: 0,
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'a.jpg',
@@ -590,7 +589,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			ddoMap: [
 				{ role: 'input_component', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			],
-			sectionTipo: 'oh1',
+			sectionTipo: 'test2',
 			sectionId: 0,
 			targetSectionId: filenameScratchId as number,
 			currentFileName: 'a.jpg',
@@ -628,7 +627,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 			const write = async (mediaFilePath: string): Promise<void> =>
 				setComponentsData({
 					ddoMap: [{ role: 'target_date', tipo: DATE_COMPONENT, section_tipo: DATE_SECTION }],
-					sectionTipo: 'oh1', // caller differs → destination = targetSectionId
+					sectionTipo: 'test2', // caller differs → destination = targetSectionId
 					sectionId: 0,
 					targetSectionId: dateScratchId,
 					currentFileName: 'dated.pdf',
@@ -672,7 +671,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 		const write = async (mediaFilePath: string | null, model: string): Promise<void> =>
 			setComponentsData({
 				ddoMap: [{ role: 'target_date', tipo: DATE_COMPONENT, section_tipo: DATE_SECTION }],
-				sectionTipo: 'oh1',
+				sectionTipo: 'test2',
 				sectionId: 0,
 				targetSectionId: dateScratchId,
 				currentFileName: 'a.bin',
@@ -705,7 +704,7 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 				{ role: 'component_option', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 				{ role: 'target_component', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
 			],
-			sectionTipo: 'oh1',
+			sectionTipo: 'test2',
 			sectionId: 0,
 			targetSectionId: basenameScratchId as number,
 			currentFileName: 'never-written.jpg',

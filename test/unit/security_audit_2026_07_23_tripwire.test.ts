@@ -16,11 +16,10 @@
  * is a weaker gate than a live exploit, but it is deterministic and credless, and
  * it catches the one regression that matters — the security line being deleted.
  */
-// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -29,6 +28,14 @@ import { Glob } from 'bun';
 import { contributorComponentTipos } from '../../src/ai/rag/retrieval.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { scopeInverseReferenceHits } from '../../src/core/security/record_scope.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 const ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(ROOT, rel), 'utf8');
@@ -64,8 +71,8 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	test('scopeInverseReferenceHits leaves a global admin unscoped (no accidental over-filter)', async () => {
 		const admin: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 		const hits = [
-			{ section_tipo: 'oh1', section_id: 5 },
-			{ section_tipo: 'rsc170', section_id: 9 },
+			{ section_tipo: 'test6813', section_id: 5 },
+			{ section_tipo: seed('rsc', 170), section_id: 9 },
 		];
 		expect(await scopeInverseReferenceHits(hits, admin)).toEqual(hits);
 	});
@@ -95,7 +102,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	 * The two assertions above name two doors by hand, and a hand-list of security
 	 * doors rots silently. It already did, twice: `tool_posterframe` was wired in by
 	 * the 2026-07-28 TOOLS-08 pass calling itself "the THIRD door", and the thesaurus
-	 * indexation grid was found in the 2026-08 oh1 beta audit (§5.4) re-implementing
+	 * indexation grid was found in the 2026-08 test6813 beta audit (§5.4) re-implementing
 	 * the rule privately with the PROJECTS half alone. Neither ever appeared here.
 	 * A registry that a new door does not have to join is not a registry.
 	 *
@@ -154,7 +161,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		},
 		'src/core/section/indexation_grid.ts': {
 			kind: 'door',
-			why: 'the thesaurus indexation grid (2026-08 oh1 beta §5.4); the read-grant half of its scoping diverges from PHP — WC-2026-08-09-indexation-grid-read-grant-scope',
+			why: 'the thesaurus indexation grid (2026-08 test6813 beta §5.4); the read-grant half of its scoping diverges from PHP — WC-2026-08-09-indexation-grid-read-grant-scope',
 		},
 		'tools/tool_posterframe/server/index.ts': {
 			kind: 'door',

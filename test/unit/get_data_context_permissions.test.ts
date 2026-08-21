@@ -11,11 +11,10 @@
  *   matrix lookup (asserted here DB-free; the matrix fallthrough is covered by
  *   request_config_permission_gate.test.ts against the live dd774).
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -52,14 +51,14 @@ describe('resolveComponentContextPermission — search-mode special grants', () 
 	test('metadata/section-info tipos are level 2 in search mode', async () => {
 		for (const metadataTipo of ['dd197', 'dd199', 'dd200', 'dd201']) {
 			expect(
-				await resolveComponentContextPermission(someUser, 'oh1', metadataTipo, 1, 'search'),
+				await resolveComponentContextPermission(someUser, 'test6813', metadataTipo, 1, 'search'),
 			).toBe(2);
 		}
 	});
 	test("synthetic 'search_<n>' / zero section_id grants level 2 (PHP (int) cast)", async () => {
 		expect(
-			await resolveComponentContextPermission(someUser, 'oh1', 'oh24', 'search_1', 'search'),
+			await resolveComponentContextPermission(someUser, 'test6813', 'test6836', 'search_1', 'search'),
 		).toBe(2);
-		expect(await resolveComponentContextPermission(someUser, 'oh1', 'oh24', 0, 'search')).toBe(2);
+		expect(await resolveComponentContextPermission(someUser, 'test6813', 'test6836', 0, 'search')).toBe(2);
 	});
 });

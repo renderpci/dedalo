@@ -4,11 +4,10 @@
  * with a REAL image, against a scratch root. Also pins the fail-closed security
  * behaviors: wrong extension, polyglot chunk assembly.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
@@ -27,6 +26,7 @@ import {
 	receiveUpload,
 } from '../../src/core/media/ingest/upload.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_upload_${process.pid}`;
@@ -60,7 +60,9 @@ function parsed(fields: Partial<ParsedUpload>, blob: Uint8Array): ParsedUpload {
 	};
 }
 
-beforeAll(() => rmSync(ROOT, { recursive: true, force: true }));
+// DECLARE the scratch root — the media doors refuse an unmarked one under the
+// test-media seam (src/core/media/test_media_root.ts).
+beforeAll(() => resetMediaRoot(ROOT));
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 describe('upload receiver — single-shot', () => {
@@ -232,8 +234,8 @@ describe('full ingest: upload → add_file → regenerate', () => {
 		const staged = receiveUpload(parsed({ keyDir: 'kdi', fileName: 'in.jpg' }, bytes), USER, ROOT);
 		expect(staged.complete).toBe(true);
 		const identity: MediaIdentity = {
-			componentTipo: 'rsc29',
-			sectionTipo: 'rsc170',
+			componentTipo: 'test99',
+			sectionTipo: 'test3',
 			sectionId: 77,
 			lang: null,
 		};
@@ -251,7 +253,7 @@ describe('full ingest: upload → add_file → regenerate', () => {
 		expect(qualities.has('1.5MB')).toBe(true);
 		expect(qualities.has('thumb')).toBe(true);
 		// original tier holds the raw upload
-		expect(existsSync(`${ROOT}/image/original/rsc29_rsc170_77.jpg`)).toBe(true);
+		expect(existsSync(`${ROOT}/image/original/test99_test3_77.jpg`)).toBe(true);
 	});
 
 	test.if(HAVE_MAGICK)('parseUploadRequest reads a real multipart Request', async () => {

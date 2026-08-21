@@ -8,11 +8,10 @@
  * Uses a disposable triple; cleans the lock table and restores the legacy
  * registry afterwards.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -22,7 +21,7 @@ import {
 	updateLockComponentsState,
 } from '../../src/core/section/locks.ts';
 
-const TRIPLE = { section_id: '999901', section_tipo: 'test2', component_tipo: 'numisdata16' };
+const TRIPLE = { section_id: '999901', section_tipo: 'test2', component_tipo: 'testmint1002' };
 // SCRATCH user ids, deliberately NOT root (-1): forceUnlockAllComponents
 // releases every lock its user holds ACROSS records, and root legitimately
 // holds live locks on a dev box (the :3500 client session, concurrent suite
@@ -75,7 +74,7 @@ describe('component edit-locks (TS-native model)', () => {
 		// USER_A moves to a second component of the same record…
 		const second = await updateLockComponentsState({
 			...TRIPLE,
-			component_tipo: 'numisdata17',
+			component_tipo: 'testmint1003',
 			action: 'focus',
 			...USER_A,
 		});
@@ -162,7 +161,7 @@ describe('component edit-locks (TS-native model)', () => {
 		});
 		await updateLockComponentsState({
 			...TRIPLE,
-			component_tipo: 'numisdata18',
+			component_tipo: 'testmint1004',
 			action: 'focus',
 			...USER_B,
 		});
@@ -175,7 +174,7 @@ describe('component edit-locks (TS-native model)', () => {
 		// …but USER_B's lock survives.
 		const bStatus = await getLockStatus({
 			...TRIPLE,
-			component_tipo: 'numisdata18',
+			component_tipo: 'testmint1004',
 			user_id: USER_A.user_id,
 		});
 		expect(bStatus.in_use).toBe(true);

@@ -36,11 +36,8 @@
  * on the same column, and every ordinary section — keeps containment, which is
  * what the restored GIN serves (WC-056 flips that index back to `keep`).
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the ordinary-section control is the
+// `test3` playground alias — this gate only builds SQL fragments, it reads no records.
 
 import { describe, expect, test } from 'bun:test';
 import { buildRelationFragment } from '../../src/core/search/builders/builder_relation.ts';
@@ -119,7 +116,7 @@ describe('the rewrite is scoped — everything else keeps containment', () => {
 
 	test('dd543 in an ORDINARY section (different table) still uses @>', () => {
 		const sentence = sentenceOf(
-			buildRelationFragment(WHO_LOCATOR, '', whoCtx({ table: 'matrix', alias: 'oh1' })),
+			buildRelationFragment(WHO_LOCATOR, '', whoCtx({ table: 'matrix', alias: 'test3' })),
 		);
 		expect(sentence).toContain('@>');
 	});

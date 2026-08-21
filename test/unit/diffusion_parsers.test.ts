@@ -14,11 +14,11 @@
  *    not null — verified by running the oracle suite); the cases here pin
  *    the current oracle CODE behavior.
  */
-// BINDS INSTALL TLDs: dc, numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19. This suite is PURE — the atoms
+// are hand-built ValueIRs and no tipo is ever resolved — so the tipos are only
+// labels: the install names became their `test`-TLD twins
+// (src/core/test_data/test_tld_tipo_map.json) or, where the source had no twin,
+// generic test-TLD names.
 
 import { describe, expect, test } from 'bun:test';
 import { cleanupFormatting, replace } from '../../src/diffusion/parsers/parser_helper.ts';
@@ -530,7 +530,7 @@ describe('parser_helper::get_first', () => {
 
 	test('unwraps a diffusion_data_object wrapper to its scalar value', () => {
 		const out = run('parser_helper::get_first', [
-			json({ errors: [], tipo: 'rsc123', value: 7, id: 'norder' }),
+			json({ errors: [], tipo: 'test6123', value: 7, id: 'norder' }),
 		]);
 		expect(strip(out)).toEqual([{ kind: 'scalar', value: 7, lang: null }]);
 	});
@@ -564,7 +564,7 @@ describe('parser_helper::count', () => {
 
 	test('a bare locator item (null value, section provenance) counts 1', () => {
 		const out = run('parser_helper::count', [
-			scalar(null, null, { sectionId: '9', sectionTipo: 'rsc197' }),
+			scalar(null, null, { sectionId: '9', sectionTipo: 'test6097' }),
 		]);
 		expect(strip(out)).toEqual([{ kind: 'scalar', value: 1, lang: null }]);
 	});
@@ -680,8 +680,8 @@ describe('parser_helper::merge (standalone, no columns)', () => {
 describe('parser_locator::get_section_id', () => {
 	test('projects each chain to its section_id list', () => {
 		const out = run('parser_locator::get_section_id', [
-			chain([link('numisdata3', '2062')]),
-			chain([link('numisdata3', '2063')]),
+			chain([link('test6103', '2062')]),
+			chain([link('test6103', '2063')]),
 		]);
 		expect(strip(out)).toEqual([
 			{ kind: 'json', value: ['2062'], lang: null },
@@ -706,16 +706,16 @@ describe('parser_locator::get_section_id', () => {
 describe('parser_locator::get_section_tipo', () => {
 	test('projects each chain to its section_tipo list', () => {
 		const out = run('parser_locator::get_section_tipo', [
-			chain([link('dc1', '42'), link('ts1', '7')]),
+			chain([link('test1026', '42'), link('ts1', '7')]),
 		]);
-		expect(strip(out)).toEqual([{ kind: 'json', value: ['dc1', 'ts1'], lang: null }]);
+		expect(strip(out)).toEqual([{ kind: 'json', value: ['test1026', 'ts1'], lang: null }]);
 	});
 });
 
 describe('parser_locator::get_term_id', () => {
 	test('builds "{section_tipo}_{section_id}" per link', () => {
-		const out = run('parser_locator::get_term_id', [chain([link('oh1', '25')])]);
-		expect(strip(out)).toEqual([{ kind: 'json', value: ['oh1_25'], lang: null }]);
+		const out = run('parser_locator::get_term_id', [chain([link('test6813', '25')])]);
+		expect(strip(out)).toEqual([{ kind: 'json', value: ['test6813_25'], lang: null }]);
 	});
 
 	test('coerce_non_locator maps non-locator values to the "_" marker (v6)', () => {
@@ -738,9 +738,9 @@ describe('parser_locator::get_term_id', () => {
 describe('parser_locator::get_section_id_grouped', () => {
 	test('groups by dataframe-id resets and emits JSON arrays joined by separator', () => {
 		const out = run('parser_locator::get_section_id_grouped', [
-			chain([link('numisdata4', '99927')], { sourceId: 1 }),
-			chain([link('numisdata4', '128187')], { sourceId: 1 }), // id reset → new group
-			chain([link('numisdata4', '133934')], { sourceId: 2 }),
+			chain([link('test6100', '99927')], { sourceId: 1 }),
+			chain([link('test6100', '128187')], { sourceId: 1 }), // id reset → new group
+			chain([link('test6100', '133934')], { sourceId: 2 }),
 		]);
 		expect(strip(out)).toEqual([
 			{ kind: 'scalar', value: '["99927"] | ["128187","133934"]', lang: null },
@@ -921,20 +921,20 @@ describe('parser_map::custom', () => {
 				scalar('bbb', null, {
 					sourceId: 'a',
 					sectionId: '1',
-					sectionTipo: 'rsc205',
-					tipo: 'rsc140',
+					sectionTipo: 'test6099',
+					tipo: 'test6140',
 				}),
 				scalar('jo jo', null, {
 					sourceId: 'b',
 					sectionId: '1',
-					sectionTipo: 'rsc205',
-					tipo: 'rsc86',
+					sectionTipo: 'test6099',
+					tipo: 'test6086',
 				}),
 				scalar('la 11', null, {
 					sourceId: 'c',
 					sectionId: '1',
-					sectionTipo: 'rsc205',
-					tipo: 'rsc85',
+					sectionTipo: 'test6099',
+					tipo: 'test6085',
 				}),
 			],
 			{ map: template },
@@ -944,7 +944,7 @@ describe('parser_map::custom', () => {
 				kind: 'json',
 				value: [
 					{
-						section_tipo: 'rsc205',
+						section_tipo: 'test6099',
 						section_id: '1',
 						table: 'publications',
 						title: 'bbb',
@@ -960,11 +960,11 @@ describe('parser_map::custom', () => {
 		const out = run(
 			'parser_map::custom',
 			[
-				scalar('T', null, { sourceId: 'a', sectionId: '1', sectionTipo: 'rsc205' }),
-				scalar('Gomez', null, { sourceId: 'b', sectionId: '1', sectionTipo: 'rsc205' }),
-				scalar('Ugolini', null, { sourceId: 'b', sectionId: '1', sectionTipo: 'rsc205' }),
-				scalar('Élian', null, { sourceId: 'c', sectionId: '1', sectionTipo: 'rsc205' }),
-				scalar('Daniela', null, { sourceId: 'c', sectionId: '1', sectionTipo: 'rsc205' }),
+				scalar('T', null, { sourceId: 'a', sectionId: '1', sectionTipo: 'test6099' }),
+				scalar('Gomez', null, { sourceId: 'b', sectionId: '1', sectionTipo: 'test6099' }),
+				scalar('Ugolini', null, { sourceId: 'b', sectionId: '1', sectionTipo: 'test6099' }),
+				scalar('Élian', null, { sourceId: 'c', sectionId: '1', sectionTipo: 'test6099' }),
+				scalar('Daniela', null, { sourceId: 'c', sectionId: '1', sectionTipo: 'test6099' }),
 			],
 			{ map: template },
 		);
@@ -974,7 +974,7 @@ describe('parser_map::custom', () => {
 	test('a field whose placeholders all resolve empty emits null (v6)', () => {
 		const out = run(
 			'parser_map::custom',
-			[scalar('T', null, { sourceId: 'a', sectionId: '1', sectionTipo: 'rsc205' })],
+			[scalar('T', null, { sourceId: 'a', sectionId: '1', sectionTipo: 'test6099' })],
 			{ map: template },
 		);
 		const row = firstRow(out);
@@ -989,7 +989,7 @@ describe('parser_map::custom', () => {
 				scalar(' <em>Las guerras</em> ', null, {
 					sourceId: 'a',
 					sectionId: '1',
-					sectionTipo: 'rsc205',
+					sectionTipo: 'test6099',
 				}),
 			],
 			{ map: template },

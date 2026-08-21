@@ -5,18 +5,23 @@
  * A scripted provider stands in for the vision model: it plays the trajectory
  * a real agent would (discover → propose a find-or-create + set-field plan),
  * so the assertion is the HARNESS, not the model. The plan is then confirmed
- * and applied on the SCRATCH section (test2 → matrix_test), and we read the
+ * and applied on the SCRATCH section (test183 → matrix_test), and we read the
  * data back through the same registry read tool an external client would use.
  *
  * This is the always-on twin; a live vision run against the real Anthropic
  * provider is gated behind an API key and is exercised manually (rewrite/ai/mcp.md
  * Inspector/smoke section).
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the
+// scratch section moves to `test183`, whose OWN component_input_text
+// (`test187`) replaces the install text component the plan used to name — the
+// pair is coherent (a component of its own section) and exists on every
+// install. Two constraints picked it: NOT `test3`, which carries a
+// component_external (`test215`, zenon) that turns an edit read into an
+// OUTBOUND request; and `test187` is is_translatable, so the find-or-create
+// round trip keeps the lg-eng the match asks for (a non-translatable component
+// normalizes to lg-nolan and the idempotency probe would never re-find it).
+// Still matrix_test, still swept in afterAll.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import {
@@ -37,9 +42,9 @@ import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
-const SECTION = 'test2';
+const SECTION = 'test183';
 const TABLE = 'matrix_test';
-const NAME_FIELD = 'numisdata16'; // stands in for a "name" text component
+const NAME_FIELD = 'test187'; // stands in for a "name" text component
 
 const createdIds: number[] = [];
 
@@ -142,7 +147,7 @@ describe('image → people → ontology (offline E2E)', () => {
 			SELECT count(*)::int AS n FROM matrix_test
 			WHERE section_tipo = ${SECTION}
 			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(string->'numisdata16') e
+				SELECT 1 FROM jsonb_array_elements(string->'test187') e
 				WHERE e->>'value' = ${PERSON_NAME}
 			)
 		`) as { n: number }[];
@@ -209,7 +214,7 @@ describe('image → people → ontology (offline E2E)', () => {
 			SELECT count(*)::int AS n FROM matrix_test
 			WHERE section_tipo = ${SECTION}
 			  AND EXISTS (
-				SELECT 1 FROM jsonb_array_elements(string->'numisdata16') e
+				SELECT 1 FROM jsonb_array_elements(string->'test187') e
 				WHERE e->>'value' = ${PERSON_NAME}
 			)
 		`) as { n: number }[];

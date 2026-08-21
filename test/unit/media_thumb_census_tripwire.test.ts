@@ -22,14 +22,14 @@
  *  4. ONE HANDLER — every trigger goes through thumb.ts rather than resolving a
  *     thumb source for itself.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import {
@@ -46,6 +46,7 @@ import {
 	mediaThumbLocation,
 	posterframeLocation,
 } from '../../src/core/media/path.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const REPO_ROOT = join(import.meta.dir, '../..');
 const MODELS: MediaModel[] = [
@@ -113,21 +114,28 @@ describe('the census is total and self-consistent', () => {
 
 describe('one grammar: the posterframe path has a single producer', () => {
 	const identity = {
-		componentTipo: 'rsc439',
-		sectionTipo: 'rsc170',
+		componentTipo: 'test94',
+		sectionTipo: 'test3',
 		sectionId: 1234,
 		lang: null,
 	};
+	/**
+	 * PATH MATH ONLY — nothing is written here. It is still a DECLARED root
+	 * (`.dedalo_test_media`), because the one root resolver every builder shares
+	 * refuses an undeclared one under the test-media seam, and a gate that asked
+	 * for an exemption from that would be asking for the hole back.
+	 */
+	const CENSUS_ROOT = markMediaRoot(join(tmpdir(), 'dedalo_thumb_census_root'));
 	/** The shapes that used to disagree — the override is the one a copy ignored. */
 	const OPTION_SHAPES: MediaPathOptions[] = [
-		{ initialMediaPath: '', maxItemsFolder: null, mediaRoot: '/tmp/dd_census' },
-		{ initialMediaPath: '', maxItemsFolder: 1000, mediaRoot: '/tmp/dd_census' },
-		{ initialMediaPath: '/sub', maxItemsFolder: 1000, mediaRoot: '/tmp/dd_census' },
+		{ initialMediaPath: '', maxItemsFolder: null, mediaRoot: CENSUS_ROOT },
+		{ initialMediaPath: '', maxItemsFolder: 1000, mediaRoot: CENSUS_ROOT },
+		{ initialMediaPath: '/sub', maxItemsFolder: 1000, mediaRoot: CENSUS_ROOT },
 		{
 			initialMediaPath: '/sub',
 			maxItemsFolder: 1000,
 			additionalPathOverride: '/custom',
-			mediaRoot: '/tmp/dd_census',
+			mediaRoot: CENSUS_ROOT,
 		},
 	];
 

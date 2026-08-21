@@ -19,28 +19,78 @@
  *   C. the caller-fault refusals (`request.invalid_data`) throw the typed
  *      code and write nothing.
  *
- * Scratch pattern: test/unit/save_roundtrip.test.ts (numisdata6/1 cloned into
- * matrix_test under 'test2'; the ontology of numisdata16 = input_text →
- * string column drives the save). Cleaned before and after.
+ * Scratch pattern: the situation this file BUILDS — one section on matrix_test
+ * and one translatable component_input_text (→ `string` column), whose ontology
+ * drives the save. Cleaned before and after.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The twin
+// used to be a CLONE of the ambient install record `numisdata6/1` read straight out
+// of `matrix`, driven through the install component `numisdata16`; both are now
+// authored here (`zzfail`), and the seeded row carries an explicit non-null `meta`
+// counter so case A's "the allocation was rolled back" assertion compares a real
+// stored value instead of null against null.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { type DedaloError, isDedaloError } from '../../src/core/errors/dedalo_error.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
+/**
+ * Where the section's records live. STATED here and PROVEN in beforeAll
+ * against `getMatrixTableFromTipo` — the test24 relation is what puts them in
+ * `matrix_test`, and a gate that only assumed it would write to `matrix`.
+ */
 const TABLE = 'matrix_test';
-const SECTION_TIPO = 'test2';
+const SECTION_TIPO = 'zzfail1';
 const EXISTING_ID = 900011;
 const UNBORN_ID = 900012;
-const COMPONENT = 'numisdata16';
+/** component_input_text, translatable → 'string' column. */
+const COMPONENT = 'zzfail2';
+/**
+ * An anchor record: dropSituation scopes its sweep to the sections the
+ * situation declares records for, so the section needs one to be torn down whole.
+ */
+const ANCHOR_ID = 900010;
+
+const SITUATION = situation({
+	tld: 'zzfail',
+	name: 'save_component_failure',
+	nodes: [
+		{
+			tipo: SECTION_TIPO,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Fallo al guardar', 'lg-eng': 'Save failure' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: COMPONENT,
+			parent: SECTION_TIPO,
+			model: 'component_input_text',
+			is_translatable: true,
+			term: { 'lg-spa': 'Texto', 'lg-eng': 'Text' },
+		},
+	],
+	records: [{ section_tipo: SECTION_TIPO, section_id: ANCHOR_ID }],
+});
+
+/**
+ * The seeded twin: items in two languages AND a non-null `meta` counter, so
+ * the meta UPDATE case A rolls back has a real value to be compared against
+ * (a null-vs-null comparison would pass without the rollback happening).
+ */
+const SEED_COLUMNS = {
+	string: { [COMPONENT]: [{ id: 3, lang: 'lg-spa', value: 'sembrado' }] },
+	meta: { [COMPONENT]: [{ count: 3 }] },
+};
 
 async function refusalOf(run: Promise<unknown>): Promise<DedaloError> {
 	try {
@@ -62,14 +112,16 @@ async function tmRowCount(sectionId: number): Promise<number> {
 
 describe('save_component failure propagation (write paths never absorb integrity errors)', () => {
 	beforeAll(async () => {
-		await cleanScratchRecord(SECTION_TIPO, EXISTING_ID);
-		await cleanScratchRecord(SECTION_TIPO, UNBORN_ID);
-		const source = await readMatrixRecord('matrix', 'numisdata6', 1);
-		await createScratchRecord(SECTION_TIPO, EXISTING_ID, source?.rawText ?? {}, { rawText: true });
+		await ensureSituation(SITUATION);
+		expect(await getMatrixTableFromTipo(SECTION_TIPO)).toBe(TABLE);
+		await cleanScratchRecord(SECTION_TIPO, EXISTING_ID, TABLE);
+		await cleanScratchRecord(SECTION_TIPO, UNBORN_ID, TABLE);
+		await createScratchRecord(SECTION_TIPO, EXISTING_ID, SEED_COLUMNS, { table: TABLE });
 	});
 	afterAll(async () => {
-		await cleanScratchRecord(SECTION_TIPO, EXISTING_ID);
-		await cleanScratchRecord(SECTION_TIPO, UNBORN_ID);
+		await cleanScratchRecord(SECTION_TIPO, EXISTING_ID, TABLE);
+		await cleanScratchRecord(SECTION_TIPO, UNBORN_ID, TABLE);
+		expect(await dropSituation(SITUATION)).toBe(0);
 	});
 
 	test('A. allocation landed, then the json_codec guard fired: DedaloError out, counter + column + TM unchanged', async () => {

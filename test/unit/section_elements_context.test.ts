@@ -7,11 +7,10 @@
  * per-element deep-diff vs the PHP oracle is a separate differential (needs the
  * PHP server up); this locks the shape + registration + auth.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { buildSectionElementsContext } from '../../src/core/resolve/section_elements_context.ts';
@@ -20,7 +19,7 @@ import { createSession, getSession } from '../../src/core/security/session_store
 import { handleRequest } from '../../src/server.ts';
 
 const context = { requestId: 'sec-elem-ctx', startedAt: 0 };
-const SECTION = 'numisdata4';
+const SECTION = 'test6100';
 
 function apiRequest(body: unknown, cookie?: string, csrf?: string): Request {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };

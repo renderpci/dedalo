@@ -1,6 +1,6 @@
 /**
- * Diffusion unpublish — target resolution (read-only vs the REAL diffusion
- * ontology) + the native executor contract: since the 2026-07-11 cutover
+ * Diffusion unpublish — target resolution (against the SCRATCH `zzd` diffusion
+ * ontology, test/helpers/zzd_diffusion_fixture.ts) + the native executor contract: since the 2026-07-11 cutover
  * (DIFFUSION_PLAN P5 step 3) deleteDiffusionRecord routes sql targets ONLY
  * through the registered in-process executor (registerNativeDiffusionSqlDelete)
  * — a stubbed executor here asserts the exact engine-wire target shape
@@ -8,13 +8,11 @@
  * no-executor pending posture, and the dd1758 retry queue (retryPendingDiffusion
  * flips pending rows in place once the executor confirms — DIFFU-08).
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the elements are PROVISIONED by
+// the `zzd` situation instead of read off whatever install the database holds, so
+// every branch (sql targets, pending, file unlink) is reachable on any machine.
 
-import { afterAll, afterEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import {
@@ -25,6 +23,23 @@ import {
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
+import {
+	countZzdOntology,
+	dropZzdOntology,
+	FILE_SECTION,
+	SQL_KEY_ONE,
+	SQL_KEY_TWO,
+	SQL_SECTION,
+	seedZzdOntology,
+} from '../helpers/zzd_diffusion_fixture.ts';
+
+/** A section the fixture gives NO diffusion element — the negative control. */
+const NO_DIFFUSION_SECTION = 'test65';
+
+beforeAll(async () => {
+	const { preCount } = await seedZzdOntology();
+	expect(preCount).toBe(0);
+});
 
 // The executor seam is module-level process state shared across test files —
 // never leave a stub behind (diffusion_native_delete.test.ts hygiene).
@@ -42,21 +57,22 @@ afterAll(async () => {
 			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb`,
-			[JSON.stringify([{ section_id: probeId, section_tipo: 'numisdata6' }])],
+			[JSON.stringify([{ section_id: Number(probeId), section_tipo: SQL_SECTION }])],
 		);
 	}
+	await dropZzdOntology();
+	expect(await countZzdOntology()).toBe(0);
 });
 
 describe('diffusion unpublish', () => {
-	test('numisdata6 resolves its REAL publish targets (mints tables)', async () => {
-		const targets = await getSectionDiffusionTargets('numisdata6');
+	test('the fixture section resolves its two sql publish targets', async () => {
+		const targets = await getSectionDiffusionTargets(SQL_SECTION);
 		const sqlTargets = targets.filter((t) => t.type === 'sql');
-		expect(sqlTargets.map((t) => `${t.database_name}|${t.table_name}`).sort()).toEqual([
-			'web_numisdata_mib_pre|mints',
-			'web_numisdata_mib|mints',
-		]);
-		// test bench has NO diffusion.
-		expect(await getSectionDiffusionTargets('test3')).toEqual([]);
+		expect(sqlTargets.map((t) => `${t.database_name}|${t.table_name}`).sort()).toEqual(
+			[SQL_KEY_ONE, SQL_KEY_TWO].sort(),
+		);
+		// a section no element publishes has NO diffusion.
+		expect(await getSectionDiffusionTargets(NO_DIFFUSION_SECTION)).toEqual([]);
 	});
 
 	test('the native executor receives the engine-wire shape and confirms deletions', async () => {
@@ -69,27 +85,35 @@ describe('diffusion unpublish', () => {
 			};
 		});
 
-		const outcome = await deleteDiffusionRecord('numisdata6', 999999);
+		const outcome = await deleteDiffusionRecord(SQL_SECTION, 999999);
 		expect(received.length).toBe(1);
-		const targets = received[0] ?? [];
+		const targets = [...(received[0] ?? [])].sort((a, b) =>
+			a.database_name < b.database_name ? -1 : 1,
+		);
 		expect(targets.length).toBe(2);
-		expect(targets[0]).toEqual({
-			database_name: 'web_numisdata_mib',
-			table_name: 'mints',
-			section_ids: [999999],
-			section_tipo: 'numisdata6',
-		});
-		expect(outcome.deleted.sort()).toEqual([
-			'web_numisdata_mib_pre|mints',
-			'web_numisdata_mib|mints',
+		// BOTH targets pinned in full — the exact engine-wire shape.
+		expect(targets).toEqual([
+			{
+				database_name: SQL_KEY_ONE.split('|')[0] as string,
+				table_name: SQL_KEY_ONE.split('|')[1] as string,
+				section_ids: [999999],
+				section_tipo: SQL_SECTION,
+			},
+			{
+				database_name: SQL_KEY_TWO.split('|')[0] as string,
+				table_name: SQL_KEY_TWO.split('|')[1] as string,
+				section_ids: [999999],
+				section_tipo: SQL_SECTION,
+			},
 		]);
+		expect(outcome.deleted.sort()).toEqual([SQL_KEY_ONE, SQL_KEY_TWO].sort());
 		expect(outcome.pending).toEqual([]);
 	});
 
 	test('no executor registered → sql targets become pending, never throws (DEC-19)', async () => {
 		resetNativeDiffusionSqlDeleteForTests();
 		// synthetic record id — its dd1758 rows are reclaimed in afterAll
-		const outcome = await deleteDiffusionRecord('numisdata6', 999998);
+		const outcome = await deleteDiffusionRecord(SQL_SECTION, 999998);
 		expect(outcome.deleted).toEqual([]);
 		expect(outcome.pending.length).toBeGreaterThan(0);
 	});
@@ -117,7 +141,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 		const { deleteDiffusionRecord, retryPendingDiffusion } = await import(
 			'../../src/core/diffusion_bridge/diffusion_delete.ts'
 		);
-		const PROBE_ID = 987654; // synthetic record id — never a real numisdata6 id
+		const PROBE_ID = 987654; // synthetic record id — never a real record id
 
 		// purge PENDING leftovers previously interrupted runs may have stranded
 		// ANYWHERE in the scratch table (this is the per-run test twin — the
@@ -127,12 +151,12 @@ describe('diffusion pending retry queue (dd1758)', () => {
 		await sql.unsafe(
 			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758'
-			   AND relation->'dd1767' @> '[{"section_id":"3","section_tipo":"dd1774"}]'`,
+			   AND relation->'dd1767' @> '[{"diffusion_action":3,"section_tipo":"dd1774"}]'`,
 		);
 		await sql.unsafe(
 			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758' AND relation->'dd1763' @> $1::text::jsonb`,
-			[JSON.stringify([{ section_id: String(PROBE_ID), section_tipo: 'numisdata6' }])],
+			[JSON.stringify([{ section_id: PROBE_ID, section_tipo: SQL_SECTION }])],
 		);
 
 		// Phase 1: executor that confirms NOTHING → every element goes pending.
@@ -140,7 +164,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 			deleted: [],
 			errors: ['stub outage'],
 		}));
-		const first = await deleteDiffusionRecord('numisdata6', PROBE_ID);
+		const first = await deleteDiffusionRecord(SQL_SECTION, PROBE_ID);
 		expect(first.deleted).toEqual([]);
 		expect(first.pending.length).toBeGreaterThan(0);
 
@@ -150,15 +174,15 @@ describe('diffusion pending retry queue (dd1758)', () => {
 			        number->'dd1764'->0->'value' AS record_id
 			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758'
-			   AND relation->'dd1767' @> '[{"section_id":"3","section_tipo":"dd1774"}]'
-			   AND relation->'dd1763' @> '[{"section_id":"987654","section_tipo":"numisdata6"}]'
+			   AND relation->'dd1767' @> '[{"diffusion_action":3,"section_tipo":"dd1774"}]'
+			   AND relation->'dd1763' @> '[{"section_id":987654,"section_tipo":"test3"}]'
 			 ORDER BY section_id`,
 		)) as Record<string, unknown>[];
-		expect(pendingRows.length).toBe(2); // one per sql element (mib + mib_pre)
+		expect(pendingRows.length).toBe(2); // one per sql element (zzd1 + zzd4)
 		for (const row of pendingRows) {
 			rowIds.push(Number(row.section_id));
-			expect(row.element_section).toBe('numisdata0'); // ontology-node locator
-			expect(row.where_tipo).toBe('numisdata6');
+			expect(row.element_section).toBe('zzd0'); // ontology-node locator
+			expect(row.where_tipo).toBe(SQL_SECTION);
 			expect(Number(row.record_id)).toBe(PROBE_ID);
 		}
 
@@ -171,7 +195,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 		expect(retry.retried).toBeGreaterThanOrEqual(2);
 
 		const flipped = (await sql.unsafe(
-			`SELECT relation->'dd1767'->0->>'section_id' AS action
+			`SELECT relation->'dd1767'->0->>'diffusion_action' AS action
 			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 			 WHERE section_tipo = 'dd1758' AND section_id = ANY($1::int[])`,
 			[`{${rowIds.join(',')}}`],
@@ -184,7 +208,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 // service_name + the section's owl:Class term
 // ('nmo:TypeSeriesItem' → 'nmo-typeseriesitem-…​.rdf' after sanitize);
 // legacy '{base}_*.rdf' variants unlink too; a missing service_name (the
-// LIVE numisdata325 config) is unresolvable → pending.
+// fixture's zzd7 rdf element) is unresolvable → pending.
 describe('diffusion published-file unlinks', () => {
 	const FILE_ROOT = `${tmpdir()}/dedalo_ts_diffusion_files_${process.pid}`;
 
@@ -192,17 +216,13 @@ describe('diffusion published-file unlinks', () => {
 		rmSync(FILE_ROOT, { recursive: true, force: true });
 	});
 
-	test('live rdf element without service_name resolves to pending', async () => {
+	test('rdf element without service_name resolves to pending', async () => {
 		const { resolvePublishedFilePath, unlinkPublishedFiles } = await import(
 			'../../src/core/diffusion_bridge/diffusion_delete.ts'
 		);
-		// numisdata325 (the real rdf element) declares NO service_name.
-		expect(await resolvePublishedFilePath('numisdata325', 'rdf', 'numisdata3', 1, FILE_ROOT)).toBe(
-			null,
-		);
-		expect(await unlinkPublishedFiles('numisdata325', 'rdf', 'numisdata3', 1, FILE_ROOT)).toBe(
-			false,
-		);
+		// zzd7 (the fixture's rdf element) declares NO service_name.
+		expect(await resolvePublishedFilePath('zzd7', 'rdf', FILE_SECTION, 1, FILE_ROOT)).toBe(null);
+		expect(await unlinkPublishedFiles('zzd7', 'rdf', FILE_SECTION, 1, FILE_ROOT)).toBe(false);
 	});
 
 	test('sanitize + unlink flow (canonical + legacy variants, idempotent)', async () => {
@@ -212,8 +232,8 @@ describe('diffusion published-file unlinks', () => {
 		const { sql } = await import('../../src/core/db/postgres.ts');
 		const { mkdirSync, writeFileSync, existsSync } = await import('node:fs');
 
-		expect(sanitizePublishedFileName('nmo:TypeSeriesItem_numisdata3_15657')).toBe(
-			'nmotypeseriesitem-numisdata3-15657',
+		expect(sanitizePublishedFileName('nmo:TypeSeriesItem_test6099_15657')).toBe(
+			'nmotypeseriesitem-test6099-15657',
 		);
 
 		// Provision a synthetic rdf element WITH a service_name + owl:Class.

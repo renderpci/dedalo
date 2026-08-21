@@ -1,5 +1,5 @@
 /**
- * PERMISSIONS parity gates — the five `oh1` beta-audit findings in §5.4 / §7 of
+ * PERMISSIONS parity gates — the five beta-audit findings in §5.4 / §7 of
  * `audits/2026-08_oh1_beta/REPORT.md`. Each rule is asserted from BOTH sides:
  * the AUTHORISED principal gets through AND the unauthorised one does not, so a
  * regression in either direction (a re-opened hole OR a re-introduced
@@ -41,11 +41,11 @@
  * deleted in afterAll together with their time-machine rows. Nothing
  * pre-existing is mutated.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (and renamed off `oh1`, which
+// was never the subject): the two ontology tipos the fixtures grant are the
+// `test`-TLD clones of the audited install's section (`test6813`) and its
+// section_tool area (`test6877`, tool_transcription) — the mechanism under test
+// is the permission rule, not either install.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -80,12 +80,14 @@ const USERS_SECTION_TIPO = 'dd128';
 const PROFILES_TABLE = 'matrix_profiles';
 const PROFILES_SECTION_TIPO = 'dd234';
 const PROJECTS_SECTION_TIPO = config.features.filterSectionTipo;
-/** The oh1 section_tool area whose tool (tool_transcription) is NOT always_active. */
-const SECTION_TOOL_AREA = 'oh81';
+/** The section_tool area whose tool (tool_transcription) is NOT always_active. */
+const SECTION_TOOL_AREA = 'test6877';
 const SECTION_TOOL_NAME = 'tool_transcription';
+/** An ordinary section the scratch profile grants — any real section will do. */
+const GRANTED_SECTION = 'test6813';
 
 /** Unique per run so a crashed previous run can never collide. */
-const RUN_TAG = `oh1perm_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
+const RUN_TAG = `permaudit_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
 const ADMIN_PASSWORD = 'scratch_admin_password_42';
 
 /**
@@ -223,12 +225,12 @@ const PROJECT_ONE = 990001;
 const PROJECT_TWO = 990002;
 
 beforeAll(async () => {
-	// A profile whose dd774 grants ONLY the oh1 section and the oh81 section_tool
+	// A profile whose dd774 grants ONLY the GRANTED_SECTION and the section_tool
 	// area (self-keyed), and whose dd1067 grants NO tools.
 	profileId = await insertMatrixRecordWithCounter(PROFILES_TABLE, PROFILES_SECTION_TIPO, {
 		misc: {
 			dd774: [
-				{ id: 1, tipo: 'oh1', section_tipo: 'oh1', value: 2 },
+				{ id: 1, tipo: GRANTED_SECTION, section_tipo: GRANTED_SECTION, value: 2 },
 				{ id: 2, tipo: SECTION_TOOL_AREA, section_tipo: SECTION_TOOL_AREA, value: 2 },
 			],
 		},

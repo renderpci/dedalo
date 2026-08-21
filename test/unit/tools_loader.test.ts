@@ -4,11 +4,9 @@
  * (tool_export, tool_time_machine) and exercise the validator directly for the
  * failure modes (bad export, name mismatch, lifecycle hook in apiActions).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the isAvailable probe only needs an
+// opaque section tipo, so it names `test3` (the generic test section) instead of an
+// install's.
 
 import { describe, expect, test } from 'bun:test';
 import { getLoadedTool, loadToolModules } from '../../src/core/tools/loader.ts';
@@ -35,8 +33,8 @@ describe('tool loader', () => {
 		expect(
 			isAvailable?.({
 				callerModel: 'component_relation_children',
-				tipo: 'rsc197',
-				sectionTipo: 'rsc197',
+				tipo: 'test3',
+				sectionTipo: 'test3',
 				isComponent: true,
 				mode: 'edit',
 			}),
@@ -44,8 +42,8 @@ describe('tool loader', () => {
 		expect(
 			isAvailable?.({
 				callerModel: 'section',
-				tipo: 'rsc197',
-				sectionTipo: 'rsc197',
+				tipo: 'test3',
+				sectionTipo: 'test3',
 				isComponent: false,
 				mode: 'list',
 			}),

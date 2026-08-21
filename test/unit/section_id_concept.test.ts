@@ -7,11 +7,10 @@
  * old `Number.isNaN` / `startsWith('search_')` sniffs sorted, into the same
  * behavioral buckets (record-read vs verbatim-echo/grant branches).
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
@@ -106,10 +105,10 @@ describe('canonicalizeStoredSectionId (the writer rule)', () => {
 });
 
 describe('classifyWireSectionId — kinds + NaN-era branch parity', () => {
-	// oh1 is a plain matrix section on the test playground; test3 is configured
+	// test6813 is a plain matrix section on the test playground; test3 is configured
 	// as a zenon EXTERNAL section there (properties.api_config) — which gives
 	// this gate a real external tipo to classify against.
-	const TIPO = 'oh1';
+	const TIPO = 'test6813';
 	const EXTERNAL_TIPO = 'test3';
 
 	test("absent: null, undefined and '' (the deliberate record-0 divergence)", async () => {

@@ -30,11 +30,13 @@
  * Scratch discipline: every DB write lands on a record this file creates and
  * deletes, and every media byte lands under a per-pid scratch root.
  */
-// BINDS INSTALL TLDs: libx, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED OFF THE INSTALL TLDs, 2026-08-19. The three ontology surfaces this
+// gate reads (`additional_path`, `target_filename`, `target_duration`) are not in
+// the generic `test` TLD — no `test*` media component declares them — so the gate
+// now BUILDS the situation it asserts against (`ONTOLOGY`, below), which is what
+// the law asks for and is also stronger: the properties are declared HERE, in the
+// gate, instead of being borrowed from whatever one install happened to configure.
+// The remaining `libx264` token is the ffmpeg H.264 encoder, not a tipo.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
@@ -79,7 +81,13 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { handleRequest } from '../../src/server.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_ingest_props_${process.pid}`;
 const USER_ID = -1;
@@ -97,18 +105,100 @@ const image = mediaTypeOf('component_image');
 if (image === null) throw new Error('component_image spec missing');
 
 /**
- * The REAL ontology surfaces this gate reads, chosen because they are the ones
- * the audit names: rsc29 (image on rsc170) declares additional_path=rsc33 and
- * target_filename=rsc398; rsc35 (av on rsc167) declares both companion
- * properties, target_duration=rsc54 among them.
+ * THE SITUATION THIS GATE ASSERTS AGAINST — the three properties, declared here.
+ *
+ * The audit found them on ONE install's ontology (an image component declaring
+ * `additional_path` + `target_filename`, an av component declaring both companion
+ * properties). Binding to that install made the gate green on one machine only,
+ * so the shape is rebuilt instead: two scratch sections on `matrix_test`, an image
+ * component that declares an additional_path sibling and a filename target, and an
+ * av component that declares the filename + duration targets and NO additional_path
+ * (the null branch needs a component that genuinely lacks the property).
+ *
+ * The filename target is deliberately ONE component shared by both media
+ * components — that is the install shape the audit describes, and it is what makes
+ * `resolveMediaCompanionTargets(IMAGE_COMPONENT).filenameTipo` equal the av one.
  */
-const IMAGE_SECTION = 'rsc170';
-const IMAGE_COMPONENT = 'rsc29';
-const IMAGE_ADDITIONAL_PATH_SIBLING = 'rsc33';
-const AV_SECTION = 'rsc167';
-const AV_COMPONENT = 'rsc35';
-const AV_FILENAME_TARGET = 'rsc398';
-const AV_DURATION_TARGET = 'rsc54';
+const IMAGE_SECTION = 'zzmip1';
+const IMAGE_COMPONENT = 'zzmip3';
+const IMAGE_ADDITIONAL_PATH_SIBLING = 'zzmip4';
+const AV_SECTION = 'zzmip10';
+const AV_COMPONENT = 'zzmip12';
+const AV_FILENAME_TARGET = 'zzmip5';
+const AV_DURATION_TARGET = 'zzmip14';
+
+const ONTOLOGY = situation({
+	name: 'ingest companion properties',
+	tld: 'zzmip',
+	nodes: [
+		// --- the image section: additional_path + target_filename ---------------
+		{
+			tipo: IMAGE_SECTION,
+			parent: 'test1',
+			model: 'section',
+			order_number: 90,
+			term: { 'lg-eng': 'Ingest properties — image section' },
+			// matrix_test: the suite's write surface, resolved exactly as the engine does.
+			relations: [{ tipo: 'test24' }],
+		},
+		{ tipo: 'zzmip2', parent: IMAGE_SECTION, model: 'section_group', order_number: 1 },
+		{
+			tipo: IMAGE_COMPONENT,
+			parent: 'zzmip2',
+			model: 'component_image',
+			order_number: 1,
+			properties: {
+				max_items_folder: 1000,
+				additional_path: IMAGE_ADDITIONAL_PATH_SIBLING,
+				target_filename: AV_FILENAME_TARGET,
+			},
+		},
+		{
+			tipo: IMAGE_ADDITIONAL_PATH_SIBLING,
+			parent: 'zzmip2',
+			model: 'component_input_text',
+			order_number: 2,
+			term: { 'lg-eng': 'Bucket folder (additional_path sibling)' },
+		},
+		{
+			tipo: AV_FILENAME_TARGET,
+			parent: 'zzmip2',
+			model: 'component_input_text',
+			order_number: 3,
+			term: { 'lg-eng': 'Original filename' },
+		},
+		// --- the av section: both companions, NO additional_path -----------------
+		{
+			tipo: AV_SECTION,
+			parent: 'test1',
+			model: 'section',
+			order_number: 91,
+			term: { 'lg-eng': 'Ingest properties — av section' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{ tipo: 'zzmip11', parent: AV_SECTION, model: 'section_group', order_number: 1 },
+		{
+			tipo: AV_COMPONENT,
+			parent: 'zzmip11',
+			model: 'component_av',
+			order_number: 1,
+			properties: {
+				target_filename: AV_FILENAME_TARGET,
+				target_duration: AV_DURATION_TARGET,
+			},
+		},
+		{
+			tipo: AV_DURATION_TARGET,
+			parent: 'zzmip11',
+			model: 'component_input_text',
+			order_number: 2,
+			term: { 'lg-eng': 'Duration' },
+		},
+	],
+	// Record 1 of the av section: the "no additional_path property" case resolves
+	// the options of a REAL record, as the original did against the install's row 1.
+	records: [{ section_tipo: AV_SECTION, section_id: 1 }],
+});
 
 /** Records this file creates, torn down (row + TM snapshot) in afterAll. */
 const scratch: { sectionTipo: string; sectionId: number }[] = [];
@@ -227,8 +317,12 @@ function jpegBytes(padding = 32): Uint8Array {
 	]);
 }
 
-beforeAll(() => {
+beforeAll(async () => {
+	await ensureSituation(ONTOLOGY);
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 	mkdirSync(ROOT, { recursive: true });
 });
 
@@ -249,6 +343,9 @@ afterAll(async () => {
 		}
 	}
 	rmSync(ROOT, { recursive: true, force: true });
+	// The situation's own sweep is asserted, not trusted: 0 = no node and no record
+	// of this gate survives it.
+	expect(await dropSituation(ONTOLOGY)).toBe(0);
 	if (failures.length > 0) {
 		throw new Error(`scratch records left behind: ${failures.join(' | ')}`);
 	}
@@ -391,7 +488,7 @@ describe('additional_path: the INGEST writes into the named bucket', () => {
 				`${ROOT}/image/original/${bucket}/${IMAGE_COMPONENT}_${IMAGE_SECTION}_${sectionId}.jpg`,
 			),
 		).toBe(false);
-		// The companion the image component declares (target_filename=rsc398) is
+		// The companion the image component declares (target_filename) is
 		// written by the same ingest, off the property — not per model.
 		expect(await storedValue(IMAGE_SECTION, sectionId, AV_FILENAME_TARGET)).toBe(
 			'Certificado de cesión.jpg',
@@ -440,10 +537,12 @@ describe('additional_path: the section-scoped call sites are a NAMED, shrink-onl
 
 describe('companion targets are read GENERICALLY off the properties', () => {
 	test('the extraction is a property read, not a per-model special case', () => {
-		expect(readCompanionTargets({ target_filename: 'rsc398', target_duration: 'rsc54' })).toEqual({
-			filenameTipo: 'rsc398',
-			durationTipo: 'rsc54',
-		});
+		expect(
+			readCompanionTargets({
+				target_filename: AV_FILENAME_TARGET,
+				target_duration: AV_DURATION_TARGET,
+			}),
+		).toEqual({ filenameTipo: AV_FILENAME_TARGET, durationTipo: AV_DURATION_TARGET });
 		expect(readCompanionTargets({})).toEqual({ filenameTipo: null, durationTipo: null });
 		expect(readCompanionTargets({ target_filename: '', target_duration: 7 })).toEqual({
 			filenameTipo: null,

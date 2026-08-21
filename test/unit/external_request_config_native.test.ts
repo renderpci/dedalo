@@ -21,11 +21,9 @@
  * Scratch surfaces: dd_ontology tipos test99{2,3,4,5}, swept in afterAll and
  * pre-cleaned in beforeAll for crashed runs. No matrix rows are written.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated 2026-08-19 (generic-`test`-TLD sweep): the situation was already BUILT in the
+// generic `test` TLD (the scratch test99x nodes below); the last install reference was a
+// production node named in a test TITLE, now described instead of named.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -345,7 +343,7 @@ describe('api_config publication', () => {
 		}
 	});
 
-	test("a CALLER's own stale api_config copy is inert (the rsc205 case)", async () => {
+	test("a CALLER's own stale api_config copy is inert (the stale-duplicate case)", async () => {
 		const item = (await parsedCaller(CALLER_WITH_STALE_COPY))[0];
 		// The ddo names the external section; that section's copy is the truth.
 		expect(item?.api_config?.entity).toBe('zenon');

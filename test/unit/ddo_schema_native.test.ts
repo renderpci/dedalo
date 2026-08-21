@@ -15,10 +15,10 @@
  * trusting the declaration:
  *
  *   - `hover` was typed `z.string()` while all 12 (dev) / 16 (live) authoring
- *     component_portal nodes — oh17, the oh1 identifying-image portal, among
+ *     component_portal nodes — test6829, the test6813 identifying-image portal, among
  *     them — store the BOOLEAN `true`, and the client tests it with
  *     `el.hover === true` (view_mosaic_edit_portal.js:204).
- *   - `section_id` had no `null` member while 4 ontology ddos (rsc36/oh83
+ *   - `section_id` had no `null` member while 4 ontology ddos (rsc36/test6879
  *     tool_transcription roles, component_text_area) store an explicit null —
  *     the same class of client-null bug already pinned for the SQO in
  *     sqo_client_nulls.test.ts.
@@ -34,11 +34,10 @@
  * and derives each button's own level (trait.request_config_utils.php:424,
  * :467).
  */
-// BINDS INSTALL TLDs: numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). Install tipos were replaced
+// by their twins (src/core/test_data/test_tld_tipo_map.json); the seed-shipped ones
+// (rsc/dd/hierarchy/ontology/lg) ship with every installation and stay, spelled through
+// `seed()` so the census can tell a reference from a binding.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type Ddo, ddoSchema, sanitizeClientDdoMap } from '../../src/core/concepts/ddo.ts';
@@ -57,6 +56,9 @@ import {
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
 import { runWithRequestContext } from '../../src/core/security/request_context.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 /**
  * PHP `sanitize_client_ddo_map` $allowed_fields, verbatim and in PHP order
@@ -142,7 +144,7 @@ let superuser: Principal | null = null;
 
 /*
  * THE AUDIT SCENARIO, as a SCRATCH fixture (nothing pre-existing is mutated).
- * A profile that grants EDIT on the section holding the oh17 portal and only
+ * A profile that grants EDIT on the section holding the test6829 portal and only
  * READ on the portal's TARGET section, plus a user assigned to it — exactly the
  * caller whose "New" / unlink / "Delete resource and all links" affordances the
  * old literal `permissions = 3` fabricated. Everything is deleted in afterAll.
@@ -151,12 +153,12 @@ const PROFILES_TABLE = 'matrix_profiles';
 const PROFILES_SECTION_TIPO = 'dd234';
 const USERS_TABLE = 'matrix_users';
 const USERS_SECTION_TIPO = 'dd128';
-/** The section that OWNS the oh17 portal — the caller edits here. */
-const PORTAL_HOST_SECTION = 'oh1';
-/** oh17's TARGET section — read-only for this caller. */
-const READ_ONLY_TARGET = 'rsc170';
+/** The section that OWNS the test6829 portal — the caller edits here. */
+const PORTAL_HOST_SECTION = 'test6813';
+/** test6829's TARGET section — read-only for this caller. */
+const READ_ONLY_TARGET = seed('rsc', 170);
 /** Granted nowhere in the fixture profile: level 0. */
-const UNGRANTED_SECTION = 'rsc2';
+const UNGRANTED_SECTION = seed('rsc', 2);
 /** Unique per run so a crashed previous run can never collide. */
 const RUN_TAG = `ddoperm_${process.pid}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -258,21 +260,21 @@ describe('ddoSchema: the client-echo whitelist', () => {
 
 	test('unknown ontology-authored keys are stripped, not rejected', () => {
 		const parsed = ddoSchema.safeParse({
-			tipo: 'rsc29',
+			tipo: seed('rsc', 29),
 			info: 'Image (component_image)', // ontology authoring comment
 			role: 'people_section', // tool ddo_map role
 			in_mosaic: true,
 		});
 		expect(parsed.success).toBe(true);
-		expect(parsed.data).toEqual({ tipo: 'rsc29', in_mosaic: true });
+		expect(parsed.data).toEqual({ tipo: seed('rsc', 29), in_mosaic: true });
 	});
 });
 
 describe('ddoSchema accepts the value shapes the ontology stores', () => {
 	test('boolean hover (the ontology + client shape) is accepted', () => {
-		// component_portal oh17 show.ddo_map[0] (rsc20), verbatim.
+		// component_portal test6829 show.ddo_map[0] (rsc20), verbatim.
 		const parsed = ddoSchema.safeParse({
-			tipo: 'rsc20',
+			tipo: seed('rsc', 20),
 			mode: 'edit',
 			view: 'line',
 			hover: true,
@@ -283,13 +285,13 @@ describe('ddoSchema accepts the value shapes the ontology stores', () => {
 		expect((parsed.data as Ddo | undefined)?.hover).toBe(true);
 	});
 
-	test('explicit null section_id (rsc36/oh83 tool roles) is accepted', () => {
+	test('explicit null section_id (the tool-role ddos) is accepted', () => {
 		const parsed = ddoSchema.safeParse({
-			tipo: 'rsc197',
+			tipo: seed('rsc', 197),
 			mode: 'list_thesaurus',
 			view: 'thesaurus_list',
 			section_id: null,
-			section_tipo: 'rsc197',
+			section_tipo: seed('rsc', 197),
 		});
 		expect(parsed.success).toBe(true);
 	});
@@ -298,11 +300,11 @@ describe('ddoSchema accepts the value shapes the ontology stores', () => {
 		const parsed = rqoSchema.safeParse({
 			action: 'read',
 			dd_api: 'dd_core_api',
-			source: { typo: 'source', type: 'section', tipo: 'oh17', section_tipo: 'oh1' },
+			source: { typo: 'source', type: 'section', tipo: 'test6829', section_tipo: 'test6813' },
 			show: {
 				ddo_map: [
-					{ tipo: 'rsc20', mode: 'edit', view: 'line', hover: true, parent: 'self' },
-					{ tipo: 'rsc29', in_mosaic: true, parent: 'self' },
+					{ tipo: seed('rsc', 20), mode: 'edit', view: 'line', hover: true, parent: 'self' },
+					{ tipo: seed('rsc', 29), in_mosaic: true, parent: 'self' },
 				],
 			},
 		});
@@ -311,10 +313,10 @@ describe('ddoSchema accepts the value shapes the ontology stores', () => {
 
 	test('sanitizeClientDdoMap keeps a boolean-hover map instead of failing closed to []', () => {
 		const clean = sanitizeClientDdoMap([
-			{ tipo: 'rsc20', hover: true, parent: 'self' },
-			{ tipo: 'rsc29', in_mosaic: true, parent: 'self' },
+			{ tipo: seed('rsc', 20), hover: true, parent: 'self' },
+			{ tipo: seed('rsc', 29), in_mosaic: true, parent: 'self' },
 		]);
-		expect(clean.map((ddo) => ddo.tipo)).toEqual(['rsc20', 'rsc29']);
+		expect(clean.map((ddo) => ddo.tipo)).toEqual([seed('rsc', 20), seed('rsc', 29)]);
 		expect(clean[0]?.hover).toBe(true);
 	});
 
@@ -326,16 +328,16 @@ describe('ddoSchema accepts the value shapes the ontology stores', () => {
 	 * schema neither dropped nor bounded them.
 	 */
 	test('limit/offset: non-negative integers survive', () => {
-		const parsed = ddoSchema.safeParse({ tipo: 'rsc20', limit: 0, offset: 25 });
+		const parsed = ddoSchema.safeParse({ tipo: seed('rsc', 20), limit: 0, offset: 25 });
 		expect(parsed.success).toBe(true);
-		expect(parsed.data).toEqual({ tipo: 'rsc20', limit: 0, offset: 25 });
+		expect(parsed.data).toEqual({ tipo: seed('rsc', 20), limit: 0, offset: 25 });
 	});
 
 	test('limit/offset: a tampered shape drops the KEY, keeps the ddo', () => {
 		for (const bad of ['10', -5, 1.5, null, true]) {
-			const parsed = ddoSchema.safeParse({ tipo: 'rsc20', limit: bad, offset: bad });
+			const parsed = ddoSchema.safeParse({ tipo: seed('rsc', 20), limit: bad, offset: bad });
 			expect(parsed.success).toBe(true);
-			expect(parsed.data).toEqual({ tipo: 'rsc20' });
+			expect(parsed.data).toEqual({ tipo: seed('rsc', 20) });
 		}
 	});
 });
@@ -346,8 +348,8 @@ describe('CENSUS TRIPWIRE: every wire ddo_map in dd_ontology satisfies ddoSchema
 		expect(hoverDdos.length).toBeGreaterThan(0);
 		const types = new Set(hoverDdos.map((entry) => typeof entry.ddo.hover));
 		expect([...types]).toEqual(['boolean']);
-		// oh17 — the oh1 identifying-image portal named in the audit finding.
-		expect(hoverDdos.some((entry) => entry.owner === 'oh17')).toBe(true);
+		// test6829 — the test6813 identifying-image portal named in the audit finding.
+		expect(hoverDdos.some((entry) => entry.owner === 'test6829')).toBe(true);
 	});
 
 	/**
@@ -374,7 +376,7 @@ describe('CENSUS TRIPWIRE: every wire ddo_map in dd_ontology satisfies ddoSchema
 
 	/**
 	 * THE RESILIENCE GATE. The ontology also authors ddos NO consumer can use —
-	 * a bare `{}` (test188) and tipo-less entries (numisdata1138/1139). PHP keeps
+	 * a bare `{}` (test188) and tipo-less entries (test6533/1139). PHP keeps
 	 * them (they resolve nothing downstream); TS drops them. Neither may take the
 	 * SIBLING ddos — or the whole request — down with them.
 	 */
@@ -384,26 +386,26 @@ describe('CENSUS TRIPWIRE: every wire ddo_map in dd_ontology satisfies ddoSchema
 		expect(unusable.length).toBeGreaterThan(0); // non-vacuity floor
 		const map = [
 			...unusable.map((entry) => phpWhitelist(entry.ddo)),
-			{ tipo: 'rsc20', hover: true },
+			{ tipo: seed('rsc', 20), hover: true },
 		];
 		const clean = sanitizeClientDdoMap(map);
-		expect(clean).toEqual([{ tipo: 'rsc20', hover: true }]);
+		expect(clean).toEqual([{ tipo: seed('rsc', 20), hover: true }]);
 	});
 
 	test('an RQO whose ddo_map holds an unusable entry still parses (no wholesale 400)', () => {
 		const parsed = rqoSchema.safeParse({
 			action: 'read',
-			source: { tipo: 'oh17', section_tipo: 'oh1' },
-			show: { ddo_map: [{}, { section_tipo: 'numisdata3' }, { tipo: 'rsc20', hover: true }] },
+			source: { tipo: 'test6829', section_tipo: 'test6813' },
+			show: { ddo_map: [{}, { section_tipo: 'test6099' }, { tipo: seed('rsc', 20), hover: true }] },
 		});
 		expect(parsed.success).toBe(true);
-		expect(parsed.data?.show?.ddo_map).toEqual([{ tipo: 'rsc20', hover: true }]);
+		expect(parsed.data?.show?.ddo_map).toEqual([{ tipo: seed('rsc', 20), hover: true }]);
 	});
 });
 
 describe('buildSqoSectionTipoDdos stamps the CALLER permissions, not a literal 3', () => {
-	/** oh17's target section (audio-visual resources) — the audit's example. */
-	const TARGET = 'rsc170';
+	/** test6829's target section (audio-visual resources) — the audit's example. */
+	const TARGET = seed('rsc', 170);
 
 	test('no request scope = internal resolution keeps the v0 admin posture (3)', async () => {
 		if (!dbReady) return;
@@ -462,7 +464,7 @@ describe('buildSqoSectionTipoDdos stamps the CALLER permissions, not a literal 3
 		expect(ddo?.buttons.map((button) => button.model).sort()).toEqual([
 			'button_delete',
 			'button_new',
-		]); // non-vacuity floor: oh1 declares oh10/oh11
+		]); // non-vacuity floor: test6813 declares test6822/test6823
 		for (const button of ddo?.buttons ?? []) {
 			const buttonTipo = await buttonTipoOf(PORTAL_HOST_SECTION, button.model);
 			expect(buttonTipo).not.toBe('');

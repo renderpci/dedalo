@@ -3,11 +3,10 @@
  * planCsvImport (column-map matching, section_id resolution, per-cell conform incl.
  * the raw-export round-trip). Pure — no DB; the tool module executes the plan.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -105,7 +104,7 @@ describe('planCsvImport', () => {
 
 	test('resolves section_id, conforms other cells, round-trips wrapped datos', async () => {
 		const wrappedText = JSON.stringify({ dedalo_data: [{ value: 'hi', lang: 'lg-eng', id: 1 }] });
-		const wrappedRel = JSON.stringify({ dedalo_data: [{ section_tipo: 'rsc197', section_id: 9 }] });
+		const wrappedRel = JSON.stringify({ dedalo_data: [{ section_tipo: 'test3', section_id: 9 }] });
 		const plan = await planCsvImport([['7', wrappedText, wrappedRel]], columns, 'test3');
 		expect(plan).toHaveLength(1);
 		expect(plan[0]?.sectionId).toBe(7);
@@ -117,7 +116,7 @@ describe('planCsvImport', () => {
 		// unusable, and PHP's conform completes it the same way.
 		expect(plan[0]?.columns[1]?.conform.result).toEqual([
 			{
-				section_tipo: 'rsc197',
+				section_tipo: 'test3',
 				section_id: 9,
 				type: 'dd151',
 				from_component_tipo: 'test88',

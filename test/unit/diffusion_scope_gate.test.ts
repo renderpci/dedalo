@@ -7,20 +7,25 @@
  * DIFF-02: `retry_pending_deletions` re-drives the GLOBAL pending-unpublish queue
  * and must be admin-only, like its siblings validate / rebuild_media_index.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the gated section is the test-TLD
+// twin, and this gate PROVISIONS its records itself (ensure/dropTestCorpus).
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { diffusionApiActions } from '../../src/core/api/handlers/dd_diffusion_api.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { selectRecordBatches } from '../../src/diffusion/resolve/selection.ts';
 
-const GATED_SECTION = 'numisdata267'; // gated by component_filter numisdata21 (projects)
+const GATED_SECTION = 'test6310'; // gated by component_filter test6107 (projects)
+
+beforeAll(async () => {
+	await ensureTestCorpus([GATED_SECTION]);
+});
+afterAll(async () => {
+	expect(await dropTestCorpus([GATED_SECTION])).toBe(0);
+});
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_PROJECTS: Principal = { userId: 987654321, isGlobalAdmin: false, isDeveloper: false };
 

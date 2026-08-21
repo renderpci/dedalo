@@ -20,11 +20,8 @@
  * Bun version (see record_scope_gates.test.ts) — afterAll re-installs the real
  * modules so later suites are not poisoned.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: every door is mocked, so the sample
+// inputs are opaque tipos — they now name generic `test` nodes.
 
 import { afterAll, describe, expect, mock, test } from 'bun:test';
 import { TOOL_REGISTRY } from '../../src/ai/mcp/registry.ts';
@@ -62,24 +59,24 @@ function sampleInput(toolName: string): Record<string, unknown> {
 	const base = { section_tipo: 'test2', section_id: 999999 };
 	switch (toolName) {
 		case 'dedalo_save_component':
-			return { ...base, tipo: 'numisdata16', action: 'update', value: { value: 'x' } };
+			return { ...base, tipo: 'test52', action: 'update', value: { value: 'x' } };
 		case 'dedalo_delete_record':
 			return base;
 		case 'dedalo_duplicate_record':
 			return base;
 		case 'dedalo_set_field':
-			return { ...base, field: 'numisdata16', value: 'x' };
+			return { ...base, field: 'test52', value: 'x' };
 		case 'dedalo_portal_link':
 		case 'dedalo_portal_unlink':
 			return {
 				...base,
-				field: 'numisdata75',
+				field: 'test80',
 				target: { section_tipo: 'test2', section_id: 888888 },
 			};
 		case 'dedalo_upload_media':
 			return {
 				...base,
-				field: 'numisdata16',
+				field: 'test52',
 				source: { kind: 'base64', data: 'eA==', filename: 'x.jpg' },
 			};
 		default:

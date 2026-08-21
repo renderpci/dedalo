@@ -2,12 +2,12 @@
  * component_info LEGACY-STORED-VALUE fall-through (audit 2026-08 finding L1) —
  * TS-native gate for WC-2026-08-09-info-legacy-stored-value-fallthrough.
  *
- * ~690 records of the target install (84 rsc167, 596 rsc170, 7 oh1, 1 rsc176 —
+ * ~690 records of the target install (84 rsc167, 596 rsc170, 7 test6813, 1 rsc176 —
  * census run read-only against dedalo7_mht 2026-08-09) hold a v5-era blob in
  * their `misc` column instead of widget entries:
  *
  *   {"id":1,"value":null,"state":{"lg-spa":{"dd203_1":[100,0]}},
- *    "section_id":"44","section_tipo":"oh1","component_tipo":"oh23"}
+ *    "section_id":"44","section_tipo":"test6813","component_tipo":"test6835"}
  *
  * PHP's get_db_data only falls back on `empty($data)`, so that blob won the
  * emission and reached the client, whose state renderer selects on `key` and
@@ -30,18 +30,17 @@
  *    into the code, so it is pinned explicitly.
  *
  * Fixtures are REAL shapes lifted from the live archive: the legacy blob from
- * oh1/44 + rsc167/1, the modern entry from rsc167/3, and the untagged
+ * test6813/44 + rsc167/1, the modern entry from rsc167/3, and the untagged
  * NON-legacy array from the dd477→dd596 rows (20 of them) that the census
  * found sharing the `misc` column.
  *
  * Scratch ids 900351..900356 on rsc2 (clear of info_widget_native's
  * 900311..900314); swept in afterAll with the loud 0-row guard.
  */
-// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getCounters, resetCountersForTests } from '../../src/core/api/counters.ts';
@@ -50,6 +49,13 @@ import { isLegacyStateResidue } from '../../src/core/components/component_info/w
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+/** The seed-shipped archive section the state widget reads, and its matrix table. */
+const SECTION = seed('rsc', 2);
+const SECTION_TABLE = 'matrix';
 
 const ID = {
 	legacy: 900351, // misc holds ONLY the v5 blob → must fall through
@@ -61,7 +67,7 @@ const ID = {
 };
 
 /**
- * The v5 blob, verbatim from the live archive (oh1/44 misc->oh28[0], and the
+ * The v5 blob, verbatim from the live archive (test6813/44 misc->test6840[0], and the
  * identical shape under rsc167/1 misc->rsc19). No `widget`, no `key`, no
  * `column`, no `type` — nothing the client's state renderer selects on.
  */
@@ -70,8 +76,8 @@ const LEGACY_ENTRY = {
 	state: { 'lg-spa': { dd203_1: [100, 0], dd203_2: [100, 0] } },
 	value: null,
 	section_id: '44',
-	section_tipo: 'oh1',
-	component_tipo: 'oh23',
+	section_tipo: 'test6813',
+	component_tipo: 'test6835',
 };
 
 /** The modern stored shape, verbatim from the live archive (rsc167/3 misc->rsc19). */
@@ -128,8 +134,8 @@ const locatorOf = (sectionTipo: string, sectionId: number | string, from: string
 
 /** rsc156 → dd501/2, rsc80 → dd174/1: the REAL install vocabularies the state widget reads. */
 const STATE_RELATIONS = {
-	rsc156: [locatorOf('dd501', 2, 'rsc156')],
-	rsc80: [locatorOf('dd174', 1, 'rsc80')],
+	[seed('rsc', 156)]: [locatorOf('dd501', 2, seed('rsc', 156))],
+	[seed('rsc', 80)]: [locatorOf('dd174', 1, seed('rsc', 80))],
 };
 
 const SCRATCH_IDS = Object.values(ID);
@@ -139,8 +145,8 @@ async function insertRow(sectionId: number, columns: Record<string, unknown>): P
 	const columnSql = names.length > 0 ? `, ${names.join(', ')}` : '';
 	const valueSql = names.map((_, index) => `, $${index + 3}::text::jsonb`).join('');
 	await sql.unsafe(
-		`INSERT INTO matrix (section_id, section_tipo${columnSql}) VALUES ($1, $2${valueSql})`,
-		[sectionId, 'rsc2', ...names.map((name) => JSON.stringify(columns[name]))],
+		`INSERT INTO ${SECTION_TABLE} (section_id, section_tipo${columnSql}) VALUES ($1, $2${valueSql})`,
+		[sectionId, SECTION, ...names.map((name) => JSON.stringify(columns[name]))],
 	);
 }
 
@@ -148,13 +154,13 @@ async function sweepScratch(): Promise<Map<number, number>> {
 	const counts = new Map<number, number>();
 	for (const sectionId of SCRATCH_IDS) {
 		const deleted = (await sql.unsafe(
-			`DELETE FROM matrix WHERE section_tipo = 'rsc2' AND section_id = $1 RETURNING id`,
-			[sectionId],
+			`DELETE FROM ${SECTION_TABLE} WHERE section_tipo = $2 AND section_id = $1 RETURNING id`,
+			[sectionId, SECTION],
 		)) as unknown[];
 		counts.set(sectionId, deleted.length);
 		await sql.unsafe(
-			`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc2' AND section_id = $1`,
-			[sectionId],
+			'DELETE FROM matrix_time_machine WHERE section_tipo = $2 AND section_id = $1',
+			[sectionId, SECTION],
 		);
 	}
 	return counts;
@@ -171,20 +177,20 @@ function readRqo(sectionId: number, mode: string): Record<string, unknown> {
 		source: {
 			typo: 'source',
 			model: 'section',
-			tipo: 'rsc2',
-			section_tipo: 'rsc2',
+			tipo: SECTION,
+			section_tipo: SECTION,
 			action: 'search',
 			mode,
 			lang: 'lg-spa',
 		},
 		sqo: {
-			section_tipo: ['rsc2'],
+			section_tipo: [SECTION],
 			limit: 1,
 			offset: 0,
-			filter_by_locators: [{ section_tipo: 'rsc2', section_id: String(sectionId) }],
+			filter_by_locators: [{ section_tipo: SECTION, section_id: String(sectionId) }],
 		},
 		show: {
-			ddo_map: [{ tipo: 'rsc19', section_tipo: 'rsc2', parent: 'rsc2', mode }],
+			ddo_map: [{ tipo: seed('rsc', 19), section_tipo: SECTION, parent: SECTION, mode }],
 		},
 	};
 }
@@ -199,14 +205,23 @@ async function entriesOf(sectionId: number, mode = 'list'): Promise<unknown[]> {
 
 beforeAll(async () => {
 	await sweepScratch(); // pre-clean a crashed prior run
-	await insertRow(ID.legacy, { relation: STATE_RELATIONS, misc: { rsc19: [LEGACY_ENTRY] } });
-	await insertRow(ID.modern, { relation: STATE_RELATIONS, misc: { rsc19: MODERN_ENTRIES } });
-	await insertRow(ID.mixed, { relation: STATE_RELATIONS, misc: { rsc19: MIXED_ENTRIES } });
+	await insertRow(ID.legacy, {
+		relation: STATE_RELATIONS,
+		misc: { [seed('rsc', 19)]: [LEGACY_ENTRY] },
+	});
+	await insertRow(ID.modern, {
+		relation: STATE_RELATIONS,
+		misc: { [seed('rsc', 19)]: MODERN_ENTRIES },
+	});
+	await insertRow(ID.mixed, {
+		relation: STATE_RELATIONS,
+		misc: { [seed('rsc', 19)]: MIXED_ENTRIES },
+	});
 	await insertRow(ID.control, { relation: STATE_RELATIONS });
-	await insertRow(ID.legacyEmptySource, { misc: { rsc19: [LEGACY_ENTRY] } });
+	await insertRow(ID.legacyEmptySource, { misc: { [seed('rsc', 19)]: [LEGACY_ENTRY] } });
 	await insertRow(ID.unclassifiable, {
 		relation: STATE_RELATIONS,
-		misc: { rsc19: UNCLASSIFIABLE_ENTRIES },
+		misc: { [seed('rsc', 19)]: UNCLASSIFIABLE_ENTRIES },
 	});
 	const token = createSession(-1, 'root', true);
 	const session = getSession(token);
@@ -225,7 +240,7 @@ afterAll(async () => {
 	const missing = [...counts.entries()].filter(([, count]) => count === 0).map(([key]) => key);
 	if (missing.length > 0) {
 		throw new Error(
-			`Scratch cleanup deleted 0 rows for rsc2/${missing.join(', rsc2/')} — seed vanished mid-run.`,
+			`Scratch cleanup deleted 0 rows for ${SECTION}/${missing.join(`, ${SECTION}/`)} — seed vanished mid-run.`,
 		);
 	}
 });
@@ -276,7 +291,7 @@ describe('component_info legacy stored-value fall-through (L1)', () => {
 		expect(served).toEqual(live as never);
 		// and the blob itself never reaches the wire
 		expect(JSON.stringify(served)).not.toContain('"dd203_1"');
-		expect(served.some((item) => item.component_tipo === 'oh23')).toBe(false);
+		expect(served.some((item) => item.component_tipo === 'test6835')).toBe(false);
 	}, 30000);
 
 	test('legacy fall-through holds in EDIT mode too (the form the client renders)', async () => {

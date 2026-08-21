@@ -11,11 +11,10 @@
  * matrix_table relation resolves to matrix_test), reserved high section_id.
  * Every row this file creates (matrix + time machine) is removed after.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { withTransaction } from '../../src/core/db/postgres.ts';
@@ -91,7 +90,7 @@ describe('datalist staleness: write + delete of a target-section record (S1-11)'
 
 	test('a write to an UNRELATED section leaves the datalist cached', async () => {
 		const before = await warmDatalist();
-		await fireSaveEvent('numisdata6'); // not a target of this datalist
+		await fireSaveEvent('testmint1'); // not a target of this datalist
 		expect(await warmDatalist()).toBe(before);
 	});
 
@@ -118,7 +117,7 @@ describe('filter_projects + hierarchy sections listeners (S1-11 durable channel)
 
 	test('an unrelated event leaves the authorized-projects cache untouched', async () => {
 		const before = await getUserAuthorizedProjects();
-		await fireSaveEvent('numisdata6');
+		await fireSaveEvent('testmint1');
 		expect(await getUserAuthorizedProjects()).toBe(before);
 	});
 

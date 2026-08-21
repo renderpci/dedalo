@@ -28,20 +28,19 @@
  *
  * SOFTENED vs the differential (oracle-only): the per-child ddo item
  * projection (fallback_value / external_source / parent_section_id / datalist
- * presence across the numisdata158/164/154/165/197 children) resolves REAL
- * mutable numisdata4 records and only means anything as a live TS-vs-PHP
+ * presence across the test6227/164/154/165/197 children) resolves REAL
+ * mutable test6100 records and only means anything as a live TS-vs-PHP
  * presence diff — it stays in the parity gate.
  *
- * Scratch hygiene: fresh numisdata3 twins via createSectionRecord (distinct
+ * Scratch hygiene: fresh test6099 twins via createSectionRecord (distinct
  * counter-minted ids — no collision with sibling gates); twins + TM rows +
  * the dd542 activity rows the dispatch save chokepoint appends for OUR hosts
  * are swept in afterAll.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -53,6 +52,7 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+import { adoptTipoIdMap } from '../parity/normalize.ts';
 
 registerSessionCleanup();
 
@@ -63,6 +63,15 @@ const fixtureText = readFileSync(
 /** The capture's host id, patched to a twin id at replay. */
 const CAPTURED_HOST = '42621';
 
+/**
+ * The capture is a FROZEN 2026-07-02 browser RQO and still speaks the install's
+ * ontology — the store bytes cannot be re-harvested, so the fixture is adopted
+ * into the generic `test` TLD at replay through the committed clone map
+ * (test/parity/normalize.ts `adoptTipoIdMap`, pinned by
+ * test/parity/tipo_map_transform.test.ts). A refusal is a HARD failure: a
+ * half-translated RQO would replay against the wrong ontology and pass or fail
+ * for the wrong reason.
+ */
 function fixtureFor(name: string, hostId: number): Record<string, unknown> {
 	const all = JSON.parse(fixtureText.replaceAll(CAPTURED_HOST, String(hostId))) as Record<
 		string,
@@ -70,7 +79,9 @@ function fixtureFor(name: string, hostId: number): Record<string, unknown> {
 	>;
 	const fixture = all[name];
 	if (fixture === undefined) throw new Error(`no captured fixture named '${name}'`);
-	return fixture;
+	const adopted = adoptTipoIdMap(fixture, `portal_drag_capture_native/${name}`);
+	if (!adopted.matched) throw new Error(`${adopted.detail} (kind ${adopted.kind})`);
+	return adopted.body;
 }
 
 /** The seeded/persisted locator shape (capture-pinned; NO paginated_key). */
@@ -78,20 +89,20 @@ const storedLocator = (id: number) => ({
 	id,
 	type: 'dd151',
 	section_id: String(100 + id),
-	section_tipo: 'numisdata4',
-	from_component_tipo: 'numisdata77',
+	section_tipo: 'test6100',
+	from_component_tipo: 'test6157',
 });
 
 let tsContext: Record<string, unknown>;
 const created: number[] = [];
 
 async function seedTwin(): Promise<number> {
-	const id = await createSectionRecord('numisdata3', -1);
+	const id = await createSectionRecord('test6099', -1);
 	created.push(id);
 	const locators = Array.from({ length: 12 }, (_, index) => storedLocator(index + 1));
 	await sql.unsafe(
-		`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object('numisdata77', $1::text::jsonb)
-		 WHERE section_tipo = 'numisdata3' AND section_id = $2`,
+		`UPDATE matrix_test SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object('test6157', $1::text::jsonb)
+		 WHERE section_tipo = 'test6099' AND section_id = $2`,
 		[JSON.stringify(locators), id],
 	);
 	return id;
@@ -99,7 +110,7 @@ async function seedTwin(): Promise<number> {
 
 async function storedPortalOf(hostId: number): Promise<unknown> {
 	const rows = (await sql.unsafe(
-		`SELECT relation->'numisdata77' AS v FROM matrix WHERE section_tipo = 'numisdata3' AND section_id = $1`,
+		`SELECT relation->'test6157' AS v FROM matrix_test WHERE section_tipo = 'test6099' AND section_id = $1`,
 		[hostId],
 	)) as { v: unknown }[];
 	return rows[0]?.v ?? null;
@@ -120,11 +131,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	for (const id of created) {
-		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'numisdata3' AND section_id = $1`, [
-			id,
-		]);
 		await sql.unsafe(
-			`DELETE FROM matrix_time_machine WHERE section_tipo = 'numisdata3' AND section_id = $1`,
+			`DELETE FROM matrix_test WHERE section_tipo = 'test6099' AND section_id = $1`,
+			[id],
+		);
+		await sql.unsafe(
+			`DELETE FROM matrix_time_machine WHERE section_tipo = 'test6099' AND section_id = $1`,
 			[id],
 		);
 	}
@@ -132,7 +144,7 @@ afterAll(async () => {
 		await sql.unsafe(
 			`DELETE FROM matrix_activity
 			 WHERE section_tipo = 'dd542'
-			   AND string->'dd546'->0->>'value' = 'numisdata77'
+			   AND string->'dd546'->0->>'value' = 'test6157'
 			   AND misc->'dd551'->0->'value'->>'section_id' = ANY($1::text[])`,
 			[`{${created.map(String).join(',')}}`],
 		);
@@ -170,16 +182,16 @@ describe('portal drag-reorder: captured client RQOs, TS-native', () => {
 		).body as { data?: { data?: Record<string, unknown>[] } };
 		const data = body.data?.data ?? [];
 		const portalItem = data.find(
-			(item) => item.tipo === 'numisdata77' && String(item.section_id) === String(host),
+			(item) => item.tipo === 'test6157' && String(item.section_id) === String(host),
 		) as Record<string, unknown> | undefined;
 		expect(portalItem).toBeDefined();
 		const item = portalItem as Record<string, unknown>;
 
 		// item identity (the capture's request echo surface)
-		expect(item.section_tipo).toBe('numisdata3');
+		expect(item.section_tipo).toBe('test6099');
 		expect(item.mode).toBe('edit');
 		expect(item.lang).toBe('lg-nolan');
-		expect(item.from_component_tipo).toBe('numisdata77');
+		expect(item.from_component_tipo).toBe('test6157');
 
 		// the paged window: 3 locators (offset 9 of 12), full total.
 		expect(item.pagination).toEqual({ total: 12, limit: 9, offset: 9 });

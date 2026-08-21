@@ -12,7 +12,7 @@
  * Machine snapshot (tipo = section_tipo, the recovery audit point) before the
  * row removal. result = the deleted section_ids AS STRINGS, in match order.
  *
- * Fixture: three fresh numisdata6 twins (matrix); a filter_by_locators SQO
+ * Fixture: three fresh testmint1 twins (matrix); a filter_by_locators SQO
  * selects exactly the first two. Asserted: those two rows gone, the third
  * intact, result lists exactly the two ids, ONE record-level TM snapshot per
  * deleted record and none for the survivor.
@@ -21,17 +21,16 @@
  * the two dd542 activity rows the dispatch delete loop appends
  * (matrix_activity is consultation-only for the engine doors; direct SQL
  * cleanup of our own rows mirrors the differential), plus the dd1758
- * unpublish-log rows the diffusion bridge writes for numisdata6 (a section
+ * unpublish-log rows the diffusion bridge writes for testmint1 (a section
  * WITH sql diffusion targets — they land in the bun-test scratch table via
  * the DIFFUSION_ACTIVITY_TABLE seam; swept only when the seam is active,
  * never from the PHP-owned real table). Anatomy of the dd542 activity rows
  * is covered by activity_log_native.test.ts, not re-asserted here.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -45,8 +44,11 @@ import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const SECTION = 'numisdata6';
-const TABLE = 'matrix';
+const SECTION = 'testmint1';
+// RESOLVED, not assumed: a cloned `test` section carries its own `matrix_table`
+// relation (→ `matrix_test`), so a hard-coded `matrix` writes where the engine
+// will never read.
+const TABLE = 'matrix_test';
 const USER_ID = -1;
 
 /** Three twins; [0] and [1] get deleted, [2] survives. */

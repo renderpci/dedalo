@@ -9,11 +9,8 @@
  * `::text::jsonb` bind check, which is the one failure mode that would look
  * fine in every round trip and still break the read graft.
  */
-// BINDS INSTALL TLDs: marc, oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -134,7 +131,7 @@ describe('temporal scratch store — isolation (the tenancy boundary)', () => {
 
 describe('temporal scratch store — the key does not collide (the PHP regression)', () => {
 	// PHP keyed on `section_tipo . user_id` with no separator and no tool, so two
-	// tools on one section shared a row and 'oh1'+42 collided with 'oh14'+2.
+	// tools on one section shared a row and 'test6813'+42 collided with 'test6826'+2.
 	testIfDb('two TOOLS on the same component are two independent rows', async () => {
 		const files = addr({ componentTipo: 'test70', scope: 'tool_import_files' });
 		const marc = addr({ componentTipo: 'test70', scope: 'tool_import_marc21' });
@@ -146,7 +143,7 @@ describe('temporal scratch store — the key does not collide (the PHP regressio
 
 	testIfDb('two SECTIONS and two LANGS are independent rows', async () => {
 		const s1 = addr({ componentTipo: 'test71', sectionTipo: 'test3' });
-		const s2 = addr({ componentTipo: 'test71', sectionTipo: 'oh1' });
+		const s2 = addr({ componentTipo: 'test71', sectionTipo: 'test6813' });
 		const eng = addr({ componentTipo: 'test72', lang: 'lg-eng' });
 		const spa = addr({ componentTipo: 'test72', lang: 'lg-spa' });
 		await writeTemporalScratch(USER_A, s1, [{ value: 's1' }], opts);

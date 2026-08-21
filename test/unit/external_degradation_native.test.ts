@@ -13,11 +13,9 @@
  * component_external under it, so the ontology is real; only the socket is
  * injected, and nothing is written to the database.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the "a real, ORDINARY (non-external)
+// section" coordinate is now `test2` — test3 itself IS external in this gate (it carries
+// the component_external test215).
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
@@ -270,7 +268,8 @@ describe('each state, end to end through the derivation', () => {
 	});
 
 	test("'misconfigured' — a section that names no service at all", async () => {
-		const derived = await deriveExternalValue(COMPONENT, 'numisdata3', REMOTE_ID);
+		// test2 is a real, ordinary section: no component_external, so no service.
+		const derived = await deriveExternalValue(COMPONENT, 'test2', REMOTE_ID);
 		expect(derived.entries).toEqual([]);
 		expect(derived.source_status).toMatchObject({ state: 'misconfigured', retryable: false });
 	});

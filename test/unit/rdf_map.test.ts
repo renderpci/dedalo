@@ -4,11 +4,10 @@
  * field-map is imported into a DISPOSABLE record (deleted after), closing the
  * Zotero/RDF map-application drives.
  */
-// BINDS INSTALL TLDs: ich — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20: the import target is the
+// `test`-TLD clone of the section it used to borrow (`test2966`, storing in
+// `matrix_test`) and its input_text child `test2968`. The record is still
+// created by the real import path and deleted again.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
@@ -18,8 +17,8 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
 import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../src/core/tools/rdf_xml.ts';
 
-const SECTION = 'ich135';
-const INPUT_TEXT = 'ich137';
+const SECTION = 'test2966';
+const INPUT_TEXT = 'test2968';
 const USER = -1;
 
 const ZOTERO = `<?xml version="1.0"?>

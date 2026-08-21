@@ -9,11 +9,7 @@
  * (the non-master posture — the widget is unreachable), flag on ⇒ the
  * admin gate + handlers respond.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the stored report row's section is an opaque string, rewritten to its phase-2 `test` clone (src/core/test_data/test_tld_tipo_map.json).
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -54,9 +50,9 @@ function row(description: string) {
 		entity: 'test',
 		dedalo_version: '7.0.0.dev',
 		user_id: 5,
-		section_tipo: 'oh1',
+		section_tipo: 'test6813',
 		section_id: '1',
-		page_url: '/dedalo/core/page/?tipo=oh1',
+		page_url: '/dedalo/core/page/?tipo=test6813',
 		description,
 		js_errors: [],
 		context: null,

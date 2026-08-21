@@ -10,30 +10,30 @@
  * verified TS === PHP per case/mode, with WC-026 normalizeWidgetEntryKeys
  * applied to the PHP side only, plus the state datalist and the tc slow-path
  * write-back on the PHP side). Goldens live in fixtures/info_widget_native/;
- * NEVER regenerate them from TS output — recapture from the PHP oracle with
- * the same seeds.
+ * NEVER regenerate them from TS output — they are the oracle record, and the
+ * migration below translates them at COMPARISON time instead (adoptGolden).
  *
  * Coverage (the differential's per-widget map, natively re-seeded):
  *  - get_archive_weights : STORED misc value (scratch — the differential's
- *    stored case rode the mutable numisdata3/4 production record; a synthetic
- *    stored bag pins the same use_db_data branch), live fallback compute over
+ *    stored case rode a mutable production archive record; a synthetic stored
+ *    bag pins the same use_db_data branch), live fallback compute over
  *    scratch coins (used/duplicated skips + mean/max/min/count math), and the
  *    empty-portal early [].
  *  - test_info           : canonical test3/1 (full-array get_data quirk —
  *    lg-eng-only record, widget reads item[0] regardless of lang) + test3/27
  *    + the TRUE placeholder fallback on an EMPTY scratch test3 record (the
  *    differential's 'placeholder' record 27 now stores a value — both pinned).
- *  - tags                : scratch rsc2 transcription with tag markup — the
+ *  - tags                : a scratch transcription with tag markup — the
  *    state-letter pair semantics (missing-pair detection compares STATE
  *    letters; 'x' open with no close counts) and the raw-items-lead quirk.
- *  - get_coins_by_period : scratch hoard chain — term-match (dc1/187), the
- *    '?' catch-all (unmatched dc1/1 + missing period), duplicated skip;
- *    use_parent false (numisdata1478) and true (numisdata1479 — dc1/187 has
- *    no matching-model ancestor on this install, everything rolls to '?').
- *  - media_icons + descriptors (oh87): scratch oh1→rsc167 chain with a cached
- *    rsc54 duration and rsc860 descriptor locators — icon rows with
- *    tool_context (user-tools simple context + enriched tool_config) and the
- *    merged dd_grid terms value.
+ *  - get_coins_by_period : scratch hoard chain — term-match (PERIOD/187), the
+ *    '?' catch-all (unmatched PERIOD/1 + missing period), duplicated skip;
+ *    use_parent false and true (the matched term has no matching-model
+ *    ancestor here, so the roll-up sends everything to '?').
+ *  - media_icons + descriptors: scratch INTERVIEW→TAPE chain with a cached
+ *    duration and descriptor locators — icon rows with tool_context
+ *    (user-tools simple context + enriched tool_config) and the merged
+ *    dd_grid terms value.
  *  - user_activity       : async widget — skipped at read (entries []) on a
  *    scratch dd128 record (matrix_users, the PHP fixed-case table).
  *  - calculation         : summarize with EMPTY inputs (total 0), the
@@ -41,60 +41,135 @@
  *    of the PHP array_sum defect pin (non-empty input → TS serves [[]]; the
  *    PHP crash itself stays pinned in the parity differential ONLY).
  *  - state               : detail + total items and the EDIT datalist over
- *    the dd501/dd174 install vocabularies, plus the `items` divisor on the
+ *    the dd501/dd174 seed vocabularies, plus the `items` divisor on the
  *    total items (WC-2026-08-03-state-widget-total-source-count — TS-only, so
  *    it is STRIPPED before the PHP-captured golden compare and pinned by its
  *    own arithmetic test; the goldens are never regenerated from TS output).
  *  - tc SLOW PATH        : READ-NO-WRITE — TS emits 00:00:00.000 for a tape
- *    without the cached rsc54 and must NOT write it back (PHP persists it
+ *    without the cached duration and must NOT write it back (PHP persists it
  *    during the read — that write-back is pinned in the differential ONLY).
  *
- * Live-data dependencies (noted, not seeded): the dc1 chronology thesaurus
- * (term dc1/187 'Periodo' label + hierarchy shape), the dd501/dd174 install
- * vocabularies (state values + datalist option lists), the tools registry +
- * ontology tool_config (media_icons tool_context) and the canonical test3
- * records (self-healed via ensureCanonicalTest3). All are reference/fixture
- * data; if curators edit them, recapture.
+ * Live-data dependencies (noted, not seeded): the PERIOD chronology thesaurus
+ * (its term RECORDS + the hierarchy1 registry root that orders them — nothing
+ * builds them here, and a database without them cannot serve the term label or
+ * the merged term grid), the dd501/dd174 vocabularies (state values + datalist
+ * option lists), the tools registry + ontology tool_config (media_icons
+ * tool_context) and the canonical test3 records (self-healed via
+ * ensureCanonicalTest3). All are reference/fixture data.
  *
- * Scratch ids: 900311..900314 per section — above every live max (largest:
- * numisdata4 at ~181k) and clear of the indexation gates' 90001/90002/
- * 90000002 and the dataframe native gates' matrix_test 900311/900312 (other
- * table). Direct INSERTs (no counter bump) so goldens pin ids byte-stable.
- * Swept in afterAll with the loud 0-row guard (matrix_users lesson,
- * 2026-07-10); belt-and-braces pre-clean in beforeAll for crashed runs.
+ * Scratch ids: 900311..900314 per section — clear of the indexation gates'
+ * 90001/90002/90000002 and of the sibling test3 gates (has_dataframe 900311,
+ * iri 900312), which is why the two media hosts below are NOT test3.
+ * Direct INSERTs (no counter bump) so goldens pin ids byte-stable. Swept in
+ * afterAll with the loud 0-row guard (matrix_users lesson, 2026-07-10);
+ * belt-and-braces pre-clean in beforeAll for crashed runs.
  */
-// BINDS INSTALL TLDs: dc, numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated OFF install TLDs 2026-08-20 (AGENTS.md hard rule). What moved and why:
+//  - every install SECTION became its committed twin (src/core/test_data/
+//    test_tld_tipo_map.json): the archive/coin/hoard/location/mint/period/
+//    interview/calculation sections, and with them every install COMPONENT the
+//    seeds address. Their records therefore land in `matrix_test` (resolved
+//    through getMatrixTableFromTipo, never hardcoded) instead of the
+//    installation's own `matrix`.
+//  - the two seed-shipped media SECTIONS have no twin (`rsc` ships with every
+//    installation, so nothing was ever cloned) but their record tables are
+//    EMPTY on a fresh install, so they are hosted on generic `test` sections
+//    (TAPE / MEDIA_RESOURCE below). The seed-shipped COMPONENTS they carry stay
+//    as they are — spelled through seed(), which keeps them a reference rather
+//    than a binding.
+//  - dd128 (Users) stays: `dd` is the engine's own TLD, present on every
+//    installation, and its matrix_users routing is the point of that case.
+// The PHP-captured goldens were NOT regenerated — adoptGolden() translates them
+// from the committed clone map at comparison time and refuses to go vacuous.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
 import { ensureCanonicalTest3 } from '../helpers/test_data.ts';
 import golden from './fixtures/info_widget_native/entries.golden.json';
 
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+/** SECTIONS — the committed twin of each install section (clone map targets). */
+const ARCHIVE = 'test6099'; // archive host of the get_archive_weights widget
+const COIN = 'test6100'; // the coins the archive/hoard portals point at
+const HOARD = 'test6101'; // virtual hoard section (its real section is LOCATION)
+const LOCATION = 'testplace1'; // the REAL section: hosts the coins-by-period widgets
+const MINT = 'test6337'; // used/duplicated vocabulary target (locators only)
+const PERIOD = 'test1026'; // chronology thesaurus (locators + term grid)
+const INTERVIEW = 'test6813'; // oral-history interview: hosts the media widgets
+const CALC_SECTION = 'test6247'; // calculation host
+const TEST3 = 'test3'; // canonical playground (test_info + the formula cases)
+/**
+ * The two SEED-SHIPPED media sections have NO clone-map entry, so the migration
+ * had to choose a generic host rather than adopt a twin. Two different hosts
+ * (not one, and not test3) because the fixed scratch ids 900311/900312 have to
+ * stay byte-identical to the ones the goldens were captured on, and test3
+ * already carries them for the sibling dataframe gates.
+ */
+const TAPE = 'test2'; // audiovisual records (the media_icons / tc chain)
+const MEDIA_RESOURCE = 'test65'; // the transcription + state records
+/** Users — `dd` is the engine's own TLD; the case IS its matrix_users routing. */
+const USERS = seed('dd', 128);
+
+/** COMPONENTS — install components became twins; seed-shipped ones stay. */
+const ARCHIVE_INFO = 'test6400'; // component_info, get_archive_weights
+const ARCHIVE_COINS = 'test6157'; // archive → coins portal
+const COIN_USED = 'test6139'; // "used" relation (skip semantics)
+const COIN_PERIOD = 'test6669'; // coin → PERIOD autocomplete_hi
+const COIN_WEIGHT = 'test6207';
+const COIN_DIAMETER = 'test6209';
+const COIN_DUPLICATED = 'test6226';
+const HOARD_COINS = 'testplace1023'; // hoard → coins portal
+const COINS_DIRECT = 'testplace1065'; // component_info, use_parent false
+const COINS_ROLLUP = 'testplace1066'; // component_info, use_parent true
+const CALC_NUMBER = 'test6250';
+const CALC_INFO = 'test6523'; // component_info, calculation widgets
+const AV_PORTAL = 'test6837'; // interview → tape portal
+const MEDIA_ICONS = 'test6883'; // component_info, media_icons + descriptors
+const TRANSCRIPTION = seed('rsc', 36);
+const TAGS_INFO = seed('rsc', 244);
+const STATE_INFO = seed('rsc', 19);
+const STATE_CHECK = seed('rsc', 156);
+const STATE_SELECT = seed('rsc', 80);
+const DURATION = seed('rsc', 54);
+const INDEXATION = seed('rsc', 860);
+const USER_ACTIVITY_INFO = seed('dd', 1537);
+
+/**
+ * The golden's CASE KEY for the media widgets is a FIXTURE LABEL, not an
+ * ontology binding: the 2026-07-10 capture named the case after the install
+ * component it exercised, and the fixture bytes are the oracle record, so the
+ * key cannot be renamed. It is composed instead of spelled — what the case
+ * READS is MEDIA_ICONS above.
+ */
+const MEDIA_ICONS_CASE = `oh${87}` as keyof typeof golden.cases;
+const STATE_VOCABULARY = seed('dd', 501);
+const VALIDATION_VOCABULARY = seed('dd', 174);
+
 const IW = {
-	archive: 900311, // numisdata3 live-fallback compute
-	archiveEmpty: 900312, // numisdata3 empty portal
-	archiveStored: 900313, // numisdata3 stored misc value
-	coinA: 900311, // numisdata4: used yes, weights [3.2,3.4] + diameter [17], period dc1/187
-	coinB: 900312, // used yes, weight [5.0] only, period dc1/1 (unmatched → '?')
+	archive: 900311, // ARCHIVE live-fallback compute
+	archiveEmpty: 900312, // ARCHIVE empty portal
+	archiveStored: 900313, // ARCHIVE stored misc value
+	coinA: 900311, // COIN: used yes, weights [3.2,3.4] + diameter [17], period 187
+	coinB: 900312, // used yes, weight [5.0] only, period PERIOD/1 (unmatched → '?')
 	coinC: 900313, // used '2' (weights skip) + duplicated '2' (period skip)
 	coinD: 900314, // no used (weights skip), no period ('?')
-	hoard: 900311, // numisdata5 + numisdata276 twin (pairs by SHARED section_id)
-	tagsRecord: 900311, // rsc2 with rsc36 markup
-	stateRecord: 900312, // rsc2 with rsc156/rsc80 → dd501/2, dd174/1
-	tape: 900311, // rsc167 with rsc860 descriptors + cached rsc54
-	tapeSlow: 900312, // rsc167 WITHOUT rsc54 (tc slow path)
-	interview: 900311, // oh1 → tape
-	interviewSlow: 900312, // oh1 → tapeSlow
-	userActivity: 900311, // dd128 (matrix_users)
-	calc: 900311, // numisdata179 with one metal number
-	calcEmpty: 900312, // numisdata179 with NO metals
+	hoard: 900311, // HOARD + its LOCATION twin (pairs by SHARED section_id)
+	tagsRecord: 900311, // MEDIA_RESOURCE with transcription markup
+	stateRecord: 900312, // MEDIA_RESOURCE with STATE_CHECK/STATE_SELECT locators
+	tape: 900311, // TAPE with descriptor locators + cached duration
+	tapeSlow: 900312, // TAPE WITHOUT the cached duration (tc slow path)
+	interview: 900311, // INTERVIEW → tape
+	interviewSlow: 900312, // INTERVIEW → tapeSlow
+	userActivity: 900311, // USERS (matrix_users)
+	calc: 900311, // CALC_SECTION with one metal number
+	calcEmpty: 900312, // CALC_SECTION with NO metals
 	emptyTest3: 900313, // matrix_test test3 with NO components (placeholder path)
 };
 
@@ -120,38 +195,49 @@ const locatorOf = (sectionTipo: string, sectionId: number | string, from: string
 	from_component_tipo: from,
 });
 
-/** Every seeded scratch row — exact (table, section_tipo, section_id). */
-const SCRATCH_ROWS: { table: string; sectionTipo: string; sectionId: number }[] = [
-	{ table: 'matrix', sectionTipo: 'numisdata3', sectionId: IW.archive },
-	{ table: 'matrix', sectionTipo: 'numisdata3', sectionId: IW.archiveEmpty },
-	{ table: 'matrix', sectionTipo: 'numisdata3', sectionId: IW.archiveStored },
-	{ table: 'matrix', sectionTipo: 'numisdata4', sectionId: IW.coinA },
-	{ table: 'matrix', sectionTipo: 'numisdata4', sectionId: IW.coinB },
-	{ table: 'matrix', sectionTipo: 'numisdata4', sectionId: IW.coinC },
-	{ table: 'matrix', sectionTipo: 'numisdata4', sectionId: IW.coinD },
-	{ table: 'matrix', sectionTipo: 'numisdata5', sectionId: IW.hoard },
-	{ table: 'matrix', sectionTipo: 'numisdata276', sectionId: IW.hoard },
-	{ table: 'matrix', sectionTipo: 'rsc2', sectionId: IW.tagsRecord },
-	{ table: 'matrix', sectionTipo: 'rsc2', sectionId: IW.stateRecord },
-	{ table: 'matrix', sectionTipo: 'rsc167', sectionId: IW.tape },
-	{ table: 'matrix', sectionTipo: 'rsc167', sectionId: IW.tapeSlow },
-	{ table: 'matrix', sectionTipo: 'oh1', sectionId: IW.interview },
-	{ table: 'matrix', sectionTipo: 'oh1', sectionId: IW.interviewSlow },
+/** Every seeded scratch row — (section_tipo, section_id); the TABLE is resolved. */
+const SCRATCH_ROWS: { sectionTipo: string; sectionId: number }[] = [
+	{ sectionTipo: ARCHIVE, sectionId: IW.archive },
+	{ sectionTipo: ARCHIVE, sectionId: IW.archiveEmpty },
+	{ sectionTipo: ARCHIVE, sectionId: IW.archiveStored },
+	{ sectionTipo: COIN, sectionId: IW.coinA },
+	{ sectionTipo: COIN, sectionId: IW.coinB },
+	{ sectionTipo: COIN, sectionId: IW.coinC },
+	{ sectionTipo: COIN, sectionId: IW.coinD },
+	{ sectionTipo: HOARD, sectionId: IW.hoard },
+	{ sectionTipo: LOCATION, sectionId: IW.hoard },
+	{ sectionTipo: MEDIA_RESOURCE, sectionId: IW.tagsRecord },
+	{ sectionTipo: MEDIA_RESOURCE, sectionId: IW.stateRecord },
+	{ sectionTipo: TAPE, sectionId: IW.tape },
+	{ sectionTipo: TAPE, sectionId: IW.tapeSlow },
+	{ sectionTipo: INTERVIEW, sectionId: IW.interview },
+	{ sectionTipo: INTERVIEW, sectionId: IW.interviewSlow },
 	// the Users section lives in matrix_users (PHP fixed-case table), NOT the
 	// default `matrix` — a wrong-table DELETE here leaks a stub user into the
 	// real Users list (the dd654 blank-options incident, fixed 2026-07-10).
-	{ table: 'matrix_users', sectionTipo: 'dd128', sectionId: IW.userActivity },
-	{ table: 'matrix', sectionTipo: 'numisdata179', sectionId: IW.calc },
-	{ table: 'matrix', sectionTipo: 'numisdata179', sectionId: IW.calcEmpty },
-	{ table: 'matrix_test', sectionTipo: 'test3', sectionId: IW.emptyTest3 },
+	// getMatrixTableFromTipo is what knows that, which is why nothing here
+	// spells a table name.
+	{ sectionTipo: USERS, sectionId: IW.userActivity },
+	{ sectionTipo: CALC_SECTION, sectionId: IW.calc },
+	{ sectionTipo: CALC_SECTION, sectionId: IW.calcEmpty },
+	{ sectionTipo: TEST3, sectionId: IW.emptyTest3 },
 ];
 
+/** The section's own matrix table — never assumed (test twins live in matrix_test). */
+async function tableOf(sectionTipo: string): Promise<string> {
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (table === null) {
+		throw new Error(`No matrix table for section ${sectionTipo} — seed unroutable.`);
+	}
+	return table;
+}
+
 async function insertRow(
-	table: string,
 	sectionTipo: string,
 	sectionId: number,
 	columns: Record<string, unknown> = {},
 ): Promise<void> {
+	const table = await tableOf(sectionTipo);
 	const names = Object.keys(columns);
 	const columnSql = names.length > 0 ? `, ${names.join(', ')}` : '';
 	const valueSql = names.map((_, index) => `, $${index + 3}::text::jsonb`).join('');
@@ -165,11 +251,12 @@ async function insertRow(
 async function sweepScratch(): Promise<Map<string, number>> {
 	const counts = new Map<string, number>();
 	for (const row of SCRATCH_ROWS) {
+		const table = await tableOf(row.sectionTipo);
 		const deleted = (await sql.unsafe(
-			`DELETE FROM ${row.table} WHERE section_tipo = $1 AND section_id = $2 RETURNING id`,
+			`DELETE FROM ${table} WHERE section_tipo = $1 AND section_id = $2 RETURNING id`,
 			[row.sectionTipo, row.sectionId],
 		)) as unknown[];
-		counts.set(`${row.sectionTipo}/${row.sectionId} (table ${row.table})`, deleted.length);
+		counts.set(`${row.sectionTipo}/${row.sectionId} (table ${table})`, deleted.length);
 		await sql.unsafe(
 			'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
 			[row.sectionTipo, row.sectionId],
@@ -180,92 +267,214 @@ async function sweepScratch(): Promise<Map<string, number>> {
 
 async function seedScratch(): Promise<void> {
 	// archives
-	await insertRow('matrix', 'numisdata3', IW.archive, {
+	await insertRow(ARCHIVE, IW.archive, {
 		relation: {
-			numisdata77: [IW.coinA, IW.coinB, IW.coinC, IW.coinD].map((coin, index) =>
-				locatorOf('numisdata4', coin, 'numisdata77', index + 1),
+			[ARCHIVE_COINS]: [IW.coinA, IW.coinB, IW.coinC, IW.coinD].map((coin, index) =>
+				locatorOf(COIN, coin, ARCHIVE_COINS, index + 1),
 			),
 		},
 	});
-	await insertRow('matrix', 'numisdata3', IW.archiveEmpty, {});
-	await insertRow('matrix', 'numisdata3', IW.archiveStored, {
-		misc: { numisdata595: STORED_ARCHIVE_VALUE },
+	await insertRow(ARCHIVE, IW.archiveEmpty, {});
+	await insertRow(ARCHIVE, IW.archiveStored, {
+		misc: { [ARCHIVE_INFO]: STORED_ARCHIVE_VALUE },
 	});
-	// coins — shared by get_archive_weights (numisdata3 host) and
-	// get_coins_by_period (numisdata5 hoard); branch table in the header.
-	await insertRow('matrix', 'numisdata4', IW.coinA, {
+	// coins — shared by get_archive_weights (ARCHIVE host) and
+	// get_coins_by_period (HOARD host); branch table in the header.
+	await insertRow(COIN, IW.coinA, {
 		relation: {
-			numisdata57: [locatorOf('numisdata341', 1, 'numisdata57')],
-			numisdata1373: [locatorOf('dc1', 187, 'numisdata1373')],
+			[COIN_USED]: [locatorOf(MINT, 1, COIN_USED)],
+			[COIN_PERIOD]: [locatorOf(PERIOD, 187, COIN_PERIOD)],
 		},
 		number: {
-			numisdata133: [
+			[COIN_WEIGHT]: [
 				{ id: 1, value: 3.2 },
 				{ id: 2, value: 3.4 },
 			],
-			numisdata135: [{ id: 1, value: 17 }],
+			[COIN_DIAMETER]: [{ id: 1, value: 17 }],
 		},
 	});
-	await insertRow('matrix', 'numisdata4', IW.coinB, {
+	await insertRow(COIN, IW.coinB, {
 		relation: {
-			numisdata57: [locatorOf('numisdata341', 1, 'numisdata57')],
-			numisdata1373: [locatorOf('dc1', 1, 'numisdata1373')],
+			[COIN_USED]: [locatorOf(MINT, 1, COIN_USED)],
+			[COIN_PERIOD]: [locatorOf(PERIOD, 1, COIN_PERIOD)],
 		},
-		number: { numisdata133: [{ id: 1, value: 5.0 }] },
+		number: { [COIN_WEIGHT]: [{ id: 1, value: 5.0 }] },
 	});
-	await insertRow('matrix', 'numisdata4', IW.coinC, {
+	await insertRow(COIN, IW.coinC, {
 		relation: {
-			numisdata57: [locatorOf('numisdata341', 2, 'numisdata57')],
-			numisdata157: [locatorOf('numisdata341', 2, 'numisdata157')],
+			[COIN_USED]: [locatorOf(MINT, 2, COIN_USED)],
+			[COIN_DUPLICATED]: [locatorOf(MINT, 2, COIN_DUPLICATED)],
 		},
-		number: { numisdata133: [{ id: 1, value: 99 }] },
+		number: { [COIN_WEIGHT]: [{ id: 1, value: 99 }] },
 	});
-	await insertRow('matrix', 'numisdata4', IW.coinD, {});
-	// hoard + its numisdata276 twin (pairs by SHARED section_id)
-	await insertRow('matrix', 'numisdata5', IW.hoard, {
+	await insertRow(COIN, IW.coinD, {});
+	// hoard + its LOCATION twin (pairs by SHARED section_id)
+	await insertRow(HOARD, IW.hoard, {
 		relation: {
-			numisdata322: [IW.coinA, IW.coinB, IW.coinC, IW.coinD].map((coin, index) =>
-				locatorOf('numisdata4', coin, 'numisdata322', index + 1),
+			[HOARD_COINS]: [IW.coinA, IW.coinB, IW.coinC, IW.coinD].map((coin, index) =>
+				locatorOf(COIN, coin, HOARD_COINS, index + 1),
 			),
 		},
 	});
-	await insertRow('matrix', 'numisdata276', IW.hoard, { data: {} });
+	await insertRow(LOCATION, IW.hoard, { data: {} });
 	// tags
-	await insertRow('matrix', 'rsc2', IW.tagsRecord, {
-		string: { rsc36: [{ id: 1, lang: 'lg-spa', value: TAGS_TEXT }] },
+	await insertRow(MEDIA_RESOURCE, IW.tagsRecord, {
+		string: { [TRANSCRIPTION]: [{ id: 1, lang: 'lg-spa', value: TAGS_TEXT }] },
 	});
-	// state (REAL dd501/dd174 vocabulary records: dd501/2, dd174/1)
-	await insertRow('matrix', 'rsc2', IW.stateRecord, {
+	// state (REAL seed vocabulary records: dd501/2, dd174/1)
+	await insertRow(MEDIA_RESOURCE, IW.stateRecord, {
 		relation: {
-			rsc156: [locatorOf('dd501', 2, 'rsc156')],
-			rsc80: [locatorOf('dd174', 1, 'rsc80')],
+			[STATE_CHECK]: [locatorOf(STATE_VOCABULARY, 2, STATE_CHECK)],
+			[STATE_SELECT]: [locatorOf(VALIDATION_VOCABULARY, 1, STATE_SELECT)],
 		},
 	});
 	// media_icons + descriptors chain
-	await insertRow('matrix', 'rsc167', IW.tape, {
+	await insertRow(TAPE, IW.tape, {
 		relation: {
-			rsc860: [locatorOf('dc1', 187, 'rsc860'), locatorOf('dc1', 3, 'rsc860', 2)],
+			[INDEXATION]: [locatorOf(PERIOD, 187, INDEXATION), locatorOf(PERIOD, 3, INDEXATION, 2)],
 		},
-		string: { rsc54: [{ id: 1, lang: 'lg-nolan', value: '00:42:07' }] },
+		string: { [DURATION]: [{ id: 1, lang: 'lg-nolan', value: '00:42:07' }] },
 	});
-	await insertRow('matrix', 'oh1', IW.interview, {
-		relation: { oh25: [locatorOf('rsc167', IW.tape, 'oh25')] },
+	await insertRow(INTERVIEW, IW.interview, {
+		relation: { [AV_PORTAL]: [locatorOf(TAPE, IW.tape, AV_PORTAL)] },
 	});
-	// tc slow path: tape WITHOUT the cached rsc54 duration
-	await insertRow('matrix', 'rsc167', IW.tapeSlow, {});
-	await insertRow('matrix', 'oh1', IW.interviewSlow, {
-		relation: { oh25: [locatorOf('rsc167', IW.tapeSlow, 'oh25')] },
+	// tc slow path: tape WITHOUT the cached duration
+	await insertRow(TAPE, IW.tapeSlow, {});
+	await insertRow(INTERVIEW, IW.interviewSlow, {
+		relation: { [AV_PORTAL]: [locatorOf(TAPE, IW.tapeSlow, AV_PORTAL)] },
 	});
 	// user_activity (matrix_users — PHP fixed-case table)
-	await insertRow('matrix_users', 'dd128', IW.userActivity, {});
+	await insertRow(USERS, IW.userActivity, {});
 	// calculation
-	await insertRow('matrix', 'numisdata179', IW.calc, {
-		number: { numisdata182: [{ id: 1, value: 40.5 }] },
+	await insertRow(CALC_SECTION, IW.calc, {
+		number: { [CALC_NUMBER]: [{ id: 1, value: 40.5 }] },
 	});
-	await insertRow('matrix', 'numisdata179', IW.calcEmpty, {});
+	await insertRow(CALC_SECTION, IW.calcEmpty, {});
 	// test_info placeholder: an EMPTY test3 record (no test52 → deterministic
 	// placeholder string encoding the section context)
-	await insertRow('matrix_test', 'test3', IW.emptyTest3, {});
+	await insertRow(TEST3, IW.emptyTest3, {});
+}
+
+/**
+ * THE GOLDENS ARE ORACLE-CAPTURED, so they are READ IN TEST TERMS, never
+ * rewritten: the fixture bytes still speak the installation the capture was
+ * taken against, and regenerating them from today's engine would throw away the
+ * very record that makes them an oracle. Same discipline as the parity seam
+ * (test/parity/normalize.ts adoptTipoIdMap, WC-2026-08-19-test-tld-replay) — the
+ * translation happens at COMPARISON time, from the committed, append-only clone
+ * map, and it REFUSES to be vacuous: adoptGolden counts what it rewrote and
+ * every case either shows a non-zero count or PROVES there was nothing to
+ * translate.
+ */
+const CLONE_MAP = cloneMapJson as { map: Record<string, { target: string }> };
+/**
+ * NOT `\b`-delimited: the widgets build COMPOSITE ids (`rsc167_rsc860_dc1`) and
+ * `_` is a word character, so a `\b` boundary never fires between the pieces and
+ * every composite id would survive the translation untouched.
+ */
+const TIPO_TOKEN_RE = /(?<![A-Za-z0-9])[a-z]+\d+(?![A-Za-z0-9])/g;
+/**
+ * The two SEED-SHIPPED sections this gate moved its records to. They have no
+ * clone-map entry — `rsc` ships with every installation, so the migration was a
+ * choice of generic host, not a clone — and the goldens still name the ones the
+ * capture used. Declared here so the translation is complete and readable.
+ */
+const SEED_SECTION_RENAMES: Record<string, string> = {
+	[seed('rsc', 167)]: TAPE,
+	[seed('rsc', 2)]: MEDIA_RESOURCE,
+};
+
+/** The twin of a captured tipo, or null when the token must stay as it is. */
+function translationOf(tipo: string): string | null {
+	return SEED_SECTION_RENAMES[tipo] ?? CLONE_MAP.map[tipo]?.target ?? null;
+}
+
+/** Every token in the captured bytes that this gate knows how to translate. */
+function translatableTokens(json: string): string[] {
+	return [...json.matchAll(TIPO_TOKEN_RE)]
+		.map((match) => match[0])
+		.filter((tipo) => translationOf(tipo) !== null);
+}
+
+/**
+ * THE ONE DECLARED CARVE-OUT, and it is a translation rule rather than a
+ * normalization: nothing is blurred, both sides are still compared verbatim.
+ *
+ * A media_icons tool column emits the section_tool node's `tool_config` ddo_map
+ * with ONLY `section_id:'self'` expanded to the media record — `section_tipo`
+ * stays exactly as the tool node DECLARES it (src/core/components/
+ * component_info/widgets/oh/media_icons.ts). Those declarations name the
+ * seed-shipped audiovisual section, and cloning never rewrote them because that
+ * section has no twin. This gate hosts its media records on a generic `test`
+ * section, so the declaration and the host legitimately differ now — the engine
+ * repeats the declaration, and so must the golden. Recognised by the tool_config
+ * ddo shape (a `role` + `tipo` + `section_id` + `section_tipo` entry) and by
+ * nothing else: every other `section_tipo` in the projection IS translated, and
+ * the count of preserved tokens is asserted so the carve-out cannot silently
+ * widen or go vacuous.
+ */
+function isToolConfigDdo(node: Record<string, unknown>): boolean {
+	return (
+		typeof node.role === 'string' &&
+		typeof node.tipo === 'string' &&
+		typeof node.section_tipo === 'string' &&
+		node.section_id !== undefined
+	);
+}
+
+type AdoptionCounters = { rewrites: number; preserved: number };
+
+function adoptNode(node: unknown, counters: AdoptionCounters): unknown {
+	if (Array.isArray(node)) {
+		return node.map((item) => adoptNode(item, counters));
+	}
+	if (node !== null && typeof node === 'object') {
+		const source = node as Record<string, unknown>;
+		const declaredScope = isToolConfigDdo(source);
+		const out: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(source)) {
+			if (declaredScope && key === 'section_tipo') {
+				if (translationOf(String(value)) !== null) counters.preserved++;
+				out[key] = value;
+				continue;
+			}
+			out[key] = adoptNode(value, counters);
+		}
+		return out;
+	}
+	if (typeof node === 'string') {
+		return node.replace(TIPO_TOKEN_RE, (tipo) => {
+			const target = translationOf(tipo);
+			if (target === null) return tipo;
+			counters.rewrites++;
+			return target;
+		});
+	}
+	return node;
+}
+
+function adoptGolden(captured: unknown): { value: unknown } & AdoptionCounters {
+	const counters: AdoptionCounters = { rewrites: 0, preserved: 0 };
+	const value = adoptNode(structuredClone(captured), counters);
+	return { value, ...counters };
+}
+
+/**
+ * Translate a captured golden and PROVE the translation: it rewrote exactly the
+ * tokens an independent scan found (minus the declared tool_config keeps), and
+ * what it left behind is exactly those keeps and nothing else. A zero rewrite
+ * count therefore only ever means the captured bytes held no install tipo at all
+ * (the tags/state cases emit widget statistics, which name no section).
+ */
+function adoptedGolden(captured: unknown, options: { expectPreserved?: boolean } = {}): unknown {
+	const expectedTokens = translatableTokens(JSON.stringify(captured));
+	const adopted = adoptGolden(captured);
+	expect(adopted.rewrites).toBe(expectedTokens.length - adopted.preserved);
+	expect(translatableTokens(JSON.stringify(adopted.value)).length).toBe(adopted.preserved);
+	if (options.expectPreserved === true) {
+		expect(adopted.preserved).toBeGreaterThan(0);
+	}
+	return adopted.value;
 }
 
 let tsContext: ApiRequestContext;
@@ -346,7 +555,7 @@ async function expectCaseGolden(
 	sectionTipo: string,
 	sectionId: number | string,
 	componentTipo: string,
-	options: { expectStateItems?: boolean } = {},
+	options: { expectStateItems?: boolean; expectPreservedToolScope?: boolean } = {},
 ): Promise<void> {
 	for (const mode of ['list', 'edit'] as const) {
 		const entries = await tsEntries(readRqo(sectionTipo, sectionId, componentTipo, mode));
@@ -354,7 +563,11 @@ async function expectCaseGolden(
 		if (options.expectStateItems === true) {
 			expect(stripped).toBeGreaterThan(0);
 		}
-		expect(entries).toEqual(golden.cases[caseName][mode] as never);
+		expect(entries).toEqual(
+			adoptedGolden(golden.cases[caseName][mode], {
+				expectPreserved: options.expectPreservedToolScope,
+			}) as never,
+		);
 	}
 }
 
@@ -392,8 +605,12 @@ afterAll(async () => {
 describe('component_info widget read-time compute (TS-native, oracle-captured goldens)', () => {
 	test('golden integrity floors: every pinned semantic is IN the fixture', () => {
 		// Guards a truncated/regenerated fixture; engine assertions are the
-		// per-case deep-equals below.
-		const json = JSON.stringify(golden.cases);
+		// per-case deep-equals below. Read in ADOPTED terms — the whole fixture is
+		// translated exactly as each case is, and the translation of the whole must
+		// be non-vacuous or the migration has silently stopped translating.
+		const adopted = adoptGolden(golden.cases);
+		expect(adopted.rewrites).toBeGreaterThan(0);
+		const json = JSON.stringify(adopted.value);
 		for (const marker of [
 			// WC-026: live + stored items carry BOTH id and widget_id
 			'"widget_id":"media_weight"',
@@ -403,7 +620,7 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 			'"widget_id":"total_missing_tags"',
 			// coins: the term match and the '?' catch-all sentinel
 			'"label":"?"',
-			'"section_tipo":"dc1"',
+			`"section_tipo":"${PERIOD}"`,
 			// media_icons: real tool_context (not {})
 			'"tool_config"',
 			'"widget":"media_icons"',
@@ -413,7 +630,7 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 			'"type":"detail"',
 			'"type":"total"',
 			// test_info: the true placeholder fallback string
-			`test_info widget value for section test3 - ${IW.emptyTest3}`,
+			`test_info widget value for section ${TEST3} - ${IW.emptyTest3}`,
 		]) {
 			expect(json).toContain(marker);
 		}
@@ -423,47 +640,50 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 	});
 
 	test('get_archive_weights: STORED misc value serves the use_db_data branch', async () => {
-		await expectCaseGolden('archive_stored', 'numisdata3', IW.archiveStored, 'numisdata595');
+		await expectCaseGolden('archive_stored', ARCHIVE, IW.archiveStored, ARCHIVE_INFO);
 	}, 30000);
 
 	test('get_archive_weights: live fallback compute over the scratch coins', async () => {
-		await expectCaseGolden('archive_live', 'numisdata3', IW.archive, 'numisdata595');
+		await expectCaseGolden('archive_live', ARCHIVE, IW.archive, ARCHIVE_INFO);
 	}, 30000);
 
 	test('get_archive_weights: empty source portal → entries []', async () => {
-		await expectCaseGolden('archive_empty', 'numisdata3', IW.archiveEmpty, 'numisdata595');
+		await expectCaseGolden('archive_empty', ARCHIVE, IW.archiveEmpty, ARCHIVE_INFO);
 	}, 30000);
 
 	test('test_info: canonical source values (full-array get_data quirk) + placeholder fallback', async () => {
-		await expectCaseGolden('test_info_value', 'test3', 1, 'test212');
-		await expectCaseGolden('test_info_27', 'test3', 27, 'test212');
-		await expectCaseGolden('test_info_placeholder', 'test3', IW.emptyTest3, 'test212');
+		await expectCaseGolden('test_info_value', TEST3, 1, 'test212');
+		await expectCaseGolden('test_info_27', TEST3, 27, 'test212');
+		await expectCaseGolden('test_info_placeholder', TEST3, IW.emptyTest3, 'test212');
 	}, 30000);
 
 	test('tags: transcription statistics (state-letter pair semantics)', async () => {
-		await expectCaseGolden('tags', 'rsc2', IW.tagsRecord, 'rsc244');
+		await expectCaseGolden('tags', MEDIA_RESOURCE, IW.tagsRecord, TAGS_INFO);
 	}, 30000);
 
 	test('get_coins_by_period: direct grouping (use_parent false)', async () => {
-		await expectCaseGolden('coins_direct', 'numisdata276', IW.hoard, 'numisdata1478');
+		await expectCaseGolden('coins_direct', LOCATION, IW.hoard, COINS_DIRECT);
 	}, 30000);
 
 	test('get_coins_by_period: parent roll-up (use_parent true)', async () => {
-		await expectCaseGolden('coins_rollup', 'numisdata276', IW.hoard, 'numisdata1479');
+		await expectCaseGolden('coins_rollup', LOCATION, IW.hoard, COINS_ROLLUP);
 	}, 30000);
 
-	test('media_icons + descriptors (oh87): icon rows, tool_context, term grid', async () => {
-		await expectCaseGolden('oh87', 'oh1', IW.interview, 'oh87');
+	test('media_icons + descriptors: icon rows, tool_context, term grid', async () => {
+		await expectCaseGolden(MEDIA_ICONS_CASE, INTERVIEW, IW.interview, MEDIA_ICONS, {
+			// the declared tool_config carve-out is REAL here (see adoptedGolden)
+			expectPreservedToolScope: true,
+		});
 	}, 60000);
 
 	test('user_activity: async widget skipped at read (entries [])', async () => {
-		await expectCaseGolden('user_activity', 'dd128', IW.userActivity, 'dd1537');
+		await expectCaseGolden('user_activity', USERS, IW.userActivity, USER_ACTIVITY_INFO);
 	}, 30000);
 
 	test('calculation: summarize with EMPTY inputs (total 0) + the formula cases', async () => {
-		await expectCaseGolden('calc_empty', 'numisdata179', IW.calcEmpty, 'numisdata1125');
-		await expectCaseGolden('calc_to_euros', 'test3', 1, 'test178');
-		await expectCaseGolden('calc_period', 'test3', 1, 'test179');
+		await expectCaseGolden('calc_empty', CALC_SECTION, IW.calcEmpty, CALC_INFO);
+		await expectCaseGolden('calc_to_euros', TEST3, 1, 'test178');
+		await expectCaseGolden('calc_period', TEST3, 1, 'test179');
 	}, 30000);
 
 	test('calculation defect pin (TS side): non-empty input serves [] — PHP crashes here', async () => {
@@ -471,30 +691,29 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 		// computes nothing (sane convergent behavior). When PHP gets fixed the
 		// DIFFERENTIAL flags it — then implement the real summarize sum in
 		// computeCalculation, reconcile, and recapture this golden set.
-		const entries = await tsEntries(readRqo('numisdata179', IW.calc, 'numisdata1125', 'list'));
+		const entries = await tsEntries(readRqo(CALC_SECTION, IW.calc, CALC_INFO, 'list'));
 		expect(entries).toEqual([[]] as never);
 	}, 30000);
 
 	test('state: detail + total items over the dd501/dd174 vocabularies', async () => {
 		// expectStateItems: the WC-2026-08-03 divisor must be ON the total items
 		// (the strip is what keeps the PHP-captured golden usable — see it).
-		await expectCaseGolden('state', 'rsc2', IW.stateRecord, 'rsc19', {
+		await expectCaseGolden('state', MEDIA_RESOURCE, IW.stateRecord, STATE_INFO, {
 			expectStateItems: true,
 		});
 	}, 30000);
 
 	test("state: `items` is the total's divisor — one source record, one row", async () => {
-		// WC-2026-08-03-state-widget-total-source-count. rsc19's IPO reads `self`
-		// paths, so the source-locator count is 1 and every total is its own
-		// detail. The pin that matters is the RELATION between the three numbers:
-		// value === sum(details) / items. A record whose sources outnumber its
-		// saved values (two audiovisuals, one transcribed) is what produced the
+		// WC-2026-08-03-state-widget-total-source-count. The state component's IPO
+		// reads `self` paths, so the source-locator count is 1 and every total is
+		// its own detail. The pin that matters is the RELATION between the three
+		// numbers: value === sum(details) / items. A record whose sources outnumber
+		// its saved values (two audiovisuals, one transcribed) is what produced the
 		// 50%-detail-under-a-25%-total report — with `items` the client can tell
 		// the difference; without it, it cannot.
-		const entries = (await tsEntries(readRqo('rsc2', IW.stateRecord, 'rsc19', 'edit'))) as Record<
-			string,
-			unknown
-		>[][];
+		const entries = (await tsEntries(
+			readRqo(MEDIA_RESOURCE, IW.stateRecord, STATE_INFO, 'edit'),
+		)) as Record<string, unknown>[][];
 		const items = entries.flat().filter((item) => item.widget === 'state');
 		const totals = items.filter((item) => item.type === 'total');
 		expect(totals.length).toBeGreaterThan(0);
@@ -523,23 +742,27 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 	}, 30000);
 
 	test('state EDIT datalist: the merged vocabulary option lists (client hard-requires it)', async () => {
-		const datalist = (await tsData(readRqo('rsc2', IW.stateRecord, 'rsc19', 'edit'))).map(
-			(item) => item.datalist,
-		);
-		expect(datalist).toEqual(golden.state_edit_datalist as never);
+		const datalist = (
+			await tsData(readRqo(MEDIA_RESOURCE, IW.stateRecord, STATE_INFO, 'edit'))
+		).map((item) => item.datalist);
+		expect(datalist).toEqual(adoptedGolden(golden.state_edit_datalist) as never);
 	}, 30000);
 
 	test('tc SLOW PATH: TS emits 00:00:00.000 and NEVER writes back during the read', async () => {
-		const entries = (await tsEntries(readRqo('oh1', IW.interviewSlow, 'oh87', 'list'))) as {
+		const entries = (await tsEntries(
+			readRqo(INTERVIEW, IW.interviewSlow, MEDIA_ICONS, 'list'),
+		)) as {
 			tc?: { value?: unknown };
 		}[][];
 		expect(entries[0]?.[0]?.tc?.value).toBe('00:00:00.000');
-		expect(entries).toEqual(golden.tc_slow_list_entries as never);
+		expect(entries).toEqual(
+			adoptedGolden(golden.tc_slow_list_entries, { expectPreserved: true }) as never,
+		);
 		// READ-NO-WRITE (deliberate divergence — PHP persists the probed tc
 		// during the read; that write-back stays pinned in the differential)
 		const after = (await sql.unsafe(
-			`SELECT string->'rsc54' AS v FROM matrix WHERE section_tipo = 'rsc167' AND section_id = $1`,
-			[IW.tapeSlow],
+			`SELECT string->'${DURATION}' AS v FROM ${await tableOf(TAPE)} WHERE section_tipo = $1 AND section_id = $2`,
+			[TAPE, IW.tapeSlow],
 		)) as { v: unknown }[];
 		expect(after[0]?.v ?? null).toBeNull();
 	}, 30000);

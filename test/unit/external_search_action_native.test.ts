@@ -22,11 +22,11 @@
  * extraction: the inline loop must be GONE from `resolveExternalSearchTarget`,
  * not merely duplicated beside it (the extraction-without-rewire trap).
  */
-// BINDS INSTALL TLDs: rsc, zenon — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: every case here is pure (the fields_map
+// loader is injected), so the tipos are coordinates only — they now name the phase-2
+// clones of the external section and its display fields (test7342 / test7344-test7347)
+// and generic `test` nodes for the portal caller and its own ddo
+// (src/core/test_data/test_tld_tipo_map.json).
 
 import { describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
@@ -74,23 +74,23 @@ function loaderFrom(
 describe('hydrateExternalSearchDdos — which ddos render and which fields go out', () => {
 	test('ddos declared on another section are excluded', async () => {
 		const load = loaderFrom({
-			zenon3: dato('id'),
-			rsc368: dato('title'), // a portal ddo on the CALLER's own section
+			test7344: dato('id'),
+			test6231: dato('title'), // a portal ddo on the CALLER's own section
 			other9: dato('authors'),
 		});
 		const { ddos, context, remoteFields } = await hydrateExternalSearchDdos(
-			'rsc1285',
-			'zenon1',
-			[ddoRef('rsc368', 'rsc332'), ddoRef('zenon3', 'zenon1'), ddoRef('other9', 'other1')],
+			'test6155',
+			'test7342',
+			[ddoRef('test6231', 'test6100'), ddoRef('test7344', 'test7342'), ddoRef('other9', 'other1')],
 			load,
 		);
-		expect(ddos.map((entry) => entry.tipo)).toEqual(['zenon3']);
+		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344']);
 		// The off-section ddos are not even READ: hydration must never fetch a
 		// node it is going to discard (this is the portal case that broke the
 		// first cut of the action).
-		expect(load.asked).toEqual(['zenon3']);
+		expect(load.asked).toEqual(['test7344']);
 		expect(context).toHaveLength(1);
-		expect((context[0] as { tipo: string }).tipo).toBe('zenon3');
+		expect((context[0] as { tipo: string }).tipo).toBe('test7344');
 		expect(remoteFields).toEqual(['id']);
 	});
 
@@ -103,30 +103,30 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 	 */
 	test('remoteFields keeps declaration order and dedupes across ddos', async () => {
 		const load = loaderFrom({
-			zenon3: dato('id', 'title'),
-			zenon4: dato('title', 'authors'),
-			zenon5: dato('id'),
+			test7344: dato('id', 'title'),
+			test7345: dato('title', 'authors'),
+			test7346: dato('id'),
 		});
 		const { remoteFields, ddos } = await hydrateExternalSearchDdos(
 			'test61',
-			'zenon1',
-			[ddoRef('zenon3', 'zenon1'), ddoRef('zenon4', 'zenon1'), ddoRef('zenon5', 'zenon1')],
+			'test7342',
+			[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342'), ddoRef('test7346', 'test7342')],
 			load,
 		);
 		expect(remoteFields).toEqual(['id', 'title', 'authors']);
 		// The dedup is on the FIELD list only — every ddo still renders, including
 		// the one whose only field was already requested.
-		expect(ddos.map((entry) => entry.tipo)).toEqual(['zenon3', 'zenon4', 'zenon5']);
+		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344', 'test7345', 'test7346']);
 	});
 
 	test('a dotted / indexed remote path contributes only its HEAD, once', async () => {
 		const { remoteFields } = await hydrateExternalSearchDdos(
 			'test61',
-			'zenon1',
-			[ddoRef('zenon3', 'zenon1'), ddoRef('zenon4', 'zenon1')],
+			'test7342',
+			[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
 			loaderFrom({
-				zenon3: dato('authors[0].name', 'publicationDates'),
-				zenon4: dato('authors.primary'),
+				test7344: dato('authors[0].name', 'publicationDates'),
+				test7345: dato('authors.primary'),
 			}),
 		);
 		expect(remoteFields).toEqual(['authors', 'publicationDates']);
@@ -135,15 +135,15 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 	test('a non-dato fields_map row asks the service for nothing', async () => {
 		const { ddos, remoteFields } = await hydrateExternalSearchDdos(
 			'test61',
-			'zenon1',
-			[ddoRef('zenon3', 'zenon1'), ddoRef('zenon4', 'zenon1')],
+			'test7342',
+			[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
 			loaderFrom({
-				zenon3: [{ local: 'label', remote: 'title' }],
-				zenon4: dato('id'),
+				test7344: [{ local: 'label', remote: 'title' }],
+				test7345: dato('id'),
 			}),
 		);
 		// The ddo still RENDERS (its map is non-empty) — it just adds no field.
-		expect(ddos.map((entry) => entry.tipo)).toEqual(['zenon3', 'zenon4']);
+		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344', 'test7345']);
 		expect(remoteFields).toEqual(['id']);
 	});
 
@@ -155,24 +155,24 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 	test('a ddo with an EMPTY fields_map is skipped and context stays index-paired', async () => {
 		const { ddos, context, remoteFields } = await hydrateExternalSearchDdos(
 			'test61',
-			'zenon1',
+			'test7342',
 			[
-				ddoRef('zenon3', 'zenon1'),
-				ddoRef('zenon_empty', 'zenon1'), // configured, but maps nothing
-				ddoRef('zenon5', 'zenon1'),
+				ddoRef('test7344', 'test7342'),
+				ddoRef('test7343', 'test7342'), // configured, but maps nothing
+				ddoRef('test7346', 'test7342'),
 			],
-			loaderFrom({ zenon3: dato('id'), zenon_empty: [], zenon5: dato('authors') }),
+			loaderFrom({ test7344: dato('id'), test7343: [], test7346: dato('authors') }),
 		);
-		expect(ddos.map((entry) => entry.tipo)).toEqual(['zenon3', 'zenon5']);
+		expect(ddos.map((entry) => entry.tipo)).toEqual(['test7344', 'test7346']);
 		expect(context).toHaveLength(ddos.length);
 		for (const [index, ddo] of ddos.entries()) {
 			expect((context[index] as { tipo: string }).tipo).toBe(ddo.tipo);
 		}
 		// The echo is the DDO OBJECT the target decision carried, not a rebuild.
 		expect(context[0]).toEqual({
-			tipo: 'zenon3',
-			section_tipo: 'zenon1',
-			label: 'echo:zenon3',
+			tipo: 'test7344',
+			section_tipo: 'test7342',
+			label: 'echo:test7344',
 		});
 		expect(remoteFields).toEqual(['id', 'authors']);
 	});
@@ -181,9 +181,9 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 		const map = dato('id', 'title');
 		const { ddos } = await hydrateExternalSearchDdos(
 			'test61',
-			'zenon1',
-			[ddoRef('zenon3', 'zenon1')],
-			loaderFrom({ zenon3: map }),
+			'test7342',
+			[ddoRef('test7344', 'test7342')],
+			loaderFrom({ test7344: map }),
 		);
 		expect(ddos[0]?.fieldsMap).toBe(map);
 	});
@@ -192,8 +192,8 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 		const refusal = await refusalOf(
 			hydrateExternalSearchDdos(
 				'test61',
-				'zenon1',
-				[ddoRef('zenon3', 'zenon1'), ddoRef('zenon4', 'zenon1')],
+				'test7342',
+				[ddoRef('test7344', 'test7342'), ddoRef('test7345', 'test7342')],
 				loaderFrom({}),
 			),
 		);
@@ -204,21 +204,21 @@ describe('hydrateExternalSearchDdos — which ddos render and which fields go ou
 	test('no ddo on the target section at all → the same refusal, never an empty search', async () => {
 		const refusal = await refusalOf(
 			hydrateExternalSearchDdos(
-				'rsc1285',
-				'zenon1',
-				[ddoRef('rsc368', 'rsc332')],
-				loaderFrom({ rsc368: dato('title') }),
+				'test6155',
+				'test7342',
+				[ddoRef('test6231', 'test6100')],
+				loaderFrom({ test6231: dato('title') }),
 			),
 		);
 		expect(refusal.code).toBe('external.bad_config');
 		expect(refusal.message).toBe(
-			'component rsc1285 external config shows no external field with a fields_map',
+			'component test6155 external config shows no external field with a fields_map',
 		);
 	});
 
 	test('an empty ddo list refuses rather than searching for nothing', async () => {
 		const refusal = await refusalOf(
-			hydrateExternalSearchDdos('test61', 'zenon1', [], loaderFrom({})),
+			hydrateExternalSearchDdos('test61', 'test7342', [], loaderFrom({})),
 		);
 		expect(refusal.code).toBe('external.bad_config');
 		expect(refusal.message).toMatch(/no external field with a fields_map/);

@@ -43,6 +43,8 @@ import {
 	verifyMediaTree,
 } from '../../src/core/install/media_tree.ts';
 import { subtitlesPath, subtitlesRelativePath } from '../../src/core/media/path.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
+import { TEST_MEDIA_MARKER } from '../helpers/test_media_root.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -52,7 +54,9 @@ function scratchRoot(): string {
 	// install/directories.ts at the tree mode. Match it so the scaffolding does
 	// not masquerade as a finding.
 	chmodSync(root, MEDIA_DIR_MODE);
-	return root;
+	// DECLARE it: provisionMediaTree refuses an unmarked root under the test-media
+	// seam (src/core/media/test_media_root.ts).
+	return markMediaRoot(root);
 }
 
 function withScratchRoot(run: (root: string) => void): void {
@@ -84,6 +88,12 @@ function listTree(root: string): string[] {
 	const out: string[] = [];
 	const walk = (dir: string, prefix: string): void => {
 		for (const name of readdirSync(dir).sort()) {
+			// The scratch root's own `.dedalo_test_media` declaration is HARNESS, not
+			// tree: it is planted by `scratchRoot()` so the media doors will write here
+			// at all (src/core/media/test_media_root.ts). Counting it would make every
+			// "the tree is exactly this" and "verify left NO residue" assertion read as
+			// a finding about scaffolding.
+			if (prefix === '' && name === TEST_MEDIA_MARKER) continue;
 			const rel = prefix === '' ? name : `${prefix}/${name}`;
 			out.push(rel);
 			if (statSync(join(dir, name)).isDirectory()) walk(join(dir, name), rel);
@@ -816,6 +826,10 @@ const MEDIA_ROOT_DOORS: Readonly<Record<string, RegExp>> = Object.freeze({
 const MEDIA_ROOT_DOOR_FILES: readonly string[] = [
 	'test/unit/install_persist_config.test.ts',
 	'test/unit/media_tree_provision_native.test.ts',
+	// The test-media-root tripwire PROVES `provisionMediaTree` refuses an unmarked
+	// root and writes into a marked one — it cannot do that without opening the
+	// door, and both roots it opens are mkdtemp'd and removed in the same test.
+	'test/unit/test_media_root_tripwire.test.ts',
 ];
 
 /**

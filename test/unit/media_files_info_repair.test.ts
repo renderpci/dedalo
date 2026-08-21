@@ -16,11 +16,10 @@
  * component key into a SQL-NULL column, and the affected-row count that stops a
  * caller reporting a write it never made (S2-02).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -49,10 +48,11 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolResponse } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 /** The canonical test3 playground (matrix_test) — the suite's only write surface. */
 const SCRATCH_SECTION = 'test3';
-/** test99 — component_image, the shape the production bug hit (rsc170/rsc29 images). */
+/** test99 — component_image, the shape the production bug hit (test3/test99 images). */
 const MEDIA_COMPONENT = 'test99';
 /** test94 — component_av, a second media component on the same record. */
 const OTHER_MEDIA_COMPONENT = 'test94';
@@ -360,12 +360,12 @@ describe('the files_info reconcile — create / refresh / nothing / missing', ()
  */
 describe('media tool identity follows the REQUEST data lang', () => {
 	/**
-	 * rsc43 — the ONE translatable media component in the suite DB (test3's own
+	 * test3205 — the ONE translatable media component in the suite DB (test3's own
 	 * media components are not translatable, and the lang branch only exists for
 	 * translatable ones). Asserted, not assumed: if it stops being translatable
 	 * this test would silently pass on the null branch.
 	 */
-	const TRANSLATABLE_MEDIA = 'rsc43';
+	const TRANSLATABLE_MEDIA = 'test3205';
 
 	test('a translatable component resolves the request lang, not the install default', async () => {
 		expect(await getTranslatableByTipo(TRANSLATABLE_MEDIA)).toBe(true);
@@ -421,6 +421,10 @@ describe('repair: a twin this host cannot write is REPORTED, and costs nothing e
 	// from one that asserted something.
 	const HAVE_MAGICK = existsSync(resolveMagick());
 
+	// DECLARE the scratch root — the media doors refuse an unmarked one under the
+	// test-media seam (src/core/media/test_media_root.ts). The CHILD probe below
+	// inherits the armed seam, so it asks the same question.
+	markMediaRoot(MEDIA_ROOT);
 	afterAll(() => rmSync(MEDIA_ROOT, { recursive: true, force: true }));
 
 	test('the kernel MERGES the returned failures — it does not drop them', () => {
@@ -444,7 +448,7 @@ describe('repair: a twin this host cannot write is REPORTED, and costs nothing e
 				['original', 'tif'],
 				['1.5MB', 'jpg'],
 			] as [string, string][]) {
-				const absolute = `${MEDIA_ROOT}/image/${quality}/rsc29_rsc170_70.${extension}`;
+				const absolute = `${MEDIA_ROOT}/image/${quality}/test99_test3_70.${extension}`;
 				mkdirSync(dirname(absolute), { recursive: true });
 				const built = await runBinary([resolveMagick(), '-size', '400x300', 'xc:red', absolute], {
 					nice: false,
@@ -463,7 +467,7 @@ describe('repair: a twin this host cannot write is REPORTED, and costs nothing e
 				'const errors = await regenerateMissingDerivatives(',
 				"\t'component_image',",
 				'\tspec,',
-				"\t{ componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 70, lang: null },",
+				"\t{ componentTipo: 'test99', sectionTipo: 'test3', sectionId: 70, lang: null },",
 				"\t{ initialMediaPath: '', maxItemsFolder: null, mediaRoot: process.env.PROBE_MEDIA_ROOT },",
 				"\t{ rawExtension: 'tif', deleteNormalized: false, bulkProcessId: null },",
 				');',
@@ -497,10 +501,10 @@ describe('repair: a twin this host cannot write is REPORTED, and costs nothing e
 			// AND THE REPAIR STILL HAPPENED: the two derivatives the tool exists to fix
 			// are on disk. Placed earlier, or wrapped as one block, the twin step would
 			// have taken them down with it.
-			expect(existsSync(`${MEDIA_ROOT}/image/thumb/rsc29_rsc170_70.jpg`)).toBe(true);
-			expect(existsSync(`${MEDIA_ROOT}/image/svg/rsc29_rsc170_70.svg`)).toBe(true);
+			expect(existsSync(`${MEDIA_ROOT}/image/thumb/test99_test3_70.jpg`)).toBe(true);
+			expect(existsSync(`${MEDIA_ROOT}/image/svg/test99_test3_70.svg`)).toBe(true);
 			// …and the format that could not be written never landed under its name.
-			expect(existsSync(`${MEDIA_ROOT}/image/1.5MB/rsc29_rsc170_70.jxl`)).toBe(false);
+			expect(existsSync(`${MEDIA_ROOT}/image/1.5MB/test99_test3_70.jxl`)).toBe(false);
 		},
 	);
 });

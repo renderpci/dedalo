@@ -12,11 +12,10 @@
  * So the gates below assert the DESTINATION DIRECTORY, not the return value: a
  * writer that throws correctly but leaks debris has not done its job.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -30,13 +29,17 @@ import {
 } from '../../src/core/media/atomic.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import { copyToQuality } from '../../src/core/media/processing.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_atomic_${process.pid}`;
 const DIR = `${ROOT}/thumb`;
-const TARGET = `${DIR}/rsc29_rsc170_440866.jpg`;
+const TARGET = `${DIR}/test99_test3_440866.jpg`;
 
 beforeEach(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root (the media doors refuse an unmarked one under the
+	// test-media seam — src/core/media/test_media_root.ts).
+	markMediaRoot(ROOT);
 	mkdirSync(DIR, { recursive: true });
 });
 
@@ -65,7 +68,7 @@ describe('writeAtomically: the destination dir is left clean whatever the produc
 			writeFileSync(temp, 'jpeg-bytes');
 		});
 		expect(result).toBe(TARGET);
-		expect(contents()).toEqual(['rsc29_rsc170_440866.jpg']);
+		expect(contents()).toEqual(['test99_test3_440866.jpg']);
 	});
 
 	test('the target directory is created when it does not exist yet', async () => {
@@ -109,7 +112,7 @@ describe('writeAtomically: the destination dir is left clean whatever the produc
 	});
 
 	test('the sweep matches the DOTTED temp stem literally — a sibling record is safe', async () => {
-		// A media temp is `rsc29_rsc170_440866.tmp.<pid>.<uuid>.jpg`: full of dots. An
+		// A media temp is `test99_test3_440866.tmp.<pid>.<uuid>.jpg`: full of dots. An
 		// unescaped '.' in the sweep regex matches ANY character, so the pattern would
 		// reach files belonging to other records and other concurrent writes. The
 		// decoy below differs from the temp only where the temp has a dot, so it is
@@ -149,7 +152,7 @@ describe('writeAtomically: the destination dir is left clean whatever the produc
 			expect(existsSync(otherTemp)).toBe(true);
 		});
 		await other;
-		expect(contents()).toEqual(['rsc29_rsc170_440866.jpg']);
+		expect(contents()).toEqual(['test99_test3_440866.jpg']);
 	});
 });
 
@@ -163,7 +166,7 @@ describe('writeAtomicallySync: the sync twin stays sync', () => {
 		expect(result).toBe(TARGET);
 		expect(typeof (result as unknown as { then?: unknown }).then).toBe('undefined');
 		expect(existsSync(TARGET)).toBe(true);
-		expect(contents()).toEqual(['rsc29_rsc170_440866.jpg']);
+		expect(contents()).toEqual(['test99_test3_440866.jpg']);
 	});
 
 	test('it sweeps and rethrows exactly like its async twin', () => {
@@ -190,8 +193,8 @@ describe('writeAtomicallySync: the sync twin stays sync', () => {
 		const spec = mediaTypeOf('component_3d');
 		if (spec === null) throw new Error('component_3d media spec is not registered');
 		const identity: MediaIdentity = {
-			componentTipo: 'rsc29',
-			sectionTipo: 'rsc170',
+			componentTipo: 'test99',
+			sectionTipo: 'test3',
 			sectionId: 440866,
 			lang: null,
 		};

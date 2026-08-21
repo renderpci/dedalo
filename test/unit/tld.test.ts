@@ -4,11 +4,9 @@
  * get_section_id_from_tipo). Getting these wrong mis-derives every provisioned
  * section tipo, so each surprising PHP behavior is an explicit assertion.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated off install TLDs 2026-08-20: the subject IS the TLD grammar, so the
+// examples are engine-shipped TLDs (`dd`, `es`, `ontologytype`) and the reserved
+// scratch prefix `zz` — never an install's name, which would say nothing extra.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -68,7 +66,7 @@ describe('getSectionIdFromTipo (PHP /[0-9]+/, first digit run, 0 is valid)', () 
 describe('mapTldToTargetSectionTipo (PHP safe_tld + "0")', () => {
 	test('derives the <tld>0 main section', () => {
 		expect(mapTldToTargetSectionTipo('dd')).toBe('dd0');
-		expect(mapTldToTargetSectionTipo('rsc')).toBe('rsc0');
+		expect(mapTldToTargetSectionTipo('zzq')).toBe('zzq0');
 	});
 	test('throws on an invalid tld', () => {
 		expect(() => mapTldToTargetSectionTipo('a')).toThrow();
@@ -85,6 +83,6 @@ describe('buildTipo / isMainTipo', () => {
 	test('isMainTipo only matches <tld>0', () => {
 		expect(isMainTipo('dd0', 'dd')).toBe(true);
 		expect(isMainTipo('dd1', 'dd')).toBe(false);
-		expect(isMainTipo('rsc0', 'dd')).toBe(false);
+		expect(isMainTipo('zzq0', 'dd')).toBe(false);
 	});
 });

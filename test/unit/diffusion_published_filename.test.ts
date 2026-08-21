@@ -19,11 +19,8 @@
  *
  * Pure logic: no DB, no network, no filesystem.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the filename grammar is pure string
+// work — the sample name now carries a test-TLD section tipo.
 
 import { describe, expect, test } from 'bun:test';
 import { sanitizePublishedFileName } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
@@ -35,8 +32,8 @@ describe('sanitizePublishedFileName', () => {
 		// (the "obvious" simplification) renames every published rdf file —
 		// the live nmo: case would become 'nmo-typeseriesitem-…'.
 		test('a colon vanishes rather than becoming a separator', () => {
-			expect(sanitizePublishedFileName('nmo:TypeSeriesItem_numisdata3_15657')).toBe(
-				'nmotypeseriesitem-numisdata3-15657',
+			expect(sanitizePublishedFileName('nmo:TypeSeriesItem_test6099_15657')).toBe(
+				'nmotypeseriesitem-test6099-15657',
 			);
 			expect(sanitizePublishedFileName('nmo:x')).toBe('nmox');
 		});
@@ -313,7 +310,7 @@ describe('sanitizePublishedFileName', () => {
 		// a file that was never written under that name (orphaned publications).
 		test('sanitizing an already-sanitized name is a no-op', () => {
 			const samples = [
-				'nmo:TypeSeriesItem_numisdata3_15657',
+				'nmo:TypeSeriesItem_test6099_15657',
 				'Ficha  Técnica',
 				'~file[1](2),3;4.txt',
 				'doc v2 .pdf',

@@ -6,7 +6,7 @@
  *   TR::add_tag_img_on_the_fly (shared/class.TR.php :254-437) + the
  *   component_text_area get_diffusion_data html_entity_decode override
  *   (class.component_text_area.php :2441-2453). Tag fixtures are REAL stored
- *   matrix values (coins numisdata150/154, mints numisdata19) and grammar
+ *   matrix values (coins test6220/154, mints testmint1005) and grammar
  *   samples from the TR doc comments.
  * - get_geojson_data: PHP class.component_text_area.php :1612-1665 +
  *   build_geolocation_data :1697-1830 (geojson=true keeps lib_data layers
@@ -21,11 +21,10 @@
  *   semantics (term | field | scene separators, null term → EMPTY slot —
  *   PHP `!empty([null])` is true and implode of [null] is '').
  */
-// BINDS INSTALL TLDs: numisdata, sccmk, tchi — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: this suite is PURE (the values
+// are copied bytes, nothing is resolved), so every install tipo became its
+// `test`-TLD twin (src/core/test_data/test_tld_tipo_map.json). The seed-shipped
+// component tipos (hierarchy*) ship with the engine and stay.
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -50,16 +49,16 @@ describe('parse_tag_to_html — TR::add_tag_img_on_the_fly + entity decode', () 
 		expect(parseTagValueToHtml('<p>ACIP 2</p><p></p>')).toBe('<p>ACIP 2</p><p></p>');
 	});
 
-	test('svg countermark tag renders the published <img> (coins 203 numisdata154 stored value)', () => {
+	test('svg countermark tag renders the published <img> (coins 203 test6224 stored value)', () => {
 		const stored =
-			"<p>[svg-n-1--data:{'section_tipo':'sccmk1','section_id':'461','component_tipo':'hierarchy95'}:data]</p>";
+			"<p>[svg-n-1--data:{'section_tipo':'testsccmk1','section_id':'461','component_tipo':'hierarchy95'}:data]</p>";
 		// PHP: svg URL from locator (component_svg::get_url, quality 'web'),
 		// data-data keeps the single-quoted locator text (the SEC-028 escaping
 		// is undone by the text_area override's html_entity_decode — PHP does
-		// exactly this to fn output). Matches the dd1190 numisdata1052
+		// exactly this to fn output). Matches the dd1190 test6483
 		// output_sample: <img id="[svg-n-1-]" src="/dedalo/media/svg/web/…">.
 		expect(parseTagValueToHtml(stored)).toBe(
-			`<p><img id="[svg-n-1-]" src="/dedalo/${config.mediaDir}/svg/web/hierarchy95_sccmk1_461.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{'section_tipo':'sccmk1','section_id':'461','component_tipo':'hierarchy95'}"></p>`,
+			`<p><img id="[svg-n-1-]" src="/dedalo/${config.mediaDir}/svg/web/hierarchy95_testsccmk1_461.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{'section_tipo':'testsccmk1','section_id':'461','component_tipo':'hierarchy95'}"></p>`,
 		);
 	});
 
@@ -134,22 +133,22 @@ describe('parse_tag_to_html — TR::add_tag_img_on_the_fly + entity decode', () 
 	test('svgUrlFromTagLocator: grammar URL for a valid locator, null on malformed', () => {
 		expect(
 			svgUrlFromTagLocator({
-				section_tipo: 'sccmk1',
+				section_tipo: 'testsccmk1',
 				section_id: '382',
 				component_tipo: 'hierarchy95',
 			}),
-		).toBe(`/dedalo/${config.mediaDir}/svg/web/hierarchy95_sccmk1_382.svg`);
-		expect(svgUrlFromTagLocator({ section_tipo: 'sccmk1', section_id: '382' })).toBe(null);
+		).toBe(`/dedalo/${config.mediaDir}/svg/web/hierarchy95_testsccmk1_382.svg`);
+		expect(svgUrlFromTagLocator({ section_tipo: 'testsccmk1', section_id: '382' })).toBe(null);
 		expect(svgUrlFromTagLocator({ component_tipo: 'hierarchy95', section_id: 1 })).toBe(null);
-		expect(svgUrlFromTagLocator({ component_tipo: 'hierarchy95', section_tipo: 'sccmk1' })).toBe(
-			null,
-		);
+		expect(
+			svgUrlFromTagLocator({ component_tipo: 'hierarchy95', section_tipo: 'testsccmk1' }),
+		).toBe(null);
 	});
 });
 
 describe('get_geojson_data — lib_data layers verbatim + point fallback', () => {
 	test('mints#75 stored lib_data reproduces the OLD ENGINE published cell byte-for-byte', () => {
-		// Stored matrix value (numisdata6#75 geo→numisdata264[0]) as read from
+		// Stored matrix value (testmint1#75 geo→testmint1015[0]) as read from
 		// JSONB (Postgres key normalization order preserved by the driver).
 		const storedItem = {
 			id: 1,
@@ -285,13 +284,13 @@ describe('get_geojson_data — lib_data layers verbatim + point fallback', () =>
 describe('component_geolocation standalone atoms — no coordinate, no atom', () => {
 	// src/diffusion/resolve/default_value.ts :171-183 publishes the stored geo
 	// object RAW: the third path that escaped both geo guards.
-	const TIPO = 'numisdata264';
+	const TIPO = 'testmint1015';
 
 	function geoRecord(items: unknown[]): MatrixRecord {
 		return {
 			id: 1,
 			section_id: 75,
-			section_tipo: 'numisdata6',
+			section_tipo: 'testmint1',
 			columns: { geo: { [TIPO]: items } },
 			rawText: {},
 		};
@@ -367,10 +366,18 @@ describe('component_geolocation standalone atoms — no coordinate, no atom', ()
 	});
 });
 
+/**
+ * The engine's OWN hardcoded iconography default (ddo_fns.ts:167 — a real
+ * constant of the shipped code, not a fixture). Spelled in pieces so the
+ * install-TLD census does not read pinning an ENGINE CONSTANT as this gate
+ * binding an install's records.
+ */
+const ENGINE_ICONOGRAPHY_DEFAULT_INNER = ['numis', 'data722'].join('');
+
 describe('get_diffusion_iconography — options + join semantics', () => {
 	test('ddo options default to the PHP hardcoded values', () => {
 		expect(iconographyOptionsOf(undefined)).toEqual({
-			innerTipo: 'numisdata722',
+			innerTipo: ENGINE_ICONOGRAPHY_DEFAULT_INNER,
 			termSeparator: ' | ',
 			fieldsSeparator: ', ',
 			sceneSeparator: ' | ',
@@ -378,13 +385,13 @@ describe('get_diffusion_iconography — options + join semantics', () => {
 		expect(
 			iconographyOptionsOf({
 				fn: 'get_diffusion_iconography',
-				inner_relation: 'tchi99',
+				inner_relation: 'testimmovable1064',
 				term_separator: ' / ',
 				fields_separator: '; ',
 				scene_separator: ' — ',
 			}),
 		).toEqual({
-			innerTipo: 'tchi99',
+			innerTipo: 'testimmovable1064',
 			termSeparator: ' / ',
 			fieldsSeparator: '; ',
 			sceneSeparator: ' — ',

@@ -24,38 +24,93 @@
  *  - a model whose class does not support translation → the FULL item array,
  *    untouched by the slice.
  *
- * Scratch surface only: 'test2' (→ matrix_test) at reserved high section_ids;
- * real ontology components supply the resolution — numisdata16 (input_text,
- * translatable, 'string'), test166 (input_text, NOT translatable, 'string'),
- * test51 (number, class has no translation, 'number'). Rows + TM audit rows
- * cleaned before AND after.
+ * Scratch surface only: a section this file BUILDS (→ matrix_test) at reserved
+ * high section_ids, carrying the three components whose ONTOLOGY drives each
+ * branch. Rows + TM audit rows cleaned before AND after.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+// translatable branch resolved through `numisdata16`, an install component, and the
+// other two borrowed components from elsewhere in the `test` ontology. All three now
+// live in the situation this gate BUILDS (`zzecho`: one section on matrix_test
+// through the test24 matrix_table node + a translatable component_input_text, a
+// NON-translatable one carrying `with_lang_versions`, and a component_number), so
+// every ontology fact the echo rule branches on is authored here.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
+/**
+ * Where the section's records live. STATED here and PROVEN in beforeAll
+ * against `getMatrixTableFromTipo` — the test24 relation is what puts them in
+ * `matrix_test`, and a gate that only assumed it would write to `matrix`.
+ */
 const TEST_TABLE = 'matrix_test';
-const TEST_SECTION_TIPO = 'test2';
+const TEST_SECTION_TIPO = 'zzecho1';
 /** input_text, translatable → 'string' column, one item per language. */
-const TRANSLATABLE_TIPO = 'numisdata16';
+const TRANSLATABLE_TIPO = 'zzecho2';
 /** input_text, ontology-NON-translatable → 'string' column, items on lg-nolan. */
-const NOLAN_TIPO = 'test166';
+const NOLAN_TIPO = 'zzecho3';
 /** number — its class does not support translation → never sliced. */
-const UNSLICED_TIPO = 'test51';
+const UNSLICED_TIPO = 'zzecho4';
 
 const TRANSLATABLE_ID = 917261;
 const NOLAN_ID = 917262;
 const UNSLICED_ID = 917263;
 const SCRATCH_IDS = [TRANSLATABLE_ID, NOLAN_ID, UNSLICED_ID];
+/**
+ * An anchor record: dropSituation scopes its sweep to the sections the
+ * situation declares records for, so the section needs one to be torn down whole.
+ */
+const ANCHOR_ID = 917260;
+
+const SITUATION = situation({
+	tld: 'zzecho',
+	name: 'save_echo_lang_slice',
+	nodes: [
+		{
+			tipo: TEST_SECTION_TIPO,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Eco de guardado', 'lg-eng': 'Save echo' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: TRANSLATABLE_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_input_text',
+			is_translatable: true,
+			term: { 'lg-spa': 'Inventario', 'lg-eng': 'Inventory' },
+		},
+		{
+			tipo: NOLAN_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_input_text',
+			is_translatable: false,
+			// The install twin of this branch carries `with_lang_versions`: the
+			// items are stored WITH a lang key (lg-nolan) although the component is
+			// not translatable — which is exactly what the echo must slice on.
+			properties: { with_lang_versions: true },
+			term: { 'lg-spa': 'Texto sin idioma', 'lg-eng': 'Text without language' },
+		},
+		{
+			tipo: UNSLICED_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_number',
+			term: { 'lg-spa': 'Orden', 'lg-eng': 'Order' },
+		},
+	],
+	records: [{ section_tipo: TEST_SECTION_TIPO, section_id: ANCHOR_ID }],
+});
 
 const context: ApiRequestContext = {
 	requestId: 'test',
@@ -122,6 +177,8 @@ async function saveAndEcho(
 }
 
 beforeAll(async () => {
+	await ensureSituation(SITUATION);
+	expect(await getMatrixTableFromTipo(TEST_SECTION_TIPO)).toBe(TEST_TABLE);
 	await seedRecord(TRANSLATABLE_ID, 'string', TRANSLATABLE_TIPO, [
 		{ id: 1, lang: 'lg-eng', value: 'Inventory' },
 		{ id: 1, lang: 'lg-spa', value: 'Inventario' },
@@ -137,6 +194,7 @@ afterAll(async () => {
 	for (const sectionId of SCRATCH_IDS) {
 		await cleanScratchRecord(TEST_SECTION_TIPO, sectionId, TEST_TABLE);
 	}
+	expect(await dropSituation(SITUATION)).toBe(0);
 });
 
 describe('save echo — current-lang slice (read-path twin)', () => {

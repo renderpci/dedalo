@@ -15,18 +15,23 @@
  *    never come. conform.ts now applies it, keyed on the leaf node's STORED
  *    ontology model; the LIVE dispatch is gated in
  *    search_date_and_ancestors_native.test.ts, this file gates the BUILDER.
- * 4. search_related filter_by_locators_op 'AND': intersection semantics on
- *    the real §15657 fixture (holds BOTH object1/99 and object1/96 via
- *    numisdata34).
+ * 4. search_related filter_by_locators_op 'AND': intersection semantics on a
+ *    record that holds BOTH targets, next to one that holds only the first.
  */
-// BINDS INSTALL TLDs: numisdata, object, tema — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+// four DB-backed cases used to hunt install records — a `tema1` section with
+// dd96 indexations, a maintained `numisdata4.relation_search` row, and the
+// `numisdata3` §15657 fixture holding both object1/99 and object1/96 — and were
+// the file's four reds on the suite database. They now run against a BUILT
+// situation (`zzsb`, matrix_test through the test24 matrix_table node, ids in
+// the 9009xx band, torn down with an asserted residue of 0), so each fixture is
+// a row this file wrote and every count is EXACT. The pure SQL-string builders
+// (the _tm twin, the registry face, relation_children) were already generic and
+// are untouched.
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { getRelationSearchFragmentBuilder } from '../../src/core/relations/registry.ts';
 import {
 	buildRelationFragment,
@@ -37,6 +42,169 @@ import { buildRelationIndexFragment } from '../../src/core/search/builders/build
 import type { BuilderContext } from '../../src/core/search/builders/types.ts';
 import { ParamsCollector } from '../../src/core/search/params.ts';
 import { findInverseReferences } from '../../src/core/search/search_related.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
+
+/* -------------------------------------------------------------------------
+ * THE SITUATION the three DB-backed describes run on.
+ *   zzsb1  owner section        — §900961 holds BOTH targets, §900962 only the
+ *                                 first (the AND/OR intersection), §900963
+ *                                 carries an ancestor locator ONLY in
+ *                                 relation_search (the autocomplete_hi wrap)
+ *   zzsb2  component_portal     — the owning column; deliberately UNPAIRED
+ *                                 (no component_relation_parent), which is the
+ *                                 relation_children "drop the clause" case
+ *   zzsb3  component_portal     — the ancestor-wrap column
+ *   zzsb5  target section       — §900951 / §900952
+ *   zzsb6  indexed section      — §900971 / §900972, pointed at by the dd96
+ *                                 locators the relation_index builder scans
+ *   zzsb7  component_relation_index — the column carrying those dd96 locators
+ * ---------------------------------------------------------------------- */
+
+const OWNER_SECTION = 'zzsb1';
+const OWNER_PORTAL = 'zzsb2';
+const ANCESTOR_PORTAL = 'zzsb3';
+const TARGET_SECTION = 'zzsb5';
+const INDEXED_SECTION = 'zzsb6';
+const INDEX_COLUMN = 'zzsb7';
+
+const TARGET_A = 900951;
+const TARGET_B = 900952;
+const OWNER_BOTH = 900961;
+const OWNER_ONE = 900962;
+const OWNER_ANCESTOR = 900963;
+const INDEXED_IDS = [900971, 900972];
+
+/** A plain portal locator on the owner column. */
+const targetLocator = (sectionId: number) => ({
+	id: 1,
+	type: 'dd151',
+	section_tipo: TARGET_SECTION,
+	section_id: sectionId,
+	from_component_tipo: OWNER_PORTAL,
+});
+/** DEDALO_RELATION_TYPE_INDEX_TIPO — what the relation_index builder scans for. */
+const indexLocator = (sectionId: number) => ({
+	id: 1,
+	type: 'dd96',
+	section_tipo: INDEXED_SECTION,
+	section_id: sectionId,
+	from_component_tipo: INDEX_COLUMN,
+});
+/**
+ * The ancestor locator that exists ONLY in `relation_search` — the whole point
+ * of the autocomplete_hi wrap: the relation column never holds it.
+ */
+const ANCESTOR_LOCATOR = {
+	type: 'dd151',
+	section_tipo: TARGET_SECTION,
+	section_id: TARGET_B,
+	from_component_tipo: ANCESTOR_PORTAL,
+};
+
+const S = situation({
+	name: 'zzsb relation search builders',
+	tld: 'zzsb',
+	nodes: [
+		{
+			tipo: OWNER_SECTION,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Propietarios', 'lg-eng': 'Owners' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: OWNER_PORTAL,
+			parent: OWNER_SECTION,
+			model: 'component_portal',
+			term: { 'lg-spa': 'Portal' },
+			relations: [{ tipo: TARGET_SECTION }],
+		},
+		{
+			tipo: ANCESTOR_PORTAL,
+			parent: OWNER_SECTION,
+			model: 'component_portal',
+			order_number: 2,
+			term: { 'lg-spa': 'Portal jerárquico' },
+			relations: [{ tipo: TARGET_SECTION }],
+		},
+		{
+			tipo: INDEX_COLUMN,
+			parent: OWNER_SECTION,
+			model: 'component_relation_index',
+			order_number: 3,
+			term: { 'lg-spa': 'Indexación' },
+		},
+		{
+			tipo: TARGET_SECTION,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Destinos', 'lg-eng': 'Targets' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: INDEXED_SECTION,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Sección indexada', 'lg-eng': 'Indexed section' },
+			relations: [{ tipo: 'test24' }],
+		},
+	],
+	records: [
+		{ section_tipo: TARGET_SECTION, section_id: TARGET_A, columns: { data: {} } },
+		{ section_tipo: TARGET_SECTION, section_id: TARGET_B, columns: { data: {} } },
+		...INDEXED_IDS.map((sectionId) => ({
+			section_tipo: INDEXED_SECTION,
+			section_id: sectionId,
+			columns: { data: {} },
+		})),
+		{
+			section_tipo: OWNER_SECTION,
+			section_id: OWNER_BOTH,
+			columns: {
+				relation: {
+					[OWNER_PORTAL]: [targetLocator(TARGET_A), targetLocator(TARGET_B)],
+					[INDEX_COLUMN]: [indexLocator(INDEXED_IDS[0] as number)],
+				},
+			},
+		},
+		{
+			section_tipo: OWNER_SECTION,
+			section_id: OWNER_ONE,
+			columns: {
+				relation: {
+					[OWNER_PORTAL]: [targetLocator(TARGET_A)],
+					[INDEX_COLUMN]: [indexLocator(INDEXED_IDS[1] as number)],
+				},
+			},
+		},
+		{
+			section_tipo: OWNER_SECTION,
+			section_id: OWNER_ANCESTOR,
+			// The ancestor lives ONLY in relation_search — `relation` has no
+			// ANCESTOR_PORTAL key at all, which is what makes the unwrapped
+			// fragment miss and the wrap the only thing that can find it.
+			columns: { relation_search: { [ANCESTOR_PORTAL]: [ANCESTOR_LOCATOR] } },
+		},
+	],
+});
+
+/** The table the ONTOLOGY resolves for the situation's sections. */
+let TABLE = '';
+
+beforeAll(async () => {
+	await ensureSituation(S);
+	const resolved = await getMatrixTableFromTipo(OWNER_SECTION);
+	expect(resolved).toBe('matrix_test'); // the test24 relation, proven not assumed
+	TABLE = resolved as string;
+}, 60000);
+
+afterAll(async () => {
+	expect(await dropSituation(S)).toBe(0);
+});
 
 const tmContext: BuilderContext = {
 	alias: 'tm',
@@ -202,13 +370,14 @@ describe('relation_children builder (PHP trait.search_component_relation_childre
 	});
 
 	test('unpaired components drop the clause (false); matrix_time_machine throws', async () => {
-		// numisdata77 is a portal — no paired component_relation_parent.
+		// zzsb2 is a portal this file authored with NO paired
+		// component_relation_parent anywhere in its section.
 		expect(
 			await buildRelationChildrenFragment(null, '*', {
 				...childrenContext,
-				tipo: 'numisdata77',
-				sectionTipo: 'numisdata3',
-				table: 'matrix',
+				tipo: OWNER_PORTAL,
+				sectionTipo: OWNER_SECTION,
+				table: TABLE,
 			}),
 		).toBe(false);
 		expect(
@@ -221,21 +390,25 @@ describe('relation_children builder (PHP trait.search_component_relation_childre
 });
 
 describe('relation_index builder (PHP trait.search_component_relation_index)', () => {
+	// The SEARCHED section is zzsb6: this file wrote the two dd96 locators that
+	// point at it, so the emitted id list is EXACTLY its two records.
 	const indexContext: BuilderContext = {
 		alias: 'h1',
 		column: 'relation',
-		tipo: 'hierarchy40',
-		sectionTipo: 'tema1',
-		table: 'matrix_hierarchy',
+		tipo: INDEX_COLUMN,
+		sectionTipo: INDEXED_SECTION,
+		table: 'matrix_test',
 		lang: 'lg-nolan',
 		translatable: false,
 		model: 'component_relation_index',
 	};
 
-	test("'*' emits a literal intval'd IN list over the dd96 references (tema1 has many)", async () => {
+	test("'*' emits a literal intval'd IN list over the dd96 references", async () => {
 		const result = await buildRelationIndexFragment(null, '*', indexContext);
 		const { sql: rendered, params } = render(result as never);
 		expect(rendered).toMatch(/^h1\.section_id IN \(\d+(,\d+)*\)$/);
+		// EXACT set, not just "well-shaped": the ids are the ones minted above.
+		expect(rendered).toBe(`h1.section_id IN (${[...INDEXED_IDS].sort().join(',')})`);
 		expect(params).toEqual([]); // zero params — PHP interpolates intval'd ids
 	});
 
@@ -243,6 +416,7 @@ describe('relation_index builder (PHP trait.search_component_relation_index)', (
 		const result = await buildRelationIndexFragment(null, '!*', indexContext);
 		const { sql: rendered } = render(result as never);
 		expect(rendered).toMatch(/^h1\.section_id NOT IN \(\d+(,\d+)*\)$/);
+		expect(rendered).toBe(`h1.section_id NOT IN (${[...INDEXED_IDS].sort().join(',')})`);
 	});
 
 	test('a reference-less section degenerates to 1=0 / 1=1 (PHP :184/:225)', async () => {
@@ -266,37 +440,25 @@ describe('relation_index builder (PHP trait.search_component_relation_index)', (
 
 describe('autocomplete_hi ancestor wrap (LIVE since 2026-08-09 — the builder, unit-gated)', () => {
 	test('an ancestor locator present ONLY in relation_search matches through the wrap', async () => {
-		// A real maintained index row: numisdata155's relation_search on
-		// numisdata4 holds ancestor locators the relation column does NOT.
-		const rows = (await sql.unsafe(
-			`SELECT section_id, relation_search->'numisdata155'->0 AS ancestor
-			 FROM matrix
-			 WHERE section_tipo = 'numisdata4' AND relation_search ? 'numisdata155'
-			 LIMIT 1`,
-			[],
-		)) as { section_id: number; ancestor: Record<string, unknown> | null }[];
-		const fixture = rows[0];
-		if (fixture === undefined || fixture.ancestor === null) {
-			throw new Error('fixture missing: no maintained relation_search rows on numisdata4');
-		}
-
+		// §900963 carries the ancestor in `relation_search` and NOWHERE in
+		// `relation` — the exact shape a maintained autocomplete_hi index row has.
 		const context: BuilderContext = {
 			alias: 'm',
 			column: 'relation',
-			tipo: 'numisdata155',
-			sectionTipo: 'numisdata4',
-			table: 'matrix',
+			tipo: ANCESTOR_PORTAL,
+			sectionTipo: OWNER_SECTION,
+			table: TABLE,
 			lang: 'lg-nolan',
 			translatable: false,
 			model: 'component_portal',
 		};
-		const wrapped = buildRelationSearchAncestorFragment([fixture.ancestor], null, context);
+		const wrapped = buildRelationSearchAncestorFragment([ANCESTOR_LOCATOR], null, context);
 		const { sql: whereSql, params } = render(wrapped);
 		expect(whereSql).toContain('relation_search');
 
 		const counted = (await sql.unsafe(
-			`SELECT count(*)::int AS total FROM matrix m
-			 WHERE m.section_tipo = 'numisdata4' AND m.section_id = ${Number(fixture.section_id)} AND ${whereSql}`,
+			`SELECT count(*)::int AS total FROM "${TABLE}" m
+			 WHERE m.section_tipo = '${OWNER_SECTION}' AND m.section_id = ${OWNER_ANCESTOR} AND ${whereSql}`,
 			params as string[],
 		)) as { total: number }[];
 		expect(counted[0]?.total).toBe(1);
@@ -304,21 +466,21 @@ describe('autocomplete_hi ancestor wrap (LIVE since 2026-08-09 — the builder, 
 		// The UNWRAPPED clause — the relation-column-only fragment every OTHER
 		// relation model still gets — does NOT match, proving the wrap is what
 		// recovers ancestor hits (and that this test is not vacuous).
-		const direct = buildRelationFragment([fixture.ancestor], null, context);
+		const direct = buildRelationFragment([ANCESTOR_LOCATOR], null, context);
 		const { sql: directSql, params: directParams } = render(direct);
 		const directCount = (await sql.unsafe(
-			`SELECT count(*)::int AS total FROM matrix m
-			 WHERE m.section_tipo = 'numisdata4' AND m.section_id = ${Number(fixture.section_id)} AND ${directSql}`,
+			`SELECT count(*)::int AS total FROM "${TABLE}" m
+			 WHERE m.section_tipo = '${OWNER_SECTION}' AND m.section_id = ${OWNER_ANCESTOR} AND ${directSql}`,
 			directParams as string[],
 		)) as { total: number }[];
 		expect(directCount[0]?.total).toBe(0);
-	});
+	}, 30000);
 });
 
 describe("search_related filter_by_locators_op 'AND'", () => {
 	const both = [
-		{ section_tipo: 'object1', section_id: 99, from_component_tipo: 'numisdata34' },
-		{ section_tipo: 'object1', section_id: 96, from_component_tipo: 'numisdata34' },
+		{ section_tipo: TARGET_SECTION, section_id: TARGET_A, from_component_tipo: OWNER_PORTAL },
+		{ section_tipo: TARGET_SECTION, section_id: TARGET_B, from_component_tipo: OWNER_PORTAL },
 	];
 
 	test('AND returns the intersection (a strict subset of OR here)', async () => {
@@ -328,14 +490,17 @@ describe("search_related filter_by_locators_op 'AND'", () => {
 			order: 'section_id',
 			op: 'AND',
 		});
-		expect(andHits.length).toBeGreaterThan(0); // §15657 holds both targets
+		// OR = every owner touching EITHER target (§900961 + §900962);
+		// AND = only the owner holding BOTH (§900961). Exact, both minted here.
+		expect(orHits.map((hit) => hit.section_id).sort()).toEqual([OWNER_ONE, OWNER_BOTH].sort());
+		expect(andHits.length).toBeGreaterThan(0);
 		expect(andHits.length).toBeLessThan(orHits.length);
 		const orKeys = new Set(orHits.map((hit) => `${hit.section_tipo}_${hit.section_id}`));
 		for (const hit of andHits) {
 			expect(orKeys.has(`${hit.section_tipo}_${hit.section_id}`)).toBe(true);
 		}
 		expect(
-			andHits.some((hit) => hit.section_tipo === 'numisdata3' && hit.section_id === 15657),
+			andHits.some((hit) => hit.section_tipo === OWNER_SECTION && hit.section_id === OWNER_BOTH),
 		).toBe(true);
-	});
+	}, 30000);
 });

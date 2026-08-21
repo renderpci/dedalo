@@ -20,19 +20,24 @@
  *  6. unknown requested types are NAMED in `msg` (never silently narrowed),
  *     known-only ⇒ `msg === []`.
  *
- * Scratch surface (namespace: rsc167 ids 934100-934199): matrix rsc167/934100 —
- * an rsc36 transcription (lg-spa ONLY) carrying a note mark, plus an rsc860
+ * Scratch surface (namespace: zztags1 ids 934100-934199): one zztags1/934100 row —
+ * a zztags2 transcription (lg-spa ONLY) carrying a note mark, plus a zztags3
  * index locator. Direct INSERT (no counter bump); swept in afterAll with its
  * matrix_time_machine tail, fail-loud on residue. The note mark points at
- * rsc326/934101, a record that deliberately does NOT exist (the missing-note
- * ddo defaults are the deterministic, in-namespace shape); no rsc326 row is
- * ever written. No dd_ontology write anywhere in this file.
+ * zztags4/934101, a record that deliberately does NOT exist (the missing-note
+ * ddo defaults are the deterministic, in-namespace shape); no zztags4 row is
+ * ever written. The dd_ontology writes are the situation's own (reserved `zztags`
+ * TLD), torn down with it.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule: a test uses
+// the generic `test` TLD and BUILDS the situation it tests). A plain rename was NOT
+// possible here: this gate's subject is the `tags_index` / `tags_notes` PROPERTIES a
+// text_area declares, and no shipped `test` component declares them. So the whole
+// shape is built as a reserved `zztags` scratch ontology — the text_area, the
+// autocomplete_hi its tags_index points at, the note section and the three note
+// components (title/body/publishable) — copied field for field from the shipped
+// zztags2 pair this gate used to read. `dropSituation` sweeps it and the residue is
+// ASSERTED, so the scratch surface stays a scratch surface.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
@@ -42,15 +47,80 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { Session } from '../../src/core/security/session_store.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { mustGet } from '../helpers/assert.ts';
 
-const SECTION = 'rsc167'; // matrix
+
+const SECTION = 'zztags1'; // the host section (its own matrix_table → matrix_test)
 const SECTION_ID = 934100; // scratch band 934100-934199
-const TEXT_AREA = 'rsc36'; // component_text_area, translatable; declares tags_index/tags_notes
-const NOTE_SECTION = 'rsc326'; // properties.tags_notes key — never written by this file
+const TEXT_AREA = 'zztags2'; // component_text_area, translatable; declares tags_index/tags_notes
+const TAGS_INDEX = 'zztags3'; // component_autocomplete_hi — the tags_index target
+const NOTE_SECTION = 'zztags4'; // properties.tags_notes key — never written by this file
+const NOTE_TITLE = 'zztags5';
+const NOTE_BODY = 'zztags6';
+const NOTE_PUBLISHABLE = 'zztags7';
+/**
+ * The host's `component_filter`. A section is PROJECT-GATED by having one
+ * (resolver.ts getComponentFilterTipo), and without it the record-scope gate
+ * has nothing to enforce — the AUTHZ case below would pass for every principal
+ * and prove nothing. The install section this gate used to read was gated; the
+ * built one has to be too, or the migration would have quietly removed the
+ * subject of the test.
+ */
+const HOST_FILTER = 'zztags8';
 const MISSING_NOTE_ID = '934101'; // deliberately absent record
 
 /** The transcription, stored ONLY in lg-spa (the lang half of the file). */
+/**
+ * The shape this gate is ABOUT, built rather than borrowed. `tags_index` names
+ * the component a mark's index entry lives in; `tags_notes` maps a note section
+ * to the components a note's title / body / publishable flag are read from.
+ * Both are copied from the shipped rsc36 declaration, with the install's tipos
+ * replaced by this situation's own.
+ */
+const TAGS_SITUATION = situation({
+	tld: 'zztags',
+	name: 'text_area tags_info',
+	nodes: [
+		{ tipo: SECTION, model: 'section', parent: 'dd14' },
+		{ tipo: TAGS_INDEX, model: 'component_autocomplete_hi', parent: SECTION },
+		{
+			tipo: TEXT_AREA,
+			model: 'component_text_area',
+			parent: SECTION,
+			is_translatable: true,
+			properties: {
+				tags_index: { tipo: TAGS_INDEX, section_id: 'self', section_tipo: 'self' },
+				tags_notes: {
+					[NOTE_SECTION]: [
+						{ id: 'title', type: 'text', section_tipo: NOTE_SECTION, component_tipo: NOTE_TITLE },
+						{ id: 'body', type: 'text', section_tipo: NOTE_SECTION, component_tipo: NOTE_BODY },
+						{
+							id: 'publishable',
+							type: 'bool',
+							section_tipo: NOTE_SECTION,
+							component_tipo: NOTE_PUBLISHABLE,
+						},
+					],
+				},
+			},
+		},
+		{ tipo: HOST_FILTER, model: 'component_filter', parent: SECTION },
+		{ tipo: NOTE_SECTION, model: 'section', parent: 'dd14' },
+		{ tipo: NOTE_TITLE, model: 'component_input_text', parent: NOTE_SECTION },
+		{ tipo: NOTE_BODY, model: 'component_text_area', parent: NOTE_SECTION },
+		{ tipo: NOTE_PUBLISHABLE, model: 'component_check_box', parent: NOTE_SECTION },
+	],
+});
+
+/** Resolved after the situation exists — never assumed (a scratch section has its own table). */
+let TABLE = 'matrix_test';
+
 const SPA_TEXT =
 	'<p>uno [index-n-1-Person-data:x:data]dos[/index-n-1] tres' +
 	` [note-a-1-data:{'section_tipo':'${NOTE_SECTION}','section_id':'${MISSING_NOTE_ID}'}:data] fin.</p>`;
@@ -100,7 +170,7 @@ const hostSource = (extra: Record<string, unknown> = {}) => ({
 });
 
 async function purgeScratch(): Promise<void> {
-	await sql.unsafe('DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2', [
+	await sql.unsafe(`DELETE FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`, [
 		SECTION,
 		SECTION_ID,
 	]);
@@ -111,21 +181,23 @@ async function purgeScratch(): Promise<void> {
 }
 
 beforeAll(async () => {
+	await ensureSituation(TAGS_SITUATION);
+	TABLE = (await getMatrixTableFromTipo(SECTION)) ?? 'matrix_test';
 	await purgeScratch(); // belt and braces: a crashed earlier run
 	await sql.unsafe(
-		'INSERT INTO matrix (section_id, section_tipo, string, relation) VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)',
+		`INSERT INTO ${TABLE} (section_id, section_tipo, string, relation) VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)`,
 		[
 			SECTION_ID,
 			SECTION,
 			JSON.stringify({ [TEXT_AREA]: [{ id: 1, lang: 'lg-spa', value: SPA_TEXT }] }),
 			JSON.stringify({
-				rsc860: [
+				[TAGS_INDEX]: [
 					{
 						id: 1,
 						type: 'dd151',
 						section_id: 1, // NUMERIC on purpose: the wire law stringifies it
 						section_tipo: 'test3',
-						from_component_tipo: 'rsc860',
+						from_component_tipo: TAGS_INDEX,
 					},
 				],
 			}),
@@ -136,7 +208,7 @@ beforeAll(async () => {
 afterAll(async () => {
 	await purgeScratch();
 	const residue = (await sql.unsafe(
-		'SELECT id FROM matrix WHERE section_tipo = $1 AND section_id = $2',
+		`SELECT id FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 		[SECTION, SECTION_ID],
 	)) as unknown[];
 	const tmResidue = (await sql.unsafe(
@@ -145,7 +217,7 @@ afterAll(async () => {
 	)) as unknown[];
 	// The note target must never have been created by this file.
 	const noteResidue = (await sql.unsafe(
-		'SELECT id FROM matrix WHERE section_tipo = $1 AND section_id = $2',
+		`SELECT id FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 		[NOTE_SECTION, Number(MISSING_NOTE_ID)],
 	)) as unknown[];
 	if (residue.length > 0 || tmResidue.length > 0 || noteResidue.length > 0) {
@@ -153,6 +225,11 @@ afterAll(async () => {
 			`scratch residue: ${residue.length} matrix + ${tmResidue.length} TM row(s) for ${SECTION}/${SECTION_ID}, ${noteResidue.length} ${NOTE_SECTION} row(s)`,
 		);
 	}
+	// The scratch ONTOLOGY goes too. This call was missing while the header
+	// claimed it ran (review 2026-08-20): the eight `zztags*` dd_ontology nodes
+	// survived every green run and stayed visible to every process-wide registry
+	// build. Residue asserted, not trusted.
+	expect(await dropSituation(TAGS_SITUATION)).toBe(0);
 });
 
 /**
@@ -287,7 +364,7 @@ describe('get_tags_info — resolved payload', () => {
 					// stored locator already held (repeals the stringify).
 					section_id: 1,
 					section_tipo: 'test3',
-					from_component_tipo: 'rsc860',
+					from_component_tipo: TAGS_INDEX,
 				},
 				label: 'input text content of one', // canonical test3/1
 			},

@@ -28,11 +28,7 @@
  * columns. Two tables, two read paths, one policy — so this gate never asserts
  * they read alike.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the ordinary-section control is the phase-2 `test` clone (src/core/test_data/test_tld_tipo_map.json); the log registry it must not leak into is seed-shipped dd.
 
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -151,13 +147,13 @@ describe('the registry actually BINDS', () => {
 		expect(logSectionColumnIsSortable(ACTIVITY_SECTION_TIPO, ACTIVITY_WHEN_TIPO)).toBe(true);
 		expect(logSectionColumnIsSortable(ACTIVITY_SECTION_TIPO, 'dd546')).toBe(false);
 		// An ordinary section is unrestricted — the registry must not leak outward.
-		expect(logSectionColumnIsSortable('oh1', 'oh25')).toBe(true);
+		expect(logSectionColumnIsSortable('test6813', 'test6837')).toBe(true);
 	});
 
 	test('section-info suppression is answered FROM the registry', () => {
 		expect(logSectionSuppressesSectionInfo(TIME_MACHINE_SECTION_TIPO)).toBe(true);
 		expect(logSectionSuppressesSectionInfo(ACTIVITY_SECTION_TIPO)).toBe(true);
-		expect(logSectionSuppressesSectionInfo('oh1')).toBe(false);
+		expect(logSectionSuppressesSectionInfo('test6813')).toBe(false);
 	});
 
 	test('the named dd15 export is DERIVED from the registry, not a second copy', () => {

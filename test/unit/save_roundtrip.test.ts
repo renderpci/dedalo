@@ -1,8 +1,7 @@
 /**
  * Phase 5d gate: component save round-trip (real DB, matrix_test playground).
  *
- * Clones a real record into matrix_test, saves an 'update' through the full
- * TS path (saveComponentData), and asserts:
+ * Saves an 'update' through the full TS path (saveComponentData) and asserts:
  *  - the target item's value changed, id/lang preserved;
  *  - SIBLING component keys in the same column are untouched (the per-key
  *    jsonb_set contract — the two-server coexistence guarantee);
@@ -10,54 +9,132 @@
  *    slice, correct coordinates and user;
  *  - permission gate: dispatch refuses save below level 2 and without CSRF.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The gate
+// used to CLONE the ambient install record `numisdata6/1` out of `matrix` and drive
+// the save through the install components `numisdata16/17/18`. On any database
+// without that install the clone was EMPTY, and two cases went red for the corpus
+// rather than for the engine (measured before this change: 3 pass / 2 fail — the
+// sibling probe read "" and `remove id 1` had no id 1 to remove). It now BUILDS its
+// situation (`zzrt`: one section on matrix_test through the test24 matrix_table
+// node, a translatable component_input_text target and two sibling components),
+// with the four-language item the cross-language remove needs authored here.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
+/**
+ * Where the section's records live. STATED here and PROVEN in beforeAll
+ * against `getMatrixTableFromTipo` — the test24 relation is what puts them in
+ * `matrix_test`, and a gate that only assumed it would write to `matrix`.
+ */
 const TEST_TABLE = 'matrix_test';
-// 'test2' is a REAL ontology section whose matrix_table relation resolves to
-// matrix_test — the save path's ontology-driven table resolution runs for
-// real. The high section_id keeps us clear of the genuine test records.
-const TEST_SECTION_TIPO = 'test2';
+const TEST_SECTION_TIPO = 'zzrt1';
 const TEST_SECTION_ID = 900002;
+/** component_input_text, translatable → `string` column: the save target. */
+const TARGET_TIPO = 'zzrt2';
+/** Two more components in the SAME column — the per-key jsonb_set witnesses. */
+const SIBLING_A_TIPO = 'zzrt3';
+const SIBLING_B_TIPO = 'zzrt4';
+/**
+ * An anchor record: dropSituation scopes its sweep to the sections the
+ * situation declares records for, so the section needs one to be torn down whole.
+ */
+const ANCHOR_ID = 900001;
+
+const SITUATION = situation({
+	tld: 'zzrt',
+	name: 'save_roundtrip',
+	nodes: [
+		{
+			tipo: TEST_SECTION_TIPO,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-spa': 'Ida y vuelta de guardado', 'lg-eng': 'Save round-trip' },
+			relations: [{ tipo: 'test24' }],
+		},
+		{
+			tipo: TARGET_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_input_text',
+			is_translatable: true,
+			term: { 'lg-spa': 'Ceca', 'lg-eng': 'Mint' },
+		},
+		{
+			tipo: SIBLING_A_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_text_area',
+			is_translatable: true,
+			term: { 'lg-spa': 'Comentario interno', 'lg-eng': 'Comment internal' },
+		},
+		{
+			tipo: SIBLING_B_TIPO,
+			parent: TEST_SECTION_TIPO,
+			model: 'component_html_text',
+			is_translatable: true,
+			term: { 'lg-spa': 'Comentario público', 'lg-eng': 'Comment public' },
+		},
+	],
+	records: [{ section_tipo: TEST_SECTION_TIPO, section_id: ANCHOR_ID }],
+});
+
+/**
+ * The seeded twin. The target carries item id 1 in FOUR languages — the shape
+ * the cross-language `remove` contract is defined against — and the two
+ * siblings share the `string` column, so a whole-column write would destroy
+ * them where a per-key `jsonb_set` leaves them alone.
+ */
+const SEED_COLUMNS = {
+	string: {
+		[TARGET_TIPO]: [
+			{ id: 1, lang: 'lg-eng', value: 'Arsa' },
+			{ id: 1, lang: 'lg-fra', value: 'Arsa (fr)' },
+			{ id: 1, lang: 'lg-ita', value: 'Arsa (it)' },
+			{ id: 1, lang: 'lg-spa', value: 'Arsa (es)' },
+		],
+		[SIBLING_A_TIPO]: [{ id: 1, lang: 'lg-spa', value: 'comentario interno' }],
+		[SIBLING_B_TIPO]: [{ id: 1, lang: 'lg-spa', value: '<p>comentario público</p>' }],
+	},
+};
 
 function cleanup(): Promise<void> {
-	return cleanScratchRecord(TEST_SECTION_TIPO, TEST_SECTION_ID);
+	return cleanScratchRecord(TEST_SECTION_TIPO, TEST_SECTION_ID, TEST_TABLE);
 }
 
 describe('component save round-trip (Phase 5d gate)', () => {
 	beforeAll(async () => {
+		await ensureSituation(SITUATION);
+		expect(await getMatrixTableFromTipo(TEST_SECTION_TIPO)).toBe(TEST_TABLE);
 		await cleanup();
-		// Clone numisdata6 #1 (string column carries numisdata16/17/18) into the playground.
-		const source = await readMatrixRecord('matrix', 'numisdata6', 1);
-		await createScratchRecord(TEST_SECTION_TIPO, TEST_SECTION_ID, source?.rawText ?? {}, {
-			rawText: true,
+		await createScratchRecord(TEST_SECTION_TIPO, TEST_SECTION_ID, SEED_COLUMNS, {
+			table: TEST_TABLE,
 		});
 	});
-	afterAll(cleanup);
+	afterAll(async () => {
+		await cleanup();
+		expect(await dropSituation(SITUATION)).toBe(0);
+	});
 
 	test('update changes the target item, preserves siblings, and audits to TM', async () => {
 		const before = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		const siblingBefore = before?.rawText.string ?? '';
-		expect(siblingBefore).toContain('numisdata17'); // sibling present pre-save
+		expect(siblingBefore).toContain(SIBLING_A_TIPO); // sibling present pre-save
 
-		// NOTE: the save resolves column/table from the ONTOLOGY of the
-		// component tipo — numisdata16 (input_text → string column). The test
-		// record lives in matrix_test under a test section tipo, so we call
-		// saveComponentData directly with the playground coordinates.
+		// NOTE: the save resolves column/table from the ONTOLOGY of the component
+		// tipo — TARGET_TIPO (input_text → string column).
 		const outcome = await saveComponentData({
-			componentTipo: 'numisdata16',
+			componentTipo: TARGET_TIPO,
 			sectionTipo: TEST_SECTION_TIPO,
 			sectionId: TEST_SECTION_ID,
 			lang: 'lg-spa',
@@ -69,7 +146,7 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		expect(outcome.ok).toBe(true);
 
 		const after = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
-		const items = (after?.columns.string as Record<string, { value: string }[]>)?.numisdata16;
+		const items = (after?.columns.string as Record<string, { value: string }[]>)?.[TARGET_TIPO];
 		expect(items?.some((item) => item.value === 'Arsa (TS-saved)')).toBe(true);
 		// The updated item kept its id and lang.
 		const updatedItem = items?.find((item) => item.value === 'Arsa (TS-saved)') as
@@ -78,8 +155,8 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		expect(updatedItem?.id).toBe(1);
 		expect(updatedItem?.lang).toBe('lg-spa');
 		// Sibling component keys in the same column untouched.
-		expect(after?.rawText.string).toContain('numisdata17');
-		expect(after?.rawText.string).toContain('numisdata18');
+		expect(after?.rawText.string).toContain(SIBLING_A_TIPO);
+		expect(after?.rawText.string).toContain(SIBLING_B_TIPO);
 
 		// TM audit row: NEW current-lang slice, correct coordinates + user.
 		const tmRows = (await sql`
@@ -88,18 +165,18 @@ describe('component save round-trip (Phase 5d gate)', () => {
 			ORDER BY id DESC LIMIT 1
 		`) as { tipo: string; lang: string; user_id: number; data: { value: string }[] }[];
 		expect(tmRows.length).toBe(1);
-		expect(tmRows[0]?.tipo).toBe('numisdata16');
+		expect(tmRows[0]?.tipo).toBe(TARGET_TIPO);
 		expect(tmRows[0]?.lang).toBe('lg-spa');
 		expect(Number(tmRows[0]?.user_id)).toBe(-1);
 		expect(tmRows[0]?.data.some((item) => item.value === 'Arsa (TS-saved)')).toBe(true);
-		// Snapshot is the lg-spa slice only (source record has 4 langs on numisdata16).
+		// Snapshot is the lg-spa slice only (the seeded record has 4 langs on the target).
 		expect(tmRows[0]?.data.every((item) => (item as { lang?: string }).lang === 'lg-spa')).toBe(
 			true,
 		);
 	});
 
 	test('dispatch save gate: below level 2 → 403; missing CSRF → 403', async () => {
-		// Non-admin user 16 has no write grant on numisdata6.
+		// Non-admin user 16 has no write grant on this section.
 		const contextNoWrite: ApiRequestContext = {
 			requestId: 'test',
 			clientIp: '127.0.0.1',
@@ -120,9 +197,9 @@ describe('component save round-trip (Phase 5d gate)', () => {
 				dd_api: 'dd_core_api',
 				source: {
 					type: 'component',
-					tipo: 'numisdata16',
-					section_tipo: 'numisdata6',
-					section_id: 1,
+					tipo: TARGET_TIPO,
+					section_tipo: TEST_SECTION_TIPO,
+					section_id: TEST_SECTION_ID,
 					lang: 'lg-spa',
 				},
 				data: {
@@ -154,9 +231,9 @@ describe('component save round-trip (Phase 5d gate)', () => {
 				dd_api: 'dd_core_api',
 				source: {
 					type: 'component',
-					tipo: 'numisdata16',
-					section_tipo: 'numisdata6',
-					section_id: 1,
+					tipo: TARGET_TIPO,
+					section_tipo: TEST_SECTION_TIPO,
+					section_id: TEST_SECTION_ID,
 					lang: 'lg-spa',
 				},
 				data: { changed_data: [] },
@@ -172,7 +249,7 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		// Seed the counter at the max existing id so allocation continues cleanly
 		// (PHP canonical array shape: {tipo: [{count: N}]}).
 		await sql`
-			UPDATE matrix_test SET meta = jsonb_set(COALESCE(meta,'{}'::jsonb), '{numisdata16}', '[{"count": 10}]'::jsonb)
+			UPDATE matrix_test SET meta = jsonb_set(COALESCE(meta,'{}'::jsonb), ARRAY[${TARGET_TIPO}], '[{"count": 10}]'::jsonb)
 			WHERE section_tipo = ${TEST_SECTION_TIPO} AND section_id = ${TEST_SECTION_ID}
 		`;
 
@@ -182,7 +259,7 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		const results = await Promise.all(
 			Array.from({ length: CONCURRENT }, (_, index) =>
 				saveComponentData({
-					componentTipo: 'numisdata16',
+					componentTipo: TARGET_TIPO,
 					sectionTipo: TEST_SECTION_TIPO,
 					sectionId: TEST_SECTION_ID,
 					lang: 'lg-spa',
@@ -196,8 +273,9 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		expect(results.every((result) => result.ok)).toBe(true);
 
 		const after = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
-		const items = (after?.columns.string as Record<string, { id: number; value: string }[]>)
-			?.numisdata16;
+		const items = (after?.columns.string as Record<string, { id: number; value: string }[]>)?.[
+			TARGET_TIPO
+		];
 		const inserted = (items ?? []).filter((item) => item.value.startsWith('inserted '));
 		// ALL six landed (no lost updates) with DISTINCT freshly allocated ids 11-16.
 		expect(inserted.length).toBe(CONCURRENT);
@@ -208,17 +286,17 @@ describe('component save round-trip (Phase 5d gate)', () => {
 
 		// Meta counter advanced to the max allocated id (PHP array shape [{count:N}]).
 		const meta = (await sql`
-			SELECT (meta->'numisdata16'->0->>'count')::int AS count FROM matrix_test
+			SELECT (meta->${TARGET_TIPO}->0->>'count')::int AS count FROM matrix_test
 			WHERE section_tipo = ${TEST_SECTION_TIPO} AND section_id = ${TEST_SECTION_ID}
 		`) as { count: number }[];
 		expect(meta[0]?.count).toBe(10 + CONCURRENT);
 	});
 
 	test('remove drops the id across ALL languages; unknown id fails cleanly', async () => {
-		// The cloned numisdata16 has id 1 in FOUR languages (eng/fra/ita/spa) —
+		// The seeded target has id 1 in FOUR languages (eng/fra/ita/spa) —
 		// removing id 1 must drop all four (the PHP cross-language contract).
 		const removed = await saveComponentData({
-			componentTipo: 'numisdata16',
+			componentTipo: TARGET_TIPO,
 			sectionTipo: TEST_SECTION_TIPO,
 			sectionId: TEST_SECTION_ID,
 			lang: 'lg-spa',
@@ -227,13 +305,13 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		});
 		expect(removed.ok).toBe(true);
 		const after = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
-		const items = (after?.columns.string as Record<string, { id: number }[]>)?.numisdata16 ?? [];
+		const items = (after?.columns.string as Record<string, { id: number }[]>)?.[TARGET_TIPO] ?? [];
 		expect(items.some((item) => Number(item.id) === 1)).toBe(false);
 		expect(items.length).toBeGreaterThan(0); // the inserted 11-16 items remain
 
 		// Unknown id → clean failure, nothing changes.
 		const missing = await saveComponentData({
-			componentTipo: 'numisdata16',
+			componentTipo: TARGET_TIPO,
 			sectionTipo: TEST_SECTION_TIPO,
 			sectionId: TEST_SECTION_ID,
 			lang: 'lg-spa',
@@ -244,7 +322,7 @@ describe('component save round-trip (Phase 5d gate)', () => {
 
 		// id null → clear everything.
 		const cleared = await saveComponentData({
-			componentTipo: 'numisdata16',
+			componentTipo: TARGET_TIPO,
 			sectionTipo: TEST_SECTION_TIPO,
 			sectionId: TEST_SECTION_ID,
 			lang: 'lg-spa',
@@ -253,7 +331,7 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		});
 		expect(cleared.ok).toBe(true);
 		const empty = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
-		expect(((empty?.columns.string as Record<string, unknown[]>)?.numisdata16 ?? []).length).toBe(
+		expect(((empty?.columns.string as Record<string, unknown[]>)?.[TARGET_TIPO] ?? []).length).toBe(
 			0,
 		);
 	});
@@ -263,9 +341,9 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		// edit writes gate); the ledger guard keeps firing for anything else.
 		await expect(
 			saveComponentData({
-				componentTipo: 'numisdata16',
-				sectionTipo: 'numisdata6',
-				sectionId: 1,
+				componentTipo: TARGET_TIPO,
+				sectionTipo: TEST_SECTION_TIPO,
+				sectionId: TEST_SECTION_ID,
 				lang: 'lg-spa',
 				changedData: [{ action: 'not_a_real_action', value: null }],
 				userId: -1,
@@ -274,9 +352,9 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		// …and it is the TYPED caller fault (the action string is the caller's).
 		const refusal = await refusalOf(
 			saveComponentData({
-				componentTipo: 'numisdata16',
-				sectionTipo: 'numisdata6',
-				sectionId: 1,
+				componentTipo: TARGET_TIPO,
+				sectionTipo: TEST_SECTION_TIPO,
+				sectionId: TEST_SECTION_ID,
 				lang: 'lg-spa',
 				changedData: [{ action: 'not_a_real_action', value: null }],
 				userId: -1,

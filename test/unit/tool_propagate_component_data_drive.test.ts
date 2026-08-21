@@ -16,11 +16,8 @@
  *
  * The dd800 bulk-process record the run mints is deleted in afterAll.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the propagated component is an opaque
+// input_text tipo, so it now names the generic `test52`.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -32,7 +29,7 @@ import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION_TIPO = 'test2';
-const COMPONENT_TIPO = 'numisdata16'; // component_input_text (string column)
+const COMPONENT_TIPO = 'test52'; // component_input_text (string column)
 const LANG = 'lg-spa';
 const IDS = [905101, 905102, 905103];
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };

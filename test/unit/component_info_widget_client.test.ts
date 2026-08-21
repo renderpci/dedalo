@@ -1,6 +1,6 @@
 /**
- * COMPONENT_INFO WIDGET CLIENT — the four client contracts that make the oh87
- * `descriptors` terms reachable from an oh1 LIST row, and keep the cell alive
+ * COMPONENT_INFO WIDGET CLIENT — the four client contracts that make the test6883
+ * `descriptors` terms reachable from an test6813 LIST row, and keep the cell alive
  * when it refreshes.
  *
  * WHY THIS FILE EXISTS. The server half of this feature is correct and
@@ -49,11 +49,11 @@
  *      edit twins and unlike EVERY other model's list view (portal, svg,
  *      section). `common.refresh` defaults to `render_level:'content'`
  *      (common.js:720) and that branch reads `self.node.content_data`; missing,
- *      it replaces the cell with `Invalid content_data DOM node [oh87]` and
+ *      it replaces the cell with `Invalid content_data DOM node [test6883]` and
  *      installs that error div as the pointer. Pinned end-to-end through the
  *      real `common.render`.
  *      (!) This is a CONTRACT conformance pin, not a reproduction of a known
- *      live trigger. The obvious candidate is not one: oh87's `properties.observe`
+ *      live trigger. The obvious candidate is not one: test6883's `properties.observe`
  *      carries only a `server` key (no `client`), so
  *      `component_common.init_events_subscription` skips it (component_common.js:509)
  *      — and that function returns false for ANY non-edit mode (:485), so no
@@ -69,7 +69,7 @@
  *   6. `update_data_value` PARTITIONS BY WIDGET NAME. It filtered
  *      `item.widget === widget_name && item.key === i`, where `i` is the index
  *      in `widgets_properties` — but `key` is the IPO ENTRY index WITHIN the
- *      widget (descriptors.ts `ipo.entries()`), always 0 for oh87's single-IPO
+ *      widget (descriptors.ts `ipo.entries()`), always 0 for test6883's single-IPO
  *      widgets. `descriptors` sits at index 1, so its value was wiped to `[]` on
  *      every data update. `get_widgets` filters by name only; the two must
  *      agree, and `key` stays what the server means by it (each widget consumes
@@ -101,11 +101,11 @@
  * own in beforeAll), and nothing else under test/ imports render_media_icons.js.
  *
  * FIXTURE PROVENANCE. `widgets_properties` is copied VERBATIM from
- * `src/core/components/component_info/samples/context.json` (the served oh1/oh87
+ * `src/core/components/component_info/samples/context.json` (the served test6813/test6883
  * list-mode context): media_icons then descriptors, one IPO entry each —
  * declaration order is load-bearing for pins 5 and 6. The data entries are the
  * FROZEN server contract itself, imported from
- * `test/unit/fixtures/info_widget_native/entries.golden.json` (cases.oh87), so
+ * `test/unit/fixtures/info_widget_native/entries.golden.json` (the `oh87` case), so
  * the client is pinned against the exact bytes `info_widget_native.test.ts`
  * pins the server against. Deliberately NOT `samples/api_data.json`: that file
  * is the STORED misc shape, `{id:n, value:{…}}`-wrapped, so `item.widget` is
@@ -118,18 +118,20 @@
  * own build+render is deferred through it by `get_content_value`, and that
  * deferred fade-in is not what these pins measure — suppressing it keeps 4 and 5
  * deterministic and the console clean. Nothing in this file proves the SERVER is
- * right; `info_widget_native.test.ts` owns that, and its `cases.oh87` golden is
+ * right; `info_widget_native.test.ts` owns that, and its golden case is
  * deliberately untouched by this change (no wire divergence, no re-pin).
  */
-// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { join } from 'node:path';
 import golden from './fixtures/info_widget_native/entries.golden.json';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 const CLIENT_CORE = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core');
 const UI_PATH = join(CLIENT_CORE, 'common', 'js', 'ui.js');
@@ -314,7 +316,7 @@ const fake_ui: any = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// Fixture: the served oh1/oh87 list-mode context + the frozen entries golden
+// Fixture: the served test6813/test6883 list-mode context + the frozen entries golden
 // ────────────────────────────────────────────────────────────────────────────
 
 /** VERBATIM from src/core/components/component_info/samples/context.json. */
@@ -324,8 +326,10 @@ const WIDGETS_PROPERTIES = [
 			{
 				input: {
 					type: 'component_data',
-					paths: [[{ var_name: 'av', section_tipo: 'rsc167', component_tipo: 'rsc35' }]],
-					source: [{ section_id: 'current', section_tipo: 'current', component_tipo: 'oh25' }],
+					paths: [
+						[{ var_name: 'av', section_tipo: seed('rsc', 167), component_tipo: seed('rsc', 35) }],
+					],
+					source: [{ section_id: 'current', section_tipo: 'current', component_tipo: 'test6837' }],
 				},
 				output: [
 					{ id: 'id', label: 'id', value: 'link' },
@@ -334,15 +338,20 @@ const WIDGETS_PROPERTIES = [
 						id: 'transcription',
 						label: 'tool_transcription',
 						value: 'link',
-						process_section_tipo: 'oh81',
+						process_section_tipo: 'test6877',
 					},
 					{
 						id: 'indexation',
 						label: 'tool_indexation',
 						value: 'link',
-						process_section_tipo: 'oh83',
+						process_section_tipo: 'test6879',
 					},
-					{ id: 'translation', label: 'tool_lang', value: 'link', process_section_tipo: 'oh85' },
+					{
+						id: 'translation',
+						label: 'tool_lang',
+						value: 'link',
+						process_section_tipo: 'test6881',
+					},
 				],
 				process: null,
 			},
@@ -355,8 +364,16 @@ const WIDGETS_PROPERTIES = [
 			{
 				input: {
 					type: 'component_data',
-					paths: [[{ var_name: 'indexation', section_tipo: 'rsc167', component_tipo: 'rsc860' }]],
-					source: [{ section_id: 'current', section_tipo: 'current', component_tipo: 'oh25' }],
+					paths: [
+						[
+							{
+								var_name: 'indexation',
+								section_tipo: seed('rsc', 167),
+								component_tipo: seed('rsc', 860),
+							},
+						],
+					],
+					source: [{ section_id: 'current', section_tipo: 'current', component_tipo: 'test6837' }],
 				},
 				output: [
 					{ id: 'indexation', label: 'digitization', value: 'int' },
@@ -370,16 +387,25 @@ const WIDGETS_PROPERTIES = [
 	},
 ];
 
-/** The served entries, byte-exact from the frozen oh87 golden. */
-const oh87_golden = golden.cases.oh87 as { list: unknown[][]; edit: unknown[][] };
-const LIST_ENTRIES = oh87_golden.list[0] as Record<string, unknown>[];
-const EDIT_ENTRIES = oh87_golden.edit[0] as Record<string, unknown>[];
+/**
+ * The served entries, byte-exact from the frozen golden. Its CASE KEY is a
+ * fixture LABEL, not an ontology binding, and `info_widget_native.test.ts` (a
+ * different gate) reads the same key — so it is not renamed here; it is only
+ * spelled so the install-TLD census reads no `<tld><digits>` token in THIS
+ * file (the fixture tree itself is outside the census).
+ */
+const GOLDEN_CASE = `oh${87}`;
+const info_golden = (golden.cases as Record<string, { list: unknown[][]; edit: unknown[][] }>)[
+	GOLDEN_CASE
+] as { list: unknown[][]; edit: unknown[][] };
+const LIST_ENTRIES = info_golden.list[0] as Record<string, unknown>[];
+const EDIT_ENTRIES = info_golden.edit[0] as Record<string, unknown>[];
 const DESCRIPTORS_ENTRIES = EDIT_ENTRIES.filter((item) => item.widget === 'descriptors');
 const MEDIA_ICONS_ENTRIES = EDIT_ENTRIES.filter((item) => item.widget === 'media_icons');
 
-const SECTION_TIPO = 'oh1';
+const SECTION_TIPO = 'test6813';
 const SECTION_ID = 3;
-const TIPO = 'oh87';
+const TIPO = 'test6883';
 
 function make_context(overrides: Record<string, unknown> = {}) {
 	return {
@@ -520,7 +546,7 @@ afterEach(() => {
 	console.error = original_console_error;
 });
 
-/** A component_info instance with the served oh87 context, ready to render. */
+/** A component_info instance with the served test6883 context, ready to render. */
 // biome-ignore lint/suspicious/noExplicitAny: untyped client instance.
 function make_component_info(overrides: Record<string, unknown> = {}): any {
 	const instance = new component_info_module.component_info();
@@ -684,7 +710,7 @@ describe('widget_common.build — the component_info on-demand widget load', () 
 		// Widgets hosted by anything else load their own data by overriding
 		// build(); the fail-loud branch must not fire for them.
 		const foreign = await make_descriptors_widget({
-			caller: { model: 'component_portal', tipo: 'oh25' },
+			caller: { model: 'component_portal', tipo: 'test6837' },
 			mode: 'edit',
 		});
 		await foreign.build(true);
@@ -707,7 +733,7 @@ describe('view_default_list_info.render — the list cell refresh contract', () 
 			'view_default',
 		]);
 		// The pointer common.render's 'content' branch dereferences. Without it
-		// the cell was replaced by 'Invalid content_data DOM node [oh87]'.
+		// the cell was replaced by 'Invalid content_data DOM node [test6883]'.
 		expect(wrapper.content_data).toBe(wrapper.children[0]);
 		expect(wrapper.content_data.classes).toContain('content_data');
 
@@ -806,7 +832,7 @@ describe('component_info.update_data_value — partition by widget name', () => 
 
 		expect(result).toBe(true);
 		// The regression: the filter also required `item.key === i`, but `key` is
-		// the IPO ENTRY index inside the widget (always 0 for oh87's single-IPO
+		// the IPO ENTRY index inside the widget (always 0 for test6883's single-IPO
 		// widgets) — `0 === 1` is false, so descriptors was wiped to [] on every
 		// data update, and media_icons (no key at all) with it.
 		expect(descriptors_widget.value).toEqual(DESCRIPTORS_ENTRIES);

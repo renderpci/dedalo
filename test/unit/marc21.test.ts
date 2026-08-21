@@ -5,11 +5,11 @@
  * back; multi-record splitting is checked. The config-driven Dédalo mapping is
  * ledgered.
  */
-// BINDS INSTALL TLDs: marc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// NO INSTALL TLD IS BOUND HERE (checked 2026-08-19). The census entry for this
+// file is a FALSE POSITIVE: the only token it matches is the MODULE PATH
+// `src/core/tools/marc21.ts` — the MARC21 cataloguing standard, not an ontology
+// tipo. `marc` is not an install TLD and should leave INSTALL_TLDS; until it
+// does, the entry stays frozen.
 
 import { describe, expect, test } from 'bun:test';
 import { parseMarc, parseMarcRecord, splitMarcRecords } from '../../src/core/tools/marc21.ts';

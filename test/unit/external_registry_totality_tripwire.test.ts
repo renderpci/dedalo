@@ -25,11 +25,9 @@
  * sections carrying properties.api_config, and every model='component_external'
  * node with its fields_map).
  */
-// BINDS INSTALL TLDs: zenon — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the external SECTION coordinate is now
+// the generic clone `test7342` (src/core/test_data/test_tld_tipo_map.json); the `zenon`
+// connector itself is an engine module, not an install's ontology, and stays.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { parseApiConfig } from '../../src/external/config.ts';
@@ -133,14 +131,14 @@ describe('every ontology-declared service resolves to an adapter', () => {
 	test('an UNKNOWN name throws — it never returns null or an empty list', () => {
 		let thrown: unknown;
 		try {
-			getExternalService('no_such_service', { sectionTipo: 'zenon1' });
+			getExternalService('no_such_service', { sectionTipo: 'test7342' });
 		} catch (error) {
 			thrown = error;
 		}
 		expect(thrown).toBeInstanceOf(ExternalServiceNotRegisteredError);
 		expect((thrown as ExternalServiceNotRegisteredError).kind).toBe('not_registered');
 		// The message names the section AND what is registered — an operator can act on it.
-		expect((thrown as Error).message).toContain('zenon1');
+		expect((thrown as Error).message).toContain('test7342');
 		expect((thrown as Error).message).toContain('zenon');
 	});
 });

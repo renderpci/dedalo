@@ -17,11 +17,9 @@
  * The rules are a WRITE gate, not only a display stamp — dd_core_api::save must
  * consult them too, which is what the end-to-end block below pins.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
+// identifiers threaded through the unit under test — a generic `test` section carries
+// the same meaning here as the install one did.
 
 import { describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -74,7 +72,7 @@ describe('resolveOwnUserRecordPermission — the PHP dd128 table', () => {
 	});
 
 	test('a non-dd128 section is untouched', () => {
-		expect(resolveOwnUserRecordPermission(principal(7, false), 'rsc167', 'dd133', 7)).toBeNull();
+		expect(resolveOwnUserRecordPermission(principal(7, false), 'test3', 'dd133', 7)).toBeNull();
 	});
 
 	test('an absent section_id is untouched (PHP $section_id !== null)', () => {

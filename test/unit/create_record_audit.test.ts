@@ -26,14 +26,13 @@
  * dd_date virtual-calendar encoding (create_record.ts virtualDateNow, ported
  * from PHP dd_date — fixed 372-day years / 31-day months).
  *
- * Scratch hygiene: one disposable numisdata6 twin (matrix), row + TM rows
+ * Scratch hygiene: one disposable testmint1 twin (matrix), row + TM rows
  * deleted in afterAll (the tm_wallclock pattern).
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dbTimestamp } from '../../src/core/db/db_timestamp.ts';
@@ -43,8 +42,11 @@ import {
 	virtualDateNow,
 } from '../../src/core/section/record/create_record.ts';
 
-const SECTION = 'numisdata6';
-const TABLE = 'matrix';
+const SECTION = 'testmint1';
+// RESOLVED, not assumed: a cloned `test` section carries its own `matrix_table`
+// relation (→ `matrix_test`), so a hard-coded `matrix` writes where the engine
+// will never read.
+const TABLE = 'matrix_test';
 const USER_ID = -1;
 
 /** Allowed |stamp − wall clock| (ms for created_date, virtual seconds for
@@ -142,8 +144,8 @@ describe('record-creation audit metadata (TS-native, PHP build_metadata shape)',
 		//
 		// So the golden is NOT weakened to "dd200 is present somewhere": the
 		// relation column must be dd200 plus PRECISELY the set this section's
-		// ontology declares — numisdata6 today means numisdata127 (the project
-		// filter), numisdata266 (dd501/1) and numisdata434 (dd64/2). Anything
+		// ontology declares — testmint1 today means testmint1013 (the project
+		// filter), testmint1017 (dd501/1) and testmint1021 (dd64/2). Anything
 		// else appearing in a fresh record's relation column still reddens.
 		const { buildRecordDefaultColumns } = await import(
 			'../../src/core/section/record/record_defaults.ts'

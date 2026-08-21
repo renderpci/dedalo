@@ -29,11 +29,9 @@
  * The remaining half (the CLIENT poll handler must not COMPUTE the URL for an
  * engine that does not need it) is in `tools/tool_transcription/server/index.ts`.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database
+// here: the tipos are opaque identifiers threaded through the unit under test, so the
+// migration is a rename.
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
@@ -97,7 +95,7 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 			{
 				status: { ...BASE, engine: LOCAL_ASR_ENGINE, pid: 'job-7' },
 				lang: 'lg-spa',
-				transcriptionDdo: { component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 1 },
+				transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
 				userId: 16,
 			},
 			{
@@ -122,7 +120,7 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 		const outcome = await pollTranscriptionCompletion({
 			status: { ...BASE, engine: 'google_translation', avUrl: 'https://media.example.org/a.mp3' },
 			lang: 'lg-spa',
-			transcriptionDdo: { component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 1 },
+			transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
 			userId: 16,
 		});
 
@@ -135,7 +133,7 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 			{
 				status: { ...BASE, engine: LOCAL_ASR_ENGINE },
 				lang: 'lg-spa',
-				transcriptionDdo: { component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 1 },
+				transcriptionDdo: { component_tipo: 'test17', section_tipo: 'test3', section_id: 1 },
 				userId: 16,
 			},
 			{ provider: async () => ({ status: 1 }), maxAttempts: 1 },
@@ -180,7 +178,7 @@ describe('buildTranscriberStatusBody', () => {
 	});
 
 	test('an external poll WITH the audio URL sends it unchanged', () => {
-		const avUrl = 'https://media.example.org/dedalo/media/av/audio/rsc167_rsc167_1.mp3';
+		const avUrl = 'https://media.example.org/dedalo/media/av/audio/test3_test3_1.mp3';
 		const body = buildTranscriberStatusBody({ ...BASE, engine: 'babel_transcriber', avUrl });
 		expect(body.get('av_url')).toBe(avUrl);
 	});

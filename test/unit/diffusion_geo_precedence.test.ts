@@ -25,11 +25,8 @@
  * object as an atom that record_ir.ts valueIrToString stringifies onto the
  * wire. All three are asserted here together.
  */
-// BINDS INSTALL TLDs: numisdata, tchi — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the record IR is fabricated in full
+// (no DB read), so the tipos are their test-TLD twins.
 
 import { describe, expect, test } from 'bun:test';
 import type { MatrixRecord } from '../../src/core/db/matrix.ts';
@@ -39,14 +36,14 @@ import { buildGeojsonLayers } from '../../src/diffusion/resolve/ddo_fns.ts';
 import { defaultPublicationValue } from '../../src/diffusion/resolve/default_value.ts';
 import { valueIrToString } from '../../src/diffusion/resolve/record_ir.ts';
 
-const TIPO = 'numisdata264';
+const TIPO = 'testmint1015';
 
 const NO_LANGS: ParserContext = { langs: [], mainLang: null };
 
 /** The ex-sentinel pair — an ordinary coordinate since the retirement. */
 const EX_SENTINEL = { lat: 39.462571, lon: -0.376295 };
 
-/** A drawn layer with one feature (the tchi1/113 Costa Brava Point shape). */
+/** A drawn layer with one feature (the testimmovable1/113 Costa Brava Point shape). */
 function drawnPoint(lon: number, lat: number): Record<string, unknown> {
 	return {
 		layer_id: 1,
@@ -68,7 +65,7 @@ function geoRecord(items: unknown[]): MatrixRecord {
 	return {
 		id: 1,
 		section_id: 113,
-		section_tipo: 'tchi1',
+		section_tipo: 'testimmovable1',
 		columns: { geo: { [TIPO]: items } },
 		rawText: {},
 	};

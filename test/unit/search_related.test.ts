@@ -8,23 +8,36 @@
  * from_component_tipo narrowing, target-section narrowing, and a real
  * write→find→cleanup round-trip on the test section.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
 	findInverseReferenceLocators,
 	findInverseReferences,
 	getRelationTables,
 } from '../../src/core/search/search_related.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
-/** A well-referenced target on this install (a Ceca used by many records). */
-const TARGET = { section_tipo: 'numisdata6', section_id: 1 };
+/**
+ * A well-referenced target: the mint twelve `test6099` corpus records point at.
+ * The gate OWNS the two sections it needs — the referenced mint and the
+ * referencing section — so the inverse set is a BUILT situation, not whatever
+ * the ambient database happens to hold.
+ */
+const TARGET = { section_tipo: 'testmint1', section_id: 75 };
+const CORPUS_SCOPE = ['testmint1', 'test6099'] as const;
+
+beforeAll(async () => {
+	await ensureTestCorpus(CORPUS_SCOPE);
+});
+afterAll(async () => {
+	expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
+});
 
 async function groundTruthCount(): Promise<number> {
 	const tables = await getRelationTables();
@@ -161,8 +174,4 @@ describe('breakdown mode (exact-locator recovery)', () => {
 			await cleanScratchRecord('test2', seedId);
 		}
 	});
-});
-
-afterAll(async () => {
-	// Safety: the seeded rows are removed in each test's finally; nothing else.
 });

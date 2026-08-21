@@ -38,11 +38,10 @@
  * Scratch surfaces (this file's namespace): test3 / 925040-925045 in
  * matrix_test, created and deleted here. `test145` is the test3 component_date.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
@@ -54,6 +53,9 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { getNode } from '../../src/core/ontology/resolver.ts';
 import { resolveCellValue } from '../../src/core/resolve/relation_list.ts';
 import oracle from './fixtures/date_value_native/date_value.oracle.json';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 interface OracleCase {
 	id: string;
@@ -238,7 +240,7 @@ describe('the relation-list and export cells render the ONE formatter', () => {
 	const declaredMode = async (): Promise<string> =>
 		dateModeOf((await getNode(DATE_TIPO))?.properties);
 
-	test('a DAY-LESS date keeps its month in the cell (the live rsc170/rsc26 loss)', async () => {
+	test('a DAY-LESS date keeps its month in the cell (the reported production loss)', async () => {
 		const unresolved: string[] = [];
 		const cell = await resolveCellValue(SECTION, IDS.dayLess, DATE_TIPO, 'lg-nolan', unresolved);
 		// The canonical formatter, on the very item that was stored.

@@ -16,11 +16,9 @@
  * These therefore run against the REAL ontology resolver — only the socket is
  * injected, and nothing is written to the database.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the "a REAL, ordinary (non-external)
+// section" coordinate is now `test2` — test3 itself IS external here (it carries the
+// component_external test215).
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
@@ -248,14 +246,14 @@ describe("'misconfigured' rather than a bare []", () => {
 		await hook?.emitItem?.({
 			ddo: { tipo: COMPONENT, section_tipo: 'test3' } as Ddo,
 			record: emptyRecord(),
-			// numisdata3 is a REAL, ordinary (non-external) section.
-			row: { section_tipo: 'numisdata3', section_id: 1 },
+			// test2 is a REAL, ordinary (non-external) section.
+			row: { section_tipo: 'test2', section_id: 1 },
 			model: 'component_external',
 			ddoMode: 'edit',
 			ddoLang: 'lg-nolan',
 			defaultMode: 'edit',
 			defaultLang: 'lg-eng',
-			callerTipo: 'numisdata3',
+			callerTipo: 'test2',
 			emission,
 		});
 		const item = emission.items[0] as DataItem;

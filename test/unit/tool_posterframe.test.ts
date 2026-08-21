@@ -5,11 +5,11 @@
  * with both actions. The DB portal-create + inverse-reference walk are ledgered
  * (media/DB not synced here), matching the media_tools.test.ts convention.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: every tipo here is a media IDENTITY
+// (the `<component>_<section>_<id>` filename grammar) inside this file's own scratch
+// media root, so they only have to be real nodes of the right model — they now name
+// generic `test` ones (test94 = component_av, test99 = component_image,
+// test26 = component_3d, test17 = component_text_area, test80 = component_portal).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -31,6 +31,7 @@ import {
 import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -42,14 +43,14 @@ const HAVE_MAGICK = existsSync(resolveMagick());
 const HAVE_BOTH = HAVE_FFMPEG && HAVE_MAGICK;
 
 const avIdentity: MediaIdentity = {
-	componentTipo: 'rsc439',
-	sectionTipo: 'rsc170',
+	componentTipo: 'test94',
+	sectionTipo: 'test3',
 	sectionId: 8,
 	lang: null,
 };
 const imageIdentity: MediaIdentity = {
-	componentTipo: 'rsc29',
-	sectionTipo: 'rsc200',
+	componentTipo: 'test99',
+	sectionTipo: 'test2',
 	sectionId: 3,
 	lang: null,
 };
@@ -90,17 +91,17 @@ async function makeAv(name: string, withVideo: boolean): Promise<void> {
 const avCtx = () => ({ spec: av, identity: avIdentity, pathOpts });
 const imageCtx = () => ({ spec: image, identity: imageIdentity, pathOpts });
 
-beforeAll(() => rmSync(ROOT, { recursive: true, force: true }));
+beforeAll(() => resetMediaRoot(ROOT));
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 describe('tool_posterframe core', () => {
 	test.if(HAVE_BOTH)(
 		'extracts a frame into the image original + regenerates derivatives',
 		async () => {
-			await makeAv('rsc439_rsc170_8', true);
+			await makeAv('test94_test3_8', true);
 			const out = await createIdentifyingImageCore(avCtx(), imageCtx(), '00:00:00');
 			expect(out.created).toBe(true);
-			expect(out.posterframePath).toContain('/image/original/rsc29_rsc200_3.jpg');
+			expect(out.posterframePath).toContain('/image/original/test99_test2_3.jpg');
 			expect(existsSync(out.posterframePath as string)).toBe(true);
 			// derivatives were scanned (at least the original tier is present)
 			expect(out.filesInfo.some((e) => e.quality === 'original')).toBe(true);
@@ -108,7 +109,7 @@ describe('tool_posterframe core', () => {
 	);
 
 	test.if(HAVE_FFMPEG)('audio-only source yields no frame (created:false)', async () => {
-		await makeAv('rsc439_rsc170_8', false);
+		await makeAv('test94_test3_8', false);
 		rmSync(`${ROOT}/image`, { recursive: true, force: true });
 		const out = await createIdentifyingImageCore(avCtx(), imageCtx(), '00:00:00');
 		expect(out.created).toBe(false);
@@ -136,40 +137,40 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 	test.if(HAVE_BOTH)(
 		'creates the posterframe under av/posterframe + regenerates the thumb',
 		async () => {
-			rmSync(ROOT, { recursive: true, force: true });
-			await makeAv('rsc439_rsc170_8', true);
+			resetMediaRoot(ROOT);
+			await makeAv('test94_test3_8', true);
 			const ok = await createAvPosterframe(avCtx(), '00:00:00');
 			expect(ok).toBe(true);
 			const target = posterframeAbsolutePath(av, avIdentity, pathOpts);
-			expect(target).toContain('/av/posterframe/rsc439_rsc170_8.jpg');
+			expect(target).toContain('/av/posterframe/test94_test3_8.jpg');
 			expect(existsSync(target)).toBe(true);
 			// PHP create_posterframe → create_thumb: the thumb is derived from it.
 			expect(
 				existsSync(
-					`${ROOT}/av/${config.media.thumb.quality}/rsc439_rsc170_8.${config.media.thumb.extension}`,
+					`${ROOT}/av/${config.media.thumb.quality}/test94_test3_8.${config.media.thumb.extension}`,
 				),
 			).toBe(true);
 		},
 	);
 
 	test.if(HAVE_FFMPEG)('audio-only source yields no posterframe (result:false)', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
-		await makeAv('rsc439_rsc170_8', false);
+		resetMediaRoot(ROOT);
+		await makeAv('test94_test3_8', false);
 		const ok = await createAvPosterframe(avCtx(), '00:00:00');
 		expect(ok).toBe(false);
 		expect(existsSync(posterframeAbsolutePath(av, avIdentity, pathOpts))).toBe(false);
 	});
 
 	test('missing source returns false (never throws)', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		expect(await createAvPosterframe(avCtx(), '0')).toBe(false);
 	});
 
 	test.if(HAVE_BOTH)(
 		'a timecode past the source duration is clamped to a valid frame (short/truncated video)',
 		async () => {
-			rmSync(ROOT, { recursive: true, force: true });
-			await makeAv('rsc439_rsc170_8', true); // 1-second source
+			resetMediaRoot(ROOT);
+			await makeAv('test94_test3_8', true); // 1-second source
 			// Request a frame 30s in — far past EOF. ffmpeg input-seeking (`-ss` before
 			// `-i`) past the end yields NO frame → the mjpeg encoder errors and the whole
 			// extraction fails. createPosterframe clamps the seek into range, so a poster
@@ -183,10 +184,10 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 	test.if(HAVE_BOTH)(
 		'delete removes the posterframe and MINTS a replacement for the thumb',
 		async () => {
-			rmSync(ROOT, { recursive: true, force: true });
-			await makeAv('rsc439_rsc170_8', true);
+			resetMediaRoot(ROOT);
+			await makeAv('test94_test3_8', true);
 			await createAvPosterframe(avCtx(), '00:00:00');
-			const thumb = `${ROOT}/av/${config.media.thumb.quality}/rsc439_rsc170_8.${config.media.thumb.extension}`;
+			const thumb = `${ROOT}/av/${config.media.thumb.quality}/test94_test3_8.${config.media.thumb.extension}`;
 			expect(existsSync(thumb)).toBe(true);
 
 			const outcome = await deletePosterframe(avCtx());
@@ -203,8 +204,8 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 	);
 
 	test.if(HAVE_BOTH)('the deleted posterframe is RECOVERABLE (moved, never unlinked)', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
-		await makeAv('rsc439_rsc170_8', true);
+		resetMediaRoot(ROOT);
+		await makeAv('test94_test3_8', true);
 		await createAvPosterframe(avCtx(), '00:00:00');
 		await deletePosterframe(avCtx());
 		// The No-hard-delete law: the operator's bytes are one move away.
@@ -214,7 +215,7 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 	});
 
 	test('a delete with nothing to delete reports it, and does nothing else', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const outcome = await deletePosterframe(avCtx());
 		expect(outcome).toEqual({ ok: false, retiredThumb: null, rebuiltThumb: null });
 	});
@@ -232,8 +233,8 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 	// uploads it to the staging tree, then move_file_to_dir binds it to the record.
 	const threeD = mediaTypeOf('component_3d')!;
 	const tdIdentity: MediaIdentity = {
-		componentTipo: 'rsc36',
-		sectionTipo: 'rsc170',
+		componentTipo: 'test26',
+		sectionTipo: 'test3',
 		sectionId: 8,
 		lang: null,
 	};
@@ -262,39 +263,39 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 	test.if(HAVE_BOTH)(
 		'moves the staged snapshot into 3d/posterframe + regenerates the thumb',
 		async () => {
-			rmSync(ROOT, { recursive: true, force: true });
+			resetMediaRoot(ROOT);
 			await stageJpg('up_abc.jpg');
 			const ok = await moveUploadedToMediaDir({
 				ctx: tdCtx(),
 				userId: USER,
 				keyDir: '3d',
 				tmpName: 'up_abc.jpg',
-				fileName: 'rsc36_rsc170_8.jpg',
+				fileName: 'test26_test3_8.jpg',
 				targetDir: 'posterframe',
 			});
 			expect(ok).toBe(true);
 			const target = posterframeAbsolutePath(threeD, tdIdentity, pathOpts);
-			expect(target).toContain('/3d/posterframe/rsc36_rsc170_8.jpg');
+			expect(target).toContain('/3d/posterframe/test26_test3_8.jpg');
 			expect(existsSync(target)).toBe(true);
 			// staged source consumed by the move
 			expect(existsSync(`${stagingDir(USER, '3d', ROOT)}/up_abc.jpg`)).toBe(false);
 			// thumb derived from the posterframe
 			expect(
 				existsSync(
-					`${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`,
+					`${ROOT}/3d/${config.media.thumb.quality}/test26_test3_8.${config.media.thumb.extension}`,
 				),
 			).toBe(true);
 		},
 	);
 
 	test('missing staged source returns false', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		const ok = await moveUploadedToMediaDir({
 			ctx: tdCtx(),
 			userId: USER,
 			keyDir: '3d',
 			tmpName: 'nope.jpg',
-			fileName: 'rsc36_rsc170_8.jpg',
+			fileName: 'test26_test3_8.jpg',
 			targetDir: 'posterframe',
 		});
 		expect(ok).toBe(false);
@@ -307,7 +308,7 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 				userId: USER,
 				keyDir: '3d',
 				tmpName: '../../etc/passwd',
-				fileName: 'rsc36_rsc170_8.jpg',
+				fileName: 'test26_test3_8.jpg',
 				targetDir: 'posterframe',
 			}),
 		).rejects.toThrow();
@@ -322,17 +323,17 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 	// the one an operator meets when nothing has captured the scene yet.
 	describe('build_version thumb (the panel gear)', () => {
 		test.if(HAVE_BOTH)('builds the thumb from the posterframe', async () => {
-			rmSync(ROOT, { recursive: true, force: true });
+			resetMediaRoot(ROOT);
 			await stageJpg('up_thumb.jpg');
 			await moveUploadedToMediaDir({
 				ctx: tdCtx(),
 				userId: USER,
 				keyDir: '3d',
 				tmpName: 'up_thumb.jpg',
-				fileName: 'rsc36_rsc170_8.jpg',
+				fileName: 'test26_test3_8.jpg',
 				targetDir: 'posterframe',
 			});
-			const thumb = `${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`;
+			const thumb = `${ROOT}/3d/${config.media.thumb.quality}/test26_test3_8.${config.media.thumb.extension}`;
 			rmSync(thumb, { force: true }); // the move already built one — start from none
 			const out = await buildVersionCore(threeD, tdIdentity, pathOpts, config.media.thumb.quality);
 			expect(out.built).toEqual([thumb]);
@@ -341,10 +342,10 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 		});
 
 		test('with no posterframe it refuses, naming the 3D viewer as the source', async () => {
-			rmSync(ROOT, { recursive: true, force: true });
+			resetMediaRoot(ROOT);
 			// A model file in the web tier is present — the exact state that used to
 			// send a .glb to the raster thumbnailer instead of refusing.
-			const model = `${ROOT}/3d/${threeD.defaultQuality}/rsc36_rsc170_8.${threeD.defaultExtension}`;
+			const model = `${ROOT}/3d/${threeD.defaultQuality}/test26_test3_8.${threeD.defaultExtension}`;
 			mkdirSync(model.slice(0, model.lastIndexOf('/')), { recursive: true });
 			writeFileSync(model, 'glTF-not-an-image');
 			await expect(
@@ -352,7 +353,7 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 			).rejects.toThrow(/has no posterframe yet.*3D viewer/s);
 			expect(
 				existsSync(
-					`${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`,
+					`${ROOT}/3d/${config.media.thumb.quality}/test26_test3_8.${config.media.thumb.extension}`,
 				),
 			).toBe(false);
 		});
@@ -361,17 +362,17 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 	test.if(HAVE_BOTH)(
 		'delete removes the 3D posterframe AND retires the thumb (nothing can re-render a mesh)',
 		async () => {
-			rmSync(ROOT, { recursive: true, force: true });
+			resetMediaRoot(ROOT);
 			await stageJpg('up_del.jpg');
 			await moveUploadedToMediaDir({
 				ctx: tdCtx(),
 				userId: USER,
 				keyDir: '3d',
 				tmpName: 'up_del.jpg',
-				fileName: 'rsc36_rsc170_8.jpg',
+				fileName: 'test26_test3_8.jpg',
 				targetDir: 'posterframe',
 			});
-			const thumb = `${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`;
+			const thumb = `${ROOT}/3d/${config.media.thumb.quality}/test26_test3_8.${config.media.thumb.extension}`;
 			expect(existsSync(thumb)).toBe(true);
 
 			const outcome = await deletePosterframe(tdCtx());
@@ -393,8 +394,8 @@ describe('component_av get_media_streams (player render path)', () => {
 	// The AV player edit view calls this on every render; the tool can't open
 	// without it (PHP dd_component_av_api::get_media_streams → ffprobe).
 	test.if(HAVE_FFMPEG)('probes the streams of an existing quality file', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
-		await makeAv('rsc439_rsc170_8', true);
+		resetMediaRoot(ROOT);
+		await makeAv('test94_test3_8', true);
 		const probe = await getAvMediaStreams(avCtx(), 'original');
 		expect(probe).not.toBeNull();
 		expect(Array.isArray(probe!.streams)).toBe(true);
@@ -404,7 +405,7 @@ describe('component_av get_media_streams (player render path)', () => {
 	});
 
 	test('returns null when no file exists at the quality (client degrades to [])', async () => {
-		rmSync(ROOT, { recursive: true, force: true });
+		resetMediaRoot(ROOT);
 		expect(await getAvMediaStreams(avCtx(), 'original')).toBeNull();
 	});
 
@@ -443,14 +444,14 @@ describe('create_identifying_image per-record scope gate', () => {
 				userId: -1,
 				background: false,
 				options: {
-					tipo: 'rsc36', // component_text_area — never reached once the gate fires
-					section_tipo: 'rsc167',
+					tipo: 'test17', // component_text_area — never reached once the gate fires
+					section_tipo: 'test3',
 					section_id: 1,
 					current_time: '00:00:01',
 					item_value: {
-						component_portal: 'rsc254',
-						component_image: 'rsc29',
-						section_tipo: 'rsc167',
+						component_portal: 'test80',
+						component_image: 'test99',
+						section_tipo: 'test3',
 						section_id: 99999999, // no such record — cannot be in any scope
 					},
 				},

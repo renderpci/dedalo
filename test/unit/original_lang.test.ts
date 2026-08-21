@@ -2,8 +2,8 @@
  * ORIGINAL-LANGUAGE GATE (the v6 get_original_lang mechanism, ported 2026-07-28).
  *
  * Interviews in one installation are recorded in different languages, so the AV
- * section carries a component_select_lang ("Original language", rsc263) beside
- * the transcription text_area (rsc36). The engine must force the text_area to
+ * section carries a component_select_lang ("Original language", test89) beside
+ * the transcription text_area (test17). The engine must force the text_area to
  * that per-record language in TWO places:
  *
  *   1. the EDIT context carries `options.related_component_lang` — the (until
@@ -19,14 +19,14 @@
  * the two records are read (the cache-poisoning guard: contexts are built from
  * a shared structural core, and a per-record stamp must never leak across).
  *
- * Uses the REAL ontology triple rsc36/rsc167/rsc263 and the real lg1 records in
+ * Uses the REAL ontology triple test17/test3/test89 and the real lg1 records in
  * the suite DB; the matrix rows are scratch (created and deleted here).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The triple is
+// now test17 (component_text_area, is_translatable) / test3 (its section) / test89
+// (component_select_lang under the same section) — structurally the same triple the
+// gate used to read off the install, and the `lg` records it resolves against are
+// seed-shipped, so they are generic already.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getOriginalLang } from '../../src/core/components/component_text_area/original_lang.ts';
@@ -40,12 +40,70 @@ import {
 	getLangCodeBySectionId,
 	getLangSectionIdByCode,
 } from '../../src/core/relations/select_lang.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { buildGetDataContext, readSection } from '../../src/core/section/read.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
-const TABLE = 'matrix'; // rsc167 lives in the main matrix table
-const SECTION = 'rsc167';
-const TEXT_AREA = 'rsc36';
-const SELECT_LANG = 'rsc263';
+const SECTION = 'zzolang1';
+const TEXT_AREA = 'zzolang2';
+const SELECT_LANG = 'zzolang3';
+const LIST = 'zzolang4';
+/** Resolved after the situation exists — a scratch section owns its own table. */
+let TABLE = 'matrix_test';
+
+/**
+ * BUILT, not borrowed. The resolution under test walks the TEXT_AREA node's own
+ * `relations` for a related `component_select_lang`
+ * (resolver.ts relatedTipoByModel, via component_text_area/original_lang.ts), and
+ * NO shipped `test` text_area declares that relation — a plain rename would have
+ * left the walk with nothing to find and the gate asserting `null` everywhere.
+ * So the triple is built with exactly the link the shipped rsc36 → rsc263 pair
+ * has. The lang records it resolves INTO are the seed's own `lg1`, which is
+ * generic on every installation.
+ */
+const ORIGINAL_LANG_SITUATION = situation({
+	tld: 'zzolang',
+	name: 'component_text_area original lang',
+	nodes: [
+		{ tipo: SECTION, model: 'section', parent: 'dd14' },
+		{
+			tipo: TEXT_AREA,
+			model: 'component_text_area',
+			parent: SECTION,
+			is_translatable: true,
+			relations: [{ tipo: SELECT_LANG }],
+		},
+		{
+			// The LIST leg needs a section_list naming the column it emits — a
+			// section without one emits no component at all, and the "the list
+			// forces the original language" cases would have nothing to assert on.
+			tipo: LIST,
+			model: 'section_list',
+			parent: SECTION,
+			relations: [{ tipo: TEXT_AREA }, { tipo: SELECT_LANG }],
+		},
+		{
+			tipo: SELECT_LANG,
+			model: 'component_select_lang',
+			parent: SECTION,
+			properties: {
+				source: {
+					request_config: [
+						{
+							type: 'main',
+							api_engine: 'dedalo',
+							sqo: { section_tipo: [{ value: 'lg1', source: 'section' }] },
+						},
+					],
+				},
+			},
+		},
+	],
+});
 
 /** lg1 ids resolved from the REAL langs table at setup. */
 let spaLg1Id = 0;
@@ -57,6 +115,8 @@ let withoutLangId = 0;
 const SPA_TEXT = '<p>Transcripción original en español.</p>';
 
 beforeAll(async () => {
+	await ensureSituation(ORIGINAL_LANG_SITUATION);
+	TABLE = (await getMatrixTableFromTipo(SECTION)) ?? 'matrix_test';
 	spaLg1Id = (await getLangSectionIdByCode('lg-spa')) ?? 0;
 	expect(spaLg1Id).toBeGreaterThan(0); // the suite DB carries real lg1 data
 
@@ -82,6 +142,8 @@ beforeAll(async () => {
 afterAll(async () => {
 	if (withLangId > 0) await deleteMatrixRecord(TABLE, SECTION, withLangId);
 	if (withoutLangId > 0) await deleteMatrixRecord(TABLE, SECTION, withoutLangId);
+	// Residue asserted, not trusted — the scratch ontology goes with the records.
+	expect(await dropSituation(ORIGINAL_LANG_SITUATION)).toBe(0);
 });
 
 describe('getLangCodeBySectionId (lg1 → lg-tag)', () => {
@@ -160,8 +222,8 @@ describe('edit context carries options.related_component_lang', () => {
 
 describe('tag rendering survives the forcing (the lost-tags regression)', () => {
 	const TAGGED = '<p>[TC_00:00:01.000_TC]Text en català</p>';
-	let vlcaCatId = 0; // rsc263=vlca, transcript typed under lg-cat (equivalence sibling)
-	let fraCatId = 0; // rsc263=fra (no equivalence), transcript under lg-cat → fallback path
+	let vlcaCatId = 0; // test89=vlca, transcript typed under lg-cat (equivalence sibling)
+	let fraCatId = 0; // test89=fra (no equivalence), transcript under lg-cat → fallback path
 
 	beforeAll(async () => {
 		const vlca = (await getLangSectionIdByCode('lg-vlca')) ?? 0;
@@ -231,7 +293,7 @@ describe('tag rendering survives the forcing (the lost-tags regression)', () => 
 	}
 
 	test('the forcing follows the EQUIVALENCE sibling that holds the text (506 shape)', async () => {
-		// rsc263 says Valencian; the transcript was typed under Catalan — the same
+		// test89 says Valencian; the transcript was typed under Catalan — the same
 		// language. Forcing the literal vlca slice (empty) stranded the text in the
 		// UNRENDERED fallback: visible, but with raw [TC_…] literals. The forced
 		// lang must be the sibling that actually holds the text.

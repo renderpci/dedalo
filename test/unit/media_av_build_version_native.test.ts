@@ -14,11 +14,11 @@
  * Real ffmpeg against a SCRATCH media root + a scratch test3 record (the suite's
  * one write surface); both are cleaned up. '240' is the cheapest ladder tier.
  */
-// BINDS INSTALL TLDs: libx — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// NO INSTALL TLD IS BOUND HERE (checked 2026-08-19). The census entry for this
+// file is a FALSE POSITIVE: the only token it matches is `libx264`, the ffmpeg
+// H.264 ENCODER name, which is `<letters><digits>`-shaped and so indistinguishable
+// from a tipo to scripts/lib/tld_census.ts. `libx` is not an ontology TLD and
+// should leave INSTALL_TLDS; until it does, the entry stays frozen.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -39,6 +39,7 @@ import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_av_build_version_${process.pid}`;
@@ -112,6 +113,10 @@ const qualityPath = (identity: MediaIdentity, quality: string): string =>
 
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
+	// DECLARE the scratch root: under the test-media seam every media door refuses
+	// an unmarked root, and the rmSync above would take an earlier marker with it
+	// (src/core/media/test_media_root.ts, test/helpers/media_scratch_root.ts).
+	markMediaRoot(ROOT);
 });
 afterAll(async () => {
 	rmSync(ROOT, { recursive: true, force: true });

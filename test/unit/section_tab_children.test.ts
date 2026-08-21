@@ -20,11 +20,10 @@
  *      vs 'tab') tells them apart. Without it the inner tab falls to the default
  *      'section_tab' branch and wrongly builds its OWN nested tab bar.
  */
-// BINDS INSTALL TLDs: tch — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -47,20 +46,38 @@ function entry(over: Partial<StructureContextEntry>): StructureContextEntry {
 describe('attachSectionTabChildren (client tab-bar contract)', () => {
 	test('a section_tab gets {tipo,label} for each entry parented to it, in order', () => {
 		const context: StructureContextEntry[] = [
-			entry({ tipo: 'tch9', model: 'section_tab', parent_grouper: 'tch7' }),
-			entry({ tipo: 'tch184', model: 'section_tab', parent_grouper: 'tch9', label: 'Ingreso' }),
-			entry({ tipo: 'tch52', model: 'section_tab', parent_grouper: 'tch9', label: 'Descripción' }),
+			entry({
+				tipo: 'testheritagecatalog1004',
+				model: 'section_tab',
+				parent_grouper: 'testheritagecatalog1',
+			}),
+			entry({
+				tipo: 'testheritagecatalog1064',
+				model: 'section_tab',
+				parent_grouper: 'testheritagecatalog1004',
+				label: 'Ingreso',
+			}),
+			entry({
+				tipo: 'testheritagecatalog1016',
+				model: 'section_tab',
+				parent_grouper: 'testheritagecatalog1004',
+				label: 'Descripción',
+			}),
 			// a component INSIDE the first tab — not a direct child of the container,
 			// must NOT appear as a tab label.
-			entry({ tipo: 'f1', model: 'component_input_text', parent_grouper: 'tch184' }),
+			entry({
+				tipo: 'f1',
+				model: 'component_input_text',
+				parent_grouper: 'testheritagecatalog1064',
+			}),
 		];
 
 		attachSectionTabChildren(context);
 
-		const outer = context.find((e) => e.tipo === 'tch9');
+		const outer = context.find((e) => e.tipo === 'testheritagecatalog1004');
 		expect(outer?.children).toEqual([
-			{ tipo: 'tch184', label: 'Ingreso' },
-			{ tipo: 'tch52', label: 'Descripción' },
+			{ tipo: 'testheritagecatalog1064', label: 'Ingreso' },
+			{ tipo: 'testheritagecatalog1016', label: 'Descripción' },
 		]);
 	});
 

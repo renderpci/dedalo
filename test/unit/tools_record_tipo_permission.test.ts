@@ -17,11 +17,9 @@
  * process-GLOBAL and `mock.restore()` does not revert it — the real exports are
  * snapshotted at import and re-installed (dedalo-ts-testing).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: every permission read is mocked, so the
+// targets are opaque tipos — they now name generic `test` nodes (section test3, its
+// components test52/test99) instead of an install's.
 
 import { afterAll, afterEach, describe, expect, mock, test } from 'bun:test';
 import { ok } from '../../src/core/errors/convert.ts';
@@ -46,8 +44,8 @@ afterAll(restoreReal);
 const USER: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
-const SECTION = 'rsc167';
-const COMPONENT = 'rsc35';
+const SECTION = 'test3';
+const COMPONENT = 'test52';
 
 function spec(minLevel = 2): ToolActionSpec {
 	return {
@@ -107,7 +105,7 @@ describe('record_tipo — fail-closed target validation', () => {
 		stubLevels(2, 2);
 		const result = await assertActionPermission(
 			spec(2),
-			{ section_tipo: SECTION, tipo: COMPONENT, component_tipo: 'rsc99', section_id: 1 },
+			{ section_tipo: SECTION, tipo: COMPONENT, component_tipo: 'test99', section_id: 1 },
 			USER,
 		);
 		expect(result.ok).toBe(false);

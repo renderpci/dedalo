@@ -10,11 +10,12 @@
  * is reverted for real and the live matrix values, the fresh bulk-tagged TM
  * rows and the per-row authorization skip are asserted against the database.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The DB
+// drive's component became the phase-2 clone of the install component it used
+// (a component_input_text, so the `string` column the revert reads back is
+// unchanged). The section carrier was already the generic `test2`, whose test24
+// matrix_table relation puts every record in `matrix_test` — which is why
+// `liveValues()` reads that table and not `matrix`.
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -100,7 +101,7 @@ describe('tool_time_machine module', () => {
 /* ------------------------------------------------------------------ DB drive */
 
 const SECTION_TIPO = 'test2';
-const COMPONENT_TIPO = 'numisdata16';
+const COMPONENT_TIPO = 'testmint1002'; // component_input_text (string column)
 const LANG = 'lg-spa';
 const IDS = [905201, 905202];
 const BATCH_BULK_ID = 9905201; // synthetic bulk id — no dd800 record needed to READ it

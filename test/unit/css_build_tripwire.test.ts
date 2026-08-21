@@ -42,11 +42,9 @@
  *
  * COST: compiles 41 entrypoints (~1s). DB-less, network-less → hermetic tier.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the only
+// install token was an ILLUSTRATIVE job name inside an assertion message (no
+// ontology is read here at all) — it is now a neutral example.
 
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
@@ -206,7 +204,7 @@ describe('css build tripwire', () => {
 		}
 		expect(
 			offenders,
-			`A .diffusion_server_control_job_table column track among the first five is INTRINSIC (auto / min-content / max-content / fit-content).\n\nThat single change reintroduces two bugs at once: cells wrap mid-word ("complet/ed", "…mdcat353_/rsc170") because word-break:break-word collapses their min-content width to one character, and the progress bar stops sizing because a percentage width contributes 0 to an intrinsic track.\n\nKeep every one of the first five as minmax(<length>, …fr) or a bare length. See the comment above this test.\n\nOffending tracks:\n${offenders.map((o) => `  ${o}`).join('\n')}`,
+			`A .diffusion_server_control_job_table column track among the first five is INTRINSIC (auto / min-content / max-content / fit-content).\n\nThat single change reintroduces two bugs at once: cells wrap mid-word ("complet/ed", "…a_long_job_/name") because word-break:break-word collapses their min-content width to one character, and the progress bar stops sizing because a percentage width contributes 0 to an intrinsic track.\n\nKeep every one of the first five as minmax(<length>, …fr) or a bare length. See the comment above this test.\n\nOffending tracks:\n${offenders.map((o) => `  ${o}`).join('\n')}`,
 		).toEqual([]);
 	});
 });

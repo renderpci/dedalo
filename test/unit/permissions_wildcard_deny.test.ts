@@ -8,11 +8,10 @@
  * The allow direction (concrete parent + 'all'/inverse tipo → 1) is pinned in
  * test/parity/permissions_differential.test.ts; THIS file pins the refusals.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
 import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -34,7 +33,7 @@ describe('AUTHZ-05: the wildcard grant requires a CONCRETE parent section', () =
 		// Uppercase — outside the ^[a-z]+[0-9]+$ grammar.
 		expect(await getPermissions(principal, 'NUMISDATA6', 'all')).toBe(0);
 		// Embedded separator / traversal-shaped inputs.
-		expect(await getPermissions(principal, 'numisdata6 OR 1=1', 'all')).toBe(0);
+		expect(await getPermissions(principal, 'testmint1 OR 1=1', 'all')).toBe(0);
 		expect(await getPermissions(principal, 'numisdata', 'all')).toBe(0);
 		expect(await getPermissions(principal, '6', 'all')).toBe(0);
 	});
@@ -42,13 +41,13 @@ describe('AUTHZ-05: the wildcard grant requires a CONCRETE parent section', () =
 	test('empty parent/tipo fail closed (level 0)', async () => {
 		const principal = await resolvePrincipal(NON_ADMIN_USER);
 		expect(await getPermissions(principal, '', 'all')).toBe(0);
-		expect(await getPermissions(principal, 'numisdata6', '')).toBe(0);
+		expect(await getPermissions(principal, 'testmint1', '')).toBe(0);
 	});
 
 	test('control: the legitimate wildcard grant still works on a concrete section', async () => {
 		// Anti-vacuity: proves this file is exercising the SAME code path the
 		// deny cases refuse (a deny-everything regression would fail here).
 		const principal = await resolvePrincipal(NON_ADMIN_USER);
-		expect(await getPermissions(principal, 'numisdata6', 'all')).toBe(1);
+		expect(await getPermissions(principal, 'testmint1', 'all')).toBe(1);
 	});
 });

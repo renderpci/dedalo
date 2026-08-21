@@ -13,14 +13,21 @@
  * `assertPublicUrlImpl` through the transport's declared seams; a case that
  * must prove "no request was made" counts the calls on that stub.
  */
-// BINDS INSTALL TLDs: zenon — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19. The emitted-shape cases name the phase-2
+// clones of the external section and its display fields (test7342 / test7344-test7347 —
+// src/core/test_data/test_tld_tipo_map.json), and the ontology-resolution case — which
+// used to be SKIPPED on every database, because the suite carried no external tree with
+// an api_config — now BUILDS the external installation it needs (the `zzxs` situation)
+// and runs unconditionally. Still no socket: the built api_config points at
+// `external.invalid` and nothing here fetches.
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { getAlpha2FromCode } from '../../src/core/resolve/lang_names.ts';
 import type { ExternalSearchResult } from '../../src/external/api/types.ts';
 import { resetBreakerForOrigin } from '../../src/external/breaker.ts';
@@ -39,7 +46,7 @@ import { type ExternalFetchImpl, fetchExternalJson } from '../../src/external/tr
 const HOST = 'zenon.dainst.org';
 const ORIGIN = `https://${HOST}`;
 const SEARCH_URL = `${ORIGIN}/api/v1/search`;
-/** The one external section the TEST database carries (zenon1's twin). */
+/** The generic `test` section the caller of these cases lives in. */
 const SECTION = 'test3';
 
 /** A realistic Zenon /search answer — the record sample, in search clothing. */
@@ -152,7 +159,7 @@ describe('buildSearchRequest reproduces the known-good browser request', () => {
 			apiUrlSearch: SEARCH_URL,
 			terms: ['casana'],
 			dataLang: 'lg-deu',
-			// rsc368's zenon ddo order — authors, publicationDates, id, title.
+			// the autocomplete's ddo order — authors, publicationDates, id, title.
 			remoteFields: ['authors', 'publicationDates', 'id', 'title'],
 			limit: 20,
 			offset: 0,
@@ -585,13 +592,13 @@ describe('the emitted shape is the one the client already speaks', () => {
 		);
 		const { parseFieldsMap } = await import('../../src/external/api/index.ts');
 		const hits = SEARCH_PAYLOAD.records.map((row) => ({
-			sectionTipo: 'zenon1',
+			sectionTipo: 'test7342',
 			remoteId: row.id,
 			row: row as Record<string, unknown>,
 		}));
 		const result: ExternalSearchResult = {
 			service: 'zenon',
-			sectionTipo: 'zenon1',
+			sectionTipo: 'test7342',
 			hits,
 			total: 137,
 			limit: 20,
@@ -599,19 +606,19 @@ describe('the emitted shape is the one the client already speaks', () => {
 			dropped: 0,
 		};
 		const target = {
-			targetSectionTipo: 'zenon1',
+			targetSectionTipo: 'test7342',
 			callerTipo: 'test61',
 			model: zenon,
 			remoteFields: ['id', 'title'],
 			context: [],
 			ddos: [
 				{
-					tipo: 'zenon3',
-					fieldsMap: parseFieldsMap([{ local: 'dato', remote: 'id' }], { tipo: 'zenon3' }),
+					tipo: 'test7344',
+					fieldsMap: parseFieldsMap([{ local: 'dato', remote: 'id' }], { tipo: 'test7344' }),
 				},
 				{
-					tipo: 'zenon4',
-					fieldsMap: parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'zenon4' }),
+					tipo: 'test7345',
+					fieldsMap: parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'test7345' }),
 				},
 			],
 		};
@@ -620,24 +627,24 @@ describe('the emitted shape is the one the client already speaks', () => {
 		// 1 sections entry + 2 records × 2 ddos.
 		expect(data).toHaveLength(5);
 		expect(data[0]).toEqual({
-			section_tipo: 'zenon1',
+			section_tipo: 'test7342',
 			// self.caller.tipo in the browser engine — the CALLER, not the service.
 			tipo: 'test61',
 			typo: 'sections',
 			entries: [
-				{ section_tipo: 'zenon1', section_id: '000848571' },
-				{ section_tipo: 'zenon1', section_id: '001338683' },
+				{ section_tipo: 'test7342', section_id: '000848571' },
+				{ section_tipo: 'test7342', section_id: '001338683' },
 			],
 		});
 		const first = data[1] as Record<string, unknown>;
-		expect(first.section_tipo).toBe('zenon1');
+		expect(first.section_tipo).toBe('test7342');
 		expect(first.section_id).toBe('000848571'); // a STRING, padding intact
 		expect(first.type).toBe('dd687');
-		expect(first.tipo).toBe('zenon3');
+		expect(first.tipo).toBe('test7344');
 		expect(first.mode).toBe('list');
 		expect(first.entries).toEqual(['000848571']);
 		const second = data[2] as Record<string, unknown>;
-		expect(second.tipo).toBe('zenon4');
+		expect(second.tipo).toBe('test7345');
 		expect(second.entries).toEqual(['Las acuñaciones provinciales romanas de Hispania ']);
 	});
 
@@ -650,25 +657,25 @@ describe('the emitted shape is the one the client already speaks', () => {
 		const data = await formatExternalSearchData(
 			{
 				service: 'zenon',
-				sectionTipo: 'zenon1',
-				hits: [{ sectionTipo: 'zenon1', remoteId: '000848571', row }],
+				sectionTipo: 'test7342',
+				hits: [{ sectionTipo: 'test7342', remoteId: '000848571', row }],
 				total: null,
 				limit: 20,
 				offset: 0,
 				dropped: 0,
 			},
 			{
-				targetSectionTipo: 'zenon1',
+				targetSectionTipo: 'test7342',
 				callerTipo: 'test61',
 				model: zenon,
 				remoteFields: ['authors'],
 				context: [],
 				ddos: [
 					{
-						tipo: 'zenon5',
+						tipo: 'test7346',
 						fieldsMap: parseFieldsMap(
 							[{ local: 'dato', remote: 'authors', format: 'zenon_authors' }],
-							{ tipo: 'zenon5' },
+							{ tipo: 'test7346' },
 						),
 					},
 				],
@@ -686,46 +693,98 @@ describe('the emitted shape is the one the client already speaks', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * DB DRIFT, stated rather than hidden: the suite database
- * (`dedalo_mib_v7_test`) carries `test3` and `test61` but NOT the `zenon1`
- * display tree, so `buildRequestConfigForElement` drops every ddo and there is
- * nothing to resolve. The behavioural assertion below runs where the tree
- * exists (the application ontology) and is SKIPPED — loudly, with the reason
- * printed — where it does not. The credless half of the same invariant is the
- * source assertion after it, which is what actually guards "the field list is
- * never taken from the caller".
+ * THE EXTERNAL INSTALLATION IS BUILT, NOT BORROWED (2026-08-19).
+ *
+ * This case used to run only "where the tree exists (the application
+ * ontology)" and printed a SKIP everywhere else — which was everywhere: no
+ * suite database has ever carried an external section WITH an `api_config`,
+ * and the phase-2 clone deliberately strips one (a cloned live endpoint once
+ * handed the credless suite a real remote URL). A permanently-skipped case
+ * guards nothing, so the situation is now DECLARED and materialized here:
+ * an external section carrying an api_config, its four component_external
+ * display fields with their fields_map, and a caller whose request_config
+ * names the engine. `resolveExternalSearchTarget` then runs end to end.
+ *
+ * NO SOCKET: the api_config points at `external.invalid` (a TLD that can never
+ * resolve), the host allowlist is overridden to exactly that host, and this
+ * case only RESOLVES — it never searches.
  */
-const hasZenonTree = await (async (): Promise<boolean> => {
-	try {
-		const { getNode } = await import('../../src/core/ontology/resolver.ts');
-		return (await getNode('zenon3')) !== null && (await getNode('test61')) !== null;
-	} catch {
-		return false;
-	}
-})();
-if (!hasZenonTree) {
-	console.warn(
-		'[external_search_native] SKIPPED the ontology-resolution case: this database carries no zenon display tree (test/fixtures/external/ontology_census.json documents the application one)',
-	);
-}
+const EXTERNAL_API_CONFIG = {
+	entity: 'zenon',
+	api_url: 'https://external.invalid/api/v1/record',
+	api_url_search: 'https://external.invalid/api/v1/search',
+	ui_base_url: 'https://external.invalid/Record/',
+	response_map: [{ local: 'ar_records', remote: 'records' }],
+};
+const EXT = {
+	section: 'zzxs1',
+	ddos: ['zzxs2', 'zzxs3', 'zzxs4', 'zzxs5'] as const,
+	callerSection: 'zzxs9',
+	caller: 'zzxs10',
+};
+const externalDdoNode = (tipo: string, remote: string) => ({
+	tipo,
+	model: 'component_external',
+	parent: EXT.section,
+	properties: { fields_map: [{ local: 'dato', remote }] },
+});
+const EXTERNAL_SITUATION = situation({
+	tld: 'zzxs',
+	name: 'external search target resolution',
+	nodes: [
+		{ tipo: EXT.section, model: 'section', parent: 'dd14', properties: { api_config: EXTERNAL_API_CONFIG } },
+		externalDdoNode(EXT.ddos[0], 'id'),
+		externalDdoNode(EXT.ddos[1], 'title'),
+		externalDdoNode(EXT.ddos[2], 'authors'),
+		externalDdoNode(EXT.ddos[3], 'publicationDates'),
+		{ tipo: EXT.callerSection, model: 'section', parent: 'dd14' },
+		{
+			tipo: EXT.caller,
+			model: 'component_autocomplete',
+			parent: EXT.callerSection,
+			properties: {
+				source: {
+					request_config: [
+						{
+							api_engine: 'zenon',
+							sqo: { section_tipo: [{ value: [EXT.section], source: 'section' }] },
+							show: {
+								ddo_map: EXT.ddos.map((tipo) => ({
+									tipo,
+									parent: EXT.section,
+									section_tipo: EXT.section,
+								})),
+							},
+						},
+					],
+				},
+			},
+		},
+	],
+});
 
 describe('the target section and the field list are resolved from the ontology', () => {
-	test.if(hasZenonTree)(
-		'test61 (an external-ONLY component) resolves to zenon1 and its zenon fields',
-		async () => {
-			const { resolveExternalSearchTarget } = await import(
-				'../../src/core/api/handlers/dd_external_api.ts'
-			);
-			const target = await resolveExternalSearchTarget('test61', 'test3');
-			expect(target.targetSectionTipo).toBe('zenon1');
-			expect(target.model.service).toBe('zenon');
-			// The ddo declaration order IS the field[] order on the wire.
-			expect(target.remoteFields).toEqual(['id', 'title', 'authors', 'publicationDates']);
-			expect(target.ddos.map((ddo) => ddo.tipo)).toEqual(['zenon3', 'zenon4', 'zenon5', 'zenon6']);
-			// Every fields_map came from the NODE, never from a caller-supplied echo.
-			expect(target.ddos[0]?.fieldsMap).toEqual([{ local: 'dato', remote: 'id' }]);
-		},
-	);
+	beforeAll(async () => {
+		await ensureSituation(EXTERNAL_SITUATION);
+	});
+	afterAll(async () => {
+		expect(await dropSituation(EXTERNAL_SITUATION)).toBe(0);
+	});
+
+	test('an external-ONLY component resolves to its external section and its fields', async () => {
+		overrideExternalSettingsForTests({ allowedHosts: ['external.invalid'] });
+		const { resolveExternalSearchTarget } = await import(
+			'../../src/core/api/handlers/dd_external_api.ts'
+		);
+		const target = await resolveExternalSearchTarget(EXT.caller, EXT.callerSection);
+		expect(target.targetSectionTipo).toBe(EXT.section);
+		expect(target.model.service).toBe('zenon');
+		// The ddo declaration order IS the field[] order on the wire.
+		expect(target.remoteFields).toEqual(['id', 'title', 'authors', 'publicationDates']);
+		expect(target.ddos.map((ddo) => ddo.tipo)).toEqual([...EXT.ddos]);
+		// Every fields_map came from the NODE, never from a caller-supplied echo.
+		expect(target.ddos[0]?.fieldsMap).toEqual([{ local: 'dato', remote: 'id' }]);
+	});
 
 	test('the fields_map is read from the NODE, never from the request', async () => {
 		// Credless, and the half that matters for trust: a client that could put a

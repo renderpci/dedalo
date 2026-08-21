@@ -24,11 +24,8 @@
  *  6. S2-32 (WS-E wiring): pool saturation is observable — queries queueing
  *     for a pooled connection feed the db_pool_waits counter.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json.
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { getCounters } from '../../src/core/api/counters.ts';
@@ -56,12 +53,12 @@ const RAG_SAVE_ID = 917032;
 /** Scratch counter tipo for the self-heal scenario (rows + counter cleaned). */
 const COUNTER_TIPO = 'zztws1';
 
-/** Seed a matrix_test record whose string column carries two numisdata16 items. */
+/** Seed a matrix_test record whose string column carries two testmint1002 items. */
 async function seedTwoItemRecord(sectionId: number): Promise<void> {
 	await cleanScratchRecord(TEST_SECTION_TIPO, sectionId);
 	await createScratchRecord(TEST_SECTION_TIPO, sectionId, {
 		string: {
-			numisdata16: [
+			testmint1002: [
 				{ id: 1, lang: 'lg-spa', value: 'first-original' },
 				{ id: 2, lang: 'lg-spa', value: 'second-original' },
 			],
@@ -85,7 +82,7 @@ describe('S1-02 — tx-wrapped save (DEC-01: stronger than the PHP oracle)', () 
 
 		const saveItem = (id: number, value: string) =>
 			saveComponentData({
-				componentTipo: 'numisdata16', // input_text → string column, translatable
+				componentTipo: 'testmint1002', // input_text → string column, translatable
 				sectionTipo: TEST_SECTION_TIPO,
 				sectionId: LOST_UPDATE_ID,
 				lang: 'lg-spa',
@@ -104,7 +101,7 @@ describe('S1-02 — tx-wrapped save (DEC-01: stronger than the PHP oracle)', () 
 
 		const after = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, LOST_UPDATE_ID);
 		const items = (after?.columns.string as Record<string, { id: number; value: string }[]>)
-			?.numisdata16;
+			?.testmint1002;
 		const byId = new Map((items ?? []).map((item) => [Number(item.id), item.value]));
 		// BOTH edits survived — the lost-update window is closed.
 		expect(byId.get(1)).toBe('first-UPDATED');
@@ -195,12 +192,12 @@ describe('S2-02 — delete atomicity and racing-writer detection', () => {
 	test('updateMatrixKeysData reports 1 for a live record, 0 for a vanished one', async () => {
 		await seedTwoItemRecord(LOST_UPDATE_ID);
 		const hit = await updateMatrixKeysData(TEST_TABLE, TEST_SECTION_TIPO, LOST_UPDATE_ID, [
-			{ column: 'string', key: 'numisdata16', value: [{ id: 1, lang: 'lg-spa', value: 'x' }] },
+			{ column: 'string', key: 'testmint1002', value: [{ id: 1, lang: 'lg-spa', value: 'x' }] },
 		]);
 		expect(hit).toBe(1);
 		await cleanScratchRecord(TEST_SECTION_TIPO, LOST_UPDATE_ID);
 		const miss = await updateMatrixKeysData(TEST_TABLE, TEST_SECTION_TIPO, LOST_UPDATE_ID, [
-			{ column: 'string', key: 'numisdata16', value: [{ id: 1, lang: 'lg-spa', value: 'x' }] },
+			{ column: 'string', key: 'testmint1002', value: [{ id: 1, lang: 'lg-spa', value: 'x' }] },
 		]);
 		expect(miss).toBe(0); // concurrently-deleted record is DETECTABLE (S2-02)
 	}, 30000);
@@ -251,7 +248,7 @@ describe('S2-13 — RAG record events fire from the write/delete pipelines', () 
 		try {
 			await seedTwoItemRecord(RAG_SAVE_ID);
 			const saved = await saveComponentData({
-				componentTipo: 'numisdata16',
+				componentTipo: 'testmint1002',
 				sectionTipo: TEST_SECTION_TIPO,
 				sectionId: RAG_SAVE_ID,
 				lang: 'lg-spa',

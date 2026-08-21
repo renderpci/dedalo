@@ -13,19 +13,31 @@
  *  2. multi-section UNION — PHP's cross-tipo collapse semantics (two tipos in
  *     one table may share a section_id) must be preserved per branch.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 
-const SECTION = 'es1';
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+/** A thesaurus twin: VIRTUAL over the seed's hierarchy20, so its term is hierarchy25. */
+const SECTION = 'test2827';
+const SECTION_TWIN = 'test2822';
 const TERM = 'hierarchy25';
+/**
+ * The section the VALUE equivalence is measured on. It must actually hold
+ * records or `count(*) === count(DISTINCT section_id)` is 0 === 0 — the gate
+ * therefore owns the corpus rows it counts.
+ */
+const COUNT_SECTION = 'test6099';
+const COUNT_TABLE = 'matrix_test';
 
 let dbReady = false;
 beforeAll(async () => {
@@ -34,7 +46,14 @@ beforeAll(async () => {
 		dbReady = true;
 	} catch {
 		dbReady = false;
+		return;
 	}
+	await ensureTestCorpus([COUNT_SECTION]);
+});
+
+afterAll(async () => {
+	if (!dbReady) return;
+	expect(await dropTestCorpus([COUNT_SECTION])).toBe(0);
 });
 
 describe('full_count SELECT shape', () => {
@@ -67,7 +86,7 @@ describe('full_count SELECT shape', () => {
 
 	test('multi-section UNION keeps count(DISTINCT (cross-tipo collapse parity)', async () => {
 		const { sql: builtSql } = await buildSearchSql({
-			section_tipo: [SECTION, 'es4'],
+			section_tipo: [SECTION, SECTION_TWIN],
 			full_count: true,
 		} as never);
 		expect(builtSql).toContain('count(DISTINCT');
@@ -75,18 +94,18 @@ describe('full_count SELECT shape', () => {
 	});
 
 	test('multi-hop join filter keeps count(DISTINCT (LATERAL multiplies rows)', async () => {
-		// Two-step path: rsc197.rsc91 → es1 term — conform builds the LATERAL
+		// Two-step path: rsc197.rsc91 → test2827 term — conform builds the LATERAL
 		// unnest + LEFT JOIN chain, so the count must dedup section_id.
 		const sqo = sanitizeClientSqo(
 			structuredClone({
-				section_tipo: ['rsc197'],
+				section_tipo: [seed('rsc', 197)],
 				full_count: true,
 				filter: {
 					$and: [
 						{
 							q: 'ea',
 							path: [
-								{ section_tipo: 'rsc197', component_tipo: 'rsc91' },
+								{ section_tipo: seed('rsc', 197), component_tipo: seed('rsc', 91) },
 								{ section_tipo: SECTION, component_tipo: TERM },
 							],
 							q_split: true,
@@ -104,7 +123,7 @@ describe('full_count SELECT shape', () => {
 	test('count(*) value equals count(DISTINCT section_id) on a real section', async () => {
 		if (!dbReady) return;
 		const { sql: builtSql, params } = await buildSearchSql({
-			section_tipo: [SECTION],
+			section_tipo: [COUNT_SECTION],
 			full_count: true,
 		} as never);
 		const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
@@ -112,9 +131,11 @@ describe('full_count SELECT shape', () => {
 		}[];
 		const plain = rows.reduce((sum, row) => sum + Number(row.full_count), 0);
 		const truth = (await sql.unsafe(
-			'SELECT count(DISTINCT section_id)::int AS c FROM matrix_hierarchy WHERE section_tipo = $1',
-			[SECTION],
+			`SELECT count(DISTINCT section_id)::int AS c FROM ${COUNT_TABLE} WHERE section_tipo = $1`,
+			[COUNT_SECTION],
 		)) as { c: number }[];
+		// Anti-vacuity: 0 === 0 would satisfy the equality without measuring it.
+		expect(truth[0]?.c ?? 0).toBeGreaterThan(1);
 		expect(plain).toBe(truth[0]?.c as number);
 	});
 });

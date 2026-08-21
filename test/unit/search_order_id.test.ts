@@ -20,18 +20,23 @@
  * convention, so an ordinary section carries these cases and one dd542 case
  * below pins the boundary between the two.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
-import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
+import { buildSearchSql, trimTipo } from '../../src/core/search/sql_assembler.ts';
 
 const ID_ORDER = { direction: 'DESC', path: [{ component_tipo: 'id' }] };
 /** An ordinary section (no timestamp-order rewrite) — the convention carrier. */
-const CARRIER = 'oh1';
+const CARRIER = 'test6813';
+/**
+ * The single-section alias the assembler mints for the carrier — `trimTipo` is
+ * the two-letter TLD prefix + the number, so it is NOT the tipo itself and the
+ * pattern below must ask for it rather than assume it.
+ */
+const CARRIER_ALIAS = trimTipo(CARRIER) as string;
 
 describe('search ORDER BY id (matrix PK) assembly', () => {
 	test("order by 'id' surfaces the PK into the SELECT exactly once and orders by it", async () => {
@@ -85,7 +90,7 @@ describe('search ORDER BY id (matrix PK) assembly', () => {
 		// No custom order → no window, no `AS id`, inner default ASC only.
 		expect(sql).not.toContain('AS id');
 		expect(sql).not.toContain('main_select');
-		expect(sql).toMatch(new RegExp(`ORDER BY\\s+${CARRIER}\\.section_id ASC`));
+		expect(sql).toMatch(new RegExp(`ORDER BY\\s+${CARRIER_ALIAS}\\.section_id ASC`));
 	});
 
 	test('the same id order on dd542 is re-expressed by WC-054 (boundary case)', async () => {

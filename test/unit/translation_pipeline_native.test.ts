@@ -42,15 +42,14 @@
  *    pair in half. See WC-2026-08-09-provider-message-truncation-boundary.
  *
  * DB surface: the scratch section `test2` (→ matrix_test) at reserved
- * 9174xx ids, with a REAL translatable component (numisdata16, input_text,
+ * 9174xx ids, with a REAL translatable component (testmint1002, input_text,
  * translatable → the `string` column). Rows + TM audit rows are cleaned before
  * and after.
  */
-// BINDS INSTALL TLDs: numisdata, oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). Install tipos were replaced
+// by their twins (src/core/test_data/test_tld_tipo_map.json); the seed-shipped ones
+// (rsc/dd/hierarchy/ontology/lg) ship with every installation and stay, spelled through
+// `seed()` so the census can tell a reference from a binding.
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -78,7 +77,7 @@ const URI = 'https://babel.example.org/translate';
 const TEST_TABLE = 'matrix_test';
 const SECTION_TIPO = 'test2';
 /** input_text, translatable → 'string' column, one item per language. */
-const COMPONENT_TIPO = 'numisdata16';
+const COMPONENT_TIPO = 'testmint1002';
 const MODEL = 'component_input_text';
 const ERROR_ID = 917481;
 const RACE_ID = 917482;
@@ -136,15 +135,15 @@ function fakeApertium(text: string): string {
 
 const MARKS = {
 	tc: '[TC_00:01:25.627_TC]',
-	indexIn: '[index-n-12-Guerra civil-data:{"section_tipo":"oh1"}:data]',
-	indexOut: '[/index-n-12-Guerra civil-data:{"section_tipo":"oh1"}:data]',
-	svg: '[svg-n-3-label-data:{"section_tipo":"rsc170","section_id":"5"}:data]',
+	indexIn: '[index-n-12-Guerra civil-data:{"section_tipo":"test6813"}:data]',
+	indexOut: '[/index-n-12-Guerra civil-data:{"section_tipo":"test6813"}:data]',
+	svg: '[svg-n-3-label-data:{"section_tipo":"test3","section_id":"5"}:data]',
 	geo: '[geo-n-4-label-data:{"lat":"41.1"}:data]',
 	page: '[page-n-7-label-data:{"page":"12"}:data]',
 	person: '[person-a-9-Maria-data:{"section_tipo":"dd15","section_id":"5"}:data]',
-	note: '[note-a-11-nota-data:{"section_tipo":"oh1","section_id":"3"}:data]',
-	referenceIn: '[reference-n-5-ref-data:{"section_tipo":"rsc370"}:data]',
-	referenceOut: '[/reference-n-5-ref-data:{"section_tipo":"rsc370"}:data]',
+	note: '[note-a-11-nota-data:{"section_tipo":"test6813","section_id":"3"}:data]',
+	referenceIn: '[reference-n-5-ref-data:{"section_tipo":"test370"}:data]',
+	referenceOut: '[/reference-n-5-ref-data:{"section_tipo":"test370"}:data]',
 } as const;
 
 describe('addBabelNotransTags (PHP TR::addBabelTagsOnTheFly)', () => {

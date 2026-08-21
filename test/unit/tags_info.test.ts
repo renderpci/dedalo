@@ -16,15 +16,18 @@
  *     key (never an empty-array lie), and an unknown type is REPORTED, never
  *     silently dropped.
  *
- * Uses the REAL suite-DB ontology (rsc36 carries the shipped tags_index /
- * tags_reference / tags_notes config); all matrix rows are scratch, created
- * and deleted here.
+ * The ontology under test is BUILT here (a reserved `zzti` scratch TLD carrying the
+ * shipped tags_index / tags_reference / tags_notes config); all matrix rows are
+ * scratch, created and deleted here.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule: a test uses the
+// generic `test` TLD and BUILDS the situation it tests). A rename was not enough: the
+// subject IS the `tags_index` / `tags_reference` / `tags_notes` properties a text_area
+// declares, and no shipped `test` component declares them. The whole shape is built as
+// a reserved `zzti` scratch ontology, copied field for field from the shipped rsc36
+// declaration; the term section carries a section_map so the term resolver has a term
+// to label, exactly as the install thesaurus did. `dropSituation` sweeps it all and
+// the residue is ASSERTED.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
@@ -35,21 +38,89 @@ import {
 	deleteMatrixRecord,
 	insertMatrixRecordWithCounter,
 } from '../../src/core/db/matrix_write.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { NOTE_PATTERN } from '../../src/core/resolve/tr_marks.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
-const TABLE = 'matrix';
-/** rsc326 (notes) lives in its OWN matrix table — the resolver knows, the test must too. */
-const NOTE_TABLE = 'matrix_notes';
-const HOST_SECTION = 'rsc167'; // the record the text_area lives on
-const TEXT_AREA = 'rsc36'; // component_text_area (translatable)
-const INDEX_PORTAL = 'rsc860'; // properties.tags_index.tipo
-const REFERENCE_PORTAL = 'rsc1368'; // properties.tags_reference.tipo
-const NOTE_SECTION = 'rsc326'; // properties.tags_notes key
-const NOTE_TITLE = 'rsc328'; // ddo id 'title', type text
-const NOTE_BODY = 'rsc329'; // ddo id 'body', type text
-const NOTE_PUBLICATION = 'rsc399'; // ddo id 'publishable', type bool
-const TERM_SECTION = 'rsc197'; // a section the term resolver can label
+const HOST_SECTION = 'zzti1'; // the record the text_area lives on
+const TEXT_AREA = 'zzti2'; // component_text_area (translatable)
+const INDEX_PORTAL = 'zzti3'; // properties.tags_index.tipo
+const REFERENCE_PORTAL = 'zzti4'; // properties.tags_reference.tipo
+const NOTE_SECTION = 'zzti5'; // properties.tags_notes key
+const NOTE_TITLE = 'zzti6'; // ddo id 'title', type text
+const NOTE_BODY = 'zzti7'; // ddo id 'body', type text
+const NOTE_PUBLICATION = 'zzti8'; // ddo id 'publishable', type bool
+const TERM_SECTION = 'zzti9'; // a section the term resolver can label
+const TERM_MAP = 'zzti10'; // its section_map (thesaurus.term → TERM_NAME)
+const TERM_NAME = 'zzti11';
+const TERM_SURNAME = 'zzti12';
 const LANG = 'lg-spa';
+
+/**
+ * Tables are RESOLVED, never assumed: each section owns its `matrix_table`
+ * relation, and the resolver reads that — a hard-coded table writes where the
+ * engine will never look.
+ */
+let TABLE = 'matrix_test';
+let NOTE_TABLE = 'matrix_test';
+
+const TAGS_SITUATION = situation({
+	tld: 'zzti',
+	name: 'text_area tags_info',
+	nodes: [
+		{ tipo: HOST_SECTION, model: 'section', parent: 'dd14' },
+		{ tipo: INDEX_PORTAL, model: 'component_autocomplete_hi', parent: HOST_SECTION },
+		{ tipo: REFERENCE_PORTAL, model: 'component_autocomplete_hi', parent: HOST_SECTION },
+		{
+			tipo: TEXT_AREA,
+			model: 'component_text_area',
+			parent: HOST_SECTION,
+			is_translatable: true,
+			properties: {
+				tags_index: { tipo: INDEX_PORTAL, section_id: 'self', section_tipo: 'self' },
+				tags_reference: { tipo: REFERENCE_PORTAL, section_id: 'self', section_tipo: 'self' },
+				tags_notes: {
+					[NOTE_SECTION]: [
+						{ id: 'title', type: 'text', section_tipo: NOTE_SECTION, component_tipo: NOTE_TITLE },
+						{ id: 'body', type: 'text', section_tipo: NOTE_SECTION, component_tipo: NOTE_BODY },
+						{
+							id: 'publishable',
+							type: 'bool',
+							section_tipo: NOTE_SECTION,
+							component_tipo: NOTE_PUBLICATION,
+						},
+					],
+				},
+			},
+		},
+		{ tipo: NOTE_SECTION, model: 'section', parent: 'dd14' },
+		{ tipo: NOTE_TITLE, model: 'component_input_text', parent: NOTE_SECTION },
+		{ tipo: NOTE_BODY, model: 'component_text_area', parent: NOTE_SECTION },
+		{ tipo: NOTE_PUBLICATION, model: 'component_check_box', parent: NOTE_SECTION },
+		{ tipo: TERM_SECTION, model: 'section', parent: 'dd14' },
+		{ tipo: TERM_NAME, model: 'component_input_text', parent: TERM_SECTION },
+		{ tipo: TERM_SURNAME, model: 'component_input_text', parent: TERM_SECTION },
+		{
+			// Without a section_map the term resolver has no term to read, and the
+			// index/reference legs would resolve to an empty label.
+			tipo: TERM_MAP,
+			model: 'section_map',
+			parent: TERM_SECTION,
+			// A term is not ONE component: the scope's `term` key may hold several
+			// tipos, joined by `fields_separator` (default ', ') —
+			// src/core/ts_object/term_resolver.ts. The install thesaurus this gate
+			// used to read declared surname + name, which is why the expected label
+			// is "Lovelace, Ada"; the twin declares the same pair in the same order.
+			properties: {
+				thesaurus: { term: [TERM_SURNAME, TERM_NAME], fields_separator: ', ' },
+			},
+		},
+	],
+});
 
 let noteId = 0;
 let termId = 0;
@@ -67,10 +138,14 @@ function noteMark(tagId: number, sectionId: number): string {
 }
 
 beforeAll(async () => {
-	termId = await insertMatrixRecordWithCounter(TABLE, TERM_SECTION, {
+	await ensureSituation(TAGS_SITUATION);
+	TABLE = (await getMatrixTableFromTipo(HOST_SECTION)) ?? 'matrix_test';
+	NOTE_TABLE = (await getMatrixTableFromTipo(NOTE_SECTION)) ?? 'matrix_test';
+	const termTable = (await getMatrixTableFromTipo(TERM_SECTION)) ?? 'matrix_test';
+	termId = await insertMatrixRecordWithCounter(termTable, TERM_SECTION, {
 		string: {
-			rsc85: [{ id: 1, lang: 'lg-nolan', value: 'Ada' }],
-			rsc86: [{ id: 1, lang: 'lg-nolan', value: 'Lovelace' }],
+			[TERM_NAME]: [{ id: 1, lang: 'lg-nolan', value: 'Ada' }],
+			[TERM_SURNAME]: [{ id: 1, lang: 'lg-nolan', value: 'Lovelace' }],
 		},
 	});
 	noteId = await insertMatrixRecordWithCounter(NOTE_TABLE, NOTE_SECTION, {
@@ -124,6 +199,8 @@ afterAll(async () => {
 	if (bareHostId > 0) await deleteMatrixRecord(TABLE, HOST_SECTION, bareHostId);
 	if (noteId > 0) await deleteMatrixRecord(NOTE_TABLE, NOTE_SECTION, noteId);
 	if (termId > 0) await deleteMatrixRecord(TABLE, TERM_SECTION, termId);
+	// Residue asserted, not trusted — the scratch ontology goes with the records.
+	expect(await dropSituation(TAGS_SITUATION)).toBe(0);
 });
 
 const host = () => ({ tipo: TEXT_AREA, section_tipo: HOST_SECTION, section_id: hostId });

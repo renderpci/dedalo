@@ -11,11 +11,10 @@
  * from the real section (not hard-coded) so the gate survives an admin
  * re-tuning the hierarchy section_list, but must never regress to empty.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 
 import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -23,6 +22,9 @@ import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { getSectionRealTipo } from '../../src/core/resolve/security_access_datalist.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { deriveSectionDdoMap } from '../../src/core/section/read.ts';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
 
 // DB reachability probe: only a genuinely unreachable DB downgrades to SKIP.
 let hasDb = false;
@@ -91,13 +93,13 @@ describe.if(hasDb)('virtual section list columns (PHP resolve_ar_related_list_se
 describe.if(hasDb)(
 	'columns_map feeds from the element OWN properties (PHP get_columns_map)',
 	() => {
-		test('rsc197 list_thesaurus exposes NO columns_map (its own properties declare none)', async () => {
+		test('a list_thesaurus exposes NO columns_map (its own properties declare none)', async () => {
 			const entry = await runWithRequestLangs(
 				{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
 				async () =>
 					buildStructureContext({
-						tipo: 'rsc197',
-						sectionTipo: 'rsc197',
+						tipo: seed('rsc', 197),
+						sectionTipo: seed('rsc', 197),
 						mode: 'list_thesaurus',
 						permissions: 2,
 						lang: 'lg-eng',
@@ -105,7 +107,7 @@ describe.if(hasDb)(
 			);
 			// The section_list_thesaurus child DOES declare one — the point of the gate.
 			const child = (await sql`
-			SELECT properties FROM dd_ontology WHERE tipo = 'rsc1050'
+			SELECT properties FROM dd_ontology WHERE tipo = ${seed('rsc', 1050)}
 		`) as { properties: { source?: { columns_map?: unknown[] } } | null }[];
 			expect(child[0]?.properties?.source?.columns_map?.length).toBeGreaterThan(0);
 

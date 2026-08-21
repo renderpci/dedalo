@@ -15,11 +15,9 @@
  *    after the paragraph's opening TC mark, surviving HTML escaping byte-
  *    exactly (the v6 tag position).
  */
-// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database
+// here: the tipos are opaque identifiers threaded through the unit under test, so the
+// migration is a rename.
 
 import { describe, expect, test } from 'bun:test';
 import { parseTagId } from '../../src/core/components/component_text_area/tag_grammar.ts';
@@ -198,9 +196,9 @@ describe('speaker_stats', () => {
 
 describe('speaker tags in the stored text (segments_to_html speaker_tags)', () => {
 	const TAG_0 =
-		"[person-b-1-AraBo-data:{'section_tipo':'rsc197','section_id':'15857','component_tipo':'rsc50'}:data]";
+		"[person-b-1-AraBo-data:{'section_tipo':'test2','section_id':'15857','component_tipo':'test50'}:data]";
 	const TAG_1 =
-		"[person-a-1-DyaDa-data:{'section_tipo':'rsc197','section_id':'15855','component_tipo':'oh24'}:data]";
+		"[person-a-1-DyaDa-data:{'section_tipo':'test2','section_id':'15855','component_tipo':'test80'}:data]";
 
 	test('the tag opens each speaker TURN, right after the TC mark, byte-exact', () => {
 		const html = segments_to_html(

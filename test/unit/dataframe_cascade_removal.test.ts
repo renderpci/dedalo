@@ -15,20 +15,22 @@
  * slot strip emits NO Time Machine row (PHP tm_record::$save_tm=false, REL-01
  * — the main component's TM row captures full state), asserted per flavor.
  *
- * Fixtures are SCRATCH records only (fresh numisdata3 hosts on matrix — the
- * portal suite's pattern — plus reserved test2 ids on matrix_test for the
- * record-delete target), cleaned before AND after. The real ontology pair
- * numisdata75 (portal) / numisdata1531 (component_dataframe ddo of its
+ * Fixtures are SCRATCH records only (fresh test6099 hosts, plus reserved test2
+ * ids for the record-delete target), cleaned before AND after. The ontology
+ * pair test6155 (portal) / test6783 (component_dataframe ddo of its
  * request_config) drives the slot resolution, like the Wave-2 probe.
+ *
+ * Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the
+ * install tipos were rewritten through src/core/test_data/test_tld_tipo_map.json
+ * (numisdata3→test6099, numisdata75→test6155, numisdata1531→test6783,
+ * numisdata4→test6100) and the hard-coded `matrix` table was replaced by the
+ * table the ontology resolves — a cloned `test` section carries `test24`, so
+ * every host row now lands in `matrix_test`.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { filterCallerEntries } from '../../src/core/relations/dataframe.ts';
 import { deletePortalLocator } from '../../src/core/relations/save.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -37,10 +39,16 @@ import { saveComponentData } from '../../src/core/section/record/save_component.
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
-const HOST_SECTION = 'numisdata3'; // matrix
-const PORTAL = 'numisdata75';
-const SLOT = 'numisdata1531'; // component_dataframe ddo of numisdata75's config
+const HOST_SECTION = 'test6099'; // matrix_test (the test24 matrix_table node)
+const PORTAL = 'test6155';
+const SLOT = 'test6783'; // component_dataframe ddo of test6155's config
 const TARGET_SECTION = 'test2'; // matrix_test (record-delete flavor target)
+/**
+ * The host's storage table, RESOLVED from the ontology rather than named: a
+ * cloned `test` section stores in `matrix_test`, and a hard-coded `matrix`
+ * here would read and write a table this gate never touches — silently green.
+ */
+let HOST_TABLE = '';
 /** Reserved scratch test2 ids — collide with nothing real. */
 const TARGET_ID_A = 990231;
 const TARGET_ID_B = 990232;
@@ -62,7 +70,7 @@ function frameEntry(idKey: number, frameTargetId: number): Record<string, unknow
 	return {
 		type: 'dd490',
 		section_id: String(frameTargetId),
-		section_tipo: 'numisdata4',
+		section_tipo: 'test6100',
 		from_component_tipo: SLOT,
 		main_component_tipo: PORTAL,
 		id_key: idKey,
@@ -72,13 +80,13 @@ function frameEntry(idKey: number, frameTargetId: number): Record<string, unknow
 /** Fresh scratch host with two portal items (ids 1, 2) + one frame each. */
 async function seedHost(): Promise<number> {
 	const hostId = await createSectionRecord(HOST_SECTION, -1);
-	created.push({ table: 'matrix', sectionTipo: HOST_SECTION, sectionId: hostId });
+	created.push({ table: HOST_TABLE, sectionTipo: HOST_SECTION, sectionId: hostId });
 	const relation = {
 		[PORTAL]: [portalItem(1, TARGET_ID_A), portalItem(2, TARGET_ID_B)],
 		[SLOT]: [frameEntry(1, 990301), frameEntry(2, 990302)],
 	};
 	await sql.unsafe(
-		`UPDATE matrix SET relation = COALESCE(relation, '{}'::jsonb) || $1::text::jsonb
+		`UPDATE ${HOST_TABLE} SET relation = COALESCE(relation, '{}'::jsonb) || $1::text::jsonb
 		 WHERE section_tipo = $2 AND section_id = $3`,
 		[JSON.stringify(relation), HOST_SECTION, hostId],
 	);
@@ -87,7 +95,7 @@ async function seedHost(): Promise<number> {
 
 async function relationKey(hostId: number, key: string): Promise<Record<string, unknown>[]> {
 	const rows = (await sql.unsafe(
-		'SELECT relation->$1 AS v FROM matrix WHERE section_tipo = $2 AND section_id = $3',
+		`SELECT relation->$1 AS v FROM ${HOST_TABLE} WHERE section_tipo = $2 AND section_id = $3`,
 		[key, HOST_SECTION, hostId],
 	)) as { v: Record<string, unknown>[] | null }[];
 	return rows[0]?.v ?? [];
@@ -114,6 +122,11 @@ async function cleanTargets(): Promise<void> {
 }
 
 beforeAll(async () => {
+	// The table is the ontology's answer, asserted: a null/`matrix` result would
+	// mean the clone lost its `test24` relation and every row below would land
+	// somewhere this gate never reads.
+	HOST_TABLE = (await getMatrixTableFromTipo(HOST_SECTION)) ?? '';
+	expect(HOST_TABLE).toBe('matrix_test');
 	await cleanTargets(); // a crashed previous run cannot poison this one
 });
 
@@ -156,9 +169,10 @@ describe('dataframe cascade on the three removal paths (S1-05)', () => {
 
 	test('portal unlink (delete_locator): removed locator cascades its frames', async () => {
 		const hostId = await seedHost();
-		// The actor must genuinely hold level 2 on numisdata3: deletePortalLocator
-		// runs PHP's `security::assert_section_permission($section_tipo, 2)` (a
-		// matrix lookup through common::get_permissions, which has NO admin
+		// The actor must genuinely hold level 2 on the host section:
+		// deletePortalLocator runs PHP's
+		// `security::assert_section_permission($section_tipo, 2)` (a matrix
+		// lookup through common::get_permissions, which has NO admin
 		// bypass), not an isGlobalAdmin flag. User 1 owns no dd1725 profile in the
 		// suite DB, so it resolves to level 0. The superuser is the only fabricable
 		// principal that short-circuits to 3; the gate itself is pinned in

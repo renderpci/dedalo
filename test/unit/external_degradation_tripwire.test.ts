@@ -25,11 +25,10 @@
  * DB-less except for the ontology reads the derivation makes against the
  * canonical `test3` playground; nothing is written.
  */
-// BINDS INSTALL TLDs: numisdata, zenon — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the "ordinary, non-external section"
+// coordinate is now `test2` (test3 IS external here — it carries test215) and the
+// external section named in the refused import cell is the generic clone `test7342`
+// (src/core/test_data/test_tld_tipo_map.json).
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -202,8 +201,8 @@ describe('no path emits a silent blank', () => {
 	}
 
 	test('a MISCONFIGURED section emits the item too (never nothing)', async () => {
-		// numisdata3 is a real, ordinary (non-external) section: nothing to fetch.
-		const derived = await deriveExternalValue(COMPONENT, 'numisdata3', REMOTE_ID);
+		// test2 is a real, ordinary (non-external) section: nothing to fetch.
+		const derived = await deriveExternalValue(COMPONENT, 'test2', REMOTE_ID);
 		expect(derived.entries).toEqual([]);
 		expect(derived.source_status?.state).toBe('misconfigured');
 	});
@@ -359,7 +358,7 @@ describe('a derived field can never be written from an import', () => {
 		const { conformImportData } = await import('../../src/core/tools/import_data.ts');
 		const result = await conformImportData({
 			...cell,
-			importValue: '[{"section_tipo":"zenon1","section_id":"001338683"}]',
+			importValue: '[{"section_tipo":"test7342","section_id":"001338683"}]',
 		});
 		expect(result.result).toBeNull();
 		expect(result.errors[0]?.msg).toContain('DERIVED');

@@ -9,11 +9,10 @@
  * children, string section_id keys, zero-count suppression, root button perms,
  * diamond/cycle walk) are exercised by the live-PHP differentials.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The one
+// install section tipo became its phase-2 clone: every use is an in-memory locator
+// key handed to the pure `pickOrderValueForParent`, which compares it as an opaque
+// string and never resolves it — this file is DB-free by design.
 
 import { describe, expect, it } from 'bun:test';
 import {
@@ -54,8 +53,8 @@ describe('formatNumberValue (PHP component_number::set_format_form_type parity)'
 
 describe('pickOrderValueForParent (order dataframe id_key priority chain)', () => {
 	const parentItems = [
-		{ id: 42, section_tipo: 'oh1', section_id: '10' },
-		{ id: 7, section_tipo: 'oh1', section_id: '99' },
+		{ id: 42, section_tipo: 'test6813', section_id: '10' },
+		{ id: 7, section_tipo: 'test6813', section_id: '99' },
 	];
 
 	it('1. id_key entry wins over everything else', () => {
@@ -63,7 +62,7 @@ describe('pickOrderValueForParent (order dataframe id_key priority chain)', () =
 			{ value: 'first', id_key: 7 }, // a DIFFERENT parent's entry
 			{ value: 'correct', id_key: 42 }, // this parent's link id
 		];
-		expect(pickOrderValueForParent(order, parentItems, 'oh1', 10)).toBe('correct');
+		expect(pickOrderValueForParent(order, parentItems, 'test6813', 10)).toBe('correct');
 	});
 
 	it('1b. REAL written shape pairs on item `id` (WC-015 — the reorder-reverts bug)', () => {
@@ -74,36 +73,36 @@ describe('pickOrderValueForParent (order dataframe id_key priority chain)', () =
 			{ id: 1, value: 2 },
 			{ id: 42, value: 6 },
 		];
-		expect(pickOrderValueForParent(order, parentItems, 'oh1', 10)).toBe(6);
+		expect(pickOrderValueForParent(order, parentItems, 'test6813', 10)).toBe(6);
 	});
 
 	it('1c. id-keyed entries are NOT "unkeyed": true unkeyed entry still wins step 3', () => {
 		// parent link id 42 matches no entry; the {id:1} entry must not be
 		// mistaken for a legacy unkeyed value.
 		const order = [{ id: 1, value: 'stale' }, { value: 'unkeyed' }];
-		expect(pickOrderValueForParent(order, parentItems, 'oh1', 10)).toBe('unkeyed');
+		expect(pickOrderValueForParent(order, parentItems, 'test6813', 10)).toBe('unkeyed');
 	});
 
 	it('1d. unresolvable parent link (no id on locator) falls back to first entry', () => {
-		const bareParents = [{ section_tipo: 'oh1', section_id: '10' }]; // pre-migration: no id
+		const bareParents = [{ section_tipo: 'test6813', section_id: '10' }]; // pre-migration: no id
 		const order = [
 			{ id: 1, value: 3 },
 			{ id: 2, value: 6 },
 		];
-		expect(pickOrderValueForParent(order, bareParents, 'oh1', 10)).toBe(3);
+		expect(pickOrderValueForParent(order, bareParents, 'test6813', 10)).toBe(3);
 	});
 
 	it('2. section-coords entry when no id_key match', () => {
 		const order = [
-			{ value: 'legacy', section_tipo_key: 'oh1', section_id_key: 10 },
+			{ value: 'legacy', section_tipo_key: 'test6813', section_id_key: 10 },
 			{ value: 'other', id_key: 999 },
 		];
-		expect(pickOrderValueForParent(order, parentItems, 'oh1', 10)).toBe('legacy');
+		expect(pickOrderValueForParent(order, parentItems, 'test6813', 10)).toBe('legacy');
 	});
 
 	it('3. legacy unkeyed single value', () => {
 		const order = [{ value: 'single' }];
-		expect(pickOrderValueForParent(order, parentItems, 'oh1', 10)).toBe('single');
+		expect(pickOrderValueForParent(order, parentItems, 'test6813', 10)).toBe('single');
 	});
 
 	it('fallback: first entry when nothing resolves', () => {
@@ -112,11 +111,11 @@ describe('pickOrderValueForParent (order dataframe id_key priority chain)', () =
 			{ value: 'y', id_key: 222 },
 		];
 		// parent link id (42) has no matching id_key entry, no section-coords, no unkeyed
-		expect(pickOrderValueForParent(order, parentItems, 'oh1', 10)).toBe('x');
+		expect(pickOrderValueForParent(order, parentItems, 'test6813', 10)).toBe('x');
 	});
 
 	it('empty order items → null', () => {
-		expect(pickOrderValueForParent([], parentItems, 'oh1', 10)).toBeNull();
+		expect(pickOrderValueForParent([], parentItems, 'test6813', 10)).toBeNull();
 	});
 });
 

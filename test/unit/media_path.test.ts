@@ -5,11 +5,10 @@
  * (:753-819). The relative shapes are deterministic; absolute-path assertions
  * run only when MEDIA_PATH is configured (skipped honestly otherwise).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// MIGRATED TO THE GENERIC `test` TLD, 2026-08-19: every install tipo this gate
+// spelled is now its generic twin (sections on the `test` TLD, storing in
+// matrix_test). A pure rename — the tipo is an identifier in a path, a filename
+// or a locator here, so no corpus and no DB round-trip were added.
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -28,46 +27,46 @@ describe('media identifier (get_id)', () => {
 	test('non-translatable: {ct}_{st}_{id}', () => {
 		expect(
 			buildMediaIdentifier({
-				componentTipo: 'rsc29',
-				sectionTipo: 'rsc170',
+				componentTipo: 'test99',
+				sectionTipo: 'test3',
 				sectionId: 770,
 				lang: null,
 			}),
-		).toBe('rsc29_rsc170_770');
+		).toBe('test99_test3_770');
 	});
 
 	test('translatable: adds _{lang} suffix', () => {
 		expect(
 			buildMediaIdentifier({
-				componentTipo: 'rsc29',
-				sectionTipo: 'rsc170',
+				componentTipo: 'test99',
+				sectionTipo: 'test3',
 				sectionId: 770,
 				lang: 'lg-spa',
 			}),
-		).toBe('rsc29_rsc170_770_lg-spa');
+		).toBe('test99_test3_770_lg-spa');
 	});
 
 	test('rejects bad tipo / non-positive id / bad lang', () => {
 		expect(() =>
 			buildMediaIdentifier({
-				componentTipo: 'rsc-29',
-				sectionTipo: 'rsc170',
+				componentTipo: 'test-99',
+				sectionTipo: 'test3',
 				sectionId: 1,
 				lang: null,
 			}),
 		).toThrow();
 		expect(() =>
 			buildMediaIdentifier({
-				componentTipo: 'rsc29',
-				sectionTipo: 'rsc170',
+				componentTipo: 'test99',
+				sectionTipo: 'test3',
 				sectionId: 0,
 				lang: null,
 			}),
 		).toThrow();
 		expect(() =>
 			buildMediaIdentifier({
-				componentTipo: 'rsc29',
-				sectionTipo: 'rsc170',
+				componentTipo: 'test99',
+				sectionTipo: 'test3',
 				sectionId: 1,
 				lang: 'lg-spa/../x',
 			}),
@@ -93,35 +92,35 @@ describe('media location (get_media_path_dir + get_media_filepath)', () => {
 	test.if(hasRoot)('relative dir/path follow the PHP grammar', () => {
 		const loc = buildMediaLocation(
 			image,
-			{ componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 770, lang: null },
+			{ componentTipo: 'test99', sectionTipo: 'test3', sectionId: 770, lang: null },
 			'1.5MB',
 			'jpg',
 			{ initialMediaPath: '', maxItemsFolder: 1000 },
 		);
 		// folder + initial + '/' + quality + bucket
 		expect(loc.relativeDir).toBe('/image/1.5MB/0');
-		expect(loc.relativePath).toBe('/image/1.5MB/0/rsc29_rsc170_770.jpg');
+		expect(loc.relativePath).toBe('/image/1.5MB/0/test99_test3_770.jpg');
 		expect(loc.absolutePath.startsWith(config.media.rootPath as string)).toBe(true);
-		expect(loc.absolutePath.endsWith('/image/1.5MB/0/rsc29_rsc170_770.jpg')).toBe(true);
+		expect(loc.absolutePath.endsWith('/image/1.5MB/0/test99_test3_770.jpg')).toBe(true);
 	});
 
 	test.if(hasRoot)('initial_media_path segment is inserted before the quality', () => {
 		const loc = buildMediaLocation(
 			image,
-			{ componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 5, lang: null },
+			{ componentTipo: 'test99', sectionTipo: 'test3', sectionId: 5, lang: null },
 			'thumb',
 			'jpg',
 			{ initialMediaPath: '/coleccion', maxItemsFolder: null },
 		);
 		expect(loc.relativeDir).toBe('/image/coleccion/thumb');
-		expect(loc.relativePath).toBe('/image/coleccion/thumb/rsc29_rsc170_5.jpg');
+		expect(loc.relativePath).toBe('/image/coleccion/thumb/test99_test3_5.jpg');
 	});
 
 	test.if(hasRoot)('invalid quality is rejected before any path is built', () => {
 		expect(() =>
 			buildMediaLocation(
 				image,
-				{ componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 1, lang: null },
+				{ componentTipo: 'test99', sectionTipo: 'test3', sectionId: 1, lang: null },
 				'../etc',
 				'jpg',
 				{ initialMediaPath: '', maxItemsFolder: null },

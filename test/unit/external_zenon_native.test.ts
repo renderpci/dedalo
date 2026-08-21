@@ -22,11 +22,12 @@
  * NO NETWORK, ever: the request build and the value mapping are pure, and the
  * one end-to-end case injects its fetch.
  */
-// BINDS INSTALL TLDs: zenon — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19. The `zenon` CONNECTOR stays — it is an
+// engine module (src/external/services/zenon.ts), not an install's ontology — but the
+// ontology COORDINATES it is exercised with are now the generic clones of the external
+// section (test7342) and its component_external children (test7344-test7347), per
+// src/core/test_data/test_tld_tipo_map.json. Still NO network: every case here is pure
+// or injects its fetch.
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import zenonData from '../../src/core/components/component_external/samples/zenon_data.json';
@@ -43,7 +44,7 @@ import { zenon } from '../../src/external/services/zenon.ts';
 import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
 
 const API_URL = 'https://zenon.dainst.org/api/v1/record';
-/** The field set `zenon_request.json` was built from (zenon2's children + id). */
+/** The field set `zenon_request.json` was built from (the external section's component_external children + id). */
 const FULL_FIELDS = [
 	'id',
 	'title',
@@ -66,7 +67,7 @@ afterEach(() => {
 
 function rowView(row: Record<string, unknown> | null): ExternalRowView {
 	return {
-		sectionTipo: 'zenon1',
+		sectionTipo: 'test7342',
 		remoteId: SAMPLE_ID,
 		service: 'zenon',
 		row,
@@ -155,7 +156,7 @@ describe('zenon payload → rows → values', () => {
 
 	test('a plain mapping yields the single-element STRING array data.json pins', () => {
 		const rows = defaultUnwrapRows(zenonData, RESPONSE_MAP);
-		const fieldsMap = parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'zenon4' });
+		const fieldsMap = parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'test7345' });
 		const result = mapRowToEntries(zenon, rowView(rows[0] as Record<string, unknown>), fieldsMap);
 		expect(result.entries).toEqual(['Las acuñaciones provinciales romanas de Hispania ']);
 		expect(result.entries.every((entry) => typeof entry === 'string')).toBe(true);
@@ -166,7 +167,7 @@ describe('zenon payload → rows → values', () => {
 		const rows = defaultUnwrapRows(zenonData, RESPONSE_MAP);
 		const fieldsMap = parseFieldsMap(
 			[{ local: 'dato', remote: 'authors', format: 'zenon_authors' }],
-			{ tipo: 'zenon5' },
+			{ tipo: 'test7346' },
 		);
 		const result = mapRowToEntries(zenon, rowView(rows[0] as Record<string, unknown>), fieldsMap);
 		// secondary:[] and corporate:[] are PHP-empty() and contribute nothing.
@@ -188,7 +189,7 @@ describe('zenon payload → rows → values', () => {
 		const rows = defaultUnwrapRows(zenonData, RESPONSE_MAP);
 		const fieldsMap = parseFieldsMap(
 			[{ local: 'dato', remote: 'publicationDates', format: 'array_values' }],
-			{ tipo: 'zenon6' },
+			{ tipo: 'test7347' },
 		);
 		expect(
 			mapRowToEntries(zenon, rowView(rows[0] as Record<string, unknown>), fieldsMap).entries,
@@ -215,7 +216,7 @@ describe('zenon payload → rows → values', () => {
 		// counter the unformatted path uses, with no entry invented for it.
 		const fieldsMap = parseFieldsMap(
 			[{ local: 'dato', remote: 'authors', format: 'array_values' }],
-			{ tipo: 'zenon6' },
+			{ tipo: 'test7347' },
 		);
 		const result = mapRowToEntries(
 			zenon,
@@ -238,7 +239,7 @@ describe('zenon payload → rows → values', () => {
 	test('a fields_map naming an unimplemented format THROWS (v6 shipped the raw value)', () => {
 		const rows = defaultUnwrapRows(zenonData, RESPONSE_MAP);
 		const fieldsMap = parseFieldsMap([{ local: 'dato', remote: 'title', format: 'nope' }], {
-			tipo: 'zenonX',
+			tipo: 'testX',
 		});
 		expect(() =>
 			mapRowToEntries(zenon, rowView(rows[0] as Record<string, unknown>), fieldsMap),
@@ -246,7 +247,7 @@ describe('zenon payload → rows → values', () => {
 	});
 
 	test('a null row emits nothing and says why', () => {
-		const fieldsMap = parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'zenon4' });
+		const fieldsMap = parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'test7345' });
 		const result = mapRowToEntries(zenon, rowView(null), fieldsMap);
 		expect(result.entries).toEqual([]);
 		expect(result.source_status?.status).toBe('not_found');
@@ -260,7 +261,7 @@ describe('zenon payload → rows → values', () => {
 				{ local: 'dato', remote: 'authors' },
 				{ local: 'dato', remote: 'title' },
 			],
-			{ tipo: 'zenonX' },
+			{ tipo: 'testX' },
 		);
 		expect(remoteFieldsOf(fieldsMap)).toEqual(['title', 'authors']);
 	});

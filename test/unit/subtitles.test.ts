@@ -7,11 +7,9 @@
  * for its validation surface in tool_transcription.test.ts; the full DB+file
  * drive is ledgered (needs a seeded AV record + media files).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). No database
+// here: the tipos are opaque identifiers threaded through the unit under test, so the
+// migration is a rename.
 
 import { describe, expect, test } from 'bun:test';
 import { subtitlesRelativePath, subtitlesUrl } from '../../src/core/media/path.ts';
@@ -195,18 +193,18 @@ describe('subtitles helpers', () => {
 
 describe('subtitles path grammar (shared single source)', () => {
 	const identity = {
-		componentTipo: 'rsc35',
-		sectionTipo: 'rsc167',
+		componentTipo: 'test94',
+		sectionTipo: 'test3',
 		sectionId: 1,
 		lang: null,
 	};
 
 	test('relative path + url follow the PHP get_subtitles_path/url grammar', () => {
 		expect(subtitlesRelativePath(identity, 'lg-spa')).toBe(
-			'/av/subtitles/rsc35_rsc167_1_lg-spa.vtt',
+			'/av/subtitles/test94_test3_1_lg-spa.vtt',
 		);
 		expect(subtitlesUrl(identity, 'lg-spa')).toBe(
-			'/dedalo/media/av/subtitles/rsc35_rsc167_1_lg-spa.vtt',
+			'/dedalo/media/av/subtitles/test94_test3_1_lg-spa.vtt',
 		);
 	});
 

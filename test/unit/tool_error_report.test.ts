@@ -13,11 +13,8 @@
  *  - unconfigured → honest failure;
  *  - size fitting drops the OLDEST captured errors, never the description.
  */
-// BINDS INSTALL TLDs: oh — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: the submitted report is opaque payload
+// that the relay copies verbatim, so its section tipo now names the generic `test3`.
 
 import { describe, expect, test } from 'bun:test';
 import type { ReportWire } from '../../src/core/error_report/schema.ts';
@@ -42,8 +39,8 @@ function adminContext(options: Record<string, unknown>): ToolActionContext {
 function submission(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
 		description: 'Saving a record wipes the toolbar.',
-		page_url: '/dedalo/core/page/?tipo=oh1',
-		section_tipo: 'oh1',
+		page_url: '/dedalo/core/page/?tipo=test3',
+		section_tipo: 'test3',
 		section_id: '42',
 		user_agent: 'test-agent',
 		js_errors: [],
@@ -137,7 +134,7 @@ describe('tool_error_report send_report (WC-019)', () => {
 		expect(typeof body.options.sent_at).toBe('string');
 		// The browser-supplied part survives verbatim:
 		expect(body.options.description).toBe('Saving a record wipes the toolbar.');
-		expect(body.options.section_tipo).toBe('oh1');
+		expect(body.options.section_tipo).toBe('test3');
 	});
 
 	test('relay failure (!ok) → honest failure envelope, never a fake success', async () => {

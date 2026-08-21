@@ -39,11 +39,10 @@
  * gate — it gets muted, and then the above-cap fallback (which no production
  * caller reaches on a small install) has no gate at all.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -215,7 +214,7 @@ describe('breakdown fast path === legacy fallback (ownerCap seam)', () => {
 			// single relation table, and the seam still emits the legacy SQL for the
 			// comparison (ownerCap 0 skips the probe entirely).
 			const none = await bothPlans([{ section_tipo: TARGET_TIPO, section_id: TARGET_A }], {
-				sectionTipos: ['numisdata3'],
+				sectionTipos: ['test6099'],
 			});
 			expect(none).toEqual([]);
 		},

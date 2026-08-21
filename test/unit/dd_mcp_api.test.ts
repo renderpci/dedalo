@@ -15,11 +15,15 @@
  *     gated results through the same bridge;
  *   - agent_apply rejects a hash mismatch.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The
+// per-principal split is BUILT, not borrowed: the gated section is the
+// playground `test3`, which is project-gated for real through its own
+// component_filter `test101`, and the two identities are the synthetic ACL ones
+// (test/helpers/acl_identity_fixture.ts). Three scratch records in the reserved
+// ≥900000 band carry the split — two the non-admin's project, one a project they
+// do NOT hold — so "the gated user sees strictly fewer, and both see some" is a
+// fact of this repo. It used to read an install's `numisdata267` records and
+// user 16, which exist on one machine: BOTH assertions were red on the suite DB.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
@@ -31,8 +35,50 @@ import {
 	getSession,
 	type Session,
 } from '../../src/core/security/session_store.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	ACL_PROJECT_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
+import {
+	cleanScratchRecord,
+	createScratchRecord,
+	ensureCanonicalTest3,
+} from '../helpers/test_data.ts';
 
-const GATED_SECTION = 'numisdata267';
+/** The project-gated section, and the component_filter buildProjectsFilter keys on. */
+const GATED_SECTION = 'test3';
+const FILTER_COMPONENT = 'test101';
+/** test3's own component_input_text — what makes the scratch rows searchable. */
+const TEXT_COMPONENT = 'test52';
+/** Projects live in dd153; the locator type the real records carry. */
+const PROJECTS_SECTION = 'dd153';
+const PROJECT_LOCATOR_TYPE = 'dd675';
+/** Scratch records this gate owns (reserved ≥900000 band). */
+const VISIBLE_IDS = [941201, 941202];
+const HIDDEN_ID = 941203;
+/** A project the gated user does NOT hold — what makes HIDDEN_ID hidden. */
+const OTHER_PROJECT_ID = 1;
+
+function projectLocator(projectId: number) {
+	return [
+		{
+			id: 1,
+			type: PROJECT_LOCATOR_TYPE,
+			section_id: String(projectId),
+			section_tipo: PROJECTS_SECTION,
+			from_component_tipo: FILTER_COMPONENT,
+		},
+	];
+}
+
+async function createGatedRecord(sectionId: number, projectId: number): Promise<void> {
+	await createScratchRecord(GATED_SECTION, sectionId, {
+		relation: { [FILTER_COMPONENT]: projectLocator(projectId) },
+		string: { [TEXT_COMPONENT]: [{ id: 1, lang: 'lg-eng', value: `mcp scratch ${sectionId}` }] },
+	});
+}
 
 let adminToken: string;
 let admin: Session;
@@ -41,18 +87,24 @@ let user: Session;
 
 const savedEnv: Record<string, string | undefined> = {};
 
-beforeAll(() => {
+beforeAll(async () => {
 	for (const key of ['DEDALO_AGENT_HTTP_ENABLED', 'DEDALO_AGENT_ALLOW_WRITE']) {
 		savedEnv[key] = process.env[key];
 	}
 	process.env.DEDALO_AGENT_HTTP_ENABLED = 'true';
+	await ensureCanonicalTest3();
+	await installAclIdentityFixture();
+	for (const id of VISIBLE_IDS) await createGatedRecord(id, ACL_PROJECT_ID);
+	await createGatedRecord(HIDDEN_ID, OTHER_PROJECT_ID);
 	adminToken = createSession(-1, 'debug_superuser', true);
 	admin = getSession(adminToken) as Session;
-	userToken = createSession(16, 'gated_user', false);
+	userToken = createSession(ACL_NON_ADMIN_USER_ID, 'gated_user', false);
 	user = getSession(userToken) as Session;
 });
 
-afterAll(() => {
+afterAll(async () => {
+	for (const id of [...VISIBLE_IDS, HIDDEN_ID]) await cleanScratchRecord(GATED_SECTION, id);
+	await removeAclIdentityFixture();
 	destroySession(adminToken);
 	destroySession(userToken);
 	for (const [key, value] of Object.entries(savedEnv)) {
@@ -291,8 +343,8 @@ describe('agent_apply', () => {
 						op_id: 'op1',
 						tool: 'dedalo_find_or_create',
 						args: {
-							section_tipo: 'test2',
-							match: [{ field: 'numisdata16', value: `never-${process.pid}`, lang: 'lg-spa' }],
+							section_tipo: 'test183',
+							match: [{ field: 'test187', value: `never-${process.pid}`, lang: 'lg-spa' }],
 						},
 						summary: 'noop',
 					},
@@ -335,11 +387,16 @@ describe('agent_apply', () => {
 	});
 });
 
-// Sanity: the gated-user fixture really is project-gated (paranoia guard so
-// the per-principal assertion above cannot silently rot).
-test('fixture sanity: numisdata267 is project-gated for user 16', async () => {
-	const rows = (await sql`
-		SELECT count(*)::int AS n FROM matrix WHERE section_tipo = ${GATED_SECTION}
-	`) as { n: number }[];
-	expect(Number(rows[0]?.n)).toBeGreaterThan(0);
+// Sanity: the split really exists — the three scratch rows are present and the
+// section really is gated by a component_filter (paranoia guard so the
+// per-principal assertion above cannot silently rot into 0-versus-0).
+test('fixture sanity: the gated section is filter-gated and holds the built split', async () => {
+	const rows = (await sql.unsafe(
+		'SELECT count(*)::int AS n FROM matrix_test WHERE section_tipo = $1 AND section_id = ANY($2::int[])',
+		[GATED_SECTION, `{${[...VISIBLE_IDS, HIDDEN_ID].join(',')}}`],
+	)) as { n: number }[];
+	expect(Number(rows[0]?.n)).toBe(3);
+
+	const { getComponentFilterTipo } = await import('../../src/core/ontology/resolver.ts');
+	expect(await getComponentFilterTipo(GATED_SECTION)).toBe(FILTER_COMPONENT);
 });

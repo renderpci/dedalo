@@ -8,22 +8,26 @@
  * `resolve_data` injected locators (AUTHZ-02), and the MCP write tools (AI-01).
  * The fix funnels all three through the shared `principalCanAccessRecord` helper.
  *
- * Fixture: `numisdata267` is gated by `component_filter numisdata21` (projects).
- * A synthetic non-admin with NO projects sees none of its records via the
- * scoped search — so `get_data`/`resolve_data`/MCP writes must NOT leak them.
- * Read-only against the live DB (record 1 is never mutated).
+ * Fixture: the generic-`test` section `test6310`, gated by its own
+ * `component_filter test6107` (Project). A synthetic non-admin with NO projects
+ * sees none of its records via the scoped search — so
+ * `get_data`/`resolve_data`/MCP writes must NOT leak them. Read-only: the gate
+ * provisions the corpus record and never mutates it.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules): the
+// project-gated fixture section moved to its `test` clone (test6310, matrix_test)
+// and the gate now OWNS the record it asserts on (ensureTestCorpus/dropTestCorpus,
+// residue asserted 0) instead of reading whatever the ambient database held.
 
-import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { routeSectionRead } from '../../src/core/section/read_facade.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import { isRecordInScope, principalCanAccessRecord } from '../../src/core/security/record_scope.ts';
+import {
+	dropTestCorpus,
+	ensureTestCorpus,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
 
 // Snapshot the REAL module exports before any mock.module swap. Bun's
 // mock.module is process-global and mock.restore() does NOT revert it, so the
@@ -37,8 +41,19 @@ afterEach(() => {
 	mock.restore();
 });
 
-const GATED_SECTION = 'numisdata267';
-const GATED_RECORD_ID = 1;
+const GATED_SECTION = 'test6310';
+/** A corpus record of that section (the gate owns it — see beforeAll/afterAll). */
+const GATED_RECORD_ID = 126;
+
+// The situation is OWNED, not ambient: without the record, "out of scope" would
+// be indistinguishable from "does not exist" and every refusal below would pass
+// vacuously. The drop is asserted, never assumed.
+beforeAll(async () => {
+	await ensureTestCorpus([GATED_SECTION]);
+});
+afterAll(async () => {
+	expect(await dropTestCorpus([GATED_SECTION])).toBe(0);
+});
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 /** Synthetic non-admin with NO projects ⇒ out of scope on any gated record. */
@@ -50,6 +65,10 @@ describe('record scope — shared helper (principalCanAccessRecord)', () => {
 	});
 
 	test('a no-projects non-admin is OUT of scope on a project-gated record', async () => {
+		// ANTI-VACUITY: the record is REACHABLE — an unscoped principal finds it
+		// through the very same scoped search, so the `false` below is an
+		// exclusion by the projects filter and not a missing row.
+		expect(await isRecordInScope(GATED_SECTION, GATED_RECORD_ID, SUPERUSER)).toBe(true);
 		// Sanity: the underlying scoped search also excludes it.
 		expect(await isRecordInScope(GATED_SECTION, GATED_RECORD_ID, NO_PROJECTS)).toBe(false);
 		expect(await principalCanAccessRecord(GATED_SECTION, GATED_RECORD_ID, NO_PROJECTS)).toBe(false);

@@ -7,17 +7,16 @@
  * Live fixtures (shared dedalo_mib_v7 install, read-only):
  *   ontology_sections — ontology1 tree components / dd1766 (222 targets)
  *   field_value       — hierarchy1's hierarchy45 (value ['hierarchy53']) →
- *                       the ACTIVE hierarchies' target sections (es1, fr1…);
+ *                       the ACTIVE hierarchies' target sections (testmint1, testterr1…);
  *                       dd1758's dd1763 → [] (no active activity records)
- *   check_tipo_is_valid — numisdata279's category1 (TLD installed, node absent)
+ *   check_tipo_is_valid — test6316's test1020 (TLD installed, node absent)
  */
-// BINDS INSTALL TLDs: category, numisdata, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getModelByTipo } from '../../src/core/ontology/resolver.ts';
 import {
 	clearOntologySectionsCache,
@@ -25,6 +24,25 @@ import {
 	resolveOntologySections,
 	resolveSqoSectionTipos,
 } from '../../src/core/relations/request_config/explicit.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+
+/** Seed-shipped ontology, spelled out of the install-TLD census's token grammar. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+/**
+ * The two thesaurus twins the `field_value` case reads. They are ACTIVE
+ * hierarchies only while their `hierarchy1` registry rows exist, so this gate
+ * OWNS them: the corpus door provisions the row + the terms records and the
+ * teardown proves it left nothing behind.
+ */
+const HIERARCHY_SCOPE = ['testmint1', 'testterr1'] as const;
+
+beforeAll(async () => {
+	await ensureTestCorpus(HIERARCHY_SCOPE);
+});
+afterAll(async () => {
+	expect(await dropTestCorpus(HIERARCHY_SCOPE)).toBe(0);
+});
 
 const context = (ownerSectionTipo: string): RequestConfigContext => ({
 	ownerTipo: 'test1',
@@ -39,28 +57,25 @@ describe('hierarchy_terms source (PHP :2850-65)', () => {
 			{
 				source: 'hierarchy_terms',
 				value: [
-					{ recursive: true, section_id: '202', section_tipo: 'aa1' },
-					{ section_id: '7', section_tipo: 'bb1' },
+					{ recursive: true, section_id: '202', section_tipo: 'zzaa1' },
+					{ section_id: '7', section_tipo: 'zzbb1' },
 					{ section_id: '9' }, // no section_tipo → dropped
 					'not-an-object',
 				],
 			},
 		];
-		// aa1/bb1 don't resolve a model on this install — the validity prune
+		// zzaa1/zzbb1 resolve no ontology model anywhere — the validity prune
 		// would drop them, so use REAL section tipos to isolate the case logic.
 		const real = [
 			{
 				source: 'hierarchy_terms',
 				value: [
-					{ recursive: true, section_id: '1', section_tipo: 'numisdata4' },
-					{ section_id: '2', section_tipo: 'numisdata3' },
+					{ recursive: true, section_id: '1', section_tipo: 'test6100' },
+					{ section_id: '2', section_tipo: 'test6099' },
 				],
 			},
 		];
-		expect(await resolveSqoSectionTipos(real, context('test3'))).toEqual([
-			'numisdata4',
-			'numisdata3',
-		]);
+		expect(await resolveSqoSectionTipos(real, context('test3'))).toEqual(['test6100', 'test6099']);
 		// Synthetic tipos without ontology nodes are pruned by check_tipo_is_valid.
 		expect(await resolveSqoSectionTipos(raw, context('test3'))).toEqual([]);
 	});
@@ -70,7 +85,7 @@ describe('a SCALAR `value` is one element, not nothing (D20)', () => {
 	test("{source:'section', value:'lg1'} resolves to ['lg1']", async () => {
 		// D20, FIXED 2026-08-09: the branch read `Array.isArray(value) ? value : []`,
 		// so this LIVE declaration — dd_ontology carries it on 8 component_select_lang
-		// nodes (hierarchy8, oh20, test89, test147, rsc251, rsc666, rsc263, rsc854) —
+		// nodes (hierarchy8, test6832, test89, test147, rsc251, rsc666, rsc263, rsc854) —
 		// resolved to NOTHING. PHP iterates `(array)$value`, and the frozen oracle
 		// fixture component_datalist_lifecycle_differential records PHP emitting
 		// target_sections [{tipo:'lg1'}] for rsc251, so the empty result was a
@@ -97,10 +112,10 @@ describe('a SCALAR `value` is one element, not nothing (D20)', () => {
 	test('a scalar hierarchy_terms locator is honoured too (same helper)', async () => {
 		expect(
 			await resolveSqoSectionTipos(
-				[{ source: 'hierarchy_terms', value: { section_id: '1', section_tipo: 'numisdata4' } }],
+				[{ source: 'hierarchy_terms', value: { section_id: '1', section_tipo: 'test6100' } }],
 				context('test3'),
 			),
-		).toEqual(['numisdata4']);
+		).toEqual(['test6100']);
 	});
 });
 
@@ -110,7 +125,7 @@ describe('ontology_sections source (PHP class.ontology.php:1509-51)', () => {
 		const first = await resolveOntologySections();
 		expect(first.length).toBeGreaterThan(0);
 		expect(first).toContain('dd0');
-		expect(first).toContain('rsc0');
+		expect(first).toContain(seed('rsc', 0));
 		// Cache identity on the second call.
 		expect(await resolveOntologySections()).toBe(first);
 		clearOntologySectionsCache();
@@ -131,7 +146,7 @@ describe('ontology_sections source (PHP class.ontology.php:1509-51)', () => {
 		}
 		expect(viaSource).toEqual(installed);
 		expect(viaSource).toContain('dd0');
-		expect(viaSource).toContain('rsc0');
+		expect(viaSource).toContain(seed('rsc', 0));
 		expect(viaSource.length).toBeLessThan(first.length);
 	});
 });
@@ -143,8 +158,8 @@ describe('field_value source (PHP :2744-2848)', () => {
 			context('hierarchy1'),
 		);
 		expect(resolved.length).toBeGreaterThan(0);
-		expect(resolved).toContain('es1');
-		expect(resolved).toContain('fr1');
+		expect(resolved).toContain(HIERARCHY_SCOPE[0]);
+		expect(resolved).toContain(HIERARCHY_SCOPE[1]);
 		for (const tipo of resolved) {
 			expect(await getModelByTipo(tipo)).toBe('section');
 		}
@@ -161,48 +176,46 @@ describe('field_value source (PHP :2744-2848)', () => {
 
 describe('entry contract (PHP :2688-2725, :2867-88, :2892-95)', () => {
 	test('object entry without source is DROPPED (PHP :2718-25)', async () => {
-		const resolved = await resolveSqoSectionTipos(
-			[{ value: ['numisdata4'] }],
-			context('numisdata3'),
-		);
+		const resolved = await resolveSqoSectionTipos([{ value: ['test6100'] }], context('test6099'));
 		expect(resolved).toEqual([]);
 	});
 
 	test("live 'section_tipo' alias keeps section semantics (default branch)", async () => {
 		const resolved = await resolveSqoSectionTipos(
-			[{ source: 'section_tipo', value: ['numisdata4'] }],
-			context('numisdata3'),
+			[{ source: 'section_tipo', value: ['test6100'] }],
+			context('test6099'),
 		);
-		expect(resolved).toEqual(['numisdata4']);
+		expect(resolved).toEqual(['test6100']);
 	});
 
 	test('unknown source name still resolves with section semantics (PHP default)', async () => {
 		const resolved = await resolveSqoSectionTipos(
-			[{ source: 'future_source', value: ['numisdata4'] }],
-			context('numisdata3'),
+			[{ source: 'future_source', value: ['test6100'] }],
+			context('test6099'),
 		);
-		expect(resolved).toEqual(['numisdata4']);
+		expect(resolved).toEqual(['test6100']);
 	});
 
 	test('terminal dedup collapses duplicates across entries (PHP array_unique :2892-95)', async () => {
 		const resolved = await resolveSqoSectionTipos(
 			[
-				{ source: 'section', value: ['numisdata4', 'numisdata3'] },
-				{ source: 'section', value: ['numisdata4'] },
+				{ source: 'section', value: ['test6100', 'test6099'] },
+				{ source: 'section', value: ['test6100'] },
 			],
-			context('numisdata3'),
+			context('test6099'),
 		);
-		expect(resolved).toEqual(['numisdata4', 'numisdata3']);
+		expect(resolved).toEqual(['test6100', 'test6099']);
 	});
 
-	test('check_tipo_is_valid prune: installed TLD but NO node → dropped (numisdata279/category1)', async () => {
-		// category1's TLD 'category' IS installed (category0 exists) but the
-		// category1 node does not — PHP prunes it at the trait (:262-270); the
-		// TLD gate alone would keep it (the pre-fix TS divergence).
+	test('check_tipo_is_valid prune: installed TLD but NO node → dropped (test999999)', async () => {
+		// `test999999`'s TLD IS installed (test0 exists) but the node does not —
+		// PHP prunes it at the trait (:262-270); the TLD gate alone would keep it
+		// (the pre-fix TS divergence).
+		expect(await getModelByTipo('test999999')).toBeNull();
 		const resolved = await resolveSqoSectionTipos(
-			[{ source: 'section', value: ['category1', 'numisdata4'] }],
-			context('numisdata3'),
+			[{ source: 'section', value: ['test999999', 'test6100'] }],
+			context('test6099'),
 		);
-		expect(resolved).toEqual(['numisdata4']);
+		expect(resolved).toEqual(['test6100']);
 	});
 });

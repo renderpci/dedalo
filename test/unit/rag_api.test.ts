@@ -1,8 +1,6 @@
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos
+// here are OPAQUE IDENTIFIERS — this gate builds and inspects a descriptor, it never
+// reads a record — so the migration is a rename.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { ragApiActions } from '../../src/ai/rag/api.ts';
@@ -38,14 +36,14 @@ beforeAll(async () => {
 	await indexComponentText({
 		section_tipo: SECTION_TIPO,
 		section_id: coinId,
-		component_tipo: 'numisdata16',
+		component_tipo: 'testmint1002',
 		lang: 'lg-spa',
 		text: 'Moneda ibérica de bronce acuñada en la ceca de Abariltur, con jinete y leyenda ibérica.',
 	});
 	await indexComponentText({
 		section_tipo: SECTION_TIPO,
 		section_id: shipId,
-		component_tipo: 'numisdata16',
+		component_tipo: 'testmint1002',
 		lang: 'lg-spa',
 		text: 'Naufragio de un barco fenicio con ánforas de aceite frente a la costa de Cartagena.',
 	});
@@ -164,9 +162,9 @@ describe('dd_rag_api embed_groups', () => {
 		principal,
 	});
 
-	test('opted-in section (numisdata3 descriptor) returns its group ids', async () => {
+	test('opted-in section (test6099 descriptor) returns its group ids', async () => {
 		const res = await ragApiActions.embed_groups(
-			rqo({ section_tipo: 'numisdata3' }),
+			rqo({ section_tipo: 'test6099' }),
 			ctx(SUPERUSER),
 		);
 		const result = res.body.result as { groups: string[] };
@@ -185,7 +183,7 @@ describe('dd_rag_api embed_groups', () => {
 			ctx(SUPERUSER),
 		);
 		const denied = await ragApiActions.embed_groups(
-			rqo({ section_tipo: 'numisdata3' }),
+			rqo({ section_tipo: 'test6099' }),
 			ctx(NO_ACCESS),
 		);
 		expect(notOpted.body.result).toEqual({ groups: [] });

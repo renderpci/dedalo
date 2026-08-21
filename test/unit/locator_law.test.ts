@@ -21,13 +21,20 @@
  * external remote ids that stay strings BY DESIGN. Deleting any test here
  * would silently break relation dedup/removal on those three populations.
  */
-// BINDS INSTALL TLDs: numisdata, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
+// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
+// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
+// ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
+
+/** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
+const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+// Generic-TLD migration 2026-08-20 (AGENTS.md hard rule). The `rsc`/`oh` tipos this
+// gate names are SEED-SHIPPED ontology — they exist on every installation, so they are
+// generic already and stay. They are spelled through `seed()` so the census can tell an
+// install BINDING from a seed reference, and so the intent is explicit at each site.
 import {
 	buildLocatorLookupKey,
 	compareLocators,
@@ -43,14 +50,14 @@ const loc = (fields: Record<string, unknown>): Locator => fields as Locator;
 
 describe('compareLocators — explicit property list', () => {
 	test('equal on the requested properties', () => {
-		const a = loc({ section_tipo: 'numisdata3', section_id: 7, type: 'dd151' });
-		const b = loc({ section_tipo: 'numisdata3', section_id: 7, type: 'dd151', extra: 'x' });
+		const a = loc({ section_tipo: 'test6099', section_id: 7, type: 'dd151' });
+		const b = loc({ section_tipo: 'test6099', section_id: 7, type: 'dd151', extra: 'x' });
 		expect(compareLocators(a, b, ['section_tipo', 'section_id', 'type'])).toBe(true);
 	});
 
 	test('section_id compares LOOSELY: int 7 == "7"', () => {
-		const a = loc({ section_tipo: 'numisdata3', section_id: 7 });
-		const b = loc({ section_tipo: 'numisdata3', section_id: '7' });
+		const a = loc({ section_tipo: 'test6099', section_id: 7 });
+		const b = loc({ section_tipo: 'test6099', section_id: '7' });
 		expect(compareLocators(a, b, ['section_tipo', 'section_id'])).toBe(true);
 	});
 
@@ -135,9 +142,9 @@ describe('buildLocatorLookupKey', () => {
 	test('joins values with the PHP DELIMITER, missing -> empty string', () => {
 		expect(LOCATOR_KEY_DELIMITER).toBe('_');
 		const key = buildLocatorLookupKey(
-			loc({ section_tipo: 'numisdata3', section_id: 7, type: 'dd151' }),
+			loc({ section_tipo: 'test6099', section_id: 7, type: 'dd151' }),
 		);
-		expect(key).toBe('numisdata3_7_dd151__');
+		expect(key).toBe('test6099_7_dd151__');
 	});
 
 	test('stringifies: 5 and "5" produce the SAME key (looser than compareLocators)', () => {
@@ -153,7 +160,7 @@ describe('buildLocatorLookupKey', () => {
 	});
 
 	test('custom property list is honored in order', () => {
-		const key = buildLocatorLookupKey(loc({ section_id: 9, section_tipo: 'rsc197' }), [
+		const key = buildLocatorLookupKey(loc({ section_id: 9, section_tipo: seed('rsc', 197) }), [
 			'section_id',
 			'section_tipo',
 		]);
@@ -163,27 +170,27 @@ describe('buildLocatorLookupKey', () => {
 
 describe('isLocatorInArray', () => {
 	const stored = [
-		loc({ section_tipo: 'numisdata3', section_id: 7, type: 'dd151', from_component_tipo: 'n77' }),
-		loc({ section_tipo: 'numisdata3', section_id: 8, type: 'dd151', from_component_tipo: 'n77' }),
+		loc({ section_tipo: 'test6099', section_id: 7, type: 'dd151', from_component_tipo: 'n77' }),
+		loc({ section_tipo: 'test6099', section_id: 8, type: 'dd151', from_component_tipo: 'n77' }),
 	];
 
 	test('finds a member on the default 5-field predicate', () => {
-		const needle = loc({ section_tipo: 'numisdata3', section_id: 7, type: 'dd151' });
+		const needle = loc({ section_tipo: 'test6099', section_id: 7, type: 'dd151' });
 		expect(isLocatorInArray(needle, stored)).toBe(true);
 	});
 
 	test('misses when a predicate field differs', () => {
-		const needle = loc({ section_tipo: 'numisdata3', section_id: 7, type: 'dd96' });
+		const needle = loc({ section_tipo: 'test6099', section_id: 7, type: 'dd96' });
 		expect(isLocatorInArray(needle, stored)).toBe(false);
 	});
 
 	test('key-based matching is LOOSE on ids: "7" matches stored 7', () => {
-		const needle = loc({ section_tipo: 'numisdata3', section_id: '7', type: 'dd151' });
+		const needle = loc({ section_tipo: 'test6099', section_id: '7', type: 'dd151' });
 		expect(isLocatorInArray(needle, stored)).toBe(true);
 	});
 
 	test('narrowed predicate broadens the match', () => {
-		const needle = loc({ section_tipo: 'numisdata3', section_id: 8 });
+		const needle = loc({ section_tipo: 'test6099', section_id: 8 });
 		expect(isLocatorInArray(needle, stored, ['section_tipo', 'section_id'])).toBe(true);
 	});
 

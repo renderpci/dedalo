@@ -35,9 +35,6 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { type MediaTypeSpec, mediaTypeOf } from '../../src/core/concepts/media.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
@@ -51,6 +48,7 @@ import {
 	statusPollAvUrl,
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
+import { scratchMediaRoot } from '../helpers/media_scratch_root.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 /** A plausible av 'audio' quality relative path (the poll rebuilds this shape). */
@@ -116,7 +114,7 @@ const IDENTITY: MediaIdentity = {
 const PATH_OPTS: MediaPathOptions = {
 	initialMediaPath: '',
 	maxItemsFolder: 1000,
-	mediaRoot: mkdtempSync(join(tmpdir(), 'dedalo-poll-gate-')),
+	mediaRoot: scratchMediaRoot('dedalo-poll-gate-'),
 };
 
 const PRINCIPAL: Principal = { userId: 16, isGlobalAdmin: false, isDeveloper: false };

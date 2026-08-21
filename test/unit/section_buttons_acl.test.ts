@@ -14,18 +14,17 @@
  * (the getPermissions >= 2 filter) and would gate live once a partial-button
  * profile or a live-PHP non-admin login exists.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
+// install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;
+// seed-shipped ontology (dd/rsc/hierarchy/lg) stays and is spelled through `seed()`,
+// which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildSectionButtons } from '../../src/core/section/buttons.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 
-const SECTION = 'numisdata3'; // buttons: button_new 123, button_delete 124, button_trigger 672
+const SECTION = 'test6099'; // buttons: button_new 123, button_delete 124, button_trigger 672
 const NON_ADMIN_USER = 16;
 
 async function buttonChildTipos(sectionTipo: string): Promise<string[]> {
@@ -67,7 +66,7 @@ describe('section buttons per-button ACL (SECTION_SPEC §9)', () => {
 	});
 
 	// PHP get_buttons_context :4231-4305 (oracle: section_context_extras fixture,
-	// numisdata672): a button_trigger DDO carries `properties` and `tools` —
+	// test6415): a button_trigger DDO carries `properties` and `tools` —
 	// each user tool with a matching properties.tool_config.<name> as a simple
 	// context + ENRICHED tool_config (ddo_map 'self' resolved, model/
 	// translatable/label stamped), the enrichment ALSO written back to the
@@ -84,7 +83,7 @@ describe('section buttons per-button ACL (SECTION_SPEC §9)', () => {
 		expect(Object.keys(plain as object)).toEqual(['typo', 'type', 'tipo', 'model', 'label']);
 
 		const trigger = buttons.find((button) => button.model === 'button_trigger');
-		expect(trigger?.tipo).toBe('numisdata672');
+		expect(trigger?.tipo).toBe('test6415');
 		// wire key order (PHP dd_object declaration order).
 		expect(Object.keys(trigger as object)).toEqual([
 			'typo',

@@ -20,14 +20,16 @@
  * wrong answer is a cross-section read, not a cosmetic bug. It is pure (no DB),
  * which is why this half asserts in full.
  */
-// BINDS INSTALL TLDs: oh, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The install
+// section/component tipos became their phase-2 clones — every one of them is a SCOPE
+// STRING here, compared or threaded through AsyncLocalStorage, and the floor's own
+// ontology lookup runs on `dd15`/`dd0`, which are seed-shipped engine nodes. The dd15
+// annotation column is no longer re-spelled either: it is the engine's own constant
+// (`TM_NOTES_TEXT`, src/core/tm_record), so the gate imports it.
 
 import { describe, expect, test } from 'bun:test';
 import { resolveTimeMachineScopeSection } from '../../src/core/section/list_definitions/time_machine_list.ts';
+import { TM_NOTES_TEXT } from '../../src/core/tm_record/tm_record.ts';
 import {
 	currentTimeMachineScopeSection,
 	runWithTimeMachineScope,
@@ -42,19 +44,19 @@ const plainUser: Principal = { userId: 43, isGlobalAdmin: false, isDeveloper: fa
 describe('TM scope resolution (the input to the floor)', () => {
 	test('a per-component history scopes to its locator section', () => {
 		const scope = resolveTimeMachineScopeSection({
-			filter_by_locators: [{ section_tipo: 'oh1', section_id: 7, tipo: 'oh25', lang: 'lg-spa' }],
+			filter_by_locators: [{ section_tipo: 'test6813', section_id: 7, tipo: 'test6837', lang: 'lg-spa' }],
 		});
-		expect(scope).toEqual({ sectionTipo: 'oh1', mixed: false });
+		expect(scope).toEqual({ sectionTipo: 'test6813', mixed: false });
 	});
 
 	test('several locators on the SAME section still scope to it', () => {
 		const scope = resolveTimeMachineScopeSection({
 			filter_by_locators: [
-				{ section_tipo: 'oh1', section_id: 7 },
-				{ section_tipo: 'oh1', section_id: 9 },
+				{ section_tipo: 'test6813', section_id: 7 },
+				{ section_tipo: 'test6813', section_id: 9 },
 			],
 		});
-		expect(scope).toEqual({ sectionTipo: 'oh1', mixed: false });
+		expect(scope).toEqual({ sectionTipo: 'test6813', mixed: false });
 	});
 
 	test('locators spanning TWO sections are refused, never reduced to the first', () => {
@@ -62,8 +64,8 @@ describe('TM scope resolution (the input to the floor)', () => {
 		// cover it — the cross-section read this resolver exists to prevent.
 		const scope = resolveTimeMachineScopeSection({
 			filter_by_locators: [
-				{ section_tipo: 'oh1', section_id: 7 },
-				{ section_tipo: 'rsc36', section_id: 3 },
+				{ section_tipo: 'test6813', section_id: 7 },
+				{ section_tipo: 'test6099', section_id: 3 },
 			],
 		});
 		expect(scope).toEqual({ sectionTipo: null, mixed: true });
@@ -71,9 +73,9 @@ describe('TM scope resolution (the input to the floor)', () => {
 
 	test('the record-snapshot list scopes to its `tipo` column filter', () => {
 		const scope = resolveTimeMachineScopeSection({
-			filter: { $and: [{ column_name: 'tipo', q: 'oh25' }] },
+			filter: { $and: [{ column_name: 'tipo', q: 'test6837' }] },
 		});
-		expect(scope).toEqual({ sectionTipo: 'oh25', mixed: false });
+		expect(scope).toEqual({ sectionTipo: 'test6837', mixed: false });
 	});
 
 	test('the bare browse is UNSCOPED (and therefore admin-only downstream)', () => {
@@ -95,10 +97,10 @@ describe('TM scope resolution (the input to the floor)', () => {
 describe('the TM scope is request-scoped, never module state', () => {
 	test('it is undefined outside any scope and does not leak out of one', async () => {
 		expect(currentTimeMachineScopeSection()).toBeUndefined();
-		const inside = await runWithTimeMachineScope('oh1', async () =>
+		const inside = await runWithTimeMachineScope('test6813', async () =>
 			currentTimeMachineScopeSection(),
 		);
-		expect(inside).toBe('oh1');
+		expect(inside).toBe('test6813');
 		expect(currentTimeMachineScopeSection()).toBeUndefined();
 	});
 
@@ -106,26 +108,26 @@ describe('the TM scope is request-scoped, never module state', () => {
 		// The whole reason this is AsyncLocalStorage and not a module variable:
 		// Bun is a long-lived process serving concurrent requests.
 		const [a, b] = await Promise.all([
-			runWithTimeMachineScope('oh1', async () => {
+			runWithTimeMachineScope('test6813', async () => {
 				await Promise.resolve();
 				return currentTimeMachineScopeSection();
 			}),
-			runWithTimeMachineScope('rsc36', async () => currentTimeMachineScopeSection()),
+			runWithTimeMachineScope('test6099', async () => currentTimeMachineScopeSection()),
 		]);
-		expect(a).toBe('oh1');
-		expect(b).toBe('rsc36');
+		expect(a).toBe('test6813');
+		expect(b).toBe('test6099');
 	});
 });
 
 describe('the dd15 permission floor', () => {
 	test('a global admin reads dd15 columns, scoped or not', async () => {
 		expect(await getPermissions(admin, TM, 'dd559')).toBe(1);
-		expect(await runWithTimeMachineScope('oh1', () => getPermissions(admin, TM, 'dd559'))).toBe(1);
+		expect(await runWithTimeMachineScope('test6813', () => getPermissions(admin, TM, 'dd559'))).toBe(1);
 	});
 
 	test('a global admin is never granted more than READ on dd15', async () => {
 		// Consultation-only: reverts go through tool_time_machine, never inline edit.
-		for (const tipo of ['dd559', 'dd577', 'dd578', 'dd1574', 'rsc329']) {
+		for (const tipo of ['dd559', 'dd577', 'dd578', 'dd1574', TM_NOTES_TEXT]) {
 			expect(await getPermissions(admin, TM, tipo)).toBe(1);
 		}
 	});

@@ -32,11 +32,8 @@
  * listed in `tool_suites_deferred` and gates nothing, so adding cases there
  * would buy a false sense of coverage.
  */
-// BINDS INSTALL TLDs: mdcat, rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// Migrated to the generic `test` TLD 2026-08-19: report_model.js is pure client
+// code — the chunks are fabricated, so the tipos are generic test-TLD names.
 
 import { describe, expect, test } from 'bun:test';
 import {
@@ -52,7 +49,7 @@ import {
 /** A minimal well-formed chunk; each test overrides only what it exercises. */
 function chunk(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
-		process_id: 'process_diffusion_-1_mdcat353_rsc170',
+		process_id: 'process_diffusion_-1_test3411_test6099',
 		is_running: false,
 		started_at: 1785318056757,
 		data: { msg: 'OK. Request done', counter: 10, total: 10 },
@@ -102,7 +99,7 @@ describe('classify_outcome — server state wins', () => {
 			result: {
 				ok: true,
 				msg: 'Partial success: 50 error(s) — see errors',
-				errors: ['rsc170:1204 dd_lang: locator has no section_tipo'],
+				errors: ['test6099:1204 dd_lang: locator has no section_tipo'],
 			},
 		});
 		expect(classify_outcome(sse)).toBe('partial');
@@ -257,7 +254,7 @@ describe('errors', () => {
 	test('the server cap is reported as a cap, and raw stays byte-verbatim', () => {
 		const errors = Array.from(
 			{ length: 50 },
-			(_, i) => `rsc170:${1000 + i} dd_lang: no section_tipo`,
+			(_, i) => `test6099:${1000 + i} dd_lang: no section_tipo`,
 		);
 		const model = build_report_model(
 			chunk({ state: 'completed', result: { ok: true, msg: 'Partial', errors } }),
@@ -277,8 +274,8 @@ describe('errors', () => {
 					ok: true,
 					msg: 'Partial',
 					errors: [
-						'rsc170:1204 dd_lang: locator has no section_tipo',
-						'rsc170:1207 dd_lang: locator has no section_tipo',
+						'test6099:1204 dd_lang: locator has no section_tipo',
+						'test6099:1207 dd_lang: locator has no section_tipo',
 					],
 				},
 			}),
@@ -286,7 +283,7 @@ describe('errors', () => {
 		);
 		expect(model.issues.groups).toHaveLength(1);
 		expect(model.issues.groups[0].count).toBe(2);
-		expect(model.issues.groups[0].ids).toEqual(['rsc170:1204', 'rsc170:1207']);
+		expect(model.issues.groups[0].ids).toEqual(['test6099:1204', 'test6099:1207']);
 	});
 
 	test('job-level errors stay distinguishable from run errors', () => {
@@ -369,7 +366,7 @@ describe('the two structural defects of the old renderer stay dead', () => {
 
 	test('a multi-cause compile failure becomes a list, keeping the original', () => {
 		const raw =
-			"Error. Diffusion run failed: diffusion plan compile failed for element 'mdcat353':\n" +
+			"Error. Diffusion run failed: diffusion plan compile failed for element 'test3411':\n" +
 			"- missing or unknown properties->diffusion->type ''\n" +
 			'- unable to resolve database name';
 		const model = build_report_model(
@@ -416,15 +413,15 @@ describe('robustness — the panel must never be the thing that breaks', () => {
 
 	test('subject falls back to parsing process_id, and flags that it did', () => {
 		const model = build_report_model(chunk({ state: 'completed' }), {});
-		expect(model.subject.element_tipo).toBe('mdcat353');
-		expect(model.subject.section_tipo).toBe('rsc170');
+		expect(model.subject.element_tipo).toBe('test3411');
+		expect(model.subject.section_tipo).toBe('test6099');
 		expect(model.subject.derived_from_process_id).toBe(true);
 	});
 
 	test('the client launch context wins over the parsed id', () => {
 		const model = build_report_model(chunk({ state: 'completed' }), {
-			item: { tipo: 'mdcat353', label: 'Publicación en web', type: 'sql' },
-			section_tipo: 'rsc170',
+			item: { tipo: 'test3411', label: 'Publicación en web', type: 'sql' },
+			section_tipo: 'test6099',
 		});
 		expect(model.subject.label).toBe('Publicación en web');
 		expect(model.subject.derived_from_process_id).toBe(false);
