@@ -256,7 +256,6 @@ const get_content_data = function(self) {
 					},
 					label		: self.caller.label,
 					total		: self.caller.total,
-					self_caller : self,
 					self_caller : self.caller
 				}
 				render_open_list_with_direct_relations( options )

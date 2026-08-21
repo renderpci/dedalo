@@ -48,7 +48,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 	const caller_label		= options.label
 	const total_records		= options.total
 	const caller_tipo 		= options.caller_tipo
-	const self_caller		= options.self
+	const self_caller		= options.self_caller
 
 	if (!sqo) {
 		console.error('Missing SQO in section in its request config object');

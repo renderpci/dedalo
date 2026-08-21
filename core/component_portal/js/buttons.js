@@ -400,7 +400,8 @@ buttons.render_list_from_component_data_button = (self) => {
 				model			: self.model
 			},
 			label		: self.label,
-			total		: self.caller.caller.total
+			total		: self.caller.caller.total,
+			self_caller	: caller_section
 		}
 		render_open_list_with_direct_relations( options )
 	}
