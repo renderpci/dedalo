@@ -32,6 +32,13 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
+# User= and Group= are TWO values. This guide's layout makes them the same string
+# (adduser --system --group dedalo), so only one placeholder appears — but on a host
+# upgraded from an older install the service user often has the WEB SERVER's group as
+# its primary group and no group of its own. Group= must name a group that EXISTS
+# (getent group <name>), or systemd fails the unit with "Failed to determine group
+# credentials: No such process" before Bun ever runs. Omitted here = the user's
+# primary group, which is also what UMask=0007 below makes the socket group-owned by.
 User=DEDALO_USER
 WorkingDirectory=/opt/dedalo/master_dedalo
 # The runtime is PINNED (.bun-version / package.json engines.bun) — point

@@ -178,6 +178,74 @@ first, so it exits `1` instead.
 *stale* socket file (nothing listening) is removed automatically — this error
 only fires when something really is alive on it.
 
+### `Failed to determine group credentials: No such process`
+
+**Cause.** The `Group=` in the systemd unit — or in a drop-in overriding it —
+names a group that **does not exist**. The message is misleading: `No such
+process` is the errno the name lookup returns for *no such group*. The engine
+never starts; systemd fails the unit before executing anything.
+
+This is the normal first failure on a host **upgraded from v6**, where the
+service user's primary group is the web server's (`gid=33(www-data)`) and no
+group is named after the user.
+
+**Diagnose.**
+
+```shell
+id <service user>              # what group does it really have?
+getent group <name>            # empty output = that group does not exist
+systemctl cat dedalo-ts        # what the unit and its drop-ins actually say
+```
+
+**Fix.** Three options, best first:
+
+1. **Give the install its own group** — the only one that keeps two installs on
+   one host apart:
+
+    ```shell
+    sudo groupadd <name> && sudo usermod -g <name> <service user>
+    sudo chown -R <service user>:<name> <install home> <media path>
+    sudo usermod -aG <name> www-data && sudo systemctl restart apache2
+    ```
+
+    On an upgraded install this is a documented migration step, with the reasoning:
+    [Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group).
+
+2. **Point `Group=` at the group that exists** (`systemctl edit dedalo-ts`).
+   Unblocks a test box; on a shared host it hands socket access to every member
+   of that group.
+
+3. **Omit `Group=`** and inherit the user's primary group. Only acceptable when
+   that group is install-specific — inheriting `users`, `nogroup` or the web
+   server's group is option 2 with the trade-off hidden.
+
+Then, in this order — `Restart=always` does **not** clear a start-limit trip:
+
+```shell
+sudo systemctl daemon-reload
+sudo systemctl reset-failed dedalo-ts
+sudo systemctl start dedalo-ts
+```
+
+### The unit fails before the engine logs anything
+
+`journalctl -u dedalo-ts` shows a `status=` code and no output of ours: systemd
+could not set up the process. The code says which step:
+
+| Code | Meaning | Usual cause |
+| --- | --- | --- |
+| `217/USER` | the user does not resolve | `User=` misspelled, or the account was never created |
+| *group credentials* | the group does not resolve | see the entry above |
+| `200/CHDIR` | cannot enter `WorkingDirectory` | wrong path, or the service user cannot traverse into it |
+| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path — it is installed per install, so it is easy to point at another install's copy |
+
+Reproduce the same conditions by hand before editing the unit again:
+
+```shell
+sudo -u <service user> <ExecStart bun path> --version
+sudo -u <service user> bash -c 'cd <WorkingDirectory> && ls src/server.ts'
+```
+
 ### The wizard is a `404`
 
 **Cause.** The instance is **sealed**. Sealing is terminal: the entire install

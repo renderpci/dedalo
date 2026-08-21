@@ -67,7 +67,7 @@ compromised process, or a tool that shells out, to that one tenant's files.
 A home-per-instance layout keeps everything a tenant owns under one tree:
 
 ```text
-/home/ded_<site>/master_dedalo/    the repo clone            (WorkingDirectory)
+/home/ded_<site>/dedalo/    the repo clone            (WorkingDirectory)
 /home/ded_<site>/private/          ../private                (.env 0600, sessions, state, backups)
 /home/ded_<site>/.bun/bin/bun      the pinned runtime        (per instance → independent upgrades)
 /srv/dedalo/<site>/media/          MEDIA_PATH                (own path, often its own volume)
@@ -93,8 +93,14 @@ Do these once for the whole server, not per domain:
 ## 2. Systemd template units
 
 A template unit (`name@.service`) is instantiated per domain with `%i` — here, the
-site name. Because each domain has its own clone, the engine resolves its own
-`../private` from `WorkingDirectory`; no `DEDALO_PRIVATE_DIR` is needed.
+site name. `dedalo-ts@site1.service` is not a file: systemd splits the name at the
+`@` and serves it from the one template, with `%i` = `site1`.
+
+Because each domain has its own clone, each resolves its own `../private`
+automatically: the engine derives that path from the location of **the code
+`ExecStart` runs**, not from the working directory or the environment. Point a
+unit at a clone and it has that clone's configuration; no `DEDALO_PRIVATE_DIR` is
+needed.
 
 `/etc/systemd/system/dedalo-ts@.service`:
 
@@ -108,7 +114,7 @@ Wants=postgresql.service
 Type=simple
 User=ded_%i
 Group=ded_%i
-WorkingDirectory=/home/ded_%i/master_dedalo
+WorkingDirectory=/home/ded_%i/dedalo
 ExecStart=/home/ded_%i/.bun/bin/bun run src/server.ts
 RuntimeDirectory=dedalo-%i            # creates /run/dedalo-%i, owned by the service user
 RuntimeDirectoryMode=0750
@@ -133,6 +139,62 @@ WantedBy=multi-user.target
     raw-JSON values (for example `DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano"}`).
     Set `SERVER_UNIX_SOCKET=/run/dedalo-<site>/dedalo_ts.sock` in each instance's
     `.env` so it matches `RuntimeDirectory=dedalo-%i`.
+
+### When the user name, the home and the site slug differ
+
+The template above uses one `%i` for three things — the user, the home and the
+site — which holds only when you created all three yourself. On a host **upgraded
+from v6** they rarely agree: the user is `dedalo_user`, its home is
+`/home/dedalo.dev`, and neither is a slug. One `%i` cannot express that.
+
+Split the identity out of the template. Keep `%i` for every **path** — pick the
+value the paths agree on, which in a home-per-domain layout is the domain itself
+— and drop `User=`/`Group=`:
+
+```ini
+# /etc/systemd/system/dedalo-ts@.service — identity removed
+WorkingDirectory=/home/%i/dedalo
+ExecStart=/home/%i/.bun/bin/bun run src/server.ts
+RuntimeDirectory=dedalo-%i
+SyslogIdentifier=dedalo-%i
+```
+
+Then give each instance its own identity with a drop-in:
+
+```shell
+sudo systemctl edit dedalo-ts@dedalo.dev
+```
+
+```ini
+[Service]
+User=dedalo_user
+Group=dedalo_user
+```
+
+`systemctl edit` creates the `dedalo-ts@dedalo.dev.service.d/` directory,
+names the file `override.conf`, and runs `daemon-reload` when you save — the
+directory does not exist beforehand, so writing the file by hand needs an
+`mkdir -p` first. The **template must already be installed**: against a missing
+one, `edit` and `cat` answer `No files found for dedalo-ts@….service`.
+
+Check the merge, which is the only view of what systemd will actually run:
+
+```shell
+systemctl cat  dedalo-ts@dedalo.dev            # template + every drop-in, in order
+systemctl show dedalo-ts@dedalo.dev -p User -p Group -p RuntimeDirectory
+```
+
+!!! warning "`Group=` must name a group that exists"
+    An adopted v6 user usually has no group of its own, and the unit then fails
+    with `Failed to determine group credentials: No such process` before the
+    engine runs at all. Give the install its own group first —
+    [the migration's Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group)
+    is the procedure and the reasoning.
+
+The alternative is to skip templating entirely: **one ordinary unit per instance**,
+no `@`, no `%i`, no drop-in — every value spelled out, `User=` included. That is
+two files duplicating some thirty identical lines. At two domains either shape is
+defensible; the template earns its indirection from the third onward.
 
 Template the remaining reference units the same way (`%i` throughout):
 
@@ -159,8 +221,8 @@ sudo -u ded_$SITE bash -c \
   'curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.3.9'
 
 # The code
-sudo -u ded_$SITE git clone <your-dedalo-remote> /home/ded_$SITE/master_dedalo
-cd /home/ded_$SITE/master_dedalo
+sudo -u ded_$SITE git clone <your-dedalo-remote> /home/ded_$SITE/dedalo
+cd /home/ded_$SITE/dedalo
 sudo -u ded_$SITE /home/ded_$SITE/.bun/bin/bun install --frozen-lockfile --production
 ```
 
@@ -235,7 +297,7 @@ server {
     location /dedalo/install/import/ontology/        { proxy_pass http://dedalo_site1; }
 
     location /dedalo/ {
-        alias /home/ded_site1/master_dedalo/client/dedalo/;
+        alias /home/ded_site1/dedalo/client/dedalo/;
         etag on;
         add_header Cache-Control "no-cache";
     }
@@ -284,8 +346,8 @@ first match wins. Every path points at **this instance's** socket, media and clo
     </Directory>
 
     # --- Client static files, from THIS instance's clone -----------------------
-    Alias /dedalo /home/ded_site1/master_dedalo/client/dedalo
-    <Directory /home/ded_site1/master_dedalo/client/dedalo>
+    Alias /dedalo /home/ded_site1/dedalo/client/dedalo
+    <Directory /home/ded_site1/dedalo/client/dedalo>
         Options -Indexes
         AllowOverride None
         Require all granted
@@ -316,6 +378,12 @@ Issue a certificate per domain: `certbot --apache -d site1.example.org` (or
 - **Socket collision.** Never leave `SERVER_UNIX_SOCKET` at its default — two
   instances at `/tmp/dedalo_ts.sock` mean the second refuses to boot. Give each a
   path under its own `RuntimeDirectory`.
+- **Adopted users share the web server's group.** An install upgraded from v6
+  keeps `www-data` as its service user's primary group, and two such instances
+  therefore have **no boundary between them**: each one's socket is writable, and
+  each one's files readable, by anything in that group. It all works, which is why
+  it survives. Give every instance its own group —
+  [Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group).
 - **`DB_POOL_MAX` is per process.** Budget the **sum** across all instances — plus
   each diffusion runner and RAG drain — against PostgreSQL's `max_connections`,
   not each instance in isolation.

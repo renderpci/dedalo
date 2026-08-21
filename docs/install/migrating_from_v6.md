@@ -14,12 +14,13 @@ flowchart TD
     B -->|Phase B: dump + restore, copy media| C[v7 host: database + media tree]
     C -->|Phase C: migrate the config| D[../private/.env]
     D -->|Phase D: start the v7 engine| E[v7 serving]
+    E -->|Phase E: systemd + reverse proxy| F[v7 in production]
 ```
 
 The transform ships as a **self-contained maintenance package** for v6, `close_v6_prepare_v7`. It is part of the Dédalo **v6** source tree — `core/area_maintenance/widgets/close_v6_prepare_v7/` — and not of the v7 repository, because it runs on v6: take it from a v6 checkout at 6.9.1 or later. It carries its own copy of the transforming engine and runs it as a separate process, so nothing in your v6 install is upgraded or replaced by installing it. Deploying it is three steps — see [get and deploy the package](#25-get-and-deploy-the-package).
 
 !!! danger "The transform rewrites the v6 database in place"
-    It is not a copy-then-convert. The only way back to v6 is the database backup — see [rollback](#9-rollback). Everything below assumes you have one.
+    It is not a copy-then-convert. The only way back to v6 is the database backup — see [rollback](#10-rollback). Everything below assumes you have one.
 
 ## 2. Before you start
 
@@ -92,7 +93,19 @@ The package is `close_v6_prepare_v7/` in the Dédalo **v6** source tree, under `
 
 ### Prepare the v7 host first
 
-Follow [production install](production.md) steps **1 through 7**: service user, OS packages, media toolchain, PostgreSQL 18, the pinned Bun runtime, the code, and the empty database and role. **Stop before step 8 (run the installer)** — a migrated instance never runs the installer, see [6.1](#61-do-not-run-the-installer). Steps 10 onward (systemd, reverse proxy, TLS) come after Phase D verification.
+Follow [production install](production.md) steps **1 through 7**: service user, OS packages, media toolchain, PostgreSQL 18, the pinned Bun runtime, the code, and the empty database and role. **Stop before step 8 (run the installer)** — a migrated instance never runs the installer, see [6.1](#61-do-not-run-the-installer). Steps 10 onward (systemd, reverse proxy, TLS) come after Phase D verification, as [Phase E](#8-phase-e-run-it-as-a-service).
+
+Step 1 of that guide creates a service user. Which of the two cases you are in decides whether you run it as written:
+
+| Your case | Step 1 |
+| --- | --- |
+| **A new v7 host** — a fresh machine, nothing of v6 on it | Run it as written: `adduser --system --group …` creates the user *and* a group of the same name. |
+| **An in-place upgrade** — v7 goes on the box that runs v6 | **Adopt the existing user.** Do not create a second one: the home, the media tree and the backups already belong to it. What must change is its **group** — see [Phase E](#8-phase-e-run-it-as-a-service). |
+
+From here on, **the service user** means whichever of the two you have.
+
+!!! warning "An in-place upgrade needs a group change before the first boot"
+    A v6 install's service user normally has the **web server's** group as its primary group, because the v6 engine ran inside the web server. v7 does not, and a systemd unit that names a group which does not exist refuses to start. [Phase E](#8-phase-e-run-it-as-a-service) is where you fix it: four commands, but finding them from the error message alone is a bad afternoon.
 
 ## 3. Phase A — transform the data, on v6
 
@@ -121,7 +134,7 @@ This is the mode that tells you whether your data is clean. It classifies every 
 | **notices** | dropped on purpose, typically a value under a tipo that no longer exists in the ontology | read them, decide whether the loss matters |
 | **needs attention** | the ontology model and the stored shape disagree — a human must decide | **fix it before migrating**; this is the only bucket that blocks |
 
-A non-empty *needs attention* bucket fails the preflight. See [when something goes wrong](#8-when-something-goes-wrong-data-errors).
+A non-empty *needs attention* bucket fails the preflight. See [when something goes wrong](#9-when-something-goes-wrong-data-errors).
 
 Both counters and the review file are written **before** the migration writes a single converted row, so a large *auto-fixed* count is something you read and understand first, not something you discover afterwards. Only this mode produces real counts for the repair below: a plain preflight runs without the ontology, so no component model resolves and no geolocation finding can appear.
 
@@ -193,7 +206,7 @@ Duration is a function of how many rows you have. There is no progress bar: the 
     grep -n "Error on run_scripts\|Request done with errors" var/prepare_v7.log
     ```
 
-    Each hit names the failing step and the affected table and record id. Note them, re-run the migration (it is idempotent) and grep again; rows that still fail are data errors — treat them as [needs attention](#81-needs-attention-findings-v6-host-before-phase-a) findings and fix the record before Phase B.
+    Each hit names the failing step and the affected table and record id. Note them, re-run the migration (it is idempotent) and grep again; rows that still fail are data errors — treat them as [needs attention](#91-needs-attention-findings-v6-host-before-phase-a) findings and fix the record before Phase B.
 
 - If the review counted [fabricated map views](#the-fabricated-map-view), open a few of those records once v7 is serving (Phase D): a record that never had a location must show an empty map, opening at the configured default view, with no coordinate stored; a record with drawn features must still show its drawing, with the map now framed on it.
 - Passwords and diffusion run **after** the stamp and are deliberately non-fatal. A failure there does not mean the database migration failed; each can be re-run on its own afterwards. If the password phase reports no Argon2 support in the interpreter, fix the interpreter and re-run just that phase — you can also do the equivalent on the v7 side later (see [Phase D](#62-migrate-the-passwords)).
@@ -403,7 +416,7 @@ Once this has run and [§7](#7-verify) passes, the v6 config copy on the v7 host
 | Activate hierarchies | maintenance area, `add_hierarchy` panel | see [install new hierarchies](../management/install_new_hierarchies.md) |
 | Repair sequences | maintenance area, `sequences_status` panel | opening it audits every table sequence except a named skip list (`session_data`, the counter tables, `temp`, the legacy `relations` tables) and **repairs one that is behind, as a side effect of loading** |
 | Refresh statistics | `analyze_statistics` in the Database info panel | the repair for the statistics wipe boot warned about |
-| Repair the media index | `bun scripts/media_repair_files_info.ts` | see [media drift](#84-media-drift-files-on-disk-nothing-rendered-v7) |
+| Repair the media index | `bun scripts/media_repair_files_info.ts` | see [media drift](#94-media-drift-files-on-disk-nothing-rendered-v7) |
 
 Widget by widget, the panels are described in [area_maintenance](../core/areas/area_maintenance.md).
 
@@ -413,7 +426,7 @@ Widget by widget, the panels are described in [area_maintenance](../core/areas/a
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
 
-Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of a socket, `curl --fail http://localhost:<port>/health`. No socket file at all means the process is not running — `journalctl -u dedalo -n 100`. Set up systemd and the reverse proxy ([production](production.md) steps 10–11) **after** this verification passes. Then, in the browser, as a normal user:
+Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of a socket, `curl --fail http://localhost:<port>/health`. No socket file at all means the process is not running — `journalctl -u dedalo -n 100`. Put the engine under systemd and the reverse proxy **after** this verification passes — that is [Phase E](#8-phase-e-run-it-as-a-service). Then, in the browser, as a normal user:
 
 | Check | Expected |
 | --- | --- |
@@ -429,7 +442,81 @@ Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of
 !!! note "The login panel's version row is not the database's"
     It shows the engine constant, so it reads `7.0.0` even on a database still stamped 6.x. Only the update-data-version panel reads the real value.
 
-## 8. When something goes wrong — data errors
+## 8. Phase E — run it as a service
+
+Phase D started the engine by hand, as the service user. Phase E makes that permanent: **one supervised service per install**, reachable by the web server. On a new host this is [production](production.md) steps 10–11 and nothing else. On an **in-place upgrade** there is one more thing to do first, because the way the engine runs changed — and with it, who must own what.
+
+### 8.1 What changed: the engine is no longer part of the web server
+
+| | v6 | v7 |
+| --- | --- | --- |
+| Where the engine runs | **inside the web server** — as a PHP module or an FPM pool | its own long-lived process |
+| Who it runs as | the web-server user (`www-data`) | its own service user |
+| What supervises it | the web server; the FPM pool *is* the service | **systemd** — one unit per install |
+| What the web server does | executes the engine | **proxies** to a unix socket, and serves static files and media |
+| Who writes the media tree | the web-server user | the service user, and nothing else |
+| Restarting the engine | reload the web server | `systemctl restart` the unit |
+| Two installs on one host | two pools, one user | two users, two units, two sockets — see [multiple instances](multi_instance.md) |
+
+An FPM pool and a systemd unit look like the same idea and are not. The pool was a *configuration block inside the web server*, spawning workers on demand under the web server's identity; the unit is a **separate program with its own identity, lifetime and logs**, that the web server merely talks to. Nothing about v7 is started, stopped or reloaded by touching the web server's configuration.
+
+!!! warning "The ownership rule inverts — this is the part that bites"
+    In v6 the tree had to be group-`www-data`, because the interpreter *was* `www-data` and wrote the media itself. In v7 **nothing runs as `www-data`**, so that requirement is gone. What the web server still needs — connect to the socket, read the client tree and the media — is granted the other way round: `www-data` is added **to the instance's group**, not the instance to `www-data`'s.
+
+### 8.2 Give the adopted user its own group
+
+A v6 service user normally has `www-data` as its **primary** group:
+
+```shell
+id _dedalo_user
+# uid=1001(_dedalo_user) gid=33(www-data) groups=33(www-data),100(users)
+```
+
+There is no group named after the user, so a unit with `Group=_dedalo_user` fails before the engine ever runs — see [troubleshooting](troubleshooting.md#failed-to-determine-group-credentials-no-such-process). Create the group, make it primary, hand the tree over, and let the web server in:
+
+```shell
+sudo groupadd _dedalo_user
+sudo usermod -g _dedalo_user _dedalo_user
+sudo chown -R _dedalo_user:_dedalo_user /home/dedalo.dev   # home, repo, ../private, backups
+sudo chown -R _dedalo_user:_dedalo_user /srv/dedalo/media         # and MEDIA_PATH, wherever it is
+sudo usermod -aG _dedalo_user www-data
+sudo systemctl restart apache2      # RESTART, not reload: group membership is read at process start
+```
+
+Then check the two things that break silently:
+
+```shell
+stat -c '%U:%G %a' /home/dedalo.dev/private/.env   # _dedalo_user:_dedalo_user 600
+ls -ld /home/dedalo.dev                            # 0751, or 0750 with www-data in the group
+```
+
+The home must stay traversable by the web server, or it can reach neither `client/` nor the media tree. `private/` stays `0700` and `.env` `0600` — the web server has no business in either.
+
+!!! danger "Leaving the primary group at `www-data` *works*, and quietly removes the boundary"
+    The unit starts, the socket is reachable, everything serves. But `UMask=0007` makes the socket group-writable, so **every member of the web-server group can connect to the engine**, and every group-readable file under the install is readable by them. On a host with a second install, or any other web application, that is the whole isolation boundary gone. Use a per-install group even when there is only one install today.
+
+Once the engine is the only writer, the group-write bits the v6 layout needed can come off the media tree. That is hardening, not a requirement.
+
+### 8.3 The unit
+
+Install the reference units and substitute the placeholders as described in [production step 10](production.md#10-run-the-engine-under-systemd). Two points that page states for a fresh install and that an upgraded host gets wrong:
+
+- `User=` and `Group=` are **two independent values**. The guide's `DEDALO_USER` placeholder fills both because on a fresh host they are the same string; here they need not be, and `Group=` must name a group that already exists (`getent group <name>`).
+- The socket must live under the unit's `RuntimeDirectory` — `/run/dedalo/` for a single install. `SERVER_UNIX_SOCKET` in `../private/.env` must match it.
+
+Hosting several domains on this box? Do not copy the unit per domain by hand — [multiple instances](multi_instance.md) covers the template unit, the per-instance identity, and what else must be unique.
+
+### 8.4 Verify the service identity
+
+```shell
+systemctl show dedalo-ts -p User -p Group -p WorkingDirectory
+ls -l /run/dedalo/dedalo_ts.sock          # srwxrwx--- <service user> <service group>
+sudo -u www-data test -w /run/dedalo/dedalo_ts.sock && echo "proxy can connect"
+```
+
+A `502` on every request through the proxy, with a healthy engine on the socket, is this check failing — see [every request is a 502](troubleshooting.md#every-request-is-a-502).
+
+## 9. When something goes wrong — data errors
 
 Most trouble is found by the deep preflight, **before** the migration. The rule for everything below is the same:
 
@@ -444,7 +531,7 @@ Most trouble is found by the deep preflight, **before** the migration. The rule 
 | Preflight refuses: requires 6.9.1 or later | v6 data is too old | update the v6 install first; this can never be forced |
 | Preflight refuses: already at or beyond 7.0.0 | already migrated | do not re-run; go to Phase B |
 | Preflight fails on the backup | the dump client is unusable or older than the server | install matching client tools; the backup is the real run's first step, so this is fatal by design |
-| Preflight fails with *needs attention* findings | model and stored shape disagree | [fix in v6 first](#81-needs-attention-findings-v6-host-before-phase-a) |
+| Preflight fails with *needs attention* findings | model and stored shape disagree | [fix in v6 first](#91-needs-attention-findings-v6-host-before-phase-a) |
 | Panel offers no buttons | maintenance mode is off | turn it on |
 | Refused: only the Dédalo superuser | you are not the superuser | log in as superuser |
 
@@ -453,15 +540,15 @@ Most trouble is found by the deep preflight, **before** the migration. The rule 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | A component shows the wrong or no value | the row failed to reformat and was carried past the stamp | search the log, re-run the migration (it is idempotent), or fix the record |
-| Widget with a subsidiary form shows nothing / duplicated rows | dataframe frames left legacy or orphaned | [dataframe frames](#82-dataframe-frames-v7) |
-| A computed/mirrored value is empty or stale | the mirror was written by the migration, outside the save path | [stale mirrors](#83-stale-observer-mirrors-v7) |
-| Media widget empty although the files are on disk | media index drift, usually a wrong media root | [media drift](#84-media-drift-files-on-disk-nothing-rendered-v7) |
-| Thesaurus tree empty, portal resolves nothing | the hierarchy was imported but never activated | [hierarchy not activated](#86-hierarchy-not-activated-v7) |
-| New records collide with existing ids | the record counter is behind the data | [counters](#87-counters-and-sequences-v7) |
-| A relation points at a record that is not there | structural leftovers | [dangling relations](#85-dangling-relations-and-wrong-tipos-v7) |
+| Widget with a subsidiary form shows nothing / duplicated rows | dataframe frames left legacy or orphaned | [dataframe frames](#92-dataframe-frames-v7) |
+| A computed/mirrored value is empty or stale | the mirror was written by the migration, outside the save path | [stale mirrors](#93-stale-observer-mirrors-v7) |
+| Media widget empty although the files are on disk | media index drift, usually a wrong media root | [media drift](#94-media-drift-files-on-disk-nothing-rendered-v7) |
+| Thesaurus tree empty, portal resolves nothing | the hierarchy was imported but never activated | [hierarchy not activated](#96-hierarchy-not-activated-v7) |
+| New records collide with existing ids | the record counter is behind the data | [counters](#97-counters-and-sequences-v7) |
+| A relation points at a record that is not there | structural leftovers | [dangling relations](#95-dangling-relations-and-wrong-tipos-v7) |
 | Stale values after an ontology or media change | stored per-record data needs regenerating | clear the caches from the runtime panel, then run [tool_update_cache](../tools/using_update_cache.md) |
 
-### 8.1 *Needs attention* findings (v6 host, before Phase A)
+### 9.1 *Needs attention* findings (v6 host, before Phase A)
 
 These are the only findings that block the migration, and they block it on purpose: the ontology says a component is one model and the stored value has the shape of another. A tool cannot decide which one is right.
 
@@ -486,7 +573,7 @@ Re-run the deep preflight; the bucket must read 0. The other two buckets do not 
 !!! note "Re-running the review with the repairs off"
     There is no panel control for this: run the preflight from the shell with `--no-auto-fix`. That is a **diagnostic** view of what your data looks like untouched; the real migration always repairs.
 
-### 8.2 Dataframe frames (v7)
+### 9.2 Dataframe frames (v7)
 
 The migration rewrites every subsidiary-record pairing locator to the v7 contract. Entries it cannot resolve are **left in the legacy shape on purpose** and reported, so nothing is lost — the engine still reads them.
 
@@ -496,7 +583,7 @@ Read the report's `complete` and `uncovered` fields before you trust a zero: a m
 
 The panel does **not** scan on load — it shows *not run* until you press run check.
 
-### 8.3 Stale observer mirrors (v7)
+### 9.3 Stale observer mirrors (v7)
 
 A migration writes records without going through the save chokepoint, so mirrored values are stale by construction. The v7 update engine reconciles them automatically at the end of a run it performed itself; after a migration performed by the old engine, do the sweep by hand:
 
@@ -512,7 +599,7 @@ bun scripts/observer_reconcile.ts --apply          # repair
 
 Scope, refusal causes and how to read the census by cause are on the canonical page: [server-side observers](../core/system/observers.md).
 
-### 8.4 Media drift: files on disk, nothing rendered (v7)
+### 9.4 Media drift: files on disk, nothing rendered (v7)
 
 The per-record file list inside the media column is a **cache derived from the disk**, served as stored. If it is stale, the client renders nothing although the files are there. The documented cause is exactly the migration case: writes ran while the media root pointed at the wrong tree.
 
@@ -528,23 +615,23 @@ bun scripts/media_repair_files_info.ts --apply
 
 To rebuild *missing derivatives* as well, use [tool_update_cache](../tools/using_update_cache.md) instead.
 
-### 8.5 Dangling relations and wrong tipos (v7)
+### 9.5 Dangling relations and wrong tipos (v7)
 
 Run **relation integrity report** in the Database info panel to see what points nowhere.
 
 Repairing it by restructuring — moving a section to another tipo, moving values into a portal, changing a component's language — is done with the five bulk transforms in the maintenance area's *migration* category ([area_maintenance](../core/areas/area_maintenance.md#the-widgets)), driven by JSON definition files under [`DEDALO_TRANSFORM_DEFINITIONS_DIR`](../config/config.md#defining-the-transform-definitions-directory). That is a **planned project, not a migration-night task**: the panel buttons report only, execution is a separate explicit call, a section move is not idempotent, and none of it writes a time machine snapshot. Plan it after the migration is verified.
 
-### 8.6 Hierarchy not activated (v7)
+### 9.6 Hierarchy not activated (v7)
 
 Importing a hierarchy lands its terms but does not make them reachable: until it is activated, its ontology does not exist, the tree shows nothing and portals resolve an empty target. Activate it from the `add_hierarchy` panel — see [install new hierarchies](../management/install_new_hierarchies.md). Re-activating an already-installed hierarchy is skipped, and never overwrites identity metadata you have edited.
 
 If activation refuses with *not registered (no valid typology)*, the registry record for that hierarchy is incomplete — fix it in the ontology, then activate.
 
-### 8.7 Counters and sequences (v7)
+### 9.7 Counters and sequences (v7)
 
 A counter behind the data makes new records collide with existing ids — which is why both mechanisms are worth checking after a restore or a transform. The `counters_status` panel audits record counters (and offers *fix* and *reset*), and opening `sequences_status` audits and repairs a lagging table sequence as a side effect of loading. Both are described in [area_maintenance](../core/areas/area_maintenance.md#the-widgets).
 
-## 9. Rollback
+## 10. Rollback
 
 There is no reverse migration. Rolling back means restoring what you backed up:
 

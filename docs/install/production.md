@@ -60,6 +60,16 @@ How each mode actually works, and how you wire it into nginx or Apache, is **[st
 sudo adduser --system --group --home /opt/dedalo --shell /usr/sbin/nologin dedalo
 ```
 
+`--group` also creates a **group** named `dedalo`. Both matter: the unit in step 10
+names the user *and* the group, and the group is what the web server is later added
+to so it can reach the socket.
+
+!!! note "Upgrading a host that already runs Dédalo? Do not create a second user"
+    Adopt the existing one — the home, the media tree and the backups are already
+    its. Its group, however, must change: [migrating a v6 install to
+    v7](migrating_from_v6.md#8-phase-e-run-it-as-a-service) explains what changed
+    and gives the four commands.
+
 1.2 Assign correct permissions to the Dédalo home. The user must have read and execute permissions on the `/opt/dedalo` directory.
 
 ```shell
@@ -437,7 +447,8 @@ cp /opt/dedalo/master_dedalo/deploy/dedalo-ts*.service \
 
 | Placeholder | This guide's value |
 | --- | --- |
-| `DEDALO_USER` (`User=` / `Group=`) | `dedalo` |
+| `DEDALO_USER` (`User=`) | `dedalo` |
+| `Group=` — **a separate value**; must name a group that already exists (`getent group dedalo`) | `dedalo` |
 | `WorkingDirectory` | `/opt/dedalo/master_dedalo` |
 | `ExecStart` bun path | `/opt/dedalo/.bun/bin/bun` |
 | backup `EnvironmentFile` | `/opt/dedalo/private/.env` |
