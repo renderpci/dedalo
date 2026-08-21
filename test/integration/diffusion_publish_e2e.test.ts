@@ -1,4 +1,21 @@
 /**
+ * ── SPLIT 2026-08-21 — the portable half now lives elsewhere ─────────────────
+ * This file is one of the two gates that CANNOT adopt the generic `test` TLD,
+ * and the reason is in what it asserts, not in how it is written: its oracle
+ * leg byte-diffs rows the DECOMMISSIONED PHP engine actually published into one
+ * installation's MariaDB. There is no generic twin of "what the old engine
+ * published", and there never can be — a re-harvest is impossible by definition
+ * (engineering/ORACLE_HARVEST.md). So it stays, install-bound, as the frozen
+ * record it is, and SKIPS wherever that install is absent.
+ *
+ * Its other two legs did not need that corpus and no longer live here:
+ * `diffusion_publish_native.test.ts` runs the FUNCTIONAL and RESUME assertions
+ * over the built `zzdif` domain, on any deployment with a disposable MariaDB
+ * schema. Same split, same reasoning as `menu_differential` →
+ * `menu_tree_datalist_native`.
+ */
+
+/**
  * END-TO-END PUBLISH GATE (DIFFUSION_PLAN P2 oracle spot-check + P4 keystone).
  *
  * Drives the REAL pipeline — compiled numisdata_mib plan → resolvePublication
