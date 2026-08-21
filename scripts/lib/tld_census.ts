@@ -31,7 +31,24 @@
  *     grup, icon, seri, terr, sccmk, ndd, utoponymy, htoponymy, roleusr,
  *     rolepos, rolejob, uncertainty, special, sc*…);
  *   - the ones the unit tier reaches for besides those (zenon, actv, mht,
- *     category, ceramics, cm, marc, libx…).
+ *     category, ceramics, cm, nexus, qdp…).
+ *
+ * `nexus` and `qdp` were ADDED on 2026-08-20 after a review found them missing:
+ * the application ontology holds 65 `nexus*` and 3 `qdp*` nodes and the frozen
+ * store names `nexus18` / `qdp266`, so tests were binding them in full view of a
+ * census that could not see it. A MISSING entry is the worst failure this list
+ * has — it makes every "0 bindings" answer a lie — which is why the list is
+ * grow-only and why a removal (see libx/marc below) needs proof that no
+ * ontology node anywhere carries the prefix.
+ *
+ * TWO NAMES WERE REMOVED on 2026-08-19 because they are not TLDs at all, and
+ * every "binding" they produced was a false positive: `libx` matched
+ * **libx264**, ffmpeg's H.264 encoder, and `marc` matched **marc21**, the MARC
+ * cataloguing standard (and its module path). No `dd_ontology` node in any
+ * database starts with either — verified before removal. Re-adding them would
+ * make six media gates and two parser gates permanently "install-bound" with
+ * nothing to migrate, which is worse than useless: it teaches that a census
+ * entry can be unfixable.
  * `rsc` and `oh` are ON the list although their ontology ships in the seed:
  * their record tables are EMPTY on a fresh install, so a test reading
  * `rsc170/5` binds to a corpus exactly as `numisdata6/1` does.
@@ -93,17 +110,17 @@ export const INSTALL_TLDS: ReadonlySet<string> = new Set([
 	'htoponymy',
 	'ich',
 	'icon',
-	'libx',
-	'marc',
 	'material',
 	'mdcat',
 	'mht',
 	'ndd',
+	'nexus',
 	'numisdata',
 	'object',
 	'objet',
 	'oh',
 	'on',
+	'qdp',
 	'render',
 	'rolejob',
 	'rolepos',

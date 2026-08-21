@@ -49,6 +49,20 @@
  *  - INSTALL_TLDS is a KNOWN list, grow-only. An install TLD nobody has named
  *    yet is not denied until it is added there.
  *  - `test/**\/fixtures/` are excluded (they are data, reached through tests).
+ *  - A CONSTRUCTED token is invisible: `'numis' + 'data1'`, `` `numis${'data1'}` ``
+ *    and `seed('rsc', 170)` all produce an install tipo the scan cannot see.
+ *    That is deliberate — the migrated gates use `seed()` to say "this is a
+ *    SEED-SHIPPED reference, not an install binding", and three parity gates
+ *    build a token whose bytes are part of a frozen fixture they must match.
+ *    But it is a door: `seed('numisdata', 6)` would sail through. The rule the
+ *    census cannot enforce, and a reviewer must: `seed()` is for the
+ *    seed-shipped TLDs (rsc, dd, hierarchy, ontology, ontologytype, lg) ONLY.
+ *  - A STRUCTURAL binding through a shared helper is invisible for the same
+ *    reason as the first bullet, and there are live instances: the observer
+ *    gates measure census-clean while reaching `on1`/`rsc205`/`rsc387` at
+ *    runtime through `test/helpers/observer_term_seed.ts`. So a "N files bind"
+ *    answer is N TEXTUAL bindings, never a count of gates that touch an
+ *    install's shape.
  *
  * HERMETIC: filesystem reads of tracked source only. No DB, no network, no
  * clock; imports nothing from src/.
