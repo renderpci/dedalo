@@ -1,6 +1,23 @@
 /**
- * Plan compiler gates (DIFFUSION_PLAN D3-P1) against the REAL dev ontology
- * (DEDALO_DIFFUSION_DOMAIN=numisdata_mib → dd1190 domain node numisdata323).
+ * Plan compiler gates (DIFFUSION_PLAN D3-P1) against a BUILT GENERIC diffusion
+ * domain (test/helpers/zzdif_diffusion_domain.ts — reserved `zzdif` TLD,
+ * provisioned in beforeAll, dropped with residue asserted 0 in afterAll).
+ *
+ * WAS INSTALL-BOUND until 2026-08-20: this suite compiled the DEPLOYMENT's
+ * domain (`DEDALO_DIFFUSION_DOMAIN`, historically `numisdata_mib` → domain node
+ * `numisdata323`), so it was green on one developer's machine and red
+ * everywhere else — measured red on this checkout ("no sql element of the
+ * domain compiled clean"). `buildVirtualDiffusionTree(domainName)` now takes
+ * the domain as a parameter, so the gate names its OWN domain and the laws
+ * below are the ENGINE's, not one install's.
+ *
+ * WHAT THE INSTALL-SPECIFIC ASSERTIONS BECAME. `tree.domainTipo === 'numisdata323'`
+ * and the implicit "the first clean sql element is numisdata29" were IDENTITIES
+ * of one install's nodes, not data worth preserving: they are restated as the
+ * laws they were standing in for (the walk starts at the domain the caller
+ * NAMED; the fixture's declared element is the one that compiles). No fixture
+ * JSON is warranted — an install's diffusion node numbering carries no
+ * contract.
  *
  * THE GUARANTEES under test:
  * - the flat virtual tree reproduces the PHP oracle walk (diffusion_utils::
@@ -8,7 +25,8 @@
  *   in-place resolution, consumed-branch suppression, parents paths;
  * - every diffusion element of the domain either compiles into a
  *   PublicationPlan or fails LOUDLY with named causes (spec §5 — no silent
- *   narrowing, ever);
+ *   narrowing, ever) — and the fixture carries one element that MUST fail, so
+ *   the loud branch is measured, never merely shaped;
  * - a real sql element yields sections/fields whose database/table/column
  *   names ALL pass the identifier chokepoint grammar (spec §8.3);
  * - alias semantics: a table_alias-backed section publishes under the ALIAS
@@ -18,22 +36,21 @@
  * - the plan cache is revision-keyed: same revision → same object, a bump
  *   (any dd_ontology write) → recompile with a new planId.
  *
- * READ-ONLY suite: it never writes dd_ontology — the revision bump is called
- * directly (the write layer reaches it through the cache-invalidation hub).
+ * WRITE SURFACE: the `zzdif` situation only (dd_ontology rows under a reserved
+ * scratch TLD + matrix_test records). The revision bump is called directly.
  *
- * The parser classifier is INJECTED (compile.ts CompileOptions) so this suite
- * does not depend on the parser-registry module's build state: the rewriter
- * set below mirrors DIFFUSION_SPEC §5 / parsers/registry.ts.
+ * The parser classifier is INJECTED (compile.ts CompileOptions) so the split
+ * mechanics are pinned independently of the registry's contents: the rewriter
+ * set below mirrors DIFFUSION_SPEC §5 / parsers/registry.ts. It defers to the
+ * REAL registry for the unknown verdict (it used to call every non-rewriter
+ * name 'runtime'), because the fixture's loud-failure element carries an
+ * unregistered fn and a blanket 'runtime' would have swallowed it. Strictly
+ * more discriminating than before — nothing it used to reject now passes.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
-
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
+import { classifyParserFn } from '../../src/diffusion/parsers/registry.ts';
 import {
 	bumpOntologyRevision,
 	currentOntologyRevision,
@@ -54,15 +71,27 @@ import {
 	buildVirtualDiffusionTree,
 	findElementNodes,
 } from '../../src/diffusion/plan/virtual_tree.ts';
+import {
+	dropZzdifDomain,
+	ensureZzdifDomain,
+	ZZDIF_BROKEN_ELEMENT,
+	ZZDIF_DOMAIN_NAME,
+	ZZDIF_DOMAIN_TIPO,
+	ZZDIF_ELEMENT,
+	ZZDIF_TABLE_ALIAS,
+	ZZDIF_UNKNOWN_PARSER_FN,
+} from '../helpers/zzdif_diffusion_domain.ts';
 
 /** Strict identifier grammar (identifier.ts SQL_IDENTIFIER_PATTERN). */
 const IDENTIFIER_GRAMMAR = /^[a-z][a-z0-9_]{0,63}$/;
 
 /**
- * Compile-time rewriters (spec §5 list; mirrors parsers/registry.ts). The
- * test classifier treats every OTHER fn as runtime — the real registry is
- * stricter (unknown names error), but this suite pins the SPLIT mechanics,
- * not the registry contents (registry has its own 1:1 oracle-diff gate).
+ * Compile-time rewriters (spec §5 list; mirrors parsers/registry.ts). The test
+ * classifier calls every OTHER REGISTERED fn 'runtime' — this suite pins the
+ * SPLIT mechanics, not the registry contents (registry has its own 1:1
+ * oracle-diff gate) — and defers to the real registry for the UNKNOWN verdict,
+ * so the fixture's unregistered fn reaches the loud-failure branch instead of
+ * being waved through as a runtime step (2026-08-20).
  */
 const REWRITER_FNS = new Set([
 	'parser_locator::get_locator',
@@ -76,18 +105,23 @@ const REWRITER_FNS = new Set([
 	'parser_global::merge_columns',
 	'parser_global::publication_unix_timestamp',
 ]);
-const testClassifier: ParserClassifier = (fn) => (REWRITER_FNS.has(fn) ? 'rewriter' : 'runtime');
+const testClassifier: ParserClassifier = (fn) =>
+	REWRITER_FNS.has(fn) ? 'rewriter' : classifyParserFn(fn) === 'unknown' ? 'unknown' : 'runtime';
 
 let tree: VirtualDiffusionTree;
 let elements: VirtualTreeNode[];
 /** The first sql element that compiles clean (the shared gate subject). */
 let sqlPlan: PublicationPlan;
 
+/** Elements that FAILED to compile, with their causes (the loud branch). */
+let failedElements: { tipo: string; errors: string[] }[] = [];
+
 beforeAll(async () => {
-	const built = await buildVirtualDiffusionTree();
+	await ensureZzdifDomain();
+	const built = await buildVirtualDiffusionTree(ZZDIF_DOMAIN_NAME);
 	if (built === null) {
 		throw new Error(
-			'no diffusion domain — this gate needs DEDALO_DIFFUSION_DOMAIN=numisdata_mib against the dev DB',
+			`the zzdif situation was ensured but no dd1190 domain node is named '${ZZDIF_DOMAIN_NAME}'`,
 		);
 	}
 	tree = built;
@@ -106,12 +140,22 @@ beforeAll(async () => {
 	if (sqlPlan === undefined) throw new Error('no sql element of the domain compiled clean');
 });
 
+afterAll(async () => {
+	// Hermeticity is ASSERTED, not trusted: dropSituation returns the residue.
+	expect(await dropZzdifDomain()).toBe(0);
+});
+
 describe('virtual tree (PHP get_virtual_diffusion_tree semantics)', () => {
-	test('resolves the configured domain and enumerates its elements', () => {
-		// numisdata_mib → domain node numisdata323 (verified live fixture).
-		expect(tree.domainTipo).toBe('numisdata323');
+	test('resolves the NAMED domain and enumerates its elements', () => {
+		// The law the old `domainTipo === 'numisdata323'` pin stood for: the tree
+		// is the domain the CALLER named, resolved by term over dd1190's children.
+		expect(tree.domainName).toBe(ZZDIF_DOMAIN_NAME);
+		expect(tree.domainTipo).toBe(ZZDIF_DOMAIN_TIPO);
 		expect(tree.nodes[0]?.tipo).toBe(tree.domainTipo); // walk starts at the domain
 		expect(elements.length).toBeGreaterThanOrEqual(1);
+		// the fixture's three declared elements are exactly what the walk finds
+		expect(elements.map((element) => element.tipo)).toContain(ZZDIF_ELEMENT);
+		expect(elements.map((element) => element.tipo)).toContain(ZZDIF_BROKEN_ELEMENT);
 		// every element sits under the domain: non-empty parents path ending there
 		for (const element of elements) {
 			expect(element.parents.length).toBeGreaterThan(0);
@@ -132,6 +176,7 @@ describe('virtual tree (PHP get_virtual_diffusion_tree semantics)', () => {
 describe('compileElementPlan over the real domain', () => {
 	test('every element compiles or fails LOUDLY with named causes', async () => {
 		let compiled = 0;
+		failedElements = [];
 		for (const element of elements) {
 			const validation = await validateElementPlan(element.tipo, {
 				tree,
@@ -148,12 +193,23 @@ describe('compileElementPlan over the real domain', () => {
 					expect(typeof cause).toBe('string');
 					expect(cause.length).toBeGreaterThan(10);
 				}
+				failedElements.push({ tipo: element.tipo, errors: validation.errors });
 			}
 		}
 		expect(compiled).toBeGreaterThanOrEqual(1);
+		// ANTI-VACUITY (new with the generic domain): on the install's domain the
+		// loud branch above could go unexecuted and the test still pass. The
+		// fixture DECLARES a broken element, so the branch is measured: exactly
+		// that element fails, and its cause names the field AND the unregistered fn.
+		expect(failedElements.map((entry) => entry.tipo)).toEqual([ZZDIF_BROKEN_ELEMENT]);
+		const causes = failedElements[0]?.errors.join('\n') ?? '';
+		expect(causes).toContain(ZZDIF_UNKNOWN_PARSER_FN);
+		expect(causes).toMatch(/^field '[a-z]+[0-9]+' .*unknown parser fn/);
 	});
 
 	test('a sql element yields sections, fields and a table target', () => {
+		// the first clean sql element IS the one the fixture declares as such
+		expect(sqlPlan.elementTipo).toBe(ZZDIF_ELEMENT);
 		expect(sqlPlan.format).toBe('sql');
 		expect(sqlPlan.target.kind).toBe('table');
 		expect(sqlPlan.sections.length).toBeGreaterThanOrEqual(1);
@@ -183,8 +239,8 @@ describe('compileElementPlan over the real domain', () => {
 
 	test('alias table: plan uses the ALIAS label, fields merge from the real table', async () => {
 		// Find a compiled section backed by a table_alias virtual node whose
-		// real table lives elsewhere (e.g. cult1 → 'ts_culture' aliasing the
-		// shared 'ts' table) — mirrors get_section_node_for_element :1163.
+		// real table lives elsewhere (the fixture's zzdif50 → zzdif60, owned by
+		// a second element) — mirrors get_section_node_for_element :1163.
 		const nodeByTipo = new Map(tree.nodes.map((node) => [node.tipo, node]));
 		let checkedAliasSection = false;
 		for (const section of sqlPlan.sections) {
@@ -203,6 +259,8 @@ describe('compileElementPlan over the real domain', () => {
 				if (fieldNode?.parent === tableNode.realTipo) fieldsFromRealTable += 1;
 			}
 			expect(fieldsFromRealTable).toBeGreaterThan(0);
+			// the alias the fixture declares is the one that backed the section
+			expect(tableNode.tipo).toBe(ZZDIF_TABLE_ALIAS);
 			checkedAliasSection = true;
 			break;
 		}
@@ -210,7 +268,7 @@ describe('compileElementPlan over the real domain', () => {
 	});
 
 	test('parser split: rewriters absorbed as warnings, runtime steps kept in order', () => {
-		// the real domain uses rewriter fns (parents, get_locator, ...) — their
+		// the domain uses a rewriter fn (publication_unix_timestamp) — its
 		// absorption must be ledgered, never silent
 		const rewriterWarnings = sqlPlan.warnings.filter((warning) => warning.startsWith('rewriter:'));
 		expect(rewriterWarnings.length).toBeGreaterThan(0);

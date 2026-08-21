@@ -359,15 +359,29 @@ export const DIFFUSION_ELEMENT_MODELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Build the flat virtual diffusion tree for the configured domain.
+ * Build the flat virtual diffusion tree for a diffusion domain.
  *
- * Returns null when DEDALO_DIFFUSION_DOMAIN is unset or no dd1190 domain node
- * matches it — the PHP fresh-install early return (get_virtual_diffusion_tree
- * :204-210); the caller decides whether that is an error (compile) or an
- * empty answer (maps).
+ * `domainName` defaults to the DEPLOYMENT's configured domain
+ * (`DEDALO_DIFFUSION_DOMAIN`), which is what every production caller wants and
+ * what this function used to read with no way to say otherwise.
+ *
+ * WHY IT TAKES AN ARGUMENT (2026-08-20). With the domain read only from config,
+ * the tree this function returns is a property of the machine it runs on: a
+ * caller could not ask "what does THIS domain compile to", and a test could not
+ * build a domain of its own — a generic one would have to share its NAME with
+ * the installation's node and would then win or lose by ontology child order.
+ * That made two gates permanently bound to one install's diffusion domain. The
+ * parameter is the seam: config supplies the default, the caller may be
+ * explicit, and nothing about the resolution below changes.
+ *
+ * Returns null when no domain is configured or given, or when no dd1190 domain
+ * node matches it — the PHP fresh-install early return
+ * (get_virtual_diffusion_tree :204-210); the caller decides whether that is an
+ * error (compile) or an empty answer (maps).
  */
-export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree | null> {
-	const domainName = readEnv('DEDALO_DIFFUSION_DOMAIN');
+export async function buildVirtualDiffusionTree(
+	domainName: string | undefined = readEnv('DEDALO_DIFFUSION_DOMAIN'),
+): Promise<VirtualDiffusionTree | null> {
 	if (domainName === undefined || domainName === '') return null;
 
 	const index = await loadOntologyIndex();
