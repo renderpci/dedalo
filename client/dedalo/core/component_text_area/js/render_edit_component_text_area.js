@@ -33,7 +33,7 @@
 *   'default'   → full rich-text CKEditor wrapper (also used for 'html_text')
 *   'mini'      → compact single-value display, used in autocomplete / datalists
 *   'line'      → single-line editor, used for inline list editing
-*   'print'     → same layout as 'line' but forced to read-only (permissions=1)
+*   'print'     → same layout as 'default' but forced to read-only (permissions=1)
 */
 export const render_edit_component_text_area = function() {
 
@@ -48,8 +48,8 @@ export const render_edit_component_text_area = function() {
 *
 * Reads `self.context.view` (set from the ontology property definition) and
 * delegates to the matching view renderer. The 'print' case intentionally
-* falls through to 'line' after forcing read-only permissions so that the
-* same compact layout is used but no editing controls are shown.
+* falls through to 'default' after forcing read-only permissions so that the
+* same layout is used (label included) but no editing controls are shown.
 *
 * Side effect: in the 'print' case, `self.permissions` is mutated to 1
 * before the render call so downstream code treats the component as read-only.
@@ -68,6 +68,9 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 		case 'mini':
 			return view_mini_text_area.render(self, options)
 
+		case 'line':
+			return view_line_edit_text_area.render(self, options)
+
 		case 'print':
 			// view print use the same view as default, except it will use read only to render content_value
 			// as different view as default it will set in the class of the wrapper
@@ -75,9 +78,6 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 			// take account that to change the css when the component will render in print context
 			// for print we need to use read of the context_value and it's necessary force permissions to use read only element render
 			self.permissions = 1
-
-		case 'line':
-			return view_line_edit_text_area.render(self, options)
 
 		case 'html_text':
 		case 'default':
