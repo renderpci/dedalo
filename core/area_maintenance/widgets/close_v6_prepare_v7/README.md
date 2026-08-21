@@ -381,6 +381,40 @@ dry run.
 
 ## Notes / limits
 
+- **v6 login survives the long tail — for MONITORING, not editing.** The legacy `datos` cleanup
+  is SPLIT into two steps. `[1/2]` drops it from the 20 **record** tables at its original
+  mid-pipeline position, right after `create_matrix_activity_diffusion_table`. `[2/2]` drops it
+  from the three **auth** tables — `matrix_users`, `matrix_profiles`, `matrix_activity` — as the
+  very last step of the descriptor, after the dataframe migrations, the section_id intify sweep
+  and the search and relation-index backfills.
+  - Why: the v7 typed columns (`data`/`relation`/`string`/…) are ADDED next to `datos`, never
+    renamed over it, so while `matrix_users` keeps its column v6 can still authenticate. On a
+    large install the tail runs for hours, and dropping `datos` before it locked the operator out
+    for the whole window — the browser session expires and v6 can no longer read `matrix_users`,
+    so the migration could not even be watched.
+  - Why the record tables are NOT included: once `reformat_matrix_data` has frozen the typed
+    columns, a v6 save writes only `datos`, which the final drop then deletes — the save reports
+    success, v7 serves the pre-edit value, and nothing flags it. Dropping the column early makes
+    that save fail LOUDLY with a SQL error instead of silently losing the edit. The split is what
+    enforces "monitoring-only"; it does not rely on operator discipline.
+  - Still true in that window: a live v6 session can trip the intify sweep's affected-rows assert
+    by deleting a record mid-batch (`stop_on_error=true`), and an idle-in-transaction v6 backend
+    can make the final `DROP COLUMN` (ACCESS EXCLUSIVE) queue and block other v6 queries. Putting
+    the install behind maintenance mode for the duration is still the safest operating posture.
+  - "Usable" is not the claim: component locking and the process registry read
+    `matrix_notifications.datos`, which phase 1 already renamed to `data`, and the
+    `delete_v6_db_indexes` → `recreate_db_assets` gap drops user functions and unique indexes.
+    Login and the maintenance dashboard work; the rest of v6 is not to be trusted mid-migration.
+  - If you add a step, add it BEFORE `[2/2]`.
+- **`intify_section_id_locators` throughput.** The section_id→int sweep is normally the longest
+  step. It reads each table ONCE (all candidate jsonb columns in the same row, matched inside a
+  `LATERAL … OFFSET 0` fence so each column is detoasted once), and writes each batch as a single
+  multi-row `UPDATE … FROM (VALUES …)` inside one transaction with `synchronous_commit` off.
+  The earlier shape scanned once per column and committed once per row — measured on a 50 000-row
+  fixture that is 50 245 transactions vs 213, which is why it used to crawl at a few dozen
+  rows/second on a box with slow fsync. The CLI line reports a live rows/s figure. The step is
+  idempotent, so if a crash loses the async-commit tail, re-run it.
+
 - Only **6.9.1+ → 7.0.0** is supported (the single descriptor in `engine/core/base/update/updates.php`,
   read as a minimum — see Prerequisites).
 - The runner is spawned with the **PHP CLI** binary from `PHP_BIN_PATH` (the v6 config constant, same
