@@ -49,7 +49,20 @@ import {add_instance, delete_instance, key_instances_builder} from '../../../cor
 
 
 
+// legacy_registered_keys — the fakes this first block plants in the SHARED registry;
+// cleaned in its after() so they cannot be served to another suite
+	const legacy_registered_keys = []
+
+
+
 describe(`SECTION_RECORD`, async () => {
+
+	after(function(){
+		for (const key of legacy_registered_keys) {
+			delete_instance(key)
+		}
+		legacy_registered_keys.length = 0
+	})
 
 	// get_ar_instances_edit must not hang when a child build fails (bug #1)
 	it(`get_ar_instances_edit resolves (does not hang) on child build failure`, async function() {
@@ -95,6 +108,7 @@ describe(`SECTION_RECORD`, async () => {
 				parent			: sr.tipo,
 				id_variant		: id_variant
 			})
+			legacy_registered_keys.push(key)
 			add_instance(key, make_failing_child(key))
 
 		// race the call against a timeout: buggy code never settles -> 'hang'
@@ -162,6 +176,7 @@ describe(`SECTION_RECORD`, async () => {
 			})
 
 		// 1) failing child -> first call rejects AND must clear the waiter
+			legacy_registered_keys.push(key)
 			add_instance(key, make_failing_child(key))
 
 			let first_err = null
@@ -203,8 +218,11 @@ describe(`SECTION_RECORD`, async () => {
 * Technique: children are FAKE instances pre-registered in the shared registry under
 * the exact key `build_instance` will ask for. A child that shows up in the result
 * therefore PROVES the key contract (model, tipo, mode, lang, parent, id_variant,
-* column_id); a child requested under any other key falls through to a dynamic import
-* of a non-existent module, resolves null, and is filtered out.
+* column_id). (!) A miss is NOT automatically a clean negative: most models used here
+* (component_input_text, component_dataframe, section_group) are REAL modules, so a
+* wrong key would import and construct the real thing. Every case that asserts an
+* absence therefore registers the child under the key the code really derives — only
+* the deliberate `component_ghost_model_zz` case relies on an import that 404s.
 */
 
 // registered_keys — every key added by the helpers, cleaned up after the suite
@@ -286,9 +304,11 @@ describe(`SECTION_RECORD (extended)`, async () => {
 		assert.equal(sr.permissions, caller.permissions, 'permissions inherited from caller by reference')
 		assert.ok(Array.isArray(sr.ar_instances) && sr.ar_instances.length===0, 'ar_instances starts empty')
 		assert.ok(Array.isArray(sr.events_tokens) && sr.events_tokens.length===0, 'events_tokens starts empty')
-		assert.equal(sr.matrix_id, null, 'matrix_id defaults to null (not undefined)')
-		assert.equal(sr.node, null, 'node is null before render')
-		assert.equal(sr.label, null, 'label is null on init')
+		// (!) strictEqual: chai's assert.equal is loose, so `undefined == null` would
+		// pass and the message would be a lie
+		assert.strictEqual(sr.matrix_id, null, 'matrix_id defaults to null (not undefined)')
+		assert.strictEqual(sr.node, null, 'node is null before render')
+		assert.strictEqual(sr.label, null, 'label is null on init')
 	})
 
 
@@ -324,19 +344,24 @@ describe(`SECTION_RECORD (extended)`, async () => {
 		const show_debug_backup = window.SHOW_DEBUG
 		window.SHOW_DEBUG = false
 
-		const second	= await sr.init({
-			model			: 'section_record',
-			tipo			: 'other_tipo',
-			section_tipo	: 'other_st',
-			section_id		: 99,
-			mode			: 'list',
-			lang			: 'lg-spa',
-			context			: {},
-			datum			: { context:[], data:[] },
-			caller			: { model:'section', section_tipo:'x', section_id:1, permissions:{} }
-		})
-
-		window.SHOW_DEBUG = show_debug_backup
+		let second = null
+		try {
+			second = await sr.init({
+				model			: 'section_record',
+				tipo			: 'other_tipo',
+				section_tipo	: 'other_st',
+				section_id		: 99,
+				mode			: 'list',
+				lang			: 'lg-spa',
+				context			: {},
+				datum			: { context:[], data:[] },
+				caller			: { model:'section', section_tipo:'x', section_id:1, permissions:{} }
+			})
+		} finally {
+			// restore even on a throw: leaving SHOW_DEBUG false would silently change
+			// what every later suite in this frame logs
+			window.SHOW_DEBUG = show_debug_backup
+		}
 
 		assert.equal(second, false, 'second init must return false')
 		assert.equal(sr.tipo, 'tipo_dbl', 'first init values must survive')
@@ -385,7 +410,7 @@ describe(`SECTION_RECORD (extended)`, async () => {
 		assert.equal(stub.section_id, 1, 'stub carries the requested section_id')
 		assert.ok(Array.isArray(stub.entries) && stub.entries.length===0, 'stub entries is an empty array')
 		assert.deepEqual(stub.fallback_value, [''], 'stub fallback_value is a one empty string array')
-		assert.equal(stub.id_key, undefined, 'non-dataframe stub must NOT carry pairing keys')
+		assert.strictEqual(stub.id_key, undefined, 'non-dataframe stub must NOT carry pairing keys (loose equal would accept null)')
 	})
 
 
@@ -515,12 +540,23 @@ describe(`SECTION_RECORD (extended)`, async () => {
 		sr.datum.context = [grouper, dataframe]
 
 		const grp = register_child(child_key_of(sr, grouper), spy_child('grp1'))
-		// the dataframe child is registered too: if it were built it WOULD show up
-		register_child(child_key_of(sr, dataframe), spy_child('df_g'))
+		// The dataframe child is registered too, under the key build_instance really
+		// derives for a component_dataframe: the base id_variant PLUS `_<id_key>_<main_component_tipo>`.
+		// With no locator and no datum entry the pairing falls back to self.section_id
+		// and self.tipo. Registering the BASE key would make this case prove nothing —
+		// the child would miss the cache and go to a live import of the real
+		// component_dataframe module whatever the filter did.
+		register_child(child_key_of(sr, {
+			model			: 'component_dataframe',
+			tipo			: 'df_g',
+			section_tipo	: 'st_g',
+			lang			: 'lg-eng',
+			id_variant		: `${id_variant_of(sr, sr.section_id)}_${sr.section_id}_${sr.tipo}`
+		}), spy_child('df_g'))
 
 		const instances = await sr.get_ar_instances_edit()
 
-		assert.equal(instances.length, 1, 'a section caller must exclude component_dataframe')
+		assert.equal(instances.length, 1, 'a section caller must exclude component_dataframe (the registered dataframe child would have shown up)')
 		assert.equal(instances[0], grp, 'the grouper is built (type grouper passes the filter)')
 	})
 
@@ -643,19 +679,25 @@ describe(`SECTION_RECORD (extended)`, async () => {
 			context			: { request_config:[ { show:{ ddo_map:[
 				{ parent:'tipo_miss', column_id:'col1', tipo:'m_ok',		mode:'list', section_tipo:'st_miss', model:'component_input_text', lang:'lg-eng' },
 				{ parent:'tipo_miss', column_id:'col2', tipo:'m_nodata',	mode:'list', section_tipo:'st_miss', model:'component_input_text', lang:'lg-eng' },
-				// a grandchild (parent is not self.tipo) must never be considered here
+				// a grandchild (parent is not self.tipo) must never be considered here.
+				// (!) It IS given a context entry and a registered child below, so the
+				// only thing that can drop it is the first-level parent filter
 				{ parent:'m_ok',      column_id:'col1', tipo:'m_grand',	mode:'list', section_tipo:'st_miss', model:'component_input_text', lang:'lg-eng' }
 			] } } ] },
 			columns_map		: [ { id:'col1' }, { id:'col2' } ],
-			// no context entry for m_nodata / m_grand
-			datum			: { context:[ { tipo:'m_ok', mode:'list', section_tipo:'st_miss', model:'component_input_text', lang:'lg-eng' } ], data:[] }
+			// no context entry for m_nodata — that is what makes it the missing-context case
+			datum			: { context:[
+				{ tipo:'m_ok',    mode:'list', section_tipo:'st_miss', model:'component_input_text', lang:'lg-eng' },
+				{ tipo:'m_grand', mode:'list', section_tipo:'st_miss', model:'component_input_text', lang:'lg-eng' }
+			], data:[] }
 		})
 
 		const ok = register_child(child_key_of(sr, { model:'component_input_text', tipo:'m_ok', section_tipo:'st_miss', lang:'lg-eng', column_id:'col1' }), spy_child('m_ok'))
+		register_child(child_key_of(sr, { model:'component_input_text', tipo:'m_grand', section_tipo:'st_miss', lang:'lg-eng', column_id:'col1' }), spy_child('m_grand'))
 
 		const instances = await sr.get_ar_columns_instances_list()
 
-		assert.equal(instances.length, 1, 'missing context is non-fatal: the column is simply skipped')
+		assert.equal(instances.length, 1, 'missing context is non-fatal (m_nodata skipped) and a grandchild is never a first-level ddo')
 		assert.equal(instances[0], ok, 'the well-defined column still builds')
 	})
 

@@ -178,7 +178,7 @@ describe('TOOL_INDEXATION BEHAVIOUR', function() {
 	it('active_value initialises active_elements lazily and registers the slot', function() {
 
 		const tool = make_tool()
-		assert.equal(tool.active_elements, undefined, 'active_elements is NOT seeded by the constructor')
+		assert.strictEqual(tool.active_elements, undefined, 'active_elements is NOT seeded by the constructor (loose equal would accept null)')
 
 		const fn = () => {}
 		assert.equal(tool.active_value('tag_id', fn), true, 'first registration returns true')
@@ -510,19 +510,29 @@ describe('TOOL_INDEXATION BEHAVIOUR', function() {
 
 	it('delete_tag deletes the span in every lang, then the index locator, then forces a re-fetch', async function() {
 
-		const calls		= []
+		const calls				= []
+		// distinct sentinels: the composite response must carry EACH call's own answer,
+		// not two interchangeable truthy objects
+		const tag_response		= { ok:true, from:'delete_tag' }
+		const locator_response	= { ok:true, from:'delete_locator' }
+		// what `data` / `datum` looked like AT THE MOMENT refresh ran — the whole point
+		// is that they are nulled BEFORE it, and only a probe inside refresh can see that
+		let state_at_refresh	= null
 		const indexing	= {
 			data	: { stale:true },
 			datum	: { stale:true },
 			delete_locator : async (locator, ar_properties) => {
 				calls.push({ locator:locator, ar_properties:ar_properties })
-				return { ok:true }
+				return locator_response
 			},
-			refresh : function(){ calls.push('refresh') }
+			refresh : function(){
+				state_at_refresh = { data:this.data, datum:this.datum }
+				calls.push('refresh')
+			}
 		}
 		const tool = make_tool({
 			transcription_component : {
-				delete_tag : async (tag_id, type) => { calls.push({ tag_id:tag_id, type:type }); return { ok:true } }
+				delete_tag : async (tag_id, type) => { calls.push({ tag_id:tag_id, type:type }); return tag_response }
 			},
 			indexing_component : indexing
 		})
@@ -533,12 +543,16 @@ describe('TOOL_INDEXATION BEHAVIOUR', function() {
 		})
 
 		assert.deepEqual(calls[0], { tag_id:'42', type:'index' }, 'step 1: the text_area removes the index-type tag in all langs')
-		assert.deepEqual(calls[1].locator, { tag_id:'42', type:DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO }, 'step 2: the locator is matched by tag_id + the index relation type')
+		// the literal tipo, not the global on both sides: `DD_TIPOS.X === DD_TIPOS.X`
+		// would hold even if the constant were undefined
+		assert.deepEqual(calls[1].locator, { tag_id:'42', type:'dd96' }, 'step 2: the locator is matched by tag_id + the index relation type dd96')
+		assert.equal(DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO, 'dd96', 'and dd96 is what the environment calls the index relation type')
 		assert.deepEqual(calls[1].ar_properties, ['tag_id','type'], 'the composite key is declared to the portal')
 		assert.equal(calls[2], 'refresh', 'the portal is refreshed last')
-		assert.equal(indexing.data, null, 'data nulled BEFORE refresh or the portal serves its cached response')
-		assert.equal(indexing.datum, null, 'datum nulled too')
-		assert.ok(response && response.delete_tag && response.delete_locator, 'both responses are handed back to the caller')
+		assert.strictEqual(state_at_refresh.data, null, 'data was already null WHEN refresh ran, or the portal serves its cached response')
+		assert.strictEqual(state_at_refresh.datum, null, 'datum too')
+		assert.equal(response.delete_tag, tag_response, 'the text_area answer is returned under delete_tag')
+		assert.equal(response.delete_locator, locator_response, 'and the portal answer under delete_locator — not swapped')
 	})
 
 
