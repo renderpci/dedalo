@@ -223,6 +223,12 @@ const add_resources_to_cache = async (options) => {
 	// A caller that arrives mid-pass waits for it and then runs its own — it must
 	// not simply join, because the running pass may be working from an older
 	// manifest than the caller just triggered (a login after a deploy).
+	// (!) The reverse ordering also exists and is NOT prevented here: a queued pass
+	// can carry an OLDER manifest than the one that ran while it waited (a deploy
+	// landing between this caller's manifest read and its turn). It then republishes
+	// the older key. Nothing is served wrong — the files were fetched with
+	// cache:'reload', so they are the current bytes — and the next revalidate sees
+	// the key mismatch and re-converges. The cost is one wasted pass.
 	const previous = pass_promise
 	const current = (async () => {
 		if (previous) {
@@ -467,6 +473,11 @@ const restore_state = async () => {
 				// keep only the COMPLETE ones (commit marker present)
 				const committed = []
 				for (const key of keys) {
+					// has() first: a key a concurrent purge just deleted must not be
+					// re-created here as an empty cache (see cache_first)
+					if (!(await caches.has(key))) {
+						continue
+					}
 					const cache		= await caches.open(key)
 					const stored	= await cache.match(record_url)
 					if (stored) {
@@ -486,6 +497,16 @@ const restore_state = async () => {
 				const manifest = await committed[0].stored.json()
 				if (!Array.isArray(manifest?.files_list) || manifest.files_list.length<1) {
 					return false
+				}
+
+				// (!) Re-check before committing. A cache pass can run to completion
+				// while this read is awaiting stored.json(): it writes the new marker,
+				// purges the old cache and commits. Committing here unconditionally
+				// would then overwrite that fresh state with the OLD manifest and a
+				// key that no longer exists — every request missing until the next
+				// revalidate noticed and re-downloaded everything.
+				if (cache_name && files_set) {
+					return true
 				}
 
 				commit_state({
@@ -567,10 +588,16 @@ const revalidate = async () => {
 		// restorable — e.g. a worker revived inside a window where no cache carried
 		// the commit marker). Both are fixed by running the pass.
 		console.log(')) revalidate: rebuilding cache', cache_name, '->', manifest.cache_name)
-		await add_resources_to_cache({
+		const rebuilt = await add_resources_to_cache({
 			manifest			: manifest,
 			load_file_handler	: () => {}
 		})
+		if (rebuilt!==true) {
+			// the pass REFUSED (too few files stored) or could not read a manifest.
+			// This is the state the short retry exists for — the worker may be
+			// serving nothing from cache at all — so do not sit on the 5 min interval.
+			next_revalidate = Date.now() + revalidate_retry_ms
+		}
 	} catch (error) {
 		next_revalidate = Date.now() + revalidate_retry_ms
 		console.error(')) revalidate failed:', error)
@@ -596,6 +623,14 @@ const cache_first = async (request) => {
 	}
 	// only check cache for files we actually cached
 	if (cache_name && files_set && files_set.has(request.url)) {
+		// (!) has() before open(): caches.open CREATES the cache when the key is
+		// absent. After the logout purge the worker still controls already-loaded
+		// clients for a moment, and one intercepted request was enough to resurrect
+		// the key as an empty shell that outlived the session with no worker left to
+		// collect it — a residue of the very leak this file exists to stop.
+		if (!(await caches.has(cache_name))) {
+			return fetch(request);
+		}
 		// Scoped to the CURRENT cache on purpose: caches.match() searches every
 		// cache in the origin, so a superseded one would keep answering with the
 		// stale file even after the key moved.

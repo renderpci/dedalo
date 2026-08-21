@@ -423,7 +423,11 @@ login.prototype.confirm_password_reset = async function(options) {
 * - SAML sessions: follow api_response.saml_redirect (IdP single-logout endpoint).
 * - Developer users: reload the current URL (preserves query string for dev tooling).
 * - Normal users: redirect to DEDALO_ROOT_WEB to force the default section landing page.
-* - Any API failure: also redirect to DEDALO_ROOT_WEB as a safe fallback.
+* - API replying failure (payload not true): redirect to DEDALO_ROOT_WEB as a safe fallback.
+* - A THROW inside quit: no navigation and no service-worker/cache teardown — the
+*   catch only logs and the finally clears the loading class. Near-dead in practice
+*   (data_manager.request is built on fetch_api, which never rejects), but do not
+*   read this function as "always ends up logged out".
 *
 * The 'loading' class on document.body is added at entry and removed in the finally block
 * so the loading indicator is always cleaned up even if an exception is thrown.
@@ -633,8 +637,12 @@ login.prototype.action_dispatch = async function(api_response) {
 						})
 					});
 					// CSS (only set if image preloaded successfully)
+					// (!) optional chain like every other self.node access here: the
+					// line below already treats a null node as possible, and a throw
+					// at this point happens BEFORE the cache path and the watchdog are
+					// wired — the login would neither navigate nor show the ring.
 					if (image_loaded) {
-						self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+						self.node?.style.setProperty('--user_login_image', `url('${bg_image}')`);
 					}
 					if (user_id===-1 && is_development_server===true && self.node) {
 						self.node.classList.add('raspa_loading')
@@ -707,7 +715,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						// The 'active' class triggers an additional CSS animation in that case.
 						if (user_id===-1) {
 							requestAnimationFrame(()=>{
-								self.node.classList.add('active')
+								self.node?.classList.add('active')
 							})
 						}
 					}

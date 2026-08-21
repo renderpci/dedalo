@@ -415,7 +415,10 @@ Return the service-worker pre-cache manifest.
 
 ### Returns
 
-`{ result: [...], dedalo_version: string, msg: string }` — the exact shape the client's `sw.js` / `worker_cache.js` read.
+The manifest rides in the standard envelope: `data` carries the `{type, url}[]`
+list and `dedalo_version` rides beside it as an extension key. The clients read
+`response_data(api_response)` for the list and `api_response.dedalo_version` for
+the cache key — there is no top-level `result` or `msg` on the wire.
 
 ### Usage
 

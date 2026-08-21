@@ -195,6 +195,15 @@ describe('sw.js consumes the key (a server-only change would be inert)', () => {
 			body,
 			'The fetch handler must schedule revalidate() without consulting restore_state. A worker that cannot restore is exactly the one that needs to re-fetch: gating the rebuild on a successful restore makes every unrestorable state permanent until a full logout+login, since revalidate is the only path that ever asks the server outside update_files.',
 		).not.toContain('restore_state');
+		// ...and the gate must not be evadable by moving the same guard INSIDE
+		// revalidate, which reintroduces the identical permanent state.
+		const code = stripComments(sw);
+		const revalidateBody = code.slice(
+			code.indexOf('const revalidate = async'),
+			code.indexOf('}//end revalidate'),
+		);
+		expect(revalidateBody.length).toBeGreaterThan(0);
+		expect(revalidateBody).not.toContain('restore_state');
 	});
 
 	/**
@@ -207,8 +216,11 @@ describe('sw.js consumes the key (a server-only change would be inert)', () => {
 		expect(sw).toContain('pass_promise');
 		const code = stripComments(sw);
 		expect(code).toMatch(/const run_cache_pass\s*=/);
-		// the pass body is reachable through the lock holder and nowhere else
-		expect(code.match(/run_cache_pass\(/g)?.length ?? 0).toBe(1);
+		// the pass body is reachable through the lock holder and nowhere else.
+		// \s* so `run_cache_pass (options)` cannot slip a second call past the count.
+		expect(code.match(/run_cache_pass\s*\(/g)?.length ?? 0).toBe(1);
+		// and it is not reachable under another name
+		expect(code).not.toMatch(/=\s*run_cache_pass\s*[,;\n)]/);
 	});
 
 	/**
@@ -252,6 +264,16 @@ describe('sw.js consumes the key (a server-only change would be inert)', () => {
 		).toBeGreaterThan(-1);
 		expect(refusal).toBeLessThan(marker);
 		expect(body).toMatch(/return false/);
+		// (!) Pin the FLOOR, not just the comparison. `min_cached_ratio = 0` makes
+		// `cached_count < Math.ceil(n*0)` unsatisfiable — the refusal is disabled
+		// while every structural assertion above still holds.
+		const ratio = /min_cached_ratio\s*=\s*([0-9.]+)/.exec(stripComments(sw))?.[1];
+		expect(ratio, 'min_cached_ratio vanished').toBeDefined();
+		expect(
+			Number(ratio),
+			'A floor of 0 disables the refusal: Math.ceil(n*0) is 0 and cached_count is never below it, so an empty cache commits over a good one exactly as before.',
+		).toBeGreaterThan(0);
+		expect(Number(ratio)).toBeLessThanOrEqual(1);
 	});
 
 	/**
@@ -260,6 +282,43 @@ describe('sw.js consumes the key (a server-only change would be inert)', () => {
 	 */
 	test('progress counts files actually STORED', () => {
 		expect(passBody(sw)).toMatch(/if\s*\(\s*stored===true\s*\)/);
+	});
+
+	/**
+	 * A cache pass can complete while restore_state is awaiting its marker read.
+	 * Committing unconditionally afterwards overwrites that fresh state with an old
+	 * manifest and a key the purge already deleted.
+	 */
+	test('restore does not clobber a state committed while it was reading', () => {
+		const code = stripComments(sw);
+		const body = code.slice(
+			code.indexOf('const restore_state = async'),
+			code.indexOf('}//end restore_state'),
+		);
+		const commit = body.indexOf('commit_state({');
+		expect(commit).toBeGreaterThan(-1);
+		// a re-check of the module state sits between the marker read and the commit
+		const before = body.slice(0, commit);
+		expect(
+			before.lastIndexOf('if (cache_name && files_set)'),
+			'restore_state checks the module state only at entry, so a pass that commits while it awaits stored.json() gets overwritten with the old manifest.',
+		).toBeGreaterThan(before.indexOf('stored.json()'));
+	});
+
+	/**
+	 * caches.open() CREATES the cache when the key is absent, so reading through it
+	 * after a purge resurrects the key as an empty shell that outlives the session.
+	 */
+	test('a deleted cache is never resurrected by a read', () => {
+		const code = stripComments(sw);
+		expect(code).toMatch(/await\s+caches\.has\(/);
+		// every caches.open in a READ path is preceded by a has() check
+		const readPath = code.slice(
+			code.indexOf('const cache_first = async'),
+			code.indexOf('}//end cache_first'),
+		);
+		expect(readPath.indexOf('caches.has(')).toBeGreaterThan(-1);
+		expect(readPath.indexOf('caches.has(')).toBeLessThan(readPath.indexOf('caches.open('));
 	});
 
 	/**
