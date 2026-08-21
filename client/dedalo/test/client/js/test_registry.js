@@ -169,7 +169,7 @@ export const tool_suites_green = [
 	'test_tool_upload',
 	'test_tool_user_admin',
 	'test_tool_diffusion',   // green after the assertion fix: it required a prototype `get_diffusion_status`, the PHP-era API ACTION name. WC-076 moved the engine in-process and the client method is get_engine_advisory; no client method ever carried the old name.
-	'test_tool_indexation'   // green after the assertion fix: it required `new_tag_note` on the prototype, but that is a module-private helper inside tag_note.js — the mixin is exactly render_indexation_note / render_empty_note / render_note. It asserted the opposite of the contract.
+	'test_tool_indexation'   // two layers: the locked tool template (module export + constructor seed + prototype wiring — green after the assertion fix: it required `new_tag_note` on the prototype, but that is a module-private helper inside tag_note.js, so it asserted the opposite of the contract), plus the BEHAVIOUR block — the tag-info pub/sub (active_value dedup, one-to-many fan-out), _ensure_lazy_instance (already-built short-circuit, unconfigured-role throw, per-role wiring, the ddo.lang > nolan > data_lang ladder), load_related_sections_list's RQO shape, delete_tag's two-confirm destructive path (composite locator key, cache-null-before-refresh, step 2 survives a thrown step 1) and render_indexation_note's single-quoted dataset locator. Fixture-free: fake children pre-registered under the exact get_instance key, data_manager patched on the shared singleton, confirm/alert stubbed (a real dialog FREEZES the headless renderer).
 ]
 
 /**
