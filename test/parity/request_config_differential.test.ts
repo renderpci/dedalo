@@ -1,7 +1,7 @@
 /**
  * Phase 4d gate: request_config explicit differential — the TS-parsed config on the
  * portal's context entry vs the live PHP context request_config for the same
- * RQO (portal numisdata163).
+ * RQO (the cloned mint portal).
  *
  * Compared per item: api_engine, type, sqo.section_tipo (PHP enriches these
  * into dd_objects — compare the tipo identity), and the show ddo_map's
@@ -9,29 +9,66 @@
  * extras (buttons/color/permissions on section ddos, fixed_filter expansion)
  * are ledgered as uncovered.
  */
-// BINDS INSTALL TLDs: numisdata, rsc, zenon — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// The RQO is written in `test`-TLD terms (the cloned mint thesaurus, its
+// cloned portal, and the cloned external-service section) and the frozen PHP
+// interactions are reached through `unmapRqo` (fixture lookup) +
+// `adoptTipoIdMap` (the frozen bodies, read in test-TLD terms). The one record
+// the read addresses comes from the committed corpus. The portal's TARGET
+// section and its column are SEED-SHIPPED ontology, spelled through `seed()`.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { readSection } from '../../src/core/section/read.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap, installTokensIn } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /**
- * The external-engine case needs the `zenon` ontology on the SUITE database.
- * The default suite DB is the test3 playground, which does not carry it — so
- * the case is reported as an explicit SKIP there (S2-40: never a silent green)
- * and runs on an installation whose DB has it. The DB-independent twin of the
- * same contract is test/unit/external_request_config_native.test.ts, which
- * builds its own scratch external section and always runs.
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
  */
-const ZENON_ONTOLOGY_PRESENT =
-	((await sql`SELECT tipo FROM dd_ontology WHERE tipo = 'zenon1' LIMIT 1`) as unknown[]).length > 0;
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The cloned mint thesaurus and the portal whose request_config is the subject. */
+const SECTION = 'testmint1';
+const PORTAL = 'testmint1014';
+/** The portal's TARGET section and the column the rqo narrows to — seed-shipped. */
+const TARGET_SECTION = seed('rsc', 332);
+const TARGET_COLUMN = seed('rsc', 473);
+/** The seed-shipped autocomplete that carries the external-engine request_config. */
+const EXTERNAL_HOST = seed('rsc', 368);
+
+/**
+ * The external-engine case needs the external SERVICE ontology the host
+ * component points at. WHICH section that is, is a fact of the installation's
+ * ontology, so it is READ from the host's own properties instead of being
+ * spelled here — spelling it would bind this file to an install TLD, and
+ * hardcoding a cloned twin would silently change the case's precondition (the
+ * host still points at the service the ontology says it does). Where that
+ * section is absent the case is reported as an explicit SKIP (S2-40: never a
+ * silent green). The DB-independent twin of the same contract is
+ * test/unit/external_request_config_native.test.ts, which builds its own
+ * scratch external section and always runs.
+ */
+const EXTERNAL_ONTOLOGY_PRESENT = await (async (): Promise<boolean> => {
+	const rows = (await sql`
+		SELECT properties FROM dd_ontology WHERE tipo = ${EXTERNAL_HOST} LIMIT 1
+	`) as { properties?: { source?: { request_config?: Record<string, unknown>[] } } }[];
+	const items = rows[0]?.properties?.source?.request_config ?? [];
+	const external = items.find((item) => (item.api_engine ?? 'dedalo') !== 'dedalo');
+	const target = (
+		(external?.sqo as { section_tipo?: { value?: string[] }[] } | undefined)?.section_tipo?.[0]
+			?.value ?? []
+	)[0];
+	if (typeof target !== 'string') return false;
+	const hit = (await sql`
+		SELECT tipo FROM dd_ontology WHERE tipo = ${target} LIMIT 1
+	`) as unknown[];
+	return hit.length > 0;
+})();
 
 const READ_RQO = {
 	action: 'read',
@@ -39,15 +76,15 @@ const READ_RQO = {
 	prevent_lock: true,
 	source: {
 		model: 'section',
-		tipo: 'numisdata6',
-		section_tipo: 'numisdata6',
+		tipo: SECTION,
+		section_tipo: SECTION,
 		mode: 'list',
 		lang: 'lg-spa',
 		action: 'search',
 	},
 	sqo: {
-		section_tipo: ['numisdata6'],
-		filter_by_locators: [{ section_tipo: 'numisdata6', section_id: '2' }],
+		section_tipo: [SECTION],
+		filter_by_locators: [{ section_tipo: SECTION, section_id: '2' }],
 		limit: 1,
 		offset: 0,
 	},
@@ -56,11 +93,11 @@ const READ_RQO = {
 		// engines narrow show.ddo_map to it. Case A (no children → ontology
 		// list-default narrowing via with_value) is LEDGERED uncovered scope.
 		ddo_map: [
-			{ tipo: 'numisdata163', section_tipo: 'self', parent: 'self', mode: 'list' },
+			{ tipo: PORTAL, section_tipo: 'self', parent: 'self', mode: 'list' },
 			{
-				tipo: 'rsc473',
-				section_tipo: 'rsc332',
-				parent: 'numisdata163',
+				tipo: TARGET_COLUMN,
+				section_tipo: TARGET_SECTION,
+				parent: PORTAL,
 				mode: 'list',
 				lang: 'lg-spa',
 			},
@@ -85,7 +122,7 @@ function ddoIdentity(ddo: RawDdo): Record<string, unknown> {
 	};
 }
 
-/** The first non-dedalo request_config item on ANY context entry (rsc368's zenon one). */
+/** The first non-dedalo request_config item on ANY context entry (the external-service one). */
 function externalItemOf(context: Record<string, unknown>[]): Record<string, unknown> | undefined {
 	for (const entry of context ?? []) {
 		const items = (entry.request_config as Record<string, unknown>[] | undefined) ?? [];
@@ -112,6 +149,31 @@ function externalDdoSurface(
 	}));
 }
 
+/**
+ * The frozen install-term body, READ IN TEST-TLD TERMS
+ * (WC-2026-08-19-test-tld-replay). Non-zero rewrite counts are the
+ * anti-vacuity floor — a body that needed no rewrite would not be the migrated
+ * one.
+ *
+ * THE ONE TOKEN THE CLONE HAS NO TWIN FOR: the install AREA node ABOVE the
+ * cloned section — the closure that built the `test` TLD stops at the SECTION
+ * root, so the section entry's `parent_grouper` cannot be mapped. It is
+ * asserted EXACTLY (kind + a single leftover) and asserted to BE that field;
+ * the token is never SPELLED here, because a test file that names an install
+ * tipo binds it. What this gate compares (the portal's request_config) is
+ * asserted to carry no install token at all.
+ */
+function adoptFrozen(body: Record<string, unknown>): Record<string, unknown> {
+	const adopted = adoptTipoIdMap(body, 'request_config_differential');
+	expect(adopted.kind).toBe('install_tipo_left');
+	expect(adopted.leftovers).toHaveLength(1);
+	expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+	expect(adopted.rewrites.ids).toBeGreaterThan(0);
+	const sectionEntry = (adopted.body.result as { context: Record<string, unknown>[] }).context[0];
+	expect(sectionEntry?.parent_grouper).toBe(adopted.leftovers[0] as string);
+	return adopted.body;
+}
+
 /** Extract section tipos from a request_config sqo (PHP enriches to dd_objects). */
 function sqoSectionTipos(sqo: { section_tipo?: unknown }): string[] {
 	const entries = Array.isArray(sqo.section_tipo) ? sqo.section_tipo : [];
@@ -125,6 +187,7 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	let tsConfig: Record<string, unknown>[];
 
 	beforeAll(async () => {
+		await ensureTestCorpus([SECTION]);
 		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
@@ -132,13 +195,19 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 			config.phpReference.password as string,
 		);
 		const { body } = await client.call(structuredClone(READ_RQO));
-		const phpContext = (body.result as { context: Record<string, unknown>[] }).context;
-		const phpPortal = phpContext.find((entry) => entry.tipo === 'numisdata163');
+		const phpContext = (adoptFrozen(body).result as { context: Record<string, unknown>[] })
+			.context;
+		const phpPortal = phpContext.find((entry) => entry.tipo === PORTAL);
 		phpConfig = (phpPortal?.request_config as Record<string, unknown>[]) ?? [];
+		expect(installTokensIn(phpConfig)).toEqual([]);
 
 		const tsResult = await readSection(READ_RQO as unknown as Rqo);
-		const tsPortal = tsResult.context.find((entry) => entry.tipo === 'numisdata163');
+		const tsPortal = tsResult.context.find((entry) => entry.tipo === PORTAL);
 		tsConfig = (tsPortal?.request_config as Record<string, unknown>[]) ?? [];
+	});
+
+	afterAll(async () => {
+		expect(await dropTestCorpus([SECTION])).toBe(0);
 	});
 
 	test('item count, api_engine, type and sqo target sections match', () => {
@@ -159,9 +228,7 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	test('case A (no rqo children): list-mode implicit fallback narrows to the section_list columns', async () => {
 		if (!hasPhpCredentials()) return;
 		const caseARqo = structuredClone(READ_RQO) as typeof READ_RQO;
-		caseARqo.show.ddo_map = [
-			{ tipo: 'numisdata163', section_tipo: 'self', parent: 'self', mode: 'list' },
-		];
+		caseARqo.show.ddo_map = [{ tipo: PORTAL, section_tipo: 'self', parent: 'self', mode: 'list' }];
 
 		const client = new PhpApiClient();
 		await client.login(
@@ -169,9 +236,9 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 			config.phpReference.password as string,
 		);
 		const { body } = await client.call(structuredClone(caseARqo));
-		const phpPortal = (body.result as { context: Record<string, unknown>[] }).context.find(
-			(entry) => entry.tipo === 'numisdata163',
-		);
+		const phpPortal = (
+			adoptFrozen(body).result as { context: Record<string, unknown>[] }
+		).context.find((entry) => entry.tipo === PORTAL);
 		const phpMap = (
 			(phpPortal?.request_config as Record<string, unknown>[])?.[0] as {
 				show?: { ddo_map?: RawDdo[] };
@@ -179,7 +246,7 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 		)?.show?.ddo_map;
 
 		const tsResult = await readSection(caseARqo as unknown as Rqo);
-		const tsPortal = tsResult.context.find((entry) => entry.tipo === 'numisdata163');
+		const tsPortal = tsResult.context.find((entry) => entry.tipo === PORTAL);
 		const tsMap = (
 			(tsPortal?.request_config as Record<string, unknown>[])?.[0] as {
 				show?: { ddo_map?: RawDdo[] };
@@ -192,8 +259,8 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	}, 30000);
 
 	/**
-	 * THE EXTERNAL-ENGINE ITEM (rsc368's second request_config, api_engine
-	 * 'zenon'). Two wire facts this pins, both live CLIENT contracts:
+	 * THE EXTERNAL-ENGINE ITEM (the second request_config on the record-service
+	 * component). Two wire facts this pins, both live CLIENT contracts:
 	 *
 	 *  - `api_config` — component_portal.js:2054 builds the record link as
 	 *    `api_config.ui_base_url + section_id`, and service_autocomplete.js:1039
@@ -206,15 +273,15 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	 *    the engine leaves it a boolean the autocomplete asks for no fields.
 	 *
 	 * Driven through case A's rqo (the one whose harvested answer carries the
-	 * rsc368 context).
+	 * record-service context entry).
 	 */
-	test.if(ZENON_ONTOLOGY_PRESENT)(
+	test.if(EXTERNAL_ONTOLOGY_PRESENT)(
 		'external engine item: api_config + hydrated fields_map match PHP',
 		async () => {
 			if (!hasPhpCredentials()) return;
 			const caseARqo = structuredClone(READ_RQO) as typeof READ_RQO;
 			caseARqo.show.ddo_map = [
-				{ tipo: 'numisdata163', section_tipo: 'self', parent: 'self', mode: 'list' },
+				{ tipo: PORTAL, section_tipo: 'self', parent: 'self', mode: 'list' },
 			];
 
 			const client = new PhpApiClient();
@@ -224,7 +291,7 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 			);
 			const { body } = await client.call(structuredClone(caseARqo));
 			const phpItem = externalItemOf(
-				(body.result as { context: Record<string, unknown>[] }).context,
+				(adoptFrozen(body).result as { context: Record<string, unknown>[] }).context,
 			);
 			const tsResult = await readSection(caseARqo as unknown as Rqo);
 			const tsItem = externalItemOf(tsResult.context as unknown as Record<string, unknown>[]);

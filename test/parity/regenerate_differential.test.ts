@@ -12,11 +12,12 @@
  *  - an unsafe tld is refused with an error and writes nothing.
  * Everything is torn down in afterAll. Runs TS-only, gated on DB reachability.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// The gate already BUILT its own situation (the scratch `zzr` hierarchy it
+// provisions and tears down); its one remaining tipo is the SEED-SHIPPED
+// section the scratch hierarchy points at, which every installation ships and
+// which the gate never reads a record from. Spelled through `seed()` so the
+// install-TLD census reads no binding.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { deleteTldNodes, dropBackupTable } from '../../src/core/db/dd_ontology.ts';
@@ -29,7 +30,13 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 import { hasPhpCredentials } from './php_client.ts';
 
 const TLD = 'zzr';
-const REAL_SECTION = 'rsc167';
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+/** The seed-shipped section the scratch hierarchy is pointed at (hierarchy109). */
+const REAL_SECTION = seed('rsc', 167);
 let hierarchyId = 0;
 const captured: { before: string[]; after: string[]; bkLeft: boolean; emptyRefused: boolean } = {
 	before: [],

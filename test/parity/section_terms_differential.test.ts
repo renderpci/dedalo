@@ -6,20 +6,37 @@
  * section + cross-section + duplicate + malformed locators), the lang is
  * honored, and the bad-locators error envelope matches.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay). The batch is
+// written in `test`-TLD terms — `test2827` (the clone of the es1 hierarchy
+// section) and `testmint1` (the clone of the numisdata6 mints thesaurus) — and
+// reaches the frozen install-term interaction through `unmapRqo`; the frozen
+// body is read back in test terms through `adoptTipoIdMap`. The record ids are
+// FIXED (the corpus id map pairs them 1:1 with the frozen request's), replacing
+// the old `SELECT … FROM matrix_hierarchy WHERE section_tipo='es1'` probe of
+// whatever the ambient database happened to hold.
+//
+// STILL RED, and NOT a TLD binding: the cross-section leg RESOLVES
+// (`testmint1_1` → "Desconocida", byte-equal to the frozen `numisdata6_1`), but
+// the two termed records are refused by the corpus derive as
+// `term_label_only` (src/core/test_data/test_corpus/refused.json: es1/1, es1/3
+// — the store revealed their labels, never a storable row), so the resolver
+// answers "" where the frozen body carries the term. The gate goes green when
+// the corpus can hold those two rows.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
-import { sql } from '../../src/core/db/postgres.ts';
 import { CATEGORY_STATUS, specOf } from '../../src/core/errors/registry.ts';
-import { adoptErrorEnvelopeV2 } from './normalize.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptErrorEnvelopeV2, adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The termed hierarchy section (was es1) and the cross-section thesaurus (was numisdata6). */
+const TERM_SECTION = 'test2827';
+const OTHER_SECTION = 'testmint1';
+/** The two records the frozen batch addressed, in corpus terms (id_map: es1/1,3 ↔ test2827/1,3). */
+const TERM_IDS = ['1', '3'] as const;
 
 function adminContext(): ApiRequestContext {
 	return {
@@ -51,22 +68,19 @@ async function tsTerms(rqoExtras: Record<string, unknown>): Promise<{
 
 describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 	let client: PhpApiClient;
-	// Real es1 records (section_map thesaurus.term = hierarchy25) from the SHARED DB.
-	let es1Ids: string[] = [];
 
 	beforeAll(async () => {
+		await ensureTestCorpus([TERM_SECTION, OTHER_SECTION]);
 		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
 			config.phpReference.password as string,
 		);
-		const rows = (await sql`
-			SELECT section_id FROM matrix_hierarchy
-			WHERE section_tipo = 'es1' AND section_id < 900000
-			ORDER BY section_id LIMIT 2
-		`) as { section_id: number }[];
-		es1Ids = rows.map((row) => String(row.section_id));
+	});
+
+	afterAll(async () => {
+		expect(await dropTestCorpus([TERM_SECTION, OTHER_SECTION])).toBe(0);
 	});
 
 	async function phpTerms(rqoExtras: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -79,36 +93,48 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 		return body;
 	}
 
+	/**
+	 * The frozen install-term body, read in test terms (WC-2026-08-19-test-tld-replay).
+	 * `matched` + a non-zero rewrite floor are the anti-vacuity check: a body that
+	 * needed no rewrite would mean this is not the migrated gate.
+	 */
+	function adoptFrozen(body: Record<string, unknown>): Record<string, unknown> {
+		const adopted = adoptTipoIdMap(body, 'section_terms_differential');
+		expect(adopted.matched).toBe(true);
+		expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+		expect(adopted.rewrites.ids).toBeGreaterThan(0);
+		return adopted.body;
+	}
+
 	test('mixed batch resolves the SAME term map as PHP', async () => {
 		if (!hasPhpCredentials()) return;
-		expect(es1Ids.length).toBeGreaterThan(0);
 		const locators: unknown[] = [
-			...es1Ids.map((id) => ({ section_tipo: 'es1', section_id: id })),
+			...TERM_IDS.map((id) => ({ section_tipo: TERM_SECTION, section_id: id })),
 			// duplicate — first occurrence wins, no double entry
-			{ section_tipo: 'es1', section_id: es1Ids[0] },
+			{ section_tipo: TERM_SECTION, section_id: TERM_IDS[0] },
 			// malformed: bad tipo grammar, missing id, non-object — all silently skipped
 			{ section_tipo: 'DROP TABLE', section_id: '1' },
-			{ section_tipo: 'es1' },
+			{ section_tipo: TERM_SECTION },
 			'not-an-object',
 			// cross-section record (no thesaurus term expected; both engines must agree)
-			{ section_tipo: 'numisdata6', section_id: '1' },
+			{ section_tipo: OTHER_SECTION, section_id: '1' },
 		];
 		const ts = await tsTerms({ locators, lang: 'lg-spa' });
-		const php = await phpTerms({ locators, lang: 'lg-spa' });
+		const php = adoptFrozen(await phpTerms({ locators, lang: 'lg-spa' }));
 		expect(ts.status).toBe(200);
 		// TS speaks envelope v2 (`data`); the frozen PHP oracle body keeps `result`.
 		expect(ts.body.data).toEqual(php.result as Record<string, unknown>);
-		// the gate is not vacuous: the es1 records DID resolve a term
+		// the gate is not vacuous: the termed records DID resolve a term
 		const resolved = ts.body.data as Record<string, unknown>;
-		expect(Object.keys(resolved)).toContain(`es1_${es1Ids[0]}`);
-		expect(typeof resolved[`es1_${es1Ids[0]}`]).toBe('string');
+		expect(Object.keys(resolved)).toContain(`${TERM_SECTION}_${TERM_IDS[0]}`);
+		expect(typeof resolved[`${TERM_SECTION}_${TERM_IDS[0]}`]).toBe('string');
 	});
 
 	test('lang is honored identically', async () => {
 		if (!hasPhpCredentials()) return;
-		const locators = es1Ids.map((id) => ({ section_tipo: 'es1', section_id: id }));
+		const locators = TERM_IDS.map((id) => ({ section_tipo: TERM_SECTION, section_id: id }));
 		const ts = await tsTerms({ locators, lang: 'lg-eng' });
-		const php = await phpTerms({ locators, lang: 'lg-eng' });
+		const php = adoptFrozen(await phpTerms({ locators, lang: 'lg-eng' }));
 		expect(ts.body.data).toEqual(php.result as Record<string, unknown>);
 	});
 

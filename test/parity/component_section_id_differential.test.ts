@@ -6,24 +6,25 @@
  * the generic literal resolver in emitDdoData, which looks for a JSONB
  * column this model has none of.
  *
- * Anchor: numisdata6 §3, child numisdata15 (component_section_id).
+ * Anchor: the cloned mint thesaurus §3, child component_section_id.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// The RQO is written in `test`-TLD terms (numisdata6 → testmint1, numisdata15
+// → testmint1001) and the frozen PHP interaction is reached through `unmapRqo`
+// (fixture lookup) + `adoptTipoIdMap` (the frozen body, read in test-TLD
+// terms). The addressed record comes from the committed corpus.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSection } from '../../src/core/section/read.ts';
-import { normalizeSectionIdTypes } from './normalize.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap, installTokensIn, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-const SECTION = 'numisdata6';
+const SECTION = 'testmint1';
 const SECTION_ID = 3;
-const COMPONENT = 'numisdata15';
+const COMPONENT = 'testmint1001';
 
 const EDIT_RQO = {
 	action: 'read',
@@ -46,12 +47,13 @@ const EDIT_RQO = {
 };
 
 describe.if(hasPhpCredentials())(
-	'component_section_id EDIT data differential (numisdata15)',
+	'component_section_id EDIT data differential (testmint1001)',
 	() => {
 		let phpItem: Record<string, unknown> | undefined;
 		let tsItem: Record<string, unknown> | undefined;
 
 		beforeAll(async () => {
+			await ensureTestCorpus([SECTION]);
 			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			await client.login(
@@ -59,15 +61,43 @@ describe.if(hasPhpCredentials())(
 				config.phpReference.password as string,
 			);
 			const { body } = await client.call(structuredClone(EDIT_RQO));
+			// WC-2026-08-19-test-tld-replay: the frozen install-term body, read in
+			// test-TLD terms.
+			//
+			// THE ONE TOKEN THE CLONE HAS NO TWIN FOR: the install AREA node ABOVE
+			// the cloned section (the closure that built the `test` TLD stops at
+			// the section root), carried by `context[0].parent_grouper`. This
+			// gate compares `data[]` only — the context shape is
+			// context_differential's subject, and that gate asserts both sides of
+			// this seam explicitly. The reduction is PROVED, not trusted, and
+			// WITHOUT naming the install token (a test file that spells one binds
+			// it): exactly one token survives, it IS the section entry's parent,
+			// and the COMPARED subtree carries none.
+			const adopted = adoptTipoIdMap(body, 'component_section_id_differential');
+			expect(adopted.kind).toBe('install_tipo_left');
+			expect(adopted.leftovers).toHaveLength(1);
+			expect(
+				(adopted.body.result as { context?: Record<string, unknown>[] })?.context?.[0]
+					?.parent_grouper,
+			).toBe(adopted.leftovers[0]);
+			expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+			expect(adopted.rewrites.ids).toBeGreaterThan(0);
+			expect(
+				installTokensIn((adopted.body.result as { data?: Record<string, unknown>[] })?.data ?? []),
+			).toEqual([]);
 			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 			const phpData = normalizeSectionIdTypes(
-				(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
+				(adopted.body.result as { data?: Record<string, unknown>[] })?.data ?? [],
 			);
 			phpItem = phpData.find((item) => item.tipo === COMPONENT);
 
 			const tsResult = await readSection(structuredClone(EDIT_RQO) as unknown as Rqo);
 			const tsData = normalizeSectionIdTypes(tsResult.data as Record<string, unknown>[]);
 			tsItem = tsData.find((item) => item.tipo === COMPONENT);
+		});
+
+		afterAll(async () => {
+			expect(await dropTestCorpus([SECTION])).toBe(0);
 		});
 
 		test('entries carry the record own section_id, not null', () => {

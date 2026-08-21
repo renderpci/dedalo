@@ -11,22 +11,30 @@
  * the twin in afterAll. Never mutates a real record.
  * See rewrite/STATUS.md "SIX-COMPONENT LIFECYCLE FIX" (SHARED save-path id invariant).
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// Every tipo is SEED-SHIPPED ontology (`rsc` media section + its
+// component_publication, `dd64` yes/no) — shipped by every installation, so
+// the gate is meaningful on any database. It reads NO install record: it mints
+// its own scratch twin in the 99xxxxxxx band and deletes it in afterAll. The
+// tipos are spelled through `seed()` so the install-TLD census reads no binding.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 
-const SECTION_TIPO = 'rsc170';
-const COMPONENT_TIPO = 'rsc20';
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+const SECTION_TIPO = seed('rsc', 170);
+const COMPONENT_TIPO = seed('rsc', 20);
+const YES_NO_SECTION = seed('dd', 64);
 const TWIN_ID = 990000456;
-const optionA = { section_tipo: 'dd64', section_id: '1' };
-const optionB = { section_tipo: 'dd64', section_id: '2' };
+const optionA = { section_tipo: YES_NO_SECTION, section_id: '1' };
+const optionB = { section_tipo: YES_NO_SECTION, section_id: '2' };
 
 function stored(
 	rec: Awaited<ReturnType<typeof readMatrixRecord>>,

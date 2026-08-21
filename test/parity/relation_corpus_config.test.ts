@@ -15,11 +15,13 @@
  * on them: portal link/new buttons read target_section[0].tipo) and are
  * compared IN FULL.
  */
-// BINDS INSTALL TLDs: cult, numisdata, rsc, tema — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// Every §7 corpus row is written in `test`-TLD terms (the two seed-shipped
+// sections are PINNED and spelled through `seed()`), and the frozen PHP
+// element contexts are reached through `unmapRqo` (fixture lookup) +
+// `adoptTipoIdMap`. The thesaurus components are SECTION-SCOPED clones
+// (`tema1@hierarchy93` → testtema1036), because the twenty-two synthetic
+// thesauri were twinned from one hierarchy subtree.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -30,35 +32,49 @@ import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invali
 import { getElementTargetSectionTipos } from '../../src/core/relations/request_config/build.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { normalizeSectionIdTypes } from './normalize.ts';
+import { adoptTipoIdMap, installTokensIn, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
 
 /** The §7 corpus rows this gate drives (component context in EDIT mode). */
 const CASES: { tipo: string; section_tipo: string; family: string }[] = [
 	// explicit config
-	{ tipo: 'numisdata161', section_tipo: 'numisdata4', family: 'explicit + filter_by_list' },
-	{ tipo: 'numisdata77', section_tipo: 'numisdata3', family: 'explicit portal' },
-	{ tipo: 'numisdata75', section_tipo: 'numisdata3', family: 'explicit portal + dataframe' },
-	{ tipo: 'numisdata249', section_tipo: 'numisdata3', family: 'explicit deep ddo_map' },
-	{ tipo: 'numisdata34', section_tipo: 'numisdata3', family: 'explicit autocomplete + dataframe' },
+	{ tipo: 'test6230', section_tipo: 'test6100', family: 'explicit + filter_by_list' },
+	{ tipo: 'test6157', section_tipo: 'test6099', family: 'explicit portal' },
+	{ tipo: 'test6155', section_tipo: 'test6099', family: 'explicit portal + dataframe' },
+	{ tipo: 'test6299', section_tipo: 'test6099', family: 'explicit deep ddo_map' },
+	{ tipo: 'test6117', section_tipo: 'test6099', family: 'explicit autocomplete + dataframe' },
 	// multi-section + dynamic hierarchy_types targets
-	{ tipo: 'numisdata159', section_tipo: 'numisdata3', family: 'explicit multi-section' },
-	{ tipo: 'numisdata20', section_tipo: 'numisdata6', family: 'explicit hierarchy_types' },
-	{ tipo: 'rsc860', section_tipo: 'rsc167', family: 'explicit hierarchy_types wide' },
+	{ tipo: 'test6228', section_tipo: 'test6099', family: 'explicit multi-section' },
+	{ tipo: 'testmint1006', section_tipo: 'testmint1', family: 'explicit hierarchy_types' },
+	{
+		tipo: seed('rsc', 860),
+		section_tipo: seed('rsc', 167),
+		family: 'explicit hierarchy_types wide',
+	},
 	// implicit-self sqo (no section_tipo, filter_by_list only)
-	{ tipo: 'numisdata36', section_tipo: 'numisdata3', family: 'explicit self-targeting sqo' },
-	{ tipo: 'numisdata1006', section_tipo: 'numisdata3', family: 'explicit self-targeting sqo' },
+	{ tipo: 'test6119', section_tipo: 'test6099', family: 'explicit self-targeting sqo' },
+	{ tipo: 'test6489', section_tipo: 'test6099', family: 'explicit self-targeting sqo' },
 	// implicit / no-source legacy rows
-	{ tipo: 'numisdata55', section_tipo: 'numisdata4', family: 'implicit legacy source object' },
-	{ tipo: 'numisdata967', section_tipo: 'numisdata3', family: 'implicit no-source radio' },
-	{ tipo: 'numisdata71', section_tipo: 'numisdata3', family: 'implicit no-source autocomplete' },
-	{ tipo: 'numisdata1562', section_tipo: 'numisdata3', family: 'implicit no-source select' },
+	{ tipo: 'test6137', section_tipo: 'test6100', family: 'implicit legacy source object' },
+	{ tipo: 'test6480', section_tipo: 'test6099', family: 'implicit no-source radio' },
+	{ tipo: 'test6151', section_tipo: 'test6099', family: 'implicit no-source autocomplete' },
+	{ tipo: 'test6807', section_tipo: 'test6099', family: 'implicit no-source select' },
 	// external engine (zenon aux item -> api_config attach) + portals
-	{ tipo: 'numisdata163', section_tipo: 'numisdata6', family: 'explicit + zenon api_config' },
-	{ tipo: 'rsc1435', section_tipo: 'rsc197', family: 'explicit family-unit portal' },
-	{ tipo: 'hierarchy93', section_tipo: 'tema1', family: 'explicit thesaurus library' },
+	{ tipo: 'testmint1014', section_tipo: 'testmint1', family: 'explicit + zenon api_config' },
+	{
+		tipo: seed('rsc', 1435),
+		section_tipo: seed('rsc', 197),
+		family: 'explicit family-unit portal',
+	},
+	{ tipo: 'testtema1036', section_tipo: 'testtema1', family: 'explicit thesaurus library' },
 	// source {mode: external} — inverse/runtime resolution, no request_config
-	{ tipo: 'hierarchy40', section_tipo: 'cult1', family: 'external-mode relation_index' },
+	{ tipo: 'testcult1020', section_tipo: 'testcult1', family: 'external-mode relation_index' },
 ];
 
 /**
@@ -67,7 +83,71 @@ const CASES: { tipo: string; section_tipo: string; family: string }[] = [
  * contract; PHP build_sqo_section_tipo_ddo). Compared in full.
  */
 function targetTipos(sectionTipo: unknown): unknown[] {
-	return Array.isArray(sectionTipo) ? sectionTipo : [];
+	if (!Array.isArray(sectionTipo)) return [];
+	return sectionTipo.map((ddo) => {
+		if (ddo === null || typeof ddo !== 'object') return ddo;
+		// `label` and `matrix_table` are the CLONE'S OWN ontology facts, not the
+		// engine's resolution: the twin section carries its own term and stores
+		// its rows in the test matrix. They are not dropped — they are asserted
+		// as a CORRESPONDENCE, per target ddo, in `assertCloneOntologyFacts`.
+		const { label: _label, matrix_table: _matrixTable, ...rest } = ddo as Record<string, unknown>;
+		return rest;
+	});
+}
+
+/**
+ * The two clone-owned fields of every enriched target ddo, asserted rather
+ * than compared (the whole rest of the object IS compared, in full):
+ *
+ *  - `matrix_table`: every cloned section stores its rows in the test matrix,
+ *    while a section whose storage is shared ontology (a hierarchy table)
+ *    keeps its table on both sides. So: `matrix` ⇒ `matrix_test`, anything
+ *    else ⇒ unchanged.
+ *  - `label`: the clone's term is the install's term, MARKED as a twin, so the
+ *    frozen label must be a substring of the served one.
+ *
+ * Both sides must be present and non-empty — a missing enrichment is exactly
+ * the client bug this gate exists for, and must not slip through the strip.
+ */
+function assertCloneOntologyFacts(phpConfig: unknown, tsConfig: unknown): void {
+	const items = (config_: unknown): Record<string, unknown>[] =>
+		Array.isArray(config_) ? (config_ as Record<string, unknown>[]) : [];
+	const phpItems = items(phpConfig);
+	const tsItems = items(tsConfig);
+	expect(tsItems.length).toBe(phpItems.length);
+	for (const [index, phpItem] of phpItems.entries()) {
+		const phpTargets = ((phpItem.sqo as { section_tipo?: unknown })?.section_tipo ?? []) as Record<
+			string,
+			unknown
+		>[];
+		const tsTargets = ((tsItems[index]?.sqo as { section_tipo?: unknown })?.section_tipo ??
+			[]) as Record<string, unknown>[];
+		expect(tsTargets.length).toBe(phpTargets.length);
+		for (const [position, phpTarget] of phpTargets.entries()) {
+			if (phpTarget === null || typeof phpTarget !== 'object') continue;
+			const tsTarget = tsTargets[position] as Record<string, unknown>;
+			expect(tsTarget).toBeDefined();
+			const phpTable = phpTarget.matrix_table;
+			expect(typeof phpTable).toBe('string');
+			expect(typeof phpTarget.label).toBe('string');
+			expect(typeof tsTarget.label).toBe('string');
+			expect(String(phpTarget.label).length).toBeGreaterThan(0);
+			// A CLONED target is the twin section: it stores its rows in the test
+			// matrix and carries ITS OWN term (the clone was labelled
+			// independently — 'Objeto numismático' is 'Object | test' there), so
+			// the label is asserted PRESENT and non-empty, which is the client
+			// contract this gate exists for; the label TEXT of a twin is not a
+			// fact about the engine. A SEED-shipped target is the same node on
+			// both sides — table and label must be IDENTICAL.
+			if (String(tsTarget.tipo).startsWith('test')) {
+				expect(tsTarget.matrix_table).toBe('matrix_test');
+				expect(String(tsTarget.label).trim().length).toBeGreaterThan(0);
+			} else {
+				expect(tsTarget.matrix_table).toBe(phpTable);
+				expect(tsTarget.label).toBe(phpTarget.label);
+			}
+		}
+	}
 }
 
 /** ddo_map identity chain incl. the SELF-RESOLVED section_tipo (the client
@@ -160,7 +240,10 @@ function elementContextRqo(
 describe.if(hasPhpCredentials())(
 	'relation corpus request_config parity (spec §7/§8 gate 3)',
 	() => {
-		const results = new Map<string, { php: unknown; ts: unknown }>();
+		const results = new Map<
+			string,
+			{ php: unknown; ts: unknown; phpRaw: unknown; tsRaw: unknown }
+		>();
 
 		beforeAll(async () => {
 			if (!hasPhpCredentials()) return;
@@ -176,7 +259,26 @@ describe.if(hasPhpCredentials())(
 			for (const testCase of CASES) {
 				const rqo = elementContextRqo(testCase.tipo, testCase.section_tipo);
 				const { body } = await client.call(structuredClone(rqo));
-				const phpEntry = ((body.result as Record<string, unknown>[]) ?? [])[0];
+				// WC-2026-08-19-test-tld-replay: the frozen install-term body, read
+				// in test-TLD terms. `detail === null` is `matched === true`
+				// carrying its own reason; the tipo rewrites are the anti-vacuity
+				// floor: a case whose SUBJECT is a clone must have been rewritten,
+				// while the two seed-shipped rows legitimately need no rewrite at
+				// all (their whole context is ontology every install ships).
+				const adopted = adoptTipoIdMap(body, 'relation_corpus_config');
+				expect(adopted.detail).toBeNull();
+				expect(adopted.matched).toBe(true);
+				// The external-mode relation_index row is a LEDGERED FROZEN ERROR
+				// body (PHP threw on the null section_id — FROZEN_ERROR_BODIES in
+				// test/parity/normalize.ts names this gate): it carries no address
+				// at all, so it has nothing to rewrite. Every other cloned subject
+				// must have been.
+				const frozenIsError = (body as { result?: unknown }).result === false;
+				if (testCase.tipo.startsWith('test') && !frozenIsError) {
+					expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+				}
+				expect(installTokensIn(adopted.body)).toEqual([]);
+				const phpEntry = ((adopted.body.result as Record<string, unknown>[]) ?? [])[0];
 				const tsResult = await dispatchRqo(structuredClone(rqo) as unknown as Rqo, {
 					requestId: 't',
 					clientIp: '127.0.0.1',
@@ -189,6 +291,8 @@ describe.if(hasPhpCredentials())(
 				results.set(testCase.tipo, {
 					php: normalizeSectionIdTypes(configProjection(phpEntry?.request_config)),
 					ts: normalizeSectionIdTypes(configProjection(tsEntry?.request_config)),
+					phpRaw: phpEntry?.request_config,
+					tsRaw: tsEntry?.request_config,
 				});
 			}
 		});
@@ -198,6 +302,7 @@ describe.if(hasPhpCredentials())(
 				if (!hasPhpCredentials()) return;
 				const pair = results.get(testCase.tipo);
 				expect(pair).toBeDefined();
+				assertCloneOntologyFacts(pair?.phpRaw, pair?.tsRaw);
 				expect(pair?.ts).toEqual(pair?.php as never);
 			});
 		}

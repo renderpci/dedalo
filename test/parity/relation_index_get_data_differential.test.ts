@@ -4,19 +4,35 @@
  * pool record so far; offset 0 seeds the pool with the pointing section's
  * representative record, later pages don't).
  */
-// BINDS INSTALL TLDs: cult — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (phase 4 pilot, WC-2026-08-19-test-tld-replay).
+// The RQO names the CLONED thesaurus term (testcult1/1) and its cloned
+// relation_index component (testcult1020 — a SECTION-SCOPED clone: the twenty-two
+// synthetic thesauri were twinned from the same hierarchy20 subtree, so the map
+// key is `cult1@hierarchy40`, never a flat `hierarchy40`). The pointing records
+// live in a seed-shipped section and come from the committed corpus.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import {
+	adoptEntriesArrayContract,
+	adoptTipoIdMap,
+	normalizeSectionIdTypes,
+	stripCorpusScaleFields,
+} from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The cloned term section and its cloned relation_index component. */
+const SECTION = 'testcult1';
+const INDEX_COMPONENT = 'testcult1020';
+/**
+ * The corpus this gate OWNS: the term itself, and the seed-shipped
+ * bibliography section whose records point at it (the index pool).
+ */
+const CORPUS_SCOPE = [SECTION, `${'rsc'}205`];
 
 const CASES = [
 	{ name: 'offset 0', limit: 2, offset: 0 },
@@ -32,14 +48,14 @@ function rqoOf(limit: number, offset: number): Record<string, unknown> {
 		source: {
 			typo: 'source',
 			model: 'component_relation_index',
-			tipo: 'hierarchy40',
-			section_tipo: 'cult1',
+			tipo: INDEX_COMPONENT,
+			section_tipo: SECTION,
 			section_id: '1',
 			mode: 'list',
 			lang: 'lg-spa',
 			action: 'get_data',
 		},
-		sqo: { section_tipo: ['cult1'], limit, offset },
+		sqo: { section_tipo: [SECTION], limit, offset },
 	};
 }
 
@@ -64,6 +80,7 @@ const results = new Map<
 >();
 
 beforeAll(async () => {
+	await ensureTestCorpus(CORPUS_SCOPE);
 	if (!hasPhpCredentials()) return;
 	const php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
@@ -75,10 +92,18 @@ beforeAll(async () => {
 		const rqo = rqoOf(testCase.limit, testCase.offset);
 		// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
 		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		// WC-2026-08-19-test-tld-replay: the frozen install-term body, read in
+		// test-TLD terms (the section-scoped component clone is the point).
+		const adopted = adoptTipoIdMap(
+			(await php.call(structuredClone(rqo))).body,
+			'relation_index_get_data_differential',
+		);
+		expect(adopted.matched).toBe(true);
+		expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+		expect(adopted.rewrites.ids).toBeGreaterThan(0);
 		const phpData = normalizeSectionIdTypes(
 			adoptEntriesArrayContract(
-				((await php.call(structuredClone(rqo))).body as { result?: { data?: unknown[] } }).result
-					?.data ?? [],
+				(adopted.body as { result?: { data?: unknown[] } }).result?.data ?? [],
 			) as Record<string, unknown>[],
 		);
 		const tsResult = await dispatchRqo(
@@ -102,6 +127,10 @@ beforeAll(async () => {
 	}
 }, 120000);
 
+afterAll(async () => {
+	expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
+});
+
 describe.if(hasPhpCredentials())(
 	'relation_index get_data differential (paging + pool children)',
 	() => {
@@ -110,8 +139,24 @@ describe.if(hasPhpCredentials())(
 				if (!hasPhpCredentials()) return;
 				const pair = results.get(testCase.name);
 				expect(pair).toBeDefined();
-				const phpItems = (pair?.php ?? []).map(comparable);
-				const tsItems = (pair?.ts ?? []).map(comparable);
+				// The unfiltered `pagination.total` counts every record in the
+				// install that points at this term; the corpus holds the handful the
+				// frozen pages revealed. Declared, justified and REFUSED-IF-ABSENT
+				// in CORPUS_SCALE_FIELDS — the paged item sequence, which is what
+				// this gate is about, stays verbatim on both sides.
+				const gate = 'relation_index_get_data_differential';
+				// Non-empty floor FIRST, on both sides: an inverse index that
+				// resolves nothing must redden HERE, with a legible message,
+				// instead of surfacing as a projection refusal three lines down.
+				// (The TS side resolves because the corpus carries the INVERSE
+				// EDGES — the rsc387 locators on rsc205/37,42,44,69,74 that point
+				// at the term — materialized by derive_test_corpus.ts from the
+				// far end and audited as `inverse_edges[]` on each pointing
+				// record. Without them the index would resolve 0 items here.)
+				expect((pair?.php ?? []).length).toBeGreaterThan(1);
+				expect((pair?.ts ?? []).length).toBeGreaterThan(1);
+				const phpItems = stripCorpusScaleFields((pair?.php ?? []).map(comparable), gate);
+				const tsItems = stripCorpusScaleFields((pair?.ts ?? []).map(comparable), gate);
 				expect(phpItems.length).toBeGreaterThan(1);
 				// ORDER matters here: the pool-accumulation duplicates are positional.
 				expect(tsItems).toEqual(phpItems);

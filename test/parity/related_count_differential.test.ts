@@ -2,18 +2,36 @@
  * Phase 3/6 gate: count with SQO mode 'related' (+ group_by) vs live PHP —
  * the relation_list paginator total and its per-section breakdown.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// The RQO is written in `test`-TLD terms (the relation_list numisdata308 →
+// testcatalogs1010 on numisdata6/1 → testmint1/1) and the frozen PHP counts
+// are reached through `unmapRqo` (fixture lookup) + `adoptTipoIdMap`.
+//
+// KNOWN RED — CORPUS SCALE, NOT A TLD BINDING (measured 2026-08-19). What this
+// gate compares IS a count over the whole relation graph: the frozen answer is
+// 57, every record in the install that relates to numisdata6/1. The committed
+// corpus holds ONE edge into testmint1/1 (the frozen store never revealed the
+// other 56 as records — `never_revealed`), so the totals cannot be equal by
+// construction and the comparison is left VERBATIM rather than reshaped into
+// something a corpus can satisfy. It goes green when the corpus can speak for
+// the pointing records, or when this gate's scale field is declared in
+// CORPUS_SCALE_FIELDS (test/parity/normalize.ts) the way the relation_index
+// pagination total is.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The cloned mint thesaurus and the cloned relation_list that counts its edges. */
+const SECTION = 'testmint1';
+const RELATION_LIST = 'testcatalogs1010';
+/** The corpus this gate OWNS: the counted record's own section. */
+const CORPUS_SCOPE = [SECTION];
 
 function countRqo(groupBy?: string[]): Record<string, unknown> {
 	return {
@@ -24,8 +42,8 @@ function countRqo(groupBy?: string[]): Record<string, unknown> {
 		source: {
 			typo: 'source',
 			model: 'relation_list',
-			tipo: 'numisdata308',
-			section_tipo: 'numisdata6',
+			tipo: RELATION_LIST,
+			section_tipo: SECTION,
 			section_id: '1',
 			action: 'count',
 			mode: 'edit',
@@ -34,7 +52,7 @@ function countRqo(groupBy?: string[]): Record<string, unknown> {
 		sqo: {
 			section_tipo: ['all'],
 			mode: 'related',
-			filter_by_locators: [{ section_tipo: 'numisdata6', section_id: '1' }],
+			filter_by_locators: [{ section_tipo: SECTION, section_id: '1' }],
 			...(groupBy !== undefined ? { group_by: groupBy } : {}),
 		},
 	};
@@ -60,18 +78,24 @@ async function tsCount(rqo: Record<string, unknown>): Promise<Record<string, unk
 let php: PhpApiClient | null = null;
 
 beforeAll(async () => {
+	await ensureTestCorpus(CORPUS_SCOPE);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
 });
 
+afterAll(async () => {
+	expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
+});
+
 async function phpCount(rqo: Record<string, unknown>): Promise<Record<string, unknown>> {
-	const result =
-		(
-			(await (php as PhpApiClient).call(structuredClone(rqo))).body as {
-				result?: Record<string, unknown>;
-			}
-		).result ?? {};
+	const body = (await (php as PhpApiClient).call(structuredClone(rqo))).body;
+	// WC-2026-08-19-test-tld-replay: the frozen install-term body, read in
+	// test-TLD terms (`totals_group` is keyed by section tipo).
+	const adopted = adoptTipoIdMap(body, 'related_count_differential');
+	expect(adopted.detail).toBeNull();
+	expect(adopted.matched).toBe(true);
+	const result = (adopted.body as { result?: Record<string, unknown> }).result ?? {};
 	const { debug: _debug, ...rest } = result;
 	return rest;
 }

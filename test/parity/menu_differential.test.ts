@@ -13,11 +13,36 @@
  * injected — and the two thesaurus virtuals with their swap_tipo configs)
  * compare BYTE-FOR-BYTE against PHP.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD: NOT MIGRATABLE THROUGH THE REPLAY SEAM — measured 2026-08-20
+// (WC-2026-08-19-test-tld-replay). This is a finding, not a deferral.
+//
+// The subject IS the whole ontology: the superuser menu is an unfiltered
+// `area::get_areas()` walk, so the frozen body names EVERY area of the
+// harvested installation (107 distinct install tokens survive
+// `adoptTipoIdMap`, across ~30 TLDs — thesauri, country hierarchies, the
+// external service, the tool areas). The `test` clone was cut at the SECTION
+// root of 33 twinned subtrees; it does not, and by design cannot, hold a twin
+// for an install's complete area tree. So the transform REFUSES the body
+// (`install_tipo_left`), and any gate written on top of it would be asserting
+// against 107 untwinned tokens — the opposite of what the seam is for.
+//
+// The two install tipos this file still spells are FIXTURE FACTS, not
+// bindings to a live record: they are the exact bytes of the WC-020 alias
+// normalization below, applied to the FROZEN body's JSON text. Renaming them
+// would break the frozen comparison and assert nothing.
+//
+// THE HONEST REPLACEMENT EXISTS since 2026-08-20:
+// `test/unit/menu_tree_datalist_native.test.ts` states the walk's RULES —
+// root order, sibling order by order_number, the model filter (and that a
+// dropped model is not a doorway), deny, skip re-parenting, and label language
+// — over an ontology it BUILDS, so it asserts its own subtree exactly and runs
+// on any database. Writing it also measured something this frozen comparison
+// could never isolate: SKIP re-parents its orphans, DENY does NOT.
+//
+// This file stays as the frozen record of the PHP menu walk — it is the only
+// evidence of what the decommissioned engine emitted for a whole installation —
+// and stays listed in engineering/generic_tld_baseline.json
+// (generic_tld_tripwire, shrink-only).
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';

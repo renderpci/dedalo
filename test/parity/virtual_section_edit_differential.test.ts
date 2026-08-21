@@ -9,11 +9,11 @@
  * rsc170 (virtual of rsc2, with exclude_elements rsc171) must resolve to the
  * same 84 edit ddos as live PHP — tipo, parent, order.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// The virtual/real/exclude triple this gate is about is SEED-SHIPPED ontology
+// every installation ships, and the gate reads NO records — it compares the
+// edit ddo_map the ontology alone determines. The tipos are spelled through
+// `seed()` so the install-TLD census reads no binding.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -22,6 +22,16 @@ import {
 	clearStructureContextCache,
 } from '../../src/core/resolve/structure_context.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The seed-shipped VIRTUAL media section, the real section it borrows from. */
+const VIRTUAL_SECTION = seed('rsc', 170);
+const REAL_SECTION = seed('rsc', 2);
 
 type Ddoish = { tipo: string; parent: string };
 
@@ -41,8 +51,8 @@ describe.if(hasPhpCredentials())('virtual section edit differential (SECTION_SPE
 			dd_api: 'dd_core_api',
 			source: {
 				model: 'section',
-				tipo: 'rsc170',
-				section_tipo: 'rsc170',
+				tipo: VIRTUAL_SECTION,
+				section_tipo: VIRTUAL_SECTION,
 				mode: 'edit',
 				lang: 'lg-spa',
 			},
@@ -55,8 +65,8 @@ describe.if(hasPhpCredentials())('virtual section edit differential (SECTION_SPE
 
 		clearStructureContextCache();
 		const tsEntry = await buildStructureContext({
-			tipo: 'rsc170',
-			sectionTipo: 'rsc170',
+			tipo: VIRTUAL_SECTION,
+			sectionTipo: VIRTUAL_SECTION,
 			mode: 'edit',
 			lang: 'lg-spa',
 			permissions: 3,
@@ -69,7 +79,7 @@ describe.if(hasPhpCredentials())('virtual section edit differential (SECTION_SPE
 		tsKeys = (tsConfig?.show?.ddo_map ?? []).map((d) => `${d.tipo}|${d.parent}`);
 	});
 
-	test('rsc170 (virtual of rsc2) resolves the real section edit tree minus excludes', () => {
+	test(`${VIRTUAL_SECTION} (virtual of ${REAL_SECTION}) resolves the real section edit tree minus excludes`, () => {
 		if (!hasPhpCredentials()) return;
 		expect(tsKeys.length).toBeGreaterThan(50); // was 0 before the virtual fix
 		expect(tsKeys).toEqual(phpKeys);

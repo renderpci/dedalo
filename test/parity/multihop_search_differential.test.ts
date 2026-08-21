@@ -3,22 +3,39 @@
  * traverses a relation into another section (coins' Ceca → the ceca's name).
  * Counts and the paged id set must match exactly.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// The SQO is written in `test`-TLD terms; the frozen PHP interaction is reached
+// through `unmapRqo` and its rows are read back through `adoptTipoIdMap`. The
+// records are the committed test corpus, owned by this gate.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The two hops: the coin-type section and the mint thesaurus it relates to. */
+const CORPUS_SECTIONS = ['test6099', 'testmint1'] as const;
+
+/**
+ * The frozen (install-term) reply, read in the `test` terms the SQO is written
+ * in. `matched` is the totality assertion; the floors are the anti-vacuity
+ * check — a reply over cloned sections cannot be mapped with zero rewrites.
+ */
+function adopt<T>(value: T): T {
+	const adopted = adoptTipoIdMap(value, 'multihop_search_differential');
+	expect(adopted.matched, adopted.detail ?? '').toBe(true);
+	expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+	expect(adopted.rewrites.ids).toBeGreaterThan(0);
+	return adopted.body;
+}
 
 function multiHopSqo(): Record<string, unknown> {
 	return {
-		section_tipo: ['numisdata3'],
+		section_tipo: ['test6099'],
 		limit: 10,
 		offset: 0,
 		filter: {
@@ -27,8 +44,8 @@ function multiHopSqo(): Record<string, unknown> {
 					q: 'Emporion',
 					lang: 'lg-spa',
 					path: [
-						{ section_tipo: 'numisdata3', component_tipo: 'numisdata30' },
-						{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' },
+						{ section_tipo: 'test6099', component_tipo: 'test6113' },
+						{ section_tipo: 'testmint1', component_tipo: 'testmint1002' },
 					],
 				},
 			],
@@ -46,8 +63,8 @@ function rqoFor(action: 'count' | 'search'): Record<string, unknown> {
 		source: {
 			typo: 'source',
 			model: 'section',
-			tipo: 'numisdata3',
-			section_tipo: 'numisdata3',
+			tipo: 'test6099',
+			section_tipo: 'test6099',
 			action: action === 'count' ? 'count' : 'search',
 			mode: 'list',
 			lang: 'lg-spa',
@@ -76,9 +93,14 @@ async function tsCall(rqo: Record<string, unknown>): Promise<Record<string, unkn
 let php: PhpApiClient | null = null;
 
 beforeAll(async () => {
+	await ensureTestCorpus([...CORPUS_SECTIONS]);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
+});
+
+afterAll(async () => {
+	expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
 });
 
 describe.if(hasPhpCredentials())('multi-hop search differential (relation joins)', () => {
@@ -97,9 +119,8 @@ describe.if(hasPhpCredentials())('multi-hop search differential (relation joins)
 		const phpBody = (await (php as PhpApiClient).call(rqoFor('search'))).body as {
 			result?: { data?: { entries?: { section_id: unknown }[] }[] };
 		};
-		const phpIds = (phpBody.result?.data?.[0]?.entries ?? []).map((entry) =>
-			Number(entry.section_id),
-		);
+		const phpIds =
+			adopt(phpBody.result?.data ?? [])[0]?.entries?.map((entry) => Number(entry.section_id)) ?? [];
 		const tsResult = (await tsCall(rqoFor('search'))) as {
 			data?: { entries?: { section_id: unknown }[] }[];
 		};

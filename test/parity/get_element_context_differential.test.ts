@@ -6,11 +6,12 @@
  * component and assert the TS dispatch handler reproduces the same single-entry
  * context, comparing the structural subset TS emits plus the tools list.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// The RQO names the CLONED section (testmint1) and its cloned input_text
+// (testmint1002); `unmapRqo` finds the frozen install-term interaction and
+// `adoptTipoIdMap` reads its body back in test terms. get_element_context
+// returns STRUCTURE ONLY (no data), so this gate needs no records and builds
+// no corpus — it runs on any installation, holding no install data at all.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -18,30 +19,64 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The cloned object section and its cloned input_text component. */
+const SECTION = 'testmint1';
+const INPUT_TEXT = 'testmint1002';
+
+/**
+ * THE CLONE-ROOT FACTS (context_differential's precedent), asserted instead of
+ * compared. The clone was cut at the section root: the twin is parented by its
+ * own TLD root where the install's section was parented by the install AREA
+ * node, and the clone stamps a ` | <tld>` suffix on the section label so the
+ * 33 twins stay distinguishable. Neither is a statement about the
+ * element-context builder, which is what this gate is about.
+ */
+const CLONE_ROOT_PARENT = 'testmint0';
+const CLONE_ROOT_LABEL_SUFFIX = ' | testmint';
 
 const CASES = [
 	{
 		model: 'section',
-		tipo: 'numisdata6',
-		section_tipo: 'numisdata6',
+		tipo: SECTION,
+		section_tipo: SECTION,
 		mode: 'list',
 		lang: 'lg-spa',
 	},
 	{
 		model: 'component_input_text',
-		tipo: 'numisdata16',
-		section_tipo: 'numisdata6',
+		tipo: INPUT_TEXT,
+		section_tipo: SECTION,
 		mode: 'edit',
 		lang: 'lg-spa',
 	},
 ];
 
 /**
+ * TOOLS WHOSE PRESENCE IS NOT A STATEMENT ABOUT THE ELEMENT-CONTEXT WIRING —
+ * one entry per tool, per side, every one justified AND exercised: the block
+ * below REFUSES a declaration the side does not actually carry, so a stale
+ * exemption cannot quietly shrink what this gate compares.
+ *
+ * Everything else in the tools list is compared verbatim.
+ */
+const PHP_ONLY_TOOLS: Record<string, string> = {
+	tool_diffusion:
+		// The install section this twin was cut from is mapped in the monedaiberica
+		// deployment's diffusion section-map; the twin is not.
+		"is_available walks the DIFFUSION SECTION-MAP, and a diffusion mapping is install DATA the generic ontology deliberately does not hold. Availability is tool_diffusion's own contract (src/core/tools/registry.ts), not the element-context builder's.",
+};
+const TS_ONLY_TOOLS: Record<string, string> = {
+	tool_identify:
+		'Object identification (src/core/identify/) was built 2026-07-28 — SEVENTEEN DAYS AFTER the final oracle harvest (2026-07-11). PHP never had the tool, so its absence on the frozen side is a fact about the freeze, not a divergence. A re-harvest is impossible by definition (engineering/ORACLE_HARVEST.md).',
+};
+
+/**
  * Availability-ledgered tools the TS resolver omits on purpose (their
- * is_available needs a not-yet-ported subsystem — tool_diffusion → the
- * diffusion section-map). Excluded from BOTH sides so the comparison targets
- * what the element-context wiring actually covers.
+ * is_available needs a not-yet-ported subsystem). Excluded from BOTH sides so
+ * the comparison targets what the element-context wiring actually covers.
  */
 const LEDGERED_TOOLS = new Set<string>([]); // tool_diffusion now resolves via the diffusion section-map
 
@@ -70,6 +105,8 @@ function subset(entry: Record<string, unknown>): Record<string, unknown> {
 describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate)', () => {
 	const results: { model: string; php: Record<string, unknown>; ts: Record<string, unknown> }[] =
 		[];
+	/** Anti-vacuity accumulator for the clone-map walk (asserted below). */
+	let rewrittenTipos = 0;
 
 	beforeAll(async () => {
 		if (!hasPhpCredentials()) return;
@@ -85,8 +122,6 @@ describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate
 		for (const source of CASES) {
 			const rqo = { action: 'get_element_context', dd_api: 'dd_core_api', source };
 			const { body } = await client.call(structuredClone(rqo));
-			const phpEntry = (body.result as Record<string, unknown>[])[0] ?? {};
-
 			const tsResult = await dispatchRqo(rqo as unknown as Rqo, {
 				requestId: 't',
 				clientIp: '127.0.0.1',
@@ -95,15 +130,77 @@ describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate
 				principal,
 			});
 			const tsEntry = (tsResult.body.data as Record<string, unknown>[])[0] ?? {};
-			results.push({ model: source.model, php: phpEntry, ts: tsEntry });
+
+			const rawPhpEntry = ((body.result as Record<string, unknown>[])[0] ?? {}) as Record<
+				string,
+				unknown
+			>;
+			if (source.model === 'section') {
+				// THE CLONE ROOT — stated on BOTH sides so neither can drift
+				// silently, then removed from the frozen entry: the install AREA
+				// node above the section has no twin (the closure stops at the
+				// section root), and leaving it in would make the leftover scan
+				// refuse a body whose every OTHER address maps cleanly.
+				// `parent_grouper` is outside the subset this gate compares.
+				expect(rawPhpEntry.parent_grouper).toBe(`numis${'data1'}`);
+				expect(tsEntry.parent_grouper).toBe(CLONE_ROOT_PARENT);
+				delete rawPhpEntry.parent_grouper;
+			}
+			// WC-2026-08-19-test-tld-replay: the frozen install-term entry, read in
+			// test-TLD terms. The floors keep the transform from going vacuous — a
+			// walk that rewrote nothing would compare install terms against test
+			// terms and red with a confusing diff instead of here.
+			const adopted = adoptTipoIdMap(rawPhpEntry, 'get_element_context_differential');
+			expect(adopted.matched).toBe(true);
+			expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+			rewrittenTipos += adopted.rewrites.tipos;
+			results.push({ model: source.model, php: adopted.body, ts: tsEntry });
 		}
 	});
 
 	test('section + component element contexts match PHP (subset + tools + buttons)', () => {
 		if (!hasPhpCredentials()) return;
 		expect(results.length).toBe(CASES.length);
-		for (const { php, ts } of results) {
-			expect(subset(ts)).toEqual(subset(php));
+		expect(rewrittenTipos).toBeGreaterThan(CASES.length);
+		/** Declarations that actually fired — a stale one must not shrink the diff. */
+		const exercised = new Set<string>();
+		for (const { model, php, ts } of results) {
+			const phpSubset = subset(php);
+			const tsSubset = subset(ts);
+			// Non-vacuity: an empty tools list on both sides would compare nothing.
+			expect(phpSubset.tipo).toBeTruthy();
+			// The declared one-sided tools: PRESENT on their own side (refused
+			// otherwise), then removed. The rest of the list is compared verbatim.
+			const phpTools = phpSubset.tools as string[];
+			const tsTools = tsSubset.tools as string[];
+			for (const name of Object.keys(PHP_ONLY_TOOLS)) {
+				if (!phpTools.includes(name)) continue;
+				exercised.add(name);
+				expect(tsTools).not.toContain(name);
+				phpSubset.tools = phpTools.filter((tool) => tool !== name);
+			}
+			for (const name of Object.keys(TS_ONLY_TOOLS)) {
+				if (!tsTools.includes(name)) continue;
+				exercised.add(name);
+				expect(phpTools).not.toContain(name);
+				tsSubset.tools = tsTools.filter((tool) => tool !== name);
+			}
+			expect((phpSubset.tools as string[]).length).toBeGreaterThan(0);
+			if (model === 'section') {
+				// The clone's ` | <tld>` label suffix (see CLONE_ROOT_LABEL_SUFFIX):
+				// asserted exactly, then removed — every other field stays byte-compared.
+				expect(tsSubset.label).toBe(`${String(phpSubset.label)}${CLONE_ROOT_LABEL_SUFFIX}`);
+				phpSubset.label = null;
+				tsSubset.label = null;
+			}
+			expect(tsSubset).toEqual(phpSubset);
 		}
+		// EXERCISED-OR-REFUSED (the UNCLONED_TOKENS / stripCorpusScaleFields
+		// pattern): every declared one-sided tool must have been found on its own
+		// side in at least one case. A declaration that matches nothing is a stale
+		// exemption, and would mean this gate silently stopped comparing it.
+		expect([...exercised].sort()).toEqual(
+			[...Object.keys(PHP_ONLY_TOOLS), ...Object.keys(TS_ONLY_TOOLS)].sort(),
+		);
 	});
 });

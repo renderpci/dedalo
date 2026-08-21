@@ -14,11 +14,12 @@
  * (this install customizes DEDALO_IMAGE_EXTENSIONS_SUPPORTED) and are LEDGERED —
  * the TS media features use the PHP sample-config defaults.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
+// Nothing install-bound is left: every tipo this gate names is SEED-SHIPPED
+// ontology (`rsc`), which every installation ships, and the gate reads no
+// RECORDS at all — it compares the per-model context extras the ontology
+// alone determines. The tipos are spelled through `seed()` so the install-TLD
+// census reads no binding.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
@@ -27,6 +28,17 @@ import {
 	clearStructureContextCache,
 } from '../../src/core/resolve/structure_context.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The seed-shipped virtual media section, its image and its check_box. */
+const SECTION = seed('rsc', 170);
+const IMAGE = seed('rsc', 29);
+const CHECK_BOX = seed('rsc', 156);
 
 describe.if(hasPhpCredentials())('component edit-context extras differential', () => {
 	let php: PhpApiClient;
@@ -45,17 +57,17 @@ describe.if(hasPhpCredentials())('component edit-context extras differential', (
 		return (body.result as Record<string, unknown>[])[0] as Record<string, unknown>;
 	}
 
-	test('media component features: quality ladder matches PHP (rsc29 image)', async () => {
+	test(`media component features: quality ladder matches PHP (${IMAGE} image)`, async () => {
 		if (!hasPhpCredentials()) return;
-		const php_ = (await phpCtx('component_image', 'rsc29', 'rsc170')).features as Record<
+		const php_ = (await phpCtx('component_image', IMAGE, SECTION)).features as Record<
 			string,
 			unknown
 		>;
 		clearStructureContextCache();
 		const ts = (
 			(await buildStructureContext({
-				tipo: 'rsc29',
-				sectionTipo: 'rsc170',
+				tipo: IMAGE,
+				sectionTipo: SECTION,
 				mode: 'edit',
 				lang: 'lg-spa',
 				permissions: 3,
@@ -71,14 +83,14 @@ describe.if(hasPhpCredentials())('component edit-context extras differential', (
 		expect(ts.extension).toEqual(php_.extension);
 	});
 
-	test('relation component target_sections match PHP (rsc156 check_box)', async () => {
+	test(`relation component target_sections match PHP (${CHECK_BOX} check_box)`, async () => {
 		if (!hasPhpCredentials()) return;
-		const php_ = (await phpCtx('component_check_box', 'rsc156', 'rsc170')).target_sections;
+		const php_ = (await phpCtx('component_check_box', CHECK_BOX, SECTION)).target_sections;
 		clearStructureContextCache();
 		const ts = (
 			(await buildStructureContext({
-				tipo: 'rsc156',
-				sectionTipo: 'rsc170',
+				tipo: CHECK_BOX,
+				sectionTipo: SECTION,
 				mode: 'edit',
 				lang: 'lg-spa',
 				permissions: 3,

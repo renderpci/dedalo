@@ -14,18 +14,21 @@
  * If PHP fixes the wrap, this test will fail on the ancestor fixture and the
  * TS side should then implement the relation_search clone for real.
  */
-// BINDS INSTALL TLDs: numisdata, object — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// The SQO is written in `test`-TLD terms; the frozen PHP interaction is reached
+// through `unmapRqo`. The records are the committed test corpus, owned by this
+// gate (`ensureTestCorpus` / `dropTestCorpus`).
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The searched section and the thesaurus its autocomplete_hi points at. */
+const CORPUS_SECTIONS = ['test6100', 'test6810'] as const;
 
 function countRqo(sectionId: string): Record<string, unknown> {
 	return {
@@ -36,21 +39,21 @@ function countRqo(sectionId: string): Record<string, unknown> {
 		source: {
 			typo: 'source',
 			model: 'section',
-			tipo: 'numisdata4',
-			section_tipo: 'numisdata4',
+			tipo: 'test6100',
+			section_tipo: 'test6100',
 			action: 'count',
 			mode: 'list',
 			lang: 'lg-spa',
 		},
 		sqo: {
-			section_tipo: ['numisdata4'],
+			section_tipo: ['test6100'],
 			limit: 10,
 			offset: 0,
 			filter: {
 				$and: [
 					{
-						q: [{ section_tipo: 'object1', section_id: sectionId }],
-						path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata155' }],
+						q: [{ section_tipo: 'test6810', section_id: sectionId }],
+						path: [{ section_tipo: 'test6100', component_tipo: 'test6225' }],
 					},
 				],
 			},
@@ -78,10 +81,15 @@ async function tsTotal(rqo: Record<string, unknown>): Promise<number> {
 let php: PhpApiClient | null = null;
 
 beforeAll(async () => {
+	await ensureTestCorpus([...CORPUS_SECTIONS]);
 	if (!hasPhpCredentials()) return;
 	php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
-}, 30000);
+}, 60000);
+
+afterAll(async () => {
+	expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
+});
 
 async function phpTotal(rqo: Record<string, unknown>): Promise<number> {
 	const body = (await (php as PhpApiClient).call(structuredClone(rqo))).body as {

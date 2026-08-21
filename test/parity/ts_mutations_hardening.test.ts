@@ -16,20 +16,29 @@
  * DESTRUCTIVE: creates real child records and deletes them in a finally block.
  * Guarded by hasPhpCredentials so it no-ops without live DB.
  */
-// BINDS INSTALL TLDs: tchi — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay). The tchi
+// thesaurus is gone: the gate BUILDS its situation from the committed test
+// corpus (`testimmovable1`, the `testimmovable` thesaurus TLD) plus its
+// hierarchy registry row, and tears it down. No frozen fixture is involved
+// (NO_ORACLE_GATES) — every record it races on is one it wrote itself.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { hasPhpCredentials } from './php_client.ts';
 
-const PARENT = { section_tipo: 'tchi1', section_id: 620 };
+/**
+ * The situation: the `testimmovable` thesaurus. `ensureTestCorpus` materializes
+ * its records AND the `hierarchy1` registry row (`testHierarchyRegistry`), whose
+ * root term is the section's lowest id — the parent the two racers contend on.
+ */
+const SECTION = 'testimmovable1';
+const PARENT = { section_tipo: SECTION, section_id: 3 };
+/** The children component of the `testimmovable` thesaurus (was tchi40). */
+const CHILDREN_TIPO = 'testimmovable1038';
 
 let tsContext: Parameters<typeof dispatchRqo>[1];
 
@@ -57,7 +66,7 @@ async function deleteRecord(sectionId: number): Promise<void> {
 		dd_api: 'dd_core_api',
 		action: 'delete',
 		prevent_lock: true,
-		source: { section_tipo: 'tchi1', section_id: sectionId, delete_mode: 'delete_record' },
+		source: { section_tipo: SECTION, section_id: sectionId, delete_mode: 'delete_record' },
 	});
 }
 
@@ -67,7 +76,7 @@ async function childrenOrders(): Promise<Map<number, number | string | null>> {
 		dd_api: 'dd_ts_api',
 		action: 'get_children_data',
 		prevent_lock: true,
-		source: { ...PARENT, children_tipo: 'tchi40', area_model: 'area_thesaurus' },
+		source: { ...PARENT, children_tipo: CHILDREN_TIPO, area_model: 'area_thesaurus' },
 	});
 	const rows = ((body.data as { ar_children_data?: unknown[] })?.ar_children_data ?? []) as {
 		section_id: number | string;
@@ -81,6 +90,7 @@ async function childrenOrders(): Promise<Map<number, number | string | null>> {
 }
 
 beforeAll(async () => {
+	await ensureTestCorpus([SECTION]);
 	if (!hasPhpCredentials()) return;
 	const token = createSession(-1, 'root', true);
 	const session = getSession(token);
@@ -104,6 +114,8 @@ describe.if(hasPhpCredentials())('dd_ts_api mutation hardening', () => {
 				/* best-effort cleanup */
 			}
 		}
+		// The situation the gate built goes with it (hermeticity, asserted).
+		expect(await dropTestCorpus([SECTION])).toBe(0);
 	});
 
 	test('two concurrent add_child get distinct ids and distinct sibling orders', async () => {
@@ -118,7 +130,7 @@ describe.if(hasPhpCredentials())('dd_ts_api mutation hardening', () => {
 
 		// Both must carry a dd47 parent locator at the parent (no orphan).
 		for (const id of [idA, idB]) {
-			const record = await readMatrixRecord('matrix', 'tchi1', id);
+			const record = await readMatrixRecord('matrix_test', SECTION, id);
 			expect(record).not.toBeNull();
 			const relation = (record?.columns.relation ?? {}) as Record<string, { type?: string }[]>;
 			const hasParentLink = Object.values(relation).some((items) =>

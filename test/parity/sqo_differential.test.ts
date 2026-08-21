@@ -15,18 +15,23 @@
  * Corpus intent: cover plain listing, pagination, string operators (contains,
  * exact, not-empty, empty), multi-section IN, and component ordering.
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// Every SQO is written in `test`-TLD terms; the frozen PHP interaction is
+// reached through `unmapRqo` and its record identities are read back through
+// `adoptTipoIdMap`. The records are the committed test corpus, owned by this
+// gate (`ensureTestCorpus` / `dropTestCorpus`), never an install's rows.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** Every section the corpus below addresses — this gate owns these records. */
+const CORPUS_SECTIONS = ['testmint1', 'test6100', 'testcatalogs1', 'test6101'] as const;
 
 interface RecordIdentity {
 	section_tipo: string;
@@ -37,23 +42,23 @@ interface RecordIdentity {
 const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'plain list, default order',
-		sqo: { section_tipo: ['numisdata6'], limit: 10, offset: 0 },
+		sqo: { section_tipo: ['testmint1'], limit: 10, offset: 0 },
 	},
 	{
 		name: 'pagination offset',
-		sqo: { section_tipo: ['numisdata6'], limit: 7, offset: 10 },
+		sqo: { section_tipo: ['testmint1'], limit: 7, offset: 10 },
 	},
 	{
 		name: 'string contains (input_text)',
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 20,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: 'ar',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -63,14 +68,14 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'string exact ==',
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 10,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: '==Arsa',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -80,14 +85,14 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'string not-empty *',
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 15,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: '*',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -97,14 +102,14 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'string empty !*',
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 15,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: '!*',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -114,19 +119,19 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'boolean $or of two string filters',
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 25,
 			offset: 0,
 			filter: {
 				$or: [
 					{
 						q: '==Arsa',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 					{
 						q: '==Burzau',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -136,7 +141,7 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'number comparison >= (component_number)',
 		sqo: {
-			section_tipo: ['numisdata4'],
+			section_tipo: ['test6100'],
 			limit: 25,
 			offset: 0,
 			filter: {
@@ -144,7 +149,7 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 					{
 						q: '5',
 						q_operator: '>=',
-						path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata133' }],
+						path: [{ section_tipo: 'test6100', component_tipo: 'test6207' }],
 					},
 				],
 			},
@@ -153,14 +158,14 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'iri not-empty * (component_iri)',
 		sqo: {
-			section_tipo: ['numisdata300'],
+			section_tipo: ['testcatalogs1'],
 			limit: 25,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: '*',
-						path: [{ section_tipo: 'numisdata300', component_tipo: 'numisdata99' }],
+						path: [{ section_tipo: 'testcatalogs1', component_tipo: 'testcatalogs1000' }],
 						lang: 'all',
 					},
 				],
@@ -170,14 +175,14 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 	{
 		name: 'order by string component (window path + jsonb sort-select)',
 		sqo: {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 10,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: '*',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -185,7 +190,7 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 			order: [
 				{
 					direction: 'ASC',
-					path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+					path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 					lang: 'lg-spa',
 				},
 			],
@@ -199,7 +204,7 @@ const CORPUS: { name: string; sqo: Record<string, unknown> }[] = [
 		// a parity bug.
 		name: 'multi-section (same matrix table → IN, explicit order)',
 		sqo: {
-			section_tipo: ['numisdata6', 'numisdata5'],
+			section_tipo: ['testmint1', 'test6101'],
 			limit: 15,
 			offset: 0,
 			order: [
@@ -244,17 +249,32 @@ async function runPhpSearch(
 		},
 		sqo: sqoInput,
 	});
-	const result = body.result as { data?: Record<string, unknown>[] } | false;
-	if (result === false || result === null || !Array.isArray(result.data)) {
+	const frozen = body.result as { data?: Record<string, unknown>[] } | false;
+	if (frozen === false || frozen === null || !Array.isArray(frozen.data)) {
 		throw new Error(`PHP search failed: ${JSON.stringify(body).slice(0, 300)}`);
 	}
+	// The frozen reply is install-term; read it in the `test` terms the SQO
+	// above is written in. Adopted slice = `data[]`, which is ALL this gate
+	// compares (record identity + order): the reply's `context` carries the
+	// install AREA node above the clone root (`numisdata1`), for which the
+	// clone has no twin by construction — context_differential owns that seam.
+	// `matched` is the totality assertion over the compared slice, and the
+	// rewrite floors are the anti-vacuity check: every row of a cloned
+	// section's reply names its section and its component, so zero rewrites
+	// would mean the transform stopped mapping rather than that the body
+	// needed nothing.
+	const adopted = adoptTipoIdMap(frozen.data, 'sqo_differential');
+	expect(adopted.matched, adopted.detail ?? '').toBe(true);
+	expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+	expect(adopted.rewrites.ids).toBeGreaterThan(0);
+	const rows: Record<string, unknown>[] = adopted.body;
 	// The list response carries one data entry PER COMPONENT PER RECORD, in
 	// row order, each stamped with the record's section_tipo/section_id.
 	// Record identity+order = unique (section_tipo, section_id) pairs in
 	// first-appearance order.
 	const seen = new Set<string>();
 	const records: RecordIdentity[] = [];
-	for (const entry of result.data) {
+	for (const entry of rows) {
 		const entrySectionTipo = entry.section_tipo;
 		const entrySectionId = entry.section_id;
 		if (typeof entrySectionTipo !== 'string' || !sectionTipos.includes(entrySectionTipo)) continue;
@@ -270,7 +290,10 @@ async function runPhpSearch(
 describe.if(hasPhpCredentials())('SQO differential: TS engine vs live PHP (Phase 3 gate)', () => {
 	let client: PhpApiClient;
 
+	// The records this gate searches are its own: provisioned here, dropped
+	// (residue-checked) after — never whatever the ambient database holds.
 	beforeAll(async () => {
+		await ensureTestCorpus([...CORPUS_SECTIONS]);
 		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		const loggedIn = await client.login(
@@ -278,6 +301,10 @@ describe.if(hasPhpCredentials())('SQO differential: TS engine vs live PHP (Phase
 			config.phpReference.password as string,
 		);
 		if (!loggedIn) throw new Error('PHP login failed — cannot run the differential corpus');
+	});
+
+	afterAll(async () => {
+		expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
 	});
 
 	for (const corpusCase of CORPUS) {
@@ -301,11 +328,11 @@ describe.if(hasPhpCredentials())('SQO differential: TS engine vs live PHP (Phase
 		// read the same jsonb). Confirms the number '*' builder matches exactly.
 		// full_count avoids the client limit clamp and gives the true match total.
 		const sqo = sanitizeClientSqo({
-			section_tipo: ['numisdata4'],
+			section_tipo: ['test6100'],
 			full_count: true,
 			limit: 1,
 			filter: {
-				$and: [{ q: '*', path: [{ section_tipo: 'numisdata4', component_tipo: 'numisdata133' }] }],
+				$and: [{ q: '*', path: [{ section_tipo: 'test6100', component_tipo: 'test6207' }] }],
 			},
 		});
 		const { sql: builtSql, params } = await buildSearchSql(sqo);
@@ -313,25 +340,34 @@ describe.if(hasPhpCredentials())('SQO differential: TS engine vs live PHP (Phase
 			full_count: number | string;
 		}[];
 		const tsCount = Number(countRows[0]?.full_count);
+		// A `test` section stores in matrix_test (test_corpus/ensure.ts, plan
+		// decision 1) — the ground-truth query must read the table the records
+		// are actually in, or it counts zero and "agrees" with nothing.
 		const truth = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix
-			WHERE section_tipo = 'numisdata4'
-			  AND number @? '$.numisdata133[*].value ? (@ != null)'
+			SELECT count(DISTINCT section_id)::int AS n FROM matrix_test
+			WHERE section_tipo = 'test6100'
+			  AND number @? '$.test6207[*].value ? (@ != null)'
 		`) as { n: number }[];
 		expect(tsCount).toBe(truth[0]?.n as number);
-		expect(tsCount).toBeGreaterThan(1000); // real, large result
+		// Anti-vacuity floor. It was `> 1000` while this gate read the install's
+		// 147k-record section; over the situation this gate now BUILDS the honest
+		// floor is "the builder matched the rows the corpus holds, and not zero" —
+		// the scale was a fact about that install, never about the number builder.
+		expect(tsCount).toBeGreaterThan(0);
 	});
 
 	test('full_count SQL agrees with a direct COUNT (PHP total deferred)', async () => {
-		const sqo = sanitizeClientSqo({ section_tipo: ['numisdata6'], full_count: true, limit: 1 });
+		const sqo = sanitizeClientSqo({ section_tipo: ['testmint1'], full_count: true, limit: 1 });
 		const { sql: builtSql, params } = await buildSearchSql(sqo);
 		const rows = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
 			full_count: number | string;
 		}[];
 		const tsCount = Number(rows[0]?.full_count);
 		const direct = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix WHERE section_tipo = 'numisdata6'
+			SELECT count(DISTINCT section_id)::int AS n FROM matrix_test
+			WHERE section_tipo = 'testmint1'
 		`) as { n: number }[];
 		expect(tsCount).toBe(direct[0]?.n as number);
+		expect(tsCount).toBeGreaterThan(0); // the corpus is provisioned, not empty
 	});
 });

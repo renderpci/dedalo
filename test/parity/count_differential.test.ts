@@ -4,18 +4,27 @@
  * (projects ACL applied to totals — PHP-as-non-admin needs that user's
  * password, so the shared DB is the oracle there).
  */
-// BINDS INSTALL TLDs: numisdata — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
+// Every SQO is written in `test`-TLD terms (the frozen PHP interaction is
+// reached through `unmapRqo`) and the records are the committed test corpus,
+// owned by this gate. The non-admin case is white-box against direct SQL, so
+// it builds its situation completely: the gated section is `testmint1`, and
+// the project ids come from the corpus user's own record.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { getUserProjects } from '../../src/core/security/permissions.ts';
+import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/** The counted section, its component_filter, and the corpus user with projects. */
+const SECTION = 'testmint1';
+const FILTER_TIPO = 'testmint1013';
+const NON_ADMIN_USER_ID = 2;
+const CORPUS_SECTIONS = [SECTION, 'dd128'] as const;
 
 function adminContext(): ApiRequestContext {
 	return {
@@ -52,12 +61,17 @@ describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
 	let client: PhpApiClient;
 
 	beforeAll(async () => {
+		await ensureTestCorpus([...CORPUS_SECTIONS]);
 		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
 			config.phpReference.password as string,
 		);
+	});
+
+	afterAll(async () => {
+		expect(await dropTestCorpus([...CORPUS_SECTIONS])).toBe(0);
 	});
 
 	async function phpCount(sqo: Record<string, unknown>): Promise<number> {
@@ -73,21 +87,21 @@ describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
 
 	test('plain section count matches PHP', async () => {
 		if (!hasPhpCredentials()) return;
-		const sqo = { section_tipo: ['numisdata6'], limit: 10, offset: 0 };
+		const sqo = { section_tipo: ['testmint1'], limit: 10, offset: 0 };
 		expect(await tsCount(structuredClone(sqo))).toBe(await phpCount(sqo));
 	});
 
 	test('filtered count matches PHP', async () => {
 		if (!hasPhpCredentials()) return;
 		const sqo = {
-			section_tipo: ['numisdata6'],
+			section_tipo: ['testmint1'],
 			limit: 10,
 			offset: 0,
 			filter: {
 				$and: [
 					{
 						q: 'ar',
-						path: [{ section_tipo: 'numisdata6', component_tipo: 'numisdata16' }],
+						path: [{ section_tipo: 'testmint1', component_tipo: 'testmint1002' }],
 						lang: 'lg-spa',
 					},
 				],
@@ -99,37 +113,50 @@ describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
 	});
 
 	test('non-admin count is projects-gated (white-box vs direct SQL)', async () => {
+		// The corpus user holds real projects; the gated section's records
+		// reference some of them. The counted total must equal the direct-SQL
+		// set — never the ungated total.
+		const projects = await getUserProjects(NON_ADMIN_USER_ID);
+		expect(projects.length).toBeGreaterThan(0); // fixture guard
 		const nonAdmin: ApiRequestContext = {
 			requestId: 'test',
 			clientIp: '127.0.0.1',
 			session: {
-				userId: 16,
-				username: 'user16',
+				userId: NON_ADMIN_USER_ID,
+				username: 'corpus_user',
 				isGlobalAdmin: false,
 				csrfToken: 'tok',
 				applicationLang: null,
 				dataLang: null,
 			},
 			csrfCandidate: 'tok',
-			principal: { userId: 16, isGlobalAdmin: false, isDeveloper: false },
+			principal: { userId: NON_ADMIN_USER_ID, isGlobalAdmin: false, isDeveloper: false },
 		};
-		// user 16 has read on numisdata267? Their profile grants — if not, the
-		// permission gate 403s, which is also correct; assert either the gated
-		// count or the denial, but never the ungated total.
 		const outcome = await dispatchRqo(
 			{
 				action: 'count',
 				dd_api: 'dd_core_api',
-				source: { model: 'section', tipo: 'numisdata267' },
-				sqo: { section_tipo: ['numisdata267'], limit: 10 },
+				source: { model: 'section', tipo: SECTION },
+				sqo: { section_tipo: [SECTION], limit: 10 },
 			} as unknown as Rqo,
 			nonAdmin,
 		);
-		const truth = (await sql`
-			SELECT count(DISTINCT section_id)::int AS n FROM matrix
-			WHERE section_tipo = 'numisdata267'
-			  AND EXISTS (SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e WHERE e->>'section_id' = '7')
-		`) as { n: number }[];
+		const truth = (await sql.unsafe(
+			`SELECT count(DISTINCT section_id)::int AS n FROM matrix_test
+			 WHERE section_tipo = $1
+			   AND EXISTS (
+				SELECT 1 FROM jsonb_array_elements(relation -> $2) e
+				WHERE (e->>'section_id') = ANY($3::text[])
+			)`,
+			[SECTION, FILTER_TIPO, `{${projects.join(',')}}`],
+		)) as { n: number }[];
+		const ungated = (await sql.unsafe(
+			`SELECT count(DISTINCT section_id)::int AS n FROM matrix_test WHERE section_tipo = $1`,
+			[SECTION],
+		)) as { n: number }[];
+		// The gate is not vacuous: the section is genuinely partial for this user.
+		expect(truth[0]?.n as number).toBeGreaterThan(0);
+		expect(truth[0]?.n as number).toBeLessThan(ungated[0]?.n as number);
 		if (outcome.status === 200) {
 			expect((outcome.body as { data: { total: number } }).data.total).toBe(truth[0]?.n as number);
 		} else {

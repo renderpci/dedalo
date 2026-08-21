@@ -12,7 +12,14 @@
  * - plain_vars: exact equality (urls/flags/DD_TIPOS mirror the install);
  * - page_globals: exact KEY SET + exact values except the engine-specific
  *   debug facts (pg/php version, memory, root path — PHP engine values by
- *   definition) and dedalo_build/data_version (deploy stamps).
+ *   definition), dedalo_build/data_version (deploy stamps) and dedalo_db_name
+ *   (the INSTALLATION's own database name).
+ *
+ * NOT A TLD-BOUND GATE: it names no ontology at all. `dedalo_db_name` joined
+ * the presence-only set 2026-08-19 for the same reason the TLD law exists —
+ * the frozen value is one installation's database, and every other machine
+ * (this suite included) serves a different one. It is asserted to be a
+ * non-empty string on both sides, so the key can never silently vanish.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -26,7 +33,12 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-/** Engine/deploy-specific page_globals keys compared for PRESENCE only. */
+/**
+ * Engine/deploy/INSTALLATION-specific page_globals keys compared for PRESENCE
+ * only — their values are facts about the machine serving them, never about
+ * the payload builder. `dedalo_db_name` is the strongest case: the frozen
+ * oracle's value is the name of ONE install's database.
+ */
 const ENGINE_SPECIFIC_KEYS = new Set([
 	'pg_version',
 	'php_version',
@@ -35,7 +47,16 @@ const ENGINE_SPECIFIC_KEYS = new Set([
 	'dedalo_build',
 	'data_version',
 	'dedalo_last_error',
+	'dedalo_db_name',
 ]);
+
+/**
+ * Presence-only keys that must still be a NON-EMPTY STRING on both sides.
+ * (`dedalo_root_path` is deliberately NOT here: the TS side serves an object
+ * there, a pre-existing shape divergence this gate has always ledgered as
+ * engine-specific and which is not this migration's subject.)
+ */
+const NON_EMPTY_STRING_KEYS = ['dedalo_db_name'] as const;
 
 describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate)', () => {
 	let phpEnv: Record<string, Record<string, unknown>>;
@@ -182,6 +203,23 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		for (const key of Object.keys(phpGlobals)) {
 			if (ENGINE_SPECIFIC_KEYS.has(key)) continue;
 			expect({ [key]: tsGlobals[key] }).toEqual({ [key]: phpGlobals[key] });
+		}
+		// Presence-only is not value-free: the installation facts must still be
+		// real non-empty strings on BOTH sides, or "compared for presence only"
+		// would quietly cover a key that stopped being served at all.
+		for (const key of NON_EMPTY_STRING_KEYS) {
+			for (const [side, globals] of [
+				['php', phpGlobals],
+				['ts', tsGlobals],
+			] as const) {
+				const value = globals[key];
+				expect({ side, key, type: typeof value }).toEqual({ side, key, type: 'string' });
+				expect({ side, key, empty: String(value).length === 0 }).toEqual({
+					side,
+					key,
+					empty: false,
+				});
+			}
 		}
 	});
 });

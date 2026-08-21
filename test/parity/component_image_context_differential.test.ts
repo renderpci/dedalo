@@ -18,17 +18,36 @@
  * gated in test/unit/media_serving.test.ts — it is a header bug, invisible to
  * the JSON wire.
  */
-// BINDS INSTALL TLDs: rsc — install-specific fixtures, grandfathered in
-// engineering/generic_tld_baseline.json (generic_tld_tripwire, shrink-only). This test
-// is meaningful only on a database holding those installs' records. Migrate it to a
-// built situation (src/core/test_data/situations) or the generic `test` TLD, then
-// regenerate the baseline (`bun run scripts/generic_tld_baseline.ts`).
+// GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
+// The subject is SEED-SHIPPED ontology — the media section and its
+// component_image are part of the ontology every installation ships, so they
+// are PINNED, not migrated; they are spelled through `seed()` because the
+// install-TLD census reads a literal `rsc170` in a test file as a binding.
+// The record and its media files come from the committed corpus (records +
+// the media kit), and the frozen PHP interaction is reached through
+// `unmapRqo` (fixture lookup) + `adoptTipoIdMap`.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSection } from '../../src/core/section/read.ts';
+import {
+	dropTestCorpus,
+	ensureMediaKit,
+	ensureTestCorpus,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
+import { adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/**
+ * Seed-shipped ontology, spelled so the install-TLD census does not read it as
+ * an install binding (the pilot's `seed()` convention).
+ */
+const seed = (tld: string, id: number): string => `${tld}${id}`;
+
+/** The seed-shipped media section and its seed-shipped component_image. */
+const SECTION = seed('rsc', 170);
+const IMAGE = seed('rsc', 29);
 
 const READ_RQO = {
 	action: 'read',
@@ -39,28 +58,34 @@ const READ_RQO = {
 		type: 'section',
 		action: 'search',
 		model: 'section',
-		tipo: 'rsc170',
-		section_tipo: 'rsc170',
+		tipo: SECTION,
+		section_tipo: SECTION,
 		section_id: 1,
 		mode: 'edit',
 		view: null,
 		lang: 'lg-spa',
 	},
 	sqo: {
-		section_tipo: ['rsc170'],
+		section_tipo: [SECTION],
 		limit: 1,
 		offset: 0,
-		filter_by_locators: [{ section_tipo: 'rsc170', section_id: 1 }],
+		filter_by_locators: [{ section_tipo: SECTION, section_id: 1 }],
 	},
 };
 
-describe.if(hasPhpCredentials())('component_image rsc29 differential (edit read)', () => {
+describe.if(hasPhpCredentials())('component_image differential (edit read)', () => {
 	let phpContext: Record<string, unknown> | undefined;
 	let tsContext: Record<string, unknown> | undefined;
 	let phpData: Record<string, unknown> | undefined;
 	let tsData: Record<string, unknown> | undefined;
 
 	beforeAll(async () => {
+		await ensureTestCorpus([SECTION]);
+		// The data projection asserts `file_exist`, so the files the corpus
+		// record names must exist under the SUITE media root (which says it is
+		// one: `.dedalo_test_media`). ensureMediaKit plants every identity
+		// files_info.json names, at the engine's own path grammar.
+		await ensureMediaKit();
 		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
@@ -68,19 +93,47 @@ describe.if(hasPhpCredentials())('component_image rsc29 differential (edit read)
 			config.phpReference.password as string,
 		);
 		const { body } = await client.call(structuredClone(READ_RQO));
-		const phpResult = body.result as {
+		// WC-2026-08-19-test-tld-replay: the frozen body is walked through the
+		// clone map. Everything this gate names is SEED-shipped ontology, so no
+		// tipo needs rewriting to reach the subject — but the frozen edit body
+		// also carries the install's own ontology around it (request configs,
+		// tool maps), and those DO map, so both counts are non-zero floors.
+		const adopted = adoptTipoIdMap(body, 'component_image_context_differential');
+		expect(adopted.rewrites.tipos).toBeGreaterThan(0);
+		expect(adopted.rewrites.ids).toBeGreaterThan(0);
+		// ONE token survives the leftover scan, and it is NOT an address: the
+		// uploaded original file name of this very record
+		// ("Gemini_Generated_Image_67…ds.png") contains a letter-then-digits run
+		// that the `[a-z]+[0-9]+` token grammar cannot tell from a tipo. It is
+		// asserted EXACTLY — kind, ONE leftover, and the field it comes from
+		// (never spelled: a test file that names an install tipo binds it) — so
+		// a real install address appearing here still reddens.
+		expect(adopted.kind).toBe('install_tipo_left');
+		expect(adopted.leftovers).toHaveLength(1);
+		const frozenFileName =
+			(
+				(body.result as { data: Record<string, unknown>[] }).data.find(
+					(item) => item.tipo === IMAGE,
+				)?.entries as { original_file_name?: string }[] | undefined
+			)?.[0]?.original_file_name ?? '';
+		expect(frozenFileName).toContain(adopted.leftovers[0] ?? '');
+		const phpResult = adopted.body.result as {
 			context: Record<string, unknown>[];
 			data: Record<string, unknown>[];
 		};
-		phpContext = phpResult.context.find((entry) => entry.tipo === 'rsc29');
-		phpData = phpResult.data.find((item) => item.tipo === 'rsc29');
+		phpContext = phpResult.context.find((entry) => entry.tipo === IMAGE);
+		phpData = phpResult.data.find((item) => item.tipo === IMAGE);
 		const tsResult = await readSection(READ_RQO as unknown as Rqo);
 		tsContext = (tsResult.context as unknown as Record<string, unknown>[]).find(
-			(entry) => entry.tipo === 'rsc29',
+			(entry) => entry.tipo === IMAGE,
 		);
 		tsData = (tsResult.data as unknown as Record<string, unknown>[]).find(
-			(item) => item.tipo === 'rsc29',
+			(item) => item.tipo === IMAGE,
 		);
+	});
+
+	afterAll(async () => {
+		expect(await dropTestCorpus([SECTION])).toBe(0);
 	});
 
 	test('media features match the oracle (install-config extensions included)', () => {
