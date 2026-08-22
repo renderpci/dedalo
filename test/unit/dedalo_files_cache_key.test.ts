@@ -42,7 +42,10 @@ function passBody(source: string): string {
 	const code = stripComments(source);
 	const start = code.indexOf('const run_cache_pass');
 	const end = code.indexOf('}//end run_cache_pass', start);
-	expect(start, 'run_cache_pass vanished — the commit-order gate has nothing to read').toBeGreaterThan(-1);
+	expect(
+		start,
+		'run_cache_pass vanished — the commit-order gate has nothing to read',
+	).toBeGreaterThan(-1);
 	expect(end).toBeGreaterThan(start);
 	return code.slice(start, end);
 }
@@ -414,7 +417,9 @@ describe('the files-cache finish contract', () => {
 		expect(code).toContain('navigator.serviceWorker.ready');
 		expect(code).toContain('SERVICE_WORKER_READY_TIMEOUT_MS');
 		// returning true before knowing a worker is active is what stalled the login
-		expect(code).toMatch(/if\s*\(!ready_registration\s*\|\|\s*!ready_registration\.active\)\s*{[\s\S]{0,200}return false/);
+		expect(code).toMatch(
+			/if\s*\(!ready_registration\s*\|\|\s*!ready_registration\.active\)\s*{[\s\S]{0,200}return false/,
+		);
 	});
 });
 

@@ -56,6 +56,9 @@
  *
  *   940001  zzdif1  PUBLISHABLE   (dd64/1) + portal → 940101, 940102
  *   940002  zzdif1  UNPUBLISHABLE (dd64/2)
+ *   940003  zzdif1  PUBLISHABLE   (dd64/1) — batching/resume filler, no relations
+ *   940004  zzdif1  PUBLISHABLE   (dd64/1) — idem
+ *   940005  zzdif1  PUBLISHABLE   (dd64/1) — idem
  *   940101  zzdif20 publishable
  *   940102  zzdif20 publishable
  *
@@ -93,6 +96,16 @@ export const ZZDIF_UNKNOWN_PARSER_FN = 'parser_zzdif::no_such_fn';
 export const ZZDIF_PUBLISHABLE_ID = 940001;
 export const ZZDIF_UNPUBLISHABLE_ID = 940002;
 export const ZZDIF_LINKED_IDS = [940101, 940102] as const;
+/**
+ * FURTHER publishable primaries, carrying no relations — they exist so a run can
+ * be INTERRUPTED with work still ahead of it. With a single publishable record
+ * the first batch always finishes the job, and a resume gate comparing the two
+ * tables passes without ever resuming: measured 2026-08-21, a planted offender
+ * (a resume cursor advanced 1000 past its checkpoint) stayed green. Anything
+ * asserting batching or checkpoints needs more than one row to be about
+ * anything.
+ */
+export const ZZDIF_EXTRA_PUBLISHABLE_IDS = [940003, 940004, 940005] as const;
 
 /** dd64 = DEDALO_SECTION_SI_NO_TIPO; section_id 1 = yes, 2 = no. */
 const YES = [{ section_tipo: 'dd64', section_id: 1 }];
@@ -408,6 +421,18 @@ function buildSituation(): Situation {
 					relation: { zzdif6: NO },
 				},
 			},
+			...ZZDIF_EXTRA_PUBLISHABLE_IDS.map((id) => ({
+				section_tipo: 'zzdif1',
+				section_id: id,
+				columns: {
+					string: {
+						zzdif2: [{ value: `zzdif publishable title ${id}`, lang: 'lg-spa' }],
+						zzdif3: [{ value: `ZZDIF-${id}` }],
+					},
+					number: { zzdif5: [{ value: id - 940000 }] },
+					relation: { zzdif6: YES },
+				},
+			})),
 			...ZZDIF_LINKED_IDS.map((id) => ({
 				section_tipo: 'zzdif20',
 				section_id: id,
