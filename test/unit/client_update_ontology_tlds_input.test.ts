@@ -79,6 +79,41 @@ describe('update_ontology admin notes', () => {
 	});
 });
 
+describe('update_ontology master-server selection', () => {
+	test('the chosen master survives a reload, and each picker owns its radio group', () => {
+		// Remembered by URL — names are free text and may repeat.
+		expect(src).toMatch(/getItem\(storage_key\)/);
+		expect(src).toMatch(/store_server\(storage_key, current_server\.url\)/);
+		// Restored only when the server is still REACHABLE and still configured.
+		expect(src).toMatch(
+			/if \(reachable && stored_url!==null && current_server\.url===stored_url\)/,
+		);
+
+		// The picker is built before the form subscribes, so the restored choice is
+		// announced afterwards — otherwise the reference row would still say
+		// "select a master" next to a checked radio.
+		expect(src).toContain('publish_active_server(servers)');
+
+		// A radio group is document-wide by name and this panel renders twice (Map
+		// + List): a shared name made the second picker's restore uncheck the first.
+		expect(src).toMatch(/const group_name = 'ontology_server_' \+ \(\+\+picker_seq\)/);
+		expect(
+			/name\s*:\s*'ontology_server'/.test(src),
+			'the radio group name must be per-picker, never the shared literal',
+		).toBe(false);
+
+		// update_code reuses this picker over a different server list: its own key.
+		const update_code = readFileSync(
+			join(
+				REPO_ROOT,
+				'client/dedalo/core/area_maintenance/widgets/update_code/js/render_update_code.js',
+			),
+			'utf8',
+		);
+		expect(update_code).toContain("'dedalo.update_code.server'");
+	});
+});
+
 describe('update_ontology TLD input ownership', () => {
 	test('selecting a master does NOT write the TLD input', () => {
 		const body = selection_handler_body();

@@ -103,6 +103,11 @@ Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add the
 
 The panel tells you which of the two you are looking at: when the key is set the reference list is headed **Configured in this installation**, and when it is not it reads **Engine fallback (not configured)** and the note says so. An empty value counts as unset.
 
+The master server you pick is also remembered in your browser (by URL) and restored the next
+time the panel renders — after a reload or after navigating away and back — so the update is one
+click when you come back to it. If that server later disappears from `ONTOLOGY_SERVERS` or is
+unreachable, nothing is restored and you simply pick again.
+
 **The input line is yours.** What you type there is remembered in your browser and is *never* rewritten when you select a master server, so you can prepare the list first and pick the server after. Two reference lists sit above it, and neither touches the input unless you click:
 
 * **Configured in this installation** — the prefilled list above. *Use this list* puts it back, which is how you undo an edit.

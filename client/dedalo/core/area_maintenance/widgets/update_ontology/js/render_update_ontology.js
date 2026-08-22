@@ -18,7 +18,8 @@
 *   b. Installed ontology — a labelled readout (version / source / date / entity)
 *      from `self.value.current_ontology` (the dd1 root-node properties).
 *   c. Master server — radio picker (`render_servers_list`) with a reachability
-*      pill; unreachable servers are disabled. Selecting one fires
+*      pill; unreachable servers are disabled. The choice is REMEMBERED in this
+*      browser (by URL) and restored on the next render. Selecting one fires
 *      `ontology_server_select_change` so the TLD input auto-fills. Below it, a
 *      two collapsed admin notes: `build_client_info` (the ONTOLOGY_SERVERS key
 *      that populates the picker) and `build_serving_info` (whether THIS install
@@ -283,6 +284,37 @@ const store_tlds = function (value) {
 		// no memory available — the input still works for this visit
 	}
 }//end store_tlds
+
+
+
+/**
+* READ_STORED_SERVER / STORE_SERVER
+* The chosen master, remembered across navigations and reloads. The URL is the
+* identity (names are free text and may repeat); the key is per PICKER, since
+* update_code reuses this picker over a different server list. Same private-mode
+* guard as the TLD line: no memory is a degradation, never an error.
+*
+* @param {string} storage_key
+*/
+const read_stored_server = function (storage_key) {
+	try {
+		const stored = window.localStorage.getItem(storage_key)
+		return (typeof stored==='string' && stored.length>0) ? stored : null
+	} catch (_error) {
+		return null
+	}
+}
+const store_server = function (storage_key, url) {
+	try {
+		if (typeof url==='string' && url.length>0) {
+			window.localStorage.setItem(storage_key, url)
+		} else {
+			window.localStorage.removeItem(storage_key)
+		}
+	} catch (_error) {
+		// no memory available — the selection still works for this visit
+	}
+}//end store_server
 
 
 
@@ -1041,12 +1073,35 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
+	// the picker may have restored a remembered master: announce it now that the
+	// form (and its reference row) is listening
+		publish_active_server(servers)
+
 	// append the response surface last
 		content_data.appendChild(body_response)
 
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* PUBLISH_ACTIVE_SERVER
+* Announces the server `render_servers_list` restored from storage, AFTER the
+* panel's subscribers exist. Without this the picker would show a selected
+* master while the reference row still said "select a master".
+*
+* @param {Array} servers - value.servers, already marked by the picker
+*/
+const publish_active_server = function (servers) {
+
+	const active = (servers || []).find(el => el.active === true)
+	if (!active) {
+		return
+	}
+	event_manager.publish('ontology_server_select_change', active.tld || null)
+}//end publish_active_server
 
 
 
@@ -1063,11 +1118,25 @@ const get_content_data_edit = async function(self) {
 * @param {Object} value - widget value; `value.servers` is the descriptor list
 * @param {string} [env_key='ONTOLOGY_SERVERS'] - config key named in the empty
 *   notice; `update_code` reuses this picker over CODE_SERVERS
+* @param {string} [storage_key] - localStorage key remembering the chosen server
+*   across navigations and reloads; one per picker (update_code passes its own)
 * @returns {HTMLElement} the `.server_picker` container
 */
-export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') {
+let picker_seq = 0
+
+export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', storage_key='dedalo.update_ontology.server') {
+
+	// A radio GROUP is document-wide by name, and this panel renders twice (the
+	// Map view mounts its own instance beside the List one). With a shared name
+	// the second picker's restore silently unchecked the first one's radio — the
+	// selection looked lost after navigating back. One group per picker.
+	const group_name = 'ontology_server_' + (++picker_seq)
 
 	const servers = value.servers || []
+
+	// the master picked last time, by URL (may be gone from the config, or now
+	// unreachable — both are handled by simply not matching)
+	const stored_url = read_stored_server(storage_key)
 
 	const picker = ui.create_dom_element({
 		element_type	: 'div',
@@ -1106,8 +1175,7 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 			const input_radio = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'radio',
-				name 			: 'ontology_server',
-				id				: i+1,
+				name 			: group_name,
 				value			: current_server.url,
 				parent			: server_row
 			})
@@ -1119,10 +1187,22 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 				current_server.active = input_radio.checked
 				picker.querySelectorAll('.server_row').forEach( el => el.classList.remove('on') )
 				server_row.classList.add('on')
+				store_server(storage_key, current_server.url)
 				event_manager.publish('ontology_server_select_change', current_server.tld || null )
 			}
 			input_radio.addEventListener('change', change_handler)
 			input_radio.addEventListener('click', (e) => { e.stopPropagation() })
+
+			// restore the remembered choice. The EVENT is not published here: the
+			// picker is built before the form subscribes, so nobody would hear it —
+			// the caller republishes once the panel is assembled (see
+			// `publish_active_server`).
+			if (reachable && stored_url!==null && current_server.url===stored_url) {
+				input_radio.checked = true
+				servers.forEach( el => delete el.active )
+				current_server.active = true
+				server_row.classList.add('on')
+			}
 
 		// meta: name + url
 			const meta = ui.create_dom_element({ element_type:'span', class_name:'meta', parent:server_row })

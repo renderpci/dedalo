@@ -163,7 +163,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// servers. Show the possible servers to synchronize the ontology.
-		const servers_list = render_servers_list( value, 'CODE_SERVERS' )
+		// its OWN storage key: this picker offers CODE servers, so remembering the
+		// choice must not collide with the ontology picker's
+		const servers_list = render_servers_list( value, 'CODE_SERVERS', 'dedalo.update_code.server' )
 		content_data.appendChild(servers_list)
 
 		// dedalo_source_version_local_dir
