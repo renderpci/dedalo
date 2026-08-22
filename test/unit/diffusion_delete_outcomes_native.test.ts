@@ -10,9 +10,11 @@
  * branch. With our own elements every branch below is reachable and exact.
  *
  * ISOLATION. DIFFUSION_ACTIVITY_TABLE is pinned to a table private to these
- * two files BEFORE diffusion_delete.ts is imported (the const is computed at
- * module load), so dd1758 row counts are exact and can never be satisfied — or
- * corrupted — by another test file's rows. The executor is a module singleton
+ * two files, so dd1758 row counts are exact and can never be satisfied — or
+ * corrupted — by another test file's rows. The engine resolves the table name
+ * per call (activityTable()), so the pin holds regardless of which file
+ * imported diffusion_delete.ts first — in one shared process, a module-load
+ * const made this seam impossible. The executor is a module singleton
  * shared across the whole run: afterEach drops it.
  */
 
@@ -20,6 +22,15 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { sql } from '../../src/core/db/postgres.ts';
+import {
+	activityTable,
+	deleteDiffusionRecord,
+	registerNativeDiffusionSqlDelete,
+	resetNativeDiffusionSqlDeleteForTests,
+	resolvePublishedFilePath,
+	retryPendingDiffusion,
+	unlinkPublishedFiles,
+} from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import {
 	countZzdOntology,
@@ -31,25 +42,12 @@ import {
 	seedZzdOntology,
 } from '../helpers/zzd_diffusion_fixture.ts';
 
-// MUST precede the diffusion_delete import (DIFFUSION_ACTIVITY_TABLE is a
-// module-load const). The prefix guard in resolveActivityTable() accepts it.
+// The prefix guard in resolveActivityTable() accepts this name; the pin is
+// restored in afterAll so it cannot bleed into later files.
 const SCRATCH_ACTIVITY_TABLE = 'dedalo_ts_test_zzd_activity';
+const DIFFUSION_ACTIVITY_TABLE = SCRATCH_ACTIVITY_TABLE;
+const PRELOAD_ACTIVITY_TABLE = process.env.DIFFUSION_ACTIVITY_TABLE;
 process.env.DIFFUSION_ACTIVITY_TABLE = SCRATCH_ACTIVITY_TABLE;
-
-const {
-	DIFFUSION_ACTIVITY_TABLE,
-	deleteDiffusionRecord,
-	registerNativeDiffusionSqlDelete,
-	resetNativeDiffusionSqlDeleteForTests,
-	resolvePublishedFilePath,
-	retryPendingDiffusion,
-	unlinkPublishedFiles,
-} = await import('../../src/core/diffusion_bridge/diffusion_delete.ts');
-if (DIFFUSION_ACTIVITY_TABLE !== SCRATCH_ACTIVITY_TABLE) {
-	throw new Error(
-		`activity-table seam not applied (got '${DIFFUSION_ACTIVITY_TABLE}') — diffusion_delete.ts was imported before the override`,
-	);
-}
 
 const FILE_ROOT = `${tmpdir()}/dedalo_ts_zzd_diffusion_${process.pid}`;
 
@@ -83,6 +81,9 @@ async function purgeScratchActivityRows(): Promise<void> {
 }
 
 beforeAll(async () => {
+	// The seam must be the one this file pinned, or every dd1758 count below is
+	// measured against a table other files also write.
+	expect(activityTable()).toBe(SCRATCH_ACTIVITY_TABLE);
 	// Materialize the private activity table through the module's own bootstrap
 	// (ensureActivityTable is internal; retryPendingDiffusion calls it and, on a
 	// table private to this file, selects nothing).
@@ -113,6 +114,10 @@ afterAll(async () => {
 	await dropZzdOntology();
 	expect(await countZzdOntology()).toBe(0);
 	rmSync(FILE_ROOT, { recursive: true, force: true });
+	// Call-time resolution means the pin would otherwise bleed into every later
+	// file in this process — hand the preload's table back.
+	if (PRELOAD_ACTIVITY_TABLE === undefined) delete process.env.DIFFUSION_ACTIVITY_TABLE;
+	else process.env.DIFFUSION_ACTIVITY_TABLE = PRELOAD_ACTIVITY_TABLE;
 });
 
 describe('scratch diffusion fixture', () => {

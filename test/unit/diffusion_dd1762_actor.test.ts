@@ -18,7 +18,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
-	DIFFUSION_ACTIVITY_TABLE,
+	activityTable,
 	deleteDiffusionRecord,
 	logDiffusionActivity,
 	registerNativeDiffusionSqlDelete,
@@ -40,7 +40,7 @@ const NO_USER_PROBE_ID = 999999718;
 async function reclaimProbeRows(): Promise<void> {
 	for (const probeId of [PROBE_ID, NO_USER_PROBE_ID]) {
 		await sql.unsafe(
-			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			`DELETE FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb`,
 			[JSON.stringify([{ section_id: probeId, section_tipo: SQL_SECTION }])],
@@ -80,7 +80,7 @@ describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
 			`SELECT relation->'dd1762'->0->>'section_id' AS actor_id,
 			        relation->'dd1762'->0->>'section_tipo' AS actor_section,
 			        relation->'dd1767'->0->>'diffusion_action' AS action
-			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			 FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb
 			 ORDER BY section_id`,
@@ -104,7 +104,7 @@ describe('dd1758 ledger actor (dd1762, PHP parity)', () => {
 		const rows = (await sql.unsafe(
 			`SELECT relation ? 'dd1762' AS has_actor,
 			        relation->'dd1762'->0->>'section_id' AS actor_id
-			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			 FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb`,
 			[JSON.stringify([{ section_id: NO_USER_PROBE_ID, section_tipo: SQL_SECTION }])],

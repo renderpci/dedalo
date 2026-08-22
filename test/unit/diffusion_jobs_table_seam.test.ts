@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { DIFFUSION_ACTIVITY_TABLE } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
+import { activityTable } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import {
 	DIFFUSION_JOB_EVENTS_TABLE,
 	DIFFUSION_JOBS_TABLE,
@@ -50,8 +50,8 @@ describe('diffusion activity table seam (dd1758 ledger)', () => {
 	test('bun test runs against the SCRATCH activity table, never the live one', () => {
 		// The preload sets the override before any module loads.
 		expect(process.env.DIFFUSION_ACTIVITY_TABLE).toBeDefined();
-		expect(DIFFUSION_ACTIVITY_TABLE.startsWith('dedalo_ts_test_')).toBe(true);
-		expect(DIFFUSION_ACTIVITY_TABLE).not.toBe('matrix_activity_diffusion');
+		expect(activityTable().startsWith('dedalo_ts_test_')).toBe(true);
+		expect(activityTable()).not.toBe('matrix_activity_diffusion');
 	});
 
 	test('a non-scratch override is REJECTED at module load (fail-loud guard)', async () => {
