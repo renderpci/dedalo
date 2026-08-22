@@ -148,11 +148,17 @@ DEDALO_SECTION_USERS_TIPO="dd128"
 	MAIN_SECTION: {
 		type: 'string',
 		scope: 'operator',
-		default: 'oh1',
+		default: '',
 		heading: 'Defining main fallback section',
 		typeLabel: 'string',
-		doc: `It defines the section will loaded by default when the user login.
-The main section of the project that will used, normally will be a inventory or catalog section.
+		doc: `It defines the section that is loaded by default when the user logs in.
+The main section of the project, normally an inventory or catalog section.
+
+It is EMPTY by default, because there is no section every installation has: the
+default used to name one installation's own section, which meant every other
+installation landed its users on a tipo that need not exist. Left empty, a login
+with no deep link opens the menu — a real state, not a misconfiguration. Set it
+to the section your users should land on.
 
 \`\`\`bash
 MAIN_SECTION="oh1"

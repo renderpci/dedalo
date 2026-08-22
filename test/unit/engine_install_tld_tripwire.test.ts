@@ -7,17 +7,20 @@
  * it is BEHAVIOUR that is correct on one machine. It does not fail anywhere
  * else, it just quietly resolves nothing.
  *
- * Measured 2026-08-22, that had happened four times, in three distinct shapes:
+ * Measured 2026-08-22, that had happened four times, in three distinct shapes,
+ * and all four were DEFAULTS — the one place an install name hides in plain
+ * sight, because the code around it reads perfectly generic:
  *
- *   - `MAIN_SECTION` defaults to `oh1` — the oral-history install's section, and
- *     the page every user lands on after login;
- *   - `MENU_SKIP_TIPOS` defaults to two more installs' menu nodes, in a key
- *     whose own documentation shows the default as `[]`;
+ *   - `MAIN_SECTION` defaulted to `oh1`, the oral-history install's section and
+ *     the page every user lands on after login. Now empty: a login with no deep
+ *     link opens the menu, which is a real state rather than a broken tipo.
+ *   - `MENU_SKIP_TIPOS` defaulted to two more installs' menu nodes, in a key
+ *     whose own documentation already showed the default as an empty array. Now
+ *     empty, as documented.
+ *   - a test fixture named after the `dmm` install wrote its record into
+ *     `matrix`, the installation's table — moved to the generic `test` TLD.
  *   - the iconography ddo defaults `inner_relation` to `numisdata722`, inherited
- *     verbatim from PHP;
- *   - and a test fixture named after the `dmm` install wrote its record into
- *     `matrix` — fixed in the same change, which is why no fixture is baselined
- *     below.
+ *     verbatim from PHP. It is the ONE survivor, and the baseline below says why.
  *
  * ── THE RULE ─────────────────────────────────────────────────────────────────
  * The set of install-named tipo literals in `src/` may only SHRINK. Each
@@ -72,11 +75,6 @@ const SEED_SHIPPED: ReadonlySet<string> = new Set([
  * plain sight: the code is generic and the constant it falls back to is not.
  */
 const ENGINE_INSTALL_TIPOS: Record<string, string> = {
-	'config/catalog/defaults.ts:oh1':
-		'MAIN_SECTION — the section a user lands on after login. Install-neutral would be no default (land on the menu), but changing it moves the landing page of every installation that relies on the default rather than setting the key, so it is an OPERATOR decision, not a refactor. Pending that call.',
-	'config/catalog/menu.ts:numisdata1':
-		"MENU_SKIP_TIPOS — one install's menu shortcut in the engine default; the key's own doc block shows `MENU_SKIP_TIPOS=[]`. Removing it changes what that install's menu shows unless it first sets the key explicitly. Pending that call.",
-	'config/catalog/menu.ts:tch188': 'MENU_SKIP_TIPOS — as above, the second install.',
 	'diffusion/resolve/ddo_fns.ts:numisdata722':
 		'PHP_DEFAULT_INNER_RELATION — inherited verbatim from component_portal (:479-482), not chosen. Deleting it is a WIRE change: if the one element using get_diffusion_iconography relies on the implicit default, its published column empties. The durable fix is on the ONTOLOGY side (that ddo declares inner_relation), after which this entry goes.',
 };

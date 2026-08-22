@@ -1175,7 +1175,41 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			};
 		}
 
-		let pageTipo = pick(locator?.tipo, searchObj.t, searchObj.tipo) ?? config.mainSection;
+		const requestedTipo = pick(locator?.tipo, searchObj.t, searchObj.tipo);
+
+		// NO SECTION ASKED FOR, AND NONE CONFIGURED → the MENU (2026-08-22).
+		// MAIN_SECTION used to default to one installation's section, so a login
+		// with no deep link landed every OTHER installation on a tipo that need
+		// not exist. The key is now install-neutral and may legitimately be empty,
+		// which makes "no landing section" a real state rather than a
+		// misconfiguration: answer with the menu the client already knows how to
+		// mount (the same shape the tool deep link returns), not with a structure
+		// read of the empty tipo.
+		if (requestedTipo === null && config.mainSection === '') {
+			const homeContext: unknown[] = [];
+			const menuCtx = await buildStructureContext({
+				tipo: 'dd85',
+				sectionTipo: 'dd85',
+				mode: 'list',
+				lang: currentDataLang(),
+				langOverride: currentDataLang(),
+				permissions: 2,
+				addRequestConfig: false,
+			});
+			if (menuCtx !== null) homeContext.push(menuCtx);
+			return {
+				status: 200,
+				body: ok(
+					{ context: homeContext, data: [] },
+					{
+						requestId: context.requestId,
+						extend: { environment: await buildEnv(context.session, principal) },
+					},
+				),
+			};
+		}
+
+		let pageTipo = requestedTipo ?? config.mainSection;
 		let pageSectionTipo =
 			pick(locator?.section_tipo, searchObj.st, searchObj.section_tipo) ?? pageTipo;
 		const pageMode = pick(locator?.mode, searchObj.m, searchObj.mode) ?? 'list';

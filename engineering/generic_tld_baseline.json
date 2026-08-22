@@ -4,16 +4,14 @@
 	"files": {
 		"test/integration/diffusion_publish_e2e.test.ts": ["numisdata", "sccmk", "tchi"],
 		"test/parity/menu_differential.test.ts": ["numisdata"],
-		"test/unit/engine_install_tld_tripwire.test.ts": ["numisdata", "oh", "rsc", "tch"]
+		"test/unit/engine_install_tld_tripwire.test.ts": ["numisdata", "rsc"]
 	},
 	"summary": {
 		"files": 3,
 		"by_tld": {
 			"numisdata": 3,
-			"oh": 1,
 			"rsc": 1,
 			"sccmk": 1,
-			"tch": 1,
 			"tchi": 1
 		}
 	}
