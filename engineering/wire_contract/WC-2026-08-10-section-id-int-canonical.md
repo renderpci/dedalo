@@ -216,3 +216,33 @@ residual sites classified permanent-exemption) is frozen in this change's
 review record; the mechanically-enforced form is the
 `section_id_int_tripwire` writer allowlist — additions to it require editing
 THIS entry with the justification.
+
+## Addendum 2026-08-22 — pinned-edge census refresh (ceilings 2→4, 1→4)
+
+The `section_id_int_tripwire` writer allowlist requires an edit here for any
+ceiling raise. Commit `fa11f2e440` (2026-08-13) added string-minting legs to
+two files ALREADY named as pinned edges above, all inside their existing law
+class. No new class, no grandfathering:
+
+- `src/diffusion/resolve/rewriters.ts` — 2 → 4. The two new legs (`:390`,
+  `:410`) are the v6 `component_relation_index` INDEX-EDGE projection, whose
+  key order and string scalars are the published byte shape ("Diffusion →
+  MariaDB published shape").
+- `src/diffusion/resolve/resolver.ts` — 1 → 4, law widened to
+  "MariaDB published shape + dual-probe variant". Three of the four are the
+  published shape (`:846` the pinned coercion this entry already names;
+  `:1349` / `:1676` build the `StoredLocator`s that feed the same publish).
+  The fourth, `:1280`, is the STRING leg of the `rootHierarchyParentId` dual
+  probe — a READ tolerance pair (`probeInt` / `probeStr`), the same class as
+  `src/core/search/containment.ts`.
+
+Contraction note: the two classes end differently. The dual-probe string leg
+at `resolver.ts:1280` is removed at contraction (step 5 above); the published
+shape is not — it is external-consumer contract and stays.
+
+Drained in the same pass (NOT an exemption, a fix):
+`src/core/test_data/test_corpus/ensure.ts:385` minted `section_id: String(...)`
+for the STORED hierarchy-registry relation locators it seeds — i.e. the suite
+corpus carried the repealed shape. Flipped to int (`locatorItem`'s `sectionId`
+param narrowed to `number`). Rows already seeded keep the string form until
+`bun run test:db:setup` re-runs.

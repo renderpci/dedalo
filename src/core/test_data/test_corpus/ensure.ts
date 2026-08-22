@@ -374,15 +374,18 @@ export function testHierarchyRegistry(): TestHierarchyRegistryRow[] {
 	return rows;
 }
 
+// STORED locator ⇒ section_id is INT (WC-2026-08-10-section-id-int-canonical).
+// The seeded corpus must carry the shape the engine writes, or a gate reading it
+// validates a form the engine repealed.
 const locatorItem = (
 	id: number,
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	fromComponentTipo: string,
 ): Record<string, unknown> => ({
 	id,
 	type: 'dd151',
-	section_id: String(sectionId),
+	section_id: sectionId,
 	section_tipo: sectionTipo,
 	from_component_tipo: fromComponentTipo,
 });
