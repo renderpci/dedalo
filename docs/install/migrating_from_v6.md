@@ -506,7 +506,41 @@ Install the reference units and substitute the placeholders as described in [pro
 
 Hosting several domains on this box? Do not copy the unit per domain by hand — [multiple instances](multi_instance.md) covers the template unit, the per-instance identity, and what else must be unique.
 
-### 8.4 Verify the service identity
+### 8.4 The web server's modules changed too
+
+The vhost is not the only thing to adjust: v6 and v7 need **different Apache
+proxy submodules**, and an upgraded host has exactly the wrong one enabled.
+
+```shell
+apachectl -M | grep -E 'proxy|ssl|headers|http2|rewrite'
+```
+
+A host that served v6 typically shows `proxy_module` and `proxy_fcgi_module` — the
+pair that talked to the FPM pool — and **no `proxy_http_module`**. v7 is reached
+over HTTP on a unix socket, which is `proxy_http`'s job, so without it every
+proxied request fails with:
+
+```text
+AH01144: No protocol handler was valid for the URL /dedalo/lib/… (scheme 'http')
+```
+
+Enable what v7 needs; the v6 module can stay, inert:
+
+```shell
+sudo a2enmod ssl headers http2 rewrite proxy proxy_http
+sudo systemctl restart apache2       # LoadModule needs a restart, not a reload
+```
+
+!!! note "`mod_headers` is not optional"
+    The vhost's `Header always set …` lines are a **configuration error** when
+    `mod_headers` is absent — Apache refuses to start, rather than skipping them.
+
+Then write the vhost itself: [reverse proxy and TLS](reverse_proxy.md) for one
+domain, [multiple instances](multi_instance.md) if this host serves several. Point
+every path at **this** install's socket, media and clone — a v6 vhost's `Alias`
+and `DocumentRoot` lines point into the old tree and cannot be reused as they are.
+
+### 8.5 Verify the service identity
 
 ```shell
 systemctl show dedalo-ts -p User -p Group -p WorkingDirectory
