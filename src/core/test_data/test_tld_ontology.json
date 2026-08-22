@@ -4378,7 +4378,7 @@
 			"tipo": "test153",
 			"parent": "dd1190",
 			"term": {
-				"lg-spa": "dedalo_edu"
+				"lg-spa": "test153 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 5,
@@ -87708,7 +87708,7 @@
 			"tipo": "test3410",
 			"parent": "dd1190",
 			"term": {
-				"lg-spa": "mdcat"
+				"lg-spa": "test3410 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 14,
@@ -157762,7 +157762,7 @@
 			"tipo": "test5941",
 			"parent": "dd1190",
 			"term": {
-				"lg-spa": "mht"
+				"lg-spa": "test5941 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 16,
@@ -164525,7 +164525,7 @@
 			"tipo": "test6131",
 			"parent": "dd1190",
 			"term": {
-				"lg-spa": "numisdata_default"
+				"lg-spa": "test6131 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 7,
@@ -174834,7 +174834,7 @@
 			"tipo": "test6334",
 			"parent": "dd1190",
 			"term": {
-				"lg-spa": "numisdata_mib"
+				"lg-spa": "test6334 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 8,
@@ -179344,7 +179344,7 @@
 			"tipo": "test6425",
 			"parent": "dd1190",
 			"term": {
-				"lg-spa": "numisdata_sardinia"
+				"lg-spa": "test6425 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 10,
@@ -193902,7 +193902,7 @@
 			"tipo": "test6769",
 			"parent": "test6965",
 			"term": {
-				"lg-spa": "numisdata_ifs_DES"
+				"lg-spa": "test6769 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 13,
@@ -211186,7 +211186,7 @@
 			"tipo": "test7230",
 			"parent": "test7273",
 			"term": {
-				"lg-spa": "mvr"
+				"lg-spa": "test7230 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 86,
@@ -212086,7 +212086,7 @@
 			"tipo": "test7273",
 			"parent": "test7277",
 			"term": {
-				"lg-spa": "coib"
+				"lg-spa": "test7273 domain"
 			},
 			"model": "diffusion_domain",
 			"order_number": 18,

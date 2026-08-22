@@ -444,6 +444,40 @@ function disambiguatedSectionTerm(
 }
 
 /**
+ * A cloned DIFFUSION DOMAIN's term, made install-free — `<target tipo> domain`.
+ *
+ * WHY. For `diffusion_domain` the term is not display text, it is the
+ * IDENTIFIER the engine resolves on: `resolveDomainTipo` picks dd1190's first
+ * child whose term equals `DEDALO_DIFFUSION_DOMAIN`
+ * (src/core/diffusion_bridge/diffusion_graph.ts). A verbatim clone therefore
+ * mints an INSTALLATION's name (`mht`, `mdcat`, `numisdata_*`) into the generic
+ * `test` TLD, where it silently WINS that match on the suite database and hands
+ * back a truncated 3-node domain — a FOUND domain with an EMPTY section map,
+ * indistinguishable from an undiffused install. Tipo-derived names cannot
+ * collide with any install's.
+ */
+function genericDomainTerm(
+	term: Record<string, string> | null,
+	target: string,
+): Record<string, string> | null {
+	if (term === null) return null;
+	const out: Record<string, string> = {};
+	for (const lang of Object.keys(term)) out[lang] = `${target} domain`;
+	return out;
+}
+
+/** Term of a cloned node: sections disambiguated, diffusion domains de-installed. */
+function cloneTerm(
+	node: SourceNode,
+	target: string,
+	targetTld: string,
+): Record<string, string> | null {
+	if (node.model === 'section') return disambiguatedSectionTerm(node.term, targetTld);
+	if (node.model === 'diffusion_domain') return genericDomainTerm(node.term, target);
+	return node.term;
+}
+
+/**
  * Remove every `properties` path the manifest's `policy.properties_strip_paths`
  * names — applied to CLONES only, never to the 217 hand-authored legacy `test`
  * nodes (they own their own fixtures; the clone only repairs their references).
@@ -1064,7 +1098,7 @@ function main(): void {
 		clonedNodes.push({
 			tipo: target,
 			parent: rewriteParent(node, map, targetTld, anchors.has(tipo)),
-			term: node.model === 'section' ? disambiguatedSectionTerm(node.term, targetTld) : node.term,
+			term: cloneTerm(node, target, targetTld),
 			model: node.model,
 			order_number: node.order_number,
 			relations: rewriteRelations(node, map, targetTld),

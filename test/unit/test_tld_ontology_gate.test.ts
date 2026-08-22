@@ -185,6 +185,34 @@ describe('test TLD ontology — the JSON source (hermetic)', () => {
 		]);
 		expect([...planted.keys()]).toContain(FROZEN.probe_tipo);
 	});
+
+	// A diffusion_domain's TERM is an IDENTIFIER, not display text:
+	// resolveDomainTipo (src/core/diffusion_bridge/diffusion_graph.ts) picks
+	// dd1190's first child whose term equals DEDALO_DIFFUSION_DOMAIN. A clone
+	// that copies an install's domain name into the `test` TLD therefore WINS
+	// that match on the suite database and serves a truncated domain: FOUND, but
+	// with an empty section map — vacuity that reads as "this install does not
+	// diffuse". Generic-TLD law, applied to the one namespace matched by value.
+	test('every diffusion_domain term is generic (test*) and unique', () => {
+		const domains = NODES.filter((node) => node.model === 'diffusion_domain');
+		expect(domains.length).toBeGreaterThan(5); // anti-vacuity: 11 today
+		const foreign: string[] = [];
+		const seen = new Map<string, string>();
+		const collided: string[] = [];
+		for (const node of domains) {
+			for (const value of Object.values(node.term ?? {})) {
+				if (!value.startsWith('test')) foreign.push(`${node.tipo}: '${value}'`);
+				const other = seen.get(value);
+				if (other !== undefined) collided.push(`'${value}': ${other} + ${node.tipo}`);
+				seen.set(value, node.tipo);
+			}
+		}
+		expect(
+			foreign.sort(),
+			"a test-TLD diffusion_domain named after an INSTALLATION: the term is what DEDALO_DIFFUSION_DOMAIN matches, so it must be tipo-derived ('<tipo> domain', scripts/clone_into_test_tld.ts genericDomainTerm)",
+		).toEqual([]);
+		expect(collided.sort()).toEqual([]);
+	});
 });
 
 describe('test TLD ontology — the inverse parser (hermetic)', () => {
