@@ -470,20 +470,34 @@ async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
 	// matrix_hierarchy_main). Hardcoding matrix_ontology_main here made the
 	// write-back a silent no-op for hierarchy1-driven provisioning (caught by
 	// test/unit/hierarchy_provision_native.test.ts).
-	await updateMatrixKeyData(
-		hierarchyTable,
-		hierarchySectionTipo,
-		hierarchySectionId,
-		'string',
-		HIERARCHY_TARGET_SECTION,
-		[{ id: 1, lang: DATA_NOLAN, value: `${tld2}1` }],
-	);
-	await updateMatrixKeyData(
-		hierarchyTable,
-		hierarchySectionTipo,
-		hierarchySectionId,
-		'string',
-		HIERARCHY_TARGET_SECTION_MODEL,
-		[{ id: 1, lang: DATA_NOLAN, value: `${tld2}2` }],
-	);
+	//
+	// FILL-ONLY (2026-08-22). This used to write the `<tld>1`/`<tld>2` convention
+	// UNCONDITIONALLY, which made provisioning the one place that destroyed
+	// operator data: hierarchy53/58 are the sections the operator declares, a
+	// hierarchy may legitimately pair foreign ones (live: 'WW' → `mht72`), and
+	// the model-section resolver (ontology/model_section.ts) READS that pairing.
+	// So provisioning a hierarchy silently repointed it at `<tld>1` and every
+	// component_relation_model derived from it followed. Same law as
+	// `ensureTargetSectionDefaults` in hierarchy_state.ts: DEFAULT when unset,
+	// never overwrite.
+	const declared = (await sql.unsafe(
+		`SELECT string FROM "${hierarchyTable}" WHERE section_tipo = $1 AND section_id = $2`,
+		[hierarchySectionTipo, hierarchySectionId],
+	)) as { string: Record<string, { value?: unknown }[]> | null }[];
+	const declaredValue = (tipo: string): string =>
+		String(declared[0]?.string?.[tipo]?.[0]?.value ?? '');
+	for (const [tipo, fallback] of [
+		[HIERARCHY_TARGET_SECTION, `${tld2}1`],
+		[HIERARCHY_TARGET_SECTION_MODEL, `${tld2}2`],
+	] as [string, string][]) {
+		if (declaredValue(tipo) !== '') continue;
+		await updateMatrixKeyData(
+			hierarchyTable,
+			hierarchySectionTipo,
+			hierarchySectionId,
+			'string',
+			tipo,
+			[{ id: 1, lang: DATA_NOLAN, value: fallback }],
+		);
+	}
 }
