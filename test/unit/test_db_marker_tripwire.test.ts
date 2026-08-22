@@ -287,6 +287,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			).ensureMapOfGrapesFixture(),
 	},
 	{
+		name: 'ensureSuiteProjectsFixture',
+		run: async () =>
+			(await import('../../src/core/test_data/projects_fixture.ts')).ensureSuiteProjectsFixture(),
+	},
+	{
+		name: 'removeSuiteProjectsFixture',
+		run: async () =>
+			(await import('../../src/core/test_data/projects_fixture.ts')).removeSuiteProjectsFixture(),
+	},
+	{
 		name: 'ensureSuiteLoginPassword',
 		run: async () =>
 			(await import('../../src/core/test_data/suite_login.ts')).ensureSuiteLoginPassword(

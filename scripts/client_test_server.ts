@@ -71,6 +71,28 @@ export function resolveSuiteDatabase(): { suiteDb: string; appDb: string } {
 }
 
 /**
+ * THE DIFFUSION DOMAIN THE CLIENT RUN PUBLISHES THROUGH — pinned, never inherited.
+ *
+ * `DEDALO_DIFFUSION_DOMAIN` is matched BY TERM against dd1190's children
+ * (src/core/diffusion_bridge/diffusion_graph.ts resolveDomainTipo), so its value
+ * only means something relative to one database's ontology. Inheriting the
+ * installation's value (`mht` here) was harmless while the run drove the
+ * developer's server on the APPLICATION database, where that term is a real
+ * 75-node domain reaching section rsc170. On the SUITE database the same term
+ * resolves to a truncated clone (`test5941`, three nodes, no table children):
+ * the domain is FOUND, the section map comes back EMPTY, `haveSectionDiffusion`
+ * is false for every section, `tool_diffusion` is unavailable, and the inspector
+ * never draws the opener — which surfaced as six mystery DOM assertions in
+ * `test_diffusion`. The suite's diffusion answer must not be a property of the
+ * developer's machine.
+ *
+ * `test` is the generic `test`-TLD domain (`test43`) that ships in
+ * src/core/test_data/test_tld_ontology.json — repo-owned, materialized by
+ * `bun run test:db:setup`, and reaching rsc170 through test5/test63/test16.
+ */
+export const SUITE_DIFFUSION_DOMAIN = 'test';
+
+/**
  * Repoint THIS process (the runner) at the suite database, before anything
  * imports src/config/config.ts — which freezes the connection at import. Same
  * seam as test/preload/test_database.ts and scripts/test_db_setup.ts; `scripts/`
@@ -88,6 +110,11 @@ export function resolveSuiteDatabase(): { suiteDb: string; appDb: string } {
 export function repointProcessToSuiteDatabase(suiteDb: string, sessionDbPath?: string): void {
 	process.env.DB_NAME = suiteDb;
 	process.env.DEDALO_DATABASE_CONN = suiteDb;
+	// THE DIFFUSION DOMAIN MOVES WITH THE DATABASE TOO — see SUITE_DIFFUSION_DOMAIN.
+	// It is set HERE and not only in the spawned server's map because this process
+	// asserts the domain resolves before Chrome launches (client_test_runner.ts
+	// assertSuiteDiffusionSurface), and it must read the same value the server will.
+	process.env.DEDALO_DIFFUSION_DOMAIN = SUITE_DIFFUSION_DOMAIN;
 	// THE MEDIA ROOT MOVES WITH THE DATABASE. The client suite uploads files,
 	// deletes records that carry media and regenerates derivatives — through a
 	// LIVE SERVER, so none of it passes this process's guards. Setting
@@ -138,6 +165,10 @@ export function suiteServerEnvironment(options: {
 		DIFFUSION_JOBS_TABLE: readEnv('DIFFUSION_JOBS_TABLE') ?? 'dedalo_ts_test_client_diffusion_jobs',
 		DIFFUSION_ACTIVITY_TABLE:
 			readEnv('DIFFUSION_ACTIVITY_TABLE') ?? 'dedalo_ts_test_client_activity_diffusion',
+		// Never the installation's domain — it names a node that does not exist on
+		// this database (see SUITE_DIFFUSION_DOMAIN). Explicit, though the repoint
+		// above already put it in the inherited environment.
+		DEDALO_DIFFUSION_DOMAIN: SUITE_DIFFUSION_DOMAIN,
 		// The client suite exercises the developer surfaces, and the fingerprint
 		// on /health is dev-mode-only by design.
 		DEDALO_DEV_MODE: 'true',

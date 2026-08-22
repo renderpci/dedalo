@@ -234,8 +234,13 @@ describe(`COMPONENT_FILTER DATA OPERATIONS`, function() {
 		// An empty datalist, or a form with nothing left to check, is not a reason
 		// to skip: it is the exact condition that leaves the widget unable to save
 		// anything. Assert it instead of guarding it away.
+			// MORE options than the record has selected, not merely "some": the
+			// record carries one project, so a one-entry datalist leaves nothing to
+			// check and this case's `find(cb => !cb.checked)` returns undefined. The
+			// run's projects fixture (src/core/test_data/projects_fixture.ts) is what
+			// makes that true — assert it here so a lost fixture names itself.
 			const datalist = instance.data.datalist || []
-			assert.isAbove(datalist.length, 0, 'datalist expected to offer options')
+			assert.isAbove(datalist.length, 1, 'fixture: the projects catalog must offer more options than the record has selected')
 
 			const unchecked = Array.from(checkboxes).find(cb => !cb.checked)
 			assert.isOk(unchecked, 'an unchecked checkbox expected to check')
