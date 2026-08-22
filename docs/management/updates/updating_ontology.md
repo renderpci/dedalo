@@ -107,7 +107,7 @@ The panel tells you which of the two you are looking at: when the key is set the
 * **Configured in this installation** — the prefilled list above. *Use this list* puts it back, which is how you undo an edit.
 * **Offered by the selected master** — the master's own manifest, fetched on demand with *Fetch list* (it costs one request, so it is not fetched just by selecting). It has no *Use this list* button on purpose: a master publishes the **whole** ontology, 200+ tlds including every language pack, and importing all of it is never what you mean.
 
-Clicking any tld chip adds it to the line, or removes it if it is already there.
+Clicking any tld chip adds it to the line, or removes it if it is already there. A chip is **highlighted while its tld is in the line**, in both lists — including when you type in the field by hand — so the reference lists double as a readout of what the update will import.
 
 When ready, press the "Update Dédalo Ontology to the latest version" button, and the process will execute.
 

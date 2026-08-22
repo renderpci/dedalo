@@ -339,19 +339,48 @@ const build_tlds_reference = function (options) {
 		parent			: node
 	})
 
+	// every chip currently on screen, so the "is this TLD in the line?" state can
+	// be repainted from ONE place (the input is the single source of truth: chips
+	// only reflect it, and typing in the input must move them too)
+	const chip_nodes = []
+
+	/** Splits the input line into trimmed, non-empty TLDs. */
+	const current_list = function () {
+		return get_value().split(',').map(el => el.trim()).filter(el => el.length>0)
+	}
+
+	/** Repaints every chip's selected state from the input line. */
+	const sync_chips = function () {
+		const current = current_list()
+		chip_nodes.forEach(entry => {
+			const selected = current.indexOf(entry.tld)!==-1
+			entry.node.classList.toggle('on', selected)
+			entry.node.setAttribute('aria-pressed', selected ? 'true' : 'false')
+			entry.node.title = selected
+				? `Remove “${entry.tld}” from the list below`
+				: `Add “${entry.tld}” to the list below`
+		})
+	}
+
+	/** Writes the input and repaints the chips in one step. */
+	const apply_value = function (new_value) {
+		set_value(new_value)
+		sync_chips()
+	}
+
 	/**
 	* Adds a TLD to the input if missing, removes it if already there — so a chip
 	* is a toggle, not a one-way append.
 	*/
 	const toggle_tld = function (tld) {
-		const current = get_value().split(',').map(el => el.trim()).filter(el => el.length>0)
+		const current = current_list()
 		const found = current.indexOf(tld)
 		if (found===-1) {
 			current.push(tld)
 		} else {
 			current.splice(found, 1)
 		}
-		set_value(current.join(','))
+		apply_value(current.join(','))
 	}
 
 	/**
@@ -392,6 +421,12 @@ const build_tlds_reference = function (options) {
 			while (chips.firstChild) {
 				chips.removeChild(chips.firstChild)
 			}
+			// drop this row's stale entries from the shared registry
+			for (let i = chip_nodes.length-1; i >= 0; i--) {
+				if (chip_nodes[i].row===chips) {
+					chip_nodes.splice(i, 1)
+				}
+			}
 			if (!ar_tlds.length) {
 				ui.create_dom_element({
 					element_type	: 'span',
@@ -406,7 +441,7 @@ const build_tlds_reference = function (options) {
 			}
 			if (use_button) {
 				use_button.disabled = false
-				use_button.onclick = () => set_value(ar_tlds.join(','))
+				use_button.onclick = () => apply_value(ar_tlds.join(','))
 			}
 			ar_tlds.forEach(tld => {
 				const chip = ui.create_dom_element({
@@ -414,11 +449,12 @@ const build_tlds_reference = function (options) {
 					type			: 'button',
 					class_name		: 'tld_chip',
 					text_content	: String(tld),
-					title			: `Add or remove “${tld}” in the list below`,
 					parent			: chips
 				})
 				chip.addEventListener('click', () => toggle_tld(String(tld)))
+				chip_nodes.push({ tld : String(tld), node : chip, row : chips })
 			})
+			sync_chips()
 		}
 		paint(tlds)
 
@@ -471,6 +507,9 @@ const build_tlds_reference = function (options) {
 
 	return {
 		node			: node,
+		// the input is editable by hand too: the panel calls this on every
+		// keystroke so the chips never lie about what is in the line
+		sync			: sync_chips,
 		set_server		: (server) => {
 			selected_server = server || null
 			fetch_button.disabled = !selected_server
@@ -524,7 +563,7 @@ const build_client_info = function (servers) {
 
 	const body = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'serving_body',
+		class_name		: 'serving_body hide',
 		parent			: details
 	})
 	ui.create_dom_element({
@@ -782,9 +821,12 @@ const get_content_data_edit = async function(self) {
 					if (stored!==null) {
 						tlds_input.value = stored
 					}
+					// declared here, wired right after the reference block exists
+					let sync_reference = () => {}
 					tlds_input.addEventListener('input', () => {
 						tlds_input.classList.remove('empty')
 						store_tlds(tlds_input.value)
+						sync_reference()
 					})
 
 					// reference lists ABOVE the input — nothing here writes the
@@ -812,7 +854,10 @@ const get_content_data_edit = async function(self) {
 							)]
 						}
 					})
+					sync_reference = reference.sync
 					nodes.form_container.insertBefore(reference.node, nodes.form_container.firstChild)
+					// first paint: the prefilled/remembered line lights its chips
+					reference.sync()
 
 					// selecting a master ARMS THE REFERENCE ROW ONLY (it used to
 					// overwrite the input, discarding the operator's edit)

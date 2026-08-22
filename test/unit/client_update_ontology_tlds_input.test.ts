@@ -18,7 +18,10 @@
  *      localStorage under the documented key;
  *   3. the master's own list is never applied wholesale: `build_row` is called
  *      with the "Use this list" button OFF for the master row (a manifest is
- *      200+ TLDs, every language pack included).
+ *      200+ TLDs, every language pack included);
+ *   4. the chips' selected state is DERIVED from the input, and the input's own
+ *      keystrokes repaint it — a chip that says "in the list" while the line says
+ *      otherwise is a worse lie than no highlight at all.
  *
  * Honest limit: this reads the source, so it proves the shape of the wiring, not
  * that the rendered widget behaves (no DOM here — the behaviour was verified in
@@ -71,6 +74,28 @@ describe('update_ontology TLD input ownership', () => {
 		// both sides guarded: a private-mode browser throws on access and the
 		// panel must still render
 		expect(src.match(/catch \(_error\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+	});
+
+	test('the chips reflect the input line, typing included', () => {
+		// ONE painter, reading the input — not a second copy of the state.
+		expect(src).toMatch(/const sync_chips = function \(\) \{/);
+		expect(src).toMatch(/const current = current_list\(\)/);
+		expect(src).toMatch(/classList\.toggle\('on', selected\)/);
+
+		// every writer goes through apply_value (write + repaint), and hand typing
+		// repaints too
+		expect(src).toMatch(
+			/const apply_value = function \(new_value\) \{\n\t\tset_value\(new_value\)\n\t\tsync_chips\(\)/,
+		);
+		const input_listener = src.slice(
+			src.indexOf("tlds_input.addEventListener('input'"),
+			src.indexOf('// reference lists ABOVE the input'),
+		);
+		expect(
+			input_listener.includes('sync_reference()'),
+			'typing in the TLD input must repaint the chips — otherwise a chip keeps ' +
+				'claiming a TLD is in a line the operator has just emptied',
+		).toBe(true);
 	});
 
 	test('the master manifest is never applied wholesale', () => {

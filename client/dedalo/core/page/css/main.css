@@ -16559,15 +16559,27 @@ dd-modal:has(.tool_header) {
   border: 1px solid var(--border_default);
   border-radius: 999px;
   background-color: var(--bg_surface_alt);
-  color: var(--fg_default);
+  color: var(--fg_muted);
   font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
   font-size: 0.76rem;
   line-height: 1.5;
   cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 .wrapper_widget.update_ontology .tlds_reference .tlds_row .tld_chip:hover {
   border-color: color-mix(in srgb, var(--color_primary) 45%, var(--border_default));
   background-color: color-mix(in srgb, var(--color_primary) 10%, transparent);
+  color: var(--fg_default);
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .tld_chip.on {
+  border-color: color-mix(in srgb, var(--color_primary) 55%, var(--border_default));
+  background-color: color-mix(in srgb, var(--color_primary) 18%, transparent);
+  color: var(--fg_default);
+  font-weight: 600;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .tld_chip.on:hover {
+  border-color: color-mix(in srgb, var(--color_danger) 45%, var(--border_default));
+  background-color: color-mix(in srgb, var(--color_danger) 12%, transparent);
 }
 .wrapper_widget.update_ontology .form_container {
   padding-top: 0;
