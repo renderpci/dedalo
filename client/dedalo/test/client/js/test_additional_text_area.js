@@ -27,14 +27,14 @@ import {pause} from '../../../core/common/js/utils/util.js'
 
 	let pause_time = 300
 
-	const section_tipo	= 'dmm480' // map of grapes
+	const section_tipo	= 'test480' // map of grapes
 	const section_id	= 1;
 
 	const options = Object.assign(component_options, {
 		section_id		: section_id,
 		mode			: 'edit',
 		view			: 'default',
-		tipo			: 'dmm507', // Site
+		tipo			: 'test507', // Site
 		section_tipo	: section_tipo // map of grapes
 	});
 
@@ -65,7 +65,7 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
 				section_id		: section_id,
 				mode			: 'edit',
 				view			: 'default',
-				tipo			: 'dmm506',
+				tipo			: 'test506',
 				section_tipo	: section_tipo,
 				model			: 'component_geolocation'
 			});

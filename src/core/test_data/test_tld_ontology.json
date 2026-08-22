@@ -36,7 +36,7 @@
 		"testunit",
 		"testweb"
 	],
-	"node_count": 8474,
+	"node_count": 8477,
 	"nodes": [
 		{
 			"tipo": "test0",
@@ -6695,6 +6695,97 @@
 			"model_tipo": "dd633",
 			"is_model": false,
 			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test480",
+			"parent": "dd14",
+			"term": {
+				"lg-eng": "Map of grapes",
+				"lg-spa": "Mapa de fosas",
+				"lg-cat": "Mapa de fosses"
+			},
+			"model": "section",
+			"order_number": 1,
+			"relations": [
+				{
+					"tipo": "test24"
+				}
+			],
+			"tld": "test",
+			"properties": {
+				"color": "#4d7c2a"
+			},
+			"model_tipo": "dd6",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test506",
+			"parent": "test480",
+			"term": {
+				"lg-eng": "Location",
+				"lg-spa": "Localización",
+				"lg-cat": "Localització"
+			},
+			"model": "component_geolocation",
+			"order_number": 2,
+			"relations": [],
+			"tld": "test",
+			"properties": {
+				"observe": [
+					{
+						"client": {
+							"event": "click_tag_geo",
+							"perform": {
+								"function": "load_tag_into_geo_editor"
+							}
+						},
+						"component_tipo": "test507"
+					},
+					{
+						"client": {
+							"event": "key_up_f2",
+							"perform": {
+								"function": "get_data_tag"
+							}
+						},
+						"component_tipo": "test507"
+					}
+				]
+			},
+			"model_tipo": "dd66",
+			"is_model": false,
+			"is_translatable": false,
+			"is_main": false,
+			"propiedades": null
+		},
+		{
+			"tipo": "test507",
+			"parent": "test480",
+			"term": {
+				"lg-eng": "Site",
+				"lg-spa": "Yacimiento",
+				"lg-cat": "Jaciment"
+			},
+			"model": "component_text_area",
+			"order_number": 1,
+			"relations": [],
+			"tld": "test",
+			"properties": {
+				"auto_init_editor": true,
+				"css": {
+					".wrapper_component": {
+						"grid-column": "span 1"
+					}
+				}
+			},
+			"model_tipo": "dd10",
+			"is_model": false,
+			"is_translatable": true,
 			"is_main": false,
 			"propiedades": null
 		},

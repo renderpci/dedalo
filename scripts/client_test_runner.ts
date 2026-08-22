@@ -172,9 +172,9 @@ async function reseedCanonicalTest3(phase: string): Promise<void> {
 }
 
 /**
- * Provision the "map of grapes" demo ontology (dmm480/dmm507/dmm506) that
+ * Provision the "map of grapes" demo ontology (test480/test507/test506) that
  * `test_additional_text_area.js`'s geolocation block depends on — see
- * src/core/test_data/dmm_map_of_grapes_fixture.ts. Idempotent; pre-run only
+ * src/core/test_data/map_of_grapes_fixture.ts. Idempotent; pre-run only
  * (nothing in the suite mutates the ontology shape, only the record's data,
  * which this re-provisions to the same starting content each run).
  *
@@ -187,10 +187,10 @@ async function reseedCanonicalTest3(phase: string): Promise<void> {
  */
 async function ensureMapOfGrapesFixture(): Promise<void> {
 	const { ensureMapOfGrapesFixture: ensure } = await import(
-		'../src/core/test_data/dmm_map_of_grapes_fixture.ts'
+		'../src/core/test_data/map_of_grapes_fixture.ts'
 	);
 	await ensure();
-	log('Map of grapes fixture (dmm480/507/506): ensured.');
+	log('Map of grapes fixture (test480/507/506): ensured.');
 }
 
 /**
