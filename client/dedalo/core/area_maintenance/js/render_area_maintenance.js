@@ -655,6 +655,9 @@ const build_list_view = async function(self, widgets) {
 	])
 	// one-line "what this does" leads, shown above the mounted tool in the panel
 	// body (the mockup's .lead). Purely descriptive — no data, so always honest.
+	// The English here is the call-site FALLBACK; a tool listed in
+	// MAP_TOOL_DESC_LABEL below serves its translated lead from the label
+	// catalogs instead (WC-033). Translating the rest is the same two lines each.
 	const MAP_TOOL_DESC = {
 		system_info:				'Full server snapshot — OS, CPU, RAM, disk, uptime and prerequisites.',
 		check_config:				'Audits the live install config: database status and private sources.',
@@ -681,7 +684,7 @@ const build_list_view = async function(self, widgets) {
 		site_builder_status:		'Agent-built public websites: daemon status and a launcher for the site builder.',
 		media_control:				'Sets the media access-protection mode and rebuilds the gate rules.',
 		ai_models:					'Local AI model store: which speech models are installed and usable.',
-		update_ontology:			'Restores a remote ontology snapshot over the live one. Irreversible.',
+		update_ontology:			'Overwrites the live ontology with a snapshot from a master server. Irreversible.',
 		move_tld:					'Rewrites the ontology tipo across every matrix table. Irreversible.',
 		move_locator:				'Bulk-moves locators from a source section to a target. Irreversible.',
 		move_to_portal:				'Portalizes component data into a portal-linked sub-section.',
@@ -689,6 +692,11 @@ const build_list_view = async function(self, widgets) {
 		export_hierarchy:			'Exports thesaurus tables to gzipped COPY files.',
 		add_hierarchy:				'Installs additional hierarchy packages.',
 		error_reports:				'Browse and manage stored error reports.'
+	}
+	// tool id → label key, resolved at RENDER time (get_label is populated at boot,
+	// after this module is imported, so a module-level read would serve undefined).
+	const MAP_TOOL_DESC_LABEL = {
+		update_ontology : 'update_ontology_lead'
 	}
 
 
@@ -1031,11 +1039,13 @@ const build_map_view = function(self, widgets, opts={}) {
 			if (!descriptor) { return }
 
 			// lead: one-line "what this does" above the tool (the mockup's .lead)
-			if (MAP_TOOL_DESC[tid]) {
+			const tool_lead = (MAP_TOOL_DESC_LABEL[tid] && get_label[MAP_TOOL_DESC_LABEL[tid]])
+				|| MAP_TOOL_DESC[tid]
+			if (tool_lead) {
 				ui.create_dom_element({
 					element_type	: 'p',
 					class_name		: 'map_ctx_lead',
-					inner_html		: MAP_TOOL_DESC[tid],
+					inner_html		: tool_lead,
 					parent			: body
 				})
 			}

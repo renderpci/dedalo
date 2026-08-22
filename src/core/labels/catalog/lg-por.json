@@ -461,6 +461,7 @@
 	"update_ontology_import_log": "Registo de importação",
 	"update_ontology_import_warnings": "Avisos de importação (%s)",
 	"update_ontology_installed_title": "Ontologia instalada",
+	"update_ontology_lead": "Substitui a ontologia em uso por um instantâneo de um servidor mestre. Irreversível.",
 	"update_ontology_master_server": "Servidor mestre",
 	"update_ontology_overwrite_note": "<b>Substitui a ontologia local.</b> Importa um instantâneo do servidor mestre selecionado sobre a ontologia em uso. As alterações locais da ontologia perdem-se e isto não pode ser desfeito.",
 	"update_ontology_select_server_alert": "Selecione primeiro um servidor mestre.",

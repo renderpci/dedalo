@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "درآمد کا لاگ",
 	"update_ontology_import_warnings": "درآمد کی تنبیہات (%s)",
 	"update_ontology_installed_title": "نصب شدہ آنٹولوجی",
+	"update_ontology_lead": "چالو آنٹولوجی کو ماسٹر سرور کے اسنیپ شاٹ سے مٹا کر لکھ دیتا ہے۔ ناقابلِ واپسی۔",
 	"update_ontology_master_server": "ماسٹر سرور",
 	"update_ontology_overwrite_note": "<b>مقامی آنٹولوجی کو مٹا کر لکھ دیتا ہے۔</b> منتخب ماسٹر سرور سے ایک اسنیپ شاٹ چالو آنٹولوجی کے اوپر درآمد کرتا ہے۔ آنٹولوجی میں کی گئی مقامی تبدیلیاں ضائع ہو جاتی ہیں اور اِسے واپس نہیں کیا جا سکتا۔",
 	"update_ontology_select_server_alert": "پہلے ایک ماسٹر سرور منتخب کریں۔",

@@ -451,6 +451,7 @@
 	"update_ontology_import_log": "आयात लग",
 	"update_ontology_import_warnings": "आयात चेतावनीहरू (%s)",
 	"update_ontology_installed_title": "स्थापित अन्टोलोजी",
+	"update_ontology_lead": "चालू अन्टोलोजीलाई मुख्य सर्भरको स्न्यापसटले अधिलेखन गर्छ। फिर्ता गर्न नसकिने।",
 	"update_ontology_master_server": "मुख्य सर्भर",
 	"update_ontology_overwrite_note": "<b>स्थानीय अन्टोलोजीलाई अधिलेखन गर्छ।</b> छानिएको मुख्य सर्भरबाट स्न्यापसट चालू अन्टोलोजीमाथि आयात गर्छ। अन्टोलोजीमा गरिएका स्थानीय परिवर्तनहरू हराउँछन् र यो फर्काउन सकिँदैन।",
 	"update_ontology_select_server_alert": "पहिले मुख्य सर्भर छान्नुहोस्।",

@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "আমদানি লগ",
 	"update_ontology_import_warnings": "আমদানির সতর্কবার্তা (%s)",
 	"update_ontology_installed_title": "স্থাপিত অন্টোলজি",
+	"update_ontology_lead": "চলমান অন্টোলজিকে মাস্টার সার্ভারের স্ন্যাপশট দিয়ে প্রতিস্থাপন করে। অপরিবর্তনীয়।",
 	"update_ontology_master_server": "মাস্টার সার্ভার",
 	"update_ontology_overwrite_note": "<b>স্থানীয় অন্টোলজি মুছে নতুন করে লেখে।</b> নির্বাচিত মাস্টার সার্ভার থেকে একটি স্ন্যাপশট চলমান অন্টোলজির উপর আমদানি করে। অন্টোলজিতে করা স্থানীয় পরিবর্তন হারিয়ে যায় এবং এটি ফেরানো যায় না।",
 	"update_ontology_select_server_alert": "আগে একটি মাস্টার সার্ভার নির্বাচন করুন।",

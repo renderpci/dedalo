@@ -461,6 +461,7 @@
 	"update_ontology_import_log": "Registro di importazione",
 	"update_ontology_import_warnings": "Avvisi di importazione (%s)",
 	"update_ontology_installed_title": "Ontologia installata",
+	"update_ontology_lead": "Sovrascrive l’ontologia in uso con un’istantanea di un server master. Irreversibile.",
 	"update_ontology_master_server": "Server master",
 	"update_ontology_overwrite_note": "<b>Sovrascrive l’ontologia locale.</b> Importa un’istantanea dal server master selezionato sopra l’ontologia in uso. Le modifiche locali all’ontologia vanno perse e l’operazione non può essere annullata.",
 	"update_ontology_select_server_alert": "Selezionate prima un server master.",

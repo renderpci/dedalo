@@ -461,6 +461,7 @@
 	"update_ontology_import_log": "Journal d’importation",
 	"update_ontology_import_warnings": "Avertissements d’importation (%s)",
 	"update_ontology_installed_title": "Ontologie installée",
+	"update_ontology_lead": "Écrase l’ontologie en service avec un instantané d’un serveur maître. Irréversible.",
 	"update_ontology_master_server": "Serveur maître",
 	"update_ontology_overwrite_note": "<b>Écrase l’ontologie locale.</b> Importe un instantané du serveur maître sélectionné par-dessus l’ontologie en service. Les modifications locales de l’ontologie sont perdues et cette action est irréversible.",
 	"update_ontology_select_server_alert": "Sélectionnez d’abord un serveur maître.",

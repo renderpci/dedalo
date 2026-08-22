@@ -664,6 +664,7 @@
 	"update_ontology_import_log": "Import log",
 	"update_ontology_import_warnings": "Import warnings (%s)",
 	"update_ontology_installed_title": "Installed ontology",
+	"update_ontology_lead": "Overwrites the live ontology with a snapshot from a master server. Irreversible.",
 	"update_ontology_master_server": "Master server",
 	"update_ontology_overwrite_note": "<b>Overwrites the local ontology.</b> Imports a snapshot from the selected master over the live ontology. Local ontology edits are lost, and this can’t be undone.",
 	"update_ontology_select_server_alert": "Select a master server first.",

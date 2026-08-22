@@ -461,6 +461,7 @@
 	"update_ontology_import_log": "Registre d’importació",
 	"update_ontology_import_warnings": "Avisos d’importació (%s)",
 	"update_ontology_installed_title": "Ontologia instal·lada",
+	"update_ontology_lead": "Sobreescriu l’ontologia en ús amb una instantània d’un servidor mestre. Irreversible.",
 	"update_ontology_master_server": "Servidor mestre",
 	"update_ontology_overwrite_note": "<b>Sobreescriu l’ontologia local.</b> Importa una instantània del servidor mestre seleccionat sobre l’ontologia en ús. Els canvis locals de l’ontologia es perden i això no es pot desfer.",
 	"update_ontology_select_server_alert": "Seleccioneu abans un servidor mestre.",

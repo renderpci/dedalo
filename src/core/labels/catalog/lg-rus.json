@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "Журнал импорта",
 	"update_ontology_import_warnings": "Предупреждения импорта (%s)",
 	"update_ontology_installed_title": "Установленная онтология",
+	"update_ontology_lead": "Перезаписывает действующую онтологию снимком с главного сервера. Необратимо.",
 	"update_ontology_master_server": "Главный сервер",
 	"update_ontology_overwrite_note": "<b>Перезаписывает локальную онтологию.</b> Импортирует снимок с выбранного главного сервера поверх действующей онтологии. Локальные изменения онтологии будут потеряны, отменить это нельзя.",
 	"update_ontology_select_server_alert": "Сначала выберите главный сервер.",

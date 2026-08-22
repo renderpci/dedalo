@@ -461,6 +461,7 @@
 	"update_ontology_import_log": "Importprotokoll",
 	"update_ontology_import_warnings": "Importwarnungen (%s)",
 	"update_ontology_installed_title": "Installierte Ontologie",
+	"update_ontology_lead": "Überschreibt die laufende Ontologie mit einer Momentaufnahme eines Master-Servers. Nicht umkehrbar.",
 	"update_ontology_master_server": "Master-Server",
 	"update_ontology_overwrite_note": "<b>Überschreibt die lokale Ontologie.</b> Importiert eine Momentaufnahme des gewählten Master-Servers über die laufende Ontologie. Lokale Änderungen an der Ontologie gehen verloren und lassen sich nicht rückgängig machen.",
 	"update_ontology_select_server_alert": "Wählen Sie zuerst einen Master-Server.",

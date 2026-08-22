@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "سجل الاستيراد",
 	"update_ontology_import_warnings": "تحذيرات الاستيراد (%s)",
 	"update_ontology_installed_title": "الأنطولوجيا المثبَّتة",
+	"update_ontology_lead": "يستبدل الأنطولوجيا قيد التشغيل بلقطة من خادم رئيسي. لا يمكن التراجع عنه.",
 	"update_ontology_master_server": "الخادم الرئيسي",
 	"update_ontology_overwrite_note": "<b>يستبدل الأنطولوجيا المحلية.</b> يستورد لقطة من الخادم الرئيسي المحدَّد فوق الأنطولوجيا قيد التشغيل. تُفقد التعديلات المحلية على الأنطولوجيا ولا يمكن التراجع عن ذلك.",
 	"update_ontology_select_server_alert": "اختر خادمًا رئيسيًا أولًا.",

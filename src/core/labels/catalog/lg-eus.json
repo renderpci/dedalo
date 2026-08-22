@@ -451,6 +451,7 @@
 	"update_ontology_import_log": "Inportazio-erregistroa",
 	"update_ontology_import_warnings": "Inportazio-abisuak (%s)",
 	"update_ontology_installed_title": "Instalatutako ontologia",
+	"update_ontology_lead": "Erabiltzen ari den ontologia gainidazten du zerbitzari nagusi baten argazki batekin. Itzulezina.",
 	"update_ontology_master_server": "Zerbitzari nagusia",
 	"update_ontology_overwrite_note": "<b>Tokiko ontologia gainidazten du.</b> Hautatutako zerbitzari nagusiaren argazki bat inportatzen du erabiltzen ari den ontologiaren gainean. Tokiko ontologia-aldaketak galdu egiten dira, eta hau ezin da desegin.",
 	"update_ontology_select_server_alert": "Hautatu lehenik zerbitzari nagusi bat.",

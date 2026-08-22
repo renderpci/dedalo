@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "导入日志",
 	"update_ontology_import_warnings": "导入警告（%s）",
 	"update_ontology_installed_title": "已安装的本体",
+	"update_ontology_lead": "用主服务器的快照覆盖正在使用的本体。不可撤销。",
 	"update_ontology_master_server": "主服务器",
 	"update_ontology_overwrite_note": "<b>会覆盖本地本体。</b>从所选主服务器导入快照并覆盖正在使用的本体。本地对本体的修改将会丢失，且无法撤销。",
 	"update_ontology_select_server_alert": "请先选择一台主服务器。",

@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "आयात लॉग",
 	"update_ontology_import_warnings": "आयात चेतावनियाँ (%s)",
 	"update_ontology_installed_title": "स्थापित ऑन्टोलॉजी",
+	"update_ontology_lead": "चालू ऑन्टोलॉजी को मास्टर सर्वर के स्नैपशॉट से अधिलेखित करता है। अपरिवर्तनीय।",
 	"update_ontology_master_server": "मास्टर सर्वर",
 	"update_ontology_overwrite_note": "<b>स्थानीय ऑन्टोलॉजी को अधिलेखित करता है।</b> चयनित मास्टर सर्वर से एक स्नैपशॉट चालू ऑन्टोलॉजी के ऊपर आयात करता है। ऑन्टोलॉजी में किए गए स्थानीय बदलाव मिट जाते हैं और इसे पूर्ववत नहीं किया जा सकता।",
 	"update_ontology_select_server_alert": "पहले एक मास्टर सर्वर चुनें।",

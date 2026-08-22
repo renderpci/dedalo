@@ -449,6 +449,7 @@
 	"update_ontology_import_log": "インポートログ",
 	"update_ontology_import_warnings": "インポートの警告（%s）",
 	"update_ontology_installed_title": "インストール済みオントロジー",
+	"update_ontology_lead": "稼働中のオントロジーを、マスターサーバーのスナップショットで上書きします。取り消せません。",
 	"update_ontology_master_server": "マスターサーバー",
 	"update_ontology_overwrite_note": "<b>ローカルのオントロジーを上書きします。</b>選択したマスターサーバーのスナップショットを、稼働中のオントロジーに上書きインポートします。ローカルでの変更は失われ、元に戻すことはできません。",
 	"update_ontology_select_server_alert": "先にマスターサーバーを選択してください。",
