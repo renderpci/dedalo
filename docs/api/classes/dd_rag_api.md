@@ -14,8 +14,9 @@ Registered actions (`src/ai/rag/api.ts`): `semantic_search`, `embed_groups`, `re
 ## Notes
 
 - Every action requires a **session** (none is in `NO_LOGIN_ACTIONS`) and is **CSRF-gated** by the dispatcher.
-- The whole class fails closed on the `DEDALO_RAG_ENABLED` kill-switch: while off, every action returns `{ result: false, msg: "RAG is disabled", errors: ["rag_disabled"] }`.
-- The three image actions (`similar_objects`, `search_by_text_image`, `characterize_object`) are gated by a **second** switch, `DEDALO_RAG_MEDIA_ENABLED`; with media off they return `{ result: false, msg: "RAG media is disabled", errors: ["media_disabled"] }`.
+- The whole class fails closed on the `DEDALO_RAG_ENABLED` kill-switch: while off, every action declines with the coded error `rag.disabled` (503, *"RAG is disabled"*). The ONE exception is `embed_groups`: it is a capability probe the client fires on every section list render with no user act behind it, so while off it ANSWERS `{groups: []}` — an install that deliberately never implemented RAG must be silent to its users (it is logged once at boot instead).
+- The three image actions (`similar_objects`, `search_by_text_image`, `characterize_object`) are gated by a **second** switch, `DEDALO_RAG_MEDIA_ENABLED`; with media off they decline with `rag.media_disabled` (503, *"RAG media is disabled"*).
+- Envelope: **v2**. A success is `{ ok: true, request_id, msg, data }` — the payload lives in `data` and nowhere else, and `msg` is a RAG outcome token riding as an extension key. A failure is `{ ok: false, request_id, error: { code, category, message, label_key, retryable } }`. The v1 `{ result, msg, errors }` shape is GONE (compat removed 2026-08-16); the response bodies below name `data`.
 - **Results are ACL-gated inside `src/ai/rag/retrieval.ts`** (schema ACL + per-record projects filter) — the retrieval chokepoint, not the handler. A caller never sees a record they could not read directly.
 - The retrieval actions accept an optional `group` — an embed-group facet id validated against a slug grammar and applied as a bound filter (never raw SQL). `limit` is clamped to `[1, 50]` (default 10).
 
@@ -35,7 +36,7 @@ Meaning-based record search — the single best record per semantic hit.
 
 ### Returns
 
-`{ result: [ <hit> ], msg: "ok", errors: [] }`. A missing `query` returns `{ result: false, msg: "Missing query", errors: ["missing_query"] }`.
+`{ ok: true, msg: "ok", data: [ <hit> ] }`. A missing `query` declines with `request.invalid_options` (*"Missing query"*).
 
 ### Example Request
 
@@ -60,7 +61,7 @@ Return the section's embed-group ids — the client's facet selector and its "is
 
 ### Returns
 
-`{ result: { groups: [ <id> ] }, msg: "ok", errors: [] }`.
+`{ ok: true, msg: "ok", data: { groups: [ <id> ] } }`.
 
 ### Usage
 
@@ -92,7 +93,7 @@ Retrieve passages (chunks) that best match a query.
 
 ### Returns
 
-`{ result: [ <passage> ], msg: "ok", errors: [] }`.
+`{ ok: true, msg: "ok", data: [ <passage> ] }`.
 
 ### Example Request
 
@@ -116,7 +117,7 @@ Retrieve passages shaped as LLM context (same passage retrieval as `retrieve`, d
 
 ### Returns
 
-`{ result: [ <passage> ], msg: "agent_context", errors: [] }`.
+`{ ok: true, msg: "agent_context", data: [ <passage> ] }`.
 
 ## similar_to
 
@@ -134,7 +135,7 @@ Records similar to a seed record.
 
 ### Returns
 
-`{ result: [ <hit> ], msg: "ok", errors: [] }`. A missing/invalid seed returns `{ result: false, msg, errors: ["missing_seed"] }`.
+`{ ok: true, msg: "ok", data: [ <hit> ] }`. A missing/invalid seed declines with `request.invalid_options`.
 
 ### Example Request
 
@@ -161,7 +162,7 @@ Grounded question answering with citations — or a refusal when no context is f
 
 ### Returns
 
-`{ result: <answer object>, msg, errors }`. `msg` is `"ok"` for a grounded answer; a grounding miss and an egress-restricted record are both **normal** envelopes (no external model was called) with a distinct `msg`; an LLM transport failure returns `{ result: false, msg: "Generation failed", errors: ["generation_failed"] }` (never a fabricated answer).
+`{ ok: true, msg, data: <answer object> }`. `msg` is `"ok"` for a grounded answer; a grounding miss and an egress-restricted record are both **normal** (ok:true) envelopes (no external model was called) with a distinct `msg`; an LLM transport failure declines with `rag.generation_failed` (503, *"The grounded answer could not be generated"*) — never a fabricated answer.
 
 ### Example Request
 
@@ -192,7 +193,7 @@ Visual object similarity from a seed record's stored image vectors.
 
 ### Returns
 
-`{ result: [ <object> ], msg: "ok", errors: [] }` — each object carries `section_tipo`, `section_id`, `similarity`, `score`, `view`, `thumb_url`, `context`.
+`{ ok: true, msg: "ok", data: [ <object> ] }` — each object carries `section_tipo`, `section_id`, `similarity`, `score`, `view`, `thumb_url`, `context`.
 
 ### Usage
 
@@ -223,7 +224,7 @@ A text query into the image space (joint text/image tower).
 
 ### Returns
 
-`{ result: [ <object> ], msg: "ok", errors: [] }` (same object shape as `similar_objects`).
+`{ ok: true, msg: "ok", data: [ <object> ] }` (same object shape as `similar_objects`).
 
 ### Usage
 
@@ -253,7 +254,7 @@ Neighbour-aggregated typology/period proposals for a seed object (no LLM — pro
 
 ### Returns
 
-`{ result: <characterization>, msg: "ok", errors: [] }`. A missing/invalid seed returns `{ result: false, msg, errors: ["missing_seed"] }`.
+`{ ok: true, msg: "ok", data: <characterization> }`. A missing/invalid seed declines with `request.invalid_options`.
 
 ### Usage
 

@@ -260,8 +260,8 @@ template ships in `install/sample.env`; see the [settings reference](../../confi
 
 | Key | Default | Effect |
 |---|---|---|
-| `DEDALO_RAG_ENABLED` | `false` | Master gate. Off ⇒ every `dd_rag_api` action returns `rag_disabled` and the save hook is not registered. |
-| `DEDALO_RAG_MEDIA_ENABLED` | `false` | Gate for the three image actions (`similar_objects`, `search_by_text_image`, `characterize_object`); off ⇒ `media_disabled`. |
+| `DEDALO_RAG_ENABLED` | `false` | Master gate. Off ⇒ every `dd_rag_api` action declines with `rag.disabled` and the save hook is not registered. `embed_groups` is the exception: the capability probe answers `{groups: []}`, so a RAG-less install shows its users no semantic UI and no alert. |
+| `DEDALO_RAG_MEDIA_ENABLED` | `false` | Gate for the three image actions (`similar_objects`, `search_by_text_image`, `characterize_object`); off ⇒ `rag.media_disabled`. |
 
 ### Vector database
 
@@ -550,7 +550,7 @@ the auth handshake). The request is an **RQO** posted to `/api/v1/json`:
 ```
 
 ```jsonc
-// response.body.result — record-level, ACL-filtered, best-first
+// response.body.data — record-level, ACL-filtered, best-first
 [
   { "section_tipo": "oh1", "section_id": 412, "component_tipo": "oh23",
     "lang": "lg-spa", "snippet": "…cuando llegó el agua tuvimos que marcharnos…",
@@ -582,7 +582,7 @@ const res = await ragApiActions.semantic_search(
   { options: { query: 'reservoir displacement', section_tipo: ['oh1'], limit: 5 } } as never,
   { principal: superuser } as never,
 );
-console.log(res.body.msg, res.body.result);
+console.log(res.body.msg, res.body.data);
 ```
 
 ### R4b — Semantic search in the CLIENT (list quick-input + search panel)
@@ -629,7 +629,7 @@ DEDALO_RAG_LLM_TEMPERATURE=0
 ```
 
 ```jsonc
-// response.body.result
+// response.body.data
 {
   "answer": "Several informants describe being forced to leave when the reservoir flooded their fields…",
   "citations": [ { "locator": "oh1-412", "sectionTipo": "oh1", "sectionId": 412, "citedText": "…" } ],
@@ -808,9 +808,9 @@ from the same query a superuser gets real hits from.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Action returns `rag_disabled` | Master switch off | `DEDALO_RAG_ENABLED=true`, restart. |
-| Image action returns `media_disabled` | Media switch off | `DEDALO_RAG_MEDIA_ENABLED=true`. |
-| Action returns `no_principal` | No session/principal on the call | Authenticate (real API) or pass a `Principal` (script). |
+| Action declines with `rag.disabled` | Master switch off | `DEDALO_RAG_ENABLED=true`, restart. (`embed_groups` never does: off, it answers `{groups: []}`.) |
+| Image action declines with `rag.media_disabled` | Media switch off | `DEDALO_RAG_MEDIA_ENABLED=true`. |
+| Action declines with `auth.not_logged` | No session/principal on the call | Authenticate (real API) or pass a `Principal` (script). |
 | `semantic_search` returns `[]` for everyone | Nothing indexed | No `rag.embed` groups in the section_map (R1) — or malformed (check server log: `rag: … dropped`); or drain never ran (R3); or backfill not done (R2). |
 | Returns `[]` for one user but not another | **Working as designed** — ACL. That user can't read those records. | — |
 | `relation "rag_embeddings" does not exist` / errors on first write | Vector schema not provisioned | Run `rag_schema.sql` (Install Step 2). |
