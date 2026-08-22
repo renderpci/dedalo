@@ -24,6 +24,7 @@ import { resolveHierarchySectionsFromTypes } from '../../src/core/relations/requ
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { persistRecordColumns } from '../../src/core/section_record/record_write.ts';
 import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
+import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 const TEST_TABLE = 'matrix_test';
@@ -106,19 +107,42 @@ describe('datalist staleness: write + delete of a target-section record (S1-11)'
 });
 
 describe('filter_projects + hierarchy sections listeners (S1-11 durable channel)', () => {
+	// AUTHZ-06: getUserAuthorizedProjects fails CLOSED on an unanchored call —
+	// it returns a FRESH [] before ever touching the cache, so an identity
+	// check on that path measures the deny, not the eviction channel. Both
+	// cases below run anchored, the way the production callers (portal.ts
+	// get_data/list, on the authenticated dispatch path) reach it.
+	const asAdmin = <T>(fn: () => Promise<T>): Promise<T> =>
+		runWithRequestContext(
+			{
+				principal: { userId: 1, isGlobalAdmin: true, isDeveloper: false },
+				session: null,
+				requestId: 'test',
+				clientIp: '127.0.0.1',
+			},
+			fn,
+		);
+
 	test('a dd153 (projects) event rebuilds the authorized-projects cache', async () => {
-		const before = await getUserAuthorizedProjects();
-		expect(await getUserAuthorizedProjects()).toBe(before);
+		const before = await asAdmin(getUserAuthorizedProjects);
+		expect(await asAdmin(getUserAuthorizedProjects)).toBe(before);
 		await fireSaveEvent('dd153');
-		const after = await getUserAuthorizedProjects();
+		const after = await asAdmin(getUserAuthorizedProjects);
 		expect(after).not.toBe(before);
 		expect(after).toEqual(before); // no data changed — same content, fresh read
 	});
 
 	test('an unrelated event leaves the authorized-projects cache untouched', async () => {
-		const before = await getUserAuthorizedProjects();
+		const before = await asAdmin(getUserAuthorizedProjects);
 		await fireSaveEvent('testmint1');
-		expect(await getUserAuthorizedProjects()).toBe(before);
+		expect(await asAdmin(getUserAuthorizedProjects)).toBe(before);
+	});
+
+	test('an UNANCHORED call fails closed and is never cached (AUTHZ-06)', async () => {
+		const first = await getUserAuthorizedProjects();
+		expect(first).toEqual([]);
+		// A fresh array each time: the deny returns before the cache lookup.
+		expect(await getUserAuthorizedProjects()).not.toBe(first);
 	});
 
 	test('a hierarchy1 (registry) event rebuilds the hierarchy-sections cache', async () => {

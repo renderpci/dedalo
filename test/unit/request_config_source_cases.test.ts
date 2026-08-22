@@ -17,6 +17,7 @@
 // which keeps it out of the install-TLD census's `<tld><digits>` token grammar.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
 import { getModelByTipo } from '../../src/core/ontology/resolver.ts';
 import {
 	clearOntologySectionsCache,
@@ -37,11 +38,42 @@ const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => 
  */
 const HIERARCHY_SCOPE = ['testmint1', 'testterr1'] as const;
 
+/**
+ * A REGISTERED-but-NOT-INSTALLED ontology target, built here. The prune this
+ * gate measures (check_tipo_is_valid) only fires on a registry row whose tipo
+ * has no dd_ontology node; on a freshly built suite database every registered
+ * ontology IS installed, so the "strictly fewer after the prune" floor was
+ * measuring the ambient database's incompleteness rather than the prune. This
+ * row is the situation, and afterAll proves it is gone.
+ */
+const UNINSTALLED_TARGET = 'zzreg0';
+const UNINSTALLED_REGISTRY_ID = 930401;
+
 beforeAll(async () => {
 	await ensureTestCorpus(HIERARCHY_SCOPE);
+	await sql.unsafe('DELETE FROM matrix_ontology_main WHERE section_tipo = $1 AND section_id = $2', [
+		'ontology35',
+		UNINSTALLED_REGISTRY_ID,
+	]);
+	await sql.unsafe(
+		`INSERT INTO matrix_ontology_main (section_id, section_tipo, string)
+		 VALUES ($1, 'ontology35', $2::text::jsonb)`,
+		[UNINSTALLED_REGISTRY_ID, JSON.stringify({ hierarchy53: [{ value: UNINSTALLED_TARGET }] })],
+	);
+	clearOntologySectionsCache();
 });
 afterAll(async () => {
 	expect(await dropTestCorpus(HIERARCHY_SCOPE)).toBe(0);
+	await sql.unsafe('DELETE FROM matrix_ontology_main WHERE section_tipo = $1 AND section_id = $2', [
+		'ontology35',
+		UNINSTALLED_REGISTRY_ID,
+	]);
+	const residue = (await sql.unsafe(
+		'SELECT count(*)::int AS n FROM matrix_ontology_main WHERE section_tipo = $1 AND section_id = $2',
+		['ontology35', UNINSTALLED_REGISTRY_ID],
+	)) as { n: number }[];
+	expect(residue[0]?.n).toBe(0);
+	clearOntologySectionsCache();
 });
 
 const context = (ownerSectionTipo: string): RequestConfigContext => ({
@@ -148,6 +180,9 @@ describe('ontology_sections source (PHP class.ontology.php:1509-51)', () => {
 		expect(viaSource).toContain('dd0');
 		expect(viaSource).toContain(seed('rsc', 0));
 		expect(viaSource.length).toBeLessThan(first.length);
+		// …and the pruned one is precisely the registered-but-uninstalled target.
+		expect(first).toContain(UNINSTALLED_TARGET);
+		expect(viaSource).not.toContain(UNINSTALLED_TARGET);
 	});
 });
 

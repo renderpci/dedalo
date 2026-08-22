@@ -54,12 +54,25 @@ beforeAll(async () => {
 			create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
 		},
 	}));
-	mock.module(
-		join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'page', 'js', 'css.js'),
-		() => ({
-			get_inserted_rules: () => [],
-		}),
+	// SPREAD, never truncate — a one-export factory makes css.js exportless for
+	// the whole (single-process) tier. A module mock is process-global and no
+	// restore hook undoes it, so the surface handed on must stay whole.
+	const css_path = join(
+		import.meta.dir,
+		'..',
+		'..',
+		'client',
+		'dedalo',
+		'core',
+		'page',
+		'js',
+		'css.js',
 	);
+	const real_css = await import(css_path);
+	mock.module(css_path, () => ({
+		...real_css,
+		get_inserted_rules: () => [],
+	}));
 
 	set_context_vars = ((await import(COMMON_PATH)) as { set_context_vars: SetContextVars })
 		.set_context_vars;

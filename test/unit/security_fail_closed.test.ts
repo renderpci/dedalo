@@ -13,7 +13,6 @@
 // ship with every installation.
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
@@ -30,8 +29,10 @@ import {
 	resetSessionStoreForTests,
 	verifyCsrf,
 } from '../../src/core/security/session_store.ts';
-
-const hasRootCreds = Boolean(config.phpReference.username && config.phpReference.password);
+import {
+	ensureSuiteLoginPassword,
+	SUITE_LOGIN_PASSWORD,
+} from '../../src/core/test_data/suite_login.ts';
 
 function anonymousContext(): ApiRequestContext {
 	return { requestId: 'test', clientIp: '127.0.0.1', session: null, csrfCandidate: null };
@@ -245,11 +246,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 	});
 
 	test('wrong password fails ambiguously; nonexistent user fails with the SAME message', async () => {
-		const wrongPassword = await login(
-			(config.phpReference.username as string) ?? 'root',
-			'definitely-wrong-password',
-			'127.0.0.1',
-		);
+		const wrongPassword = await login('root', 'definitely-wrong-password', '127.0.0.1');
 		const noSuchUser = await login('no_such_user_zzz', 'whatever', '127.0.0.1');
 		expect(wrongPassword.ok).toBe(false);
 		expect(noSuchUser.ok).toBe(false);
@@ -267,13 +264,16 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 		expect(isThrottled(buildThrottleKey('login', 'victim', '10.0.0.2'))).toBe(false);
 	});
 
-	test('real login against shared matrix_users root: session issued + rotation + throttle reset', async () => {
-		if (!hasRootCreds) {
-			console.warn('[UNCOVERED] root credentials not configured — live login test skipped.');
-			return;
-		}
-		const username = config.phpReference.username as string;
-		const password = config.phpReference.password as string;
+	test('real login against the suite matrix_users root: session issued + rotation + throttle reset', async () => {
+		// BUILDS the credential it tests. The old shape logged in with
+		// config.phpReference.* — the APPLICATION install's password — against the
+		// suite database, whose seed ships root with no password at all: the gate
+		// measured one database's secret against another and went red the moment
+		// the suite DB was rebuilt. ensureSuiteLoginPassword is marker-guarded and
+		// writes through the one matrix door.
+		const username = 'root';
+		const password = SUITE_LOGIN_PASSWORD;
+		await ensureSuiteLoginPassword(username, password);
 
 		// Poison the throttle a bit, then succeed — success must clear it.
 		const key = buildThrottleKey('login', username, '127.0.0.1');

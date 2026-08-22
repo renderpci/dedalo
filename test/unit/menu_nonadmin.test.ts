@@ -9,11 +9,23 @@
  * the viewer's own permissions table — never hardcoded.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getMenuTreeDatalist } from '../../src/core/api/handlers/menu.ts';
 import { getAuthorizedAreaTipos } from '../../src/core/security/permissions.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
 
-const NON_ADMIN_USER = 16; // profile 8 — the standing non-admin fixture
+// BUILT, not borrowed: this was "user 16, profile 8 — the standing non-admin
+// fixture", an installation account a rebuilt suite database does not hold. A
+// grantless principal makes the filtered tree EMPTY, so the "at least some
+// remain" floor measured the fixture's absence.
+const NON_ADMIN_USER = ACL_NON_ADMIN_USER_ID;
+
+beforeAll(installAclIdentityFixture);
+afterAll(removeAclIdentityFixture);
 
 describe('non-admin menu filter (Phase 6 gate)', () => {
 	test('a non-admin sees exactly the authorized subset of the superuser tree', async () => {

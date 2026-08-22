@@ -11,17 +11,22 @@
  * the implicit pipeline) + the emission backstop in section/read.ts (both the
  * context loop and the readSectionRows data map).
  *
- * Fixture: user 16 (profile 8) — the real non-admin of the shared mib DB. The
- * (section, denied component, granted component) triple is DISCOVERED from
- * the live dd774 matrix + the section's derived list map, with a non-vacuity
- * floor: if no denied pair exists the gate FAILS, never silently green.
+ * Fixture: the SYNTHETIC non-admin of test/helpers/acl_identity_fixture.ts,
+ * BUILT here (install/remove in beforeAll/afterAll). It used to be "user 16,
+ * profile 8, the real non-admin of the shared mib DB" — an installation's
+ * account that a rebuilt suite database does not hold, so resolvePrincipal
+ * returned a grantless principal, the discovery loop found no pair, and the
+ * non-vacuity floor reported the fixture's absence rather than the engine's
+ * behaviour. The (section, denied component, granted component) triple is
+ * still DISCOVERED from the dd774 matrix + the section's derived list map (so
+ * the gate stays drift-tolerant), and the floor still FAILS when no denied
+ * pair exists — it just now has something real to find.
  *
- * Oracle honesty note: a live-PHP differential needs a user-16 PHP session
- * (its password is not in the harness env) — the PHP behavior is pinned by
- * the trait anchors above; this gate runs against the REAL permission matrix.
+ * Oracle honesty note: the PHP behavior is pinned by the trait anchors above;
+ * this gate runs against the permission matrix the engine actually reads.
  */
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../src/core/concepts/section.ts';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -36,10 +41,16 @@ import {
 	getSectionPermissions,
 	type Principal,
 	resolvePrincipal,
+	resolveProfileId,
 } from '../../src/core/security/permissions.ts';
 import { runWithRequestContext } from '../../src/core/security/request_context.ts';
+import {
+	ACL_NON_ADMIN_USER_ID,
+	installAclIdentityFixture,
+	removeAclIdentityFixture,
+} from '../helpers/acl_identity_fixture.ts';
 
-const NON_ADMIN_USER = 16; // profile 8, real non-admin on the mib DB
+const NON_ADMIN_USER = ACL_NON_ADMIN_USER_ID;
 
 let dbReady = false;
 let nonAdmin: Principal;
@@ -49,6 +60,8 @@ let admin: Principal;
 let sectionTipo: string | null = null;
 let deniedTipo: string | null = null;
 let grantedTipo: string | null = null;
+/** The MODE whose derived map holds the discovered pair (see the loop below). */
+let readMode: 'list' | 'edit' = 'list';
 
 beforeAll(async () => {
 	try {
@@ -58,18 +71,29 @@ beforeAll(async () => {
 		dbReady = false; // no shared DB on this machine — DB-backed cases skip honestly
 		return;
 	}
+	await installAclIdentityFixture();
 	nonAdmin = await resolvePrincipal(NON_ADMIN_USER);
 	admin = await resolvePrincipal(-1);
+	// The profile the ENGINE resolves for this user — never a hard-coded id.
+	const profileId = await resolveProfileId(NON_ADMIN_USER);
 	const rows = (await sql`
 		SELECT misc->'dd774' AS grants FROM matrix_profiles
-		WHERE section_tipo = 'dd234' AND section_id = 8
+		WHERE section_tipo = 'dd234' AND section_id = ${profileId}
 	`) as { grants: { tipo: string; section_tipo: string; value: number }[] }[];
 	const grants = rows[0]?.grants ?? [];
 	const readableSections = grants
 		.filter((grant) => grant.tipo === grant.section_tipo && grant.value >= 1)
 		.map((grant) => grant.section_tipo);
-	for (const candidate of readableSections) {
-		const map = await deriveSectionDdoMap(candidate, candidate, 'list');
+	// Both modes: a section's LIST map is a small subset of its edit map, so a
+	// granted component may only appear in one of them — and the assertions read
+	// in the SAME mode the pair was discovered in, or "context contains the
+	// granted tipo" would fail for a reason that is not the permission gate.
+	const candidates: { section: string; mode: 'list' | 'edit' }[] = [];
+	for (const section of readableSections) {
+		for (const mode of ['list', 'edit'] as const) candidates.push({ section, mode });
+	}
+	for (const { section: candidate, mode } of candidates) {
+		const map = await deriveSectionDdoMap(candidate, candidate, mode);
 		let denied: string | null = null;
 		let granted: string | null = null;
 		for (const ddo of map) {
@@ -88,9 +112,14 @@ beforeAll(async () => {
 			sectionTipo = candidate;
 			deniedTipo = denied;
 			grantedTipo = granted;
+			readMode = mode;
 			break;
 		}
 	}
+});
+
+afterAll(async () => {
+	if (dbReady) await removeAclIdentityFixture();
 });
 
 function asUser16<T>(fn: () => Promise<T>): Promise<T> {
@@ -114,7 +143,7 @@ function readRqo(section: string, ddoMap: unknown[] = []): Rqo {
 			model: 'section',
 			tipo: section,
 			section_tipo: section,
-			mode: 'list',
+			mode: readMode,
 			lang: 'lg-spa',
 		},
 		show: { ddo_map: ddoMap, fields_separator: ' | ', columns: [] },
@@ -157,13 +186,13 @@ describe('per-component permission gates (AUTHZ, 2026-07-10)', () => {
 				tipo: deniedTipo,
 				section_tipo: sectionTipo,
 				parent: sectionTipo,
-				mode: 'list',
+				mode: readMode,
 			},
 			{
 				tipo: grantedTipo,
 				section_tipo: sectionTipo,
 				parent: sectionTipo,
-				mode: 'list',
+				mode: readMode,
 			},
 		];
 		const result = await asUser16(() =>

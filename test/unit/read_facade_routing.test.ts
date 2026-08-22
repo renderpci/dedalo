@@ -19,20 +19,33 @@
  *   - find_equal shape (search WITH section_id, empty show.ddo_map) → served
  *     by readSection, not readComponentData (PHP parity), no throw.
  *
- * DB-backed (monedaiberica fixtures test6099/test6157 → test6100);
- * cases guard on a live-connection probe so the file is honest offline.
+ * DB-BACKED, and the records are the ones this gate PROVISIONS: the repo-owned
+ * corpus for test6099 (the host) and test6100 (the picker's target). The old
+ * shape read whatever the ambient database happened to hold and floored the
+ * picker search at "> 0 entries" with a comment counting >1000 matches on a
+ * developer's install — on a suite database built from the definitions-only
+ * seed there are no such records at all, so the floor measured the fixture.
+ * The search term and the expected entry COUNT are now derived from the corpus
+ * itself. Cases still guard on a live-connection probe so the file is honest
+ * offline.
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
 // were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
 // seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
 // ship with every installation.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	dropTestCorpus,
+	ensureTestCorpus,
+	loadTestCorpus,
+	testCorpusResidue,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -138,6 +151,31 @@ async function dispatchAsRoot(rqo: Rqo): Promise<{ status: number; result: ReadR
 	};
 }
 
+const CORPUS_SCOPE = [HOST_SECTION, TARGET_SECTION] as const;
+/** The picker's page size — the rqo above sends limit 10. */
+const SEARCH_LIMIT = 10;
+/** The term the picker search sends. Any single letter the corpus carries. */
+const SEARCH_TERM = 'a';
+
+/**
+ * How many target records the corpus itself gives the search — computed from
+ * the same JSON the provisioner writes, so the expectation moves WITH the
+ * corpus and can never be satisfied by ambient rows.
+ */
+function corpusMatchCount(): number {
+	const section = loadTestCorpus().find((entry) => entry.section_tipo === TARGET_SECTION);
+	if (section === undefined) throw new Error(`corpus has no ${TARGET_SECTION} section`);
+	let matches = 0;
+	for (const record of section.records) {
+		const strings = (record.columns as { string?: Record<string, { value?: string }[]> }).string;
+		const hit = [Q_FIELD_A, Q_FIELD_B].some((field) =>
+			(strings?.[field] ?? []).some((entry) => (entry.value ?? '').includes(SEARCH_TERM)),
+		);
+		if (hit) matches++;
+	}
+	return matches;
+}
+
 let dbReady = false;
 beforeAll(async () => {
 	try {
@@ -145,15 +183,24 @@ beforeAll(async () => {
 		dbReady = true;
 	} catch {
 		dbReady = false; // no shared DB on this machine — DB-backed cases skip honestly
+		return;
 	}
+	await ensureTestCorpus(CORPUS_SCOPE);
+});
+afterAll(async () => {
+	if (!dbReady) return;
+	await dropTestCorpus(CORPUS_SCOPE);
+	expect(await testCorpusResidue(CORPUS_SCOPE)).toBe(0);
 });
 
 describe('read facade routing: component-source action:search (BUG-0)', () => {
 	test('autocomplete picker search reaches readSection (NOT the empty shell)', async () => {
 		if (!dbReady) return;
-		// q:'a' with q_split matches >1000 target records (counted via the
-		// `count` action while diagnosing BUG-0) — membership-independent.
-		const { status, result } = await dispatchAsRoot(autocompleteRqo('a'));
+		// The corpus decides how many rows the term matches; the picker pages at
+		// SEARCH_LIMIT. Both halves come from the fixture this gate provisioned.
+		const expectedEntries = Math.min(corpusMatchCount(), SEARCH_LIMIT);
+		expect(expectedEntries).toBeGreaterThan(0); // non-vacuity: the corpus must feed the search
+		const { status, result } = await dispatchAsRoot(autocompleteRqo(SEARCH_TERM));
 		expect(status).toBe(200);
 		expect(result).not.toBe(false);
 		const read = result as ReadResult;
@@ -161,7 +208,7 @@ describe('read facade routing: component-source action:search (BUG-0)', () => {
 		expect(read.context.length).toBeGreaterThan(0);
 		const sectionsItem = read.data.find((item) => item.typo === 'sections');
 		expect(sectionsItem).toBeDefined();
-		expect((sectionsItem?.entries ?? []).length).toBeGreaterThan(0);
+		expect((sectionsItem?.entries ?? []).length).toBe(expectedEntries);
 		// Per-ddo values ride along so the client renders each row.
 		expect(read.data.some((item) => item.tipo === Q_FIELD_A)).toBe(true);
 	});

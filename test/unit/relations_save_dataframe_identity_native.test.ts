@@ -12,22 +12,44 @@
  * the SAME target from DIFFERENT main items collapsed into one, silently.
  *
  * These cases are all `pairing: null` on purpose: that is the import shape.
- * Pure — no DB, no fixture. `validateRelationInsert` only touches the database
- * on branches these inputs never reach (the model/tipo lookups fire for
- * relation models with a section target, not for a dd490 frame).
+ *
+ * NOT pure any more, and it never honestly was. Since
+ * WC-2026-08-14-relation-insert-target-validation the door RESOLVES the calling
+ * component's declared targets out of dd_ontology and REFUSES a locator that
+ * names another section (`relation.insert_refused`). The old fixture survived
+ * only because its caller tipo did not exist in the suite database, which
+ * silently took the "no declared target ⇒ no constraint" exemption; the moment
+ * the generic-TLD migration pointed it at a tipo the clone DOES ship, six cases
+ * went red. So the gate now BUILDS its situation: two scratch dataframe slots in
+ * a synthetic `zzdf` tld, each declaring `test3` as its target and NO
+ * data_limit (a cap would refuse the second frame at the selection gate, for a
+ * reason that has nothing to do with frame identity), swept in afterAll.
  */
-// Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
-// were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the
-// seed-shipped ones (rsc/dd/hierarchy/ontology/lg) have no twin and stay, because they
-// ship with every installation.
+// Generic `test`/`zz` TLDs only (AGENTS.md hard rule): the frames target the
+// canonical test3 playground and the callers are built here.
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
+import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { validateRelationInsert } from '../../src/core/relations/save.ts';
 
+/** Synthetic caller tld — no install uses it, no section walk reaches it. */
+const CALLER_TLD = 'zzdf';
+/** The saving dataframe slot: targets test3, uncapped. */
+const SLOT = `${CALLER_TLD}1`;
+/** A second, genuinely different slot — same target, so only the slot differs. */
+const OTHER_SLOT = `${CALLER_TLD}2`;
+/** Main components the frames extend: names only, never resolved. */
+const MAIN = `${CALLER_TLD}m1`;
+const OTHER_MAIN = `${CALLER_TLD}m2`;
+/** The target section every frame below points at, and one of its records. */
+const TARGET_SECTION = 'test3';
+const TARGET_ID = '1';
+
 const HOST = {
-	componentTipo: 'testmint1036',
+	componentTipo: SLOT,
 	model: 'component_dataframe',
-	hostSectionTipo: 'testmint1',
+	hostSectionTipo: TARGET_SECTION,
 	hostSectionId: 2,
 	translatable: false,
 	lang: 'lg-nolan',
@@ -36,20 +58,61 @@ const HOST = {
 /** A stored frame locator as the raw export writes it into the CSV. */
 function frame(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {
-		section_tipo: 'test6117',
-		section_id: '15657',
-		from_component_tipo: 'testmint1036',
+		section_tipo: TARGET_SECTION,
+		section_id: TARGET_ID,
+		from_component_tipo: SLOT,
 		type: 'dd490',
 		id_key: 1,
-		main_component_tipo: 'testmint1014',
+		main_component_tipo: MAIN,
 		...overrides,
 	};
 }
 
+async function buildSlot(tipo: string): Promise<void> {
+	await sql.unsafe(
+		`INSERT INTO dd_ontology (tipo, parent, model, tld, term, is_model, is_translatable, is_main, properties)
+		 VALUES ($1, $2, 'component_dataframe', $3, $4::text::jsonb, false, false, false, $5::text::jsonb)`,
+		[
+			tipo,
+			// Orphan parent: no section walk can reach these nodes.
+			`${CALLER_TLD}x`,
+			CALLER_TLD,
+			JSON.stringify({ 'lg-spa': `scratch dataframe slot ${tipo}` }),
+			JSON.stringify({
+				source: {
+					request_config: [
+						{ sqo: { section_tipo: [{ value: [TARGET_SECTION], source: 'section' }] } },
+					],
+				},
+			}),
+		],
+	);
+}
+
+async function purgeScratch(): Promise<void> {
+	await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1', [CALLER_TLD]);
+	await clearOntologyDerivedCaches();
+}
+
+beforeAll(async () => {
+	await purgeScratch();
+	await buildSlot(SLOT);
+	await buildSlot(OTHER_SLOT);
+	await clearOntologyDerivedCaches();
+});
+
+afterAll(async () => {
+	await purgeScratch();
+	const residue = (await sql.unsafe('SELECT count(*)::int AS n FROM dd_ontology WHERE tld = $1', [
+		CALLER_TLD,
+	])) as { n: number }[];
+	expect(residue[0]?.n).toBe(0);
+});
+
 describe('validateRelationInsert — frame identity with no caller pairing (import)', () => {
 	test('two frames on the SAME target from DIFFERENT main items are BOTH kept', async () => {
 		// THE REGRESSION. Under the generic key both hash to
-		// "15657|test6117|dd490|" and the second was dropped as "already
+		// "<id>|test3|dd490|" and the second was dropped as "already
 		// linked" — the other main item's framed content, gone with no issue row.
 		const kept: unknown[] = [];
 		for (const candidate of [frame({ id_key: 1 }), frame({ id_key: 2 })]) {
@@ -90,7 +153,7 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// either dedup gate (PHP-faithful, :1107-19). A payload claiming another
 		// slot is therefore rewritten to THIS slot and collapses into the existing
 		// frame — it does not sneak in as a second one.
-		const result = await validateRelationInsert(frame({ from_component_tipo: 'test6783' }), {
+		const result = await validateRelationInsert(frame({ from_component_tipo: OTHER_SLOT }), {
 			...HOST,
 			existingItems: [frame()],
 			pairing: null,
@@ -103,16 +166,16 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// which is the only way the slot can legitimately differ.
 		const result = await validateRelationInsert(frame(), {
 			...HOST,
-			componentTipo: 'test6783',
+			componentTipo: OTHER_SLOT,
 			existingItems: [frame()],
 			pairing: null,
 		});
 		expect(result).not.toBeNull();
-		expect((result as Record<string, unknown>).from_component_tipo).toBe('test6783');
+		expect((result as Record<string, unknown>).from_component_tipo).toBe(OTHER_SLOT);
 	});
 
 	test('a different main_component_tipo is a DISTINCT frame', async () => {
-		const result = await validateRelationInsert(frame({ main_component_tipo: 'test6488' }), {
+		const result = await validateRelationInsert(frame({ main_component_tipo: OTHER_MAIN }), {
 			...HOST,
 			existingItems: [frame()],
 			pairing: null,
@@ -124,12 +187,13 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// With no caller there is nothing authoritative to stamp. The id_key and
 		// main_component_tipo written by the raw export ARE the identity — that is
 		// what makes the export round trip.
-		const result = (await validateRelationInsert(
-			frame({ id_key: 7, main_component_tipo: 'testmint1014' }),
-			{ ...HOST, existingItems: [], pairing: null },
-		)) as Record<string, unknown>;
+		const result = (await validateRelationInsert(frame({ id_key: 7, main_component_tipo: MAIN }), {
+			...HOST,
+			existingItems: [],
+			pairing: null,
+		})) as Record<string, unknown>;
 		expect(result.id_key).toBe(7);
-		expect(result.main_component_tipo).toBe('testmint1014');
+		expect(result.main_component_tipo).toBe(MAIN);
 		expect(result.type).toBe('dd490');
 	});
 
@@ -137,8 +201,8 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 		// The anti-overreach case: the new arm keys on type === 'dd490' only, so an
 		// ordinary relation with a stray id_key must still dedupe generically.
 		const ordinary = {
-			section_tipo: 'test6117',
-			section_id: '15657',
+			section_tipo: TARGET_SECTION,
+			section_id: TARGET_ID,
 			type: 'dd67',
 			id_key: 1,
 		};
@@ -159,11 +223,11 @@ describe('validateRelationInsert — frame identity with no caller pairing (impo
 			{
 				...HOST,
 				existingItems: [],
-				pairing: { frameTipo: 'testmint1036', mainComponentTipo: 'testmint1014', idKey: 4 },
+				pairing: { frameTipo: SLOT, mainComponentTipo: MAIN, idKey: 4 },
 			},
 		)) as Record<string, unknown>;
 		expect(result.id_key).toBe(4);
-		expect(result.main_component_tipo).toBe('testmint1014');
+		expect(result.main_component_tipo).toBe(MAIN);
 		expect(result.type).toBe('dd490');
 	});
 });

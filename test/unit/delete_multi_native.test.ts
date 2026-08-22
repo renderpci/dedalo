@@ -36,7 +36,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { DIFFUSION_ACTIVITY_TABLE } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
+import { activityTable } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
@@ -136,9 +136,9 @@ afterAll(async () => {
 	}
 	// The dd1758 unpublish-log rows for OUR record ids — scratch seam only
 	// (the real matrix_activity_diffusion is PHP-owned; never touched).
-	if (ids.length > 0 && DIFFUSION_ACTIVITY_TABLE.startsWith('dedalo_ts_test_')) {
+	if (ids.length > 0 && activityTable().startsWith('dedalo_ts_test_')) {
 		await sql.unsafe(
-			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			`DELETE FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND string->'dd1765'->0->>'value' = $1
 			   AND number->'dd1764'->0->>'value' = ANY($2::text[])`,

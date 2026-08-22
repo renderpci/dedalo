@@ -31,17 +31,29 @@ const USER_A = { user_id: 424241, full_username: 'Debug user' };
 const USER_B = { user_id: 424242, full_username: 'Other user' };
 
 let savedLegacy: string | null = null;
+/** True when THIS file created the legacy registry row (a clean DB has none). */
+let createdLegacy = false;
 
 beforeAll(async () => {
 	const rows = (await sql`SELECT data::text AS raw FROM matrix_notifications WHERE id = 1`) as {
 		raw: string;
 	}[];
 	savedLegacy = rows[0]?.raw ?? null;
+	if (rows.length === 0) {
+		// The legacy PHP registry is a single row the install seeds; a rebuilt
+		// suite database has none, and the PHP-lock case below UPDATEs it. Without
+		// this the UPDATE matched no row and the case passed nothing — it measured
+		// the fixture's presence, not the engine.
+		await sql.unsafe(`INSERT INTO matrix_notifications (id, data) VALUES (1, '[]'::text::jsonb)`);
+		createdLegacy = true;
+	}
 });
 
 afterAll(async () => {
 	await sql`DELETE FROM dedalo_ts_component_locks WHERE section_tipo = ${TRIPLE.section_tipo}`;
-	if (savedLegacy !== null) {
+	if (createdLegacy) {
+		await sql`DELETE FROM matrix_notifications WHERE id = 1`;
+	} else if (savedLegacy !== null) {
 		await sql.unsafe('UPDATE matrix_notifications SET data = $1::text::jsonb WHERE id = 1', [
 			savedLegacy,
 		]);
@@ -127,9 +139,12 @@ describe('component edit-locks (TS-native model)', () => {
 			full_username: 'PHP user',
 			date: new Date().toISOString().slice(0, 19).replace('T', ' '),
 		};
-		await sql.unsafe('UPDATE matrix_notifications SET data = $1::text::jsonb WHERE id = 1', [
-			JSON.stringify([phpEvent]),
-		]);
+		const written = (await sql.unsafe(
+			'UPDATE matrix_notifications SET data = $1::text::jsonb WHERE id = 1 RETURNING id',
+			[JSON.stringify([phpEvent])],
+		)) as { id: number }[];
+		// The lock this case asserts on must actually EXIST in the registry.
+		expect(written).toHaveLength(1);
 		const blocked = await updateLockComponentsState({ ...TRIPLE, action: 'focus', ...USER_A });
 		expect(blocked.in_use).toBe(true);
 		expect(blocked.full_username).toBe('PHP user');

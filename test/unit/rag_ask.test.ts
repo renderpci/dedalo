@@ -154,7 +154,8 @@ describe('dd_rag_api ask', () => {
 			} as Ctx,
 		);
 		expect(res.body.msg).toBe('ok');
-		const result = res.body.result as {
+		// envelope v2: the payload is `data` (the `result` compat key was removed 2026-08-16)
+		const result = res.body.data as {
 			grounded: boolean;
 			answer: string;
 			citations: unknown[];
@@ -172,7 +173,7 @@ describe('dd_rag_api ask', () => {
 			} as Ctx,
 		);
 		expect(res.body.msg).toBe('no_grounded_context');
-		expect((res.body.result as { grounded: boolean }).grounded).toBe(false);
+		expect((res.body.data as { grounded: boolean }).grounded).toBe(false);
 	});
 
 	test('a dead LLM endpoint maps to generation_failed', async () => {
@@ -205,8 +206,9 @@ describe('dd_rag_api ask', () => {
 				principal: SUPERUSER,
 			} as Ctx);
 			expect(res.body.msg).toBe(RESTRICTED_MSG);
-			expect(res.body.errors ?? []).not.toContain('generation_failed');
-			expect((res.body.result as { restricted?: boolean }).restricted).toBe(true);
+			// no transport happened ⇒ NOT the rag.generation_failed throw, i.e. a success envelope
+			expect(res.body.ok).toBe(true);
+			expect((res.body.data as { restricted?: boolean }).restricted).toBe(true);
 		} finally {
 			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.DEDALO_RAG_LLM_ENDPOINT;

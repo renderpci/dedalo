@@ -525,10 +525,22 @@ afterAll(async () => {
 	// schedule nothing further), THEN restore.
 	await new Promise((resolve) => setTimeout(resolve, 50));
 
-	data_manager.request = original_request;
-	for (const [key, value] of Object.entries(saved)) {
-		if (value === undefined) delete globals[key];
-		else globals[key] = value;
+	// TEARDOWN MUST NOT DEPEND ON SETUP HAVING SUCCEEDED. If beforeAll dies
+	// (a module mask leaked by an earlier file is enough), `data_manager` is
+	// undefined and an unguarded restore throws HERE — leaving globals.window
+	// and globals.document installed for the rest of the process. That is how a
+	// dead beforeAll in a client file turns into "window is defined" failures in
+	// unrelated engine gates (the Anthropic SDK refuses to construct in a
+	// browser-shaped process). Restore the globals in a finally, always.
+	try {
+		if (data_manager !== undefined && original_request !== undefined) {
+			data_manager.request = original_request;
+		}
+	} finally {
+		for (const [key, value] of Object.entries(saved)) {
+			if (value === undefined) delete globals[key];
+			else globals[key] = value;
+		}
 	}
 });
 
