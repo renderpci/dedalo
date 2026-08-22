@@ -4553,7 +4553,7 @@ ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
 
 ---
 
-### defining the  ontology master server code
+### Defining the ontology master server code
 
 ONTOLOGY_SERVER_CODE `string`
 

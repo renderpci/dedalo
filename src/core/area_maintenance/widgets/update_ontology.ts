@@ -88,9 +88,25 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 	};
 
 	const labels = await getLabels(config.lang.structureLang);
+
+	// Serving side: can OTHER installs pull their ontology from THIS one? The
+	// panel only reports the three settings that decide it (client renders the
+	// checklist + the .env snippet); nothing here is a secret — the code itself
+	// is reported as configured/not, never echoed.
+	// dynamic-import rationale 3, engineering/CONVENTIONS.md §2.
+	const { CORS_ENABLED } = await import('../../security/cors.ts');
+	const serving = {
+		enabled: config.ontologyIo.isOntologyServer === true,
+		has_server_code:
+			typeof config.ontologyIo.serverCode === 'string' && config.ontologyIo.serverCode.length > 0,
+		cors_enabled: CORS_ENABLED,
+		url: `${publicOrigin()}/dedalo/core/api/v1/json/`,
+	};
+
 	return {
 		data: {
 			servers,
+			serving,
 			current_ontology: currentOntology,
 			active_ontology_tlds: activeOntologyTlds,
 			body: `${labels.update_ontology ?? 'Update ontology'} is disabled for ${config.entity}`,

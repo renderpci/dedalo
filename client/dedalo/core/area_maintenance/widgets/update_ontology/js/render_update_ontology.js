@@ -19,7 +19,10 @@
 *      from `self.value.current_ontology` (the dd1 root-node properties).
 *   c. Master server — radio picker (`render_servers_list`) with a reachability
 *      pill; unreachable servers are disabled. Selecting one fires
-*      `ontology_server_select_change` so the TLD input auto-fills.
+*      `ontology_server_select_change` so the TLD input auto-fills. Below it, a
+*      two collapsed admin notes: `build_client_info` (the ONTOLOGY_SERVERS key
+*      that populates the picker) and `build_serving_info` (whether THIS install
+*      can serve its ontology to others, and the .env keys that decide it).
 *   d. Update form — the TLD list to import + the destructive submit button. On
 *      submit: Phase 1 `get_ontology_update_info` (discover files) → show the
 *      installed→incoming version change → Phase 2 `update_ontology` (import) →
@@ -210,6 +213,214 @@ const build_version_change = function (installed, incoming) {
 
 
 /**
+* BUILD_CLIENT_INFO
+* Admin help for the PULL side: which servers this installation may pull from
+* comes from ONE config key, so the panel names it, reports how many entries it
+* holds, and shows the exact `../private/.env` line to add. The `code` must be
+* the `ONTOLOGY_SERVER_CODE` of the server being contacted.
+*
+* @param {Array} servers - value.servers (already probed server-side)
+* @returns {HTMLElement} collapsed <details>
+*/
+const build_client_info = function (servers) {
+
+	const total = servers.length
+
+	const details = ui.create_dom_element({
+		element_type	: 'details',
+		class_name		: 'serving_info client_info'
+	})
+	if (total===0) {
+		details.setAttribute('open', 'open')
+	}
+	const summary = ui.create_dom_element({
+		element_type	: 'summary',
+		parent			: details
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'ttl',
+		inner_html		: 'Connect to a remote ontology server',
+		parent			: summary
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: total>0 ? 'dd_badge pill_ok' : 'dd_badge pill_warning',
+		inner_html		: total>0 ? `${total} configured` : 'None configured',
+		parent			: summary
+	})
+
+	const body = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'serving_body',
+		parent			: details
+	})
+	ui.create_dom_element({
+		element_type	: 'p',
+		class_name		: 'dd_note',
+		inner_html		: 'The list above is built from <code>ONTOLOGY_SERVERS</code> in <code>../private/.env</code> (one JSON array, one object per master). Add the servers you are authorized to pull from and restart the server.',
+		parent			: body
+	})
+	ui.create_dom_element({
+		element_type	: 'pre',
+		class_name		: 'env_sample',
+		text_content	: 'ONTOLOGY_SERVERS=[{"name":"Dédalo Ontology server","url":"https://myserverdomain.org/dedalo/core/api/v1/json/","code":"xx-myspecialcode-xxx"}]',
+		parent			: body
+	})
+	const fields = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'serving_checks',
+		parent			: body
+	})
+	;[
+		{ k:'name', d:'Free label, only shown in the list above.' },
+		{ k:'url',  d:'The master’s JSON API endpoint, ending in <code>/dedalo/core/api/v1/json/</code>.' },
+		{ k:'code', d:'The <code>ONTOLOGY_SERVER_CODE</code> configured on THAT server. A wrong or missing code makes it answer as unreachable.' }
+	].forEach(field => {
+		const row = ui.create_dom_element({ element_type:'div', class_name:'chk field', parent:fields })
+		ui.create_dom_element({ element_type:'span', class_name:'mark', inner_html:'·', parent:row })
+		const txt = ui.create_dom_element({ element_type:'div', class_name:'txt', parent:row })
+		const head = ui.create_dom_element({ element_type:'div', class_name:'hd', parent:txt })
+		ui.create_dom_element({ element_type:'code', text_content:field.k, parent:head })
+		ui.create_dom_element({ element_type:'div', class_name:'desc', inner_html:field.d, parent:txt })
+	})
+
+	return details
+}//end build_client_info
+
+
+
+/**
+* BUILD_SERVING_INFO
+* Admin help: what makes THIS installation able to SERVE its ontology to other
+* installs (the mirror image of this panel — a remote client lists us under its
+* own ONTOLOGY_SERVERS). Three settings decide it, so each is shown as a live
+* checklist row plus the exact `../private/.env` lines to add.
+*
+* `serving` comes from update_ontology.ts getValue:
+* `{ enabled, has_server_code, cors_enabled, url }` — the access code itself is
+* never sent, only whether one is configured.
+*
+* @param {Object} serving
+* @returns {HTMLElement} collapsed <details>
+*/
+const build_serving_info = function (serving) {
+
+	const ready = serving.enabled===true && serving.has_server_code===true && serving.cors_enabled===true
+
+	const details = ui.create_dom_element({
+		element_type	: 'details',
+		class_name		: 'serving_info'
+	})
+	const summary = ui.create_dom_element({
+		element_type	: 'summary',
+		parent			: details
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'ttl',
+		inner_html		: 'Serve this ontology to other installations',
+		parent			: summary
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: ready ? 'dd_badge pill_ok' : 'dd_badge pill_warning',
+		inner_html		: ready ? 'Enabled' : 'Not configured',
+		parent			: summary
+	})
+
+	const body = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'serving_body',
+		parent			: details
+	})
+	ui.create_dom_element({
+		element_type	: 'p',
+		class_name		: 'dd_note',
+		inner_html		: 'This panel PULLS an ontology. To let other installations pull <i>from here</i> — they add this server to their own <code>ONTOLOGY_SERVERS</code> — configure <code>../private/.env</code> with at least these keys and restart the server.',
+		parent			: body
+	})
+
+	// live checklist
+	const checks = [
+		{
+			ok	: serving.enabled===true,
+			k	: 'IS_AN_ONTOLOGY_SERVER',
+			v	: serving.enabled===true ? 'true' : 'not set',
+			d	: 'Opens the ontology JSON endpoint and adds the “Local files” source here.'
+		},
+		{
+			ok	: serving.has_server_code===true,
+			k	: 'ONTOLOGY_SERVER_CODE',
+			v	: serving.has_server_code===true ? 'configured' : 'not set',
+			d	: 'Shared access code a client must present. Pick your own; clients store it in their ONTOLOGY_SERVERS entry.'
+		},
+		{
+			ok	: serving.cors_enabled===true,
+			k	: 'DEDALO_CORS_ALLOWED_ORIGINS',
+			v	: serving.cors_enabled===true ? 'configured' : 'not set',
+			d	: 'Clients call this server from their browser, so their origin must be allowed. <code>["*"]</code> opens it to any origin; list the client origins instead when you know them.'
+		}
+	]
+	const list = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'serving_checks',
+		parent			: body
+	})
+	checks.forEach(check => {
+		const row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: check.ok ? 'chk on' : 'chk off',
+			parent			: list
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'mark',
+			inner_html		: check.ok ? '✓' : '•',
+			parent			: row
+		})
+		const txt = ui.create_dom_element({ element_type:'div', class_name:'txt', parent:row })
+		const head = ui.create_dom_element({ element_type:'div', class_name:'hd', parent:txt })
+		ui.create_dom_element({ element_type:'code', text_content:check.k, parent:head })
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'val',
+			text_content	: check.v,
+			parent			: head
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'desc',
+			inner_html		: check.d,
+			parent			: txt
+		})
+	})
+
+	// the literal .env block
+	ui.create_dom_element({
+		element_type	: 'pre',
+		class_name		: 'env_sample',
+		text_content	: [
+			'IS_AN_ONTOLOGY_SERVER=true',
+			'ONTOLOGY_SERVER_CODE=xx-myspecialcode-xxx',
+			'DEDALO_CORS_ALLOWED_ORIGINS=["*"]'
+		].join('\n'),
+		parent			: body
+	})
+
+	// the URL clients must register
+	if (serving.url) {
+		const url_row = ui.create_dom_element({ element_type:'div', class_name:'serve_url', parent:body })
+		ui.create_dom_element({ element_type:'span', class_name:'dd_k', inner_html:'Endpoint clients register', parent:url_row })
+		ui.create_dom_element({ element_type:'code', text_content:String(serving.url), parent:url_row })
+	}
+
+	return details
+}//end build_serving_info
+
+
+
+/**
 * GET_CONTENT_DATA_EDIT
 * Builds the full inner content DOM for the update_ontology widget and wires the
 * two-phase submit flow.
@@ -235,6 +446,7 @@ const get_content_data_edit = async function(self) {
 		const servers				= value.servers || []
 		const active_ontology_tlds	= value.active_ontology_tlds || []
 		const confirm_text			= value.confirm_text || 'Sure?'
+		const serving				= value.serving || {}
 
 	// content_data (own class — the wrapper's content node is otherwise classless,
 	// so styles must hang off this, not a non-existent `.content_data` class)
@@ -265,6 +477,8 @@ const get_content_data_edit = async function(self) {
 		const servers_section = ui.create_dom_element({ element_type:'div', class_name:'section', parent:content_data })
 		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:'Master server', parent:servers_section })
 		servers_section.appendChild(render_servers_list(value))
+		servers_section.appendChild(build_client_info(servers))
+		servers_section.appendChild(build_serving_info(serving))
 
 	// body_response: result surface, declared before init_form so on_submit can close over it
 		const body_response = ui.create_dom_element({
