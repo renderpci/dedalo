@@ -531,19 +531,18 @@ const build_tlds_reference = function (options) {
 * the `ONTOLOGY_SERVER_CODE` of the server being contacted.
 *
 * @param {Array} servers - value.servers (already probed server-side)
-* @returns {HTMLElement} collapsed <details>
+* @returns {HTMLElement} collapsed <details> (collapsed on load in every state)
 */
 const build_client_info = function (servers) {
 
 	const total = servers.length
 
+	// Collapsed on load, always: the panel's first screen is the update itself,
+	// and the summary pill already reports the state ("None configured").
 	const details = ui.create_dom_element({
 		element_type	: 'details',
 		class_name		: 'serving_info client_info'
 	})
-	if (total===0) {
-		details.setAttribute('open', 'open')
-	}
 	const summary = ui.create_dom_element({
 		element_type	: 'summary',
 		parent			: details
@@ -563,7 +562,7 @@ const build_client_info = function (servers) {
 
 	const body = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'serving_body hide',
+		class_name		: 'serving_body',
 		parent			: details
 	})
 	ui.create_dom_element({

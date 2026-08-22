@@ -29,13 +29,14 @@ Common and shared tlds are defined by `ACTIVE_ONTOLOGY_TLDS` (set in `../private
 ## What the panel tells you
 
 The update panel carries the configuration it depends on, as two collapsible notes under the
-master-server list. Both read the LIVE configuration of the installation you are looking at, so
+master-server list — both collapsed until you open them. Both read the LIVE configuration of the
+installation you are looking at, so
 they double as a check: each `../private/.env` key is shown with its current state (`CONFIGURED`
 / `NOT SET`), never with its value — the access code itself is never sent to the browser.
 
 * **Connect to a remote ontology server** — the [`ONTOLOGY_SERVERS`](../../config/config.md#ontology-servers)
-  entry that puts a master in the list above, field by field. It opens by itself when no master
-  is configured, which is why a fresh installation finds the picker empty.
+  entry that puts a master in the list above, field by field. When the picker is empty this is
+  why, and the pill beside the title reads *None configured*.
 * **Serve this ontology to other installations** — the three keys below, as a checklist.
 
 ## Serving other installations (ontology master)

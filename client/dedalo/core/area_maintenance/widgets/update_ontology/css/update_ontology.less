@@ -140,6 +140,13 @@
 			transform: rotate(90deg);
 		}
 
+		// A CLOSED <details> hides its content through UA styles, but an explicit
+		// `display` on that content wins over them in some engines — so the closed
+		// state is stated here, not assumed. Both notes start collapsed.
+		&:not([open]) .serving_body {
+			display: none;
+		}
+
 		.serving_body {
 			display: flex;
 			flex-direction: column;

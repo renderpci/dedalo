@@ -16314,6 +16314,9 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_ontology .serving_info[open] > summary:before {
   transform: rotate(90deg);
 }
+.wrapper_widget.update_ontology .serving_info:not([open]) .serving_body {
+  display: none;
+}
 .wrapper_widget.update_ontology .serving_info .serving_body {
   display: flex;
   flex-direction: column;

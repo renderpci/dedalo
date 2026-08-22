@@ -53,6 +53,32 @@ function selection_handler_body(): string {
 	return src.slice(start, end);
 }
 
+describe('update_ontology admin notes', () => {
+	test('both notes are COLLAPSED on load, in every configuration state', () => {
+		// The panel's first screen is the update itself; the summary pills already
+		// report state ("None configured" / "Not configured"), so neither note may
+		// open itself — the empty-picker case used to.
+		const notes = src.slice(
+			src.indexOf('const build_client_info'),
+			src.indexOf('const build_tlds_reference'),
+		);
+		expect(/setAttribute\('open'/.test(notes), 'neither admin note may open itself on render').toBe(
+			false,
+		);
+
+		// …and a closed <details> whose body carries an explicit `display` is not
+		// hidden by UA styles alone in every engine: the CSS states the closed case.
+		const css = readFileSync(
+			join(
+				REPO_ROOT,
+				'client/dedalo/core/area_maintenance/widgets/update_ontology/css/update_ontology.less',
+			),
+			'utf8',
+		);
+		expect(css).toMatch(/&:not\(\[open\]\) \.serving_body \{\n\t\t\tdisplay: none;/);
+	});
+});
+
 describe('update_ontology TLD input ownership', () => {
 	test('selecting a master does NOT write the TLD input', () => {
 		const body = selection_handler_body();
