@@ -23,7 +23,10 @@
 *      two collapsed admin notes: `build_client_info` (the ONTOLOGY_SERVERS key
 *      that populates the picker) and `build_serving_info` (whether THIS install
 *      can serve its ontology to others, and the .env keys that decide it).
-*   d. Update form — the TLD list to import + the destructive submit button. On
+*   d. Update form — a TLD reference block (where the default list comes from +
+*      the configured/master lists to copy from) over the TLD input, which is the
+*      OPERATOR's (persisted in localStorage, never overwritten by a server
+*      selection), + the destructive submit button. On
 *      submit: Phase 1 `get_ontology_update_info` (discover files) → show the
 *      installed→incoming version change → Phase 2 `update_ontology` (import) →
 *      one status line + a collapsible import log + a collapsed raw-JSON detail.
@@ -209,6 +212,259 @@ const build_version_change = function (installed, incoming) {
 
 	return wrap
 }//end build_version_change
+
+
+
+/**
+* GET_UPDATE_INFO
+* Phase 1 of the update: ask a master for its manifest (available files + the
+* version info). Called from TWO places — the reference block's "Fetch list"
+* button and the submit flow — so the request shape lives in ONE place.
+*
+* @param {Object} server - a `value.servers` entry (url + code)
+* @returns {Promise<Object>} the raw api_response (caller inspects the envelope)
+*/
+const get_update_info = async function (server) {
+
+	const api_response = await data_manager.request({
+		url		: server.url,
+		body	: {
+			dd_api			: 'dd_utils_api',
+			action			: 'get_ontology_update_info',
+			prevent_lock	: true,
+			source			: { action : 'update_ontology' },
+			options : {
+				version	: page_globals.dedalo_version,
+				code	: server.code
+			}
+		},
+		retries : 1,
+		timeout : 3600 * 1000
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) get_ontology_update_info:', api_response)
+	}
+
+	return api_response
+}//end get_update_info
+
+
+
+/**
+* TLDS_STORAGE_KEY
+* Per-ORIGIN key (localStorage is origin-scoped, so two installations served from
+* different hosts never share an edit).
+*/
+const TLDS_STORAGE_KEY = 'dedalo.update_ontology.tlds'
+
+/**
+* READ_STORED_TLDS / STORE_TLDS
+* The operator's own TLD line, remembered across reloads. Private-mode browsers
+* throw on access, so both sides are guarded and simply degrade to "no memory".
+*
+* @returns {string|null}
+*/
+const read_stored_tlds = function () {
+	try {
+		const stored = window.localStorage.getItem(TLDS_STORAGE_KEY)
+		return (typeof stored==='string' && stored.trim().length>0) ? stored : null
+	} catch (_error) {
+		return null
+	}
+}
+const store_tlds = function (value) {
+	try {
+		if (typeof value==='string' && value.trim().length>0) {
+			window.localStorage.setItem(TLDS_STORAGE_KEY, value)
+		} else {
+			window.localStorage.removeItem(TLDS_STORAGE_KEY)
+		}
+	} catch (_error) {
+		// no memory available — the input still works for this visit
+	}
+}//end store_tlds
+
+
+
+/**
+* BUILD_TLDS_REFERENCE
+* The block that sits ABOVE the TLD input: where the prefilled list comes from,
+* plus the two reference lists (what this installation is configured for, and
+* what the selected master actually offers).
+*
+* Why it exists: the input used to be OVERWRITTEN every time a master was
+* selected, silently discarding the operator's edit. Now the input is the
+* operator's — remembered across reloads — and the lists are reference material
+* they copy from deliberately (whole list, or one TLD at a time by clicking it).
+*
+* @param {Object} options
+* @param {string[]} options.configured   - value.active_ontology_tlds
+* @param {Function} options.get_value    - reads the live input value
+* @param {Function} options.set_value    - writes the input value (and persists it)
+* @param {Function} options.fetch_server_tlds - async (server) => string[]; the
+*   master's own list, read from its manifest when the operator asks for it
+* @returns {{node:HTMLElement, set_server:Function}}
+*   `set_server(server)` arms the master row for the newly selected master.
+*/
+const build_tlds_reference = function (options) {
+
+	const configured	= options.configured || []
+	const get_value		= options.get_value
+	const set_value		= options.set_value
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'tlds_reference'
+	})
+
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_eyebrow',
+		inner_html		: 'Ontologies to update',
+		parent			: node
+	})
+	ui.create_dom_element({
+		element_type	: 'p',
+		class_name		: 'dd_note',
+		inner_html		: 'The list below is yours to edit — it is remembered in this browser and is never overwritten when you pick a master. It starts from <code>ACTIVE_ONTOLOGY_TLDS</code> in <code>../private/.env</code> (the shared TLDs this installation tracks), always unioned with the core pair <code>ontology</code> / <code>ontologytype</code>; when the key is unset the mandatory core set is used instead. Change it there to change the default for everyone.',
+		parent			: node
+	})
+
+	/**
+	* Adds a TLD to the input if missing, removes it if already there — so a chip
+	* is a toggle, not a one-way append.
+	*/
+	const toggle_tld = function (tld) {
+		const current = get_value().split(',').map(el => el.trim()).filter(el => el.length>0)
+		const found = current.indexOf(tld)
+		if (found===-1) {
+			current.push(tld)
+		} else {
+			current.splice(found, 1)
+		}
+		set_value(current.join(','))
+	}
+
+	/**
+	* One reference row: a label, the chips, and a "Use this list" button that
+	* replaces the input wholesale.
+	*/
+	const build_row = function (label, tlds, empty_text, with_use_list) {
+
+		const row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tlds_row',
+			parent			: node
+		})
+		const head = ui.create_dom_element({ element_type:'div', class_name:'hd', parent:row })
+		const label_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'lbl',
+			text_content	: label,
+			parent			: head
+		})
+		// "Use this list" REPLACES the whole input, so it only exists where that is
+		// a sane action: a master publishes its ENTIRE manifest (200+ TLDs, every
+		// language pack included) and importing all of it is never what an operator
+		// means — there, chips are added one by one.
+		const use_button = with_use_list===true
+			? ui.create_dom_element({
+				element_type	: 'button',
+				type			: 'button',
+				class_name		: 'light use_list',
+				inner_html		: 'Use this list',
+				parent			: head
+			})
+			: null
+		const chips = ui.create_dom_element({ element_type:'div', class_name:'chips', parent:row })
+
+		const paint = function (list, empty_override) {
+			const ar_tlds = (list || []).filter(Boolean)
+			while (chips.firstChild) {
+				chips.removeChild(chips.firstChild)
+			}
+			if (!ar_tlds.length) {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'empty',
+					text_content	: empty_override || empty_text,
+					parent			: chips
+				})
+				if (use_button) {
+					use_button.disabled = true
+				}
+				return
+			}
+			if (use_button) {
+				use_button.disabled = false
+				use_button.onclick = () => set_value(ar_tlds.join(','))
+			}
+			ar_tlds.forEach(tld => {
+				const chip = ui.create_dom_element({
+					element_type	: 'button',
+					type			: 'button',
+					class_name		: 'tld_chip',
+					text_content	: String(tld),
+					title			: `Add or remove “${tld}” in the list below`,
+					parent			: chips
+				})
+				chip.addEventListener('click', () => toggle_tld(String(tld)))
+			})
+		}
+		paint(tlds)
+
+		return {
+			paint		: paint,
+			head		: head,
+			set_label	: (text) => { label_node.textContent = text }
+		}
+	}//end build_row
+
+	// the configured row never changes after render; the master row is filled on
+	// demand — a master publishes its list only in its manifest, which costs a
+	// request, so it is fetched when the operator asks for it, not on selection
+	build_row('Configured in this installation', configured, 'none', true)
+	const server_row = build_row('Offered by the selected master', [], 'select a master, then fetch its list', false)
+
+	const fetch_button = ui.create_dom_element({
+		element_type	: 'button',
+		type			: 'button',
+		class_name		: 'light fetch_list',
+		inner_html		: 'Fetch list',
+		parent			: server_row.head
+	})
+	fetch_button.disabled = true
+
+	let selected_server = null
+
+	fetch_button.addEventListener('click', async () => {
+		if (!selected_server) {
+			return
+		}
+		fetch_button.disabled = true
+		fetch_button.classList.add('button_spinner')
+		try {
+			const tlds = await options.fetch_server_tlds(selected_server)
+			server_row.paint(tlds || [], 'the master returned no list — check its access code')
+			server_row.set_label(`Offered by ${selected_server.name} (${(tlds || []).length})`)
+		} finally {
+			fetch_button.classList.remove('button_spinner')
+			fetch_button.disabled = false
+		}
+	})
+
+	return {
+		node			: node,
+		set_server		: (server) => {
+			selected_server = server || null
+			fetch_button.disabled = !selected_server
+			server_row.paint([])
+			server_row.set_label(selected_server
+				? `Offered by ${selected_server.name}`
+				: 'Offered by the selected master')
+		}
+	}
+}//end build_tlds_reference
 
 
 
@@ -504,11 +760,47 @@ const get_content_data_edit = async function(self) {
 					const input_nodes = nodes.input_nodes || []
 					const tlds_input = input_nodes.find(el => el.name === 'active_ontology_tlds')
 
-					// auto-fill the TLD input from the selected server's TLD list
-					const render_handler = function( server_selected ){
-						tlds_input.value = !server_selected
+					// the operator's line wins over the configured default, and
+					// survives a reload
+					const stored = read_stored_tlds()
+					if (stored!==null) {
+						tlds_input.value = stored
+					}
+					tlds_input.addEventListener('input', () => {
+						tlds_input.classList.remove('empty')
+						store_tlds(tlds_input.value)
+					})
+
+					// reference lists ABOVE the input — nothing here writes the
+					// input unless the operator clicks
+					const reference = build_tlds_reference({
+						configured	: Array.isArray(active_ontology_tlds)
 							? active_ontology_tlds
-							: server_selected.join(',')
+							: String(active_ontology_tlds).split(','),
+						get_value	: () => tlds_input.value,
+						set_value	: (new_value) => {
+							tlds_input.value = new_value
+							tlds_input.classList.remove('empty')
+							store_tlds(new_value)
+						},
+						fetch_server_tlds : async (server) => {
+							const api_response = await get_update_info(server)
+							const result = response_data(api_response)
+							if (request_failed(api_response) || !result) {
+								return []
+							}
+							// the manifest names one file per TLD
+							return [...new Set(
+								(result.files || []).map(el => el.tld).filter(Boolean)
+							)]
+						}
+					})
+					nodes.form_container.insertBefore(reference.node, nodes.form_container.firstChild)
+
+					// selecting a master ARMS THE REFERENCE ROW ONLY (it used to
+					// overwrite the input, discarding the operator's edit)
+					const render_handler = function(){
+						reference.set_server(servers.find(el => el.active === true) || null)
 					}
 					self.events_tokens.push(
 						event_manager.subscribe('ontology_server_select_change', render_handler)
@@ -540,24 +832,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// Phase 1: discover available files + version info on the master
-						const server_ontology_api_response = await data_manager.request({
-							url		: server.url,
-							body	: {
-								dd_api			: 'dd_utils_api',
-								action			: 'get_ontology_update_info',
-								prevent_lock	: true,
-								source			: { action : 'update_ontology' },
-								options : {
-									version	: page_globals.dedalo_version,
-									code	: server.code
-								}
-							},
-							retries : 1,
-							timeout : 3600 * 1000
-						})
-						if(SHOW_DEBUG===true) {
-							console.log('))) get_ontology_update_info:', server_ontology_api_response)
-						}
+						const server_ontology_api_response = await get_update_info(server)
 
 						const result = response_data(server_ontology_api_response)
 						if(request_failed(server_ontology_api_response) || !result){

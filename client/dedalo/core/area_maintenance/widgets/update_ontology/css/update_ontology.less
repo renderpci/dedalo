@@ -340,6 +340,104 @@
 		}
 	}
 
+	// ---- TLD reference block (sits above the TLD input, inside the form) ----
+	.tlds_reference {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-bottom: 0.9rem;
+
+		// same inline-code chip as the admin notes above
+		code {
+			display: inline !important;
+			width: auto !important;
+			margin: 0 !important;
+			padding: 0.05em 0.35em !important;
+			border: 1px solid var(--border_default);
+			border-radius: 4px;
+			background-color: color-mix(in srgb, var(--color_primary) 8%, var(--bg_surface_alt));
+			color: var(--fg_default);
+			font-family: @dd_mono;
+			font-size: 0.76rem;
+			font-weight: 400;
+			line-height: 1.6;
+			white-space: nowrap;
+			vertical-align: baseline;
+		}
+
+		> .dd_note {
+			margin: 0;
+			line-height: 1.6;
+		}
+
+		.tlds_row {
+			display: flex;
+			flex-direction: column;
+			gap: 0.35rem;
+
+			.hd {
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
+
+				.lbl {
+					font-size: 0.72rem;
+					font-weight: 600;
+					letter-spacing: 0.04em;
+					text-transform: uppercase;
+					color: var(--fg_muted);
+					flex: 1 1 auto;
+					min-width: 0;
+				}
+				.use_list,
+				.fetch_list {
+					flex: 0 0 auto;
+					font-size: 0.74rem;
+					padding: 0.15rem 0.5rem;
+
+					&:disabled {
+						opacity: 0.45;
+						cursor: not-allowed;
+					}
+				}
+			}
+
+			// a master's manifest is long (200+ TLDs): scroll it in place instead
+			// of pushing the submit button off the card
+			.chips {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.3rem;
+				max-height: 7.5rem;
+				overflow-y: auto;
+
+				.empty {
+					font-size: 0.8rem;
+					font-style: italic;
+					color: var(--fg_muted);
+				}
+			}
+
+			// one TLD, click to add it to (or remove it from) the input
+			.tld_chip {
+				padding: 0.1rem 0.45rem;
+				border: 1px solid var(--border_default);
+				border-radius: 999px;
+				background-color: var(--bg_surface_alt);
+				color: var(--fg_default);
+				font-family: @dd_mono;
+				font-size: 0.76rem;
+				line-height: 1.5;
+				cursor: pointer;
+
+				&:hover {
+					border-color: color-mix(in srgb, var(--color_primary) 45%, var(--border_default));
+					background-color: color-mix(in srgb, var(--color_primary) 10%, transparent);
+				}
+			}
+		}
+	}
+
 	// ---- form: the single destructive submit -------------------------------
 	.form_container {
 		padding-top: 0;

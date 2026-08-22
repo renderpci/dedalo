@@ -16486,6 +16486,89 @@ dd-modal:has(.tool_header) {
     transform: rotate(90deg);
   }
 }
+.wrapper_widget.update_ontology .tlds_reference {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.wrapper_widget.update_ontology .tlds_reference code {
+  display: inline !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0.05em 0.35em !important;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color_primary) 8%, var(--bg_surface_alt));
+  color: var(--fg_default);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+.wrapper_widget.update_ontology .tlds_reference > .dd_note {
+  margin: 0;
+  line-height: 1.6;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .hd {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .hd .lbl {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .hd .use_list,
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .hd .fetch_list {
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+  padding: 0.15rem 0.5rem;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .hd .use_list:disabled,
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .hd .fetch_list:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-height: 7.5rem;
+  overflow-y: auto;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .chips .empty {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--fg_muted);
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .tld_chip {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+  background-color: var(--bg_surface_alt);
+  color: var(--fg_default);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.wrapper_widget.update_ontology .tlds_reference .tlds_row .tld_chip:hover {
+  border-color: color-mix(in srgb, var(--color_primary) 45%, var(--border_default));
+  background-color: color-mix(in srgb, var(--color_primary) 10%, transparent);
+}
 .wrapper_widget.update_ontology .form_container {
   padding-top: 0;
 }

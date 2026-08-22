@@ -90,13 +90,22 @@ To update the shared ontology enter into the Maintenance panel in the System adm
 
 The control panel will show the ontology configuration and the tlds to be updated; it's possible to change the tlds to be updated by editing the input field to add or remove one.
 
+### Which tlds are updated
+
 The prefilled list is `ACTIVE_ONTOLOGY_TLDS` unioned with the core pair `ontology` / `ontologytype` (always imported, whatever the configuration says). When the key is not set in `../private/.env`, it falls back to the mandatory core set every installation needs:
 
 ```
 dd, rsc, ontology, ontologytype, hierarchy, lg, utoponymy, nexus
 ```
 
-Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add them to `ACTIVE_ONTOLOGY_TLDS` so they are offered here on every update.
+Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add them to `ACTIVE_ONTOLOGY_TLDS` so they are offered here on every update — that is the only place to change the default for everybody.
+
+**The input line is yours.** What you type there is remembered in your browser and is *never* rewritten when you select a master server, so you can prepare the list first and pick the server after. Two reference lists sit above it, and neither touches the input unless you click:
+
+* **Configured in this installation** — the prefilled list above. *Use this list* puts it back, which is how you undo an edit.
+* **Offered by the selected master** — the master's own manifest, fetched on demand with *Fetch list* (it costs one request, so it is not fetched just by selecting). It has no *Use this list* button on purpose: a master publishes the **whole** ontology, 200+ tlds including every language pack, and importing all of it is never what you mean.
+
+Clicking any tld chip adds it to the line, or removes it if it is already there.
 
 When ready, press the "Update Dédalo Ontology to the latest version" button, and the process will execute.
 
