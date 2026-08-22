@@ -15,10 +15,13 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | The installer stops on a `psql` complaint | [Installing](#installing) |
 | `Database is not empty … restore refused` | [Installing](#installing) |
 | The server refuses to boot | [Booting](#booting) |
+| `Cannot find package …` on start | [Booting](#booting) |
+| The socket is not where the unit says | [Booting](#booting) |
 | The server serves the install wizard instead of the app | [Booting](#booting) |
 | The wizard resumes on an install that is already finished | [Booting](#booting) |
 | The wizard is a `404`, or refuses your address | [Booting](#booting) |
 | `502` from the proxy | [Serving](#serving) |
+| Apache: `AH01144`, or `AH01630` naming a path under `/etc/apache2` | [Serving](#serving) |
 | nginx will not start | [Serving](#serving) |
 | A big export dies after about a minute | [Serving](#serving) |
 | Uploads fail with `413` | [Serving](#serving) |
@@ -178,6 +181,53 @@ first, so it exits `1` instead.
 *stale* socket file (nothing listening) is removed automatically — this error
 only fires when something really is alive on it.
 
+### `error: Cannot find package 'zod' from '…/src/core/concepts/rqo.ts'`
+
+**Cause.** That clone has no usable `node_modules`. The package name varies; the
+path in the message is the authoritative part — it names **the tree the engine is
+running from**, which is not necessarily the tree you installed into.
+
+Almost always one of two things:
+
+- `bun install` was never run in that directory, or was run in a **different**
+  one. `sudo -u <user> <cmd>` does not move to that user's home; it inherits the
+  directory you are standing in, so an install launched from `/root` reports
+  `could not find a package.json file to install from` and touches nothing.
+- It was run as `root`, leaving a `node_modules` the service user cannot read.
+
+**Fix.** Install as the service user, in the clone, in one command:
+
+```shell
+sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+ls -d /opt/dedalo/master_dedalo/node_modules/zod      # proof it landed
+```
+
+Then clear the crash-loop trip before starting — `Restart=always` does not:
+
+```shell
+sudo systemctl reset-failed dedalo-ts && sudo systemctl start dedalo-ts
+```
+
+### The engine listens on `/tmp/dedalo_ts.sock` instead of `/run/dedalo/…`
+
+**Cause.** `SERVER_UNIX_SOCKET` is not set in `../private/.env`, so the engine
+falls back to its default path and ignores the unit's `RuntimeDirectory`
+entirely. The boot line says exactly where it bound:
+
+```text
+Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: …)
+```
+
+Two consequences, both delayed: the proxy points at a socket that never appears
+and every request `502`s, and a **second install on the same host refuses to
+boot**, because something is already answering on the default path.
+
+**Fix.** Set it per install, matching the unit's `RuntimeDirectory`, and restart:
+
+```dotenv
+SERVER_UNIX_SOCKET=/run/dedalo/dedalo_ts.sock
+```
+
 ### `Failed to determine group credentials: No such process`
 
 **Cause.** The `Group=` in the systemd unit — or in a drop-in overriding it —
@@ -300,6 +350,55 @@ ls -l /run/dedalo/dedalo_ts.sock # → srwxrwx--- dedalo dedalo
 
 Also confirm the paths agree: `SERVER_UNIX_SOCKET` in `.env`, the `upstream` in
 the proxy configuration, and the watchdog unit's `--unix-socket`.
+
+### Apache: `AH01144: No protocol handler was valid for the URL … (scheme 'http')`
+
+**Cause.** `mod_proxy_http` is not loaded. `mod_proxy` alone understands the
+`ProxyPass` syntax but has no handler for the `http` scheme, so it matches the
+rule and then has nothing to hand the request to.
+
+A host that previously served an older Dédalo shows this reliably: it has
+`proxy_fcgi` — the submodule its interpreter pool used — and never needed
+`proxy_http`. The engine is reached over HTTP on a unix socket, so the `unix:`
+prefix is `mod_proxy`'s part and everything after the `|` is `proxy_http`'s.
+
+**Fix.**
+
+```shell
+apachectl -M | grep proxy            # want proxy_module AND proxy_http_module
+sudo a2enmod proxy proxy_http
+sudo systemctl restart apache2       # LoadModule needs a restart, not a reload
+```
+
+### Apache: `AH01630: client denied by server configuration: /etc/apache2/…`
+
+**Cause.** A filesystem path in the vhost is missing its **leading slash**.
+Apache resolves a relative path against `ServerRoot` (`/etc/apache2` on
+Debian/Ubuntu), so `Alias /dedalo home/site/dedalo/client/dedalo` silently becomes
+`/etc/apache2/home/site/…`. No `<Directory>` block matches that invented path, and
+the filesystem default outside `DocumentRoot` is `Require all denied` — hence a
+denial rather than a `404`. The path in the message is the fabricated one, which
+is what makes it recognisable.
+
+**Fix.** Find the offending line and add the slash:
+
+```shell
+grep -rnE '^\s*(Alias|AliasMatch|DocumentRoot|ScriptAlias|<Directory)\s+"?[^/"]' \
+     /etc/apache2/sites-enabled/ /etc/apache2/conf-enabled/
+apachectl -S                          # the resolved DocumentRoot per vhost
+apachectl configtest && sudo systemctl reload apache2
+```
+
+Two variants produce the same `AH01630` with a **correct-looking** path:
+
+- the `<Directory>` block's path does not match the `Alias` target exactly (a
+  trailing slash, or a symlinked component — Apache matches the resolved path);
+- the web-server user cannot **traverse** into the tree. A `0700` home denies it
+  before `Require all granted` is ever read:
+
+    ```shell
+    sudo -u www-data ls /home/<site>/<clone>/client/dedalo >/dev/null
+    ```
 
 ### nginx: `unknown "dedalo_auth_key" variable`
 
