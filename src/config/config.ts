@@ -234,6 +234,13 @@ export interface OntologyIoConfig {
 	 * (PHP glossary: DEDALO_PREFIX_TIPOS / defaults.prefix_tipos).
 	 */
 	readonly activeOntologyTlds: readonly string[];
+	/**
+	 * Was `ACTIVE_ONTOLOGY_TLDS` actually SET, or is `activeOntologyTlds` the
+	 * catalog fallback? The update panel says which, because "these are the TLDs
+	 * this installation tracks" and "nobody configured this yet, so here is the
+	 * built-in set" are different answers for an administrator.
+	 */
+	readonly activeOntologyTldsConfigured: boolean;
 	/** PHP STRUCTURE_FROM_SERVER passthrough for the update panel (null = unset). */
 	readonly structureFromServer: boolean | null;
 }
@@ -954,6 +961,7 @@ export const config: DedaloConfig = Object.freeze({
 		isOntologyServer: readString('IS_AN_ONTOLOGY_SERVER') === 'true',
 		serverCode: readEnv('ONTOLOGY_SERVER_CODE'),
 		activeOntologyTlds: readList('ACTIVE_ONTOLOGY_TLDS'),
+		activeOntologyTldsConfigured: readOptionalList('ACTIVE_ONTOLOGY_TLDS') !== null,
 		structureFromServer: (() => {
 			const raw = readEnv('STRUCTURE_FROM_SERVER');
 			return raw === undefined ? null : raw === 'true';

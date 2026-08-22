@@ -70,6 +70,9 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 	}
 
 	// TLD list: the configured active TLDs, always unioned with the core pair.
+	// `..._configured` tells the panel whether ACTIVE_ONTOLOGY_TLDS was set at all
+	// or the list below is the engine's fallback — an administrator needs to know
+	// which of the two they are looking at before editing anything.
 	const activeOntologyTlds = [
 		...new Set([...config.ontologyIo.activeOntologyTlds, 'ontology', 'ontologytype']),
 	];
@@ -109,6 +112,7 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 			serving,
 			current_ontology: currentOntology,
 			active_ontology_tlds: activeOntologyTlds,
+			active_ontology_tlds_configured: config.ontologyIo.activeOntologyTldsConfigured,
 			body: `${labels.update_ontology ?? 'Update ontology'} is disabled for ${config.entity}`,
 			confirm_text:
 				'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +

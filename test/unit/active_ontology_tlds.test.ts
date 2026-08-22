@@ -31,6 +31,13 @@ const READ_CONFIG_KEY =
 	"const { config } = await import('./src/config/config.ts');" +
 	'console.log(JSON.stringify(config.ontologyIo.activeOntologyTlds));';
 
+/** Did the key come from the environment, or is the panel showing the fallback? */
+const READ_PANEL_SOURCE =
+	"const { dispatchGetWidgetValue } = await import('./src/core/area_maintenance/widgets/registry.ts');" +
+	'const ADMIN = { userId: -1, isGlobalAdmin: true, isDeveloper: true };' +
+	"const body = await dispatchGetWidgetValue(ADMIN, { model: 'update_ontology' });" +
+	'console.log(JSON.stringify(body.data.active_ontology_tlds_configured));';
+
 /** The panel payload as the client receives it, from a child booted with a given env. */
 const READ_PANEL_TLDS =
 	"const { dispatchGetWidgetValue } = await import('./src/core/area_maintenance/widgets/registry.ts');" +
@@ -168,5 +175,27 @@ describe('update_ontology panel wire key (WC-028)', () => {
 		);
 		expect(boot.exitCode).toBe(0);
 		expect(JSON.parse(boot.stdout)).toEqual(['dd', 'rsc', 'oh', 'ontology', 'ontologytype']);
+	});
+
+	test('the panel distinguishes a CONFIGURED list from the engine fallback', () => {
+		// The two states look identical on the wire — both are just a list — so the
+		// panel would otherwise present the engine's fallback as "what this
+		// installation tracks", and an administrator would never learn the key is
+		// unset. The client labels the reference list from this flag.
+		const configured = bootConfigWith(
+			{ ACTIVE_ONTOLOGY_TLDS: 'dd,rsc,oh', DEDALO_PREFIX_TIPOS: undefined },
+			READ_PANEL_SOURCE,
+		);
+		expect(configured.exitCode).toBe(0);
+		expect(JSON.parse(configured.stdout)).toBe(true);
+
+		// An empty value counts as UNSET for this key (catalog `emptyIsUnset`), so
+		// the panel must report the fallback — not claim an empty list was chosen.
+		const empty = bootConfigWith(
+			{ ACTIVE_ONTOLOGY_TLDS: '', DEDALO_PREFIX_TIPOS: undefined },
+			READ_PANEL_SOURCE,
+		);
+		expect(empty.exitCode).toBe(0);
+		expect(JSON.parse(empty.stdout)).toBe(false);
 	});
 });

@@ -299,6 +299,8 @@ const store_tlds = function (value) {
 *
 * @param {Object} options
 * @param {string[]} options.configured   - value.active_ontology_tlds
+* @param {boolean} options.configured_by_env - value.active_ontology_tlds_configured:
+*   false means ACTIVE_ONTOLOGY_TLDS is unset and the list is the engine fallback
 * @param {Function} options.get_value    - reads the live input value
 * @param {Function} options.set_value    - writes the input value (and persists it)
 * @param {Function} options.fetch_server_tlds - async (server) => string[]; the
@@ -323,10 +325,17 @@ const build_tlds_reference = function (options) {
 		inner_html		: 'Ontologies to update',
 		parent			: node
 	})
+	// Two different answers, and an administrator must not confuse them: either
+	// somebody configured this installation's TLDs, or nobody did and what is
+	// shown is the engine's built-in fallback.
+	const origin_html = options.configured_by_env===true
+		? 'It starts from <code>ACTIVE_ONTOLOGY_TLDS</code> in <code>../private/.env</code> — the shared TLDs this installation tracks — always unioned with the core pair <code>ontology</code> / <code>ontologytype</code>. Change it there to change the default for everyone.'
+		: '<b><code>ACTIVE_ONTOLOGY_TLDS</code> is not set in <code>../private/.env</code></b>, so it starts from the engine\u2019s built-in fallback (below), unioned with the core pair <code>ontology</code> / <code>ontologytype</code>. Domain TLDs (<code>oh</code>, <code>ich</code>, <code>tch</code>, <code>numisdata</code>, \u2026) are per-installation: set the key to make your own set the default for everyone.'
+
 	ui.create_dom_element({
 		element_type	: 'p',
 		class_name		: 'dd_note',
-		inner_html		: 'The list below is yours to edit — it is remembered in this browser and is never overwritten when you pick a master. It starts from <code>ACTIVE_ONTOLOGY_TLDS</code> in <code>../private/.env</code> (the shared TLDs this installation tracks), always unioned with the core pair <code>ontology</code> / <code>ontologytype</code>; when the key is unset the mandatory core set is used instead. Change it there to change the default for everyone.',
+		inner_html		: 'The list below is yours to edit — it is remembered in this browser and is never overwritten when you pick a master. ' + origin_html,
 		parent			: node
 	})
 
@@ -423,7 +432,14 @@ const build_tlds_reference = function (options) {
 	// the configured row never changes after render; the master row is filled on
 	// demand — a master publishes its list only in its manifest, which costs a
 	// request, so it is fetched when the operator asks for it, not on selection
-	build_row('Configured in this installation', configured, 'none', true)
+	build_row(
+		options.configured_by_env===true
+			? 'Configured in this installation'
+			: 'Engine fallback (not configured)',
+		configured,
+		'none',
+		true
+	)
 	const server_row = build_row('Offered by the selected master', [], 'select a master, then fetch its list', false)
 
 	const fetch_button = ui.create_dom_element({
@@ -777,6 +793,7 @@ const get_content_data_edit = async function(self) {
 						configured	: Array.isArray(active_ontology_tlds)
 							? active_ontology_tlds
 							: String(active_ontology_tlds).split(','),
+						configured_by_env : value.active_ontology_tlds_configured===true,
 						get_value	: () => tlds_input.value,
 						set_value	: (new_value) => {
 							tlds_input.value = new_value

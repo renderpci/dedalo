@@ -54,9 +54,19 @@ Besides, every installation can import the ontology tipo that will use in the in
 | **isad** | Archives following the [ISAD(g) standard](https://www.ica.org/en/isadg-general-international-standard-archival-description-second-edition) (General International Standard Archival Description - Second edition), the definition of sections and tools to be used for cataloging documents with the standard structure, etc. |
 | **actv** | Activities, the definition of section and fields of activities as exhibitions, workshops, didactics, conferences, etc. |
 
+An EXAMPLE for an oral-history + intangible-heritage installation \u2014 not the default:
+
 \`\`\`bash
 ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "hierarchy", "lg", "oh", "ich" ]
 \`\`\`
+
+!!! info "When the key is unset"
+    The engine does NOT fall back to an empty list: it uses the mandatory core set
+    \`dd, rsc, ontology, ontologytype, hierarchy, lg, utoponymy, nexus\`, and the update
+    panel says so \u2014 it labels the reference list *Engine fallback (not configured)*
+    instead of *Configured in this installation*. Domain TLDs (\`oh\`, \`ich\`, \`tch\`,
+    \`numisdata\`, \u2026) are never in that fallback: they are per-installation, so set the
+    key to add them.
 
 !!! note "Thesaurus dependencies"
     Some tld has a thesaurus dependency, if you want to use a \`tch\` Dédalo installation will need to create the \`material\`, \`technique\`, or \`objects\` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users. [See the table of dependencies](thesaurus_dependeces.md#dependencies).

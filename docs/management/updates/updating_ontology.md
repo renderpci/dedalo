@@ -98,7 +98,9 @@ The prefilled list is `ACTIVE_ONTOLOGY_TLDS` unioned with the core pair `ontolog
 dd, rsc, ontology, ontologytype, hierarchy, lg, utoponymy, nexus
 ```
 
-Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add them to `ACTIVE_ONTOLOGY_TLDS` so they are offered here on every update — that is the only place to change the default for everybody.
+Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add them to `ACTIVE_ONTOLOGY_TLDS` so they are offered here on every update — that is the only place to change the default for everybody. They are never part of the fallback above.
+
+The panel tells you which of the two you are looking at: when the key is set the reference list is headed **Configured in this installation**, and when it is not it reads **Engine fallback (not configured)** and the note says so. An empty value counts as unset.
 
 **The input line is yours.** What you type there is remembered in your browser and is *never* rewritten when you select a master server, so you can prepare the list first and pick the server after. Two reference lists sit above it, and neither touches the input unless you click:
 
