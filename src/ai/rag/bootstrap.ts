@@ -26,6 +26,11 @@ export function initRagHooks(): void {
 	if (!isRagEnabled()) {
 		registerRagRecordHook(null);
 		registerMediaIngestHook(null);
+		// The install-level fact is stated HERE, once, to the operator — never to
+		// the user: an install that deliberately never implemented RAG must look
+		// like a normal install in the client (the capability probe answers
+		// `{groups: []}` and the semantic UI simply does not appear, api.ts).
+		console.log('[rag] disabled (DEDALO_RAG_ENABLED off) — no indexing, no semantic search');
 		return;
 	}
 	// enqueue-only queue: the save path never indexes (the drain does), so no
