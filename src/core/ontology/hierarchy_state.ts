@@ -161,6 +161,33 @@ const literal = (row: RegistryRow | null, tipo: string): string =>
 const locator = (row: RegistryRow | null, tipo: string): Record<string, unknown> | null =>
 	row?.relation?.[tipo]?.[0] ?? null;
 
+/**
+ * THE SECTIONS THIS HIERARCHY DECLARES — hierarchy53 (terms) and hierarchy58
+ * (model), with the `<tld>1`/`<tld>2` convention as the FALLBACK when unset.
+ *
+ * One resolver, because there used to be none: the `targets` check read the
+ * registry (correctly — those are operator data), and then every OTHER consumer
+ * re-derived `${tld}1`/`${tld}2` from the TLD name and ignored what the row
+ * said. On a hierarchy that pairs foreign sections the two answers disagree,
+ * and the tld-derived one is simply wrong: live, 'WW' declares hierarchy53
+ * `mht72`, so its perfectly good root term reported `points at mht72/…` — the
+ * check announcing the correct value as the defect — and `ensure` would then
+ * mint a SECOND root inside `ww1`, a section the operator never pointed at.
+ *
+ * The fallback is the documented law, not a guess: unset MEANS the convention
+ * (`ensureTargetSectionDefaults` writes exactly this pair, fill-only), so on the
+ * overwhelming majority of hierarchies — every one that never repointed a
+ * target — this returns precisely what the old derivation returned.
+ */
+function declaredTargets(row: RegistryRow | null, tld: string): { terms: string; model: string } {
+	const terms = literal(row, HIERARCHY_TARGET_SECTION);
+	const model = literal(row, HIERARCHY_TARGET_SECTION_MODEL);
+	return {
+		terms: terms === '' ? `${tld}1` : terms,
+		model: model === '' ? `${tld}2` : model,
+	};
+}
+
 /** Does a record exist? The question the old code never asked. */
 async function recordExists(sectionTipo: string, sectionId: number): Promise<boolean> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
@@ -184,11 +211,26 @@ async function lowestRecordId(sectionTipo: string): Promise<number | null> {
 	return id === null || id === undefined ? null : Number(id);
 }
 
-/** The tld's ontology: the three dd_ontology nodes + the two `<tld>0` node records. */
-async function ontologyPresent(tld: string): Promise<{ ok: boolean; detail: string }> {
+/**
+ * The tld's ontology: the `<tld>0` container node plus its two node records, and
+ * the two sections this hierarchy DECLARES.
+ *
+ * It used to assert the `<tld>0/1/2` triad literally, which asks the wrong
+ * question twice over: a hierarchy pointing hierarchy53 at a foreign section
+ * reported its ontology broken while nothing was, and a `<tld>1` that existed
+ * but was not the declared target counted as proof. `<tld>0` stays tld-derived
+ * because it IS the tld's container — provisioning creates it — while the term
+ * and model sections are read from the row (see `declaredTargets`). When the
+ * targets are unset this is byte-identical to the old check.
+ */
+async function ontologyPresent(
+	tld: string,
+	targets: { terms: string; model: string },
+): Promise<{ ok: boolean; detail: string }> {
+	const wanted = [...new Set([`${tld}0`, targets.terms, targets.model])];
 	const nodes = (await sql.unsafe(
-		'SELECT tipo FROM dd_ontology WHERE tipo IN ($1, $2, $3) ORDER BY tipo',
-		[`${tld}0`, `${tld}1`, `${tld}2`],
+		"SELECT tipo FROM dd_ontology WHERE tipo = ANY(string_to_array($1, ',')) ORDER BY tipo",
+		[wanted.join(',')],
 	)) as { tipo: string }[];
 	const records = (await sql.unsafe(
 		'SELECT section_id FROM matrix_ontology WHERE section_tipo = $1 ORDER BY section_id',
@@ -196,7 +238,8 @@ async function ontologyPresent(tld: string): Promise<{ ok: boolean; detail: stri
 	)) as { section_id: number }[];
 	const haveNodes = nodes.map((node) => node.tipo);
 	const haveRecords = records.map((record) => Number(record.section_id));
-	const ok = haveNodes.length === 3 && haveRecords.includes(1) && haveRecords.includes(2);
+	const ok =
+		haveNodes.length === wanted.length && haveRecords.includes(1) && haveRecords.includes(2);
 	return {
 		ok,
 		detail: ok
@@ -322,7 +365,12 @@ export async function inspectHierarchy(sectionId: number): Promise<HierarchyStat
 		return { section_id: sectionId, tld: null, typology, usable: false, checks };
 	}
 
-	const ontology = await ontologyPresent(tld);
+	// Resolved ONCE, and used by every check below it: the ontology question, the
+	// target check's fallback message, and — the fix — the two root checks, which
+	// used to re-derive `<tld>1`/`<tld>2` and contradict this very row.
+	const targets = declaredTargets(row, tld);
+
+	const ontology = await ontologyPresent(tld, targets);
 	add('ontology', 'Ontology', ontology.ok, ontology.detail);
 
 	// The target sections are OPERATOR DATA too, not tld-derived constants — the same rule
@@ -345,11 +393,11 @@ export async function inspectHierarchy(sectionId: number): Promise<HierarchyStat
 	};
 	const [targetOk, targetDetail] = await targetCheck(
 		literal(row, HIERARCHY_TARGET_SECTION),
-		`${tld}1`,
+		targets.terms,
 	);
 	const [targetModelOk, targetModelDetail] = await targetCheck(
 		literal(row, HIERARCHY_TARGET_SECTION_MODEL),
-		`${tld}2`,
+		targets.model,
 	);
 	add(
 		'targets',
@@ -358,9 +406,9 @@ export async function inspectHierarchy(sectionId: number): Promise<HierarchyStat
 		`${targetDetail} / ${targetModelDetail}`,
 	);
 
-	const rootTerm = await rootTermCheck(row, HIERARCHY_GENERAL_TERM, `${tld}1`);
+	const rootTerm = await rootTermCheck(row, HIERARCHY_GENERAL_TERM, targets.terms);
 	add('root_term', 'General term', rootTerm.ok, rootTerm.detail);
-	const rootModel = await rootTermCheck(row, HIERARCHY_GENERAL_TERM_MODEL, `${tld}2`);
+	const rootModel = await rootTermCheck(row, HIERARCHY_GENERAL_TERM_MODEL, targets.model);
 	add('root_model', 'General term model', rootModel.ok, rootModel.detail);
 
 	return {
@@ -677,7 +725,9 @@ export async function ensureHierarchy(
 
 	// 3. the ontology. generateVirtualSection re-reads the record, so the flags above
 	// must already be committed — they are (updateMatrixKeyData writes immediately).
-	const ontology = await ontologyPresent(tld);
+	// Asked about the sections the row DECLARES (unset → the `<tld>1`/`<tld>2`
+	// convention, which is what provisioning is about to create anyway).
+	const ontology = await ontologyPresent(tld, declaredTargets(row, tld));
 	if (!ontology.ok) {
 		const provision = await generateVirtualSection({
 			section_tipo: HIERARCHY_SECTION,
@@ -703,9 +753,14 @@ export async function ensureHierarchy(
 
 	// 5. the roots — resolve-or-create, never trust the stored locator.
 	row = await readRegistry(sectionId);
+	// Re-read AFTER step 4, so a target just defaulted is seen: the roots go into
+	// the sections the row DECLARES, never into `<tld>1`/`<tld>2` derived behind
+	// its back (that minted a second root in a section the operator never
+	// pointed at, and left the declared one empty).
+	const ensureTargets = declaredTargets(row, tld);
 	for (const [componentTipo, targetSectionTipo] of [
-		[HIERARCHY_GENERAL_TERM, `${tld}1`],
-		[HIERARCHY_GENERAL_TERM_MODEL, `${tld}2`],
+		[HIERARCHY_GENERAL_TERM, ensureTargets.terms],
+		[HIERARCHY_GENERAL_TERM_MODEL, ensureTargets.model],
 	] as [string, string][]) {
 		const outcome = await ensureRootTerm(sectionId, componentTipo, targetSectionTipo, row);
 		if (outcome.error !== null) errors.push(outcome.error);

@@ -331,7 +331,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_PDF_TYPE',
 			'DEDALO_SVG_MIME_TYPE',
 			'DEDALO_3D_MIME_TYPE',
-			'DEDALO_3D_THUMB_DEFAULT',
 		],
 		'derived: v7 resolves the media type from the file extension',
 	),
@@ -438,6 +437,21 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 		reason:
 			'no v7 key: the row-level record ACL (component_filter_records) is enforced whenever a user has an allow-list, not behind a flag',
 	},
+
+	// The per-family thumb-quality names, superseded INSIDE v6 by the single
+	// generic DEDALO_QUALITY_THUMB — core/base/update/unsoported_updates.php:693
+	// announces it ("DEDALO_IMAGE_THUMB_DEFAULT is changed by generic
+	// DEDALO_QUALITY_THUMB"). No v6 PHP file reads any of the three; the image and
+	// pdf spellings were also removed from v6's shipped sample.config.php, which is
+	// why they are absent from the vendored fixture and only reach the migration
+	// from an older, hand-maintained config.php. Nothing is lost:
+	// DEDALO_QUALITY_THUMB is SAME, and both engines fall back to 'thumb' unset.
+	// (The 3d spelling sat in the mime/type group above until 2026-08-22 — it never
+	// named a media type, so the reason printed for it was simply wrong.)
+	...dropped(
+		['DEDALO_IMAGE_THUMB_DEFAULT', 'DEDALO_PDF_THUMB_DEFAULT', 'DEDALO_3D_THUMB_DEFAULT'],
+		'superseded inside v6 by the generic DEDALO_QUALITY_THUMB (a SAME key); no v6 or v7 code reads the per-family name',
+	),
 
 	// Read by nothing in the TS engine today.
 	...dropped(

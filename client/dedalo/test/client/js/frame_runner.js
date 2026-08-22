@@ -89,8 +89,25 @@ if (ready) {
 
 	const runner = mocha.run()
 
+	// failures: the WHY of a red suite. Without it a failing suite is opaque all
+	// the way out to the terminal (the parent only ever saw counters), so the
+	// reason had to be re-discovered by hand in a browser. Collected here because
+	// this is the only place the mocha Error object exists.
+	const failures = []
+
 	runner.on('test', function(test) {
 		window.parent.postMessage({ type: 'test_start', title: test.title }, '*')
+	})
+
+	runner.on('fail', function(test, err) {
+		failures.push({
+			// full title = "suite > test", the name you re-run with
+			title	: (test && (test.fullTitle ? test.fullTitle() : test.title)) || '(unknown test)',
+			message	: String((err && err.message) || err),
+			// a few frames only: this crosses a postMessage boundary, and the deep
+			// tail is mocha's own machinery
+			stack	: String((err && err.stack) || '').split('\n').slice(1, 5).join('\n')
+		})
 	})
 
 	runner.on('end', function() {
@@ -101,7 +118,8 @@ if (ready) {
 				pass	: runner.stats.passes,
 				fail	: runner.stats.failures,
 				pending	: runner.stats.pending
-			}
+			},
+			failures : failures
 		}, '*')
 	})
 }

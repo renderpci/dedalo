@@ -318,3 +318,92 @@ describe('rebuildHierarchy', () => {
 		expect(outcome.applied[0]).toContain('tore down');
 	});
 });
+
+/**
+ * 5. FOREIGN TARGET SECTIONS — the hierarchy declares where its terms live, and
+ *    the engine must believe it.
+ *
+ * hierarchy53 (terms section) and hierarchy58 (model section) are OPERATOR DATA:
+ * a hierarchy may legitimately pair sections that are not its own `<tld>1` /
+ * `<tld>2` (live: 'WW' declares hierarchy53 `mht72`). The `targets` check always
+ * read the row correctly — and then every other consumer re-derived
+ * `<tld>1`/`<tld>2` from the TLD NAME and contradicted it:
+ *
+ *   - `inspect` reported a perfectly good root as `points at mht72/…` — the
+ *     check announcing the declared value as the defect (a LIVE bug: WW reads
+ *     broken in the maintenance panel and cannot be activated);
+ *   - `ensure` would then "repair" it by minting a SECOND root inside `<tld>1`,
+ *     a section the operator never pointed at, leaving the declared one empty;
+ *   - `ontologyPresent` asserted the `<tld>0/1/2` triad, so a hierarchy whose
+ *     declared target was foreign reported its ontology broken while nothing was.
+ *
+ * Reproduced here by SWAPPING the pair — hierarchy53 → `zz2`, hierarchy58 →
+ * `zz1` — which is the same shape as WW (declared ≠ conventional) while staying
+ * inside the scratch tld this file already sweeps.
+ */
+describe('foreign target sections (hierarchy53 / hierarchy58)', () => {
+	/** Point the registry row at the SWAPPED pair, as an operator would. */
+	async function declareSwappedTargets(): Promise<void> {
+		await sql.unsafe(
+			`UPDATE "${TABLE}" SET string = string || $3::text::jsonb
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[
+				SECTION,
+				SCRATCH_ID,
+				JSON.stringify({
+					hierarchy53: [{ id: 1, lang: 'lg-nolan', value: `${TLD}2` }],
+					hierarchy58: [{ id: 1, lang: 'lg-nolan', value: `${TLD}1` }],
+				}),
+			],
+		);
+		await clearOntologyDerivedCaches();
+	}
+
+	test('ensure creates each root in the DECLARED section, not in `<tld>1`/`<tld>2`', async () => {
+		await seedRegistry(false);
+		await declareSwappedTargets();
+
+		const outcome = await ensureHierarchy(SCRATCH_ID, USER_ID);
+
+		expect(outcome.ok).toBe(true);
+		expect(outcome.state.usable).toBe(true);
+		// The term root went where the row says (zz2), and the MODEL root to zz1.
+		// Before the fix both went to the tld-derived pair and this was reversed.
+		expect(await rootLocator('hierarchy45')).toMatchObject({ section_tipo: `${TLD}2` });
+		expect(await rootLocator('hierarchy59')).toMatchObject({ section_tipo: `${TLD}1` });
+		// Exactly one root apiece — no phantom second root in the conventional
+		// section, which is the damage `ensure` used to do.
+		expect(await terms(`${TLD}2`)).toHaveLength(1);
+		expect(await terms(`${TLD}1`)).toHaveLength(1);
+	});
+
+	test('inspect reports the declared pairing as OK (it used to name it as the defect)', async () => {
+		await seedRegistry(false);
+		await declareSwappedTargets();
+		await ensureHierarchy(SCRATCH_ID, USER_ID);
+
+		const state = await inspectHierarchy(SCRATCH_ID);
+
+		expect(check(state, 'root_term')?.ok).toBe(true);
+		expect(check(state, 'root_term')?.detail).toContain(`${TLD}2/`);
+		expect(check(state, 'root_model')?.ok).toBe(true);
+		expect(check(state, 'root_model')?.detail).toContain(`${TLD}1/`);
+		// The ontology check asks about the DECLARED sections now, so it is green
+		// on the same row that used to fail the `<tld>0/1/2` triad assertion.
+		expect(check(state, 'ontology')?.ok).toBe(true);
+		expect(check(state, 'targets')?.ok).toBe(true);
+		expect(state.usable).toBe(true);
+	});
+
+	test('IDEMPOTENT on the declared pairing — a second ensure changes nothing', async () => {
+		await seedRegistry(false);
+		await declareSwappedTargets();
+		await ensureHierarchy(SCRATCH_ID, USER_ID);
+
+		const second = await ensureHierarchy(SCRATCH_ID, USER_ID);
+
+		expect(second.applied).toEqual([]);
+		expect(await terms(`${TLD}2`)).toHaveLength(1);
+		expect(await terms(`${TLD}1`)).toHaveLength(1);
+	});
+});

@@ -580,14 +580,20 @@ DEDALO_SECTION_USERS_TIPO="dd128"
 
 MAIN_SECTION `string`
 
-It defines the section will loaded by default when the user login.
-The main section of the project that will used, normally will be a inventory or catalog section.
+It defines the section that is loaded by default when the user logs in.
+The main section of the project, normally an inventory or catalog section.
+
+It is EMPTY by default, because there is no section every installation has: the
+default used to name one installation's own section, which meant every other
+installation landed its users on a tipo that need not exist. Left empty, a login
+with no deep link opens the menu — a real state, not a misconfiguration. Set it
+to the section your users should land on.
 
 ```bash
 MAIN_SECTION="oh1"
 ```
 
-*Default: oh1*
+*Default: (empty)*
 
 ---
 
@@ -1961,13 +1967,15 @@ MENU_SKIP_TIPOS `array`
 
 This parameter defines the tipos to be skipped from the menu.
 
-The ontology sometimes define long hierarchy to access to the sections, and could be convenient to remove some tipo from the menu to access more quickly to the sections. Add the tipo to the array to be removed it from menu.
+The ontology sometimes defines a long hierarchy to reach the sections, and it can be convenient to remove some tipo from the menu to get to them more quickly. Add the tipo to the array to remove it from the menu.
+
+It is EMPTY by default. The default used to carry four tipos, two of them belonging to specific installations' ontologies — menu shortcuts of one project applied to every project, in a key whose own example already showed an empty array. Declare the skips your own ontology needs.
 
 ```bash
 MENU_SKIP_TIPOS=[]
 ```
 
-*Default: ["dd349","dd355","numisdata1","tch188"]*
+*Default: []*
 
 ---
 

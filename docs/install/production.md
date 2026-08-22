@@ -218,6 +218,16 @@ sudo -u dedalo /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production
 
 `--frozen-lockfile` refuses to silently resolve a different dependency tree than the one that was tested. `--production` skips the dev dependencies (the test harness and the linters).
 
+!!! warning "The `cd` is part of the command"
+    `sudo -u dedalo …` does **not** move to that user's home — it inherits the
+    directory you are standing in. Run the install from anywhere else and Bun
+    reports `could not find a package.json file to install from`, having never
+    looked at the clone. Combine them when in doubt:
+
+    ```shell
+    sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+    ```
+
 !!! note "A clone is self-contained — there is no sync step and no fetch step"
     The browser libraries the client loads (Leaflet, three.js, D3, CKEditor,the PDF viewer…) ship **with the repo**: they come either from `bun install` (`node_modules/`) or from the committed `vendor/` tree, and they are served through an explicit allowlist (`src/core/client_libs/registry.ts`). Nothing is downloaded at install time, nothing is copied into place, nothing can be half-built.
 

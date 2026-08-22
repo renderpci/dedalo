@@ -117,6 +117,7 @@ const TRIPWIRES = [
 	'test/unit/generic_tld_tripwire.test.ts',
 	'test/unit/mock_isolation_tripwire.test.ts',
 	'test/unit/install_table_write_tripwire.test.ts',
+	'test/unit/engine_install_tld_tripwire.test.ts',
 	'test/unit/test_tld_ontology_gate.test.ts',
 	'test/unit/test_db_marker_tripwire.test.ts',
 	'test/unit/test_media_root_tripwire.test.ts',

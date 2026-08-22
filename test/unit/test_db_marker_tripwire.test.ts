@@ -280,14 +280,21 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		},
 	},
 	{
-		name: 'ensureFilterProjects',
+		name: 'ensureMapOfGrapesFixture',
 		run: async () =>
-			(await import('../../src/core/test_data/filter_projects_fixture.ts')).ensureFilterProjects(),
+			(
+				await import('../../src/core/test_data/map_of_grapes_fixture.ts')
+			).ensureMapOfGrapesFixture(),
 	},
 	{
-		name: 'dropFilterProjects',
+		name: 'ensureSuiteProjectsFixture',
 		run: async () =>
-			(await import('../../src/core/test_data/filter_projects_fixture.ts')).dropFilterProjects(),
+			(await import('../../src/core/test_data/projects_fixture.ts')).ensureSuiteProjectsFixture(),
+	},
+	{
+		name: 'removeSuiteProjectsFixture',
+		run: async () =>
+			(await import('../../src/core/test_data/projects_fixture.ts')).removeSuiteProjectsFixture(),
 	},
 	{
 		name: 'ensureSuiteLoginPassword',

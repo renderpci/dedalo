@@ -26,12 +26,14 @@ AREAS_DENY=["dd137","rsc1","hierarchy20"]
 	MENU_SKIP_TIPOS: {
 		type: 'string_list',
 		scope: 'operator',
-		default: ['dd349', 'dd355', 'numisdata1', 'tch188'],
+		default: [],
 		heading: 'Defining skip tipos from menu',
 		typeLabel: 'array',
 		doc: `This parameter defines the tipos to be skipped from the menu.
 
-The ontology sometimes define long hierarchy to access to the sections, and could be convenient to remove some tipo from the menu to access more quickly to the sections. Add the tipo to the array to be removed it from menu.
+The ontology sometimes defines a long hierarchy to reach the sections, and it can be convenient to remove some tipo from the menu to get to them more quickly. Add the tipo to the array to remove it from the menu.
+
+It is EMPTY by default. The default used to carry four tipos, two of them belonging to specific installations' ontologies — menu shortcuts of one project applied to every project, in a key whose own example already showed an empty array. Declare the skips your own ontology needs.
 
 \`\`\`bash
 MENU_SKIP_TIPOS=[]

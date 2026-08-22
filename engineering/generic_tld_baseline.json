@@ -4,20 +4,23 @@
 	"files": {
 		"client/dedalo/test/client/js/data.js": ["oh", "rsc"],
 		"client/dedalo/test/client/js/elements.js": ["zenon"],
+		"client/dedalo/test/client/js/test_additional_text_area.js": ["rsc"],
 		"client/dedalo/test/client/js/test_api_error.js": ["oh"],
 		"client/dedalo/test/client/js/test_component_filter_records.js": ["rsc"],
+		"client/dedalo/test/client/js/test_diffusion.js": ["rsc"],
 		"client/dedalo/test/client/js/test_instances_lifecycle.js": ["oh"],
 		"client/dedalo/test/client/js/test_render_api_error.js": ["oh"],
 		"client/dedalo/test/client/js/test_tool_indexation.js": ["oh", "rsc"],
 		"test/integration/diffusion_publish_e2e.test.ts": ["numisdata", "sccmk", "tchi"],
-		"test/parity/menu_differential.test.ts": ["numisdata"]
+		"test/parity/menu_differential.test.ts": ["numisdata"],
+		"test/unit/engine_install_tld_tripwire.test.ts": ["numisdata", "rsc"]
 	},
 	"summary": {
-		"files": 9,
+		"files": 12,
 		"by_tld": {
+			"rsc": 6,
 			"oh": 5,
-			"rsc": 3,
-			"numisdata": 2,
+			"numisdata": 3,
 			"sccmk": 1,
 			"tchi": 1,
 			"zenon": 1

@@ -65,7 +65,7 @@ describe('dd_rag_api semantic_search', () => {
 			{ principal: SUPERUSER } as Ctx,
 		);
 		expect(res.body.msg).toBe('ok');
-		const hits = res.body.result as { section_id: number; snippet: string }[];
+		const hits = res.body.data as { section_id: number; snippet: string }[];
 		expect(hits.length).toBeGreaterThan(0);
 		expect(hits[0]!.section_id).toBe(createdIds[0]!);
 		expect(hits[0]!.snippet).toContain('Abariltur');
@@ -76,7 +76,7 @@ describe('dd_rag_api semantic_search', () => {
 			rqo({ query: 'moneda de bronce con jinete ceca', limit: 5 }),
 			{ principal: NO_ACCESS } as Ctx,
 		);
-		expect(res.body.result).toEqual([]);
+		expect(res.body.data).toEqual([]);
 	});
 
 	test('missing query is rejected', async () => {
@@ -93,7 +93,7 @@ describe('dd_rag_api retrieve / get_agent_context', () => {
 			principal: SUPERUSER,
 		} as Ctx);
 		expect(res.body.msg).toBe('ok');
-		const passages = res.body.result as { section_id: number; chunk_index: number }[];
+		const passages = res.body.data as { section_id: number; chunk_index: number }[];
 		expect(passages.length).toBeGreaterThan(0);
 		expect(passages[0]!.chunk_index).toBe(0);
 	});
@@ -110,7 +110,7 @@ describe('dd_rag_api retrieve / get_agent_context', () => {
 		const res = await ragApiActions.retrieve(rqo({ query: 'barco fenicio ánforas', limit: 5 }), {
 			principal: NO_ACCESS,
 		} as Ctx);
-		expect(res.body.result).toEqual([]);
+		expect(res.body.data).toEqual([]);
 	});
 });
 
@@ -120,7 +120,7 @@ describe('dd_rag_api similar_to', () => {
 			rqo({ section_tipo: SECTION_TIPO, section_id: createdIds[0], limit: 5 }),
 			{ principal: SUPERUSER } as Ctx,
 		);
-		const hits = res.body.result as { section_id: number }[];
+		const hits = res.body.data as { section_id: number }[];
 		expect(hits.every((h) => h.section_id !== createdIds[0])).toBe(true);
 		expect(hits.some((h) => h.section_id === createdIds[1])).toBe(true);
 	});
@@ -130,7 +130,7 @@ describe('dd_rag_api similar_to', () => {
 			rqo({ section_tipo: SECTION_TIPO, section_id: createdIds[0], limit: 5 }),
 			{ principal: NO_ACCESS } as Ctx,
 		);
-		expect(res.body.result).toEqual([]);
+		expect(res.body.data).toEqual([]);
 	});
 
 	test('missing seed is rejected', async () => {
@@ -143,12 +143,41 @@ describe('dd_rag_api similar_to', () => {
 });
 
 describe('dd_rag_api kill-switch', () => {
-	test('declines every action when DEDALO_RAG_ENABLED is off', async () => {
+	test('declines every ACTION when DEDALO_RAG_ENABLED is off', async () => {
 		process.env.DEDALO_RAG_ENABLED = '';
 		try {
 			await expect(
 				ragApiActions.semantic_search(rqo({ query: 'x' }), { principal: SUPERUSER } as Ctx),
 			).rejects.toMatchObject({ code: 'rag.disabled' });
+		} finally {
+			process.env.DEDALO_RAG_ENABLED = 'true';
+		}
+	});
+
+	// The one exception, and the reason for it: embed_groups is the client's
+	// CAPABILITY PROBE, fired on every section list render with no user act
+	// behind it. A decline there is a red per-navigation alert on an install
+	// that deliberately never implemented RAG, so the switch ANSWERS instead.
+	//
+	// The context carries NO principal and NO session ON PURPOSE — that is what
+	// makes this gate see the kill-switch branch and nothing else. Any other
+	// empty answer (malformed tipo, denied caller, not opted in) is produced
+	// AFTER resolveCaller, so with the switch on this same call throws
+	// auth.not_logged; before this change it threw rag.disabled. Only the
+	// switch answering FIRST can make it resolve.
+	test('embed_groups ANSWERS empty when off, before any caller resolves', async () => {
+		const bare = { requestId: 'rag-api-test', session: null } as Ctx;
+
+		await expect(
+			ragApiActions.embed_groups(rqo({ section_tipo: 'test6099' }), bare),
+		).rejects.toMatchObject({ code: 'auth.not_logged' });
+
+		process.env.DEDALO_RAG_ENABLED = '';
+		try {
+			const res = await ragApiActions.embed_groups(rqo({ section_tipo: 'test6099' }), bare);
+			expect(res.status).toBe(200);
+			expect(res.body.ok).toBe(true);
+			expect(res.body.data).toEqual({ groups: [] });
 		} finally {
 			process.env.DEDALO_RAG_ENABLED = 'true';
 		}
@@ -162,15 +191,18 @@ describe('dd_rag_api embed_groups', () => {
 		principal,
 	});
 
-	test('opted-in section (test6099 descriptor) returns its group ids', async () => {
+	// SHAPE ONLY, and the name says so: no repo-owned `test` TLD section_map
+	// declares an `rag.embed` group today, so the group-LISTING path (a
+	// descriptor resolving to ids) is not covered by this suite. Naming it
+	// "opted-in section returns its group ids" claimed coverage that never
+	// existed — the fix is a test fixture with a descriptor, not a rename.
+	test('a readable section answers the SHAPE (array of slugs) — no descriptor in the test TLD', async () => {
 		const res = await ragApiActions.embed_groups(rqo({ section_tipo: 'test6099' }), ctx(SUPERUSER));
-		const result = res.body.result as { groups: string[] };
-		// The live descriptor on numisdata316 declares the 'card' group; if that
-		// data ever changes, the assertion is on the SHAPE (array of slugs).
+		const result = res.body.data as { groups: string[] };
 		expect(Array.isArray(result.groups)).toBe(true);
 	});
 
-	test('not-opted-in, malformed tipo, and DENIED caller are byte-identical empty (no oracle)', async () => {
+	test('RAG off, not-opted-in, malformed tipo, and DENIED caller are byte-identical empty (no oracle)', async () => {
 		const notOpted = await ragApiActions.embed_groups(
 			rqo({ section_tipo: 'test2' }),
 			ctx(SUPERUSER),
@@ -183,8 +215,16 @@ describe('dd_rag_api embed_groups', () => {
 			rqo({ section_tipo: 'test6099' }),
 			ctx(NO_ACCESS),
 		);
-		expect(notOpted.body.result).toEqual({ groups: [] });
+		process.env.DEDALO_RAG_ENABLED = '';
+		let ragOff: Awaited<ReturnType<typeof ragApiActions.embed_groups>>;
+		try {
+			ragOff = await ragApiActions.embed_groups(rqo({ section_tipo: 'test6099' }), ctx(SUPERUSER));
+		} finally {
+			process.env.DEDALO_RAG_ENABLED = 'true';
+		}
+		expect(notOpted.body.data).toEqual({ groups: [] });
 		expect(JSON.stringify(malformed.body)).toBe(JSON.stringify(notOpted.body));
 		expect(JSON.stringify(denied.body)).toBe(JSON.stringify(notOpted.body));
+		expect(JSON.stringify(ragOff.body)).toBe(JSON.stringify(notOpted.body));
 	});
 });

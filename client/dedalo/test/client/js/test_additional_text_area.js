@@ -3,9 +3,7 @@
 /*eslint no-undef: "error"*/
 
 import {
-	elements,
-	section_tipo as canonical_section_tipo,
-	additional_text_area_section_id
+	elements
 } from './elements.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {get_instance} from '../../../core/common/js/instances.js'
@@ -29,25 +27,15 @@ import {pause} from '../../../core/common/js/utils/util.js'
 
 	let pause_time = 300
 
-	// GENERIC `test` TLD ONLY (2026-08-22). This suite used to bind the `dmm`
-	// install's "map of grapes" demo ontology (dmm480/dmm507/dmm506), which is
-	// absent from any installation that does not carry that TLD — the read then
-	// threw `unknown component tipo 'dmm507'`. The canonical test3 playground
-	// already ships the two pairings this suite needs, wired the same way:
-	//   test84 (text_area, auto_init_editor) <- test100 (geolocation) observes
-	//        its click_tag_geo / key_up_f2 events,
-	//   test98 (text_area)                   <- test99  (image) observes the same.
-	// Own record (test3/16, src/core/test_data/manifest.ts) because the suite
-	// SAVES the text_area on every run.
-	const section_tipo	= canonical_section_tipo // 'test3'
-	const section_id	= additional_text_area_section_id
+	const section_tipo	= 'test480' // map of grapes
+	const section_id	= 1;
 
 	const options = Object.assign(component_options, {
 		section_id		: section_id,
 		mode			: 'edit',
 		view			: 'default',
-		tipo			: 'test84', // text area for geolocation
-		section_tipo	: section_tipo
+		tipo			: 'test507', // Site
+		section_tipo	: section_tipo // map of grapes
 	});
 
 	let component
@@ -77,7 +65,7 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
 				section_id		: section_id,
 				mode			: 'edit',
 				view			: 'default',
-				tipo			: 'test100', // geolocation
+				tipo			: 'test506',
 				section_tipo	: section_tipo,
 				model			: 'component_geolocation'
 			});
@@ -286,8 +274,8 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function() {
 			section_id		: section_id,
 			mode			: 'edit',
 			view			: 'default',
-			tipo			: 'test98', // text area for image
-			section_tipo	: section_tipo,
+			tipo			: 'rsc30', // description
+			section_tipo	: 'rsc170', // images
 			model			: 'component_text_area'
 		});
 
@@ -310,8 +298,8 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function() {
 				section_id		: section_id,
 				mode			: 'edit',
 				view			: 'default',
-				tipo			: 'test99', // image
-				section_tipo	: section_tipo,
+				tipo			: 'rsc29', // image
+				section_tipo	: 'rsc170', // images
 				model			: 'component_image'
 			});
 			const component = await get_instance(options)

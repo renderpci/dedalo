@@ -40,13 +40,26 @@
 // WC-2026-08-16-error-envelope-compat-removal. `ToolResponse` IS the v2 envelope,
 // so the payload is `data`.
 //
-// SIX CASES ARE STILL RED, and they are a corpus gap, not a binding: the
-// dataframe-bearing main and every multi-hop case (test6113 → testmint1006 /
-// testmint1014, and the three grid_value breakdowns) export rows with EMPTY
-// cells. Same root cause as the tool_export parity family: the chain's config
-// lives in the install's ontology, and the seed's twin carries an empty
-// `show.ddo_map`, so the export never descends. Left red on purpose — the fix
-// is a `test`-TLD twin of that chain, not a weaker assertion here.
+// THE SIX RED CASES, AND WHAT THEY ACTUALLY WERE (closed 2026-08-22). The
+// dataframe-bearing main and every multi-hop case exported rows whose cells
+// were all EMPTY. The note here used to blame an empty `show.ddo_map` on the
+// seed twin; that was a MISDIAGNOSIS — those maps are fully populated. The gap
+// was one level further out: the chains resolve INTO NEIGHBOUR SECTIONS whose
+// records the corpus does not hold (the main's autocomplete reads `test6810`,
+// the hierarchical leaf reads a thesaurus record, the portal leaf targets
+// `rsc332`), and the record the hop actually lands on — `testmint1/75` — has no
+// value for `testmint1006` at all. Sections that exist as DEFINITIONS and hold
+// no RECORDS: an export of nothing, indistinguishable from an export that
+// stopped descending.
+//
+// Not fixable in the corpus, which is DERIVED and never authored
+// (`derive_test_corpus.ts` refuses rather than guesses), so those neighbours
+// cannot be typed in without inventing data. Those cases now run on a BUILT
+// chain instead (test/helpers/zzexp_export_chain.ts) — which is the law's
+// answer and the stronger gate: the chain is CLOSED, every hop lands on a real
+// record and every leaf holds a value, so an empty cell can only mean the
+// engine stopped walking. The corpus cases that never needed a neighbour keep
+// their breadth over real derived data, and stay.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -54,10 +67,23 @@ import { join } from 'node:path';
 import { sql } from '../../src/core/db/postgres.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import { dropSituation, ensureSituation } from '../../src/core/test_data/situations/situation.ts';
 import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_corpus/ensure.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
 import { exportGridUnified } from '../../src/diffusion/export/index.ts';
 import { toolExportGetExportGrid } from '../../tools/tool_export/server/tool_export.ts';
+import {
+	ZZEXP_DATAFRAME_MAIN,
+	ZZEXP_HOP,
+	ZZEXP_LEAF_LITERAL,
+	ZZEXP_LEAF_PORTAL,
+	ZZEXP_LEAF_RELATION,
+	ZZEXP_LITERAL,
+	ZZEXP_MAIN_SECTION,
+	ZZEXP_RECORD_IDS,
+	ZZEXP_SITUATION,
+	ZZEXP_TARGET_SECTION,
+} from '../helpers/zzexp_export_chain.ts';
 
 // Fixture detection at COLLECTION time (top-level await), so missing fixtures
 // gate the tests via test.if → reported SKIP — never a silent fake PASS
@@ -96,9 +122,14 @@ const testIfData = test.if(hasData);
 
 beforeAll(async () => {
 	if (hasData) await ensureTestCorpus(CORPUS_SCOPE);
+	// The BUILT chain does not depend on the phase-2 clone, so it is not gated
+	// on `hasData` — it is this gate's own structure, and it either builds or
+	// the file fails loudly.
+	await ensureSituation(ZZEXP_SITUATION);
 });
 afterAll(async () => {
 	if (hasData) expect(await dropTestCorpus(CORPUS_SCOPE)).toBe(0);
+	expect(await dropSituation(ZZEXP_SITUATION)).toBe(0);
 });
 
 const contextOf = (options: Record<string, unknown>): ToolActionContext =>
@@ -113,7 +144,15 @@ type ProtocolLine = { t: string; i?: number; sub?: number; c?: Record<string, un
  * Run one fixture through BOTH forms via the tools facade and assert:
  * stream ≡ buffered lines, protocol-shape invariants, non-vacuous rows.
  */
-async function assertExportInvariants(options: Record<string, unknown>): Promise<void> {
+async function assertExportInvariants(
+	options: Record<string, unknown>,
+	/**
+	 * How many columns this fixture MUST emit, all of them carrying at least one
+	 * atom. Given only for the BUILT chain, whose content is known — see the
+	 * floor below for why the number and not just "all emitted ones".
+	 */
+	expectColumns?: number,
+): Promise<void> {
 	const bufferedResponse: ToolResponse = await toolExportGetExportGrid(
 		contextOf(structuredClone(options)),
 	);
@@ -177,6 +216,34 @@ async function assertExportInvariants(options: Record<string, unknown>): Promise
 	expect((buffered.meta as { total?: number }).total ?? 0).toBeGreaterThan(0);
 	expect(buffered.rows.some((row) => Object.keys(row.c ?? {}).length > 0)).toBe(true);
 
+	// PER-COLUMN floor, on the BUILT chain, whose content is known (see the
+	// header). The floor above is per-ROW, and that is how the six multi-hop
+	// cases stayed "non-vacuous" for months while the column under test emitted
+	// NOTHING: a sibling literal column filled the row and the assertion passed.
+	//
+	// It is a COUNT, not just "every emitted column is filled", because a column
+	// that resolves to nothing is not emitted EMPTY — it is not emitted at all,
+	// so a check over the ordinals actually seen goes vacuous exactly when it
+	// matters. Measured 2026-08-22 by pointing the chain's hop at a non-existent
+	// record: the three `value` cases lose every cell and the ROW floor catches
+	// them, but the three grid cases still emit their literal column, still fill
+	// a row, and still have every EMITTED column filled — they pass both weaker
+	// checks and only the count reddens them. With the count, all six.
+	// Two narrower offenders confirm the leaves: removing the dataframe main's
+	// target record reddens that one case, and emptying the portal leaf's
+	// locators reddens the hop → portal case.
+	if (expectColumns !== undefined) {
+		expect(seenOrdinals.size, 'a declared column was not emitted at all').toBe(expectColumns);
+		const filled = new Set<number>();
+		for (const row of buffered.rows) {
+			for (const ordinal of Object.keys(row.c ?? {})) filled.add(Number(ordinal));
+		}
+		expect(
+			[...seenOrdinals].filter((ordinal) => !filled.has(ordinal)),
+			'a column was emitted but produced no atom in any row — the walk stopped short',
+		).toEqual([]);
+	}
+
 	// (c) facade equivalence: direct engine call produces the same envelope.
 	const direct = await exportGridUnified(contextOf(structuredClone(options)));
 	expect(JSON.stringify(direct.data)).toBe(JSON.stringify(bufferedResponse.data));
@@ -210,7 +277,35 @@ const baseOptions = (
 	...extra,
 });
 
+/** One ddo path step on the BUILT chain (the `name` is the column label). */
+const chainStep = (
+	sectionTipo: string,
+	componentTipo: string,
+	model?: string,
+): { section_tipo: string; component_tipo: string; model?: string; name: string } =>
+	model === undefined
+		? { section_tipo: sectionTipo, component_tipo: componentTipo, name: componentTipo }
+		: { section_tipo: sectionTipo, component_tipo: componentTipo, model, name: componentTipo };
+
+/** baseOptions over the built chain's two main records. */
+const chainOptions = (
+	dataFormat: string,
+	ddos: Record<string, unknown>[],
+	extra: Record<string, unknown> = {},
+): Record<string, unknown> =>
+	baseOptions(
+		ZZEXP_MAIN_SECTION,
+		dataFormat,
+		ddos,
+		ZZEXP_RECORD_IDS.map((id) => String(id)),
+		extra,
+	);
+
 // Fixture ddos (mined from test/parity/tool_export_differential.test.ts).
+// The two that described the multi-hop chain (the `test6113` hop and its `Ref`
+// literal) are GONE with the cases that used them — the corpus cannot close
+// that chain, and a fixture kept for tests that no longer exist is just a
+// second, unverified description of the ontology.
 const CECA = {
 	section_tipo: 'testmint1',
 	component_tipo: 'testmint1002',
@@ -234,18 +329,6 @@ const PORTAL163 = {
 	component_tipo: 'testmint1014',
 	model: 'component_portal',
 	name: 'Referencias',
-};
-const HOP_CECA_PORTAL = {
-	section_tipo: 'test6099',
-	component_tipo: 'test6113',
-	model: 'component_portal',
-	name: 'Ceca',
-};
-const REF3 = {
-	section_tipo: 'test6099',
-	component_tipo: 'test6134',
-	model: 'component_input_text',
-	name: 'Ref',
 };
 
 describe('P6 export — unified engine protocol + stream/buffered duality', () => {
@@ -274,23 +357,17 @@ describe('P6 export — unified engine protocol + stream/buffered duality', () =
 		60000,
 	);
 
-	testIfData(
-		'value format: dataframe-bearing main (test6117@15657)',
-		async () => {
-			await assertExportInvariants(
-				baseOptions(
-					'test6099',
-					'value',
-					[
-						ddo([{ section_tipo: 'test6099', component_tipo: 'test6117', name: 'test6117' }]),
-						ddo([{ section_tipo: 'test6099', component_tipo: 'test6157', name: 'test6157' }]),
-					],
-					['15657'],
-				),
-			);
-		},
-		60000,
-	);
+	// BUILT CHAIN (see the header): the install twin's equivalent read into
+	// `test6810`, a section the corpus holds no records for.
+	test('value format: dataframe-bearing main (built chain)', async () => {
+		await assertExportInvariants(
+			chainOptions('value', [
+				ddo([chainStep(ZZEXP_MAIN_SECTION, ZZEXP_DATAFRAME_MAIN)]),
+				ddo([chainStep(ZZEXP_MAIN_SECTION, ZZEXP_LITERAL)]),
+			]),
+			2,
+		);
+	}, 60000);
 
 	// WC-049: value_with_parents is PER-DDO only and grid_value only — the
 	// legacy request-global option is ignored, and the value format never grows
@@ -371,34 +448,49 @@ describe('P6 export — unified engine protocol + stream/buffered duality', () =
 		60000,
 	);
 
-	for (const leaf of [CECA, CULTURA, PORTAL163]) {
-		testIfData(
-			`multi-hop value: test6113 → ${leaf.component_tipo}`,
-			async () => {
-				await assertExportInvariants(
-					baseOptions('test6099', 'value', [ddo([HOP_CECA_PORTAL, leaf])], ['1', '2']),
-				);
-			},
-			60000,
-		);
+	// BUILT CHAIN: one case per LEAF KIND a hop can land on — literal, relation
+	// and portal. The corpus twin could only ever satisfy the literal one: its
+	// hop lands on `testmint1/75`, which holds no value for the relation leaf and
+	// whose portal leaf points at a section with no records.
+	for (const [kind, leafTipo] of [
+		['literal', ZZEXP_LEAF_LITERAL],
+		['relation', ZZEXP_LEAF_RELATION],
+		['portal', ZZEXP_LEAF_PORTAL],
+	] as [string, string][]) {
+		test(`multi-hop value: hop → ${kind} leaf (built chain)`, async () => {
+			await assertExportInvariants(
+				chainOptions('value', [
+					ddo([
+						chainStep(ZZEXP_MAIN_SECTION, ZZEXP_HOP, 'component_portal'),
+						chainStep(ZZEXP_TARGET_SECTION, leafTipo),
+					]),
+				]),
+				1,
+			);
+		}, 60000);
 	}
 
+	// BUILT CHAIN: the deep-breakdown math (suffix placement, row alignment,
+	// fill_the_gaps) is what this trio is for, and it needs a multi-hop column
+	// that actually produces atoms — which is precisely what the corpus twin
+	// could not supply.
 	for (const breakdown of ['default', 'rows', 'columns']) {
-		testIfData(
-			`grid_value multi-hop breakdown '${breakdown}'`,
-			async () => {
-				await assertExportInvariants(
-					baseOptions(
-						'test6099',
-						'grid_value',
-						[ddo([REF3]), ddo([HOP_CECA_PORTAL, CULTURA])],
-						['1', '2'],
-						{ breakdown },
-					),
-				);
-			},
-			60000,
-		);
+		test(`grid_value multi-hop breakdown '${breakdown}' (built chain)`, async () => {
+			await assertExportInvariants(
+				chainOptions(
+					'grid_value',
+					[
+						ddo([chainStep(ZZEXP_MAIN_SECTION, ZZEXP_LITERAL)]),
+						ddo([
+							chainStep(ZZEXP_MAIN_SECTION, ZZEXP_HOP, 'component_portal'),
+							chainStep(ZZEXP_TARGET_SECTION, ZZEXP_LEAF_RELATION),
+						]),
+					],
+					{ breakdown },
+				),
+				2,
+			);
+		}, 60000);
 	}
 });
 

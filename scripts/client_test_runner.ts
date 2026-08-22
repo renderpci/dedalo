@@ -79,6 +79,7 @@ import {
 	probeServedDatabase,
 	repointProcessToSuiteDatabase,
 	resolveSuiteDatabase,
+	SUITE_DIFFUSION_DOMAIN,
 	startClientTestServer,
 	suiteServerPaths,
 } from './client_test_server.ts';
@@ -172,46 +173,86 @@ async function reseedCanonicalTest3(phase: string): Promise<void> {
 }
 
 /**
- * Build the situations the browser suites need on the SUITE database, before a
- * server is started (both are read through server-side caches at request time).
+ * Provision the "map of grapes" demo ontology (test480/test507/test506) that
+ * `test_additional_text_area.js`'s geolocation block depends on — see
+ * src/core/test_data/map_of_grapes_fixture.ts. Idempotent; pre-run only
+ * (nothing in the suite mutates the ontology shape, only the record's data,
+ * which this re-provisions to the same starting content each run).
  *
- * Two suites cannot assert anything against a from-scratch suite database
- * without them, and both used to be green only because the run drove the
- * developer's own server on the APPLICATION database:
- *
- *  - `test_diffusion` needs tool_diffusion to BE AVAILABLE for the section it
- *    renders, which means a diffusion domain named after DEDALO_DIFFUSION_DOMAIN
- *    whose element targets `test3` (src/core/test_data/situations/client_diffusion.ts).
- *  - `test_component_filter` needs the projects datalist to offer MORE THAN ONE
- *    option: its cases check an unchecked box and uncheck one of two checked
- *    ones. The install seed ships exactly one project, so on a suite database
- *    every rendered box was already checked and there was nothing to check.
- *
- * Both are torn down after the run (see the finally block): they are the run's
- * situation, not a permanent fact of the database.
+ * Same DB-only caveat as reseedCanonicalTest3: this runs in the SCRIPT's own
+ * process, so its cache-invalidation call only clears ITS OWN in-memory
+ * ontology cache, not the long-lived dev server's. The first time this
+ * fixture is created against a server that already cached a negative lookup
+ * for these tipos (e.g. from an earlier failed request), restart the TS
+ * server once — every run after that is DB-only stable.
  */
-async function ensureClientSituations(): Promise<void> {
-	const { ensureClientDiffusion } = await import(
-		'../src/core/test_data/situations/client_diffusion.ts'
+async function ensureMapOfGrapesFixture(): Promise<void> {
+	const { ensureMapOfGrapesFixture: ensure } = await import(
+		'../src/core/test_data/map_of_grapes_fixture.ts'
 	);
-	await ensureClientDiffusion();
-	const { ensureFilterProjects } = await import('../src/core/test_data/filter_projects_fixture.ts');
-	const { created } = await ensureFilterProjects();
-	log(`Client situations: diffusion domain ensured; filter projects ensured (${created} created).`);
+	await ensure();
+	log('Map of grapes fixture (test480/507/506): ensured.');
 }
 
-/** Remove them again — the residue is REPORTED, never swallowed. */
-async function dropClientSituations(): Promise<void> {
-	const { dropClientDiffusion } = await import(
-		'../src/core/test_data/situations/client_diffusion.ts'
+/**
+ * Provision the SECOND project `test_component_filter.js` needs — see
+ * src/core/test_data/projects_fixture.ts for why one is not enough. Installed
+ * before the server spawns (so it reads the row cold) and swept in the same
+ * place the post-run reseed runs, so no other tier on this shared database
+ * inherits a widened projects catalog.
+ */
+async function ensureSuiteProjectsFixture(): Promise<void> {
+	const { ensureSuiteProjectsFixture: ensure } = await import(
+		'../src/core/test_data/projects_fixture.ts'
 	);
-	const residue = await dropClientDiffusion();
-	const { dropFilterProjects } = await import('../src/core/test_data/filter_projects_fixture.ts');
-	const removed = await dropFilterProjects();
-	log(`Client situations removed (diffusion residue ${residue}, ${removed} filter projects).`);
-	if (residue !== 0) {
-		error(`the client diffusion situation left ${residue} row(s) behind`);
+	await ensure();
+	log('Suite projects fixture (dd153 second project): ensured.');
+}
+
+async function removeSuiteProjectsFixture(): Promise<void> {
+	const { removeSuiteProjectsFixture: remove } = await import(
+		'../src/core/test_data/projects_fixture.ts'
+	);
+	await remove();
+	log('Suite projects fixture (dd153 second project): swept.');
+}
+
+/**
+ * PRE-FLIGHT: the diffusion surface `test_diffusion.js` drives must EXIST.
+ *
+ * The inspector draws the publish opener only when the section's tools list
+ * carries `tool_diffusion`, and that tool's availability is `haveSectionDiffusion`
+ * — an O(1) lookup in a map built by walking the CONFIGURED diffusion domain
+ * (src/core/diffusion_bridge/diffusion_map.ts). An empty map is not an error
+ * anywhere in the engine: a fresh install legitimately has no diffusion, so every
+ * caller returns "unavailable" quietly. That silence is exactly what made a
+ * misconfigured domain surface as six unexplained `expected false to equal true`
+ * DOM assertions instead of naming itself. Assert it here, before Chrome starts,
+ * so the run fails with the domain's name in the message.
+ *
+ * DB-only, like the other pre-run fixtures: it proves this DATABASE answers, in
+ * THIS process, for the pinned SUITE_DIFFUSION_DOMAIN. An external `--url`
+ * server started with a different domain is outside what this can see.
+ */
+async function assertSuiteDiffusionSurface(): Promise<void> {
+	// The section test_diffusion.js opens (all three of its describes drive it).
+	const DIFFUSION_SECTION = 'rsc170';
+	const { haveSectionDiffusion, getSectionDiffusionMap } = await import(
+		'../src/core/diffusion_bridge/diffusion_map.ts'
+	);
+	const map = await getSectionDiffusionMap();
+	if (!(await haveSectionDiffusion(DIFFUSION_SECTION))) {
+		throw new Error(
+			`REFUSING to run: the diffusion domain '${SUITE_DIFFUSION_DOMAIN}' resolves ${map.size} publishable section(s) on this database and ${DIFFUSION_SECTION} is not among them` +
+				(map.size === 0
+					? " — the domain name matches no dd1190 child, or its subtree reaches no section. Rebuild the suite database with 'bun run test:db:setup'."
+					: ` (it resolves: ${[...map].join(', ')}).`) +
+				' Without it the inspector draws no publish opener and test_diffusion fails with unexplained DOM assertions.',
+		);
 	}
+	log(
+		`Diffusion domain '${SUITE_DIFFUSION_DOMAIN}': ${map.size} publishable sections, ${DIFFUSION_SECTION} included.`,
+	);
 }
 
 /**
@@ -240,15 +281,10 @@ async function ensureSuiteLogin(): Promise<void> {
 /**
  * Suites that are RED TODAY, each with what it actually asserts when it fails.
  *
- * MEASURED 2026-08-22 through THIS runner on its OWN server, on the dedicated
- * SUITE database: 131 suites, 131 pass, 0 fail, 0 pending, 0 deferred — the
- * whole inventory runs, and a `--strict` run is identical because the list below
- * is empty. (The previous 2026-08-20 measurement was taken against the :4000 dev
- * listener, i.e. the APPLICATION database. Moving to the suite database exposed
- * two suites that had been reading that install's data — test_diffusion, which
- * needed a diffusion domain covering the section it renders, and
- * test_component_filter, which needed more than one project to check. Both now
- * BUILD what they need: see ensureClientSituations above.)
+ * MEASURED 2026-08-20 through THIS runner (which reseeds canonical test3 before
+ * the run) against the :4000 dev listener: 131 suites, 131 pass, 0 fail, 0
+ * pending, 0 deferred — the whole inventory runs. Two consecutive runs agree,
+ * and a `--strict` run is identical because the list below is empty.
  *
  * (!) Measure the baseline WITH the reseed. A hand-driven run against a polluted
  * test3 showed NINE failures — seven of them were leftover state from earlier
@@ -293,10 +329,18 @@ interface GroupStats {
 	fail: number;
 	pending: number;
 }
+/** One failing mocha test, as the frame reported it (client/.../frame_runner.js). */
+interface SuiteFailure {
+	title: string;
+	message: string;
+	stack?: string;
+}
 interface SuiteResult {
 	name: string;
 	group: string;
 	status: string;
+	/** Why it is red. Empty on a failing suite = no mocha failure at all. */
+	failures: SuiteFailure[];
 }
 interface RunResults {
 	total: number;
@@ -372,11 +416,48 @@ async function openTarget(options: {
 	return { url: runnerPageUrl(server.origin), server };
 }
 
+/**
+ * Ctrl-C MUST NOT LEAVE SCRATCH DATA ON THE SHARED DATABASE.
+ *
+ * The projects fixture widens the authorized-projects catalog, and `finally`
+ * never runs on a signal — so an interrupted run used to hand every later
+ * `bun test` tier a catalog the suite database is not supposed to have, with
+ * nothing to say where it came from. Registered ONCE, before any fixture is
+ * installed; it sweeps, then re-raises the signal by exiting on the conventional
+ * 128+n code so a shell still sees an interrupted run as interrupted.
+ */
+/**
+ * Did THIS run install the projects fixture? The sweep REFUSES when it deletes
+ * nothing (that refusal is the guarantee the row never survives a run), so it
+ * must only be asked on a run that got as far as creating it — otherwise a run
+ * that died in `prepareSuiteDatabase` reports a phantom "unaccounted for" row.
+ */
+let projectsFixtureInstalled = false;
+
+function sweepOnSignal(): void {
+	for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+		process.on(signal, () => {
+			void (async () => {
+				error(`${signal} — sweeping scratch fixtures before exit.`);
+				if (projectsFixtureInstalled) {
+					try {
+						await removeSuiteProjectsFixture();
+					} catch (err) {
+						error(`sweep on ${signal} failed: ${(err as Error).message}`);
+					}
+				}
+				process.exit(signal === 'SIGINT' ? 130 : 143);
+			})();
+		});
+	}
+}
+
 async function main(): Promise<void> {
 	let browser: Browser | undefined;
 	let server: ClientTestServer | undefined;
 	let exitCode = 1;
 
+	sweepOnSignal();
 	try {
 		const suite = await prepareSuiteDatabase();
 		if (authMode !== 'mint') {
@@ -384,11 +465,18 @@ async function main(): Promise<void> {
 		}
 		if (reseedEnabled) {
 			await reseedCanonicalTest3('pre-run');
+			await ensureMapOfGrapesFixture();
 		}
-		// BEFORE the server: it caches the diffusion map and the projects
-		// datalist per process, so a situation created afterwards would be
-		// invisible to the very requests the suites make.
-		await ensureClientSituations();
+		// OUTSIDE the reseed block, deliberately. `--no-reseed` skips restoring the
+		// test3 playground to iterate faster; it must not also remove a SITUATION a
+		// suite asserts against. test_component_filter requires the projects
+		// catalog to offer more options than the record selects, so without this
+		// row `--no-reseed` would fail a suite that has nothing wrong with it — a
+		// documented flag turning a green suite red is worse than the seconds it
+		// saves. The fixture sweeps itself first, so it is idempotent.
+		await ensureSuiteProjectsFixture();
+		projectsFixtureInstalled = true;
+		await assertSuiteDiffusionSurface();
 		const target = await openTarget(suite);
 		const testUrl = target.url;
 		server = target.server;
@@ -511,10 +599,23 @@ async function main(): Promise<void> {
 					['deferred', 'pass', 'fail', 'running', 'pending'].find((s) =>
 						dot?.classList.contains(s),
 					) ?? 'pending';
+				// The failure reasons the frame reported, parked on the card by
+				// client/dedalo/test/client/js/index.js. Scraped alongside the dot so
+				// a red suite is never opaque in the terminal.
+				let failures: SuiteFailure[] = [];
+				const raw = (card as HTMLElement).dataset.testFailures;
+				if (raw) {
+					try {
+						failures = JSON.parse(raw) as SuiteFailure[];
+					} catch {
+						failures = [{ title: '(unparseable failure payload)', message: raw }];
+					}
+				}
 				suites.push({
 					name: (card as HTMLElement).dataset.testName || '',
 					group: (card as HTMLElement).dataset.group || '',
 					status,
+					failures,
 				});
 			}
 			return {
@@ -546,6 +647,35 @@ async function main(): Promise<void> {
 		}
 		log('');
 
+		// WHY EACH RED SUITE IS RED — printed for EVERY failing suite, including one
+		// listed in KNOWN_FAILING: a known failure with an unknown reason is still
+		// unknown. A failing suite with no listed failure never reached mocha
+		// (import/setup error, watchdog) — said explicitly, because that is itself a
+		// diagnosis.
+		const failing = results.suites.filter((s) => s.status === 'fail');
+		if (failing.length > 0) {
+			log('--- Failure detail ---');
+			for (const suite of failing) {
+				log(`  ${suite.group}/${suite.name}`);
+				if (suite.failures.length === 0) {
+					log('    (no mocha failure reported — the suite did not run to completion)');
+					continue;
+				}
+				for (const failure of suite.failures) {
+					log(`    ✗ ${failure.title}`);
+					for (const line of String(failure.message).split('\n')) {
+						log(`        ${line}`);
+					}
+					if (failure.stack) {
+						for (const line of failure.stack.split('\n')) {
+							log(`        ${line.trim()}`);
+						}
+					}
+				}
+			}
+			log('');
+		}
+
 		// VERDICT — measured against the disclosed baseline, in both directions.
 		const failed = results.suites.filter((s) => s.status === 'fail').map((s) => s.name);
 		const unexpectedFailures = strict ? failed : failed.filter((name) => !KNOWN_FAILING.has(name));
@@ -554,7 +684,10 @@ async function main(): Promise<void> {
 			: [...KNOWN_FAILING.keys()].filter(
 					(name) => results.suites.find((s) => s.name === name)?.status === 'pass',
 				);
-		if (!strict && failed.length > 0) {
+		// Annotate only when there IS an annotation: an empty header under a red run
+		// reads as "these were expected", which is the opposite of the truth.
+		const annotated = failed.filter((n) => KNOWN_FAILING.has(n) || KNOWN_FLAKY.includes(n));
+		if (!strict && annotated.length > 0) {
 			log('--- Known-failing suites (engineering ledger; see KNOWN_FAILING) ---');
 			for (const name of failed.filter((n) => KNOWN_FAILING.has(n))) {
 				log(`  [KNOWN  ] ${name} — ${KNOWN_FAILING.get(name)}`);
@@ -585,18 +718,23 @@ async function main(): Promise<void> {
 		if (browser) {
 			await browser.close();
 		}
-		// Never mask the test exit code with a teardown failure.
-		try {
-			await dropClientSituations();
-		} catch (err) {
-			error(`removing the client situations failed: ${(err as Error).message}`);
-		}
 		if (reseedEnabled) {
 			// Never mask the test exit code with a reseed failure.
 			try {
 				await reseedCanonicalTest3('post-run');
 			} catch (err) {
 				error(`post-run reseed failed: ${(err as Error).message}`);
+			}
+		}
+		// Swept whatever the reseed flag says, because it is INSTALLED whatever the
+		// reseed flag says (see above). This row widens the authorized-projects
+		// catalog on the SHARED suite database, so leaving it behind changes what
+		// the unit and parity tiers see.
+		if (projectsFixtureInstalled) {
+			try {
+				await removeSuiteProjectsFixture();
+			} catch (err) {
+				error(`post-run projects fixture sweep failed: ${(err as Error).message}`);
 			}
 		}
 		// The run owns its server: it must not outlive the run (an orphan holds

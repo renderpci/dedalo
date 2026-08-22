@@ -73,6 +73,40 @@
 	let active_watchdog = null
 	const WATCHDOG_MS = 120000 // force-fail a suite that never reports back
 
+	// record_failures: park the failing test titles/messages ON THE CARD, so the
+	// reason a suite is red survives out of the iframe and is readable both in the
+	// UI (title attribute) and by the headless runner, which scrapes the DOM.
+	// A suite is opaque without this: the frame only ever reported counters.
+	function record_failures(test_name, failures) {
+		const key = test_name.toLowerCase()
+		for (const card of test_cards) {
+			if (card.dataset.testName !== key) continue
+			if (!failures || failures.length === 0) {
+				// a retry that went green must not keep the old reason
+				delete card.dataset.testFailures
+				card.removeAttribute('title')
+				break
+			}
+			// A RETRY MUST NOT DOWNGRADE THE FIRST RUN'S REASON. A red suite is
+			// re-run once (see the retry below), and the second attempt can fail
+			// LESS informatively than the first — real assertion titles replaced by
+			// a watchdog line or a setup error. Keep both attempts, labelled: the
+			// first run's assertions are usually the true diagnosis, and the retry
+			// only tells you whether it reproduced.
+			const previous = card.dataset.testFailures
+				? JSON.parse(card.dataset.testFailures)
+				: []
+			const merged = previous.length === 0
+				? failures
+				: previous
+					.map(f => ({ ...f, title: '[attempt 1] ' + f.title }))
+					.concat(failures.map(f => ({ ...f, title: '[attempt 2] ' + f.title })))
+			card.dataset.testFailures = JSON.stringify(merged)
+			card.title = merged.map(f => `${f.title}: ${f.message}`).join('\n')
+			break
+		}
+	}
+
 	// clear_active: detach the current message listener and watchdog
 	function clear_active() {
 		if (active_handler) {
@@ -128,10 +162,35 @@ window.load_test = function(area, model, test_name, on_complete) {
 			mark_test_status(test_name, 'running')
 		}
 		else if (e.data.type === 'test_end') {
-			const final_status = (e.data.stats?.fail || 0) > 0 ? 'fail' : 'pass'
+			const fail_count = e.data.stats?.fail || 0
+			const final_status = fail_count > 0 ? 'fail' : 'pass'
+			// The frame COUNTS failures and REPORTS their detail separately, so the
+			// two can disagree. If it counted failures and sent no detail, SAY THAT:
+			// falling through to the empty case would leave the runner printing
+			// "the suite did not run to completion", which is a different diagnosis
+			// and, here, a false one. The live way to reach this is a stale
+			// frame_runner.js in the browser cache — the client is served without
+			// Cache-Control and `?v=` cannot bust an ES-module import.
+			const detail = fail_count > 0 && (!e.data.failures || e.data.failures.length === 0)
+				? [{
+					title	: '(the frame counted ' + fail_count + ' failure(s) but sent no detail)',
+					message	: 'stale frame_runner.js in the browser cache? hard-reload and re-run',
+					stack	: ''
+				}]
+				: e.data.failures
+			record_failures(test_name, detail)
 			finish_active(test_name, final_status, on_complete)
 		}
 		else if (e.data.type === 'test_error') {
+			// setup failure: mocha never ran, so there is no failing test — say so
+			// explicitly rather than leave the card reasonless (the distinction
+			// between "an assertion failed" and "the suite never started" IS the
+			// diagnosis).
+			record_failures(test_name, [{
+				title	: '(suite setup error — mocha did not run)',
+				message	: String(e.data.error || 'unknown error'),
+				stack	: ''
+			}])
 			finish_active(test_name, 'fail', on_complete)
 		}
 	}
@@ -139,6 +198,11 @@ window.load_test = function(area, model, test_name, on_complete) {
 
 	// watchdog: never let a stuck iframe stall the queue
 	active_watchdog = setTimeout(function() {
+		record_failures(test_name, [{
+			title	: '(watchdog — suite never reported back)',
+			message	: `no test_end within ${WATCHDOG_MS}ms`,
+			stack	: ''
+		}])
 		finish_active(test_name, 'fail', on_complete)
 	}, WATCHDOG_MS)
 }

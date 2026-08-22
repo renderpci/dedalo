@@ -39,19 +39,19 @@ import {pause} from '../../../core/common/js/utils/util.js'
 
 
 
-// GENERIC `test` TLD ONLY (2026-08-22). This suite used to render the `rsc`
-// install's images section (rsc170/1, /2 and its list), and tool_diffusion was
-// available only because the developer's own database happened to carry a
-// diffusion domain covering it — on the suite database the map is empty, no
-// opener renders and every case fails. The situation is now BUILT:
-// src/core/test_data/situations/client_diffusion.ts provisions a domain named
-// after DEDALO_DIFFUSION_DOMAIN with one sql element whose table targets test3,
-// which is what makes tool_diffusion::is_available answer true here.
-describe(`SECTION PUBLICATION TEST`,  function() {
+// THE DIFFUSION SURFACE IS PINNED BY THE RUN, NOT BY THE MACHINE. tool_diffusion
+// is available only for a section the CONFIGURED diffusion domain reaches, so
+// this suite passed only where the developer's own database carried a domain
+// covering rsc170. The run now pins the repo-owned generic domain
+// (scripts/client_test_server.ts SUITE_DIFFUSION_DOMAIN='test', materialized
+// from src/core/test_data/test_tld_ontology.json) and REFUSES to start when it
+// does not reach this section — so a misconfigured domain names itself instead
+// of surfacing as six mystery DOM assertions here.
+describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 
 	this.timeout(20000);
 
-	const section_tipo	= 'test3' // the generic playground section
+	const section_tipo	= 'rsc170' // images rsc170
 	const section_id	= 1;
 
 	const options = {
@@ -144,11 +144,11 @@ describe(`SECTION PUBLICATION TEST`,  function() {
 
 
 
-describe(`SECTION PUBLICATION RECORD 2 TEST`,  function() {
+describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 
 	this.timeout(20000);
 
-	const section_tipo	= 'test3' // the generic playground section
+	const section_tipo	= 'rsc170' // images rsc170
 	const section_id	= 2;
 
 	const options = {
@@ -241,11 +241,11 @@ describe(`SECTION PUBLICATION RECORD 2 TEST`,  function() {
 
 
 
-describe(`SECTION PUBLICATION LIST TEST`,  function() {
+describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 
 	this.timeout(20000);
 
-	const section_tipo	= 'test3' // the generic playground section
+	const section_tipo	= 'rsc170' // images rsc170
 	const section_id	= null;
 
 	const request_config = [
@@ -254,7 +254,7 @@ describe(`SECTION PUBLICATION LIST TEST`,  function() {
 			"type": "main",
 			"sqo": {
 				"section_tipo": [
-					"test3"
+					"rsc170"
 				],
 				"limit": 10,
 				"offset": 0,
@@ -267,8 +267,8 @@ describe(`SECTION PUBLICATION LIST TEST`,  function() {
 								{
 									"name": "Id",
 									"model": "component_section_id",
-									"section_tipo": "test3",
-									"component_tipo": "test142"
+									"section_tipo": "rsc170",
+									"component_tipo": "rsc175"
 								}
 							],
 							"q_split": false,

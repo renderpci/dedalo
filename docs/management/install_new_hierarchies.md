@@ -138,13 +138,123 @@ Both, common and private, hierarchies has the same process to be created.
 
 #### Toponyms or other standardized hierarchies
 
-!!! warning "Gap: the toponymy import panel does not import yet"
-    The Maintenance panel has an "Install hierarchies" block intended to let
-    you check off pre-configured countries and normalized hierarchies and
-    import them in bulk. The panel itself renders
-    (`addHierarchyGetValue` in `src/core/area_maintenance/widgets/add_hierarchy.ts`),
-    but its importable-hierarchies list is always empty and the **import**
-    action itself is unregistered — the JSON definition files it would import
-    from are not yet wired to a location this engine owns. Until this ships,
-    create toponymy and other standardized hierarchies through the manual
-    process above instead.
+Dédalo ships around 150 standardized hierarchies — the ISO country toponymies and
+the common thematic ones — as vendored dump files in `install/import/hierarchy/`.
+You do not create these by hand:
+
+- **During the install**, the wizard's hierarchy step offers them as a checkbox
+  list and imports the ones you tick.
+- **Afterwards**, Maintenance → **Install hierarchies** (`add_hierarchy`) offers
+  the same list, minus the ones already installed, and imports on demand.
+
+Either way the import is the same operation: the terms are copied into
+`matrix_hierarchy`, the record counter is re-consolidated, and the hierarchy is
+**activated**. Activation is not optional — imported terms with no ontology and no
+active registry record are unreachable, so an import whose activation fails is
+reported as a failure for that TLD, not as a partial success.
+
+A hierarchy already present is **skipped**, never merged: the import is additive and
+will not touch a TLD that has rows. To replace one with the shipped version, use the
+panel's **reset** action — it deletes that TLD's rows first, so anything your
+editors added to it is lost.
+
+## Moving a hierarchy between installations
+
+The vendored set is not the only source. A hierarchy curated in one install — a
+private thesaurus, or a shared one you have extended — travels to another install
+as the same kind of dump file, produced by the Maintenance area's **Export
+hierarchy** panel.
+
+The two halves meet in **one directory**: `install/import/hierarchy/`, inside the
+engine's own tree. Export writes there; import reads from there. There is no path
+to configure — the destination is derived from the engine's location, so a file
+exported on a machine is immediately offered by that machine's own import panel.
+
+!!! note "Coming from v6"
+    v6 had an `EXPORT_HIERARCHY_PATH` constant for this destination. It is gone,
+    and the [config migration](../install/migrating_from_v6.md) drops it: the only
+    useful destination is the directory the import half already reads.
+
+### 1. Export, on the source install
+
+Maintenance → **Export hierarchy**. Two scopes:
+
+| Scope | Produces | Use it for |
+| --- | --- | --- |
+| A list of section tipos (`es1`, `ts1`, …) | one `<section_tipo>.copy.gz` per tipo | moving specific hierarchies — **this is the importable form** |
+| Everything | one timestamped `all_2026-08-22_142530.copy.gz` | a whole-thesaurus snapshot, for archive or manual restore |
+
+Each file is a gzip-compressed psql `COPY` of the hierarchy rows. The panel lists
+what it produced, with a download link per file
+(`/dedalo/install/import/hierarchy/<file>`), and prints the manual re-import
+command underneath.
+
+!!! warning "The `all_…` file is not importable by the panel"
+    The import side recognises `<tld>1.copy.gz` and nothing else. A whole-table
+    snapshot has to be restored with the manual `psql` command the panel prints —
+    and that command loads *every* hierarchy in the file, which is rarely what you
+    want on a populated install.
+
+### 2. Carry the files across
+
+Copy the `.copy.gz` files into the target install's `install/import/hierarchy/`
+directory, as the service user. A hierarchy is at most two files:
+
+| File | Holds |
+| --- | --- |
+| `<tld>1.copy.gz` | the thesaurus terms — **required** |
+| `<tld>2.copy.gz` | the hierarchy's models, when it has them — optional |
+
+### 3. Declare it, or the panel will not offer it
+
+The import panel offers **the intersection** of the data files present and the
+descriptors in `install/import/hierarchy/hierarchies.json`. A `.copy.gz` with no
+descriptor entry is invisible — the panel does not guess a label or a typology.
+Add one entry per TLD you carried over:
+
+```json
+{
+	"tld": "mytld",
+	"label": "My hierarchy",
+	"typology": 1,
+	"active_in_thesaurus": true
+}
+```
+
+The typology numbers are the ones in the table above (`1` thematic, `2` toponymy,
+`3` languages, `4` semantic, …); the full list the panel renders lives in
+`hierarchies_typologies.json` beside it.
+
+!!! danger "An empty *Install hierarchies* list means a missing descriptor"
+    Files present and nothing offered is almost always `hierarchies.json` — a
+    missing entry, a TLD spelled differently there than in the file name, or
+    invalid JSON, which is read fail-soft and yields an empty list rather than an
+    error. Check the file before suspecting the import.
+
+### 4. Import and activate, on the target install
+
+Maintenance → **Install hierarchies**, tick the TLD, import. This is the same code
+path as the vendored hierarchies: copy into `matrix_hierarchy`, re-consolidate the
+counter, activate. The TLD then appears in the Thesaurus area.
+
+Two things the import does **not** do for you:
+
+- **Permissions.** Grant the profiles that need it access to the new sections, as
+  in step 12 above.
+- **Ontology dependencies.** A hierarchy whose terms are referenced by components of
+  another TLD needs that ontology present too. See [thesaurus
+  dependencies](../config/thesaurus_dependeces.md).
+
+### Verify the round trip
+
+- [ ] The file is listed by the panel on the source install, and downloads.
+- [ ] On the target, the TLD appears in the *Install hierarchies* list.
+- [ ] After import, the Thesaurus area shows the tree with its terms.
+- [ ] A portal or autocomplete pointing at that hierarchy resolves terms.
+
+!!! warning "Ids are carried, not re-assigned"
+    The dump preserves `section_id`. Importing into a TLD that already holds terms
+    is refused as *already installed* rather than merged, precisely because the two
+    id spaces would collide. Merging two populated copies of the same hierarchy is
+    not what this tool does — export from one, import into an install that does not
+    have it.

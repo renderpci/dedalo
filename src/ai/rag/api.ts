@@ -18,7 +18,9 @@
  * Security: every action requires a session (not in NO_LOGIN_ACTIONS) and is
  * CSRF-gated by the dispatcher; the RESULTS are ACL-gated inside retrieval.ts
  * (schema ACL + per-record projects filter — the DoD chokepoint). The global
- * DEDALO_RAG_ENABLED kill-switch declines every action when off.
+ * DEDALO_RAG_ENABLED kill-switch declines every action when off — EXCEPT
+ * embed_groups, the capability probe, which answers `{groups: []}` instead
+ * (see its doc block: a refusal there is a red alert nobody asked for).
  *
  * Types are imported from response.ts (not dispatch.ts) to avoid an import cycle
  * with the registry that mounts these handlers.
@@ -113,7 +115,10 @@ function envelope(data: unknown, msg: string, context: RagApiContext): ApiResult
 	return { status: 200, body: ok(data, { requestId: context.requestId, extend: { msg } }) };
 }
 
-/** The master kill-switch refusal (every action declines first). */
+/**
+ * The master kill-switch refusal: every action declines first — except
+ * embed_groups, which ANSWERS empty instead (a capability probe is not an act).
+ */
 const disabled = (): never => {
 	throw new DedaloError('rag.disabled');
 };
@@ -191,15 +196,21 @@ async function similarToAction(rqo: Rqo, context: RagApiContext): Promise<ApiRes
 
 /**
  * embed_groups — the section's embed-group ids (the client's facet selector +
- * its "is this section semantic-searchable" gate). The master kill-switch
- * declines first like every action; after that, a malformed tipo, a section
- * the CALLER cannot read, and a section without a rag.embed descriptor ALL
- * return the same `{groups: []}` — byte-identical on purpose, so the gate is
- * never a section-existence oracle (sec review #1; mirrors mcp discovery's
- * not_found shape).
+ * its "is this section semantic-searchable" gate). This is the ONE action the
+ * client fires WITHOUT a user asking for anything (every section list render),
+ * so it is the one action the kill-switch answers instead of refusing: a
+ * disabled install is a CAPABILITY fact, and a refusal here painted a red
+ * per-navigation alert on installs that deliberately never implemented RAG
+ * (the operator is told at boot instead — bootstrap.ts). RAG off therefore
+ * joins the other empty cases: a malformed tipo, a section the CALLER cannot
+ * read, and a section without a rag.embed descriptor ALL return the same
+ * `{groups: []}` — byte-identical on purpose, so the gate is never a
+ * section-existence oracle (sec review #1; mirrors mcp discovery's not_found
+ * shape). Every OTHER action still declines: those need an explicit user act.
  */
 async function embedGroupsAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
-	if (!isRagEnabled()) return disabled();
+	// Answered before the principal resolves: a disabled install touches nothing.
+	if (!isRagEnabled()) return envelope({ groups: [] }, 'ok', context);
 	const principal = await resolveCaller(context);
 	if (principal === null) return noPrincipal();
 	const sectionTipo = optionString(rqo.options, 'section_tipo');

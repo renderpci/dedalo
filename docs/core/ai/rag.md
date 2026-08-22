@@ -227,7 +227,7 @@ The code lives in three trees:
 - **`src/ai/agent/`** — a manual tool-use loop (`loop.ts`) over the same ACL-gated handlers MCP exposes, plus RAG semantic search, driven by a pluggable `AgentLlmProvider` (`llm_provider.ts`). The concrete provider is resolved from the model catalog (`model_catalog.ts`, `resolveProvider`, `DEDALO_AGENT_MODELS`): the official Anthropic SDK (`anthropic_provider.ts`) or an OpenAI-compatible provider for local models (`openai_compat_provider.ts`) in production, or a scripted/deterministic provider in tests.
 - **`src/ai/mcp/`** — a Model Context Protocol server (`server.ts`, `@modelcontextprotocol/sdk`) exposing the same read (and, opt-in, write) handlers (`tools.ts`) to any MCP-speaking client.
 
-It is registered in the API dispatch as the `dd_rag_api` action class (`src/core/api/dispatch.ts` → `ragApiActions` from `src/ai/rag/api.ts`) and is **strictly opt-in**: every action declines with `rag_disabled` unless `DEDALO_RAG_ENABLED` is `'true'`/`'1'` (`isRagEnabled()`, `src/ai/rag/rag_enabled.ts`); the three image actions additionally decline with `media_disabled` unless `DEDALO_RAG_MEDIA_ENABLED` is set (`isMediaEnabled()`, `src/ai/rag/multimodal_config.ts`).
+It is registered in the API dispatch as the `dd_rag_api` action class (`src/core/api/dispatch.ts` → `ragApiActions` from `src/ai/rag/api.ts`) and is **strictly opt-in**: every action declines with `rag.disabled` unless `DEDALO_RAG_ENABLED` is `'true'`/`'1'` (`isRagEnabled()`, `src/ai/rag/rag_enabled.ts`) — with ONE deliberate exception, `embed_groups`, the capability probe the client fires unasked on every list render, which ANSWERS `{groups: []}` when RAG is off so an install that never implemented RAG shows its users nothing at all (the operator is told once, at boot); the three image actions additionally decline with `rag.media_disabled` unless `DEDALO_RAG_MEDIA_ENABLED` is set (`isMediaEnabled()`, `src/ai/rag/multimodal_config.ts`).
 
 ## Architecture at a glance
 
@@ -292,9 +292,9 @@ The `dd812` entry is the deep case: `rsc138` is a relation, and its child ddo re
 
 ## The API (`dd_rag_api`)
 
-Registered in the static action registry (`src/core/api/dispatch.ts` → `ragApiActions`), so login/CSRF/session gating is inherited from the same dispatch chokepoint every other API class goes through. Every action reads `rqo.options` and returns the standard `{ status: 200, body: { result, msg, errors } }` envelope. Each handler resolves the caller's `Principal` first (`resolveCaller`) and declines with `no_principal` if there is none; every action declines with `rag_disabled` (`disabled()`) unless `DEDALO_RAG_ENABLED` is on.
+Registered in the static action registry (`src/core/api/dispatch.ts` → `ragApiActions`), so login/CSRF/session gating is inherited from the same dispatch chokepoint every other API class goes through. Every action reads `rqo.options` and returns the standard envelope v2 success — `{ status: 200, body: { ok: true, request_id, msg, data } }`, the payload in `data` and the RAG outcome token `msg` riding as an extension key; a refusal is a coded THROW, never an `ok:true` body. Each handler resolves the caller's `Principal` first (`resolveCaller`) and declines with `auth.not_logged` if there is none; every action declines with `rag.disabled` (`disabled()`) unless `DEDALO_RAG_ENABLED` is on — except `embed_groups`, which answers `{groups: []}` instead (see below).
 
-**Actions:** `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `embed_groups` (a section's embed-group ids — the client's facet selector and semantic-availability gate; empty for malformed/denied/not-opted-in alike, never an existence oracle), and (images, additionally gated by `DEDALO_RAG_MEDIA_ENABLED`) `similar_objects`, `search_by_text_image`, `characterize_object`.
+**Actions:** `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `embed_groups` (a section's embed-group ids — the client's facet selector and semantic-availability gate; empty for RAG-off/malformed/denied/not-opted-in alike, never an existence oracle and never a red alert on an install without RAG), and (images, additionally gated by `DEDALO_RAG_MEDIA_ENABLED`) `similar_objects`, `search_by_text_image`, `characterize_object`.
 
 A `limit` is clamped to `[1, 50]`, default `10` (`clampTopK`, `MAX_TOP_K = 50`). An optional `section_tipo` scope accepts a single string or an array of strings (`optionScope`) — pushed down into both store legs (recall) AND re-applied at the ACL gate, never a substitute for it. An optional `group` (slug) narrows to one embed facet's chunks. The CLIENT search UI consumes `semantic_search` through the resolve-once-then-pin flow: ranked hits become `sqo.filter_by_locators` pins plus the `{mode:'locator_position'}` order entry, so the normal section list renders them in relevance order (WC-047).
 
@@ -313,7 +313,7 @@ A `limit` is clamped to `[1, 50]`, default `10` (`clampTopK`, `MAX_TOP_K = 50`).
 }
 ```
 ```json
-// response.body.result (record-level, ACL-filtered, best-first)
+// response.body.data (record-level, ACL-filtered, best-first)
 [
     { "section_tipo": "oh1", "section_id": 412, "component_tipo": "oh23", "lang": "lg-spa",
       "snippet": "…cuando llegó el agua tuvimos que marcharnos…", "score": 0.031 }
@@ -331,7 +331,7 @@ A `limit` is clamped to `[1, 50]`, default `10` (`clampTopK`, `MAX_TOP_K = 50`).
                "section_tipo": ["oh1"] } }
 ```
 ```json
-// response.body.result
+// response.body.data
 {
     "answer": "Several informants describe being forced to leave when the reservoir flooded their fields…",
     "citations": [ { "locator": "oh1-412", "sectionTipo": "oh1", "sectionId": 412, "citedText": "…" } ],
