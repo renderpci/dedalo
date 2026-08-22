@@ -161,10 +161,28 @@ export interface IconographyOptions {
 	sceneSeparator: string;
 }
 
+/**
+ * THE ONE INSTALL-NAMED CONSTANT IN THE ENGINE, and it is inherited, not chosen.
+ *
+ * PHP's component_portal (:479-482) defaults `inner_relation` to this literal —
+ * a component of the `numisdata` installation, meaningful nowhere else. On any
+ * other install a ddo that omits `inner_relation` therefore reads a component
+ * that does not exist and resolves NOTHING, silently.
+ *
+ * It is kept, named, and ledgered rather than deleted because removing it is a
+ * WIRE change: the only element known to use `get_diffusion_iconography` is that
+ * installation's, and if its ddo relies on the implicit default, dropping it
+ * would empty a published column. The durable fix is on the ONTOLOGY side — that
+ * ddo declares `inner_relation` explicitly — after which this constant, and the
+ * baseline entry naming it, both go.
+ */
+const PHP_DEFAULT_INNER_RELATION = 'numisdata722';
+
 /** Read the fn ddo's options, PHP defaults applied. */
 export function iconographyOptionsOf(ddo: Record<string, unknown> | undefined): IconographyOptions {
 	return {
-		innerTipo: typeof ddo?.inner_relation === 'string' ? ddo.inner_relation : 'numisdata722',
+		innerTipo:
+			typeof ddo?.inner_relation === 'string' ? ddo.inner_relation : PHP_DEFAULT_INNER_RELATION,
 		termSeparator: typeof ddo?.term_separator === 'string' ? ddo.term_separator : ' | ',
 		fieldsSeparator: typeof ddo?.fields_separator === 'string' ? ddo.fields_separator : ', ',
 		sceneSeparator: typeof ddo?.scene_separator === 'string' ? ddo.scene_separator : ' | ',
