@@ -6,6 +6,19 @@
  * Usage: php diffusion/migration/migrate_diffusion_properties.php
  */
 
+// CLI ONLY -- checked BEFORE the bootstrap, deliberately.
+// This script forges a DEDALO_SUPERUSER session (force_login below) and, on error, echoes a
+// full debug_print_backtrace() via the handler installed a few lines down. Booting the engine
+// first would hand an unauthenticated HTTP request a live connection to the production
+// database plus filesystem paths in the response body, before any guard could run.
+// Same position and reason as the package's run/lib/engine_boot.php:28.
+// REQUEST_METHOD is checked too: CLI-SAPI HTTP runtimes (Swoole, RoadRunner, FrankenPHP
+// worker mode) report PHP_SAPI === 'cli' while serving real requests.
+if (PHP_SAPI !== 'cli' || isset($_SERVER['REQUEST_METHOD'])) {
+	header('HTTP/1.1 403 Forbidden', true, 403);
+	die("This migration can only be run from the command line\n");
+}
+
 // Bootstrap
 $config_path = dirname(dirname(__DIR__)) . '/config/bootstrap.php';
 if (!file_exists($config_path)) {
@@ -493,13 +506,16 @@ register_shutdown_function(function() : void {
 		. ' unmapped(warning)=' . $unmapped . PHP_EOL);
 
 	if ($unmapped > 0) {
+		// NB: never write the literal bracketed markers here. phase3_diffusion.php counts every
+		// line containing them, and this summary lands in the SAME file via 2>&1 -- so naming
+		// them made every reported total off by one.
 		fwrite(STDERR, 'WARNING: ' . $unmapped . ' node(s) carry v6 propiedades that matched no mapping '
-			. 'branch. Search "[UNMAPPED]" in the log — they are a coverage gap, not a failure.' . PHP_EOL);
+			. 'branch. Search UNMAPPED in the log — they are a coverage gap, not a failure.' . PHP_EOL);
 	}
 
 	if ($failures > 0) {
-		fwrite(STDERR, 'ERROR: ' . $failures . ' node(s) failed to migrate. Search "[TEST FAIL]" / '
-			. '"[WARN]" in the log.' . PHP_EOL);
+		fwrite(STDERR, 'ERROR: ' . $failures . ' node(s) failed to migrate. Search TEST FAIL / '
+			. 'WARN in the log.' . PHP_EOL);
 		exit(1);
 	}
 });
@@ -519,7 +535,9 @@ function traverse_ontology_recursive($current_tipo, $level = 0) {
 	// branch — and the failure it counted — was unreachable.
 	$node = ontology_node::get_instance($current_tipo);
 	process_node($node, $level);
-	$total_nodes++;
+	// (no second $total_nodes++ here: the node is already counted at the top of this
+	// function. Counting it twice made "Total nodes processed" report exactly 2x the
+	// real node count, which reads like half the tree was skipped.)
 
 	// Find children using dd_ontology_db_manager
 	// We search for nodes where 'parent' column is $current_tipo
@@ -6680,8 +6698,15 @@ if ($is_direct_run && !defined('MIGRATE_DIFFUSION_NO_AUTORUN')) {
 				. " node(s) would be written. Nothing was changed.\n";
 			echo "Re-run without --dry-run to apply.\n";
 		}
-	} catch (Exception $e) {
-		echo "Error: " . $e->getMessage() . "\n";
+	} catch (\Throwable $e) {
+		// \Throwable, NOT Exception. A TypeError/Error raised mid-traversal (e.g. a malformed
+		// dd_ontology.relations entry reaching a string-typed ontology_node parameter) is not an
+		// Exception, so it used to escape this catch -- straight into the engine's global handler
+		// (Error::captureException), which LOGS AND RETURNS. A returning exception handler makes
+		// PHP exit 0, the "Total nodes processed" line never prints, and phase3_diffusion.php
+		// reported a partial migration as a clean one.
+		echo "Error: " . $e->getMessage()
+			. ' in ' . $e->getFile() . ':' . $e->getLine() . "\n";
 		$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
 	}
 }
@@ -6897,25 +6922,43 @@ function get_ddo_map($current_tipo) {
 	*/
 	function force_login($user_id) : void {
 
-		// check is development server. if not, throw to prevent malicious access
-			if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-				throw new Exception("Error. Only development servers can use this method", 1);
-				die();
+		// CLI only.
+		// This forges a DEDALO_SUPERUSER session with no credential check, so what the guard
+		// must prevent is reachability over HTTP — not "is this a production box". Shell access
+		// already implies full trust: same model as this package's own run/lib/engine_boot.php
+		// (SAPI gate at :28, identical superuser session at :182).
+		// Formerly gated on DEVELOPMENT_SERVER, inherited from the v7 dev repo. That value is
+		// snapshotted from the live v6 config by prepare_v7::CONFIG_SNAPSHOT, so it is false on
+		// every production install — i.e. the migration this package exists to run could never
+		// complete on the servers it targets.
+			if (PHP_SAPI !== 'cli' || isset($_SERVER['REQUEST_METHOD'])) {
+				throw new Exception("Error. This migration can only be run from the command line", 1);
 			}
 
 		// user
 			$username		= 'test ' . $user_id;
 			$full_username	= 'test user ' . $user_id;
 
-		// dd_init_test
-			$init_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
-			if ($init_response->result===false) {
-				debug_log(__METHOD__
-					." Init test error (dd_init_test): ". PHP_EOL
-					.' init_response: ' . $init_response->msg
-					, logger::ERROR
-				);
-			}
+		// NO dd_init_test HERE.
+		// It is a WEB-BOOT integrity check, and running it from a migration has three
+		// production-only side effects, none of which this script needs:
+		//  1. dd_init_test.php:988-993 self-heals a MISSING dd_ontology_recovery table by
+		//     piping install/db/dd_ontology_recovery.sql.gz into psql against the LIVE database
+		//     (installer_ontology_manager::restore_dd_ontology_recovery_from_file). Neither v6
+		//     nor the v6->v7 migration ever creates that table, and DEDALO_INSTALL_STATUS is
+		//     'installed', so on every real install the branch fires. The dump carries
+		//     'ALTER TABLE ... OWNER TO paco' (a developer role), psql stderr is never inspected
+		//     and the method returns result=true regardless: a silent, half-applied import into
+		//     the customer's database as a side effect of a login.
+		//  2. It CREATES directories rather than merely checking them (media/, upload/, import/,
+		//     and DEDALO_BACKUP_PATH, which resolves OUTSIDE this package to
+		//     core/area_maintenance/widgets/backups -- i.e. inside the docroot, uncovered by the
+		//     package .htaccess).
+		//  3. Its $init_response->msg is an ARRAY, so the old failure branch here raised
+		//     'Array to string conversion' -- which the set_error_handler at the top of this file
+		//     echoes, with a full backtrace, into the phase-3 audit log.
+		// The package's own run/lib/engine_boot.php (phases 1-2) deliberately does not call it
+		// either; bootstrap.php has already loaded everything this script uses.
 
 		// is_global_admin (before set user session vars)
 			$is_global_admin = (bool)security::is_global_admin($user_id);
@@ -6943,21 +6986,12 @@ function get_ddo_map($current_tipo) {
 				lock_components::force_unlock_all_components($user_id);
 			}
 
-		// precalculate profiles datalist security access in background
-		// This file is generated on every user login, launching the process in background
-			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
-				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
-				dd_cache::process_and_cache_to_file((object)[
-					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
-					'data'			=> (object)[
-						'session_id'	=> session_id(),
-						'user_id'		=> $user_id,
-						'lang'			=> DEDALO_APPLICATION_LANG
-					],
-					'file_name'		=> $cache_file_name,
-					'wait'			=> false
-				]);
-			}
+		// NO security-tree cache warm HERE.
+		// dd_cache::process_and_cache_to_file redirects only STDOUT ('> file &', class.dd_cache.php
+		// :227-233), so the backgrounded child inherits exec()'s stderr pipe and exec() blocks until
+		// it exits -- 'wait' => false notwithstanding. That stalls phase 3 before the first ontology
+		// node is touched, to build a cache file under this package's own cache/ dir that nothing
+		// ever reads. A migration is not a user login; there is no datalist to warm.
 
 		// login activity report
 			login::login_activity_report(

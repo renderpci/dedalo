@@ -53,6 +53,16 @@
  * v7 reads dedalo_v7_mht, different databases.
  */
 
+// CLI ONLY -- checked BEFORE the bootstrap, deliberately.
+// This script forges an is_developer + is_global_admin session with no credential check and
+// then does destructive work. The guard exists to keep it unreachable over HTTP: the package
+// .htaccess ('Require all denied') is Apache-only and INERT under nginx, where the operator
+// must hand-add a deny rule. Same position and reason as run/lib/engine_boot.php:28.
+if (PHP_SAPI !== 'cli' || isset($_SERVER['REQUEST_METHOD'])) {
+    header('HTTP/1.1 403 Forbidden', true, 403);
+    die("This helper can only be run from the command line\n");
+}
+
 ob_start();
 require_once __DIR__ . '/../../../../../../../../config/config.php';
 ob_end_clean();

@@ -85,6 +85,31 @@ else
 	ok "no runtime config present"
 fi
 
+# 5. every session-forging file is CLI-gated
+# Several files here fabricate an authenticated session (is_logged / is_global_admin /
+# is_developer) with NO credential check, because a migration has no interactive login.
+# That is fine on a shell and catastrophic over HTTP: the package .htaccess is Apache-only
+# and INERT under nginx, so the SAPI gate is the only portable control. It must also sit
+# BEFORE the bootstrap require, or an unauthenticated request still boots the engine against
+# the production database (and these scripts echo backtraces on error).
+# This check exists because the diffusion migration was instead gated on DEVELOPMENT_SERVER,
+# which made it fail on every production install while protecting nothing.
+forgers=$(grep -rIl "_SESSION\['dedalo'\]\['auth'\]\['\(is_logged\|is_global_admin\|is_developer\)'\]" \
+	"$PKG_DIR/engine/diffusion" "$PKG_DIR/run" "$PKG_DIR/widget" --include=*.php 2>/dev/null)
+ungated=""
+for f in $forgers; do
+	gate_line=$(grep -nE "(PHP_SAPI|php_sapi_name\(\))[[:space:]]*!==[[:space:]]*'cli'" "$f" | head -1 | cut -d: -f1)
+	# a real require STATEMENT (line starts with it), never a docblock mentioning one
+	boot_line=$(grep -nE "^[[:space:]]*(require|require_once|include|include_once)[[:space:]].*(bootstrap\.php|config/config\.php)" "$f" | head -1 | cut -d: -f1)
+	if [ -z "$gate_line" ]; then
+		ungated="$ungated ${f#$PKG_DIR/}(no-gate)"
+	elif [ -n "$boot_line" ] && [ "$gate_line" -gt "$boot_line" ]; then
+		ungated="$ungated ${f#$PKG_DIR/}(gate-after-bootstrap)"
+	fi
+done
+[ -z "$ungated" ] && ok "every session-forging file is CLI-gated" \
+	|| bad "every session-forging file is CLI-gated" "$ungated"
+
 echo
 [ "$fail" -eq 0 ] && echo "Package is self-contained." || echo "Package is INCOMPLETE."
 exit "$fail"

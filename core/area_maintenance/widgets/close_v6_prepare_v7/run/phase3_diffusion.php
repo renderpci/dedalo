@@ -121,13 +121,24 @@ $log('diffusion nodes: verified=' . $pass . ' mismatched=' . $fail . ' warnings=
 	. ' | ' . $coverage
 	. ($total !== '' ? ' | ' . $total : ''));
 
-// Green on nothing. A run that traversed ZERO nodes produces pass=0, fail=0, no total and
-// exit 0, which reads exactly like a clean migration. It becomes reachable the moment the
-// script's autorun guard (realpath($argv[0]) === realpath(__FILE__)) stops matching — e.g. a
-// future launcher that includes it instead of exec'ing it. Refuse rather than report success.
-if ($pass === 0 && $fail === 0 && $total === '') {
-	$log('ERROR: the diffusion migration produced no per-node audit output — it traversed nothing.');
-	$log('Check that ' . $script . ' ran as the entry script (see the autorun guard at its foot).');
+// PROOF-OF-COMPLETION gate. "Total nodes processed:" is echoed only after
+// traverse_ontology_recursive() returns, so its ABSENCE is the one reliable signal that the
+// traversal did not finish — whether it traversed nothing at all, or died part-way through.
+// $total === '' is therefore fatal on its own. It used to be conjoined with pass===0 && fail===0,
+// which meant a run that migrated 200 nodes and then aborted (pass>0) sailed past this check and
+// was reported as a clean migration, leaving the rest of the diffusion tree with properties NULL.
+if ($total === '') {
+	$log('ERROR: the diffusion migration never reported "Total nodes processed" — the traversal did');
+	$log('not run to completion. Nodes verified before it stopped: ' . $pass . '.');
+	if ($pass === 0 && $fail === 0) {
+		$log('No per-node audit output at all: check that ' . $script . ' ran as the entry script');
+		$log('(see the autorun guard at its foot).');
+	} else {
+		$log('It stopped part-way: the diffusion tree is PARTIALLY migrated. Read the end of');
+		$log('  ' . $diffusion_log);
+		$log('for the failing node, then re-run — the step is idempotent (it reads the untouched v6');
+		$log('`propiedades` and rewrites v7 `properties`).');
+	}
 	exit(7);
 }
 
