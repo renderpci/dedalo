@@ -20,7 +20,7 @@
  * all of them. So the rows are real, written through the engine's own door
  * (`upsertDdOntologyNode` — dd_ontology.ts's "ONLY dd_ontology SQL" rule) and
  * both write paths fan out their own cache invalidation, so no restart is
- * needed. This generalizes `../dmm_map_of_grapes_fixture.ts`, which proved the
+ * needed. This generalizes the retired `dmm_map_of_grapes_fixture.ts`, which proved the
  * pattern for one fixture by hand.
  *
  * Reserved namespace: a situation's `tld` MUST start with `zz` (checked). The

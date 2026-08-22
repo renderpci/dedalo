@@ -49,7 +49,7 @@
 		"dmm480": {
 			"tld": "testgraves",
 			"term": "Map of graves",
-			"reason": "dmm map-of-graves thesaurus — the dmm_map_of_grapes fixture surface"
+			"reason": "dmm map-of-graves thesaurus — the anchor of the dmm480 struct/parity binding below"
 		},
 		"tch7": {
 			"tld": "testheritagecatalog",
@@ -383,9 +383,7 @@
 		"dmm259": "frozen foreign ref of a legacy test node (test2.properties) — cloned so the reference can be retargeted",
 		"dmm263": "code binding in STRUCT test — test/unit/record_defaults_native.test.ts",
 		"dmm265": "frozen foreign ref of a legacy test node (test2.properties) — cloned so the reference can be retargeted",
-		"dmm480": "code binding in STRUCT/PARITY/CLIENT test — test/unit/search_projects_filter_multisection.test.ts, test/parity/projects_filter_differential.test.ts",
-		"dmm506": "code binding in CLIENT test — client/dedalo/test/client/js/test_additional_text_area.js",
-		"dmm507": "code binding in CLIENT test — client/dedalo/test/client/js/test_additional_text_area.js",
+		"dmm480": "code binding in STRUCT/PARITY test — test/unit/search_projects_filter_multisection.test.ts, test/parity/projects_filter_differential.test.ts (the CLIENT binding, test_additional_text_area.js on dmm480/507/506, was retired 2026-08-22 for the generic test3 pairing; dmm507/dmm506 need no root of their own — the subtree policy clones them with dmm480)",
 		"ds1": "fixture RQO (gate addresses it) — test/unit/tm_dataframe_restore_native.test.ts, test/parity/indexation_grid_differential.test.ts",
 		"dz1": "fixture RQO (gate addresses it) — fixture:indexation_grid_differential.json, fixture:relation_inverse_differential.json",
 		"es1": "fixture RQO (gate addresses it) — fixture:section_terms_differential.json",

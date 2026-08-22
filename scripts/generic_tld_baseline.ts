@@ -42,7 +42,7 @@ import {
 	type FileTldRefs,
 	INSTALL_TLDS,
 	REPO_ROOT,
-	SCAN_ROOTS,
+	SCAN_ROOTS_LABEL,
 	scannedFileCount,
 	summarizeByTld,
 } from './lib/tld_census.ts';
@@ -66,7 +66,7 @@ export interface TldBaseline {
 	summary: { files: number; by_tld: Record<string, number> };
 }
 
-const GENERATED_BY = `${FIX_COMMAND} (Glob().scanSync + readFileSync census of ${SCAN_ROOTS.join(', ')} via scripts/lib/tld_census.ts — never grep)`;
+const GENERATED_BY = `${FIX_COMMAND} (Glob().scanSync + readFileSync census of ${SCAN_ROOTS_LABEL} via scripts/lib/tld_census.ts — never grep)`;
 
 const RULE = [
 	'SHRINK-ONLY ratchet on the SET of test files that bind a specific-install ontology TLD (a `<tld><digits>` tipo token, comments excluded; the install TLD list is INSTALL_TLDS in scripts/lib/tld_census.ts).',
@@ -164,7 +164,9 @@ export function computeDrift(results: readonly FileTldRefs[], baseline: TldBasel
 
 	const scanned = scannedFileCount();
 	if (scanned < CORPUS_FLOOR) {
-		drift.vacuity.push(`only ${scanned} test files scanned (< ${CORPUS_FLOOR}) — scanner broken?`);
+		drift.vacuity.push(
+			`only ${scanned} files scanned under ${SCAN_ROOTS_LABEL} (< ${CORPUS_FLOOR}) — a root moved or a glob broke. Fix the scanner, never the floor.`,
+		);
 	}
 	return drift;
 }
@@ -185,9 +187,7 @@ if (import.meta.main) {
 	const results = census();
 
 	if (args.has('--report')) {
-		console.log(
-			`test files scanned: ${scannedFileCount()}; binding an install TLD: ${results.length}`,
-		);
+		console.log(`files scanned: ${scannedFileCount()}; binding an install TLD: ${results.length}`);
 		console.log('files per install TLD:', summarizeByTld(results));
 		const top = [...results]
 			.map((r) => ({ f: r.file, n: Object.values(r.denied).reduce((a, v) => a + v.length, 0) }))

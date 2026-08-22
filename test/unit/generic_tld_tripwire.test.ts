@@ -1,5 +1,5 @@
 /**
- * GENERIC-TLD TRIPWIRE — the set of test files that bind a specific-install
+ * GENERIC-TLD TRIPWIRE — the set of GATE files that bind a specific-install
  * ontology TLD may only SHRINK.
  *
  * ── WHAT IT GUARDS ───────────────────────────────────────────────────────────
@@ -42,13 +42,23 @@
  * and commit the JSON with the change. Never edit the JSON by hand; never add
  * a file to get green.
  *
+ * ── THE MEASURED TREES (widened 2026-08-22) ──────────────────────────────────
+ * `test/**\/*.test.ts` (unit + parity), `client/dedalo/test/client/js/**\/*.js`
+ * (the browser suite) and `src/core/test_data/**\/*.ts` (the test-data writers)
+ * — SCAN_ROOTS in scripts/lib/tld_census.ts. The last two were added after a
+ * client gate (`test_additional_text_area.js`) was found binding the `dmm`
+ * install's demo ontology, propped up by a `src/core/test_data` fixture that
+ * PROVISIONED it, both invisible to a census that only looked at `*.test.ts`.
+ * A census that cannot see a tree is not evidence about that tree.
+ *
  * ── HONEST LIMITATIONS ───────────────────────────────────────────────────────
  *  - It measures TIPO tokens (`<tld><digits>`), comments blanked. A test that
  *    reaches an install's records through a helper WITHOUT naming a tipo is
- *    outside it (the helper's own file is not scanned unless it is a *.test.ts).
+ *    outside it (a helper is scanned only if it lives in a measured tree).
  *  - INSTALL_TLDS is a KNOWN list, grow-only. An install TLD nobody has named
  *    yet is not denied until it is added there.
- *  - `test/**\/fixtures/` are excluded (they are data, reached through tests).
+ *  - `fixtures/` path segments are excluded everywhere (they are data, reached
+ *    through gates), as is `node_modules`.
  *  - A CONSTRUCTED token is invisible: `'numis' + 'data1'`, `` `numis${'data1'}` ``
  *    and `seed('rsc', 170)` all produce an install tipo the scan cannot see.
  *    That is deliberate — the migrated gates use `seed()` to say "this is a
@@ -71,6 +81,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { join } from 'node:path';
+import { Glob } from 'bun';
 import {
 	BASELINE_PATH,
 	computeDrift,
@@ -83,6 +95,8 @@ import {
 	deniedTldsIn,
 	INSTALL_TLDS,
 	INVARIANT_TLDS,
+	REPO_ROOT,
+	SCAN_ROOTS,
 	scannedFileCount,
 } from '../../scripts/lib/tld_census.ts';
 
@@ -122,6 +136,26 @@ describe('generic_tld ratchet — install-TLD bindings in tests may only shrink'
 			formatDrift({ ...DRIFT, regressions: [], stale: [], summary: [] }),
 		).toEqual([]);
 		expect(scannedFileCount()).toBeGreaterThan(300);
+	});
+
+	test('every measured tree is real and contributes files', () => {
+		// A root that matches NOTHING silently un-measures a whole tree — exactly
+		// the hole this gate had until 2026-08-22. Each root must see files.
+		for (const { root, glob } of SCAN_ROOTS) {
+			const seen = [...new Glob(glob).scanSync({ cwd: join(REPO_ROOT, root) })].length;
+			expect(
+				seen,
+				`measured tree ${root}/${glob} matched NO file — the root moved or the glob broke. Fix the scanner, never the root list.`,
+			).toBeGreaterThan(0);
+		}
+	});
+
+	test('the client suite and the test-data writers ARE measured', () => {
+		// Named explicitly: a future narrowing of SCAN_ROOTS back to `test/` would
+		// re-open the door the dmm "map of grapes" binding walked through.
+		const roots = SCAN_ROOTS.map((entry) => entry.root);
+		expect(roots).toContain('client/dedalo/test/client/js');
+		expect(roots).toContain('src/core/test_data');
 	});
 });
 

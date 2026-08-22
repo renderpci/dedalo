@@ -2018,20 +2018,36 @@ component_geolocation.prototype.init_draw_editor = function() {
 *    `set_changed_data` to enqueue the changed_data_item for the next save.
 *
 * @param {number} layer_id - Id of the FeatureGroup whose geometry has changed.
-* @returns {boolean} Always true.
+* @returns {boolean} True when the layer was serialised; false when there is
+*                    nothing to serialise (map not built, or that layer is not
+*                    loaded) — see the guard below.
 */
 component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 	const self = this
 
-	// set the data_changed to true to control that the data was changed
-		self.is_data_changed = true
-
-	// active_layer. get the active draw data of the active_layer
-		const active_layer = self.FeatureGroup[layer_id];
+	// NOTHING TO SERIALISE. `ar_layer_loaded` is null until get_map() builds the
+	// map, and FeatureGroup[layer_id] only exists once load_layer rendered that
+	// layer. The Leaflet handlers always run inside a built map, but create_point
+	// does not: it is the programmatic entry point (the address search in
+	// view_default_edit_geolocation, and direct calls from tests), so it can
+	// arrive before either is true and the reads below would throw on null.
+	// Nothing has been loaded, so there is no live geometry to write back — and
+	// marking the component dirty here would enqueue a changed_data_item built
+	// from data it never read.
+		const active_layer = self.FeatureGroup[layer_id]
+		if (!self.ar_layer_loaded || !active_layer) {
+			return false
+		}
 
 	// current_layer. get the layer from the loaded data
 		const current_layer = self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
+		if (!current_layer) {
+			return false
+		}
+
+	// set the data_changed to true to control that the data was changed
+		self.is_data_changed = true
 
 	// layer_data. get the GeoJson of the active layer (from leaflet)
 		current_layer.layer_data = active_layer.toGeoJSON()
@@ -2262,8 +2278,8 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 *   - Recovers the layer from `ar_data_buffer` if available (supports undo after remove).
 *   - Pushes the recovered or new empty layer into `ar_layer_loaded`, renders it on
 *     the map, and persists the change via `change_value`.
-*   - After save resolves, updates `db_data.value[key]` so the in-memory DB snapshot
-*     stays consistent and avoids false dirty-state detection.
+*   - The db_data baseline is NOT touched here: save() advances it from the
+*     server's answer (component_common.save).
 *
 * 'remove' action:
 *   - Saves the layer into `ar_data_buffer[layer_id]` to enable undo recovery.
@@ -2280,7 +2296,8 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 * @param {string} change.action - 'insert' or 'remove'.
 * @param {number|string} change.tag_id - The numeric id of the affected tag (parsed to int).
 * @param {string} change.type - Always 'geo' for this component.
-* @returns {boolean} True on success; false when the layer to remove cannot be found.
+* @returns {boolean} True on success; false when the map is not built yet
+*                   (`ar_layer_loaded` still null) or the layer to remove cannot be found.
 */
 component_geolocation.prototype.layer_data_change = function(change) {
 
@@ -2291,6 +2308,19 @@ component_geolocation.prototype.layer_data_change = function(change) {
 		const layer_id		= parseInt(change.tag_id)
 		const key			= 0; // fixed key (only one element is allowed)
 		// const layer_name	= 'layer_' +layer_id
+
+	// THE MAP MAY NOT BE BUILT YET. `ar_layer_loaded` is null until get_map()
+	// clones the stored value into it, and the paired component_text_area fires
+	// its tag events as soon as its editor loads content (set_content →
+	// changeData → publish), which happens BEFORE the map is opened whenever the
+	// geolocation component is not yet activated. Without this the subscriber
+	// threw `Cannot read properties of null (reading 'find')` and the editor's
+	// change handler died mid-flight. Nothing is loaded, so there is nothing to
+	// synchronise — and writing current_value here would persist a layer set the
+	// component has not read yet. Same guard as layers_loader ('layer' branch).
+		if (!self.ar_layer_loaded) {
+			return false
+		}
 
 		switch(action) {
 
@@ -2315,13 +2345,19 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
 				const recover_changed_data = [self.build_changed_data_item(key)]
+				// (!) NO db_data SYNC HERE. save() already advances the baseline
+				// from the SERVER's answer (component_common: `db_data = clone(data)`,
+				// skipped on a degraded save on purpose). The line that used to sit
+				// in a `.then()` here wrote `db_data.value[key]` — a phantom key:
+				// this component's data carries `entries`, never `value`, so it threw
+				// `Cannot set properties of undefined` on EVERY tag insertion, inside
+				// a floating promise (an unhandled rejection, which is why the suite
+				// stayed green). Written to the real key it would be worse than
+				// useless: it would overwrite the server-confirmed baseline with local
+				// state, exactly what save() refuses to do when the record is degraded.
 				self.change_value({
 					changed_data	: recover_changed_data,
 					refresh			: false
-				})
-				.then(()=>{
-					// sync the DB snapshot after save so dirty-check sees a clean state
-					self.db_data.value[key] = clone(self.current_value[key])
 				})
 				break;
 
@@ -2357,8 +2393,8 @@ component_geolocation.prototype.layer_data_change = function(change) {
 					refresh			: false
 				})
 				.then(()=>{
-					// sync the DB snapshot after save
-					self.db_data.value[key] = clone(self.current_value[key])
+					// (!) no db_data sync — save() owns the baseline (see the insert
+					// branch above; the line here threw the same way).
 					// when the ar_layer_loaded is empty, the user has delete all tags and is necessary reset the load_layer
 
 					if(self.ar_layer_loaded.length === 0){
@@ -2393,17 +2429,29 @@ component_geolocation.prototype.layer_data_change = function(change) {
 * @param {Object} point - Coordinate pair accepted by `L.marker`.
 * @param {number} point.lat - WGS84 latitude in decimal degrees.
 * @param {number} point.lng - WGS84 longitude in decimal degrees.
-* @returns {boolean} Always true.
+* @returns {boolean} True when the point was placed; false when the map is not
+*                    built yet — see the guard below.
 */
 component_geolocation.prototype.create_point = function(point) {
 
 	const self = this
 
+	// THE MAP MAY NOT BE BUILT YET. This is the PROGRAMMATIC entry point (the
+	// address search in view_default_edit_geolocation, and direct calls from
+	// tests), so unlike the Leaflet handlers it is not guaranteed to run inside
+	// a built map: `self.map` is null until get_map() runs, and the active
+	// FeatureGroup only exists once load_layer rendered it. Placing a marker on
+	// a null map throws. Same guard as layer_data_change.
+	const active_group = self.FeatureGroup[self.active_layer_id]
+	if (!self.map || !self.ar_layer_loaded || !active_group) {
+		return false
+	}
+
 	// create new point in the coordinates
 	const new_point = L.marker(point).addTo(self.map);
 
 	// add new point to the active layer
-	self.FeatureGroup[self.active_layer_id].addLayer(new_point)
+	active_group.addLayer(new_point)
 
 	// update the layer data with the new point
 	self.update_draw_data(self.active_layer_id)

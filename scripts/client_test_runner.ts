@@ -172,28 +172,6 @@ async function reseedCanonicalTest3(phase: string): Promise<void> {
 }
 
 /**
- * Provision the "map of grapes" demo ontology (dmm480/dmm507/dmm506) that
- * `test_additional_text_area.js`'s geolocation block depends on — see
- * src/core/test_data/dmm_map_of_grapes_fixture.ts. Idempotent; pre-run only
- * (nothing in the suite mutates the ontology shape, only the record's data,
- * which this re-provisions to the same starting content each run).
- *
- * Same DB-only caveat as reseedCanonicalTest3: this runs in the SCRIPT's own
- * process, so its cache-invalidation call only clears ITS OWN in-memory
- * ontology cache, not the long-lived dev server's. The first time this
- * fixture is created against a server that already cached a negative lookup
- * for these tipos (e.g. from an earlier failed request), restart the TS
- * server once — every run after that is DB-only stable.
- */
-async function ensureMapOfGrapesFixture(): Promise<void> {
-	const { ensureMapOfGrapesFixture: ensure } = await import(
-		'../src/core/test_data/dmm_map_of_grapes_fixture.ts'
-	);
-	await ensure();
-	log('Map of grapes fixture (dmm480/507/506): ensured.');
-}
-
-/**
  * Make the run's credential true on the suite database (a no-op when it already
  * is). Guarded by the marker like every other test-data write, so it can only
  * ever touch a database that declares itself disposable.
@@ -358,7 +336,6 @@ async function main(): Promise<void> {
 		}
 		if (reseedEnabled) {
 			await reseedCanonicalTest3('pre-run');
-			await ensureMapOfGrapesFixture();
 		}
 		const target = await openTarget(suite);
 		const testUrl = target.url;

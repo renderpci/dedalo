@@ -860,8 +860,11 @@ describe(`COMPONENT_GEOLOCATION EMPTY RECORD FIRST-VALUE CREATION`, function() {
 		// and an initialised ar_layer_loaded, both provider/timing dependent here
 		instance.ar_layer_loaded	= []
 		instance.layer_control		= instance.layer_control || L.control.layers({}).addTo(instance.map)
-		// the post-save snapshot sync touches db_data.value[key]
-		instance.db_data			= instance.db_data || { value : [] }
+		// (!) NO db_data STUB. This used to seed `{value:[]}` because the insert
+		// branch's `.then()` wrote `db_data.value[key]` — a phantom key that threw
+		// on every real run (component data carries `entries`, never `value`).
+		// That line is gone: save() owns the baseline, so the stub would only
+		// hide the shape from the test.
 
 		const spy = stub_change_value(instance)
 
@@ -1627,6 +1630,152 @@ describe(`COMPONENT_GEOLOCATION SEARCH DATA OPERATIONS`, function() {
 			while (component_container.firstChild) {
 				component_container.removeChild(component_container.firstChild)
 			}
+	});
+});
+
+
+
+// THE MAP IS NOT BUILT YET
+// `ar_layer_loaded` is null until get_map() clones the stored value into it, and
+// FeatureGroup[id] only exists once load_layer rendered that layer. The observe
+// bridge does not wait for either: a paired component_text_area publishes its tag
+// events as soon as its editor loads content, which happens BEFORE the map opens
+// whenever this component is not yet activated. Every entry point that is not a
+// Leaflet handler must therefore REFUSE, not throw — a throw inside the subscriber
+// killed the editor's change handler mid-flight.
+describe(`COMPONENT_GEOLOCATION MAP NOT BUILT — the entry points refuse instead of throwing`, function() {
+
+	this.timeout(20000);
+
+
+
+	it(`layer_data_change refuses on an unbuilt map and writes nothing`, async function() {
+
+		const instance = await build_empty_instance('unbuilt_tag')
+
+		// the unbuilt shape: get_map() has not run
+		assert.isNull(instance.ar_layer_loaded, 'ar_layer_loaded expected null before get_map')
+
+		const spy = stub_change_value(instance)
+
+		const inserted = instance.layer_data_change({
+			action	: 'insert',
+			tag_id	: 7,
+			type	: 'geo'
+		})
+		const removed = instance.layer_data_change({
+			action	: 'remove',
+			tag_id	: 7,
+			type	: 'geo'
+		})
+		await tick()
+
+		assert.isFalse(inserted, 'insert expected false on an unbuilt map')
+		assert.isFalse(removed, 'remove expected false on an unbuilt map')
+		assert.equal(spy.calls.length, 0, 'expected NO save: nothing was read, so nothing may be persisted')
+		assert.isUndefined(instance.current_value[0], 'current_value expected untouched on an unbuilt map')
+		assert.isNotTrue(instance.is_data_changed, 'is_data_changed expected not set by a refused call')
+
+		spy.restore()
+		await instance.destroy(true)
+	});
+
+
+
+	it(`update_draw_data refuses on an unbuilt map and does not mark the component dirty`, async function() {
+
+		const instance = await build_empty_instance('unbuilt_draw')
+
+		const serialised = instance.update_draw_data(instance.active_layer_id)
+
+		assert.isFalse(serialised, 'update_draw_data expected false on an unbuilt map')
+		assert.isNotTrue(
+			instance.is_data_changed,
+			'is_data_changed expected NOT set: a dirty flag with nothing serialised enqueues a changed_data_item built from data never read'
+		)
+		assert.isUndefined(instance.current_value[0], 'current_value expected untouched')
+
+		await instance.destroy(true)
+	});
+
+
+
+	it(`update_draw_data refuses when the layer is absent from ar_layer_loaded`, async function() {
+
+		const instance = await build_empty_instance('unbuilt_layer')
+
+		// map built, but this layer was never loaded
+		instance.ar_layer_loaded = []
+
+		assert.isFalse(
+			instance.update_draw_data(instance.active_layer_id),
+			'update_draw_data expected false when the layer is not loaded'
+		)
+		assert.isNotTrue(instance.is_data_changed, 'is_data_changed expected not set')
+
+		await instance.destroy(true)
+	});
+
+
+
+	it(`create_point refuses on an unbuilt map`, async function() {
+
+		const instance = await build_empty_instance('unbuilt_point')
+
+		assert.isNull(instance.map, 'map expected null before get_map')
+
+		assert.isFalse(
+			instance.create_point({ lat: 41.7665, lng: -2.4790 }),
+			'create_point expected false on an unbuilt map'
+		)
+		assert.isNotTrue(instance.is_data_changed, 'is_data_changed expected not set')
+
+		await instance.destroy(true)
+	});
+
+
+
+	it(`a geo-tag insert never writes db_data.value (the phantom key)`, async function() {
+
+		// REGRESSION GATE. The insert branch used to sync `db_data.value[key]` in a
+		// floating `.then()`. Component data carries `entries`, never `value`, so it
+		// threw `Cannot set properties of undefined` on EVERY tag insertion — inside
+		// an unhandled rejection, which is why the suite stayed green. save() owns
+		// the baseline (component_common advances db_data from the SERVER's answer),
+		// so nothing here may touch it.
+		const instance	= await build_empty_instance('no_phantom_key')
+		const node		= await instance.render()
+		component_container.appendChild(node)
+
+		const map_holder = create_map_holder(component_container, 0)
+		await instance.get_map(map_holder, 0)
+
+		instance.ar_layer_loaded	= []
+		instance.layer_control		= instance.layer_control || L.control.layers({}).addTo(instance.map)
+
+		const db_data_before = instance.db_data
+
+		const spy = stub_change_value(instance)
+
+		instance.layer_data_change({
+			action	: 'insert',
+			tag_id	: 7,
+			type	: 'geo'
+		})
+		await tick()
+
+		assert.equal(spy.calls.length, 1, 'expected the insert to reach change_value')
+		assert.strictEqual(instance.db_data, db_data_before, 'db_data expected untouched by layer_data_change')
+		assert.isUndefined(
+			instance.db_data?.value,
+			'db_data.value expected undefined — the component data key is `entries`, never `value`'
+		)
+
+		spy.restore()
+		await instance.destroy(true)
+		while (component_container.firstChild) {
+			component_container.removeChild(component_container.firstChild)
+		}
 	});
 });
 

@@ -77,11 +77,37 @@ import { stripComments } from '../../test/helpers/strip_comments.ts';
 /** Repo root (this file lives at scripts/lib/tld_census.ts). */
 export const REPO_ROOT = join(import.meta.dir, '..', '..');
 
-/** The scanned tree: every test tier. */
-export const SCAN_ROOTS = ['test'] as const;
+/**
+ * THE MEASURED TREES. Every tree that can HARD-CODE an install tipo into a
+ * gate, each with the file pattern that is a gate in that tree.
+ *
+ * WIDENED 2026-08-22 from `['test']`/`*.test.ts` alone. The narrow scan was a
+ * hole the law could walk through: `client/dedalo/test/client/js/
+ * test_additional_text_area.js` bound the `dmm` install's "map of grapes" demo
+ * ontology (dmm480/dmm507/dmm506) and `src/core/test_data/
+ * dmm_map_of_grapes_fixture.ts` PROVISIONED that ontology so the binding would
+ * resolve — a client gate that read one install's shape, green here and
+ * throwing `unknown component tipo 'dmm507'` everywhere else, in full view of a
+ * census that could not see either file. A census that cannot see a tree cannot
+ * be cited as evidence about it.
+ *
+ *  - `test`                         — the unit + parity tiers (`*.test.ts`).
+ *  - `client/dedalo/test/client/js` — the browser suite (`*.js`). Same law: a
+ *    client gate binds the generic `test` TLD and the test3 playground.
+ *  - `src/core/test_data`           — the test-data WRITERS (`*.ts`). A fixture
+ *    that provisions an install's ontology is the binding, one level down.
+ *
+ * Adding a tree is a WIDENING of the measure, never of the debt: re-freeze with
+ * `--allow-regression` in the same commit and say so in the message.
+ */
+export const SCAN_ROOTS = [
+	{ root: 'test', glob: '**/*.test.ts' },
+	{ root: 'client/dedalo/test/client/js', glob: '**/*.js' },
+	{ root: 'src/core/test_data', glob: '**/*.ts' },
+] as const;
 
-/** Only test files are measured — helpers/fixtures are reached THROUGH a test. */
-export const MEASURED_SUFFIX = '.test.ts';
+/** `root/glob, …` — for the artifact's `generated_by` and failure messages. */
+export const SCAN_ROOTS_LABEL = SCAN_ROOTS.map((entry) => `${entry.root}/${entry.glob}`).join(', ');
 
 /** Excluded PATH SEGMENTS. */
 export const EXCLUDED_SEGMENTS = ['node_modules', 'fixtures'] as const;
@@ -203,8 +229,8 @@ export function deniedTldsIn(source: string): Record<string, string[]> {
 /** Scan every measured file. Deterministic order. Throws on an unreadable file. */
 export function census(): FileTldRefs[] {
 	const results: FileTldRefs[] = [];
-	for (const root of SCAN_ROOTS) {
-		const glob = new Glob(`**/*${MEASURED_SUFFIX}`);
+	for (const { root, glob: pattern } of SCAN_ROOTS) {
+		const glob = new Glob(pattern);
 		for (const rel of glob.scanSync({ cwd: join(REPO_ROOT, root) })) {
 			const abs = join(REPO_ROOT, root, rel);
 			const repoRel = toRepoRelative(abs);
@@ -220,8 +246,8 @@ export function census(): FileTldRefs[] {
 /** Files scanned (for the anti-vacuity floor), independent of hits. */
 export function scannedFileCount(): number {
 	let n = 0;
-	for (const root of SCAN_ROOTS) {
-		const glob = new Glob(`**/*${MEASURED_SUFFIX}`);
+	for (const { root, glob: pattern } of SCAN_ROOTS) {
+		const glob = new Glob(pattern);
 		for (const rel of glob.scanSync({ cwd: join(REPO_ROOT, root) })) {
 			if (!isExcluded(toRepoRelative(join(REPO_ROOT, root, rel)))) n++;
 		}

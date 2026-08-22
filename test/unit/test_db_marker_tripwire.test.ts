@@ -280,13 +280,6 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		},
 	},
 	{
-		name: 'ensureMapOfGrapesFixture',
-		run: async () =>
-			(
-				await import('../../src/core/test_data/dmm_map_of_grapes_fixture.ts')
-			).ensureMapOfGrapesFixture(),
-	},
-	{
 		name: 'ensureSuiteLoginPassword',
 		run: async () =>
 			(await import('../../src/core/test_data/suite_login.ts')).ensureSuiteLoginPassword(
