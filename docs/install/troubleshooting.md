@@ -22,6 +22,7 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | The wizard is a `404`, or refuses your address | [Booting](#booting) |
 | `502` from the proxy | [Serving](#serving) |
 | Apache: `AH01144`, or `AH01630` naming a path under `/etc/apache2` | [Serving](#serving) |
+| A client asset `404`s at a path that is not in the repo | [Serving](#serving) |
 | nginx will not start | [Serving](#serving) |
 | A big export dies after about a minute | [Serving](#serving) |
 | Uploads fail with `413` | [Serving](#serving) |
@@ -399,6 +400,50 @@ Two variants produce the same `AH01630` with a **correct-looking** path:
     ```shell
     sudo -u www-data ls /home/<site>/<clone>/client/dedalo >/dev/null
     ```
+
+### A client asset `404`s at a path that is not in the repo
+
+**Symptom.** One `/dedalo/lib/…` or `/dedalo/core/…` request fails while the page
+otherwise loads, and the body is the engine's own envelope:
+
+```json
+{"ok":false,"request_id":"…","error":{"code":"resource.not_found", …}}
+```
+
+**Cause.** That envelope means **the engine answered** — the proxy is fine. Third-
+party libraries are served through an allowlist that maps `/dedalo/lib/<id>/<path>`
+to a registered package root, and refuses anything else rather than guessing. So a
+`404` here says the requested path does not exist in this install's tree.
+
+Almost always the browser is running a **cached module from an older client**. On
+an upgrade the hostname does not change, so every returning visitor — and the
+operator testing the upgrade — carries the previous engine's module graph. Asset
+paths that moved between versions are then requested at their old location. A
+plain reload does not help: an ES-module `import` resolved inside a cached module
+is not revalidated, which is also why a `?v=` on the entry point cannot reach it.
+
+**Fix.** Confirm it is the cache before touching the server — check whether the
+requested path exists in the clone:
+
+```shell
+ls <clone>/node_modules/codex-tooltip/dist/tooltip.js   # the path the CURRENT client asks for
+grep -rn "codex-tooltip" <clone>/client/ --include="*.js"
+```
+
+If the deployed client imports a *different* path than the browser requested, the
+browser is stale. Empty the cache and hard-reload (Safari: ⌥⌘E then ⌘R; Chrome and
+Firefox: ⇧-reload with the developer tools open, or "Empty cache and hard reload").
+
+!!! note "Tell your users once, after an upgrade"
+    This is not only the operator's browser. Anyone who used the old install on the
+    same address needs one hard reload; until then they may see a half-rendered
+    interface with a console full of module errors.
+
+If the path genuinely is missing from the tree, this is not a cache problem —
+the dependencies were not installed in that clone (see
+[`Cannot find package …`](#error-cannot-find-package-zod-from-srccoreconceptsrqots)),
+or the library is not registered in the allowlist, which is a code change, not a
+configuration one.
 
 ### nginx: `unknown "dedalo_auth_key" variable`
 

@@ -550,6 +550,15 @@ sudo -u www-data test -w /run/dedalo/dedalo_ts.sock && echo "proxy can connect"
 
 A `502` on every request through the proxy, with a healthy engine on the socket, is this check failing — see [every request is a 502](troubleshooting.md#every-request-is-a-502).
 
+!!! warning "Empty your browser cache before you judge the result"
+    The address did not change, so your browser still holds the **old engine's**
+    JavaScript — and an ES-module import resolved inside a cached module is not
+    revalidated by a normal reload. The symptom is one asset `404`ing at a path
+    that exists nowhere in the new tree, which reads like a proxy fault and is not
+    ([details](troubleshooting.md#a-client-asset-404s-at-a-path-that-is-not-in-the-repo)).
+    Empty the cache and hard-reload before concluding anything about the install —
+    and tell your users to do it once, for the same reason.
+
 ## 9. When something goes wrong — data errors
 
 Most trouble is found by the deep preflight, **before** the migration. The rule for everything below is the same:
