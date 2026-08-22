@@ -25,11 +25,16 @@ import { buildInstallServerInfo } from './server_info.ts';
 /** The installer element tipo (dd1590 in the ontology; pinned by the client). */
 export const INSTALLER_TIPO = 'dd1590';
 
-/** Default-checked hierarchies (PHP install_checked_default). */
-const INSTALL_CHECKED_DEFAULT = ['es', 'fr', 'lg', 'ts', 'utoponymy'];
+/**
+ * Default-checked hierarchies (PHP install_checked_default). EXPORTED so the
+ * gate that guards it can ASK rather than keep a second copy — a tripwire
+ * mirroring an unexported constant asserts about its own literal, which is the
+ * exact defect the tripwire exists to catch.
+ */
+export const INSTALL_CHECKED_DEFAULT = ['es', 'fr', 'lg', 'ts', 'utoponymy'];
 
 /** Pre-checked defaults, restricted to what is actually installable. */
-function effectiveDefaults(): string[] {
+export function effectiveDefaults(): string[] {
 	const available = availableHierarchyTlds();
 	return INSTALL_CHECKED_DEFAULT.filter((tld) => available.has(tld));
 }

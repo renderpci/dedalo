@@ -156,6 +156,12 @@
 		"active_in_thesaurus": true
 	},
 	{
+		"tld": "cm",
+		"label": "Cameroon",
+		"typology": 2,
+		"active_in_thesaurus": true
+	},
+	{
 		"tld": "co",
 		"label": "Colombia",
 		"typology": 2,
