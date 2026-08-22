@@ -172,6 +172,49 @@ async function reseedCanonicalTest3(phase: string): Promise<void> {
 }
 
 /**
+ * Build the situations the browser suites need on the SUITE database, before a
+ * server is started (both are read through server-side caches at request time).
+ *
+ * Two suites cannot assert anything against a from-scratch suite database
+ * without them, and both used to be green only because the run drove the
+ * developer's own server on the APPLICATION database:
+ *
+ *  - `test_diffusion` needs tool_diffusion to BE AVAILABLE for the section it
+ *    renders, which means a diffusion domain named after DEDALO_DIFFUSION_DOMAIN
+ *    whose element targets `test3` (src/core/test_data/situations/client_diffusion.ts).
+ *  - `test_component_filter` needs the projects datalist to offer MORE THAN ONE
+ *    option: its cases check an unchecked box and uncheck one of two checked
+ *    ones. The install seed ships exactly one project, so on a suite database
+ *    every rendered box was already checked and there was nothing to check.
+ *
+ * Both are torn down after the run (see the finally block): they are the run's
+ * situation, not a permanent fact of the database.
+ */
+async function ensureClientSituations(): Promise<void> {
+	const { ensureClientDiffusion } = await import(
+		'../src/core/test_data/situations/client_diffusion.ts'
+	);
+	await ensureClientDiffusion();
+	const { ensureFilterProjects } = await import('../src/core/test_data/filter_projects_fixture.ts');
+	const { created } = await ensureFilterProjects();
+	log(`Client situations: diffusion domain ensured; filter projects ensured (${created} created).`);
+}
+
+/** Remove them again — the residue is REPORTED, never swallowed. */
+async function dropClientSituations(): Promise<void> {
+	const { dropClientDiffusion } = await import(
+		'../src/core/test_data/situations/client_diffusion.ts'
+	);
+	const residue = await dropClientDiffusion();
+	const { dropFilterProjects } = await import('../src/core/test_data/filter_projects_fixture.ts');
+	const removed = await dropFilterProjects();
+	log(`Client situations removed (diffusion residue ${residue}, ${removed} filter projects).`);
+	if (residue !== 0) {
+		error(`the client diffusion situation left ${residue} row(s) behind`);
+	}
+}
+
+/**
  * Make the run's credential true on the suite database (a no-op when it already
  * is). Guarded by the marker like every other test-data write, so it can only
  * ever touch a database that declares itself disposable.
@@ -197,10 +240,15 @@ async function ensureSuiteLogin(): Promise<void> {
 /**
  * Suites that are RED TODAY, each with what it actually asserts when it fails.
  *
- * MEASURED 2026-08-20 through THIS runner (which reseeds canonical test3 before
- * the run) against the :4000 dev listener: 131 suites, 131 pass, 0 fail, 0
- * pending, 0 deferred — the whole inventory runs. Two consecutive runs agree,
- * and a `--strict` run is identical because the list below is empty.
+ * MEASURED 2026-08-22 through THIS runner on its OWN server, on the dedicated
+ * SUITE database: 131 suites, 131 pass, 0 fail, 0 pending, 0 deferred — the
+ * whole inventory runs, and a `--strict` run is identical because the list below
+ * is empty. (The previous 2026-08-20 measurement was taken against the :4000 dev
+ * listener, i.e. the APPLICATION database. Moving to the suite database exposed
+ * two suites that had been reading that install's data — test_diffusion, which
+ * needed a diffusion domain covering the section it renders, and
+ * test_component_filter, which needed more than one project to check. Both now
+ * BUILD what they need: see ensureClientSituations above.)
  *
  * (!) Measure the baseline WITH the reseed. A hand-driven run against a polluted
  * test3 showed NINE failures — seven of them were leftover state from earlier
@@ -337,6 +385,10 @@ async function main(): Promise<void> {
 		if (reseedEnabled) {
 			await reseedCanonicalTest3('pre-run');
 		}
+		// BEFORE the server: it caches the diffusion map and the projects
+		// datalist per process, so a situation created afterwards would be
+		// invisible to the very requests the suites make.
+		await ensureClientSituations();
 		const target = await openTarget(suite);
 		const testUrl = target.url;
 		server = target.server;
@@ -532,6 +584,12 @@ async function main(): Promise<void> {
 	} finally {
 		if (browser) {
 			await browser.close();
+		}
+		// Never mask the test exit code with a teardown failure.
+		try {
+			await dropClientSituations();
+		} catch (err) {
+			error(`removing the client situations failed: ${(err as Error).message}`);
 		}
 		if (reseedEnabled) {
 			// Never mask the test exit code with a reseed failure.

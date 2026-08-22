@@ -14,12 +14,44 @@ import {pause} from '../../../core/common/js/utils/util.js'
 	section_container.classList.add('section_container')
 
 
+// wait_for_selector
+// The tool builds ITSELF from the server (engine advisory + get_diffusion_info)
+// after the opener's mousedown, so the publish button appears on a network
+// round-trip, not on a timer. A fixed `pause()` encoded one machine's warm-cache
+// timing: the FIRST block pays the cold section build (measured 6s here) and
+// missed a 400ms window, while blocks 2 and 3 passed on warm caches — and a
+// fixed wait long enough for the slow case makes every fast case slow. Poll
+// instead, and let the assertion (not the timeout) state the contract. The cap
+// is well above the slow case (and under each block's own 20s mocha timeout):
+// polling makes a generous cap free, and a cap that merely clears the measured
+// case turns the next slow machine into a mystery failure.
+	const wait_for_selector = async function(selector, timeout_ms=15000) {
+		const deadline = Date.now() + timeout_ms
+		while (Date.now() < deadline) {
+			const node = document.querySelector(selector)
+			if (node) {
+				return node
+			}
+			await pause(50)
+		}
+		return null
+	}
 
-describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
+
+
+// GENERIC `test` TLD ONLY (2026-08-22). This suite used to render the `rsc`
+// install's images section (rsc170/1, /2 and its list), and tool_diffusion was
+// available only because the developer's own database happened to carry a
+// diffusion domain covering it — on the suite database the map is empty, no
+// opener renders and every case fails. The situation is now BUILT:
+// src/core/test_data/situations/client_diffusion.ts provisions a domain named
+// after DEDALO_DIFFUSION_DOMAIN with one sql element whose table targets test3,
+// which is what makes tool_diffusion::is_available answer true here.
+describe(`SECTION PUBLICATION TEST`,  function() {
 
 	this.timeout(20000);
 
-	const section_tipo	= 'rsc170' // images rsc170
+	const section_tipo	= 'test3' // the generic playground section
 	const section_id	= 1;
 
 	const options = {
@@ -57,13 +89,11 @@ describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 
 	it(`Open Tool diffusion`, async function() {
 
-		await pause(100)
-
 		// The inspector's diffusion opener is a SPAN with class
 		// "button block_icon light diffusion" (render_inspector.js), not a <button>
 		// — the old `button.diffusion` selector matched nothing, which is the whole
 		// of this suite's deferral. Select on the class, tag-agnostic.
-		const button_diffusion = document.querySelector('.button.diffusion')
+		const button_diffusion = await wait_for_selector('.button.diffusion')
 
 		assert.equal(
 			(button_diffusion instanceof Element),
@@ -76,9 +106,7 @@ describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 
 	it(`Publish button renders and is confirm-gated`, async function() {
 
-		await pause(400)
-
-		const publication_button = document.querySelector('button.publication_button')
+		const publication_button = await wait_for_selector('button.publication_button')
 
 		assert.equal(
 			(publication_button instanceof Element),
@@ -116,11 +144,11 @@ describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 
 
 
-describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
+describe(`SECTION PUBLICATION RECORD 2 TEST`,  function() {
 
 	this.timeout(20000);
 
-	const section_tipo	= 'rsc170' // images rsc170
+	const section_tipo	= 'test3' // the generic playground section
 	const section_id	= 2;
 
 	const options = {
@@ -158,13 +186,11 @@ describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 
 	it(`Open Tool diffusion`, async function() {
 
-		await pause(100)
-
 		// The inspector's diffusion opener is a SPAN with class
 		// "button block_icon light diffusion" (render_inspector.js), not a <button>
 		// — the old `button.diffusion` selector matched nothing, which is the whole
 		// of this suite's deferral. Select on the class, tag-agnostic.
-		const button_diffusion = document.querySelector('.button.diffusion')
+		const button_diffusion = await wait_for_selector('.button.diffusion')
 
 		assert.equal(
 			(button_diffusion instanceof Element),
@@ -177,9 +203,7 @@ describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 
 	it(`Publish button renders and is confirm-gated`, async function() {
 
-		await pause(400)
-
-		const publication_button = document.querySelector('button.publication_button')
+		const publication_button = await wait_for_selector('button.publication_button')
 
 		assert.equal(
 			(publication_button instanceof Element),
@@ -217,11 +241,11 @@ describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 
 
 
-describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
+describe(`SECTION PUBLICATION LIST TEST`,  function() {
 
 	this.timeout(20000);
 
-	const section_tipo	= 'rsc170' // images rsc170
+	const section_tipo	= 'test3' // the generic playground section
 	const section_id	= null;
 
 	const request_config = [
@@ -230,7 +254,7 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 			"type": "main",
 			"sqo": {
 				"section_tipo": [
-					"rsc170"
+					"test3"
 				],
 				"limit": 10,
 				"offset": 0,
@@ -243,8 +267,8 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 								{
 									"name": "Id",
 									"model": "component_section_id",
-									"section_tipo": "rsc170",
-									"component_tipo": "rsc175"
+									"section_tipo": "test3",
+									"component_tipo": "test142"
 								}
 							],
 							"q_split": false,
@@ -305,10 +329,8 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 
 	it(`Open Tool diffusion`, async function() {
 
-		await pause(100)
-
 		// button tool_diffusion
-		const button_diffusion = document.querySelector('button.tool_diffusion')
+		const button_diffusion = await wait_for_selector('button.tool_diffusion')
 
 		assert.equal(
 			(button_diffusion instanceof Element),
@@ -321,9 +343,7 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 
 	it(`Publish button renders and is confirm-gated`, async function() {
 
-		await pause(400)
-
-		const publication_button = document.querySelector('button.publication_button')
+		const publication_button = await wait_for_selector('button.publication_button')
 
 		assert.equal(
 			(publication_button instanceof Element),

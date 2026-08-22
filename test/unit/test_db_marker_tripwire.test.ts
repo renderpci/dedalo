@@ -280,6 +280,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		},
 	},
 	{
+		name: 'ensureFilterProjects',
+		run: async () =>
+			(await import('../../src/core/test_data/filter_projects_fixture.ts')).ensureFilterProjects(),
+	},
+	{
+		name: 'dropFilterProjects',
+		run: async () =>
+			(await import('../../src/core/test_data/filter_projects_fixture.ts')).dropFilterProjects(),
+	},
+	{
 		name: 'ensureSuiteLoginPassword',
 		run: async () =>
 			(await import('../../src/core/test_data/suite_login.ts')).ensureSuiteLoginPassword(

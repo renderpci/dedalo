@@ -6,7 +6,6 @@
 		"client/dedalo/test/client/js/elements.js": ["zenon"],
 		"client/dedalo/test/client/js/test_api_error.js": ["oh"],
 		"client/dedalo/test/client/js/test_component_filter_records.js": ["rsc"],
-		"client/dedalo/test/client/js/test_diffusion.js": ["rsc"],
 		"client/dedalo/test/client/js/test_instances_lifecycle.js": ["oh"],
 		"client/dedalo/test/client/js/test_render_api_error.js": ["oh"],
 		"client/dedalo/test/client/js/test_tool_indexation.js": ["oh", "rsc"],
@@ -14,10 +13,10 @@
 		"test/parity/menu_differential.test.ts": ["numisdata"]
 	},
 	"summary": {
-		"files": 10,
+		"files": 9,
 		"by_tld": {
 			"oh": 5,
-			"rsc": 4,
+			"rsc": 3,
 			"numisdata": 2,
 			"sccmk": 1,
 			"tchi": 1,
