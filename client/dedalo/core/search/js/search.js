@@ -79,6 +79,7 @@
 	} from './search_user_presets.js'
 	import {is_filter_empty} from './search_utils.js'
 	import {response_data} from '../../common/js/api_error.js'
+	import {has_embed_groups} from './render_semantic.js'
 	export {is_filter_empty} from './search_utils.js'
 
 
@@ -1507,6 +1508,23 @@ search.prototype.update_state = async function(options) {
 		// hits become filter_by_locators pins + the locator_position order mode, so
 		// the normal list renders/pages them in score order and the pins COMPOSE
 		// (AND) with the structured filter above.
+			// CAPABILITY FIRST (cached probe, the same one the toolbar input's reveal
+			// gate makes, asked of the WHOLE scope). The input is hidden where no
+			// target section is semantic-searchable, but a SAVED PRESET can still
+			// carry a semantic query into an install that never implemented RAG.
+			// That is a dead field, not a failure: drop it silently — no request
+			// (which would decline and paint a red toast nobody asked for), no
+			// status flag, no chip. A stale flag from an earlier failure is also
+			// cleared here: this search supersedes it.
+			if (self.semantic.q && self.semantic.q.trim()!=='') {
+				if (self.caller?.model==='section') {
+					self.caller.semantic_status = null
+				}
+				if (!(await has_embed_groups(self.target_section_tipo))) {
+					self.semantic.q = ''
+				}
+			}
+
 			let filter_by_locators = null
 			if (self.semantic.q && self.semantic.q.trim()!=='') {
 				const hits = await self.resolve_semantic_hits()
@@ -1562,6 +1580,10 @@ search.prototype.update_state = async function(options) {
 	* searched section as scope. Returns the ranked hits array, or false on any
 	* API/transport error (the caller proceeds unpinned and flags the status).
 	* Results are ACL-gated server-side; limit is clamped server-side to [1,50].
+	*
+	* `false` means ONE thing here — the call failed. The "this install has no
+	* semantic search" case never reaches this function: exec_search asks the
+	* capability probe first (has_embed_groups) and drops the query instead.
 	*
 	* @returns {Promise<Array|false>}
 	*/

@@ -46,6 +46,11 @@ const embed_groups_cache = new Map()
 * The section's embed-group ids from dd_rag_api (cached per section_tipo).
 * Empty array ⇔ semantic search is unavailable for this section (hide the UI).
 *
+* ONLY AN ANSWER IS CACHED. A probe that did not answer (transport failure, an
+* error envelope) is forgotten, so the next caller retries: caching it would
+* conflate "this section has no embed groups" with "the probe hiccuped once"
+* and disable semantic search for the whole page life with no way back.
+*
 * @param {string} section_tipo
 * @returns {Promise<string[]>}
 */
@@ -53,6 +58,11 @@ export const get_embed_groups = function(section_tipo) {
 
 	if (embed_groups_cache.has(section_tipo)) {
 		return embed_groups_cache.get(section_tipo)
+	}
+
+	const forget = () => {
+		embed_groups_cache.delete(section_tipo)
+		return []
 	}
 
 	const js_promise = data_manager.request({
@@ -65,17 +75,50 @@ export const get_embed_groups = function(section_tipo) {
 		}
 	})
 	.then(function(api_response){
+		// data_manager resolves an error envelope too (it never rejects on one)
+		if (api_response?.ok!==true) {
+			return forget()
+		}
 		const groups = response_data(api_response)?.groups
 		return Array.isArray(groups) ? groups : []
 	})
 	.catch(function(){
-		return []
+		return forget()
 	})
 
 	embed_groups_cache.set(section_tipo, js_promise)
 
 	return js_promise
 }//end get_embed_groups
+
+
+
+/**
+* HAS_EMBED_GROUPS
+* The capability question for a SEARCH SCOPE, which is a list of sections and
+* not one: true when ANY target section is semantic-searchable. The scope sent
+* to semantic_search is the whole array, so gating on the first element alone
+* would suppress a search the server would have answered.
+*
+* An empty/absent target answers false — there is nothing to search.
+*
+* @param {string|string[]} target_section_tipo
+* @returns {Promise<boolean>}
+*/
+export const has_embed_groups = async function(target_section_tipo) {
+
+	const ar_tipo = Array.isArray(target_section_tipo)
+		? target_section_tipo
+		: (target_section_tipo ? [target_section_tipo] : [])
+
+	if (ar_tipo.length===0) {
+		return false
+	}
+
+	const ar_groups = await Promise.all(ar_tipo.map(get_embed_groups))
+
+	return ar_groups.some(groups => Array.isArray(groups) && groups.length>0)
+}//end has_embed_groups
 
 
 
