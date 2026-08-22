@@ -125,11 +125,13 @@ describe('update_ontology TLD input ownership', () => {
 	});
 
 	test('the master manifest is never applied wholesale', () => {
-		// build_row(label, tlds, empty_text, with_use_list)
-		const server_row = src.match(/const server_row = build_row\([^)]*\)/)?.[0] ?? '';
-		expect(server_row, 'the master reference row must still be built by build_row').not.toBe('');
+		// build_row(label, tlds, empty_text, with_use_list) — the call spans several
+		// lines and nests get_label parentheses, so slice it, don't regex it
+		const start = src.indexOf('const server_row = build_row(');
+		expect(start, 'the master reference row must still be built by build_row').toBeGreaterThan(-1);
+		const server_row = src.slice(start, src.indexOf('\n\t)', start));
 		expect(
-			server_row.trimEnd().endsWith('false)'),
+			server_row.trimEnd().endsWith('false'),
 			'the master row must NOT offer "Use this list": its manifest is the whole ' +
 				'ontology (200+ TLDs) and importing all of it is never what an operator means',
 		).toBe(true);

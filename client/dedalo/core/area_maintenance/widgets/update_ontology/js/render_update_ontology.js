@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEBUG */
+/*global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -197,7 +197,7 @@ const build_version_change = function (installed, incoming) {
 
 	// installed card
 		const from = ui.create_dom_element({ element_type:'div', class_name:'vcard', parent:wrap })
-		ui.create_dom_element({ element_type:'div', class_name:'lbl', inner_html:'Installed now', parent:from })
+		ui.create_dom_element({ element_type:'div', class_name:'lbl', inner_html:(get_label.update_ontology_version_installed_now || 'Installed now'), parent:from })
 		ui.create_dom_element({ element_type:'div', class_name:'num', text_content:String(installed.version || '—'), parent:from })
 		ui.create_dom_element({ element_type:'div', class_name:'src', text_content:`${installed.host || '—'} · ${fmt_date(installed.date)}`, parent:from })
 
@@ -206,7 +206,7 @@ const build_version_change = function (installed, incoming) {
 
 	// incoming card
 		const to = ui.create_dom_element({ element_type:'div', class_name:'vcard incoming', parent:wrap })
-		ui.create_dom_element({ element_type:'div', class_name:'lbl', inner_html:'Incoming', parent:to })
+		ui.create_dom_element({ element_type:'div', class_name:'lbl', inner_html:(get_label.update_ontology_version_incoming || 'Incoming'), parent:to })
 		ui.create_dom_element({ element_type:'div', class_name:'num', text_content:String((incoming && incoming.version) || '—'), parent:to })
 		ui.create_dom_element({ element_type:'div', class_name:'src', text_content:`${(incoming && incoming.host) || '—'} · ${fmt_date(incoming && incoming.date)}`, parent:to })
 
@@ -322,20 +322,20 @@ const build_tlds_reference = function (options) {
 	ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'dd_eyebrow',
-		inner_html		: 'Ontologies to update',
+		inner_html		: (get_label.update_ontology_tlds_title || 'Ontologies to update'),
 		parent			: node
 	})
 	// Two different answers, and an administrator must not confuse them: either
 	// somebody configured this installation's TLDs, or nobody did and what is
 	// shown is the engine's built-in fallback.
 	const origin_html = options.configured_by_env===true
-		? 'It starts from <code>ACTIVE_ONTOLOGY_TLDS</code> in <code>../private/.env</code> — the shared TLDs this installation tracks — always unioned with the core pair <code>ontology</code> / <code>ontologytype</code>. Change it there to change the default for everyone.'
-		: '<b><code>ACTIVE_ONTOLOGY_TLDS</code> is not set in <code>../private/.env</code></b>, so it starts from the engine\u2019s built-in fallback (below), unioned with the core pair <code>ontology</code> / <code>ontologytype</code>. Domain TLDs (<code>oh</code>, <code>ich</code>, <code>tch</code>, <code>numisdata</code>, \u2026) are per-installation: set the key to make your own set the default for everyone.'
+		? (get_label.update_ontology_tlds_origin_env || 'It starts from <code>ACTIVE_ONTOLOGY_TLDS</code> in <code>../private/.env</code> — the shared TLDs this installation tracks — always unioned with the core pair <code>ontology</code> / <code>ontologytype</code>. Change it there to change the default for everyone.')
+		: (get_label.update_ontology_tlds_origin_fallback || '<b><code>ACTIVE_ONTOLOGY_TLDS</code> is not set in <code>../private/.env</code></b>, so it starts from the engine\u2019s built-in fallback (below), unioned with the core pair <code>ontology</code> / <code>ontologytype</code>. Domain TLDs (<code>oh</code>, <code>ich</code>, <code>tch</code>, <code>numisdata</code>, \u2026) are per-installation: set the key to make your own set the default for everyone.')
 
 	ui.create_dom_element({
 		element_type	: 'p',
 		class_name		: 'dd_note',
-		inner_html		: 'The list below is yours to edit — it is remembered in this browser and is never overwritten when you pick a master. ' + origin_html,
+		inner_html		: (get_label.update_ontology_tlds_note || 'The list below is yours to edit — it is remembered in this browser and is never overwritten when you pick a master.') + ' ' + origin_html,
 		parent			: node
 	})
 
@@ -356,9 +356,10 @@ const build_tlds_reference = function (options) {
 			const selected = current.indexOf(entry.tld)!==-1
 			entry.node.classList.toggle('on', selected)
 			entry.node.setAttribute('aria-pressed', selected ? 'true' : 'false')
-			entry.node.title = selected
-				? `Remove “${entry.tld}” from the list below`
-				: `Add “${entry.tld}” to the list below`
+			entry.node.title = (selected
+				? (get_label.update_ontology_tld_remove || 'Remove “%s” from the list below')
+				: (get_label.update_ontology_tld_add || 'Add “%s” to the list below')
+			).replace('%s', entry.tld)
 		})
 	}
 
@@ -410,7 +411,7 @@ const build_tlds_reference = function (options) {
 				element_type	: 'button',
 				type			: 'button',
 				class_name		: 'light use_list',
-				inner_html		: 'Use this list',
+				inner_html		: (get_label.update_ontology_tlds_use_list || 'Use this list'),
 				parent			: head
 			})
 			: null
@@ -470,19 +471,24 @@ const build_tlds_reference = function (options) {
 	// request, so it is fetched when the operator asks for it, not on selection
 	build_row(
 		options.configured_by_env===true
-			? 'Configured in this installation'
-			: 'Engine fallback (not configured)',
+			? (get_label.update_ontology_tlds_row_configured || 'Configured in this installation')
+			: (get_label.update_ontology_tlds_row_fallback || 'Engine fallback (not configured)'),
 		configured,
-		'none',
+		(get_label.update_ontology_tlds_empty_none || 'none'),
 		true
 	)
-	const server_row = build_row('Offered by the selected master', [], 'select a master, then fetch its list', false)
+	const server_row = build_row(
+		(get_label.update_ontology_tlds_row_master || 'Offered by the selected master'),
+		[],
+		(get_label.update_ontology_tlds_empty_select_master || 'select a master, then fetch its list'),
+		false
+	)
 
 	const fetch_button = ui.create_dom_element({
 		element_type	: 'button',
 		type			: 'button',
 		class_name		: 'light fetch_list',
-		inner_html		: 'Fetch list',
+		inner_html		: (get_label.update_ontology_tlds_fetch_list || 'Fetch list'),
 		parent			: server_row.head
 	})
 	fetch_button.disabled = true
@@ -497,8 +503,15 @@ const build_tlds_reference = function (options) {
 		fetch_button.classList.add('button_spinner')
 		try {
 			const tlds = await options.fetch_server_tlds(selected_server)
-			server_row.paint(tlds || [], 'the master returned no list — check its access code')
-			server_row.set_label(`Offered by ${selected_server.name} (${(tlds || []).length})`)
+			server_row.paint(
+				tlds || [],
+				(get_label.update_ontology_tlds_empty_master_none || 'the master returned no list — check its access code')
+			)
+			server_row.set_label(
+				(get_label.update_ontology_tlds_row_master_count || 'Offered by %s (%s)')
+					.replace('%s', selected_server.name)
+					.replace('%s', String((tlds || []).length))
+			)
 		} finally {
 			fetch_button.classList.remove('button_spinner')
 			fetch_button.disabled = false
@@ -515,8 +528,8 @@ const build_tlds_reference = function (options) {
 			fetch_button.disabled = !selected_server
 			server_row.paint([])
 			server_row.set_label(selected_server
-				? `Offered by ${selected_server.name}`
-				: 'Offered by the selected master')
+				? (get_label.update_ontology_tlds_row_master_named || 'Offered by %s').replace('%s', selected_server.name)
+				: (get_label.update_ontology_tlds_row_master || 'Offered by the selected master'))
 		}
 	}
 }//end build_tlds_reference
@@ -550,13 +563,15 @@ const build_client_info = function (servers) {
 	ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'ttl',
-		inner_html		: 'Connect to a remote ontology server',
+		inner_html		: (get_label.update_ontology_connect_title || 'Connect to a remote ontology server'),
 		parent			: summary
 	})
 	ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: total>0 ? 'dd_badge pill_ok' : 'dd_badge pill_warning',
-		inner_html		: total>0 ? `${total} configured` : 'None configured',
+		inner_html		: total>0
+			? (get_label.update_ontology_connect_state_configured || '%s configured').replace('%s', String(total))
+			: (get_label.update_ontology_connect_state_none || 'None configured'),
 		parent			: summary
 	})
 
@@ -568,7 +583,7 @@ const build_client_info = function (servers) {
 	ui.create_dom_element({
 		element_type	: 'p',
 		class_name		: 'dd_note',
-		inner_html		: 'The list above is built from <code>ONTOLOGY_SERVERS</code> in <code>../private/.env</code> (one JSON array, one object per master). Add the servers you are authorized to pull from and restart the server.',
+		inner_html		: (get_label.update_ontology_connect_body || 'The list above is built from <code>ONTOLOGY_SERVERS</code> in <code>../private/.env</code> (one JSON array, one object per master). Add the servers you are authorized to pull from and restart the server.'),
 		parent			: body
 	})
 	ui.create_dom_element({
@@ -583,9 +598,9 @@ const build_client_info = function (servers) {
 		parent			: body
 	})
 	;[
-		{ k:'name', d:'Free label, only shown in the list above.' },
-		{ k:'url',  d:'The master’s JSON API endpoint, ending in <code>/dedalo/core/api/v1/json/</code>.' },
-		{ k:'code', d:'The <code>ONTOLOGY_SERVER_CODE</code> configured on THAT server. A wrong or missing code makes it answer as unreachable.' }
+		{ k:'name', d:(get_label.update_ontology_field_name_info || 'Free label, only shown in the list above.') },
+		{ k:'url',  d:(get_label.update_ontology_field_url_info || 'The master’s JSON API endpoint, ending in <code>/dedalo/core/api/v1/json/</code>.') },
+		{ k:'code', d:(get_label.update_ontology_field_code_info || 'The <code>ONTOLOGY_SERVER_CODE</code> configured on THAT server. A wrong or missing code makes it answer as unreachable.') }
 	].forEach(field => {
 		const row = ui.create_dom_element({ element_type:'div', class_name:'chk field', parent:fields })
 		ui.create_dom_element({ element_type:'span', class_name:'mark', inner_html:'·', parent:row })
@@ -629,13 +644,15 @@ const build_serving_info = function (serving) {
 	ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'ttl',
-		inner_html		: 'Serve this ontology to other installations',
+		inner_html		: (get_label.update_ontology_serve_title || 'Serve this ontology to other installations'),
 		parent			: summary
 	})
 	ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: ready ? 'dd_badge pill_ok' : 'dd_badge pill_warning',
-		inner_html		: ready ? 'Enabled' : 'Not configured',
+		inner_html		: ready
+			? (get_label.update_ontology_serve_state_on || 'Enabled')
+			: (get_label.update_ontology_serve_state_off || 'Not configured'),
 		parent			: summary
 	})
 
@@ -647,7 +664,7 @@ const build_serving_info = function (serving) {
 	ui.create_dom_element({
 		element_type	: 'p',
 		class_name		: 'dd_note',
-		inner_html		: 'This panel PULLS an ontology. To let other installations pull <i>from here</i> — they add this server to their own <code>ONTOLOGY_SERVERS</code> — configure <code>../private/.env</code> with at least these keys and restart the server.',
+		inner_html		: (get_label.update_ontology_serve_body || 'This panel PULLS an ontology. To let other installations pull <i>from here</i> — they add this server to their own <code>ONTOLOGY_SERVERS</code> — configure <code>../private/.env</code> with at least these keys and restart the server.'),
 		parent			: body
 	})
 
@@ -656,20 +673,24 @@ const build_serving_info = function (serving) {
 		{
 			ok	: serving.enabled===true,
 			k	: 'IS_AN_ONTOLOGY_SERVER',
-			v	: serving.enabled===true ? 'true' : 'not set',
-			d	: 'Opens the ontology JSON endpoint and adds the “Local files” source here.'
+			v	: serving.enabled===true ? 'true' : (get_label.update_ontology_state_not_set || 'not set'),
+			d	: (get_label.update_ontology_serve_key_server_info || 'Opens the ontology JSON endpoint and adds the “Local files” source here.')
 		},
 		{
 			ok	: serving.has_server_code===true,
 			k	: 'ONTOLOGY_SERVER_CODE',
-			v	: serving.has_server_code===true ? 'configured' : 'not set',
-			d	: 'Shared access code a client must present. Pick your own; clients store it in their ONTOLOGY_SERVERS entry.'
+			v	: serving.has_server_code===true
+				? (get_label.update_ontology_state_configured || 'configured')
+				: (get_label.update_ontology_state_not_set || 'not set'),
+			d	: (get_label.update_ontology_serve_key_code_info || 'Shared access code a client must present. Pick your own; clients store it in their ONTOLOGY_SERVERS entry.')
 		},
 		{
 			ok	: serving.cors_enabled===true,
 			k	: 'DEDALO_CORS_ALLOWED_ORIGINS',
-			v	: serving.cors_enabled===true ? 'configured' : 'not set',
-			d	: 'Clients call this server from their browser, so their origin must be allowed. <code>["*"]</code> opens it to any origin; list the client origins instead when you know them.'
+			v	: serving.cors_enabled===true
+				? (get_label.update_ontology_state_configured || 'configured')
+				: (get_label.update_ontology_state_not_set || 'not set'),
+			d	: (get_label.update_ontology_serve_key_cors_info || 'Clients call this server from their browser, so their origin must be allowed. <code>["*"]</code> opens it to any origin; list the client origins instead when you know them.')
 		}
 	]
 	const list = ui.create_dom_element({
@@ -721,7 +742,7 @@ const build_serving_info = function (serving) {
 	// the URL clients must register
 	if (serving.url) {
 		const url_row = ui.create_dom_element({ element_type:'div', class_name:'serve_url', parent:body })
-		ui.create_dom_element({ element_type:'span', class_name:'dd_k', inner_html:'Endpoint clients register', parent:url_row })
+		ui.create_dom_element({ element_type:'span', class_name:'dd_k', inner_html:(get_label.update_ontology_endpoint_register || 'Endpoint clients register'), parent:url_row })
 		ui.create_dom_element({ element_type:'code', text_content:String(serving.url), parent:url_row })
 	}
 
@@ -769,23 +790,23 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note state_danger overwrite_note',
-			inner_html		: '<b>Overwrites the local ontology.</b> Imports a snapshot from the selected master over the live ontology. Local ontology edits are lost, and this can’t be undone.',
+			inner_html		: (get_label.update_ontology_overwrite_note || '<b>Overwrites the local ontology.</b> Imports a snapshot from the selected master over the live ontology. Local ontology edits are lost, and this can’t be undone.'),
 			parent			: content_data
 		})
 
 	// b. installed ontology readout
 		const installed_section = ui.create_dom_element({ element_type:'div', class_name:'section', parent:content_data })
-		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:'Installed ontology', parent:installed_section })
+		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:(get_label.update_ontology_installed_title || 'Installed ontology'), parent:installed_section })
 		installed_section.appendChild(build_readout([
-			{ k:'Version', v:current_ontology.version, mono:true },
-			{ k:'Source',  v:current_ontology.host },
-			{ k:'Installed', v:(typeof current_ontology.date==='string' ? current_ontology.date.slice(0,10) : null) },
-			{ k:'Entity',  v:current_ontology.entity_label || current_ontology.entity }
+			{ k:(get_label.version || 'Version'), v:current_ontology.version, mono:true },
+			{ k:(get_label.source || 'Source'), v:current_ontology.host },
+			{ k:(get_label.installed || 'Installed'), v:(typeof current_ontology.date==='string' ? current_ontology.date.slice(0,10) : null) },
+			{ k:(get_label.entity_label || 'Entity'), v:current_ontology.entity_label || current_ontology.entity }
 		]))
 
 	// c. master server picker
 		const servers_section = ui.create_dom_element({ element_type:'div', class_name:'section', parent:content_data })
-		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:'Master server', parent:servers_section })
+		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:(get_label.update_ontology_master_server || 'Master server'), parent:servers_section })
 		servers_section.appendChild(render_servers_list(value))
 		servers_section.appendChild(build_client_info(servers))
 		servers_section.appendChild(build_serving_info(serving))
@@ -799,14 +820,14 @@ const get_content_data_edit = async function(self) {
 	// d. update form
 		if (self.caller?.init_form) {
 			self.caller.init_form({
-				submit_label	: 'Overwrite local ontology',
+				submit_label	: (get_label.update_ontology_submit || 'Overwrite local ontology'),
 				confirm_text	: confirm_text,
 				body_info		: content_data,
 				body_response	: body_response,
 				inputs			: [{
 					type		: 'text',
 					name		: 'active_ontology_tlds',
-					label		: 'Ontologies to update',
+					label		: (get_label.update_ontology_tlds_title || 'Ontologies to update'),
 					mandatory	: true,
 					value		: active_ontology_tlds
 				}],
@@ -876,14 +897,14 @@ const get_content_data_edit = async function(self) {
 							.filter(el => el.length>1)
 
 						if (!ar_active_ontology_tlds.length) {
-							alert('Select at least one ontology to update.')
+							alert(get_label.update_ontology_select_tld_alert || 'Select at least one ontology to update.')
 							return
 						}
 
 					// the server marked active by the radio handler
 						const server = servers.find(el => el.active === true )
 						if( !server ){
-							alert('Select a master server first.')
+							alert(get_label.update_ontology_select_server_alert || 'Select a master server first.')
 							return
 						}
 
@@ -904,7 +925,7 @@ const get_content_data_edit = async function(self) {
 								ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
-									text_content	: String(response_extension(server_ontology_api_response, 'msg') || 'Could not reach the master server.'),
+									text_content	: String(response_extension(server_ontology_api_response, 'msg') || get_label.update_ontology_unreachable_error || 'Could not reach the master server.'),
 									parent			: body_response
 								})
 							}
@@ -946,7 +967,7 @@ const get_content_data_edit = async function(self) {
 								ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
-									text_content	: String(response_extension(api_response, 'msg') || 'The ontology import failed.'),
+									text_content	: String(response_extension(api_response, 'msg') || get_label.update_ontology_import_failed || 'The ontology import failed.'),
 									parent			: body_response
 								})
 							}
@@ -957,7 +978,7 @@ const get_content_data_edit = async function(self) {
 						ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'ok',
-							inner_html		: 'Ontology updated.',
+							inner_html		: (get_label.update_ontology_done || 'Ontology updated.'),
 							parent			: body_response
 						})
 
@@ -967,7 +988,7 @@ const get_content_data_edit = async function(self) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'warning',
-								text_content	: `Your Dédalo code is older than this ontology needs (≥ ${required_version}). Update the code soon to avoid incompatibilities.`,
+								text_content	: (get_label.update_ontology_code_older || 'Your Dédalo code is older than this ontology needs (≥ %s). Update the code soon to avoid incompatibilities.').replace('%s', required_version),
 								parent			: body_response
 							})
 						}
@@ -976,7 +997,11 @@ const get_content_data_edit = async function(self) {
 						const errors = (response_extension(api_response, 'errors') || []).filter(Boolean)
 						if (errors.length>0) {
 							body_response.appendChild(
-								build_details('Import warnings ('+errors.length+')', errors.join('\n'), { open:true, pre_class:'warning' })
+								build_details(
+									(get_label.update_ontology_import_warnings || 'Import warnings (%s)').replace('%s', String(errors.length)),
+									errors.join('\n'),
+									{ open:true, pre_class:'warning' }
+								)
 							)
 						}
 
@@ -984,7 +1009,7 @@ const get_content_data_edit = async function(self) {
 						const import_log = response_extension(api_response, 'msg')
 						if (import_log) {
 							body_response.appendChild(
-								build_details('Import log', import_log, { open:true, pre_class:'log' })
+								build_details((get_label.update_ontology_import_log || 'Import log'), import_log, { open:true, pre_class:'log' })
 							)
 						}
 
@@ -993,7 +1018,11 @@ const get_content_data_edit = async function(self) {
 							delete api_response.debug.rqo_string
 						}
 						body_response.appendChild(
-							build_details('Developer response (raw JSON)', JSON.stringify(api_response, null, 2), { open:false, pre_class:'dev_json' })
+							build_details(
+								(get_label.update_ontology_dev_response || 'Developer response (raw JSON)'),
+								JSON.stringify(api_response, null, 2),
+								{ open:false, pre_class:'dev_json' }
+							)
 						)
 
 					// refresh the menu (server rebuilt its nav cache during the update)
@@ -1049,7 +1078,7 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note empty',
-			text_content	: `No master servers are configured (${env_key}).`,
+			text_content	: (get_label.update_ontology_servers_empty || 'No master servers are configured (%s).').replace('%s', env_key),
 			parent			: picker
 		})
 		return picker
@@ -1067,7 +1096,9 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 			const server_row = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: reachable ? 'server_row' : 'server_row off',
-				title			: reachable ? current_server.name : (current_server.msg || 'Unreachable'),
+				title			: reachable
+					? current_server.name
+					: (current_server.msg || get_label.update_ontology_server_unreachable || 'Unreachable'),
 				parent			: picker
 			})
 
@@ -1102,7 +1133,9 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: reachable ? 'dd_badge pill_ok' : 'dd_badge pill_danger',
-				inner_html		: reachable ? 'Reachable' : 'Unreachable',
+				inner_html		: reachable
+					? (get_label.update_ontology_server_reachable || 'Reachable')
+					: (get_label.update_ontology_server_unreachable || 'Unreachable'),
 				parent			: server_row
 			})
 	}
