@@ -194,8 +194,8 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `make_backup` | data | `make_psql_backup`, `get_dedalo_backup_files` |
 | `build_database_version` | data | `build_recovery_version_file`, `restore_dd_ontology_recovery_from_file` |
 | `update_data_version` | data | `update_data_version` |
-| `export_hierarchy` | data | `sync_hierarchy_active_status` — the export action itself is engine-denied (it writes install dump files), so the panel value reports no export path and only the sync form is offered |
-| `add_hierarchy` | data | *(read-only panel)* |
+| `export_hierarchy` | data | `sync_hierarchy_active_status`, `export_hierarchy` — the dump lands in the engine's own `install/import/hierarchy`, the directory `add_hierarchy` imports from; see [moving a hierarchy between installations](../../management/install_new_hierarchies.md#moving-a-hierarchy-between-installations) |
+| `add_hierarchy` | data | `install_hierarchies`, `reset_hierarchies` — import + activate the selected TLDs; `reset` is the destructive re-import |
 | `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang` | migration | one transform action each, named after the widget; the panel value carries the explanation body and the JSON definition files to pick from, so both halves of the `getValue` pair are wired |
 | `check_config` | config | `set_maintenance_mode`, `set_recovery_mode`, `set_notification` |
 | `config_areas` | config | `save_config_areas` |
