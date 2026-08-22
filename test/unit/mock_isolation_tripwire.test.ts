@@ -22,15 +22,31 @@
  * being trustworthy, and a real regression can hide in the noise.
  *
  * ── THE TWO RULES ────────────────────────────────────────────────────────────
- *  1. A `mock.module` factory returning an object literal must SPREAD the real
- *     module (`...real`), so the surface stays whole for every other importer —
- *     or carry a named exemption saying why it cannot.
+ *  1. A `mock.module` factory returning an object literal must not NARROW the
+ *     module's export surface: it either spreads the real module (`...real`) or
+ *     covers every one of its exports — or carries a named exemption.
  *  2. A file that installs a module mock must restore it (`mock.restore()`), or
  *     say why it does not need to.
+ *
+ * ── HOW RULE 1 IS MEASURED (rebuilt 2026-08-22) ───────────────────────────────
+ * The scan used to match `mock.module\([^,]+,` — a module-id group that CANNOT
+ * contain a comma, so every `mock.module(join(DIR, 'a', 'b'), …)` site was
+ * INVISIBLE (10 of them, the whole client-module family). Both css.js
+ * truncations lived in that blind spot and were reported as engine failures in
+ * unrelated files. The site scanner now brace-walks the argument list instead of
+ * regexing it, RESOLVES the module id (evaluating `join()` over string literals,
+ * `import.meta.dir` and file-local consts) and compares the factory's top-level
+ * keys against the REAL module's exports. That is strictly stronger than
+ * "must contain `...`": a single-export module (ui.js exports only `ui`) is
+ * whole without a spread, and a 5-export module stubbed with 1 key is caught
+ * whether or not it spreads something else.
  *
  * ── HONEST LIMITATIONS ───────────────────────────────────────────────────────
  *  - It reads SOURCE, not behaviour: a factory that spreads the wrong module
  *    passes. The rules make the common accident impossible, not every accident.
+ *  - A module id it cannot resolve statically, or one that names no file on
+ *    disk (a VIRTUAL id), has no surface to compare — those fall back to the
+ *    spread rule and are listed in the baseline with that reason.
  *  - It cannot see a global stub at all (rule 1 covers modules). The `URL` case
  *    above is prevented by review and by the comment left at that site, not by
  *    this gate — stubbing a global CONSTRUCTOR is the pattern to look for.
@@ -39,8 +55,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { isAbsolute, join, resolve } from 'node:path';
 
 const UNIT_DIR = join(import.meta.dir);
 
@@ -58,14 +74,17 @@ const UNIT_DIR = join(import.meta.dir);
  * name.
  */
 const PARTIAL_MOCK_BASELINE: readonly string[] = [
-	'client_data_model_guard.test.ts',
-	'client_tm_list_destroy_race.test.ts', // ui.js; its events.js mock WAS the proven leak, now spread
-	'client_upload_queue_render.test.ts',
-	'component_info_widget_client.test.ts',
-	'dd_tools_api_stream_headers.test.ts', // captures + re-mocks the real module
-	'record_scope_gates.test.ts', // captures + re-mocks the real module
-	'tools_record_tipo_permission.test.ts', // captures + re-mocks the real module
-	'transcription_status_panel.test.ts', // a VIRTUAL module id: no file on disk to spread
+	// Both capture the REAL module up front and re-mock it back (a restore by
+	// another name), but the stub is narrower than record_scope.ts while active.
+	'record_scope_gates.test.ts',
+	'tools_record_tipo_permission.test.ts',
+	// A VIRTUAL module id ('/virtual/…'): there is no file on disk to spread.
+	'transcription_status_panel.test.ts',
+	// (The css.js truncations in client_render_queue_deadlock and
+	// client_show_interface_ownership were FIXED, not baselined, in the same
+	// change that gave this gate its eyes — they were the two the old
+	// comma-blind regex could not see. The ui.js family left the list without
+	// any edit: ui.js has exactly ONE export, so `{ ui: … }` never narrowed it.)
 ];
 
 /** Same shape: files that install a module mock and never call `mock.restore()`. */
@@ -79,6 +98,8 @@ const NO_RESTORE_BASELINE: readonly string[] = [
 interface Site {
 	file: string;
 	body: string;
+	/** Absolute module id, or null when it could not be resolved statically. */
+	moduleId: string | null;
 }
 
 /** This file NAMES `mock.module(` in its prose and its regex; it never calls it. */
@@ -90,30 +111,173 @@ function unitFiles(): string[] {
 		.sort();
 }
 
-/** Every `mock.module(x, () => ({ … }))` site — the REPLACEMENT shape. */
+/** Split a call's argument source on TOP-LEVEL commas. */
+function splitArguments(source: string): string[] {
+	const out: string[] = [];
+	let depth = 0;
+	let current = '';
+	for (const char of source) {
+		if ('([{'.includes(char)) depth++;
+		else if (')]}'.includes(char)) depth--;
+		if (char === ',' && depth === 0) {
+			out.push(current);
+			current = '';
+			continue;
+		}
+		current += char;
+	}
+	if (current.trim() !== '') out.push(current);
+	return out;
+}
+
+/**
+ * Evaluate the tiny expression language module ids are written in: string
+ * literals, `import.meta.dir`, file-local consts and `join(...)` over those.
+ * Anything else ⇒ null (unresolvable, handled as its own class).
+ */
+function evaluatePath(expression: string, consts: Map<string, string>): string | null {
+	const text = expression.trim();
+	if (/^'[^']*'$/.test(text)) return text.slice(1, -1);
+	if (/^`[^`$]*`$/.test(text)) return text.slice(1, -1);
+	if (text === 'import.meta.dir') return UNIT_DIR;
+	const known = consts.get(text);
+	if (known !== undefined) return known;
+	const call = text.match(/^join\(([\s\S]*)\)$/);
+	if (call === null) return null;
+	const parts: string[] = [];
+	for (const argument of splitArguments(call[1] ?? '')) {
+		const value = evaluatePath(argument, consts);
+		if (value === null) return null;
+		parts.push(value);
+	}
+	return parts.length === 0 ? null : join(...parts);
+}
+
+/** File-local `const X = <path expression>` table, in source order. */
+function pathConsts(source: string): Map<string, string> {
+	const consts = new Map<string, string>();
+	for (const match of source.matchAll(
+		/const\s+([A-Za-z_$][\w$]*)\s*=\s*(join\([^;]*?\)|'[^']*'|`[^`$]*`)\s*;/g,
+	)) {
+		const value = evaluatePath(match[2] ?? '', consts);
+		if (value !== null) consts.set(match[1] as string, value);
+	}
+	return consts;
+}
+
+/** The factory object literal's TOP-LEVEL keys (nested stub shapes ignored). */
+function topLevelKeys(body: string): Set<string> {
+	const keys = new Set<string>();
+	let depth = 0;
+	for (let index = 0; index < body.length; index++) {
+		const char = body[index] as string;
+		if ('([{'.includes(char)) {
+			depth++;
+			continue;
+		}
+		if (')]}'.includes(char)) {
+			depth--;
+			continue;
+		}
+		if (depth !== 0) continue;
+		const previous = index === 0 ? ',' : (body[index - 1] as string);
+		if (!/[\s,{]/.test(previous)) continue;
+		const key = /^([A-Za-z_$][\w$]*)\s*[:,(]/.exec(body.slice(index));
+		if (key !== null) {
+			keys.add(key[1] as string);
+			index += (key[1] as string).length;
+		}
+	}
+	return keys;
+}
+
+/** Named exports of a real module (const/let/var/function/class + `export {}`). */
+function moduleExports(path: string): Set<string> {
+	const source = readFileSync(path, 'utf8');
+	const names = new Set<string>();
+	for (const match of source.matchAll(
+		/^export\s+(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/gm,
+	)) {
+		names.add(match[1] as string);
+	}
+	for (const match of source.matchAll(/^export\s*\{([^}]*)\}/gm)) {
+		for (const part of (match[1] ?? '').split(',')) {
+			const name = part
+				.trim()
+				.split(/\s+as\s+/)
+				.pop();
+			if (name !== undefined && name !== '') names.add(name);
+		}
+	}
+	return names;
+}
+
+/** Every `mock.module(<id>, () => ({ … }))` site — the REPLACEMENT shape. */
 function objectLiteralMockSites(): Site[] {
 	const sites: Site[] = [];
 	for (const file of unitFiles()) {
 		const source = readFileSync(join(UNIT_DIR, file), 'utf8');
-		for (const match of source.matchAll(
-			/mock\.module\([^,]+,\s*\(\)\s*=>\s*\(\{(.*?)\}\)\s*\)/gs,
-		)) {
-			sites.push({ file, body: match[1] ?? '' });
+		const consts = pathConsts(source);
+		let cursor = 0;
+		while (true) {
+			const start = source.indexOf('mock.module(', cursor);
+			if (start < 0) break;
+			const argsStart = start + 'mock.module('.length;
+			let depth = 1;
+			let index = argsStart;
+			while (index < source.length) {
+				const char = source[index] as string;
+				if ('([{'.includes(char)) depth++;
+				else if (')]}'.includes(char)) depth--;
+				else if (char === ',' && depth === 1) break;
+				index++;
+			}
+			cursor = argsStart;
+			if (source[index] !== ',') continue;
+			const factory = /^\s*(?:async\s*)?\(\)\s*=>\s*\(\{([\s\S]*?)\}\)\s*,?\s*\)/.exec(
+				source.slice(index + 1),
+			);
+			if (factory === null) continue;
+			sites.push({
+				file,
+				body: factory[1] ?? '',
+				moduleId: evaluatePath(source.slice(argsStart, index), consts),
+			});
 		}
 	}
 	return sites;
 }
 
+/**
+ * Does this site NARROW its module? Spread ⇒ never. Resolvable + on disk ⇒
+ * compare against the real export surface. Otherwise fall back to the spread
+ * rule, because there is no surface to compare against.
+ */
+function narrowsItsModule(site: Site): boolean {
+	if (site.body.includes('...')) return false;
+	if (site.moduleId === null) return true;
+	const absolute = isAbsolute(site.moduleId) ? site.moduleId : resolve(UNIT_DIR, site.moduleId);
+	if (!existsSync(absolute)) return true; // virtual id: nothing to spread
+	const real = moduleExports(absolute);
+	if (real.size === 0) return false; // no named exports to lose
+	const stubbed = topLevelKeys(site.body);
+	return [...real].some((name) => !stubbed.has(name));
+}
+
+/** Files whose mock narrows a module (the shrink-only offender set). */
+function narrowingFiles(): string[] {
+	return [
+		...new Set(
+			objectLiteralMockSites()
+				.filter(narrowsItsModule)
+				.map((s) => s.file),
+		),
+	].sort();
+}
+
 describe('mock isolation — one process, so a mock is everyone’s', () => {
 	test('NO NEW partial module mock (shrink-only)', () => {
-		const partial = [
-			...new Set(
-				objectLiteralMockSites()
-					.filter((site) => !site.body.includes('...'))
-					.map((site) => site.file),
-			),
-		].sort();
-		const added = partial.filter((file) => !PARTIAL_MOCK_BASELINE.includes(file));
+		const added = narrowingFiles().filter((file) => !PARTIAL_MOCK_BASELINE.includes(file));
 		expect(
 			added,
 			'A partial `mock.module` TRUNCATES that module for every other file in the tier — they fail at import with "Export named \'x\' not found", nowhere near this file. Spread the real module and override only what you stub.',
@@ -133,11 +297,7 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 	});
 
 	test('the baselines are LIVE — a stale entry is a finding, because it hides a regression', () => {
-		const partial = new Set(
-			objectLiteralMockSites()
-				.filter((site) => !site.body.includes('...'))
-				.map((site) => site.file),
-		);
+		const partial = new Set(narrowingFiles());
 		expect(
 			PARTIAL_MOCK_BASELINE.filter((file) => !partial.has(file)),
 			'fixed — delete these names in the same change that fixed them',
@@ -161,6 +321,12 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 		// 40+ files mock a module today; a scan that found none would pass every
 		// rule above while measuring nothing.
 		expect(mockers.length).toBeGreaterThan(20);
-		expect(objectLiteralMockSites().length).toBeGreaterThan(5);
+		const sites = objectLiteralMockSites();
+		expect(sites.length).toBeGreaterThan(5);
+		// THE BLIND SPOT THAT EXISTED UNTIL 2026-08-22: the old `[^,]+` module-id
+		// group could not match a call expression, so every `mock.module(join(D,
+		// 'a', 'b'), …)` site was unseen — and both real truncations lived there.
+		// The scan must keep seeing that form, and must keep RESOLVING ids.
+		expect(sites.filter((site) => site.moduleId !== null).length).toBeGreaterThan(10);
 	});
 });
