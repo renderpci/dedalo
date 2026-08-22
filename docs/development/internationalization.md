@@ -76,11 +76,11 @@ All language behaviour is configured by the `lang` domain of the typed config ca
 
 The server is a single long-lived Bun process serving many concurrent users, so "the current language" can never be a module-level value — one caller's choice would bleed into every other request. `DEDALO_APPLICATION_LANG` and `DEDALO_DATA_LANG` therefore live in a **request-scoped `AsyncLocalStorage` scope** (`src/core/resolve/request_lang.ts`):
 
-- The dispatch chokepoint (`dispatchRqo`, `src/core/api/dispatch.ts`) opens the scope once per RQO with `runWithRequestLangs({ applicationLang, dataLang }, …)`, seeded from the caller's session row.
+- The dispatch chokepoint (`dispatchRqo`, `src/core/api/dispatch.ts`) opens the scope once per RQO with `runWithRequestLangs({ applicationLang, dataLang }, …)`, seeded `session row → pre-auth `dedalo_lang` cookie → installation default`.
 - Leaf resolvers (label lookup, data reads, page globals) read the effective language through `currentApplicationLang()` / `currentDataLang()`.
 - Outside any scope (unit tests calling resolvers directly, background jobs) the accessors fall back to the installation defaults from `config` — so behavior is identical whenever no user override is in effect.
 
-The user's choice is persisted onto the session row by the `change_lang` action (`setSessionLangs()` in `src/core/security/session_store.ts`), which honors `DEDALO_DATA_LANG_SYNC` (couple the two when the install requests it). See [Runtime & request-scoped context](runtime_and_workers.md#request-scoped-ambient-state-asynclocalstorage) for the shared pattern.
+The user's choice is persisted onto the session row by the `change_lang` action (`setSessionLangs()` in `src/core/security/session_store.ts`), which honors `DEDALO_DATA_LANG_SYNC` (couple the two when the install requests it). Before login there is no session row, so the login panel's selector persists its choice to the `dedalo_lang` cookie instead (application language only, allowlisted against `DEDALO_APPLICATION_LANGS` on read, adopted onto the session at login) — see [Login → the pre-auth language cookie](../core/system/login.md#the-pre-auth-language-cookie-dedalo_lang). See [Runtime & request-scoped context](runtime_and_workers.md#request-scoped-ambient-state-asynclocalstorage) for the shared pattern.
 
 ## Plane 1 — DATA: language lives on the value
 

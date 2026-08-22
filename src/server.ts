@@ -250,6 +250,25 @@ function readCookie(cookieHeader: string, name: string): string | undefined {
 		?.slice(name.length + 1);
 }
 
+/**
+ * The PRE-AUTH LANGUAGE cookie (login-panel change_lang). Anonymous callers have no
+ * session row, so the language chosen on the login form is remembered here and read
+ * back by dispatch when seeding the request language scope.
+ *
+ *  HttpOnly     the client never reads it — page_globals already carries the lang.
+ *  Max-Age 1y   a preference, not a credential: it must survive the browser session.
+ *  Value        an install lang code, allowlisted (DEDALO_APPLICATION_LANGS) at read
+ *               time in dispatch — never trusted straight off the wire.
+ */
+const PREAUTH_LANG_COOKIE = 'dedalo_lang';
+const PREAUTH_LANG_MAX_AGE = 60 * 60 * 24 * 365;
+
+function preauthLangCookieHeader(value: string): string {
+	const attributes = ['HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${PREAUTH_LANG_MAX_AGE}`];
+	if (SESSION_COOKIE_SECURE) attributes.push('Secure');
+	return `${PREAUTH_LANG_COOKIE}=${value}; ${attributes.join('; ')}`;
+}
+
 /** Assemble the session Set-Cookie header with consistent attributes. */
 function sessionCookieHeader(value: string, options: { clear?: boolean } = {}): string {
 	const attributes = ['HttpOnly', 'SameSite=Lax', 'Path=/'];
@@ -1060,6 +1079,8 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			clientIp: clientIpFromRequest(request),
 			session: sessionToken !== undefined ? getSession(sessionToken) : null,
 			sessionToken: sessionToken ?? null,
+			// Anonymous language preference (login panel). Allowlisted in dispatch.
+			preauthLang: readCookie(cookieHeader, PREAUTH_LANG_COOKIE) ?? null,
 			// Header first; the body token is the fallback for sendBeacon, which
 			// cannot set headers (beforeunload lock release, page.js).
 			// WC-2026-08-19-rqo-body-csrf-token.
@@ -1097,6 +1118,9 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			// Logout: expire the cookie so the browser drops it (Max-Age=0). Same
 			// attributes as issuance so the browser matches and overwrites it.
 			headers.append('Set-Cookie', sessionCookieHeader('', { clear: true }));
+		}
+		if (outcome.setPreauthLangCookie !== undefined) {
+			headers.append('Set-Cookie', preauthLangCookieHeader(outcome.setPreauthLangCookie));
 		}
 		if (outcome.setMediaAuthCookie !== undefined) {
 			headers.append('Set-Cookie', mediaAuthCookieHeader(outcome.setMediaAuthCookie));

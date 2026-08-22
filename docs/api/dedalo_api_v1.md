@@ -34,7 +34,7 @@ curl -X POST \
 Every request passes through the gates in `dispatchRqo`, in this order:
 
 1. **Allowlist** — the `(dd_api, action)` pair must be explicitly registered in `ACTION_REGISTRY`; otherwise the request is refused with *"Undefined or unauthorized method (action)"*.
-2. **Authentication** — a session is required unless the action is in `NO_LOGIN_ACTIONS` (`login`, `get_environment`, `start`, `get_login_context`, plus the machine-to-machine intake and ontology/code master-server actions).
+2. **Authentication** — a session is required unless the action is in `NO_LOGIN_ACTIONS` (`login`, `get_environment`, `start`, `get_login_context`, `change_lang` (the login panel's language selector), plus the machine-to-machine intake and ontology/code master-server actions).
 3. **CSRF** — authenticated, non-exempt actions must present a valid CSRF token (constant-time compare). The exemptions are listed in `CSRF_EXEMPT_ACTIONS`. A CSRF failure answers `error.code: 'auth.csrf_failed'` (401) plus the session's current `csrf_token` — the shape the client's transparent retry keys on.
 4. **Request-scoped language** — the handler runs inside a language context (`AsyncLocalStorage`, `src/core/resolve/request_lang.ts`) seeded from the session, so a user's language choice takes effect on the next request without a caller passing it explicitly, and one caller's language never bleeds into another's request.
 5. **Per-action permission gates** — each handler resolves the caller's `Principal` and checks section/component permission levels before any DB work (read requires level ≥ 1, write ≥ 2).

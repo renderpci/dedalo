@@ -213,7 +213,9 @@ At least one must be present. Each value is validated against the language ident
 
 ### Usage
 
-State-changing and authenticated (the router already ran the CSRF gate, and the action requires a session). The choice is stored on the server-side session; every later request rebuilds with the stored language (`src/core/resolve/request_lang.ts`). The client posts here, then full-reloads.
+State-changing. For an authenticated caller the router runs the CSRF gate and the choice is stored on the server-side session; every later request rebuilds with the stored language (`src/core/resolve/request_lang.ts`). The client posts here, then full-reloads.
+
+The action is **also reachable without a session** — the login panel carries its own language selector, and there is no session row to store into before login. The server answers with the pre-auth language cookie (`dedalo_lang`, HttpOnly, one year) carrying the **application** language only — an anonymous call naming only `dedalo_data_lang` is refused (`auth.not_logged`), since there is nowhere to put it. The cookie is honored on the next anonymous request and adopted onto the session at login, so the app opens in the language the login form was switched to; **authenticated** calls refresh it too, so the two stores never disagree. The value is checked against this install's `DEDALO_APPLICATION_LANGS` when read back — a cookie naming any other language is ignored, not persisted. Divergence entry: `engineering/wire_contract/WC-2026-08-22-preauth-language-cookie.md`.
 
 ### Example Request
 

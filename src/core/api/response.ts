@@ -45,6 +45,15 @@ export interface ApiResult {
 	/** Emit an expiring Set-Cookie that clears the media-auth cookie (logout/quit). */
 	clearMediaAuthCookie?: boolean;
 	/**
+	 * PRE-AUTH LANGUAGE cookie value (change_lang from the LOGIN panel). Anonymous
+	 * callers have no session row to store the choice in, so the interface language
+	 * picked before logging in rides a cookie instead — otherwise the login page
+	 * snaps back to the install default on the reload that follows the switch.
+	 *
+	 * Handlers hand over a VALUE, never a header — server.ts owns the cookie policy.
+	 */
+	setPreauthLangCookie?: string;
+	/**
 	 * Long-lived streaming payload (diffusion SSE). When set, server.ts returns
 	 * the stream as the raw Response body with `streamHeaders` instead of
 	 * JSON-serializing `body` — the dispatch gates (auth/CSRF/allowlist) still

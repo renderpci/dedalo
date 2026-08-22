@@ -11,6 +11,7 @@ import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { DEDALO_VERSION_TRIPLE, parseVersionString } from '../../update/version.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
+import type { ApiResult } from '../response.ts';
 
 /**
  * Human-readable SQL for the SQO dev console: substitute $N placeholders with
@@ -409,8 +410,11 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// change_lang → $_SESSION['dedalo']['config']). The client's two menu
 		// selectors both post here, then full-reload; every subsequent request
 		// rebuilds with the stored language (see core/resolve/request_lang.ts).
-		// State-changing + authenticated: the router already ran the CSRF gate,
-		// and change_lang is NOT in NO_LOGIN_ACTIONS, so a session is guaranteed.
+		// State-changing: the router ran the CSRF gate for authenticated callers.
+		// A session is NOT guaranteed — the LOGIN PANEL's selector posts here too
+		// (change_lang is in NO_LOGIN_ACTIONS). With a session the choice is stored
+		// on the session row; without one it goes to the anonymous language cookie,
+		// which dispatch reads back when seeding the request language scope.
 		const options = (rqo.options ?? {}) as {
 			dedalo_application_lang?: unknown;
 			dedalo_data_lang?: unknown;
@@ -438,16 +442,43 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 				publicMessage: 'No valid language supplied',
 			});
 		}
-		if (context.sessionToken) {
+		const result: ApiResult = {
+			status: 200,
+			body: ok(true, { requestId: context.requestId }),
+		};
+		if (context.session !== null && context.sessionToken) {
 			const { setSessionLangs } = await import('../../security/session_store.ts');
 			setSessionLangs(context.sessionToken, { applicationLang, dataLang });
+		} else if (applicationLang === undefined) {
+			// Anonymous, data language only: there is nowhere to put it. The cookie
+			// carries the APPLICATION language alone (the data-lang selector is an
+			// authenticated affordance), so storing nothing while answering ok(true)
+			// would be a silent no-op — refuse loudly instead.
+			// The CODE is the accurate one — the refusal really is "no session" — and
+			// the client's relogin policy is safe on it (error_dispatch relogin()
+			// returns recovered:false when page_globals.is_logged !== true, which is
+			// exactly the login page). No publicMessage: `auth.not_logged` is
+			// disclosure:'operator', so one would be discarded by the converter.
+			throw new DedaloError('auth.not_logged', {
+				message: 'change_lang: the data language has no pre-auth store (cookie is app-lang only)',
+			});
+		}
+		if (applicationLang !== undefined) {
+			// THE COOKIE MIRRORS THE APPLICATION LANGUAGE ALWAYS, authenticated or not
+			// — not only on the anonymous branch. It is the store that OUTLIVES the
+			// session, and `login` adopts it, so a cookie left behind by the login form
+			// would otherwise reinstate itself over every later in-app choice: pick
+			// Català once on the form, set Deutsch in the menu, log out, and the next
+			// login would come back Catalan forever, with no affordance to undo it.
+			// Refreshing here keeps the two stores from disagreeing by construction.
+			result.setPreauthLangCookie = applicationLang;
 		}
 		const changed = [
 			applicationLang !== undefined ? `dedalo_application_lang to ${applicationLang}` : null,
 			dataLang !== undefined ? `dedalo_data_lang to ${dataLang}` : null,
 		].filter(Boolean);
 		console.info(`[change_lang] changed ${changed.join(', ')}`);
-		return { status: 200, body: ok(true, { requestId: context.requestId }) };
+		return result;
 	},
 	get_login_context: async (_rqo, context) => {
 		// The login form's own context request (PHP dd_utils_api::
@@ -578,6 +609,23 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// so the dispatch-level append cannot see it).
 		const { getSession } = await import('../../security/session_store.ts');
 		const freshSession = getSession(outcome.sessionToken as string);
+		// Carry the language chosen on the LOGIN PANEL into the new session, so the
+		// app opens in the language the form was just switched to instead of the
+		// install default. Through allowlistedPreauthLang — the ONE door the cookie
+		// enters by — because it is caller-controlled input.
+		const { allowlistedPreauthLang } = await import('../../resolve/request_lang.ts');
+		const adoptedLang = allowlistedPreauthLang(context.preauthLang);
+		if (adoptedLang !== null) {
+			const { setSessionLangs } = await import('../../security/session_store.ts');
+			// DEDALO_DATA_LANG_SYNC: setSessionLangs is two independent UPDATEs and
+			// applies no coupling of its own, so the sync rule is re-applied here.
+			// Without it adoption could mint a session state change_lang itself can
+			// never produce (application_lang moved, data_lang left at the default).
+			setSessionLangs(outcome.sessionToken as string, {
+				applicationLang: adoptedLang,
+				...(config.menu.dataLangSync === true ? { dataLang: adoptedLang } : {}),
+			});
+		}
 		return {
 			status: 200,
 			// `user_id` + `csrf_token` are owned top-level keys: the fresh session is

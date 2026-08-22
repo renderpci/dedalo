@@ -284,6 +284,53 @@ and verified against the source.
 | `pruneExpiredSessions()` | Delete sessions idle past the TTL. |
 | `SESSION_COOKIE` | The cookie name constant, `dedalo_ts_session`. |
 
+### The pre-auth language cookie (`dedalo_lang`)
+
+The login form has a language selector, but an anonymous caller has no session
+row to store the choice in — so before this cookie existed the form snapped back
+to the install default on the reload that follows every switch.
+
+`change_lang` is therefore in `NO_LOGIN_ACTIONS`. With a session it writes
+`setSessionLangs()` as always; whenever an APPLICATION language is named it also
+returns
+`ApiResult.setPreauthLangCookie`, which `src/server.ts` emits as `dedalo_lang`
+(HttpOnly, SameSite=Lax, Path=/, `Secure` per `SESSION_COOKIE_SECURE`,
+`Max-Age` one year — a preference, not a credential). It carries the
+**application** language only, so an anonymous call that names only the data
+language is refused (`auth.not_logged`) rather than answering OK and storing
+nothing.
+
+The cookie is refreshed by **authenticated** changes too, not only by the login
+form. It outlives the session and `login()` adopts it, so a cookie that only the
+form could move would reinstate itself over every later in-app choice: pick
+Català once on the form, set Deutsch from the menu, log out — and the next login
+would come back Catalan with no way to undo it.
+
+On a SHARED browser the cookie carries a preference across users: an
+application-language change made in the app is inherited by the next person to
+log in there, until they change it themselves. Accepted deliberately — the
+alternative makes the login form forget the choice again, which is the bug this
+exists to fix.
+
+Precedence when dispatch seeds the request language scope is
+`session → cookie → install default`: a logged-in user's session row always
+wins. The cookie is caller-controlled input, so it is read back through one
+door — `allowlistedPreauthLang()` in `src/core/resolve/request_lang.ts` — and
+only if it names a language of this install's `DEDALO_APPLICATION_LANGS` map, so
+it never reaches a lang-keyed JSONB path unvalidated. `login()` adopts it onto
+the fresh session through that same door (re-applying `DEDALO_DATA_LANG_SYNC`),
+so the app opens in the language the form was switched to.
+
+Because the anonymous branch runs before the CSRF gate — the login POST's own
+posture — a third-party page can make a browser store a `dedalo_lang`, and
+adoption carries it into the victim's next session. Accepted deliberately: the
+cookie authorizes nothing, names no record, and the whole effect is labels in the
+wrong language until the user picks another. The reasoning is in the divergence
+entry.
+
+Divergence entry: `engineering/wire_contract/WC-2026-08-22-preauth-language-cookie.md`.
+Gates: `test/unit/change_lang.test.ts`.
+
 ### Login-form context (`src/core/api/handlers/login_context.ts`)
 
 | function | purpose |
@@ -303,7 +350,8 @@ and verified against the source.
 - **The dispatch gates.** `dispatchRqo()` runs three gates per request:
   (1) the action must be in the `ACTION_REGISTRY` allowlist; (2) a session is
   required unless the action is in `NO_LOGIN_ACTIONS` (`login`,
-  `get_environment`, `start`, `get_login_context`); (3) CSRF is verified
+  `get_environment`, `start`, `get_login_context`, `change_lang` — the login
+  panel's own language selector, see below); (3) CSRF is verified
   (`verifyCsrf`) for every authenticated, non-exempt action — read and count are
   **not** exempt. A CSRF failure returns `errors:['csrf_failed']` plus the
   session's current token, so the client's single transparent retry can succeed.

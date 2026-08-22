@@ -37,6 +37,22 @@ export function runWithRequestLangs<T>(langs: RequestLangs, fn: () => T): T {
 }
 
 /**
+ * The PRE-AUTH language cookie's value, or null unless it names one of THIS
+ * install's application languages (DEDALO_APPLICATION_LANGS).
+ *
+ * THE ONE DOOR the anonymous `dedalo_lang` cookie enters by (dispatch seeds the
+ * scope with it; the login handler adopts it onto the fresh session). A cookie
+ * is caller-controlled input and the value goes on to key JSONB paths and label
+ * lookups, so it is checked against the install's own map — not merely against
+ * the lang GRAMMAR, which `all` also satisfies. Two copies of this check would
+ * be two doors, and the one that drifts is the hole.
+ */
+export function allowlistedPreauthLang(raw: string | null | undefined): string | null {
+	if (typeof raw !== 'string' || raw === '') return null;
+	return Object.hasOwn(config.lang.applicationLangs, raw) ? raw : null;
+}
+
+/**
  * The effective interface/label language for the current request, or the
  * installation default when called outside a request scope.
  */

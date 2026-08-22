@@ -75,6 +75,12 @@ export const NO_LOGIN_ACTIONS: ReadonlySet<string> = new Set([
 	'dd_core_api:get_environment',
 	'dd_core_api:start',
 	'dd_utils_api:get_login_context',
+	// The LOGIN PANEL's language selector posts change_lang before any session
+	// exists. Pre-auth by necessity: without it the choice could not be stored at
+	// all and the form snapped back to the install default on every reload. The
+	// handler persists to the session row when there is one, and to the anonymous
+	// language cookie when there is not; the value is allowlist-validated either way.
+	'dd_utils_api:change_lang',
 	// Forgot-password recovery (PHP dd_manager pre-auth whitelist): the user is
 	// locked out by definition. Anti-enumeration/throttling live in
 	// security/password_reset.ts.
@@ -453,7 +459,9 @@ async function runGatesAndHandler(rqo: Rqo, context: ApiRequestContext): Promise
 	//    lang parameter through every call. Both fall back to install defaults
 	//    when the session carries no override.
 	const { runWithRequestContext } = await import('../security/request_context.ts');
-	const { runWithRequestLangs } = await import('../resolve/request_lang.ts');
+	const { allowlistedPreauthLang, runWithRequestLangs } = await import(
+		'../resolve/request_lang.ts'
+	);
 	const result = await runWithRequestContext(
 		{
 			principal: context.principal,
@@ -464,7 +472,13 @@ async function runGatesAndHandler(rqo: Rqo, context: ApiRequestContext): Promise
 		() =>
 			runWithRequestLangs(
 				{
-					applicationLang: context.session?.applicationLang ?? config.menu.applicationLang,
+					// Session first, then the ANONYMOUS pre-auth language cookie (login
+					// panel), then the install default. allowlistedPreauthLang is the ONE
+					// door the cookie enters by (core/resolve/request_lang.ts).
+					applicationLang:
+						context.session?.applicationLang ??
+						allowlistedPreauthLang(context.preauthLang) ??
+						config.menu.applicationLang,
 					dataLang: context.session?.dataLang ?? config.menu.dataLang,
 				},
 				() => handler(rqo, context),

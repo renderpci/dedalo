@@ -29,6 +29,13 @@ export interface ApiRequestContext {
 	 * Null when the request carries no session cookie.
 	 */
 	sessionToken?: string | null;
+	/**
+	 * The pre-auth interface language carried by the anonymous language cookie
+	 * (see ApiResult.setPreauthLangCookie), or null. Used ONLY when there is no
+	 * session lang: the session row always wins once the user is logged in.
+	 * Validated against the install's DEDALO_APPLICATION_LANGS allowlist before use.
+	 */
+	preauthLang?: string | null;
 	/** Raw CSRF token from header/body, if any. */
 	csrfCandidate: string | null;
 	/** Raw X-Dedalo-Report-Token header (error-report intake spam filter,
