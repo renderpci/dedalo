@@ -36,6 +36,20 @@ import { testDatabaseName } from '../helpers/test_database.ts';
 // RELATIVE '/dedalo/media' URL shape, so the suite must never inherit that key.
 process.env.DEDALO_MEDIA_WEB_BASE = '';
 
+// SUITE-OWNED SUBSYSTEMS. The DB, the media root and the session store are already
+// pinned onto suite surfaces; these two were left aimed at whatever ../private/.env
+// configures — i.e. at the DEVELOPER'S INSTALLATION. process.env outranks .env.
+//
+// No mailbox. With a real DEDALO_SMTP_HOST the mailer skips its 'not configured'
+// branch and a unit run OPENS AN SMTP CONNECTION to the developer's mail server.
+process.env.DEDALO_SMTP_HOST = '';
+// NOT PINNED HERE: DEDALO_DIFFUSION_SCHEDULER_ENABLED. Turning dispatch off for
+// the whole tier looks tempting (the unit suite does spawn real runner
+// subprocesses), but MEASURED it reds 5 gates that legitimately exercise
+// dispatch — diffusion_dispatch_gate asserts "enabled by default" as the
+// contract itself, and diffusion_actions drives a real spawn end-to-end. A
+// gate that must not be raced has to isolate itself, not disarm the engine.
+
 if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 	const testDb = testDatabaseName();
 	const appDb = process.env.DB_NAME ?? process.env.DEDALO_DATABASE_CONN;

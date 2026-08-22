@@ -19,7 +19,11 @@ import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/r
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
-import { deleteJobsForTests, enqueueDiffusionJob } from '../../src/diffusion/jobs/queue.ts';
+import {
+	countRunningJobs,
+	deleteJobsForTests,
+	enqueueDiffusionJob,
+} from '../../src/diffusion/jobs/queue.ts';
 import {
 	isSchedulerDraining,
 	isSchedulerPaused,
@@ -222,6 +226,19 @@ describe('diffusion_server_control widget (native engine)', () => {
 	// completes on the first poll, so this asserts the whole round trip without
 	// leaving a paused scheduler or a background wait behind.
 	test('set_scheduler drain_resume: returns at once and drains an idle queue', async () => {
+		// BUILD the premise instead of assuming it. requeue_job (above) kicks
+		// schedulerTick, which CLAIMS the jobs this file enqueued and spawns real
+		// runners; with a non-empty running set drainAndResume polls at
+		// DRAIN_POLL_MS = 1000 and the 50 ms probe below reads `draining` as true
+		// for a reason that has nothing to do with the round trip under test.
+		// Remove the claimable set FIRST (an in-flight tick can otherwise re-claim
+		// between the probe and the call), then wait — bounded, and loud if it
+		// never empties. Never a longer sleep.
+		await deleteJobsForTests(createdJobIds);
+		const idle_deadline = Date.now() + 20000;
+		while ((await countRunningJobs()) > 0 && Date.now() < idle_deadline) await Bun.sleep(100);
+		expect(await countRunningJobs()).toBe(0);
+
 		const body = await call('set_scheduler', { action: 'drain_resume' });
 		expect(body.data).toBe(true);
 		expect(body.errors).toBeUndefined();

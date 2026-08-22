@@ -79,12 +79,16 @@ export function resolveSuiteDatabase(): { suiteDb: string; appDb: string } {
  * installation's value (`mht` here) was harmless while the run drove the
  * developer's server on the APPLICATION database, where that term is a real
  * 75-node domain reaching section rsc170. On the SUITE database the same term
- * resolves to a truncated clone (`test5941`, three nodes, no table children):
- * the domain is FOUND, the section map comes back EMPTY, `haveSectionDiffusion`
- * is false for every section, `tool_diffusion` is unavailable, and the inspector
- * never draws the opener — which surfaced as six mystery DOM assertions in
- * `test_diffusion`. The suite's diffusion answer must not be a property of the
- * developer's machine.
+ * resolved to a truncated clone (`test5941`, three nodes, no table children):
+ * the domain was FOUND, the section map came back EMPTY, `haveSectionDiffusion`
+ * false for every section, `tool_diffusion` unavailable, and the inspector never
+ * drew the opener — six mystery DOM assertions in `test_diffusion`. That clone
+ * no longer carries an install's name (2026-08-22: every cloned diffusion_domain
+ * term is now tipo-derived, `<tipo> domain` — the term IS the identifier
+ * resolveDomainTipo matches on, so an install name in the generic TLD is a
+ * collision by construction; gate: test_tld_ontology_gate), which removes the
+ * collision but not the reason for the pin: the suite's diffusion answer must
+ * not be a property of the developer's machine.
  *
  * `test` is the generic `test`-TLD domain (`test43`) that ships in
  * src/core/test_data/test_tld_ontology.json — repo-owned, materialized by

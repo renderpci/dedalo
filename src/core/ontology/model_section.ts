@@ -136,14 +136,19 @@ registerOntologyCacheClearer(clearModelSectionCaches);
 // rebuilds the pairing map. ONE listener consulting the derived family
 // instead of one registration per section: the family itself is dynamic
 // (an ontology write may add a registry section) and the listener channel
-// has no unregister. Family not cached ⇒ the pairing map was never built
-// this epoch (its build derives the family first) ⇒ clearing is a free
-// no-op that keeps correctness independent of that reasoning.
+// has no unregister.
 registerSectionDataListener((sectionTipo) => {
 	const family = registryFamilyCache.get('family');
-	if (family === undefined || family.some((entry) => entry.sectionTipo === sectionTipo)) {
-		clearModelSectionCaches();
-	}
+	// Family not cached ⇒ the pairing map was never built this epoch (its build
+	// derives the family FIRST, and getModelSectionRegistryFamily is the sole
+	// writer of the 'family' key) ⇒ there is nothing to invalidate. This must
+	// be a real early return, not a "free" clear: clearModelSectionCaches
+	// BROADCASTS to pairingChangeListeners, so clearing here wiped the whole
+	// relations datalist cache on every save to any unrelated section for as
+	// long as the family stayed unwarmed. A second writer of the 'family' key
+	// would silently break this reasoning.
+	if (family === undefined) return;
+	if (family.some((entry) => entry.sectionTipo === sectionTipo)) clearModelSectionCaches();
 });
 
 /**

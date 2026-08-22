@@ -35,7 +35,14 @@ const CLIENT_CORE = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core'
 mock.module(join(CLIENT_CORE, 'common', 'js', 'ui.js'), () => ({
 	ui: { create_dom_element: () => make_node(), activate_tooltips: () => {} },
 }));
-mock.module(join(CLIENT_CORE, 'page', 'js', 'css.js'), () => ({ get_inserted_rules: () => [] }));
+// SPREAD, never truncate: mock.module is process-global and is NOT undone by
+// mock.restore(), so a one-export factory here TRUNCATES css.js for the whole
+// tier and every later file importing component_common.js dies at its
+// `import { set_element_css } from '../../page/js/css.js'`. css.js is inert at
+// import (a Map), so capturing the real module costs nothing.
+const CSS_PATH = join(CLIENT_CORE, 'page', 'js', 'css.js');
+const real_css = await import(CSS_PATH);
+mock.module(CSS_PATH, () => ({ ...real_css, get_inserted_rules: () => [] }));
 
 const saved_globals: Record<string, unknown> = {};
 const g = globalThis as Record<string, any>;

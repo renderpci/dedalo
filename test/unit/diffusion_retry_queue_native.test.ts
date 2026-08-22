@@ -5,9 +5,11 @@
  * type 'unknown' in this database, so a retry bound to them would never reach
  * the sql branch at all.
  *
- * ISOLATION. DIFFUSION_ACTIVITY_TABLE is pinned (before the module import,
- * where the const is computed) to a table private to this file and its twin
- * diffusion_delete_outcomes_native.test.ts. This matters more here than
+ * ISOLATION. DIFFUSION_ACTIVITY_TABLE is pinned to a table private to this
+ * file and its twin diffusion_delete_outcomes_native.test.ts (the engine
+ * resolves the name per call — activityTable() — so the pin no longer depends
+ * on this file winning the module-registry race, which in one shared process
+ * it never could). This matters more here than
  * anywhere else: retryPendingDiffusion's SELECT is UNFILTERED — it re-runs
  * EVERY pending row of the table it is pointed at, and would otherwise both
  * flip foreign rows and make `total`/ordering assertions satisfiable by rows
@@ -29,22 +31,19 @@ import {
 } from '../helpers/zzd_diffusion_fixture.ts';
 
 const SCRATCH_ACTIVITY_TABLE = 'dedalo_ts_test_zzd_activity';
+const DIFFUSION_ACTIVITY_TABLE = SCRATCH_ACTIVITY_TABLE;
+const PRELOAD_ACTIVITY_TABLE = process.env.DIFFUSION_ACTIVITY_TABLE;
 process.env.DIFFUSION_ACTIVITY_TABLE = SCRATCH_ACTIVITY_TABLE;
 
-const {
+import {
+	activityTable,
 	DIFFUSION_ACTION,
-	DIFFUSION_ACTIVITY_TABLE,
 	deleteDiffusionRecord,
 	logDiffusionActivity,
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
 	retryPendingDiffusion,
-} = await import('../../src/core/diffusion_bridge/diffusion_delete.ts');
-if (DIFFUSION_ACTIVITY_TABLE !== SCRATCH_ACTIVITY_TABLE) {
-	throw new Error(
-		`activity-table seam not applied (got '${DIFFUSION_ACTIVITY_TABLE}') — diffusion_delete.ts was imported before the override`,
-	);
-}
+} from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 
 /** Marker written into dd1765 by the rows this file inserts by hand. */
 const RAW_MARKER = 'zzd_raw_probe';
@@ -96,6 +95,9 @@ async function purgeScratchActivityRows(): Promise<void> {
 }
 
 beforeAll(async () => {
+	// The seam must be the one this file pinned, or every row assertion below
+	// would be measured against a table other files also write.
+	expect(activityTable()).toBe(SCRATCH_ACTIVITY_TABLE);
 	// materialize the private table through the module's own bootstrap
 	await retryPendingDiffusion(1);
 	const { preCount } = await seedZzdOntology();
@@ -126,6 +128,10 @@ afterAll(async () => {
 	expect(residue[0]?.n).toBe(0);
 	await dropZzdOntology();
 	expect(await countZzdOntology()).toBe(0);
+	// Call-time resolution means the pin would otherwise bleed into every later
+	// file in this process — hand the preload's table back.
+	if (PRELOAD_ACTIVITY_TABLE === undefined) delete process.env.DIFFUSION_ACTIVITY_TABLE;
+	else process.env.DIFFUSION_ACTIVITY_TABLE = PRELOAD_ACTIVITY_TABLE;
 });
 
 describe('logDiffusionActivity — the dd1758 row shape', () => {

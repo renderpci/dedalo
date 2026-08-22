@@ -10,7 +10,6 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import {
 	dispatchGetWidgetValue,
@@ -20,7 +19,10 @@ import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { login } from '../../src/core/security/auth.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { hasPhpCredentials } from '../parity/php_client.ts';
+import {
+	ensureSuiteLoginPassword,
+	SUITE_LOGIN_PASSWORD,
+} from '../../src/core/test_data/suite_login.ts';
 
 const STATE_PATH = readEnv('DEDALO_TS_STATE_PATH');
 if (STATE_PATH === undefined) {
@@ -98,30 +100,27 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		expect(bad.code).toBe('maintenance.action_refused');
 	});
 
-	// Gated at collection time (loud skip, S2-40) — needs the real root credentials.
-	test.if(hasPhpCredentials())(
-		'maintenance mode refuses non-superuser logins; superuser passes',
-		async () => {
-			setServerState({ maintenance_mode: true });
-			try {
-				// a non-existent user under maintenance still gets the ambiguous
-				// failure (the gate must not leak account existence)…
-				const stranger = await login('no_such_user_zz', 'x', '127.0.0.1');
-				expect(stranger.ok).toBe(false);
+	// BUILDS its credential: the old shape logged in with config.phpReference.*
+	// (the APPLICATION install's password) against the suite database, whose seed
+	// ships root with no password — one database's secret tried on another. No
+	// oracle gating is needed any more, so the case always runs.
+	test('maintenance mode refuses non-superuser logins; superuser passes', async () => {
+		await ensureSuiteLoginPassword('root', SUITE_LOGIN_PASSWORD);
+		setServerState({ maintenance_mode: true });
+		try {
+			// a non-existent user under maintenance still gets the ambiguous
+			// failure (the gate must not leak account existence)…
+			const stranger = await login('no_such_user_zz', 'x', '127.0.0.1');
+			expect(stranger.ok).toBe(false);
 
-				// …and the SUPERUSER may still log in
-				const root = await login(
-					config.phpReference.username as string,
-					config.phpReference.password as string,
-					'127.0.0.1',
-				);
-				expect(root.ok).toBe(true);
-				expect(root.userId).toBe(-1);
-			} finally {
-				setServerState({ maintenance_mode: false });
-			}
-		},
-	);
+			// …and the SUPERUSER may still log in
+			const root = await login('root', SUITE_LOGIN_PASSWORD, '127.0.0.1');
+			expect(root.ok).toBe(true);
+			expect(root.userId).toBe(-1);
+		} finally {
+			setServerState({ maintenance_mode: false });
+		}
+	});
 
 	test('check_config.get_value reports the TS config sources + db status', async () => {
 		const body = (await dispatchGetWidgetValue(ADMIN, {

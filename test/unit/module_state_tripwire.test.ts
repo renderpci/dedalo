@@ -179,11 +179,6 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// executor above): boot-registered marker-store ops functions, never
 	// request identity.
 	'core/diffusion_bridge/diffusion_delete.ts:nativeMediaIndexOps',
-	// dd1758 activity-table seam: the scratch-table bootstrap memo (the
-	// diffusion/jobs/schema.ts:ensured twin) — a process-lifecycle DDL latch,
-	// only ever non-null under the test-only DIFFUSION_ACTIVITY_TABLE override;
-	// no request identity.
-	'core/diffusion_bridge/diffusion_delete.ts:activityTableEnsured',
 	// Scheduler pause switch (admin flow control via the diffusion_server_control
 	// widget) — process-wide operational state, no request identity.
 	'diffusion/jobs/scheduler.ts:paused',
@@ -244,6 +239,14 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// module loads, never cleared by design, and its members are code-authored
 	// callbacks that carry no request identity.
 	'core/ontology/model_section.ts:pairingChangeListeners',
+	// dd1758 activity-table seam: the scratch-table bootstrap latch (the
+	// diffusion/jobs/schema.ts:ensured twin), keyed by RESOLVED table name —
+	// the table is resolved per call now, so one latch per name. A
+	// process-lifecycle DDL memo, only ever populated under the test-only
+	// DIFFUSION_ACTIVITY_TABLE override; no request identity. Cleared by
+	// nobody on purpose: a created table stays created for the process, and a
+	// failed bootstrap deletes its own entry so the next call retries.
+	'core/diffusion_bridge/diffusion_delete.ts:activityTableEnsured',
 	// section_id coercion WARN sampler (WC-2026-08-10-section-id-int-canonical
 	// D10): per-door tallies deciding which coercions log (first + every
 	// 1000th). Process-lifetime like api/counters itself, request-independent

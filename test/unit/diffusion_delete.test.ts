@@ -16,7 +16,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import {
-	DIFFUSION_ACTIVITY_TABLE,
+	activityTable,
 	deleteDiffusionRecord,
 	type NativeSqlDeleteTarget,
 	registerNativeDiffusionSqlDelete,
@@ -54,7 +54,7 @@ afterAll(async () => {
 	const { sql } = await import('../../src/core/db/postgres.ts');
 	for (const probeId of ['999998', '999999']) {
 		await sql.unsafe(
-			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			`DELETE FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1763' @> $1::text::jsonb`,
 			[JSON.stringify([{ section_id: Number(probeId), section_tipo: SQL_SECTION }])],
@@ -130,7 +130,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 		const { sql } = await import('../../src/core/db/postgres.ts');
 		for (const id of rowIds) {
 			await sql.unsafe(
-				`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}" WHERE section_tipo = 'dd1758' AND section_id = $1`,
+				`DELETE FROM "${activityTable()}" WHERE section_tipo = 'dd1758' AND section_id = $1`,
 				[id],
 			);
 		}
@@ -149,12 +149,12 @@ describe('diffusion pending retry queue (dd1758)', () => {
 		// pending rows older than our probe rows starve the oldest-first
 		// LIMIT in retryPendingDiffusion (the ledgered intermittent).
 		await sql.unsafe(
-			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			`DELETE FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1767' @> '[{"diffusion_action":3,"section_tipo":"dd1774"}]'`,
 		);
 		await sql.unsafe(
-			`DELETE FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			`DELETE FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758' AND relation->'dd1763' @> $1::text::jsonb`,
 			[JSON.stringify([{ section_id: PROBE_ID, section_tipo: SQL_SECTION }])],
 		);
@@ -172,7 +172,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 			`SELECT section_id, relation->'dd1766'->0->>'section_tipo' AS element_section,
 			        string->'dd1765'->0->>'value' AS where_tipo,
 			        number->'dd1764'->0->'value' AS record_id
-			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			 FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758'
 			   AND relation->'dd1767' @> '[{"diffusion_action":3,"section_tipo":"dd1774"}]'
 			   AND relation->'dd1763' @> '[{"section_id":987654,"section_tipo":"test3"}]'
@@ -196,7 +196,7 @@ describe('diffusion pending retry queue (dd1758)', () => {
 
 		const flipped = (await sql.unsafe(
 			`SELECT relation->'dd1767'->0->>'diffusion_action' AS action
-			 FROM "${DIFFUSION_ACTIVITY_TABLE}"
+			 FROM "${activityTable()}"
 			 WHERE section_tipo = 'dd1758' AND section_id = ANY($1::int[])`,
 			[`{${rowIds.join(',')}}`],
 		)) as { action: string }[];

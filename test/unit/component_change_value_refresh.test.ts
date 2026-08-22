@@ -27,9 +27,24 @@
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { join } from 'node:path';
 import { plugin } from 'bun';
 
-const REPO = '/Users/paco/Trabajos/Dedalo/v7/master_dedalo';
+// Repo root derived from this file's location — never a checkout-specific
+// literal. (The literal was another machine's checkout, so on any other clone
+// the file did not load at all and bun reported it as an unnamed failure.)
+// STILL RED after this fix, for an unrelated and newly measured reason: on
+// Bun 1.3.9 a plugin-resolved ON-DISK path fails to load with
+// `ENOENT reading "file:…/client_module_stubs/utils_index.js"` on a file that
+// exists (note the single-slash `file:` scheme — bun builds a malformed URL
+// from the returned path), so the leaf-stub redirect below never serves
+// anything. Re-measured 2026-08-22: adding `namespace: 'file'` and returning a
+// round-tripped file URL both fail IDENTICALLY, so it is not the call shape. The durable
+// cure is process isolation (this gate's stubs are process-global whichever
+// mechanism serves them: a mock.module version measured 8/8 alone but starved
+// component_info_widget_client.test.ts — which needs the REAL data_manager —
+// into a hang), not a looser assertion.
+const REPO = join(import.meta.dir, '..', '..');
 const COMPONENT_COMMON_PATH = `${REPO}/client/dedalo/core/component_common/js/component_common.js`;
 const COMMON_PATH = `${REPO}/client/dedalo/core/common/js/common.js`;
 const STUBS = `${REPO}/test/unit/fixtures/client_module_stubs`;

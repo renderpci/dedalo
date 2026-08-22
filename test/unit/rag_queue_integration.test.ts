@@ -7,18 +7,26 @@ import {
 	fireRagRecordEvent,
 	registerRagRecordHook,
 } from '../../src/core/section_record/save_event.ts';
+import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 
 /**
- * Queue mechanics + the save-hook seam against the REAL matrix DB (dedalo7_mib),
- * Brick 3. Exercises the actual `rag_index_queue` table, the advisory-lock drain
- * on a reserved connection, and the record-write → enqueue wiring. Uses a unique
- * synthetic section so it never collides with real data; cleans up after itself.
+ * Queue mechanics + the save-hook seam against the SUITE matrix DB, Brick 3.
+ * Exercises the actual `rag_index_queue` table, the advisory-lock drain on a
+ * reserved connection, and the record-write → enqueue wiring.
+ *
+ * clean() OWNS THE WHOLE TABLE, not just this file's rows. drain() is global by
+ * contract — it processes every ready marker — so a section-scoped clean left
+ * `result.processed` counting whatever markers sibling gates had enqueued in the
+ * same run (measured: 2 own + 10 foreign = 12). Table-wide is what makes
+ * `processed === 2` a statement about the ENGINE. Safe because the suite
+ * database is marked and disposable; assertTestDatabase refuses any other.
  */
 
-const TEST_SECTION = 'ragqueueitest99';
+const TEST_SECTION = 'test99ragqueue';
 
 async function clean(): Promise<void> {
-	await sql.unsafe('DELETE FROM rag_index_queue WHERE section_tipo = $1', [TEST_SECTION]);
+	await assertTestDatabase('rag_queue_integration.clean');
+	await sql.unsafe('DELETE FROM rag_index_queue');
 }
 
 async function rowsFor(): Promise<{ section_id: number; op: string; attempts: number }[]> {
@@ -53,7 +61,7 @@ afterAll(async () => {
 	// Do NOT close the shared matrix `sql` pool (other suites use it).
 });
 
-describe('rag queue (dedalo7_mib rag_index_queue)', () => {
+describe('rag queue (suite rag_index_queue)', () => {
 	test('enqueue → drain indexes ready markers and removes them', async () => {
 		const seen: RecordLocator[] = [];
 		const queue = new RagQueue(defaultMatrixQueryer()).setIndexer(spyIndexer(true, seen));

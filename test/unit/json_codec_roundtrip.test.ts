@@ -13,28 +13,58 @@
  * values (undefined / NaN / Infinity).
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import {
+	dropTestCorpus,
+	ensureTestCorpus,
+	loadTestCorpus,
+	testCorpusResidue,
+} from '../../src/core/test_data/test_corpus/ensure.ts';
 
-/** How many rows to sample per table. Broad but fast. */
-const SAMPLE_SIZE = 150;
+// The rows this gate reads are the ones it PROVISIONS. It used to sample
+// `matrix WHERE id % 37 = 0` — whatever records the ambient database happened
+// to hold — and floor the sample at >50: on a suite database built from the
+// definitions-only seed that query returns ZERO rows, so the floor measured the
+// fixture. The repo-owned corpus is the situation, and its own record count is
+// the floor.
+beforeAll(async () => {
+	await ensureTestCorpus();
+});
+afterAll(async () => {
+	await dropTestCorpus();
+	expect(await testCorpusResidue()).toBe(0);
+});
+
+/** Every (table, section_tipo, section_id) the corpus declares. */
+function corpusRecords(): { table: string; section_tipo: string; section_id: number }[] {
+	const rows: { table: string; section_tipo: string; section_id: number }[] = [];
+	for (const section of loadTestCorpus()) {
+		for (const record of section.records) {
+			rows.push({
+				table: section.table,
+				section_tipo: section.section_tipo,
+				section_id: record.section_id,
+			});
+		}
+	}
+	return rows;
+}
 
 describe('json_codec round-trip against real data (Phase 2 gate)', () => {
-	test(`parse→stringify→jsonb is canonical-text-identical over ${SAMPLE_SIZE} real rows`, async () => {
-		// Random-ish spread: order by id with a modulo bucket to cross sections.
-		const rows = (await sql.unsafe(
-			'SELECT section_tipo, section_id FROM matrix WHERE id % 37 = 0 ORDER BY id LIMIT $1',
-			[SAMPLE_SIZE],
-		)) as { section_tipo: string; section_id: number }[];
-		expect(rows.length).toBeGreaterThan(50);
+	test('parse→stringify→jsonb is canonical-text-identical over every corpus row', async () => {
+		const rows = corpusRecords();
+		// Non-vacuity: the corpus's OWN size, so an empty or shrunken corpus
+		// reddens instead of passing on nothing.
+		expect(rows.length).toBeGreaterThan(100);
 
 		let checkedColumns = 0;
 		const failures: string[] = [];
 
-		for (const { section_tipo, section_id } of rows) {
-			const record = await readMatrixRecord('matrix', section_tipo, section_id);
+		for (const { table, section_tipo, section_id } of rows) {
+			const record = await readMatrixRecord(table, section_tipo, section_id);
 			if (!record) continue;
 			for (const column of MATRIX_JSONB_COLUMNS) {
 				const originalText = record.rawText[column];

@@ -262,6 +262,12 @@ describe('agent loop — RAG tools (2026-07-22 scope/group + passages)', () => {
 		const provider = new ScriptedProvider(
 			ragScript('dedalo_semantic_search', {
 				query: 'anything',
+				// SCOPED like its siblings. Unscoped, the search fuses whatever the
+				// ambient vector store holds — an installation's records, whose
+				// section_tipo need not exist in the suite ontology; the ACL gate then
+				// throws and the tool result is an error for a reason that has nothing
+				// to do with the slug this gate is about.
+				section_tipo: 'test3',
 				group: 'NOT A SLUG!',
 				limit: 2,
 			}),

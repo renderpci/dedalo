@@ -27,10 +27,19 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { join } from 'node:path';
 import { plugin } from 'bun';
 
-const RENDER_PATH =
-	'/Users/paco/Trabajos/Dedalo/v7/master_dedalo/tools/tool_transcription/js/render_transcription_status.js';
+// Path derived from this file's location — never a checkout-specific literal.
+const RENDER_PATH = join(
+	import.meta.dir,
+	'..',
+	'..',
+	'tools',
+	'tool_transcription',
+	'js',
+	'render_transcription_status.js',
+);
 
 // ────────────────────────────────────────────────────────────────────────────
 // A DOM stub with exactly the surface this panel touches

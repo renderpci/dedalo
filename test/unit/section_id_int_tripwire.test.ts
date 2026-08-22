@@ -59,8 +59,19 @@ const WRITER_EXEMPTIONS = new Map<string, { max: number; law: string }>([
 	['src/core/diffusion_bridge/diffusion_delete.ts', { max: 1, law: 'legacy probe leg' }],
 	// Diffusion → MariaDB published bytes: external consumers, publication v1
 	// PHP LIKE-probes the quoted form. Pinned edge, never "fixed".
-	['src/diffusion/resolve/rewriters.ts', { max: 2, law: 'MariaDB published shape' }],
-	['src/diffusion/resolve/resolver.ts', { max: 1, law: 'MariaDB published shape' }],
+	// Census refresh 2026-08-22 (WC entry addendum): fa11f2e440, 2026-08-13,
+	// added legs INSIDE these already-named classes — the v6 index-edge
+	// projection (rewriters 390/410), the pinned published-shape coercion
+	// (resolver 846), the root-parent / relation-list StoredLocators that feed
+	// the same publish (resolver 1349/1676), and the STRING leg of the
+	// rootHierarchyParentId DUAL PROBE (resolver 1280, a read-tolerance pair —
+	// same class as containment.ts, and the one leg here that DIES at
+	// contraction, unlike the published shape which never does).
+	['src/diffusion/resolve/rewriters.ts', { max: 4, law: 'MariaDB published shape' }],
+	[
+		'src/diffusion/resolve/resolver.ts',
+		{ max: 4, law: 'MariaDB published shape + dual-probe variant' },
+	],
 	['src/diffusion/writers/markdown.ts', { max: 1, law: 'frontmatter published shape' }],
 	// dedalo_ts_component_locks text-column KEY normalization (D14, tables only).
 	['src/core/section/locks.ts', { max: 1, law: 'locks text-table key' }],
