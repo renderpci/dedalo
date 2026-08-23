@@ -27,8 +27,16 @@ import { z } from 'zod';
 /** Tipo strings are strictly `letters+digits` — this regex IS the §7.6 gate shape. */
 export const TIPO_PATTERN = /^[a-z]+[0-9]+$/;
 
-/** Language codes: 'lg-*' or the 'all' sentinel — §7.6 gate shape. */
-export const LANG_PATTERN = /^(lg-[a-z0-9_]+|all)$/;
+/**
+ * Language codes: 'lg-*' or the 'all' sentinel — §7.6 gate shape.
+ *
+ * RE-EXPORTED, not redefined. The definition moved down to the leaf
+ * `src/config/lang_code.ts` because `src/config/` may not import `src/core/`
+ * and config now has to validate lang codes itself. Every existing importer
+ * keeps working through this name; there is exactly ONE copy of the regex
+ * ("link, never duplicate").
+ */
+export { isValidLang, LANG_PATTERN } from '../../config/lang_code.ts';
 
 export const tipoSchema = z.string().regex(TIPO_PATTERN, 'invalid ontology tipo');
 export type Tipo = z.infer<typeof tipoSchema>;
@@ -45,11 +53,6 @@ export function isValidTipo(candidate: string): boolean {
 	return (
 		candidate.length >= 2 && candidate.length <= MAX_TIPO_LENGTH && TIPO_PATTERN.test(candidate)
 	);
-}
-
-/** Validate a language code (used by the search identifier chokepoint, §7.6). */
-export function isValidLang(candidate: string): boolean {
-	return LANG_PATTERN.test(candidate);
 }
 
 /**

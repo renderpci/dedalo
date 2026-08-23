@@ -50,6 +50,10 @@ const MARIADB_TARGET_PREFIX = 'diffusion/targets/mariadb/';
 const DIFFUSION_IMPORT_SEAMS = new Set([
 	'core/api/handlers/dd_diffusion_api.ts',
 	'core/area_maintenance/widgets/diffusion_server_control.ts',
+	// The check_config published-language coherence row: it reads the audit through
+	// the diffusion FACADE (src/diffusion/api/) only, the same shape as the other
+	// widget seam above. Listed so widening the boundary stays a deliberate act.
+	'core/area_maintenance/widgets/check_config.ts',
 	'core/install/db_probe.ts',
 ]);
 const DISPATCH_SEAM = 'core/api/handlers/dd_diffusion_api.ts';

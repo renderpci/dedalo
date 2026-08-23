@@ -177,11 +177,14 @@ Local ontologies can be provided by other installations in parallel by adding ne
 entries to this list. Every Dédalo server can provide its own ontologies.`,
 	},
 	STRUCTURE_FROM_SERVER: {
+		// Tri-state: UNSET is not the same as 'false' (the reader branches on all
+		// three), so type:'string' is right and the 'bool' LABEL was the lie.
 		type: 'string',
 		scope: 'operator',
 		default: undefined,
 		heading: 'Sync ontology from master server',
-		typeLabel: 'bool',
+		typeLabel: 'true || false',
+		typeSuffix: '(optional; unset = not configured)',
 		doc: `This parameter defines if the installation will be updated his ontology using the master server versions.
 
 \`\`\`bash

@@ -34,6 +34,7 @@
 import { legacyAwareDefaultDir } from './catalog/media.ts';
 import { RETIRED_ENV_KEYS, readEnv } from './env.ts';
 import { INSTALL_MODE } from './install_mode.ts';
+import { isDiffusionLangCode } from './lang_code.ts';
 import {
 	readBool,
 	readJsonArray,
@@ -581,6 +582,29 @@ export interface ErrorReportConfig {
 	readonly retentionDays: number;
 }
 
+/**
+ * PUBLICATION (diffusion) settings resolved ONCE, at boot.
+ *
+ * The lang set used to be re-derived at every plan compile from a RAW
+ * `readEnv('DEDALO_DIFFUSION_LANGS')` plus a hand `.split(',')` — in four
+ * different places. That is exactly how the phantom-lang defect happened: the
+ * key is authored as a JSON array, a comma split turned `["lg-spa","lg-cat"]`
+ * into the four garbage codes `["lg-spa`, `"lg-cat"]`, and the publication
+ * shipped them without a word. One resolution, one shape, one place to gate.
+ */
+export interface DiffusionConfig {
+	/** Languages to publish, ORDER PRESERVED — langs[0] is the main one. NEVER empty. */
+	readonly langs: readonly string[];
+	/** false => nothing was configured and `langs` was DERIVED from the project langs. */
+	readonly langsConfigured: boolean;
+	/** Configured entries that are not project languages — refused at plan compile. */
+	readonly langsOutsideProject: readonly string[];
+	/** Configured entries that are not `lg-xxx` codes at all — refused at plan compile. */
+	readonly langsMalformed: readonly string[];
+	/** Element tipos the native engine may publish. [] = permissive; ['all'] = every one. */
+	readonly nativeElements: readonly string[];
+}
+
 export interface DedaloConfig {
 	/**
 	 * INSTALL MODE (DEC-19 TS-native install): true when the server boots with
@@ -640,6 +664,7 @@ export interface DedaloConfig {
 	readonly identity: IdentityConfig;
 	readonly lang: LangConfig;
 	readonly features: FeaturesConfig;
+	readonly diffusion: DiffusionConfig;
 	readonly geoip: GeoipConfig;
 	readonly tools: ToolsConfig;
 	readonly siteBuilder: SiteBuilderConfig;
@@ -854,6 +879,93 @@ function parseLangEquivalences(configured: string | undefined): readonly (readon
 	return Object.freeze([]);
 }
 
+/**
+ * Resolve the PUBLICATION language set — the ONE derivation, kept pure so the
+ * gate and the unit tests can call it without booting a config.
+ *
+ * WHY IT DERIVES AT ALL (the rationale this rewrite inherited from the plan
+ * compiler, where it used to live): an explicit DEDALO_DIFFUSION_LANGS wins.
+ * When it is unset the languages MIRROR the project languages — the key has
+ * always been a DERIVED one whose default is DEDALO_PROJECTS_DEFAULT_LANGS, so
+ * in practice it is effectively always defined and the publication builder
+ * never reaches its own single-language fallback. Collapsing to the one data
+ * language instead (an earlier behavior here) published a single language out
+ * of an installation that edits in four. The single-language path survives ONLY
+ * as a last resort, for an installation with no project languages configured at
+ * all — otherwise there would be nothing to publish.
+ *
+ * ORDER IS A CONTRACT: mainLang is `langs[0]`, so the configured order is kept
+ * verbatim and never sorted or de-duplicated here.
+ *
+ * The two problem sets are REPORTED, not filtered: a malformed or non-project
+ * entry means the operator's intent cannot be honored, and silently dropping it
+ * would publish a set nobody asked for. The refusal happens at plan compile,
+ * which is the only place that knows a publication is actually being built.
+ */
+export function resolveDiffusionLangs(
+	configured: readonly string[],
+	projectLangs: readonly string[],
+	dataLang: string,
+): {
+	langs: readonly string[];
+	configured: boolean;
+	outsideProject: readonly string[];
+	malformed: readonly string[];
+} {
+	if (configured.length === 0) {
+		// Derived: the project langs, or — with none configured — the one data
+		// language, so `langs` is never empty for a caller that must iterate it.
+		const derived = projectLangs.length > 0 ? [...projectLangs] : [dataLang];
+		return {
+			langs: Object.freeze(derived),
+			configured: false,
+			// Nothing is "outside the project languages" when the project languages ARE
+			// the source — but they still have to BE language codes. The derived set was
+			// previously waved through unvalidated, so a typo in
+			// DEDALO_PROJECTS_DEFAULT_LANGS (`"spa"` for `"lg-spa"`) reached the
+			// publication plan unchecked and published a rendition under a code that
+			// names no language: the exact silent-garbage class this key was fixed to
+			// close, arriving through the other door.
+			outsideProject: Object.freeze([]),
+			malformed: Object.freeze(derived.filter((lang) => !isDiffusionLangCode(lang))),
+		};
+	}
+	const projectSet = new Set(projectLangs);
+	return {
+		langs: Object.freeze([...configured]),
+		configured: true,
+		outsideProject: Object.freeze(configured.filter((lang) => !projectSet.has(lang))),
+		malformed: Object.freeze(configured.filter((lang) => !isDiffusionLangCode(lang))),
+	};
+}
+
+// Project languages are INSTALL configuration (owner rule 2026-07-09) and are read
+// EXACTLY ONCE: `menu.projectsDefaultLangs` publishes them and `diffusion.langs`
+// derives from them, so a second requireList call here would be a second source of
+// truth for the same install fact.
+const projectsDefaultLangs = requireList('PROJECTS_DEFAULT_LANGS');
+
+const diffusionLangs = resolveDiffusionLangs(
+	readList('DEDALO_DIFFUSION_LANGS'),
+	projectsDefaultLangs,
+	readString('DATA_LANG'),
+);
+
+// Report at boot, but DO NOT THROW: this module is imported at module scope by
+// most of the engine (and by every gate), and a publication-only setting must
+// never stop a server whose editors are working fine. The loud refusal belongs
+// to the plan compiler, which runs only when someone actually publishes.
+if (diffusionLangs.malformed.length > 0) {
+	console.error(
+		`[config] DEDALO_DIFFUSION_LANGS contains entries that are not 'lg-xxx' language codes: ${diffusionLangs.malformed.join(', ')} — publication will refuse to compile a plan.`,
+	);
+}
+if (diffusionLangs.outsideProject.length > 0) {
+	console.error(
+		`[config] DEDALO_DIFFUSION_LANGS names languages outside DEDALO_PROJECTS_DEFAULT_LANGS: ${diffusionLangs.outsideProject.join(', ')} — publication will refuse to compile a plan.`,
+	);
+}
+
 export const config: DedaloConfig = Object.freeze({
 	installMode: INSTALL_MODE,
 	entity: requireString('ENTITY'),
@@ -889,10 +1001,10 @@ export const config: DedaloConfig = Object.freeze({
 		skipTipos: Object.freeze(readJsonArray('MENU_SKIP_TIPOS')),
 		areasDeny: Object.freeze(readJsonArray('AREAS_DENY')),
 		// Project languages are INSTALL configuration (owner rule 2026-07-09):
-		// required from ../private/.env DEDALO_PROJECTS_DEFAULT_LANGS (must match
-		// the PHP oracle's config), never a hardcoded list — the string-family
-		// lang-fallback chain and the diffusion lang catalog derive from it.
-		projectsDefaultLangs: requireList('PROJECTS_DEFAULT_LANGS'),
+		// required from ../private/.env DEDALO_PROJECTS_DEFAULT_LANGS, never a
+		// hardcoded list — the string-family lang-fallback chain and the diffusion
+		// lang set both derive from it. Resolved once, above.
+		projectsDefaultLangs,
 	}),
 	identity: Object.freeze({
 		// PHP derives the label from the entity name when unset — same here.
@@ -927,6 +1039,15 @@ export const config: DedaloConfig = Object.freeze({
 		maxRowsPerPage: Math.max(1, readNumber('DEDALO_MAX_ROWS_PER_PAGE')),
 		defaultProject: readNumber('DEDALO_DEFAULT_PROJECT'),
 		filterSectionTipo: readString('DEDALO_FILTER_SECTION_TIPO_DEFAULT'),
+	}),
+	diffusion: Object.freeze({
+		langs: diffusionLangs.langs,
+		langsConfigured: diffusionLangs.configured,
+		langsOutsideProject: diffusionLangs.outsideProject,
+		langsMalformed: diffusionLangs.malformed,
+		// [] is PERMISSIVE (every element publishes) — the staged-migration lever is
+		// opt-in; ['all'] is the explicit "every element" spelling of the same thing.
+		nativeElements: readList('DEDALO_DIFFUSION_NATIVE_ELEMENTS'),
 	}),
 	geoip: Object.freeze({
 		enabled: readBool('DEDALO_GEOIP_ENABLED'),

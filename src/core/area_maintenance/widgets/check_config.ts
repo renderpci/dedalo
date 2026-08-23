@@ -4,8 +4,20 @@
  * shape; the PHP widget reports the PHP install's files, which this server
  * must not misreport as its own. State flags (maintenance/recovery/
  * notification) persist in the TS server-state store.
+ *
+ * It also carries the ONE cross-subsystem coherence row the dashboard needs:
+ * `diffusion_langs` compares the publication language POLICY against the langs
+ * actually present in the MariaDB publication targets. That belongs to a
+ * config-health panel and nowhere else — it is the only way an install broken
+ * by the v6→v7 DEDALO_DIFFUSION_LANGS migration can be FOUND, because after
+ * the fix its config parses cleanly and no boot check can see the damage.
+ * That read is the ONE core→diffusion dependency here: it goes through the
+ * diffusion/api/ FACADE, lazily, from a single function, and this file is
+ * REGISTERED for it in diffusion_boundaries.test.ts's DIFFUSION_IMPORT_SEAMS —
+ * a deliberate, named widening of the boundary, not an ambient permission.
  */
 
+import { isDiffusionLangCode } from '../../../config/lang_code.ts';
 import { sql } from '../../db/postgres.ts';
 import { probeSchemaHealth } from '../../db/schema_probe.ts';
 import {
@@ -80,6 +92,169 @@ export function evaluateCredentialChecks(
 }
 
 /**
+ * The `diffusion_langs` coherence row (see the file header). Flattened from the
+ * diffusion subsystem's own report into the shape a status row renders:
+ * `applicable:false` + a one-line `reason` is the ANSWER for the installs that
+ * publish to no MariaDB target — the common case, and a healthy one.
+ */
+export interface DiffusionLangCoherence {
+	applicable: boolean;
+	reason: string | null;
+	/** The publication policy (config.diffusion.langs), order preserved. */
+	policy: string[];
+	/** Every lang value actually present in the target tables, deduplicated. */
+	published: string[];
+	/** Published langs the policy does not name — the phantom set to repair. */
+	phantom: string[];
+	phantom_rows: number;
+	/** false ⇒ the scan budget ran out; the phantom set may be incomplete. */
+	complete: boolean;
+	/**
+	 * Tables the audit deliberately did NOT look at: they carry a `lang` column
+	 * but are not positively identified as diffusion-created, so the sweep owns
+	 * nothing in them. Reported so the narrowing is visible instead of silent.
+	 */
+	unmarked_tables: number;
+	errors: string[];
+}
+
+/**
+ * The nested shape of the diffusion report this widget flattens, stated
+ * STRUCTURALLY on purpose: `import type` from src/diffusion would be erased at
+ * runtime and legal under rule (c) of diffusion_boundaries, but the widget has
+ * no business naming the subsystem's types — it consumes a report, and this is
+ * exactly the part of it the flattener walks. The one runtime door stays the
+ * lazy facade import in auditDiffusionLangCoherence().
+ */
+interface PublishedLangReport {
+	applicable: boolean;
+	reason: string | null;
+	policy: readonly string[];
+	databases: readonly { tables: readonly { published: readonly { lang: string }[] }[] }[];
+	phantom_langs: readonly string[];
+	phantom_rows: number;
+	complete: boolean;
+	unmarked_tables: number;
+	errors: readonly string[];
+}
+
+/**
+ * PURE — flatten the diffusion subsystem's nested coherence report into the one
+ * status row the dashboard renders. Extracted from computeCheckConfig so it is
+ * reachable by a gate without a MariaDB target (extract-AND-rewire, the CRAP
+ * program's law): the parent is an unexecutable I/O shell, this is not.
+ * Gate: test/unit/check_config_diffusion_langs_native.test.ts.
+ */
+export function flattenLangCoherence(report: PublishedLangReport): DiffusionLangCoherence {
+	// Deduplicated in FIRST-SEEN order — the audit walks database → table → lang,
+	// so the order an operator reads is the order the targets were scanned.
+	const published: string[] = [];
+	for (const database of report.databases) {
+		for (const table of database.tables) {
+			for (const entry of table.published) {
+				if (!published.includes(entry.lang)) published.push(entry.lang);
+			}
+		}
+	}
+	return {
+		applicable: report.applicable,
+		reason: report.reason,
+		policy: [...report.policy],
+		published,
+		phantom: [...report.phantom_langs],
+		phantom_rows: report.phantom_rows,
+		complete: report.complete,
+		unmarked_tables: report.unmarked_tables,
+		errors: [...report.errors],
+	};
+}
+
+/**
+ * PURE — the card-level error line for a coherence row, as a 0-or-1 element
+ * list so the caller appends without a branch of its own. A phantom lang is
+ * PUBLISHED GARBAGE being served right now, so it colours the dashboard card
+ * like any other failed check: the operator must not have to open the panel to
+ * learn about it. The advice names a REGISTERED action
+ * (dd_diffusion_api::sweep_published_langs, src/core/api/handlers/
+ * dd_diffusion_api.ts) — a widget must never point at an action that does not
+ * exist. Gate: test/unit/check_config_diffusion_langs_native.test.ts.
+ */
+export function phantomLangCardErrors(row: DiffusionLangCoherence): string[] {
+	if (row.phantom.length === 0) return [];
+
+	// A phantom lang has TWO very different causes, and only one of them is
+	// repaired by deleting rows:
+	//
+	//  - DEBRIS (`["lg-cat"`): a shredded config value published codes that were
+	//    never languages. Nothing legitimate is stored under them, so sweeping is
+	//    the repair.
+	//  - POLICY DRIFT (`lg-cat`): a WELL-FORMED code that the policy no longer
+	//    names. The usual cause is a LOST DEDALO_DIFFUSION_LANGS — unset, the key
+	//    derives from the project languages, which may be narrower than what was
+	//    published. Those rows are real translations. Sweeping them DESTROYS
+	//    them; the repair is to restore the policy.
+	//
+	// Steering the operator at the destructive action for both is a data-loss
+	// trap, so the two are reported separately and only debris names the sweep.
+	const debris = row.phantom.filter((lang) => !isDiffusionLangCode(lang));
+	const drift = row.phantom.filter((lang) => isDiffusionLangCode(lang));
+	const errors: string[] = [];
+
+	if (debris.length > 0) {
+		errors.push(
+			`Published languages that are not language codes: ${debris.join(', ')} ` +
+				`(of ${row.phantom_rows} phantom row(s)) — malformed values reached the ` +
+				`publication target; run dd_diffusion_api sweep_published_langs to remove them`,
+		);
+	}
+	if (drift.length > 0) {
+		errors.push(
+			`Published languages outside the diffusion policy: ${drift.join(', ')} ` +
+				`(of ${row.phantom_rows} phantom row(s)) — these are well-formed codes, so ` +
+				`check DEDALO_DIFFUSION_LANGS / DEDALO_PROJECTS_DEFAULT_LANGS FIRST: if the ` +
+				`policy is wrong, restore it, because sweeping deletes real translations`,
+		);
+	}
+	return errors;
+}
+
+/**
+ * The `diffusion_langs` probe: the ONE core→diffusion read this widget makes.
+ *
+ * Read through the diffusion FACADE (src/diffusion/api/), lazily — the file is
+ * registered in diffusion_boundaries.test.ts's DIFFUSION_IMPORT_SEAMS for
+ * exactly this call, and boundary_seam_tripwire allows a core→diffusion pair
+ * only when it targets the facade.
+ *
+ * The dashboard budget is deliberately the TIGHT one: `lang` is the second
+ * column of the published tables' composite primary key, so counting the langs
+ * is an index scan, and a panel read must never sit on one. An install with no
+ * MariaDB target — the common case — costs a single cached ontology lookup and
+ * answers `applicable:false`.
+ *
+ * Fail-soft like every other probe in this widget: a diffusion-side failure
+ * leaves the row null (the client omits it) and never blanks the dashboard.
+ */
+async function auditDiffusionLangCoherence(): Promise<{
+	row: DiffusionLangCoherence | null;
+	errors: string[];
+}> {
+	try {
+		// ONE-LINE `await import(...)` ON PURPOSE: diffusion_boundaries.test.ts
+		// scans rule (c) line by line, so a formatter-wrapped specifier would slip
+		// past the very gate that must see this file and record it as a seam.
+		const diffusionFacade = await import('../../../diffusion/api/actions.ts');
+		const report = await diffusionFacade.auditPublishedLangs(diffusionFacade.WIDGET_AUDIT_BUDGET);
+		const row = flattenLangCoherence(report);
+		return { row, errors: phantomLangCardErrors(row) };
+	} catch (error) {
+		// Never silent: the row is absent AND the reason is in the log.
+		console.warn('[check_config] diffusion lang coherence audit failed', error);
+		return { row: null, errors: [] };
+	}
+}
+
+/**
  * computeCheckConfig — config-source health + live DB probes. Returns the INNER
  * result payload the client stores as `self.value` (db_status + config_sources +
  * state) plus the soft errors that colour the envelope msg. Shared by getValue
@@ -117,6 +292,7 @@ async function computeCheckConfig(): Promise<{
 			diffusion_native: boolean;
 			dev_mode: boolean;
 		};
+		diffusion_langs: DiffusionLangCoherence | null;
 		state: unknown;
 	};
 	errors: string[];
@@ -286,12 +462,21 @@ async function computeCheckConfig(): Promise<{
 		dev_mode: readEnv('DEDALO_DEV_MODE') === 'true',
 	};
 
+	// --- diffusion language coherence: the POLICY vs what is PUBLISHED ---
+	// The whole probe (the facade seam, the flattening and the card error) lives
+	// in auditDiffusionLangCoherence() above: this parent is a probe SHELL whose
+	// complexity is frozen by the ratchet, so a cross-subsystem read enters it as
+	// ONE call with no decision of its own.
+	const coherence = await auditDiffusionLangCoherence();
+	errors.push(...coherence.errors);
+
 	return {
 		payload: {
 			db_status: dbStatus,
 			config_sources: configSources,
 			db_info: dbInfo,
 			runtime_mode: runtimeMode,
+			diffusion_langs: coherence.row,
 			state,
 		},
 		errors,

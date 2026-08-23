@@ -79,6 +79,23 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		const { retryPendingDeletionsAction } = await import('../../../diffusion/api/actions.ts');
 		return retryPendingDeletionsAction(rqo, principal);
 	},
+	sweep_published_langs: async (rqo, context) => {
+		// Admin-only: the published-lang coherence audit (mode:'report', the
+		// default) and, behind confirm:true, the DELETION of published rows whose
+		// lang the policy no longer names — a cross-section destructive operation
+		// on the publication server, gated exactly like retry_pending_deletions /
+		// rebuild_media_index. The gate is duplicated inside the action too
+		// (diffusion/api/actions.ts): a wiring mistake must not be able to remove
+		// a permission check.
+		const principal = requirePrincipal(context);
+		if (!principal.isGlobalAdmin) {
+			throw new DedaloError('perm.denied', {
+				coordinates: { action: 'sweep_published_langs', required: 'global_admin' },
+			});
+		}
+		const { sweepPublishedLangsAction } = await import('../../../diffusion/api/actions.ts');
+		return sweepPublishedLangsAction(rqo, principal);
+	},
 	validate: async (rqo, context) => {
 		// Admin-only plan validation (PHP dd_diffusion_api::validate): compiles
 		// the element and reports errors/warnings — the loud pre-run gate.

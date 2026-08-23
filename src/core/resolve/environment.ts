@@ -19,11 +19,13 @@ import { readBool, readString } from '../../config/readers.ts';
 import { sql } from '../db/postgres.ts';
 import { getLabels } from '../labels/catalog.ts';
 import { resolveMediaAccessMode } from '../media/protection.ts';
+import { createDataCache } from '../ontology/cache_factory.ts';
 import type { Principal } from '../security/permissions.ts';
 import { SESSION_IDLE_TTL_SECONDS, type Session } from '../security/session_store.ts';
 import { getAdditionalToolsUrlMap } from '../tools/paths.ts';
 import { DEDALO_BUILD, DEDALO_ENGINE_VERSION } from '../update/build_stamp.ts';
 import { DEDALO_VERSION_TRIPLE } from '../update/version.ts';
+import { getAlpha2FromCode, getLangNameFromCode } from './lang_names.ts';
 import { currentApplicationLang, currentDataLang } from './request_lang.ts';
 import { getServerState } from './server_state.ts';
 
@@ -123,8 +125,8 @@ export async function buildPageGlobals(
 	principal: Principal | null,
 ): Promise<Record<string, unknown>> {
 	const isLogged = session !== null;
-	// Projects default langs: language metadata rows (PHP caches this list; it
-	// comes from the lang catalog — mirrored lazily from the projects config).
+	// Projects default langs: the configured languages resolved through the lang
+	// catalog (lg1 records) in this request's data lang — see below.
 	const projectsDefaultLangs = await getProjectsDefaultLangs();
 	const serverState = getServerState();
 
@@ -245,29 +247,131 @@ async function getPgVersion(): Promise<string> {
 	return pgVersionCache;
 }
 
-/** [install] projects default langs, mirrored from the live capture shape. */
-let projectsLangsCache: { label: string; value: string; tld2: string }[] | null = null;
-async function getProjectsDefaultLangs(): Promise<
-	{ label: string; value: string; tld2: string }[]
-> {
-	if (projectsLangsCache !== null) return projectsLangsCache;
-	// The PHP list is DEDALO_PROJECTS_DEFAULT_LANGS resolved through the lang
-	// catalog. Mirrored statically for the mib install (see the gate).
-	projectsLangsCache = [
-		{ label: 'Nepali', value: 'lg-nep', tld2: 'ne' },
-		{ label: 'English', value: 'lg-eng', tld2: 'en' },
-		{ label: 'German', value: 'lg-deu', tld2: 'de' },
-		{ label: 'French', value: 'lg-fra', tld2: 'fr' },
-		{ label: 'Valencià', value: 'lg-vlca', tld2: 'ca' },
-		{ label: 'Arabic Cluster', value: 'lg-ara', tld2: 'ar' },
-		{ label: 'Catalan', value: 'lg-cat', tld2: 'ca' },
-		{ label: 'Greek', value: 'lg-ell', tld2: 'el' },
-		{ label: 'Basque', value: 'lg-eus', tld2: 'eu' },
-		{ label: 'Italian', value: 'lg-ita', tld2: 'it' },
-		{ label: 'Portuguese', value: 'lg-por', tld2: 'pt' },
-		{ label: 'Castellano', value: 'lg-spa', tld2: 'es' },
-	];
-	return projectsLangsCache;
+/**
+ * `dedalo_projects_default_langs` — the install's DATA languages as the client
+ * needs them: `{label, value, tld2}`, one entry per configured language.
+ *
+ * REAL RESOLUTION (was a hardcoded 12-entry list "mirrored for the mib install"):
+ * the label comes from the langs section (lg1) records through
+ * getLangNameFromCode, the tld2 from the ISO 639-1 map through
+ * getAlpha2FromCode — exactly what the old engine did
+ * (dd_core_api::get_page_globals → lang::resolve_multiple + fallback_lang_value
+ * + get_alpha2_from_code). A static mirror is a FOURTH encoding of the project
+ * language set and is wrong on every install that is not mib.
+ *
+ * ORDER = the CONFIGURED order (config.menu.projectsDefaultLangs), and that is a
+ * DELIBERATE divergence from the frozen fixture — see the note on
+ * resolveProjectsDefaultLangs below.
+ *
+ * Labels are NOT uniformly one language: fallback_lang_value asks each record for
+ * the requested lang, then the request data lang, then any — so a record with no
+ * term in the caller's language serves whatever term it has ("Nepali" in English
+ * next to "Castellano" in Spanish). That is the old behaviour, kept.
+ */
+interface ProjectLangEntry {
+	label: string;
+	value: string;
+	tld2: string | null;
+}
+
+/**
+ * DEDALO_LANGS_SECTION_TIPO — the langs section. Declared locally, as every other
+ * consumer of it does (lang_names.ts, relations/select_lang.ts, tools/import_conform.ts):
+ * it is a mirror of a fixed ontology constant, not a definition owned here.
+ */
+const LANGS_SECTION_TIPO = 'lg1';
+
+/**
+ * REQUEST-ISOLATION: the label depends on the request DATA LANG (the fallback
+ * chain consults it), so the old single-slot module cache would BLEED — the
+ * first caller's language would be served to every later one (S3-21/S3-59).
+ *
+ * THE KEY COVERS EVERY DEPENDENCY, enumerated: an entry is
+ * {label, value, tld2}; `value` is the configured code and `tld2` is the static
+ * ISO 639-1 map, both request-INDEPENDENT; `label` is
+ * getLangNameFromCode(code, dataLang), whose only two inputs are the code and
+ * the data lang (it re-reads currentDataLang() for the same fallback, so the
+ * caller's dataLang IS both of its lang dimensions). The APPLICATION lang, the
+ * principal and the session never reach this value. So the data lang is the
+ * whole key.
+ *
+ * The cache is a DATA cache, so a write to the langs section (lg1) re-resolves
+ * the labels instead of serving a stale name until restart. It is a `const`
+ * from the factory — invalidation-wired by construction, and therefore not an
+ * entry in module_state_tripwire's allowlist.
+ */
+const projectsLangsCache = createDataCache<string, ProjectLangEntry[]>((cache, sectionTipo) => {
+	if (sectionTipo === LANGS_SECTION_TIPO) cache.clear();
+});
+
+/**
+ * Resolve the configured project languages to client entries, IN CONFIG ORDER.
+ *
+ * WHY NOT THE FIXTURE'S ORDER — the frozen oracle capture
+ * (test/parity/fixtures/rqo_get_environment.response.json) lists these twelve
+ * languages in an order that is neither the configured one nor alphabetical nor
+ * matrix_langs RECORD order. It is the PHYSICAL ROW ORDER of ONE install's
+ * matrix_langs table at one instant: PHP's lang::resolve_multiple issued a
+ * single `WHERE string @? $1` over the hierarchy41 GIN index with NO ORDER BY,
+ * so a bitmap heap scan handed back whatever the pages held — and PHP then
+ * froze that answer in its page_globals FILE CACHE, so the fixture is one heap
+ * on one day.
+ *
+ * MEASURED 2026-08-23 — the same twelve codes, the same query, three orders:
+ *   fixture               nep eng deu fra vlca ara cat ell eus ita por spa
+ *   this installation     ara ell vlca eng eus fra ita por spa cat deu nep
+ *   its own suite clone   ell por cat eng ara deu eus fra ita nep spa vlca
+ * and `ORDER BY section_id` (record order) gives a fourth. The fixture order is
+ * therefore unreachable by construction: it is not a property of the payload
+ * builder, it is a property of one database's heap, and it changes under
+ * VACUUM FULL or a plan flip on the very same install. Reproducing it would
+ * mean asserting a machine, not an engine.
+ *
+ * So the order served is the one the INSTALL declares —
+ * DEDALO_PROJECTS_DEFAULT_LANGS verbatim. It is deterministic, operator-owned,
+ * identical on every deployment, and it is already the order the rest of the
+ * engine treats as authoritative (entry 0 is the main data language). The
+ * `dedalo_projects_default_langs` ORDER therefore diverges from the frozen
+ * fixture — and only the order: ledgered in
+ * engineering/wire_contract/WC-2026-08-23-projects-default-langs-derived.md,
+ * reconciled by test/parity/environment_differential.test.ts, which compares the
+ * twelve entries exactly but order-insensitively.
+ *
+ * A configured code with no lg1 record keeps its place with the bare code as its
+ * label (PHP's `$name ?? $item->code`) and is reported loudly — never silently
+ * dropped from the list the language selector is built from.
+ */
+async function resolveProjectsDefaultLangs(dataLang: string): Promise<ProjectLangEntry[]> {
+	const unresolved: string[] = [];
+	const entries: ProjectLangEntry[] = [];
+	for (const langCode of config.menu.projectsDefaultLangs) {
+		const name = await getLangNameFromCode(langCode, dataLang);
+		if (name === null) unresolved.push(langCode);
+		entries.push({
+			// Bare alpha-3 fallback, as PHP: an unnamed language still has to be
+			// pickable in the selector, and 'nep' is a usable stand-in for a
+			// missing term while a blank entry is not.
+			label: name ?? langCode.replace('lg-', ''),
+			value: langCode,
+			tld2: getAlpha2FromCode(langCode),
+		});
+	}
+	if (unresolved.length > 0) {
+		console.error(
+			`[environment] DEDALO_PROJECTS_DEFAULT_LANGS names languages with no ${LANGS_SECTION_TIPO} record: ${unresolved.join(', ')} — serving the bare code as their label.`,
+		);
+	}
+	return entries;
+}
+
+/** The client's project-language list for THIS request's data lang (cached per lang). */
+async function getProjectsDefaultLangs(): Promise<ProjectLangEntry[]> {
+	const dataLang = currentDataLang();
+	const cached = projectsLangsCache.get(dataLang);
+	if (cached !== undefined) return cached;
+	const entries = await resolveProjectsDefaultLangs(dataLang);
+	projectsLangsCache.set(dataLang, entries);
+	return entries;
 }
 
 /** The full environment response block (PHP get_environment → {result,msg,errors}). */

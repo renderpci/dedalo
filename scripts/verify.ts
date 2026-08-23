@@ -42,6 +42,8 @@ const TRIPWIRES = [
 	'test/unit/sql_confinement_tripwire.test.ts',
 	'test/unit/config_env_tripwire.test.ts',
 	'test/unit/config_census_tripwire.test.ts',
+	'test/unit/config_declaration_tripwire.test.ts',
+	'test/unit/install_seed_drift_tripwire.test.ts',
 	'test/unit/config_docs_tripwire.test.ts',
 	'test/unit/module_state_tripwire.test.ts',
 	'test/unit/diffusion_boundaries.test.ts',

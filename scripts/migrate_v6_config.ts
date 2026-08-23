@@ -120,6 +120,34 @@ function main(): void {
 		planned.push({ key: rule.target as string, value, from: name, rule });
 	}
 
+	// --- DEDALO_DIFFUSION_LANGS: DERIVED, never pinned ----------------------------
+	// A stock v6 config says `define('DEDALO_DIFFUSION_LANGS', DEDALO_PROJECTS_DEFAULT_LANGS)`
+	// — the constant is a pure ALIAS of the project languages, and the extractor
+	// faithfully resolves it to the SAME array. Copying it across would freeze a
+	// derivation into a snapshot: v7 resolves an unset DEDALO_DIFFUSION_LANGS to the
+	// project languages (`config.diffusion`), so a pinned copy means that adding a
+	// project language later leaves publication silently behind, still emitting the
+	// four languages of migration day. So we write the key ONLY when the v6 install
+	// really overrode it.
+	//
+	// THE COMPARISON IS ON THE ENCODED VALUES — the exact bytes each key would get in
+	// the .env — not on the parsed arrays: that is what v7 will read back, and it
+	// makes a REORDERING count as an override (the order is load-bearing; the first
+	// language is the main one). A different array, a subset, or a different order is
+	// therefore a genuine override and IS written.
+	const diffusionLangs = planned.find((p) => p.key === 'DEDALO_DIFFUSION_LANGS');
+	const projectLangs = planned.find((p) => p.from === 'DEDALO_PROJECTS_DEFAULT_LANGS');
+	// No project langs to compare against (absent, null, or runtime-computed) means we
+	// cannot prove the value is derived — keep it, and let the boot-critical section
+	// below complain about the missing PROJECTS_DEFAULT_LANGS.
+	const diffusionLangsDerived =
+		diffusionLangs !== undefined &&
+		projectLangs !== undefined &&
+		diffusionLangs.value === projectLangs.value;
+	if (diffusionLangsDerived && diffusionLangs !== undefined) {
+		planned.splice(planned.indexOf(diffusionLangs), 1);
+	}
+
 	// --- report (values are NEVER printed) ---------------------------------------
 	const byClass = (c: string): string[] =>
 		planned.filter((p) => p.rule.cls === c).map((p) => `${p.from} → ${p.key}`);
@@ -146,6 +174,20 @@ function main(): void {
 	if (extracted.commentedOut.length > 0) {
 		console.log(
 			`\x1b[2mCOMMENTED OUT in the v6 config — left at the v7 default, on purpose\x1b[0m (${extracted.commentedOut.length}): ${extracted.commentedOut.join(', ')}\n`,
+		);
+	}
+
+	if (diffusionLangsDerived) {
+		console.log(
+			"\x1b[2mDERIVED, NOT PINNED\x1b[0m (1): DEDALO_DIFFUSION_LANGS — the v6 value is exactly\n   DEDALO_PROJECTS_DEFAULT_LANGS, which is what v7 derives it from when it is unset.\n   Writing it would freeze today's languages; adding a project language later would\n   not reach publication. Set it by hand ONLY to diffuse a different set.\n",
+		);
+	} else if (diffusionLangs !== undefined && projectLangs !== undefined) {
+		console.log(
+			'\x1b[2mDEDALO_DIFFUSION_LANGS is a genuine OVERRIDE in this v6 config (it differs from\n   DEDALO_PROJECTS_DEFAULT_LANGS in content or order) — migrated as-is.\x1b[0m\n',
+		);
+	} else if (diffusionLangs !== undefined) {
+		console.log(
+			'\x1b[2mDEDALO_DIFFUSION_LANGS migrated as-is: this config has no usable\n   DEDALO_PROJECTS_DEFAULT_LANGS to compare it against, so it cannot be shown to be\n   the derived default.\x1b[0m\n',
 		);
 	}
 

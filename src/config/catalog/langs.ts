@@ -175,19 +175,28 @@ DEDALO_DATA_LANG_SELECTOR=true
 \`\`\``,
 	},
 	DEDALO_DIFFUSION_LANGS: {
-		type: 'string',
+		// 'string_list' — NOT 'string'. The declared type was the whole defect: labelled
+		// 'array' and documented with a JSON example, but typed 'string', so nothing
+		// stopped four call sites reading it raw and comma-splitting it. Under readList
+		// the JSON example is now TRUE. Gate: config_declaration_tripwire.
+		type: 'string_list',
 		scope: 'operator',
 		default: undefined,
+		defaultDoc: 'the project languages (DEDALO_PROJECTS_DEFAULT_LANGS)',
 		heading: 'Defining diffusion languages',
 		typeLabel: 'array',
 		doc: `This parameter defines the languages that Dédalo will use to publish data.
 
-This definition control the amount of languages that will be processed to publish data in the publication process. When Dédalo publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in this process.
+It controls the amount of languages processed when data is published. Publishing builds one fixed rendition per language, falling back to the main languages' correspondences where a field has no value in the language being processed; this parameter narrows the set of languages that work is done for, so an installation can publish fewer languages than it edits in.
 
-This parameter is configured with the same values as DEDALO_PROJECTS_DEFAULT_LANGS, but it can be changed to other values to separate the export languages from the diffusion languages.
+Unset (or empty) it DERIVES from the project languages: the value of DEDALO_PROJECTS_DEFAULT_LANGS is used verbatim, order included. Set it only to separate the published languages from the editing ones.
+
+Accepted encodings: a JSON array or a plain comma-separated list — both parse to the same set. ORDER IS LOAD-BEARING: the first entry is the main publication language.
+
+Every entry must be a \`lg-xxx\` code (the \`all\` sentinel is NOT a language and is refused here) and must be ONE OF the project languages: a language the installation does not edit in has no data to publish. An entry that fails either rule is reported at boot and REFUSES the publication plan — a wrong lang list silently publishes empty renditions, which is worse than not publishing.
 
 \`\`\`bash
-DEDALO_DIFFUSION_LANGS=[ "lg-spa", "lg-cat", "lg-eng"]
+DEDALO_DIFFUSION_LANGS=["lg-spa","lg-cat","lg-eng"]
 \`\`\`
 
 >The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.`,

@@ -39,6 +39,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readList } from '../../config/readers.ts';
 import { toStructuredErr } from '../../core/errors/convert.ts';
 import { DedaloError } from '../../core/errors/dedalo_error.ts';
 import type { StructuredErr } from '../mcp/envelope.ts';
@@ -98,12 +99,20 @@ export function buildAgentEgressPolicy(
 	return buildEgressPolicy(cfg, publishable);
 }
 
-/** The env slice the agent egress policy reads (readEnv only). */
+/** The env slice the agent egress policy reads (readEnv/readList only). */
 export function defaultAgentEgressEnv(): Record<string, string | undefined> {
 	return {
-		DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS: readEnv(
+		// readList, NOT a bare readEnv: the key is declared `string_list`, whose
+		// grammar is a JSON array OR a comma list, and the v6->v7 migration
+		// JSON-encodes v6 PHP arrays. A raw split would shred `["oh1","rsc45"]`
+		// into tokens matching no section tipo — and because this is a DENY
+		// list, an empty result fails OPEN: records from the never-egress
+		// sections would be handed to an external model provider. Normalized
+		// here, at the readEnv boundary, so the policy builders downstream stay
+		// pure functions of an injected env slice.
+		DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS: readList(
 			'DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS',
-		),
+		).join(','),
 		DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT: readEnv(
 			'DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT',
 		),

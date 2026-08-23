@@ -102,6 +102,7 @@ import {
 	toAgentToolDefinition,
 } from '../../../ai/mcp/registry.ts';
 import { readEnv } from '../../../config/env.ts';
+import { readOptionalList } from '../../../config/readers.ts';
 import {
 	type ApiErrorBody,
 	DedaloError,
@@ -140,12 +141,16 @@ export function mcpSessionIdFor(session: Session): string {
 function requestGates(context: ApiRequestContext): RegistryGates {
 	const principal = requirePrincipal(context);
 	const allowWrite = readEnv('DEDALO_AGENT_ALLOW_WRITE') === 'true' && !principal.isGlobalAdmin;
-	const writableSections = new Set(
-		(readEnv('DEDALO_AGENT_WRITE_SECTIONS') ?? '')
-			.split(',')
-			.map((entry) => entry.trim())
-			.filter((entry) => entry !== ''),
-	);
+	// readList, NOT a hand-rolled readEnv().split(','): the key is declared
+	// `string_list` in the catalog, whose grammar is a JSON array OR a comma
+	// list. The v6->v7 migration JSON-encodes v6 PHP arrays, so a raw split
+	// would shred `["oh1","rsc197"]` into tokens like `["oh1"` that match no
+	// section tipo — this allowlist would silently narrow to nothing.
+	// readOptionalList, not readList: it is the ONLY reader that tells UNSET
+	// (null -> no narrowing) apart from PRESENT-BUT-EMPTY ([] -> nothing
+	// writable). Collapsing the two would silently open every section.
+	const configuredSections = readOptionalList('DEDALO_AGENT_WRITE_SECTIONS');
+	const writableSections = configuredSections === null ? undefined : new Set(configuredSections);
 	return { allowWrite, writableSections };
 }
 

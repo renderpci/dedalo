@@ -82,9 +82,10 @@ DEDALO_BACKUP_TIME_RANGE=8
 \`\`\``,
 	},
 	DEDALO_DEBUG_API_ERRORS: {
-		type: 'string',
+		// Binary: the reader is `!== 'true'`, so unset IS false.
+		type: 'boolean',
 		scope: 'operator',
-		default: undefined,
+		default: false,
 		heading: 'Defining debug detail for API errors',
 		typeLabel: 'bool',
 		typeSuffix: '(optional; development only)',

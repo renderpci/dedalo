@@ -25,11 +25,15 @@ DEDALO_INSTALL_ALLOWED_IPS="loopback,203.0.113.10"
 \`\`\``,
 	},
 	DEDALO_INSTALL_NO_RESTART: {
-		type: 'string',
+		// A real boolean: restart.ts suppresses the exit for 'true' and restarts for
+		// anything else, unset included. Same empty-value rule as 'string' (readers.ts
+		// emptyIsUnset), so the declaration changes no boot.
+		type: 'boolean',
 		scope: 'internal',
-		default: undefined,
+		default: false,
 		heading: 'Suppressing the post-install restart',
 		typeLabel: 'bool',
+		typeSuffix: '(optional)',
 		doc: `Engine guard, not a setting. When the install wizard writes the configuration, the server must restart to boot into it, which it does by exiting with the code its supervisor respawns on. Set to \`true\`, this suppresses that exit: the test runner and the command-line installer set it so a run cannot kill the process out from under itself.
 
 \`\`\`bash

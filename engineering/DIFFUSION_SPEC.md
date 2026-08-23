@@ -435,6 +435,54 @@ one registered writer.
 - **csv / json**: new first-class; one streamed file per table target, ZIP on
   close.
 
+### 4.3.1 Published-language coherence and the phantom-lang repair — 2026-08-23
+
+**The policy.** The publication language set is resolved ONCE, at boot, as
+`config.diffusion` (`resolveDiffusionLangs`, `src/config/config.ts`). Unset, it
+DERIVES from the project languages; set, it is a SUBSET override, order
+preserved — `langs[0]` is the main language. It used to be re-derived at every
+plan compile from a raw `readEnv` plus a hand `.split(',')` in four places,
+which is how a JSON-encoded value became four phantom "language codes" that were
+published as real rows. A code that is malformed, or outside the project
+languages, is reported at boot and REFUSES the publication plan
+(`langPolicyErrors`); it never stops the engine booting, because a
+publication-only setting must not take the CMS down.
+
+**Why a republish does not repair it.** One target row per policy language, PK
+`(section_id, lang)`, and publication is `INSERT … ON DUPLICATE KEY UPDATE`
+(`targets/mariadb/sql_generator.ts`). A republish updates the rows the policy
+names and NEVER removes the others, so the publication API keeps serving the
+phantom rows until they are swept. Detection compares the POLICY against what is
+PUBLISHED — `targets/mariadb/lang_sweep.ts`, surfaced as the `diffusion_langs`
+row of `check_config` and as `dd_diffusion_api sweep_published_langs`
+(admin-only, reports before it removes, `confirm:true`, deletes only enumerated
+values, never a `NOT IN` predicate, and refuses any language still in the policy).
+
+**Which tables the sweep may touch — the safety property.** A publication
+database is routinely SHARED with other content, so "has a `lang` column" is not
+evidence a table belongs to diffusion; sweeping on that alone would `DELETE` from
+a stranger's table. Discovery therefore POSITIVELY identifies a diffusion-created
+table and requires BOTH markers: the exact anatomy `generateCreateTable` emits —
+a two-column `PRIMARY KEY` that is `(section_id, lang)` in that order, read from
+`INFORMATION_SCHEMA.STATISTICS` — AND a table name the install's own diffusion
+MAP declares. Either test alone is a guess: the key shape is one another product
+could satisfy, and the map alone names a table someone else may own. A table
+failing either test is never read, never deleted from, and is COUNTED as
+`unmarked_tables`, so the narrowing is visible rather than silent. An install
+with an empty diffusion map has nothing sweepable. Gate:
+`test/unit/diffusion_lang_sweep_native.test.ts`, which asserts that no statement
+of any kind reaches an unmarked table.
+
+**Phantom langs have two causes, and only one is repaired by deleting.** Debris
+(`["lg-cat"`) is a value that was never a language code — nothing legitimate is
+stored under it, so the sweep is the repair. A well-formed code (`lg-cat`) the
+policy no longer names is usually a LOST policy: with `DEDALO_DIFFUSION_LANGS`
+unset the set derives from the project languages, which may be narrower than what
+was published, and those rows are real translations. The `check_config` row
+reports the two separately and names the sweep only for debris — for a
+well-formed phantom it points at the policy first, because sweeping there
+destroys data.
+
 ### 4.4 Language model
 
 The 5-level ladder lives in **Projection** as one pure, exported,
