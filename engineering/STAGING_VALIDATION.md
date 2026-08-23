@@ -228,6 +228,15 @@ before the first production code update. Needs a staging code master
 tree at `/opt/dedalo/bin/` (PRODUCTION §12 — the units point there; verify
 `systemctl cat` shows no `ExecStart` under the app tree before starting).
 
+**I0. The automated twin (`bun run test:update`).** `scripts/update_drill.ts`
+rehearses I1 + I2-class refusals WITHOUT a staging box: a scratch clone gets
+the release commit, a real second instance builds and serves it, a git-archive
+copy of this checkout under a supervisor loop installs it across the planned-
+death restart, and `/health` must answer the new version with the sentinel
+`confirmed`. It proves the MECHANISM end to end; it cannot prove the SYSTEMD
+half below (OnFailure rollback, watchdog probe, relocated backup root) — those
+still need this section's ▢s on a real box.
+
 **I1. Happy path end-to-end.**
 ▢ Publish a patch release on the staging master (`RELEASE.md` steps 1–7),
 then install it from the consumer's update-code panel.

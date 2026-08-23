@@ -71,3 +71,11 @@ minor within the major, no skipping).
 
 Note: `deploy/deploy.sh` is a PARKED git-based deploy that has never run
 against a real host — it is not a step of this runbook.
+
+Automated twin: steps 1–10 are rehearsed end to end by
+`bun run test:update` (`scripts/update_drill.ts`) — a scratch clone gets the
+release commit, a real master instance builds and serves it, and a git-archive
+copy installs it across the planned-death restart. Run it after changing
+ANYTHING under `src/core/update/`, the update widgets, or `.gitattributes`
+export rules; it is the only gate that exercises build → serve → discover →
+install → restart as one wire-true sequence.

@@ -38,3 +38,14 @@ vendor/**  linguist-vendored=true
 # test/unit/build_stamp_native.test.ts refuses a committed expanded value.
 # ---------------------------------------------------------------------------
 src/core/update/build_info.txt export-subst
+
+# ---------------------------------------------------------------------------
+# Agent tooling aliases never ship in a release. CLAUDE.md -> AGENTS.md and
+# .claude/ -> .agents/ are committed SYMLINKS (the vendor-neutral alias layout),
+# and `git archive` stores symlinks as symlink entries — which the installer's
+# zipinfo pre-validation REFUSES outright (code_update.ts: no symlink entry is
+# ever extracted). Without export-ignore every release built from this checkout
+# was uninstallable by construction (found by scripts/update_drill.ts).
+# ---------------------------------------------------------------------------
+/.claude export-ignore
+/CLAUDE.md export-ignore
