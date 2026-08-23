@@ -151,6 +151,12 @@ const SAME_KEYS: readonly string[] = [
 	'DEDALO_SOURCE_VERSION_LOCAL_DIR',
 	// diffusion
 	'DEDALO_DIFFUSION_DOMAIN',
+	// Same name, same shape — but v7 DERIVES it from the project languages when it
+	// is unset (`config.diffusion`), and a stock v6 config defines it as literally
+	// `DEDALO_PROJECTS_DEFAULT_LANGS`. Classified here so the census stays complete;
+	// `scripts/migrate_v6_config.ts` then OMITS it when the v6 value equals the
+	// project languages, because writing it would freeze the derivation into a
+	// migration-day snapshot. A genuinely different set (or order) is migrated.
 	'DEDALO_DIFFUSION_LANGS',
 	'DEDALO_DIFFUSION_RESOLVE_LEVELS',
 ];

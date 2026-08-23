@@ -33,6 +33,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { readEnv } from '../../config/env.ts';
+import { readList } from '../../config/readers.ts';
 import { resolvePrincipal } from '../../core/security/permissions.ts';
 import { asToolResult } from './envelope.ts';
 import { type RegistryGates, registeredTools, runTool } from './registry.ts';
@@ -141,12 +142,12 @@ if (import.meta.main) {
 	const principal = await resolveServicePrincipal();
 	// Write tools require the explicit opt-in; anything else is read-only.
 	const allowWrite = readEnv('DEDALO_MCP_ALLOW_WRITE') === 'true';
-	const writableSections = new Set(
-		(readEnv('DEDALO_MCP_WRITE_SECTIONS') ?? '')
-			.split(',')
-			.map((s) => s.trim())
-			.filter((s) => s !== ''),
-	);
+	// readList, NOT a hand-rolled readEnv().split(','): the key is declared
+	// `string_list` in the catalog, whose grammar is a JSON array OR a comma
+	// list. The v6->v7 migration JSON-encodes v6 PHP arrays, so a raw split
+	// would shred `["oh1","rsc25"]` into tokens matching no section tipo —
+	// this allowlist would silently narrow to nothing.
+	const writableSections = new Set(readList('DEDALO_MCP_WRITE_SECTIONS'));
 	const server = buildMcpServer(principal, { allowWrite, writableSections });
 	const transport = new StdioServerTransport();
 	await server.connect(transport);

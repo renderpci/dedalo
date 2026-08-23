@@ -39,7 +39,7 @@ DEDALO_3D_ALTERNATIVE_EXTENSIONS=[]
 This parameter will use to store files to specific quality.
 
 \`\`\`bash
-DEDALO_3D_AR_QUALITY=[DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]
+DEDALO_3D_AR_QUALITY=["original","web"]
 \`\`\``,
 	},
 	DEDALO_3D_EXTENSION: {
@@ -136,13 +136,13 @@ DEDALO_AV_ALTERNATIVE_EXTENSIONS=[]
 		scope: 'operator',
 		default: ['original', '1080', '720', '576', '404', '240', 'audio'],
 		heading: 'Audiovisual',
-		typeLabel: 'string',
+		typeLabel: 'array',
 		doc: `This parameter defines the different qualities that can be used for compress the audiovisual files.
 
 This parameter will use to compress audiovisual files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 \`\`\`bash
-DEDALO_AV_AR_QUALITY=[DEDALO_AV_QUALITY_ORIGINAL,"4k","1080","720","576","404","240","audio"]
+DEDALO_AV_AR_QUALITY=["original","1080","720","576","404","240","audio"]
 \`\`\``,
 	},
 	DEDALO_AV_EXTENSION: {
@@ -259,7 +259,7 @@ DEDALO_AV_POSTERFRAME_EXTENSION="jpg"
 		scope: 'operator',
 		default: 404,
 		heading: 'Audiovisual',
-		typeLabel: 'string',
+		typeLabel: 'int',
 		doc: `This parameter defines the default quality used for the audiovisual files.
 
 This parameter will use to compress all audiovisual files to specific quality, unifying the quality used by all sections. By default Dédalo use 720x404 h264 quality.
@@ -528,7 +528,7 @@ In thumb quality directory (thumbnails take no companion):
 This parameter will use to compress image files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 \`\`\`bash
-DEDALO_IMAGE_AR_QUALITY=[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,"25MB","6MB","1.5MB",DEDALO_QUALITY_THUMB]
+DEDALO_IMAGE_AR_QUALITY=["original","modified","100MB","25MB","6MB","1.5MB","thumb"]
 \`\`\``,
 	},
 	DEDALO_IMAGE_EXTENSION: {
@@ -840,7 +840,7 @@ In web quality directory:
 This parameter will use to compress PDF files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 \`\`\`bash
-DEDALO_PDF_AR_QUALITY=[DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]
+DEDALO_PDF_AR_QUALITY=["original","web"]
 \`\`\``,
 	},
 	DEDALO_PDF_EXTENSION: {
@@ -1005,7 +1005,7 @@ DEDALO_SVG_ALTERNATIVE_EXTENSIONS=[]
 This parameter will use to store different svg version files to specific quality.
 
 \`\`\`bash
-DEDALO_SVG_AR_QUALITY=[DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT, DEDALO_QUALITY_THUMB]
+DEDALO_SVG_AR_QUALITY=["original","web"]
 \`\`\``,
 	},
 	DEDALO_SVG_EXTENSION: {
@@ -1184,11 +1184,13 @@ DEDALO_UPLOAD_TMP_SUBDIR="upload/service_upload/tmp"
 \`\`\``,
 	},
 	MEDIA_DEV_ROUTE_ENABLED: {
+		// Tri-state: UNSET is not the same as 'false' (the reader branches on all
+		// three), so type:'string' is right and the 'bool' LABEL was the lie.
 		type: 'string',
 		scope: 'operator',
 		default: undefined,
 		heading: 'Serving media from the engine (development only)',
-		typeLabel: 'bool',
+		typeLabel: 'true || false',
 		typeSuffix: '*optional — unset is NOT the same as `false`*',
 		doc: `**You normally leave this unset.** Media files are served by the WEB SERVER, which enforces the access rules Dédalo generates for it. But Dédalo can also serve them itself, straight from the media root — with no per-record access control at all. That fallback exists for the one setup that has no web server in the request path: a developer running the engine on its local TCP port.
 

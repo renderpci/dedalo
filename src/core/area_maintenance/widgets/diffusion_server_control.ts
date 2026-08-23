@@ -102,24 +102,31 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 	const { info, queue, scheduler, writers } = await diffusionModules();
 	const { readEnv } = await import('../../../config/env.ts');
 	const { readBool } = await import('../../../config/readers.ts');
+	// Aliased: the panel payload below is itself called `config`, and the engine
+	// config is what the two list settings must come from.
+	const { config: engineConfig } = await import('../../../config/config.ts');
 	const [running, queued, jobs, pending] = await Promise.all([
 		queue.countRunningJobs(),
 		queue.countQueuedJobs(),
 		queue.listJobsForCaller(null), // admin scope: all jobs (24h window, LIMIT 200)
 		countPendingDiffusion(),
 	]);
-	const langsRaw = readEnv('DEDALO_DIFFUSION_LANGS') ?? '';
 	const config = {
 		// readBool, not readEnv==='true': the catalog default (true) must apply on
 		// an install that never wrote the key, or this panel reports "external
 		// engine" while buildPlainVars routes the tool at the native one.
 		native: readBool('DEDALO_DIFFUSION_NATIVE'),
-		native_elements: readEnv('DEDALO_DIFFUSION_NATIVE_ELEMENTS') ?? null,
+		// Both list settings come from the ONE resolution now. The wire VALUE of
+		// native_elements is unchanged (a comma string or null — the client does
+		// String(...)); only where it is parsed moved.
+		native_elements:
+			engineConfig.diffusion.nativeElements.length > 0
+				? engineConfig.diffusion.nativeElements.join(',')
+				: null,
 		resolve_levels: envIntOrNull(readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS')),
-		langs: langsRaw
-			.split(',')
-			.map((lang) => lang.trim())
-			.filter((lang) => lang !== ''),
+		// Unset DERIVES the project languages here too, so the panel and the engine
+		// can no longer disagree about what is published.
+		langs: [...engineConfig.diffusion.langs],
 		batch_rows: envIntOrNull(readEnv('DEDALO_DIFFUSION_BATCH_ROWS')),
 		batch_records: envIntOrNull(readEnv('DEDALO_DIFFUSION_BATCH_RECORDS')),
 		target_db_socket: (readEnv('DEDALO_DIFFUSION_DB_SOCKET') ?? '') !== '',

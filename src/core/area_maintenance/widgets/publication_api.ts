@@ -25,22 +25,21 @@ import type { WidgetModule } from './support.ts';
 async function buildPublicationApiValue(): Promise<Record<string, unknown>> {
 	try {
 		const { readEnv } = await import('../../../config/env.ts');
+		const { config } = await import('../../../config/config.ts');
 		const { getSectionDiffusionMap } = await import('../../diffusion_bridge/diffusion_map.ts');
 		const levelsRaw = readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS');
-		const langsRaw = readEnv('DEDALO_DIFFUSION_LANGS');
 		const diffusionSections = [...(await getSectionDiffusionMap())];
 		return {
 			dedalo_diffusion_domain: readEnv('DEDALO_DIFFUSION_DOMAIN') ?? null,
 			dedalo_diffusion_resolve_levels:
 				levelsRaw !== undefined && levelsRaw !== '' ? Number(levelsRaw) : null,
 			api_web_user_code_multiple: [],
-			dedalo_diffusion_langs:
-				langsRaw !== undefined && langsRaw !== ''
-					? langsRaw
-							.split(',')
-							.map((lang) => lang.trim())
-							.filter(Boolean)
-					: [],
+			// config.diffusion.langs, NOT a raw read: this panel used to comma-split the
+			// key itself AND report [] when it was unset, while the engine derived the
+			// project languages — so the panel said "no diffusion languages" about an
+			// installation that was publishing several. The frozen oracle
+			// (widgets_differential.json) shows the full derived set: the PANEL was wrong.
+			dedalo_diffusion_langs: [...config.diffusion.langs],
 			diffusion_map: { sections: diffusionSections, engine_reachable: null },
 		};
 	} catch {

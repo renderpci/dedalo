@@ -10,6 +10,9 @@
  * - get_process_status ... SSE poll stream by client process_id (reconnect)
  * - list_processes ....... ok({ processes: progress_data[] })
  * - cancel_process ....... ok({ cancelled, message })
+ * - sweep_published_langs  ok(report) — the published-lang coherence audit
+ *   and, only when explicitly confirmed, the removal of the target rows whose
+ *   lang the publication policy no longer names (targets/mariadb/lang_sweep.ts).
  *
  * AUTHORIZATION (stronger than the old engine): every action runs behind the
  * dispatch gates (session, CSRF, allowlist); diffuse additionally requires
@@ -23,7 +26,7 @@
  * push upgrade; nothing depends on it yet (ledgered in STATUS.md).
  */
 
-import { readEnv } from '../../config/env.ts';
+import { config } from '../../config/config.ts';
 import { incrementCounter } from '../../core/api/counters.ts';
 import { type ApiResult, streamResult } from '../../core/api/response.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
@@ -59,6 +62,26 @@ import {
 	sseResponseHeaders,
 } from '../jobs/sse.ts';
 import { diffusionResolveLevels } from '../plan/compile.ts';
+import {
+	auditPublishedLangs,
+	type LangCoherenceReport,
+	OPERATOR_AUDIT_BUDGET,
+	sweepPhantomLangs,
+} from '../targets/mariadb/lang_sweep.ts';
+
+/**
+ * The published-lang coherence audit, re-exported through the FACADE — ONE
+ * definition, in targets/mariadb/lang_sweep.ts. src/core/ may read it (the
+ * check_config maintenance widget's coherence row does) and
+ * boundary_seam_tripwire allows a core→diffusion pair only when it targets
+ * src/diffusion/api/, so this door is what keeps that widget off the internals.
+ */
+export {
+	auditPublishedLangs,
+	type LangCoherenceReport,
+	OPERATOR_AUDIT_BUDGET,
+	WIDGET_AUDIT_BUDGET,
+} from '../targets/mariadb/lang_sweep.ts';
 
 /** Old-engine cadences (pinned): 2s state re-send on diffuse; 15s ":\n" on status. */
 const DIFFUSE_HEARTBEAT_MS = 2000;
@@ -514,15 +537,23 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 	}
 
 	// Staged-cutover routing (DIFFUSION_PLAN P5 step 2): when the deployment
-	// pins DEDALO_DIFFUSION_NATIVE_ELEMENTS (csv of element tipos, or 'all'),
-	// elements outside the list refuse LOUDLY — they still publish through
-	// the old engine (never both engines on one element+section). Unset =
-	// permissive (dev posture; the copied client only reaches this action
-	// once DEDALO_DIFFUSION_NATIVE flips the environment key anyway).
-	const routedElements = readEnv('DEDALO_DIFFUSION_NATIVE_ELEMENTS');
-	if (routedElements !== undefined && routedElements !== '' && routedElements !== 'all') {
-		const allowed = routedElements.split(',').map((entry: string) => entry.trim());
-		if (!allowed.includes(elementTipo)) {
+	// pins DEDALO_DIFFUSION_NATIVE_ELEMENTS (a list of element tipos, or the
+	// single value 'all'), elements outside the list refuse LOUDLY — they still
+	// publish through the old engine (never both engines on one
+	// element+section). Unset = permissive (dev posture; the copied client only
+	// reaches this action once DEDALO_DIFFUSION_NATIVE flips the environment key
+	// anyway). Parsed ONCE at boot into config.diffusion.nativeElements — the
+	// hand `.split(',')` this replaced could not read the key's own JSON-array
+	// form and silently routed nothing.
+	//
+	// 'all' is a SENTINEL, and only when it is the WHOLE value: a list that
+	// happens to contain it (['dd1190','all']) names two tipos, one of which
+	// does not exist, and must stay RESTRICTIVE. Testing the single-entry case
+	// — not `includes('all')` — is what keeps a typo from opening the gate.
+	const routedElements = config.diffusion.nativeElements;
+	const routesEverything = routedElements.length === 1 && routedElements[0] === 'all';
+	if (routedElements.length > 0 && !routesEverything) {
+		if (!routedElements.includes(elementTipo)) {
 			refuse(
 				'engine.uncovered_scope',
 				`Element ${elementTipo} is not routed to the native engine yet (DEDALO_DIFFUSION_NATIVE_ELEMENTS)`,
@@ -711,6 +742,122 @@ export async function retryPendingDeletionsAction(
 			{
 				summary: `Retried ${summary.retried} of ${summary.total} pending deletions (${summary.remaining} remaining)`,
 				...summary,
+			},
+			{ requestId: requestId() },
+		),
+	};
+}
+
+/**
+ * `sweep_published_langs` — FIND and REPAIR the publication targets of an
+ * install damaged by the DEDALO_DIFFUSION_LANGS migration defect
+ * (targets/mariadb/lang_sweep.ts carries the full account of the defect).
+ *
+ * TWO MODES, and the destructive one is never the default:
+ *  - `mode:'report'` (default): the audit — the policy, every published lang,
+ *    and the phantom ones with their row counts. Read-only.
+ *  - `mode:'sweep'`: removes the rows carrying `options.langs`. Requires
+ *    `confirm:true` AND an explicit lang list, so the operator can only ever
+ *    remove values a report already showed them. The result carries the audit
+ *    taken AFTER the sweep, so the caller sees what is left rather than
+ *    trusting the delete counts.
+ *
+ * NEITHER MODE EVER TOUCHES A TABLE IT CANNOT POSITIVELY IDENTIFY as
+ * diffusion-created (composite PK (section_id, lang) AND a name the diffusion
+ * map declares) — a publication schema is shared ground, see the lang_sweep.ts
+ * header. Gate: test/unit/diffusion_lang_sweep_native.test.ts.
+ *
+ * ADMIN-ONLY, enforced HERE as well as at the dispatch handler: this is a
+ * cross-section destructive operation on the publication server, exactly like
+ * its siblings validate / rebuild_media_index / retry_pending_deletions. The
+ * gate is duplicated deliberately — the handler wiring is one edit away from
+ * being written without it, and a missing permission check must not be
+ * something a wiring mistake can cause.
+ */
+export async function sweepPublishedLangsAction(
+	rqo: Rqo,
+	principal: Principal,
+): Promise<ApiResult> {
+	if (!principal.isGlobalAdmin) {
+		throw new DedaloError('perm.denied', {
+			coordinates: { action: 'sweep_published_langs', required: 'global_admin' },
+		});
+	}
+	const options = (rqo.options ?? {}) as {
+		mode?: unknown;
+		langs?: unknown;
+		databases?: unknown;
+		confirm?: unknown;
+	};
+	const mode = options.mode === 'sweep' ? 'sweep' : 'report';
+	/**
+	 * A list of strings, or a LOUD refusal — never a filtered survivor list.
+	 * Silently dropping a non-string would make the sweep act on a list the
+	 * caller never sent (and, for `databases`, would silently widen the scope
+	 * from "these two" to "every target").
+	 */
+	const stringList = (value: unknown, name: string): string[] | undefined => {
+		if (value === undefined || value === null) return undefined;
+		if (!Array.isArray(value)) {
+			refuse('request.invalid_options', `${name} must be an array of strings`);
+		}
+		for (const item of value) {
+			if (typeof item !== 'string' || item.trim() === '') {
+				refuse('request.invalid_options', `${name} must contain non-empty strings only`);
+			}
+		}
+		return value as string[];
+	};
+
+	if (mode === 'report') {
+		return {
+			status: 200,
+			body: ok(
+				{ mode, ...(await auditPublishedLangs(OPERATOR_AUDIT_BUDGET)) },
+				{ requestId: requestId() },
+			),
+		};
+	}
+
+	const langs = stringList(options.langs, 'options.langs') ?? [];
+	if (langs.length === 0) {
+		refuse(
+			'request.invalid_options',
+			'sweep mode requires options.langs — run mode:"report" first and name the languages to remove',
+		);
+	}
+	if (options.confirm !== true) {
+		// Report-before-remove is a CONTRACT, not a UI convention: the caller has
+		// to have seen the counts, and `confirm` is the only evidence of that a
+		// server-side action can ask for.
+		refuse(
+			'request.invalid_options',
+			'sweep mode requires options.confirm:true (run mode:"report" and review the row counts first)',
+		);
+	}
+	// An EXPLICIT empty database list is a caller bug, not "sweep nothing":
+	// answering ok({swept:[]}) to it would tell an operator their targets are
+	// clean when nothing was even looked at. Omit the key to sweep every target.
+	const databases = stringList(options.databases, 'options.databases');
+	if (databases !== undefined && databases.length === 0) {
+		refuse(
+			'request.invalid_options',
+			'options.databases must name at least one target database (omit it to sweep every target)',
+		);
+	}
+	const sweep = await sweepPhantomLangs({
+		langs,
+		...(databases === undefined ? {} : { databases }),
+	});
+	const after: LangCoherenceReport = await auditPublishedLangs(OPERATOR_AUDIT_BUDGET);
+	return {
+		status: 200,
+		body: ok(
+			{
+				mode,
+				summary: `Removed ${sweep.total_rows} row(s) carrying ${sweep.requested_langs.join(', ')}`,
+				...sweep,
+				after,
 			},
 			{ requestId: requestId() },
 		),

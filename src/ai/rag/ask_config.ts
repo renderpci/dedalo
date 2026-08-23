@@ -11,6 +11,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { readList } from '../../config/readers.ts';
 import type { RecordEgressClass, SystemPromptResolver } from './ask.ts';
 import type { RagConfig } from './config.ts';
 import { HttpLlmProvider, type LlmProvider, StubLlmProvider } from './llm_provider.ts';
@@ -44,12 +45,33 @@ function parseBool(value: string | undefined): boolean {
 	return value === 'true' || value === '1';
 }
 
+/**
+ * Parse the never-egress section list out of an injected env VALUE.
+ *
+ * The grammar of a `string_list` catalog key (JSON array OR comma list) is owned
+ * by `readList`, and that is where it is applied: `defaultRagEnv()` /
+ * `defaultAgentEgressEnv()` normalize the key at the readEnv boundary, so this
+ * function stays PURE and injectable (a caller hands it a plain env map, as the
+ * gates do). What is left here is the last-ditch tolerance, and it exists
+ * because of WHICH list this is: an allowlist that mis-parses fails CLOSED
+ * (nothing is writable), but this is a DENY list — shredding
+ * `["oh1","rsc45"]` into `["oh1"` and `"rsc45"]` matches no section tipo, the
+ * forbidden set comes out EMPTY, and restricted records reach an external LLM
+ * provider. It fails OPEN, silently. So a raw value that reached us
+ * un-normalized (an injected map, a hand-built call) is still read for the
+ * tipos it names: split on commas, then strip the JSON punctuation a section
+ * tipo can never contain.
+ */
+function parseForbiddenSections(value: string | undefined): string[] {
+	return (value ?? '')
+		.split(',')
+		.map((entry) => entry.replace(/[[\]"']/g, '').trim())
+		.filter((entry) => entry !== '');
+}
+
 /** Read the ask runtime config from env (DEDALO_RAG_*). */
 export function askRuntimeConfigFromEnv(env: Env): AskRuntimeConfig {
-	const forbidden = (env.DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS ?? '')
-		.split(',')
-		.map((s) => s.trim())
-		.filter((s) => s !== '');
+	const forbidden = parseForbiddenSections(env.DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS);
 	return {
 		contextTokenBudget: parseIntOr(
 			env.DEDALO_RAG_CONTEXT_TOKEN_BUDGET,
@@ -163,5 +185,14 @@ export function defaultRagEnv(): Env {
 	];
 	const env: Env = {};
 	for (const key of keys) env[key] = readEnv(key);
+	// The one list-shaped key in the slice: normalized THROUGH the catalog reader
+	// that owns the `string_list` grammar (JSON array OR comma list), then handed
+	// on as a canonical comma list so the map stays a plain env slice. A section
+	// tipo never contains a comma, so the round-trip is lossless. Without this a
+	// JSON-encoded value (what the v6->v7 migration writes for a v6 PHP array)
+	// would shred into non-matching tokens and empty the never-egress list.
+	env.DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS = readList(
+		'DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS',
+	).join(',');
 	return env;
 }

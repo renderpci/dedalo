@@ -686,27 +686,50 @@ async function compileSectionPlan(
 }
 
 /**
- * Language policy: an explicit DEDALO_DIFFUSION_LANGS (comma-separated, same
- * parsing as area_maintenance/widgets/publication_api.ts) wins. When unset we mirror the PHP
- * config CATALOG, where DEDALO_DIFFUSION_LANGS is a DERIVED key defaulting to
- * DEDALO_PROJECTS_DEFAULT_LANGS (core/base/config/catalog/domains/lang.php:94)
- * — so the constant is effectively ALWAYS defined and build_langs never hits
- * its own [DEDALO_DATA_LANG] fallback. Collapsing to the single data language
- * here (the previous behavior) published only one lang; deriving from the
- * project langs publishes the full set the oracle does. The single-lang path
- * remains only as a last resort if no project langs are configured. mainLang =
- * first entry (this install's DEDALO_DATA_LANG_DEFAULT === the first lang).
+ * The publication-blocking faults of the configured language set, as compile
+ * errors. PURE and exported so the gate can state each fault without booting a
+ * config: `config.diffusion` is frozen at boot, and an invariant that can only
+ * be observed by mutating the environment is an invariant nobody tests.
+ *
+ * Neither set can be honored by ANY plan. A code that is not `lg-xxx` names no
+ * rendition at all — it is usually the debris of a JSON-array value split on
+ * commas — and a code outside the project languages names a rendition the
+ * installation does not edit. Both used to be published without a word: a
+ * phantom column of empty values in the published table.
+ *
+ * STRICTER THAN BEFORE for the out-of-project case, deliberately: it used to be
+ * honored silently. Refusing here, where a publication is actually being built,
+ * is the loud stop the boot-time console line cannot be — src/config/config.ts
+ * is imported at module scope by the whole engine, so throwing there would stop
+ * a server whose editors are working perfectly well.
+ */
+export function langPolicyErrors(diffusionConfig: {
+	readonly langsMalformed: readonly string[];
+	readonly langsOutsideProject: readonly string[];
+}): string[] {
+	const errors: string[] = [];
+	if (diffusionConfig.langsMalformed.length > 0) {
+		errors.push(
+			`DEDALO_DIFFUSION_LANGS contains entries that are not 'lg-xxx' language codes: ` +
+				`${diffusionConfig.langsMalformed.join(', ')}`,
+		);
+	}
+	if (diffusionConfig.langsOutsideProject.length > 0) {
+		errors.push(
+			`DEDALO_DIFFUSION_LANGS names languages outside DEDALO_PROJECTS_DEFAULT_LANGS: ` +
+				`${diffusionConfig.langsOutsideProject.join(', ')}`,
+		);
+	}
+	return errors;
+}
+
+/**
+ * Language policy of a plan. The derivation (why the project langs stand in
+ * when nothing is configured, why the order is a contract) lives with the ONE
+ * resolution, in `resolveDiffusionLangs` / `config.diffusion` (src/config/config.ts).
  */
 function buildLangPolicy(): { langs: string[]; mainLang: string | null } {
-	const raw = readEnv('DEDALO_DIFFUSION_LANGS');
-	let langs =
-		raw !== undefined && raw !== ''
-			? raw
-					.split(',')
-					.map((lang) => lang.trim())
-					.filter(Boolean)
-			: [...config.menu.projectsDefaultLangs];
-	if (langs.length === 0) langs = [config.menu.dataLang];
+	const langs = [...config.diffusion.langs];
 	return { langs, mainLang: langs[0] ?? null };
 }
 
@@ -735,6 +758,8 @@ export async function compileElementPlan(
 	}
 
 	const diagnostics: CompileDiagnostics = { errors: [], warnings: [], degradations: [] };
+	// No plan may be built on a broken language set (see langPolicyErrors).
+	diagnostics.errors.push(...langPolicyErrors(config.diffusion));
 
 	// The element as it appears VIRTUALLY (alias tipo kept, alias contract on
 	// properties applied by the tree walk).

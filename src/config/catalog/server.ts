@@ -8,12 +8,14 @@ import type { CatalogEntry } from '../catalog_types.ts';
 
 export const SERVER_KEYS = {
 	DEDALO_SUPERVISED: {
+		// Tri-state: UNSET is not the same as 'false' (the reader branches on all
+		// three), so type:'string' is right and the 'bool' LABEL was the lie.
 		type: 'string',
 		scope: 'operator',
 		default: undefined,
 		heading: 'Declaring that a process supervisor is present',
-		typeLabel: 'bool',
-		typeSuffix: '(optional; auto-detected)',
+		typeLabel: 'true || false',
+		typeSuffix: '(optional; unset = auto-detect)',
 		doc: `A code update replaces the installation tree and then exits the server process, so that
 it comes back up running the new code. That only works if **something restarts it**. To
 avoid taking the server down for good, the update refuses to run unless it can see a

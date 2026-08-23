@@ -102,6 +102,7 @@ import {
 	toAgentToolDefinition,
 } from '../../../ai/mcp/registry.ts';
 import { readEnv } from '../../../config/env.ts';
+import { readList } from '../../../config/readers.ts';
 import {
 	type ApiErrorBody,
 	DedaloError,
@@ -140,12 +141,12 @@ export function mcpSessionIdFor(session: Session): string {
 function requestGates(context: ApiRequestContext): RegistryGates {
 	const principal = requirePrincipal(context);
 	const allowWrite = readEnv('DEDALO_AGENT_ALLOW_WRITE') === 'true' && !principal.isGlobalAdmin;
-	const writableSections = new Set(
-		(readEnv('DEDALO_AGENT_WRITE_SECTIONS') ?? '')
-			.split(',')
-			.map((entry) => entry.trim())
-			.filter((entry) => entry !== ''),
-	);
+	// readList, NOT a hand-rolled readEnv().split(','): the key is declared
+	// `string_list` in the catalog, whose grammar is a JSON array OR a comma
+	// list. The v6->v7 migration JSON-encodes v6 PHP arrays, so a raw split
+	// would shred `["oh1","rsc197"]` into tokens like `["oh1"` that match no
+	// section tipo — this allowlist would silently narrow to nothing.
+	const writableSections = new Set(readList('DEDALO_AGENT_WRITE_SECTIONS'));
 	return { allowWrite, writableSections };
 }
 

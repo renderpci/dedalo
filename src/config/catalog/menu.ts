@@ -8,7 +8,9 @@ import type { CatalogEntry } from '../catalog_types.ts';
 
 export const MENU_KEYS = {
 	AREAS_DENY: {
-		type: 'string_list',
+		// 'json_array': read with readJsonArray (config.ts), which REFUSES a comma
+		// list — declaring 'string_list' promised a grammar the reader rejects.
+		type: 'json_array',
 		scope: 'operator',
 		default: ['dd137', 'rsc1', 'hierarchy20'],
 		heading: 'Defining denied areas',
@@ -24,7 +26,8 @@ AREAS_DENY=["dd137","rsc1","hierarchy20"]
 \`\`\``,
 	},
 	MENU_SKIP_TIPOS: {
-		type: 'string_list',
+		// 'json_array': same inverse defect as AREAS_DENY — readJsonArray only.
+		type: 'json_array',
 		scope: 'operator',
 		default: [],
 		heading: 'Defining skip tipos from menu',

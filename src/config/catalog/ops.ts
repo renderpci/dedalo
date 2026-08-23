@@ -82,12 +82,14 @@ DEDALO_BACKUP_TIME_RANGE=8
 \`\`\``,
 	},
 	DEDALO_DEBUG_API_ERRORS: {
+		// Tri-state: UNSET is not the same as 'false' (the reader branches on all
+		// three), so type:'string' is right and the 'bool' LABEL was the lie.
 		type: 'string',
 		scope: 'operator',
 		default: undefined,
 		heading: 'Defining debug detail for API errors',
-		typeLabel: 'bool',
-		typeSuffix: '(optional; development only)',
+		typeLabel: 'true || false',
+		typeSuffix: '(optional; unset = off)',
 		doc: `When a request fails unexpectedly, the client is answered with a generic message and a
 **request id**, while the exception text stays on the server, logged under that same id. This
 is deliberate: the raw text of an error can carry query fragments, filesystem paths and internal

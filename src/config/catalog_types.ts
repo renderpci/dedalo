@@ -28,8 +28,20 @@ export type ConfigType =
 	| 'string'
 	| 'number'
 	| 'boolean'
-	| 'string_list' // JSON array OR comma list
-	| 'json_array' // strictly JSON (a value may legitimately contain commas)
+	// `readList` accepts a JSON array OR a comma list; `requireList` (the required
+	// twin, readers.ts) is JSON-ONLY and THROWS on a comma list. Both are declared
+	// 'string_list', so the type says "a list of strings", never which encodings the
+	// reader of this particular key will take.
+	| 'string_list'
+	// Strictly JSON, and a comma list is REFUSED (logged, value ignored): used where a
+	// value may legitimately contain commas (raw web-server directives) or where the
+	// list is authored as JSON everywhere and a comma fallback would only hide a typo.
+	| 'json_array'
+	// TYPE GAP: DEDALO_LANG_EQUIVALENCES holds string[][] (groups of lg-* codes) and NO
+	// member of this union covers it, so it is declared 'string' and parsed by hand in
+	// config.ts (parseLangEquivalences). Left as a comment on purpose: a one-key type
+	// would have exactly one reader, and the honest fix is a nested-list type only if a
+	// second such key ever appears.
 	| 'string_map' // JSON object of string → string
 	| 'server_list' // [{name,url,code}]
 	| 'tool_roots' // [{path,url}]
