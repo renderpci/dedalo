@@ -28,6 +28,17 @@ const READ_PANEL_SERVING =
 	"const body = await dispatchGetWidgetValue(ADMIN, { model: 'update_ontology' });" +
 	'console.log(JSON.stringify(body.data.serving));';
 
+/**
+ * Every test here SPAWNS A FULL ENGINE BOOT (config graph + a Postgres
+ * connection) and reads its stdout, which costs ~0.5 s warm but seconds on a
+ * cold transpile cache or a cold pool. Under bun's DEFAULT 5 s budget that made
+ * the suite intermittently red with a flat "timed out after 5000ms" — a timing
+ * flake wearing a logic failure's clothes, and the kind of red that teaches a
+ * reader to re-run instead of to look. Hence the explicit per-test timeouts
+ * below, the same convention the other spawn-heavy gates use
+ * (activity_log_native, activity_deep_offset_flip). The budget is generous ON
+ * PURPOSE: it bounds a hang, it does not measure performance.
+ */
 function panelServingWith(env: Record<string, string | undefined>): {
 	exitCode: number;
 	serving: Record<string, unknown>;
@@ -73,7 +84,7 @@ describe('update_ontology panel — serving readout', () => {
 		// The endpoint is reported whatever the state — it is what a client must
 		// register, and the admin needs it BEFORE turning serving on.
 		expect(String(boot.serving.url)).toContain('/dedalo/core/api/v1/json/');
-	});
+	}, 30000);
 
 	test('each flag tracks its own key', () => {
 		const boot = panelServingWith({
@@ -85,7 +96,7 @@ describe('update_ontology panel — serving readout', () => {
 		expect(boot.serving.enabled).toBe(true);
 		expect(boot.serving.has_server_code).toBe(false);
 		expect(boot.serving.cors_enabled).toBe(true);
-	});
+	}, 30000);
 
 	test('the access code is reported as CONFIGURED, never echoed', () => {
 		const secret = 'xx-myspecialcode-xxx';
@@ -100,5 +111,5 @@ describe('update_ontology panel — serving readout', () => {
 		// A shared secret on an admin panel is still a secret: the whole payload
 		// must not carry it.
 		expect(boot.stdout).not.toContain(secret);
-	});
+	}, 30000);
 });
