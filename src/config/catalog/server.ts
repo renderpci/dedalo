@@ -37,11 +37,14 @@ DEDALO_SUPERVISED=true
 \`\`\``,
 	},
 	DEDALO_SMOKE_BOOT: {
+		// Read as the literal string `'true'` (anything else, including unset, is
+		// "not a smoke boot"), so type:'string' is right and a 'bool' LABEL would
+		// be the same lie DEDALO_SUPERVISED's was.
 		type: 'string',
 		scope: 'environment',
 		default: undefined,
 		heading: 'Pre-swap boot check of a candidate code tree',
-		typeLabel: 'bool',
+		typeLabel: 'true',
 		typeSuffix: '(set by the updater; never by hand)',
 		doc: `Set by the code updater on a CHILD process, never by an administrator.
 
