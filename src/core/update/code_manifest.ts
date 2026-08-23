@@ -17,11 +17,11 @@ import { compareVersionArrays } from './version.ts';
 /**
  * One advertised release (PHP file_item).
  *
- * The two data-carrying keys are SNAKE_CASE because they are wire names the
- * client reads verbatim: `render_update_code.js` branches on
- * `force_update_mode === 'clean'` and `update_code.ts` forwards the whole item
- * back as `options.file` (`file.sha256`, `file.force_update_mode`). A camelCase
- * spelling here serializes fine and is silently never read.
+ * `sha256` is SNAKE-adjacent wire spelling because the client forwards the
+ * whole item back as `options.file` (`file.sha256`). `force_update_mode` LEFT
+ * the wire with the clean-only pipeline
+ * (WC-2026-08-23-update-mode-clean-only): clean is the only install mode, so
+ * the manifest advertises nothing to branch on.
  */
 export interface CodeReleaseItem {
 	version: string;
@@ -29,7 +29,6 @@ export interface CodeReleaseItem {
 	date: string;
 	/** sha256 of the archive, from the `<file>.zip.sha256` sidecar (WC-024). */
 	sha256?: string;
-	force_update_mode?: 'clean';
 }
 
 export interface CodeUpdateInfo {
@@ -53,44 +52,64 @@ export function linearUpgradeTargets(
 	clientVersion: readonly number[],
 	catalog: typeof UPDATE_CATALOG = UPDATE_CATALOG,
 ): number[][] {
+	const client = normalizedClientTriple(clientVersion);
 	const targets: number[][] = [];
 	let nextMajor: number[] | null = null;
 	let nextMinor: number[] | null = null;
-	const clientMajor = clientVersion[0] ?? 0;
 	for (const descriptor of Object.values(catalog)) {
 		const triple = [descriptor.versionMajor, descriptor.versionMedium, descriptor.versionMinor];
-		// next major boundary x+1.0.0
-		if (
-			descriptor.versionMajor === clientMajor + 1 &&
-			descriptor.versionMedium === 0 &&
-			descriptor.versionMinor === 0
-		) {
-			nextMajor = triple;
-		}
-		// next minor within the current major (overrides the major candidate)
-		if (
-			descriptor.versionMajor === clientMajor &&
-			descriptor.versionMedium === (clientVersion[1] ?? 0) + 1 &&
-			descriptor.versionMinor === 0
-		) {
-			nextMinor = triple;
-		}
-		// next patch within the current minor
-		if (
-			descriptor.versionMajor === clientMajor &&
-			descriptor.versionMedium === (clientVersion[1] ?? 0) &&
-			descriptor.versionMinor === (clientVersion[2] ?? 0) + 1
-		) {
-			targets.push(triple);
-		}
+		const rung = upgradeRung(triple, client);
+		if (rung === 'major') nextMajor = triple;
+		else if (rung === 'minor') nextMinor = triple;
+		else if (rung === 'patch') targets.push(triple);
 	}
-	const boundary = nextMinor ?? nextMajor;
-	if (boundary !== null) targets.push(boundary);
+	appendBoundaryTarget(targets, nextMinor, nextMajor);
 	// One dedupe over the WHOLE list (defect D17, fixed 2026-08-09): the same
 	// triple can be reached from two catalog keys, not only from the boundary
 	// candidate, and a duplicated rung would be advertised twice in the manifest.
 	const unique = [...new Map(targets.map((triple) => [triple.join('.'), triple])).values()];
 	return unique.sort(compareVersionArrays);
+}
+
+/** The ONE boundary rung the manifest advertises: the minor candidate
+ * OVERRIDES the major one — the next minor within the current major must be
+ * exhausted before the x+1.0.0 boundary is visible. */
+function appendBoundaryTarget(
+	targets: number[][],
+	nextMinor: number[] | null,
+	nextMajor: number[] | null,
+): void {
+	const boundary = nextMinor ?? nextMajor;
+	if (boundary !== null) targets.push(boundary);
+}
+
+/** The client version as an exact [major, minor, patch], missing parts = 0. */
+function normalizedClientTriple(clientVersion: readonly number[]): [number, number, number] {
+	return [clientVersion[0] ?? 0, clientVersion[1] ?? 0, clientVersion[2] ?? 0];
+}
+
+/**
+ * Which rung of the linear upgrade path a catalog triple sits on, relative to
+ * the client: the x+1.0.0 major boundary, the next minor within the current
+ * major, the next patch within the current minor — or none.
+ */
+function upgradeRung(
+	triple: readonly number[],
+	[cMajor, cMinor, cPatch]: readonly [number, number, number],
+): 'major' | 'minor' | 'patch' | null {
+	if (tripleEquals(triple, cMajor + 1, 0, 0)) return 'major';
+	if (tripleEquals(triple, cMajor, cMinor + 1, 0)) return 'minor';
+	if (tripleEquals(triple, cMajor, cMinor, cPatch + 1)) return 'patch';
+	return null;
+}
+
+function tripleEquals(
+	triple: readonly number[],
+	major: number,
+	minor: number,
+	patch: number,
+): boolean {
+	return triple[0] === major && triple[1] === minor && triple[2] === patch;
 }
 
 /**
@@ -109,25 +128,32 @@ export function buildCodeUpdateInfo(options: {
 	const targets = linearUpgradeTargets(options.clientVersion, options.catalog ?? UPDATE_CATALOG);
 	if (options.codeFilesDir !== undefined && existsSync(options.codeFilesDir)) {
 		for (const triple of targets) {
-			const versionString = triple.join('.');
-			const fileName = `${versionString}.zip`;
-			const filePath = codeReleasePath(options.codeFilesDir, triple, fileName);
-			if (filePath === null || !existsSync(filePath)) continue;
-			const key = `${triple[0]}${triple[1]}${triple[2]}`;
-			const descriptor = (options.catalog ?? UPDATE_CATALOG)[key];
-			const sha256 = readShaSidecar(filePath);
-			files.push({
-				version: versionString,
-				url: `${options.publicBaseUrl}/${versionString}/${fileName}`,
-				date: new Date(statSync(filePath).mtimeMs).toISOString(),
-				...(sha256 === null ? {} : { sha256 }),
-				...(descriptor?.forceUpdateMode === 'clean' ? { force_update_mode: 'clean' as const } : {}),
-			});
+			const item = releaseItemFor(options.codeFilesDir, options.publicBaseUrl, triple);
+			if (item !== null) files.push(item);
 		}
 	}
 	return {
 		info: { version: options.serverVersion.join('.'), ...options.info },
 		files,
+	};
+}
+
+/** One advertised release item, or null when its archive does not exist on disk. */
+function releaseItemFor(
+	codeFilesDir: string,
+	publicBaseUrl: string,
+	triple: readonly number[],
+): CodeReleaseItem | null {
+	const versionString = triple.join('.');
+	const fileName = `${versionString}.zip`;
+	const filePath = codeReleasePath(codeFilesDir, triple, fileName);
+	if (filePath === null || !existsSync(filePath)) return null;
+	const sha256 = readShaSidecar(filePath);
+	return {
+		version: versionString,
+		url: `${publicBaseUrl}/${versionString}/${fileName}`,
+		date: new Date(statSync(filePath).mtimeMs).toISOString(),
+		...(sha256 === null ? {} : { sha256 }),
 	};
 }
 
@@ -148,13 +174,22 @@ function readShaSidecar(archivePath: string): string | null {
 	return /^[a-f0-9]{64}$/.test(digest) ? digest : null;
 }
 
-/** Release archive path: <codeFilesDir>/<major>/<major.minor>/<file>. Confined. */
+/**
+ * Release archive path: <codeFilesDir>/<major>/<major.minor>/<file>. Confined.
+ *
+ * TWO channels resolve, ONE is advertised: the published `<v>.zip` and the
+ * developer `<v>-dev.zip` (code_build_plan.ts releaseFileName) are both
+ * servable through code_serving.ts, but `buildCodeUpdateInfo` above only ever
+ * LOOKS FOR `<v>.zip` — a dev build is fetchable by an operator who knows its
+ * URL, never offered to a consumer as a release. That separation is a security
+ * property; do not teach the manifest the `-dev` name.
+ */
 export function codeReleasePath(
 	codeFilesDir: string,
 	triple: readonly number[],
 	fileName: string,
 ): string | null {
-	if (!/^[0-9]+\.[0-9]+\.[0-9]+\.zip$/.test(fileName)) return null;
+	if (!/^[0-9]+\.[0-9]+\.[0-9]+(-dev)?\.zip$/.test(fileName)) return null;
 	const dir = join(codeFilesDir, String(triple[0]), `${triple[0]}.${triple[1]}`);
 	const resolved = resolve(join(dir, fileName));
 	if (!resolved.startsWith(`${resolve(codeFilesDir)}${sep}`)) return null;
@@ -165,16 +200,29 @@ export function codeReleasePath(
 export function existingReleaseVersions(codeFilesDir: string | undefined): string[] {
 	if (codeFilesDir === undefined || !existsSync(codeFilesDir)) return [];
 	const versions: string[] = [];
-	for (const major of readdirSync(codeFilesDir)) {
-		const majorDir = join(codeFilesDir, major);
-		if (!statSync(majorDir).isDirectory()) continue;
-		for (const minor of readdirSync(majorDir)) {
-			const minorDir = join(majorDir, minor);
-			if (!statSync(minorDir).isDirectory()) continue;
-			for (const file of readdirSync(minorDir)) {
-				if (file.endsWith('.zip')) versions.push(file.replace(/\.zip$/, ''));
-			}
+	for (const majorDir of subdirsOf(codeFilesDir)) {
+		for (const minorDir of subdirsOf(majorDir)) {
+			versions.push(...zipVersionsIn(minorDir));
 		}
 	}
 	return versions.sort();
+}
+
+/** The version strings of the `<v>.zip` files directly inside a dir. */
+function zipVersionsIn(dir: string): string[] {
+	const versions: string[] = [];
+	for (const file of readdirSync(dir)) {
+		if (file.endsWith('.zip')) versions.push(file.replace(/\.zip$/, ''));
+	}
+	return versions;
+}
+
+/** Absolute paths of a directory's immediate subdirectories. */
+function subdirsOf(dir: string): string[] {
+	const dirs: string[] = [];
+	for (const name of readdirSync(dir)) {
+		const full = join(dir, name);
+		if (statSync(full).isDirectory()) dirs.push(full);
+	}
+	return dirs;
 }

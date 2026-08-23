@@ -30,6 +30,16 @@ Wants=postgresql.service
 StartLimitIntervalSec=300
 StartLimitBurst=5
 
+# Code-update rollback hook. The unit enters `failed` EXACTLY when the start
+# limit above is exhausted — which is precisely the "the newly swapped-in code
+# tree never boots" signature (Restart=always keeps retrying individual crashes
+# as before; only the exhausted budget lands here). The rollback unit is a
+# no-op unless the code-update sentinel (<backup root>/last_code_update.json)
+# says a pending, unconfirmed update exists — so an ordinary crash loop with no
+# update in flight fires it harmlessly and nothing is touched. See
+# deploy/dedalo-code-rollback.sh.
+OnFailure=dedalo-ts-rollback.service
+
 [Service]
 Type=simple
 # User= and Group= are TWO values. This guide's layout makes them the same string

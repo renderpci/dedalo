@@ -28,7 +28,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { getRoots, TOOL_COMMON_CLIENT_DIR, TOOLS_URL_BASE } from '../tools/paths.ts';
-import { DEDALO_ENGINE_VERSION } from '../update/version.ts';
+import { DEDALO_ENGINE_VERSION } from '../update/build_stamp.ts';
 
 /** One manifest entry ({type,url}, PHP shape). */
 export interface DedaloFileEntry {

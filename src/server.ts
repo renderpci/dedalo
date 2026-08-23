@@ -67,6 +67,7 @@ import {
 } from './core/security/session_store.ts';
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
+import { DEDALO_ENGINE_VERSION } from './core/update/build_stamp.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
@@ -761,6 +762,10 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			{
 				result: dbOk ? 'ok' : 'error',
 				entity: config.entity,
+				// The running engine version (update_code post-restart poll: the
+				// client compares this to the update's expected_version). NOT the
+				// database name — see test_db_marker_tripwire's /health rule.
+				version: DEDALO_ENGINE_VERSION,
 				db: dbOk ? 'ok' : 'down',
 				// Dev mode only, and an opaque hash even then (see above).
 				...(DEV_MODE_HEALTH_DB_IDENTITY && dbOk
@@ -1418,6 +1423,23 @@ export async function startServer() {
 	installUnhandledRejectionGuard();
 	echoRuntimeVersion();
 
+	// SMOKE BOOT (core/update/smoke_boot.ts): the code updater boots the
+	// QUARANTINE tree once, pre-swap, with DEDALO_SMOKE_BOOT=true. Under the
+	// flag this process is READ-ONLY BY CONSTRUCTION: boot migrations,
+	// search-store provisioning, schedulers, diffusion, media-tree provisioning
+	// and every other boot writer below are SKIPPED — it only binds and answers
+	// /health (whose DB ping is the one, read-only, touch of the shared DB).
+	const smokeBoot = readEnv('DEDALO_SMOKE_BOOT') === 'true';
+	if (smokeBoot) {
+		console.warn(
+			'================ SMOKE BOOT ================\n' +
+				'[boot] DEDALO_SMOKE_BOOT=true — pre-swap boot check of a quarantine tree. ' +
+				'Skipping boot migrations, schedulers, diffusion, watchers and media provisioning; ' +
+				'serving /health only until SIGTERM.\n' +
+				'============================================',
+		);
+	}
+
 	// Serialize the core module-graph evaluation BEFORE anything can race it
 	// (see warmCoreModuleGraph). A failure here is fatal by design: exit
 	// explicitly — a throw would only feed the unhandledRejection guard above
@@ -1446,8 +1468,10 @@ export async function startServer() {
 	// continues: the lazy CREATE IF NOT EXISTS bootstraps remain the fallback,
 	// and refusing to boot on a transient DB blip would contradict the
 	// fault-tolerant boot posture (S1-15). Skipped entirely in install mode (the
-	// sentinel DB is unreachable and there is nothing to migrate yet).
-	if (!config.installMode) {
+	// sentinel DB is unreachable and there is nothing to migrate yet) and in a
+	// smoke boot (read-only by construction — running migrations pre-swap would
+	// mutate the shared DB while the old code is live).
+	if (!config.installMode && !smokeBoot) {
 		try {
 			await runBootMigrations();
 		} catch (error) {
@@ -1489,9 +1513,10 @@ export async function startServer() {
 	}
 
 	// Everything below through the diffusion control plane is DB-dependent —
-	// skipped in install mode (no database yet). The block restores on the
+	// skipped in install mode (no database yet) and in a smoke boot (schedulers,
+	// watchers, media provisioning: all writers). The block restores on the
 	// post-configuration restart.
-	if (!config.installMode) {
+	if (!config.installMode && !smokeBoot) {
 		// Register the RAG save/delete → index-queue hook (no-op when
 		// DEDALO_RAG_ENABLED is off). Must run before serving so writes are captured.
 		initRagHooks();
@@ -1794,16 +1819,18 @@ export async function startServer() {
 	// Media job pfile reconcile + residue GC (audit S2-15/S3-46): flip stale
 	// 'running' pfiles from previous process lives to 'interrupted' and prune
 	// ancient terminal pfiles. Fire-and-forget — pure filesystem hygiene.
-	void import('./core/media/jobs.ts')
-		.then(({ reconcileProcessFiles }) => {
-			const { interrupted, pruned } = reconcileProcessFiles();
-			if (interrupted.length > 0 || pruned > 0) {
-				console.warn(
-					`[media jobs] boot reconcile: ${interrupted.length} stale running pfile(s) marked interrupted, ${pruned} old pfile(s) pruned`,
-				);
-			}
-		})
-		.catch((error) => console.error('[media jobs] boot reconcile failed:', error));
+	// Skipped in a smoke boot: the quarantine must not touch the live pfiles.
+	if (!smokeBoot)
+		void import('./core/media/jobs.ts')
+			.then(({ reconcileProcessFiles }) => {
+				const { interrupted, pruned } = reconcileProcessFiles();
+				if (interrupted.length > 0 || pruned > 0) {
+					console.warn(
+						`[media jobs] boot reconcile: ${interrupted.length} stale running pfile(s) marked interrupted, ${pruned} old pfile(s) pruned`,
+					);
+				}
+			})
+			.catch((error) => console.error('[media jobs] boot reconcile failed:', error));
 
 	const socketPath = config.server.unixSocketPath;
 	// A previous unclean shutdown leaves the socket file behind; Bun cannot
@@ -1843,6 +1870,22 @@ export async function startServer() {
 	});
 	servers.push(server);
 	console.log(`Dédalo TS server listening on unix socket ${socketPath} (entity: ${config.entity})`);
+
+	// CODE-UPDATE BOOT CONFIRMATION (core/update/boot_confirm.ts): once the
+	// listener is up AND the first DB ping is green, flip a pending update
+	// sentinel to 'confirmed' so the supervisor-side rollback stands down.
+	// Skipped in install mode (no DB) and in a smoke boot (the quarantine must
+	// never confirm an update it is merely rehearsing).
+	if (!config.installMode && !smokeBoot) {
+		void (async () => {
+			if (await checkDbHealth()) {
+				const { confirmBootedCodeUpdate } = await import('./core/update/boot_confirm.ts');
+				await confirmBootedCodeUpdate();
+			} else {
+				console.warn('[code update] boot confirmation deferred: DB ping failed at boot');
+			}
+		})().catch((error) => console.error('[code update] boot confirmation errored:', error));
+	}
 
 	// Optional TCP dev listener (browsers cannot reach a unix socket directly;
 	// production stays socket-only behind the reverse proxy). Set

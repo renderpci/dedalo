@@ -11,56 +11,12 @@
 
 	>.content_data {
 
-		.config_grid {
-			grid-template-columns: 3fr 6fr;
-			gap: 0.25rem;
+		.dd_readout {
+			margin-bottom: 0.75rem;
+		}
 
-			.label {
-				display: flex;
-				align-items: flex-start;
-				flex-wrap: nowrap;
-
-				&.bold {
-					padding-bottom: 0.5rem !important;
-				}
-			}
-
-			&.servers_grid {
-
-				.label {
-					display: block;
-					cursor: pointer;
-					padding-bottom: 0px;
-					padding-top: 0.2rem;
-					overflow: hidden;
-					text-overflow: ellipsis;
-					white-space: nowrap;
-
-					input[type="radio"] {
-						cursor: pointer;
-						width: unset;
-						height: unset;
-						padding: 0;
-						margin: 0 .5em .5em 0;
-						vertical-align: text-top;
-					}
-				}
-
-				.value {
-					padding: 0.5rem;
-					padding-bottom: 0px;
-					padding-top: 0.2rem;
-
-					.icon {
-						margin-left: 0.5rem;
-					}
-				}
-
-				.active {
-					color: @color_black;
-					font-weight: 500;
-				}
-			}
+		.dd_note {
+			margin: 0.5rem 0;
 		}
 
 		.build_version_group {
@@ -68,6 +24,48 @@
 			border-radius: 4px;
 			padding: 0.66rem;
 			margin-top: 0.5rem;
+		}
+
+		// phase track: the shared-kit progress bar + one row per job phase
+		.phase_track {
+			margin: 0.75rem 0;
+
+			.dd_bar {
+				margin-bottom: 0.33rem;
+			}
+
+			.dd_readout {
+				margin-top: 0.5rem;
+			}
+		}
+
+		.body_response {
+
+			>.error {
+				margin: 0.5rem 0;
+			}
+
+			// the raw SSE mirror render_stream emits under display_json:true is
+			// this widget's REDUCER FEED (render_update_code.js observes it),
+			// not an operator surface: the phase track is the UI. Hidden, not
+			// removed — the MutationObserver still fires on hidden nodes.
+			.update_stream .display_json_box {
+				display: none;
+			}
+
+			// a pre-phase refusal is the whole story (the track is all-pending):
+			// render its sentence prominently
+			.dd_note.update_refusal {
+				font-weight: bold;
+				font-size: 1.1em;
+			}
+
+			.reload_pending {
+
+				>button {
+					margin-left: 0.75rem;
+				}
+			}
 		}
 	}
 
@@ -88,25 +86,13 @@
 		justify-content: center;
 		font-size: 1.1rem;
 
-		.beta_updates_container {
+		.dd_readout {
 			width: 100%;
-			text-align: right;
-			margin-top: 3rem;
-			padding-right: 1.5rem;
-
-			>.version_label {
-				cursor: pointer;
-
-				>input {
-					cursor: pointer;
-					vertical-align: bottom;
-					margin-right: 0.33rem;
-				}
-			}
+			margin-top: 1rem;
 		}
 
 		.files_container {
-			width: 100;
+			width: 100%;
 			text-align: left;
 			margin-top: 2rem;
 
@@ -135,15 +121,6 @@
 					font-weight: 300;
 					color: @color_grey_9;
 				}
-
-				&.development {
-					background-color: @color_orange_dedalo;
-					color: @color_white;
-
-					.value {
-						color: @color_white;
-					}
-				}
 			}
 
 			.file_container:last-child {
@@ -160,23 +137,9 @@
 		margin-top: 2rem;
 		min-height: 6rem;
 
-		// update_mode_container. Radio buttons update mode user selection
-		>.update_mode_container {
-			padding: 1rem;
-			margin-bottom: 1.5rem;
-			display: flex;
-			width: 100%;
-			justify-content: center;
-			gap: 1rem;
-
-			>label {
-				cursor: pointer;
-
-				input {
-					cursor: pointer;
-					vertical-align: bottom;
-				}
-			}
+		>button[disabled] {
+			opacity: 0.5;
+			cursor: not-allowed;
 		}
 
 		// update-file JSON preview — the shared console surface
@@ -191,6 +154,10 @@
 		>.response {
 			padding-bottom: 6rem;
 			padding-top: 0;
+
+			&.error {
+				color: @color_danger;
+			}
 		}
 
 		.spinner {

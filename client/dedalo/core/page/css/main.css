@@ -16693,52 +16693,39 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code .server_picker .server_row .dd_badge {
   flex: 0 0 auto;
 }
-.wrapper_widget.update_code > .content_data .config_grid {
-  grid-template-columns: 3fr 6fr;
-  gap: 0.25rem;
+.wrapper_widget.update_code > .content_data .dd_readout {
+  margin-bottom: 0.75rem;
 }
-.wrapper_widget.update_code > .content_data .config_grid .label {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-}
-.wrapper_widget.update_code > .content_data .config_grid .label.bold {
-  padding-bottom: 0.5rem !important;
-}
-.wrapper_widget.update_code > .content_data .config_grid.servers_grid .label {
-  display: block;
-  cursor: pointer;
-  padding-bottom: 0px;
-  padding-top: 0.2rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.wrapper_widget.update_code > .content_data .config_grid.servers_grid .label input[type="radio"] {
-  cursor: pointer;
-  width: unset;
-  height: unset;
-  padding: 0;
-  margin: 0 0.5em 0.5em 0;
-  vertical-align: text-top;
-}
-.wrapper_widget.update_code > .content_data .config_grid.servers_grid .value {
-  padding: 0.5rem;
-  padding-bottom: 0px;
-  padding-top: 0.2rem;
-}
-.wrapper_widget.update_code > .content_data .config_grid.servers_grid .value .icon {
-  margin-left: 0.5rem;
-}
-.wrapper_widget.update_code > .content_data .config_grid.servers_grid .active {
-  color: var(--color_black);
-  font-weight: 500;
+.wrapper_widget.update_code > .content_data .dd_note {
+  margin: 0.5rem 0;
 }
 .wrapper_widget.update_code > .content_data .build_version_group {
   border: 1px solid var(--color_orange);
   border-radius: 4px;
   padding: 0.66rem;
   margin-top: 0.5rem;
+}
+.wrapper_widget.update_code > .content_data .phase_track {
+  margin: 0.75rem 0;
+}
+.wrapper_widget.update_code > .content_data .phase_track .dd_bar {
+  margin-bottom: 0.33rem;
+}
+.wrapper_widget.update_code > .content_data .phase_track .dd_readout {
+  margin-top: 0.5rem;
+}
+.wrapper_widget.update_code > .content_data .body_response > .error {
+  margin: 0.5rem 0;
+}
+.wrapper_widget.update_code > .content_data .body_response .update_stream .display_json_box {
+  display: none;
+}
+.wrapper_widget.update_code > .content_data .body_response .dd_note.update_refusal {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+.wrapper_widget.update_code > .content_data .body_response .reload_pending > button {
+  margin-left: 0.75rem;
 }
 .widget_update_code_modal .modal_content {
   width: 890px;
@@ -16750,22 +16737,12 @@ dd-modal:has(.tool_header) {
   justify-content: center;
   font-size: 1.1rem;
 }
-.widget_update_code_modal .body .beta_updates_container {
+.widget_update_code_modal .body .dd_readout {
   width: 100%;
-  text-align: right;
-  margin-top: 3rem;
-  padding-right: 1.5rem;
-}
-.widget_update_code_modal .body .beta_updates_container > .version_label {
-  cursor: pointer;
-}
-.widget_update_code_modal .body .beta_updates_container > .version_label > input {
-  cursor: pointer;
-  vertical-align: bottom;
-  margin-right: 0.33rem;
+  margin-top: 1rem;
 }
 .widget_update_code_modal .body .files_container {
-  width: 100;
+  width: 100%;
   text-align: left;
   margin-top: 2rem;
 }
@@ -16792,13 +16769,6 @@ dd-modal:has(.tool_header) {
   font-weight: 300;
   color: var(--color_grey_9);
 }
-.widget_update_code_modal .body .files_container .file_container.development {
-  background-color: var(--color_orange_dedalo);
-  color: var(--color_white);
-}
-.widget_update_code_modal .body .files_container .file_container.development .value {
-  color: var(--color_white);
-}
 .widget_update_code_modal .body .files_container .file_container:last-child {
   border-bottom: none;
   margin-bottom: 0px;
@@ -16810,20 +16780,9 @@ dd-modal:has(.tool_header) {
   margin-top: 2rem;
   min-height: 6rem;
 }
-.widget_update_code_modal .footer > .update_mode_container {
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  display: flex;
-  width: 100%;
-  justify-content: center;
-  gap: 1rem;
-}
-.widget_update_code_modal .footer > .update_mode_container > label {
-  cursor: pointer;
-}
-.widget_update_code_modal .footer > .update_mode_container > label input {
-  cursor: pointer;
-  vertical-align: bottom;
+.widget_update_code_modal .footer > button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .widget_update_code_modal .footer pre {
   padding: 0.7rem 0.85rem;
@@ -16844,6 +16803,9 @@ dd-modal:has(.tool_header) {
 .widget_update_code_modal .footer > .response {
   padding-bottom: 6rem;
   padding-top: 0;
+}
+.widget_update_code_modal .footer > .response.error {
+  color: var(--color_danger);
 }
 .widget_update_code_modal .footer .spinner {
   margin: 0px;

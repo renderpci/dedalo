@@ -10,6 +10,7 @@
 import { accessSync, constants, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 
 export interface ServerState {
 	maintenance_mode: boolean;
@@ -75,8 +76,8 @@ export function getEffectiveAreasAllow(): string[] {
  * Save instead of failing it).
  */
 export function isStateWritable(): boolean {
-	const path = statePath();
 	try {
+		const path = statePath();
 		accessSync(existsSync(path) ? path : dirname(path), constants.W_OK);
 		return true;
 	} catch {
@@ -96,14 +97,24 @@ export function statePath(): string {
 	const override = readEnv('DEDALO_TS_STATE_PATH');
 	if (override !== undefined) return override;
 	// The ONE private-dir resolution (src/config/env.ts), which honors
-	// DEDALO_PRIVATE_DIR. This used to re-derive it as
-	// `dirname(process.cwd()) + '/private'`, which ignored that variable: in a
-	// container (DEDALO_PRIVATE_DIR=/private, cwd=the repo) it resolved to a
-	// non-existent /opt/dedalo/private, fell back to the read-only repo, and the
-	// install died on `EACCES … /opt/dedalo/master_dedalo/ts_state.json`.
-	// config/install_mode.ts always used the shared value — the two had diverged,
-	// and the state file is what tells install mode from a sealed instance.
-	return join(existsSync(privateDir) ? privateDir : process.cwd(), 'ts_state.json');
+	// DEDALO_PRIVATE_DIR. This used to fall back to `process.cwd()` when the
+	// private dir did not exist — under systemd cwd IS the code tree, so the
+	// state file landed inside projectRoot and a code-update tree swap carried
+	// it away (runtime-path census, 2026-08-23). A missing private dir is now
+	// CREATED, and a private dir that cannot be created is a loud typed refusal,
+	// never a silent write into the code tree.
+	if (!existsSync(privateDir)) {
+		try {
+			mkdirSync(privateDir, { recursive: true });
+		} catch (error) {
+			throw new DedaloError('internal.invariant', {
+				message: `server_state: the private directory '${privateDir}' does not exist and cannot be created (${(error as Error).message}); refusing to place ts_state.json inside the code tree`,
+				coordinates: { module: 'core/resolve/server_state.ts', path: privateDir },
+				cause: error,
+			});
+		}
+	}
+	return join(privateDir, 'ts_state.json');
 }
 
 export function getServerState(): ServerState {

@@ -11,18 +11,13 @@ export const DEDALO_VERSION_TRIPLE: readonly [number, number, number] = Object.f
 	7, 0, 0,
 ]) as [number, number, number];
 
-/**
- * Prerelease tag appended to the code-version string ('' on release builds).
- * PHP appends '.dev' when DEVELOPMENT_SERVER; this install literal is pinned
- * for wire parity ([install]).
- */
-const PRERELEASE_TAG = '.dev';
-
 /** '7.0.0' — the data-version string (matrix_updates rows, login About panel). */
 export const DEDALO_VERSION: string = DEDALO_VERSION_TRIPLE.join('.');
 
-/** '7.0.0.dev' — the code-version string the client displays (PHP DEDALO_VERSION). */
-export const DEDALO_ENGINE_VERSION: string = `${DEDALO_VERSION}${PRERELEASE_TAG}`;
+// The COMPOSED code-version string (DEDALO_VERSION + prerelease tag) lives in
+// build_stamp.ts: the tag is build-provenance-derived ('.dev' on a dev
+// checkout, '' on a `git archive` release), and provenance needs fs — this
+// module stays a leaf.
 
 /** '7.0' — the ontology IO directory segment (patch releases share one dir, PHP parity). */
 export const DEDALO_VERSION_MAJOR_MINOR: string = `${DEDALO_VERSION_TRIPLE[0]}.${DEDALO_VERSION_TRIPLE[1]}`;

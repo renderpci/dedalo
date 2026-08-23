@@ -4,9 +4,161 @@
  * GENERATED SCAFFOLD (probe_emit_catalog.ts). Hand-edit from here on.
  */
 
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { CatalogEntry, CatalogGet } from '../catalog_types.ts';
-import { projectRoot } from '../env.ts';
+import { privateDir, projectRoot, readEnv } from '../env.ts';
+
+/**
+ * Legacy-dir probe (2026-08-23 review, FINDING 1). Three honest answers:
+ *  - 'content':    the dir exists and holds ANY entry — dot-entries INCLUDED.
+ *    `.publication` (the media ACCESS-CONTROL marker tree,
+ *    core/media/protection.ts) lives at `<mediaRoot>/.publication`, and so does
+ *    anything else an operator put there; the old non-dotfile filter read a
+ *    marker-only legacy dir as "empty" and silently repointed the root,
+ *    orphaning the access-control state.
+ *  - 'empty':      the dir does not exist, or exists and is empty.
+ *  - 'unreadable': the dir exists but readdir failed (EACCES, an NFS blip) —
+ *    NEVER "empty": a transient error must not repoint a live media root.
+ */
+function probeLegacyDir(path: string): 'content' | 'empty' | 'unreadable' {
+	if (!existsSync(path)) return 'empty';
+	try {
+		return readdirSync(path).length > 0 ? 'content' : 'empty';
+	} catch {
+		return 'unreadable';
+	}
+}
+
+/**
+ * Where the boot-resolved facts live: a mirror of core/resolve/server_state.ts
+ * `statePath()` WITHOUT its mkdir side effect — the runtime-path census calls
+ * through here as a PURE question, and importing server_state from the config
+ * catalog would invert the layering. Extra keys in ts_state.json survive
+ * server_state's read-spread/write cycle, so the two writers coexist.
+ */
+function stateFilePath(): string {
+	const override = readEnv('DEDALO_TS_STATE_PATH');
+	if (override !== undefined && override !== '') return override;
+	return join(privateDir, 'ts_state.json');
+}
+
+type LegacyDirDecision = 'legacy' | 'modern';
+
+/** The recorded (sticky) legacy-vs-modern decisions, keyed by config key. */
+function readStickyDecisions(): Record<string, LegacyDirDecision> {
+	try {
+		const state = JSON.parse(readFileSync(stateFilePath(), 'utf8')) as {
+			legacy_dir_fallback?: Record<string, LegacyDirDecision>;
+		};
+		const map = state.legacy_dir_fallback;
+		return map !== null && typeof map === 'object' ? map : {};
+	} catch {
+		return {};
+	}
+}
+
+/** Record one decision durably (merge-write; other ts_state.json keys survive). */
+function recordStickyDecision(key: string, decision: LegacyDirDecision): void {
+	const path = stateFilePath();
+	try {
+		let state: Record<string, unknown> = {};
+		try {
+			const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+			if (parsed !== null && typeof parsed === 'object') state = parsed as Record<string, unknown>;
+		} catch {
+			/* fresh or unreadable state file — start from the decision alone */
+		}
+		const previous = (state.legacy_dir_fallback ?? {}) as Record<string, LegacyDirDecision>;
+		state.legacy_dir_fallback = { ...previous, [key]: decision };
+		mkdirSync(dirname(path), { recursive: true });
+		writeFileSync(path, `${JSON.stringify(state, null, '\t')}\n`);
+	} catch (error) {
+		console.warn(
+			`[config] could not record the ${key} legacy-dir decision ('${decision}') in '${path}' (${(error as Error).message}) — the decision holds for this process but will be re-derived at next boot.`,
+		);
+	}
+}
+
+/**
+ * LEGACY-AWARE DEFAULT for a runtime data directory that historically lived
+ * INSIDE the code tree (2026-08-23, the runtime-path census: a code update
+ * renames the whole tree away, so in-tree defaults silently move an install's
+ * data into the backup dir — src/core/install/runtime_paths.ts).
+ *
+ * The default is now `<private dir>/<privateRel>`, but a location change must
+ * NEVER move anyone's files: when the key is unset and the legacy in-tree
+ * directory still holds content, the legacy path keeps being used and a
+ * one-line warning names the key that ends the fallback. Only an install with
+ * no legacy data gets the new default. `preferPrivateWhenExists` lets a key
+ * whose legacy dir SHIPS repo content (ONTOLOGY_DATA_IO_DIR — the vendored
+ * `install/import/ontology/7.0/*.copy.gz` seeds make "legacy is non-empty"
+ * permanently true) escape by simply creating the private-dir home.
+ *
+ * It lives HERE (not in runtime_paths.ts) because the census module imports
+ * the typed readers, which load the catalog — the helper in runtime_paths
+ * would be an import cycle.
+ *
+ * THE DECISION IS STICKY (2026-08-23 review, FINDING 1). Re-deriving it from
+ * directory contents at every config build made the media root BISTABLE: a
+ * legacy dir emptied of visible files (but still holding `.publication`, the
+ * access-control marker tree) silently flipped the root to `<private>/media`;
+ * a fresh install that later gained a stray `<root>/media` with files silently
+ * repointed the live archive; and the boot-frozen `config.media.rootPath`
+ * could disagree with the update-time census. So the first derivation is
+ * RECORDED in ts_state.json (`legacy_dir_fallback`, the home of boot-resolved
+ * facts) by the ONE consumer call (`options.record`, set by buildMediaConfig),
+ * and every later call — config rebuilds, the census at update time — returns
+ * the recorded answer. It changes only when an operator sets the key
+ * explicitly, which bypasses this function entirely. Note
+ * `DEDALO_TEST_MEDIA_ROOT` outranks all of this: both buildMediaConfig and the
+ * census resolve it BEFORE ever reaching this default.
+ */
+export function legacyAwareDefaultDir(
+	key: string,
+	legacyRel: readonly string[],
+	privateRel: readonly string[],
+	options: { preferPrivateWhenExists?: boolean; warn?: boolean; record?: boolean } = {},
+): string {
+	const legacy = join(projectRoot, ...legacyRel);
+	const modern = join(privateDir, ...privateRel);
+	if (options.preferPrivateWhenExists === true && existsSync(modern)) return modern;
+	const decision = stickyOrDerivedDecision(key, legacy, options.record === true);
+	if (decision === 'legacy') {
+		if (options.warn === true) {
+			console.warn(
+				`[config] ${key} is unset and the LEGACY in-tree default '${legacy}' holds data — keeping it so nothing moves, but a code update renames the whole tree away. Set ${key} (e.g. to '${modern}') and move the directory to end this warning.`,
+			);
+		}
+		return legacy;
+	}
+	return modern;
+}
+
+/** The recorded decision when one exists; else derive it (and record it when
+ * `record` — the ONE consumer call, buildMediaConfig — asks; see the sticky
+ * contract in legacyAwareDefaultDir's doc comment). */
+function stickyOrDerivedDecision(key: string, legacy: string, record: boolean): LegacyDirDecision {
+	const sticky = readStickyDecisions()[key];
+	if (sticky === 'legacy' || sticky === 'modern') return sticky;
+	const decision = deriveLegacyDecision(key, legacy);
+	if (record) recordStickyDecision(key, decision);
+	return decision;
+}
+
+/** First-time derivation from the legacy dir's contents. */
+function deriveLegacyDecision(key: string, legacy: string): LegacyDirDecision {
+	const probe = probeLegacyDir(legacy);
+	if (probe === 'unreadable') {
+		// Assume-legacy on error: keeping a dir that turns out empty costs
+		// nothing; repointing a root that turns out full loses the library.
+		console.warn(
+			`[config] ${key} is unset and the legacy in-tree directory '${legacy}' exists but CANNOT BE READ — assuming it holds data and keeping it (nothing moves on a guess). Fix its permissions, or set ${key} explicitly.`,
+		);
+		return 'legacy';
+	}
+	return probe === 'content' ? 'legacy' : 'modern';
+}
 
 export const MEDIA_KEYS = {
 	DEDALO_3D_ALTERNATIVE_EXTENSIONS: {
@@ -1203,13 +1355,16 @@ MEDIA_DEV_ROUTE_ENABLED=false
 	MEDIA_PATH: {
 		type: 'string',
 		scope: 'operator',
-		default: () => join(projectRoot, 'media'),
-		defaultDoc: '`<install dir>/media` — auto-derived; set only to relocate the media tree',
+		default: () => legacyAwareDefaultDir('MEDIA_PATH', ['media'], ['media']),
+		defaultDoc:
+			'`<private dir>/media` — auto-derived; a legacy `<install dir>/media` holding files keeps being used (with a start-up warning) so nothing moves',
 		heading: 'Defining media base path',
 		typeLabel: 'string',
 		doc: `This parameter defines the root media directory in the directory tree.
 
-Normally this directory sits alongside the install, but it can be set to any path. The server needs read/write access to this directory as its owner. Unset in dev leaves media handling disabled.
+Unset, it defaults to \`media\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and must never carry the media library away with the old code. Installs that already keep their media at the legacy in-tree \`<install dir>/media\` location are not moved: while that directory holds files and this key is unset, it keeps being used and the server logs a one-line warning naming this key as the fix. Set the key (and move the directory) to end the warning.
+
+The directory can be set to any path. The server needs read/write access to this directory as its owner. Unset in dev leaves media handling disabled.
 
 \`\`\`bash
 MEDIA_PATH="/srv/dedalo/media"

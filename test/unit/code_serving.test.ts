@@ -23,6 +23,7 @@ const ROOT = join(
 );
 const FILES_DIR = join(ROOT, 'files');
 const ARCHIVE = join(FILES_DIR, '7', '7.0', '7.0.1.zip');
+const DEV_ARCHIVE = join(FILES_DIR, '7', '7.0', '7.0.1-dev.zip');
 const OPEN = { isCodeServer: true, codeFilesDir: FILES_DIR };
 
 // The 404 body is a converter-made envelope; under DEDALO_DEBUG_API_ERRORS=true
@@ -35,6 +36,8 @@ beforeAll(() => {
 	mkdirSync(join(FILES_DIR, '7', '7.0'), { recursive: true });
 	writeFileSync(ARCHIVE, 'PK-not-a-real-zip');
 	writeFileSync(`${ARCHIVE}.sha256`, `${'c'.repeat(64)}  7.0.1.zip\n`);
+	writeFileSync(DEV_ARCHIVE, 'PK-dev-zip');
+	writeFileSync(`${DEV_ARCHIVE}.sha256`, `${'d'.repeat(64)}  7.0.1-dev.zip\n`);
 });
 afterAll(() => {
 	if (previousDebugFlag === undefined) delete process.env.DEDALO_DEBUG_API_ERRORS;
@@ -63,9 +66,30 @@ describe('resolveCodeReleaseFile', () => {
 		expect(resolveCodeReleaseFile(url, { isCodeServer: true, codeFilesDir: undefined })).toBeNull();
 	});
 
+	test('the -dev channel is SERVABLE (never advertised — see code_manifest.test.ts)', () => {
+		// A developer build (`code_build_plan.ts` releaseFileName, non-master ref)
+		// must be fetchable by an operator who knows its URL; until 2026-08-23 the
+		// build produced a zip NO HTTP path would serve while the client presented
+		// it as a deliverable. The manifest half of the property — a -dev zip is
+		// never OFFERED as a release — is gated in code_manifest.test.ts.
+		expect(resolveCodeReleaseFile('/dedalo/install/code/7.0.1/7.0.1-dev.zip', OPEN)).toEqual({
+			path: DEV_ARCHIVE,
+			contentType: 'application/zip',
+		});
+		expect(resolveCodeReleaseFile('/dedalo/install/code/7.0.1/7.0.1-dev.zip.sha256', OPEN)).toEqual(
+			{
+				path: `${DEV_ARCHIVE}.sha256`,
+				contentType: 'text/plain; charset=utf-8',
+			},
+		);
+	});
+
 	test('only THIS release’s own names resolve', () => {
 		for (const url of [
 			'/dedalo/install/code/7.0.1/7.0.2.zip', // a neighbour release under our dir
+			'/dedalo/install/code/7.0.1/7.0.2-dev.zip', // a neighbour dev build
+			'/dedalo/install/code/7.0.1/7.0.1-dev.tar', // dev channel, wrong grammar
+			'/dedalo/install/code/7.0.1/7.0.1-devx.zip', // not the fixed -dev token
 			'/dedalo/install/code/7.0.1/7.0.1.tar', // not the zip grammar
 			'/dedalo/install/code/7.0.1/', // no file
 			'/dedalo/install/code/7.0/7.0.zip', // not a triple
@@ -86,6 +110,10 @@ describe('serveCodeReleaseRequest', () => {
 		expect(res.headers.get('Content-Type')).toBe('application/zip');
 		expect(res.headers.get('Cache-Control')).toBe('no-store');
 		expect(await res.text()).toBe('PK-not-a-real-zip');
+		// the -dev channel serves over HTTP too (manual-testing deliverable)
+		const dev = await serveCodeReleaseRequest('/dedalo/install/code/7.0.1/7.0.1-dev.zip', OPEN);
+		expect(dev.status).toBe(200);
+		expect(await dev.text()).toBe('PK-dev-zip');
 	});
 
 	test('a release that was never built 404s like everything else', async () => {

@@ -1,10 +1,18 @@
 /**
- * Code-update ENGINE (UPDATE_PROCESS Phase 4 — PHP update_code::update_code +
- * update_clean/update_incremental). Downloads the selected release archive,
- * VERIFIES its sha256, PRE-VALIDATES every zip entry (zipinfo) so no unsafe
- * or symlink entry is ever extracted, extracts into a QUARANTINE dir, swaps
- * it onto the TS tree (rename-based; old tree backed up), writes a durable
- * pending-result record, and restarts so the supervisor boots the new code.
+ * Code-update ENGINE (UPDATE_PROCESS Phase 4 — PHP update_code::update_code).
+ * Downloads the selected release archive, VERIFIES its sha256, PRE-VALIDATES
+ * every zip entry (zipinfo) so no unsafe or symlink entry is ever extracted,
+ * extracts into a QUARANTINE dir, installs its dependencies THERE, boots the
+ * quarantine once (smoke_boot.ts), swaps it onto the TS tree (rename-based;
+ * old tree backed up), writes the ROLLBACK SENTINEL, and restarts so the
+ * supervisor boots the new code.
+ *
+ * CLEAN-ONLY (2026-08-23; WC-2026-08-23-update-mode-clean-only): the
+ * incremental (`cpSync` overlay) mode is DELETED, not optional. An overlay
+ * never deletes files the release removed, so the "updated" tree is a
+ * superposition of two releases — and, worse, it CANNOT be rolled back: there
+ * is no backup tree to restore, which is incompatible with the rollback
+ * contract below. Clean rename-swap is the only path.
  *
  * SECURITY POSTURE (Opus-designed; deliberately STRICTER than PHP — WC-024):
  *  - TLS-on, origin-pinned, redirect-refused, capped download (code_download.ts).
@@ -15,18 +23,54 @@
  *    — closes the info-zip symlink-write-through escape (no zip lib in deps;
  *    adding one is spike-gated). Post-extraction walk is a belt over that.
  *  - Extraction into a quarantine dir, never over the live tree; rename-based
- *    swap with the old tree backed up (same-device asserted for atomicity).
+ *    swap with the old tree backed up (same-device asserted for atomicity),
+ *    and a failed second rename RESTORES the backup in place.
  *  - Live swap REFUSED without a supervisor (a self-exit would not restart).
+ *
+ * DATA-SAFETY GATES (2026-08-23, the runtime-path census era):
+ *  - `runtimePathsInsideTree(targetRoot)` non-empty → refuse: the swap would
+ *    carry live runtime data (media, state, sessions…) into the backup.
+ *  - A `backupRoot` inside `targetRoot` → refuse (its own swap would move it).
+ *  - ROOT WHITELIST: any top-level entry of `targetRoot` that is neither
+ *    shipped by the release, nor preserved/census-registered, refuses the
+ *    swap — this is what catches `.dedalo.env`, `acc/`, stray `*.log` files
+ *    before they vanish into a backup dir. NESTED entries under a shipped
+ *    dir (e.g. `deploy/certs/*`) are covered by a SECRET-PATTERN walk
+ *    (`certs/` dirs, `*.pem|key|crt|cer|p12|pfx`, `.env*`): a full nested
+ *    diff is impossible without the OLD release's manifest — a file the new
+ *    release legitimately REMOVED is indistinguishable from an operator
+ *    drop-in — so only secret-shaped untracked entries refuse. That is the
+ *    honest limit of the nested check.
+ *  - `image` deployment channel (channel.ts) → refuse: a swap inside a
+ *    container image lands in the writable layer and is discarded on the next
+ *    recreation.
+ *
+ * ROLLBACK CONTRACT (deploy/dedalo-code-rollback.sh + boot_confirm.ts): the
+ * sentinel `<backupRoot>/last_code_update.json` is written `status:"pending"`,
+ * AWAITED AND VERIFIED, **BEFORE the first swap rename**, naming the
+ * `backupDir` the swap INTENDS to create (the rollback script tolerates a
+ * backupDir that does not exist yet). A failed sentinel write refuses the
+ * update while the live tree is still UNTOUCHED — strictly better than the
+ * old post-swap write, which left two crash windows (dead between the two
+ * renames with no sentinel; dead after them with no sentinel) in which the
+ * supervisor-side rollback found nothing to do. When the swap fails and the
+ * old tree is fully restored in place, the pending sentinel is retracted
+ * (best-effort — a leftover pending sentinel naming a nonexistent backupDir
+ * is tolerated by the script). The BACKUP keeps its old `node_modules` (no longer carried forward — the
+ * quarantine installs its own), which is exactly what makes the rollback
+ * script's `mv backupDir targetRoot; systemctl start` yield a BOOTABLE server
+ * with no network and no `bun install`. LOAD-BEARING: if that ever changes,
+ * deploy/dedalo-code-rollback.sh changes with it.
+ *
  * The engine is seam-driven (`targetRoot`/`backupRoot`/`restart`/`verifySha`/
- * `supervised`) so tests drive the full download→validate→extract→swap chain
- * against a TEMP tree — the live projectRoot swap is an operator drill
- * (ledgered), never an automated test.
+ * `supervised`/`installDeps`/`smokeBoot`/`channel`/`renameIntoPlace`) so tests
+ * drive the full pipeline against a TEMP tree — the live projectRoot swap is
+ * an operator drill (ledgered), never an automated test.
  */
 
 import { createHash } from 'node:crypto';
 import {
 	closeSync,
-	cpSync,
 	existsSync,
 	lstatSync,
 	mkdirSync,
@@ -36,17 +80,24 @@ import {
 	readSync,
 	renameSync,
 	rmSync,
+	type Stats,
 	statSync,
+	writeFileSync,
 } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
 import { DedaloError, ok } from '../errors/index.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
+import { runtimePathsInsideTree } from '../install/runtime_paths.ts';
+import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
+import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
 import { engineOwnsInstall } from './ownership.ts';
+import { checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
+import { smokeBootQuarantine } from './smoke_boot.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
 
 /**
@@ -66,20 +117,99 @@ function refuseArchive(publicSentence: string, detail = publicSentence): never {
 const ARCHIVE_ROOT_PREFIX = 'dedalo_code/';
 const MAX_ARCHIVE_ENTRIES = 50_000;
 const MAX_EXTRACTED_TOTAL_BYTES = 1024 * 1024 * 1024;
-const PRESERVE_ROOT_ENTRIES: ReadonlySet<string> = new Set(['node_modules', '.git']);
+/**
+ * Root entries carried from the old tree into the new one across the swap.
+ * `node_modules` is DELIBERATELY NOT here (2026-08-23): the quarantine carries
+ * a freshly `bun install`ed one for the NEW release's lockfile, and the BACKUP
+ * keeps the OLD tree's node_modules — which is exactly what makes the
+ * supervisor-side rollback (deploy/dedalo-code-rollback.sh) bootable offline.
+ */
+const PRESERVE_ROOT_ENTRIES: ReadonlySet<string> = new Set(['.git']);
 
 /**
- * The pipeline's answer IS the wire body (the update_code widget returns it
- * verbatim), so it is ENVELOPE v2 — `data` is the installed release, `msg` an
- * extension key. Every gate REFUSES BY THROWING a registered `update.*` /
- * `request.invalid_options` code (./refuse.ts); nothing here builds a failure
- * body.
+ * The pipeline's answer IS the wire body (the update_code widget's job payload
+ * carries it verbatim), so it is ENVELOPE v2 — `data` is the installed release,
+ * `msg` an extension key. Every gate REFUSES BY THROWING a registered
+ * `update.*` / `request.invalid_options` code (./refuse.ts); nothing here
+ * builds a failure body.
  */
 export type CodeUpdateResponse = ApiEnvelope;
 
 /** The current RQO's id (the widget dispatcher opens the scope), or '' outside a request. */
 function currentRequestId(): string {
 	return currentRequestContext()?.requestId ?? '';
+}
+
+// ---------------------------------------------------------------------------
+// PHASE FRAMES — the progress wire the maintenance client renders.
+// ---------------------------------------------------------------------------
+
+/** Pipeline phases, in execution order. `health` is the CLIENT's post-restart poll. */
+export const UPDATE_PHASES = [
+	'download',
+	'verify',
+	'extract',
+	'deps',
+	'preflight',
+	'swap',
+	'restart',
+	'health',
+] as const;
+export type UpdatePhaseId = (typeof UPDATE_PHASES)[number];
+export type UpdatePhaseStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
+
+/** One progress frame (the update_code client contract). */
+export interface UpdatePhaseFrame {
+	phase: UpdatePhaseId;
+	phases: { id: UpdatePhaseId; status: UpdatePhaseStatus }[];
+	/** The release being installed. */
+	version: string;
+	/** On the `restart` frame: the version /health must answer post-restart. */
+	expected_version?: string;
+	message?: string;
+	rollback?: { performed: boolean; to: string };
+}
+
+interface PhaseTracker {
+	start: (phase: UpdatePhaseId, extra?: Partial<UpdatePhaseFrame>) => void;
+	fail: (message: string) => void;
+}
+
+function createPhaseTracker(
+	version: string,
+	onPhase: ((frame: UpdatePhaseFrame) => void) | undefined,
+): PhaseTracker {
+	const statuses = new Map<UpdatePhaseId, UpdatePhaseStatus>(
+		UPDATE_PHASES.map((id) => [id, 'pending']),
+	);
+	let current: UpdatePhaseId | null = null;
+	const emit = (phase: UpdatePhaseId, extra: Partial<UpdatePhaseFrame> = {}): void => {
+		onPhase?.({
+			phase,
+			phases: UPDATE_PHASES.map((id) => ({ id, status: statuses.get(id) ?? 'pending' })),
+			version,
+			...extra,
+		});
+	};
+	return {
+		start(phase, extra = {}) {
+			if (current !== null) statuses.set(current, 'done');
+			statuses.set(phase, 'running');
+			current = phase;
+			emit(phase, extra);
+		},
+		fail(message) {
+			// A refusal BEFORE any phase started (bad checksum, no supervisor, the
+			// image channel, a runtime path inside the tree, an unknown root entry)
+			// is the LIKELIEST first-run outcome, and it used to emit nothing at
+			// all — the operator got a phase track sitting all-pending and a
+			// generic sentence. Attribute it to the first phase so the track shows
+			// WHERE the pipeline stopped; the refusal's own sentence rides along.
+			const failed = current ?? UPDATE_PHASES[0];
+			statuses.set(failed, 'failed');
+			emit(failed, { message });
+		},
+	};
 }
 
 export interface CodeUpdateSeams {
@@ -89,6 +219,23 @@ export interface CodeUpdateSeams {
 	verifySha?: (filePath: string) => string;
 	/** Override supervisor detection (tests). */
 	supervised?: boolean;
+	/** Dependency install in the quarantine (default: pinned-bun `install --frozen-lockfile --production`). */
+	installDeps?: (codeRoot: string) => Promise<void>;
+	/** Pre-swap boot check of the quarantine (default: smoke_boot.ts). */
+	smokeBoot?: (codeRoot: string, stagingDir: string) => Promise<void>;
+	/** Override deployment-channel detection (tests). */
+	channel?: DeploymentChannel;
+	/** The FIRST swap rename, live tree → backup (tests inject an EBUSY-style
+	 * failure to gate the nothing-moved guarantee, or observe the pre-rename
+	 * sentinel ordering). */
+	renameToBackup?: (from: string, to: string) => void;
+	/** The SECOND swap rename (tests inject a failure to gate the restore path). */
+	renameIntoPlace?: (from: string, to: string) => void;
+	/** The RESTORE rename, backup → live tree (tests inject a failure to gate the
+	 * double-failure parking path). */
+	renameRestore?: (from: string, to: string) => void;
+	/** Progress frames (the widget wires this to the job's onData). */
+	onPhase?: (frame: UpdatePhaseFrame) => void;
 }
 
 function sha256Of(filePath: string): string {
@@ -115,11 +262,16 @@ function looksLikeZip(filePath: string): boolean {
 	return buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04;
 }
 
+/** Absolute forms an archive entry name must never take (POSIX root or a Windows drive). */
+function isAbsoluteEntryName(normalized: string): boolean {
+	return normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized);
+}
+
 /** One name-validity check shared by pre- and post-extraction. */
 function entryNameIsSafe(name: string): boolean {
 	if (name === '' || name.includes('\0')) return false;
 	const normalized = name.replaceAll('\\', '/');
-	if (normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized)) return false; // absolute
+	if (isAbsoluteEntryName(normalized)) return false;
 	if (normalized.split('/').some((seg) => seg === '..' || seg === '.')) return false;
 	return (
 		normalized === ARCHIVE_ROOT_PREFIX.slice(0, -1) || normalized.startsWith(ARCHIVE_ROOT_PREFIX)
@@ -142,7 +294,14 @@ export async function preValidateArchive(zipPath: string): Promise<string | null
 	for (const name of entryNames) {
 		if (!entryNameIsSafe(name)) return `unsafe archive entry name: ${name}`;
 	}
-	// Verbose zipinfo shows the unix mode in the first column; 'l' = symlink.
+	return scanArchiveModesForSymlinks(zipPath);
+}
+
+/**
+ * Verbose zipinfo shows the unix mode in the first column; 'l' = symlink.
+ * Returns null when no symlink entry exists, else the refusal reason.
+ */
+async function scanArchiveModesForSymlinks(zipPath: string): Promise<string | null> {
 	const verbose = Bun.spawn(['zipinfo', zipPath], { stdout: 'pipe', stderr: 'pipe' });
 	const [modeText, exitVerbose] = await Promise.all([
 		new Response(verbose.stdout).text(),
@@ -154,6 +313,38 @@ export async function preValidateArchive(zipPath: string): Promise<string | null
 		if (/^l[rwxsStT-]{9}\s/.test(line)) return 'archive contains a symlink entry';
 	}
 	return null;
+}
+
+/**
+ * The post-extraction belt's per-entry SHAPE refusals: symlink, path escaping
+ * the extraction dir, non-regular (fifo/device/socket). After this an entry is
+ * provably a plain directory or a plain file.
+ */
+function refuseUnsafeExtractedEntry(
+	name: string,
+	full: string,
+	stat: Stats,
+	destDir: string,
+	destResolved: string,
+): void {
+	if (stat.isSymbolicLink()) {
+		refuseArchive(
+			'the archive contains a symlink entry',
+			`extracted a symlink entry: ${relative(destDir, full)}`,
+		);
+	}
+	if (!resolve(full).startsWith(destResolved + sep)) {
+		refuseArchive(
+			'an archive entry escapes the extraction directory',
+			`extracted entry escapes the extraction dir: ${name}`,
+		);
+	}
+	if (!stat.isDirectory() && !stat.isFile()) {
+		refuseArchive(
+			'the archive contains a non-regular entry',
+			`non-regular extracted entry: ${name}`,
+		);
+	}
 }
 
 /** Extract a PRE-VALIDATED archive into `destDir`, then post-walk (belt). */
@@ -179,29 +370,13 @@ export async function extractArchive(zipPath: string, destDir: string): Promise<
 		for (const name of readdirSync(dir)) {
 			const full = join(dir, name);
 			const stat = lstatSync(full);
-			if (stat.isSymbolicLink()) {
-				refuseArchive(
-					'the archive contains a symlink entry',
-					`extracted a symlink entry: ${relative(destDir, full)}`,
-				);
-			}
-			if (!resolve(full).startsWith(destResolved + sep)) {
-				refuseArchive(
-					'an archive entry escapes the extraction directory',
-					`extracted entry escapes the extraction dir: ${name}`,
-				);
-			}
+			refuseUnsafeExtractedEntry(name, full, stat, destDir, destResolved);
 			entries += 1;
 			if (entries > MAX_ARCHIVE_ENTRIES) refuseArchive('archive exceeds the entry-count cap');
 			if (stat.isDirectory()) walk(full);
-			else if (stat.isFile()) {
+			else {
 				bytes += stat.size;
 				if (bytes > MAX_EXTRACTED_TOTAL_BYTES) refuseArchive('archive exceeds the size cap');
-			} else {
-				refuseArchive(
-					'the archive contains a non-regular entry',
-					`non-regular extracted entry: ${name}`,
-				);
 			}
 		}
 	};
@@ -226,186 +401,697 @@ export function assertLinearUpgrade(
 ): string | null {
 	if (compareVersionArrays(target, current) !== 1)
 		return 'refusing a downgrade or same-version install';
+	return versionSkipReason(current, target);
+}
+
+/** The skip rules over a KNOWN-ascending pair (assertLinearUpgrade gates order first). */
+function versionSkipReason(current: readonly number[], target: readonly number[]): string | null {
 	const [cMajor = 0, cMinor = 0] = current;
 	const [tMajor = 0, tMinor = 0, tPatch = 0] = target;
 	if (tMajor > cMajor + 1) return 'major version skip is not allowed';
 	if (tMajor === cMajor && tMinor > cMinor + 1) return 'minor version skip is not allowed';
-	if ((tMajor > cMajor || tMinor > cMinor) && tPatch !== 0)
+	if (isMajorOrMinorBump(cMajor, cMinor, tMajor, tMinor) && tPatch !== 0)
 		return 'a minor/major bump must land on .0';
 	return null;
 }
 
-/** Rename-based clean swap: old tree → backup, new tree → target (atomic renames). */
-function renameSwap(codeRoot: string, targetRoot: string, backupDir: string): void {
+/** Does the target cross a major or minor boundary (vs a same-minor patch bump)? */
+function isMajorOrMinorBump(
+	cMajor: number,
+	cMinor: number,
+	tMajor: number,
+	tMinor: number,
+): boolean {
+	return tMajor > cMajor || tMinor > cMinor;
+}
+
+/**
+ * Marker file dropped into the staging dir when a failed swap restore leaves
+ * the ONLY remaining copy of a tree parked there. `cleanStagingDir` (the
+ * pipeline's `finally`) and the next run's staging sweep both REFUSE to delete
+ * a staging dir carrying it — at no point may the only surviving copy of a
+ * tree live somewhere the cleanup will delete.
+ */
+const STAGING_KEEP_MARKER = 'DO_NOT_DELETE_holds_live_tree';
+
+/** The guarded staging cleanup — never deletes a staging dir holding a parked tree. */
+function cleanStagingDir(stagingDir: string): void {
+	if (existsSync(join(stagingDir, STAGING_KEEP_MARKER))) {
+		console.error(
+			`[code update] staging dir KEPT — it holds a parked tree after a failed swap restore: ${stagingDir}`,
+		);
+		return;
+	}
+	rmSync(stagingDir, { recursive: true, force: true });
+}
+
+/**
+ * Rename-based clean swap: old tree → backup, new tree → target.
+ *
+ * The two renames are INDIVIDUALLY atomic but the PAIR is not:
+ *  - The FIRST rename moves nothing else beforehand: preserved entries
+ *    (`.git`) are carried into the new tree FROM THE BACKUP only AFTER the
+ *    first rename succeeded. Carrying them earlier opened a window where a
+ *    first-rename failure (EBUSY on a bind-mounted checkout — exactly the
+ *    tree_swap-blessed container deployment — or EACCES/EPERM) stranded
+ *    `.git` inside the staging dir the cleanup deletes. A first-rename
+ *    failure now provably leaves the live tree byte-identical.
+ *  - A failed SECOND rename restores: preserved entries back into the
+ *    backup, then backup → target, then refuses with the original cause.
+ *  - A DOUBLE failure (the restore rename throws too) parks the new tree in
+ *    staging, drops STAGING_KEEP_MARKER so no cleanup deletes it, and throws
+ *    loudly naming both surviving trees; the pending sentinel stays, so the
+ *    supervisor-side rollback can still restore the backup.
+ */
+function renameSwap(
+	codeRoot: string,
+	targetRoot: string,
+	backupDir: string,
+	stagingDir: string,
+	seams: CodeUpdateSeams,
+): void {
+	const renameToBackup = seams.renameToBackup ?? renameSync;
+	const renameIntoPlace = seams.renameIntoPlace ?? renameSync;
 	// Same-device assert so the renames are atomic (a cross-device rename throws).
 	if (statSync(targetRoot).dev !== statSync(resolve(backupDir, '..')).dev) {
 		refuseArchive('backup dir is on a different filesystem — rename swap would not be atomic');
 	}
-	// Carry the preserved runtime entries into the new tree before the swap.
-	for (const name of PRESERVE_ROOT_ENTRIES) {
-		const from = join(targetRoot, name);
-		if (existsSync(from)) {
-			renameSync(from, join(codeRoot, name));
-		}
+	// FIRST rename: live tree aside. Nothing has moved before this point.
+	try {
+		renameToBackup(targetRoot, backupDir);
+	} catch (error) {
+		refuseUpdate(
+			'update.failed',
+			'Error. Code swap could not move the live tree aside (the first rename failed) — nothing changed',
+			error,
+		);
 	}
-	renameSync(targetRoot, backupDir);
-	renameSync(codeRoot, targetRoot);
+	// Carry the preserved entries FROM THE BACKUP into the new tree, then swap in.
+	const preservedMoved: string[] = [];
+	try {
+		carryPreservedEntries(backupDir, codeRoot, preservedMoved);
+		renameIntoPlace(codeRoot, targetRoot);
+	} catch (error) {
+		restoreAfterFailedSwap(
+			preservedMoved,
+			codeRoot,
+			targetRoot,
+			backupDir,
+			stagingDir,
+			seams,
+			error,
+		);
+	}
 }
 
-/** Incremental overlay: new files onto the live tree, existing kept (test seam). */
-function incrementalSwap(codeRoot: string, targetRoot: string): void {
-	for (const name of readdirSync(codeRoot)) {
-		if (PRESERVE_ROOT_ENTRIES.has(name)) continue;
-		cpSync(join(codeRoot, name), join(targetRoot, name), { recursive: true, force: true });
+/**
+ * Move the preserved root entries (`.git`) FROM THE BACKUP into the new tree.
+ * Pushes each moved name so a failed second rename can move them back (the
+ * partially-filled list is why the caller owns the array, not a return value).
+ */
+function carryPreservedEntries(backupDir: string, codeRoot: string, moved: string[]): void {
+	for (const name of PRESERVE_ROOT_ENTRIES) {
+		const from = join(backupDir, name);
+		if (existsSync(from)) {
+			renameSync(from, join(codeRoot, name));
+			moved.push(name);
+		}
+	}
+}
+
+/**
+ * The failed-second-rename repair: preserved entries back into the backup
+ * FIRST (so a restore-rename failure never leaves them in staging), then the
+ * old tree straight back where it was; on success refuse with the original
+ * cause. A DOUBLE failure parks the new tree in staging under
+ * STAGING_KEEP_MARKER and throws naming both surviving trees.
+ */
+function restoreAfterFailedSwap(
+	preservedMoved: readonly string[],
+	codeRoot: string,
+	targetRoot: string,
+	backupDir: string,
+	stagingDir: string,
+	seams: CodeUpdateSeams,
+	error: unknown,
+): never {
+	const renameRestore = seams.renameRestore ?? renameSync;
+	try {
+		for (const name of preservedMoved) {
+			renameSync(join(codeRoot, name), join(backupDir, name));
+		}
+		renameRestore(backupDir, targetRoot);
+	} catch (restoreError) {
+		// DOUBLE FAILURE: no tree at targetRoot. The old tree survives in
+		// backupDir (pending sentinel → supervisor rollback restores it); the
+		// new tree survives parked in staging, marked against deletion.
+		try {
+			writeFileSync(
+				join(stagingDir, STAGING_KEEP_MARKER),
+				`swap restore failed; new tree parked at ${codeRoot}; old tree at ${backupDir}\n`,
+			);
+		} catch {
+			// marker write best-effort — the error below still names both trees
+		}
+		throw new DedaloError('update.failed', {
+			message: `code swap failed (${String(error)}) AND the restore failed (${String(restoreError)}): old tree at ${backupDir}, new tree parked at ${codeRoot} — staging dir KEPT`,
+			publicMessage:
+				'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the new tree is parked in staging (NOT deleted), and the pending rollback sentinel is in place. Operator recovery required; see the server log.',
+		});
+	}
+	refuseUpdate(
+		'update.failed',
+		'Error. Code swap failed after the backup rename — the previous tree was restored in place; nothing changed',
+		error,
+	);
+}
+
+/** The rollback sentinel (deploy/dedalo-code-rollback.sh contract — flat, exact keys). */
+interface UpdateSentinel {
+	version: string;
+	previousVersion: string;
+	updateMode: 'clean';
+	stamp: string;
+	backupDir: string;
+	status: 'pending';
+	rollback_attempted: false;
+}
+
+/**
+ * Write the sentinel AWAITED AND VERIFIED. The old best-effort try/catch
+ * swallow is DEAD ON PURPOSE: the supervisor-side rollback contract depends on
+ * this file existing, so a failed write must fail the update, never be
+ * shrugged off.
+ */
+async function writeUpdateSentinel(backupRoot: string, sentinel: UpdateSentinel): Promise<void> {
+	mkdirSync(backupRoot, { recursive: true });
+	const path = join(backupRoot, 'last_code_update.json');
+	const bytes = JSON.stringify(sentinel, null, '\t');
+	await Bun.write(path, bytes);
+	// Verify: readable and parseable, not merely "the write did not throw".
+	const readBack = JSON.parse(readFileSync(path, 'utf8')) as UpdateSentinel;
+	if (readBack.version !== sentinel.version || readBack.status !== 'pending') {
+		// Typed even though the caller catches it and refuses with its own
+		// sentence: an untyped throw is the failure signal the error taxonomy
+		// retires, and "it is caught upstream" is how untyped debt accretes.
+		refuseUpdate('update.failed', `sentinel verification failed at ${path}`);
+	}
+}
+
+/** Default deps install: the PINNED bun (process.execPath — never a floating `bun`). */
+async function installDepsReal(codeRoot: string): Promise<void> {
+	const child = Bun.spawn([process.execPath, 'install', '--frozen-lockfile', '--production'], {
+		cwd: codeRoot,
+		stdout: 'ignore',
+		stderr: 'pipe',
+	});
+	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+	if (exitCode !== 0) {
+		// 503/retryable — correct for the offline case (registry unreachable).
+		throw new DedaloError('update.failed', {
+			message: `bun install failed in the quarantine (exit ${exitCode}): ${stderr.trim().split('\n').slice(-20).join('\n')}`,
+			publicMessage: 'Error. Installing the release dependencies failed — nothing was swapped',
+		});
 	}
 }
 
 interface UpdateCodeOptions {
-	file?: { version?: unknown; url?: unknown; sha256?: unknown; force_update_mode?: unknown };
-	update_mode?: unknown;
+	file?: { version?: unknown; url?: unknown; sha256?: unknown };
+	waive_backup?: unknown;
 }
 
-/** The full code-update pipeline. Seam-driven; production passes no seams. */
-export async function updateCode(
-	rawOptions: unknown,
-	seams: CodeUpdateSeams = {},
-): Promise<CodeUpdateResponse> {
-	if (!engineOwnsInstall()) {
-		refuseUpdate('update.refused', 'Error. Code update is not runnable on this engine');
-	}
+/** The validated, typed update request — every field already shape-checked. */
+interface UpdateRequest {
+	url: string;
+	version: string;
+	declaredSha: string;
+}
+
+/**
+ * STEP 0 + request validation, all BEFORE any network fetch. Operator
+ * preconditions first: superuser AND maintenance mode REQUIRED (a code swap is
+ * more disruptive than the data migration that already requires it), plus a
+ * REQUIRED recent backup — waivable only explicitly. Then the request shape:
+ *  - CMD-06 (2026-07-28 audit): `version` is used downstream as a path segment,
+ *    and parseVersionString/compareVersionArrays NaN-short-circuit — so a
+ *    traversal value like `../../x` could slip the linear-upgrade gate. Require
+ *    a strict numeric-dotted form up front so it can never be a path or option.
+ *  - A release is installed ONLY against a declared digest. The manifest
+ *    carries one for every built archive (code_manifest.readShaSidecar), so an
+ *    ABSENT hash means either a master that never wrote the sidecar or a
+ *    hand-assembled request — neither is a thing to swap a code tree for.
+ *    Until 2026-08-15 an empty `file.sha256` silently skipped the check, which
+ *    made WC-024's whole integrity guarantee inert (the manifest never carried
+ *    a hash at all).
+ */
+function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRequest {
 	const options = (rawOptions ?? {}) as UpdateCodeOptions;
+	const waiveBackup = options.waive_backup === true;
+	if (waiveBackup) {
+		console.warn(
+			`[code update] BACKUP REQUIREMENT WAIVED by request (waive_backup: true, user ${principal.userId}) — proceeding without a recent database backup`,
+		);
+	}
+	checkUpdatePreconditions(
+		principal,
+		waiveBackup ? { backupWarn: false } : { backupRequire: true },
+	);
+	const request = readReleaseFields(options);
+	assertReleaseShape(request);
+	return request;
+}
+
+/** The `file.*` strings, shape-untrusted (assertReleaseShape gates them next). */
+function readReleaseFields(options: UpdateCodeOptions): UpdateRequest {
 	const file = options.file ?? {};
-	const url = typeof file.url === 'string' ? file.url : '';
-	const version = typeof file.version === 'string' ? file.version : '';
-	const declaredSha = typeof file.sha256 === 'string' ? file.sha256 : '';
-	const updateMode =
-		options.update_mode === 'clean' || file.force_update_mode === 'clean' ? 'clean' : 'incremental';
+	return {
+		url: typeof file.url === 'string' ? file.url : '',
+		version: typeof file.version === 'string' ? file.version : '',
+		declaredSha: typeof file.sha256 === 'string' ? file.sha256 : '',
+	};
+}
+
+/**
+ * The request-shape refusal chain, in its LOAD-BEARING order: missing fields →
+ * malformed version → linear-upgrade guard → malformed/missing sha. All before
+ * any network fetch, by contract.
+ */
+function assertReleaseShape({ url, version, declaredSha }: UpdateRequest): void {
 	if (url === '' || version === '') {
 		refuseUpdate(
 			'request.invalid_options',
 			'Error. Missing release file/version (file.url and file.version are required)',
 		);
 	}
-	// CMD-06 (2026-07-28 audit): `version` is used downstream as a path segment,
-	// and parseVersionString/compareVersionArrays NaN-short-circuit — so a
-	// traversal value like `../../x` could slip the linear-upgrade gate. Require a
-	// strict numeric-dotted form up front so it can never be a path or an option.
 	if (!/^\d+(\.\d+){1,3}$/.test(version)) {
 		refuseUpdate(
 			'request.invalid_options',
 			'Error. Malformed release version (a numeric dotted release is required, e.g. 7.0.1)',
 		);
 	}
-	const target = parseVersionString(version);
-	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, target);
+	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parseVersionString(version));
 	if (linear !== null) {
 		refuseUpdate('update.refused', `Error. ${linear}`);
 	}
-	// A release is installed ONLY against a declared digest. The manifest carries
-	// one for every built archive (code_manifest.readShaSidecar), so an ABSENT
-	// hash means either a master that never wrote the sidecar or a hand-assembled
-	// request — neither is a thing to swap a code tree for. Until 2026-08-15 an
-	// empty `file.sha256` silently skipped the check, which made WC-024's whole
-	// integrity guarantee inert (the manifest never carried a hash at all).
 	if (!/^[a-f0-9]{64}$/.test(declaredSha)) {
 		refuseUpdate(
 			'request.invalid_options',
 			'Error. Malformed or missing release checksum (sha256 must be 64 hex chars)',
 		);
 	}
+}
 
-	const targetRoot = seams.targetRoot ?? projectRoot;
+/**
+ * The pre-download REFUSAL BATTERY over the swap's filesystem — order is
+ * load-bearing (tests pin it): supervisor → deployment channel → runtime-path
+ * census → backup-root containment. Returns the resolved backup root.
+ *
+ *  - Only the LIVE tree needs a supervisor (a self-exit must be respawned); a
+ *    seam-driven test swap of a temp tree does not restart the process.
+ *  - DEPLOYMENT CHANNEL (channel.ts): on `image` the tree lives in the
+ *    container image, so a swap writes into the writable layer and is
+ *    DISCARDED on the next container recreation — silently reverting the
+ *    install and destroying the backup. A bind-mounted checkout inside a
+ *    container is tree_swap.
+ *  - RUNTIME-PATH CENSUS (install/runtime_paths.ts): any runtime data
+ *    resolving inside the code tree would be silently carried into the backup
+ *    by the swap.
+ *  - The backup root itself must not sit inside the tree the swap renames away.
+ */
+function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
 	const supervised = seams.supervised ?? isSupervised();
-	// Only the LIVE tree needs a supervisor (a self-exit must be respawned);
-	// a seam-driven test swap of a temp tree does not restart the process.
 	if (targetRoot === projectRoot && !supervised) {
 		refuseUpdate(
 			'update.refused',
 			'Error. No supervisor detected; the server would not restart onto the new tree. Set DEDALO_SUPERVISED=true.',
 		);
 	}
+
+	const channel = seams.channel ?? detectDeploymentChannel(targetRoot);
+	if (channel === 'image') {
+		refuseUpdate(
+			'update.refused',
+			'Error. This install runs from a container IMAGE: a tree swap would land in the container writable layer and be discarded on the next recreation. Update the image instead (deploy/dedalo-image-update.sh).',
+		);
+	}
+
+	refuseRuntimeDataInsideTree(targetRoot);
+	return resolveBackupRootOrRefuse(targetRoot, seams);
+}
+
+/** The RUNTIME-PATH CENSUS gate (install/runtime_paths.ts): refuse any runtime
+ * data resolving inside the code tree — the swap would carry it into the backup. */
+function refuseRuntimeDataInsideTree(targetRoot: string): void {
+	const insideTree = runtimePathsInsideTree(targetRoot);
+	if (insideTree.length > 0) {
+		const first = insideTree[0] as { id: string; envKey: string | null; path: string };
+		const remedy =
+			first.envKey === null
+				? `move it (census id '${first.id}')`
+				: `move it, or set ${first.envKey}`;
+		throw new DedaloError('update.refused', {
+			// The FIRST offender + its env key on the wire; the full list log-only.
+			publicMessage: `Error. Runtime data lives inside the code tree: ${first.path} (${remedy}) — a code swap would carry it into the backup.`,
+			message: `runtime paths inside the code tree: ${insideTree
+				.map((entry) => `${entry.id} (${entry.envKey ?? 'hard-coded'}): ${entry.path}`)
+				.join('; ')}`,
+		});
+	}
+}
+
+/** Resolve the backup root and refuse one that sits inside the tree the swap
+ * renames away (its own swap would move it). */
+function resolveBackupRootOrRefuse(targetRoot: string, seams: CodeUpdateSeams): string {
 	const backupRoot =
 		seams.backupRoot ??
 		(readEnv('DEDALO_BACKUP_PATH') as string | undefined) ??
 		join(projectRoot, '..', 'backups', 'code');
-	const stagingDir = join(backupRoot, '.code_staging');
-	const restart = seams.restart ?? scheduleServerRestartReal;
-	const verifySha = seams.verifySha ?? sha256Of;
-
-	try {
-		rmSync(stagingDir, { recursive: true, force: true });
-		mkdirSync(stagingDir, { recursive: true });
-
-		const codeServer = config.update.codeServers.find((entry) => {
-			try {
-				return new URL(entry.url).origin === new URL(url).origin;
-			} catch {
-				return false;
-			}
-		});
-		if (codeServer === undefined) {
-			refuseUpdate(
-				'request.invalid_options',
-				'Error. Release URL is not on a configured code server',
-			);
-		}
-		const zipPath = join(stagingDir, `${version}.zip`);
-		// A download failure THROWS out of downloadReleaseArchive (typed).
-		await downloadReleaseArchive({
-			url,
-			configuredOrigin: new URL(codeServer.url).origin,
-			targetPath: zipPath,
-		});
-
-		if (verifySha(zipPath) !== declaredSha) {
-			refuseUpdate('update.refused', 'Error. Release checksum mismatch — refusing to install');
-		}
-		if (!looksLikeZip(zipPath)) {
-			refuseUpdate('update.refused', 'Error. Downloaded release is not a ZIP archive');
-		}
-		const preValidation = await preValidateArchive(zipPath);
-		if (preValidation !== null) {
-			refuseUpdate('update.refused', `Error. Unsafe release archive: ${preValidation}`);
-		}
-
-		const quarantine = join(stagingDir, 'extract');
-		const codeRoot = await extractArchive(zipPath, quarantine);
-
-		const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
-		if (updateMode === 'clean') {
-			mkdirSync(backupRoot, { recursive: true });
-			renameSwap(
-				codeRoot,
-				targetRoot,
-				join(backupRoot, `dedalo_${DEDALO_VERSION_TRIPLE.join('.')}_${stamp}`),
-			);
-		} else {
-			incrementalSwap(codeRoot, targetRoot);
-		}
-
-		writePendingResult(backupRoot, { version, updateMode, stamp, ok: true });
-		const msg = `OK. Installed Dédalo ${version} (${updateMode}). Restarting to load the new code.`;
-		restart(`code update to ${version}`);
-		return ok(
-			{ version, update_mode: updateMode },
-			{ requestId: currentRequestId(), extend: { msg } },
+	const rootResolved = resolve(targetRoot);
+	const backupResolved = resolve(backupRoot);
+	if (backupResolved === rootResolved || backupResolved.startsWith(rootResolved + sep)) {
+		refuseUpdate(
+			'update.refused',
+			'Error. The code-backup dir resolves INSIDE the code tree — its own swap would move it. Point DEDALO_BACKUP_PATH outside the tree.',
 		);
-	} catch (error) {
-		rethrowOrRefuseUpdate(error, 'update.failed', 'Error. Code update failed');
-	} finally {
-		rmSync(stagingDir, { recursive: true, force: true });
+	}
+	return backupRoot;
+}
+
+/**
+ * The archive ACQUISITION + INTEGRITY chain (`download` and `verify` phases):
+ * configured-origin match, capped TLS download, sha256 against the declared
+ * digest, ZIP magic sniff, zipinfo pre-validation. Returns the verified zip's
+ * path; every failure refuses (a download failure THROWS out of
+ * downloadReleaseArchive, typed).
+ */
+async function acquireVerifiedArchive(
+	request: UpdateRequest,
+	stagingDir: string,
+	seams: CodeUpdateSeams,
+	phases: PhaseTracker,
+): Promise<string> {
+	const verifySha = seams.verifySha ?? sha256Of;
+	const codeServer = config.update.codeServers.find((entry) => {
+		try {
+			return new URL(entry.url).origin === new URL(request.url).origin;
+		} catch {
+			return false;
+		}
+	});
+	if (codeServer === undefined) {
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Release URL is not on a configured code server',
+		);
+	}
+	phases.start('download');
+	const zipPath = join(stagingDir, `${request.version}.zip`);
+	await downloadReleaseArchive({
+		url: request.url,
+		configuredOrigin: new URL(codeServer.url).origin,
+		targetPath: zipPath,
+	});
+
+	phases.start('verify');
+	if (verifySha(zipPath) !== request.declaredSha) {
+		refuseUpdate('update.refused', 'Error. Release checksum mismatch — refusing to install');
+	}
+	if (!looksLikeZip(zipPath)) {
+		refuseUpdate('update.refused', 'Error. Downloaded release is not a ZIP archive');
+	}
+	const preValidation = await preValidateArchive(zipPath);
+	if (preValidation !== null) {
+		refuseUpdate('update.refused', `Error. Unsafe release archive: ${preValidation}`);
+	}
+	return zipPath;
+}
+
+/** Filenames that smell like credentials/keys wherever they sit in the tree. */
+const SECRET_LIKE_NAME = /\.(pem|key|crt|cer|p12|pfx)$/i;
+
+/**
+ * Walk the live tree for entries ABSENT from the release that match a secret
+ * pattern (`certs/` dirs, key/cert extensions, `.env*`). A full nested diff
+ * is impossible — a file the release removed is indistinguishable from an
+ * operator drop-in — so only secret-shaped untracked entries are reported
+ * (the module header states this limit). Returns tree-relative paths; a
+ * flagged directory is reported once, without descending.
+ */
+function nestedUntrackedSecrets(codeRoot: string, targetRoot: string): string[] {
+	const offenders: string[] = [];
+	// `prefix` is '' at the root, else 'dir/…/': relPath is always prefix+name.
+	const walk = (prefix: string): void => {
+		for (const name of readdirSync(join(targetRoot, prefix))) {
+			if (isSecretWalkSkipped(prefix, name)) continue;
+			const relPath = prefix + name;
+			if (!existsSync(join(codeRoot, relPath)) && isSecretShapedName(name)) {
+				offenders.push(relPath);
+				continue; // a flagged dir is enough — no need to descend
+			}
+			if (lstatSync(join(targetRoot, relPath)).isDirectory()) walk(`${relPath}/`);
+		}
+	};
+	walk('');
+	return offenders;
+}
+
+/** Entries the secret walk never descends into or reports: preserved root
+ * entries, and node_modules/.git anywhere (huge, engine-owned). */
+function isSecretWalkSkipped(prefix: string, name: string): boolean {
+	return (
+		name === 'node_modules' || name === '.git' || (prefix === '' && PRESERVE_ROOT_ENTRIES.has(name))
+	);
+}
+
+/** Does a name match the secret pattern (`certs/` dirs, key/cert extensions, `.env*`)? */
+function isSecretShapedName(name: string): boolean {
+	return SECRET_LIKE_NAME.test(name) || name === 'certs' || name.startsWith('.env');
+}
+
+/**
+ * Prepare the EXTRACTED quarantine for the swap (`deps` and `preflight`
+ * phases): root whitelist, hard .bun-version gate, dependency install, smoke
+ * boot. Nothing here touches the live tree.
+ *
+ *  - ROOT WHITELIST (post-extraction, pre-anything-destructive): every
+ *    top-level entry of the live tree must be accounted for — shipped by the
+ *    release, preserved across the swap, node_modules (backed up, by design),
+ *    or a census-registered runtime path (already refused earlier if inside).
+ *  - The HARD .bun-version gate: the swap hands the tree to the RUNNING bun
+ *    (process.execPath) via the supervisor, so a release pinning a different
+ *    Bun must not be installed until the operator installs that Bun. (The
+ *    boot-time check in server.ts stays a warning — that tree is already
+ *    running.)
+ *  - PRE-FLIGHT SMOKE BOOT (smoke_boot.ts): boot the quarantine once; a tree
+ *    that cannot start never replaces a working one.
+ */
+
+/** The ROOT WHITELIST + nested secret-pattern refusals (prepareQuarantine's
+ * first gates — see its doc comment; the module header states the nested
+ * check's honest limit). */
+function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
+	const shipped = new Set(readdirSync(codeRoot));
+	const unknown = readdirSync(targetRoot).filter(
+		(name) => !shipped.has(name) && !PRESERVE_ROOT_ENTRIES.has(name) && name !== 'node_modules',
+	);
+	if (unknown.length > 0) {
+		refuseArchive(
+			`Error. Unknown entries at the code-tree root would be moved into the backup by the swap: ${unknown.join(', ')} — move them out of the tree (or delete them) before updating.`,
+		);
+	}
+	const nestedSecrets = nestedUntrackedSecrets(codeRoot, targetRoot);
+	if (nestedSecrets.length > 0) {
+		refuseArchive(
+			`Error. Untracked secret-shaped entries under shipped directories would be moved into the backup by the swap: ${nestedSecrets.join(', ')} — move them out of the tree before updating.`,
+		);
 	}
 }
 
-function writePendingResult(
-	backupRoot: string,
-	record: { version: string; updateMode: string; stamp: string; ok: boolean },
-): void {
+async function prepareQuarantine(
+	codeRoot: string,
+	targetRoot: string,
+	stagingDir: string,
+	seams: CodeUpdateSeams,
+	phases: PhaseTracker,
+): Promise<void> {
+	refuseUnaccountedLiveEntries(codeRoot, targetRoot);
+
+	phases.start('deps');
+	const quarantinePin = readFileSync(join(codeRoot, '.bun-version'), 'utf8').trim();
+	if (quarantinePin !== '' && quarantinePin !== Bun.version) {
+		refuseUpdate(
+			'update.refused',
+			`Error. The release pins Bun ${quarantinePin} but this server runs Bun ${Bun.version} — install the pinned Bun first, then retry the update.`,
+		);
+	}
+	await (seams.installDeps ?? installDepsReal)(codeRoot);
+
+	phases.start('preflight');
+	await (seams.smokeBoot ?? smokeBootQuarantine)(codeRoot, stagingDir);
+}
+
+/**
+ * `assertSwapPreconditions`, but a refusal is REPORTED on the phase track
+ * before it propagates. These gates (image channel, a runtime path inside the
+ * tree, a backup root inside it) are the likeliest first-run outcomes, and they
+ * fire before any phase has started — without this the operator watched an
+ * all-pending track and got only a generic sentence.
+ */
+function swapPreconditionsWithFrame(
+	targetRoot: string,
+	seams: CodeUpdateSeams,
+	phases: PhaseTracker,
+): string {
 	try {
+		return assertSwapPreconditions(targetRoot, seams);
+	} catch (error) {
+		phases.fail(errorText(error));
+		throw error;
+	}
+}
+
+/** The message a phase-frame carries for any thrown value. */
+function errorText(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+/** Refuse a staging dir holding a PARKED tree (a previous run's failed swap
+ * restore — never sweep it), else sweep and recreate it empty. */
+function prepareStagingDirOrRefuse(stagingDir: string): void {
+	if (existsSync(join(stagingDir, STAGING_KEEP_MARKER))) {
+		refuseUpdate(
+			'update.refused',
+			'Error. The code-staging dir holds a parked tree from a previously failed swap restore — recover it (see the server log of that run) before updating.',
+		);
+	}
+	rmSync(stagingDir, { recursive: true, force: true });
+	mkdirSync(stagingDir, { recursive: true });
+}
+
+/**
+ * The sentinel-guarded swap: pending sentinel FIRST (awaited and verified,
+ * before the first rename — a failed write refuses while the live tree is
+ * untouched), then the rename swap; when the swap fails FULLY RESTORED (live
+ * tree back, no backup dir) the pending sentinel is retracted best-effort
+ * (the rollback script tolerates a leftover pending sentinel naming a
+ * nonexistent backupDir).
+ */
+async function sentinelGuardedSwap(
+	codeRoot: string,
+	targetRoot: string,
+	backupRoot: string,
+	backupDir: string,
+	stagingDir: string,
+	sentinel: UpdateSentinel,
+	seams: CodeUpdateSeams,
+): Promise<void> {
+	try {
+		await writeUpdateSentinel(backupRoot, sentinel);
+	} catch (error) {
+		rethrowOrRefuseUpdate(
+			error,
+			'update.failed',
+			'Error. Could not record the update sentinel (the rollback contract requires it) — nothing was swapped, the live tree is untouched',
+		);
+	}
+	try {
+		renameSwap(codeRoot, targetRoot, backupDir, stagingDir, seams);
+	} catch (error) {
+		retractSentinelIfFullyRestored(targetRoot, backupRoot, backupDir);
+		throw error;
+	}
+}
+
+/** Best-effort pending-sentinel retraction after a swap failure that left the
+ * live tree fully restored in place (no backup dir was created). */
+function retractSentinelIfFullyRestored(
+	targetRoot: string,
+	backupRoot: string,
+	backupDir: string,
+): void {
+	if (existsSync(targetRoot) && !existsSync(backupDir)) {
+		try {
+			rmSync(join(backupRoot, 'last_code_update.json'), { force: true });
+		} catch {
+			// best-effort retraction only
+		}
+	}
+}
+
+/** The full code-update pipeline. Seam-driven; production passes no seams. */
+export async function updateCode(
+	rawOptions: unknown,
+	principal: Principal,
+	seams: CodeUpdateSeams = {},
+): Promise<CodeUpdateResponse> {
+	if (!engineOwnsInstall()) {
+		refuseUpdate('update.refused', 'Error. Code update is not runnable on this engine');
+	}
+	// Preconditions + request shape FIRST — a malformed request (including a
+	// missing/malformed sha) refuses BEFORE any network fetch, by contract.
+	const request = parseUpdateRequest(rawOptions, principal);
+	const { version } = request;
+
+	const targetRoot = seams.targetRoot ?? projectRoot;
+	// The tracker is built BEFORE the swap preconditions so their refusals (the
+	// image channel, a runtime path inside the tree, an unknown root entry — the
+	// likeliest first-run outcomes) still reach the operator's phase track.
+	// Built after parseUpdateRequest because the frames carry the version.
+	const phases = createPhaseTracker(version, seams.onPhase);
+	const backupRoot = swapPreconditionsWithFrame(targetRoot, seams, phases);
+	const stagingDir = join(backupRoot, '.code_staging');
+	const restart = seams.restart ?? scheduleServerRestartReal;
+
+	try {
+		prepareStagingDirOrRefuse(stagingDir);
+
+		const zipPath = await acquireVerifiedArchive(request, stagingDir, seams, phases);
+
+		phases.start('extract');
+		const quarantine = join(stagingDir, 'extract');
+		const codeRoot = await extractArchive(zipPath, quarantine);
+
+		await prepareQuarantine(codeRoot, targetRoot, stagingDir, seams, phases);
+
+		phases.start('swap');
+		const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
+		const previousVersion = DEDALO_VERSION_TRIPLE.join('.');
+		const backupDir = join(backupRoot, `dedalo_${previousVersion}_${stamp}`);
 		mkdirSync(backupRoot, { recursive: true });
-		Bun.write(join(backupRoot, 'last_code_update.json'), JSON.stringify(record));
-	} catch {
-		// best-effort mirror
+
+		// ROLLBACK SENTINEL FIRST — `status:"pending"`, naming the backupDir the
+		// swap INTENDS to create, awaited and verified, BEFORE the first rename.
+		// A crash anywhere inside the swap always leaves a pending sentinel for
+		// the supervisor-side rollback (which tolerates a not-yet-created backupDir).
+		await sentinelGuardedSwap(
+			codeRoot,
+			targetRoot,
+			backupRoot,
+			backupDir,
+			stagingDir,
+			{
+				version,
+				previousVersion,
+				updateMode: 'clean',
+				stamp,
+				backupDir,
+				status: 'pending',
+				rollback_attempted: false,
+			},
+			seams,
+		);
+
+		const msg = `OK. Installed Dédalo ${version} (clean). Restarting to load the new code.`;
+		// The LAST frame before the restart: the client uses expected_version to
+		// tell "restarting into new code" apart from "died", then polls /health.
+		phases.start('restart', { expected_version: version });
+		restart(`code update to ${version}`);
+		return ok({ version }, { requestId: currentRequestId(), extend: { msg } });
+	} catch (error) {
+		phases.fail(errorText(error));
+		rethrowOrRefuseUpdate(error, 'update.failed', 'Error. Code update failed');
+	} finally {
+		cleanStagingDir(stagingDir);
 	}
 }
 

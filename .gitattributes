@@ -27,3 +27,14 @@ vendor/**  linguist-vendored=true
 
 # The .less files ARE source: always diff them normally, never collapse.
 *.less  linguist-generated=false
+
+# ---------------------------------------------------------------------------
+# Build provenance. Releases are `git archive --format=zip --prefix=dedalo_code/`
+# exports (src/core/update/code_build.ts); export-subst makes git expand the
+# `$Format:%H %cI$` placeholder in build_info.txt to the real `<sha> <ISO date>`
+# INSIDE the archive. The checked-in file keeps the literal placeholder — that
+# is how a dev checkout self-identifies (src/core/update/build_stamp.ts:
+# placeholder → DEDALO_BUILD=null + '.dev' tag; expanded → release stamp).
+# test/unit/build_stamp_native.test.ts refuses a committed expanded value.
+# ---------------------------------------------------------------------------
+src/core/update/build_info.txt export-subst

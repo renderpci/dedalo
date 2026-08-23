@@ -837,9 +837,16 @@ const get_content_data_edit = async function(self) {
 		]))
 
 	// c. master server picker
+	// on_server_change: THIS caller's selection callback — the only place the
+	// panel-wide `ontology_server_select_change` event is published, so a
+	// co-mounted CODE picker (update_code, which passes no callback) can never
+	// reset this widget's reference row.
+		const on_server_change = (server) => {
+			event_manager.publish('ontology_server_select_change', server ? (server.tld || null) : null)
+		}
 		const servers_section = ui.create_dom_element({ element_type:'div', class_name:'section', parent:content_data })
 		ui.create_dom_element({ element_type:'span', class_name:'dd_eyebrow', inner_html:(get_label.update_ontology_master_server || 'Master server'), parent:servers_section })
-		servers_section.appendChild(render_servers_list(value))
+		servers_section.appendChild(render_servers_list(value, 'ONTOLOGY_SERVERS', 'dedalo.update_ontology.server', on_server_change))
 		servers_section.appendChild(build_client_info(servers))
 		servers_section.appendChild(build_serving_info(serving))
 
@@ -1075,7 +1082,7 @@ const get_content_data_edit = async function(self) {
 
 	// the picker may have restored a remembered master: announce it now that the
 	// form (and its reference row) is listening
-		publish_active_server(servers)
+		publish_active_server(servers, on_server_change)
 
 	// append the response surface last
 		content_data.appendChild(body_response)
@@ -1090,17 +1097,21 @@ const get_content_data_edit = async function(self) {
 * PUBLISH_ACTIVE_SERVER
 * Announces the server `render_servers_list` restored from storage, AFTER the
 * panel's subscribers exist. Without this the picker would show a selected
-* master while the reference row still said "select a master".
+* master while the reference row still said "select a master". Routed through
+* the SAME per-caller callback as a live selection — never a bare publish.
 *
 * @param {Array} servers - value.servers, already marked by the picker
+* @param {Function} [on_change] - the caller's selection callback
 */
-const publish_active_server = function (servers) {
+const publish_active_server = function (servers, on_change) {
 
 	const active = (servers || []).find(el => el.active === true)
 	if (!active) {
 		return
 	}
-	event_manager.publish('ontology_server_select_change', active.tld || null)
+	if (typeof on_change==='function') {
+		on_change(active)
+	}
 }//end publish_active_server
 
 
@@ -1109,8 +1120,11 @@ const publish_active_server = function (servers) {
 * RENDER_SERVERS_LIST
 * Radio picker for `value.servers`. Each row shows the server name + URL and a
 * reachability pill; unreachable servers are disabled. Selecting a row publishes
-* `ontology_server_select_change` (the server's TLD list, or null) and marks
-* `server.active = true` so the submit handler can find the chosen server.
+* selection through the caller's `on_change` callback (update_ontology's own
+* caller publishes `ontology_server_select_change` from it; update_code passes
+* nothing, so picking a CODE server never touches the ontology widget) and
+* marks `server.active = true` so the submit handler can find the chosen
+* server.
 *
 * Reachability is pre-probed server-side (`update_ontology.ts` getValue →
 * `checkRemoteServer`); the client only reads `response_code` + `result`.
@@ -1120,11 +1134,15 @@ const publish_active_server = function (servers) {
 *   notice; `update_code` reuses this picker over CODE_SERVERS
 * @param {string} [storage_key] - localStorage key remembering the chosen server
 *   across navigations and reloads; one per picker (update_code passes its own)
+* @param {Function} [on_change] - called with the selected server descriptor on
+*   every selection (and by publish_active_server with the restored one). A
+*   CALLBACK, not an event name: only the caller that passes one hears its own
+*   picker, so co-mounted pickers cannot bleed into each other's widgets.
 * @returns {HTMLElement} the `.server_picker` container
 */
 let picker_seq = 0
 
-export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', storage_key='dedalo.update_ontology.server') {
+export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', storage_key='dedalo.update_ontology.server', on_change) {
 
 	// A radio GROUP is document-wide by name, and this panel renders twice (the
 	// Map view mounts its own instance beside the List one). With a shared name
@@ -1188,7 +1206,9 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS', 
 				picker.querySelectorAll('.server_row').forEach( el => el.classList.remove('on') )
 				server_row.classList.add('on')
 				store_server(storage_key, current_server.url)
-				event_manager.publish('ontology_server_select_change', current_server.tld || null )
+				if (typeof on_change==='function') {
+					on_change(current_server)
+				}
 			}
 			input_radio.addEventListener('change', change_handler)
 			input_radio.addEventListener('click', (e) => { e.stopPropagation() })

@@ -35,6 +35,18 @@ import {
  * end through `dispatchGetWidgetValue` by test/unit/active_ontology_tlds.test.ts,
  * so a second direct gate would assert the same fold twice.
  */
+/**
+ * PHP parity: the 'Local files' pseudo-server is THIS install, so it is forced
+ * reachable — the probe travels the network stack to ourselves and a slow or
+ * proxied loopback would otherwise disable the panel's own local source. Only
+ * the localhost entry is touched, and only when the remote answered an object.
+ */
+function forceLocalhostReachable(server: Record<string, unknown>): void {
+	if (server.code !== 'localhost') return;
+	if (typeof server.result !== 'object' || server.result === null) return;
+	(server.result as { result?: unknown }).result = true;
+}
+
 async function updateOntologyGetValue(): Promise<WidgetResponse> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
 	const { readDdOntologyRow } = await import('../../db/dd_ontology.ts');
@@ -60,13 +72,7 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 		// panel contract the client reads (render_update_ontology.js) — the probe's
 		// own outcome field is `data` since the P1 sweep.
 		server.result = probe.data;
-		if (
-			server.code === 'localhost' &&
-			typeof server.result === 'object' &&
-			server.result !== null
-		) {
-			(server.result as { result?: unknown }).result = true;
-		}
+		forceLocalhostReachable(server);
 	}
 
 	// TLD list: the configured active TLDs, always unioned with the core pair.

@@ -125,22 +125,38 @@ describe('planCodeBuild — version guard', () => {
 		});
 	}
 
-	test("accepts '7.0.1' and builds the confined release path", () => {
-		const plan = planCodeBuild({ version: '7.0.1', ref: 'main' }, OK_CFG);
+	test("accepts '7.0.1' from the master ref and builds the confined PUBLISHED path", () => {
+		const plan = planCodeBuild({ version: '7.0.1', ref: 'master' }, OK_CFG);
 		expect(plan.ok).toBe(true);
 		if (plan.ok !== true) throw new Error('expected an ok plan');
 		expect(plan).toEqual({
 			ok: true,
 			gitDir: '/g',
-			ref: 'main',
+			ref: 'master',
 			versionString: '7.0.1',
 			targetDir: '/f/7/7.0',
 			filePath: '/f/7/7.0/7.0.1.zip',
 		});
 	});
 
+	test('release channel: only master (or refs/heads/master) claims the published <v>.zip name', () => {
+		// The published name is what code_manifest.ts advertises; a developer-branch
+		// build must NEVER overwrite it — any other ref gets the -dev suffix
+		// (still built, still served by code_serving.ts, never advertised).
+		for (const masterRef of ['master', 'refs/heads/master']) {
+			const plan = planCodeBuild({ version: '7.0.1', ref: masterRef }, OK_CFG);
+			if (plan.ok !== true) throw new Error('expected an ok plan');
+			expect(plan.filePath).toBe('/f/7/7.0/7.0.1.zip');
+		}
+		for (const devRef of ['main', 'v7', 'refs/heads/v7', 'Master', 'master2', 'x/master']) {
+			const plan = planCodeBuild({ version: '7.0.1', ref: devRef }, OK_CFG);
+			if (plan.ok !== true) throw new Error('expected an ok plan');
+			expect(plan.filePath).toBe('/f/7/7.0/7.0.1-dev.zip');
+		}
+	});
+
 	test("accepts the prerelease form '7.0.1.dev' and normalises it to '7.0.1'", () => {
-		const plan = planCodeBuild({ version: '7.0.1.dev', ref: 'main' }, OK_CFG);
+		const plan = planCodeBuild({ version: '7.0.1.dev', ref: 'master' }, OK_CFG);
 		if (plan.ok !== true) throw new Error('expected an ok plan');
 		expect(plan.versionString).toBe('7.0.1');
 		expect(plan.filePath).toBe('/f/7/7.0/7.0.1.zip');
@@ -163,7 +179,7 @@ describe('planCodeBuild — version guard', () => {
 		test(`quirk: ${JSON.stringify(sloppy)} is accepted and normalised to ${normalised}`, () => {
 			// explicit ref: some of these sloppy strings are not valid git refs,
 			// and the ref gate would otherwise mask the version behaviour.
-			const plan = planCodeBuild({ version: sloppy, ref: 'main' }, OK_CFG);
+			const plan = planCodeBuild({ version: sloppy, ref: 'master' }, OK_CFG);
 			if (plan.ok !== true) throw new Error('expected an ok plan');
 			expect(plan.versionString).toBe(normalised);
 			expect(plan.filePath).toBe(`/f/7/7.0/${normalised}.zip`);
@@ -171,10 +187,12 @@ describe('planCodeBuild — version guard', () => {
 	}
 
 	test('a multi-digit / zero triple lands in the right major.minor directory', () => {
+		// omitted ref defaults to the version string — a NON-master ref, so the
+		// artifact lands on the -dev channel.
 		const plan = planCodeBuild({ version: '10.12.0' }, OK_CFG);
 		if (plan.ok !== true) throw new Error('expected an ok plan');
 		expect(plan.targetDir).toBe('/f/10/10.12');
-		expect(plan.filePath).toBe('/f/10/10.12/10.12.0.zip');
+		expect(plan.filePath).toBe('/f/10/10.12/10.12.0-dev.zip');
 	});
 });
 
@@ -206,8 +224,8 @@ describe('planCodeBuild — git ref allowlist (CMD-05)', () => {
 			const plan = planCodeBuild({ version: '7.0.1', ref: good }, OK_CFG);
 			if (plan.ok !== true) throw new Error('expected an ok plan');
 			expect(plan.ref).toBe(good);
-			// the ref NEVER influences the output path
-			expect(plan.filePath).toBe('/f/7/7.0/7.0.1.zip');
+			// the ref selects ONLY the channel suffix — no ref bytes in the path
+			expect(plan.filePath).toBe('/f/7/7.0/7.0.1-dev.zip');
 		});
 	}
 
@@ -217,7 +235,7 @@ describe('planCodeBuild — git ref allowlist (CMD-05)', () => {
 		const plan = planCodeBuild({ version: '7.0.1', ref: 'refs/heads/../../x' }, OK_CFG);
 		if (plan.ok !== true) throw new Error('expected an ok plan');
 		expect(plan.ref).toBe('refs/heads/../../x');
-		expect(plan.filePath).toBe('/f/7/7.0/7.0.1.zip');
+		expect(plan.filePath).toBe('/f/7/7.0/7.0.1-dev.zip');
 	});
 
 	test('an empty explicit ref does NOT fall back to the version (?? not ||)', () => {
@@ -307,7 +325,8 @@ describe('buildVersionFromGit — real git archive', () => {
 		await git('config', 'user.name', 'test');
 		await git('add', 'package.json');
 		await git('commit', '-q', '-m', 'seed');
-		await git('tag', 'v7.0.1');
+		// build from the PUBLISHED channel: only `master` claims `<v>.zip`
+		await git('branch', '-M', 'master');
 
 		try {
 			mock.module('../../src/config/config.ts', () => ({
@@ -323,7 +342,7 @@ describe('buildVersionFromGit — real git archive', () => {
 				},
 			}));
 
-			const out = await buildVersionFromGit({ version: '7.0.1', ref: 'v7.0.1' });
+			const out = await buildVersionFromGit({ version: '7.0.1', ref: 'master' });
 			expect(out.ok).toBe(true);
 
 			const expected = join(filesDir, '7', '7.0', '7.0.1.zip');
@@ -351,7 +370,8 @@ describe('buildVersionFromGit — real git archive', () => {
 			// git's stderr is the LOG-side detail, never the wire sentence
 			expect((bad as Error).message).toStartWith('git archive failed: ');
 			expect((bad as Error).message.length).toBeGreaterThan('git archive failed: '.length);
-			expect(existsSync(join(filesDir, '7', '7.0', '7.0.2.zip.sha256'))).toBe(false);
+			// non-master ref → the artifact would be 7.0.2-dev.zip; no sidecar either way
+			expect(existsSync(join(filesDir, '7', '7.0', '7.0.2-dev.zip.sha256'))).toBe(false);
 		} finally {
 			mock.module('../../src/config/config.ts', () => REAL_CONFIG);
 			mock.restore();

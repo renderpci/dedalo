@@ -12,7 +12,7 @@
  */
 
 import { config } from '../../../config/config.ts';
-import { readEnv } from '../../../config/env.ts';
+import type { Principal } from '../../security/permissions.ts';
 import {
 	engineDenied,
 	fromEnvelope,
@@ -50,28 +50,57 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 	return {
 		data: {
 			servers,
-			dedalo_source_version_local_dir:
-				(readEnv('DEDALO_SOURCE_VERSION_LOCAL_DIR') as string | undefined) ?? null,
+			// dedalo_source_version_local_dir dropped (2026-08-23): the engine
+			// ignores DEDALO_SOURCE_VERSION_LOCAL_DIR entirely — staging is
+			// <DEDALO_BACKUP_PATH>/.code_staging — and the client no longer
+			// displays it. The config-catalog key is a retirement candidate.
 			is_a_code_server: config.update.isCodeServer,
 		},
 	};
 }
 
 /**
- * The OPEN (owned) code-update: download + verify + extract + swap + restart.
+ * The OPEN (owned) code-update: a BACKGROUND mediaJobs job running the full
+ * pipeline (download + verify + extract + deps + preflight + swap + restart);
+ * the immediate answer is the {pid, pfile} poll handle the maintenance client
+ * feeds to dd_utils_api:get_process_status, and the pipeline's phase frames
+ * (core/update/code_update.ts UpdatePhaseFrame) ride the job's `data`.
+ *
+ * KNOWN LIMIT, BY DESIGN: the restart phase kills THIS process, which orphans
+ * the in-process job — core/api/process_status.ts's dead-owner reconcile then
+ * emits a terminal `interrupted` frame. That is the designed HANDOFF: the
+ * client saw `phase:'restart'` with `expected_version` first, so it switches
+ * to polling GET /health (which now carries `version`) instead of treating the
+ * interruption as a failure. Do not "fix" the interruption away.
  *
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
- * engineering/crap_coverage_exempt.json): a two-field unwrap forwarding to
- * `core/update/code_update.ts`, gated in its own suite. EXECUTING it replaces the
- * code tree on disk and restarts the process. The one widget-level law worth
- * pinning — the closed branch's non-superuser refusal — is already gated by
- * test/unit/update_preconditions.test.ts.
+ * engineering/crap_coverage_exempt.json): a thin job-submission wrapper over
+ * `core/update/code_update.ts`, gated in its own suite. EXECUTING it replaces
+ * the code tree on disk and restarts the process.
  */
-async function updateCodeOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
+async function updateCodeOwned(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
 	const { updateCode } = await import('../../update/code_update.ts');
-	// core/update/** REFUSES BY THROWING (update.refused / update.failed) and
-	// answers an ok envelope; unwrap it so the widget dispatcher re-wraps it once.
-	return fromEnvelope(await updateCode(options));
+	const { mediaJobs } = await import('../../media/jobs.ts');
+	const record = mediaJobs.submit(
+		'update_code',
+		async ({ onData }) => {
+			// core/update/** REFUSES BY THROWING (update.refused / update.failed);
+			// phase frames stream through the job's data channel as it advances.
+			return await updateCode(options, principal, { onPhase: (frame) => onData(frame) });
+		},
+		{ userId: principal.userId },
+	);
+	return {
+		data: true,
+		msg: `OK. Running publication ${process.pid}`,
+		// In-process job: the server process runs it (same shape as
+		// update_data_version's background branch — the client polls
+		// dd_utils_api:get_process_status with {pid, pfile}).
+		extend: { pid: process.pid, pfile: `${record.id}.json` },
+	};
 }
 
 /**

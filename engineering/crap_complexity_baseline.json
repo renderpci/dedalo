@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 494,
-		"functions": 4148,
-		"functionsOverCap": 702,
-		"filesOverCap": 274
+		"files": 500,
+		"functions": 4254,
+		"functionsOverCap": 694,
+		"filesOverCap": 271
 	},
 	"files": {
 		"src/core/ai/model_store.ts": 10,
@@ -50,7 +50,7 @@
 		"src/core/area_maintenance/widgets/sequences_status.ts": 10,
 		"src/core/area_maintenance/widgets/site_builder_status.ts": 9,
 		"src/core/area_maintenance/widgets/system_info.ts": 7,
-		"src/core/area_maintenance/widgets/update_ontology.ts": 13,
+		"src/core/area_maintenance/widgets/update_ontology.ts": 11,
 		"src/core/client_libs/serving.ts": 11,
 		"src/core/components/component_date/date_value.ts": 20,
 		"src/core/components/component_external/value.ts": 12,
@@ -268,12 +268,9 @@
 		"src/core/ts_object/term_resolver.ts": 13,
 		"src/core/ts_object/ts_api.ts": 12,
 		"src/core/ts_object/ts_object.ts": 22,
-		"src/core/update/catalog.ts": 7,
 		"src/core/update/code_build.ts": 7,
 		"src/core/update/code_build_plan.ts": 9,
 		"src/core/update/code_download.ts": 13,
-		"src/core/update/code_manifest.ts": 17,
-		"src/core/update/code_update.ts": 28,
 		"src/core/update/engine.ts": 37,
 		"src/core/update/transform/definitions.ts": 9,
 		"src/core/update/transform/engine.ts": 9,

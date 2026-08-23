@@ -38,7 +38,7 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { DEDALO_ENGINE_VERSION } from '../../../src/core/update/version.ts';
+import { DEDALO_ENGINE_VERSION } from '../../../src/core/update/build_stamp.ts';
 
 /** The relay-routing settings (defaults to the boot config catalog). */
 export interface RelaySettings {

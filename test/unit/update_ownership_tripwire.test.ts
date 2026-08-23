@@ -34,6 +34,8 @@ import {
 } from '../../src/core/area_maintenance/widgets/support.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { DEDALO_ENGINE_VERSION } from '../../src/core/update/build_stamp.ts';
+import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -242,11 +244,25 @@ describe('TLS peer verification stays ON (WC-023 D1)', () => {
 });
 
 describe('engine-version single source (core/update/version.ts)', () => {
+	// DERIVED from the live triple — the ratchet keeps guarding after a version
+	// bump instead of silently scanning for a version nobody ships any more.
+	// Quote-anchored: '<v>' / "<v>.dev" / `<v>` — never bare (would
+	// false-positive on '127.0.0.1'); plus the [M, m, p] array form.
+	const escaped = DEDALO_VERSION.replace(/\./g, '\\.');
+	const stringLiteral = new RegExp(`['"\`]${escaped}(\\.dev)?['"\`]`);
+	const arrayLiteral = new RegExp(`\\[\\s*${DEDALO_VERSION_TRIPLE.join('\\s*,\\s*')}\\s*\\]`);
+
+	test('self-check: the derived regexes match the current version (a dead regex is a dead gate)', () => {
+		expect(stringLiteral.test(`'${DEDALO_VERSION}'`)).toBe(true);
+		expect(stringLiteral.test(`"${DEDALO_VERSION}.dev"`)).toBe(true);
+		expect(stringLiteral.test(`\`${DEDALO_ENGINE_VERSION}\``)).toBe(true);
+		expect(arrayLiteral.test(`[${DEDALO_VERSION_TRIPLE.join(', ')}]`)).toBe(true);
+		expect(arrayLiteral.test(`[${DEDALO_VERSION_TRIPLE.join(',')}]`)).toBe(true);
+		// quote-anchoring: an IP-shaped bare occurrence must NOT trip
+		expect(stringLiteral.test(`'12${DEDALO_VERSION}.1'`)).toBe(false);
+	});
+
 	test('no version literals outside version.ts in src/ and tools/ runtime code', () => {
-		// Quote-anchored: '7.0.0' / "7.0.0.dev" / `7.0.0` — never bare (would
-		// false-positive on '127.0.0.1'); plus the [7, 0, 0] array form.
-		const stringLiteral = /['"`]7\.0\.0(\.dev)?['"`]/;
-		const arrayLiteral = /\[\s*7\s*,\s*0\s*,\s*0\s*\]/;
 		const offenders: string[] = [];
 		const glob = new Glob('{src,tools}/**/*.ts');
 		for (const rel of glob.scanSync({ cwd: REPO_ROOT })) {

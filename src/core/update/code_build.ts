@@ -14,6 +14,7 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { basename } from 'node:path';
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
 import { DedaloError, ok } from '../errors/index.ts';
@@ -59,7 +60,7 @@ export async function buildVersionFromGit(options: {
 			publicMessage: plan.msg,
 		});
 	}
-	const { gitDir, ref, versionString, targetDir, filePath } = plan;
+	const { gitDir, ref, targetDir, filePath } = plan;
 	try {
 		mkdirSync(targetDir, { recursive: true });
 	} catch (error) {
@@ -86,15 +87,19 @@ export async function buildVersionFromGit(options: {
 	}
 
 	// sha256 sidecar (WC-024 — the integrity guarantee PHP never emitted).
+	// The sidecar line names the plan's ACTUAL artifact: the planner emits
+	// `<v>-dev.zip` for non-master refs, so composing the name from
+	// `versionString` alone would sign a dev build under the published name.
+	const archiveName = basename(filePath);
 	const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
-	await Bun.write(`${filePath}.sha256`, `${digest}  ${versionString}.zip\n`);
+	await Bun.write(`${filePath}.sha256`, `${digest}  ${archiveName}\n`);
 
 	return ok(
 		{ file_path: filePath, sha256: digest },
 		{
 			requestId: currentRequestId(),
 			extend: {
-				msg: `OK. Built release ${versionString}.zip (${statSync(filePath).size} bytes)`,
+				msg: `OK. Built release ${archiveName} (${statSync(filePath).size} bytes)`,
 				// PHP parity: the maintenance client reads both at the top level.
 				file_path: filePath,
 				sha256: digest,

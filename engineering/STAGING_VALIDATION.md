@@ -218,6 +218,87 @@ detection still answers 7.0.0 (`getCurrentDataVersion` — the marker must not
 shadow it) ▢ parity green ▢ smoke green. Only then schedule the production
 window: maintenance ON → fresh backup → dry-run → review → apply → OFF.
 
+## I. Code-update drill (PRODUCTION §12, RELEASE.md)
+
+Rehearse the whole release→install→fail→rollback cycle on the staging box
+before the first production code update. Needs a staging code master
+(`IS_A_CODE_SERVER`, `RELEASE.md`) and a consumer install running under the
+`deploy/` units — including `dedalo-ts-rollback.service` and the
+`dedalo-ts-watchdog.sh` probe, with BOTH supervisor scripts installed out of
+tree at `/opt/dedalo/bin/` (PRODUCTION §12 — the units point there; verify
+`systemctl cat` shows no `ExecStart` under the app tree before starting).
+
+**I1. Happy path end-to-end.**
+▢ Publish a patch release on the staging master (`RELEASE.md` steps 1–7),
+then install it from the consumer's update-code panel.
+✅ Download → sha256 verify → quarantine extract + dependency install →
+smoke boot → swap → restart, all in the journal; `/health` green; the engine
+version AND the build stamp both changed; the sentinel
+(`<backup root>/last_code_update.json`) reads `status:"confirmed"`.
+
+**I2. Runtime data inside the tree → refusal, named key.**
+▢ Plant a `media/` directory inside the consumer's code tree, run the update.
+✅ The pipeline REFUSES before any swap, and the refusal names `MEDIA_PATH`
+as the key to set; the live tree and the planted dir are untouched.
+
+**I3. Broken release → smoke boot refuses, nothing swapped.**
+▢ Build a release whose `src/server.ts` throws at load, publish, install.
+✅ The pre-flight smoke boot fails IN QUARANTINE; the update answers a
+refusal; the live tree still serves, on the old version; no sentinel with
+`status:"pending"` is left behind.
+
+**I4. Post-swap boot failure → automatic rollback.**
+▢ Force a boot failure AFTER the swap (e.g. a release that loads but exits at
+startup), let `Restart=always` exhaust the start limit (5 in 300 s).
+✅ `dedalo-ts.service` enters `failed`; `OnFailure=` fires
+`dedalo-ts-rollback.service`; the journal shows the failed tree parked at
+`<backup root>/failed_<stamp>`, the backup restored, the sentinel
+`status:"rolled_back"` with `rollback_attempted:true`; `/health` goes green on
+the OLD version.
+✅ A second start of the rollback unit is a NO-OP (once-only guard) — it must
+never loop on its own failure.
+⚠ The watchdog path (red `/health` + pending sentinel → rollback instead of
+restart) is the same script; observe at least one watchdog-triggered run.
+
+**I4b. Crash window W1 → rollback with NO tree at APP_DIR.**
+▢ Simulate the worst crash point of the swap: stop the service, move the live
+tree into the backup dir yourself (`mv /opt/dedalo/master_dedalo
+<backup root>/backup_<stamp>`), write (or keep) a `status:"pending"` sentinel
+naming that backupDir, and leave NOTHING at the app path — then start
+`dedalo-ts-rollback.service`.
+✅ The rollback runs at all (its script lives at `/opt/dedalo/bin/`, outside
+the vanished tree — an in-tree `ExecStart` fails here with "No such file");
+the journal logs `state 1`; the backup is moved back to the app path; the
+sentinel reads `status:"rolled_back"`, `rollback_attempted:true`; `/health`
+goes green on the old version.
+
+**I4c. Pre-swap crash → sentinel names a backupDir that never existed.**
+▢ With the service running and healthy, write a `status:"pending"`,
+`rollback_attempted:false` sentinel whose `backupDir` does NOT exist (the
+pipeline writes the sentinel BEFORE the first rename, so a crash there leaves
+exactly this), then start `dedalo-ts-rollback.service`.
+✅ The journal logs `state 2 — nothing was swapped, nothing to restore`; exit
+0; the live tree is untouched, no restart is issued; the sentinel is marked
+`rollback_attempted:true` so neither the watchdog nor a re-fire acts on it
+again.
+
+**I4d. Relocated backup root → scripts still find the sentinel.**
+▢ Set `DEDALO_BACKUP_PATH` in `../private/.env` to a non-default directory
+(no unit edit, no process-env override), run one update, and re-run I4.
+✅ Both scripts resolve the root from `.env` (journal shows the sentinel path
+under the relocated root) — a script that only knows the default would log
+"no sentinel … nothing to do" and leave the broken tree running; that outcome
+is a FAIL.
+
+**I5. Docker channel refuses the swap.**
+▢ On a containerized staging stack (`docker-compose.simple.yml`), run the
+same code update from the panel.
+✅ The pipeline REFUSES the tree swap (the tree lives in the image; a swap
+would be discarded on recreation) and points at the image channel; update the
+stack with `deploy/dedalo-image-update.sh --mode build --ref <tag>` and watch
+the compose healthcheck go healthy — then force a red build and watch it
+re-pin the previous image and report the failure honestly.
+
 ## Sign-off
 
 A staging pass = every ▢ observed, every ✅ met, every ⚠ understood. Until then,

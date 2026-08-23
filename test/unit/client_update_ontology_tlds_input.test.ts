@@ -92,7 +92,7 @@ describe('update_ontology master-server selection', () => {
 		// The picker is built before the form subscribes, so the restored choice is
 		// announced afterwards — otherwise the reference row would still say
 		// "select a master" next to a checked radio.
-		expect(src).toContain('publish_active_server(servers)');
+		expect(src).toContain('publish_active_server(servers, on_server_change)');
 
 		// A radio group is document-wide by name and this panel renders twice (Map
 		// + List): a shared name made the second picker's restore uncheck the first.
@@ -170,5 +170,49 @@ describe('update_ontology TLD input ownership', () => {
 			'the master row must NOT offer "Use this list": its manifest is the whole ' +
 				'ontology (200+ TLDs) and importing all of it is never what an operator means',
 		).toBe(true);
+	});
+});
+
+describe('update_ontology server picker: no cross-widget event bleed', () => {
+	test('the shared picker publishes NOTHING itself; only its caller does, via on_change', () => {
+		// The regression (2026-08-23): render_servers_list published
+		// ontology_server_select_change on EVERY radio change, and update_code
+		// reuses the picker on the same dashboard — picking a CODE server reset
+		// the ontology widget's reference row while its radio stayed checked.
+		const picker = src.slice(
+			src.indexOf('export const render_servers_list'),
+			src.indexOf('}//end render_servers_list'),
+		);
+		expect(
+			picker.includes('event_manager.publish('),
+			'render_servers_list must not publish any event — selection travels ' +
+				"through the caller's on_change callback only",
+		).toBe(false);
+		expect(picker).toContain('on_change');
+		expect(picker).toMatch(
+			/if \(typeof on_change==='function'\) \{\n\t\t\t\t\ton_change\(current_server\)/,
+		);
+
+		// publish_active_server goes through the same callback, never bare
+		const announcer = src.slice(
+			src.indexOf('const publish_active_server'),
+			src.indexOf('}//end publish_active_server'),
+		);
+		expect(announcer.includes('event_manager.publish(')).toBe(false);
+		expect(announcer).toContain('on_change(active)');
+
+		// …and update_ontology's OWN caller still publishes, exactly once,
+		// from its callback with the tld payload it always carried
+		expect(
+			src.match(/event_manager\.publish\('ontology_server_select_change'/g)?.length,
+			"exactly ONE publish site: the ontology caller's on_change callback",
+		).toBe(1);
+		expect(src).toContain(
+			"event_manager.publish('ontology_server_select_change', server ? (server.tld || null) : null)",
+		);
+		expect(src).toContain(
+			"render_servers_list(value, 'ONTOLOGY_SERVERS', 'dedalo.update_ontology.server', on_server_change)",
+		);
+		expect(src).toContain('publish_active_server(servers, on_server_change)');
 	});
 });

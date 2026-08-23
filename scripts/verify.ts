@@ -121,6 +121,7 @@ const TRIPWIRES = [
 	'test/unit/test_tld_ontology_gate.test.ts',
 	'test/unit/test_db_marker_tripwire.test.ts',
 	'test/unit/test_media_root_tripwire.test.ts',
+	'test/unit/runtime_paths_census_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

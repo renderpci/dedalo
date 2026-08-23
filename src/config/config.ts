@@ -31,8 +31,8 @@
  * the DB layer without changing call sites.
  */
 
-import { join } from 'node:path';
-import { projectRoot, RETIRED_ENV_KEYS, readEnv } from './env.ts';
+import { legacyAwareDefaultDir } from './catalog/media.ts';
+import { RETIRED_ENV_KEYS, readEnv } from './env.ts';
 import { INSTALL_MODE } from './install_mode.ts';
 import {
 	readBool,
@@ -314,9 +314,11 @@ export interface MediaUploadConfig {
 export interface MediaConfig {
 	/**
 	 * Absolute filesystem media root (PHP DEDALO_MEDIA_PATH; env MEDIA_PATH).
-	 * DERIVED — `<projectRoot>/media` — unless MEDIA_PATH overrides it, mirroring
-	 * the PHP constant, which is defined as DEDALO_ROOT_PATH + '/media' and which
-	 * private/sample.env documents as "auto-derived; uncomment only to override".
+	 * DERIVED — `<privateDir>/media` since 2026-08-23 (runtime-path census: an
+	 * in-tree default is carried away by a code-update tree swap), with a
+	 * keep-the-legacy fallback: an unset MEDIA_PATH plus a `<projectRoot>/media`
+	 * that holds files keeps the legacy root, warned once. PHP derived
+	 * DEDALO_ROOT_PATH + '/media'; sample.env documents both behaviours.
 	 * Null is therefore unreachable from env; the type keeps it only so a test can
 	 * construct an unconfigured catalog and prove requireMediaRoot still throws.
 	 */
@@ -536,7 +538,8 @@ export interface OpsConfig {
 	/**
 	 * TS-owned home for the move_* transform definition JSON files
 	 * (UPDATE_PROCESS Phase 5; PHP core/base/transform_definition_files).
-	 * Defaults to <projectRoot>/install/transform_definition_files. undefined
+	 * Defaults to <privateDir>/transform_definition_files (legacy-aware: an
+	 * in-tree dir holding files keeps being used — catalog/tools.ts). undefined
 	 * only if explicitly blanked.
 	 */
 	readonly transformDefinitionsDir: string | undefined;
@@ -668,12 +671,19 @@ function buildMediaConfig(): MediaConfig {
 	// the guard did not see.
 	const testRootRaw = readEnv('DEDALO_TEST_MEDIA_ROOT');
 	const testRoot = testRootRaw !== undefined && testRootRaw !== '' ? testRootRaw : null;
+	// Unset MEDIA_PATH: the legacy-aware default (catalog/media.ts). Since the
+	// runtime-path census (2026-08-23) the derived default is <privateDir>/media
+	// — a code update renames the whole projectRoot away, so an in-tree default
+	// silently moved the media library into the backup dir. A legacy
+	// <projectRoot>/media that holds files keeps being used (nothing moves)
+	// with a one-line warning naming MEDIA_PATH as the fix; only this call
+	// warns, so the warning prints once per process (config builds once).
 	const mediaRoot =
 		testRoot !== null
 			? testRoot
 			: mediaPath !== undefined && mediaPath !== ''
 				? mediaPath
-				: join(projectRoot, 'media');
+				: legacyAwareDefaultDir('MEDIA_PATH', ['media'], ['media'], { warn: true, record: true });
 	// The `bin(key, name)` helper is gone: each binary key now declares its own computed
 	// default (`<DEDALO_BINARY_BASE>/<name>`) in src/config/catalog/media.ts, so the census
 	// can print it and readString resolves it.

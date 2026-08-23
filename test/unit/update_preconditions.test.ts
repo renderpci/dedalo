@@ -127,6 +127,62 @@ describe('checkUpdatePreconditions — recent-backup warning (never refuses)', (
 	});
 });
 
+describe('checkUpdatePreconditions — backupRequire (the code-update REFUSAL mode)', () => {
+	const scratch = join(
+		readEnv('TMPDIR') ?? '/tmp',
+		`dedalo_precond_require_${process.pid}_${Math.random().toString(36).slice(2)}`,
+	);
+
+	function runRequired(dir: string) {
+		setServerState({ maintenance_mode: true });
+		try {
+			return checkUpdatePreconditions(SUPERUSER, { backupDir: dir, backupRequire: true });
+		} finally {
+			setServerState({ maintenance_mode: false });
+		}
+	}
+
+	test('no backup → update.refused (never a warning), naming the waiver', () => {
+		const error = thrownBy(() => runRequired(join(scratch, 'absent')));
+		expect(error.code).toBe('update.refused');
+		expect(error.publicMessage).toContain('No database backup found');
+		expect(error.publicMessage).toContain('waive_backup');
+	});
+
+	test('stale backup (older than the throttle window) → update.refused', () => {
+		const dir = join(scratch, 'stale');
+		mkdirSync(dir, { recursive: true });
+		const file = join(dir, 'db.custom.backup');
+		writeFileSync(file, 'x');
+		const tenHoursAgo = (Date.now() - 10 * 3600000) / 1000;
+		utimesSync(file, tenHoursAgo, tenHoursAgo);
+		const error = thrownBy(() => runRequired(dir));
+		expect(error.code).toBe('update.refused');
+		expect(error.publicMessage).toContain('hours old');
+	});
+
+	test('fresh backup passes with no warnings', () => {
+		const dir = join(scratch, 'fresh');
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'db.custom.backup'), 'x');
+		expect(runRequired(dir)).toEqual({ warnings: [] });
+	});
+
+	test('the WARN path is untouched: same findings stay warnings without backupRequire', () => {
+		// update_data_version's responses are byte-frozen — the require mode must
+		// not have changed a single warn byte.
+		setServerState({ maintenance_mode: true });
+		try {
+			const out = checkUpdatePreconditions(SUPERUSER, { backupDir: join(scratch, 'absent') });
+			expect(out.warnings).toEqual([
+				'Warning. No database backup found — make a backup before updating',
+			]);
+		} finally {
+			setServerState({ maintenance_mode: false });
+		}
+	});
+});
+
 describe('update_data_version EXECUTE through the widget dispatch (typed refusals)', () => {
 	function run(principal: Principal) {
 		return dispatchWidgetRequest(

@@ -6,7 +6,8 @@
 
 import { join } from 'node:path';
 import type { CatalogEntry } from '../catalog_types.ts';
-import { privateDir, projectRoot } from '../env.ts';
+import { privateDir } from '../env.ts';
+import { legacyAwareDefaultDir } from './media.ts';
 
 export const MAINTENANCE_KEYS = {
 	CODE_SERVERS: {
@@ -93,14 +94,40 @@ IS_A_CODE_SERVER=false
 IS_AN_ONTOLOGY_SERVER=false
 \`\`\``,
 	},
+	DEDALO_ONTOLOGY_RECOVERY_PATH: {
+		type: 'string',
+		scope: 'operator',
+		default: () => join(privateDir, 'db', 'dd_ontology_recovery.sql.gz'),
+		defaultDoc: '`<private dir>/db/dd_ontology_recovery.sql.gz`',
+		heading: 'Ontology recovery file path',
+		typeLabel: 'string',
+		doc: `This parameter defines where the ontology recovery file is written and read. Before an ontology update, Dédalo dumps the whitelisted slice of the ontology into this gzipped SQL file, so a failed update can be examined and the previous definitions restored.
+
+Unset, the file lives at \`db/dd_ontology_recovery.sql.gz\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and the recovery dump is exactly the file you need AFTER an update went wrong. A recovery file still sitting at the legacy in-tree location (\`install/db/dd_ontology_recovery.sql.gz\`) keeps being read while no file exists at the new location, with a warning; the next build always writes to this path.
+
+\`\`\`bash
+DEDALO_ONTOLOGY_RECOVERY_PATH="/srv/dedalo_private/db/dd_ontology_recovery.sql.gz"
+\`\`\``,
+	},
 	ONTOLOGY_DATA_IO_DIR: {
 		type: 'string',
 		scope: 'operator',
-		default: () => join(projectRoot, 'install', 'import', 'ontology'),
-		defaultDoc: '`<install dir>/install/import/ontology`',
+		default: () =>
+			legacyAwareDefaultDir(
+				'ONTOLOGY_DATA_IO_DIR',
+				['install', 'import', 'ontology'],
+				['import', 'ontology'],
+				{
+					preferPrivateWhenExists: true,
+				},
+			),
+		defaultDoc:
+			'`<private dir>/import/ontology` once that directory exists; until then the legacy `<install dir>/install/import/ontology` (which ships the vendored ontology seeds) keeps being used',
 		heading: 'Ontology input/output, export/import or download directory',
 		typeLabel: 'string',
-		doc: `This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server. Defaults to \`install/import/ontology\` inside the install tree.
+		doc: `This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server.
+
+Unset, Dédalo prefers \`import/ontology\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy \`install/import/ontology\` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
 
 \`\`\`bash
 ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
