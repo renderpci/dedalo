@@ -14,8 +14,8 @@
  *   RELEASE.md steps 1–7 (the master side)
  *     1. a throwaway `git clone --shared` of THIS checkout gets the release
  *        commit a human release manager would make (RELEASE.md steps 1–2):
- *        version triple bumped to 7.0.1 + `.bun-version` pinned to the RUNNING
- *        bun, committed on a branch literally named `master`;
+ *        version triple bumped to the rung's TO end + `.bun-version` pinned to
+ *        the RUNNING bun, committed on a branch literally named `master`;
  *     2. a REAL master instance boots (suite database, scratch state) with
  *        IS_A_CODE_SERVER + DEDALO_CODE_SERVER_GIT_DIR + DEDALO_CODE_FILES_DIR;
  *     3. the release archive is built THROUGH THE WIRE
@@ -35,10 +35,10 @@
  *     8. then the happy path: {pid,pfile} handle → get_process_status SSE
  *        frames download→…→restart(expected_version) → the process DIES
  *        mid-stream (the designed handoff) → the supervisor respawns the NEW
- *        tree → /health answers version 7.0.1 with no .dev tag (both markers
- *        moved — RELEASE.md step 10);
+ *        tree → /health answers the RELEASE version with no .dev tag (both
+ *        markers moved — RELEASE.md step 10);
  *     9. disk truth: sentinel status "confirmed" (boot_confirm), exactly one
- *        dedalo_7.0.0_* backup carrying package.json+node_modules+.git (the
+ *        dedalo_<from>_* backup carrying package.json+node_modules+.git (the
  *        rollback-bootability contract), the quarantine's fresh node_modules
  *        live, staging swept, and one more status poll answering the terminal
  *        `interrupted` frame (the dead-owner contract the client's switch to
@@ -68,6 +68,9 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
+import { DEDALO_ENGINE_VERSION } from '../src/core/update/build_stamp.ts';
+import { UPDATE_CATALOG, type UpdateDescriptor } from '../src/core/update/catalog.ts';
+import { compareVersionArrays } from '../src/core/update/version.ts';
 import {
 	assertServedDatabase,
 	findFreePort,
@@ -80,8 +83,52 @@ import {
 // Fixed drill facts
 // ---------------------------------------------------------------------------
 
-const CURRENT_VERSION = '7.0.0';
-const RELEASE_VERSION = '7.0.1';
+/**
+ * THE RUNG THE DRILL REHEARSES, DERIVED AT RUNTIME — never a literal.
+ *
+ * The pair was hardcoded `7.0.0 → 7.0.1`, which made the drill a bomb timed to
+ * the exact moment it matters: cutting 7.0.1 (bumping DEDALO_VERSION_TRIPLE)
+ * would have reddened the one gate that rehearses cutting a release.
+ *
+ * So the rung comes from `UPDATE_CATALOG`, which is the engine's own statement
+ * of which upgrades exist: the NEWEST descriptor names both ends —
+ * `updateFrom*` is the version a consumer upgrades FROM, `version*` the release
+ * it lands on. That is also the pair a release manager just authored, so the
+ * drill always rehearses the most recent real release rather than a fossil.
+ *
+ * Neither end is assumed to equal the running engine: the consumer tree is
+ * pinned to `from` and the release clone to `to`, so the drill keeps working
+ * when the checkout has already moved past both.
+ */
+function newestCatalogRung(): { from: number[]; to: number[] } {
+	const descriptors = Object.values(UPDATE_CATALOG) as UpdateDescriptor[];
+	if (descriptors.length === 0) {
+		throw new Error(
+			'UPDATE_CATALOG is EMPTY, so there is no upgrade rung to rehearse. The drill will not ' +
+				'invent one: the master advertises releases by walking this catalog, so a synthetic ' +
+				'target would exercise a path no consumer can reach. Add the descriptor for the next ' +
+				'release (engineering/RELEASE.md) and re-run.',
+		);
+	}
+	const newest = descriptors.reduce((best, entry) => {
+		const a = [entry.versionMajor, entry.versionMedium, entry.versionMinor];
+		const b = [best.versionMajor, best.versionMedium, best.versionMinor];
+		return compareVersionArrays(a, b) === 1 ? entry : best;
+	});
+	return {
+		from: [newest.updateFromMajor, newest.updateFromMedium, newest.updateFromMinor],
+		to: [newest.versionMajor, newest.versionMedium, newest.versionMinor],
+	};
+}
+
+const RUNG = newestCatalogRung();
+/** The version the consumer install is pinned to (the upgrade's FROM end). */
+const CURRENT_VERSION = RUNG.from.join('.');
+/** The version the release clone is bumped to and the master publishes. */
+const RELEASE_VERSION = RUNG.to.join('.');
+/** The literal `DEDALO_VERSION_TRIPLE` bodies the two trees must carry. */
+const CURRENT_TRIPLE_LITERAL = `[${RUNG.from.join(', ')}]`;
+const RELEASE_TRIPLE_LITERAL = `[${RUNG.to.join(', ')}]`;
 /** Shared secret: the consumer's CODE_SERVERS code and the master's accepted code. */
 const DRILL_CODE = 'dedalo_update_drill_shared_code';
 const API_PATH = '/api/v1/json';
@@ -407,14 +454,23 @@ function instanceEnvironment(options: {
 // Small local helpers
 // ---------------------------------------------------------------------------
 
-/** The one-line source edit a release commit makes (RELEASE.md step 1). */
-function bumpVersionTriple(text: string): string {
+/**
+ * The one-line source edit a release commit makes (RELEASE.md step 1), applied
+ * to whichever tree needs pinning: the clone to the release version, the
+ * consumer copy to the version it upgrades FROM.
+ *
+ * The match is the GENERIC triple shape, not this release's digits — the whole
+ * point of deriving the rung is defeated by a regex that only recognises one
+ * version. It is anchored on the `as [number, number, number]` assertion, which
+ * exists exactly once in version.ts.
+ */
+function setVersionTriple(text: string, tripleLiteral: string, whose: string): string {
 	const replaced = text.replace(
-		/\[\s*7\s*,\s*0\s*,\s*0\s*,?\s*\]\s*\)\s*as\s*\[number,\s*number,\s*number\]/,
-		`[7, 0, 1]) as [number, number, number]`,
+		/\[\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,?\s*\]\s*\)\s*as\s*\[number,\s*number,\s*number\]/,
+		`${tripleLiteral}) as [number, number, number]`,
 	);
 	if (replaced === text) {
-		throw new Error('could not patch DEDALO_VERSION_TRIPLE in the release clone');
+		throw new Error(`could not patch DEDALO_VERSION_TRIPLE in the ${whose}`);
 	}
 	return replaced;
 }
@@ -471,6 +527,21 @@ function materializeConsumer(fromRoot: string, to: string): Promise<void> {
 		for (const alias of ['.claude', 'CLAUDE.md']) {
 			rmSync(join(to, alias), { recursive: true, force: true });
 		}
+		// PIN the consumer to the rung's FROM end. The export carries HEAD's
+		// triple, which stops being the upgrade's starting point the moment the
+		// checkout moves past it — after cutting a release, HEAD IS the release,
+		// and a consumer already on it would be asked to install itself (which
+		// assertLinearUpgrade refuses as a same-version install). Idempotent when
+		// HEAD already is the FROM end.
+		const consumerVersionTs = join(to, 'src', 'core', 'update', 'version.ts');
+		writeFileSync(
+			consumerVersionTs,
+			setVersionTriple(
+				readFileSync(consumerVersionTs, 'utf8'),
+				CURRENT_TRIPLE_LITERAL,
+				'consumer install',
+			),
+		);
 		Bun.spawnSync(['cp', '-R', join(fromRoot, 'node_modules'), join(to, 'node_modules')], {
 			stdout: 'ignore',
 			stderr: 'inherit',
@@ -527,7 +598,14 @@ async function main(): Promise<void> {
 		console.log('[drill] cloning the checkout for the release commit…');
 		await runGit(['clone', '--shared', '--quiet', projectRoot, cloneDir], 'clone');
 		const versionTsPath = join(cloneDir, 'src', 'core', 'update', 'version.ts');
-		writeFileSync(versionTsPath, bumpVersionTriple(readFileSync(versionTsPath, 'utf8')));
+		writeFileSync(
+			versionTsPath,
+			setVersionTriple(
+				readFileSync(versionTsPath, 'utf8'),
+				RELEASE_TRIPLE_LITERAL,
+				'release clone',
+			),
+		);
 		writeFileSync(join(cloneDir, '.bun-version'), Bun.version);
 		// The clone INHERITS the repo's export rules — it never repairs them.
 		// A drill that patched a missing `export-ignore` would go green on the
@@ -597,7 +675,12 @@ async function main(): Promise<void> {
 		sealStateFile(join(scratch, 'master_state.json'));
 		master = spawnServer([process.execPath, 'run', 'src/server.ts'], projectRoot, masterEnv);
 		await waitHealthy(masterOrigin, {
-			expectedVersion: `${CURRENT_VERSION}.dev`,
+			// The master runs THIS CHECKOUT unpatched, so it answers whatever the
+			// engine currently is — which is NOT the rung's FROM end once the
+			// checkout has moved past it. Its own version gates nothing here: the
+			// manifest keys on the CALLER's version, and the build is asked for an
+			// explicit release version below.
+			expectedVersion: DEDALO_ENGINE_VERSION,
 			fingerprint,
 			timeoutMs: 120_000,
 			label: 'master boot',
@@ -738,7 +821,17 @@ async function main(): Promise<void> {
 			files: { version: string; url: string; sha256?: string }[];
 			info: { version: string };
 		};
-		must(info.info.version === CURRENT_VERSION, 'manifest reports the wrong server version');
+		// `info.version` is the MASTER's OWN version (code_manifest.ts passes
+		// `serverVersion: DEDALO_VERSION_TRIPLE`), NOT the rung's FROM end — the
+		// two only coincided while this checkout still sat on 7.0.0. The master
+		// here runs this unpatched checkout, so the honest expectation is the
+		// running engine's data version: DEDALO_ENGINE_VERSION minus its
+		// prerelease tag, which is what the manifest reports.
+		const masterDataVersion = DEDALO_ENGINE_VERSION.replace(/\.dev$/, '');
+		must(
+			info.info.version === masterDataVersion,
+			`manifest reports server version ${info.info.version}, expected ${masterDataVersion}`,
+		);
 		must(
 			Array.isArray(info.files) && info.files.length === 1,
 			`expected exactly the ${RELEASE_VERSION} rung`,
@@ -821,7 +914,7 @@ async function main(): Promise<void> {
 		);
 
 		// ---------------------------------------------------------------
-		// STEP 8 — HAPPY PATH: install 7.0.1 across a planned restart
+		// STEP 8 — HAPPY PATH: install the release across a planned restart
 		// ---------------------------------------------------------------
 		console.log(
 			`[drill] installing ${RELEASE_VERSION} (the stream will DIE at restart — by design)…`,
@@ -847,7 +940,7 @@ async function main(): Promise<void> {
 			);
 		}
 
-		// The supervisor brings the NEW tree up; /health must answer 7.0.1.
+		// The supervisor brings the NEW tree up; /health must answer the release.
 		const healthUntil = Date.now() + 150_000;
 		let health: HealthBody = {};
 		while (Date.now() < healthUntil) {
@@ -901,9 +994,9 @@ async function main(): Promise<void> {
 		must(!existsSync(join(consumerBackupRoot, '.code_staging')), 'staging dir was not swept');
 		must(
 			readFileSync(join(consumerTree, 'src', 'core', 'update', 'version.ts'), 'utf8').includes(
-				'[7, 0, 1]',
+				RELEASE_TRIPLE_LITERAL,
 			),
-			'live tree is not the 7.0.1 code',
+			`live tree is not the ${RELEASE_VERSION} code`,
 		);
 		must(
 			!readFileSync(join(consumerTree, 'src', 'core', 'update', 'build_info.txt'), 'utf8').includes(

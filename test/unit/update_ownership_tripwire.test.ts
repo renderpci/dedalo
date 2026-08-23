@@ -262,9 +262,14 @@ describe('engine-version single source (core/update/version.ts)', () => {
 		expect(stringLiteral.test(`'12${DEDALO_VERSION}.1'`)).toBe(false);
 	});
 
-	test('no version literals outside version.ts in src/ and tools/ runtime code', () => {
+	test('no version literals outside version.ts in src/, tools/ and scripts/', () => {
 		const offenders: string[] = [];
-		const glob = new Glob('{src,tools}/**/*.ts');
+		// scripts/ IS scanned (2026-08-24): the release drill hardcoded the pair
+		// `7.0.0 → 7.0.1`, so the one gate that rehearses cutting a release would
+		// have gone red the moment a release was cut — and nothing said so,
+		// because the scan stopped at src/ and tools/. A version literal is the
+		// same defect wherever it lives; the derived rung belongs to the catalog.
+		const glob = new Glob('{src,tools,scripts}/**/*.ts');
 		for (const rel of glob.scanSync({ cwd: REPO_ROOT })) {
 			if (rel === join('src', 'core', 'update', 'version.ts')) continue;
 			if (rel.endsWith('.test.ts')) continue;
