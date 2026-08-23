@@ -214,6 +214,17 @@ export async function runWithoutStatementTimeout(
 		await reserved.unsafe('SET statement_timeout = 0', []);
 		return (await reserved.unsafe(statement, params)) as unknown[];
 	} finally {
+		// RESET restores the connect-time ceiling (the startup-packet GUC is the
+		// session default) BEFORE the connection returns to the pool — without it
+		// the cleared 0 persists on the pooled connection and silently un-bounds
+		// every later request handed it (the exact leak the docstring forbids).
+		// A RESET failure means the connection itself is broken (the pool
+		// discards it); never let it mask the maintenance statement's own error.
+		try {
+			await reserved.unsafe('RESET statement_timeout', []);
+		} catch {
+			// broken connection — pool-level discard handles it; nothing to reset
+		}
 		reserved.release();
 	}
 }

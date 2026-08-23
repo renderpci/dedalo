@@ -23,7 +23,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { runWithoutStatementTimeout, sql } from '../../src/core/db/postgres.ts';
+import { getPoolStats, runWithoutStatementTimeout, sql } from '../../src/core/db/postgres.ts';
 
 /** Longer than the ceiling below, short enough to keep the suite quick. */
 const SLEEP_S = 1.5;
@@ -44,6 +44,12 @@ describe('statement_timeout exemption for maintenance (WC-055)', () => {
 				cancelled = (error as Error).message;
 			}
 		} finally {
+			// The test's own hygiene: a plain SET persists for the connection's
+			// life, and bun test is ONE process sharing this pool — released
+			// un-reset, the 300ms ceiling rides the connection into later files
+			// and cancels their long statements as 57014 (measured: 2
+			// transform_lang_native victims before this reset existed).
+			await reserved.unsafe('RESET statement_timeout', []);
 			reserved.release();
 		}
 		expect(cancelled, 'the ceiling did not cancel a statement that exceeded it').toMatch(
@@ -70,24 +76,34 @@ describe('statement_timeout exemption for maintenance (WC-055)', () => {
 	}, 30000);
 
 	test('the cleared GUC does not leak back into pooled traffic', async () => {
-		await runWithoutStatementTimeout('SELECT 1');
-		// Whatever connection the pool hands out next must still carry the
-		// install's configured value, NOT the helper's 0. With
-		// DB_STATEMENT_TIMEOUT_MS unset (test env) that value is '0' too, so
-		// assert the invariant that actually matters: the helper released the
-		// reservation, so a pooled statement is governed by the POOL's setting.
-		const configured = (await import('../../src/config/config.ts')).config.ops.dbStatementTimeoutMs;
-		// Compare as an INTERVAL, not as text: Postgres renders the GUC in its own
-		// units ('1min' for 60000ms, '0' for off), so a string compare is a trap.
-		const rows = (await sql.unsafe(
-			`SELECT current_setting('statement_timeout') AS raw,
-			        current_setting('statement_timeout')::interval
-			          = make_interval(secs => $1::numeric / 1000) AS matches_config`,
-			[configured],
-		)) as { raw: string; matches_config: boolean }[];
+		// De-vacuated (2026-08-23): the old form compared the pooled GUC against
+		// config.ops.dbStatementTimeoutMs, which is 0 in the test env — a leaked
+		// 0 equalled the configured 0 and the assertion could never fail. Drive a
+		// SENTINEL instead: the "maintenance statement" itself sets a
+		// recognizable nonzero ceiling on the helper's reserved connection, so a
+		// connection released without RESET is distinguishable from every honest
+		// pooled connection.
+		const SENTINEL_MS = 12345;
+		await runWithoutStatementTimeout(
+			`SELECT set_config('statement_timeout', '${SENTINEL_MS}', false)`,
+		);
+		// Concurrent probes to spread across the pool's connections (sequential
+		// queries tend to reuse one), sized to make missing the leaked
+		// connection unlikely.
+		const { max } = getPoolStats();
+		const probes = (await Promise.all(
+			Array.from(
+				{ length: Math.max(4, max * 2) },
+				() =>
+					sql.unsafe(`SELECT current_setting('statement_timeout') AS timeout`, []) as Promise<
+						{ timeout: string }[]
+					>,
+			),
+		)) as { timeout: string }[][];
+		const leaked = probes.map((rows) => rows[0]?.timeout).filter((t) => t?.includes('12345'));
 		expect(
-			rows[0]?.matches_config,
-			`pooled statement_timeout is '${rows[0]?.raw}', expected the configured ${configured}ms — the helper leaked its cleared GUC back into the pool`,
-		).toBe(true);
+			leaked,
+			`a pooled connection still carries the helper's reserved-span statement_timeout (${leaked[0]}) — runWithoutStatementTimeout released without RESET`,
+		).toEqual([]);
 	}, 30000);
 });
