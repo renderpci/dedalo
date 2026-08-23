@@ -201,6 +201,62 @@ function isDropzoneServiceRemovalEntry(entry: ManifestEntry): boolean {
 	return entry.url.startsWith('/dedalo/core/services/service_dropzone/');
 }
 
+/** TS client files ADDED after the 2026-07-11 harvest froze the oracle census
+ * (WC-2026-08-23-dedalo-files-post-harvest-census — the census consequence of
+ * each cited entry, none of which touched this gate when it landed). EXACT
+ * URLs by the service_upload-fold rule: every future addition costs a line of
+ * reviewable paperwork. The recovery assertion below proves each one ACTUALLY
+ * serves. */
+const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
+	// diffusion_server_control live panel (WC-069, commit c7111777fa)
+	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/live_diffusion_server_control.js',
+	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js',
+	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/rollup_panel.js',
+	// thesaurus picker (WC-2026-08-14-thesaurus-picker-caller-declared)
+	'/dedalo/core/area_thesaurus/js/thesaurus_picker.js',
+	// errors v2 client contract (WC-2026-08-16-error-envelope-compat-removal,
+	// WC-2026-08-15-error-status-is-a-channel; error_dispatch is the same
+	// family's dispatcher — engineering/ERRORS_SPEC.md client contract)
+	'/dedalo/core/common/js/api_error.js',
+	'/dedalo/core/common/js/api_transport.js',
+	'/dedalo/core/common/js/error_dispatch.js',
+	'/dedalo/core/common/js/error_policy.js',
+	'/dedalo/core/common/js/render_api_error.js',
+	// media-job visibility surface (WC-2026-08-12-media-job-visibility)
+	'/dedalo/core/common/js/floating_dock.js',
+	'/dedalo/core/common/js/job_follow.js',
+	'/dedalo/core/page/js/job_tray.js',
+	// external record services client render (WC-2026-08-06-external-client-render)
+	'/dedalo/core/component_external/js/external_render.js',
+	// inverse search render — census-adopted post-harvest addition
+	'/dedalo/core/component_inverse/js/render_search_component_inverse.js',
+	// TM list view replacing the service_time_machine package
+	// (WC-2026-08-14-tm-scope-server-owned and WC-2026-08-14-tm-ddo-mode-retired)
+	'/dedalo/core/section/js/view_tm_list_section.js',
+	// diffusion job result record panel (WC-2026-08-15-diffusion-job-result-record)
+	'/dedalo/tools/tool_diffusion/js/report_model.js',
+	// ontologies filter — census-adopted post-harvest addition
+	'/dedalo/tools/tool_ontology_parser/js/ontologies_filter.js',
+];
+function isPostHarvestClientAdditionEntry(entry: ManifestEntry): boolean {
+	return POST_HARVEST_CLIENT_ADDITIONS.includes(entry.url);
+}
+
+/** The service_time_machine PACKAGE and worker_data.js are REMOVED from the
+ * TS tree (WC-2026-08-23-dedalo-files-post-harvest-census, removal half): the
+ * TM list moved into the section family (view_tm_list_section.js above,
+ * WC-2026-08-14-tm-scope-server-owned entry) and worker_data's polling was superseded by the
+ * media-job surface (WC-2026-08-12-media-job-visibility). The frozen oracle
+ * (2026-07-11) still censuses all seven files. A PREFIX for the package (a
+ * removal leaves nothing for the prefix to stop comparing — the TS-side-empty
+ * mirror below proves it) plus the one exact worker_data.js URL. */
+function isTimeMachineServiceRemovalEntry(entry: ManifestEntry): boolean {
+	return (
+		entry.url.startsWith('/dedalo/core/services/service_time_machine/') ||
+		entry.url === '/dedalo/core/common/js/worker_data.js'
+	);
+}
+
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
 	let phpBody: PhpManifestBody;
 	let tsBody: TsManifestBody;
@@ -285,7 +341,9 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isPhpUserRemovalEntry(entry) &&
 			!isServiceUploadFoldAdditionEntry(entry) &&
 			!isTranscriptionStatusAdditionEntry(entry) &&
-			!isDropzoneServiceRemovalEntry(entry);
+			!isDropzoneServiceRemovalEntry(entry) &&
+			!isPostHarvestClientAdditionEntry(entry) &&
+			!isTimeMachineServiceRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.data.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
@@ -309,6 +367,24 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		// happily normalize away a resurrected (or never-deleted) package.
 		expect(tsBody.data.filter(isDropzoneServiceRemovalEntry)).toEqual([]);
 		expect(phpBody.result.filter(isDropzoneServiceRemovalEntry).length).toBeGreaterThan(0);
+
+		// Recovery for the post-harvest client additions: every listed URL must
+		// ACTUALLY serve on the TS side (a listed file that stopped shipping
+		// would otherwise vanish from coverage), and none may appear in the
+		// frozen oracle (if one does, it predates the harvest and belongs in
+		// the ordinary compare, not this filter).
+		const servedAdditions = new Set(
+			tsBody.data.filter(isPostHarvestClientAdditionEntry).map((entry) => entry.url),
+		);
+		for (const url of POST_HARVEST_CLIENT_ADDITIONS) {
+			expect(servedAdditions.has(url), `post-harvest addition not served by TS: ${url}`).toBe(true);
+		}
+		expect(phpBody.result.filter(isPostHarvestClientAdditionEntry)).toEqual([]);
+
+		// Mirror for the time-machine/worker_data removal: nothing left on the
+		// TS side, all seven files still in the frozen oracle census.
+		expect(tsBody.data.filter(isTimeMachineServiceRemovalEntry)).toEqual([]);
+		expect(phpBody.result.filter(isTimeMachineServiceRemovalEntry).length).toBe(7);
 	});
 
 	test('WC-013: the TS tool_assistant census is the server-driven file set', () => {

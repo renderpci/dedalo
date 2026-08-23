@@ -24,10 +24,10 @@
  *   - NINE slots where the frozen label is the PHP-era ALL-CAPS term
  *     ("DATABASE INFO", "DEDALO COUNTERS STATUS") and the repo catalog now
  *     serves sentence case with correct diacritics ("Database info", "Dédalo
- *     counters status"). That is a real, visible wire change with no TLD or
- *     corpus component: it wants a `engineering/wire_contract/` entry from the
- *     labels owner, NOT a wider exclusion here. Until that entry exists this
- *     gate is red BY DESIGN — the ledger is the fix, silence is not.
+ *     counters status"). LEDGERED 2026-08-23:
+ *     WC-2026-08-23-maintenance-widget-label-case — normalized below with both
+ *     sides asserted (frozen all-caps, TS sentence-cased, diacritic-fold-equal)
+ *     and the matched count pinned non-zero.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -121,6 +121,14 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		expect(tsList.length).toBe(phpList.length);
 		/** Slots where the FROZEN side carries the missing-label marker (see below). */
 		let untranslatedLabels = 0;
+		/** Slots where the frozen label is the ALL-CAPS PHP-era term (see below). */
+		let caseChangedLabels = 0;
+		/** Diacritic-fold + lowercase, so `DEDALO` (accent lost at the freeze) still twins `Dédalo`. */
+		const fold = (value: string): string =>
+			value
+				.normalize('NFD')
+				.replace(/[\u0300-\u036f]/g, '')
+				.toLowerCase();
 		for (let index = 0; index < phpList.length; index++) {
 			// `value` is EXCLUDED: 11 widgets embed a per-widget payload computed
 			// by their own PHP widget class (migration form catalogs, sequence
@@ -160,11 +168,32 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 				expect(String(tsLabel).length).toBeGreaterThan(0);
 				untranslatedLabels++;
 			}
+			// THE CASE-CHANGED SLOT (WC-2026-08-23-maintenance-widget-label-case):
+			// the frozen label is the PHP-era ALL-CAPS install term and the repo
+			// catalog now serves sentence case with restored diacritics. The
+			// exclusion applies ONLY where the frozen side is all-caps AND the two
+			// labels are diacritic-fold-equal (same words, case/accents apart), the
+			// TS side is asserted to actually BE sentence-cased (not all-caps), and
+			// the matched count is required non-zero below.
+			const tsLabelRaw = (tsList[index] as { label?: unknown }).label;
+			const isCaseChangedLabel =
+				!isDiffusionControl &&
+				!isRuntimeInfo &&
+				!isUntranslatedLabel &&
+				typeof phpLabel === 'string' &&
+				typeof tsLabelRaw === 'string' &&
+				phpLabel !== tsLabelRaw &&
+				phpLabel === phpLabel.toUpperCase() &&
+				fold(phpLabel) === fold(tsLabelRaw);
+			if (isCaseChangedLabel) {
+				expect(tsLabelRaw).not.toBe(String(tsLabelRaw).toUpperCase());
+				caseChangedLabels++;
+			}
 			const omit = isDiffusionControl
 				? ['value', 'label']
 				: isRuntimeInfo
 					? ['value', 'id', 'label', 'class']
-					: isUntranslatedLabel
+					: isUntranslatedLabel || isCaseChangedLabel
 						? ['value', 'label']
 						: ['value'];
 			const strip = (item: Record<string, unknown>): Record<string, unknown> =>
@@ -176,6 +205,7 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// Exercised-or-refused: a declaration that matches nothing is a stale
 		// exemption, and would mean this gate stopped comparing labels for free.
 		expect(untranslatedLabels).toBeGreaterThan(0);
+		expect(caseChangedLabels).toBeGreaterThan(0);
 	});
 
 	test('the read returns a non-empty context matching PHP (client render contract)', () => {

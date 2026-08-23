@@ -52,6 +52,16 @@
 // those records in the corpus (a derive that can source them, or a built
 // situation that authors the multi-author bibliography this gate describes).
 // Nothing in this file can close it, and no assertion was relaxed to hide it.
+//
+// TS-NATIVE TWIN (DEC-14b, 2026-08-23):
+// test/unit/tool_export_breakdown_native.test.ts BUILDS that multi-author
+// bibliography (test/helpers/zzbib_export_chain.ts) and pins every placement
+// rule the frozen bodies state as exact expected grids ('|n' suffix keys,
+// rows/default/columns placement, fill_the_gaps, relation-leaf fan-out,
+// labels/ar_labels/'end', value dedupe, dedalo_raw wrapper, WC-008 compact).
+// This file stays as the FROZEN RECORD: only its bodies still pin the PHP
+// fan-out side of WC-008 and the install-record display strings. Map row:
+// engineering/ORACLE_HARVEST.md § Generic-TLD replacement map.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';

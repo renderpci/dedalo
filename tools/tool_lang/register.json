@@ -1224,6 +1224,11 @@
                 "label": "Babel"
               },
               {
+                "name": "google_translation",
+                "type": "server",
+                "label": "Google translator"
+              },
+              {
                 "name": "browser_transformer",
                 "type": "browser",
                 "label": "Local AI translator"

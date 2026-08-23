@@ -24,6 +24,17 @@
  * (the DEC-14b twin pattern). BOTH are decisions about shared surfaces, so this
  * file states the fact instead of pretending: do not "fix" it by comparing
  * fewer fields or by dropping the ordering.
+ *
+ * ── RETIRED 2026-08-23 → option (b) taken ──
+ * THE HONEST REPLACEMENT EXISTS: `test/unit/activity_read_native.test.ts`
+ * seeds three scratch dd542 rows in the reserved >= 900000 band (a DESC window
+ * over the append-only log is deterministic there no matter how much residue
+ * the run appends) and asserts the same wire facts through the same pipeline —
+ * the dd543 locator entries + per-component pagination, the dd545 datalist
+ * label resolution, the dd546/dd544 stored values, the sections envelope.
+ * Mapping: engineering/ORACLE_HARVEST.md (generic-TLD replacement map). This
+ * file stays as the frozen record of the PHP activity read and stays red on
+ * the suite database by construction (the residue mechanism above).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

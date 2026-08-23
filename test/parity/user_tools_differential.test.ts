@@ -37,10 +37,39 @@ type ToolDdo = Record<string, unknown> & { name: string };
  */
 const TS_ONLY_TOOLS: ReadonlySet<string> = new Set(['tool_error_report']);
 
+/**
+ * Tools REGISTERED AFTER the 2026-07-11 harvest froze the oracle store
+ * (WC-2026-08-23-user-tools-post-harvest-census): the frozen 35-tool list can
+ * never carry them, so they are filtered from the TS side — and POSITIVELY
+ * asserted present there (below), so the filter can never hide a tool that
+ * silently fell out of the registry. Grow-only, one WC citation each.
+ */
+const POST_HARVEST_TS_TOOLS: ReadonlyMap<string, string> = new Map([
+	['tool_identify', 'WC-062'],
+	['tool_sitebuilder', 'WC-035'],
+]);
+
+/**
+ * Post-harvest FIELD flips on tools the frozen list DOES carry
+ * (WC-2026-08-23-user-tools-post-harvest-census): dd1332 (tool_ontology)
+ * `show_in_component` was deliberately set true in d43cadc1d7 (2026-07-26,
+ * "feat(tool_ontology): show on ontology components") — 15 days after the
+ * harvest, so the frozen DDO still says false. The oracle side is normalized
+ * to the adopted value, and the TS side is POSITIVELY asserted to carry it,
+ * so a regression back to false reddens instead of matching the stale record.
+ */
+const POST_HARVEST_FIELD_FLIPS: ReadonlyArray<{
+	tool: string;
+	field: string;
+	adopted: unknown;
+}> = [{ tool: 'tool_ontology', field: 'show_in_component', adopted: true }];
+
 /** Index a tool list by name for order-independent comparison. */
 function byName(tools: ToolDdo[]): Map<string, ToolDdo> {
 	return new Map(
-		tools.filter((tool) => !TS_ONLY_TOOLS.has(tool.name)).map((tool) => [tool.name, tool]),
+		tools
+			.filter((tool) => !TS_ONLY_TOOLS.has(tool.name) && !POST_HARVEST_TS_TOOLS.has(tool.name))
+			.map((tool) => [tool.name, tool]),
 	);
 }
 
@@ -68,10 +97,36 @@ describe.if(hasPhpCredentials())('user_tools differential (Phase 6 gate)', () =>
 		expect(tsNames).toEqual(phpNames);
 	});
 
+	test('every post-harvest tool the filter removes IS actually served by TS', () => {
+		// The recovery half of the POST_HARVEST_TS_TOOLS filter: a filtered
+		// name that stopped being served would otherwise vanish from parity
+		// coverage entirely.
+		if (!hasPhpCredentials()) return;
+		const tsNames = new Set(tsTools.map((tool) => tool.name));
+		for (const [name, wc] of POST_HARVEST_TS_TOOLS) {
+			expect(
+				tsNames.has(name),
+				`'${name}' (${wc}) is filtered as a post-harvest registration but the TS registry no longer serves it — the filter is hiding a real regression`,
+			).toBe(true);
+		}
+	});
+
 	test('every tool DDO matches PHP field-for-field', () => {
 		if (!hasPhpCredentials()) return;
 		const phpByName = byName(phpTools);
 		const tsByName = byName(tsTools);
+		// Adopt the ledgered post-harvest field flips onto the ORACLE side —
+		// and prove the TS side actually carries each adopted value first.
+		for (const flip of POST_HARVEST_FIELD_FLIPS) {
+			const tsTool = tsByName.get(flip.tool);
+			if (tsTool === undefined) continue; // set diff above reddens instead
+			expect(
+				tsTool[flip.field],
+				`'${flip.tool}'.${flip.field} no longer serves the adopted post-harvest value — the normalization would mask a regression`,
+			).toEqual(flip.adopted);
+			const phpTool = phpByName.get(flip.tool);
+			if (phpTool !== undefined) phpTool[flip.field] = flip.adopted;
+		}
 		for (const [name, phpTool] of phpByName) {
 			const tsTool = tsByName.get(name);
 			expect(tsTool).toBeDefined();

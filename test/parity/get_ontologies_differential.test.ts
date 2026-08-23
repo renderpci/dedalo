@@ -8,6 +8,21 @@
  *  - a non-developer principal is refused ('unauthorized');
  *  - export_ontologies is unregistered → 'unauthorized_method';
  *  - empty options passes the developer gate (the copied client sends options:{}).
+ *
+ * ── RETIRED 2026-08-23 (DEC-14b) ──
+ * The frozen body is the monedaiberica install's ~230-TLD REGISTERED-ontology
+ * census — a fact about which install is loaded, not about the engine
+ * (verified: the frozen TLD set and the suite DB's `SELECT DISTINCT tld FROM
+ * dd_ontology` are disjoint). THE HONEST REPLACEMENT EXISTS:
+ * `test/unit/get_ontologies_native.test.ts` seeds scratch ontology35 rows
+ * (zz* TLDs, reserved id band) and asserts the census DERIVATION — the
+ * five-field descriptor incl. the typology-name hop, the non-fatal tld-less
+ * skip into the `errors` extension key, the activeOnly hierarchy4 filter —
+ * plus UNGATED copies of the three developer security tests below (fully
+ * native, needlessly credential-gated here). Mapping:
+ * engineering/ORACLE_HARVEST.md. This file stays as the frozen record of the
+ * decommissioned install's census and stays red on the suite DB by
+ * construction.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';

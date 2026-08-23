@@ -168493,12 +168493,12 @@
 									{
 										"tipo": "rsc85",
 										"parent": "self",
-										"section_tipo": "self"
+										"section_tipo": "rsc197"
 									},
 									{
 										"tipo": "rsc86",
 										"parent": "self",
-										"section_tipo": "self"
+										"section_tipo": "rsc197"
 									},
 									{
 										"tipo": "rsc116",
@@ -168523,12 +168523,12 @@
 									{
 										"tipo": "rsc85",
 										"parent": "self",
-										"section_tipo": "self"
+										"section_tipo": "rsc197"
 									},
 									{
 										"tipo": "rsc86",
 										"parent": "self",
-										"section_tipo": "self"
+										"section_tipo": "rsc197"
 									},
 									{
 										"tipo": "rsc116",
@@ -171421,81 +171421,7 @@
 							{
 								"mode": "edit",
 								"role": "coins",
-								"tipo": "test6157",
-								"properties": {
-									"css": {
-										".wrapper_component": {
-											"grid-row": "2 /span 4",
-											"grid-column": "1 /span 2"
-										},
-										".wrapper_component >.list_body": {
-											"grid-template-columns": "1fr"
-										},
-										".wrapper_component >.list_body .section_record": {
-											"height": "28rem"
-										},
-										".wrapper_component >.list_body >.content_data .section_record .component_image >.content_data": {
-											"height": "28rem"
-										}
-									},
-									"view": "mosaic",
-									"source": {
-										"mode": "external",
-										"request_config": [
-											{
-												"sqo": {
-													"section_tipo": [
-														{
-															"value": [
-																"test6100"
-															],
-															"source": "section"
-														}
-													]
-												},
-												"show": {
-													"ddo_map": [
-														{
-															"info": "Publishable (component_publication)",
-															"mode": "edit",
-															"tipo": "test6227",
-															"view": "line",
-															"hover": true,
-															"parent": "self",
-															"section_tipo": "test6100"
-														},
-														{
-															"info": "Obverse (component_portal)",
-															"tipo": "test6232",
-															"parent": "self",
-															"in_mosaic": true,
-															"section_tipo": "test6100"
-														},
-														{
-															"info": "Reverse (component_portal)",
-															"tipo": "test6233",
-															"parent": "self",
-															"in_mosaic": true,
-															"section_tipo": "test6100"
-														}
-													],
-													"sqo_config": {
-														"limit": 1
-													}
-												}
-											}
-										],
-										"data_from_field": [
-											"test6119"
-										],
-										"section_to_search": [
-											"test6100"
-										],
-										"component_to_search": [
-											"test6230"
-										]
-									}
-								},
+								"tipo": "test6271",
 								"section_id": "self",
 								"section_tipo": "test6099"
 							},
