@@ -207,17 +207,18 @@ DEDALO_DIFFUSION_NATIVE=false
 \`\`\``,
 	},
 	DEDALO_DIFFUSION_NATIVE_ELEMENTS: {
-		// A LIST, like every other tipo list. It was typed 'string' and read with a
-		// hand comma-split, so a JSON value routed NOTHING and every element refused.
 		type: 'string_list',
 		scope: 'operator',
 		default: undefined,
 		heading: 'Elements routed to the native diffusion engine',
 		typeLabel: 'array',
-		doc: `A staged-migration lever: a JSON array or comma list of the diffusion element tipos that
-the native engine is allowed to publish, or \`all\` for every one of them. An element
-outside the list is refused loudly with an explicit "not routed" message, so that one
+		doc: `A staged-migration lever: the diffusion element tipos that the native engine is
+allowed to publish, or the single value \`all\` for every one of them. An element outside
+the list is refused loudly with an explicit "not routed" message, so that one
 element+section is never published by two engines at once.
+
+Accepted encodings: a JSON array or a plain comma-separated list — both parse to the same
+set.
 
 Use it to move a large installation over one publication at a time. Unset (the default)
 is permissive — every element is accepted — which is the right posture for a development

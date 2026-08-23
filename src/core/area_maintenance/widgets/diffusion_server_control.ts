@@ -102,31 +102,32 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 	const { info, queue, scheduler, writers } = await diffusionModules();
 	const { readEnv } = await import('../../../config/env.ts');
 	const { readBool } = await import('../../../config/readers.ts');
-	// Aliased: the panel payload below is itself called `config`, and the engine
-	// config is what the two list settings must come from.
-	const { config: engineConfig } = await import('../../../config/config.ts');
+	const { config } = await import('../../../config/config.ts');
 	const [running, queued, jobs, pending] = await Promise.all([
 		queue.countRunningJobs(),
 		queue.countQueuedJobs(),
 		queue.listJobsForCaller(null), // admin scope: all jobs (24h window, LIMIT 200)
 		countPendingDiffusion(),
 	]);
-	const config = {
+	const configSummary = {
 		// readBool, not readEnv==='true': the catalog default (true) must apply on
 		// an install that never wrote the key, or this panel reports "external
 		// engine" while buildPlainVars routes the tool at the native one.
 		native: readBool('DEDALO_DIFFUSION_NATIVE'),
-		// Both list settings come from the ONE resolution now. The wire VALUE of
-		// native_elements is unchanged (a comma string or null — the client does
-		// String(...)); only where it is parsed moved.
+		// Wire value UNCHANGED (comma string or null — the client renders it with
+		// String(...)), but the SOURCE is now the one resolved set: the raw key may
+		// hold a JSON array, which the readEnv passthrough here published verbatim.
 		native_elements:
-			engineConfig.diffusion.nativeElements.length > 0
-				? engineConfig.diffusion.nativeElements.join(',')
-				: null,
+			config.diffusion.nativeElements.length > 0 ? config.diffusion.nativeElements.join(',') : null,
 		resolve_levels: envIntOrNull(readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS')),
-		// Unset DERIVES the project languages here too, so the panel and the engine
-		// can no longer disagree about what is published.
-		langs: [...engineConfig.diffusion.langs],
+		// The ONE resolution of the publication languages, never a second parse of
+		// the raw key (the hand `.split(',')` that stood here shredded the JSON
+		// array the v6->v7 migration writes into phantom codes). The UNSET case now
+		// DERIVES the project languages rather than showing an empty list: the
+		// frozen oracle (test/parity/fixtures/oracle_harvest/widgets_differential.json,
+		// `dedalo_diffusion_langs`) shows the full derived set, so an empty panel
+		// contradicted what the engine actually publishes.
+		langs: [...config.diffusion.langs],
 		batch_rows: envIntOrNull(readEnv('DEDALO_DIFFUSION_BATCH_ROWS')),
 		batch_records: envIntOrNull(readEnv('DEDALO_DIFFUSION_BATCH_RECORDS')),
 		target_db_socket: (readEnv('DEDALO_DIFFUSION_DB_SOCKET') ?? '') !== '',
@@ -147,7 +148,9 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 			},
 			jobs: jobs.map(mapJobToClient),
 			pending,
-			config,
+			// wire key unchanged; the local const is `configSummary` so it cannot be
+			// confused with the engine `config` object it now reads from.
+			config: configSummary,
 			is_admin: true, // the dispatch gate already enforced global admin
 		},
 	};

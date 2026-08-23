@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 494,
-		"functions": 4148,
+		"files": 495,
+		"functions": 4172,
 		"functionsOverCap": 702,
-		"filesOverCap": 274
+		"filesOverCap": 273
 	},
 	"files": {
 		"src/core/ai/model_store.ts": 10,
@@ -44,13 +44,12 @@
 		"src/core/area_maintenance/widgets/diffusion_server_control.ts": 8,
 		"src/core/area_maintenance/widgets/lock_components.ts": 9,
 		"src/core/area_maintenance/widgets/media_control.ts": 20,
-		"src/core/area_maintenance/widgets/publication_api.ts": 7,
 		"src/core/area_maintenance/widgets/register_tools.ts": 15,
 		"src/core/area_maintenance/widgets/registry.ts": 12,
 		"src/core/area_maintenance/widgets/sequences_status.ts": 10,
 		"src/core/area_maintenance/widgets/site_builder_status.ts": 9,
 		"src/core/area_maintenance/widgets/system_info.ts": 7,
-		"src/core/area_maintenance/widgets/update_ontology.ts": 13,
+		"src/core/area_maintenance/widgets/update_ontology.ts": 9,
 		"src/core/client_libs/serving.ts": 11,
 		"src/core/components/component_date/date_value.ts": 20,
 		"src/core/components/component_external/value.ts": 12,

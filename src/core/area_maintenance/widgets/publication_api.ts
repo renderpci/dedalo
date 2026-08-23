@@ -1,8 +1,10 @@
 /**
  * publication_api widget — display-only panel (no execute action); its eager
  * catalog value comes from diffusion config constants (PHP get_ar_widgets).
- * Best-effort on the TS engine: domain/resolve_levels/langs come from
- * DEDALO_DIFFUSION_* env, diffusion_map from the ontology diffusion scan.
+ * Best-effort on the TS engine: domain/resolve_levels come from DEDALO_DIFFUSION_*
+ * env, the publication languages from the ONE resolved set (config.diffusion.langs
+ * — derived from the project languages when the key is unset), diffusion_map from
+ * the ontology diffusion scan.
  * api_web_user_code_multiple is a PHP install constant with NO TS source —
  * returned empty (documented gap; the client then renders no per-code API
  * buttons).
@@ -34,11 +36,17 @@ async function buildPublicationApiValue(): Promise<Record<string, unknown>> {
 			dedalo_diffusion_resolve_levels:
 				levelsRaw !== undefined && levelsRaw !== '' ? Number(levelsRaw) : null,
 			api_web_user_code_multiple: [],
-			// config.diffusion.langs, NOT a raw read: this panel used to comma-split the
-			// key itself AND report [] when it was unset, while the engine derived the
-			// project languages — so the panel said "no diffusion languages" about an
-			// installation that was publishing several. The frozen oracle
-			// (widgets_differential.json) shows the full derived set: the PANEL was wrong.
+			// The ONE resolution of the publication languages (config.diffusion),
+			// never a second parse of the raw key: the value may be a JSON array
+			// (what the v6->v7 migration writes) and the hand `.split(',')` that
+			// stood here turned `["lg-spa","lg-cat"]` into phantom codes.
+			//
+			// The UNSET case now DERIVES the project languages instead of reporting
+			// []. The panel was the wrong one: the frozen oracle
+			// (test/parity/fixtures/oracle_harvest/widgets_differential.json,
+			// `dedalo_diffusion_langs`) shows the full derived set, i.e. the engine
+			// publishes those languages whether or not the key is written — a panel
+			// answering "no diffusion languages" contradicted what was published.
 			dedalo_diffusion_langs: [...config.diffusion.langs],
 			diffusion_map: { sections: diffusionSections, engine_reachable: null },
 		};

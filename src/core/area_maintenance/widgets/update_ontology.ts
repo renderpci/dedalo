@@ -25,20 +25,19 @@ import {
 } from './support.ts';
 
 /**
- * update_ontology panel (PHP get_value — response bytes preserved; the
- * legacy STRUCTURE_SERVER_URL/CODE fallback is not carried: TS installs are
- * v7-configured).
+ * The panel's SERVER LIST, probed: the configured ONTOLOGY_SERVERS plus the
+ * 'Local files' pseudo-server this instance offers when it is itself an
+ * ontology master, each annotated with the outcome of a live check.
+ *
+ * Extracted from updateOntologyGetValue (extract-AND-rewire, the CRAP program's
+ * law) so the panel fold stays under the ratchet's frozen max: it is the one
+ * part of that function with real control flow, and the parent is an
+ * I/O-shaped fold that only assembles the answer.
+ *
+ * PHP parity: sequential 5 s checks, localhost forced reachable.
  */
-/*
- * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
- * engineering/crap_coverage_exempt.json): this panel is ALREADY exercised end to
- * end through `dispatchGetWidgetValue` by test/unit/active_ontology_tlds.test.ts,
- * so a second direct gate would assert the same fold twice.
- */
-async function updateOntologyGetValue(): Promise<WidgetResponse> {
+async function probeOntologyServers(): Promise<Record<string, unknown>[]> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
-	const { readDdOntologyRow } = await import('../../db/dd_ontology.ts');
-	const { getLabels } = await import('../../labels/catalog.ts');
 
 	const servers: Record<string, unknown>[] = config.ontologyIo.servers.map((server) => ({
 		...server,
@@ -50,7 +49,6 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 			code: 'localhost',
 		});
 	}
-	// Probe each server (PHP: sequential 5 s checks; localhost forced reachable).
 	for (const server of servers) {
 		const probe = await checkRemoteServer(server as { name: string; url: string; code: string });
 		server.msg = probe.msg;
@@ -68,6 +66,25 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 			(server.result as { result?: unknown }).result = true;
 		}
 	}
+	return servers;
+}
+
+/**
+ * update_ontology panel (PHP get_value — response bytes preserved; the
+ * legacy STRUCTURE_SERVER_URL/CODE fallback is not carried: TS installs are
+ * v7-configured).
+ */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): this panel is ALREADY exercised end to
+ * end through `dispatchGetWidgetValue` by test/unit/active_ontology_tlds.test.ts,
+ * so a second direct gate would assert the same fold twice.
+ */
+async function updateOntologyGetValue(): Promise<WidgetResponse> {
+	const { readDdOntologyRow } = await import('../../db/dd_ontology.ts');
+	const { getLabels } = await import('../../labels/catalog.ts');
+
+	const servers = await probeOntologyServers();
 
 	// TLD list: the configured active TLDs, always unioned with the core pair.
 	// `..._configured` tells the panel whether ACTIVE_ONTOLOGY_TLDS was set at all

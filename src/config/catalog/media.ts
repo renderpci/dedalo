@@ -255,11 +255,14 @@ DEDALO_AV_POSTERFRAME_EXTENSION="jpg"
 \`\`\``,
 	},
 	DEDALO_AV_QUALITY_DEFAULT: {
-		type: 'number',
+		// A quality NAME that merely looks numeric (404 = 720x404), read with
+		// readString. Typed 'number' it contradicted its own reader and example.
+		emptyIsUnset: true,
+		type: 'string',
 		scope: 'operator',
-		default: 404,
+		default: '404',
 		heading: 'Audiovisual',
-		typeLabel: 'int',
+		typeLabel: 'string',
 		doc: `This parameter defines the default quality used for the audiovisual files.
 
 This parameter will use to compress all audiovisual files to specific quality, unifying the quality used by all sections. By default Dédalo use 720x404 h264 quality.

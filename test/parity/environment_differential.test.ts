@@ -13,7 +13,10 @@
  * - page_globals: exact KEY SET + exact values except the engine-specific
  *   debug facts (pg/php version, memory, root path — PHP engine values by
  *   definition), dedalo_build/data_version (deploy stamps) and dedalo_db_name
- *   (the INSTALLATION's own database name).
+ *   (the INSTALLATION's own database name);
+ * - dedalo_projects_default_langs: the ENTRIES exactly, the ORDER deliberately
+ *   not (WC-2026-08-23-projects-default-langs-derived — the oracle's order is a
+ *   heap-scan artefact, the TS order is the configured one).
  *
  * NOT A TLD-BOUND GATE: it names no ontology at all. `dedalo_db_name` joined
  * the presence-only set 2026-08-19 for the same reason the TLD law exists —
@@ -57,6 +60,13 @@ const ENGINE_SPECIFIC_KEYS = new Set([
  * engine-specific and which is not this migration's subject.)
  */
 const NON_EMPTY_STRING_KEYS = ['dedalo_db_name'] as const;
+
+/**
+ * The one page_globals key whose ORDER is a deliberate divergence
+ * (engineering/wire_contract/WC-2026-08-23-projects-default-langs-derived.md).
+ * Its entries are still compared exactly — see the compare in the page_globals test.
+ */
+const PROJECT_LANGS_KEY = 'dedalo_projects_default_langs';
 
 describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate)', () => {
 	let phpEnv: Record<string, Record<string, unknown>>;
@@ -200,8 +210,36 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 			delete tsGlobals[key];
 		}
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
+		// engineering/wire_contract/WC-2026-08-23-projects-default-langs-derived.md:
+		// `dedalo_projects_default_langs` is DERIVED per installation now, and its ORDER
+		// is the configured order. The frozen oracle's order is not a contract to match:
+		// PHP's lang::resolve_multiple issued ONE set-membership SELECT over
+		// matrix_langs with NO ORDER BY, so the array carried whatever order the heap
+		// scan produced — MEASURED 2026-08-23, the same twelve languages come back in
+		// three different orders from three databases (fixture:
+		// nep,eng,deu,fra,vlca,ara,cat,ell,eus,ita,por,spa; this installation:
+		// ara,ell,vlca,eng,eus,fra,ita,por,spa,cat,deu,nep; its own suite clone:
+		// ell,por,cat,eng,ara,deu,eus,fra,ita,nep,spa,vlca). Matching it would assert a
+		// database's page layout, and PHP additionally froze the value in a file cache,
+		// so the fixture is one heap at one instant.
+		//
+		// So the ORDER — and ONLY the order — diverges: the twelve ENTRIES are compared
+		// exactly, order-insensitively, so a wrong label, a wrong tld2, a dropped or an
+		// extra language still fails here.
+		const projectLangs = (globals: Record<string, unknown>) =>
+			[...(globals[PROJECT_LANGS_KEY] as { value: string }[])].sort((a, b) =>
+				a.value.localeCompare(b.value),
+			);
+		expect(projectLangs(tsGlobals)).toEqual(projectLangs(phpGlobals));
+		// …and the TS order is not arbitrary either: it is DEDALO_PROJECTS_DEFAULT_LANGS
+		// verbatim, which is what makes two installations with the same configuration
+		// answer the same thing (the fossil order never did).
+		expect((tsGlobals[PROJECT_LANGS_KEY] as { value: string }[]).map((e) => e.value)).toEqual([
+			...config.menu.projectsDefaultLangs,
+		]);
 		for (const key of Object.keys(phpGlobals)) {
 			if (ENGINE_SPECIFIC_KEYS.has(key)) continue;
+			if (key === PROJECT_LANGS_KEY) continue; // asserted order-insensitively above
 			expect({ [key]: tsGlobals[key] }).toEqual({ [key]: phpGlobals[key] });
 		}
 		// Presence-only is not value-free: the installation facts must still be

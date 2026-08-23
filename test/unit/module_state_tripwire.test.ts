@@ -125,7 +125,6 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// CREATE TABLE IF NOT EXISTS is idempotent and the DDL cannot un-apply.
 	'core/section/record/temporal_store.ts:tableReady',
 	'core/resolve/environment.ts:pgVersionCache',
-	'core/resolve/environment.ts:projectsLangsCache',
 	'core/diffusion_bridge/diffusion_map.ts:mapCache',
 	'core/diffusion_bridge/diffusion_map.ts:targetsCache',
 	'core/relations/select_lang.ts:resolvedLangsCache',
