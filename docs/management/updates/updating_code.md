@@ -1,12 +1,12 @@
 # Updating code
 
-> See also: [Updating ontology](updating_ontology.md) · [Updating data](updating_data.md) · [Updating code options](updating_code_options.md)
+> See also: [Updating ontology](updating_ontology.md) · [Updating data](updating_data.md) · [How a code update works](updating_code_options.md)
 
 Dédalo is an active, rapidly developing software project. It is therefore important to keep it updated and in good condition for stability and security reasons.
 
 There are two ways to update the server's code: the maintenance-panel **self-update** (below), driven by a configured code server, and a **manual** `git pull` (see [Updating manually](#updating-manually)). Both operate on this install's own tree — there is no separate install they delegate to.
 
-The update process is based on the Dédalo cadence numbering. It is incremental and sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
+The update process is based on the Dédalo cadence numbering. Versions are installed step by step — the updater refuses to skip a major or minor version — and a code version sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
 
 Updating the Dédalo code should be supervised by the IT team. Some changes — such as **new configuration settings** — must be applied manually in `../private/.env`, because neither update path touches your configuration.
 
@@ -19,8 +19,11 @@ The "Update code" maintenance panel (`update_code` widget,
 `src/core/area_maintenance/widgets/update_code.ts`) downloads a release
 archive from a configured code server, verifies its sha256 checksum,
 pre-validates every archive entry, extracts it into a quarantine directory,
-and only then swaps it onto the live tree — never over the live tree
-directly.
+installs its dependencies and boot-tests it **there**, and only then swaps it
+onto the live tree — never over the live tree directly. The swap is always a
+clean, rename-based replacement with the previous tree kept as a backup; see
+[How a code update works](updating_code_options.md) for the phases, the
+safety gates and the rollback contract.
 
 !!! info "A release is installed only against a declared checksum"
     Every release the code server advertises carries the sha256 of its archive,
@@ -34,25 +37,38 @@ run under a supervisor that sets `INVOCATION_ID`/`JOURNAL_STREAM`
 (systemd does this for you). Without a detected supervisor the update
 refuses rather than risk a self-exit with nothing to restart it.
 
+The update **refuses to start** — it does not merely warn — unless the operator
+is the superuser (`root`), the server is in **maintenance mode**, and a
+**recent database backup** exists. The backup requirement can be waived only by
+an explicit `waive_backup: true` in the update request (there is no panel
+control for it), and every waiver is logged loudly in the server log. It also
+refuses, without changing anything, on a number of unsafe situations — runtime
+data inside the code tree, an unaccounted file at the tree root, a
+containerised (image) deployment, a Bun version mismatch, a failed dependency
+install or pre-flight boot of the new tree; see
+[How a code update works](updating_code_options.md#what-else-makes-the-update-refuse).
+
 1. Close access to the work system.
 
-    Before updating the code, it is highly recommended to change the Dédalo status to maintenance. Follow [this guide](../maintenace_status.md) to change the Dédalo status and disable Dédalo access.
+    Change the Dédalo status to maintenance — the update refuses to run otherwise. Follow [this guide](../maintenace_status.md) to change the Dédalo status and disable Dédalo access.
 
 2. Enter the maintenance panel.
 
     Log in as root user and go to the Maintenance panel, located in:
     > System administration -> Maintenance
 
-    **Optional**: make a backup of the database first. Follow [this guide](../backup.md#backup-the-work-system).
+    Make a backup of the database first — the update refuses without a recent one. Follow [this guide](../backup.md#backup-the-work-system).
 
 3. Locate the "Update code" control panel.
 
     Choose the server to obtain the code. By default, the panel shows the official Dédalo server, but you can configure other mirrors or providers via `CODE_SERVERS`, set in `../private/.env` (see the [Configuration Administrator Guide](../../config/administration.md)).
 
-    Press "Update Dédalo code", choose the version you want, then select whether you want [Incremental or Clean](updating_code_options.md), and press `Update`.
+    Press "Check available updates", choose the version you want, and press `Update`. The panel then shows the pipeline's phase track (download → verify → extract → deps → preflight → swap → restart → health) while the update runs; the server restarts itself during the `restart` phase and the panel polls its health endpoint until the new version answers.
+
+    Confirm success by **both** the engine version and the build stamp changing in the panel's readout — the build stamp is the release's commit date, so an unchanged stamp means old code is still running.
 
     !!! warning "Re-login after update"
-        After the update, log out and log in to Dédalo to safely refresh the browser's cache files.
+        After the update the panel prompts for a reload: the browser still holds the previous client code, and only logging in again loads the new one. If you dismiss the prompt, a persistent "Reload required" note with its own button remains.
 
 4. Check for new settings.
 
@@ -85,19 +101,26 @@ or an institution's own mirror. Set in `../private/.env` (see the
 ### Building a release
 
 On a code server, the "Update code" panel shows two extra buttons, "Build
-Dédalo code master branch" and "Build Dédalo code developer branch". Each
-archives that branch of the configured git checkout at the engine's **current
-version**, writing
+master release" and "Build developer release". Each archives a branch of the
+configured git checkout at the engine's **current version**. A build of the
+`master` branch writes the published release name; a build of any other branch
+gets a `-dev` suffix, so it can never overwrite the published master release
+of the same version:
 
 ```
-<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip
-<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip.sha256
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip        (master)
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>-dev.zip    (any other branch)
 ```
 
-The `.sha256` sidecar is what remote installs verify against — keep the two
-files together; an archive without its sidecar cannot be installed. Both
-buttons write the same filename for a given version, so a developer build
-overwrites a master build of that version.
+Each archive is written together with its `.sha256` sidecar — that sidecar is
+what remote installs verify against; keep the two files together, because an
+archive without its sidecar cannot be installed.
+
+!!! note "Developer builds are never advertised"
+    The release manifest only looks for `<version>.zip`, so a `-dev` archive is
+    never offered to consuming installs. It is still served at its own URL
+    (`/dedalo/install/code/<version>/<version>-dev.zip`), so an operator who
+    knows the name can fetch it for manual testing.
 
 ### Serving a release
 
