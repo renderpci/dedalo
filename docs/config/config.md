@@ -349,17 +349,21 @@ DEDALO_DIFFUSION_LANGS `array`
 
 This parameter defines the languages that Dédalo will use to publish data.
 
-This definition control the amount of languages that will be processed to publish data in the publication process. When Dédalo publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in this process.
+It controls the amount of languages processed when data is published. Publishing builds one fixed rendition per language, falling back to the main languages' correspondences where a field has no value in the language being processed; this parameter narrows the set of languages that work is done for, so an installation can publish fewer languages than it edits in.
 
-This parameter is configured with the same values as DEDALO_PROJECTS_DEFAULT_LANGS, but it can be changed to other values to separate the export languages from the diffusion languages.
+Unset (or empty) it DERIVES from the project languages: the value of DEDALO_PROJECTS_DEFAULT_LANGS is used verbatim, order included. Set it only to separate the published languages from the editing ones.
+
+Accepted encodings: a JSON array or a plain comma-separated list — both parse to the same set. ORDER IS LOAD-BEARING: the first entry is the main publication language.
+
+Every entry must be a `lg-xxx` code (the `all` sentinel is NOT a language and is refused here) and must be ONE OF the project languages: a language the installation does not edit in has no data to publish. An entry that fails either rule is reported at boot and REFUSES the publication plan — a wrong lang list silently publishes empty renditions, which is worse than not publishing.
 
 ```bash
-DEDALO_DIFFUSION_LANGS=[ "lg-spa", "lg-cat", "lg-eng"]
+DEDALO_DIFFUSION_LANGS=["lg-spa","lg-cat","lg-eng"]
 ```
 
 >The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
 
-*Default: (unset)*
+*Default: the project languages (DEDALO_PROJECTS_DEFAULT_LANGS)*
 
 ---
 
@@ -628,7 +632,7 @@ This parameter defines the different qualities that can be used for store 3d fil
 This parameter will use to store files to specific quality.
 
 ```bash
-DEDALO_3D_AR_QUALITY=[DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]
+DEDALO_3D_AR_QUALITY=["original","web"]
 ```
 
 *Default: ["original","web"]*
@@ -737,14 +741,14 @@ DEDALO_AV_ALTERNATIVE_EXTENSIONS=[]
 
 ### Audiovisual
 
-DEDALO_AV_AR_QUALITY `string`
+DEDALO_AV_AR_QUALITY `array`
 
 This parameter defines the different qualities that can be used for compress the audiovisual files.
 
 This parameter will use to compress audiovisual files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 ```bash
-DEDALO_AV_AR_QUALITY=[DEDALO_AV_QUALITY_ORIGINAL,"4k","1080","720","576","404","240","audio"]
+DEDALO_AV_AR_QUALITY=["original","1080","720","576","404","240","audio"]
 ```
 
 *Default: ["original","1080","720","576","404","240","audio"]*
@@ -1152,7 +1156,7 @@ This parameter defines the different qualities that can be used for compress the
 This parameter will use to compress image files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 ```bash
-DEDALO_IMAGE_AR_QUALITY=[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,"25MB","6MB","1.5MB",DEDALO_QUALITY_THUMB]
+DEDALO_IMAGE_AR_QUALITY=["original","modified","100MB","25MB","6MB","1.5MB","thumb"]
 ```
 
 *Default: ["original","modified","100MB","25MB","6MB","1.5MB","thumb"]*
@@ -1475,7 +1479,7 @@ This parameter defines the different qualities that can be used for compress the
 This parameter will use to compress PDF files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 ```bash
-DEDALO_PDF_AR_QUALITY=[DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]
+DEDALO_PDF_AR_QUALITY=["original","web"]
 ```
 
 *Default: ["original","web"]*
@@ -1657,7 +1661,7 @@ This parameter defines the different qualities that can be used transformed svg 
 This parameter will use to store different svg version files to specific quality.
 
 ```bash
-DEDALO_SVG_AR_QUALITY=[DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT, DEDALO_QUALITY_THUMB]
+DEDALO_SVG_AR_QUALITY=["original","web"]
 ```
 
 *Default: ["original","web"]*
@@ -1861,7 +1865,7 @@ DEDALO_UPLOAD_TMP_SUBDIR="upload/service_upload/tmp"
 
 ### Serving media from the engine (development only)
 
-MEDIA_DEV_ROUTE_ENABLED `bool` *optional — unset is NOT the same as `false`*
+MEDIA_DEV_ROUTE_ENABLED `true || false` *optional — unset is NOT the same as `false`*
 
 **You normally leave this unset.** Media files are served by the WEB SERVER, which enforces the access rules Dédalo generates for it. But Dédalo can also serve them itself, straight from the media root — with no per-record access control at all. That fallback exists for the one setup that has no web server in the request path: a developer running the engine on its local TCP port.
 
@@ -2411,7 +2415,7 @@ SESSION_WARNING_SECONDS=300
 
 ### Declaring that a process supervisor is present
 
-DEDALO_SUPERVISED `bool` (optional; auto-detected)
+DEDALO_SUPERVISED `true || false` (optional; unset = auto-detect)
 
 A code update replaces the installation tree and then exits the server process, so that
 it comes back up running the new code. That only works if **something restarts it**. To
@@ -2834,7 +2838,7 @@ Unset (off) is the default and the only correct value on a shared or public inst
 DEDALO_DEBUG_API_ERRORS=true
 ```
 
-*Default: (unset)*
+*Default: false*
 
 ---
 
@@ -4620,7 +4624,7 @@ entries to this list. Every Dédalo server can provide its own ontologies.
 
 ### Sync ontology from master server
 
-STRUCTURE_FROM_SERVER `bool`
+STRUCTURE_FROM_SERVER `true || false` (optional; unset = not configured)
 
 This parameter defines if the installation will be updated his ontology using the master server versions.
 
@@ -4824,19 +4828,22 @@ DEDALO_DIFFUSION_NATIVE=false
 
 ### Elements routed to the native diffusion engine
 
-DEDALO_DIFFUSION_NATIVE_ELEMENTS `string`
+DEDALO_DIFFUSION_NATIVE_ELEMENTS `array`
 
-A staged-migration lever: a comma-separated list of the diffusion element tipos that
-the native engine is allowed to publish, or `all` for every one of them. An element
-outside the list is refused loudly with an explicit "not routed" message, so that one
+A staged-migration lever: the diffusion element tipos that the native engine is
+allowed to publish, or the single value `all` for every one of them. An element outside
+the list is refused loudly with an explicit "not routed" message, so that one
 element+section is never published by two engines at once.
+
+Accepted encodings: a JSON array or a plain comma-separated list — both parse to the same
+set.
 
 Use it to move a large installation over one publication at a time. Unset (the default)
 is permissive — every element is accepted — which is the right posture for a development
 box and for an installation that has finished its migration.
 
 ```bash
-DEDALO_DIFFUSION_NATIVE_ELEMENTS="dd1190,rsc167"
+DEDALO_DIFFUSION_NATIVE_ELEMENTS=["dd1190","rsc167"]
 ```
 
 *Default: (unset)*

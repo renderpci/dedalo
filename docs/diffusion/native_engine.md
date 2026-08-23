@@ -243,11 +243,11 @@ All keys live in `../private/.env` (see [config](../config/index.md)):
 | --- | --- | --- |
 | `DEDALO_DIFFUSION_DOMAIN` | — | The dd1190 domain the virtual tree/plans are built for |
 | `DEDALO_DIFFUSION_RESOLVE_LEVELS` | `2` | Breadth-first linked-record publishing budget |
-| `DEDALO_DIFFUSION_LANGS` | — | Output languages (the ladder's row set) |
+| `DEDALO_DIFFUSION_LANGS` | the project languages | Output languages (the ladder's row set), first entry = main language. **Derived** from `DEDALO_PROJECTS_DEFAULT_LANGS` verbatim when unset or empty; set it only to publish a subset. Accepts a JSON array or a comma-separated list. Every entry must be a `lg-xxx` code (never the `all` sentinel) and must be one of the project languages — otherwise the value is reported at boot and the publication plan is REFUSED rather than publishing empty renditions |
 | `DEDALO_DIFFUSION_DB_SOCKET` / `_DB_HOST` / `_DB_PORT` / `_DB_USER` / `_DB_PASSWORD` | socket `/tmp/mysql.sock` | MariaDB target access (never reuses the old engine's `DB_*` keys — both must coexist during transition). Target databases are **pre-created**; a missing one is a loud config error, never auto-created |
 | `DEDALO_DIFFUSION_MAX_RUNNERS` | `2` | Concurrent runner processes |
 | `DEDALO_DIFFUSION_NATIVE` | `true` | Emits no `DEDALO_DIFFUSION_API_URL` in the environment payload, so the client calls the main API and this server answers. Set to `false` ONLY on a deployment that still runs the external service behind a route of its own — this server serves no `/dedalo/diffusion/api/v1/`, so with the flag off the tool 404s (WC-003). Defaulted to `true` on 2026-07-29; it was previously unset-meaning-`false` |
-| `DEDALO_DIFFUSION_NATIVE_ELEMENTS` | unset | **Cutover lever 2**: csv of element tipos (or `all`) allowed to publish natively; un-routed elements refuse loudly (never both engines on one element+section) |
+| `DEDALO_DIFFUSION_NATIVE_ELEMENTS` | unset | **Cutover lever 2**: the element tipos allowed to publish natively — a JSON array or a comma-separated list, or the single value `all`; un-routed elements refuse loudly (never both engines on one element+section) |
 | `DEDALO_DIFFUSION_FILES_ROOT` | media path | File-writer root override (tests) |
 
 ## Migrating from an older Dédalo installation
