@@ -905,7 +905,11 @@ const build_pending_block = function(self, value, parent) {
 *   - Native routing      — on/off (DEDALO_DIFFUSION_NATIVE)
 *   - Native elements     — csv|'all'|none (DEDALO_DIFFUSION_NATIVE_ELEMENTS)
 *   - Resolve levels      — integer (DEDALO_DIFFUSION_RESOLVE_LEVELS)
-*   - Publication languages — comma list (DEDALO_DIFFUSION_LANGS)
+*   - Publication languages (DEDALO_DIFFUSION_LANGS). The server sends an ALREADY
+*     PARSED string[], never the raw setting: the key accepts a JSON array or a
+*     comma list and DERIVES the project languages when unset, so parsing it here
+*     would be a second, disagreeing implementation. Order is meaningful — the
+*     first entry is the main publication language.
 *   - Batch rows/records  — integers
 *   - Target DB           — socket / host presence + user configured flag
 *   - Writer formats      — the formats the native engine can write

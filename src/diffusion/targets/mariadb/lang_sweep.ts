@@ -642,10 +642,20 @@ export async function sweepPhantomLangs(
 				try {
 					// Chunked so one sweep never becomes a single multi-million-row
 					// transaction on the operator's live publication server.
+					//
+					// `BINARY lang = ?` — the byte-exact half is LOAD-BEARING, not belt and
+					// braces. Classification above is an exact JS string compare, but a bare
+					// `lang = ?` compares under the TABLE's collation, which on a stock
+					// MariaDB is case-insensitive and PAD SPACE. So a published `lg-spa `
+					// (trailing space) or `LG-SPA` is phantom to us while its DELETE would
+					// ALSO match the real `lg-spa` rows — the sweep would destroy the
+					// translations it exists to protect. Comparing on the same terms as the
+					// classification closes that gap. The plain `lang = ?` stays alongside it
+					// so the index seek is preserved; BINARY alone would force a scan.
 					for (let iteration = 0; iteration < SWEEP_MAX_ITERATIONS; iteration++) {
 						const outcome = (await pool.unsafe(
-							`DELETE FROM ${escapeSqlIdentifier(table)} WHERE lang = ? LIMIT ${SWEEP_DELETE_CHUNK}`,
-							[lang],
+							`DELETE FROM ${escapeSqlIdentifier(table)} WHERE lang = ? AND BINARY lang = ? LIMIT ${SWEEP_DELETE_CHUNK}`,
+							[lang, lang],
 						)) as MariadbExecResult;
 						const affected = outcome?.affectedRows ?? 0;
 						removed += affected;

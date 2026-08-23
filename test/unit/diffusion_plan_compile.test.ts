@@ -48,8 +48,7 @@
  * more discriminating than before — nothing it used to reject now passes.
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { config } from '../../src/config/config.ts';
-import { readEnv } from '../../src/config/env.ts';
+import { config, resolveDiffusionLangs } from '../../src/config/config.ts';
 import { classifyParserFn } from '../../src/diffusion/parsers/registry.ts';
 import {
 	bumpOntologyRevision,
@@ -59,6 +58,7 @@ import {
 import type { ParserClassifier } from '../../src/diffusion/plan/compile.ts';
 import {
 	compileElementPlan,
+	langPolicyErrors,
 	PlanCompileError,
 	validateElementPlan,
 } from '../../src/diffusion/plan/compile.ts';
@@ -313,25 +313,103 @@ describe('compileElementPlan over the real domain', () => {
 		expect(sqlPlan.recursion.maxLevels).toBeGreaterThanOrEqual(1);
 	});
 
-	test('DEDALO_DIFFUSION_LANGS: env wins when set; unset derives the full project lang set', () => {
-		// Regression: the constant is a DERIVED catalog key (defaults to
-		// DEDALO_PROJECTS_DEFAULT_LANGS) on the PHP oracle, so publication emits
-		// every project language — a single-lang fallback published only lg-spa.
-		// S3-69 unpin: this install may legitimately set the key in
-		// ../private/.env, so assert the ACTIVE posture instead of pinning
-		// "unset" (the test used to fail on legitimate config changes).
-		const envLangs = (readEnv('DEDALO_DIFFUSION_LANGS') ?? '')
-			.split(',')
-			.map((lang) => lang.trim())
-			.filter((lang) => lang !== '');
-		if (envLangs.length > 0) {
-			expect(sqlPlan.langPolicy.langs).toEqual(envLangs);
-		} else {
-			expect(sqlPlan.langPolicy.langs).toEqual([...config.menu.projectsDefaultLangs]);
-		}
-		// The regression tooth either way: never a single-lang fallback on a
-		// multi-lang install.
+	test('the plan takes its langs from the ONE resolution, not from a re-parse', () => {
+		// This test used to RE-IMPLEMENT the comma split it was meant to guard, so a
+		// JSON-encoded value produced four phantom codes on BOTH sides and the
+		// assertion passed. The parse now happens once, in config.diffusion, and the
+		// only honest assertion is that the plan agrees with it.
+		expect(sqlPlan.langPolicy.langs).toEqual([...config.diffusion.langs]);
+		// Order is a contract: mainLang IS langs[0].
+		expect(sqlPlan.langPolicy.mainLang).toBe(sqlPlan.langPolicy.langs[0] as string);
+		// Never a single-lang collapse on a multi-lang install.
 		expect(sqlPlan.langPolicy.langs.length).toBeGreaterThan(1);
+	});
+});
+
+/**
+ * The PURE half of the lang policy. Both functions are exported precisely so a gate
+ * can state each fault without booting a config — these are that gate.
+ */
+describe('lang policy — the pure resolution (resolveDiffusionLangs)', () => {
+	const project = ['lg-spa', 'lg-cat', 'lg-eng'];
+
+	test('unset DERIVES the project languages, verbatim and in order', () => {
+		const resolved = resolveDiffusionLangs([], project, 'lg-spa');
+		expect(resolved.langs).toEqual(project);
+		expect(resolved.configured).toBe(false);
+		expect(resolved.malformed).toEqual([]);
+		expect(resolved.outsideProject).toEqual([]);
+	});
+
+	test('a configured SUBSET wins, order preserved (langs[0] is the main lang)', () => {
+		const resolved = resolveDiffusionLangs(['lg-eng', 'lg-spa'], project, 'lg-spa');
+		expect(resolved.langs).toEqual(['lg-eng', 'lg-spa']);
+		expect(resolved.configured).toBe(true);
+		// NOT sorted and NOT de-duplicated: the first entry is load-bearing.
+		expect(resolved.langs[0]).toBe('lg-eng');
+	});
+
+	test('no project languages at all falls back to the single data language', () => {
+		// The last resort — an install with nothing configured to publish.
+		expect(resolveDiffusionLangs([], [], 'lg-spa').langs).toEqual(['lg-spa']);
+	});
+
+	test('langs is NEVER empty (mainLang undefined would break every ladder lookup)', () => {
+		for (const [configured, projectLangs] of [
+			[[], project],
+			[[], []],
+			[['lg-eng'], project],
+		] as [string[], string[]][]) {
+			expect(
+				resolveDiffusionLangs(configured, projectLangs, 'lg-spa').langs.length,
+			).toBeGreaterThan(0);
+		}
+	});
+
+	test('the DERIVED set is validated too — the same defect can arrive by the other door', () => {
+		// A typo in DEDALO_PROJECTS_DEFAULT_LANGS ('spa' for 'lg-spa') used to be waved
+		// through unchecked, because only the CONFIGURED branch was validated.
+		const resolved = resolveDiffusionLangs([], ['spa', 'lg-eng'], 'lg-spa');
+		expect(resolved.configured).toBe(false);
+		expect(resolved.malformed).toEqual(['spa']);
+	});
+
+	test('JSON-shred debris is reported as MALFORMED — the defect this change exists to stop', () => {
+		// Exactly what a raw comma-split produced from a migrated `["lg-spa",...]`.
+		const resolved = resolveDiffusionLangs(['["lg-spa', '"lg-cat"'], project, 'lg-spa');
+		expect(resolved.malformed).toEqual(['["lg-spa', '"lg-cat"']);
+	});
+
+	test("the 'all' sentinel is NOT a publication language", () => {
+		// LANG_PATTERN accepts 'all'; a publication target cannot.
+		expect(resolveDiffusionLangs(['all'], project, 'lg-spa').malformed).toEqual(['all']);
+	});
+
+	test('a well-formed code outside the project languages is reported separately', () => {
+		const resolved = resolveDiffusionLangs(['lg-spa', 'lg-nep'], project, 'lg-spa');
+		expect(resolved.outsideProject).toEqual(['lg-nep']);
+		expect(resolved.malformed).toEqual([]);
+	});
+});
+
+describe('lang policy — the refusal (langPolicyErrors)', () => {
+	test('a clean policy raises nothing', () => {
+		expect(langPolicyErrors({ langsMalformed: [], langsOutsideProject: [] })).toEqual([]);
+	});
+
+	test('malformed and out-of-project each produce their own error naming the offenders', () => {
+		const errors = langPolicyErrors({
+			langsMalformed: ['["lg-spa'],
+			langsOutsideProject: ['lg-nep'],
+		});
+		expect(errors).toHaveLength(2);
+		expect(errors.join('\n')).toContain('["lg-spa');
+		expect(errors.join('\n')).toContain('lg-nep');
+	});
+
+	test('the refusal names the KEY, so the operator knows what to edit', () => {
+		const [error] = langPolicyErrors({ langsMalformed: ['nope'], langsOutsideProject: [] });
+		expect(error).toContain('DEDALO_DIFFUSION_LANGS');
 	});
 });
 

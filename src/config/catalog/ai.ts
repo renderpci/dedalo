@@ -190,11 +190,13 @@ narrows write mode to the part of the repository you are willing to let a model 
 in — a cataloguing section, say, and nothing else. A plan naming any other section is refused
 before it reaches the database.
 
-Read the default carefully: **unset (or empty) means no narrowing at all** — with
-\`DEDALO_AGENT_ALLOW_WRITE=true\` and this list empty, a confirmed plan may write to any
-section the logged-in user could already edit through the client. The allowlist is a
-restriction, not a grant: it can only take sections away, never add permission the user does
-not have. It has no effect while write mode is off.
+Read the default carefully. **UNSET means no narrowing at all** — with
+\`DEDALO_AGENT_ALLOW_WRITE=true\` and this key absent, a confirmed plan may write to any
+section the logged-in user could already edit through the client. But **PRESENT AND EMPTY
+(\`[]\`) means NOTHING is writable**, which is what an empty allowlist reads as everywhere
+else; the two are deliberately different, because "no narrowing" is already expressible by
+leaving the key out. The allowlist is a restriction, not a grant: it can only take sections
+away, never add permission the user does not have. It has no effect while write mode is off.
 
 \`\`\`bash
 DEDALO_AGENT_WRITE_SECTIONS=oh1,rsc197
@@ -290,11 +292,11 @@ DEDALO_MCP_USER_ID=42
 		doc: `A comma-separated list of section \`tipo\`s the stand-alone tool server's write tools may
 target. A write call addressing any other section is refused before the engine is reached.
 
-As with the assistant's twin setting, **unset (or empty) means no narrowing**: with
-\`DEDALO_MCP_ALLOW_WRITE=true\` and this list empty, the tool server may write to every section
-its service user (\`DEDALO_MCP_USER_ID\`) is already allowed to edit. The list only ever removes
-sections — it cannot grant permission that user does not have. It has no effect while write
-mode is off.
+As with the assistant's twin setting, **UNSET means no narrowing**: with
+\`DEDALO_MCP_ALLOW_WRITE=true\` and this key absent, the tool server may write to every section
+its service user (\`DEDALO_MCP_USER_ID\`) is already allowed to edit. **PRESENT AND EMPTY
+(\`[]\`) means NOTHING is writable.** The list only ever removes sections — it cannot grant
+permission that user does not have. It has no effect while write mode is off.
 
 \`\`\`bash
 DEDALO_MCP_WRITE_SECTIONS=rsc197

@@ -87,9 +87,15 @@ export async function runTool(
 				throw new DedaloError('mcp.write_disabled', { coordinates: { tool: spec.name } });
 			}
 			const sectionTipo = (parsed.data as { section_tipo?: unknown }).section_tipo;
+			// NO `size > 0` here. An allowlist that is PRESENT but EMPTY means "narrow to
+			// nothing", not "narrow to nothing in particular" — `=[]` reads as "allow
+			// none" in every allowlist idiom, and "no narrowing" is already expressible
+			// by leaving the key UNSET (undefined), so treating empty as open buys
+			// nothing and fails in the dangerous direction over irreplaceable records.
+			// (Before the list keys moved to a typed reader, `=[]` produced the nonsense
+			// token '[]' and narrowed to nothing BY ACCIDENT; this makes that deliberate.)
 			if (
 				gates.writableSections !== undefined &&
-				gates.writableSections.size > 0 &&
 				typeof sectionTipo === 'string' &&
 				!gates.writableSections.has(sectionTipo)
 			) {

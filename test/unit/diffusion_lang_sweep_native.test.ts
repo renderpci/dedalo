@@ -174,6 +174,20 @@ describe('discovery — the marker is the composite PK, not "has a lang column"'
 			expect(statement.sql).not.toContain(UNDECLARED_TABLE);
 		}
 	});
+
+	test('the DELETE matches the lang BYTE-EXACTLY, not under the table collation', async () => {
+		// Classification is an exact JS compare; a bare `lang = ?` compares under the
+		// table's collation, which is case-insensitive and PAD SPACE by default. A
+		// published `lg-spa ` would then be phantom to us while its DELETE also swept
+		// the REAL `lg-spa` rows — destroying the translations the sweep protects.
+		const log: RecordedStatement[] = [];
+		await sweepPhantomLangs({ langs: [PHANTOM] }, buildDependencies(log));
+		const deletes = log.filter((statement) => statement.sql.startsWith('DELETE'));
+		expect(deletes).toHaveLength(1);
+		expect(deletes[0]?.sql).toContain('BINARY lang = ?');
+		// Both placeholders bound, so the index seek survives alongside the byte check.
+		expect(deletes[0]?.params).toEqual([PHANTOM, PHANTOM]);
+	});
 });
 
 describe('sweep — the DELETE is as narrow as the audit that justified it', () => {

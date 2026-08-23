@@ -102,7 +102,7 @@ import {
 	toAgentToolDefinition,
 } from '../../../ai/mcp/registry.ts';
 import { readEnv } from '../../../config/env.ts';
-import { readList } from '../../../config/readers.ts';
+import { readOptionalList } from '../../../config/readers.ts';
 import {
 	type ApiErrorBody,
 	DedaloError,
@@ -146,7 +146,11 @@ function requestGates(context: ApiRequestContext): RegistryGates {
 	// list. The v6->v7 migration JSON-encodes v6 PHP arrays, so a raw split
 	// would shred `["oh1","rsc197"]` into tokens like `["oh1"` that match no
 	// section tipo — this allowlist would silently narrow to nothing.
-	const writableSections = new Set(readList('DEDALO_AGENT_WRITE_SECTIONS'));
+	// readOptionalList, not readList: it is the ONLY reader that tells UNSET
+	// (null -> no narrowing) apart from PRESENT-BUT-EMPTY ([] -> nothing
+	// writable). Collapsing the two would silently open every section.
+	const configuredSections = readOptionalList('DEDALO_AGENT_WRITE_SECTIONS');
+	const writableSections = configuredSections === null ? undefined : new Set(configuredSections);
 	return { allowWrite, writableSections };
 }
 

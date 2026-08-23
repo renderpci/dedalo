@@ -909,8 +909,15 @@ export function resolveDiffusionLangs(
 		return {
 			langs: Object.freeze(derived),
 			configured: false,
+			// Nothing is "outside the project languages" when the project languages ARE
+			// the source — but they still have to BE language codes. The derived set was
+			// previously waved through unvalidated, so a typo in
+			// DEDALO_PROJECTS_DEFAULT_LANGS (`"spa"` for `"lg-spa"`) reached the
+			// publication plan unchecked and published a rendition under a code that
+			// names no language: the exact silent-garbage class this key was fixed to
+			// close, arriving through the other door.
 			outsideProject: Object.freeze([]),
-			malformed: Object.freeze([]),
+			malformed: Object.freeze(derived.filter((lang) => !isDiffusionLangCode(lang))),
 		};
 	}
 	const projectSet = new Set(projectLangs);

@@ -80,9 +80,15 @@ export interface EnvKeyCallSite {
 	 * quotes a call — `config.ts` documents the very defect this scanner now catches by
 	 * writing `readEnv('DEDALO_DIFFUSION_LANGS')` in its own header. Heuristic, not a
 	 * lexer: the line is a comment line (`//`, `/*`, or a `*` continuation), or a `//`
-	 * opens before the match on the same line. It errs toward calling something code,
-	 * which is the safe direction — a missed comment is a false alarm someone reads,
-	 * a missed CALL is an invariant that never fires.
+	 * opens before the match on the same line.
+	 *
+	 * KNOWN HOLE, stated rather than implied: that last clause is NOT a lexer, so a
+	 * `//` inside a string literal earlier on the line (`const u = 'https://x';
+	 * readEnv('SOME_KEY')`) marks a REAL call commented and exempts it — a false
+	 * NEGATIVE, the unsafe direction, because a missed CALL is an invariant that never
+	 * fires. No current site hits it (the gate's own census would move if one did).
+	 * Do not trust this field as a lexer; if a real call is ever exempted this way,
+	 * fix the scanner rather than the call site.
 	 */
 	readonly commented: boolean;
 }

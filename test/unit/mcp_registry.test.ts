@@ -91,6 +91,43 @@ describe('MCP tool registry (shared-catalog gate)', () => {
 		}
 	});
 
+	// THE FAIL-CLOSED RULE. An allowlist that is PRESENT but EMPTY narrows to NOTHING.
+	// Before the list keys moved to a typed reader, `=[]` yielded the nonsense token
+	// '[]' and narrowed to nothing by ACCIDENT; when the reader started parsing it
+	// correctly, an empty set briefly meant "no narrowing" — i.e. every section became
+	// writable, over irreplaceable records. Pinned so it can never flip back silently.
+	test('an EMPTY writableSections narrows to NOTHING, never to everything', async () => {
+		const spec = getToolSpec('dedalo_create_record');
+		if (spec === undefined) throw new Error('spec missing');
+		const result = await runTool(
+			spec,
+			SCOPED_USER,
+			{ section_tipo: 'test3' },
+			{ allowWrite: true, writableSections: new Set<string>() },
+		);
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error.code).toBe('perm.section_not_writable');
+		}
+	});
+
+	// The other half of the same contract: UNSET (undefined) still means no narrowing,
+	// which is how an operator expresses "every section this user may already edit".
+	test('an UNSET writableSections still means no narrowing', async () => {
+		const spec = getToolSpec('dedalo_create_record');
+		if (spec === undefined) throw new Error('spec missing');
+		const result = await runTool(
+			spec,
+			SCOPED_USER,
+			{ section_tipo: 'test3' },
+			{ allowWrite: true },
+		);
+		// It gets PAST the allowlist gate: any failure here is not the section check.
+		if (!result.ok) {
+			expect(result.error.code).not.toBe('perm.section_not_writable');
+		}
+	});
+
 	test('invalid input never reaches a handler (invalid_request envelope)', async () => {
 		const spec = getToolSpec('dedalo_read_record');
 		if (spec === undefined) throw new Error('spec missing');
