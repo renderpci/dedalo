@@ -327,6 +327,16 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		run: async () =>
 			(await import('../helpers/acl_identity_fixture.ts')).removeAclIdentityFixture(),
 	},
+	{
+		name: 'installHierarchyPruningFixture',
+		run: async () =>
+			(await import('../helpers/hierarchy_pruning_fixture.ts')).installHierarchyPruningFixture(),
+	},
+	{
+		name: 'removeHierarchyPruningFixture',
+		run: async () =>
+			(await import('../helpers/hierarchy_pruning_fixture.ts')).removeHierarchyPruningFixture(),
+	},
 	// NOT LISTED, deliberately: `test/helpers/observer_term_seed.ts`. Until
 	// 2026-08-20 it wrote an install thesaurus (`on1`) with its own
 	// assertTestDatabase call and was a door in its own right. It is now a thin
