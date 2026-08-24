@@ -329,7 +329,12 @@ export async function login(
 	// mid-session reaches the Principal on the next request (dispatch re-resolves
 	// it) but not this session row until the next login.
 	const { isGlobalAdmin } = await resolvePrincipal(user.section_id);
-	const sessionToken = createSession(user.section_id, username, isGlobalAdmin);
+	const sessionToken = createSession(
+		user.section_id,
+		username,
+		isGlobalAdmin,
+		mediaAuthCookieValue,
+	);
 	// AUTHZ-04 single-session policy (opt-in, DEDALO_SINGLE_SESSION). When on,
 	// evict every OTHER session of this user — a new login invalidates a token
 	// stolen earlier, closing the re-login window. Off by default: concurrent
