@@ -35,21 +35,32 @@ export function receiverEnabled(): boolean {
 }
 
 /**
- * Is the caller's IP allowed to reach the intake? Same grammar as the install
- * gate: comma-separated entries, `loopback` shorthand, unset → open (the
- * intake is still throttled + size-capped). `clientIp` is the dispatcher's
- * already-resolved trusted-hop address (server.ts clientIpFromRequest).
+ * Is the caller's IP allowed to reach the intake? Same ENTRY GRAMMAR as the install
+ * gate — it reuses that module's loopback spellings and its `ipInCidr`, so there is
+ * ONE definition of "this machine", one of a CIDR block, and one ENTRY MATCHER
+ * (`allowEntryMatches`) shared with it — so a literal `127.0.0.1` appears in neither
+ * file, and neither predicate can quietly stop understanding a spelling the other
+ * still admits.
+ *
+ * The DEFAULT deliberately differs, and the difference is the point: the install
+ * gate fronts an unauthenticated installer that rewrites `.env`, so an unset key
+ * there means LOOPBACK ONLY (2026-08-24, WC-2026-08-24-install-ip-gate-fail-closed).
+ * This intake fronts a receiver that is OFF unless `DEDALO_ERROR_REPORT_RECEIVER`
+ * turns it on — and when off the endpoint is invisible (the exact unregistered-action
+ * refusal) — whose whole purpose is to accept reports from remote installations
+ * whose addresses the master operator cannot enumerate in advance, and which is
+ * throttled, size-capped and optionally token-checked behind this gate. So here an
+ * unset key means OPEN: locking it to loopback would not harden a smaller surface,
+ * it would silently break the only thing the receiver does.
  */
 export function reporterIpAllowed(clientIp: string): boolean {
 	const raw = readEnv('DEDALO_ERROR_REPORT_ALLOWED_IPS');
 	if (raw === undefined || raw.trim() === '') return true;
-	const loopback = new Set(['local', '127.0.0.1', '::1', '::ffff:127.0.0.1']);
-	for (const entry of raw.split(',').map((item) => item.trim())) {
-		if (entry === '') continue;
-		if (entry === 'loopback' && loopback.has(clientIp)) return true;
-		if (entry === clientIp) return true;
-	}
-	return false;
+	return raw
+		.split(',')
+		.map((item) => item.trim())
+		.filter((entry) => entry !== '')
+		.some((entry) => allowEntryMatches(entry, clientIp));
 }
 
 /**

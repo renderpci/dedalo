@@ -654,7 +654,7 @@ Hardening recap — verify each, because each is a real hole:
 | `DEDALO_DEV_MODE` | `false` | dev mode exposes the browser test harness and developer payloads |
 | `DEDALO_DEBUG_API_ERRORS` | `false` | otherwise exception text is echoed to the client |
 | `MEDIA_DEV_ROUTE_ENABLED` | **unset** | unset is already safe: the engine media fallback answers only on the TCP dev listener (unset in production) and only while protection is unconfigured. Setting it to `true` FORCES it on for every listener — the socket included — serving media with **no per-record ACL** and bypassing the generated rules entirely |
-| `DEDALO_INSTALL_ALLOWED_IPS` | set, while unsealed | the install surface is pre-auth until the instance is sealed |
+| `DEDALO_INSTALL_ALLOWED_IPS` | unset (= the local machine only), or the exact address you install from | the install surface is pre-auth until the instance is sealed; the default is fail-closed, and `any` is the only spelling that opens it |
 | `SESSION_COOKIE_SECURE` | `true` (the default) | requires TLS — the browser drops a `Secure` cookie over plain HTTP |
 | `../private/.env` | `0600`, owned by `dedalo` | it holds every secret |
 | `../private/` | `0700` | it holds the session store and the media-auth store |
