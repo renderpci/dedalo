@@ -16713,6 +16713,11 @@ dd-modal:has(.tool_header) {
   gap: 0.5rem;
   cursor: pointer;
   font-weight: bold;
+  padding-bottom: 0px;
+  color: var(--color_blue_2);
+}
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_check {
+  height: initial;
 }
 .wrapper_widget.update_code > .content_data > .dev_channel_row > .dd_note.dev_channel_note {
   margin: 0.25rem 0 0 1.75rem;
