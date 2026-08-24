@@ -817,7 +817,7 @@ const render_build_version = function(self, content_data, body_response, code_se
 		// button Build Dédalo code MASTER branch
 		self.caller.init_form({
 			submit_label	: get_label.update_code_build_master || 'Build master release',
-			confirm_text	: (get_label.update_code_build_master_confirm || "A release of the current version (%s) will be created from branch 'master' as: %s")
+			confirm_text	: (get_label.update_code_build_master_confirm || "A release of version %s will be created from branch 'master' as: %s")
 				.replace('%s', version)
 				.replace('%s', `\n\n${release_dir}${version}.zip\n`),
 			body_info		: build_version_group,
@@ -841,7 +841,7 @@ const render_build_version = function(self, content_data, body_response, code_se
 		// its own `<v>-dev.zip` filename: it never overwrites the master build
 		self.caller.init_form({
 			submit_label	: get_label.update_code_build_developer || 'Build developer release',
-			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of the current version (%s) will be created from branch 'v7' as: %s The master build of the same version is kept.")
+			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of version %s will be created from branch 'v7' as: %s The master build of the same version is kept.")
 				.replace('%s', version)
 				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`),
 			body_info		: build_version_group,
