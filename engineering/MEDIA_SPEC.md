@@ -22,6 +22,35 @@ Keep a coverage ledger of what the rebuild does not yet cover.
 
 ## 1. Mission & honest status
 
+> **ADDENDUM 2026-08-24 (module homes — read this before the rest of the spec.)**
+> Three of the TS modules this spec's older text names **no longer exist under
+> those paths**; the paths are corrected in place below, and the salvage/design
+> prose that referenced them now means the current homes:
+> - the `media_control` dashboard widget is **not** in a `resolve/widget_request.ts`
+>   monolith: it is one widget module,
+>   `src/core/area_maintenance/widgets/media_control.ts` (`get_value:
+>   mediaControlGetValue`), listed in `src/core/area_maintenance/widgets/registry.ts`
+>   and reached through the `dd_area_maintenance_api` `widget_request` /
+>   `get_widget_value` actions
+>   (`src/core/api/handlers/dd_area_maintenance_api.ts`);
+> - **`src/core/resolve/tool_request.ts` and its `TOOL_API_ACTIONS` export are
+>   gone.** Tool dispatch is `src/core/tools/dispatch.ts` +
+>   `src/core/tools/registry.ts`, and a tool's actions are declared per tool in its
+>   `register.json` with a `permission` / `minLevel` spec
+>   (`ToolActionSpec`, `src/core/tools/module.ts`). Where §5/§9/§10 say "register
+>   in `TOOL_API_ACTIONS`", read "declare the action in the tool's `register.json`
+>   with its permission spec"; the argument the spec makes — an EXPLICIT registry
+>   with declarative permission specs and no reflection, strictly stronger than
+>   PHP's 8-gate chain — is unchanged and now stronger still (`record_tipo` gates
+>   component tipo AND record scope in one spec, the gate for the whole media
+>   family);
+> - `src/core/resolve/backup.ts` → `src/core/area_maintenance/backup.ts` (the
+>   spawn pattern §5 points at as proven).
+>
+> Date is the date of record, not of the move: repo history is squashed at the
+> 2026-07-11 initial commit, so the moves are not datable from `git log`.
+> Nothing about the media DESIGN changes — only where the modules live.
+
 **Media components store no pixels in the database — they store a materialized *index* (`files_info`) of files living in a shared on-disk layout, regenerated from the filesystem on every `save()`.** The DB row is a cache of the disk; the disk is addressed by a deterministic grammar (identifier + quality directories + numeric buckets). Everything else — upload, derivative generation, rotation, posterframes, OCR, soft-delete — is choreography around that invariant. Because the PHP and TS servers share the SAME database AND the SAME media directory (`REWRITE_SPEC §2.2`), byte/structure compatibility of *both* surfaces — the stored `files_info` JSON and the on-disk file layout — is non-negotiable.
 
 The current TS implementation is judged **not done correctly** and is hereby superseded as a foundation. What exists is real and differential-gated, but it is **read-only projection glue only** — the entire ingestion/derivative half of the subsystem is absent:
@@ -32,7 +61,7 @@ The current TS implementation is judged **not done correctly** and is hereby sup
 - **Duplicate does not copy physical files.** `duplicate_record.ts:20` explicitly ledgers "media-file duplication (physical file copies + regenerate)" as a TODO; the jsonb `files_info` is copied but the files are not.
 - **Media protection is native and enforced** since 2026-07-12 — out of scope of THIS spec, but no longer a reporting shell (`engineering/MEDIA_PROTECTION.md`).
 
-**Salvage (proven — keep, do not rewrite blind):** the delete-time soft-move `removeSectionMediaFiles` (now `src/core/media/file_ops.ts`, paired with its restore and unit-gated by `test/unit/media_lifecycle_native.test.ts`; the `delete_record.ts` copy this line originally pointed at was inert on a default install and is deleted); the dev-only session-gated serving route (`src/server.ts:126-155`, traversal-guarded, fail-closed 404); the media export cells (`tool_export` media URL resolution, `STATUS.md:594`); the `media_control.get_value` dashboard widget (`widget_request.ts:~1640`); the explicit tool dispatch registry (`src/core/resolve/tool_request.ts`, `TOOL_API_ACTIONS`); the media list/read differentials (image/svg/pdf list-mode byte-parity, `model_coverage_sweep.test.ts`). The differential suite is the validation harness: it must stay green throughout with **zero fixture/normalization changes** (the relations/section/area rebuild rule).
+**Salvage (proven — keep, do not rewrite blind):** the delete-time soft-move `removeSectionMediaFiles` (now `src/core/media/file_ops.ts`, paired with its restore and unit-gated by `test/unit/media_lifecycle_native.test.ts`; the `delete_record.ts` copy this line originally pointed at was inert on a default install and is deleted); the dev-only session-gated serving route (`src/server.ts:126-155`, traversal-guarded, fail-closed 404); the media export cells (`tool_export` media URL resolution, `STATUS.md:594`); the `media_control.get_value` dashboard widget (now `src/core/area_maintenance/widgets/media_control.ts`, registered in `widgets/registry.ts`, served through the `dd_area_maintenance_api` `widget_request`/`get_widget_value` actions); the explicit, reflection-free tool dispatch registry (now `src/core/tools/dispatch.ts` + `src/core/tools/registry.ts`, per-tool `register.json` permission specs); the media list/read differentials (image/svg/pdf list-mode byte-parity, `model_coverage_sweep.test.ts`). The differential suite is the validation harness: it must stay green throughout with **zero fixture/normalization changes** (the relations/section/area rebuild rule).
 
 ---
 
@@ -146,7 +175,7 @@ Binaries `DEDALO_AV_FFMPEG_PATH` / `_FFPROBE_PATH` / `_FASTSTART_PATH` (§3). Se
 
 ## 5. TS module design
 
-Follows the AREA/SECTION/RELATIONS pattern: ONE contract module in `concepts/`, one subsystem home, tool handlers plugged into the existing explicit `TOOL_API_ACTIONS` registry (`tool_request.ts`). Spawn pattern proven in `src/core/resolve/backup.ts`.
+Follows the AREA/SECTION/RELATIONS pattern: ONE contract module in `concepts/`, one subsystem home, tool handlers plugged into the existing explicit tool registry (`src/core/tools/registry.ts`, dispatched by `src/core/tools/dispatch.ts`; each action declared in the tool's `register.json`). Spawn pattern proven in `src/core/area_maintenance/backup.ts`.
 
 ```
 src/core/concepts/media.ts          — THE contract: type/quality catalog accessor (env-config), allowlists, id-grammar types
@@ -679,7 +708,7 @@ Write-phases run against a **scratch media root** (the `MEDIA_PATH` override the
 
 ## 8. The media tools
 
-All register in `TOOL_API_ACTIONS` (`tool_request.ts`) with declarative permission specs (`minLevel: 2` on the target for every mutation; PHP `assert_record_in_user_scope` → the standard `getPermissions` gate + record-scope check). PHP's 8-gate `tool_request` chain (sanitize model → registry whitelist → per-user grant → realpath confinement → API_ACTIONS allowlist → public+static reflection → 0-or-1-object-param signature → declarative permission spec) is already re-expressed as the explicit TS registry (no reflection) — strictly stronger. Each tool's `register.json` is an ontology record in section `dd1340`.
+All register as actions in the tool's `register.json`, dispatched by `src/core/tools/dispatch.ts` through `src/core/tools/registry.ts`, with declarative permission specs (`ToolActionSpec`, `src/core/tools/module.ts` — `permission: 'record_tipo'` + `minLevel: 2` on the target for every media mutation, since a media action names BOTH a component tipo and a record id; PHP `assert_record_in_user_scope` → the standard `getPermissions` gate + record-scope check). PHP's 8-gate `tool_request` chain (sanitize model → registry whitelist → per-user grant → realpath confinement → API_ACTIONS allowlist → public+static reflection → 0-or-1-object-param signature → declarative permission spec) is already re-expressed as the explicit TS registry (no reflection) — strictly stronger. Each tool's `register.json` is an ontology record in section `dd1340`.
 
 - **tool_upload.process_uploaded_file** — the ingest entry (§6.2). `API_ACTIONS = ['process_uploaded_file']`.
 - **tool_media_versions** (`API_ACTIONS = ['get_files_info','delete_quality','build_version','conform_headers','rotate','sync_files','delete_version','get_job_status']`) — thin verbs over §4–§6: `build_version` (`options.async` default **true** → job manager), `conform_headers` (AV remux), `sync_files` (`edit` mode, `regenerate_component`, re-scan disk), `delete_version` (thumb → `delete_thumb`, else `delete_file(quality,ext)`). Two TS-only additions the panel depends on (`WC-2026-08-04-media-versions-panel-wire`):
@@ -731,7 +760,7 @@ All register in `TOOL_API_ACTIONS` (`tool_request.ts`) with declarative permissi
 | Quality strings | SEC-065 `[A-Za-z0-9_\-.]+` (`:2830`) | charset AND catalog membership (`assertValidQuality`, stronger) |
 | Identifier segments | implicit | `identifier_gate` tipo validation + integer section_id (stronger) |
 | Shell | `escapeshellarg` everywhere | **no shell exists**; argv arrays; binaries from a boot-time absolute-path allowlist |
-| Tool dispatch | 8-gate reflection chain (`dd_tools_api.php:178-394`) | existing explicit `TOOL_API_ACTIONS` registry (no reflection) + declarative min-level before handlers |
+| Tool dispatch | 8-gate reflection chain (`dd_tools_api.php:178-394`) | explicit `src/core/tools/registry.ts` + `dispatch.ts` (no reflection) + declarative `register.json` permission/min-level spec run before the handler |
 | Record scope | `assert_record_in_user_scope` on every mutation | `getPermissions ≥ 2` + record project-scope check in every mutating handler |
 | CSRF | upload not exempt; header+field fallback (SEC-008) | same, constant-time compare |
 | Custom processors | SEC-053 realpath+regex+Reflection sandbox (`tool_import_files.php:595-643`) | replaced by an explicit named-processor registry (strictly stronger) |
