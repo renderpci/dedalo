@@ -37,54 +37,51 @@ is described in the [architecture overview](../architecture_overview.md).
 
 ## The matrix table model
 
-All section records are stored in one table, `matrix`, with just **four
-columns**:
+All records of a section live in one table — `matrix` for most sections, and
+**which** table is resolved from the ontology, never hardcoded
+(`getMatrixTableFromTipo()`, `src/core/ontology/resolver.ts`). Every standard
+matrix table shares **one** schema: three structural columns plus **eleven typed
+JSONB payload columns**.
 
 | column | type | meaning |
 | --- | --- | --- |
-| `id` | int | The real, table-wide unique row id (the PostgreSQL primary key). |
+| `id` | int | The real, table-wide unique row id (the PostgreSQL surrogate primary key). |
 | `section_id` | int | The record id *within its section* — unique per `section_tipo`, not table-wide. |
 | `section_tipo` | text | The ontology tipo of the section the row belongs to (e.g. `rsc197`, `oh1`). |
-| `data` | jsonb | The whole record payload: component values keyed by component tipo, plus the section `relations` array. |
+| `data` | jsonb | Record-level **metadata only**: label, created/modified stamps, diffusion info. **Not** component values. |
+| `relation` | jsonb | Every relation component's [locators](../locator.md), as an object keyed by the owning component tipo. |
+| `string` `date` `iri` `geo` `number` `media` `misc` | jsonb | The literal component values, one column per data shape. |
+| `relation_search` `meta` | jsonb | Derived/auxiliary payloads (ancestor locators for search; per-value counters). |
 
 Two different sections can both have `section_id = 1`; what disambiguates them is
-`section_tipo`. The pair **`(section_tipo, section_id)`** is the logical primary
-key of a record, and it is exactly the pair you pass everywhere in the code to
-identify a record.
+`section_tipo`. The pair **`(section_tipo, section_id)`** is the logical key of a
+record — a `UNIQUE` constraint on every standard table — and it is exactly the
+pair you pass everywhere in the code to identify a record.
 
 ```text
-| id | section_id | section_tipo | data                                                              |
-|----|-----------|--------------|-------------------------------------------------------------------|
-| 1  | 1         | "rsc197"     | { "section":"rsc197", "section_id":1, "rsc85":..., "rsc86":... }  |
-| 2  | 1         | "oh1"        | { "section":"oh1", "section_id":1, "oh2":... }                    |
+| id | section_id | section_tipo | string                                        | relation                                    |
+|----|-----------|--------------|-----------------------------------------------|---------------------------------------------|
+| 1  | 1         | "rsc197"     | { "rsc85": [...], "rsc86": [...] }            | { "rsc1435": [ {locator}, ... ] }           |
+| 2  | 368       | "oh1"        | { "oh16": [...] }                             | { "oh24": [...], "oh115": [...] }           |
 ```
 
-### What lives inside the data payload
+!!! danger "There is no `datos` column, and no record-level `relations` array"
+    Both are v6 shapes and both are gone. A record's payload is **split by
+    component model** across the typed columns, and relation locators live in the
+    **`relation`** column — *singular* — as an **object keyed by the originating
+    component tipo**, never as a flat array. `{"relations": [ … ]}` is wrong on
+    both counts. Canon: [Locator › Function and structure](../locator.md#function-and-structure).
 
-Conceptually the `data` payload holds **component values + a global
-`relations` array**:
-
-```json
-{
-  "rsc85": "Alicia",
-  "rsc86": "Gutierrez",
-  "relations": [ /* every locator that links this record to others */ ]
-}
-```
-
-Each component contributes its value under its own component tipo as the key,
-and the section keeps one flat `relations` array listing every
-[locator](../locator.md) that links this record to other records (related
-components, portals, parents/children, filters, etc.). Relation-bearing
-components read and write into this single shared array rather than each keeping
-their own; this is why the section, not the component, owns the relation list
-(see [Relations are section-owned](#relations-are-section-owned)).
+    The word `relations` **is** correct in one other place, and only there: the
+    `relations` column of a **`dd_ontology` node**, which holds `{"tipo": …}`
+    references between definitions (`rsc197` carries `[{"tipo":"rsc75"}]`, its
+    virtual-section pointer). Definition vs record — never the same thing.
 
 ### Storage detail: the data column is split into typed JSONB columns
 
-The single conceptual `data` payload is, at the physical level, **distributed
-across several typed JSONB columns** so PostgreSQL can index and query each data
-shape efficiently. The column list is `MATRIX_JSONB_COLUMNS`
+What callers loosely call "the record's data" is, at the physical level,
+**distributed across those typed JSONB columns** so PostgreSQL can index and
+query each data shape efficiently. The column list is `MATRIX_JSONB_COLUMNS`
 (`src/core/db/matrix.ts`) and the model→column map is resolved by
 `getColumnNameByModel()` (`src/core/ontology/resolver.ts`): component models
 resolve through the component registry's `descriptor.column`, and the
@@ -105,9 +102,10 @@ non-component `section` pseudo-model through a small local map.
 | `meta` | per-value unique identifiers / counters | string components meta |
 
 So when you read "the `data` JSON of the record" you should picture it as the
-merge of these typed columns. The `relation` column, for instance, stores
-`{"oh25":[locators], "rsc197":[locators]}` keyed by the originating component
-tipo, and the section's global `relations` array is assembled from it.
+merge of these typed columns — a merge no column actually holds. The `relation`
+column, for instance, stores `{"oh24":[locators], "oh115":[locators]}`, keyed by
+the **originating component tipo**; a reader slices out one component's locators
+by that key. Nothing anywhere assembles them into a record-wide array.
 
 There is no per-column lazy-decode step: Bun's Postgres driver parses `jsonb`
 columns natively, so a `MatrixRecord` (`src/core/db/matrix.ts`) arrives already
@@ -128,7 +126,7 @@ flowchart TB
         c1["id (PK)"]
         c2["section_id"]
         c3["section_tipo"]
-        c4["data (jsonb, split into typed columns)"]
+        c4["11 typed jsonb payload columns"]
     end
 
     subgraph cols["typed JSONB columns inside the row"]
@@ -166,7 +164,7 @@ of confusion.
 
 | concept | model | module home | role |
 | --- | --- | --- | --- |
-| **section** | `section` | `src/core/concepts/section.ts` (pure contract) + `src/core/section/context.ts`, `buttons.ts`, `read.ts` (engine) | The *type* (the "table with logic"): instancing, record creation/duplication/deletion, the relations array, permissions, children resolution. |
+| **section** | `section` | `src/core/concepts/section.ts` (pure contract) + `src/core/section/context.ts`, `buttons.ts`, `read.ts` (engine) | The *type* (the "table with logic"): instancing, record creation/duplication/deletion, the record's relation locators, permissions, children resolution. |
 | **section_record** | — | `src/core/concepts/section_record.ts` (contract) + `src/core/section_record/` (write chokepoint, virtual-record substitution) + `src/core/section/record/` (create/duplicate/delete/save engine) | One record **row**, addressed by `(section_tipo, section_id)` — read/write/delete/duplicate. |
 | **[`section_group`](section_group.md) / [`section_tab`](section_tab.md)** | `section_group`, `section_tab` (+ legacy `section_group_div`, `tab`) | `GROUPER_MODELS` / `isGrouperModel()` in `src/core/concepts/section.ts`; stamped generically as context `type: 'grouper'` in `src/core/resolve/structure_context.ts` | Pure **layout groupers**: child nodes of a section under which components are visually grouped. They carry no data and no tools. |
 | **sections** (plural) | — | `src/core/concepts/sections.ts` (envelope contract) + `src/core/section/read.ts` (`readSection`, `readSectionRows`, `deriveSectionDdoMap`) | The multi-record loader: given an SQO, resolves and returns many section records at once (list views, portals). |
@@ -186,7 +184,7 @@ The separation between *type* and *row* is load-bearing:
 
 - **section** is about the *type*: which components it has, what permissions
   the current user holds over it, how to create/duplicate/delete a record, and
-  the shared `relations` array.
+  the record's `relation` column.
 - **section_record** is about *one row*: the pair `(section_tipo, section_id)`,
   and the read/write/delete/duplicate operations that issue the actual database
   operations against the matrix table.
@@ -337,17 +335,17 @@ flowchart LR
 
 ## Relations are section-owned
 
-Because relations are stored once per record (not per relating component), a
-record's locator array is a section-level concern, not a component-level one.
+Every relation component of a record writes into **one** column of **one** row —
+the `relation` column of `(section_tipo, section_id)` — so relation storage is a
+section-level concern, not a component-level one. Inside that column each
+component owns its own key (its tipo); components do not share an array and do
+not keep a private copy elsewhere.
+
 The write-side operations live in the relation family's own module,
 `src/core/relations/save.ts` (`applyAddNewElement`, `applySortData`,
-`applySortByColumn`, `deletePortalLocator`, `maintainRelationSearchIndex`),
-which writes into the same `relation` typed column described above.
-
-For this page you only need to know that the shared `relations` array is where
-every relating component's locators land, and that no component keeps its own
-private copy. The full relation machinery — portals, dataframes, indexation, the
-unified `id_key` pairing contract — is documented under
+`applySortByColumn`, `deletePortalLocator`, `maintainRelationSearchIndex`) — not
+on the component. The full relation machinery — portals, dataframes, indexation,
+the unified `id_key` pairing contract — is documented under
 [Components](../components/index.md).
 
 ---
@@ -362,7 +360,7 @@ area), and the translatable `lg-*` labels:
 ```json
 {
   "tipo": "rsc197",
-  "parent": "tch188",
+  "parent": "rsc203",
   "model": "section",
   "model_tipo": "dd6",
   "tld": "rsc",
@@ -377,24 +375,28 @@ suffix is exactly the `section_tipo` index that ends up in the `matrix` table.
 
 The section's "columns" are its **component children**. A component node points
 back at the section with `parent = <section_tipo>` and is placed in the layout
-under a `parent_grouper` — normally a `section_group` (or `section_tab`) so the
-form has structure. When the grouper *is* the section itself, the component
-sits directly under the section:
+under a **grouper** — normally a `section_group` (or `section_tab`) so the form
+has structure. When a section declares no grouper, the component sits directly
+under the section instead:
 
 ```json
 [
-  { "tipo": "rsc197", "model": "section", "parent": "tch188",
+  { "tipo": "rsc75", "model": "section", "parent": "rsc1",
     "lg-eng": "People" },
 
-  { "tipo": "rsc85", "model": "component_input_text",
-    "parent": "rsc197", "parent_grouper": "rsc197",
+  { "tipo": "rsc76", "model": "section_group", "parent": "rsc75",
+    "lg-eng": "Identification" },
+
+  { "tipo": "rsc85", "model": "component_input_text", "parent": "rsc76",
     "lg-eng": "Name" },
 
-  { "tipo": "rsc86", "model": "component_input_text",
-    "parent": "rsc197", "parent_grouper": "rsc197",
+  { "tipo": "rsc86", "model": "component_input_text", "parent": "rsc76",
     "lg-eng": "Surname" }
 ]
 ```
+
+(The section here is `rsc75`, the **real** People section; `rsc197` is its
+virtual twin and borrows these children — see the worked example below.)
 
 At runtime the children-by-model walk is a recursive CTE
 over `dd_ontology` filtered by model, following the traversal law encoded in
@@ -407,31 +409,29 @@ skipped when collecting data-bearing components.
 
 A node's **`properties`** (deep-cloned per call with `structuredClone()` in
 `src/core/resolve/structure_context.ts`, so a caller can never mutate the shared
-ontology cache) and its **`relations`** array flow through the structure-context build onto the
-emitted `ddo` entry and from there into the context/subcontext the client
+ontology cache) and its **`relations`** array — the *node's* `dd_ontology`
+column of `{"tipo": …}` references, not the record's `relation` locators — flow
+through the structure-context build onto the emitted `ddo` entry and from there into the context/subcontext the client
 renders. This is how per-instance layout (CSS, label overrides, view) reaches
 the browser without a code change. See the [request config](../request_config.md)
 docs for the full context-building flow.
 
 ```mermaid
 flowchart TB
-    A(("Area: tch188")) --> S(("Section: rsc197<br/>model: section<br/>People"))
-    S --> G(("section_group / section_tab<br/>(layout grouper)"))
-    G -. parent_grouper .- S
+    A(("Area: rsc1")) --> S(("Section: rsc75<br/>model: section<br/>People"))
+    S --> G(("rsc76<br/>section_group<br/>Identification"))
     G --> C1(("rsc85<br/>component_input_text<br/>Name"))
     G --> C2(("rsc86<br/>component_input_text<br/>Surname"))
-    G --> C3(("rsc197x<br/>component_portal<br/>related records"))
-    C1 -. parent .-> S
-    C2 -. parent .-> S
-    C3 -. parent .-> S
+    G --> C3(("rsc1435<br/>component_portal<br/>Family unit"))
 ```
 
-**Diagram — section → components composition.** The section node (`rsc197`) is
-a child of an area. Its component children declare `parent = rsc197` (logical
-ownership) and a `parent_grouper` (layout placement, usually a `section_group`
-or `section_tab`). Literal components such as `rsc85`/`rsc86` store their values
-in the section record's typed columns; relation-bearing components such as a
-`component_portal` write locators into the record's shared `relations` array.
+**Diagram — section → components composition.** The section node (`rsc75`) is
+a child of an area. Its components hang off the layout grouper `rsc76`
+(a `section_group`), which is what `parent_grouper` resolves to in the emitted
+context. Literal components such as `rsc85`/`rsc86` store their values in the
+section record's typed columns; relation-bearing components such as the portal
+`rsc1435` write locators into the record's `relation` column, under their own
+tipo as the key.
 Groupers carry no data and produce no tools — they exist purely to organise the
 form.
 
@@ -481,56 +481,64 @@ and one relation to interviews.
 
 ### 1. Ontology nodes (the definition / the "schema")
 
+These are live nodes of the `monedaiberica` install this repo is developed
+against; another install numbers its own nodes differently.
+
 ```json
 [
-  { "tipo": "rsc197", "model": "section", "parent": "tch188",
+  { "tipo": "rsc197", "model": "section", "parent": "rsc203",
     "model_tipo": "dd6", "tld": "rsc",
     "lg-eng": "People", "lg-spa": "Personas", "lg-cat": "Persones" },
 
-  { "tipo": "rsc85", "model": "component_input_text",
-    "parent": "rsc197", "parent_grouper": "rsc197",
+  { "tipo": "rsc85", "model": "component_input_text", "parent": "rsc76",
     "lg-eng": "Name", "lg-spa": "Nombre", "lg-cat": "Nom" },
 
-  { "tipo": "rsc86", "model": "component_input_text",
-    "parent": "rsc197", "parent_grouper": "rsc197",
+  { "tipo": "rsc86", "model": "component_input_text", "parent": "rsc76",
     "lg-eng": "Surname", "lg-spa": "Apellidos", "lg-cat": "Cognoms" },
 
-  { "tipo": "rsc200", "model": "component_portal",
-    "parent": "rsc197", "parent_grouper": "rsc197",
-    "lg-eng": "Interviews", "lg-spa": "Entrevistas",
+  { "tipo": "rsc1435", "model": "component_portal", "parent": "rsc76",
+    "lg-eng": "Family unit", "lg-spa": "Unidad familiar",
     "properties": {
-      "view": "line",
-      "label": { "lg-eng": "Interviews with this person" }
+      "view": "default",
+      "config_relation": { "relation_type": "dd151" },
+      "source": { "mode": "external", "section_to_search": ["rsc424"] }
     } }
 ]
 ```
 
+`rsc197` is a **virtual** section: its `relations` column carries
+`[{"tipo":"rsc75"}]`, so it borrows the children of the real section `rsc75`
+(`rsc76` is that section's `section_group` grouper, which is why the components
+hang off `rsc76` rather than off `rsc197`). That `relations` key is the ontology
+node's, not a record's.
+
 ### 2. The stored record (the "row" in `matrix`)
 
-One person, `section_id = 1`. Conceptually the `data` payload is:
+One person, `section_id = 1`. There is no single payload object: the record is
+**one row**, and each value sits in the column its component's model maps to.
 
 ```json
 {
-  "section": "rsc197",
-  "section_id": 1,
-  "rsc85": "Alicia",
-  "rsc86": "Gutierrez",
-  "relations": [
-    { "type": "dd63", "section_tipo": "oh1", "section_id": 7,
-      "from_component_tipo": "rsc200" }
-  ]
+  "string": {
+    "rsc85": [ { "id": 1, "lang": "lg-nolan", "value": "Alicia" } ],
+    "rsc86": [ { "id": 1, "lang": "lg-nolan", "value": "Gutierrez" } ]
+  },
+  "relation": {
+    "rsc1435": [
+      { "id": 1, "type": "dd151", "section_tipo": "rsc424", "section_id": 7,
+        "from_component_tipo": "rsc1435" }
+    ]
+  },
+  "data": { "label": "Alicia Gutierrez" }
 }
 ```
 
-Physically, that single payload is split across the typed columns of the
-`matrix` row `(section_tipo = "rsc197", section_id = 1)`:
-
-- the `string` column holds `{ "rsc85": ["Alicia"], "rsc86": ["Gutierrez"] }`,
-- the `relation` column holds the portal's locators grouped under `rsc200`,
-- the `data` column holds the section metadata (label, created/modified, …),
-
-and the section's `relations` array is assembled from the `relation` column
-whenever a caller reads it.
+- the `string` column holds the two literals, each keyed by its component tipo
+  and each value an item with its own stable `id`,
+- the `relation` column holds the portal's locators under the portal's **own
+  tipo** `rsc1435` — an object key, not a flat array,
+- the `data` column holds the record metadata (label, created/modified, …) and
+  no component value at all.
 
 ### 3. What happens at runtime
 
@@ -542,14 +550,14 @@ import { persistRecordKeys } from '../section_record/record_write.ts';
 const sectionId = await createSectionRecord('rsc197', principal.userId); // → e.g. 1
 
 // the input_text components read/write their slice of the `string` column;
-// the component_portal writes a locator into the shared `relations` array —
-// via the relation-family write API (src/core/relations/save.ts), not a
-// `section` instance method (see "Relations are section-owned" above):
+// the component_portal writes a locator into the `relation` column under its
+// own tipo — via the relation-family write API (src/core/relations/save.ts),
+// not a `section` instance method (see "Relations are section-owned" above):
 const locator = {
-  type: 'dd63',
-  section_tipo: 'oh1',
+  type: 'dd151',
+  section_tipo: 'rsc424',
   section_id: 7,
-  from_component_tipo: 'rsc200',
+  from_component_tipo: 'rsc1435',
 };
 
 // persisting goes through the single write chokepoint, in ONE update
@@ -557,7 +565,7 @@ const locator = {
 // writes itself from the `audit` argument):
 await persistRecordKeys(
   { table: 'matrix', sectionTipo: 'rsc197', sectionId },
-  [{ column: 'relation', key: 'rsc200', value: [locator] }],
+  [{ column: 'relation', key: 'rsc1435', value: [locator] }],
   { userId: principal.userId },
 );
 ```
@@ -582,7 +590,7 @@ abstraction.
   defined as nodes.
 - [Request config](../request_config.md) — how a section's context/subcontext is
   built and delivered to the client.
-- [Locator](../locator.md) — the pointer type stored in the `relations` array.
+- [Locator](../locator.md) — the pointer type stored in the `relation` column.
 - [Glossary](../glossary.md) — definitions of tipo, model, subdata, ddo, etc.
 - [Architecture overview](../architecture_overview.md) — where sections sit in
   the wider system.

@@ -183,15 +183,14 @@ Each node is a single JSON object. The load-bearing fields:
 ```json
 {
   "tipo"           : "rsc197",
-  "parent"         : "tch188",
-  "parent_grouper" : "rsc197",
+  "parent"         : "rsc203",
   "model"          : "section",
   "model_tipo"     : "dd6",
   "order_number"   : 5,
   "tld"            : "rsc",
   "is_translatable": false,
   "lg-eng": "People", "lg-spa": "Personas", "lg-cat": "Persones",
-  "relations"  : [ ],
+  "relations"  : [ { "tipo": "rsc75" } ],
   "properties" : { }
 }
 ```
@@ -203,13 +202,23 @@ Each node is a single JSON object. The load-bearing fields:
   tree by setting `parent` to an existing node.
 - `model` (resolved via `model_tipo`, e.g. `dd6` → `section`,
   `dd592` → `component_portal`) declares what logic the node uses.
-- `parent` places the node in the tree; `parent_grouper` sets its layout parent
-  (usually a `section_group`).
+- `parent` places the node in the tree; the resolved context also carries a
+  `parent_grouper` (the layout parent, usually a `section_group`), derived from
+  `parent` rather than stored on the node.
 - the `lg-*` keys are the translatable label (the *term object*).
 - `properties` (JSONB) is the per-node descriptor: behavior, options, layout/CSS,
-  and `request_config`. `relations` is the typed-locator array. Both flow,
-  through the structure-context cache, into the **context** the client renders
-  (see [request_config](request_config.md) and [dd_object](dd_object.md)).
+  and `request_config`. `relations` (JSONB) is the node's list of `{"tipo": …}`
+  references to **other definitions** — here `rsc75`, marking `rsc197` a virtual
+  section that borrows the real section's children. Both flow, through the
+  structure-context cache, into the **context** the client renders (see
+  [request_config](request_config.md) and [dd_object](dd_object.md)).
+
+!!! warning "Node `relations` is not record data"
+    A node's `relations` array points at other **ontology nodes**. It has
+    nothing to do with a record's stored [locators](locator.md), which live in
+    the `relation` column — singular — of the record's matrix row, keyed by
+    component tipo. Same word, two unrelated things; see
+    [Sections](sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns).
 
 ## The areas → sections → components → data hierarchy
 
@@ -361,15 +370,18 @@ via `expandPortal()` in `src/core/relations/relation_core.ts` (dispatched throug
 `src/core/relations/registry.ts` and the per-model resolver in
 `src/core/relations/models/portal.ts`) — so the value is always live: edit
 the target record and every portal that links to it shows the change. A
-record-wide `relations` bag aggregates every locator in the record;
-`from_component_tipo` is the key each component and `relation_list` uses to slice
-out its own subset.
+record's `relation` JSONB column holds every relation component's locators in
+**one** place, as an object keyed by the owning component tipo —
+`{"rsc91": [ … ], "rsc1435": [ … ]}` — so a component slices out its own subset
+by that key (`relation_list` uses `from_component_tipo` on the entries for the
+same purpose). There is no flat record-wide array and no `relations` key on a
+record.
 
 ```mermaid
 flowchart LR
     subgraph People["Section: People (rsc197), section_id 1"]
         Name["component_input_text<br/>Name (rsc85) = 'Alicia'"]
-        Birth["component_portal<br/>Birth town (rsc91)"]
+        Birth["component_autocomplete_hi<br/>Birth town (rsc91)"]
     end
     subgraph Town["Section: Town (es1), section_id 3896"]
         Term["component_input_text<br/>Term = 'Valencia'"]
@@ -380,8 +392,9 @@ flowchart LR
 
 **Prose description of the diagram above:** On the left is the section "People"
 (`rsc197`), record `section_id` 1, containing a literal `component_input_text`
-"Name" holding the value "Alicia" and a `component_portal` "Birth town"
-(`rsc91`). On the right is a different section, "Town" (`es1`), record 3896,
+"Name" holding the value "Alicia" and a `component_autocomplete_hi` "Birth town"
+(`rsc91`) — a related component of the portal family, sharing its locator
+storage. On the right is a different section, "Town" (`es1`), record 3896,
 containing a `component_input_text` whose term is "Valencia". A solid arrow runs
 from the portal to the Town section carrying a locator
 `{type: dd151, section_tipo: es1, section_id: 3896, from_component_tipo: rsc91}` —
@@ -424,7 +437,7 @@ explicit action registry — no dynamic method lookup or reflection. The matched
 the section or component (`src/core/section/read.ts` for reads,
 `src/core/section/record/save_component.ts` for writes, the `relations/`
 engines for related components) against its ontology node (model, properties,
-relations) and the record's stored data in PostgreSQL, resolving locators if it
+node relations) and the record's stored data in PostgreSQL, resolving locators if it
 is a related component. It assembles a `context` (the description) and `data`
 (the values) into a `ddo` of shape `{context, data}`, which travels back
 through the API as a JSON response. Finally the client renders the DOM using
