@@ -16783,6 +16783,8 @@ dd-modal:has(.tool_header) {
   flex-wrap: wrap;
   justify-content: center;
   font-size: 1.1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 .widget_update_code_modal .body .dd_readout {
   width: 100%;
