@@ -85,7 +85,7 @@ export function planCodeBuild(
 
 	const versionString = triple.join('.');
 	const targetDir = join(filesDir, String(triple[0]), `${triple[0]}.${triple[1]}`);
-	const filePath = join(targetDir, `${versionString}.zip`);
+	const filePath = join(targetDir, releaseFileName(versionString, ref));
 	// LEDGERED UNREACHABLE BRANCH — reason: the version guard above proves the
 	// triple is three NON-NEGATIVE INTEGERS, so every path segment interpolated
 	// here is `[0-9]+`; no traversal or absolute segment can be constructed and
@@ -96,4 +96,20 @@ export function planCodeBuild(
 		return { ok: false, msg: 'Error. Unconfined release path', error: 'unconfined release path' };
 	}
 	return { ok: true, gitDir, ref, versionString, targetDir, filePath };
+}
+
+/**
+ * RELEASE CHANNEL in the filename (computed after every refusal gate — the
+ * gate order in planCodeBuild is the wire contract). Only a `master` build
+ * claims the published `<v>.zip` name that code_manifest.ts advertises; any
+ * other ref gets the sanitized `-dev` suffix, so a "developer branch" build
+ * can never OVERWRITE the published master release of the same version. Dev
+ * zips are inherently un-advertised (the manifest only looks for `<v>.zip`)
+ * while code_serving.ts still serves them for manual testing. The suffix is a
+ * fixed sanitized token — no ref bytes reach the path, so confinement still
+ * derives solely from the validated triple.
+ */
+function releaseFileName(versionString: string, ref: string): string {
+	const isMasterRef = ref === 'master' || ref === 'refs/heads/master';
+	return isMasterRef ? `${versionString}.zip` : `${versionString}-dev.zip`;
 }

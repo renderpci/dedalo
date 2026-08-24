@@ -6,9 +6,9 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { DEDALO_ENGINE_VERSION, DEDALO_PRERELEASE_TAG } from '../../src/core/update/build_stamp.ts';
 import {
 	compareVersionArrays,
-	DEDALO_ENGINE_VERSION,
 	DEDALO_VERSION,
 	DEDALO_VERSION_MAJOR_MINOR,
 	DEDALO_VERSION_TRIPLE,
@@ -16,11 +16,18 @@ import {
 } from '../../src/core/update/version.ts';
 
 describe('version exports (byte-pinned wire values)', () => {
-	test('the four shapes derive from one triple and match the install literals', () => {
+	test('the ONE deliberate pin of the engine version triple', () => {
+		// The single literal in the suite: bumping the engine version means
+		// consciously editing THIS line (everything else derives from the triple).
 		expect(JSON.stringify(DEDALO_VERSION_TRIPLE)).toBe('[7,0,0]');
-		expect(DEDALO_VERSION).toBe('7.0.0');
-		expect(DEDALO_ENGINE_VERSION).toBe('7.0.0.dev');
-		expect(DEDALO_VERSION_MAJOR_MINOR).toBe('7.0');
+	});
+
+	test('the derived shapes follow the triple (relational — a bump touches one line)', () => {
+		expect(DEDALO_VERSION).toBe(DEDALO_VERSION_TRIPLE.join('.'));
+		expect(DEDALO_ENGINE_VERSION).toBe(`${DEDALO_VERSION}${DEDALO_PRERELEASE_TAG}`);
+		expect(DEDALO_VERSION_MAJOR_MINOR).toBe(
+			`${DEDALO_VERSION_TRIPLE[0]}.${DEDALO_VERSION_TRIPLE[1]}`,
+		);
 	});
 
 	test('the triple is frozen (shared by reference into wire payloads)', () => {

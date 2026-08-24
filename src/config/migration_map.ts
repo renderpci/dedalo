@@ -571,6 +571,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_ACCESS_LOG',
 	'DEDALO_SLOW_REQUEST_MS',
 	'DEDALO_SUPERVISED',
+	// set by the code updater on its own pre-swap smoke-boot child, never by an operator
+	'DEDALO_SMOKE_BOOT',
 	// systemd facts (read, not configured — they detect supervision)
 	'INVOCATION_ID',
 	'JOURNAL_STREAM',
@@ -667,6 +669,9 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_BACKUP_DIR',
 	'DEDALO_TRANSFORM_DEFINITIONS_DIR',
 	'DEDALO_TS_STATE_PATH',
+	// runtime-path census (2026-08-23): the ontology recovery dump moved out of
+	// the code tree (a code-update swap carried the in-tree file away)
+	'DEDALO_ONTOLOGY_RECOVERY_PATH',
 	// geoip (native, offline IP→country for section Activity dd542)
 	'DEDALO_GEOIP_ENABLED',
 	'DEDALO_GEOIP_DIR',

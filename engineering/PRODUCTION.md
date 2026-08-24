@@ -25,6 +25,10 @@ Reference units in `deploy/`:
   on failure restarts the main unit. (systemd `WatchdogSec` needs `sd_notify`,
   which Bun does not speak — the curl timer is the equivalent.)
 - `dedalo-backup.service` + `.timer` — the nightly backup set (§6).
+- `dedalo-ts-rollback.service` — restores the previous code tree after a
+  failed code update (§12; fired by `OnFailure=` on the main unit and by the
+  watchdog when a pending update never confirms). Publishing a release:
+  `engineering/RELEASE.md`.
 
 `/health` answers `200 {result:'ok', db:'ok'}` only when **Postgres answers**
 (S3-48); DB down / pool wedged → `503 {db:'down'}` → watchdog restart + a
@@ -500,3 +504,124 @@ PARTITION KEY: changing model (or quantization) = a new partition = re-index
 
 Backups: the vector DB (`dedalo7_rag`) is derived state — §6 already covers it
 as a separate dump; losing it costs a re-index, never data.
+
+## 12. Code updates: swap pipeline, channels, rollback
+
+Publishing side (the master's runbook): `engineering/RELEASE.md`. This section
+is the CONSUMER side — what an install does with a release, and what catches
+it when the release is bad. Engine: `src/core/update/code_update.ts`.
+
+**The swap pipeline.** Download (TLS-on, origin-pinned, capped) → sha256
+verified against the manifest sidecar → zip entries pre-validated (no
+absolute/`..`/symlink entries) → extracted into a QUARANTINE dir, never over
+the live tree → **dependencies installed in quarantine** (`bun install
+--frozen-lockfile --production` against the release's own lockfile) →
+**pre-flight smoke boot** of the quarantined tree (a throwaway process must
+evaluate the server entrypoint cleanly; a release that cannot even load is
+refused with the live tree untouched) → the SENTINEL is written
+`status:"pending"` (naming the backup dir the swap INTENDS to create) → the
+live tree is renamed into the backup dir (same-device asserted, so both
+renames are atomic) → the new tree moves in → planned restart (exit 75).
+
+**The sentinel** (`<backup root>/last_code_update.json`, backup root =
+`<install>/../backups/code`, `DEDALO_BACKUP_PATH` overrides) is the rollback
+contract: written `status:"pending"` BEFORE the swap's first rename, so a
+crash at ANY point of the swap leaves a sentinel the supervisor can read; the
+NEW tree flips it to `"confirmed"` once it listens and reaches the database.
+A pending, unconfirmed sentinel is the machine-readable fact "the last update
+never proved itself". Because it is written pre-swap, the `backupDir` it names
+may not exist yet — the rollback script handles that state explicitly (below).
+
+**The supervisor scripts live OUT OF TREE.** The swap renames the whole app
+tree; in the crash window between its two renames there is NO tree at
+`/opt/dedalo/master_dedalo` — an in-tree rollback script would vanish exactly
+when `OnFailure=` needs it. The units therefore execute the INSTALLED copies
+at `/opt/dedalo/bin/` (a sibling of the checkout, next to the pinned bun at
+`/opt/dedalo/.bun/`), never the shipped copies inside `deploy/`. One-time
+install:
+
+```sh
+sudo install -d /opt/dedalo/bin
+sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
+sudo install -m 0755 deploy/dedalo-ts-watchdog.sh   /opt/dedalo/bin/
+```
+
+An out-of-tree copy is a real staleness risk: it does NOT update with the
+tree. Re-run the two `install` lines after any code update that touched
+`deploy/*.sh` (the release notes say when), and after editing them locally.
+The scripts are deliberately self-contained and change rarely, but a drifted
+copy fails the contract silently — refresh it, don't trust it.
+
+**Backup-root resolution (scripts = engine).** The units do not source
+`../private/.env` (on purpose — systemd's env parser mangles raw-JSON
+values), yet the ENGINE writes the sentinel to `DEDALO_BACKUP_PATH` resolved
+through `readEnv` (process env, then `<private>/.env`). The scripts therefore
+resolve the backup root with the SAME precedence: `--backup-root` flag →
+`DEDALO_BACKUP_PATH` in the process environment → `DEDALO_BACKUP_PATH` in
+`<private>/.env` (private dir = `$DEDALO_PRIVATE_DIR`, default the checkout's
+sibling `private/`) → the documented default `<install>/../backups/code`. A
+wrong or unreadable `.env` degrades to the default and logs a WARN — never
+silently. An install that relocated backups needs no unit edit; pinning
+`--backup-root` in the unit is still the most explicit option.
+
+**Automatic rollback** is the systemd units' job, on two triggers:
+
+- the new tree NEVER boots — `dedalo-ts.service` exhausts its start limit and
+  enters `failed`; its `OnFailure=dedalo-ts-rollback.service` fires;
+- the new tree boots but is DEAD — the watchdog probe
+  (`deploy/dedalo-ts-watchdog.sh`) sees a red `/health` with a pending
+  unconfirmed sentinel and starts the rollback unit instead of a restart.
+
+`dedalo-code-rollback.sh` (the `/opt/dedalo/bin/` copy) distinguishes FOUR
+states of the sentinel and logs which one it saw:
+
+1. **pending, backupDir exists, no usable tree at APP_DIR** — the crash landed
+   BETWEEN the two renames (window W1): restore `backupDir` → APP_DIR.
+2. **pending, backupDir missing, APP_DIR present** — the crash landed BEFORE
+   the first rename: nothing was swapped, nothing to restore; mark the
+   sentinel attempted and exit 0.
+3. **pending, both present** — the normal post-swap rollback: park the failed
+   tree, restore the backup.
+4. **confirmed / absent / already attempted** — exit 0, touch nothing.
+
+For a restore (states 1 and 3) it: flips `rollback_attempted` FIRST (a
+rollback that itself fails must never loop), parks any failed tree at
+`<backup root>/failed_<stamp>`, moves the backup tree back (it keeps its own
+`node_modules` — the pipeline does not strip it from the backup, which is
+exactly what makes the restore bootable offline), carries `.git` back if the
+backup lacks it, marks the sentinel `rolled_back`, restarts, health-waits, and
+says GREEN or "manual intervention required". The four states are drilled
+against a real filesystem fixture by
+`test/unit/install_restart_supervisor_tripwire.test.ts`.
+
+**Honest limit:** automatic rollback REQUIRES the systemd units. A plain
+`bun run start:supervised` loop respawns on exit 75 but has no failure hook —
+the update response names the backup dir, and the manual procedure is the
+script's own body: move the failed tree aside, move the backup back, start.
+
+**Deployment channels.** The pipeline serves exactly one of two layouts:
+
+| Channel | Layout | Update | Rollback |
+|---|---|---|---|
+| `tree_swap` | the repo is a checkout on a host (systemd or supervised loop) | quarantine → rename swap (above) | sentinel + `dedalo-code-rollback.sh` |
+| `image` | containerized; the code tree is INSIDE the image (`Dockerfile` `COPY . .`), only `/private`/media/socket are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. Use `deploy/dedalo-image-update.sh` (pull a new tag, or rebuild from a ref) | re-pin the previous image tag + `up -d` — atomic and complete, dependencies included |
+
+**Offline-dependency caveat.** A release whose `bun.lock` changed needs
+registry access at install time (the quarantine `bun install`). On an
+air-gapped host that install FAILS IN QUARANTINE and the live tree is never
+touched — the loud, safe outcome. Pre-warm the offline cache or use the image
+channel there.
+
+**Keep runtime data OUT of the code tree.** The swap renames the whole tree;
+anything living inside it would ride along (the pipeline refuses the swap when
+it finds runtime data in the tree, naming the key to set). Per-key recipe:
+
+- `MEDIA_PATH` — move the `media/` tree out (e.g. `/srv/dedalo/media`), set
+  the key, restart, verify a thumbnail loads. The refusal names this key when
+  a `media/` dir sits inside the code tree.
+- `DEDALO_ONTOLOGY_RECOVERY_PATH` — point the ontology-update recovery dumps
+  at a directory outside the tree.
+- `DEDALO_BACKUP_DIR` (database dumps) and `DEDALO_BACKUP_PATH` (code
+  backups) — both default outside the tree already; never point them into it.
+- `DEDALO_PRIVATE_DIR` — the private tree is a SIBLING by default; only ever
+  relocate it further out (containers use `/private`), never inward.

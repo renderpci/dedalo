@@ -298,10 +298,14 @@ async function computeCheckConfig(): Promise<{
 	errors: string[];
 }> {
 	const { existsSync } = await import('node:fs');
-	const { basename, dirname, join } = await import('node:path');
-	const { readEnv } = await import('../../../config/env.ts');
+	const { basename, join } = await import('node:path');
+	// The ONE private-dir resolution (src/config/env.ts) — it honors
+	// DEDALO_PRIVATE_DIR. This used to re-derive it as
+	// `dirname(process.cwd()) + '/private'`, which ignored that variable and
+	// reported a container's config sources against a directory that does not
+	// exist (runtime-path census, 2026-08-23).
+	const { privateDir, readEnv } = await import('../../../config/env.ts');
 	const { readBool } = await import('../../../config/readers.ts');
-	const privateDir = join(dirname(String(process.cwd())), 'private');
 	const errors: string[] = [];
 
 	// --- database status (installer::get_db_status() OBJECT shape) ---

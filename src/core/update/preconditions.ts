@@ -34,10 +34,30 @@ export interface UpdatePreconditions {
  * `backupWarn: false` skips the backup scan for callers whose response is
  * byte-frozen (update_data_version). `backupDir` is a test seam; production
  * callers use the configured dir.
+ *
+ * `backupRequire: true` (code update, 2026-08-23) turns the same scan into a
+ * REFUSAL: a code swap replaces the whole tree and its rollback contract leans
+ * on a restorable state, so "no backup / stale backup" is `update.refused`,
+ * not a warning. The warn path above stays byte-frozen — update_data_version's
+ * responses are pinned. The refusal is waived ONLY by an explicit
+ * `waive_backup: true` in the request, which the CALLER must log loudly.
  */
+/** The recent-backup scan's finding (byte-frozen wording), or null when fresh enough. */
+function staleBackupFinding(backupDir?: string): string | null {
+	const newest = newestBackupMtimeMs(backupDir);
+	if (newest === 0) {
+		return 'No database backup found — make a backup before updating';
+	}
+	const hours = (Date.now() - newest) / 3600000;
+	if (hours > config.ops.backupTimeRangeHours) {
+		return `Newest database backup is about ${Math.round(hours)} hours old — make a fresh backup before updating`;
+	}
+	return null;
+}
+
 export function checkUpdatePreconditions(
 	principal: Principal,
-	options: { backupWarn?: boolean; backupDir?: string } = {},
+	options: { backupWarn?: boolean; backupDir?: string; backupRequire?: boolean } = {},
 ): UpdatePreconditions {
 	if (principal.userId !== SUPERUSER_ID) {
 		throw new DedaloError('perm.superuser_required', { coordinates: { user: principal.userId } });
@@ -48,16 +68,13 @@ export function checkUpdatePreconditions(
 
 	const warnings: string[] = [];
 	if (options.backupWarn !== false) {
-		const newest = newestBackupMtimeMs(options.backupDir);
-		if (newest === 0) {
-			warnings.push('Warning. No database backup found — make a backup before updating');
-		} else {
-			const hours = (Date.now() - newest) / 3600000;
-			if (hours > config.ops.backupTimeRangeHours) {
-				warnings.push(
-					`Warning. Newest database backup is about ${Math.round(hours)} hours old — make a fresh backup before updating`,
-				);
+		const finding = staleBackupFinding(options.backupDir);
+		if (finding !== null) {
+			if (options.backupRequire === true) {
+				const sentence = `Error. ${finding} (or pass waive_backup to proceed without one)`;
+				throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
 			}
+			warnings.push(`Warning. ${finding}`);
 		}
 	}
 	return { warnings };

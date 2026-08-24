@@ -23,7 +23,8 @@ import { createDataCache } from '../ontology/cache_factory.ts';
 import type { Principal } from '../security/permissions.ts';
 import { SESSION_IDLE_TTL_SECONDS, type Session } from '../security/session_store.ts';
 import { getAdditionalToolsUrlMap } from '../tools/paths.ts';
-import { DEDALO_ENGINE_VERSION, DEDALO_VERSION_TRIPLE } from '../update/version.ts';
+import { DEDALO_BUILD, DEDALO_ENGINE_VERSION } from '../update/build_stamp.ts';
+import { DEDALO_VERSION_TRIPLE } from '../update/version.ts';
 import { getAlpha2FromCode, getLangNameFromCode } from './lang_names.ts';
 import { currentApplicationLang, currentDataLang } from './request_lang.ts';
 import { getServerState } from './server_state.ts';
@@ -159,7 +160,9 @@ export async function buildPageGlobals(
 		dedalo_session_warning_seconds: isLogged ? Number(readString('SESSION_WARNING_SECONDS')) : null,
 		// API-03: version strings only for authenticated callers.
 		dedalo_version: isLogged ? DEDALO_ENGINE_VERSION : null,
-		dedalo_build: isLogged ? '2026-03-14T13:52:19+02:00' : null, // [install]
+		// Build provenance (build_stamp.ts): the release commit date, null on a
+		// dev checkout. Key always present; still gated on isLogged (API-03).
+		dedalo_build: isLogged ? DEDALO_BUILD : null,
 		mode: 'list',
 		// dedalo_application_langs_default is the INSTALL default (PHP
 		// DEDALO_APPLICATION_LANGS_DEFAULT); the two live langs reflect the
@@ -220,7 +223,7 @@ export async function buildPageGlobals(
 export async function buildInfoData(): Promise<Record<string, unknown>> {
 	return {
 		dedalo_version: DEDALO_ENGINE_VERSION,
-		dedalo_build: '2026-03-14T13:52:19+02:00', // [install]
+		dedalo_build: DEDALO_BUILD, // release commit date; null on a dev checkout
 		dedalo_db_name: config.db.database,
 		pg_version: await getPgVersion(),
 		php_version: `Bun ${Bun.version}`,

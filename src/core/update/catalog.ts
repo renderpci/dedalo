@@ -4,8 +4,8 @@
  * matched on `updateFrom*` against the INSTALLED data version
  * (matrix_updates), strictly linear (no skipping — PHP parity).
  *
- * THE CATALOG STARTS EMPTY: 7.0.0 is the current data version and no 7.x
- * migration exists yet. The v6→v7 content (updates.php $v=700, class.v6_to_v7,
+ * 7.0.0 is the current data version; the only descriptor so far is the
+ * code-only 7.0.1 release. The v6→v7 content (updates.php $v=700, class.v6_to_v7,
  * dataframe_v7_migration) is PHP-OWNED and deliberately NOT carried — that
  * migration runs exactly once, on the engine that owns its catalog
  * (rewrite/prompts/UPDATE_PROCESS.md §8).
@@ -39,8 +39,6 @@ export interface UpdateDescriptor {
 	updateFromMinor: number;
 	/** false = code-only release: skipped by getUpdateVersion (PHP parity). */
 	updateData?: boolean;
-	/** Consumed by the CODE update widget only (PHP parity). */
-	forceUpdateMode?: 'clean' | null;
 	runPreScripts?: readonly UpdateScriptStep[];
 	/** Raw SQL statements (PHP SQL_update — hard-abort on failure). */
 	sqlUpdate?: readonly string[];
@@ -53,9 +51,47 @@ export interface UpdateDescriptor {
 
 /**
  * The catalog, keyed by concatenated target version (PHP `$updates->700`
- * convention: '701' = 7.0.1). EMPTY until the first 7.x data migration.
+ * convention: '701' = 7.0.1).
+ *
+ * ⚠️ EVERY CODE RELEASE NEEDS A DESCRIPTOR HERE, even when it carries NO data
+ * migration (`updateData: false`): `src/core/update/code_manifest.ts`
+ * (`linearUpgradeTargets`) WALKS THIS CATALOG to decide which release zips the
+ * master advertises. An empty/omitted entry means the master answers
+ * `files: []` and no consumer can ever see the release — the coupling is
+ * invisible from here, which is exactly why this comment exists.
  */
-export const UPDATE_CATALOG: Readonly<Record<string, UpdateDescriptor>> = Object.freeze({});
+export const UPDATE_CATALOG: Readonly<Record<string, UpdateDescriptor>> = Object.freeze({
+	'701': {
+		versionMajor: 7,
+		versionMedium: 0,
+		versionMinor: 1,
+		updateFromMajor: 7,
+		updateFromMedium: 0,
+		updateFromMinor: 0,
+		updateData: false, // code-only release — no data migration
+	},
+	// 7.0.2 — published by the museum-cycle probe (scripts/update_probe.ts cuts
+	// the archive into <repo>/code/); code-only like 701.
+	'702': {
+		versionMajor: 7,
+		versionMedium: 0,
+		versionMinor: 2,
+		updateFromMajor: 7,
+		updateFromMedium: 0,
+		updateFromMinor: 1,
+		updateData: false,
+	},
+	// 7.0.3 — third probe rung (museum walks 7.0.0 → 7.0.1 → 7.0.2 → 7.0.3).
+	'703': {
+		versionMajor: 7,
+		versionMedium: 0,
+		versionMinor: 3,
+		updateFromMajor: 7,
+		updateFromMedium: 0,
+		updateFromMinor: 2,
+		updateData: false,
+	},
+});
 
 /** Key for a descriptor's target version (PHP implode('', [7,0,1]) = '701'). */
 export function catalogKeyOf(descriptor: UpdateDescriptor): string {
@@ -116,7 +152,6 @@ export function toWireDescriptor(descriptor: UpdateDescriptor): Record<string, u
 		update_from_medium: descriptor.updateFromMedium,
 		update_from_minor: descriptor.updateFromMinor,
 	};
-	if (descriptor.forceUpdateMode !== undefined) wire.force_update_mode = descriptor.forceUpdateMode;
 	if (descriptor.runPreScripts !== undefined) {
 		wire.run_pre_scripts = descriptor.runPreScripts.map(wireScript);
 	}

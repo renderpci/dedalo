@@ -9,8 +9,12 @@
  * Fail-closed, same posture as `serveOntologyIoFile` (server.ts):
  *  - only when IS_A_CODE_SERVER is set and DEDALO_CODE_FILES_DIR is configured;
  *  - only a version-shaped dir segment, and only that release's own
- *    `<version>.zip` (or its `.sha256` sidecar — the digest the consumer
- *    verifies, harmless to publish and useful to an operator);
+ *    `<version>.zip` or `<version>-dev.zip` (or their `.sha256` sidecars — the
+ *    digest the consumer verifies, harmless to publish and useful to an
+ *    operator). The `-dev` channel (code_build_plan.ts releaseFileName) is
+ *    SERVABLE but NEVER ADVERTISED: `buildCodeUpdateInfo` only looks for
+ *    `<v>.zip`, so a developer build reaches only an operator who types its
+ *    URL, never a consumer following the manifest;
  *  - the on-disk path is re-derived through `codeReleasePath`, the SAME
  *    confinement gate the manifest uses, never string-joined from the request.
  * Anonymous by design: the archive is public code, and the manifest that names
@@ -45,7 +49,7 @@ export function resolveCodeReleaseFile(
 	if (filesDir === undefined) return null;
 	const named = parseReleaseUrl(pathname);
 	if (named === null) return null;
-	const archivePath = codeReleasePath(filesDir, named.triple, `${named.version}.zip`);
+	const archivePath = codeReleasePath(filesDir, named.triple, named.archiveName);
 	if (archivePath === null) return null;
 	return named.isSidecar
 		? { path: `${archivePath}.sha256`, contentType: 'text/plain; charset=utf-8' }
@@ -55,14 +59,19 @@ export function resolveCodeReleaseFile(
 /** The release a URL names, or null when the URL is not one of ours. */
 function parseReleaseUrl(
 	pathname: string,
-): { version: string; triple: number[]; isSidecar: boolean } | null {
+): { version: string; triple: number[]; archiveName: string; isSidecar: boolean } | null {
 	const match = pathname.match(RELEASE_URL_RE);
 	if (match === null) return null;
 	const [, version, fileName] = match as unknown as [string, string, string];
-	// A release dir holds exactly one archive: its own. Anything else is a probe.
-	const isSidecar = fileName === `${version}.zip.sha256`;
-	if (!isSidecar && fileName !== `${version}.zip`) return null;
-	return { version, triple: version.split('.').map(Number), isSidecar };
+	// A release dir holds its own archive on two channels: the published
+	// `<v>.zip` and the un-advertised developer `<v>-dev.zip`. Anything else
+	// (a neighbour version, another grammar) is a probe.
+	const archiveName = fileName.startsWith(`${version}-dev`)
+		? `${version}-dev.zip`
+		: `${version}.zip`;
+	const isSidecar = fileName === `${archiveName}.sha256`;
+	if (!isSidecar && fileName !== archiveName) return null;
+	return { version, triple: version.split('.').map(Number), archiveName, isSidecar };
 }
 
 /** The HTTP half: 404 (JSON, like every other not-found here) or the file. */

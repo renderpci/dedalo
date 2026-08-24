@@ -1887,13 +1887,15 @@ MEDIA_PATH `string`
 
 This parameter defines the root media directory in the directory tree.
 
-Normally this directory sits alongside the install, but it can be set to any path. The server needs read/write access to this directory as its owner. Unset in dev leaves media handling disabled.
+Unset, it defaults to `media` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and must never carry the media library away with the old code. Installs that already keep their media at the legacy in-tree `<install dir>/media` location are not moved: while that directory holds files and this key is unset, it keeps being used and the server logs a one-line warning naming this key as the fix. Set the key (and move the directory) to end the warning.
+
+The directory can be set to any path. The server needs read/write access to this directory as its owner. Unset in dev leaves media handling disabled.
 
 ```bash
 MEDIA_PATH="/srv/dedalo/media"
 ```
 
-*Default: `<install dir>/media` — auto-derived; set only to relocate the media tree*
+*Default: `<private dir>/media` — auto-derived; a legacy `<install dir>/media` holding files keeps being used (with a start-up warning) so nothing moves*
 
 ---
 
@@ -4329,13 +4331,13 @@ This parameter defines the directory holding the transform definition files — 
 
 A transformation of this kind is written down before it is run: the file lists, item by item, what is moved where. The widget reads the files of its own subdirectory (`<dir>/move_tld/`, `<dir>/move_locator/`, …) and offers them to the operator; only `.json` files sitting directly in that subdirectory are read, never a path that climbs out of it.
 
-By default Dédalo reads them from `install/transform_definition_files` inside the installation. Point the key at a directory of your own to keep your transformations outside the code — a sensible thing to do, since they are institution-specific and an update of the code should not touch them.
+Unset, Dédalo reads them from `transform_definition_files` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and your transformations are institution-specific data an update must not touch. An install that still keeps files at the legacy in-tree `install/transform_definition_files` location is not moved: while that directory holds files and this key is unset, it keeps being used. Point the key at a directory of your own to place them anywhere else.
 
 ```bash
 DEDALO_TRANSFORM_DEFINITIONS_DIR="/srv/dedalo_transforms"
 ```
 
-*Default: `<install dir>/install/transform_definition_files`*
+*Default: `<private dir>/transform_definition_files` — a legacy `<install dir>/install/transform_definition_files` holding files keeps being used so nothing moves*
 
 ---
 
@@ -4563,17 +4565,35 @@ IS_AN_ONTOLOGY_SERVER=false
 
 ---
 
+### Ontology recovery file path
+
+DEDALO_ONTOLOGY_RECOVERY_PATH `string`
+
+This parameter defines where the ontology recovery file is written and read. Before an ontology update, Dédalo dumps the whitelisted slice of the ontology into this gzipped SQL file, so a failed update can be examined and the previous definitions restored.
+
+Unset, the file lives at `db/dd_ontology_recovery.sql.gz` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and the recovery dump is exactly the file you need AFTER an update went wrong. A recovery file still sitting at the legacy in-tree location (`install/db/dd_ontology_recovery.sql.gz`) keeps being read while no file exists at the new location, with a warning; the next build always writes to this path.
+
+```bash
+DEDALO_ONTOLOGY_RECOVERY_PATH="/srv/dedalo_private/db/dd_ontology_recovery.sql.gz"
+```
+
+*Default: `<private dir>/db/dd_ontology_recovery.sql.gz`*
+
+---
+
 ### Ontology input/output, export/import or download directory
 
 ONTOLOGY_DATA_IO_DIR `string`
 
-This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server. Defaults to `install/import/ontology` inside the install tree.
+This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server.
+
+Unset, Dédalo prefers `import/ontology` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy `install/import/ontology` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
 
 ```bash
 ONTOLOGY_DATA_IO_DIR="/srv/dedalo/import/ontology"
 ```
 
-*Default: `<install dir>/install/import/ontology`*
+*Default: `<private dir>/import/ontology` once that directory exists; until then the legacy `<install dir>/install/import/ontology` (which ships the vendored ontology seeds) keeps being used*
 
 ---
 

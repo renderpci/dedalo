@@ -4,8 +4,9 @@
  * build_recovery_version_file / restore_dd_ontology_recovery_from_file).
  *
  * BUILD: materialize the whitelisted-TLD slice table (db/dd_ontology.ts
- * createRecoverySlice), pg_dump ONLY that table, gzip it to
- * <projectRoot>/install/db/dd_ontology_recovery.sql.gz, drop the slice.
+ * createRecoverySlice), pg_dump ONLY that table, gzip it to the
+ * recovery slot (default <private>/db/dd_ontology_recovery.sql.gz — see
+ * DEDALO_ONTOLOGY_RECOVERY_PATH and runtime_paths.ts), drop the slice.
  * RESTORE: gunzip (capped — the file is local but the caps are free) and
  * feed psql; this RECREATES the dd_ontology_recovery table in the live DB —
  * it deliberately does NOT overwrite dd_ontology (PHP parity: the merge/swap
@@ -14,13 +15,14 @@
  */
 
 import { once } from 'node:events';
-import { createWriteStream, existsSync, renameSync, rmSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { createGzip } from 'node:zlib';
-import { envSnapshot, projectRoot } from '../../config/env.ts';
+import { envSnapshot } from '../../config/env.ts';
 import { createRecoverySlice, dropRecoverySlice } from '../db/dd_ontology.ts';
 import { resolvePgBinary } from '../install/pg_bin.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import { recoveryFileWritePath, resolveRecoveryFilePath } from '../install/runtime_paths.ts';
 import { gunzipWithCaps } from './data_io_import.ts';
 
 /** PHP installer whitelist (narrower than config to_preserve_tld). */
@@ -34,7 +36,16 @@ export const RECOVERY_PRESERVE_TLDS = [
 	'test',
 ] as const;
 
-export const RECOVERY_FILE_PATH = join(projectRoot, 'install', 'db', 'dd_ontology_recovery.sql.gz');
+/**
+ * The recovery slot moved OUT of the code tree (2026-08-23, runtime-path
+ * census): a code-update tree swap used to carry the pre-update dump away with
+ * the old tree — the one file you need after an update went wrong. Default is
+ * now `<private>/db/dd_ontology_recovery.sql.gz` (DEDALO_ONTOLOGY_RECOVERY_PATH
+ * relocates it); BUILD always writes there, RESTORE reads the effective path,
+ * which falls back to a still-existing legacy in-tree file (with a warning)
+ * so nobody's last good dump is orphaned. Resolution lives in
+ * src/core/install/runtime_paths.ts, next to the census entry that reports it.
+ */
 
 export interface RecoveryFileResponse {
 	/** INTERNAL outcome discriminator (never a wire body). */
@@ -63,7 +74,7 @@ async function gzipStreamToFile(source: AsyncIterable<Uint8Array>, path: string)
 /** Build the recovery file (PHP build_recovery_version_file). */
 export async function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
-	outFile: string = RECOVERY_FILE_PATH,
+	outFile: string = recoveryFileWritePath(),
 ): Promise<RecoveryFileResponse> {
 	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
 	try {
@@ -80,6 +91,9 @@ export async function buildRecoveryVersionFile(
 	// truncated dd_ontology_recovery table. Rename is atomic on the same fs.
 	const partFile = `${outFile}.part`;
 	try {
+		// The private-dir slot ('<private>/db/') may not exist on a box whose
+		// dump always landed in-tree before; the build creates its parent.
+		mkdirSync(dirname(outFile), { recursive: true });
 		const args: string[] = [];
 		if (conn.host && !conn.socket) args.push('-h', conn.host);
 		if (conn.port) args.push('-p', String(conn.port));
@@ -119,7 +133,7 @@ export async function buildRecoveryVersionFile(
 /** Restore the slice table from the recovery file (PHP restore twin). */
 export async function restoreDdOntologyRecoveryFromFile(
 	conn: DbConnDescriptor = connFromConfig(),
-	inFile: string = RECOVERY_FILE_PATH,
+	inFile: string = resolveRecoveryFilePath(),
 ): Promise<RecoveryFileResponse> {
 	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
 	if (!existsSync(inFile)) {

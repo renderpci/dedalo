@@ -4,9 +4,8 @@
  * GENERATED SCAFFOLD (probe_emit_catalog.ts). Hand-edit from here on.
  */
 
-import { join } from 'node:path';
 import type { CatalogEntry } from '../catalog_types.ts';
-import { projectRoot } from '../env.ts';
+import { legacyAwareDefaultDir } from './media.ts';
 
 export const TOOLS_KEYS = {
 	DEDALO_ADDITIONAL_TOOLS: {
@@ -29,15 +28,21 @@ DEDALO_ADDITIONAL_TOOLS=[{"path":"/srv/custom_tools","url":"/custom_tools"}]
 	DEDALO_TRANSFORM_DEFINITIONS_DIR: {
 		type: 'string',
 		scope: 'operator',
-		default: () => join(projectRoot, 'install', 'transform_definition_files'),
-		defaultDoc: '`<install dir>/install/transform_definition_files`',
+		default: () =>
+			legacyAwareDefaultDir(
+				'DEDALO_TRANSFORM_DEFINITIONS_DIR',
+				['install', 'transform_definition_files'],
+				['transform_definition_files'],
+			),
+		defaultDoc:
+			'`<private dir>/transform_definition_files` — a legacy `<install dir>/install/transform_definition_files` holding files keeps being used so nothing moves',
 		heading: 'Defining the transform definitions directory',
 		typeLabel: 'string',
 		doc: `This parameter defines the directory holding the transform definition files — the JSON declarations that drive the \`move_*\` maintenance widgets (move a tipo, move a locator, move data into a portal or into a table, move a language).
 
 A transformation of this kind is written down before it is run: the file lists, item by item, what is moved where. The widget reads the files of its own subdirectory (\`<dir>/move_tld/\`, \`<dir>/move_locator/\`, …) and offers them to the operator; only \`.json\` files sitting directly in that subdirectory are read, never a path that climbs out of it.
 
-By default Dédalo reads them from \`install/transform_definition_files\` inside the installation. Point the key at a directory of your own to keep your transformations outside the code — a sensible thing to do, since they are institution-specific and an update of the code should not touch them.
+Unset, Dédalo reads them from \`transform_definition_files\` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and your transformations are institution-specific data an update must not touch. An install that still keeps files at the legacy in-tree \`install/transform_definition_files\` location is not moved: while that directory holds files and this key is unset, it keeps being used. Point the key at a directory of your own to place them anywhere else.
 
 \`\`\`bash
 DEDALO_TRANSFORM_DEFINITIONS_DIR="/srv/dedalo_transforms"

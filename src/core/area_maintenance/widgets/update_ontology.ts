@@ -25,6 +25,18 @@ import {
 } from './support.ts';
 
 /**
+ * PHP parity: the 'Local files' pseudo-server is THIS install, so it is forced
+ * reachable — the probe travels the network stack to ourselves and a slow or
+ * proxied loopback would otherwise disable the panel's own local source. Only
+ * the localhost entry is touched, and only when the remote answered an object.
+ */
+function forceLocalhostReachable(server: Record<string, unknown>): void {
+	if (server.code !== 'localhost') return;
+	if (typeof server.result !== 'object' || server.result === null) return;
+	(server.result as { result?: unknown }).result = true;
+}
+
+/**
  * The panel's SERVER LIST, probed: the configured ONTOLOGY_SERVERS plus the
  * 'Local files' pseudo-server this instance offers when it is itself an
  * ontology master, each annotated with the outcome of a live check.
@@ -58,13 +70,7 @@ async function probeOntologyServers(): Promise<Record<string, unknown>[]> {
 		// panel contract the client reads (render_update_ontology.js) — the probe's
 		// own outcome field is `data` since the P1 sweep.
 		server.result = probe.data;
-		if (
-			server.code === 'localhost' &&
-			typeof server.result === 'object' &&
-			server.result !== null
-		) {
-			(server.result as { result?: unknown }).result = true;
-		}
+		forceLocalhostReachable(server);
 	}
 	return servers;
 }

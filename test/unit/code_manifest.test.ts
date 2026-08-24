@@ -169,31 +169,44 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 		expect(info.info).toEqual({ version: '7.1.0', ...BASE_INFO });
 	});
 
-	test("the catalog's forceUpdateMode is carried as the WIRE key force_update_mode; null/undefined omit the KEY entirely", () => {
-		// The client branches on key PRESENCE (a `force_update_mode: undefined`
-		// would serialize away but still fail Object.hasOwn assertions here).
-		const clean = buildCodeUpdateInfo({
+	test('a -dev build on disk is NEVER advertised, even when it is the only archive', () => {
+		// The security property behind the two channels: a developer build is
+		// servable by URL (code_serving.test.ts) but must never be OFFERED as a
+		// release. 7.1.0 is on the linear path and only its -dev zip exists →
+		// the manifest stays silent about it.
+		const devZip = join(FILES_DIR, '7', '7.1', '7.1.0-dev.zip');
+		writeFileSync(devZip, 'PK-dev');
+		try {
+			const info = buildCodeUpdateInfo({
+				clientVersion: [7, 0, 0],
+				serverVersion: [7, 1, 0],
+				codeFilesDir: FILES_DIR,
+				publicBaseUrl: 'http://m',
+				info: { ...BASE_INFO },
+				catalog: catalogOf(target(7, 0, 1), target(7, 1, 0)),
+			});
+			// only the published 7.0.1.zip is advertised; no url ever names -dev
+			expect(info.files.map((f) => f.version)).toEqual(['7.0.1']);
+			for (const f of info.files) expect(f.url.includes('-dev')).toBe(false);
+		} finally {
+			rmSync(devZip, { force: true });
+		}
+	});
+
+	test('force_update_mode never appears on the wire (WC-2026-08-23-update-mode-clean-only)', () => {
+		// The clean-only pipeline retired the key: clean is the ONLY install
+		// mode, so the manifest has nothing for the client to branch on. Pin the
+		// ABSENCE — a resurrected key would be a silent wire divergence.
+		const info = buildCodeUpdateInfo({
 			clientVersion: [7, 0, 0],
 			serverVersion: [7, 0, 0],
 			codeFilesDir: FILES_DIR,
 			publicBaseUrl: 'http://m',
 			info: { ...BASE_INFO },
-			catalog: catalogOf(target(7, 0, 1, { forceUpdateMode: 'clean' })),
+			catalog: catalogOf(target(7, 0, 1)),
 		});
-		expect(clean.files[0]?.force_update_mode).toBe('clean');
-
-		for (const mode of [null, undefined] as const) {
-			const info = buildCodeUpdateInfo({
-				clientVersion: [7, 0, 0],
-				serverVersion: [7, 0, 0],
-				codeFilesDir: FILES_DIR,
-				publicBaseUrl: 'http://m',
-				info: { ...BASE_INFO },
-				catalog: catalogOf(target(7, 0, 1, { forceUpdateMode: mode })),
-			});
-			expect(info.files.length).toBe(1);
-			expect(Object.hasOwn(info.files[0] as object, 'force_update_mode')).toBe(false);
-		}
+		expect(info.files.length).toBe(1);
+		expect(Object.hasOwn(info.files[0] as object, 'force_update_mode')).toBe(false);
 	});
 
 	test('the sha256 SIDECAR is advertised; a missing or malformed one omits the key', () => {
@@ -229,11 +242,11 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 		);
 	});
 
-	test('a MIS-KEYED catalog still advertises the file but loses force_update_mode', () => {
-		// The descriptor lookup re-derives '701' from the triple; a catalog keyed
-		// any other way resolves `undefined` and the `?.` branch drops the flag.
+	test('a MIS-KEYED catalog still advertises the file (the walk keys on the triple, not the key)', () => {
+		// linearUpgradeTargets iterates Object.values, so an odd key still
+		// advertises its rung — the key shape is a convention, not a gate.
 		const misKeyed: Record<string, UpdateDescriptor> = {
-			'7.0.1': target(7, 0, 1, { forceUpdateMode: 'clean' }),
+			'7.0.1': target(7, 0, 1),
 		};
 		const info = buildCodeUpdateInfo({
 			clientVersion: [7, 0, 0],
@@ -282,6 +295,19 @@ describe('codeReleasePath (filename-grammar gate + layout)', () => {
 		expect(codeReleasePath(FILES_DIR, [7, 0, 1], '7.0.1.zip')).toBe(
 			join(FILES_DIR, '7', '7.0', '7.0.1.zip'),
 		);
+	});
+
+	test('the -dev channel resolves through the SAME confinement (servable, never advertised)', () => {
+		// `code_build_plan.ts` names non-master builds `<v>-dev.zip`; the grammar
+		// admits exactly that fixed token so code_serving.ts can serve a developer
+		// build for manual testing. The suffix is a fixed sanitized token — no
+		// ref bytes reach the path, so confinement is unchanged.
+		expect(codeReleasePath(FILES_DIR, [7, 0, 1], '7.0.1-dev.zip')).toBe(
+			join(FILES_DIR, '7', '7.0', '7.0.1-dev.zip'),
+		);
+		for (const bad of ['7.0.1-devx.zip', '7.0.1-dev.tar', '../7.0.1-dev.zip', '7.0.1-DEV.zip']) {
+			expect(codeReleasePath(FILES_DIR, [7, 0, 1], bad)).toBeNull();
+		}
 	});
 
 	test('anything that is not <n.n.n>.zip is refused (traversal, extension, non-numeric)', () => {

@@ -36,6 +36,30 @@ by hand.
 DEDALO_SUPERVISED=true
 \`\`\``,
 	},
+	DEDALO_SMOKE_BOOT: {
+		// Read as the literal string `'true'` (anything else, including unset, is
+		// "not a smoke boot"), so type:'string' is right and a 'bool' LABEL would
+		// be the same lie DEDALO_SUPERVISED's was.
+		type: 'string',
+		scope: 'environment',
+		default: undefined,
+		heading: 'Pre-swap boot check of a candidate code tree',
+		typeLabel: 'true',
+		typeSuffix: '(set by the updater; never by hand)',
+		doc: `Set by the code updater on a CHILD process, never by an administrator.
+
+Before a code update replaces the installation tree, it boots the downloaded tree once —
+in place, in its quarantine directory — to prove the new release can actually start. That
+child is spawned with this flag and a throwaway socket of its own.
+
+Under the flag the server is **read-only by construction**: boot migrations, schedulers,
+diffusion, watchers and media-tree provisioning are all skipped, and the process only binds
+its socket and answers \`/health\` until it is asked to stop. If it never answers, the update
+is refused and nothing is swapped.
+
+Setting it by hand on the real server yields a process that serves \`/health\` and nothing
+else — never do it. See \`engineering/PRODUCTION.md\` for the update pipeline.`,
+	},
 	INVOCATION_ID: {
 		type: 'string',
 		scope: 'environment',

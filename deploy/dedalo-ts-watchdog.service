@@ -12,8 +12,20 @@ After=dedalo-ts.service
 
 [Service]
 Type=oneshot
-# --fail: non-2xx exits non-zero → OnFailure restart. --max-time bounds a hung
-# server. Match the socket path to SERVER_UNIX_SOCKET in ../private/.env.
-ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 10 \
-    --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
-OnFailure=dedalo-ts-restart.service
+# The probe script curls /health (--fail, --max-time 10) and on red CHOOSES the
+# remedy itself: a pending unconfirmed code update → dedalo-ts-rollback.service
+# (restarting freshly swapped-in broken code would only re-run it); otherwise →
+# dedalo-ts-restart.service, exactly as before. No OnFailure= here — the script
+# starts the remedy unit directly, and an OnFailure restart would race the
+# rollback it just started. Match --socket to SERVER_UNIX_SOCKET in
+# ../private/.env (canonical: /run/dedalo/dedalo_ts.sock).
+#
+# ExecStart points at the OUT-OF-TREE install (/opt/dedalo/bin/), like the
+# rollback unit: the probe must keep running while the app tree is mid-swap
+# or gone. Install + refresh after updates (PRODUCTION.md §12):
+#   sudo install -m 0755 deploy/dedalo-ts-watchdog.sh /opt/dedalo/bin/
+# The script resolves the code-backup root (for the sentinel) the same way
+# the engine does: env DEDALO_BACKUP_PATH, then <private>/.env, then default.
+ExecStart=/opt/dedalo/bin/dedalo-ts-watchdog.sh \
+    --socket /run/dedalo/dedalo_ts.sock \
+    --app-dir /opt/dedalo/master_dedalo

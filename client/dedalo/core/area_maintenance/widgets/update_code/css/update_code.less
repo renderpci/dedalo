@@ -11,55 +11,87 @@
 
 	>.content_data {
 
-		.config_grid {
-			grid-template-columns: 3fr 6fr;
-			gap: 0.25rem;
+		.dd_readout {
+			margin-bottom: 0.75rem;
+		}
 
-			.label {
-				display: flex;
-				align-items: flex-start;
-				flex-wrap: nowrap;
+		.dd_note {
+			margin: 0.5rem 0;
+		}
 
-				&.bold {
-					padding-bottom: 0.5rem !important;
+		// STATUS readouts (render_update_status.js) — LAYOUT ONLY.
+		// The severity vocabulary is the shared widget_kit's (.dd_badge +
+		// pill_ok / pill_warning / pill_danger, .dd_eyebrow, .dd_readout): a
+		// second chip system local to this widget would drift from every other
+		// maintenance panel, so nothing here defines a state colour.
+		.update_status {
+			margin-bottom: 1rem;
+
+			.status_block {
+				margin-bottom: 0.75rem;
+
+				.dd_eyebrow {
+					margin-bottom: 0.33rem;
 				}
 			}
 
-			&.servers_grid {
+			// the headline verdict of a role, above its checks
+			.status_verdict {
+				font-weight: bold;
+				margin-bottom: 0.4rem;
 
-				.label {
-					display: block;
-					cursor: pointer;
-					padding-bottom: 0px;
-					padding-top: 0.2rem;
-					overflow: hidden;
-					text-overflow: ellipsis;
+				&.state_ok {
+					color: @color_success;
+				}
+				&.state_danger {
+					color: @color_danger;
+				}
+			}
+
+			// a check's value cell: chip, then the server's fact, then the why
+			.check_row {
+
+				.dd_v {
+					display: flex;
+					flex-wrap: wrap;
+					align-items: baseline;
+					gap: 0.4rem;
+				}
+
+				// paths and offender lists can be long: wrap, never widen the
+				// grid column (the readout is a two-column grid — an unbroken
+				// path would push the whole panel sideways)
+				.check_detail {
+					overflow-wrap: anywhere;
+					opacity: 0.85;
+				}
+
+				// what the check looked at (a git ref, a path) — an axis label,
+				// deliberately quieter than the fact it qualifies
+				.check_scope {
+					font-size: 0.9em;
+					opacity: 0.7;
 					white-space: nowrap;
-
-					input[type="radio"] {
-						cursor: pointer;
-						width: unset;
-						height: unset;
-						padding: 0;
-						margin: 0 .5em .5em 0;
-						vertical-align: text-top;
-					}
 				}
 
-				.value {
-					padding: 0.5rem;
-					padding-bottom: 0px;
-					padding-top: 0.2rem;
-
-					.icon {
-						margin-left: 0.5rem;
-					}
+				// the explanation, rendered only on a non-ok check
+				.check_note {
+					flex-basis: 100%;
+					font-size: 0.9em;
+					opacity: 0.75;
 				}
+			}
 
-				.active {
-					color: @color_black;
-					font-weight: 500;
-				}
+			// restore points / releases put their chips after the value
+			.dd_v > .dd_badge {
+				margin-left: 0.4rem;
+			}
+
+			// the divergence note lives in a plain fact row, not a check row
+			.dd_v > .check_note {
+				font-size: 0.9em;
+				opacity: 0.75;
+				margin-top: 0.2rem;
 			}
 		}
 
@@ -68,6 +100,48 @@
 			border-radius: 4px;
 			padding: 0.66rem;
 			margin-top: 0.5rem;
+		}
+
+		// phase track: the shared-kit progress bar + one row per job phase
+		.phase_track {
+			margin: 0.75rem 0;
+
+			.dd_bar {
+				margin-bottom: 0.33rem;
+			}
+
+			.dd_readout {
+				margin-top: 0.5rem;
+			}
+		}
+
+		.body_response {
+
+			>.error {
+				margin: 0.5rem 0;
+			}
+
+			// the raw SSE mirror render_stream emits under display_json:true is
+			// this widget's REDUCER FEED (render_update_code.js observes it),
+			// not an operator surface: the phase track is the UI. Hidden, not
+			// removed — the MutationObserver still fires on hidden nodes.
+			.update_stream .display_json_box {
+				display: none;
+			}
+
+			// a pre-phase refusal is the whole story (the track is all-pending):
+			// render its sentence prominently
+			.dd_note.update_refusal {
+				font-weight: bold;
+				font-size: 1.1em;
+			}
+
+			.reload_pending {
+
+				>button {
+					margin-left: 0.75rem;
+				}
+			}
 		}
 	}
 
@@ -87,26 +161,16 @@
 		flex-wrap: wrap;
 		justify-content: center;
 		font-size: 1.1rem;
+		padding-left: 1rem;
+		padding-right: 1rem;
 
-		.beta_updates_container {
+		.dd_readout {
 			width: 100%;
-			text-align: right;
-			margin-top: 3rem;
-			padding-right: 1.5rem;
-
-			>.version_label {
-				cursor: pointer;
-
-				>input {
-					cursor: pointer;
-					vertical-align: bottom;
-					margin-right: 0.33rem;
-				}
-			}
+			margin-top: 1rem;
 		}
 
 		.files_container {
-			width: 100;
+			width: 100%;
 			text-align: left;
 			margin-top: 2rem;
 
@@ -135,15 +199,6 @@
 					font-weight: 300;
 					color: @color_grey_9;
 				}
-
-				&.development {
-					background-color: @color_orange_dedalo;
-					color: @color_white;
-
-					.value {
-						color: @color_white;
-					}
-				}
 			}
 
 			.file_container:last-child {
@@ -160,23 +215,9 @@
 		margin-top: 2rem;
 		min-height: 6rem;
 
-		// update_mode_container. Radio buttons update mode user selection
-		>.update_mode_container {
-			padding: 1rem;
-			margin-bottom: 1.5rem;
-			display: flex;
-			width: 100%;
-			justify-content: center;
-			gap: 1rem;
-
-			>label {
-				cursor: pointer;
-
-				input {
-					cursor: pointer;
-					vertical-align: bottom;
-				}
-			}
+		>button[disabled] {
+			opacity: 0.5;
+			cursor: not-allowed;
 		}
 
 		// update-file JSON preview — the shared console surface
@@ -191,6 +232,10 @@
 		>.response {
 			padding-bottom: 6rem;
 			padding-top: 0;
+
+			&.error {
+				color: @color_danger;
+			}
 		}
 
 		.spinner {

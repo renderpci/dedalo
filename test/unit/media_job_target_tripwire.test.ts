@@ -39,6 +39,10 @@ const EXEMPT_SUBMITTERS: ReadonlyMap<string, string> = new Map([
 		'The test-suite runner: it produces a report, not a media derivative.',
 	],
 	[
+		'src/core/area_maintenance/widgets/update_code.ts',
+		'Install-wide CODE update: it replaces the engine tree on disk and restarts the process — there is no record, section or component it could be attached to (the same class as the data-migration job above).',
+	],
+	[
 		'src/core/tools/background.ts',
 		'The GENERIC tool-background bridge: it runs whatever handler a tool declared backgroundRunnable, so it cannot know a target here. A tool whose background action IS record-scoped stamps its own target inside its handler.',
 	],

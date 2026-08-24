@@ -56,6 +56,7 @@ const NOT_ENV_KEYS = new Set([
 	'NFD', // unicode normalization form
 	'SIGINT', // signal names
 	'SIGTERM',
+	'SIGKILL',
 	// Binary format markers passed to `ascii(…)` in the media content verifier
 	// (src/core/media/engine/verify_content.ts): the four bytes that terminate a
 	// PNG stream, not a setting anyone can configure.
