@@ -27,7 +27,7 @@
         {
             "type"                : "dd48",
             "section_tipo"        : "test3",
-            "section_id"          : "2",
+            "section_id"          : 2,
             "from_component_tipo" : "test201"
         }
     ],
@@ -118,7 +118,7 @@ children locator per result:
     {
         "type"                : "dd48",
         "section_tipo"        : "test3",
-        "section_id"          : "2",
+        "section_id"          : 2,
         "from_component_tipo" : "test201"
     }
 ]
@@ -297,7 +297,7 @@ is also accepted when a single target section can be resolved. The column name m
 the bare component tipo (`test201`) or a `tipo_targetsection` form (`test201_test3`):
 
 ```json
-[{"section_tipo":"test3","section_id":"2","from_component_tipo":"test201"}]
+[{"section_tipo":"test3","section_id":2,"from_component_tipo":"test201"}]
 ```
 
 Because this component is calculated, importing a children link ultimately writes the

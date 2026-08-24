@@ -433,6 +433,13 @@ The lang tag is used to mark the change from the previous language. Example, an 
 
 > \[lang-a-1-spa-data:['lg-spa']:data]
 
+!!! note "`section_id` inside a tag is quoted on purpose"
+    A record address is an integer everywhere in the engine's API. The locator
+    embedded in an inline tag is the one exception you will see below: it is
+    serialized **into the text string itself**, and its byte form is fixed
+    contract for the consumers that parse it, so it keeps the quoted
+    `'section_id':'2'` shape.
+
 ##### svg
 
 The svg tag is used to add a graphic within the text. The tag uses a locator to point to the svg section. Example to add an Iberian symbol inside a legend text.

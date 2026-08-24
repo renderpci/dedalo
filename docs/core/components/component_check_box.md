@@ -30,13 +30,13 @@
     ],
     "data"        : "array of locators",
     "sample_data" : [
-        {"type":"dd151","section_id":"1","section_tipo":"rsc723","from_component_tipo":"tch191"},
-        {"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}
+        {"type":"dd151","section_id":1,"section_tipo":"rsc723","from_component_tipo":"tch191"},
+        {"type":"dd151","section_id":2,"section_tipo":"rsc723","from_component_tipo":"tch191"}
     ],
     "value"        : "array of locators",
     "sample_value" : [
-        {"type":"dd151","section_id":"1","section_tipo":"rsc723","from_component_tipo":"tch191"},
-        {"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}
+        {"type":"dd151","section_id":1,"section_tipo":"rsc723","from_component_tipo":"tch191"},
+        {"type":"dd151","section_id":2,"section_tipo":"rsc723","from_component_tipo":"tch191"}
     ]
 }
 ```
@@ -77,14 +77,16 @@
 
 **Value:** `array` of `locators`, or `null`.
 
-**Storage shape.** A component never touches the database; it reads and writes through its section. Like every related component, `component_check_box` does **not** keep an isolated value column — its locators live in the section-wide global `relations` container, and the component slices its own subset out of that bag by matching `from_component_tipo` (its own `tipo`) and `section_tipo`. The canonical locator shape is `{type, section_tipo, section_id, from_component_tipo}`; `type` is the relation type (`dd151` by default), `section_tipo`/`section_id` point at the selected list-of-values record, and `from_component_tipo` names this component.
+**Storage shape.** A component never touches the database; it reads and writes through its section. Like every related component, `component_check_box` does **not** keep an isolated value column — its locators live in the record's `relation` column — singular, and an **object keyed by component tipo**, not a flat array — so the component reads its own entry under its `tipo` (and still matches `from_component_tipo`/`section_tipo` when slicing a shared bag). The canonical locator shape is `{type, section_tipo, section_id, from_component_tipo}`; `type` is the relation type (`dd151` by default), `section_tipo`/`section_id` point at the selected list-of-values record, and `from_component_tipo` names this component.
 
 ```json
 {
-    "relations" : [
-        {"type":"dd151","section_id":"1","section_tipo":"rsc723","from_component_tipo":"tch191"},
-        {"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}
-    ]
+    "relation" : {
+        "tch191" : [
+            {"type":"dd151","section_id":1,"section_tipo":"rsc723","from_component_tipo":"tch191"},
+            {"type":"dd151","section_id":2,"section_tipo":"rsc723","from_component_tipo":"tch191"}
+        ]
+    }
 }
 ```
 
@@ -229,7 +231,7 @@ DOM (edit / default): `wrapper_component component_check_box <tipo> <mode> view_
 **Import.** The default import format is a JSON array of [locators](../locator.md), conformed by the generic import engine (`conformImportData()`, `src/core/tools/import_data.ts`):
 
 ```json
-[{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}]
+[{"type":"dd151","section_id":2,"section_tipo":"rsc723","from_component_tipo":"tch191"}]
 ```
 
 An empty cell clears the existing relation.

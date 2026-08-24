@@ -66,7 +66,7 @@ Pick the path that matches what you are trying to do. Each is a short, ordered l
 1. [Installation](install/index.md) — **start here**: server sizing, prerequisites, and your path — a [production server](install/production.md), [Docker](install/docker.md), or a [laptop in ten minutes](install/dev_quickstart.md). Then the [reverse proxy](install/reverse_proxy.md), the [installer reference](install/installer_reference.md), [upgrading](install/upgrading.md) and [troubleshooting](install/troubleshooting.md)
 2. [Configuration](config/index.md) — the one `.env` file: [how it works](config/administration.md), [every setting](config/config.md), [database](config/config_db.md), [areas](config/config_areas.md)
 3. [Media protection](config/media_protection.md) and [search config](config/search.md) — **before you expose media to the internet**: the two-rule access gate the web server enforces, and search tuning
-4. [Management & maintenance](management/index.md) — environments, root user, [maintenance status](management/maintenace_status.md), [recovery mode](management/recovery_mode.md)
+4. [Management & maintenance](management/index.md) — environments, root user, [maintenance status](management/maintenance_status.md), [recovery mode](management/recovery_mode.md)
 5. [Users, profiles & permissions](management/users_and_permissions.md) — creating users and profiles, the 0–3 permission levels, how access is computed and enforced
 6. [Backup](management/backup.md) + [best practices](management/backup_best_practises.md) — protecting the data
 7. [Updates](management/updates/index.md) — [updating code](management/updates/updating_code.md), [data](management/updates/updating_data.md), [ontology](management/updates/updating_ontology.md)

@@ -28,7 +28,7 @@
     "sample_data" : [
         {
             "id"                  : 1,
-            "section_id"          : "1",
+            "section_id"          : 1,
             "section_tipo"        : "rsc550",
             "from_component_tipo" : "tch171",
             "from_section_tipo"   : "tch1",
@@ -80,7 +80,7 @@ Each computed inverse locator looks like this:
 ```json
 {
     "id"                  : 1,
-    "section_id"          : "1",
+    "section_id"          : 1,
     "section_tipo"        : "rsc550",
     "from_component_tipo" : "tch171",
     "from_section_tipo"   : "tch1",
@@ -108,7 +108,7 @@ Each computed inverse locator looks like this:
         "entries"      : [
             {
                 "id"                  : 1,
-                "section_id"          : "1",
+                "section_id"          : 1,
                 "section_tipo"        : "rsc550",
                 "from_component_tipo" : "tch171",
                 "from_section_tipo"   : "tch1",

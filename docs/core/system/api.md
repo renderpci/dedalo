@@ -129,11 +129,13 @@ handler bodies live in `src/core/api/handlers/<class>.ts`.
 | `dd_area_maintenance_api` | The maintenance widgets: `widget_request`, `get_widget_value`, `lock_components_actions` — admin-gated inside the dispatcher. |
 | `dd_diffusion_api` | The diffusion engine: `diffuse`, `validate`, `get_process_status`, `list_processes`, `cancel_process`, `get_diffusion_info`, `get_engine_advisory`, `retry_pending_deletions`, `rebuild_media_index`. |
 | `dd_component_portal_api` | `delete_locator` (bulk locator removal). |
+| `dd_component_text_area_api` | Transcription tags: `get_tags_info` (resolve a text's marks into the records they point at), `delete_tag` (remove one tag's marks from every language of the text). |
 | `dd_component_av_api` | `create_posterframe`, `delete_posterframe`, `get_media_streams`. |
 | `dd_component_3d_api` | `move_file_to_dir`, `delete_posterframe`. |
 | `dd_component_info` | `get_widget_data`. |
 | `dd_rag_api` | Retrieval: `semantic_search`, `retrieve`, `get_agent_context`, `similar_to`, `ask`, `embed_groups`, `similar_objects`, `search_by_text_image`, `characterize_object` (retrieval actions accept a `group` facet). ACL-gated inside the handlers. |
-| `dd_identify_api` | Object identification: `find_matches` — the records sharing a seed's identifying features, each with its per-criterion breakdown. Needs a `properties.identify` profile on the section; declines cleanly without one. ACL-gated inside the engine. |
+| `dd_identify_api` | Object identification: `find_matches` (the records sharing a seed's identifying features, with the per-criterion breakdown), `identify_by_image`, `get_proposals`, `resolve_type_link`. Needs a `properties.identify` profile on the section; declines cleanly without one. All four are READS, ACL-gated inside the engine. |
+| `dd_external_api` | `search` — a third-party catalogue searched THROUGH the engine, so the request passes the host allowlist, the SSRF guard, the breaker and the byte cap. The client names only its own component and the query. |
 | `dd_mcp_api` | The in-process agent bridge: `mcp_proxy`, `agent_models`, `agent_chat`, `agent_chat_stream`, `agent_apply`. **Fail-closed** — every action refuses unless the agent HTTP surface is explicitly enabled. |
 | `dd_error_report_api` | `receive_report` — machine-to-machine error intake, reachable only where the receiver is enabled. |
 

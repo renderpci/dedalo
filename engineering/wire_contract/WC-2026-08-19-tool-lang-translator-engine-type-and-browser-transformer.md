@@ -29,6 +29,15 @@ Each item carries a `type` discriminator, and a third engine exists:
 ]
 ```
 
+Addendum 2026-08-23 (measured): a per-INSTALL config (dd996/dd999) may extend
+the `browser_transformer` item with `models` — the local model catalog the
+in-browser runtime offers (name/task/dtype/model_id/requires_webgpu per model);
+the live install's record carries one. Additive, browser-consumed only, and
+NOT part of the register default (dd1633), which this entry pins. Also
+measured 2026-08-23: the register default had drifted to TWO engines
+(`google_translation` missing) while the install-config slot and this entry
+both carry three — the default was reconciled back to the pinned three.
+
 `type: 'server'` engines are dispatched to `tool_lang`'s server action;
 `type: 'browser'` engines run entirely in the client (no round trip). The
 client keys its behaviour on `type`, so a config item without it is treated as

@@ -1,6 +1,6 @@
 # Adding or installing new hierarchies
 
-> See also: [Management and maintenance](index.md) · [Thesaurus dependencies](../config/thesaurus_dependeces.md)
+> See also: [Management and maintenance](index.md) · [Thesaurus dependencies](../config/thesaurus_dependencies.md)
 
 Hierarchies (thesauri) are an important part of the Dédalo system. Dédalo uses hierarchies in many scenarios: normalized toponymy, languages, themes, materials, techniques and more. Adding or installing new hierarchies is an important maintenance task.
 
@@ -243,7 +243,7 @@ Two things the import does **not** do for you:
   in step 12 above.
 - **Ontology dependencies.** A hierarchy whose terms are referenced by components of
   another TLD needs that ontology present too. See [thesaurus
-  dependencies](../config/thesaurus_dependeces.md).
+  dependencies](../config/thesaurus_dependencies.md).
 
 ### Verify the round trip
 

@@ -93,7 +93,7 @@ Both the dataframe pairing AND the relation sibling-ordering have moved to `id_k
 ```
 
 !!! note "Typology"
-    `component_dataframe` is a **related** component. On the client it is an **alias** of `component_portal` (`export const component_dataframe = component_portal`) with a few dataframe-specific additions (`create_new_section`, `get_rating`). Server-side it reuses the same shared portal engine: the descriptor `src/core/components/component_dataframe/descriptor.ts` registers `resolveData: 'portal'` (`src/core/relations/models/portal.ts`), so it gets the whole related-component contract ([locator](../locator.md) storage in the section `relations` container, `from_component_tipo` filtering, grid/export/diffusion resolution) from the shared relation engines, and adds one purpose of its own: pairing **frame records** to individual data items of another component. The id_key pairing/merge algebra itself (not row emission) lives in `src/core/relations/dataframe.ts`.
+    `component_dataframe` is a **related** component. On the client it is an **alias** of `component_portal` (`export const component_dataframe = component_portal`) with a few dataframe-specific additions (`create_new_section`, `get_rating`). Server-side it reuses the same shared portal engine: the descriptor `src/core/components/component_dataframe/descriptor.ts` registers `resolveData: 'portal'` (`src/core/relations/models/portal.ts`), so it gets the whole related-component contract ([locator](../locator.md) storage in the record's `relation` column, `from_component_tipo` filtering, grid/export/diffusion resolution) from the shared relation engines, and adds one purpose of its own: pairing **frame records** to individual data items of another component. The id_key pairing/merge algebra itself (not row emission) lives in `src/core/relations/dataframe.ts`.
 
 !!! info "About `default_tools`"
     As for the portal model it shares, the toolbar is assembled from the model + ontology, never hardcoded — the concrete list should be verified per instance in the ontology. A dataframe slot is non-translatable, so it never receives `tool_lang` / `tool_lang_multi`. In practice the frame editing surface is the **target section opened in a modal**, so most of the per-item tooling lives on the target record, not on the dataframe button. `tool_time_machine` is the only tool guaranteed by the verified source in this checkout (`tools/tool_time_machine`).
@@ -120,11 +120,17 @@ It works for relation main components ([component_portal](component_portal.md), 
 - To store a value that every cataloguer types inline -> use the appropriate literal component; only add a dataframe when item-level metadata is genuinely needed.
 
 !!! note "One frame slot, many pairings"
-    A single `component_dataframe` instance (a *slot*, e.g. the IRI label slot `dd560`) holds the pairing locators for ALL items, and even for several main components of the same record. When a caller context is supplied, the read filters the section-wide relations bag down to just the entries matching that caller (the *match predicate* below); without one, the whole slot is returned.
+    A single `component_dataframe` instance (a *slot*, e.g. the IRI label slot `dd560`) holds the pairing locators for ALL items, and even for several main components of the same record. When a caller context is supplied, the read filters the slot's entries down to just the ones matching that caller (the *match predicate* below); without one, the whole slot is returned.
 
 ## Data model
 
-**Data type:** `array of frame locators` stored in the section record's `relations` container, keyed by the dataframe slot tipo — exactly like any relation component.
+**Data type:** `array of frame locators` stored in the record's **`relation`** JSONB column under the **dataframe slot's own tipo** as the key — exactly like any relation component.
+
+!!! warning "The column is `relation`, the shape is an object"
+    Frames live in `relation` (singular), as `{"<slot tipo>": [ … ]}` — never in
+    a flat `relations` array, and never under the *main* component's tipo. See
+    [Sections › typed JSONB columns](../sections/index.md#storage-detail-the-data-column-is-split-into-typed-jsonb-columns)
+    and [Locator](../locator.md#function-and-structure).
 
 **Value type:** `array` of frame locators, or `null`.
 
@@ -133,7 +139,7 @@ It works for relation main components ([component_portal](component_portal.md), 
 Every value of every component carries a stable, server-minted item `id` (a per-component counter inside the section record). The dataframe pairs against that id, not against array position and not against the target record:
 
 ```text
-main component data item              frame locator (relations container)
+main component data item              frame locator (relation column, key = slot tipo)
 { "id": 2, "iri": "https://..." } ←── { "type": "dd490", "id_key": 2,
                                         "main_component_tipo": "rsc217",
                                         "from_component_tipo": "dd560",
@@ -243,8 +249,8 @@ Note that the frame locator carries its **own** `id` (it is itself a data item o
 
 **Literal main: text with a role qualifier.** The live literal wiring — a
 [component_input_text](component_input_text.md) `oh16` (section `oh1`) with two
-values, the second one qualified by a frame in slot `oh130` pointing at a
-`rolepos1` term. Note the literal's values live in the **`string`** column
+values, each qualified by a frame in slot `oh130` pointing at an `rsc1242`
+("Data frame | Uncertainty") record. Note the literal's values live in the **`string`** column
 (keyed by tipo, like every literal) while its frames live in **`relation`**
 under the SLOT's tipo — never under the main's:
 
@@ -258,26 +264,31 @@ under the SLOT's tipo — never under the main's:
     },
     "relation": {
         "oh130": [
-            {"id":1,"type":"dd490","id_key":2,"section_id":4,"section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}
+            {"id":4,"type":"dd490","id_key":2,"section_id":583,"section_tipo":"rsc1242","from_component_tipo":"oh130","main_component_tipo":"oh16"},
+            {"id":5,"type":"dd490","id_key":1,"section_id":585,"section_tipo":"rsc1242","from_component_tipo":"oh130","main_component_tipo":"oh16"}
         ]
     }
 }
 ```
 
-`id_key: 2` pairs the frame to the value whose `id` is `2` ("Segundo
-testimonio") — never to its array position.
+`id_key: 2` pairs the first frame to the value whose `id` is `2` ("Segundo
+testimonio") — never to its array position, which here is the opposite order.
 
 The edit view renders the frame button next to the second value; reordering or editing the values never breaks the pairing because it follows `id:2`, not the position.
 
-**Relation main: portal informant with a certainty frame.** A [component_portal](component_portal.md) (tipo `oh24`) pointing at person records, where the first link carries a frame:
+**Relation main: portal informant with a role frame.** The live wiring of `oh1/368`: a [component_portal](component_portal.md) (tipo `oh24`, "Informants") pointing at two person records, the first link qualified by a frame in slot `oh115` ("Role"). Main and slot are **separate keys of the same `relation` column** — the frame is never appended to the main's own array:
 
 ```json
 {
-    "relations": [
-        {"type":"dd151","section_id":14,"section_tipo":"rsc197","from_component_tipo":"oh24","id":1},
-        {"type":"dd151","section_id":20,"section_tipo":"rsc197","from_component_tipo":"oh24","id":2},
-        {"type":"dd490","section_id":5,"section_tipo":"ds1","id_key":1,"from_component_tipo":"oh115","main_component_tipo":"oh24","id":1}
-    ]
+    "relation": {
+        "oh24": [
+            {"id":1,"type":"dd151","section_id":15855,"section_tipo":"rsc197","from_component_tipo":"oh24"},
+            {"id":2,"type":"dd151","section_id":15856,"section_tipo":"rsc197","from_component_tipo":"oh24"}
+        ],
+        "oh115": [
+            {"id":4,"type":"dd490","id_key":1,"section_id":1,"section_tipo":"rolepos1","from_component_tipo":"oh115","main_component_tipo":"oh24"}
+        ]
+    }
 }
 ```
 
@@ -407,7 +418,7 @@ The optional delete policy is a sibling block on the same node:
     Symptom: the server sends the frame item and its context correctly, the
     browser console is clean, and nothing appears.
 
-At construction the dataframe instance is created with a **caller_dataframe** object (carrying `id_key` / `main_component_tipo` for the item it is paired with); this context is expected in non-search modes. `section_tipo` / `parent` of the *target* records are not the dataframe node's own section; persistence still flows through the main record's section (the single database writer), with the frame locators living in that record's `relations` container.
+At construction the dataframe instance is created with a **caller_dataframe** object (carrying `id_key` / `main_component_tipo` for the item it is paired with); this context is expected in non-search modes. `section_tipo` / `parent` of the *target* records are not the dataframe node's own section; persistence still flows through the main record's section (the single database writer), with the frame locators living in that record's `relation` column under the slot's tipo.
 
 ## Properties & options
 

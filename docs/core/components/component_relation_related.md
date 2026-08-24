@@ -28,7 +28,7 @@
         "id"                  : 1,
         "type"                : "dd89",
         "type_rel"            : "dd620",
-        "section_id"          : "2",
+        "section_id"          : 2,
         "section_tipo"        : "test3",
         "from_component_tipo" : "test54"
     }],
@@ -80,7 +80,7 @@ The canonical locator for this component carries `type = dd89` (the related rela
         "id"                  : 1,
         "type"                : "dd89",
         "type_rel"            : "dd620",
-        "section_id"          : "2",
+        "section_id"          : 2,
         "section_tipo"        : "test3",
         "from_component_tipo" : "test54"
     }
@@ -229,7 +229,7 @@ DOM follows the portal structure: `wrapper_component component_relation_related 
 - The default **locator JSON** (the component's own data shape):
 
 ```json
-[{"type":"dd89","type_rel":"dd620","section_id":"2","section_tipo":"test3","from_component_tipo":"test54"}]
+[{"type":"dd89","type_rel":"dd620","section_id":2,"section_tipo":"test3","from_component_tipo":"test54"}]
 ```
 
 - A **number sequence of `section_id`** when the target section is unambiguous (a single resolvable `target_section_tipo`):

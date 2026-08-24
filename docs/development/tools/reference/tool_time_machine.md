@@ -96,7 +96,7 @@ const rqo = {
     source : create_source(self, 'apply_value'), // → tool_time_machine::apply_value
     options : {
         section_tipo : 'rsc167',  // the record's section
-        section_id   : '482',     // the record
+        section_id   : 482,       // the record
         tipo         : 'rsc170',  // the component being restored
         lang         : 'lg-eng',
         matrix_id    : 91237      // the chosen matrix_time_machine row
@@ -116,7 +116,7 @@ const rqo = {
     source : create_source(self, 'bulk_revert_process'), // → tool_time_machine::bulk_revert_process
     options : {
         section_tipo              : 'rsc167',
-        section_id                : '482',
+        section_id                : 482,
         tipo                      : 'rsc170',
         lang                      : 'lg-eng',
         bulk_process_id           : 5571,                 // the run to undo

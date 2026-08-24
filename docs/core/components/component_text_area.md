@@ -165,6 +165,12 @@ Internally each item is the canonical `{id, value, lang}` shape of the
     the text only carries a synchronised copy of the tag. The component never
     stores locator arrays of its own (`is_related: false`).
 
+    That is also why the `section_id` inside a marker is **quoted**: the marker
+    is a byte sequence serialized into a text scalar, not a locator the engine
+    reads back as a record address. Everywhere the engine emits a real record
+    address — including the tags payload the person/index widgets receive — it is
+    an integer.
+
 !!! note "Empty values"
     Editor garbage such as `<p></p>`, `<p> </p>` and `<br data-mce-bogus="1">` is
     treated as empty, so an "empty" editor never persists noise.
@@ -437,9 +443,29 @@ See [Exporting data](../exporting_data.md).
   have no TS equivalent yet.
 - **Plain text — not ported.** Stripping tags/HTML down to a plain-text body for
   publication search has no TS equivalent.
-- **API actions — not implemented.** The `dd_component_text_area_api` actions
-  (`delete_tag`, `get_tags_info`) are not registered in
-  `src/core/api/dispatch.ts`.
+- **API actions (WC-077).** `dd_component_text_area_api` is registered in
+  `src/core/api/dispatch.ts`, with two actions:
+    - `get_tags_info` (read) — resolves a transcription's marks into the
+      records they point at (tool_tr_print's feed). `source`: `tipo`,
+      `section_tipo`, `section_id` (int, coerced per
+      WC-2026-08-10-section-id-int-canonical), optional `lang` (defaults to
+      the current data lang); `options.ar_type` a non-empty array of tag
+      types. Gate: `principalCanAccessRecord` (read scope) on the host
+      record. Returns the tags-info map, plus any unresolvable requested
+      types named in the envelope's `unknown_types` extension.
+    - `delete_tag` (write) — removes one tag's marks from every language of
+      the text (tool_indexation's step 1; the portal locator is a separate
+      `dd_component_portal_api::delete_locator` call the client issues
+      right after). `source`: `tipo`, `section_tipo`, a positive int
+      `section_id`; `options`: `tag_id`, `type` — only `index` and
+      `reference` are deletable by id, any other `type` is a named refusal.
+      Gate: `getPermissions(principal, section_tipo, tipo) >= 2`, then
+      per-record project scope for non-admins. Returns a **boolean** —
+      `removedCount > 0 && no partial-write error` — and that falsiness is
+      load-bearing: the client only strips the editor's tag markup on a
+      truthy answer, so "nothing matched" is a valid falsy success, never a
+      thrown error. A partial multi-lang failure rides as a
+      `record.save_failed` notice alongside a still-successful envelope.
 - **Default tools.** Indexation/transcription tooling (`tool_indexation`,
   `tool_subtitles`, `tool_tc`, `tool_tr_print`) plus the shared `tool_lang`,
   `tool_lang_multi`, `tool_propagate_component_data` and `tool_time_machine` are

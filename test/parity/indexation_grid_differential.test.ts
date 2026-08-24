@@ -156,6 +156,15 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			// install token would make the deep-equal below meaningless.
 			const adopted = adoptTipoIdMap(php.body.result, 'indexation_grid_differential');
 			expect(adopted.matched, adopted.detail ?? '').toBe(true);
+			// Rewrite floor (WC-2026-08-19-test-tld-replay), conditional by
+			// construction: `matched === true` already proves every install token
+			// was rewritten, so a zero here is legitimate ONLY when the frozen
+			// body carried no install token at all (the empty-grid case
+			// testterr1_140 and the seed-only case test2819_47 — measured
+			// 2026-08-23). Any case whose adoption DID rewrite must keep doing
+			// so, or the translation went vacuous.
+			const tokenFree = ['testterr1_140', 'test2819_47'].includes(`${termTipo}_${termId}`);
+			if (!tokenFree) expect(adopted.rewrites.tipos).toBeGreaterThan(0);
 			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 			expect(normalizeSectionIdTypes(ts.body.data)).toEqual(
 				normalizeSectionIdTypes(adopted.body) as never,

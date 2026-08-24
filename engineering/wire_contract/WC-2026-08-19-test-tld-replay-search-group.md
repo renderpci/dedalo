@@ -64,14 +64,18 @@ of the ontology under test: `` id: `ac_diff_${seed('rsc', 92)}` `` and
 1. **Nothing on the wire changes** — same class as the parent entry: this is a test-harness
    contract, ledgered because it changes how a frozen PHP response is read.
 2. Every migrated gate asserts `matched === true` plus a non-zero rewrite floor, so the
-   translation can never go vacuous.
+   translation can never go vacuous. (Audited 2026-08-23: `indexation_grid` shipped
+   without the floor; it carries it now.)
 3. The residual reds in this family are **corpus content, not TLD binding**, and each is
    documented in its own file header. In summary: thesaurus parent (`hierarchy36`) and
    index (`hierarchy40`/`dd96`) edges are not reconstructed by
    `scripts/derive_test_corpus.ts`, so `indexation_grid` and `relation_search_pipelines`
-   search a populated fixture against an empty index; `test6099` holds no `test6113`
-   edge, so the 2-hop joins resolve nothing; several frozen totals count install-wide row
-   sets the reduced corpus deliberately does not hold; and a reconstructed record keeps
+   search a populated fixture against an empty index; several frozen totals count
+   install-wide row sets the reduced corpus deliberately does not hold (`multihop_search`'s
+   1790 and `multihop_order`'s global sort page among them — corrected 2026-08-23: this
+   entry originally blamed a missing `test6099`→`test6113` edge, but the current corpus
+   carries those edges on 36/38 records, so the multihop reds are the install-wide totals,
+   not a broken join); and a reconstructed record keeps
    only the lang projections a frozen body revealed, which is why the `lg-eng` half of the
    autocomplete lang-clause case is missing.
 

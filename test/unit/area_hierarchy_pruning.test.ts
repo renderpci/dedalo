@@ -1,66 +1,58 @@
 /**
  * Non-admin hierarchy PRUNING on the tree-area boot data (PHP
  * area_thesaurus_json per-hierarchy read-permission loop, mirrored in
- * src/core/area/read.ts readTreeArea) — the Phase-C gate deferred 2026-07-03
- * for want of a fixture ("no fixture user has area-access-but-partial-
- * hierarchy-access"; user 16 is denied at the area level).
+ * src/core/area/read.ts filterHierarchiesByGrant) — the Phase-C gate deferred
+ * 2026-07-03 for want of a fixture.
  *
- * FIXTURE FOUND 2026-07-10 (read-only census of the live matrix): user 4
- * (profile 13) is a NON-admin (dd244 → 2, not 1) holding dd100 thesaurus-area
- * level 2 and PARTIAL hierarchy coverage — 5 ACTIVE hierarchies carry NO
- * self-grant (dc1, object1, special1, tn1, utoponymy1) while es1/fr1/tchi1/…
- * are granted. The gate discovers the denied/granted split from the live
- * matrix at run time (data drift re-aims it instead of falsely reddening)
- * with a non-vacuity floor on both sides.
+ * REBUILT 2026-08-23 under the generic-TLD law. The 2026-07-10 form asserted
+ * the mht install's live matrix ("user 4, profile 13, partial hierarchy
+ * split") — on the suite database that user does not exist and all three
+ * tests reddened as claims about an ABSENT install; its discovery probe also
+ * bound only the STRING section_id form, which matches 0 post-int-sweep rows
+ * (the exact trap relations/request_config/explicit.ts documents). The gate
+ * now BUILDS the split (test/helpers/hierarchy_pruning_fixture.ts): a scratch
+ * non-admin whose profile grants the thesaurus area + ONE of two scratch
+ * hierarchies' targets. Both hierarchies are servable by construction, so
+ * "denied is absent" is pruning, never a config drop — and the superuser leg
+ * proves exactly that.
+ *
+ * The old `if (!dbReady) return;` guard also made every test silently green
+ * with the DB down (zero assertions). Gone: an unreachable database now fails
+ * the beforeAll loudly.
  */
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
-import { sql } from '../../src/core/db/postgres.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
+import {
+	getPermissions,
+	resolvePrincipal,
+	SUPERUSER_ID,
+} from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	HP_AREA_TIPO,
+	HP_DENIED_TARGET,
+	HP_GRANTED_TARGET,
+	HP_NON_ADMIN_USER_ID,
+	installHierarchyPruningFixture,
+	removeHierarchyPruningFixture,
+} from '../helpers/hierarchy_pruning_fixture.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
 
-const FIXTURE_USER = 4; // profile 13: dd100=2, partial hierarchy self-grants
-const AREA_TIPO = 'dd100';
-
-let dbReady = false;
 let nonAdmin: Principal;
-let admin: Principal;
-let deniedTargets: string[] = [];
-let grantedTargets: string[] = [];
+let superuser: Principal;
 
 beforeAll(async () => {
-	try {
-		await sql`SELECT 1`;
-		dbReady = true;
-	} catch {
-		dbReady = false;
-		return;
-	}
-	nonAdmin = await resolvePrincipal(FIXTURE_USER);
-	admin = await resolvePrincipal(-1);
-	// Discover the split from the ACTIVE hierarchy registry vs the fixture's
-	// live grants (the same self-keyed lookup the pruning loop applies).
-	const rows = (await sql`
-		SELECT COALESCE(data->'hierarchy53', string->'hierarchy53')->0->>'value' AS target
-		FROM matrix_hierarchy_main
-		WHERE section_tipo = 'hierarchy1'
-		  AND relation->'hierarchy4' @> '[{"section_id":"1","section_tipo":"dd64"}]'::jsonb
-	`) as { target: string | null }[];
-	for (const row of rows) {
-		const target = row.target;
-		if (typeof target !== 'string' || target === '') continue;
-		if ((await getPermissions(nonAdmin, target, target)) < 1) deniedTargets.push(target);
-		else grantedTargets.push(target);
-	}
-	deniedTargets = [...new Set(deniedTargets)];
-	grantedTargets = [...new Set(grantedTargets)];
+	await installHierarchyPruningFixture();
+	nonAdmin = await resolvePrincipal(HP_NON_ADMIN_USER_ID);
+	superuser = await resolvePrincipal(SUPERUSER_ID);
 });
+
+afterAll(removeHierarchyPruningFixture);
 
 async function readTree(principal: Principal): Promise<{ target_section_tipo?: string }[]> {
 	const token = createSession(
@@ -78,8 +70,8 @@ async function readTree(principal: Principal): Promise<{ target_section_tipo?: s
 		source: {
 			typo: 'source',
 			model: 'area_thesaurus',
-			tipo: AREA_TIPO,
-			section_tipo: AREA_TIPO,
+			tipo: HP_AREA_TIPO,
+			section_tipo: HP_AREA_TIPO,
 			action: 'get_data',
 			mode: 'list',
 			lang: 'lg-spa',
@@ -97,34 +89,40 @@ async function readTree(principal: Principal): Promise<{ target_section_tipo?: s
 }
 
 describe('tree-area non-admin hierarchy pruning (PHP area_thesaurus_json loop)', () => {
-	test('fixture floor: user 4 is non-admin with area access and BOTH granted and denied hierarchies', async () => {
-		if (!dbReady) return;
+	test('fixture floor: the scratch non-admin holds area access and a REAL granted/denied split', async () => {
 		expect(nonAdmin.isGlobalAdmin).toBe(false);
-		expect(await getPermissions(nonAdmin, AREA_TIPO, AREA_TIPO)).toBeGreaterThanOrEqual(1);
-		// If either side empties, the profile changed — re-aim the fixture, the
-		// gate is vacuous without a real split.
-		expect(deniedTargets.length).toBeGreaterThan(0);
-		expect(grantedTargets.length).toBeGreaterThan(0);
+		// Verified through the real permission door, not by trusting the insert:
+		// a grant that does not confer reddens HERE, before the tree is read.
+		expect(await getPermissions(nonAdmin, HP_AREA_TIPO, HP_AREA_TIPO)).toBeGreaterThanOrEqual(1);
+		expect(
+			await getPermissions(nonAdmin, HP_GRANTED_TARGET, HP_GRANTED_TARGET),
+		).toBeGreaterThanOrEqual(1);
+		expect(await getPermissions(nonAdmin, HP_DENIED_TARGET, HP_DENIED_TARGET)).toBeLessThan(1);
 	});
 
-	test('the non-admin boot tree PRUNES every denied hierarchy and keeps granted ones', async () => {
-		if (!dbReady) return;
+	test('the non-admin boot tree PRUNES the denied hierarchy and keeps the granted one', async () => {
 		const tree = await readTree(nonAdmin);
 		expect(tree.length).toBeGreaterThan(0);
 		const served = new Set(tree.map((entry) => entry.target_section_tipo));
-		for (const denied of deniedTargets) {
-			expect(served.has(denied)).toBe(false);
+		expect(served.has(HP_GRANTED_TARGET)).toBe(true);
+		expect(served.has(HP_DENIED_TARGET)).toBe(false);
+		// The pruning law itself, over the WHOLE tree: nothing served may be a
+		// target the principal cannot read.
+		for (const target of served) {
+			if (typeof target !== 'string') continue;
+			expect(
+				await getPermissions(nonAdmin, target, target),
+				`served target '${target}' is not readable by the non-admin — the pruning loop leaked it`,
+			).toBeGreaterThanOrEqual(1);
 		}
-		// At least one granted hierarchy must actually serve (some granted
-		// targets are skipped for structural reasons — no root terms/children —
-		// so assert the intersection, not full coverage).
-		expect(grantedTargets.some((granted) => served.has(granted))).toBe(true);
 	});
 
-	test('the ADMIN boot tree still carries hierarchies the fixture is denied (no over-prune)', async () => {
-		if (!dbReady) return;
-		const tree = await readTree(admin);
+	test('the SUPERUSER boot tree carries BOTH scratch hierarchies (denied is pruned, not unservable)', async () => {
+		const tree = await readTree(superuser);
 		const served = new Set(tree.map((entry) => entry.target_section_tipo));
-		expect(deniedTargets.some((denied) => served.has(denied))).toBe(true);
+		// Both must serve: if the DENIED one is missing here, its absence from
+		// the non-admin tree proves nothing (a config drop, not pruning).
+		expect(served.has(HP_GRANTED_TARGET)).toBe(true);
+		expect(served.has(HP_DENIED_TARGET)).toBe(true);
 	});
 });

@@ -1,5 +1,13 @@
 # MEDIA PROTECTION — web-server-enforced media access control
 
+> **ADDENDUM 2026-08-24 (paths verified — read this before the rest).** Unlike its
+> sibling media/diffusion specs, nothing this spec names has moved: every module
+> and gate path below was swept and resolves as written —
+> `src/core/media/protection.ts`, `src/diffusion/targets/mediastore/media_index.ts`,
+> `test/unit/media_protection_tripwire.test.ts`,
+> `test/unit/media_fallback_listener.test.ts`. Body text is current, not historical.
+> Date is the date of the sweep.
+
 **What this is.** One media tree serves two audiences at the same URLs, with no file
 duplication and **no application process in the byte path**. The web server authorizes
 each request with a single `stat()` on a zero-byte marker file.

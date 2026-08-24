@@ -11,7 +11,7 @@ Routing is table-driven, not reflective. The **`ACTION_REGISTRY`** map in `src/c
 - `src/server.ts` receives the POST, parses it, and validates the body against the RQO Zod schema (`src/core/concepts/rqo.ts`).
 - It calls `dispatchRqo(rqo, context)`, which looks the handler up in `ACTION_REGISTRY[dd_api][action]` and runs the security gates in order — allowlist → authentication → CSRF → request-scoped language → per-action permission checks. See [Security gates](../dedalo_api_v1.md#security-gates).
 - The handler bodies live in `src/core/api/handlers/<dd_api>.ts`, one module per API class. `dispatch.ts` itself holds only the registry, the gates, and the response envelope.
-- Any handler exception is caught and degraded to the client envelope (HTTP 200 with `result: false`) rather than a raw 500, because the client decides failure by reading `result` from a parsed JSON body.
+- Any handler exception is caught by the one converter and degraded to the envelope-v2 failure body (`ok: false` plus a coded `error`) rather than a raw 500, because the client decides failure by reading `ok` from a parsed JSON body.
 
 ## Notes for integrators
 
@@ -22,7 +22,7 @@ Routing is table-driven, not reflective. The **`ACTION_REGISTRY`** map in `src/c
 
 - **Purpose:** validate the request, enforce the security gates, and call the target handler. Wraps exceptions and returns a normalized response.
 - **Accepts:** the decoded RQO (`dd_api`, `action`, `source`, `options`, `sqo`, `data`, …) plus the `ApiRequestContext`.
-- **Returns:** the handler's `ApiResult` (`{ status, body }`), or on error `{ result: false, msg, errors }` inside an HTTP 200 body.
+- **Returns:** the handler's `ApiResult` (`{ status, body }`), or on error `{ ok: false, request_id, error: { code, category, message, label_key, retryable } }`.
 
 ### Example request
 
@@ -39,8 +39,9 @@ Routing is table-driven, not reflective. The **`ACTION_REGISTRY`** map in `src/c
 
 ```json
 {
-  "result": { "context": [ /* structure contexts */ ], "data": [ /* records */ ] },
-  "msg": "OK"
+  "ok": true,
+  "request_id": "c0ffee03",
+  "data": { "context": [], "data": [] }
 }
 ```
 
@@ -53,6 +54,8 @@ Each `(dd_api, action)` pair the registry binds lives in one of these class page
 - [dd_tools_api](dd_tools_api.md) · [dd_ts_api](dd_ts_api.md) · [dd_area_maintenance_api](dd_area_maintenance_api.md).
 - [dd_diffusion_api](dd_diffusion_api.md) — publication / diffusion process control.
 - [dd_rag_api](dd_rag_api.md) — semantic retrieval (RAG) and image similarity.
-- [dd_component_portal_api](dd_component_portal_api.md) · [dd_component_av_api](dd_component_av_api.md) · [dd_component_3d_api](dd_component_3d_api.md) · [dd_component_info](dd_component_info.md).
+- [dd_identify_api](dd_identify_api.md) — object identification: matches, image identification, proposals, Type promotion.
+- [dd_external_api](dd_external_api.md) — search a third-party catalogue through the engine.
+- [dd_component_portal_api](dd_component_portal_api.md) · [dd_component_text_area_api](dd_component_text_area_api.md) · [dd_component_av_api](dd_component_av_api.md) · [dd_component_3d_api](dd_component_3d_api.md) · [dd_component_info](dd_component_info.md).
 - [dd_mcp_api](dd_mcp_api.md) — the in-process assistant / MCP bridge.
 - [dd_error_report_api](dd_error_report_api.md) — machine-to-machine error-report intake.

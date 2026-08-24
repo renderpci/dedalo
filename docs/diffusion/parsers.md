@@ -102,13 +102,14 @@ output: 'Murtili | Mirtilis | Myrtilis'
 ```
 
 ```
-input : [{section_tipo:'dd64', section_id:'2'}]          — the resolved reference
-step 1: parser_locator::get_section_id  → ['2']          — project to the id
-step 2: parser_helper::get_first        → '2'            — array → scalar
+input : [{section_tipo:'dd64', section_id:2}]            — the resolved reference
+step 1: parser_locator::get_section_id  → [2]            — project to the id (int)
+step 2: parser_helper::get_first        → 2              — array → scalar
 step 3: parser_text::map_value          → 'no'           — dictionary substitution
 ```
 
-Why each step: `get_section_id` reduces the reference to its id **list**; `get_first` keeps one scalar per language (a select holds one value); `map_value` looks the raw value up in `options.map` — an id-scoped mapping (map key = source handle) wins, otherwise the first mapping that knows the value applies, and **unmapped values pass through unchanged**.
+Why each step: `get_section_id` reduces the reference to its id **list**; `get_first` keeps one scalar per language (a select holds one value); `map_value` looks the raw value up in `options.map` — an id-scoped mapping (map key = source handle) wins, otherwise the first mapping that knows the value applies, and **unmapped values pass through unchanged**. The map is keyed by the value's
+string form, so an integer id still matches a `"2"` key.
 
 ### Publish a related record's id list as JSON
 
@@ -122,11 +123,11 @@ Why each step: `get_section_id` reduces the reference to its id **list**; `get_f
 ```
 
 ```
-input : [{section_tipo:'rsc197', section_id:'1'}, {section_tipo:'rsc197', section_id:'2'}]
-output: '["1","2"]'
+input : [{section_tipo:'rsc197', section_id:1}, {section_tipo:'rsc197', section_id:2}]
+output: '[1,2]'
 ```
 
-`output_format: "json"` keeps the projected list as a JSON array instead of joining it into a display string. (Relation-family fields default to `json` even without the explicit setting.) To publish the **full references** rather than bare ids, use `parser_locator::get_locator` — see the [rewriters](#compile-time-rewriters).
+`output_format: "json"` keeps the projected list as a JSON array instead of joining it into a display string. A record address is an integer, so the array publishes as `[1,2]`; a column migrated from a v6 install keeps the old `["1","2"]` bytes by resolving through `parser_locator::get_v6_section_id` instead (see below). (Relation-family fields default to `json` even without the explicit setting.) To publish the **full references** rather than bare ids, use `parser_locator::get_locator` — see the [rewriters](#compile-time-rewriters).
 
 ### Publish a date — year, formatted string, or Unix timestamp
 
@@ -350,27 +351,28 @@ output: [{value:'Hello<br>World', lang:'lg-spa'}]
 
 ### parser_locator — reference projections
 
-The four runtime survivors of the locator family project **resolved reference chains** down to publishable scalars. Input values are link lists: `[{section_tipo, section_id}, …]`.
+The five runtime survivors of the locator family project **resolved reference chains** down to publishable scalars. Input values are link lists: `[{section_tipo, section_id}, …]`.
 
 | fn | Purpose | Options |
 | --- | --- | --- |
 | `parser_locator::get_section_id` | Project each reference to its `section_id` list. | `split:true` → one value **per id** (with synthetic per-value grouping, so a following `merge:'unique'` dedupes individual ids) |
+| `parser_locator::get_v6_section_id` | Same projection, value emitted as a **string**. A record address is an integer everywhere else; this twin exists only so a column already published by a v6 install keeps its `["1","2"]` bytes for consumers that read them as strings. New columns use `get_section_id`. | `split` |
 | `parser_locator::get_section_tipo` | Same projection for `section_tipo`. | `split` |
 | `parser_locator::get_term_id` | Build `"{section_tipo}_{section_id}"` per link. | `split`; `coerce_non_locator:true` → non-reference values (e.g. a color `'#f78a1c'`) yield the `'_'` marker, empty values publish nothing |
 | `parser_locator::get_section_id_grouped` | Group dataframe-paired references (a new group starts when the pairing id resets) and publish each group as a JSON array, groups joined by `records_separator`. | `records_separator` |
 
 ```
-input : [[{section_tipo:'numisdata3', section_id:'2062'}], [{section_tipo:'numisdata3', section_id:'2063'}]]
+input : [[{section_tipo:'numisdata3', section_id:2062}], [{section_tipo:'numisdata3', section_id:2063}]]
 step  : {fn:'parser_locator::get_section_id'}
-output: [['2062'], ['2063']]                       — with output_format json: '["2062"]' per value
+output: [[2062], [2063]]                           — with output_format json: '[2062]' per value
 
-input : [{section_tipo:'oh1', section_id:'25'}]
+input : [{section_tipo:'oh1', section_id:25}]
 step  : {fn:'parser_locator::get_term_id'}
 output: ['oh1_25']
 
 input : ref#1 → 99927 · ref#1 → 128187 · ref#2 → 133934   (pairing ids 1, 1, 2)
 step  : {fn:'parser_locator::get_section_id_grouped'}
-output: '["99927"] | ["128187","133934"]'
+output: '["99927"] | ["128187","133934"]'      — grouped ids are serialized as strings
 ```
 
 ### parser_date
@@ -425,7 +427,7 @@ output: [{section_tipo:'rsc205', section_id:'1', table:'publications',
           title:'bbb', author:'jo jo, la 11'}]
 ```
 
-`parser_map::custom` details worth knowing: repeated handles interpolate **per index** (the i-th surname pairs with the i-th name: `'Gomez, Élian, Ugolini, Daniela'`); a field whose placeholders all resolve empty publishes `null`; values are tag-stripped and trimmed; `${section_id}`/`${section_tipo}` are always available as built-in handles.
+`parser_map::custom` details worth knowing: repeated handles interpolate **per index** (the i-th surname pairs with the i-th name: `'Gomez, Élian, Ugolini, Daniela'`); a field whose placeholders all resolve empty publishes `null`; values are tag-stripped and trimmed; `${section_id}`/`${section_tipo}` are always available as built-in handles. Those two built-ins are template **handles**, so the row publishes `section_id` in its string form — the published byte shape, not the engine's int-canonical record address.
 
 ---
 

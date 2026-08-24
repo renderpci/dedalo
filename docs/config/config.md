@@ -480,10 +480,10 @@ ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "hierarchy", "lg", "oh", "ich" ]
     key to add them.
 
 !!! note "Thesaurus dependencies"
-    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users. [See the table of dependencies](thesaurus_dependeces.md#dependencies).
+    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users. [See the table of dependencies](thesaurus_dependencies.md#dependencies).
 
 !!! note "Applying changes in ACTIVE_ONTOLOGY_TLDS"
-    Any change in `ACTIVE_ONTOLOGY_TLDS` will need a update of the ontology, this changes are not directly applied. Dédalo needs to get the ontology tld and install it, to do that update the ontology in [maintenance](../management/maintenace_status.md) control panel.
+    Any change in `ACTIVE_ONTOLOGY_TLDS` will need a update of the ontology, this changes are not directly applied. Dédalo needs to get the ontology tld and install it, to do that update the ontology in [maintenance](../management/maintenance_status.md) control panel.
 
 !!! note "Activities"
     The `actv` tld should be used as model to implement a virtual sections with more specific activities as hierarchies of toponymy does into the thesaurus using it as `hierarchy20`, the main section to implement in this way is `actv1` and his model `actv2`. The virtual sections should be defined with a prefix `actv` into the new tld, in this way:

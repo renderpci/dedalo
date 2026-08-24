@@ -104,7 +104,7 @@ These transformations adapt the data in the publication database for different a
 
 ### How the publication ontology works
 
-The whole publication process is defined in the Dédalo ontology and depends on the [diffusion](https://dedalo.dev/ontology/dd3) node.
+The whole publication process is defined in the Dédalo ontology and depends on the [diffusion](https://dedalo.dev/ontology/dd1190) node.
 
 The ontology defines several models to build a diffusion schema. This diffusion ontology defines the characteristics, relationships and naming of the destination tables and their columns, as well as the format of the data to be published.
 
@@ -125,7 +125,7 @@ For a publication ontology to work, you must always create a `field_enum` column
 #### Common models
 
 **diffusion_root**
-Dédalo defines the publication architecture as an ontology subtree below the root diffusion node `dd3` (model `diffusion`). This node cannot be changed; to build a specific diffusion model, create a diffusion domain below the root diffusion node.
+Dédalo defines the publication architecture as an ontology subtree below the root diffusion node `dd1190` (model `diffusion`). This node cannot be changed; to build a specific diffusion model, create a diffusion domain below the root diffusion node.
 
 **diffusion_domain**
 Each diffusion domain is built from the custom diffusion model elements that describe the complete diffusion flow. One Dédalo installation can have several diffusion domain nodes, each for a specific publication.
@@ -311,7 +311,7 @@ Table **interview : oh1**
 | [oh14](https://dedalo.dev/ontology/oh14) | Code | oh_code1 | \["oh_code1"] |
 | [oh16](https://dedalo.dev/ontology/oh16) | Title | My title |  \["My title"] |
 | [oh23](https://dedalo.dev/ontology/oh23) | Summary | My abstract translated | \["My abstract translated"] |
-| [oh24](https://dedalo.dev/ontology/oh24) | Informants | Manuel González, María Gómez | \[{"section_id" : "1","section_tipo" : "rsc197"},{"section_id" : "2", "section_tipo" : "rsc197"}] |
+| [oh24](https://dedalo.dev/ontology/oh24) | Informants | Manuel González, María Gómez | \[{"section_id" : 1,"section_tipo" : "rsc197"},{"section_id" : 2, "section_tipo" : "rsc197"}] |
 
 Interview 1 has two informants (interviewees) linked by locators stored in the `Informants` (`oh24`) field. The informant table therefore has two records:
 
@@ -421,11 +421,11 @@ In this sample the interview has 2 informants (two interviewees), so its section
 ```json
 [
     {
-    "section_id" : "1",
+    "section_id" : 1,
     "section_tipo" : "rsc197"
     },
     {
-    "section_id" : "2",
+    "section_id" : 2,
     "section_tipo" : "rsc197"
     }
 ]
@@ -440,6 +440,13 @@ Table **interview**:
 | 1 | 1 | lg-eng | oh_code1 | My title | \["1","2"]  |
 | 2 | 1 | lg-spa | oh_code1 | Mi título | \["1","2"]  |
 | 3 | 1 | lg-cat | oh_code1 |  El meu títol | \["1","2"]  |
+
+The stored locators above carry `section_id` as an **integer** — a record
+address always does. The published `informant_data` column shows the quoted
+form because this service was migrated from a v6 install and resolves that
+column through `parser_locator::get_v6_section_id`, which keeps the byte shape
+its existing consumers read; a column published natively by this engine
+publishes `[1,2]`. See [parsers](parsers.md).
 
 Table **informant**:
 

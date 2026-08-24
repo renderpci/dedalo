@@ -109,15 +109,15 @@ Registered actions: `user_tools`, `tool_request`.
 For `tool_request`, the tool name is passed in `source.model` and the tool method in `source.action`; the per-tool action allowlist and dispatch live in `src/core/tools/dispatch.ts`:
 
 ```json
-{ "dd_api": "dd_tools_api", "action": "tool_request", "source": { "model": "tool_indexation", "action": "reindex" }, "options": {} }
+{ "dd_api": "dd_tools_api", "action": "tool_request", "source": { "model": "tool_time_machine", "action": "apply_value" }, "options": {} }
 ```
 
 ### dd_ts_api (thesaurus / hierarchical tree)
 
-Registered actions: `get_node_data`, `get_children_data`, `add_child`, `update_parent_data`, `save_order`. These are thin wrappers over `src/core/ts_object/ts_api.ts`, which owns permission gating and the verbatim response envelopes.
+Registered actions: `get_node_data`, `get_children_data`, `add_child`, `update_parent_data`, `save_order`. These are thin wrappers over `src/core/ts_object/ts_api.ts`, which owns permission gating and every refusal.
 
 ```json
-{ "dd_api": "dd_ts_api", "action": "get_node_data", "source": { "section_tipo": "oh1", "section_id": "1" }, "options": {} }
+{ "dd_api": "dd_ts_api", "action": "get_node_data", "source": { "section_tipo": "es1", "section_id": 13919 }, "options": {} }
 ```
 
 ### dd_area_maintenance_api (maintenance and admin)
@@ -265,7 +265,10 @@ the error channel.
 - **[dd_area_maintenance_api](classes/dd_area_maintenance_api.md)** — maintenance and admin endpoints.
 - **[dd_diffusion_api](classes/dd_diffusion_api.md)** — publication / diffusion process control.
 - **[dd_rag_api](classes/dd_rag_api.md)** — semantic retrieval (RAG) and image similarity.
+- **[dd_identify_api](classes/dd_identify_api.md)** — object identification: matches for a seed record, identification by photograph, value proposals, Type promotion.
+- **[dd_external_api](classes/dd_external_api.md)** — search a third-party catalogue through the engine's one outbound door.
 - **[dd_component_portal_api](classes/dd_component_portal_api.md)** — portal component helpers.
+- **[dd_component_text_area_api](classes/dd_component_text_area_api.md)** — transcription tags: resolve them, delete one.
 - **[dd_component_av_api](classes/dd_component_av_api.md)** — audio/video helpers.
 - **[dd_component_3d_api](classes/dd_component_3d_api.md)** — 3D component helpers.
 - **[dd_component_info](classes/dd_component_info.md)** — component info widget data.

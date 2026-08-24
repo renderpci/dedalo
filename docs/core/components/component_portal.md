@@ -32,7 +32,7 @@
         "id"                  : 1,
         "type"                : "dd151",
         "section_tipo"        : "rsc197",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "from_component_tipo" : "oh24"
     }],
     "value"        : "array of strings",
@@ -88,14 +88,14 @@ A portal's stored data is therefore an **array of locator objects**:
         "id"                  : 1,
         "type"                : "dd151",
         "section_tipo"        : "rsc197",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "from_component_tipo" : "oh24"
     },
     {
         "id"                  : 2,
         "type"                : "dd151",
         "section_tipo"        : "rsc167",
-        "section_id"          : "8",
+        "section_id"          : 8,
         "from_component_tipo" : "oh24"
     }
 ]
@@ -341,11 +341,11 @@ DOM (edit / default): `wrapper_component portal <tipo> <mode>` -> `label`, `butt
 Default (full or trimmed locators — `type` / `from_component_tipo` may be omitted, they are injected):
 
 ```json
-[{"type":"dd151","section_tipo":"rsc197","section_id":"1","from_component_tipo":"oh24"}]
+[{"type":"dd151","section_tipo":"rsc197","section_id":1,"from_component_tipo":"oh24"}]
 ```
 
 ```json
-[{"section_id":"2","section_tipo":"rsc197"}]
+[{"section_id":2,"section_tipo":"rsc197"}]
 ```
 
 A comma-separated list of target `section_id`s, valid when the portal has a single target section (the `section_tipo` is then resolved from that one configured target):

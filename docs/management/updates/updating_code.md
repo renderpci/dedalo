@@ -76,7 +76,11 @@ count of root entries in the live tree, the running Bun and this tree's pin.
 
 1. Close access to the work system.
 
-    Change the Dédalo status to maintenance — the update refuses to run otherwise. Follow [this guide](../maintenace_status.md) to change the Dédalo status and disable Dédalo access.
+<<<<<<< HEAD
+    Before updating the code, it is highly recommended to change the Dédalo status to maintenance. Follow [this guide](../maintenance_status.md) to change the Dédalo status and disable Dédalo access.
+=======
+    Change the Dédalo status to maintenance — the update refuses to run otherwise. Follow [this guide](../maintenance_status.md) to change the Dédalo status and disable Dédalo access.
+>>>>>>> refs/remotes/gitdedalo/v7
 
 2. Enter the maintenance panel.
 

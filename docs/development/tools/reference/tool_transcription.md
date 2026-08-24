@@ -226,8 +226,8 @@ const rqo = {
     source  : source,
     options : {
         source_lang       : 'lg-spa',
-        transcription_ddo : { component_tipo: 'dd32', section_id: '1', section_tipo: 'rsc167' }, // WRITE-gated text target
-        media_ddo         : { component_tipo: 'rsc35', section_id: '1', section_tipo: 'rsc167' }, // source AV
+        transcription_ddo : { component_tipo: 'dd32', section_id: 1, section_tipo: 'rsc167' }, // WRITE-gated text target
+        media_ddo         : { component_tipo: 'rsc35', section_id: 1, section_tipo: 'rsc167' }, // source AV
         transcriber_engine  : 'babel_transcriber',
         transcriber_quality : 'large',
         config              : self.context.config

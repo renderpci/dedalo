@@ -35,6 +35,22 @@ locked in:
 > wire*: the key is no longer advertised by default. Gate:
 > `test/unit/diffusion_native_default.test.ts`; ledger: WC-003 addendum.
 
+> **ADDENDUM 2026-08-24 (module homes — the `resolve/` → `diffusion_bridge/`
+> move).** The two core-side bridge modules this spec names under
+> `src/core/resolve/` live in their own subsystem home now:
+> `src/core/diffusion_bridge/diffusion_delete.ts` and
+> `src/core/diffusion_bridge/diffusion_map.ts` (alongside `diffusion_graph.ts`).
+> `src/core/resolve/` holds neither. Paths are corrected in place below; where
+> the body names the files bare (`diffusion_map.ts`, `diffusion_delete.ts`) the
+> filenames are still exact — only the directory moved. This is a MOVE, not a
+> rewrite: the delete-propagation and section-map/delete-target cache designs
+> §3/§4/§7/§10 describe are unchanged, and so is the §2 module boundary
+> (`src/core/**` never imports the MariaDB client — the bridge is core-side, the
+> MariaDB half stays in `src/diffusion/targets/mariadb/`).
+>
+> Date is the date of record, not of the move: repo history is squashed at the
+> 2026-07-11 initial commit, so the move is not datable from `git log`.
+
 ## 1. Mission
 
 Build the Dédalo **diffusion engine** as a native subsystem of the TS server in
@@ -98,7 +114,7 @@ principle:
    `pub/`/`dbs/`/`auth/` layout, fail-closed web enforcement), and
    `section_record.delete()`'s "diffusion failure never blocks the work-system
    delete" invariant are shared with the rest of the system — reuse
-   `src/core/resolve/diffusion_delete.ts`'s implementations.
+   `src/core/diffusion_bridge/diffusion_delete.ts`'s implementations.
 7. **REWRITE_SPEC §2b code style and §4 request-isolation rules apply.** All
    mutable run state lives in a per-run context; the only process-global is the
    immutable plan cache.
@@ -112,7 +128,7 @@ Study these in the reference trees, then re-express their *semantics*:
   (`v7 .../diffusion/class.diffusion_utils.php:194`): dd1190 subtree flattened,
   aliases resolved in place (alias wins tipo/label, inherits properties,
   suppresses consumed real branch). Already part-ported in
-  `src/core/resolve/diffusion_map.ts`.
+  `src/core/diffusion_bridge/diffusion_map.ts`.
 - **Element→database→table→field naming** — db/table/column names come from
   ontology node **labels** (alias-aware); field model → SQL column type
   (field_date→DATE, field_int→INT, field_varchar→VARCHAR(n),
@@ -151,7 +167,7 @@ Study these in the reference trees, then re-express their *semantics*:
 - **Delete propagation + retry** — `section_record.delete()` → target
   resolution → per-format removal; failures → dd1758 `unpublish_pending`,
   retried on boot/opportunistically/manually (already native in
-  `src/core/resolve/diffusion_delete.ts` minus the socket hop).
+  `src/core/diffusion_bridge/diffusion_delete.ts` minus the socket hop).
 - **v6-parity side-channels** — `global_table_maps`, `merge_columns`,
   `preserve_order`, `empty_value`, `empty_to_string`, `default_value`,
   `add_parents`: today smuggled through the wire context; in the new engine
@@ -164,7 +180,7 @@ Key oracle files: PHP `diffusion/class.diffusion_utils.php`,
 `diffusion/migration/diffusion_ontology_migration.json`; old engine
 `diffusion/api/v1/{index.ts, lib/types.ts, lib/diffusion_processor.ts,
 lib/sql_generator.ts, lib/db.ts, lib/progress_store.ts, lib/media_index.ts,
-lib/parsers/}`; TS tree `src/core/resolve/{diffusion_map,diffusion_delete}.ts`,
+lib/parsers/}`; TS tree `src/core/diffusion_bridge/{diffusion_map,diffusion_delete}.ts`,
 `tools/tool_export/server/tool_export.ts`,
 `src/core/components/{registry,types}.ts`.
 

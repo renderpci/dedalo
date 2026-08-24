@@ -18,14 +18,14 @@ Locators are how Dédalo connects data. In addition, locators are the actual dat
 
 A locator is an extensible object: it depends on the data it points at, and its properties can be extended for specific uses.
 
-A locator is the universal **value object (DTO)** that addresses a single entity in Dédalo's data model: a section record, a component within it, an inline tag, or a language record. `locatorSchema` is a `.passthrough()` object, so callers may attach ad-hoc pseudo-properties (`id`, `paginated_key`, `label`) that survive JSON round-trips. **Properties are sparse**: only meaningful fields are set, and absent ones simply do not serialize.
+A locator is the universal **value object (DTO)** that addresses a single entity in Dédalo's data model: a section record, a component within it, an inline tag, or a language record. `locatorSchema` is a `.passthrough()` object, so callers may attach ad-hoc keys that survive JSON round-trips — most of the fields this page documents are **modeled** on the schema; only a handful ride through on passthrough (see [Property reference](#property-reference)). **Properties are sparse**: only meaningful fields are set, and absent ones simply do not serialize.
 
 !!! note "How locators graft SQL relations onto NoSQL"
-    Each section lives in a `matrix_*` table (`id PK, section_id, section_tipo, datos jsonb`), and the two-field pair `{section_tipo, section_id}` is the minimal locator that pins a row. Relation components (portal, select, check_box, autocomplete, etc.) store *arrays of locators* as their own data, so one canonical record can be pointed at by many. Resolving a locator means reading the target row and rendering the requested component.
+    Each section record is one row in a `matrix_*` table, addressed by the pair `{section_tipo, section_id}` — the minimal locator. Relation components (portal, select, check_box, autocomplete, etc.) store *arrays of locators* as their own data, so one canonical record can be pointed at by many. Resolving a locator means reading the target row and rendering the requested component. The row's payload is **not** one blob: v7 splits it across typed JSONB columns, so a relation locator lives in `relation`, a literal value in `string`, and so on — see [Function and structure](#function-and-structure).
 
 ### Function and structure
 
-To understand how a locator works, keep in mind that Dédalo uses a few tables to store many sections. These tables are named `matrix_XXX`, and they all share the same schema:
+To understand how a locator works, keep in mind that Dédalo uses a few tables to store many sections. Every standard matrix table (`matrix`, `matrix_dd`, `matrix_hierarchy`, `matrix_users`, `matrix_dataframe`, `matrix_list`, `matrix_notes`, …) shares **one** schema — three structural columns plus eleven typed JSONB payload columns:
 
 ```mermaid
 erDiagram
@@ -33,32 +33,33 @@ erDiagram
         int id PK
         int section_id
         string section_tipo
-        jsonb datos
-    }
-    matrix_hierarchy {
-        int id PK
-        int section_id
-        string section_tipo
-        jsonb datos
-    }
-     matrix_users {
-        int id PK
-        int section_id
-        string section_tipo
-        jsonb datos
-    }
-    matrix_XX {
-        int id PK
-        int section_id
-        string section_tipo
-        jsonb datos
+        jsonb data
+        jsonb relation
+        jsonb string
+        jsonb date
+        jsonb iri
+        jsonb geo
+        jsonb number
+        jsonb media
+        jsonb misc
+        jsonb relation_search
+        jsonb meta
     }
 ```
 
-The `datos` column holds all the data of the section in JSON format.
+`(section_id, section_tipo)` is the logical key — a `UNIQUE` constraint on every standard table — while `id` is only the surrogate primary key. **Which** table a section lives in is resolved from the ontology, never hardcoded (`getMatrixTableFromTipo()` in `src/core/ontology/resolver.ts`); the identifier allowlist `MATRIX_TABLE_ALLOWLIST` in `src/core/db/matrix.ts` is the gate. So there is no such thing as "the `matrix_XX` of a section" in prose — you ask the ontology.
+
+There is **no single `datos` column**. That was the v6 shape; v7 splits a record's payload by component model, and `getColumnNameByModel()` (`src/core/ontology/resolver.ts`) is the mapping — a `component_portal` writes into `relation`, a `component_input_text` into `string`, a `component_date` into `date`, and so on. The TS mirror of the column set is `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`); a read comes back as a `MatrixRecord` (`{id, section_id, section_tipo, columns, rawText}`).
+
+!!! warning "`data` is section metadata, not component values"
+    The `data` column carries **record-level metadata** — `label`, `created_date`, `created_by_user_id`, `diffusion_info` — not the components' values. Looking for a component's value in `data` finds nothing; look in the column its model maps to.
+
+A few tables deliberately depart from the standard shape (`src/core/db/matrix.ts` documents each): `matrix_activity` / `matrix_activity_diffusion` add a `timestamp` column on top of the standard set; `matrix_time_machine` is a flat audit table (`id, bulk_process_id, section_id, section_tipo, tipo, lang, timestamp, user_id, bulk_process_temp, data`); `matrix_counter` / `matrix_counter_dd` are `(tipo, value, ref)`; `matrix_updates` and `matrix_notifications` are `(id, data)` queues.
 
 !!! note "JSON storage"
-    We use the JSONB (binary JSON) type of PostgreSQL instead of the string JSON format.
+    We use the JSONB (binary JSON) type of PostgreSQL instead of the string JSON format. Each table carries btree indexes on `section_id`, `section_tipo` and `(section_tipo, section_id DESC)`, GIN `jsonb_path_ops` indexes on the searchable payload columns, and expression GINs over flattened relation locators — which is what makes a locator probe cheap.
+
+Two further tables, `matrix_string_search` and `matrix_relation_index`, are **derived and never authoritative**: trigger-maintained accelerators, safe to truncate and re-backfill (`src/core/db/db_pg_definitions.json`).
 
 The `section_id` and `section_tipo` columns are the most basic form of a locator:
 
@@ -91,27 +92,28 @@ Every time Oral History 1 loads the Informants component, it uses the locator to
 
 Locator resolution uses the `section_id` and `section_tipo` columns of the matrix tables to locate the specific row in the database.
 
-See it as tables:
+See it as rows. The caller's locator sits in the **`relation`** column, in an object **keyed by the component tipo that stores it** (only the relevant column is shown; the other ten are omitted):
 
 Table: **matrix**
 
-| id | section_id | section_tipo | datos |
+| id | section_id | section_tipo | relation |
 | --- | --- | --- | --- |
-| 345 | 1 | oh1 | \[{"oh24":\[{"section_id": 88, "section_tipo": "rsc197"}]}] |
+| 345 | 1 | oh1 | `{"oh24":[{"id":1,"type":"dd151","section_id":88,"section_tipo":"rsc197","from_component_tipo":"oh24"}]}` |
 
-table: **matrix**
+The target's literal values sit in the **`string`** column of its own row, keyed the same way — one entry per language, each with its own item `id`:
 
-| id | section_id | section_tipo | datos |
+Table: **matrix**
+
+| id | section_id | section_tipo | string |
 | --- | --- | --- | --- |
-| 654 | 88 | rsc197 | \[{"rsc85":\["Adela"]},{"rsc86":\["García"]}] |
+| 654 | 88 | rsc197 | `{"rsc85":[{"id":1,"lang":"lg-nolan","value":"Adela"}],"rsc86":[{"id":1,"lang":"lg-nolan","value":"García"}]}` |
 
 When you ask for the Informants field, it answers with the data of People under study 88: the name ([rsc85](https://dedalo.dev/ontology/rsc85)) and surname ([rsc86](https://dedalo.dev/ontology/rsc86)) of the informant.
 
-Then the result is:
+So the resolved value of `oh24` on Oral History 1 is **Adela García** — assembled at read time from the target row, never copied into the caller's own row.
 
-| id | section_id | section_tipo | datos |
-| --- | --- | --- | --- |
-| 345 | 1 | oh1 | Adela García |
+!!! warning "The two shapes examples get wrong"
+    The column is **`relation`**, singular — not `relations`. And it is an **object keyed by component tipo**, not a flat array of locators. `{"relations": [ … ]}` is wrong on both counts.
 
 Locators can point to:
 
@@ -128,7 +130,12 @@ A locator names its source with the *from* prefix:
 
 A locator is sparse: a portal link may carry only `{section_tipo, section_id, type, from_component_tipo}`, while a dataframe locator adds `id_key`, and a tag locator adds `tag_id`/`tag_component_tipo`. Only `section_tipo` and `section_id` are always required, shape-checked by `locatorSchema` in `src/core/concepts/locator.ts`, with tipo-charset validation at the identifier gate, `assertValidTipo()` in `src/core/search/identifier_gate.ts`.
 
-`Locator` (`src/core/concepts/locator.ts`) is a plain object validated as a whole by `locatorSchema` — a `zod` `.passthrough()` object, so unmodeled keys survive a parse/serialize round-trip. Every field below is simply an optional property on that object.
+`Locator` (`src/core/concepts/locator.ts`) is a plain object validated as a whole by `locatorSchema` — a `zod` `.passthrough()` object. That splits the field set in two, and the difference is real:
+
+- **Modeled** fields are declared on the schema: they are typed, validated, and the engine writes them. These are `section_tipo`, `section_id`, `component_tipo`, `from_component_tipo`, `type`, `type_rel`, `lang`, `tag_id`, `tag_component_tipo`, `tag_type`, `id_key`, `section_id_key`, `section_tipo_key`, `main_component_tipo`, `id`, `paginated_key`.
+- **Passthrough** fields are not on the schema at all. `.passthrough()` means they survive a parse/serialize round-trip untouched (byte-compat with stored data), but nothing validates their type and the core write path does not stamp them: `from_section_tipo`, `from_section_id`, `from_component_top_tipo`, `section_top_tipo`, `section_top_id`, `label`.
+
+Every modeled field except the two mandatory ones is optional.
 
 ### Mandatory
 
@@ -146,18 +153,16 @@ A locator is sparse: a portal link may carry only `{section_tipo, section_id, ty
 | **tag_component_tipo** | `string` | Tipo of the component (typically a text_area) that holds the tag | `rsc36` |
 | **tag_type** | `string` | Ontology tipo of the tag kind (index / reference / draw …), stored as a tipo, not a label | _tipo_ |
 | **lang** | `string` | Language code of the target | `lg-spa` |
-| **tipo** | `string` | Generic tipo for term-node locators (neither section nor component) | `rsc36` |
 
-### Source / directionality (the `from_*` prefix marks the caller side)
+### Relation flavour (modeled)
 
 | Property | Type | Meaning | Example |
 | --- | --- | --- | --- |
-| **from_section_tipo** | `string` | Source section_tipo (the section owning the component that stored the locator) | `oh1` |
-| **from_section_id** | `string` | Source section_id | `1` |
-| **from_component_tipo** | `string` | Source component tipo; needed to navigate a relation back to its origin | `oh25` |
-| **from_component_top_tipo** | `string` | Originating top-level component in nested-grid traversal | `oh1` |
+| **from_component_tipo** | `string` | Source component tipo — the component that CREATED the relation; needed to navigate a relation back to its origin | `oh25` |
 | **type** | `string` | Relation type tipo — see [Relation `type` values](#relation-type-values) | `dd151` |
 | **type_rel** | `string` | Directionality descriptor: `unidirectional` / `bidirectional` / `multidirectional` | `bidirectional` |
+
+Note that `type` and `type_rel` are **not** `from_*` fields: they describe the relation itself, not the caller side.
 
 ### Dataframe pairing
 
@@ -168,43 +173,49 @@ A locator is sparse: a portal link may carry only `{section_tipo, section_id, ty
 | **section_id_key** | `int` | **@deprecated** legacy dataframe pairing key, retired by `id_key`; read only as a BC fallback (e.g. legacy dataframe order resolution in `ts_object/node_repository.ts` `pickOrderValueForParent()`) and by the old-CSV import / v6→v7 update — never written anew | `1` |
 | **section_tipo_key** | `string` | **@deprecated** legacy pairing tipo, retired by the `id_key` unification; read only as a BC fallback (same `ts_object/node_repository.ts` order path) and by the old-CSV import / v6→v7 update — never written anew | `rsc197` |
 
-### Deprecated hierarchical anchors (v6, being abandoned)
+### Passthrough fields
 
-| Property | Type | Replacement | Example |
-| --- | --- | --- | --- |
-| **section_top_tipo** | `string` | use **from_section_tipo** | `oh1` |
-| **section_top_id** | `string` | use **from_section_id** | `1` |
+These are **not** on `locatorSchema`. They ride through unvalidated, and the core relation write path does not stamp them — so do not expect to find them on an arbitrary stored locator.
 
-These were a top-level parent section anchor for deeply nested grid components; v7 maps them to the `from_section_*` fields.
+| Property | Type | Where it actually comes from |
+| --- | --- | --- |
+| **section_top_tipo** | `string` | **Live, not deprecated.** The top-level record anchor of an indexation locator: `src/core/section/indexation_grid.ts` defaults it to the locator's own `section_tipo` and groups the indexation grid by it. |
+| **section_top_id** | `int` \| `string` | Its id twin, canonicalized through `canonicalizeStoredSectionId()` on read (same file). |
+| **from_component_top_tipo** | `string` | The originating top-level component of an index relation; `src/core/resolve/relation_index.ts` derives it from `from_component_tipo` when projecting an index entry. |
+| **from_section_tipo** | `string` | Appears in **read/ordering** paths (`src/core/search/order_path.ts` prepends it for a subdatum ddo, so the sort join chain starts at the section being listed) and in stored `component_inverse` payloads. The engine does not stamp it on locators it stores, and diffusion never emits it. |
+| **from_section_id** | `string` | Its id twin, same readers. **The int law does not reach it**: `ADDRESS_KEYS` in `src/core/update/transform/section_id_intify.ts` is exactly `section_id`, `section_id_key`, `parent_section_id`, so the data sweep never converted `from_section_id` and stored payloads keep the string form. Semantically an address, mechanically untouched — do not "fix" it to an int. |
+| **label** | `string` | Select-widget option display; discarded on hydration. The only genuinely throwaway field of the set. |
 
-### Transient pseudo-properties
+!!! warning "`section_top_*` is not a legacy alias of `from_section_*`"
+    Earlier documentation claimed v7 maps `section_top_tipo`/`section_top_id` onto `from_section_tipo`/`from_section_id`. No such mapping exists, in either direction. They are separate fields with separate readers.
 
-The `.passthrough()` schema lets callers attach throwaway fields that are never part of a normalized stored locator:
+### Modeled convenience fields
 
-| Property | Used by |
-| --- | --- |
-| **id** | Attaches the literal component item id to a pseudo-locator so subdatum resolution can match it without a real section_id |
-| **paginated_key** | Zero-based pagination index; stripped before persisting a relation |
-| **label** | Select-widget option display; discarded on hydration |
+| Property | Type | Meaning |
+| --- | --- | --- |
+| **id** | `int` \| `string` | Item id: on a stored relation entry it is the entry's own stable id; on a pseudo-locator it carries the literal component item id so subdatum resolution can match it without a real `section_id`. |
+| **paginated_key** | `int` | Zero-based pagination index (paginated portals); stripped before persisting a relation. |
 
 ## Relation `type` values
 
 The `type` property is a **real ontology tipo, not a label**. The constants are declared where needed, split across `src/core/ontology/ontology_tipos.ts` (`RELATION_TYPE_LINK`/`_PARENT`/`_CHILDREN`/`_INDEX`), `src/core/relations/related.ts` (`RELATED_UNIDIRECTIONAL`/`_BIDIRECTIONAL`/`_MULTIDIRECTIONAL`) and `src/core/concepts/subdatum.ts` (`DATAFRAME_RELATION_TYPE`) — there is no single central constants file:
 
-| Constant | Value | Meaning |
-| --- | --- | --- |
-| `DEDALO_RELATION_TYPE_LINK` | `dd151` | Generic portal/select **link** (the default for most relations) |
-| `DEDALO_RELATION_TYPE_PARENT_TIPO` | `dd47` | Hierarchy **parent** |
-| `DEDALO_RELATION_TYPE_CHILDREN_TIPO` | `dd48` | Hierarchy **child** |
-| `DEDALO_RELATION_TYPE_RELATED_TIPO` | `dd89` | **Related** record |
-| `DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO` | `dd620` | Related, unidirectional variant |
-| `DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO` | `dd467` | Related, bidirectional variant |
-| `DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO` | `dd621` | Related, multidirectional variant |
-| `DEDALO_RELATION_TYPE_MODEL_TIPO` | `dd98` | **Model** |
-| `DEDALO_RELATION_TYPE_INDEX_TIPO` | `dd96` | Index relation |
-| `DEDALO_RELATION_TYPE_FILTER` | `dd675` | Project / access **filter** |
-| `DEDALO_RELATION_TYPE_ONTOLOGY` | `dd77` | Ontology relation |
-| `DEDALO_RELATION_TYPE_DATAFRAME` | `dd490` | Positive marker of **dataframe-pairing** locators |
+| Constant (TS export) | Declared in | Value | Meaning |
+| --- | --- | --- | --- |
+| `RELATION_TYPE_LINK` | `ontology_tipos.ts` | `dd151` | Generic portal/select **link** (the default for most relations) |
+| `RELATION_TYPE_PARENT` | `ontology_tipos.ts` | `dd47` | Hierarchy **parent** |
+| `RELATION_TYPE_CHILDREN` | `ontology_tipos.ts` | `dd48` | Hierarchy **child** |
+| `RELATION_TYPE_INDEX` | `ontology_tipos.ts` | `dd96` | Index relation |
+| `RELATED_UNIDIRECTIONAL` | `relations/related.ts` | `dd620` | Related, unidirectional variant |
+| `RELATED_BIDIRECTIONAL` | `relations/related.ts` | `dd467` | Related, bidirectional variant |
+| `RELATED_MULTIDIRECTIONAL` | `relations/related.ts` | `dd621` | Related, multidirectional variant |
+| `DATAFRAME_RELATION_TYPE` | `concepts/subdatum.ts` | `dd490` | Positive marker of **dataframe-pairing** locators |
+| `RELATION_TYPE_FILTER` | `section/record/record_defaults.ts` | `dd675` | Project / access **filter** |
+
+Two more relation types have **no constant**: they are literals on the component descriptor that defaults to them — `dd89` (**related** record, `component_relation_related`) and `dd98` (**model**, `component_relation_model`), each the `defaultRelationType` in that model's `descriptor.ts`.
+
+!!! note "Names, not `DEDALO_*`"
+    The exported names are the bare ones above. The `DEDALO_RELATION_TYPE_*` spelling belongs to the ontology's own constant naming (and to the client `DD_TIPOS` map); it is not what you import in TS.
 
 Conceptually the addressing surface lists: **link / external link / parent / child / related / model**. "External link" is the external-source variant of a link.
 
@@ -222,7 +233,7 @@ For **related** relations the `type_rel` descriptor records direction, read from
 
 ### Canonical form of `section_id`
 
-A record address is **always a safe integer** — negatives included (`-1` is the root record). Every writer mints the int form (`canonicalizeStoredSectionId()` in `src/core/concepts/section_id.ts`), and every app-API emission — reads, echoes, datalists, lock events — carries the int.
+A record address is **always a safe integer** — negatives included (`-1` is the root/superuser record, `-666` the activity sentinel — the invariant is *integer*, never *positive* integer). Every writer mints the int form (`canonicalizeStoredSectionId()` in `src/core/concepts/section_id.ts`), and every app-API emission — reads, echoes, datalists, lock events — carries the int.
 
 Three values are **not** addresses and are stored/echoed verbatim, never converted:
 
@@ -273,18 +284,18 @@ graph LR
 
 This drives referential-integrity cleanup on delete (`src/core/section/record/delete_record.ts`) and the inverse view of `relation_list`.
 
-On the diffusion side this materialises as the **`dd_relations`** column, refactored from the legacy v6 `jer_dd_relations` column. The publication API's `resolve_inverse_relations` option resolves it, e.g.:
+On the diffusion side this materialises as the **`dd_relations`** column, refactored from the legacy v6 `jer_dd_relations` column. The publication API's `resolve_inverse_relations` option resolves it. The `relation_list` projection that fills the column emits **two keys only**, with the id as a string (`src/diffusion/resolve/resolver.ts`, the `relation_list` locator build):
 
 ```json
-{
-    "type": "dd48",
-    "section_id": "33",
-    "section_tipo": "aa1",
-    "from_component_tipo": "hierarchy49",
-    "from_section_tipo": "aa1",
-    "from_section_id": "4"
-}
+[
+    { "section_tipo": "hierarchy20", "section_id": "33" }
+]
 ```
+
+An **index edge** publishes a wider locator — `type`, `section_tipo`, `section_id`, `component_tipo`, `tag_id`, `section_top_id`, `section_top_tipo`, `from_component_top_tipo`, `from_component_tipo`, in that key order — again with every id stringified (`src/diffusion/resolve/rewriters.ts`).
+
+!!! warning "The published shape is stringified, and carries no `from_section_*`"
+    Diffusion mints `String(sectionId)` on the way out, so the app wire's int law stops at this boundary — see [the `section_id` canonical form](#canonical-form-of-section_id). And no diffusion path emits `from_section_tipo`/`from_section_id`: those belong to `component_inverse` payloads and the read/ordering path, not to `dd_relations`.
 
 ### Resolution to a value (locator → target row → value)
 
@@ -332,7 +343,7 @@ const result = await self.link_record(locator)
 
 Notes for client work:
 
-- Relation-type constants are exposed as `DD_TIPOS.DEDALO_RELATION_TYPE_*` (e.g. `dd151`), served to the client by the environment bootstrap (`DD_TIPOS` map in `src/core/resolve/environment.ts`).
+- The `DD_TIPOS` map served by the environment bootstrap (`src/core/resolve/environment.ts`) is **small and closed** — exactly five keys, not the full constant set: `DEDALO_RELATION_TYPE_LINK` (`dd151`), `DEDALO_RELATION_TYPE_INDEX_TIPO` (`dd96`), `DEDALO_SECTION_INFO_INVERSE_RELATIONS` (`dd1596`), `DEDALO_SECTION_RESOURCES_IMAGE_TIPO` (`rsc170`), `DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO` (`rsc29`). Anything else must come from the payload, which is why the snippet above keeps a `?? 'dd151'` fallback.
 - `link_record` / `unlink_record` add and remove locators from a relation component's value array. Unlink keys off `locator.id`.
 - Transient UI-only fields (e.g. `close_modal`, `id`) may ride on the client locator; the server discards anything it does not recognise as a normalized property.
 - Search/list flows generate single-record locators on the fly from `self.section_tipo` + `self.section_id` (`filter_by_locators`) when none is provided.
@@ -362,7 +373,10 @@ The `_` character separates the values, and the flat version of the locator abov
 Because the flat version is used to name media files, the image is stored on the server as `rsc29_rsc170_3.jpg`.
 
 !!! note "Where the flat id is built"
-    There is no `get_flat()` method anywhere on the `Locator` type. The flat id is built where media components need it — format `{component_tipo}_{section_tipo}_{section_id}` (e.g. `dd522_dd128_1`), used for file naming and URL generation — by `buildMediaIdentifier()` in `src/core/media/path.ts`, plus an optional trailing `_{lang}` for translatable media. `from_section_tipo`/`from_section_id` are, like every other field, plain optional properties on the `Locator` object — nothing constructs or validates them specially.
+    There is no `get_flat()` method anywhere on the `Locator` type. The flat id is built where media components need it — format `{component_tipo}_{section_tipo}_{section_id}` (e.g. `dd522_dd128_1`), used for file naming and URL generation — by `buildMediaIdentifier()` in `src/core/media/path.ts`, plus an optional trailing `_{lang}` for translatable media.
+
+!!! warning "The flat form narrows the section_id rule"
+    A record address is an integer *including negatives*, but `buildMediaIdentifier()` requires a **positive** integer and throws `media.invalid_identifier` otherwise. A file name has to survive a filesystem and a URL, so the sentinel ids (`-1`, `-666`) are refused here rather than turned into a `-` in a path. Both tipos also pass the identifier gate before interpolation.
 
 ## See also
 

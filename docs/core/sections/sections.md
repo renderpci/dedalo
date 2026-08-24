@@ -182,7 +182,7 @@ const result = await readSection(
 const rqo = {
   action: 'delete',
   source: { section_tipo: 'oh1', delete_mode: 'delete_record' },
-  sqo: { section_tipo: ['oh1'], filter_by_locators: [{ section_tipo: 'oh1', section_id: '127' }] },
+  sqo: { section_tipo: ['oh1'], filter_by_locators: [{ section_tipo: 'oh1', section_id: 127 }] },
 };
 // → { result: ['127'], msg: 'OK. Request done' }
 ```

@@ -97,20 +97,20 @@ attaches `ts_search` when a search was requested.
     "tipo": "dd100",
     "value": [
         {
-            "section_id": "1",
+            "section_id": 1,
             "section_tipo": "hierarchy1",
             "target_section_tipo": "es1",
             "target_section_name": "Onomastic places (Spain)",
-            "children_tipo": "es44",
-            "typology_section_id": "7",
+            "children_tipo": "hierarchy49",
+            "typology_section_id": 7,
             "order": 3,
             "type": "hierarchy",
             "active_in_thesaurus": true,
-            "root_terms": [ { "section_tipo": "es1", "section_id": "1" } ]
+            "root_terms": [ { "section_tipo": "es1", "section_id": 1 } ]
         }
     ],
     "typologies": [
-        { "section_id": "7", "type": "typology", "label": "Geographic", "order": 3 }
+        { "section_id": 7, "type": "typology", "label": "Geographic", "order": 3 }
     ],
     "ts_search": { "result": [], "found": [], "total": 0 }
 }

@@ -48,7 +48,7 @@ target address; the other fields are sparse (only meaningful ones serialize):
 ```json
 {
     "section_tipo"        : "rsc197",
-    "section_id"          : "88",
+    "section_id"          : 88,
     "from_component_tipo" : "oh24",
     "type"                : "dd151"
 }
@@ -66,7 +66,7 @@ Richer items add destination and pairing fields (all optional, sparse):
 ```json
 {
     "section_tipo"        : "rsc170",
-    "section_id"          : "3",
+    "section_id"          : 3,
     "component_tipo"      : "rsc29",
     "from_component_tipo" : "oh24",
     "from_section_tipo"   : "oh1",
@@ -109,11 +109,11 @@ component tipo**, each value being that component's array of locators:
 ```json
 {
     "oh24": [
-        { "section_tipo": "rsc197", "section_id": "88", "from_component_tipo": "oh24", "type": "dd151" },
-        { "section_tipo": "rsc167", "section_id": "12", "from_component_tipo": "oh24", "type": "dd151" }
+        { "section_tipo": "rsc197", "section_id": 88, "from_component_tipo": "oh24", "type": "dd151" },
+        { "section_tipo": "rsc167", "section_id": 12, "from_component_tipo": "oh24", "type": "dd151" }
     ],
     "oh25": [
-        { "section_tipo": "rsc197", "section_id": "5", "from_component_tipo": "oh25", "type": "dd151" }
+        { "section_tipo": "rsc197", "section_id": 5, "from_component_tipo": "oh25", "type": "dd151" }
     ]
 }
 ```
@@ -187,7 +187,7 @@ the v6→v7 migration). The publication API's
 ```json
 {
     "type"                : "dd48",
-    "section_id"          : "33",
+    "section_id"          : 33,
     "section_tipo"        : "aa1",
     "from_component_tipo" : "hierarchy49",
     "from_section_tipo"   : "aa1",
@@ -317,7 +317,7 @@ the values).
 ```javascript
 // client/dedalo/core/component_common/js/component_common.js (shape)
 self.data.entries = [
-    { section_tipo: "rsc197", section_id: "88", from_component_tipo: "oh24", type: "dd151" }
+    { section_tipo: "rsc197", section_id: 88, from_component_tipo: "oh24", type: "dd151" }
     // ...
 ]
 ```

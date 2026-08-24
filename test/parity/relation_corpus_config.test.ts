@@ -50,7 +50,17 @@ const CASES: { tipo: string; section_tipo: string; family: string }[] = [
 	{ tipo: 'test6299', section_tipo: 'test6099', family: 'explicit deep ddo_map' },
 	{ tipo: 'test6117', section_tipo: 'test6099', family: 'explicit autocomplete + dataframe' },
 	// multi-section + dynamic hierarchy_types targets
+	// (test6228 re-cut to the HARVESTED stored declaration 2026-08-23 —
+	// WC-2026-08-23-test6228-clone-recut: the committed clone had drifted to the
+	// post-harvest 'self' form and could never match the frozen resolution.)
 	{ tipo: 'test6228', section_tipo: 'test6099', family: 'explicit multi-section' },
+	// The two hierarchy_types rows are RED BY CONSTRUCTION on any non-harvest
+	// database: {source:'hierarchy_types'} resolves through the ACTIVE hierarchy1
+	// REGISTRY (database state, not ontology) and the frozen bodies froze
+	// monedaiberica's 26-target registry answer. The contract is pinned natively
+	// over a BUILT registry in test/unit/relation_hierarchy_types_native.test.ts
+	// (DEC-14b; ORACLE_HARVEST.md map row 2026-08-23). These rows stay as the
+	// frozen record.
 	{ tipo: 'testmint1006', section_tipo: 'testmint1', family: 'explicit hierarchy_types' },
 	{
 		tipo: seed('rsc', 860),
@@ -242,7 +252,17 @@ describe.if(hasPhpCredentials())(
 	() => {
 		const results = new Map<
 			string,
-			{ php: unknown; ts: unknown; phpRaw: unknown; tsRaw: unknown }
+			{
+				php: unknown;
+				ts: unknown;
+				phpRaw: unknown;
+				tsRaw: unknown;
+				/** The frozen body was the LEDGERED PHP fault (result === false). */
+				phpFrozenError: boolean;
+				/** TS envelope ok + the served element context entry's own tipo. */
+				tsOk: boolean;
+				tsEntryTipo: unknown;
+			}
 		>();
 
 		beforeAll(async () => {
@@ -293,6 +313,9 @@ describe.if(hasPhpCredentials())(
 					ts: normalizeSectionIdTypes(configProjection(tsEntry?.request_config)),
 					phpRaw: phpEntry?.request_config,
 					tsRaw: tsEntry?.request_config,
+					phpFrozenError: frozenIsError,
+					tsOk: (tsResult.body as { ok?: unknown }).ok === true,
+					tsEntryTipo: tsEntry?.tipo,
 				});
 			}
 		});
@@ -302,6 +325,28 @@ describe.if(hasPhpCredentials())(
 				if (!hasPhpCredentials()) return;
 				const pair = results.get(testCase.tipo);
 				expect(pair).toBeDefined();
+				// VACUITY CLOSED 2026-08-23. The external-mode row's frozen body is
+				// the LEDGERED PHP FAULT (result:false — FROZEN_ERROR_BODIES), so its
+				// phpEntry is undefined and both projections collapse to []. Before
+				// this guard the case compared [] with [] and would have stayed green
+				// no matter what TS did — including erroring out entirely. The TS
+				// behavior for this element is now pinned EXPLICITLY: the dispatch
+				// succeeds (ok:true, where PHP threw on the null section_id), it
+				// serves the element's own context entry, and that entry carries NO
+				// request_config — source {mode: external} resolves at runtime
+				// (inverse relation_index), never through a stored config.
+				if (testCase.tipo === 'testcult1020') {
+					expect(pair?.phpFrozenError).toBe(true);
+					expect(pair?.tsOk).toBe(true);
+					expect(pair?.tsEntryTipo).toBe('testcult1020');
+					// TS serves the entry with an EXPLICITLY EMPTY request_config
+					// (measured 2026-08-23) — the external mode has no stored config.
+					expect(pair?.tsRaw).toEqual([]);
+					expect(pair?.ts).toEqual([]);
+					return;
+				}
+				expect(pair?.phpFrozenError).toBe(false);
+				expect(pair?.tsOk).toBe(true);
 				assertCloneOntologyFacts(pair?.phpRaw, pair?.tsRaw);
 				expect(pair?.ts).toEqual(pair?.php as never);
 			});

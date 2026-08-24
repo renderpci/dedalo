@@ -261,7 +261,7 @@ const input = await get_instance({
     model        : 'component_input_text',
     tipo         : 'oh15',
     section_tipo : 'oh1',
-    section_id   : '42',
+    section_id   : 42,
     mode         : 'edit',
     lang         : 'lg-eng'
 })

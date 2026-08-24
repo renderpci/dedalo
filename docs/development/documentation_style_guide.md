@@ -8,8 +8,6 @@ consistent terminology, accurate examples, and clear, native English.
 
 > Scope: the Markdown files under `docs/` only. For doc-blocks and inline comments inside Dédalo's
 > TS/JS **source**, see the separate [code documentation standard](code_documentation_standard.md).
-> The `docs/superpowers/` working notes (dated plans and specs) are out of scope — leave them as
-> historical record.
 
 ## Guiding principles
 

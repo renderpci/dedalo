@@ -158,7 +158,7 @@ exposed as the `entries` array the JS views iterate:
 {
     "tipo": "test211",
     "section_tipo": "test3",
-    "section_id": "1",
+    "section_id": 1,
     "mode": "edit",
     "lang": "lg-nolan",
     "from_component_tipo": "test211",

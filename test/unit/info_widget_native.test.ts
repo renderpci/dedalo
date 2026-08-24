@@ -49,13 +49,25 @@
  *    without the cached duration and must NOT write it back (PHP persists it
  *    during the read — that write-back is pinned in the differential ONLY).
  *
- * Live-data dependencies (noted, not seeded): the PERIOD chronology thesaurus
- * (its term RECORDS + the hierarchy1 registry root that orders them — nothing
- * builds them here, and a database without them cannot serve the term label or
- * the merged term grid), the dd501/dd174 vocabularies (state values + datalist
- * option lists), the tools registry + ontology tool_config (media_icons
- * tool_context) and the canonical test3 records (self-healed via
- * ensureCanonicalTest3). All are reference/fixture data.
+ * Live-data dependencies: SEEDED since 2026-08-23 — the PERIOD chronology
+ * chain (term records 187/3 + the hierarchy1 registry root) and the three
+ * ACTIVE hierarchy rows behind the media_icons grid's dynamic columns are now
+ * scratch rows like everything else (see PERIOD_TERM_MATCHED /
+ * IW.immovableRegistry), because on the suite database they cannot exist as
+ * "reference data" and the two thesaurus-dependent cases failed by
+ * construction. Still ambient: the dd501/dd174 vocabularies, the tools
+ * registry + ontology tool_config, and the canonical test3 records
+ * (self-healed via ensureCanonicalTest3).
+ *
+ * KNOWN RED (media_icons, measured 2026-08-23): the golden's term grid rows
+ * carry ONE more column — label 'Término', model component_portal, no tipo
+ * emitted — contributed on the capture install by a resolved hierarchy-target
+ * section whose section_map thesaurus.term IS a component_portal. NO section
+ * in the committed test ontology has a portal term (verified across every
+ * section_map node and inline map; the 'ts' TLD the suite's hierarchy row 1
+ * names is absent entirely), so the column is unreproducible until the
+ * 2026-08-20 ontology migration clones such a section. Corpus/ontology gap —
+ * do not weaken the golden compare.
  *
  * Scratch ids: 900311..900314 per section — clear of the indexation gates'
  * 90001/90002/90000002 and of the sibling test3 gates (has_dataframe 900311,
@@ -171,7 +183,28 @@ const IW = {
 	calc: 900311, // CALC_SECTION with one metal number
 	calcEmpty: 900312, // CALC_SECTION with NO metals
 	emptyTest3: 900313, // matrix_test test3 with NO components (placeholder path)
+	periodRegistry: 900311, // hierarchy1 registry root for the PERIOD chain
+	immovableRegistry: 900312, // ACTIVE hierarchy: target testimmovable1 (grid col)
+	webRegistry: 900313, // ACTIVE hierarchy: target testweb1 (grid col)
+	mintRegistry: 900314, // ACTIVE hierarchy: target testmint1 (grid col)
 };
+
+/**
+ * The PERIOD term chain — seeded since 2026-08-23, no longer a live-data
+ * dependency. The header used to note the chronology thesaurus as "reference
+ * data, not seeded", which was true on the capture install and FALSE on the
+ * suite database (matrix_test holds no test1026 rows), so the coins-by-period
+ * grouping and the media_icons term grid failed there by construction. The
+ * term ids are pinned BY THE GOLDENS ('187' matched/"Periodo", '3'
+ * "Edad Media"), so they cannot ride the scratch band; test1026 is otherwise
+ * empty in matrix_test and both rows are swept with the loud guard.
+ */
+const PERIOD_TERM_MATCHED = 187;
+const PERIOD_TERM_MEDIEVAL = 3;
+/** hierarchy1 — the registry section whose hierarchy45 orders the roots. */
+const HIERARCHY_REGISTRY = seed('hierarchy', 1);
+/** hierarchy25 — the default term component resolveThesaurusTerm falls back to. */
+const TERM_COMPONENT = seed('hierarchy', 25);
 
 const TAGS_TEXT =
 	'<p>Intro [TC_00:00:01.000_TC] hello [index-n-1-Person-data:x:data]world[/index-n-1]' +
@@ -221,6 +254,15 @@ const SCRATCH_ROWS: { sectionTipo: string; sectionId: number }[] = [
 	{ sectionTipo: CALC_SECTION, sectionId: IW.calc },
 	{ sectionTipo: CALC_SECTION, sectionId: IW.calcEmpty },
 	{ sectionTipo: TEST3, sectionId: IW.emptyTest3 },
+	// the PERIOD term chain (see seedScratch) — term ids are GOLDEN-PINNED
+	// (187/3, below the scratch band, but matrix_test/test1026 holds no other
+	// rows) and the registry root rides the ordinary scratch id.
+	{ sectionTipo: PERIOD, sectionId: PERIOD_TERM_MATCHED },
+	{ sectionTipo: PERIOD, sectionId: PERIOD_TERM_MEDIEVAL },
+	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.periodRegistry },
+	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.immovableRegistry },
+	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.webRegistry },
+	{ sectionTipo: HIERARCHY_REGISTRY, sectionId: IW.mintRegistry },
 ];
 
 /** The section's own matrix table — never assumed (test twins live in matrix_test). */
@@ -353,6 +395,52 @@ async function seedScratch(): Promise<void> {
 	// test_info placeholder: an EMPTY test3 record (no test52 → deterministic
 	// placeholder string encoding the section context)
 	await insertRow(TEST3, IW.emptyTest3, {});
+	// the PERIOD term chain (see PERIOD_TERM_MATCHED doc): two term records
+	// with the default hierarchy25 label slice, and the hierarchy1 registry
+	// root whose hierarchy45 seeds the coins-by-period root walk. The registry
+	// row carries NO hierarchy4 active flag on purpose — the area boot query
+	// filters on it, so this root is invisible to the tree-area gates.
+	await insertRow(PERIOD, PERIOD_TERM_MATCHED, {
+		string: { [TERM_COMPONENT]: [{ id: 1, lang: 'lg-spa', value: 'Periodo' }] },
+	});
+	await insertRow(PERIOD, PERIOD_TERM_MEDIEVAL, {
+		string: { [TERM_COMPONENT]: [{ id: 1, lang: 'lg-spa', value: 'Edad Media' }] },
+	});
+	await insertRow(HIERARCHY_REGISTRY, IW.periodRegistry, {
+		string: { hierarchy53: [{ id: 1, lang: 'lg-nolan', value: PERIOD }] },
+		relation: {
+			hierarchy45: [locatorOf(PERIOD, PERIOD_TERM_MATCHED, 'hierarchy45')],
+		},
+	});
+	// The three ACTIVE hierarchy rows behind the media_icons descriptor grid's
+	// dynamic columns: rsc860's sqo resolves {source:'hierarchy_types'} through
+	// the ACTIVE registry (resolveHierarchySectionsFromTypes — hierarchy4
+	// dd64/1 + hierarchy9 typology match), and each resolved target section
+	// contributes its section_map thesaurus.term as a column. The capture
+	// install had these active; the suite database ships only the language
+	// hierarchies, which collapsed the golden's 4 columns to 1. Seeded AFTER
+	// the language rows by section_id, so the column order matches the golden.
+	for (const [registryId, target] of [
+		[IW.immovableRegistry, 'testimmovable1'],
+		[IW.webRegistry, 'testweb1'],
+		[IW.mintRegistry, 'testmint1'],
+	] as const) {
+		await insertRow(HIERARCHY_REGISTRY, registryId, {
+			string: { hierarchy53: [{ id: 1, lang: 'lg-nolan', value: target }] },
+			relation: {
+				hierarchy4: [locatorOf('dd64', 1, 'hierarchy4')],
+				// typology 4 — one of rsc860's declared hierarchy_types (1,2,4,…).
+				hierarchy9: [locatorOf('hierarchy13', 4, 'hierarchy9')],
+			},
+		});
+	}
+	// These raw INSERTs bypass the write chokepoint, so the derived caches
+	// (hierarchySectionsCache, gridColumnsCache) primed by earlier files in the
+	// same process would serve the pre-seed world — drop them all.
+	const { clearOntologyDerivedCaches } = await import(
+		'../../src/core/ontology/cache_invalidation.ts'
+	);
+	await clearOntologyDerivedCaches();
 }
 
 /**
@@ -594,6 +682,12 @@ afterAll(async () => {
 	// the DELETE targeted the wrong matrix table (matrix_users lesson) — clean
 	// everything we can, then fail loudly rather than silently leak/mask.
 	const counts = await sweepScratch();
+	// The seeded ACTIVE hierarchy rows are gone — drop the derived caches again
+	// so later files never resolve hierarchy_types against the seeded world.
+	const { clearOntologyDerivedCaches } = await import(
+		'../../src/core/ontology/cache_invalidation.ts'
+	);
+	await clearOntologyDerivedCaches();
 	const missing = [...counts.entries()].filter(([, count]) => count === 0).map(([key]) => key);
 	if (missing.length > 0) {
 		throw new Error(

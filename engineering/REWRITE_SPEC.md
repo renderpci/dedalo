@@ -3,6 +3,40 @@
 > Standing specification for the TS/Bun rewrite. Authored 2026-07-01 with the project owner.
 > PHP reference tree: `../../v7_php_frozen/master_dedalo/` (READ-ONLY). This tree: the rewrite workspace.
 
+> **CUTOVER ADDENDUM — executed 2026-07-11, recorded here 2026-08-24. Read this before §2.**
+> The rewrite this spec instructs **shipped**: the TS/Bun server is the SINGLE
+> engine and the **sole writer** of the matrix database; the PHP engine is
+> **decommissioned**. `../../v7_php_frozen/master_dedalo/` is unmaintained
+> **dead code**, a historical reference only — and a **BETA snapshot,
+> incomplete versus the v6 production tree**, so behaviour read there is a
+> hint, never an authority (diff against v6 before porting anything out of
+> it). The spec below is kept whole, as the design record; where it describes
+> a live PHP peer it is **history, not present tense**. In force:
+> - **§2.1 — PHP is no longer "the source of truth"** (amended in place).
+>   Authority today: this tree, the frozen fixture store
+>   (`test/parity/fixtures/oracle_harvest/`) and the wire-divergence ledger
+>   (`engineering/wire_contract/`).
+> - **§2.2 — half survives, half is dead** (amended in place). Schema and
+>   per-component `data` shapes: preserved exactly, still non-negotiable —
+>   live heritage installs upgrade IN PLACE onto their existing database.
+>   "Both servers run against the same database": **dead**, nothing else
+>   connects as a writer.
+> - **§2.5 — superseded.** `client/` is the PRIMARY, TS-OWNED source, edited
+>   directly; `scripts/sync_client.sh` is retired and refuses to run.
+> - **§2.6 — built, not pending.** RAG/Agent/MCP live under `src/ai/`.
+> - **The live-oracle era is OVER** (§3 gate, §9, §10 and the Verification
+>   section amended below). Read-path parity replays the FROZEN store
+>   (`ORACLE_MODE` defaults to `fixtures`, credless); a re-harvest is
+>   impossible by definition, so any fixture change is a deliberate contract
+>   edit with its `engineering/wire_contract/` entry the same day. The store
+>   is corpus-bound and NOT green on the vendored suite database — it is
+>   being replaced gate-by-gate with generic-`test`-TLD twins; write-path
+>   contracts already live in TS-native `test/unit/*_native.test.ts` gates.
+>   Full story + the twin map: `engineering/ORACLE_HARVEST.md`.
+> - **Unchanged by the cutover:** §2.3 (security floor), §2.4 (independent
+>   runtime/config), §2b (code style), §4, §5, §6, §7. The PHP `file:line`
+>   anchors throughout stay valid as historical oracle references.
+
 ## Context
 
 Dédalo is a large, mature, **ontology-driven** content/collections platform currently written in PHP (~3,663 PHP files) with a framework-free vanilla-JS client (~2,606 JS files), a LESS design system, and a PostgreSQL JSONB "matrix" data model. Everything in the app — menus, areas, sections, components, tools, buttons, widgets — is *generated from the ontology*, not hard-coded. A small amount of TypeScript/Bun already exists in production only for the **diffusion** engine (`diffusion/api/v1/`, MariaDB) and the MCP server.
@@ -22,11 +56,44 @@ Rebuild the Dédalo **server** as a modern, native TypeScript application on the
 ## 2. Absolute constraints (non-negotiable)
 
 1. **Do not modify the PHP project** at `v7_php_frozen/master_dedalo/`. It is the source of truth and functional reference — read it, never write it.
+   > **SUPERSEDED 2026-07-11 (cutover).** PHP is DECOMMISSIONED dead code:
+   > unmaintained, not the source of truth, not the functional reference of
+   > record. Do still not modify it — not because it is authoritative but
+   > because it is a frozen historical artifact, and a BETA snapshot that is
+   > incomplete versus v6. What replaced it as authority: this tree, the
+   > frozen fixture store (`engineering/ORACLE_HARVEST.md`) and
+   > `engineering/wire_contract/`.
 2. **Preserve the database schema and data model exactly.** The PostgreSQL JSONB **matrix** tables (`matrix`, `matrix_default`, `matrix_list`, `matrix_hierarchy`, `matrix_hierarchy_main`, `matrix_langs`, `matrix_tools`, `matrix_time_machine`, etc.) and the **per-component `data` JSON structures** stored inside them must be read and written byte-compatibly with the PHP version. Both servers must be able to run against the same database without corrupting each other's data.
+   > **AMENDED 2026-07-11 (cutover) — one half stands, one half is dead.**
+   > STANDS, non-negotiable: schema and per-component `data` JSON shapes are
+   > preserved exactly. The reason is no longer a peer process but **data
+   > continuity** — long-lived heritage installs upgrade IN PLACE onto the
+   > rows they already hold, so a shape change is a migration event and needs
+   > its `engineering/wire_contract/` entry. Byte-compatibility is owed to the
+   > RECORDS ON DISK. DEAD: "both servers must be able to run against the same
+   > database" — TS is the sole writer, no second engine connects.
 3. **At least as secure as PHP.** Every security chokepoint in §7 must have an equal-or-stronger equivalent. Never ship a regression in the security posture.
 4. **Independent projects.** The TS tree has its own directory architecture, its own config system, and its own runtime. The PHP and TS developer versions must each run standalone — including independent config definitions (no shared runtime config files, no shared sessions).
 5. **Copy, don't rewrite, the client view layer.** The vanilla-JS client and the LESS/CSS are copied from PHP as the starting base. You may *adapt the client's server-communication layer* (the code that builds RQO/SQO and calls the API) to match a modernized wire contract — but the rendering/view/CSS stays as-is.
+   > **SUPERSEDED 2026-07-11 (cutover).** `client/` is the **PRIMARY,
+   > TS-OWNED client source** — edit it directly; there is no upstream left to
+   > copy from, and `scripts/sync_client.sh` is RETIRED (it refuses to run:
+   > syncing would overwrite owned files with dead-code copies). "Adapt only
+   > the call layer, keep views/CSS untouched" goes with it: views, LESS/CSS
+   > and call layer are all ours to change — under the wire contract, and with
+   > the old law surviving in spirit (a blank widget is a server-payload bug
+   > first; the client is vanilla JS against an exact contract). Gates:
+   > `test/unit/client_serving.test.ts` (serving self-consistency) +
+   > `bun run test:client` (Mocha in headless Chrome, its own server on the
+   > suite database).
 6. **RAG, Agent, and MCP are greenfield.** The PHP implementations of these are **not in production** — do **not** port them. Design them fresh in TS/Bun when their phase comes, taking advantage of native tooling.
+   > **STATUS 2026-08-24 — built greenfield as instructed, no longer pending.**
+   > They live under `src/ai/`: `src/ai/rag/` (indexer, chunker, embedding +
+   > LLM providers, vector store, retrieval/fusion/reranker, multimodal image
+   > source), `src/ai/agent/` (loop, provider adapters, change_plan, egress)
+   > and `src/ai/mcp/` (server, registry, tool_spec, tools/). Nothing was
+   > ported from PHP. Object identification (`src/core/identify/`) rides the
+   > same image index — `engineering/IDENTIFY_SPEC.md`. Manual: `docs/core/ai/`.
 
 ## 2b. Code style & maintainability (standing rule)
 
@@ -76,6 +143,16 @@ Keep this split. It is what makes caching, permissions capping, and lazy loading
 `subdatum` is the recursive expansion of child-component data through the `request_config`/`ddo_map` hierarchy, bridging a parent's stored **locators** to their resolved child **values** (`class.common.php:2254` `get_subdatum()`; dataframe variant `trait.dataframe_common.php:395`). Output shape: `{context, data}` (deduplicated child structures + resolved data rows). Portals and relations are all built on it. The dataframe **id_key** contract (pairing frame records to individual data items of a main component, never by array index) must be preserved exactly.
 
 > **Deliverable gate:** Before writing feature code, produce a written model of these eight concepts *as you will implement them in TS* (types + resolver flow), and validate it by replaying real RQO/SQO requests from the PHP server and matching the resolved context/data/subdatum semantics.
+>
+> **AMENDED 2026-07-11 (cutover).** The gate was met, and the PHP server it
+> names no longer answers. §3's concepts and PHP `file:line` anchors remain
+> the canonical description and stay valid as historical references — but
+> "replay against the PHP server" now means **replay the frozen fixture
+> store** (`test/parity/fixtures/oracle_harvest/`, `ORACLE_MODE=fixtures`,
+> credless). The live implementations are the reading of record:
+> `src/core/ontology/resolver.ts`, `src/core/concepts/` (locator, ddo,
+> subdatum, request_config), `src/core/section/read.ts`,
+> `src/core/relations/`, `src/core/search/`.
 
 ## 4. Architecture & runtime
 
@@ -111,7 +188,7 @@ Also carry over: failed-login timing/ambiguity, activity logging, and never reve
 ## 8. AI integration (design-in, build greenfield)
 Architect the server so AI is native, not bolted on: clean typed service boundaries, structured tool/action schemas, and data access suitable for embedding/retrieval. **RAG, Agent, and MCP are fresh greenfield builds** (do not port the non-production PHP versions) — but leave the seams for them from the start (e.g. a way to expose ontology-typed data and actions to LLM tools, respecting the same ACL as human access). Default to the latest, most capable Claude models when wiring AI features.
 
-> **Work-system MCP foundation (built 2026-07-07).** One shared, ACL-gated tool registry serves the stdio MCP server, the in-app `dd_mcp_api` bridge (the tool_assistant chat), and the server-side agent loop. Discovery/search/read + fail-closed write tiers, a propose→confirm→apply change-plan protocol for the image→extract→fill-ontology flow, and image-capable vision input. Details: **`rewrite/ai/mcp.md`**; catalog diff vs the PHP reference + the security-pass scope: **`rewrite/ai/mcp_review.md`**.
+> **Work-system MCP foundation (built 2026-07-07).** One shared, ACL-gated tool registry serves the stdio MCP server, the in-app `dd_mcp_api` bridge (the tool_assistant chat), and the server-side agent loop. Discovery/search/read + fail-closed write tiers, a propose→confirm→apply change-plan protocol for the image→extract→fill-ontology flow, and image-capable vision input. Live code: `src/ai/mcp/` (server.ts, registry.ts, tool_spec.ts, tools/), the agent loop in `src/ai/agent/`, and the in-app bridge in the API dispatch. Operator + user documentation: `docs/core/ai/assistant/`.
 
 ## 9. Method & sequencing (how to proceed)
 1. **Concept mastery + type foundations** — implement the §3 concepts as TS types and resolver skeletons; validate against live PHP responses (§3 gate).
@@ -123,6 +200,16 @@ Architect the server so AI is native, not bolted on: clean typed service boundar
 7. **Client seam** — copy client JS/CSS; adapt only the RQO/SQO-building + API-call layer to the modernized contract; keep views/CSS untouched.
 8. **AI/RAG/Agent/MCP** — greenfield, last, on the stable typed core.
 - **Every phase is parity-gated against the PHP reference.** Prefer differential testing (same input → compare TS vs PHP output) over hand-written expectations wherever feasible. Never silently narrow scope — log what a phase does not yet cover.
+
+> **AMENDED 2026-07-11 (cutover).** All eight steps ran; the sequencing is
+> history. Two of them read differently now: step 7 is not a client copy —
+> `client/` is TS-owned primary source (§2.5 addendum) — and the closing
+> parity rule has no live peer to diff against. Parity today = replay of the
+> frozen read-path store plus TS-native write-path gates
+> (`test/unit/*_native.test.ts`), with each retired differential mapped to its
+> twin in `engineering/ORACLE_HARVEST.md`. What did NOT change: never silently
+> narrow scope — an uncovered path throws loudly and gets a ledger line, and a
+> stated invariant is tripwired or deleted (`engineering/TRIPWIRES.md`).
 
 ## 9b. Multi-agent orchestration (how to execute at scale)
 
@@ -136,12 +223,37 @@ You may — and for a rewrite of this size, *should* — **use sub-agents freely
 ## 10. Definition of done
 - Feature-complete versus PHP for §6, verified by parity tests.
 - Same DB schema and per-component data structures; both servers coexist on one database safely.
+  > **AMENDED 2026-07-11 (cutover).** Clause 1 stands (schema + per-component
+  > `data` shapes preserved, for in-place upgrade of existing installs);
+  > clause 2 is dead — there is no second server. Read as: **the engine reads
+  > and writes the records existing installs already hold, and is the only
+  > thing that writes them.**
 - Security posture equal-or-stronger on all §7 chokepoints; no cross-request state bleed.
 - Measurably lower API latency than sequential PHP on representative workloads.
 - Runs standalone behind Apache/Nginx over a socket, with its own independent config; the copied client works against it through the adapted call layer.
+  > **AMENDED 2026-07-11 (cutover).** "The copied client" is now the owned
+  > client: `client/`, served by this engine, gated by
+  > `test/unit/client_serving.test.ts` + `bun run test:client`.
 - RAG/Agent/MCP built fresh in TS, ACL-respecting, or cleanly seamed for a later phase.
 
 ## Verification (how the executor proves parity)
+
+> **AMENDED 2026-07-11 (cutover) — the live-oracle workflow below is HISTORY.**
+> There is no running PHP server to drive, so:
+> - **Differential harness** → replay of the frozen store. `ORACLE_MODE`
+>   defaults to `fixtures`: `test/parity/php_client.ts` serves the recorded
+>   response by canonical request hash, no network, no credentials. The store
+>   is corpus-bound (harvested against one install's records) and therefore
+>   NOT green on the vendored suite database; its gates are being replaced by
+>   generic-`test`-TLD twins. Map + measured state: `engineering/ORACLE_HARVEST.md`.
+> - **DB round-trip via PHP** → gone with the peer. The write-path contracts
+>   are asserted by TS-native gates (`test/unit/*_native.test.ts`) against a
+>   database that SAYS it is a test database (`dedalo_test_marker`), on
+>   generic-`test`-TLD situations the test BUILDS itself.
+> - **Security tests** and **perf** stand unchanged — those never needed the
+>   oracle; the §7 bypass attempts must still fail closed.
+> - Any change to a frozen fixture is a deliberate contract edit and needs its
+>   `engineering/wire_contract/` entry the same day.
 - **Differential harness:** drive identical RQO/SQO requests at the running PHP server and the TS server; diff resolved `context`, `data`, `subdatum`, and search results. Reuse the diffusion engine's existing Bun test patterns.
 - **DB round-trip:** write a record via TS, read via PHP (and vice-versa); assert byte-identical `data` JSON in the matrix.
 - **Security tests:** attempt each bypass the PHP gates block (server-only SQO keys, invalid tipo/lang injection, over-limit, unauthorized action/class, cross-project record access, media without cookie/marker) and confirm they fail closed.

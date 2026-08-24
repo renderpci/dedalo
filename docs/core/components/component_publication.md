@@ -32,7 +32,7 @@
         {
             "id"                  : 3,
             "type"                : "dd151",
-            "section_id"          : "1",
+            "section_id"          : 1,
             "section_tipo"        : "dd64",
             "from_component_tipo" : "test92"
         }
@@ -42,7 +42,7 @@
         {
             "id"                  : 3,
             "type"                : "dd151",
-            "section_id"          : "1",
+            "section_id"          : 1,
             "section_tipo"        : "dd64",
             "from_component_tipo" : "test92"
         }
@@ -91,7 +91,7 @@ A single stored locator (record marked **for** publication, *yes* = `section_id 
     {
         "id"                  : 3,
         "type"                : "dd151",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "section_tipo"        : "dd64",
         "from_component_tipo" : "test92"
     }
@@ -105,7 +105,7 @@ The same component explicitly **excluded** from publication (*no* = `section_id 
     {
         "id"                  : 1,
         "type"                : "dd151",
-        "section_id"          : "2",
+        "section_id"          : 2,
         "section_tipo"        : "dd64",
         "from_component_tipo" : "test92"
     }
@@ -216,7 +216,7 @@ DOM (edit / default): `wrapper_component component_publication <tipo> <mode>` ->
 **Import.** The import conform step (`conformImportData()`, `src/core/tools/import_data.ts`) accepts the JSON locator format, the same as any related component. For a publication switch the meaningful locators point at `dd64` with `section_id` `1` (*yes*) or `2` (*no*):
 
 ```json
-[{"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"test92"}]
+[{"type":"dd151","section_id":1,"section_tipo":"dd64","from_component_tipo":"test92"}]
 ```
 
 Because the target section is fixed to the yes/no section, the short numeric `section_id` sequence form (used by single-target [component_portal](component_portal.md)) can also apply — `1` selects *yes*, `2` selects *no*. See [importing data](../importing_data.md#related-data).

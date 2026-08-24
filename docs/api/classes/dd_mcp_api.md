@@ -55,7 +55,7 @@ Return the client-safe model catalog and whether write mode is available to this
 
 ### Returns
 
-`{ result: true, data: { models: [ { id, label, egress, vision } ], write_allowed: bool } }`. Endpoints, key names and provider-native model ids are never exposed. A broken catalog answers a `denied()` with a clear operator message.
+`{ ok: true, request_id, data: { models: [ { id, label, egress, vision } ], write_allowed: <bool> } }`. Endpoints, key names and provider-native model ids are never exposed. A broken catalog **throws** a public `ai.*` code, so the assistant is disabled with the operator's own sentence on the wire.
 
 ### Example Request
 
@@ -84,7 +84,7 @@ Run the agent loop as the logged-in user and return a single JSON response.
 
 ### Returns
 
-`{ result: true, data: { answer, stop, change_plan, turns, model, usage, history } }`. In write mode `change_plan` carries a plan for confirmation (never written directly). A validation failure or catalog/config problem returns a 400 `denied()`.
+`{ ok: true, request_id, data: { answer, stop, change_plan, turns, model, usage, history } }`. In write mode `change_plan` carries a plan for confirmation (never written directly). A validation failure refuses with `request.invalid` (HTTP 400); a catalog or configuration problem throws a public `ai.*` code.
 
 ### Example Request
 
@@ -92,7 +92,7 @@ Run the agent loop as the logged-in user and return a single JSON response.
 {
   "dd_api": "dd_mcp_api",
   "action": "agent_chat",
-  "options": { "question": "Summarize this record", "context": { "section_tipo": "oh1", "section_id": "3" } }
+  "options": { "question": "Summarize this record", "context": { "section_tipo": "oh1", "section_id": 368 } }
 }
 ```
 

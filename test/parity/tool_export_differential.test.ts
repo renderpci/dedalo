@@ -27,6 +27,15 @@
 // IT NEEDS: those records in the corpus (a derive that can source them, or a
 // built situation that authors them). Nothing in this file can close it, and no
 // assertion was relaxed to hide it.
+//
+// TS-NATIVE TWIN (DEC-14b, 2026-08-23): test/unit/tool_export_native.test.ts
+// pins the flat-grid rules on a BUILT chain (test/helpers/zzbib_export_chain.ts
+// — 'rows'→'value' normalization, multi-hop leaf walk, dedalo_raw wrapper,
+// media img URL cells); the NDJSON protocol lives in
+// test/unit/diffusion_export_unified.test.ts. This file stays as the FROZEN
+// RECORD: only its bodies still pin the multi-target autocomplete_hi thesaurus
+// explosion and the install-record display strings. Map row:
+// engineering/ORACLE_HARVEST.md § Generic-TLD replacement map.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';

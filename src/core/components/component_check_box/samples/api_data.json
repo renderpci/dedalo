@@ -9,12 +9,12 @@
 		{
 			"id": 1,
 			"type": "dd151",
-			"section_id": "1",
+			"section_id": 1,
 			"section_tipo": "dmm798",
 			"from_component_tipo": "dmm567"
 		},
 		{
-			"section_id": "2",
+			"section_id": 2,
 			"section_tipo": "dmm798",
 			"id": 2,
 			"type": "dd151",
@@ -27,19 +27,19 @@
 	"datalist": [
 		{
 			"value": {
-				"section_id": "1",
+				"section_id": 1,
 				"section_tipo": "dmm798"
 			},
 			"label": "<mark>Fossa</mark>",
-			"section_id": "1"
+			"section_id": 1
 		},
 		{
 			"value": {
-				"section_id": "2",
+				"section_id": 2,
 				"section_tipo": "dmm798"
 			},
 			"label": "Grave",
-			"section_id": "2"
+			"section_id": 2
 		}
 	],
 	"changed_data": []

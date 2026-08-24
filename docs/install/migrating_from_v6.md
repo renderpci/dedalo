@@ -53,7 +53,7 @@ dropdb dedalo_restore_test
 | --- | --- | --- |
 | Data version | **6.9.1 or later, and below 7.0.0** | the `matrix_updates` table; the v6 preparation panel reports it |
 | You are logged in as | the Dédalo **superuser** | the panel refuses anyone else |
-| Maintenance mode | **on** before anything that writes | [maintenance status](../management/maintenace_status.md) |
+| Maintenance mode | **on** before anything that writes | [maintenance status](../management/maintenance_status.md) |
 | Dump tool on the **v6** host | `pg_dump --version` not older than the v6 server's `SELECT version();`, and not older than the v7 target's major | the preflight fails hard if the dump cannot run |
 | Server on the **v6** host | the PostgreSQL that already serves v6 — the transform runs there, in place | — |
 | Server on the **v7** host | PostgreSQL 18 plus the client tools | [prerequisites](index.md#prerequisites-at-a-glance) |

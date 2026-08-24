@@ -36,7 +36,7 @@ The single most important rule of the tree: **hierarchy is stored bottom-up**. E
         {
             "type": "dd47",
             "section_tipo": "es1",
-            "section_id": "5",
+            "section_id": 5,
             "from_component_tipo": "hierarchy36"
         }
     ]
@@ -131,7 +131,7 @@ shared by `area_thesaurus` and `area_ontology`.
 
 ```json
 {
-    "section_tipo": "es1", "section_id": "42",
+    "section_tipo": "es1", "section_id": 42,
     "ts_id": "es1_42", "ts_parent": "es1_5",
     "order": 3, "is_descriptor": true, "is_indexable": true,
     "children_tipo": "hierarchy49", "has_descriptor_children": true,

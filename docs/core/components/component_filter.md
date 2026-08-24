@@ -33,12 +33,12 @@
     ],
     "data": "array of locators",
     "sample_data": [
-        {"type":"dd675","section_tipo":"dd153","section_id":"1","from_component_tipo":"test101"},
-        {"type":"dd675","section_tipo":"dd153","section_id":"7","from_component_tipo":"test101"}
+        {"type":"dd675","section_tipo":"dd153","section_id":1,"from_component_tipo":"test101"},
+        {"type":"dd675","section_tipo":"dd153","section_id":7,"from_component_tipo":"test101"}
     ],
     "value": "array of locators",
     "sample_value": [
-        {"type":"dd675","section_tipo":"dd153","section_id":"1","from_component_tipo":"test101"}
+        {"type":"dd675","section_tipo":"dd153","section_id":1,"from_component_tipo":"test101"}
     ]
 }
 ```
@@ -76,24 +76,26 @@
 
 **Value:** `array` of `locators`, or `null`.
 
-**Storage shape.** A component never writes to the database directly; its section does. `component_filter` stores its locators the same way every relation component does — as members of the section-wide `relations` array. Each locator is a project assignment whose `type` is the filter relation type `dd675`, whose `section_tipo`/`section_id` point at the target project record (in `dd153`), and whose `from_component_tipo` is this component's own `tipo`, so the section can slice this component's subset out of the shared bag.
+**Storage shape.** A component never writes to the database directly; its section does. `component_filter` stores its locators the same way every relation component does — in the matrix `relation` column, an object keyed by component tipo (singular `relation`, never a flat `relations` array). Each locator is a project assignment whose `type` is the filter relation type `dd675`, whose `section_tipo`/`section_id` point at the target project record (in `dd153`), and whose `from_component_tipo` is this component's own `tipo`, so the section can slice this component's subset out of the shared bag.
 
 ```json
 {
-    "relations" : [
-        {
-            "type"                : "dd675",
-            "section_tipo"        : "dd153",
-            "section_id"          : "1",
-            "from_component_tipo" : "test101"
-        },
-        {
-            "type"                : "dd675",
-            "section_tipo"        : "dd153",
-            "section_id"          : "7",
-            "from_component_tipo" : "test101"
-        }
-    ]
+    "relation" : {
+        "test101" : [
+            {
+                "type"                : "dd675",
+                "section_tipo"        : "dd153",
+                "section_id"          : 1,
+                "from_component_tipo" : "test101"
+            },
+            {
+                "type"                : "dd675",
+                "section_tipo"        : "dd153",
+                "section_id"          : 7,
+                "from_component_tipo" : "test101"
+            }
+        ]
+    }
 }
 ```
 
@@ -111,13 +113,13 @@
     "lang"                : "lg-nolan",
     "from_component_tipo" : "test101",
     "entries": [
-        {"id":1,"section_id":"1","section_tipo":"dd153","from_component_tipo":"test101"},
-        {"id":2,"section_tipo":"dd153","section_id":"7","from_component_tipo":"test101"}
+        {"id":1,"section_id":1,"section_tipo":"dd153","from_component_tipo":"test101"},
+        {"id":2,"section_tipo":"dd153","section_id":7,"from_component_tipo":"test101"}
     ],
     "datalist": [
-        {"type":"project","label":"Global project","section_tipo":"dd153","section_id":"1","value":{"section_tipo":"dd153","section_id":"1"},"parent":null,"order":0},
-        {"type":"project","label":"Project Three","section_tipo":"dd153","section_id":"3","value":{"section_tipo":"dd153","section_id":"3"},"parent":null,"order":0},
-        {"type":"project","label":"Project Four","section_tipo":"dd153","section_id":"4","value":{"section_tipo":"dd153","section_id":"4"},"parent":{"section_tipo":"dd153","section_id":"3"},"order":1}
+        {"type":"project","label":"Global project","section_tipo":"dd153","section_id":1,"value":{"section_tipo":"dd153","section_id":1},"parent":null,"order":0},
+        {"type":"project","label":"Project Three","section_tipo":"dd153","section_id":3,"value":{"section_tipo":"dd153","section_id":3},"parent":null,"order":0},
+        {"type":"project","label":"Project Four","section_tipo":"dd153","section_id":4,"value":{"section_tipo":"dd153","section_id":4},"parent":{"section_tipo":"dd153","section_id":3},"order":1}
     ],
     "changed_data": []
 }
@@ -198,7 +200,7 @@ DOM (edit / default): `wrapper_component component_filter <tipo> <mode>` -> `but
 **Import.** The default format is the JSON array of filter locators (the target project records). Each locator points at a `dd153` project:
 
 ```json
-[{"type":"dd675","section_tipo":"dd153","section_id":"1","from_component_tipo":"test101"}]
+[{"type":"dd675","section_tipo":"dd153","section_id":1,"from_component_tipo":"test101"}]
 ```
 
 On import the relations engine normalises every incoming locator: it injects `type` (the filter type), forces `from_component_tipo` to this component's own `tipo`, and de-dupes against the locators already stored. Two filter locators are the same when their `section_tipo`, `section_id`, `type` and `from_component_tipo` all match — the one locator-equality rule, `compareLocators()` (`src/core/concepts/locator.ts`). See [importing data — Related data](../importing_data.md#related-data).
@@ -218,7 +220,7 @@ Two mechanisms keep a record from being stranded outside every project.
 (`src/core/relations/save.ts`) reads the **host** record's own project filter and
 inherits it into the new record's `component_filter`, re-stamping each locator. If
 the host carries no project, it falls back to the default-project locator
-(`section_tipo: 'dd153'`, `section_id: '1'`, `type: 'dd675'`).
+(`section_tipo: 'dd153'`, `section_id: 1`, `type: 'dd675'`).
 
 **On removing a record's last project.** The delete path
 (`src/core/section/record/delete_record.ts`) does not empty a `component_filter`

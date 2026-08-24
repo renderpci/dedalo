@@ -134,7 +134,8 @@ For testing:
 bun test                    # unit + parity tests
 bun test test/unit/...      # targeted unit gates
 bun test test/parity/...    # parity tests (replays frozen fixtures, no oracle, no creds)
-bun run test:client         # client suite against a DEDALO_DEV_MODE=true server
+bun run test:client         # client suite; starts its own server on the suite DB
+                             # (bun run test:db:setup builds that DB)
 bunx tsc --noEmit           # typecheck (zero-NEW-errors rule)
 bun run lint                # biome
 ```
@@ -193,10 +194,11 @@ master_dedalo/
 │   │   ├── resolve/           # Resolution pipeline
 │   │   ├── ts_object/         # Thesaurus tree
 │   │   ├── tools/             # Tool subsystem
+│   │   ├── media/             # Media processing
 │   │   └── ...
 │   ├── diffusion/             # Native diffusion (workshop → gallery publishing)
-│   ├── ai/                    # RAG / semantic search, AI tool protocol
-│   └── media/                 # Media processing
+│   ├── external/              # External record services (Zenon connector)
+│   └── ai/                    # RAG / semantic search, AI tool protocol
 ├── client/                    # TS-owned primary client source (vanilla JS)
 ├── test/
 │   ├── unit/                  # TS-native unit gates (*_native.test.ts)
