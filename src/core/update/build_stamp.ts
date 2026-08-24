@@ -18,6 +18,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { INSTALLED_CHANNEL, type InstallChannel } from './install_stamp.ts';
 import { DEDALO_VERSION } from './version.ts';
 
 /** Parsed provenance: null build ⇒ dev tree. */
@@ -65,11 +66,28 @@ export const DEDALO_BUILD: string | null = INFO.build;
 export const DEDALO_BUILD_SHA: string | null = INFO.sha;
 
 /**
- * Prerelease tag appended to the code-version string: '.dev' on a dev
- * checkout, '' on a release archive (PHP appended '.dev' when
- * DEVELOPMENT_SERVER; here the signal is build provenance, not config).
+ * Prerelease tag appended to the code-version string: '.dev' on a dev checkout
+ * OR a dev-channel install, '' on a published release (PHP appended '.dev'
+ * when DEVELOPMENT_SERVER; here the signal is provenance, not config).
+ *
+ * THE CHANNEL CLAUSE IS LOAD-BEARING (2026-08-24). Build provenance alone
+ * cannot answer "is this a release": `build_info.txt` is `export-subst`, so a
+ * `v7` branch build is expanded exactly like a `master` one, and a dev-channel
+ * install would otherwise report a bare `7.0.1` everywhere it is asked —
+ * /health, page_globals.dedalo_version, the login About panel, the maintenance
+ * panel — while running code that was never released. An archive with no
+ * install stamp (any release built before stamps existed) keeps the bare
+ * string: absence of evidence is not evidence of a branch build.
  */
-export const DEDALO_PRERELEASE_TAG: string = INFO.build === null ? '.dev' : '';
+export function prereleaseTagFor(
+	build: string | null,
+	channel: InstallChannel | null,
+): string {
+	if (build === null) return '.dev';
+	return channel === 'dev' ? '.dev' : '';
+}
+
+export const DEDALO_PRERELEASE_TAG: string = prereleaseTagFor(INFO.build, INSTALLED_CHANNEL);
 
 /** The code-version string the client displays (PHP DEDALO_VERSION). */
 export const DEDALO_ENGINE_VERSION: string = `${DEDALO_VERSION}${DEDALO_PRERELEASE_TAG}`;

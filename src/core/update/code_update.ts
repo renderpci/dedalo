@@ -84,7 +84,7 @@ import {
 	statSync,
 	writeFileSync,
 } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
 import { DedaloError, ok } from '../errors/index.ts';
@@ -612,6 +612,56 @@ function restoreAfterFailedSwap(
 	);
 }
 
+/**
+ * Stamp the QUARANTINE with what it is, before it is smoke-booted and swapped
+ * in (install_stamp.ts): the verified archive digest — the tree's only
+ * per-bytes identity once the version stops changing — plus the channel that
+ * built it, which is what makes a `v7` build report `.dev` instead of
+ * impersonating the published release.
+ *
+ * Written BEFORE the smoke boot on purpose: the tree that is validated is then
+ * byte-for-byte the tree that lands.
+ */
+function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
+	const stamp = {
+		digest: request.declaredSha,
+		channel: request.channel,
+		source_url: request.url,
+		installed_at: new Date().toISOString(),
+	};
+	const path = join(codeRoot, INSTALL_STAMP_PATH);
+	mkdirSync(dirname(path), { recursive: true });
+	writeFileSync(path, `${JSON.stringify(stamp, null, '\t')}\n`);
+}
+
+/**
+ * The digest of the archive the LIVE tree was installed from, read from that
+ * tree's own stamp (never the running module's constant — the swap may target
+ * a tree that is not this process's). Null for a tree installed before stamps
+ * existed, or a dev checkout.
+ */
+function installedDigestOf(targetRoot: string): string | null {
+	try {
+		return parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest
+			?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * The restore point's name. It carried only `dedalo_<version>_<stamp>`, which
+ * on the dev channel names every iteration identically (the version does not
+ * move) — five restore points, nothing but a timestamp to tell them apart. The
+ * short digest of the tree the dir HOLDS makes it identifiable; a tree with no
+ * stamp keeps the old name rather than inventing a token.
+ */
+function backupDirName(previousVersion: string, previousDigest: string | null, stamp: string): string {
+	return previousDigest === null
+		? `dedalo_${previousVersion}_${stamp}`
+		: `dedalo_${previousVersion}_${previousDigest.slice(0, 7)}_${stamp}`;
+}
+
 /** The rollback sentinel (deploy/dedalo-code-rollback.sh contract — flat, exact keys). */
 interface UpdateSentinel {
 	version: string;
@@ -619,6 +669,8 @@ interface UpdateSentinel {
 	updateMode: 'clean';
 	stamp: string;
 	backupDir: string;
+	/** sha256 of the installed archive — what boot_confirm.ts compares (2026-08-24). */
+	installDigest: string;
 	status: 'pending';
 	rollback_attempted: false;
 }
@@ -662,7 +714,7 @@ async function installDepsReal(codeRoot: string): Promise<void> {
 }
 
 interface UpdateCodeOptions {
-	file?: { version?: unknown; url?: unknown; sha256?: unknown };
+	file?: { version?: unknown; url?: unknown; sha256?: unknown; channel?: unknown };
 	waive_backup?: unknown;
 }
 
@@ -671,6 +723,8 @@ interface UpdateRequest {
 	url: string;
 	version: string;
 	declaredSha: string;
+	/** The channel the manifest advertised this archive on ('master' unless 'dev'). */
+	channel: InstallChannel;
 }
 
 /**
@@ -714,6 +768,9 @@ function readReleaseFields(options: UpdateCodeOptions): UpdateRequest {
 		url: typeof file.url === 'string' ? file.url : '',
 		version: typeof file.version === 'string' ? file.version : '',
 		declaredSha: typeof file.sha256 === 'string' ? file.sha256 : '',
+		// Anything that is not exactly 'dev' is the release channel: an unknown
+		// or absent value must never be the one that relaxes a guard.
+		channel: file.channel === 'dev' ? 'dev' : 'master',
 	};
 }
 
@@ -722,7 +779,7 @@ function readReleaseFields(options: UpdateCodeOptions): UpdateRequest {
  * malformed version → linear-upgrade guard → malformed/missing sha. All before
  * any network fetch, by contract.
  */
-function assertReleaseShape({ url, version, declaredSha }: UpdateRequest): void {
+function assertReleaseShape({ url, version, declaredSha, channel }: UpdateRequest): void {
 	if (url === '' || version === '') {
 		refuseUpdate(
 			'request.invalid_options',
@@ -735,7 +792,7 @@ function assertReleaseShape({ url, version, declaredSha }: UpdateRequest): void 
 			'Error. Malformed release version (a numeric dotted release is required, e.g. 7.0.1)',
 		);
 	}
-	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parseVersionString(version));
+	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parseVersionString(version), channel);
 	if (linear !== null) {
 		refuseUpdate('update.refused', `Error. ${linear}`);
 	}
@@ -1206,13 +1263,17 @@ export async function updateCode(
 		phases.start('extract');
 		const quarantine = join(stagingDir, 'extract');
 		const codeRoot = await extractArchive(zipPath, quarantine);
+		writeInstallStampSync(codeRoot, request);
 
 		await prepareQuarantine(codeRoot, targetRoot, stagingDir, seams, phases);
 
 		phases.start('swap');
 		const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
 		const previousVersion = DEDALO_VERSION_TRIPLE.join('.');
-		const backupDir = join(backupRoot, `dedalo_${previousVersion}_${stamp}`);
+		const backupDir = join(
+			backupRoot,
+			backupDirName(previousVersion, installedDigestOf(targetRoot), stamp),
+		);
 		mkdirSync(backupRoot, { recursive: true });
 
 		// ROLLBACK SENTINEL FIRST — `status:"pending"`, naming the backupDir the
@@ -1231,6 +1292,7 @@ export async function updateCode(
 				updateMode: 'clean',
 				stamp,
 				backupDir,
+				installDigest: request.declaredSha,
 				status: 'pending',
 				rollback_attempted: false,
 			},

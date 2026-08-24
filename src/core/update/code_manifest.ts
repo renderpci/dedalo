@@ -29,6 +29,14 @@ export interface CodeReleaseItem {
 	date: string;
 	/** sha256 of the archive, from the `<file>.zip.sha256` sidecar (WC-024). */
 	sha256?: string;
+	/**
+	 * Present, and 'dev', ONLY on a developer-channel item (2026-08-24). A
+	 * published release carries no `channel` at all, so the release manifest is
+	 * byte-unchanged by this feature. The consumer forwards the whole item back
+	 * as `options.file`, and `code_update.ts` reads this to know that a
+	 * same-version install is the one it was offered.
+	 */
+	channel?: 'dev';
 }
 
 export interface CodeUpdateInfo {
@@ -123,10 +131,19 @@ export function buildCodeUpdateInfo(options: {
 	publicBaseUrl: string;
 	info: Omit<CodeUpdateInfo['info'], 'version'>;
 	catalog?: typeof UPDATE_CATALOG;
+	/** What the CONSUMER asked for (its panel switch). Default: releases only. */
+	channel?: 'master' | 'dev';
+	/** Whether THIS master publishes developer builds (DEDALO_CODE_SERVER_DEV_CHANNEL). */
+	devChannelEnabled?: boolean;
 }): CodeUpdateInfo {
 	const files: CodeReleaseItem[] = [];
 	const targets = linearUpgradeTargets(options.clientVersion, options.catalog ?? UPDATE_CATALOG);
 	if (options.codeFilesDir !== undefined && existsSync(options.codeFilesDir)) {
+		// BOTH switches, or nothing: a master that never opted in answers a dev ask
+		// exactly as it answers a release one.
+		if (options.channel === 'dev' && options.devChannelEnabled === true) {
+			files.push(...devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets));
+		}
 		for (const triple of targets) {
 			const item = releaseItemFor(options.codeFilesDir, options.publicBaseUrl, triple);
 			if (item !== null) files.push(item);
@@ -151,14 +168,37 @@ export function codeReleaseUrl(base: string, version: string, fileName: string):
 	return `${base}/${version}/${fileName}`;
 }
 
+/**
+ * The developer-channel items, listed BEFORE the published ones: a consumer
+ * that flipped its dev switch means it, and the client pre-selects the first
+ * row. The CURRENT version leads the list — a branch build carries no version
+ * bump, so "install the same version again" IS the feature; the published
+ * rungs follow so an operator can still see a real release from the same panel.
+ */
+function devItemsFor(
+	codeFilesDir: string,
+	publicBaseUrl: string,
+	clientVersion: readonly number[],
+	targets: readonly number[][],
+): CodeReleaseItem[] {
+	const items: CodeReleaseItem[] = [];
+	const current = normalizedClientTriple(clientVersion);
+	for (const triple of [current, ...targets]) {
+		const item = releaseItemFor(codeFilesDir, publicBaseUrl, triple, 'dev');
+		if (item !== null) items.push(item);
+	}
+	return items;
+}
+
 /** One advertised release item, or null when its archive does not exist on disk. */
 function releaseItemFor(
 	codeFilesDir: string,
 	publicBaseUrl: string,
 	triple: readonly number[],
+	channel: 'master' | 'dev' = 'master',
 ): CodeReleaseItem | null {
 	const versionString = triple.join('.');
-	const fileName = `${versionString}.zip`;
+	const fileName = channel === 'dev' ? `${versionString}-dev.zip` : `${versionString}.zip`;
 	const filePath = codeReleasePath(codeFilesDir, triple, fileName);
 	if (filePath === null || !existsSync(filePath)) return null;
 	const sha256 = readShaSidecar(filePath);
@@ -167,6 +207,7 @@ function releaseItemFor(
 		url: codeReleaseUrl(publicBaseUrl, versionString, fileName),
 		date: new Date(statSync(filePath).mtimeMs).toISOString(),
 		...(sha256 === null ? {} : { sha256 }),
+		...(channel === 'dev' ? { channel: 'dev' as const } : {}),
 	};
 }
 
@@ -190,12 +231,15 @@ function readShaSidecar(archivePath: string): string | null {
 /**
  * Release archive path: <codeFilesDir>/<major>/<major.minor>/<file>. Confined.
  *
- * TWO channels resolve, ONE is advertised: the published `<v>.zip` and the
- * developer `<v>-dev.zip` (code_build_plan.ts releaseFileName) are both
- * servable through code_serving.ts, but `buildCodeUpdateInfo` above only ever
- * LOOKS FOR `<v>.zip` — a dev build is fetchable by an operator who knows its
- * URL, never offered to a consumer as a release. That separation is a security
- * property; do not teach the manifest the `-dev` name.
+ * TWO channels resolve: the published `<v>.zip` and the developer
+ * `<v>-dev.zip` (code_build_plan.ts releaseFileName), both servable through
+ * code_serving.ts.
+ *
+ * A dev build is advertised ONLY when the consumer explicitly asked for the dev
+ * channel AND this master opted in (2026-08-24). The property to preserve is
+ * NOT "the manifest never says -dev" — it is that a dev build is never offered
+ * to a consumer that did not ask for one, and never by a master that did not
+ * publish one. Do not collapse those two switches into one.
  */
 export function codeReleasePath(
 	codeFilesDir: string,

@@ -169,11 +169,11 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 		expect(info.info).toEqual({ version: '7.1.0', ...BASE_INFO });
 	});
 
-	test('a -dev build on disk is NEVER advertised, even when it is the only archive', () => {
-		// The security property behind the two channels: a developer build is
-		// servable by URL (code_serving.test.ts) but must never be OFFERED as a
-		// release. 7.1.0 is on the linear path and only its -dev zip exists →
-		// the manifest stays silent about it.
+	test('a -dev build on disk is NEVER advertised to a consumer that did not ask for one', () => {
+		// The property behind the two channels, NARROWED on 2026-08-24: a
+		// developer build is servable by URL (code_serving.test.ts) but is never
+		// OFFERED unless the consumer asked for the dev channel AND this master
+		// opted in. Here it does neither, so the manifest stays silent about it.
 		const devZip = join(FILES_DIR, '7', '7.1', '7.1.0-dev.zip');
 		writeFileSync(devZip, 'PK-dev');
 		try {
@@ -191,6 +191,73 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 		} finally {
 			rmSync(devZip, { force: true });
 		}
+	});
+
+	// -----------------------------------------------------------------------
+	// THE DEV CHANNEL (2026-08-24). Two independent switches must both be on:
+	// the consumer ASKS (channel:'dev' — its panel switch) and this master has
+	// OPTED IN (DEDALO_CODE_SERVER_DEV_CHANNEL). A public code server that never
+	// set the key answers identically no matter what it is asked.
+	// -----------------------------------------------------------------------
+	describe('the dev channel', () => {
+		const devZip = join(FILES_DIR, '7', '7.0', '7.0.0-dev.zip');
+
+		beforeAll(() => {
+			writeFileSync(devZip, 'PK-dev');
+			writeFileSync(`${devZip}.sha256`, `${'f'.repeat(64)}  7.0.0-dev.zip\n`);
+		});
+		afterAll(() => {
+			rmSync(devZip, { force: true });
+			rmSync(`${devZip}.sha256`, { force: true });
+		});
+
+		function manifest(options: { channel?: 'master' | 'dev'; devChannelEnabled?: boolean }) {
+			return buildCodeUpdateInfo({
+				clientVersion: [7, 0, 0],
+				serverVersion: [7, 0, 0],
+				codeFilesDir: FILES_DIR,
+				publicBaseUrl: 'http://m',
+				info: { ...BASE_INFO },
+				catalog: catalogOf(target(7, 0, 1)),
+				...options,
+			});
+		}
+
+		test('advertises the SAME-VERSION dev build — the whole point of the channel', () => {
+			const info = manifest({ channel: 'dev', devChannelEnabled: true });
+			const dev = info.files.find((f) => f.url.includes('-dev'));
+			expect(dev).toBeDefined();
+			// the consumer runs 7.0.0 and is offered 7.0.0 — no version bump, which
+			// is exactly what an unreleased branch build has to offer.
+			expect(dev?.version).toBe('7.0.0');
+			expect(dev?.url).toBe('http://m/7.0.0/7.0.0-dev.zip');
+			expect(dev?.channel).toBe('dev');
+			// the digest stays mandatory: an archive with no sidecar is not installable
+			expect(dev?.sha256).toBe('f'.repeat(64));
+		});
+
+		test('the dev build is listed FIRST — a consumer that asked for it means it', () => {
+			const info = manifest({ channel: 'dev', devChannelEnabled: true });
+			expect(info.files[0]?.url.includes('-dev')).toBe(true);
+			// …and the published rung is still offered alongside it
+			expect(info.files.map((f) => f.version)).toContain('7.0.1');
+		});
+
+		test('a master that did NOT opt in ignores the ask entirely', () => {
+			const info = manifest({ channel: 'dev', devChannelEnabled: false });
+			expect(info.files.map((f) => f.url).some((u) => u.includes('-dev'))).toBe(false);
+		});
+
+		test('an opted-in master still answers a RELEASE-channel ask with releases only', () => {
+			const info = manifest({ channel: 'master', devChannelEnabled: true });
+			expect(info.files.map((f) => f.url).some((u) => u.includes('-dev'))).toBe(false);
+		});
+
+		test('the release manifest is UNCHANGED by the feature: no channel key on a published item', () => {
+			const info = manifest({});
+			expect(info.files.map((f) => f.version)).toEqual(['7.0.1']);
+			expect(Object.hasOwn(info.files[0] as object, 'channel')).toBe(false);
+		});
 	});
 
 	test('force_update_mode never appears on the wire (WC-2026-08-23-update-mode-clean-only)', () => {

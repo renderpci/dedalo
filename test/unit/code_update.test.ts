@@ -405,15 +405,25 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 			const sentinel = JSON.parse(
 				readFileSync(join(backupRoot, 'last_code_update.json'), 'utf8'),
 			) as Record<string, unknown>;
+			// `installDigest` JOINED the sentinel on 2026-08-24 (dev channel): it is
+			// what boot_confirm.ts compares, because a same-version install leaves
+			// `version` unable to tell the new tree from the rolled-back old one.
 			expect(sentinel).toEqual({
 				version: '7.0.1',
 				previousVersion: '7.0.0',
 				updateMode: 'clean',
 				stamp: sentinel.stamp,
 				backupDir,
+				installDigest: sha,
 				status: 'pending',
 				rollback_attempted: false,
 			});
+			// A release install stamps the tree too, on the master channel — so a
+			// published tree keeps its release posture and its plain version string.
+			const installStamp = JSON.parse(
+				readFileSync(join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(installStamp).toMatchObject({ digest: sha, channel: 'master' });
 			expect(existsSync(sentinel.backupDir as string)).toBe(true);
 			// phase frames: the last one before the restart carries expected_version
 			const last = frames.at(-1) as UpdatePhaseFrame;
@@ -1261,5 +1271,96 @@ describe('assertLinearUpgrade on the dev channel', () => {
 
 	test('dev allows the next rung, exactly like the release channel', () => {
 		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 1], 'dev')).toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE DEV-CHANNEL SWAP end to end: same version, and the tree that lands must
+// be IDENTIFIABLE afterwards — the version no longer distinguishes it from the
+// tree it replaced, so the install stamp and the sentinel's digest are the only
+// things standing between a landed swap and a rollback that looks identical.
+// ---------------------------------------------------------------------------
+describe('full swap chain on the DEV CHANNEL (same version)', () => {
+	test('a same-version dev release installs, stamps the tree, and records its digest in the sentinel', async () => {
+		if (!zipAvailable) return;
+		const base = join(ROOT, 'dev_swap');
+		const zipPath = await buildReleaseZip(base);
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const previousDigest = 'd'.repeat(64);
+
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const origin = `http://localhost:${server.port}`;
+
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		// the live tree was itself installed by an earlier dev iteration
+		mkdirSync(join(targetRoot, 'src', 'core', 'update'), { recursive: true });
+		writeFileSync(
+			join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'),
+			JSON.stringify({ digest: previousDigest, channel: 'dev' }),
+		);
+		const backupRoot = join(base, 'backups');
+		const version = DEDALO_VERSION_TRIPLE.join('.'); // the SAME version we run
+
+		try {
+			mockUpdateEnv(origin);
+			const out = await updateCode(
+				{
+					file: {
+						version,
+						url: `${origin}/${version}-dev.zip`,
+						sha256: sha,
+						channel: 'dev',
+					},
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({ targetRoot, backupRoot, restart: () => {} }),
+			);
+			expect(out.ok).toBe(true);
+			expect(out.data).toEqual({ version });
+
+			// THE INSTALL STAMP: the new tree names the archive it came from and
+			// the channel that built it (which is what restores its `.dev` tag).
+			const stamp = JSON.parse(
+				readFileSync(join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(stamp.digest).toBe(sha);
+			expect(stamp.channel).toBe('dev');
+			expect(stamp.source_url).toBe(`${origin}/${version}-dev.zip`);
+
+			// THE SENTINEL carries the same digest: boot_confirm compares THAT,
+			// not the (unchanged) version, so a rollback stays loud.
+			const sentinel = JSON.parse(
+				readFileSync(join(backupRoot, 'last_code_update.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(sentinel.installDigest).toBe(sha);
+			expect(sentinel.version).toBe(version);
+			expect(sentinel.previousVersion).toBe(version);
+
+			// THE RESTORE POINT is identifiable: same version every iteration, so
+			// the name carries the digest of the tree it holds.
+			const backups = readdirSync(backupRoot).filter((n) => n.startsWith('dedalo_'));
+			expect(backups.length).toBe(1);
+			expect(backups[0]).toContain(`_${previousDigest.slice(0, 7)}_`);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
+	test('the same-version release is REFUSED without the dev channel', async () => {
+		const version = DEDALO_VERSION_TRIPLE.join('.');
+		const refusal = await refusalOf(
+			updateCode(
+				{
+					file: { version, url: `http://localhost:1/${version}.zip`, sha256: 'e'.repeat(64) },
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({ targetRoot: join(ROOT, 'never_touched') }),
+			),
+		);
+		expect(refusal.message).toContain('same-version install');
 	});
 });

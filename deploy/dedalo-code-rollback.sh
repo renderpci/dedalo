@@ -23,8 +23,13 @@
 # to create, so a crash at any point leaves a sentinel this script can read:
 #   { "version", "previousVersion", "updateMode", "stamp",
 #     "backupDir": <absolute path of the backed-up old tree>,
+#     "installDigest": <sha256 of the installed archive, absent pre-2026-08-24>,
 #     "status": "pending" | "confirmed" | "rolled_back",
 #     "rollback_attempted": false | true }
+# installDigest is REWRITTEN VERBATIM below and must never be dropped: on the
+# dev channel the version is identical on both sides of the swap, so it is the
+# only field that tells the new tree from the restored old one. A rewrite that
+# lost it would leave a `pending` sentinel that the OLD tree happily confirms.
 # The NEW tree flips status to "confirmed" once it listens and reaches the
 # database. This script acts ONLY on status=="pending" && rollback_attempted==
 # false, and flips rollback_attempted to true BEFORE touching the filesystem —
@@ -124,6 +129,12 @@ json_raw() { # json_raw <key> — first bare (non-string) value, or ''
 }
 
 write_sentinel() { # write_sentinel <status> <rollback_attempted>
+	# The digest line is emitted only when the sentinel carried one, so a
+	# pre-2026-08-24 sentinel is rewritten in its original shape.
+	digest_line=""
+	if [ -n "$INSTALL_DIGEST" ]; then
+		digest_line="	\"installDigest\": \"$INSTALL_DIGEST\","
+	fi
 	cat > "$SENTINEL" <<EOF
 {
 	"version": "$VERSION",
@@ -131,6 +142,7 @@ write_sentinel() { # write_sentinel <status> <rollback_attempted>
 	"updateMode": "$UPDATE_MODE",
 	"stamp": "$STAMP",
 	"backupDir": "$BACKUP_DIR",
+$digest_line
 	"status": "$1",
 	"rollback_attempted": $2
 }
@@ -168,6 +180,7 @@ PREVIOUS_VERSION="$(json_str previousVersion)"
 UPDATE_MODE="$(json_str updateMode)"
 STAMP="$(json_str stamp)"
 BACKUP_DIR="$(json_str backupDir)"
+INSTALL_DIGEST="$(json_str installDigest)"
 
 # --- sanity gates: refuse absurd inputs, loudly -----------------------------
 if [ -z "$BACKUP_DIR" ]; then
