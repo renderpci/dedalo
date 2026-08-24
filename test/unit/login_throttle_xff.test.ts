@@ -17,24 +17,34 @@ import {
 	recordFailedAttempt,
 	resetSessionStoreForTests,
 } from '../../src/core/security/session_store.ts';
-import { clientIpFromRequest } from '../../src/server.ts';
+import { clientIpFromRequest, createRequestContext } from '../../src/server.ts';
 
 const req = (headers: Record<string, string>): Request => new Request('http://x/', { headers });
+
+/**
+ * A request context from the PRODUCTION listener: the unix socket, behind the reverse
+ * proxy. These three cases are about the hop arithmetic, which only runs on a transport
+ * whose header may be believed at all — WHICH transports those are, and what happens on
+ * one that may not, is proxy_trust_tripwire's subject (2026-08-24).
+ */
+const proxied = () => createRequestContext({ proxyTrusted: true, peerIp: null });
 
 afterEach(() => resetSessionStoreForTests());
 
 describe('clientIpFromRequest — trusted-hop XFF (H5)', () => {
 	test('no XFF header → local', () => {
-		expect(clientIpFromRequest(req({}))).toBe('local');
+		expect(clientIpFromRequest(req({}), proxied())).toBe('local');
 	});
 
 	test('a single trusted-proxy hop → the sole entry is the client', () => {
-		expect(clientIpFromRequest(req({ 'x-forwarded-for': '203.0.113.7' }))).toBe('203.0.113.7');
+		expect(clientIpFromRequest(req({ 'x-forwarded-for': '203.0.113.7' }), proxied())).toBe(
+			'203.0.113.7',
+		);
 	});
 
 	test('a spoofed left-most value is ignored; the trusted right-most wins', () => {
 		// Attacker sends "1.2.3.4"; the single trusted proxy appends the real peer.
-		expect(clientIpFromRequest(req({ 'x-forwarded-for': '1.2.3.4, 203.0.113.7' }))).toBe(
+		expect(clientIpFromRequest(req({ 'x-forwarded-for': '1.2.3.4, 203.0.113.7' }), proxied())).toBe(
 			'203.0.113.7',
 		);
 	});

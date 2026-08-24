@@ -198,14 +198,36 @@ export interface RequestContext {
 	 * than by an operator remembering a flag. Transport fact, not identity.
 	 */
 	readonly devListener?: boolean;
+	/**
+	 * The TRANSPORT's own peer address (Bun `server.requestIP`), or null on the unix
+	 * socket, where the peer is a local socket with no address to report. Unforgeable:
+	 * it comes from the connection, not from a header.
+	 */
+	readonly peerIp?: string | null;
+	/**
+	 * May this request's `X-Forwarded-For` be believed? True only when a reverse proxy
+	 * is known to stand in front of THIS listener (TRUSTED_PROXY_TRANSPORT). A header
+	 * is only as trustworthy as the transport that delivered it.
+	 */
+	readonly proxyTrusted?: boolean;
 }
 
-/** Exported for tests that call `handleRequest` directly (no socket). */
-export function createRequestContext(options: { devListener?: boolean } = {}): RequestContext {
+/**
+ * Exported for tests that call `handleRequest` directly (no socket).
+ *
+ * `proxyTrusted` defaults to FALSE — a context nobody described is a context with no
+ * proxy behind it, and defaulting the other way would hand every future caller the
+ * spoofable behaviour by omission. The listeners set it explicitly.
+ */
+export function createRequestContext(
+	options: { devListener?: boolean; peerIp?: string | null; proxyTrusted?: boolean } = {},
+): RequestContext {
 	return {
 		requestId: crypto.randomUUID(),
 		startedAt: performance.now(),
 		devListener: options.devListener === true,
+		peerIp: options.peerIp ?? null,
+		proxyTrusted: options.proxyTrusted === true,
 	};
 }
 
@@ -216,28 +238,84 @@ export function createRequestContext(options: { devListener?: boolean } = {}): R
  * left is client-supplied and MUST NOT be trusted. Default 1 (the standard single
  * nginx/Apache in front). The reverse proxy must append (not replace-with-client)
  * XFF for this to hold — the production default.
+ *
+ * Read through a function rather than captured at module load, so a test can set
+ * the key and observe the effect: a module-level const is fixed at import, and a
+ * gate written against one would be asserting nothing but its own default.
  */
-const TRUSTED_PROXY_HOPS = Math.max(1, Number(readString('TRUSTED_PROXY_HOPS')) || 1);
+function trustedProxyHops(): number {
+	return Math.max(1, Number(readString('TRUSTED_PROXY_HOPS')) || 1);
+}
 
 /**
- * The client IP for throttle/audit — resolved from the TRUSTED hop of
- * X-Forwarded-For, never the spoofable left-most value. Taking the left-most
- * entry let an attacker rotate a fake XFF to mint a fresh login-throttle bucket
- * per request (brute-force bypass). This is never an authorization input.
+ * WHICH TRANSPORT MAY SPEAK X-Forwarded-For. `socket` (the default) means only the
+ * unix-socket listener — the documented production topology, where the socket is
+ * reachable only by the local reverse proxy. `tcp` is the escape hatch for a
+ * topology that really does put a proxy in front of SERVER_TCP_PORT; `none`
+ * disables XFF entirely.
  */
-export function clientIpFromRequest(request: Request): string {
+function trustedProxyTransport(): string {
+	const value = readString('TRUSTED_PROXY_TRANSPORT');
+	return value === undefined || value === '' ? 'socket' : value;
+}
+
+/**
+ * The client IP for throttle and audit.
+ *
+ * X-Forwarded-For is a request HEADER: anything that can open a connection can
+ * write it. It is trustworthy only because a reverse proxy is known to have
+ * rewritten it — so it may be read only on a transport where a proxy is known to
+ * stand in front, and on any other transport the transport's own peer address is
+ * the only honest answer.
+ *
+ * That distinction was missing until 2026-08-24: the hop arithmetic was right, but
+ * it ran on EVERY listener. On the direct TCP listener, which has no proxy in
+ * front, a client simply sent its own `X-Forwarded-For` and chose what this
+ * function returned — unlimited login-throttle buckets (the brute-force protection
+ * this value exists for), forged addresses in dd544 activity rows, and, since the
+ * install gate matches the literal `127.0.0.1`, a spoofable claim to be loopback.
+ * The old comment's "this is never an authorization input" was not true.
+ *
+ * A short header is treated as forged, not as a shorter chain: fewer entries than
+ * there are trusted hops means the request did not come through the proxy chain
+ * the operator described.
+ */
+export function clientIpFromRequest(request: Request, context?: RequestContext): string {
+	// No context: a direct handleRequest() call from a test. Fall back to the
+	// production shape (socket transport, no peer address) rather than inventing
+	// trust — the socket listener is the one this default describes.
+	const proxyTrusted = context === undefined ? true : context.proxyTrusted;
+	const peerIp = context?.peerIp ?? null;
+
+	if (!proxyTrusted) return peerIp ?? 'local';
+
 	const xff = request.headers.get('x-forwarded-for');
-	if (xff === null || xff.trim() === '') return 'local';
+	if (xff === null || xff.trim() === '') return peerIp ?? 'local';
 	const parts = xff
 		.split(',')
 		.map((entry) => entry.trim())
 		.filter((entry) => entry !== '');
-	if (parts.length === 0) return 'local';
-	// The trusted proxies own the right-most TRUSTED_PROXY_HOPS entries; the real
-	// client is the entry the outermost trusted proxy appended (index len - hops).
-	const index = Math.max(0, parts.length - TRUSTED_PROXY_HOPS);
-	return parts[index] ?? parts[parts.length - 1] ?? 'local';
+	const hops = trustedProxyHops();
+	// FEWER ENTRIES THAN HOPS: the chain the operator described did not happen, so
+	// every entry present is client-written. This used to clamp the index to 0 and
+	// return the LEFT-MOST entry — i.e. the attacker's own value, which is exactly
+	// the spoof the hop arithmetic exists to prevent.
+	if (parts.length < hops) return peerIp ?? PROXY_MALFORMED_IP;
+	return parts[parts.length - hops] ?? peerIp ?? PROXY_MALFORMED_IP;
 }
+
+/**
+ * The address for a request whose X-Forwarded-For is shorter than the configured
+ * hop count and whose transport has no peer address to fall back on.
+ *
+ * A distinct token rather than 'local': it must never satisfy a loopback check,
+ * and it must be visible to an operator reading an audit row. It cannot amplify
+ * into an install-wide lockout, because a login throttle key carries the USERNAME
+ * as well (`buildThrottleKey`), so a misconfigured hop count degrades to one
+ * bucket per account rather than one bucket for everybody. The exception worth
+ * knowing is the password-reset VERIFY throttle, which is keyed by reset id.
+ */
+const PROXY_MALFORMED_IP = 'proxy-malformed';
 
 /** Parse the Content-Length header to a non-negative integer, else undefined. */
 export function parseContentLength(header: string | null): number | undefined {
@@ -1173,7 +1251,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			requestId: context.requestId,
 			// Behind the reverse proxy the socket has no peer IP; the client IP comes
 			// from the TRUSTED X-Forwarded-For hop (never the spoofable left-most).
-			clientIp: clientIpFromRequest(request),
+			clientIp: clientIpFromRequest(request, context),
 			session: sessionToken !== undefined ? getSession(sessionToken) : null,
 			sessionToken: sessionToken ?? null,
 			// Anonymous language preference (login panel). Allowlisted in dispatch.
@@ -1966,7 +2044,15 @@ export async function startServer() {
 		// options shape; the runtime accepts it (verified on the pinned 1.3.9).
 		idleTimeout: config.ops.idleTimeoutSeconds as unknown as undefined,
 		fetch(request) {
-			return handleRequest(request, createRequestContext());
+			// The unix socket is reachable only by whatever can open that file — in the
+			// documented topology, the local reverse proxy and nothing else. That is what
+			// makes its X-Forwarded-For believable, and why `socket` is the default
+			// TRUSTED_PROXY_TRANSPORT. A socket peer has no address to report, so there
+			// is no peerIp: on this listener the header is the only source there is.
+			return handleRequest(
+				request,
+				createRequestContext({ proxyTrusted: trustedProxyTransport() === 'socket' }),
+			);
 		},
 		// Catch-all for any throw that escapes handleRequest (API-01 hardening).
 		// Without it, an un-try/caught throw returns Bun's raw 500 stack page,
@@ -2010,11 +2096,24 @@ export async function startServer() {
 				port: Number(tcpPort),
 				maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
 				idleTimeout: config.ops.idleTimeoutSeconds,
-				fetch(request) {
+				fetch(request, server) {
 					// devListener: THIS listener is the only one a browser can reach without a
 					// web server in front, so it is the only one that may answer media from the
 					// engine (mediaFallbackAllowed). The socket listener never sets it.
-					return handleRequest(request, createRequestContext({ devListener: true }));
+					//
+					// And by the same fact it is the one listener a BROWSER talks to directly,
+					// so its X-Forwarded-For is written by whoever connected — not by a proxy.
+					// The peer address from the connection is the honest client identity here,
+					// and the header is believed only if an operator declared a proxy in front
+					// of this port (TRUSTED_PROXY_TRANSPORT=tcp).
+					return handleRequest(
+						request,
+						createRequestContext({
+							devListener: true,
+							peerIp: server.requestIP(request)?.address ?? null,
+							proxyTrusted: trustedProxyTransport() === 'tcp',
+						}),
+					);
 				},
 				error(error) {
 					console.error('[server] unhandled fetch error (dev listener):', error);

@@ -217,6 +217,37 @@ file from an unclean stop is removed.
 SERVER_UNIX_SOCKET="/run/dedalo/dedalo_ts.sock"
 \`\`\``,
 	},
+	TRUSTED_PROXY_TRANSPORT: {
+		type: 'string',
+		scope: 'operator',
+		default: 'socket',
+		heading: 'Defining which transport may be believed about the client address',
+		typeLabel: 'socket | tcp | none',
+		doc: `Which of this engine's listeners sits behind the reverse proxy, and therefore
+whose \`X-Forwarded-For\` header may be believed.
+
+\`X-Forwarded-For\` is a request **header**: anything that can open a connection can write
+it. It is trustworthy only because a proxy is known to have rewritten it — so it is read
+on one transport and ignored on the other, and on the other the connection's own peer
+address is used instead.
+
+* \`socket\` (**default**) — the unix socket (\`SERVER_UNIX_SOCKET\`), which only the local
+  reverse proxy can open. This is the documented production topology.
+* \`tcp\` — a proxy really does stand in front of \`SERVER_TCP_PORT\`. Set this ONLY when
+  that is true: on a port a browser reaches directly, it lets any client choose its own
+  address.
+* \`none\` — never read the header. Every request is attributed to its peer address.
+
+Until 2026-08-24 the header was read on every listener, so on the direct TCP port a client
+could pick the address used for the login throttle (a fresh brute-force bucket per
+request), for \`dd544\` activity rows, and for any check that matches a literal loopback
+address. The address is used for throttling and audit; the hop arithmetic is
+\`TRUSTED_PROXY_HOPS\`.
+
+\`\`\`bash
+TRUSTED_PROXY_TRANSPORT=socket
+\`\`\``,
+	},
 	TRUSTED_PROXY_HOPS: {
 		type: 'number',
 		scope: 'operator',
