@@ -284,6 +284,8 @@ export const RUNTIME_PATH_SCAN_EXEMPTIONS: Readonly<Record<string, string>> = Ob
 	'src/server.ts': 'reads the shipped .bun-version pin — release content, not runtime data',
 	'src/core/update/code_update.ts':
 		'the updater: it operates ON the code tree by design and consults this census before any swap',
+	'src/core/update/status.ts':
+		'the readiness PANEL: read-only introspection of the live tree (the shipped .bun-version pin, the unaccounted root entries) — it writes nothing and asks this census itself for the swap blockers',
 	'src/core/area_maintenance/widgets/system_info.ts':
 		'statfsSync(process.cwd()) — a read-only disk-usage probe, writes nothing',
 });

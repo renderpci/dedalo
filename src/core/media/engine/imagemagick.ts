@@ -708,11 +708,20 @@ export function canWriteImageFormat(extension: string): Promise<boolean> {
 	// cache's lifecycle note. Dropping it after resolution, not before, is what
 	// keeps both properties.
 	writableFormatCache.set(normalized, probe);
+	const dropIfStillOurs = (): void => {
+		if (writableFormatCache.get(normalized) === probe) writableFormatCache.delete(normalized);
+	};
+	// TWO arms, both required. This `.then` is a SECOND consumer of the shared
+	// promise, so a rejection needs its own handler here or it surfaces as a
+	// process-level unhandled rejection attached to no caller (under `bun test`
+	// that is a file whose tests count as neither pass nor fail). And a REJECTED
+	// probe must leave the cache exactly like a `false` one: memoized, a single
+	// transient tmpdir error would take the format out for the process's life and
+	// every later pass would retire twins it could no longer rebuild — the damage
+	// the note above exists to prevent.
 	void probe.then((writable) => {
-		if (!writable && writableFormatCache.get(normalized) === probe) {
-			writableFormatCache.delete(normalized);
-		}
-	});
+		if (!writable) dropIfStillOurs();
+	}, dropIfStillOurs);
 	return probe;
 }
 
@@ -732,7 +741,16 @@ async function probeWritableFormat(extension: string): Promise<boolean> {
 	} catch {
 		return false;
 	} finally {
-		rmSync(target, { force: true });
+		// `force` swallows ENOENT only: EACCES/EPERM/EISDIR on the tmp target
+		// would still throw OUT of the finally and reject a promise whose whole
+		// contract is "never throws — an unwritable format is an answer". The
+		// leftover 1x1 file is inert (os.tmpdir(), uuid-named), the exception is
+		// not.
+		try {
+			rmSync(target, { force: true });
+		} catch {
+			/* the probe's ANSWER outranks its own cleanup */
+		}
 	}
 }
 

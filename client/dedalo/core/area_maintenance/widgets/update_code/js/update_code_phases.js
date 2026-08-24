@@ -131,7 +131,7 @@ export const apply_phase_frame = function(state, frame) {
  * already knows the truth. That envelope outranks the frozen track:
  *
  *   {data:{ok:true,  data:{version}}}            → updated  (install landed)
- *   {data:{ok:false}| errors:[…]}                → failed   (the sentence rides)
+ *   {data:{ok:false,error:{message}} | errors:[…]} → failed  (the sentence rides)
  *
  * Returns {outcome:'updated', version} | {outcome:'failed', message} | null
  * when the frame decides nothing (caller keeps its existing heuristics).
@@ -148,9 +148,18 @@ export const resolve_final_frame = function(state, frame) {
 		if (result.ok===true && result.data && typeof result.data.version==='string') {
 			return { outcome : 'updated', version : result.data.version }
 		}
+		// The failure sentence, in wire order: the job frame's own `errors[]`
+		// first (it collects the throw the worker caught), else envelope v2's
+		// `error.message`. NEVER `result.msg` — `msg` is a handler extension key
+		// the pipeline writes on SUCCESS only (src/core/update/code_update.ts
+		// ok({version},{extend:{msg}})), so on a failed run it is undefined, and
+		// on the degenerate ok-without-version run it is a success sentence
+		// rendered as the failure's.
 		const message = Array.isArray(frame.errors) && frame.errors.length > 0
 			? frame.errors.join(' ')
-			: (typeof result.msg==='string' && result.msg.length>0 ? result.msg : null)
+			: (result.error && typeof result.error.message==='string' && result.error.message.length>0
+				? result.error.message
+				: null)
 		if (result.ok===false || message!==null) {
 			return { outcome : 'failed', message : message }
 		}

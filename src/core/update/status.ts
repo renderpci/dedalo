@@ -454,9 +454,9 @@ function buildPlanCheck(): StatusCheck {
 }
 
 /** A configured directory that must exist and be writable to publish. */
-function directoryCheck(id: string, dir: string | undefined): StatusCheck {
+function directoryCheck(id: string, dir: string | null | undefined): StatusCheck {
 	return probe(id, () => {
-		if (dir === undefined || dir === '') return check(id, 'blocked', 'unset');
+		if (dir === undefined || dir === null || dir === '') return check(id, 'blocked', 'unset');
 		if (!existsSync(dir)) return check(id, 'blocked', dir);
 		return check(id, 'ok', dir);
 	});
@@ -505,13 +505,44 @@ export function archiveSymlinkNames(listing: string): string[] {
 	const names: string[] = [];
 	for (const line of listing.split('\n')) {
 		if (!/^l[rwxsStT-]{9}\s/.test(line)) continue;
-		const linkHalf = (line.split(' -> ')[0] ?? '').trimEnd();
-		// `<mode> <size> <owner> <group> <size> <month> <day> <HH:MM|year> <name>`
-		const named = /\s(?:\d{2}:\d{2}|\d{4})\s+(.+)$/.exec(linkHalf);
-		const name = named?.[1] ?? linkHalf.split(/\s+/).pop() ?? '';
+		const name = symlinkNameOf(line);
 		if (name !== '') names.push(name);
 	}
 	return names;
+}
+
+/** The NAME column of one `tar -tv` link line ('' when the line yields none). */
+function symlinkNameOf(line: string): string {
+	const linkHalf = (line.split(' -> ')[0] ?? '').trimEnd();
+	// `<mode> <size> <owner> <group> <size> <month> <day> <HH:MM|year> <name>`
+	const named = /\s(?:\d{2}:\d{2}|\d{4})\s+(.+)$/.exec(linkHalf);
+	return named?.[1] ?? linkHalf.split(/\s+/).pop() ?? '';
+}
+
+/** The `.bun-version` pin of a source checkout — absent is an ANSWER, not an error. */
+function readBunPin(gitDir: string): string | null {
+	try {
+		return readFileSync(join(gitDir, '.bun-version'), 'utf8').trim();
+	} catch {
+		return null;
+	}
+}
+
+/** The RELEASE_REF half of `source`: present/absent, and what it points at. */
+function readReleaseRef(
+	gitDir: string,
+): Pick<
+	CodeServerStatus['source'],
+	'has_master_ref' | 'release_ref' | 'release_sha' | 'release_date' | 'divergence'
+> {
+	const hasRelease = git(gitDir, ['rev-parse', '--verify', '--quiet', RELEASE_REF]) !== null;
+	return {
+		has_master_ref: hasRelease,
+		release_ref: RELEASE_REF,
+		release_sha: hasRelease ? git(gitDir, ['rev-parse', '--short', RELEASE_REF]) : null,
+		release_date: hasRelease ? git(gitDir, ['log', '-1', '--format=%cI', RELEASE_REF]) : null,
+		divergence: hasRelease ? readDivergence(gitDir) : null,
+	};
 }
 
 /** Everything git knows about the tree the releases are built FROM. */
@@ -532,25 +563,14 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 		};
 	}
 	const dirty = git(gitDir, ['status', '--porcelain']);
-	let pin: string | null = null;
-	try {
-		pin = readFileSync(join(gitDir, '.bun-version'), 'utf8').trim();
-	} catch {
-		pin = null;
-	}
-	const hasRelease = git(gitDir, ['rev-parse', '--verify', '--quiet', RELEASE_REF]) !== null;
 	return {
 		git_dir: gitDir,
 		head_sha: git(gitDir, ['rev-parse', '--short', 'HEAD']),
 		head_date: git(gitDir, ['log', '-1', '--format=%cI']),
 		branch: git(gitDir, ['rev-parse', '--abbrev-ref', 'HEAD']),
 		dirty: dirty === null ? null : dirty !== '',
-		has_master_ref: hasRelease,
-		bun_pin: pin,
-		release_ref: RELEASE_REF,
-		release_sha: hasRelease ? git(gitDir, ['rev-parse', '--short', RELEASE_REF]) : null,
-		release_date: hasRelease ? git(gitDir, ['log', '-1', '--format=%cI', RELEASE_REF]) : null,
-		divergence: hasRelease ? readDivergence(gitDir) : null,
+		bun_pin: readBunPin(gitDir),
+		...readReleaseRef(gitDir),
 	};
 }
 
@@ -569,8 +589,16 @@ function readDivergence(gitDir: string): { ahead: number; behind: number } | nul
 }
 
 /** Every archive already published under the code-files dir, newest first. */
-function readReleases(filesDir: string | undefined, publicBaseUrl: string): PublishedRelease[] {
-	if (filesDir === undefined || filesDir === '' || !existsSync(filesDir)) return [];
+/** An UNSET/absent directory is an answer ('nothing published'), never an error. */
+function isReadableDir(dir: string | null | undefined): dir is string {
+	return dir !== undefined && dir !== null && dir !== '' && existsSync(dir);
+}
+
+function readReleases(
+	filesDir: string | null | undefined,
+	publicBaseUrl: string,
+): PublishedRelease[] {
+	if (!isReadableDir(filesDir)) return [];
 	const found: PublishedRelease[] = [];
 	try {
 		for (const major of readdirSync(filesDir)) {
@@ -602,6 +630,68 @@ function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRe
 	}
 }
 
+/**
+ * The manifest a consumer at THIS version would receive. An empty list with a
+ * published zip on disk is the catalog's doing (UPDATE_CATALOG is empty for
+ * 7.x) — the panel shows both, so the operator can see the difference instead
+ * of inferring it.
+ */
+function advertisedFiles(filesDir: string | null, publicBaseUrl: string): CodeReleaseItem[] {
+	return buildCodeUpdateInfo({
+		clientVersion: DEDALO_VERSION_TRIPLE,
+		serverVersion: DEDALO_VERSION_TRIPLE,
+		codeFilesDir: filesDir ?? undefined,
+		publicBaseUrl,
+		info: { date: '', entity_id: null, entity: null, host: null },
+	}).files;
+}
+
+/** `master_ref`: does the release ref exist at all (unknown when git could not answer). */
+function masterRefCheck(source: CodeServerStatus['source']): StatusCheck {
+	return probe('master_ref', () =>
+		source.has_master_ref === null
+			? check('master_ref', 'unknown', undefined, RELEASE_REF)
+			: check('master_ref', source.has_master_ref ? 'ok' : 'blocked', undefined, RELEASE_REF),
+	);
+}
+
+/**
+ * `worktree_clean`. A dirty worktree does not refuse the build — `git archive`
+ * silently packages HEAD, so the uncommitted work is simply ABSENT from the
+ * release. That is a warning the operator must see before publishing.
+ */
+function worktreeCleanCheck(source: CodeServerStatus['source']): StatusCheck {
+	return probe('worktree_clean', () =>
+		source.dirty === null
+			? check('worktree_clean', 'unknown')
+			: check('worktree_clean', source.dirty ? 'warn' : 'ok'),
+	);
+}
+
+/**
+ * `release_ref_current` — the commits-not-in-the-release-ref line. A WARNING,
+ * not a blocker: publishing an older `master` is a legitimate act. It exists
+ * because without it a publish check red on work the operator has ALREADY
+ * committed reads as a false alarm — the fix is on their branch, and the panel
+ * was looking at the release ref all along.
+ */
+function releaseRefCurrentCheck(source: CodeServerStatus['source']): StatusCheck {
+	return probe('release_ref_current', () => {
+		if (source.divergence === null) {
+			return check('release_ref_current', 'unknown', undefined, RELEASE_REF);
+		}
+		if (source.divergence.behind === 0) {
+			return check('release_ref_current', 'ok', undefined, RELEASE_REF);
+		}
+		return check(
+			'release_ref_current',
+			'warn',
+			`${source.divergence.behind} / ${source.branch ?? 'HEAD'}`,
+			RELEASE_REF,
+		);
+	});
+}
+
 /** The code-server half of the panel: role, build source, artifacts, manifest. */
 export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 	const gitDir = config.update.codeServerGitDir ?? null;
@@ -612,37 +702,10 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 		directoryCheck('git_dir', gitDir ?? undefined),
 		directoryCheck('files_dir', filesDir ?? undefined),
 		buildPlanCheck(),
-		probe('master_ref', () =>
-			source.has_master_ref === null
-				? check('master_ref', 'unknown', undefined, RELEASE_REF)
-				: check('master_ref', source.has_master_ref ? 'ok' : 'blocked', undefined, RELEASE_REF),
-		),
-		// A dirty worktree does not refuse the build — `git archive` silently
-		// packages HEAD, so the uncommitted work is simply ABSENT from the
-		// release. That is a warning the operator must see before publishing.
-		probe('worktree_clean', () =>
-			source.dirty === null
-				? check('worktree_clean', 'unknown')
-				: check('worktree_clean', source.dirty ? 'warn' : 'ok'),
-		),
+		masterRefCheck(source),
+		worktreeCleanCheck(source),
 		archiveShapeCheck(gitDir, RELEASE_REF),
-		// The commits-not-in-the-release-ref line. It is a WARNING, not a
-		// blocker: publishing an older `master` is a legitimate act. It exists
-		// because without it a publish check red on work the operator has
-		// ALREADY committed reads as a false alarm — the fix is on their branch,
-		// and the panel was looking at the release ref all along.
-		probe('release_ref_current', () =>
-			source.divergence === null
-				? check('release_ref_current', 'unknown', undefined, RELEASE_REF)
-				: source.divergence.behind === 0
-					? check('release_ref_current', 'ok', undefined, RELEASE_REF)
-					: check(
-							'release_ref_current',
-							'warn',
-							`${source.divergence.behind} / ${source.branch ?? 'HEAD'}`,
-							RELEASE_REF,
-						),
-		),
+		releaseRefCurrentCheck(source),
 	];
 	return {
 		is_a_code_server: config.update.isCodeServer,
@@ -650,20 +713,10 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 		ready: !checks.some((entry) => entry.state === 'blocked'),
 		source,
 		files_dir: filesDir,
-		releases: readReleases(filesDir ?? undefined, publicBaseUrl),
+		releases: readReleases(filesDir, publicBaseUrl),
 		advertises: {
 			for_version: DEDALO_VERSION,
-			// The manifest a consumer at THIS version would receive. An empty
-			// list with a published zip on disk is the catalog's doing
-			// (UPDATE_CATALOG is empty for 7.x) — the panel shows both, so the
-			// operator can see the difference instead of inferring it.
-			files: buildCodeUpdateInfo({
-				clientVersion: DEDALO_VERSION_TRIPLE,
-				serverVersion: DEDALO_VERSION_TRIPLE,
-				codeFilesDir: filesDir ?? undefined,
-				publicBaseUrl,
-				info: { date: '', entity_id: null, entity: null, host: null },
-			}).files,
+			files: advertisedFiles(filesDir, publicBaseUrl),
 		},
 	};
 }

@@ -165,6 +165,12 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 			"One row of the widget payload's `servers[]`: the probe writes `msg`/`errors`/`response_code`/`result` per server (src/core/area_maintenance/widgets/update_ontology.ts).",
 	},
 	{
+		file: 'client/dedalo/core/area_maintenance/widgets/update_code/js/update_code_phases.js',
+		pattern: /\bframe\.errors\b/g,
+		reason:
+			"`frame` is the server-owned job STATUS FRAME {pid, pfile, is_running, data, errors, total_time} (src/core/media/jobs.ts JobStatusFrame), not an envelope: `errors` there is the worker's collected failure lines. The envelope INSIDE it (`frame.data`) is read as `data`/`error.message`.",
+	},
+	{
 		file: 'client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/render_diffusion_server_control.js',
 		pattern: /\bjob\.msg\b/g,
 		reason:

@@ -345,7 +345,13 @@ describe('update_code terminal frame (resolve_final_frame)', () => {
 		const refused = resolve_final_frame(
 			// biome-ignore lint/suspicious/noExplicitAny: plain-JS reducer
 			init_phase_state('7.0.1') as any,
-			terminal({ ok: false, msg: 'Error. Release checksum mismatch' }),
+			// envelope v2 failure body: the sentence is `error.message`. `msg` is a
+			// handler extension key emitted on SUCCESS only, so a fixture carrying
+			// it on ok:false would test a shape the server cannot send.
+			terminal({
+				ok: false,
+				error: { code: 'update.failed', message: 'Error. Release checksum mismatch' },
+			}),
 		);
 		expect(refused?.outcome).toBe('failed');
 		expect(refused?.message).toContain('checksum');
