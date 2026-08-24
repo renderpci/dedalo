@@ -29,10 +29,10 @@
  * `scripts/strip_test_tld_from_seed.ts` removes its copy of these rows.
  */
 
-import { describe, expect, test } from 'bun:test';
-import type { DdOntologyNode } from '../../src/core/db/dd_ontology.ts';
-import { readDdOntologyRow, searchDdOntology } from '../../src/core/db/dd_ontology.ts';
+import { beforeAll, describe, expect, test } from 'bun:test';
+import type { DdOntologyNode, DdOntologyRow } from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import type { OntologyState } from '../../src/core/ontology/ontology_state.ts';
 import { inspectOntology, nodeDiffColumns } from '../../src/core/ontology/ontology_state.ts';
 import {
 	ONTOLOGY_CONNECTED_TO,
@@ -275,7 +275,107 @@ describe('test TLD ontology — the inverse parser (hermetic)', () => {
 	});
 });
 
+/**
+ * THE FETCH PHASE — why this tier reads the database ONCE, up front.
+ *
+ * Until 2026-08-24 each database test below walked all 8477 nodes making
+ * SEQUENTIAL round trips inside bun's DEFAULT 5000 ms per-test budget (a record
+ * parse per node, a dd_ontology read per node, a table lookup per section:
+ * ~17k awaited queries, ~0.6 ms allowed each). It did not report drift — it
+ * TIMED OUT, which reports NOTHING and is indistinguishable in the totals from
+ * a gate that found no problem.
+ *
+ * So the reads are batched here and every test below is a pure in-memory diff:
+ *  - dd_ontology is ONE query for every declared TLD (was 8477 readDdOntologyRow
+ *    + 33 searchDdOntology calls), normalized exactly as the single-row reader
+ *    normalizes it;
+ *  - the per-record parse has no batched form (the parser reads one record at a
+ *    time, by design), so it keeps its per-record round trip but runs with
+ *    bounded concurrency instead of one-at-a-time.
+ *
+ * NOTHING is checked less: every node is still parsed back from its own record
+ * and still compared column by column with the engine's own `nodeDiffColumns`,
+ * and `inspectOntology` still runs per TLD.
+ *
+ * Measured on this machine (2026-08-24, idle tier): fetch phase 1848 ms for 8477
+ * nodes; each test below then runs in ~40 ms (whole file 3.41 s -> 2.19 s). The
+ * budget below is DATA VOLUME, not a race — it is sized for a loaded tier, and
+ * the phase does a fixed amount of work that never waits on another process.
+ */
+const FETCH_BUDGET_MS = 120_000;
+/** How many record parses may be in flight (pool-friendly; the pool queues the rest). */
+const PARSE_CONCURRENCY = 16;
+
+/** Every node that HAS a source record (the `<tld>0` main is minted by the rebuild). */
+const SOURCE_NODES = NODES.filter((node) => node.is_main !== true);
+
+/** dd_ontology rows for every declared TLD, by tipo. */
+const STORED = new Map<string, DdOntologyRow>();
+/** The tipos dd_ontology holds, per TLD (what `searchDdOntology({tld})` answers). */
+const DB_TIPOS_BY_TLD = new Map<string, Set<string>>();
+/** What each source record parses back into, by node tipo (null = no record / unparseable). */
+const PARSED = new Map<string, DdOntologyNode | null>();
+/** `inspectOntology(tld)` per declared TLD. */
+const STATES = new Map<string, OntologyState>();
+/** The matrix table each `section` node stores in. */
+const TABLE_BY_TIPO = new Map<string, string | null>();
+
+/** Run `worker` over `items` with at most `width` in flight. Order-independent. */
+async function forEachConcurrent<T>(
+	items: readonly T[],
+	width: number,
+	worker: (item: T) => Promise<void>,
+): Promise<void> {
+	let cursor = 0;
+	const runner = async (): Promise<void> => {
+		while (cursor < items.length) {
+			const item = items[cursor++] as T;
+			await worker(item);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(width, items.length) }, runner));
+}
+
 describe('test TLD ontology — the database is derived from the JSON', () => {
+	beforeAll(async () => {
+		// dd_ontology: ONE query for every declared TLD. Same columns and the same
+		// order_number normalization `readDdOntologyRow` applies (the driver may
+		// hand a numeric column back as a string).
+		const rows = (await sql`
+			SELECT tipo, parent, term, model, order_number, relations, tld,
+			       properties, model_tipo, is_model, is_translatable, is_main, propiedades
+			FROM dd_ontology
+			WHERE tld = ANY(string_to_array(${TLDS.join(',')}, ','))
+		`) as DdOntologyRow[];
+		for (const row of rows) {
+			row.order_number =
+				row.order_number === null || row.order_number === undefined
+					? null
+					: Math.trunc(Number(row.order_number));
+			STORED.set(row.tipo, row);
+			const tld = String(row.tld ?? '');
+			const bucket = DB_TIPOS_BY_TLD.get(tld) ?? new Set<string>();
+			bucket.add(row.tipo);
+			DB_TIPOS_BY_TLD.set(tld, bucket);
+		}
+		// The record round trip: per record (no batched parser exists), concurrent.
+		await forEachConcurrent(SOURCE_NODES, PARSE_CONCURRENCY, async (node) => {
+			const sectionId = Number(getSectionIdFromTipo(node.tipo));
+			PARSED.set(node.tipo, await parseSectionRecordToOntologyNode(`${node.tld}0`, sectionId));
+		});
+		// The engine's own drift verdict, per TLD.
+		await forEachConcurrent(TLDS, 4, async (tld) => {
+			STATES.set(tld, await inspectOntology(tld));
+		});
+		await forEachConcurrent(
+			NODES.filter((node) => node.model === 'section' && node.is_main !== true),
+			PARSE_CONCURRENCY,
+			async (node) => {
+				TABLE_BY_TIPO.set(node.tipo, await getMatrixTableFromTipo(node.tipo));
+			},
+		);
+	}, FETCH_BUDGET_MS);
+
 	test('the fixed component→column map still matches the ontology itself', async () => {
 		const expected: Record<string, string> = {
 			[ONTOLOGY_PARENT]: 'relation',
@@ -298,14 +398,11 @@ describe('test TLD ontology — the database is derived from the JSON', () => {
 		}
 	});
 
-	test('every materialized record parses BACK into exactly its JSON node (round trip)', async () => {
+	test('every materialized record parses BACK into exactly its JSON node (round trip)', () => {
 		let parsed = 0;
 		const diffs: string[] = [];
-		for (const node of NODES) {
-			// The main node has no source record — the rebuild mints it.
-			if (node.is_main === true) continue;
-			const sectionId = Number(getSectionIdFromTipo(node.tipo));
-			const back = await parseSectionRecordToOntologyNode(`${node.tld}0`, sectionId);
+		for (const node of SOURCE_NODES) {
+			const back = PARSED.get(node.tipo) ?? null;
 			if (back === null) {
 				diffs.push(`${node.tipo}: no record / unparseable`);
 				continue;
@@ -319,9 +416,9 @@ describe('test TLD ontology — the database is derived from the JSON', () => {
 		expect(parsed).toBeGreaterThan(200); // anti-vacuity
 	});
 
-	test('dd_ontology equals the JSON node for node, and no TLD has drift', async () => {
+	test('dd_ontology equals the JSON node for node, and no TLD has drift', () => {
 		for (const tld of TLDS) {
-			const dbTipos = new Set(await searchDdOntology({ tld }));
+			const dbTipos = DB_TIPOS_BY_TLD.get(tld) ?? new Set<string>();
 			const jsonTipos = new Set(NODES.filter((node) => node.tld === tld).map((node) => node.tipo));
 			expect([...dbTipos].filter((tipo) => !jsonTipos.has(tipo)).sort(), `${tld}: extra`).toEqual(
 				[],
@@ -329,14 +426,14 @@ describe('test TLD ontology — the database is derived from the JSON', () => {
 			expect([...jsonTipos].filter((tipo) => !dbTipos.has(tipo)).sort(), `${tld}: missing`).toEqual(
 				[],
 			);
-			const state = await inspectOntology(tld);
+			const state = STATES.get(tld) as OntologyState;
 			expect(state.drift, `${tld} drift`).toEqual([]);
 			expect(state.inSync, `${tld} inSync`).toBe(true);
 		}
 		const diffs: string[] = [];
 		for (const node of NODES) {
-			const row = await readDdOntologyRow(node.tipo);
-			if (row === null) {
+			const row = STORED.get(node.tipo);
+			if (row === undefined) {
 				diffs.push(`${node.tipo}: absent`);
 				continue;
 			}
@@ -363,7 +460,7 @@ describe('test TLD ontology — the database is derived from the JSON', () => {
 		).resolves.toEqual({ tlds: [], nodes: 0, rebuilt: [], strays: [] });
 	});
 
-	test('every test SECTION stores in matrix_test (no test record in an install table)', async () => {
+	test('every test SECTION stores in matrix_test (no test record in an install table)', () => {
 		const wrong: string[] = [];
 		let checked = 0;
 		for (const node of NODES) {
@@ -372,7 +469,7 @@ describe('test TLD ontology — the database is derived from the JSON', () => {
 			// the section_id='0' rule, and holds the TLD's own node records.
 			if (node.is_main === true) continue;
 			checked++;
-			const table = await getMatrixTableFromTipo(node.tipo);
+			const table = TABLE_BY_TIPO.get(node.tipo) ?? null;
 			if (table !== 'matrix_test') wrong.push(`${node.tipo} → ${table}`);
 		}
 		expect(
