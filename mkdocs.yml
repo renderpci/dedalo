@@ -86,8 +86,10 @@ plugins:
         # Pages renamed away from a retired engine's class names.
         api/classes/dd_manager.md: api/classes/dispatch.md
         core/ontology/ontology_class.md: core/ontology/ontology_write.md
+        # Fossil misspellings, corrected 2026-08-24. The pages themselves stayed.
+        management/maintenace_status.md: management/maintenance_status.md
+        config/thesaurus_dependeces.md: config/thesaurus_dependencies.md
         # Pages deleted because they documented something the engine does not have.
-        api/classes/dd_component_text_area_api.md: api/dedalo_api_v1.md
         core/areas/area_common.md: core/areas/area.md
         core/areas/area_graph.md: core/areas/index.md
         development/OpcacheObjectManager.md: development/runtime_and_workers.md

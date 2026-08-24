@@ -91,7 +91,7 @@ nothing.
 
 Before performing any critical maintenance task, such as a data update, change the Dédalo state to maintenance.
 
-- [Changing to maintenance state.](maintenace_status.md)
+- [Changing to maintenance state.](maintenance_status.md)
 
 Previous task is common in multiple scenarios.
 

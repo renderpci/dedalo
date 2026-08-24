@@ -35,7 +35,7 @@ wizard](../install/index.md) writes the file for you.
 | [Areas](config_areas.md) | Allowing and denying areas. |
 | [Media protection](media_protection.md) | Web-server-enforced access control for media files. |
 | [Search](search.md) | The search trust boundary and its limits. |
-| [Thesaurus dependencies](thesaurus_dependeces.md) | Which ontology TLDs need which hierarchies. |
+| [Thesaurus dependencies](thesaurus_dependencies.md) | Which ontology TLDs need which hierarchies. |
 
 ---
 

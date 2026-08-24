@@ -22,7 +22,7 @@ Not every code update implies a data update — the two processes are independen
 1. Close access to the work system.
 
     Before updating the data, it is mandatory to change the Dédalo status to maintenance.
-    Follow [this guide](../maintenace_status.md) to change the Dédalo status and disable Dédalo access.
+    Follow [this guide](../maintenance_status.md) to change the Dédalo status and disable Dédalo access.
 
     !!! danger "Inconsistencies"
         If the work system is in a normal state instead of maintenance status and users change data while the data-update process is running, data inconsistencies may arise.

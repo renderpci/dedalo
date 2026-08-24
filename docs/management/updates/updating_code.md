@@ -36,7 +36,7 @@ refuses rather than risk a self-exit with nothing to restart it.
 
 1. Close access to the work system.
 
-    Before updating the code, it is highly recommended to change the Dédalo status to maintenance. Follow [this guide](../maintenace_status.md) to change the Dédalo status and disable Dédalo access.
+    Before updating the code, it is highly recommended to change the Dédalo status to maintenance. Follow [this guide](../maintenance_status.md) to change the Dédalo status and disable Dédalo access.
 
 2. Enter the maintenance panel.
 
