@@ -9,16 +9,27 @@
  * is demonstrably alive (listener up + first DB ping green). server.ts calls
  * this at exactly that point.
  *
- * A pending sentinel whose `version` is NOT the running engine's means either
- * a rollback already happened (we are the OLD tree booting again) or a
- * half-applied swap — both log LOUDLY and leave the sentinel untouched (the
- * rollback script owns it in that state). Never throws: confirmation is a
- * post-boot courtesy, and a broken sentinel must not take the server down.
+ * A pending sentinel the running tree does NOT match means either a rollback
+ * already happened (we are the OLD tree booting again) or a half-applied swap
+ * — both log LOUDLY and leave the sentinel untouched (the rollback script owns
+ * it in that state). Never throws: confirmation is a post-boot courtesy, and a
+ * broken sentinel must not take the server down.
+ *
+ * WHAT "MATCHES" MEANS (2026-08-24, dev channel): the INSTALLED ARCHIVE DIGEST,
+ * not the version. A dev-channel install swaps a tree whose version is
+ * unchanged, so a version comparison confirms the rolled-back OLD tree just as
+ * happily as the new one — silently disarming the supervisor-side rollback for
+ * exactly the class of build (unreleased branch code) most likely to need it.
+ * The digest is per-BYTES, so it separates them. Sentinels written before this
+ * (no `installDigest`) still fall back to the version compare: an old pending
+ * sentinel must not become unconfirmable across the upgrade that introduces
+ * the field.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RUNTIME_PATH_CENSUS } from '../install/runtime_paths.ts';
+import { INSTALLED_DIGEST } from './install_stamp.ts';
 import { DEDALO_VERSION } from './version.ts';
 
 /** The one sentinel shape (flat, machine-written; the rollback script greps it). */
@@ -28,6 +39,8 @@ export interface CodeUpdateSentinel {
 	updateMode: string;
 	stamp: string;
 	backupDir: string;
+	/** sha256 of the installed archive — the tree's identity (absent: pre-2026-08-24). */
+	installDigest?: string;
 	status: 'pending' | 'confirmed' | 'rolled_back';
 	rollback_attempted: boolean;
 }
@@ -44,29 +57,44 @@ export function codeUpdateSentinelPath(): string | null {
 }
 
 /**
+ * Does the booted tree match what the pending sentinel installed? Digest when
+ * the sentinel carries one, version otherwise (legacy sentinels).
+ */
+function bootedTreeMatches(
+	sentinel: CodeUpdateSentinel,
+	runningVersion: string,
+	runningDigest: string | null,
+): boolean {
+	return sentinel.installDigest === undefined
+		? sentinel.version === runningVersion
+		: sentinel.installDigest === runningDigest;
+}
+
+/**
  * Confirm (or loudly report) a pending code update. `sentinelPath` /
- * `runningVersion` are test seams; production passes nothing.
+ * `runningVersion` / `runningDigest` are test seams; production passes nothing.
  */
 export async function confirmBootedCodeUpdate(
 	sentinelPath: string | null = codeUpdateSentinelPath(),
 	runningVersion: string = DEDALO_VERSION,
+	runningDigest: string | null = INSTALLED_DIGEST,
 ): Promise<void> {
 	try {
 		if (sentinelPath === null || !existsSync(sentinelPath)) return;
 		const sentinel = JSON.parse(readFileSync(sentinelPath, 'utf8')) as CodeUpdateSentinel;
 		if (sentinel.status !== 'pending') return;
-		if (sentinel.version === runningVersion) {
+		if (bootedTreeMatches(sentinel, runningVersion, runningDigest)) {
 			await Bun.write(
 				sentinelPath,
 				JSON.stringify({ ...sentinel, status: 'confirmed' }, null, '\t'),
 			);
 			console.log(
-				`[code update] boot CONFIRMED: running ${runningVersion} matches the pending update (sentinel flipped to confirmed)`,
+				`[code update] boot CONFIRMED: running ${runningVersion} (installed digest ${runningDigest ?? 'none'}) matches the pending update (sentinel flipped to confirmed)`,
 			);
 			return;
 		}
 		console.error(
-			`[code update] LOUD: a PENDING code-update sentinel names version ${sentinel.version} but this process runs ${runningVersion} — a rollback happened, or the swap half-applied. The sentinel at ${sentinelPath} is left untouched; inspect it and the backup at ${sentinel.backupDir}.`,
+			`[code update] LOUD: a PENDING code-update sentinel names version ${sentinel.version} / digest ${sentinel.installDigest ?? 'none'} but this process runs ${runningVersion} / digest ${runningDigest ?? 'none'} — a rollback happened, or the swap half-applied. The sentinel at ${sentinelPath} is left untouched; inspect it and the backup at ${sentinel.backupDir}.`,
 		);
 	} catch (error) {
 		console.error('[code update] boot confirmation failed (sentinel unreadable?):', error);

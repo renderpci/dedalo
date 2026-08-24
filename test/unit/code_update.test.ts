@@ -1230,3 +1230,36 @@ describe('boot_confirm under a same-version (dev channel) install', () => {
 		expect(after.status).toBe('confirmed');
 	});
 });
+
+// ---------------------------------------------------------------------------
+// The DEV CHANNEL relaxes an ORDERING guard, never an authenticity one: the
+// same version becomes installable (that IS the feature — a `v7` branch build
+// carries no version bump), while downgrades and rung skips stay refused.
+// ---------------------------------------------------------------------------
+describe('assertLinearUpgrade on the dev channel', () => {
+	test('the SAME version is allowed on dev and still refused on the release channel', () => {
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 1], 'dev')).toBeNull();
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 1], 'master')).toBe(
+			'refusing a downgrade or same-version install',
+		);
+		// the default is the release channel — an omitted channel never relaxes
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 1])).toBe(
+			'refusing a downgrade or same-version install',
+		);
+	});
+
+	test('dev still refuses a downgrade', () => {
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 0], 'dev')).toBe(
+			'refusing a downgrade or same-version install',
+		);
+	});
+
+	test('dev still refuses a rung skip', () => {
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 3], 'dev')).toBe('patch version skip is not allowed');
+		expect(assertLinearUpgrade([7, 0, 0], [9, 0, 0], 'dev')).toBe('major version skip is not allowed');
+	});
+
+	test('dev allows the next rung, exactly like the release channel', () => {
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 1], 'dev')).toBeNull();
+	});
+});

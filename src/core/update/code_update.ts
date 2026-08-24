@@ -94,6 +94,7 @@ import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
+import { type InstallChannel, INSTALL_STAMP_PATH, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
@@ -402,13 +403,24 @@ export async function extractArchive(zipPath: string, destDir: string): Promise<
  * Strict linear upgrade guard (Opus §1.3) — a backstop against a malicious or
  * buggy code server offering a skip. Returns null when the target is a legal
  * next rung, else the reason.
+ *
+ * THE DEV CHANNEL (2026-08-24) relaxes exactly ONE clause: `target === current`
+ * becomes legal, because a branch build carries no version bump — that is the
+ * whole point of testing unreleased `v7` code on a remote install. It relaxes
+ * an ORDERING guard, not an AUTHENTICITY one: the origin allowlist, the
+ * no-redirect rule and the sha256-vs-sidecar check are untouched, so the worst
+ * a forged `channel` buys is installing a same-version archive the configured
+ * master really published. Downgrades and rung skips stay refused on both
+ * channels, and an OMITTED channel never relaxes anything.
  */
 export function assertLinearUpgrade(
 	current: readonly number[],
 	target: readonly number[],
+	channel: InstallChannel = 'master',
 ): string | null {
-	if (compareVersionArrays(target, current) !== 1)
-		return 'refusing a downgrade or same-version install';
+	const order = compareVersionArrays(target, current);
+	if (order === 0 && channel === 'dev') return null;
+	if (order !== 1) return 'refusing a downgrade or same-version install';
 	return versionSkipReason(current, target);
 }
 
