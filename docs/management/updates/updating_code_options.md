@@ -31,7 +31,7 @@ Nothing before the `swap` phase touches the live tree: dependencies are installe
 Before anything is downloaded, the update **refuses** unless all of the following hold:
 
 - the operator is the **superuser** (`root`);
-- the server is in **maintenance mode** (see [maintenance status](../maintenace_status.md));
+- the server is in **maintenance mode** (see [maintenance status](../maintenance_status.md));
 - a **recent database backup** exists (newer than the configured backup window).
 
 The backup requirement can be waived only by an explicit `waive_backup: true` in the update request — there is no panel checkbox for it, and every waiver is logged loudly in the server log with the requesting user.
