@@ -308,17 +308,18 @@ async function ensureSuiteLogin(): Promise<void> {
 const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([]);
 
 /**
- * KNOWN-FLAKY under run-all load (passes in isolation and in most runs). Not
- * excused — named so a red run can be read honestly, and so the next person
- * re-runs it alone before believing it. `test_component_select_lang` failed in
- * one of two consecutive baseline runs with no code change between them.
- * This list ANNOTATES a red run — it never excuses one: a flaky suite that fails
- * is still an unexpected failure. (`test_component_geolocation` was listed here
- * for a day; its "flakiness" was record pollution — its saves appended and its
- * removes left null holes in the SHARED record — and it now owns test3/14 with a
- * teardown, so it is deterministic and off the list.)
+ * KNOWN_FLAKY WAS DELETED (2026-08-24), deliberately and without a replacement.
+ *
+ * It held one name, had no ratchet, no staleness check and no registration: a
+ * listed suite that stopped flaking was never reported, so the row could outlive
+ * its bug indefinitely. The honest mechanical form — an N-consecutive-green
+ * record — needs an artifact nothing here keeps, and the naive rule ("listed but
+ * passed → red") cannot work, because passing is what a flaky suite mostly does.
+ *
+ * So a flaky failure is now simply RED, and gets fixed or quarantined properly.
+ * The principle is already stated for KNOWN_FAILING above: a stale excuse
+ * outliving its bug is how a baseline turns into a blanket.
  */
-const KNOWN_FLAKY: readonly string[] = ['test_component_select_lang'];
 
 // ---------------------------------------------------------------------------
 // Stats shape scraped from the runner page.
@@ -686,14 +687,12 @@ async function main(): Promise<void> {
 				);
 		// Annotate only when there IS an annotation: an empty header under a red run
 		// reads as "these were expected", which is the opposite of the truth.
-		const annotated = failed.filter((n) => KNOWN_FAILING.has(n) || KNOWN_FLAKY.includes(n));
+		const annotated = failed.filter((n) => KNOWN_FAILING.has(n));
 		if (!strict && annotated.length > 0) {
 			log('--- Known-failing suites (engineering ledger; see KNOWN_FAILING) ---');
-			for (const name of failed.filter((n) => KNOWN_FAILING.has(n))) {
+			for (const name of annotated) {
 				log(`  [KNOWN  ] ${name} — ${KNOWN_FAILING.get(name)}`);
 			}
-			const flaky = failed.filter((n) => KNOWN_FLAKY.includes(n));
-			for (const name of flaky) log(`  [FLAKY  ] ${name} — passes in isolation; re-run it alone`);
 		}
 		if (results.pending > 0) {
 			error(`${results.pending} test suite(s) did not complete.`);
