@@ -81,32 +81,41 @@ import {
 } from '../../scripts/parity_baseline.ts';
 
 /**
- * THE LIVE DRIFT CHECK DOES NOT RUN FROM HERE, AND SAYS SO.
+ * THE LIVE DRIFT CHECK RUNS FROM HERE AGAIN (2026-08-24, second pass).
  *
- * MEASURED 2026-08-24: spawning `bun test test/parity` from INSIDE a `bun test`
- * process reports a different tier than the same census run standalone — 169
- * reds the standalone run does not have, and 86 frozen ones reported as no
- * longer failing. Stripping the unit tier's per-run env seams
- * (session store, canonical-restore skip, run-scoped diffusion tables) did NOT
- * close the gap, so the cause is deeper than env inheritance and is not yet
- * understood.
+ * It was quarantined the same day: spawning `bun test test/parity` from INSIDE a
+ * `bun test` process reported a different tier than the standalone census — a
+ * flood of reds the standalone run does not have, PLUS frozen ones reported as
+ * "no longer failing". Stripping the per-run env seams did not close the gap, so
+ * the legs were skipped behind a flag with a named reason rather than reporting
+ * a number nobody could trust. That was the right call while the cause was
+ * unknown; a ratchet that misreports is worse than none.
  *
- * A ratchet that misreports is worse than none: it would redden every run with
- * 169 phantom regressions and train everyone to ignore the one real one. So the
- * live comparison lives where it MEASURES CORRECTLY —
- * `bun run scripts/parity_baseline.ts --check` — and this gate keeps the
- * assertions that are context-independent: the baseline's shape, its internal
- * consistency, and that the drift rules themselves bite. It SKIPS the live legs
- * with a named reason rather than reporting a number it cannot trust.
+ * THE CAUSE, found and fixed in `scripts/lib/parity_census.ts` childEnv(): the
+ * census stripped the per-run seams but deliberately KEPT the DB addressing, so
+ * the child could "still refuse to touch an installation". But
+ * `test/preload/test_database.ts` REWRITES `DB_NAME` to the suite database — so
+ * a child spawned from a `bun test` parent inherited `DB_NAME=<app>_test` and
+ * derived `<app>_test_test`, which does not exist. Every DB-backed parity gate
+ * died, some at module scope, which is precisely the mixed regressions-plus-
+ * stale signature. Reproduced OUTSIDE bun-test nesting with a plain
+ * `DB_NAME=<app>_test bun run scripts/parity_baseline.ts --check`, so the
+ * mechanism is not a guess. `DB_NAME`, `DEDALO_DATABASE_CONN` and
+ * `DEDALO_TEST_MEDIA_ROOT` are now stripped too, and the child's own preloads
+ * re-derive them — which is what enforced the installation refusal all along.
  *
- * Set DEDALO_PARITY_DRIFT=1 to run them anyway (a standalone
- * `bun test test/unit/parity_baseline_tripwire.test.ts` still nests, so that
- * flag is for a runner that has solved the nesting, not a workaround).
+ * Nothing was loosened to achieve this: `computeDrift`, the baseline bytes, the
+ * floors and the frozen `measured` block are untouched. The legs cost one ~7 s
+ * tier subprocess per run.
+ *
+ * DEDALO_PARITY_DRIFT=0 disables them for a runner that cannot spawn a
+ * subprocess; `bun run scripts/parity_baseline.ts --check` remains the standalone
+ * entry point and measures identically.
  */
-const LIVE_DRIFT = process.env.DEDALO_PARITY_DRIFT === '1';
+const LIVE_DRIFT = process.env.DEDALO_PARITY_DRIFT !== '0';
 if (!LIVE_DRIFT) {
 	console.warn(
-		'[parity_baseline_tripwire] live drift legs SKIPPED — a nested `bun test test/parity` misreports from inside bun test (see the header). Enforcement: `bun run scripts/parity_baseline.ts --check`.',
+		'[parity_baseline_tripwire] live drift legs DISABLED by DEDALO_PARITY_DRIFT=0. Enforcement: `bun run scripts/parity_baseline.ts --check`.',
 	);
 }
 const RUN = LIVE_DRIFT ? runParityTier() : null;

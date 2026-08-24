@@ -162,9 +162,26 @@ export function parseJunit(xml: string): ParityRun {
  * no baseline at all.
  *
  * So the per-run seams are STRIPPED and the child's own preload establishes them
- * freshly. What is deliberately KEPT is the addressing: the suite database
- * connection and the marked test media root, because the child must still refuse
- * to touch an installation.
+ * freshly.
+ *
+ * THE ADDRESSING MUST BE STRIPPED TOO — and keeping it was the whole bug
+ * (diagnosed 2026-08-24). `test/preload/test_database.ts` REWRITES `DB_NAME` to
+ * the suite database. So when the parent is itself `bun test`, the child inherits
+ * `DB_NAME=<app>_test` and `testDatabaseName()` derives `<app>_test_test` — a
+ * database that does not exist. Every DB-backed parity gate then dies, some at
+ * module scope, which is exactly the recorded signature: a flood of reds the
+ * standalone run does not have, PLUS frozen ones reported as "no longer failing"
+ * because their file never reported at all. `test_media_root.ts` doubles
+ * identically; the stray `../private/test_media/<app>_test_test/` tree those runs
+ * left behind is that bug's debris.
+ *
+ * That is why stripping the six seams alone never closed the gap: the offending
+ * keys were in the KEPT set, protected by the reasoning below — which is sound
+ * about the goal and wrong about the mechanism. Refusing to touch an
+ * installation is enforced by the child's OWN preloads, which unconditionally
+ * repoint away from the app DB and arm the media-marker guard. It was never the
+ * inherited env doing it. An operator's explicit `DEDALO_TEST_DATABASE` survives
+ * the strip and short-circuits the derivation, so that path is unchanged.
  *
  * `ORACLE_MODE` is PINNED rather than defaulted: it only defaults to `fixtures`,
  * so a shell that once ran a harvest would silently make the census measure a
@@ -177,6 +194,11 @@ const PER_RUN_SEAMS = [
 	'DIFFUSION_ACTIVITY_TABLE',
 	'DIFFUSION_JOBS_TABLE',
 	'DEDALO_TS_STATE_PATH',
+	// The addressing keys: inherited from a parent `bun test` these are ALREADY
+	// the suite's, and re-deriving on top of them doubles the `_test` suffix.
+	'DB_NAME',
+	'DEDALO_DATABASE_CONN',
+	'DEDALO_TEST_MEDIA_ROOT',
 ] as const;
 
 function childEnv(): Record<string, string | undefined> {
