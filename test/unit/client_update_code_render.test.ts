@@ -522,7 +522,11 @@ describe('update_code developer-builds switch', () => {
 		// back to mount the action into it.
 		expect(render_src).toContain('make_builder_mounter');
 		// rendered through render_code_server_half, so a build can re-run it
-		expect(/render_code_server_status\(\s*server_body,\s*code_server,\s*make_builder_mounter/.test(render_src)).toBe(true);
+		expect(
+			/render_code_server_status\(\s*server_body,\s*code_server,\s*make_builder_mounter/.test(
+				render_src,
+			),
+		).toBe(true);
 		expect(render_src).toContain('render_code_server_half(value.code_server)');
 		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
 		expect(status_src).toContain('mount_builder(channel, action)');
@@ -553,11 +557,19 @@ describe('update_code developer-builds switch', () => {
 		expect(render_src).toContain('on_built');
 		expect(render_src).toContain('refresh_code_server');
 		// re-read from the SERVER, not from the value this render closed over
-		expect(/refresh_code_server\s*=\s*async\s*\(\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(render_src)).toBe(true);
+		expect(
+			/refresh_code_server\s*=\s*async\s*\(\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
+				render_src,
+			),
+		).toBe(true);
 		// and the half is re-rendered from that fresh value
 		expect(render_src).toContain('render_code_server_half(fresh.code_server)');
 		// a failed refresh must not take the panel down
-		expect(/catch \(error\) \{[\s\S]{0,240}console\.error\('update_code: could not refresh/.test(render_src)).toBe(true);
+		expect(
+			/catch \(error\) \{[\s\S]{0,240}console\.error\('update_code: could not refresh/.test(
+				render_src,
+			),
+		).toBe(true);
 	});
 
 	test('both role blocks fold, and remember it', () => {
