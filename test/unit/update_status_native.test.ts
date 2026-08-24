@@ -119,7 +119,10 @@ describe('consumer status', () => {
 	test('restore points report the rollback-bootability contract', () => {
 		for (const point of consumerStatus(superuser).restore_points) {
 			expect(typeof point.bootable).toBe('boolean');
-			expect(typeof point.bytes).toBe('number');
+			// NO `bytes`: it used to be statSync(dir).size — the directory
+			// INODE's size (measured 672 B–1.6 KB for multi-GB trees) — rendered
+			// through format_bytes beside a green "bootable" pill.
+			expect('bytes' in point).toBe(false);
 			expect(point.name.startsWith('dedalo_')).toBe(true);
 		}
 	});
@@ -158,7 +161,13 @@ describe('code server status', () => {
 		for (const release of status.releases) {
 			// Only `<v>.zip` is ever advertised; `-dev` is servable, never offered.
 			expect(release.channel).toBe(release.file.includes('-dev') ? 'dev' : 'master');
-			expect(release.url.endsWith(release.file)).toBe(true);
+			// EXACT, not endsWith: the panel used to append the
+			// /dedalo/install/code prefix to a base that already carried it,
+			// emitting a doubled path that resolveCodeReleaseFile refuses —
+			// and `endsWith(file)` was true of that broken URL too.
+			expect(release.url).toBe(
+				`https://example.test/dedalo/install/code/${release.version}/${release.file}`,
+			);
 		}
 	});
 
@@ -167,9 +176,17 @@ describe('code server status', () => {
 		// OFFERED, so `advertises` may legitimately be empty while `releases`
 		// is not. What must never happen is the reverse — offering a release
 		// that is not on disk.
-		for (const offered of status.advertises.files) {
-			expect(status.releases.some((release) => release.version === offered.version)).toBe(true);
+		for (const rung of status.advertises.rungs) {
+			for (const offered of rung.files) {
+				expect(status.releases.some((release) => release.version === offered.version)).toBe(true);
+			}
 		}
+		// …and the listing must not be silently empty because the WALK died.
+		// A single stray non-directory entry (a `.DS_Store`, which macOS plants
+		// in every browsed dir) used to abort the whole two-level walk, so the
+		// panel reported "Published releases: None" over a dir full of served
+		// archives — and fired THIS security-shaped alarm for a directory bug.
+		expect(status.releases_unreadable).toEqual([]);
 	});
 
 	test('every publish check names the ref it was evaluated against', () => {

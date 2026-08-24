@@ -138,6 +138,19 @@ export function buildCodeUpdateInfo(options: {
 	};
 }
 
+/**
+ * The public URL of one published archive — the ONE builder.
+ *
+ * Both the manifest (`releaseItemFor`) and the code-server panel
+ * (status.ts `collectReleaseDir`) hand a consumer a release URL, and they drifted:
+ * the panel appended the `/dedalo/install/code` prefix to a base that already
+ * carried it, emitting a path `resolveCodeReleaseFile` refuses. `base` is
+ * always the prefix WITHOUT a trailing slash.
+ */
+export function codeReleaseUrl(base: string, version: string, fileName: string): string {
+	return `${base}/${version}/${fileName}`;
+}
+
 /** One advertised release item, or null when its archive does not exist on disk. */
 function releaseItemFor(
 	codeFilesDir: string,
@@ -151,7 +164,7 @@ function releaseItemFor(
 	const sha256 = readShaSidecar(filePath);
 	return {
 		version: versionString,
-		url: `${publicBaseUrl}/${versionString}/${fileName}`,
+		url: codeReleaseUrl(publicBaseUrl, versionString, fileName),
 		date: new Date(statSync(filePath).mtimeMs).toISOString(),
 		...(sha256 === null ? {} : { sha256 }),
 	};

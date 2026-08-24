@@ -117,7 +117,20 @@ export function newestBackupMtimeMs(backupDir: string = getBackupDir()): number 
 	}
 	for (const name of names) {
 		if (!name.endsWith('.backup')) continue;
-		const mtime = statSync(join(backupDir, name)).mtimeMs;
+		// PER-ENTRY guard. An unstatable entry — a dangling symlink to backup
+		// storage that has been moved or unmounted, or a rotation cron deleting
+		// between readdir and stat — used to throw ENOENT out of the WHOLE scan.
+		// That throw escapes into the code-update path (checkUpdatePreconditions
+		// runs before the pipeline's try), where it surfaces as
+		// `internal.unexpected` with no phase track, and it degrades the panel's
+		// `backup_fresh` check to `unknown` — which is excluded from `ready`, so
+		// the panel says "ready to update" precisely because it failed to look.
+		let mtime: number;
+		try {
+			mtime = statSync(join(backupDir, name)).mtimeMs;
+		} catch {
+			continue;
+		}
 		if (mtime > newest) newest = mtime;
 	}
 	return newest;

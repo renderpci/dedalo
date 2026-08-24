@@ -34,21 +34,25 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot } from '../../config/env.ts';
-import { newestBackupMtimeMs } from '../area_maintenance/backup.ts';
 import { runtimePathsInsideTree } from '../install/runtime_paths.ts';
 import { getServerState } from '../resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.ts';
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
+import { UPDATE_CATALOG } from './catalog.ts';
 import { detectDeploymentChannel } from './channel.ts';
 import { planCodeBuild } from './code_build_plan.ts';
-import { buildCodeUpdateInfo, type CodeReleaseItem } from './code_manifest.ts';
+import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
 	backupRootIsInsideTree,
+	codeStagingDir,
 	isSupervised,
 	PRESERVE_ROOT_ENTRIES,
 	resolveCodeBackupRoot,
+	STAGING_KEEP_MARKER,
+	stagingHoldsParkedTree,
 } from './code_update.ts';
+import { backupFreshness } from './preconditions.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
 
 // ---------------------------------------------------------------------------
@@ -131,7 +135,6 @@ function onPath(binary: string): boolean {
 export interface RestorePoint {
 	name: string;
 	stamp: number;
-	bytes: number;
 	/** Carries package.json + node_modules — the rollback-BOOTABILITY contract. */
 	bootable: boolean;
 }
@@ -197,11 +200,12 @@ function operatorChecks(principal: Principal): StatusCheck[] {
  */
 function backupFreshnessCheck(): StatusCheck {
 	return probe('backup_fresh', () => {
-		const newest = newestBackupMtimeMs();
-		if (newest === 0) return check('backup_fresh', 'blocked', 'none');
-		const hours = Math.round((Date.now() - newest) / 3600000);
-		const stale = hours > config.ops.backupTimeRangeHours;
-		return check('backup_fresh', stale ? 'blocked' : 'ok', String(hours));
+		// The pipeline's OWN predicate, not a second copy of it — the panel
+		// rounded and the refusal did not, which made them disagree for the
+		// half hour after every freshness deadline (see backupFreshness).
+		const { hours, stale } = backupFreshness();
+		if (hours === null) return check('backup_fresh', 'blocked', 'none');
+		return check('backup_fresh', stale ? 'blocked' : 'ok', String(Math.round(hours)));
 	});
 }
 
@@ -253,11 +257,18 @@ function bunPinCheck(livePin: string | null): StatusCheck {
 /** Leftover `.code_staging` from an interrupted run (the pipeline sweeps it,
  * but its presence tells the operator a previous attempt died mid-flight). */
 function stagingCheck(backupRoot: string): StatusCheck {
-	return probe('staging_clean', () =>
-		existsSync(join(backupRoot, '.code_staging'))
+	return probe('staging_clean', () => {
+		// A PARKED LIVE TREE is not a leftover — `prepareStagingDirOrRefuse`
+		// hard-refuses on its marker, so the panel must say `blocked`. Reported
+		// as a bare `warn`, it left `ready` true and the headline reading
+		// "Ready to update" over an install the pipeline refuses immediately.
+		if (stagingHoldsParkedTree(backupRoot)) {
+			return check('staging_clean', 'blocked', STAGING_KEEP_MARKER);
+		}
+		return existsSync(codeStagingDir(backupRoot))
 			? check('staging_clean', 'warn')
-			: check('staging_clean', 'ok'),
-	);
+			: check('staging_clean', 'ok');
+	});
 }
 
 /**
@@ -308,10 +319,15 @@ function readRestorePoints(backupRoot: string): RestorePoint[] {
 			.filter((name) => name.startsWith('dedalo_'))
 			.map((name) => {
 				const dir = join(backupRoot, name);
+				// NO `bytes`. It used to report `statSync(dir).size` — the
+				// DIRECTORY INODE's size (measured 672 B–1.6 KB for multi-GB
+				// trees), rendered through format_bytes beside a green
+				// "bootable" pill, so every restore point advertised a
+				// nonsense KB figure. Walking the tree is not the fix either:
+				// node_modules is ~10^5 inodes on a synchronous panel path.
 				return {
 					name,
 					stamp: statSync(dir).mtimeMs,
-					bytes: statSync(dir).size,
 					bootable: existsSync(join(dir, 'package.json')) && existsSync(join(dir, 'node_modules')),
 				};
 			})
@@ -428,8 +444,18 @@ export interface CodeServerStatus {
 	};
 	files_dir: string | null;
 	releases: PublishedRelease[];
-	/** What a consumer AT THIS VERSION would actually be offered. */
-	advertises: { for_version: string; files: CodeReleaseItem[] };
+	/** Release dirs the walk could not read — never folded into an empty list. */
+	releases_unreadable: string[];
+	/**
+	 * What consumers would actually be offered. `for_version`/`files` keep the
+	 * master's-own-version answer (wire-frozen); `rungs` is the useful one — a
+	 * row per distinct catalog `updateFrom`, i.e. per real museum position.
+	 */
+	advertises: {
+		for_version: string;
+		files: CodeReleaseItem[];
+		rungs: { for_version: string; files: CodeReleaseItem[] }[];
+	};
 }
 
 /**
@@ -568,28 +594,80 @@ function readDivergence(gitDir: string): { ahead: number; behind: number } | nul
 	return { ahead: ahead as number, behind: behind as number };
 }
 
-/** Every archive already published under the code-files dir, newest first. */
-function readReleases(filesDir: string | undefined, publicBaseUrl: string): PublishedRelease[] {
-	if (filesDir === undefined || filesDir === '' || !existsSync(filesDir)) return [];
-	const found: PublishedRelease[] = [];
+/**
+ * The immediate SUBDIRECTORY names of `dir`, or null when the directory itself
+ * could not be read.
+ *
+ * `withFileTypes` + an `isDirectory()` filter is load-bearing, not tidiness:
+ * the release layout is `<filesDir>/<major>/<major.minor>/`, and a single
+ * NON-directory entry at either level (a `.DS_Store` — which macOS plants in
+ * every browsed dir, a README, a stray sidecar) used to make the next
+ * `readdirSync` throw ENOTDIR and abort the WHOLE walk. The panel then reported
+ * "Published releases: None" over a dir full of served archives, and the gate
+ * that compares `advertises` against `releases` fired its
+ * offering-a-release-that-is-not-on-disk alarm for a directory-walk bug
+ * (measured 2026-08-24: `code/.DS_Store` AND `code/7/.DS_Store` both present).
+ */
+function releaseSubdirs(dir: string): string[] | null {
 	try {
-		for (const major of readdirSync(filesDir)) {
-			for (const minor of readdirSync(join(filesDir, major))) {
-				collectReleaseDir(join(filesDir, major, minor), publicBaseUrl, found);
-			}
-		}
+		return readdirSync(dir, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name);
 	} catch {
-		/* a half-built tree reports what it managed to read */
+		return null;
 	}
-	return found.sort((a, b) => b.stamp - a.stamp);
 }
 
-function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRelease[]): void {
-	for (const file of readdirSync(dir)) {
+/**
+ * Every archive already published under the code-files dir, newest first, and
+ * whether the walk was COMPLETE. A level that could not be read is reported
+ * (`unreadable`), never silently folded into a short list: "no releases" and
+ * "I could not look" are different facts and the panel must not conflate them.
+ */
+function readReleases(
+	filesDir: string | undefined,
+	publicBaseUrl: string,
+): { releases: PublishedRelease[]; unreadable: string[] } {
+	if (filesDir === undefined || filesDir === '' || !existsSync(filesDir)) {
+		return { releases: [], unreadable: [] };
+	}
+	const found: PublishedRelease[] = [];
+	const unreadable: string[] = [];
+	const majors = releaseSubdirs(filesDir);
+	if (majors === null) return { releases: [], unreadable: [filesDir] };
+	for (const major of majors) {
+		const majorDir = join(filesDir, major);
+		const minors = releaseSubdirs(majorDir);
+		if (minors === null) {
+			unreadable.push(majorDir);
+			continue;
+		}
+		for (const minor of minors) {
+			const minorDir = join(majorDir, minor);
+			if (!collectReleaseDir(minorDir, publicBaseUrl, found)) unreadable.push(minorDir);
+		}
+	}
+	return { releases: found.sort((a, b) => b.stamp - a.stamp), unreadable };
+}
+
+/** One release dir's archives; false when the dir itself could not be read. */
+function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRelease[]): boolean {
+	let entries: string[];
+	try {
+		entries = readdirSync(dir);
+	} catch {
+		return false;
+	}
+	for (const file of entries) {
 		const match = /^(\d+\.\d+\.\d+)(-dev)?\.zip$/.exec(file);
 		if (match === null) continue;
 		const version = match[1] as string;
-		const stat = statSync(join(dir, file));
+		let stat: ReturnType<typeof statSync>;
+		try {
+			stat = statSync(join(dir, file));
+		} catch {
+			continue; // vanished between readdir and stat (a rotation racing us)
+		}
 		into.push({
 			version,
 			channel: match[2] === undefined ? 'master' : 'dev',
@@ -597,9 +675,16 @@ function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRe
 			bytes: stat.size,
 			stamp: stat.mtimeMs,
 			sidecar: existsSync(join(dir, `${file}.sha256`)),
-			url: `${publicBaseUrl}/dedalo/install/code/${version}/${file}`,
+			// ONE builder for both this and the manifest (code_manifest.ts
+			// releaseItemFor): `publicBaseUrl` ALREADY ends in
+			// /dedalo/install/code — appending it again here produced
+			// `…/dedalo/install/code/dedalo/install/code/<v>/<v>.zip`, a path
+			// `resolveCodeReleaseFile` refuses, for an archive that serves fine
+			// at the single-prefix URL.
+			url: codeReleaseUrl(publicBaseUrl, version, file),
 		});
 	}
+	return true;
 }
 
 /** The code-server half of the panel: role, build source, artifacts, manifest. */
@@ -644,26 +729,87 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 						),
 		),
 	];
+	const published = readReleases(filesDir ?? undefined, publicBaseUrl);
+	// "No releases" and "I could not look" are DIFFERENT facts. Folding an
+	// unreadable level into an empty list is what let a stray `.DS_Store`
+	// present itself as an empty release dir.
+	checks.push(
+		published.unreadable.length === 0
+			? check('releases_readable', 'ok')
+			: check('releases_readable', 'warn', published.unreadable.join(', ')),
+	);
+	// The origin this master will BAKE INTO every advertised URL. A localhost
+	// origin is not a cosmetic slip: `get_code_update_info` hands every museum a
+	// `file.url` nothing outside this machine can fetch, and the consumer only
+	// discovers it at download time — after maintenance mode is already on.
+	checks.push(advertisedOriginCheck(publicBaseUrl));
 	return {
 		is_a_code_server: config.update.isCodeServer,
 		checks,
 		ready: !checks.some((entry) => entry.state === 'blocked'),
 		source,
 		files_dir: filesDir,
-		releases: readReleases(filesDir ?? undefined, publicBaseUrl),
-		advertises: {
-			for_version: DEDALO_VERSION,
-			// The manifest a consumer at THIS version would receive. An empty
-			// list with a published zip on disk is the catalog's doing
-			// (UPDATE_CATALOG is empty for 7.x) — the panel shows both, so the
-			// operator can see the difference instead of inferring it.
+		releases: published.releases,
+		releases_unreadable: published.unreadable,
+		advertises: advertisedRungs(filesDir ?? undefined, publicBaseUrl),
+	};
+}
+
+/**
+ * The manifest each REACHABLE consumer version would be offered — one row per
+ * distinct `updateFrom` triple in UPDATE_CATALOG.
+ *
+ * It used to ask exactly ONE question: "what would a consumer at the master's
+ * OWN version get?" (`clientVersion: DEDALO_VERSION_TRIPLE`). That is the one
+ * version whose answer is least useful: the master publishes releases AT its
+ * own version, so a correctly-operating master that had just published
+ * `<v>.zip` rendered "No release is offered" — the panel reporting a fault in
+ * the exact steady state it was built to confirm. Meanwhile a real museum, one
+ * or more rungs behind, got an answer nobody could see.
+ */
+function advertisedRungs(
+	filesDir: string | undefined,
+	publicBaseUrl: string,
+): CodeServerStatus['advertises'] {
+	const seen = new Set<string>();
+	const rows: CodeServerStatus['advertises']['rungs'] = [];
+	for (const descriptor of Object.values(UPDATE_CATALOG)) {
+		const from = [
+			descriptor.updateFromMajor,
+			descriptor.updateFromMedium,
+			descriptor.updateFromMinor,
+		];
+		const key = from.join('.');
+		if (seen.has(key)) continue;
+		seen.add(key);
+		rows.push({
+			for_version: key,
 			files: buildCodeUpdateInfo({
-				clientVersion: DEDALO_VERSION_TRIPLE,
+				clientVersion: from,
 				serverVersion: DEDALO_VERSION_TRIPLE,
-				codeFilesDir: filesDir ?? undefined,
+				codeFilesDir: filesDir,
 				publicBaseUrl,
 				info: { date: '', entity_id: null, entity: null, host: null },
 			}).files,
-		},
+		});
+	}
+	return {
+		for_version: DEDALO_VERSION,
+		files: rows.find((row) => row.for_version === DEDALO_VERSION)?.files ?? [],
+		rungs: rows,
 	};
+}
+
+/** Localhost/empty origins make every advertised release URL unfetchable. */
+function advertisedOriginCheck(publicBaseUrl: string): StatusCheck {
+	let host = '';
+	try {
+		host = new URL(publicBaseUrl).hostname;
+	} catch {
+		return check('advertised_origin', 'blocked', publicBaseUrl);
+	}
+	const local = host === '' || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+	return local
+		? check('advertised_origin', 'blocked', host)
+		: check('advertised_origin', 'ok', host);
 }

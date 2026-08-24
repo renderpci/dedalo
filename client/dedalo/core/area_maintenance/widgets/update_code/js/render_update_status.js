@@ -328,7 +328,10 @@ export const render_consumer_status = function(parent, consumer) {
 			fact_row(restore, get_label.update_code_none || 'None', get_label.update_code_note_no_restore_points || '')
 		}
 		points.forEach(point => {
-			const row = fact_row(restore, point.name, `${format_bytes(point.bytes)} · ${format_stamp(point.stamp)}`, true)
+			// NO size: the server used to send the directory inode's own size
+			// (a few hundred bytes for a multi-GB tree) and this printed it
+			// through format_bytes as if it were the backup's size.
+			const row = fact_row(restore, point.name, format_stamp(point.stamp), true)
 			const value = row.querySelector('.dd_v')
 			// bootability is the rollback contract: a backup without
 			// package.json + node_modules cannot be booted back into
@@ -449,16 +452,29 @@ export const render_code_server_status = function(parent, code_server) {
 		})
 
 	// what a consumer is ACTUALLY offered — the gap operators cannot otherwise see
-		const advertises = code_server.advertises || {files:[]}
+		const advertises = code_server.advertises || {files:[], rungs:[]}
 		const offered = section(wrapper, get_label.update_code_advertised || 'Offered to an installation at this version')
-		if (!advertises.files.length) {
-			fact_row(
-				offered,
-				advertises.for_version,
-				get_label.update_code_note_advertised_empty || 'No release is offered.'
-			)
-		}
-		advertises.files.forEach(file => fact_row(offered, file.version, file.url, true))
+		// One row per REACHABLE consumer version. Asking only about the
+		// master's OWN version was the least useful question available: a
+		// master publishes releases AT its own version, so a correctly
+		// operating one that had just published <v>.zip rendered
+		// "No release is offered" — the panel reporting a fault in exactly the
+		// steady state it exists to confirm — while a real museum, one or more
+		// rungs behind, got an answer nobody could see.
+		const rungs = (advertises.rungs && advertises.rungs.length)
+			? advertises.rungs
+			: [{for_version:advertises.for_version, files:advertises.files}]
+		rungs.forEach(rung => {
+			if (!rung.files.length) {
+				fact_row(
+					offered,
+					rung.for_version,
+					get_label.update_code_note_advertised_empty || 'No release is offered.'
+				)
+				return
+			}
+			rung.files.forEach(file => fact_row(offered, `${rung.for_version} → ${file.version}`, file.url, true))
+		})
 
 	return wrapper
 }//end render_code_server_status
