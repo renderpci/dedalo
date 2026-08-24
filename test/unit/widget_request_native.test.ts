@@ -59,6 +59,9 @@
  * Scratch hygiene: one fresh test3 record (counter materialization), one
  * synthetic test52 + one zztc2 matrix_counter row, synthetic matrix_activity
  * rows + the dd1521 aggregates they produce — all swept fail-loud.
+ *
+ * @twin-of      test/parity/widget_request_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
 // were replaced by their twins from src/core/test_data/test_tld_tipo_map.json.

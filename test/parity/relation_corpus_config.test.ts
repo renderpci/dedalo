@@ -14,6 +14,8 @@
  * (labels, colors, permissions, buttons, matrix_table — the CLIENT depends
  * on them: portal link/new buttons read target_section[0].tipo) and are
  * compared IN FULL.
+ *
+ * @twinned-by   test/unit/relation_hierarchy_types_native.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
 // Every §7 corpus row is written in `test`-TLD terms (the two seed-shipped

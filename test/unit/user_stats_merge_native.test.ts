@@ -36,6 +36,9 @@
  *
  * No DB WRITES here: read-only ontology term lookups only, so no scratch band
  * and no sweep are required.
+ *
+ * @twin-of      test/parity/get_widget_data_differential.test.ts
+ * @twin-status  supplement
  */
 
 import { describe, expect, test } from 'bun:test';

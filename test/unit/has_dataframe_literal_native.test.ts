@@ -40,6 +40,9 @@
  * (counter ≤ double digits) and of the sibling gates' 9003xx twins (900312
  * iri / 900313 info_widget). Direct INSERT (no counter bump) so the golden
  * pins section_id byte-stable.
+ *
+ * @twin-of      test/parity/has_dataframe_literal_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

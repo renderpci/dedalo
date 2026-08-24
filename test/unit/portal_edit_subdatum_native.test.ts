@@ -62,6 +62,9 @@
  * a nested portal onto a third section; one host record with 3 locators
  * (contract a), one with 12 (contracts b, d, e), twelve targets each holding
  * one nested locator. Dropped in afterAll with residue asserted 0.
+ *
+ * @twin-of      test/parity/portal_edit_subdatum_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

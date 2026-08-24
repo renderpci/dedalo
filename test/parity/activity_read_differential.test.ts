@@ -35,6 +35,8 @@
  * Mapping: engineering/ORACLE_HARVEST.md (generic-TLD replacement map). This
  * file stays as the frozen record of the PHP activity read and stays red on
  * the suite database by construction (the residue mechanism above).
+ *
+ * @twinned-by   test/unit/activity_read_native.test.ts
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

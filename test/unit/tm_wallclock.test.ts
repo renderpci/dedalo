@@ -25,6 +25,9 @@
  * sibling gates' 9003xx twins — 900311 has_dataframe, 900312 iri,
  * 900313/900314 info_widget); the row is materialised by direct upsert (no
  * counter bump), and the twin + its TM rows are deleted before AND after.
+ *
+ * @twin-of      test/parity/tm_wallclock_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

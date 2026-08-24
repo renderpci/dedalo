@@ -31,6 +31,9 @@
  * Fixture: one fresh test3 twin (matrix_test; the differential used test2 —
  * same table contract, test3 matches the sibling natives and stays clear of
  * the observer/indexation scratch surfaces). Row + TM rows swept in afterAll.
+ *
+ * @twin-of      test/parity/delete_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

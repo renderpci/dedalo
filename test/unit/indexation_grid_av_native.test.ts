@@ -32,6 +32,9 @@
  * the live matrix_counter values (test3=474, test6813=359, test6101=624,
  * test2=440863, measured 2026-07-11) and clear of the parity gate's 90001.
  * Swept in afterAll; belt-and-braces pre-clean in beforeAll for crashed runs.
+ *
+ * @twin-of      test/parity/indexation_grid_media_av_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install
 // sections became their twins (src/core/test_data/test_tld_tipo_map.json) and every

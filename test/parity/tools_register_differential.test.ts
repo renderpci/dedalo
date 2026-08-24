@@ -14,6 +14,8 @@
  * diff-free; only the in-registry requirement is carved out. PHP must never
  * re-import tools (the tool_assistant COEXISTENCE rule), so a TS-written row
  * is stable.
+ *
+ * @twinned-by   test/unit/engine_denied_boundary.test.ts
  */
 
 import { describe, expect, test } from 'bun:test';

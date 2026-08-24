@@ -33,6 +33,9 @@
  * own native gates. Fixture: one test3 source with a two-lang test52 value
  * (direct-SQL seed; the differential used test2/numisdata16 — same
  * matrix_test contract). Source + duplicate + TM swept in afterAll.
+ *
+ * @twin-of      test/parity/duplicate_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

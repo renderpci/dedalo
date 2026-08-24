@@ -17,6 +17,10 @@
  *
  * Scratch-twin hygiene: every created row is tracked and deleted (0-row
  * deletes fail loudly — the dd128 leak lesson).
+ *
+ * @twinned-by   test/unit/user_stats_interval_native.test.ts
+ * @twinned-by   test/unit/user_stats_merge_native.test.ts
+ * @twinned-by   test/unit/user_stats_range_native.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-20 (WC-2026-08-19-test-tld-replay).
 // The archive/weights case is written in `test`-TLD terms (the cloned archive

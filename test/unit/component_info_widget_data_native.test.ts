@@ -56,6 +56,9 @@
  * counter bump). Every row is swept in afterAll together with its
  * matrix_time_machine tail, fail-loud on residue AND on a sweep that deletes
  * nothing (a wrong-table DELETE leaks). No dd_ontology write anywhere.
+ *
+ * @twin-of      test/parity/info_widget_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
 // install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;

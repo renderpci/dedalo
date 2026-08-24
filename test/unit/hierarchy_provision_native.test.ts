@@ -29,6 +29,9 @@
  * Shared-surface note (same blast radius as the differential): provisioning
  * re-derives the ontologytype/hierarchytype/hierarchymtype grouper registrations
  * idempotently — those are canonical rows both engines rebuild the same way.
+ *
+ * @twin-of      test/parity/generate_virtual_section_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). The tipos are
 // identifiers threaded through the unit under test — a generic `test` section carries

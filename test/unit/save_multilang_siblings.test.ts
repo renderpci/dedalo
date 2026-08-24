@@ -23,6 +23,9 @@
  * Scratch surfaces only: a section this file BUILDS, at high reserved
  * section_ids. Records seeded via updateMatrixRecord (no counter touched);
  * rows + TM audit rows cleaned before AND after.
+ *
+ * @twin-of      test/parity/save_multilang_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). The real
 // ontology resolution under test (component_input_text, translatable → the

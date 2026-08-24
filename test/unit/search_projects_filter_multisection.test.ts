@@ -29,6 +29,9 @@
  * satisfiable at zero-versus-zero (the green-suite trap). This gate installs
  * the synthetic ACL identities (test/helpers/acl_identity_fixture.ts) and reads
  * the non-admin's ONE project id back out of the emitted bound parameter.
+ *
+ * @twin-of      test/parity/projects_filter_differential.test.ts
+ * @twin-status  supplement
  */
 // Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
 // install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;

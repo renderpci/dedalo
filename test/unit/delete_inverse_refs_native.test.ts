@@ -27,6 +27,9 @@
  * differential's exact twin — a test3 TARGET and a test3 REFERRER whose
  * portal (test80) bag holds two locators: one at the target, one
  * self-reference keeper (direct-SQL seed). Both rows + TM swept in afterAll.
+ *
+ * @twin-of      test/parity/delete_inverse_refs_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

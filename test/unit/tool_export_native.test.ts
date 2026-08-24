@@ -33,6 +33,9 @@
  * The multi-target autocomplete_hi thesaurus explosion (frozen 711fa556,
  * per-target-section term columns) remains pinned ONLY by the frozen record —
  * building it needs a hierarchical thesaurus situation; see the parity gate.
+ *
+ * @twin-of      test/parity/tool_export_differential.test.ts
+ * @twin-status  frozen-record
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

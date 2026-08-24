@@ -45,6 +45,9 @@
  * from 424262/424263 in user_stats_paging.test.ts so the two files stay
  * independent), matrix_activity rows only, swept fail-loud in afterAll. This
  * function only READS — it writes no matrix_stats and no matrix_time_machine.
+ *
+ * @twin-of      test/parity/get_widget_data_differential.test.ts
+ * @twin-status  supplement
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

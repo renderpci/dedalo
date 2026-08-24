@@ -149,6 +149,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/install_table_write_tripwire.test.ts
 	test/unit/media_job_target_tripwire.test.ts
 	test/unit/parity_baseline_tripwire.test.ts
+	test/unit/twin_map_tripwire.test.ts
 	test/unit/runtime_paths_census_tripwire.test.ts
 	test/unit/tool_permission_census_tripwire.test.ts
 	test/unit/client_error_contract_tripwire.test.ts

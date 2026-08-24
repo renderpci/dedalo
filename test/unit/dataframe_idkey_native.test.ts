@@ -54,6 +54,9 @@
  * it ships on every installation), and the MAIN items point at test6810, the
  * section test6117's request_config actually targets. Neither is read here;
  * both are opaque addresses inside a jsonb value asserted verbatim.
+ *
+ * @twin-of      test/parity/dataframe_roundtrip_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

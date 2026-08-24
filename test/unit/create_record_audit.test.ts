@@ -28,6 +28,9 @@
  *
  * Scratch hygiene: one disposable testmint1 twin (matrix), row + TM rows
  * deleted in afterAll (the tm_wallclock pattern).
+ *
+ * @twin-of      test/parity/create_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
 // were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the

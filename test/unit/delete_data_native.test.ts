@@ -30,6 +30,9 @@
  * differential's exact seed (fresh test3 twin, test52 value + meta counter
  * written via direct SQL so no save-path side effects skew it). Row + TM
  * rows swept in afterAll.
+ *
+ * @twin-of      test/parity/delete_data_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

@@ -11,6 +11,8 @@
  * config/tool_config) pins PHP's answer: result:false — PHP fatals building a
  * section on the non-section tipo (set_lang on false, :430-434); TS refuses
  * loudly with the same envelope.
+ *
+ * @twinned-by   test/unit/section_tool_context.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-tools-gates-test-tld).
 // Every tipo below is a phase-2 clone in the generic `test` TLD

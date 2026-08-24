@@ -62,6 +62,9 @@
  * Three referencing sections pin the per-section context grouping; nine
  * referencing records pin the paging (hits are ordered by section_id, so page
  * 1 stops inside A and page 2 spills into B and C).
+ *
+ * @twin-of      test/parity/relation_list_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

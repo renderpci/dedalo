@@ -11,6 +11,9 @@
  *    fields, and resolvePresetRequestConfig resolves the active fixture. The
  *    live-PHP EQUALITY is the sibling parity gate
  *    (test/parity/request_config_presets_differential.test.ts).
+ *
+ * @twin-of      test/parity/request_config_presets_differential.test.ts
+ * @twin-status  supplement
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';

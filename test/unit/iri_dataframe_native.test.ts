@@ -26,6 +26,9 @@
  * section_id byte-stable. NO ontology mutation: dd560/test140 ship in the
  * ontology (unlike the has_dataframe gate, which provisions its own frame node —
  * test900 since 2026-07-12, when the seeded ontology grew into its old test218).
+ *
+ * @twin-of      test/parity/iri_dataframe_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

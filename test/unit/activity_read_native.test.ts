@@ -23,6 +23,9 @@
  *  - the envelope row carries entries + server-authoritative pagination.
  * Mapping recorded in engineering/ORACLE_HARVEST.md (generic-TLD replacement
  * map). Seed-shipped `dd` ontology only — every installation has it.
+ *
+ * @twin-of      test/parity/activity_read_differential.test.ts
+ * @twin-status  frozen-record
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

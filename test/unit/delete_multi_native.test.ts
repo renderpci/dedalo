@@ -26,6 +26,9 @@
  * the DIFFUSION_ACTIVITY_TABLE seam; swept only when the seam is active,
  * never from the PHP-owned real table). Anatomy of the dd542 activity rows
  * is covered by activity_log_native.test.ts, not re-asserted here.
+ *
+ * @twin-of      test/parity/delete_multi_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
 // were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the

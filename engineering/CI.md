@@ -46,7 +46,7 @@ oracle instead of silently skipping. Ignore any older text below telling you to
 Two tiers, by dependency footprint:
 
 - **Hermetic** (any bare runner, no secrets): `bun install` + `bunx tsc
-  --noEmit` + `bun run lint` + the **75** DB-less/sibling-less tripwires + the
+  --noEmit` + `bun run lint` + the **76** DB-less/sibling-less tripwires + the
   dependency-audit ratchet + the two isolated publication packages
   (`site_builder`, `server_api/v2` — each `bun install` + `tsc` + `bun test`).
   One source of truth: `scripts/ci/hermetic.sh` — GitHub and GitLab both call
@@ -66,7 +66,7 @@ Two tiers, by dependency footprint:
   one direction, and its parser was silently truncating at 21 of 41 entries. Both
   are fixed: rule 3c of `ci_workflow_tripwire` requires every tripwire to be wired
   here or to carry a written reason in its `NOT_HERMETIC` map (stale rows red in
-  both directions), and the tier went 41 → 75 gates, 648 tests, ~16 s. Each entry
+  both directions), and the tier went 41 → 76 gates, ~16 s. Each entry
   was empirically re-verified DB-less (`DB_PORT` closed) before being added.
 - **Self-hosted** (this Mac — the machine that has the live matrix Postgres
   with real Dédalo data, the PHP oracle at :8080, the sibling PHP tree, and

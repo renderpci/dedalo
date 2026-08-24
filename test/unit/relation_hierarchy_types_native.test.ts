@@ -28,6 +28,9 @@
  *   - the registry cache invalidates through the hierarchy1 save event
  *     (the durable S1-11 channel), so teardown is VISIBLE: after the sweep
  *     the scratch typologies resolve to nothing (residue asserted).
+ *
+ * @twin-of      test/parity/relation_corpus_config.test.ts
+ * @twin-status  frozen-record
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

@@ -12,6 +12,8 @@
  * target section with the tool simple-context + enriched tool_config ddo_map
  * injected — and the two thesaurus virtuals with their swap_tipo configs)
  * compare BYTE-FOR-BYTE against PHP.
+ *
+ * @twinned-by   test/unit/menu_tree_datalist_native.test.ts
  */
 // GENERIC-TLD: NOT MIGRATABLE THROUGH THE REPLAY SEAM — measured 2026-08-20
 // (WC-2026-08-19-test-tld-replay). This is a finding, not a deferral.

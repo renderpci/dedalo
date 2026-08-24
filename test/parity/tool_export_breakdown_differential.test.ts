@@ -31,6 +31,9 @@
  * PHP's own get_record_atoms guard. A 500 cannot be pinned differentially.
  *
  * READ-ONLY: every request is a read; no scratch records needed.
+ *
+ * @twinned-by   test/unit/diffusion_export_unified.test.ts
+ * @twinned-by   test/unit/tool_export_breakdown_native.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-tools-gates-test-tld).
 // The two exported sections and their bibliography portals are phase-2 clones
