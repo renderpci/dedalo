@@ -1,0 +1,171 @@
+{
+	"generated_by": "bun run scripts/parity_baseline.ts (runs `bun test test/parity` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
+	"rule": "SHRINK-ONLY red baseline for the test/parity tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the permanent corpus-bound reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` is the frozen debt AND the anti-vacuity anchor: the gate asserts it exactly, so a run that measures nothing (zero failures, a tier that never executed) is red rather than green. DO NOT hand-edit. Regenerate with: bun run scripts/parity_baseline.ts Why the reds are permanent (AGENTS.md 'THE VERIFICATION STORY'): the 76 harvested gates were recorded against ONE installation's records and the PHP oracle is decommissioned, so a re-harvest is impossible. The corpus-bound gates are being replaced by generic-`test`-TLD twins — retirement map in engineering/ORACLE_HARVEST.md. Every retirement should LOWER the numbers here.",
+	"measured": {
+		"tier_files": 78,
+		"tier_tests": 382,
+		"tier_pass": 270,
+		"tier_skip": 13,
+		"failing_files": 29,
+		"failing_tests": 99
+	},
+	"files": {
+		"test/parity/activity_read_differential.test.ts": [
+			"activity listing differential (dd542 over matrix_activity) > envelope entries match PHP exactly",
+			"activity listing differential (dd542 over matrix_activity) > every activity item matches PHP on the normalized fields"
+		],
+		"test/parity/area_dashboard_differential.test.ts": [
+			"area dashboard differential > area_activity (dd69) dashboard byte-equal",
+			"area dashboard differential > area_development (dd770) dashboard byte-equal"
+		],
+		"test/parity/area_hierarchy_differential.test.ts": [
+			"tree-area boot data differential (thesaurus + ontology) > area_ontology value + typologies match PHP byte-for-byte",
+			"tree-area boot data differential (thesaurus + ontology) > area_thesaurus value + typologies match PHP byte-for-byte"
+		],
+		"test/parity/autocomplete_hi_search_differential.test.ts": [
+			"autocomplete_hi search differential (relation_search wrap parity) > DIRECT locator: counts match on a large real fixture"
+		],
+		"test/parity/autocomplete_search_differential.test.ts": [
+			"autocomplete picker search differential (BUG-0) > multilingual thesaurus picker: fallback_value + ddinfo breadcrumb byte-equal (seed portal → test2830)",
+			"autocomplete picker search differential (BUG-0) > real portal shape: $and over [text, date] lang-less fields (Ceca test6113)",
+			"autocomplete picker search differential (BUG-0) > scale: large q fills the page on both engines and count totals agree"
+		],
+		"test/parity/complex_relation_sweep.test.ts": [
+			"complex relation component sweep (list mode) > rsc197.rsc1435 items match PHP",
+			"complex relation component sweep (list mode) > test6099.test6117 items match PHP",
+			"complex relation component sweep (list mode) > test6099.test6157 items match PHP",
+			"complex relation component sweep (list mode) > test6100.test6230 items match PHP",
+			"complex relation component sweep (list mode) > testcult1.testcult1020 items match PHP",
+			"complex relation component sweep (list mode) > testcult1.testcult1036 items match PHP",
+			"complex relation component sweep (list mode) > testmint1.testmint1006 items match PHP",
+			"complex relation component sweep (list mode) > testmint1.testmint1014 items match PHP"
+		],
+		"test/parity/component_datalist_lifecycle_differential.test.ts": [
+			"six-component get_data lifecycle differential > filter: edit datalist deep-equal PHP",
+			"six-component get_data lifecycle differential > filter: list value labels equal PHP",
+			"six-component get_data lifecycle differential > filter_master: edit datalist deep-equal PHP",
+			"six-component get_data lifecycle differential > filter_master: list value labels equal PHP",
+			"six-component get_data lifecycle differential > security_access: SECTION-READ datalist + envelope match PHP (client path)",
+			"six-component get_data lifecycle differential > security_access: edit datalist node count + envelope match PHP"
+		],
+		"test/parity/component_list_css_strip_differential.test.ts": [
+			"component list css strip differential (SECTION_SPEC §7.1, PHP :1801-1846) > test2938: portal list css = section_list child's (swap), edit css own",
+			"component list css strip differential (SECTION_SPEC §7.1, PHP :1801-1846) > test2939: portal list css = section_list child's (swap), edit css own"
+		],
+		"test/parity/count_differential.test.ts": [
+			"count differential (Phase 5g gate) > filtered count matches PHP",
+			"count differential (Phase 5g gate) > plain section count matches PHP"
+		],
+		"test/parity/dedalo_files_differential.test.ts": [
+			"get_dedalo_files differential (S1-19 gate) > file set matches the oracle exactly (order + tool_common + WC-013 normalized)"
+		],
+		"test/parity/get_ontologies_differential.test.ts": [
+			"get_ontologies differential > names match per tld",
+			"get_ontologies differential > same ontology descriptor set (tld + target_section_tipo + typology_id)"
+		],
+		"test/parity/indexation_grid_differential.test.ts": [
+			"get_indexation_grid differential > grid for test1023_1 (rsc167) is DEEP-EQUAL to PHP",
+			"get_indexation_grid differential > grid for test1026_65 (test6101) is DEEP-EQUAL to PHP",
+			"get_indexation_grid differential > grid for test2822_1024 (rsc167) is DEEP-EQUAL to PHP",
+			"get_indexation_grid differential > grid for testcont1_10 (rsc205) is DEEP-EQUAL to PHP",
+			"get_indexation_grid differential > grid for testcont1_31 (rsc205+testimmovable1, limit 3 offset 2) is DEEP-EQUAL to PHP",
+			"get_indexation_grid differential > grid for testcont1_38 (rsc205+testimmovable1) is DEEP-EQUAL to PHP",
+			"get_indexation_grid differential > the gate is not vacuous: the rich case resolves real values"
+		],
+		"test/parity/list_column_sortable_differential.test.ts": [
+			"list-column sortable + order path differential > test6813: every top-level list column's sortable + path matches PHP"
+		],
+		"test/parity/menu_differential.test.ts": [
+			"menu tree_datalist differential (Phase 6 gate) > TS plain nodes match PHP exactly on {tipo, model, parent, label}",
+			"menu tree_datalist differential (Phase 6 gate) > rewritten nodes (section_tool + thesaurus virtuals) match PHP byte-for-byte"
+		],
+		"test/parity/model_coverage_sweep.test.ts": [
+			"model coverage sweep (pre-Phase-6 measurement) > sweep all models; lock the known-good set; ledger divergences"
+		],
+		"test/parity/multihop_order_differential.test.ts": [
+			"multi-hop order differential (sort by a related section value) > the ordered paged id sequence matches PHP"
+		],
+		"test/parity/multihop_search_differential.test.ts": [
+			"multi-hop search differential (relation joins) > the 2-hop count matches PHP"
+		],
+		"test/parity/related_count_differential.test.ts": [
+			"related count differential (relation_list totals) > group_by section_tipo yields the same per-group totals",
+			"related count differential (relation_list totals) > the plain total matches PHP"
+		],
+		"test/parity/relation_corpus_config.test.ts": [
+			"relation corpus request_config parity (spec §7/§8 gate 3) > rsc860 (explicit hierarchy_types wide): request_config projection matches PHP",
+			"relation corpus request_config parity (spec §7/§8 gate 3) > test6119 (explicit self-targeting sqo): request_config projection matches PHP",
+			"relation corpus request_config parity (spec §7/§8 gate 3) > test6230 (explicit + filter_by_list): request_config projection matches PHP",
+			"relation corpus request_config parity (spec §7/§8 gate 3) > test6489 (explicit self-targeting sqo): request_config projection matches PHP",
+			"relation corpus request_config parity (spec §7/§8 gate 3) > testmint1006 (explicit hierarchy_types): request_config projection matches PHP",
+			"relation corpus request_config parity (spec §7/§8 gate 3) > testtema1036 (explicit thesaurus library): request_config projection matches PHP"
+		],
+		"test/parity/relation_inverse_differential.test.ts": [
+			"inverse/indexation family differential (spec gate 4) > children get_data: relation_children on the seed bibliography §19575 — computed page + full count + subdatum",
+			"inverse/indexation family differential (spec gate 4) > indexation get_data: relation_index on the cloned tree §1024 — tag-carrying dd96 inverse page",
+			"inverse/indexation family differential (spec gate 4) > relation_related MULTIDIRECTIONAL: §61683 computed references on the edit item"
+		],
+		"test/parity/relation_search_pipelines_differential.test.ts": [
+			"relation search pipelines differential (testtema1) > children '*' (has children) matches PHP",
+			"relation search pipelines differential (testtema1) > children contain / '!=' / '!==' on a real child locator match PHP",
+			"relation search pipelines differential (testtema1) > index '*' (indexed terms) and '!*' (orphans) match PHP"
+		],
+		"test/parity/section_context_extras_differential.test.ts": [
+			"section context extras differential (SECTION_SPEC §6) > testcult1: section_map + matrix_table + relation_list_tipo match PHP"
+		],
+		"test/parity/section_terms_differential.test.ts": [
+			"get_section_terms differential > lang is honored identically",
+			"get_section_terms differential > mixed batch resolves the SAME term map as PHP"
+		],
+		"test/parity/sqo_differential.test.ts": [
+			"SQO differential: TS engine vs live PHP (Phase 3 gate) > number comparison >= (component_number)"
+		],
+		"test/parity/start_differential.test.ts": [
+			"start action differential > default-section context matches (tipo/model/label/matrix_table/config)"
+		],
+		"test/parity/tool_export_breakdown_differential.test.ts": [
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — WC-008 single-step portal COMPACT grid_value/columns",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — WC-008 single-step portal COMPACT grid_value/default",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — WC-008 single-step portal COMPACT grid_value/rows",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — dedalo_raw/default",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — grid_value/columns",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — grid_value/default",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — grid_value/default fill_the_gaps=false",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — grid_value/rows",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — grid_value/rows fill_the_gaps=false",
+			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — value/default",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — WC-008 single-step portal COMPACT grid_value/columns",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — WC-008 single-step portal COMPACT grid_value/default",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — WC-008 single-step portal COMPACT grid_value/rows",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — dedalo_raw/default",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — grid_value/columns",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — grid_value/default",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — grid_value/default fill_the_gaps=false",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — grid_value/rows",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — grid_value/rows fill_the_gaps=false",
+			"tool_export deep-breakdown differential > testmint1 §2 (Mint, 22 refs, multi-author pubs) — value/default",
+			"tool_export deep-breakdown differential > value format dedupes same-top-component ddos into ONE column (PHP register-by-key)"
+		],
+		"test/parity/tool_export_differential.test.ts": [
+			"tool_export dedalo_raw differential > test6099 raw cells match PHP byte-for-byte",
+			"tool_export dedalo_raw differential > testmint1 raw cells match PHP byte-for-byte",
+			"tool_export grid differential > meta total + row VALUES match PHP exactly",
+			"tool_export grid_value breakdown differential > breakdown 'columns' rows + columns match PHP",
+			"tool_export grid_value breakdown differential > breakdown 'default' rows + columns match PHP",
+			"tool_export grid_value breakdown differential > breakdown 'rows' rows + columns match PHP",
+			"tool_export grid_value multi-hop differential > multi-hop breakdown 'columns' matches PHP",
+			"tool_export grid_value multi-hop differential > multi-hop breakdown 'default' matches PHP",
+			"tool_export grid_value multi-hop differential > multi-hop breakdown 'rows' matches PHP",
+			"tool_export multi-hop path differential > test6113 → testmint1006 rows match PHP byte-for-byte",
+			"tool_export multi-hop path differential > test6113 → testmint1014 rows match PHP byte-for-byte",
+			"tool_export ndjson_stream differential > grid_value stream lines match PHP"
+		],
+		"test/parity/ts_node_read_differential.test.ts": [
+			"dd_ts_api.get_children_data differential (mode A) > paginated children build matches PHP",
+			"dd_ts_api.get_node_data differential > descriptor node payload matches PHP"
+		],
+		"test/parity/ts_search_differential.test.ts": [
+			"area_thesaurus ts_search injection differential > keyword search embeds a matching ts_search tree"
+		]
+	}
+}

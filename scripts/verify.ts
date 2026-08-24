@@ -119,6 +119,7 @@ const TRIPWIRES = [
 	'test/unit/client_error_contract_tripwire.test.ts',
 	'test/unit/migration_shared_row_tripwire.test.ts',
 	'test/unit/generic_tld_tripwire.test.ts',
+	'test/unit/parity_baseline_tripwire.test.ts',
 	'test/unit/mock_isolation_tripwire.test.ts',
 	'test/unit/install_table_write_tripwire.test.ts',
 	'test/unit/engine_install_tld_tripwire.test.ts',
