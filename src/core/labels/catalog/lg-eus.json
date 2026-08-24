@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "Konexioa galduta — eguneratzea zerbitzarian exekutatzen ari daiteke oraindik. Ireki berriro panel hau berriz konektatzeko, eta ez hasi beste eguneratzerik.",
 	"update_code_current_build": "Uneko eraikuntza",
 	"update_code_current_version": "Uneko bertsioa",
+	"update_code_dev_channel": "Garapen-eraikuntzak",
+	"update_code_dev_channel_note": "Garapen-adar batetik egindako argitaratu gabeko eraikuntzak ere eskaintzen ditu. Instalatutakoaren bertsio-zenbaki bera dute, beraz haren gainean instalatzen dira. Erabili garapen-lana probatzeko, inoiz ez produkzioko instalazio batean.",
 	"update_code_dev_refused": "Nahi gabeko gainidazketak saihesteko, garapen-instalazioak ez du kodea eguneratzen uzten.",
 	"update_code_failed": "Eguneratzeak huts egin du.",
 	"update_code_git_builders": "GIT-etik kodea eraikitzeko tresnak",

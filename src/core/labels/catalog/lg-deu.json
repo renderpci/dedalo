@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "Verbindung verloren — die Aktualisierung läuft möglicherweise noch auf dem Server. Öffnen Sie dieses Panel erneut, um sich wieder zu verbinden, und starten Sie keine weitere Aktualisierung.",
 	"update_code_current_build": "Aktueller Build",
 	"update_code_current_version": "Aktuelle Version",
+	"update_code_dev_channel": "Entwicklungs-Builds",
+	"update_code_dev_channel_note": "Bietet auch unveröffentlichte Builds aus einem Entwicklungs-Branch an. Sie tragen dieselbe Versionsnummer wie die installierte und werden daher darüber installiert. Verwenden Sie sie, um Entwicklungsarbeit zu testen, niemals auf einer Produktionsinstallation.",
 	"update_code_dev_refused": "Um versehentliches Überschreiben zu vermeiden, erlaubt die Entwicklungsinstallation keine Code-Aktualisierung.",
 	"update_code_failed": "Die Aktualisierung ist fehlgeschlagen.",
 	"update_code_git_builders": "Code-Builder aus GIT",

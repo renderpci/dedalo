@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "连接已断开 — 更新可能仍在服务器上运行。请重新打开此面板以重新连接，且不要启动另一次更新。",
 	"update_code_current_build": "当前构建",
 	"update_code_current_version": "当前版本",
+	"update_code_dev_channel": "开发构建",
+	"update_code_dev_channel_note": "同时提供来自开发分支的未发布构建。它们与已安装版本的版本号相同，因此会覆盖安装。请用于测试开发工作，切勿用于生产环境的安装。",
 	"update_code_dev_refused": "为避免意外覆盖，开发安装不允许更新代码。",
 	"update_code_failed": "更新失败。",
 	"update_code_git_builders": "来自 GIT 的代码构建器",

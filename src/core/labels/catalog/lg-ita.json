@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "Connessione persa — l'aggiornamento potrebbe essere ancora in esecuzione sul server. Riaprire questo pannello per riconnettersi e non avviare un altro aggiornamento.",
 	"update_code_current_build": "Build attuale",
 	"update_code_current_version": "Versione attuale",
+	"update_code_dev_channel": "Build di sviluppo",
+	"update_code_dev_channel_note": "Offre anche build non pubblicate create da un ramo di sviluppo. Portano lo stesso numero di versione di quella installata, quindi vi si installano sopra. Usatele per provare il lavoro in sviluppo, mai su un'installazione di produzione.",
 	"update_code_dev_refused": "Per evitare sovrascritture accidentali, l'installazione di sviluppo non consente di aggiornare il codice.",
 	"update_code_failed": "L'aggiornamento non è riuscito.",
 	"update_code_git_builders": "Costruttori di codice da GIT",

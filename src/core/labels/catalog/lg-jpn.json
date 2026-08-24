@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "接続が失われました — 更新はサーバー上でまだ実行中の可能性があります。このパネルを開き直して再接続し、別の更新を開始しないでください。",
 	"update_code_current_build": "現在のビルド",
 	"update_code_current_version": "現在のバージョン",
+	"update_code_dev_channel": "開発ビルド",
+	"update_code_dev_channel_note": "開発ブランチから作成された未公開ビルドも提供します。インストール済みのものと同じバージョン番号を持つため、その上にインストールされます。開発作業の検証に使用し、本番環境のインストールでは決して使用しないでください。",
 	"update_code_dev_refused": "誤った上書きを防ぐため、開発用インストールではコードを更新できません。",
 	"update_code_failed": "更新に失敗しました。",
 	"update_code_git_builders": "GIT からのコードビルダー",

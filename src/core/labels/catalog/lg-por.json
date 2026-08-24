@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "Ligação perdida — a atualização pode continuar a ser executada no servidor. Reabra este painel para voltar a ligar e não inicie outra atualização.",
 	"update_code_current_build": "Compilação atual",
 	"update_code_current_version": "Versão atual",
+	"update_code_dev_channel": "Compilações de desenvolvimento",
+	"update_code_dev_channel_note": "Também oferece compilações não publicadas feitas a partir de um ramo de desenvolvimento. Têm o mesmo número de versão da instalada, pelo que são instaladas por cima. Use-as para testar trabalho em desenvolvimento, nunca numa instalação de produção.",
 	"update_code_dev_refused": "Para evitar substituições acidentais, a instalação de desenvolvimento não permite atualizar o código.",
 	"update_code_failed": "A atualização falhou.",
 	"update_code_git_builders": "Compiladores de código a partir do GIT",

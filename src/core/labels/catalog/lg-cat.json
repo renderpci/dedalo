@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "Connexió perduda — l'actualització pot continuar executant-se al servidor. Torneu a obrir aquest tauler per reconnectar i no inicieu una altra actualització.",
 	"update_code_current_build": "Compilació actual",
 	"update_code_current_version": "Versió actual",
+	"update_code_dev_channel": "Compilacions de desenvolupament",
+	"update_code_dev_channel_note": "També ofereix compilacions no publicades fetes des d'una branca de desenvolupament. Porten el mateix número de versió que la instal·lada, de manera que s'instal·len al damunt. Useu-les per provar treball en desenvolupament, mai en una instal·lació de producció.",
 	"update_code_dev_refused": "Per evitar sobreescriptures accidentals, la instal·lació de desenvolupament no permet actualitzar el codi.",
 	"update_code_failed": "L'actualització ha fallat.",
 	"update_code_git_builders": "Compiladors de codi des de GIT",

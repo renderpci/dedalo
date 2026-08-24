@@ -524,6 +524,8 @@
 	"update_code_connection_lost": "연결이 끊겼습니다 — 업데이트가 서버에서 계속 실행 중일 수 있습니다. 이 패널을 다시 열어 재연결하고 다른 업데이트를 시작하지 마십시오.",
 	"update_code_current_build": "현재 빌드",
 	"update_code_current_version": "현재 버전",
+	"update_code_dev_channel": "개발 빌드",
+	"update_code_dev_channel_note": "개발 브랜치에서 만든 미공개 빌드도 제공합니다. 설치된 것과 같은 버전 번호를 가지므로 그 위에 설치됩니다. 개발 작업을 시험할 때 사용하고, 운영 설치본에서는 절대 사용하지 마십시오.",
 	"update_code_dev_refused": "실수로 덮어쓰는 것을 막기 위해 개발 설치본에서는 코드를 업데이트할 수 없습니다.",
 	"update_code_failed": "업데이트에 실패했습니다.",
 	"update_code_git_builders": "GIT 기반 코드 빌더",
