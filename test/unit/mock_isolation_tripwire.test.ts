@@ -47,9 +47,21 @@
  *  - A module id it cannot resolve statically, or one that names no file on
  *    disk (a VIRTUAL id), has no surface to compare — those fall back to the
  *    spread rule and are listed in the baseline with that reason.
- *  - It cannot see a global stub at all (rule 1 covers modules). The `URL` case
- *    above is prevented by review and by the comment left at that site, not by
- *    this gate — stubbing a global CONSTRUCTOR is the pattern to look for.
+ *  - GLOBAL STUBS ARE NOW COVERED (2026-08-24) — this limitation is retired.
+ *    Three rules below scan every `globalThis.X =`, `(globalThis as T).X =` and
+ *    alias form (`const globals = globalThis as …`), which is how the corpus is
+ *    actually written. What they still CANNOT see, stated plainly:
+ *      · a PARTIAL restore — `tool_transcription.test.ts` restores three of the
+ *        six globals it assigns, and a file-level rule cannot tell that from a
+ *        complete one. Per-key detection is not textually possible: the
+ *        compliant files restore in a LOOP over a saved map, so demanding a
+ *        per-key restore statement would redden correct teardown.
+ *      · a computed-key write (`globals[name] = …`) or a write inside an
+ *        imported helper. Neither shape exists in the tree today.
+ *      · a stub of a global that is NOT a runtime constructor here (Bun has no
+ *        DOM, so `Node`/`Option`/`XMLHttpRequest`/`DocumentFragment` are
+ *        undefined and assigning them defines a shim rather than destroying a
+ *        builtin) — those are allowed deliberately, not overlooked.
  *
  * HERMETIC: filesystem reads of tracked test source. No DB, no network, no clock.
  */
@@ -100,6 +112,115 @@ interface Site {
 	body: string;
 	/** Absolute module id, or null when it could not be resolved statically. */
 	moduleId: string | null;
+}
+
+// ── GLOBAL STUBS (2026-08-24) ─────────────────────────────────────────────────
+//
+// The header's stated blind spot — "It cannot see a global stub at all" — closed.
+// The originating incident: replacing `globalThis.URL` with a PLAIN OBJECT broke
+// `new URL(...)` process-wide and made a security gate report `bad_config` where
+// it asserts `blocked_host`. One process, so a global is everyone's.
+//
+// WHAT COUNTS AS DANGEROUS, measured rather than assumed. Only a global that is
+// a REAL CONSTRUCTOR IN THIS RUNTIME can be clobbered; Bun has no DOM, so
+// `Node`, `DocumentFragment`, `Option` and `XMLHttpRequest` are undefined here
+// and a test assigning them is DEFINING a shim, not destroying a builtin. The
+// list below is therefore the runtime-real set, verified with `typeof` under the
+// Bun this suite runs on — not a textbook list of "browser constructors".
+const RUNTIME_CONSTRUCTOR_GLOBALS: readonly string[] = [
+	'URL',
+	'Date',
+	'Response',
+	'Request',
+	'Headers',
+	'FormData',
+	'WebSocket',
+	'Blob',
+	'AbortController',
+];
+
+/**
+ * Files that assign a global and never restore it. SHRINK-ONLY.
+ *
+ * Seeded with the one real offender rather than empty: an earlier plan asserted
+ * "all of them already restore", which was false and would have landed this gate
+ * red on its first commit.
+ */
+const GLOBAL_NO_RESTORE_BASELINE: readonly string[] = [
+	// Assigns SHOW_DEBUG in `beforeAll`; its `afterAll` restores console.warn /
+	// console.error only, so the flag leaks to every later file in the process.
+	'component_change_value_refresh.test.ts',
+];
+
+/** `const x = globalThis;` / `const x = globalThis as …;` — an ALIAS, not a save. */
+const GLOBAL_ALIAS =
+	/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]*)?=\s*globalThis\s*(?:as\b[^;=]*)?\s*;/g;
+
+/** Assignments through `globalThis.X =` and `(globalThis as T).X =`. */
+const DIRECT_ASSIGN = /\bglobalThis\s*\.\s*([A-Za-z_$][\w$]*)\s*=(?!=)/g;
+const PAREN_ASSIGN = /\(\s*globalThis\s+as[^)]*\)\s*\.\s*([A-Za-z_$][\w$]*)\s*=(?!=)/g;
+
+type GlobalSite = { file: string; key: string; rhs: string; line: number };
+
+/** Every global assignment in a unit test, through any alias spelling. */
+function globalAssignments(): GlobalSite[] {
+	const sites: GlobalSite[] = [];
+	for (const file of unitFiles()) {
+		const source = readFileSync(join(UNIT_DIR, file), 'utf8');
+		const targets = new Set<string>(['globalThis']);
+		for (const m of source.matchAll(GLOBAL_ALIAS)) targets.add(m[1] as string);
+
+		const patterns = [DIRECT_ASSIGN, PAREN_ASSIGN].map((re) => new RegExp(re.source, 'g'));
+		for (const alias of targets) {
+			if (alias === 'globalThis') continue;
+			patterns.push(new RegExp(`\\b${alias}\\s*\\.\\s*([A-Za-z_$][\\w$]*)\\s*=(?!=)`, 'g'));
+		}
+		for (const re of patterns) {
+			for (const m of source.matchAll(re)) {
+				const at = m.index ?? 0;
+				const rhs = source.slice(at + m[0].length, source.indexOf('\n', at) + 1 || undefined);
+				sites.push({
+					file,
+					key: m[1] as string,
+					rhs: rhs.trim(),
+					line: source.slice(0, at).split('\n').length,
+				});
+			}
+		}
+	}
+	return sites;
+}
+
+/** Files with teardown (`afterAll`/`afterEach`/`finally`) that touches a global. */
+function filesRestoringGlobals(): Set<string> {
+	const restoring = new Set<string>();
+	for (const file of unitFiles()) {
+		const source = readFileSync(join(UNIT_DIR, file), 'utf8');
+		const targets = new Set<string>(['globalThis']);
+		for (const m of source.matchAll(GLOBAL_ALIAS)) targets.add(m[1] as string);
+
+		// Teardown bodies, brace-matched. `finally` is included deliberately: two
+		// files restore per-test in a finally rather than in afterEach, and a rule
+		// demanding the restore sit lexically inside afterAll reddens correct code.
+		const bodies: string[] = [];
+		for (const m of source.matchAll(/\b(?:afterAll|afterEach)\s*\(|\bfinally\s*\{/g)) {
+			const open = source.indexOf('{', (m.index ?? 0) + m[0].length - 1);
+			if (open === -1) continue;
+			let depth = 0;
+			let end = open;
+			while (end < source.length) {
+				if (source[end] === '{') depth += 1;
+				else if (source[end] === '}') {
+					depth -= 1;
+					if (depth === 0) break;
+				}
+				end += 1;
+			}
+			bodies.push(source.slice(open, end));
+		}
+		if (bodies.some((body) => [...targets].some((t) => body.includes(t)))) restoring.add(file);
+	}
+	return restoring;
 }
 
 /** This file NAMES `mock.module(` in its prose and its regex; it never calls it. */
@@ -328,5 +449,55 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 		// 'a', 'b'), …)` site was unseen — and both real truncations lived there.
 		// The scan must keep seeing that form, and must keep RESOLVING ids.
 		expect(sites.filter((site) => site.moduleId !== null).length).toBeGreaterThan(10);
+	});
+	// ── global stubs ─────────────────────────────────────────────────────────
+	test('no NON-CONSTRUCTOR is assigned over a real runtime constructor global', () => {
+		const offenders = globalAssignments()
+			.filter((site) => RUNTIME_CONSTRUCTOR_GLOBALS.includes(site.key))
+			.filter((site) => {
+				// A constructor RHS: a class expression, or an identifier declared
+				// `class` in the same file. The one legitimate shape in the tree is
+				// `class StubURL extends (globals.URL as typeof URL)` — it SUBCLASSES
+				// the real constructor instead of replacing it, and that is the
+				// pattern to copy.
+				if (/^class\b/.test(site.rhs)) return false;
+				const id = site.rhs.match(/^([A-Za-z_$][\w$]*)/)?.[1];
+				if (id === undefined) return true;
+				const source = readFileSync(join(UNIT_DIR, site.file), 'utf8');
+				return !new RegExp(`class\\s+${id}\\b`).test(source);
+			});
+		expect(
+			offenders.map((o) => `${o.file}:${o.line} ${o.key} = ${o.rhs}`),
+			'a plain object over a real constructor breaks `new X()` for the whole ' +
+				'process — subclass it (`class Stub extends (globals.X as typeof X)`) instead',
+		).toEqual([]);
+	});
+
+	test('every file that assigns a global restores it in teardown', () => {
+		const restoring = filesRestoringGlobals();
+		const assigning = new Set(globalAssignments().map((s) => s.file));
+		const unrestored = [...assigning].filter((f) => !restoring.has(f)).sort();
+		expect(
+			unrestored.filter((f) => !GLOBAL_NO_RESTORE_BASELINE.includes(f)),
+			'a global assigned and never restored leaks into every later file in the process',
+		).toEqual([]);
+		// Stale baseline entries are red too.
+		expect(
+			GLOBAL_NO_RESTORE_BASELINE.filter((f) => !unrestored.includes(f)),
+			'fixed — delete these names in the same change that fixed them',
+		).toEqual([]);
+	});
+
+	test('ANTI-VACUITY: the global scan actually finds stub sites', () => {
+		const sites = globalAssignments();
+		const files = new Set(sites.map((s) => s.file));
+		// Measured 2026-08-24: 21 files, across three alias spellings
+		// (`globalThis.X`, `const globals = globalThis as …`, `const g = …`).
+		// A scan that found none would pass both rules above while measuring nothing.
+		expect(files.size).toBeGreaterThanOrEqual(18);
+		expect(sites.length).toBeGreaterThan(40);
+		// The alias forms must keep being seen: an earlier corpus counted only two
+		// spellings and missed three files, two of which were real offenders.
+		expect([...files].filter((f) => !/^client_/.test(f)).length).toBeGreaterThan(2);
 	});
 });
