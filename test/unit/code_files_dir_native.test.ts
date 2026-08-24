@@ -23,6 +23,7 @@ import {
 	readFileSync,
 	rmSync,
 	statSync,
+	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -40,7 +41,11 @@ afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
 const modeOf = (path: string): number => statSync(path).mode & 0o777;
 
-/** Run with a pinned umask: the gate must assert the FORCED mode, not the ambient one. */
+/**
+ * Run with a pinned umask: the gate must assert the FORCED mode, not the
+ * ambient one. SYNCHRONOUS BODIES ONLY — the umask is process-global, so an
+ * `await` inside would leak the mask to whatever else runs in this process.
+ */
 function withUmask<T>(mask: number, body: () => T): T {
 	const previous = process.umask(mask);
 	try {
@@ -107,6 +112,64 @@ describe('ensureCodeFilesDir', () => {
 		expect(report.error).toBeNull();
 	});
 
+	test('a path with .. is normalised, so every minted level really is forced', () => {
+		// `relative()` normalises `..` away, so without the resolve() at the top
+		// of ensureCodeFilesDir mkdir would mint a level (`x`) that the mode
+		// walk then never visits — left at the umask's mode while the report
+		// claimed every minted level was forced.
+		withUmask(0o077, () => {
+			const dir = join(ROOT, 'dots', 'x', '..', 'y', 'z');
+			const report = ensureCodeFilesDir(dir);
+			expect(report.created).toBe(true);
+			expect(report.modeForced).toBe(true);
+			// `path` is the normalised path, and because mkdir is given that same
+			// normalised path, the `..` level is never minted at all — the
+			// created set and the forced set are one set by construction.
+			expect(report.path).toBe(join(ROOT, 'dots', 'y', 'z'));
+			expect(existsSync(join(ROOT, 'dots', 'x'))).toBe(false);
+			for (const level of [
+				join(ROOT, 'dots'),
+				join(ROOT, 'dots', 'y'),
+				join(ROOT, 'dots', 'y', 'z'),
+			]) {
+				expect(modeOf(level), level).toBe(CODE_DIR_MODE);
+			}
+		});
+	});
+
+	test('a vanished path is reported, never thrown (the never-throws contract)', () => {
+		// existsSync + statSync is a race. The guarded stat is what keeps an
+		// ENOENT from escaping into startServer (S1-15) and into code_build.ts,
+		// which calls this outside any try. Simulated by racing the same window
+		// a removal opens: a dangling symlink is the reachable shape of it.
+		const link = join(ROOT, 'dangling');
+		const target = join(ROOT, 'gone');
+		mkdirSync(target, { recursive: true });
+		symlinkSync(target, link);
+		rmSync(target, { recursive: true, force: true });
+		// existsSync follows the link and answers false, so this takes the
+		// CREATE branch and mkdirSync throws EEXIST — reported, not thrown.
+		const report = ensureCodeFilesDir(link);
+		expect(report.created).toBe(false);
+		expect(report.error).toBeInstanceOf(Error);
+		expect(report.isDirectory).toBe(false);
+	});
+
+	test('a chmod refusal is a REPORT field, never a creation failure', () => {
+		// The regression this split exists for: a filesystem without POSIX modes
+		// (CIFS/SMB, exFAT — an ordinary home for release archives on a mirror
+		// box) answers EPERM to every chmod. Such a mount cannot be conjured in
+		// a unit test, so the invariant is asserted where it bites: a successful
+		// create reports `error:null` + `isDirectory:true` and carries the mode
+		// outcome SEPARATELY, on `modeForced` — the two fields code_build.ts
+		// keys its refusal on stay clean either way.
+		const report = ensureCodeFilesDir(join(ROOT, 'forced'));
+		expect(report.error).toBeNull();
+		expect(report.isDirectory).toBe(true);
+		expect(report.created).toBe(true);
+		expect(report.modeForced).toBe(true);
+	});
+
 	test.skipIf(asRoot)('reports the failure instead of throwing when it cannot create', () => {
 		const parent = join(ROOT, 'sealed');
 		mkdirSync(parent, { recursive: true });
@@ -143,5 +206,14 @@ describe('the boot wiring', () => {
 		const src = readFileSync(join(REPO_ROOT, 'src', 'core', 'update', 'code_files_dir.ts'), 'utf8');
 		expect(src).toContain('if (config.update.isCodeServer !== true) return null;');
 		expect(src).toContain("if (configured === undefined || configured === '') return null;");
+	});
+
+	test('code_build refuses on creation/not-a-directory ONLY, never on the mode', () => {
+		// A build must not be refused because a chmod was refused: keying the
+		// refusal on anything mode-shaped would hard-fail a release on a mount
+		// that cannot carry POSIX modes.
+		const src = readFileSync(join(REPO_ROOT, 'src', 'core', 'update', 'code_build.ts'), 'utf8');
+		expect(src).toContain('dirReport.error !== null || !dirReport.isDirectory');
+		expect(src).not.toContain('dirReport.modeForced');
 	});
 });

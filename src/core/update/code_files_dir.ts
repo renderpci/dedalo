@@ -53,14 +53,38 @@ export interface CodeFilesDirReport {
 	readonly isDirectory: boolean;
 	/** The observed mode of the path (permission bits), or null when absent. */
 	readonly mode: number | null;
-	/** The mkdir failure, when there was one. */
+	/**
+	 * The chmod that FORCES the mode failed, on a directory that was
+	 * nonetheless created. NOT an `error`: a filesystem with no POSIX modes
+	 * (a CIFS/SMB or exFAT-mounted NAS share — an entirely ordinary home for
+	 * release archives on a mirror box) answers EPERM/ENOTSUP to every chmod,
+	 * and refusing a build over a cosmetic mode is worse than publishing at
+	 * the mount's own mode. `mode` then reports what actually landed.
+	 */
+	readonly modeForced: boolean;
+	/** The CREATION failure, when there was one — never a chmod failure. */
 	readonly error: Error | null;
 }
 
-/** Permission bits of a path, or null when it cannot be stat'd. */
+/** Permission bits of a path, or null when it cannot be stat'd (report-only). */
 function modeOf(path: string): number | null {
+	return statOf(path)?.mode ?? null;
+}
+
+/**
+ * `{isDirectory, mode}` for a path, or null when it cannot be stat'd.
+ *
+ * GUARDED, because `existsSync` + `statSync` is a race: the path can be
+ * removed (or a symlink's target can be) between the two calls, and an ENOENT
+ * escaping here would break this module's never-throws contract at the two
+ * places that depend on it most — the boot pass (S1-15) and `code_build.ts`,
+ * which calls this OUTSIDE any try and would surface a raw ENOENT instead of
+ * its `refuseUpdate` sentence.
+ */
+function statOf(path: string): { isDirectory: boolean; mode: number } | null {
 	try {
-		return statSync(path).mode & 0o777;
+		const stats = statSync(path);
+		return { isDirectory: stats.isDirectory(), mode: stats.mode & 0o777 };
 	} catch {
 		return null;
 	}
@@ -75,18 +99,32 @@ function modeOf(path: string): number | null {
  * disk. `mkdirSync(…, {recursive:true})` returns the FIRST path it created,
  * which bounds the walk exactly: levels that already existed are never
  * touched, only the ones this call brought into being.
+ *
+ * `dir` is ALREADY NORMALISED by the caller (`resolve` at the top of
+ * `ensureCodeFilesDir`), which is what makes "the created set" and "the walked
+ * set" the same set by construction: `relative()` normalises a `..` away, so
+ * an unnormalised `a/x/../y` would leave the `x` that mkdir really minted at
+ * the umask's mode while claiming every minted level was forced.
+ *
+ * Returns false when the filesystem refuses the chmod — a fact for the caller
+ * to report, never a reason to unwind a directory that now exists.
  */
-function forceModeOnCreated(firstCreated: string, dir: string): void {
+function forceModeOnCreated(firstCreated: string, dir: string): boolean {
 	const top = resolve(firstCreated);
 	const segments = relative(top, resolve(dir))
 		.split(sep)
 		.filter((part) => part !== '');
 	let path = top;
-	chmodSync(path, CODE_DIR_MODE);
-	for (const segment of segments) {
-		path = resolve(path, segment);
+	try {
 		chmodSync(path, CODE_DIR_MODE);
+		for (const segment of segments) {
+			path = resolve(path, segment);
+			chmodSync(path, CODE_DIR_MODE);
+		}
+	} catch {
+		return false;
 	}
+	return true;
 }
 
 /**
@@ -96,21 +134,25 @@ function forceModeOnCreated(firstCreated: string, dir: string): void {
  * (`/srv/dedalo/code`); the mode is then FORCED on the levels it minted (see
  * `forceModeOnCreated` — the `mode` option alone is umask-dependent).
  */
-export function ensureCodeFilesDir(dir: string): CodeFilesDirReport {
-	if (existsSync(dir)) {
-		const isDirectory = statSync(dir).isDirectory();
+export function ensureCodeFilesDir(configured: string): CodeFilesDirReport {
+	// Normalised ONCE, so the path mkdir is given, the path the mode walk
+	// traverses and the path every report field names are the same string.
+	const dir = resolve(configured);
+	const existing = existsSync(dir) ? statOf(dir) : null;
+	if (existing !== null) {
 		return {
 			path: dir,
 			created: false,
-			writable: isDirectory && dirIsWritable(dir),
-			isDirectory,
-			mode: modeOf(dir),
+			writable: existing.isDirectory && dirIsWritable(dir),
+			isDirectory: existing.isDirectory,
+			mode: existing.mode,
+			modeForced: false,
 			error: null,
 		};
 	}
+	let firstCreated: string | undefined;
 	try {
-		const firstCreated = mkdirSync(dir, { recursive: true, mode: CODE_DIR_MODE });
-		if (firstCreated !== undefined) forceModeOnCreated(firstCreated, dir);
+		firstCreated = mkdirSync(dir, { recursive: true, mode: CODE_DIR_MODE });
 	} catch (error) {
 		return {
 			path: dir,
@@ -118,15 +160,22 @@ export function ensureCodeFilesDir(dir: string): CodeFilesDirReport {
 			writable: false,
 			isDirectory: false,
 			mode: modeOf(dir),
+			modeForced: false,
 			error: error as Error,
 		};
 	}
+	// OUTSIDE the mkdir's try, deliberately: the directory now EXISTS, so a
+	// failed chmod must never be reported as a creation failure (it refused a
+	// build that would otherwise have published — the whole point of this
+	// split). See `modeForced`.
+	const modeForced = firstCreated === undefined || forceModeOnCreated(firstCreated, dir);
 	return {
 		path: dir,
 		created: true,
 		writable: dirIsWritable(dir),
 		isDirectory: true,
 		mode: modeOf(dir),
+		modeForced,
 		error: null,
 	};
 }
@@ -159,6 +208,15 @@ export function ensureCodeFilesDirAtBoot(): CodeFilesDirReport | null {
 		console.warn(
 			`[code files dir] created the release files directory '${configured}' at mode ` +
 				`${(report.mode ?? 0).toString(8).padStart(4, '0')} (DEDALO_CODE_FILES_DIR).`,
+		);
+	}
+	if (report.created && !report.modeForced) {
+		console.warn(
+			`[code files dir] could not force mode ${CODE_DIR_MODE.toString(8).padStart(4, '0')} on ` +
+				`'${configured}' — it was created and is usable, at mode ` +
+				`${(report.mode ?? 0).toString(8).padStart(4, '0')}. A filesystem without POSIX ` +
+				'modes (CIFS/SMB, exFAT) refuses every chmod; set the mount options if that mode ' +
+				'is too wide for this host.',
 		);
 	}
 	if (!report.isDirectory) {

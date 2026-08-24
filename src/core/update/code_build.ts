@@ -147,6 +147,10 @@ export async function buildVersionFromGit(options: {
 	// levels a build mints must not be looser than the root they sit in, and a
 	// bare `mkdirSync(mode)` is umask-dependent. It never throws — the refusal
 	// below is this call site's, so the operator sentence stays the wire's.
+	// `error` is a CREATION failure only — a refused chmod (`modeForced:false`)
+	// leaves a usable directory and must NOT refuse a build that would
+	// otherwise publish (a release dir on a CIFS/exFAT mount answers EPERM to
+	// every chmod).
 	const dirReport = ensureCodeFilesDir(targetDir);
 	if (dirReport.error !== null || !dirReport.isDirectory) {
 		refuseUpdate(
