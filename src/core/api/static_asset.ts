@@ -142,24 +142,62 @@ export const UPDATE_MASTER_CSP_ORIGINS: readonly string[] = deriveUpdateMasterOr
 const CONNECT_SRC: string = [withMedia("'self' blob:"), ...UPDATE_MASTER_CSP_ORIGINS].join(' ');
 
 /**
- * The ONE media URL prefix the app may embed as `<object>`, on a split-origin
- * install: the image folder, and nothing else on that host. `<object>` opens a
- * nested browsing context, so an SVG loaded into one EXECUTES its script in the
- * origin it was fetched from — and a split-origin media host is an external
- * Apache/nginx serving the generated access rules, which emit no CSP, no
- * `sandbox` and no `Content-Disposition` (`src/core/media/protection.ts` — the
- * MEDIA-03 safety headers exist only on the Bun dev/fallback media route).
- * Handing the WHOLE host to `object-src` would therefore make every
- * uploader-supplied `svg/` file embeddable-and-executing in the media origin,
- * with the viewer's media auth cookie — a capability `frame-src` (which never
- * carries the media origin) does not already grant. Path-scoping to the image
- * folder admits exactly the server-generated envelopes: `svg` is not an image
- * quality and component_image rejects `.svg` uploads, so no uploader bytes land
- * under it. A CSP source whose path ends in `/` is a prefix match (CSP3
- * §6.6.2.6). Empty when media is same-origin — `'self'` already covers it.
+ * The ONE media URL prefix the app may embed, on a split-origin install: the image
+ * folder, and nothing else on that host. It feeds BOTH `object-src` and `frame-src`.
+ *
+ * WHY BOTH (2026-08-24, measured in Chrome, not reasoned). component_image's edit view
+ * hosts the server-generated SVG envelope as `<object type="image/svg+xml">`, and an
+ * `<object>` that loads a document opens a NESTED BROWSING CONTEXT — which Chrome
+ * checks against `frame-src`, not only `object-src`. So on a split-origin install this
+ * prefix in `object-src` alone was not enough: the browser reported
+ * `Framing 'http://<media host>/' violates … "frame-src 'self' blob:"` and every image
+ * in the edit view rendered blank, which is the exact symptom
+ * `object-src 'none'` had produced before this constant existed. The two directives
+ * must therefore carry the SAME source, from this one definition, or the policy
+ * contradicts itself and the contradiction is invisible until a split-origin install
+ * opens an image.
+ *
+ * WHY IT IS SAFE TO FRAME. A nested context executes an SVG's script in the origin it
+ * was fetched from. That is why the media host is never handed over WHOLESALE, and why
+ * this is path-scoped to the image folder: `svg` is not an image quality and
+ * component_image rejects `.svg` uploads, so no uploader bytes land under it — the
+ * uploader-supplied population lives under `svg/`, which this prefix excludes. Since
+ * MEDIA-03 landed (`WC-2026-08-24-media-svg-response-headers`) the generated
+ * Apache/nginx rules also emit the envelope's own restrictive CSP (`script-src 'none'`)
+ * and hand every other SVG over as a sandboxed `attachment`, so the framed document is
+ * inert at the media origin too — where this comment previously had to record the
+ * opposite ("the generated access rules emit no CSP, no sandbox and no
+ * Content-Disposition"), which was true until that work.
+ *
+ * A CSP source whose path ends in `/` is a prefix match (CSP3 §6.6.2.6). Empty when
+ * media is same-origin — `'self'` already covers it.
  */
-export const MEDIA_CSP_OBJECT_SOURCE: string =
+export const MEDIA_CSP_EMBED_SOURCE: string =
 	MEDIA_CSP_ORIGIN === '' ? '' : `${config.media.webBase}${config.media.image.folder}/`;
+
+/** @deprecated Use MEDIA_CSP_EMBED_SOURCE — it now governs `frame-src` as well. */
+export const MEDIA_CSP_OBJECT_SOURCE: string = MEDIA_CSP_EMBED_SOURCE;
+
+/**
+ * The two EMBED directives, built from one source list. PURE, and exported for the
+ * gate, because the ambient value of `MEDIA_CSP_EMBED_SOURCE` depends on how the box
+ * this runs on is configured: under `bun test` media is same-origin, so it is `''` and
+ * every assertion about the split-origin case is silently VACUOUS. That is how the
+ * frame-src/object-src disagreement survived — the pre-existing object-src gate could
+ * not see it either. A pure builder can be driven with a synthetic source instead.
+ */
+export function buildEmbedDirectives(embedSource: string): {
+	frameSrc: string;
+	objectSrc: string;
+} {
+	const extra = embedSource === '' ? '' : ` ${embedSource}`;
+	return {
+		frameSrc: `frame-src 'self' blob:${extra}`,
+		objectSrc: `object-src 'self'${extra}`,
+	};
+}
+
+const EMBED_DIRECTIVES = buildEmbedDirectives(MEDIA_CSP_EMBED_SOURCE);
 
 export const APP_CSP = [
 	"default-src 'self'",
@@ -170,7 +208,11 @@ export const APP_CSP = [
 	`media-src ${withMedia("'self' blob:")}`,
 	"font-src 'self' data:",
 	`connect-src ${CONNECT_SRC}`,
-	"frame-src 'self' blob:",
+	// The envelope prefix rides here as well as in `object-src`: Chrome checks an
+	// <object>-created nested browsing context against BOTH, so the two must agree
+	// or the edit view goes blank on every split-origin install (see
+	// MEDIA_CSP_EMBED_SOURCE). Same source, one builder.
+	EMBED_DIRECTIVES.frameSrc,
 	"frame-ancestors 'self'",
 	// MEDIA-03, other half: component_image's default edit view hosts the
 	// server-generated SVG envelope as <object type="image/svg+xml"> (it needs
@@ -182,8 +224,8 @@ export const APP_CSP = [
 	// context fetched from a URL, so object-src was never the control there —
 	// the write-side sanitizer (html_sanitize.ts, XSS-01, strips object/embed/
 	// iframe/svg) is. The media origin is NOT handed over wholesale; see
-	// MEDIA_CSP_OBJECT_SOURCE for why it is path-scoped to the envelope folder.
-	`object-src ${MEDIA_CSP_OBJECT_SOURCE === '' ? "'self'" : `'self' ${MEDIA_CSP_OBJECT_SOURCE}`}`,
+	// MEDIA_CSP_EMBED_SOURCE for why it is path-scoped to the envelope folder.
+	EMBED_DIRECTIVES.objectSrc,
 	"base-uri 'self'",
 	"form-action 'self'",
 ].join('; ');
