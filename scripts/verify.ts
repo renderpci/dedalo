@@ -75,6 +75,7 @@ const TRIPWIRES = [
 	'test/unit/ci_workflow_tripwire.test.ts',
 	'test/unit/local_db_stores_tripwire.test.ts',
 	'test/unit/docs_current_engine_tripwire.test.ts',
+	'test/unit/docs_locator_shape_tripwire.test.ts',
 	'test/unit/css_build_tripwire.test.ts',
 	'test/unit/css_token_duplication_tripwire.test.ts',
 	'test/unit/wire_contract_tripwire.test.ts',
