@@ -365,7 +365,7 @@ const get_content_data_edit = async function(self) {
 			// catalog's doing — the panel shows both instead of leaving the
 			// operator to infer it). Null on a non-code-server.
 			render_code_server_status(content_data, value.code_server)
-			render_build_version(self, content_data, body_response)
+			render_build_version(self, content_data, body_response, value.code_server)
 		}
 
 	// add at end body_response
@@ -774,7 +774,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 * @param {HTMLElement} body_response - the response area passed to init_form
 * @returns {boolean|undefined} Returns nothing meaningful; side-effects only.
 */
-const render_build_version = function(self, content_data, body_response) {
+const render_build_version = function(self, content_data, body_response, code_server) {
 
 	if (self.caller?.init_form) {
 
@@ -802,7 +802,14 @@ const render_build_version = function(self, content_data, body_response) {
 		}
 
 		// version parts (shared by both confirm texts)
-		const ar_version	= page_globals.dedalo_version.split('.')
+		// THE VERSION THE PUBLISH WILL ACTUALLY PRODUCE — the one the release
+		// REF declares, which the server sends as source.release_version. The
+		// running process's own version (page_globals.dedalo_version) is only a
+		// fallback: naming the artifact after it is exactly the bug that let a
+		// 7.0.0 master publish an uninstallable 7.0.0.zip, and it silently
+		// mislabels every build made by a master left running across a bump.
+		const ref_version	= code_server && code_server.source && code_server.source.release_version
+		const ar_version	= String(ref_version || page_globals.dedalo_version).split('.')
 		const major_version	= ar_version[0]
 		const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
 		const release_dir	= `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`

@@ -41,7 +41,7 @@ import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { detectDeploymentChannel } from './channel.ts';
-import { planCodeBuild } from './code_build_plan.ts';
+import { parseDeclaredTriple, planCodeBuild, VERSION_TS_PATH } from './code_build_plan.ts';
 import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
 	backupRootIsInsideTree,
@@ -434,6 +434,14 @@ export interface CodeServerStatus {
 		release_sha: string | null;
 		release_date: string | null;
 		/**
+		 * The version RELEASE_REF's own `version.ts` DECLARES — the name a
+		 * publish will actually produce. Not the running engine's version: the
+		 * panel's confirm text used to promise "a release of the current
+		 * version (X)" from `page_globals.dedalo_version`, which is only true
+		 * while the process and the ref happen to agree.
+		 */
+		release_version: string | null;
+		/**
 		 * How far the release ref is from the checked-out branch:
 		 * `behind` = commits on the branch that the release ref does NOT have
 		 * (work that will not ship until merged — the answer to "I fixed it,
@@ -554,6 +562,7 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 			release_ref: RELEASE_REF,
 			release_sha: null,
 			release_date: null,
+			release_version: null,
 			divergence: null,
 		};
 	}
@@ -576,6 +585,7 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 		release_ref: RELEASE_REF,
 		release_sha: hasRelease ? git(gitDir, ['rev-parse', '--short', RELEASE_REF]) : null,
 		release_date: hasRelease ? git(gitDir, ['log', '-1', '--format=%cI', RELEASE_REF]) : null,
+		release_version: hasRelease ? declaredVersionAtRef(gitDir, RELEASE_REF) : null,
 		divergence: hasRelease ? readDivergence(gitDir) : null,
 	};
 }
@@ -711,6 +721,14 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 				: check('worktree_clean', source.dirty ? 'warn' : 'ok'),
 		),
 		archiveShapeCheck(gitDir, RELEASE_REF),
+		// WHAT VERSION WOULD A PUBLISH ACTUALLY PRODUCE? The release is named
+		// after the version its REF declares, so that question has an answer
+		// before the button is pressed — and it has a wrong answer worth
+		// blocking on: a ref declaring the version this master ALREADY runs
+		// yields an archive assertLinearUpgrade refuses as a same-version
+		// install. Measured 2026-08-24: a 7.0.0 master published a 7.0.0.zip
+		// nobody could install, and nothing said so until a consumer tried.
+		releaseVersionCheck(gitDir, RELEASE_REF),
 		// The commits-not-in-the-release-ref line. It is a WARNING, not a
 		// blocker: publishing an older `master` is a legitimate act. It exists
 		// because without it a publish check red on work the operator has
@@ -798,6 +816,33 @@ function advertisedRungs(
 		files: rows.find((row) => row.for_version === DEDALO_VERSION)?.files ?? [],
 		rungs: rows,
 	};
+}
+
+/** The version a ref's own version.ts declares, read from the object store. */
+function declaredVersionAtRef(gitDir: string, ref: string): string | null {
+	const source = git(gitDir, ['show', `${ref}:${VERSION_TS_PATH}`]);
+	return source === null ? null : parseDeclaredTriple(source);
+}
+
+/** The version RELEASE_REF declares, and whether publishing it is useful. */
+function releaseVersionCheck(gitDir: string | null, ref: string): StatusCheck {
+	return probe('release_version_matches_ref', () => {
+		if (gitDir === null) return check('release_version_matches_ref', 'unknown', undefined, ref);
+		const declared = declaredVersionAtRef(gitDir, ref);
+		if (declared === null) {
+			// Nothing can be named, so nothing can be built.
+			return check('release_version_matches_ref', 'blocked', VERSION_TS_PATH, ref);
+		}
+		if (declared === DEDALO_VERSION) {
+			return check(
+				'release_version_matches_ref',
+				'warn',
+				`${declared} = the running engine — a same-version release is not installable`,
+				ref,
+			);
+		}
+		return check('release_version_matches_ref', 'ok', declared, ref);
+	});
 }
 
 /** Localhost/empty origins make every advertised release URL unfetchable. */

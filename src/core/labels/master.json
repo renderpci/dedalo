@@ -674,6 +674,7 @@
 	"update_code_check_maintenance_mode": "Maintenance mode",
 	"update_code_check_master_ref": "A 'master' ref exists",
 	"update_code_check_release_ref_current": "Release ref has this branch's commits",
+	"update_code_check_release_version_matches_ref": "Release version comes from the ref",
 	"update_code_check_releases_readable": "Release directory readable",
 	"update_code_check_root_entries": "Code-tree root entries",
 	"update_code_check_runtime_data_outside_tree": "Runtime data outside the code tree",

@@ -16,7 +16,8 @@ import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { buildVersionFromGit } from '../../src/core/update/code_build.ts';
-import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
+import { parseDeclaredTriple, planCodeBuild } from '../../src/core/update/code_build_plan.ts';
+import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
 // Snapshot the REAL config module ONCE at top level: mock.restore() does NOT
 // revert mock.module, so afterAll must re-install it or the mocked config
@@ -263,9 +264,14 @@ describe('buildVersionFromGit — rewired to planCodeBuild', () => {
 		expect(source).not.toContain('code build dirs unconfigured');
 		expect(source).not.toContain('Invalid version number');
 		expect(source).not.toContain('unconfined release path');
-		// …and the call site must actually run the extraction.
+		// …and the call site must actually run the extraction. The options object
+		// is now BUILT (the version is derived from the ref's own bytes before
+		// planning, see parseDeclaredTriple), so the call no longer forwards
+		// `options` verbatim — what matters is that planCodeBuild is what
+		// decides, and that the ref allowlist is still the planner's ONE copy.
 		expect(source).toContain("from './code_build_plan.ts'");
-		expect(source).toContain('planCodeBuild(options, {');
+		expect(source).toContain('planCodeBuild(');
+		expect(source).toContain('isSafeGitRef(');
 	});
 
 	test('the refusal path THROWS the registered update.refused code (P1 sweep)', async () => {
@@ -377,4 +383,63 @@ describe('buildVersionFromGit — real git archive', () => {
 			mock.restore();
 		}
 	}, 60000);
+});
+
+// ---------------------------------------------------------------------------
+// A RELEASE IS NAMED AFTER ITS OWN BYTES.
+//
+// The build used to take the artifact's version from the RUNNING MASTER
+// PROCESS (DEDALO_VERSION) while the bytes came from an independently chosen
+// git ref, with nothing comparing the two. Two live consequences, both
+// measured 2026-08-24 on the dev master:
+//   - a master left running across a version bump keeps naming archives after
+//     the OLD version, so <v>.zip holds a tree that is not version v;
+//   - a master whose ref declares the version it ALREADY runs publishes a
+//     same-version zip that assertLinearUpgrade refuses as a downgrade — an
+//     uninstallable release produced by the button that exists to publish.
+// ---------------------------------------------------------------------------
+describe('the release version comes from the ref, not the process', () => {
+	test('parseDeclaredTriple reads both the committed and the bumped spelling', () => {
+		// The committed source spreads the triple over three lines; a probe's
+		// bump writes it on one. A substring match on one spelling silently
+		// misreads the other (that exact bug half-wiped the probe museum).
+		const committed = readFileSync(
+			join(import.meta.dir, '../../src/core/update/version.ts'),
+			'utf8',
+		);
+		expect(parseDeclaredTriple(committed)).toBe(DEDALO_VERSION);
+		expect(parseDeclaredTriple('Object.freeze([7, 0, 4]) as [number, number, number]')).toBe(
+			'7.0.4',
+		);
+		expect(parseDeclaredTriple('Object.freeze([\n\t8, 1, 12,\n])')).toBe('8.1.12');
+		expect(parseDeclaredTriple('no triple here')).toBeNull();
+	});
+
+	test('the widget no longer names the artifact from the running process', () => {
+		// The regression this whole change exists to prevent: if the widget ever
+		// re-imports DEDALO_VERSION to default `version`, the process is naming
+		// releases again.
+		const widget = readFileSync(
+			join(import.meta.dir, '../../src/core/area_maintenance/widgets/update_code.ts'),
+			'utf8',
+		);
+		const build = widget.slice(widget.indexOf('async function buildVersionOwned'));
+		const body = build.slice(0, build.indexOf('\n}'));
+		expect(body).not.toContain('DEDALO_VERSION');
+	});
+
+	test('the ref allowlist has exactly ONE definition', () => {
+		// code_build.ts validates the ref before its pre-plan `git show` read;
+		// that must reuse the planner's predicate, never re-declare the regex.
+		const plan = readFileSync(
+			join(import.meta.dir, '../../src/core/update/code_build_plan.ts'),
+			'utf8',
+		);
+		const build = readFileSync(
+			join(import.meta.dir, '../../src/core/update/code_build.ts'),
+			'utf8',
+		);
+		expect(plan.match(/\[A-Za-z0-9\._\/\]\[A-Za-z0-9\._\/-\]/g)?.length ?? 0).toBe(1);
+		expect(build).not.toContain('A-Za-z0-9');
+	});
 });
