@@ -258,7 +258,7 @@ export async function requestPasswordReset(
 		storePasswordReset(
 			resetId,
 			resolved.userId,
-			await Bun.password.hash(code, { algorithm: 'argon2id' }),
+			await Bun.password.hash(code, ARGON2_OPTIONS),
 			ttlSeconds,
 		);
 	} catch (error) {

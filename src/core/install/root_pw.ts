@@ -13,6 +13,7 @@
  * password is still empty (fresh seed) — never silently overwrite a real one.
  */
 
+import { ARGON2_OPTIONS } from '../security/argon2_params.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -66,7 +67,7 @@ export async function setRootPassword(
 	// Argon2id hash. The hash charset ($argon2id$v=...$<b64>$<b64>) contains no
 	// single quotes or backslashes, so embedding it in a single-quoted SQL literal
 	// is injection-safe; the SQL is piped via stdin (never on argv).
-	const hash = await Bun.password.hash(password, { algorithm: 'argon2id' });
+	const hash = await Bun.password.hash(password, ARGON2_OPTIONS);
 	if (/['\\]/.test(hash)) {
 		refuseInstall('install.step_failed', 'Unexpected hash format — aborting for safety');
 	}
