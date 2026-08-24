@@ -46,7 +46,7 @@ oracle instead of silently skipping. Ignore any older text below telling you to
 Two tiers, by dependency footprint:
 
 - **Hermetic** (any bare runner, no secrets): `bun install` + `bunx tsc
-  --noEmit` + `bun run lint` + the **39** DB-less/sibling-less tripwires + the
+  --noEmit` + `bun run lint` + the **75** DB-less/sibling-less tripwires + the
   dependency-audit ratchet + the two isolated publication packages
   (`site_builder`, `server_api/v2` — each `bun install` + `tsc` + `bun test`).
   One source of truth: `scripts/ci/hermetic.sh` — GitHub and GitLab both call
@@ -58,13 +58,31 @@ Two tiers, by dependency footprint:
   the other 28 ran on NO executing tier — the DB/parity tier is parked in
   `workflows-selfhosted/` and the private mirror is not wired. XSS, remote-code,
   agent-egress and write-scope invariants all existed and none of them ran on a
-  PR. Each entry added was re-verified DB-less first; the ones that genuinely need
-  Postgres are listed, with the reason, at the top of `hermetic.sh`.
+  PR.
+
+  **And why it reopened (2026-08-24):** nothing enforced the list. The index grew
+  to 89 gates against the same 41 here, and five more landed the same day — 53
+  running nowhere, every gate green throughout. The subset rule only ever checked
+  one direction, and its parser was silently truncating at 21 of 41 entries. Both
+  are fixed: rule 3c of `ci_workflow_tripwire` requires every tripwire to be wired
+  here or to carry a written reason in its `NOT_HERMETIC` map (stale rows red in
+  both directions), and the tier went 41 → 75 gates, 648 tests, ~16 s. Each entry
+  was empirically re-verified DB-less (`DB_PORT` closed) before being added.
 - **Self-hosted** (this Mac — the machine that has the live matrix Postgres
   with real Dédalo data, the PHP oracle at :8080, the sibling PHP tree, and
-  Chrome): everything else. Unit tests are NOT hermetic by design (they read
-  real records); parity needs the oracle; `client_serving` byte-compares
-  against the PHP tree; the client gate needs puppeteer + a booted server.
+  Chrome): everything else — the DB-backed unit tier, the parity tier against a
+  live oracle, and the client gate (puppeteer + a booted server).
+
+  Two claims that used to live here were stale and are deleted rather than
+  amended: unit tests do **not** "read real records" — `test/preload/test_database.ts`
+  repoints the suite at a dedicated database and refuses to fall back to the
+  application DB, `scripts/test_db_setup.ts` builds it from bytes vendored in this
+  repo ("never by copying a live database"), and the generic-`test`-TLD migration
+  removed the last dependency on an installation's ontology. And `client_serving`
+  does not byte-compare against the sibling PHP tree: since the cutover `client/`
+  is the TS-owned primary source, tracked in this repo, so that gate is hermetic
+  and now runs on the hosted tier. What genuinely stays here is the ~19 gates that
+  need live Postgres, each named with its reason in `NOT_HERMETIC`.
 
 ## Non-negotiables (each is tripwired)
 
