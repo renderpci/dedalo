@@ -32,7 +32,7 @@
         "id"                  : 1,
         "type"                : "dd151",
         "section_tipo"        : "dd64",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "from_component_tipo" : "test91"
     }],
     "value"        : "array of string",
@@ -82,7 +82,7 @@
         "id"                  : 1,
         "type"                : "dd151",
         "section_tipo"        : "dd64",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "from_component_tipo" : "test91"
     }
 ]
@@ -214,7 +214,7 @@ DOM (edit / default): `wrapper_component component_select <tipo> <mode> view_def
 - **JSON locator array** (default round-trip format) — a one-element array since the component is single-valued:
 
 ```json
-[{"type":"dd151","section_tipo":"dd64","section_id":"1","from_component_tipo":"test91"}]
+[{"type":"dd151","section_tipo":"dd64","section_id":1,"from_component_tipo":"test91"}]
 ```
 
 - **Plain `section_id`** when the target section is unambiguous (a single target in the RQO, or disambiguated by the CSV column header `tipo_targettipo`, e.g. `test91_dd64`). The importer builds the full locator from that id:

@@ -24,7 +24,7 @@ Use it when: you are ordering and grouping numismatic objects and marking origin
 - **Sorting** reads `self.coins.datum.data`, filters items by the chosen measurement tipo (`numisdata133` weight, `numisdata135` diameter), sorts them numerically ascending with null values pushed to the end, maps the order back onto the coin locators, and rebuilds the mosaic in place. Toggling a sort button off restores database (`section_id`) order.
 - **Drag-and-drop.** A mosaic tile carries a JSON locator (`{ locator: { section_id, section_tipo } }`) in its `text/plain` `dataTransfer` payload. Dropping onto an `ordered_coins` cell calls `assign_element`, which issues an `insert` `change_value` on that cell's component instance; the right panel is then rebuilt and the dragged tile is marked `used`.
 - **Original / Copy** (`set_original_copy`) reads the checked radio inputs (`input.input_original` / `input.input_copy`) from the mosaic and, per selected coin, writes:
-  - `numisdata157` (discard/status component) — an `update` to `{ section_id: '1', section_tipo: 'numisdata341' }` for an original, or `{ section_id: '2', section_tipo: 'numisdata341' }` for a copy (section_id `1`/`2` of `numisdata341` are the original/copy code values).
+  - `numisdata157` (discard/status component) — an `update` to `{ section_id: 1, section_tipo: 'numisdata341' }` for an original, or `{ section_id: 2, section_tipo: 'numisdata341' }` for a copy (section_id `1`/`2` of `numisdata341` are the original/copy code values).
   - `numisdata55` (equivalents, `component_relation_related`) — a `set_data` on each **original** with the locators of every selected copy.
 
 !!! note "Developer caveats in the current client"

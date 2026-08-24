@@ -28,7 +28,7 @@
         {
             "id"                  : 1,
             "type"                : "dd151",
-            "section_id"          : "17344",
+            "section_id"          : 17344,
             "section_tipo"        : "lg1",
             "from_component_tipo" : "oh20"
         }
@@ -38,7 +38,7 @@
         {
             "id"                  : 1,
             "type"                : "dd151",
-            "section_id"          : "17344",
+            "section_id"          : 17344,
             "section_tipo"        : "lg1",
             "from_component_tipo" : "oh20"
         }
@@ -80,19 +80,21 @@ Unlike a generic [`component_select`](component_select.md), its option list does
 
 **Value:** `array` of `locators` (one element), or `null`.
 
-**Storage shape.** A component never touches the database; it reads and writes through its section. Like every related component, `component_select_lang` does **not** keep an isolated value column — its locator lives in the matrix `relation` column as part of the record-wide relations bag, and the component slices its own subset out of the section's global `relations` container by matching `from_component_tipo` (its own `tipo`) and `section_tipo`. The canonical locator shape is `{type, section_tipo, section_id, from_component_tipo}` plus the per-entry `id`:
+**Storage shape.** A component never touches the database; it reads and writes through its section. Like every related component, `component_select_lang` does **not** keep an isolated value column — its locator lives in the matrix `relation` column — singular, and an **object keyed by component tipo**, not a flat array — so the component reads its own entry under its `tipo` (and still matches `from_component_tipo`/`section_tipo` when slicing a shared bag). The canonical locator shape is `{type, section_tipo, section_id, from_component_tipo}` plus the per-entry `id`:
 
 ```json
 {
-    "relations": [
-        {
-            "id"                  : 1,
-            "type"                : "dd151",
-            "section_id"          : "17344",
-            "section_tipo"        : "lg1",
-            "from_component_tipo" : "oh20"
-        }
-    ]
+    "relation": {
+        "oh20": [
+            {
+                "id"                  : 1,
+                "type"                : "dd151",
+                "section_id"          : 17344,
+                "section_tipo"        : "lg1",
+                "from_component_tipo" : "oh20"
+            }
+        ]
+    }
 }
 ```
 
@@ -103,7 +105,7 @@ Unlike a generic [`component_select`](component_select.md), its option list does
 Because it is non-translatable, the component is always instantiated with `lang = lg-nolan` and the locator carries no `lang`.
 
 !!! note "Datum vs. client `entries` / `datalist`"
-    The transmitted unit is a `{context, data}` datum. In `edit` mode the resolver returns the stored value under `data.entries` **and** attaches a `datalist` — the project languages resolved by `getSelectLangDatalist()` (`src/core/relations/select_lang.ts`). In `list` / `tm` mode it returns the resolved language name(s) via `getSelectLangListValue()` and no datalist (the render only needs the selected label). Each datalist item is `{value:{section_id,section_tipo}, label, section_id:"lg-xxx"}`; note that the item's `section_id` carries the **language code** (e.g. `lg-spa`), while the locator under `value` carries the numeric record id. Verified client sample:
+    The transmitted unit is a `{context, data}` datum. In `edit` mode the resolver returns the stored value under `data.entries` **and** attaches a `datalist` — the project languages resolved by `getSelectLangDatalist()` (`src/core/relations/select_lang.ts`). In `list` / `tm` mode it returns the resolved language name(s) via `getSelectLangListValue()` and no datalist (the render only needs the selected label). Each datalist item is `{value:{section_id,section_tipo}, label, section_id:"lg-xxx"}`; note that the item's `section_id` carries the **language code** (e.g. `lg-spa`) — same field name, different concept, and a string verbatim — while the locator under `value` carries the `lg1` record address, an integer like every record address. Verified client sample:
 
     ```json
     {
@@ -113,12 +115,12 @@ Because it is non-translatable, the component is always instantiated with `lang 
         "lang"                : "lg-nolan",
         "from_component_tipo" : "oh20",
         "entries": [
-            {"id":1,"type":"dd151","section_id":"17344","section_tipo":"lg1","from_component_tipo":"oh20"}
+            {"id":1,"type":"dd151","section_id":17344,"section_tipo":"lg1","from_component_tipo":"oh20"}
         ],
         "datalist": [
             {"label":"","value":null},
-            {"value":{"section_id":"5101","section_tipo":"lg1"},"label":"English","section_id":"lg-eng"},
-            {"value":{"section_id":"17344","section_tipo":"lg1"},"label":"Spanish","section_id":"lg-spa"}
+            {"value":{"section_id":5101,"section_tipo":"lg1"},"label":"English","section_id":"lg-eng"},
+            {"value":{"section_id":17344,"section_tipo":"lg1"},"label":"Spanish","section_id":"lg-spa"}
         ]
     }
     ```
@@ -274,7 +276,7 @@ DOM (edit / default): `wrapper_component component_select_lang <tipo> <mode> vie
 3. A JSON [locator](../locator.md) (array or single object), handled as a generic related import:
 
     ```json
-    [{"section_tipo":"lg1","section_id":"17344"}]
+    [{"section_tipo":"lg1","section_id":17344}]
     ```
 
 4. A numeric `section_id` list (legacy related import), handled as a generic related import:

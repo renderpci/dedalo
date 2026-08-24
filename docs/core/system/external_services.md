@@ -202,7 +202,11 @@ Points worth knowing:
   `test204` (portal).
 - The stored value in **your** record is only the locator:
   `{"section_tipo": "zenon1", "section_id": "001338683"}`. Everything else is
-  fetched.
+  fetched. The `section_id` here is the **remote** id and keeps its exact string
+  form (the zero padding is part of it); a local matrix record address is always
+  an integer. The rule is the value, not the tipo: a plainly numeric string is a
+  record address on any tipo, so only a non-convertible value on an external
+  tipo counts as a remote id.
 
 ## When the service is down
 

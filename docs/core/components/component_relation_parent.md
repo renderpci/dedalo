@@ -32,7 +32,7 @@
         "id"                  : 1,
         "type"                : "dd47",
         "section_tipo"        : "test3",
-        "section_id"          : "2",
+        "section_id"          : 2,
         "from_component_tipo" : "test71"
     }],
     "value"        : "array of strings",
@@ -85,7 +85,7 @@
         "id"                  : 1,
         "type"                : "dd47",
         "section_tipo"        : "test3",
-        "section_id"          : "2",
+        "section_id"          : 2,
         "from_component_tipo" : "test71"
     }
 ]
@@ -221,7 +221,7 @@ The server CSS for the parent itself is minimal (`client/dedalo/core/component_r
 - The full JSON locator array (default, round-trips an export):
 
 ```json
-[{"type":"dd47","section_tipo":"test3","section_id":"2","from_component_tipo":"test71"}]
+[{"type":"dd47","section_tipo":"test3","section_id":2,"from_component_tipo":"test71"}]
 ```
 
 - A bare `section_id` sequence when the component has a single resolvable target section (the parent section), e.g. `2,5,8`. The CSV column header carries the target when needed, in the form `from_component_tipo` + delimiter + `target_section_tipo` (e.g. `test71_test3`); when only the component tipo is given the target is resolved from the RQO. An empty cell clears the existing data (result `null`).

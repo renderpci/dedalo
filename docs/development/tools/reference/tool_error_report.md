@@ -86,6 +86,12 @@ const response = await self.tool_request({
 // response → { result: { delivered: true, via: 'master' }, msg: 'OK. Report sent to the master installation', errors: [] }
 ```
 
+`section_id` is a **string** here, and deliberately so: an error report is a
+self-reported free-text diagnostic, its wire schema declares the field as a
+capped string and the report table stores it as text. It is not a record
+address the engine resolves — everywhere the engine does address a record it
+uses an integer.
+
 The outbound relay the server sends to the master (`dd_error_report_api:receive_report`, WC-017) carries the **server-stamped** report as `options`; the master re-validates everything and trusts no remote installation.
 
 ## Related

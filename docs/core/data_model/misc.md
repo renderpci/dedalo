@@ -347,8 +347,8 @@ tipo and relation type:
 
 ```json
 [
-  { "section_tipo": "es1", "section_id": "4", "type": "dd543", "from_component_tipo": "oh23" },
-  { "section_tipo": "es1", "section_id": "2", "type": "dd543", "from_component_tipo": "oh23" }
+  { "section_tipo": "es1", "section_id": 4, "type": "dd543", "from_component_tipo": "oh23" },
+  { "section_tipo": "es1", "section_id": 2, "type": "dd543", "from_component_tipo": "oh23" }
 ]
 ```
 

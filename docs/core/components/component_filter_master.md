@@ -28,13 +28,13 @@
         {
             "id"                  : 1,
             "type"                : "dd675",
-            "section_id"          : "1",
+            "section_id"          : 1,
             "section_tipo"        : "dd153",
             "from_component_tipo" : "dd170"
         },
         {
             "id"                  : 2,
-            "section_id"          : "7",
+            "section_id"          : 7,
             "section_tipo"        : "dd153",
             "from_component_tipo" : "dd170"
         }
@@ -90,13 +90,13 @@ When a record is loaded, the projects on its `component_filter` are matched agai
     {
         "id"                  : 1,
         "type"                : "dd675",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "section_tipo"        : "dd153",
         "from_component_tipo" : "dd170"
     },
     {
         "id"                  : 2,
-        "section_id"          : "7",
+        "section_id"          : 7,
         "section_tipo"        : "dd153",
         "from_component_tipo" : "dd170"
     }
@@ -117,9 +117,9 @@ In `edit` (and `search`) the option list is built by `getFilterDatalist()` (`src
     "type"         : "project",
     "label"        : "Project Five",
     "section_tipo" : "dd153",
-    "section_id"   : "5",
-    "value"        : { "section_tipo": "dd153", "section_id": "5", "from_component_tipo": "dd170" },
-    "parent"       : { "section_tipo": "dd153", "section_id": "3" },
+    "section_id"   : 5,
+    "value"        : { "section_tipo": "dd153", "section_id": 5, "from_component_tipo": "dd170" },
+    "parent"       : { "section_tipo": "dd153", "section_id": 3 },
     "order"        : 2,
     "has_children" : false
 }
@@ -203,7 +203,7 @@ Modes:
 **Import.** `conformImportData()` (`src/core/tools/import_data.ts`) accepts the JSON locator array:
 
 ```json
-[{"type":"dd675","section_id":"1","section_tipo":"dd153","from_component_tipo":"dd170"}]
+[{"type":"dd675","section_id":1,"section_tipo":"dd153","from_component_tipo":"dd170"}]
 ```
 
 !!! warning "Gap: bare section_id shorthand not implemented"

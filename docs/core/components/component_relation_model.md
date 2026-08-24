@@ -28,7 +28,7 @@
         "id"                  : 1,
         "type"                : "dd98",
         "section_tipo"        : "dd922",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "from_component_tipo" : "test169"
     }],
     "value"        : "array of strings",
@@ -146,7 +146,7 @@ The canonical locator shape for this component is `{id, type, section_tipo, sect
         "id"                  : 1,
         "type"                : "dd98",
         "section_tipo"        : "dd922",
-        "section_id"          : "1",
+        "section_id"          : 1,
         "from_component_tipo" : "test169"
     }
 ]
@@ -283,7 +283,7 @@ Modes:
 Default import (JSON locators):
 
 ```json
-[{"type":"dd98","section_tipo":"dd922","section_id":"1","from_component_tipo":"test169"}]
+[{"type":"dd98","section_tipo":"dd922","section_id":1,"from_component_tipo":"test169"}]
 ```
 
 A number sequence of `section_id` when there is a single resolved target section:

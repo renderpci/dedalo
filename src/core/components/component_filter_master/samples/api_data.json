@@ -9,13 +9,13 @@
 		{
 			"id": 1,
 			"type": "dd675",
-			"section_id": "1",
+			"section_id": 1,
 			"section_tipo": "dd153",
 			"from_component_tipo": "dd170"
 		},
 		{
 			"id": 2,
-			"section_id": "7",
+			"section_id": 7,
 			"section_tipo": "dd153",
 			"from_component_tipo": "dd170"
 		}
@@ -28,10 +28,10 @@
 			"type": "project",
 			"label": "Eigth",
 			"section_tipo": "dd153",
-			"section_id": "8",
+			"section_id": 8,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "8",
+				"section_id": 8,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -42,10 +42,10 @@
 			"type": "project",
 			"label": "Eleven",
 			"section_tipo": "dd153",
-			"section_id": "11",
+			"section_id": 11,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "11",
+				"section_id": 11,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -56,10 +56,10 @@
 			"type": "project",
 			"label": "Fourteen",
 			"section_tipo": "dd153",
-			"section_id": "14",
+			"section_id": 14,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "14",
+				"section_id": 14,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -70,10 +70,10 @@
 			"type": "project",
 			"label": "Global project",
 			"section_tipo": "dd153",
-			"section_id": "1",
+			"section_id": 1,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "1",
+				"section_id": 1,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -84,10 +84,10 @@
 			"type": "project",
 			"label": "Nine",
 			"section_tipo": "dd153",
-			"section_id": "9",
+			"section_id": 9,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "9",
+				"section_id": 9,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -98,15 +98,15 @@
 			"type": "project",
 			"label": "Project Five",
 			"section_tipo": "dd153",
-			"section_id": "5",
+			"section_id": 5,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "5",
+				"section_id": 5,
 				"from_component_tipo": "dd170"
 			},
 			"parent": {
 				"section_tipo": "dd153",
-				"section_id": "3"
+				"section_id": 3
 			},
 			"order": 2,
 			"has_children": false
@@ -115,15 +115,15 @@
 			"type": "project",
 			"label": "Project Four",
 			"section_tipo": "dd153",
-			"section_id": "4",
+			"section_id": 4,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "4",
+				"section_id": 4,
 				"from_component_tipo": "dd170"
 			},
 			"parent": {
 				"section_tipo": "dd153",
-				"section_id": "3"
+				"section_id": 3
 			},
 			"order": 1,
 			"has_children": false
@@ -132,10 +132,10 @@
 			"type": "project",
 			"label": "Project seven",
 			"section_tipo": "dd153",
-			"section_id": "7",
+			"section_id": 7,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "7",
+				"section_id": 7,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -146,15 +146,15 @@
 			"type": "project",
 			"label": "Project six",
 			"section_tipo": "dd153",
-			"section_id": "6",
+			"section_id": 6,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "6",
+				"section_id": 6,
 				"from_component_tipo": "dd170"
 			},
 			"parent": {
 				"section_tipo": "dd153",
-				"section_id": "3"
+				"section_id": 3
 			},
 			"order": 3,
 			"has_children": false
@@ -163,10 +163,10 @@
 			"type": "project",
 			"label": "Project Three",
 			"section_tipo": "dd153",
-			"section_id": "3",
+			"section_id": 3,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "3",
+				"section_id": 3,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -177,10 +177,10 @@
 			"type": "project",
 			"label": "Stolen Motherhoods",
 			"section_tipo": "dd153",
-			"section_id": "2",
+			"section_id": 2,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "2",
+				"section_id": 2,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -191,10 +191,10 @@
 			"type": "project",
 			"label": "Ten",
 			"section_tipo": "dd153",
-			"section_id": "10",
+			"section_id": 10,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "10",
+				"section_id": 10,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -205,10 +205,10 @@
 			"type": "project",
 			"label": "Trece",
 			"section_tipo": "dd153",
-			"section_id": "13",
+			"section_id": 13,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "13",
+				"section_id": 13,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,
@@ -219,10 +219,10 @@
 			"type": "project",
 			"label": "Twelve",
 			"section_tipo": "dd153",
-			"section_id": "12",
+			"section_id": 12,
 			"value": {
 				"section_tipo": "dd153",
-				"section_id": "12",
+				"section_id": 12,
 				"from_component_tipo": "dd170"
 			},
 			"parent": null,

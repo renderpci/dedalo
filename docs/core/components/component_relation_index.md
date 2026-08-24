@@ -32,13 +32,13 @@
         {
             "type"                    : "dd96",
             "section_tipo"            : "rsc170",
-            "section_id"              : "1",
+            "section_id"              : 1,
             "from_component_top_tipo" : "rsc1054"
         },
         {
             "type"                    : "dd96",
             "section_tipo"            : "rsc420",
-            "section_id"              : "48",
+            "section_id"              : 48,
             "from_component_top_tipo" : "rsc909"
         }
     ],
@@ -92,19 +92,19 @@ The persisted / transmitted shape is an array of locator objects. The relation `
     {
         "type"                    : "dd96",
         "section_tipo"            : "rsc170",
-        "section_id"              : "1",
+        "section_id"              : 1,
         "from_component_top_tipo" : "rsc1054"
     },
     {
         "type"                    : "dd96",
         "section_tipo"            : "rsc170",
-        "section_id"              : "33",
+        "section_id"              : 33,
         "from_component_top_tipo" : "rsc1054"
     },
     {
         "type"                    : "dd96",
         "section_tipo"            : "rsc420",
-        "section_id"              : "48",
+        "section_id"              : 48,
         "from_component_top_tipo" : "rsc909"
     }
 ]

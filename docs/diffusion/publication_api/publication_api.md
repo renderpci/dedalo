@@ -18,6 +18,15 @@
     `config_api/.htaccess`). The one functional repair: `web_data::get_text_fragment` — which the
     `text_fragment` action calls and which had been lost — is restored from the v6 source.
 
+!!! info "`section_id` is a string in every example on this page"
+    The engine's own API emits a record address as an **integer**
+    (`"section_id": 7`). This API does not: it reads the **published** MariaDB,
+    whose locator columns are written by the diffusion publisher in the v6 byte
+    shape, with `section_id`, `tag_id` and `section_top_id` quoted. That shape is
+    contract for already-published websites, so the strings below are correct as
+    written and must not be "modernised". The same applies to the query-string
+    examples: a URL parameter is text by definition.
+
 The Dédalo Publication API connects your archive data with the web.
 
 ## Introduction

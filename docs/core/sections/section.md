@@ -232,7 +232,7 @@ const added = await applyAddNewElement(
 const removed = await deletePortalLocator(
   principal,
   { tipo: 'rsc200', section_tipo: 'rsc197', section_id: 1 },
-  { locator: { section_tipo: 'oh1', section_id: '7' } },
+  { locator: { section_tipo: 'oh1', section_id: 7 } },
 );
 // removed → { result: <removed count>, msg: [], errors: [] }
 ```

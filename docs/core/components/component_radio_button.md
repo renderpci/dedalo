@@ -28,7 +28,7 @@
         {
             "id"                  : 8,
             "type"                : "dd151",
-            "section_id"          : "1",
+            "section_id"          : 1,
             "section_tipo"        : "dd64",
             "from_component_tipo" : "test87"
         }
@@ -38,7 +38,7 @@
         {
             "id"                  : 8,
             "type"                : "dd151",
-            "section_id"          : "1",
+            "section_id"          : 1,
             "section_tipo"        : "dd64",
             "from_component_tipo" : "test87"
         }
@@ -79,19 +79,21 @@
 
 **Value:** `array` of `locators` (one element), or `null`.
 
-**Storage shape.** Like every related component, `component_radio_button` does not write its own column. Its locator lives in the matrix `relation` column as part of the record-wide relations bag, and the component slices its own subset out of the section's global `relations` container by matching `from_component_tipo` (and `section_tipo`). The canonical locator shape is `{type, section_tipo, section_id, from_component_tipo}` plus the per-entry `id`:
+**Storage shape.** Like every related component, `component_radio_button` does not write its own column. Its locator lives in the matrix `relation` column — singular, and an **object keyed by component tipo**, not a flat array — so the component reads its own entry under its `tipo` (and still matches `from_component_tipo`/`section_tipo` when slicing a shared bag). The canonical locator shape is `{type, section_tipo, section_id, from_component_tipo}` plus the per-entry `id`:
 
 ```json
 {
-    "relations": [
-        {
-            "id"                  : 8,
-            "type"                : "dd151",
-            "section_id"          : "1",
-            "section_tipo"        : "dd64",
-            "from_component_tipo" : "test87"
-        }
-    ]
+    "relation": {
+        "test87": [
+            {
+                "id"                  : 8,
+                "type"                : "dd151",
+                "section_id"          : 1,
+                "section_tipo"        : "dd64",
+                "from_component_tipo" : "test87"
+            }
+        ]
+    }
 }
 ```
 
@@ -112,11 +114,11 @@ Because it is non-translatable, the component is always instantiated with `lang 
         "lang"                : "lg-nolan",
         "from_component_tipo" : "test87",
         "entries": [
-            {"id":8,"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"test87"}
+            {"id":8,"type":"dd151","section_id":1,"section_tipo":"dd64","from_component_tipo":"test87"}
         ],
         "datalist": [
-            {"value":{"section_tipo":"dd64","section_id":"2"},"label":"No","section_id":"2","hide":[]},
-            {"value":{"section_tipo":"dd64","section_id":"1"},"label":"Si","section_id":"1","hide":[]}
+            {"value":{"section_tipo":"dd64","section_id":2},"label":"No","section_id":2,"hide":[]},
+            {"value":{"section_tipo":"dd64","section_id":1},"label":"Si","section_id":1,"hide":[]}
         ]
     }
     ```
@@ -235,7 +237,7 @@ DOM (edit / default): `wrapper_component component_radio_button <tipo> <mode> vi
 **Import.** The default import format is the shared related-component format — a JSON array of [locator](../locator.md) objects — handled by the shared related-component import path:
 
 ```json
-[{"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"test87"}]
+[{"type":"dd151","section_id":1,"section_tipo":"dd64","from_component_tipo":"test87"}]
 ```
 
 When the radio button points at a single target section, a bare `section_id` (or a comma sequence) is also accepted; the importer infers the target `section_tipo` from that one configured target section and builds the full locator. If multiple target sections are configured the target must be made explicit in the column header (`<component_tipo>_<section_tipo>`), otherwise the cell is rejected and logged (`IGNORED: Trying to import multiple section_tipo without clear target`). An empty cell clears the existing selection. Invalid `section_id` / `section_tipo` values are rejected and logged rather than stored. See the full related-data definition in [importing data](../importing_data.md#related-data).

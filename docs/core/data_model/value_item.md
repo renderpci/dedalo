@@ -334,7 +334,7 @@ two properties, `context` (the structure/ontology) and `data` (the value). See
 {
   "context": { /* model, tipo, view, properties, permissions, … */ },
   "data": {
-    "section_id": "1",
+    "section_id": 1,
     "section_tipo": "rsc197",
     "tipo": "rsc85",
     "lang": "lg-spa",

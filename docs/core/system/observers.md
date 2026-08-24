@@ -353,14 +353,14 @@ on this install:
             {
                 "id": 1,
                 "type": "dd151",
-                "section_id": "356",
+                "section_id": 356,
                 "section_tipo": "numisdata4",
                 "from_component_tipo": "numisdata77"
             },
             {
                 "id": 2,
                 "type": "dd151",
-                "section_id": "61153",
+                "section_id": 61153,
                 "section_tipo": "numisdata4",
                 "from_component_tipo": "numisdata77"
             }

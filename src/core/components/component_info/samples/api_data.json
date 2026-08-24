@@ -16,7 +16,7 @@
 					"widget": "media_icons",
 					"locator": {
 						"type": "dd151",
-						"section_id": "1",
+						"section_id": 1,
 						"section_tipo": "rsc167",
 						"from_component_tipo": "oh25"
 					}
@@ -28,7 +28,7 @@
 					"widget": "media_icons",
 					"locator": {
 						"type": "dd151",
-						"section_id": "1",
+						"section_id": 1,
 						"section_tipo": "rsc167",
 						"from_component_tipo": "oh25"
 					}
@@ -40,7 +40,7 @@
 					"widget": "media_icons",
 					"locator": {
 						"type": "dd151",
-						"section_id": "1",
+						"section_id": 1,
 						"section_tipo": "rsc167",
 						"from_component_tipo": "oh25"
 					},
@@ -68,7 +68,7 @@
 									"tipo": "rsc36",
 									"label": "Description / transcription",
 									"model": "component_text_area",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": true
 								},
@@ -78,7 +78,7 @@
 									"tipo": "rsc860",
 									"label": "Indexation",
 									"model": "component_portal",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								},
@@ -88,7 +88,7 @@
 									"tipo": "rsc35",
 									"label": "Audiovisual",
 									"model": "component_av",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								},
@@ -109,7 +109,7 @@
 									"tipo": "rsc437",
 									"label": "IN Status",
 									"model": "component_check_box",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								},
@@ -120,7 +120,7 @@
 									"tipo": "rsc439",
 									"label": "IN validation",
 									"model": "component_select",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								}
@@ -137,7 +137,7 @@
 					"widget": "media_icons",
 					"locator": {
 						"type": "dd151",
-						"section_id": "1",
+						"section_id": 1,
 						"section_tipo": "rsc167",
 						"from_component_tipo": "oh25"
 					},
@@ -165,7 +165,7 @@
 									"tipo": "rsc36",
 									"label": "Description / transcription",
 									"model": "component_text_area",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": true
 								},
@@ -175,7 +175,7 @@
 									"tipo": "rsc438",
 									"label": "TL Status",
 									"model": "component_check_box",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								},
@@ -185,7 +185,7 @@
 									"tipo": "rsc493",
 									"label": "TL Validation",
 									"model": "component_select",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								}
@@ -202,7 +202,7 @@
 					"widget": "media_icons",
 					"locator": {
 						"type": "dd151",
-						"section_id": "1",
+						"section_id": 1,
 						"section_tipo": "rsc167",
 						"from_component_tipo": "oh25"
 					},
@@ -230,7 +230,7 @@
 									"tipo": "rsc35",
 									"label": "Audiovisual",
 									"model": "component_av",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								},
@@ -240,7 +240,7 @@
 									"tipo": "rsc36",
 									"label": "Description / transcription",
 									"model": "component_text_area",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": true
 								},
@@ -250,7 +250,7 @@
 									"tipo": "rsc431",
 									"label": "TR Status",
 									"model": "component_check_box",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								},
@@ -260,7 +260,7 @@
 									"tipo": "rsc285",
 									"label": "TR Validation",
 									"model": "component_select",
-									"section_id": "1",
+									"section_id": 1,
 									"section_tipo": "rsc167",
 									"translatable": false
 								}
@@ -282,7 +282,7 @@
 				"widget": "descriptors",
 				"locator": {
 					"type": "dd151",
-					"section_id": "1",
+					"section_id": 1,
 					"section_tipo": "rsc167",
 					"from_component_tipo": "oh25"
 				}
@@ -729,7 +729,7 @@
 				"widget": "descriptors",
 				"locator": {
 					"type": "dd151",
-					"section_id": "1",
+					"section_id": 1,
 					"section_tipo": "rsc167",
 					"from_component_tipo": "oh25"
 				}

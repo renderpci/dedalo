@@ -174,7 +174,7 @@ vocabulary, `state` = `dd501`), for each `output` id of the IPO block:
 [
   // one detail item per SOURCE RECORD (or per language, on a translatable leaf)
   { "widget": "state", "key": 0, "widget_id": "indexation", "lang": "lg-nolan",
-    "value": 50, "locator": { "section_tipo": "dd501", "section_id": "2" },
+    "value": 50, "locator": { "section_tipo": "dd501", "section_id": 2 },
     "column": "state", "type": "detail" },
   // one total item per column: the average over every source record
   { "widget": "state", "key": 0, "widget_id": "indexation", "lang": "lg-nolan",

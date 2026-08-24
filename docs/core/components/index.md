@@ -511,7 +511,7 @@ Example of the data for *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91),
 
 ```json
 {
-    "section_id": "1", // section_id of the component instance
+    "section_id": 1, // section_id of the component instance
     "section_tipo": "rsc197", // section_tipo of the component instance
     "tipo": "rsc91", // ontology tipo of the component instance
     "lang": "lg-nolan", // language of the component instance
@@ -519,19 +519,19 @@ Example of the data for *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91),
     "value": [
         {
             "type": "dd151",
-            "section_id": "3896",
+            "section_id": 3896,
             "section_tipo": "es1",
             "from_component_tipo": "rsc91"
         }
     ], // database value
     "parent_tipo": "rsc197", // section or component that calls this component
-    "parent_section_id": "1", // section_id of the section or component that calls this component
+    "parent_section_id": 1, // section_id of the section or component that calls this component
     "pagination": {
         "total": 1,
         "limit": 10,
         "offset": 0
     },
-    "row_section_id": "1",
+    "row_section_id": 1,
     "changed_data": [] // to set with new data or modify existing data
 }
 ```

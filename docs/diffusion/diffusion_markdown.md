@@ -21,9 +21,9 @@ shared machinery is in [The diffusion engine](native_engine.md).
 | File path | `<media>/markdown/{service_name}/{section_tipo}_{section_id}.md` |
 | Run output | The per-record files plus a downloadable **zip** of the run (no merged file — each `.md` is self-contained) |
 | Access | Public (parity with RDF/XML); only records that pass the publication gate are written |
-| Relations | Flattened value **inline** *and* a link to the related record's own `.md` |
-| Depth | The *resolve levels* budget drives how deep related records are published (so links resolve) |
-| Document header | `# {section_name}` + YAML frontmatter |
+| Relations | The **flattened value** the projection produced — the writer emits no cross-file links |
+| Depth | The *resolve levels* budget drives how deep related records are published, so a related record gets its own `.md` |
+| Document header | YAML frontmatter + `# {table_name}` |
 | Writer | `src/diffusion/writers/markdown.ts` |
 
 ## Deterministic output
@@ -38,50 +38,59 @@ not in the artifacts.
 
 ```markdown
 ---
-section_name: "Interview"
 section_tipo: "rsc197"
 section_id: "42"
-title: "Interview with Jane Doe"
-diffusion_element: "dd1234"
+table: "interview"
+diffusion_element: "oh63"
 ---
 
-# Interview
+# interview
 
-## Title
+## lg-eng
 
-- **en:** Interview with Jane Doe
-- **es:** Entrevista con Jane Doe
+**title**: Interview with Jane Doe
+**author**: Jane Doe
+**photograph**: https://example.org/dedalo/media/.../image.jpg
 
-## Author
+## lg-spa
 
-Jane Doe ([rsc167_88](rsc167_88.md))
-
-## Photograph
-
-![Photograph](https://example.org/dedalo/media/.../image.jpg)
+**title**: Entrevista con Jane Doe
+**author**: Jane Doe
 ```
+
+(`oh63` is a real `diffusion_element` on the reference install
+`monedaiberica`, where it is configured as `sql`; that install has no markdown
+element yet, so the document above is shape-only — the field values are
+illustrative.)
 
 Rendering rules:
 
-- **Header**: always `# {section_name}` — the section's resolved label. The
-  record `title` (first non-empty text value) goes in the frontmatter.
-- **One `## {label}` block per field**, in plan column order; the label is the
-  diffusion node's term. Empty fields are skipped to keep the document compact.
-- **Translatable fields** emit one bold sub-line per output language
-  (`- **en:** …`), following `DEDALO_DIFFUSION_LANGS`.
-- **Relation fields** render the flattened value followed by a link to the
-  related record's `.md` (`value ([rsc_id](rsc_id.md))`), or a bare link when
-  there is no value.
-- **Media fields** (image / av / 3d / pdf) render as a Markdown image
-  `![label](url)` or link `[label](url)`.
+- **Frontmatter**: exactly four keys — `section_tipo`, `section_id`, `table`,
+  `diffusion_element` — written as quoted YAML scalars. `section_id` is
+  therefore quoted here even though a record address is an integer everywhere
+  in the engine's API: this is a published document, not an API payload. The
+  writer deliberately makes **no ontology lookups**, which is why no section
+  label or record title appears in the block.
+- **Header**: `# {table_name}` — the diffusion section node's table name.
+- **One `## {lang}` block per output language**, in `ProjectedRow` order
+  (`## nolan` for the language-independent row), each listing
+  `**{column}**: {value}` lines in plan column order. Empty and null values are
+  skipped, so documents stay compact.
+- **Relation and media fields** publish the value their `ddo_map` projection
+  produced — a flattened label, an id list or a media URL, exactly as any other
+  format receives it. The writer adds no Markdown links or image syntax of its
+  own.
 - Values are escaped only for structure-breaking sequences (line-leading
   headers, a lone `---`), never HTML-escaped — readability is the goal.
+- **No wall clock, no ontology reads**: both are deliberate divergences from the
+  retired engine's markdown output and are what makes a re-publish
+  byte-identical. They are recorded in the run report.
 
-!!! note "Dangling links are a configuration matter"
-    A relation link is emitted from the related record's identity even if that
-    related section is not mapped under the element (so no `.md` is generated
-    for it). To make links resolve, configure the related sections under the
-    **same** markdown element, reachable within the *resolve levels* budget.
+!!! note "Related records get their own file, not a link"
+    Configure the related sections under the **same** markdown element and
+    within the *resolve levels* budget and each one is published as its own
+    `{section_tipo}_{section_id}.md`. Nothing in a document points at those
+    files: a reader (or an agent) locates them by the file-name grammar.
 
 ## Ontology configuration
 
@@ -103,8 +112,9 @@ diffusion_element        { "diffusion": { "type": "markdown", "service_name": "�
   written). The admin `validate` action reports elements missing it.
 - **`diffusion_section`** — a `related` relation to the target section. This is
   the node published per record; its children are the fields.
-- **`diffusion_component`** — one per `## heading`; carries
-  `properties->process->ddo_map`. The node's term becomes the heading.
+- **`diffusion_component`** — one per published field; carries
+  `properties->process->ddo_map`. The node's term becomes the column name, i.e.
+  the bold label of its `**{column}**: {value}` line.
 
 The `ddo_map` compiles into the same resolve-step tree as every format —
 including **relation chains that pull related-section data into the main

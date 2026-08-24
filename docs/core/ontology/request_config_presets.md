@@ -90,7 +90,7 @@ map).
   This is used to locate the preset by user ID.  
     
     Sample (resolved value): 'Xavier'  
-    Sample data: [{"type":"dd151","section_id":"5","section_tipo":"dd128","from_component_tipo":"dd654"}]
+    Sample data: [{"type":"dd151","section_id":5,"section_tipo":"dd128","from_component_tipo":"dd654"}]
 
 ---
 
@@ -101,7 +101,7 @@ map).
   If value is 'No', only the preset's owner can load it; all other users will load their own preset for the current section or the default ontology configuration instead.
 
     Sample (resolved value): 'Yes'  
-    Sample data: [{"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"dd640"}]
+    Sample data: [{"type":"dd151","section_id":1,"section_tipo":"dd64","from_component_tipo":"dd640"}]
 
 ---
 
@@ -111,7 +111,7 @@ map).
   If this is 'Yes', this preset will be available, else will be ignored when presets are loaded.  
 
     Sample (resolved value): 'Yes'  
-    Sample data: [{"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"dd1566"}]
+    Sample data: [{"type":"dd151","section_id":1,"section_tipo":"dd64","from_component_tipo":"dd1566"}]
 
 ---
 

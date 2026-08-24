@@ -104,7 +104,7 @@ On the wire the datum `data` carries the values as `entries` (the array the JS v
 {
     "tipo": "test211",
     "section_tipo": "test3",
-    "section_id": "1",
+    "section_id": 1,
     "lang": "lg-nolan",
     "entries": [
         { "id": 5, "value": 31416.2 },

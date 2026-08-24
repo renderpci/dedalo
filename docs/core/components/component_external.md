@@ -124,6 +124,10 @@ shape (flat, JSON, empty) is refused per cell, leaving the record untouched.
     accepts only `GET` and `POST`; no adapter can express a remote mutation.
     The **one** thing curation writes is the caller's own locator, in the
     calling component: `{"section_tipo": "zenon1", "section_id": "001338683"}`.
+    That `section_id` is a **remote** id and stays a string verbatim — a matrix
+    record address is an integer, but a zero-padded or otherwise
+    non-numeric-convertible value addresses no matrix record and is never
+    converted by any writer.
 
 Data item emitted to the client (`mode: list`):
 

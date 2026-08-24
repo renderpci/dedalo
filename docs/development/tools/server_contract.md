@@ -68,7 +68,7 @@ The client sends this (built by the JS helper `this.tool_request()`):
 	"dd_api": "dd_tools_api",
 	"action": "tool_request",
 	"source": { "model": "tool_x", "action": "my_method", "...": "..." },
-	"options": { "section_tipo": "oh1", "section_id": "5", "...": "..." }
+	"options": { "section_tipo": "oh1", "section_id": 5, "...": "..." }
 }
 ```
 

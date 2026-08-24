@@ -385,7 +385,7 @@ A user is editing a record in section `rsc197`, and changes the *Summary*
 field `rsc110` from `"old"` to `"new"`.
 
 1. **The field already exists.** During the section's list/edit build,
-   `get_instance({ model:'component_input_text', tipo:'rsc110', section_tipo:'rsc197', section_id:'1', mode:'edit', lang:'lg-eng' })`
+   `get_instance({ model:'component_input_text', tipo:'rsc110', section_tipo:'rsc197', section_id:1, mode:'edit', lang:'lg-eng' })`
    produced the instance with
    `id = component_input_text_rsc110_rsc197_1_edit_lg-eng` and
    `id_base = rsc197_1_rsc110`. Its `<input>` lives inside
@@ -413,14 +413,14 @@ field `rsc110` from `"old"` to `"new"`.
         "model": "component_input_text",
         "tipo": "rsc110",
         "section_tipo": "rsc197",
-        "section_id": "1",
+        "section_id": 1,
         "mode": "edit",
         "lang": "lg-eng"
       },
       "data": {
         "tipo": "rsc110",
         "section_tipo": "rsc197",
-        "section_id": "1",
+        "section_id": 1,
         "lang": "lg-eng",
         "changed_data": [
           { "action": "update", "key": 0, "value": ["new"], "lang": "lg-eng" }

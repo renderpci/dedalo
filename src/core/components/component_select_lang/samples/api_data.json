@@ -9,7 +9,7 @@
 		{
 			"id": 1,
 			"type": "dd151",
-			"section_id": "17344",
+			"section_id": 17344,
 			"section_tipo": "lg1",
 			"from_component_tipo": "oh20"
 		}
@@ -24,7 +24,7 @@
 		},
 		{
 			"value": {
-				"section_id": "5223",
+				"section_id": 5223,
 				"section_tipo": "lg1"
 			},
 			"label": "Basque",
@@ -32,7 +32,7 @@
 		},
 		{
 			"value": {
-				"section_id": "3032",
+				"section_id": 3032,
 				"section_tipo": "lg1"
 			},
 			"label": "Catalan",
@@ -40,7 +40,7 @@
 		},
 		{
 			"value": {
-				"section_id": "5101",
+				"section_id": 5101,
 				"section_tipo": "lg1"
 			},
 			"label": "English",
@@ -48,7 +48,7 @@
 		},
 		{
 			"value": {
-				"section_id": "5450",
+				"section_id": 5450,
 				"section_tipo": "lg1"
 			},
 			"label": "French",
@@ -56,7 +56,7 @@
 		},
 		{
 			"value": {
-				"section_id": "4253",
+				"section_id": 4253,
 				"section_tipo": "lg1"
 			},
 			"label": "German",
@@ -64,7 +64,7 @@
 		},
 		{
 			"value": {
-				"section_id": "5037",
+				"section_id": 5037,
 				"section_tipo": "lg1"
 			},
 			"label": "Greek",
@@ -72,7 +72,7 @@
 		},
 		{
 			"value": {
-				"section_id": "7466",
+				"section_id": 7466,
 				"section_tipo": "lg1"
 			},
 			"label": "Italian",
@@ -80,7 +80,7 @@
 		},
 		{
 			"value": {
-				"section_id": "12943",
+				"section_id": 12943,
 				"section_tipo": "lg1"
 			},
 			"label": "Nepali",
@@ -88,7 +88,7 @@
 		},
 		{
 			"value": {
-				"section_id": "14895",
+				"section_id": 14895,
 				"section_tipo": "lg1"
 			},
 			"label": "Portuguese",
@@ -96,7 +96,7 @@
 		},
 		{
 			"value": {
-				"section_id": "17344",
+				"section_id": 17344,
 				"section_tipo": "lg1"
 			},
 			"label": "Spanish",
@@ -104,7 +104,7 @@
 		},
 		{
 			"value": {
-				"section_id": "20155",
+				"section_id": 20155,
 				"section_tipo": "lg1"
 			},
 			"label": "Valencià",

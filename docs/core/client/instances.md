@@ -203,7 +203,7 @@ const input = await get_instance({
     model        : 'component_input_text',
     tipo         : 'oh15',
     section_tipo : 'oh1',
-    section_id   : '42',
+    section_id   : 42,
     mode         : 'edit',
     lang         : 'lg-eng'
 })
@@ -214,7 +214,7 @@ const same = await get_instance({
     model        : 'component_input_text',
     tipo         : 'oh15',
     section_tipo : 'oh1',
-    section_id   : '42',
+    section_id   : 42,
     mode         : 'edit',
     lang         : 'lg-eng'
 })
@@ -230,7 +230,7 @@ const same = await get_instance({
 const element = await get_instance({
     tipo         : 'oh15',
     section_tipo : 'oh1',
-    section_id   : '42',
+    section_id   : 42,
     mode         : 'edit'
 })
 ```
@@ -270,13 +270,13 @@ const found = get_instance_by_id(node.dataset.instanceId)
 const edits = find_instances({
     tipo         : 'oh15',
     section_tipo : 'oh1',
-    section_id   : '42',
+    section_id   : 42,
     mode         : 'edit',
     lang         : 'lg-eng'
 })
 
 // bulk-remove every registry entry for one section_id (wildcards on omitted props)
-const removed = delete_instances({ section_tipo:'oh1', section_id:'42' })
+const removed = delete_instances({ section_tipo:'oh1', section_id:42 })
 ```
 
 !!! warning "Prefer `destroy()` over raw `delete_instance`"

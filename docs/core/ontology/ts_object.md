@@ -127,7 +127,7 @@ The unit `ts_object.ts` produces is a flat `TsNodeData` object:
 ```json
 {
     "section_tipo"  : "es1",
-    "section_id"    : "42",
+    "section_id"    : 42,
     "ts_id"         : "es1_42",
     "ts_parent"     : "es1_5",
     "order"         : 3,
