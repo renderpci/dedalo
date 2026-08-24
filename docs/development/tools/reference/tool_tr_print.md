@@ -28,8 +28,8 @@ A **view-mode selector** offers three renderings of the transcript:
 
 The **left panel** carries a language selector plus visibility checkboxes that toggle DOM elements directly (immediate, no re-render): *Header*, *Time Codes*, *Persons*, *Indexations*, *Indexations info*, *Annotations*, *Languages*, and *Lines* (draws separators between timecoded passages). The header (`render_header`) aggregates the transcription's `data.related_sections` context (labels and component values for each related section) and person badges from `data.tags_persons`.
 
-!!! warning "Tag resolution depends on an unregistered component API"
-    The *Default* and header renderings resolve index/note tags through `component_text_area.get_tags_info(...)`, which routes to the `dd_component_text_area_api` endpoint. That API class is **not registered** in `src/core/api/dispatch.ts` on this engine (only `dd_component_portal_api` and `dd_component_av_api` are), so `get_tags_info` is not currently callable — the same gap noted for [tool_indexation](tool_indexation.md). The *Original* and *Source* views, which do not need it, are unaffected. Treat resolved-tag rendering as unverified until that endpoint is available.
+!!! note "Tag resolution: `dd_component_text_area_api::get_tags_info`"
+    The *Default* and header renderings resolve index/note tags through `component_text_area.get_tags_info(...)`, which routes to `dd_component_text_area_api::get_tags_info` (WC-077, implemented in `src/core/api/dispatch.ts`). `source`: `tipo`, `section_tipo`, `section_id` (int), optional `lang`; `options.ar_type` names the requested tag types (here `['index','note','reference']`). Gate: `principalCanAccessRecord` (read scope) on the transcription's host record. Any requested type the resolver cannot answer is named in the envelope's `unknown_types` extension rather than dropped silently. The *Original* and *Source* views do not call it.
 
 ## Actions & options
 

@@ -141,13 +141,14 @@ The API class that will handle the call. Only classes that are top-level KEYS of
 | `dd_diffusion_api` | Publishing and diffusion-process control | `diffuse`, `get_process_status`, `list_processes`, `cancel_process`, `get_diffusion_info`, `get_engine_advisory`, `retry_pending_deletions`, `validate`, `rebuild_media_index` |
 | `dd_area_maintenance_api` | Admin maintenance widgets | `widget_request`, `get_widget_value`, `lock_components_actions` |
 | `dd_component_portal_api` | Portal-specific endpoints | `delete_locator` |
+| `dd_component_text_area_api` | Transcription tag resolution/deletion (WC-077) | `get_tags_info`, `delete_tag` |
 | `dd_component_av_api`, `dd_component_3d_api` | Media posterframe / stream endpoints | posterframe generation (+ media streams for AV) |
 | `dd_component_info` | Info-widget data | `get_widget_data` |
 | `dd_rag_api` | Semantic search / RAG retrieval | see `src/ai/rag/api.ts` |
 | `dd_mcp_api` | The in-process MCP/agent bridge for `tool_assistant` | `mcp_proxy` (fails closed unless the agent HTTP surface is enabled) |
 | `dd_error_report_api` | Anonymous machine-to-machine error-report intake | `receive_report` (reachable only while the receiver is enabled, gated separately from the auth pipeline) |
 
-There is no `dd_ontology_api`/`dd_agent_api`/`dd_component_text_area_api` key in the registry — those classes are not reachable through this RQO mechanism.
+There is no `dd_ontology_api`/`dd_agent_api` key in the registry — those classes are not reachable through this RQO mechanism.
 
 The default when `dd_api` is unset is `dd_core_api`.
 
@@ -317,7 +318,7 @@ Pretty-printed JSON response (debugging).
 	"action" : "save",
 	"dd_api" : "dd_core_api",
 	"source" : { "typo":"source", "type":"component", "action":null, "model":"component_input_text",
-		"tipo":"oh16", "section_tipo":"oh1", "section_id":"124", "mode":"edit", "lang":"lg-eng" },
+		"tipo":"oh16", "section_tipo":"oh1", "section_id":124, "mode":"edit", "lang":"lg-eng" },
 	"data"   : { "changed_data": [ {"action":"update","key":0,"value":"Interview about..."} ] }
 }
 ```
@@ -426,7 +427,7 @@ Deep-copies record `2` and returns the new `section_id`. Two gates apply: sectio
 		"section_tipo":"oh1", "section_id":null, "mode":"list", "lang":"lg-eng",
 		"delete_mode":"delete_record" },
 	"options": { "delete_diffusion_records":true, "delete_with_children":false },
-	"sqo"    : { "section_tipo":["oh1"], "filter_by_locators":[{"section_tipo":"oh1","section_id":"127"}], "limit":1 }
+	"sqo"    : { "section_tipo":["oh1"], "filter_by_locators":[{"section_tipo":"oh1","section_id":127}], "limit":1 }
 }
 ```
 
