@@ -443,14 +443,36 @@ function archiveShapeCheck(gitDir: string | null, ref: string): StatusCheck {
 			['-c', `set -o pipefail; git -C '${gitDir}' archive --format=tar '${ref}' | tar -tvf -`],
 			{ encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 60_000, maxBuffer: 64e6 },
 		);
-		const symlinks = listing
-			.split('\n')
-			.filter((line) => /^l[rwxsStT-]{9}\s/.test(line))
-			.map((line) => line.split(' ').pop() ?? '');
+		const symlinks = archiveSymlinkNames(listing);
 		return symlinks.length === 0
 			? check('archive_installable', 'ok')
 			: check('archive_installable', 'blocked', symlinks.join(', '));
 	});
+}
+
+/**
+ * The LINK NAMES in a `tar -tv` listing — the entries the installer refuses.
+ *
+ * The naive `line.split(' ').pop()` returns `.agents` for
+ * `… .claude -> .agents`: the link's TARGET, not the offending entry. That
+ * points the operator at the wrong file, which on a panel whose whole job is
+ * naming the blocker is a defect, not a cosmetic slip (found 2026-08-24 by the
+ * panel reporting `.agents, AGENTS.md` for symlinks actually named `.claude`
+ * and `CLAUDE.md`). So: cut the ` -> target` half off first, then take
+ * everything after the timestamp column, which keeps names containing spaces
+ * intact.
+ */
+export function archiveSymlinkNames(listing: string): string[] {
+	const names: string[] = [];
+	for (const line of listing.split('\n')) {
+		if (!/^l[rwxsStT-]{9}\s/.test(line)) continue;
+		const linkHalf = (line.split(' -> ')[0] ?? '').trimEnd();
+		// `<mode> <size> <owner> <group> <size> <month> <day> <HH:MM|year> <name>`
+		const named = /\s(?:\d{2}:\d{2}|\d{4})\s+(.+)$/.exec(linkHalf);
+		const name = named?.[1] ?? linkHalf.split(/\s+/).pop() ?? '';
+		if (name !== '') names.push(name);
+	}
+	return names;
 }
 
 /** Everything git knows about the tree the releases are built FROM. */

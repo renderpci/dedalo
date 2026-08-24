@@ -29,6 +29,7 @@ import { detectDeploymentChannel } from '../../src/core/update/channel.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 import { backupRootIsInsideTree, isSupervised } from '../../src/core/update/code_update.ts';
 import {
+	archiveSymlinkNames,
 	codeServerStatus,
 	consumerStatus,
 	type StatusCheck,
@@ -178,5 +179,63 @@ describe('code server status', () => {
 		const check = byId(status.checks, 'archive_installable');
 		expect(STATES.has(check.state)).toBe(true);
 		if (check.state === 'unknown') expect(typeof check.detail).toBe('string');
+	});
+});
+
+describe('archive symlink names', () => {
+	test('names the LINK, never its target', () => {
+		// Real `tar -tv` bytes. The naive last-token parse answered `.agents` /
+		// `AGENTS.md` here — the targets — so the panel pointed the operator at
+		// files that were not the problem (found 2026-08-24 against this repo's
+		// own master ref).
+		const listing = [
+			'lrwxrwxrwx  0 root   root        0 Jul 30 12:04 .claude -> .agents',
+			'lrwxrwxrwx  0 root   root        0 Jul 30 12:04 CLAUDE.md -> AGENTS.md',
+			'-rw-r--r--  0 root   root     1234 Jul 30 12:04 package.json',
+			'drwxr-xr-x  0 root   root        0 Jul 30 12:04 src/',
+		].join('\n');
+		expect(archiveSymlinkNames(listing)).toEqual(['.claude', 'CLAUDE.md']);
+	});
+
+	test('keeps a name containing spaces intact, and reads a year-column listing', () => {
+		// tar prints a YEAR instead of HH:MM once an entry is over six months old.
+		const listing = [
+			'lrwxrwxrwx  0 root   root        0 Jul 30  2024 docs/my notes.md -> ../notes.md',
+		].join('\n');
+		expect(archiveSymlinkNames(listing)).toEqual(['docs/my notes.md']);
+	});
+
+	test('an empty or symlink-free listing yields nothing', () => {
+		expect(archiveSymlinkNames('')).toEqual([]);
+		expect(archiveSymlinkNames('-rw-r--r--  0 root root 1 Jul 30 12:04 a.txt')).toEqual([]);
+	});
+
+	test('agrees with git on this repo (the check is not parsing fiction)', () => {
+		const listing = Bun.spawnSync(
+			[
+				'bash',
+				'-c',
+				`set -o pipefail; git -C '${projectRoot}' archive --format=tar HEAD | tar -tvf -`,
+			],
+			{ stdout: 'pipe', stderr: 'ignore' },
+		);
+		expect(listing.exitCode).toBe(0);
+		const names = archiveSymlinkNames(listing.stdout.toString());
+		// HONEST LIMIT: on a branch whose .gitattributes already excludes every
+		// symlink (release_archive_tripwire keeps HEAD in that state) this loop
+		// is empty and asserts nothing — the fixture tests above carry the
+		// parsing proof. It bites on any branch that still ships one.
+		// Whatever git reports, every name must be a real tracked path — never a
+		// link target, which is what the old parser produced.
+		for (const name of names) {
+			const tracked = Bun.spawnSync(
+				['git', '-C', projectRoot, 'ls-files', '--error-unmatch', name],
+				{
+					stdout: 'ignore',
+					stderr: 'ignore',
+				},
+			);
+			expect(tracked.exitCode, `${name} is not a tracked path`).toBe(0);
+		}
 	});
 });
