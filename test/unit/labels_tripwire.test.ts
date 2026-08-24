@@ -197,4 +197,46 @@ describe('labels tripwire (WC-033 — master.json defines, catalogs translate)',
 			.sort();
 		expect(stale, 'prune UNCATALOGED_CLIENT_KEYS — these entries are no longer real').toEqual([]);
 	});
+
+	// -----------------------------------------------------------------------
+	// FULL TRANSLATION COVERAGE for the non-error label set.
+	//
+	// The fallback chain means an untranslated key serves the English master
+	// string — safe, but SILENT: a Spanish operator sees one English line in an
+	// otherwise Spanish panel and nothing anywhere says why. That is how the
+	// whole update_code panel sat at 1/107 translated in every language while
+	// its neighbour update_ontology_lead was served in 17.
+	//
+	// So coverage is an INVARIANT, not a chore: a new UI string must ship with
+	// its translations, exactly as it already must ship with its master
+	// definition. `error_*` is deliberately out of scope — the error registry
+	// is its own subsystem with its own disclosure rules — and is the only
+	// exemption; it is asserted below so the carve-out cannot quietly widen.
+	// -----------------------------------------------------------------------
+	test('every non-error master key is translated in every catalog', () => {
+		const nonError = Object.keys(loadMaster()).filter((key) => !key.startsWith('error_'));
+		const gaps: string[] = [];
+		for (const catalog of loadCatalogs()) {
+			if (catalog.lang === MASTER_SOURCE_LANG) continue; // sparse override by design
+			const missing = nonError.filter((key) => catalog.map[key] === undefined);
+			if (missing.length > 0) {
+				const shown = missing.slice(0, 5).join(', ');
+				gaps.push(
+					`${catalog.lang}: ${missing.length} missing (${shown}${missing.length > 5 ? ', …' : ''})`,
+				);
+			}
+		}
+		expect(
+			gaps,
+			'a UI string ships with its translations — `bun run scripts/labels_fill.ts --lang <code>` lists the backlog',
+		).toEqual([]);
+	});
+
+	test('the only translation-coverage exemption is the error registry', () => {
+		// If this ever reaches zero the exemption above is dead and should go;
+		// if some OTHER prefix needs exempting it must be added deliberately
+		// here, not by widening the filter in the test above.
+		const exempt = Object.keys(loadMaster()).filter((key) => key.startsWith('error_'));
+		expect(exempt.length).toBeGreaterThan(0);
+	});
 });
