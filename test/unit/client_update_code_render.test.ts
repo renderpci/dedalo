@@ -376,3 +376,45 @@ describe('update_code terminal frame (resolve_final_frame)', () => {
 		expect(render_src).toContain("ending.outcome==='updated'");
 	});
 });
+
+// ---------------------------------------------------------------------------
+// The terminal envelope is NOT a health confirmation.
+//
+// `on_done`'s stream_final branch used to force every phase — 'health'
+// included — to 'done' and call finish_success() straight off an ok:true
+// terminal frame. But that envelope is emitted BEFORE the restart
+// (code_update.ts returns it, THEN the process dies), while the rollback
+// sentinel still reads "pending". So the panel declared the update a success
+// without ever asking /health whether the new tree boots, and reported exactly
+// the same success when the engine came back rolled back onto the old version.
+// The docs promise a health confirmation; this pins that the code performs one.
+// ---------------------------------------------------------------------------
+describe('a terminal ok frame hands off to health polling, never straight to success', () => {
+	test('the success branch keeps the health phase open and polls', () => {
+		// The branch must not mark 'health' done…
+		const branch = render_src.slice(
+			render_src.indexOf("if (ending && ending.outcome==='updated')"),
+		);
+		const body = branch.slice(0, branch.indexOf('return'));
+		expect(body).toContain("p.id==='health' ? 'running' : 'done'");
+		// …must enter polling mode with an expected_version…
+		expect(body).toContain("mode				: 'polling'");
+		expect(body).toContain('state.expected_version || ending.version');
+		// …and must actually call the poller, not finish_success.
+		expect(body).toContain('poll_health()');
+		expect(body).not.toContain('finish_success');
+	});
+
+	test('resolve_health_outcome needs the expected_version this branch supplies', () => {
+		// WHY the `state.expected_version || ending.version` fallback is
+		// load-bearing: on the panel-RESUME path expected_version is null, and
+		// a null one turns a perfectly good update into a 'rolled_back' report.
+		const resumed = { ...init_phase_state(null), mode: 'polling' };
+		expect(resolve_health_outcome(resumed, '7.0.1').outcome).toBe('rolled_back');
+
+		const carried = { ...init_phase_state('7.0.1'), mode: 'polling' };
+		expect(resolve_health_outcome(carried, '7.0.1').outcome).toBe('updated');
+		// …and the old version still reads as a rollback, which is the point.
+		expect(resolve_health_outcome(carried, '7.0.0').outcome).toBe('rolled_back');
+	});
+});

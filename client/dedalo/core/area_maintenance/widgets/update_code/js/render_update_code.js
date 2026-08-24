@@ -692,10 +692,34 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 			if (stream_final) {
 				const ending = resolve_final_frame(state, final_frame)
 				if (ending && ending.outcome==='updated') {
+					// The terminal envelope is emitted BEFORE the restart, while
+					// the rollback sentinel still reads "pending" — it means
+					// "the swap landed and I am about to restart", NOT "the new
+					// code is live". Forcing every phase (health included) to
+					// 'done' here skipped poll_health() entirely, so the panel
+					// declared success without one confirmation that the tree it
+					// installed can actually boot — and reported success just
+					// the same when the engine came back rolled back.
+					// So: everything up to and including 'restart' is done; the
+					// 'health' phase stays running and /health decides.
 					state = apply_phase_frame(state, {
-						phases : state.phases.map(p => ({ id : p.id, status : 'done' }))
+						phases : state.phases.map(p => ({
+							id		: p.id,
+							status	: p.id==='health' ? 'running' : 'done'
+						}))
 					})
-					finish_success(ending.version)
+					// expected_version is null on the panel-RESUME path; without
+					// it resolve_health_outcome would read a perfectly good
+					// update as 'rolled_back'.
+					state = {
+						...state,
+						mode				: 'polling',
+						expected_version	: state.expected_version || ending.version
+					}
+					track.paint(state)
+					// the old pid/pfile mean nothing to the restarted process
+					data_manager.delete_local_db_data(LOCAL_DB_ID, 'status')
+					poll_health()
 					return
 				}
 				state = { ...state, mode:'failed' }
