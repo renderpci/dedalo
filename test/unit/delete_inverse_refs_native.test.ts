@@ -138,6 +138,11 @@ describe('delete_record inverse refs (TS-native selective strip)', () => {
 	});
 
 	test('referrer TM pair: backfill (old bag) then the surviving bag, −60s apart', () => {
+		// Exactly two rows, asserted BEFORE the shape: an observer hop, a re-run
+		// without teardown or a concurrent writer taking an id between the pair
+		// otherwise surfaces as a value diff and sends the reader to the wrong
+		// subsystem. The delta below indexes positionally and needs this.
+		expect(tmRows.length, 'unexpected TM row count — the pair is not a pair').toBe(2);
 		const shapes = tmRows.map((tm) => ({ lang: tm.lang, data: tm.data }));
 		expect(shapes).toEqual([
 			{ lang: 'lg-nolan', data: seededBag() },

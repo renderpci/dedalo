@@ -170,6 +170,11 @@ describe('delete_data end-state (TS-native, differential-pinned shapes)', () => 
 	});
 
 	test('TM pair: backfill (old value, lg-spa) then null save row, −60s apart', () => {
+		// Exactly two rows, asserted BEFORE the shape: an observer hop, a re-run
+		// without teardown or a concurrent writer taking an id between the pair
+		// otherwise surfaces as a value diff and sends the reader to the wrong
+		// subsystem. The delta below indexes positionally and needs this.
+		expect(tmRows.length, 'unexpected TM row count — the pair is not a pair').toBe(2);
 		const shape = tmRows.map((tm) => ({ tipo: tm.tipo, lang: tm.lang, data: tm.data }));
 		expect(shape).toEqual([
 			{ tipo: COMPONENT, lang: 'lg-spa', data: VALUE },
