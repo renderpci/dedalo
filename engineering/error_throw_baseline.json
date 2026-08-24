@@ -35,7 +35,7 @@
 		"src/core/media/ingest/upload.ts": 1,
 		"src/core/media/ontology_path.ts": 2,
 		"src/core/media/path.ts": 1,
-		"src/core/media/protection.ts": 3,
+		"src/core/media/protection.ts": 2,
 		"src/core/media/svg_overlay.ts": 1,
 		"src/core/media/tool_support.ts": 1,
 		"src/core/media/tools/files_info_persist.ts": 1,
@@ -71,6 +71,6 @@
 	},
 	"summary": {
 		"files": 66,
-		"total": 126
+		"total": 125
 	}
 }
