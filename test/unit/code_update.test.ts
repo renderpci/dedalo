@@ -1164,3 +1164,69 @@ describe('UPDATE_CATALOG may not run ahead of the engine', () => {
 		}
 	});
 });
+
+// ---------------------------------------------------------------------------
+// THE SAME-VERSION IDENTITY GATE (dev channel, 2026-08-24).
+// A dev install swaps a tree whose VERSION IS UNCHANGED, so the version can no
+// longer answer "did the new tree boot?": after a rollback the OLD tree matches
+// the pending sentinel exactly, boot confirmation flips it to `confirmed`, and
+// the supervisor-side rollback (deploy/dedalo-code-rollback.sh) is silently
+// disarmed for the class of build most likely to fail. The installed ARCHIVE
+// DIGEST is the identity token instead.
+// ---------------------------------------------------------------------------
+describe('boot_confirm under a same-version (dev channel) install', () => {
+	const DIGEST_NEW = 'a'.repeat(64);
+	const DIGEST_OLD = 'b'.repeat(64);
+
+	function pendingSentinel(dir: string): Record<string, unknown> {
+		return {
+			version: '7.0.1',
+			previousVersion: '7.0.1', // SAME version — the dev-channel case
+			updateMode: 'clean',
+			stamp: '2026-08-24T10-00-00',
+			backupDir: dir,
+			installDigest: DIGEST_NEW,
+			status: 'pending',
+			rollback_attempted: false,
+		};
+	}
+
+	test('the rolled-back OLD tree does NOT confirm: same version, different installed digest', async () => {
+		const dir = join(ROOT, 'confirm_same_version_rollback');
+		mkdirSync(dir, { recursive: true });
+		const sentinelPath = join(dir, 'last_code_update.json');
+		writeFileSync(sentinelPath, JSON.stringify(pendingSentinel(dir)));
+
+		// The tree that actually booted carries the PREVIOUS archive's digest.
+		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', DIGEST_OLD);
+
+		const after = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+		expect(after.status).toBe('pending');
+	});
+
+	test('the NEW tree confirms: same version, matching installed digest', async () => {
+		const dir = join(ROOT, 'confirm_same_version_ok');
+		mkdirSync(dir, { recursive: true });
+		const sentinelPath = join(dir, 'last_code_update.json');
+		writeFileSync(sentinelPath, JSON.stringify(pendingSentinel(dir)));
+
+		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', DIGEST_NEW);
+
+		const after = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+		expect(after.status).toBe('confirmed');
+	});
+
+	test('a legacy sentinel with no installDigest still confirms on the version alone', async () => {
+		const dir = join(ROOT, 'confirm_legacy');
+		mkdirSync(dir, { recursive: true });
+		const sentinelPath = join(dir, 'last_code_update.json');
+		const legacy = pendingSentinel(dir);
+		delete legacy.installDigest;
+		writeFileSync(sentinelPath, JSON.stringify(legacy));
+
+		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', null);
+
+		const after = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+		expect(after.status).toBe('confirmed');
+	});
+});
