@@ -21,10 +21,34 @@ import { join } from 'node:path';
 import { smokeBootQuarantine } from '../../src/core/update/smoke_boot.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
-const ROOT = join(
-	process.env.TMPDIR ?? '/tmp',
-	`dedalo_smoke_boot_${process.pid}_${Math.random().toString(36).slice(2)}`,
-);
+/**
+ * THE ROOT MUST KEEP THE SOCKET PATH UNDER 104 BYTES.
+ *
+ * The smoke boot binds a UNIX SOCKET inside the staging dir it is handed
+ * (`<root>/<case>/staging/smoke_boot.sock`), and macOS caps a socket path at
+ * 104 bytes. A stock macOS `TMPDIR` is a per-user `/var/folders/…/T/` — ~49 of
+ * those bytes — so three of these tests died with ENAMETOOLONG on a plain
+ * checkout and passed only under `TMPDIR=/tmp/dd`. A gate must not be red
+ * because of the machine's temp-dir naming.
+ *
+ * `TMPDIR` is still HONOURED when it fits (it is how a machine redirects
+ * scratch writes off `/tmp`); the fallback engages only when this root's own
+ * longest socket path would not fit, which is a fact about the path, measured
+ * rather than assumed.
+ */
+const SOCKET_PATH_MAX = 104;
+/** The deepest path any case builds under the root, relative to it. */
+const DEEPEST_CHILD = '/neutralised/staging/smoke_boot.sock';
+const ROOT_NAME = `dedalo_smoke_boot_${process.pid}_${Math.random().toString(36).slice(2)}`;
+
+function scratchRoot(): string {
+	const preferred = join(process.env.TMPDIR ?? '/tmp', ROOT_NAME);
+	return `${preferred}${DEEPEST_CHILD}`.length <= SOCKET_PATH_MAX
+		? preferred
+		: join('/tmp', ROOT_NAME);
+}
+
+const ROOT = scratchRoot();
 
 beforeAll(() => {
 	mkdirSync(ROOT, { recursive: true });
