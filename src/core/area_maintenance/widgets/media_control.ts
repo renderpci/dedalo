@@ -98,6 +98,12 @@ async function mediaControlGetValue(
 		data: {
 			mode: protection.resolveMediaAccessMode(),
 			mode_source: protection.resolveModeSource(),
+			// WHICH LAYER decided, as a token rather than the prose above. Since the
+			// default became fail-closed (2026-08-24) 'default' is a state an operator
+			// must be able to act on: the mode is in force, nobody chose it, and on
+			// nginx it is not actually applied until the includes are wired and reloaded.
+			// The prose string is for reading; this is for the widget to branch on.
+			mode_decided_by: protection.resolveMediaAccessModeDetail().source,
 			custom_override: protection.getStateOverride(),
 			config_mode: protection.getConfigFileMode(),
 			legacy_protect: protection.getLegacyProtectFlag(),
@@ -133,6 +139,46 @@ async function mediaControlGetValue(
  * The client posts one of `config | off | private | publication` (render_media_control.js
  * build_mode_selector): 'config' REMOVES the override and falls back to the .env value.
  */
+/**
+ * What an operator must DO after a mode change, in the order they must do it.
+ *
+ * Extracted from the action rather than inlined: the action already carries the whole
+ * permission/validation/persist/write-rules chain, and every note added a branch to the
+ * one function in this widget that can least afford another (the complexity ratchet
+ * refuses a raised number, correctly — this is the split it asks for).
+ */
+function accessModeNotes(
+	effective: 'private' | 'publication' | false,
+	status: {
+		nginx: { exists: boolean };
+		nginx_map: { exists: boolean; up_to_date: boolean | null };
+	},
+): string[] {
+	const notes: string[] = [];
+	if (effective !== false) {
+		notes.push(
+			'Live sessions were re-keyed; anyone without a media auth cookie receives one on their next request.',
+		);
+	}
+	if (effective === 'publication') {
+		notes.push("If this instance has existing publications, run 'Rebuild media index' once.");
+	}
+	if (status.nginx.exists) {
+		notes.push(
+			'nginx: RELOAD REQUIRED (nginx -t && nginx -s reload). The Apache .htaccess applies immediately.',
+		);
+	}
+	// The map is not cosmetic staleness: the server block references variables only a
+	// current map defines, so an out-of-date map makes `nginx -t` FAIL outright. An
+	// operator who reloads without re-including it loses the gate, not a header.
+	if (status.nginx_map.exists && status.nginx_map.up_to_date === false) {
+		notes.push(
+			'nginx: the http{} map file was REGENERATED — re-include it before reloading, or nginx will refuse to start (unknown $dedalo_svg_csp).',
+		);
+	}
+	return notes;
+}
+
 async function mediaControlSetAccessMode(
 	options: Record<string, unknown>,
 	principal: Principal,
@@ -198,25 +244,19 @@ async function mediaControlSetAccessMode(
 		);
 	}
 
-	// Re-enabling: re-lay the auth markers from the persisted store so users who ALREADY
-	// hold a cookie keep media access instead of 404ing until their next login.
+	// Re-enabling: re-lay the auth markers for every LIVE SESSION, so editors who are
+	// already logged in keep media access instead of 404ing until their next login. This
+	// used to read the persisted day-global store; since the credential became
+	// per-session (2026-08-24) the sessions table IS the source of truth, and this same
+	// call is what collects orphan markers left by an unclean shutdown.
 	if (effective !== false) {
-		protection.syncAuthMarkersFromStore();
+		const { listActiveMediaKeys } = await import('../../security/session_store.ts');
+		protection.reconcileAuthMarkers(listActiveMediaKeys());
 	}
 
 	const status = protection.getRulesStatus();
 	const label = effective === false ? 'off (media is world-readable)' : effective;
-	const notes = [
-		effective !== false
-			? 'Users without the media auth cookie receive it at their next login.'
-			: '',
-		effective === 'publication'
-			? "If this instance has existing publications, run 'Rebuild media index' once."
-			: '',
-		status.nginx.exists
-			? 'nginx: RELOAD REQUIRED (nginx -t && nginx -s reload). The Apache .htaccess applies immediately.'
-			: '',
-	].filter((note) => note !== '');
+	const notes = accessModeNotes(effective, status);
 
 	return {
 		data: true,

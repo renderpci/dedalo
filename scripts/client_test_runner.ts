@@ -851,10 +851,16 @@ async function mintSessionForUser(user: string): Promise<RunnerSession> {
 	const { resolvePrincipal } = await import('../src/core/security/permissions.ts');
 	const { createSession } = await import('../src/core/security/session_store.ts');
 	const { isGlobalAdmin } = await resolvePrincipal(row.section_id);
+	// Mint this session's MEDIA credential too, exactly as login does. Skipping it would
+	// hand the run a session with no media access, so every image/av/pdf the suite loads
+	// would 404 under a configured mode — and since the default became fail-closed, that
+	// is now the ordinary case rather than an exotic one.
+	const { issueSessionMediaKey } = await import('../src/core/media/protection.ts');
+	const mediaKey = issueSessionMediaKey();
 	return {
 		ok: true,
 		message: 'ok',
-		sessionToken: createSession(row.section_id, user, isGlobalAdmin),
+		sessionToken: createSession(row.section_id, user, isGlobalAdmin, mediaKey),
 	};
 }
 

@@ -704,9 +704,12 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 				},
 			});
 		}
-		const { destroySession } = await import('../../security/session_store.ts');
+		// endSession, not destroySession: it deletes the row AND unlinks the media marker
+		// this session's `dedalo_media_auth` cookie names. Logging out must revoke BOTH
+		// credentials — see the note on clearMediaAuthCookie below.
+		const { endSession } = await import('../../security/session_media.ts');
 		if (context.sessionToken) {
-			destroySession(context.sessionToken);
+			endSession(context.sessionToken);
 		}
 		// No SAML on this install, so no saml_redirect (the client falls back to
 		// the standard SW-cleanup + root redirect when the field is absent).
@@ -720,10 +723,15 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			// user who logs out just after an operator switched protection off — a value
 			// that becomes valid again the moment it is switched back on.
 			//
-			// (!) This clears the BROWSER cookie only. It must NEVER unlink the auth
-			// marker: the cookie value is install-global (every logged-in editor shares
-			// today's value), so unlinking it on one user's logout would lock out all of
-			// them until their next login.
+			// (!) THIS INVERTED ON 2026-08-24, and the old rule is worth keeping visible:
+			// it used to read "must NEVER unlink the auth marker", because the cookie
+			// value was install-global — every logged-in editor held today's value, so
+			// unlinking it on one logout would have locked out all of them. The price
+			// was that logging out revoked nothing a thief actually needed: the media
+			// cookie kept working for up to ~48 hours, and a password reset could not
+			// take it away either. The credential is now per SESSION, so `endSession`
+			// above unlinks THIS session's marker and no other, and clearing the browser
+			// cookie is the second half of a revocation rather than the whole of it.
 			clearMediaAuthCookie: true,
 		};
 	},

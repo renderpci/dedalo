@@ -253,8 +253,16 @@ describe('AUTHZ-04: single-session policy is wired into login (opt-in)', () => {
 	test('login evicts other sessions when DEDALO_SINGLE_SESSION is on (source invariant)', () => {
 		const auth = read('src/core/security/auth.ts');
 		// The flag gates the eviction, and it keeps the token just minted.
-		expect(auth).toMatch(/config\.features\.singleSession[\s\S]{0,120}destroyUserSessions/);
-		expect(auth).toContain('destroyUserSessions(user.section_id, sessionToken)');
+		//
+		// endUserSessions, not destroyUserSessions, since 2026-08-24: an evicted session
+		// must lose its MEDIA marker too. Evicting the token while leaving the stolen
+		// media cookie working is precisely the window this policy exists to close, and
+		// the media credential used to be install-global and unrevokable — so the
+		// distinction is the fix, not a rename.
+		expect(auth).toMatch(/config\.features\.singleSession[\s\S]{0,400}endUserSessions/);
+		expect(auth).toContain('endUserSessions(user.section_id, sessionToken)');
+		// And the bare destroy must not come back: it would silently drop the media half.
+		expect(auth).not.toMatch(/^\s*destroyUserSessions\(/m);
 		// The config key is read into config.features.
 		const cfg = read('src/config/config.ts');
 		expect(cfg).toContain("singleSession: readString('DEDALO_SINGLE_SESSION') === 'true'");

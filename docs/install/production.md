@@ -38,7 +38,7 @@ Media is served **by the web server**, not by Dédalo — but the **access rules
 
 | `DEDALO_MEDIA_ACCESS_MODE` | Who can read a media file |
 | --- | --- |
-| *(unset)* | everyone — the media tree is world-readable |
+| *(unset)* | **the `publication` default** — logged-in users plus anonymous readers of *published* records (fail-closed since 2026-08-24; set `false` to deliberately serve an open tree) |
 | `private` | logged-in Dédalo users only |
 | `publication` | logged-in users **plus** anonymous readers of *published* records, in *public quality* folders only |
 

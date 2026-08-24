@@ -1,6 +1,6 @@
 ---
 name: dedalo-media-protection
-description: Web-server-enforced media file access control in the Dédalo v7 TS/Bun engine — the .publication marker store, the fixed-name daily auth cookie, the filename→record grammar, and the GENERATED Apache/nginx rule files. Use when editing src/core/media/protection.ts, the login media-cookie hook (core/security/auth.ts + server.ts Set-Cookie assembly), the media_control maintenance widget, src/diffusion/targets/mediastore/media_index.ts, or when debugging why media 404s for a logged-in user, why anonymous users can (or cannot) read published media, or a media_protection_tripwire failure.
+description: Web-server-enforced media file access control in the Dédalo v7 TS/Bun engine — the .publication marker store, the fixed-name PER-SESSION auth cookie and its revocation, the MEDIA-03 SVG response headers, the filename→record grammar, and the GENERATED Apache/nginx rule files. Use when editing src/core/media/protection.ts, the login media-cookie hook (core/security/auth.ts + server.ts Set-Cookie assembly), the media_control maintenance widget, src/diffusion/targets/mediastore/media_index.ts, src/core/media/svg_safety.ts, src/core/security/session_media.ts, or when debugging why media 404s for a logged-in user, why anonymous users can (or cannot) read published media, why an uploaded SVG downloads instead of rendering, or a media_protection_tripwire failure.
 ---
 
 # Dédalo v7 media protection (TS)
@@ -56,14 +56,23 @@ generation were PHP-owned and died with the cutover.
    least one `dbs/` dir, **recomputed from full directory state — never refcounted**. The
    store is never served, in any mode.
 
-6. **The auth store is a credential file.** `<private>/media_auth.json`, mode 0600, and it
-   must live OUTSIDE every served tree — a fetchable store lets anyone set the cookie and
-   read the whole tree for ~48 h. `writeAuthStore()` refuses to write it under the media
-   root; the tripwire pins that.
+6. **The day-global auth store is RETIRED.** `<private>/media_auth.json` held the shared
+   values; there is no shared value any more, so boot renames it `.migrated` once
+   (`retireLegacyAuthStore`). Do not reintroduce a store: a fetchable one let anyone set
+   the cookie and read the whole tree for ~48 h, which is why it lived outside every
+   served root.
 
-7. **The cookie value is install-global**, not per-user. Therefore **logout must never
-   unlink the marker** (it would lock out every other editor) — it clears the browser cookie
-   only.
+7. **The credential is per SESSION, and revocation is the point.** The marker set is a
+   PROJECTION of the sessions table, so every way a session ends must unlink its marker —
+   go through `src/core/security/session_media.ts` (`endSession` / `endUserSessions` /
+   `sweepExpiredSessions`), never a bare `destroySession`/`pruneExpiredSessions`.
+   This INVERTED an older rule that read "logout must never unlink the marker": the value
+   used to be install-global, so unlinking it would have locked out every other editor —
+   and the price was that a stolen cookie survived logout AND a password reset for up to
+   ~48 h, outside the session store's reach entirely.
+   **The orphan reconcile must NOT run at boot**: the update's smoke boot starts with an
+   empty throwaway session store and the inherited `MEDIA_PATH`, so it would unlink every
+   live editor's marker on the production tree.
 
 8. **`original`/`modified` are never public.** `filterPublicQualities()` refuses master/work
    qualities even when explicitly configured — and refuses this install's *configured*
@@ -91,6 +100,18 @@ generation were PHP-owned and died with the cutover.
   regex location entirely, and every anonymous request for published media 404s.
 - **nginx rule B needs NAMED captures** (`dd_s`/`dd_i`): the inner `if (-f …)` runs its own
   regex and resets the numeric captures.
+- **The generated rules emit HEADERS as well as access control** (MEDIA-03, 2026-08-24):
+  SVG is the one image format that is also a document. The selection rule, the two CSPs
+  and the disposition live in ONE place, `src/core/media/svg_safety.ts`, shared with the
+  Bun media route. The envelope sits one bucket dir BELOW its `svg/` segment — a pattern
+  anchoring it directly inside `svg/` matches nothing and blanks every edit view. The
+  nginx map is no longer static: it carries a config hash and must be rewritten on drift,
+  or an existing install cannot reload nginx at all.
+- **The default mode is fail-closed** (`publication`, 2026-08-24). Read the mode's SOURCE,
+  not just its value (`resolveMediaAccessModeDetail()`): `source === 'default'` means
+  nobody chose, and two things must DEGRADE there rather than fail — the engine's media
+  fallback route (or a web-server-less install 404s every image for its own editors) and
+  `issueSessionMediaKey` on an unset `MEDIA_PATH` (or nobody can log in to fix it).
 - **`server.ts` response headers must be a `Headers` object**, not a `Record<string,string>`:
   an object key holds ONE `Set-Cookie`, so the media cookie would silently clobber the
   session cookie (login "breaks", and the tempting fix is to switch protection off — i.e.

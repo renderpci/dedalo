@@ -2080,15 +2080,28 @@ DEDALO_MEDIA_ACCESS_MODE `false | string`
 
 This parameter defines if the directory of the media files (av, images, pdf, subtitles, ...) will be protected and controlled for undesired/external access. The full documentation, with the architecture, use cases, web server configuration and examples, is in [Media protection (media file access control)](./media_protection.md).
 
-* `false` : no protection — media files are world-readable (default)
+* `'publication'` (**default**) : logged-in users access everything; anonymous users access only media of published records in the configured public quality folders (see `DEDALO_MEDIA_PUBLIC_QUALITIES`)
 * `'private'` : only logged-in Dédalo users can access media files
-* `'publication'` : logged-in users access everything; anonymous users access only media of published records in the configured public quality folders (see `DEDALO_MEDIA_PUBLIC_QUALITIES`)
+* `false` : no protection — media files are world-readable
+
+**The default is fail-closed, and that is deliberate.** Until 2026-08-24 an install that
+configured nothing served its whole media tree — unpublished records, master-quality
+originals, rights-restricted material — to anyone who could guess a URL. `'publication'`
+rather than `'private'` because on an install with no publications the two behave
+identically, while `'private'` would later 404 the archive's own published site the day
+diffusion writes its first marker.
+
+Setting `false` is still a real choice and is honoured — an operator who deliberately
+serves an open media tree said so. What is no longer honoured is silence.
+
+**nginx installs must reload** after this takes effect (`nginx -t && nginx -s reload`);
+the Apache `.htaccess` applies immediately. See the maintenance widget, which reports it.
 
 ```bash
-DEDALO_MEDIA_ACCESS_MODE=false
+DEDALO_MEDIA_ACCESS_MODE=publication
 ```
 
-*Default: (empty)*
+*Default: publication*
 
 ---
 

@@ -617,8 +617,10 @@ markers it never matches, so Rule A is the only door for unpublished media.
 
 **Fix.** Work outward from the file to the browser:
 
-1. Confirm the marker store exists and is readable by the web server, and that
-   it holds the value in `<private>/media_auth.json`:
+1. Confirm the marker store exists and is readable by the web server. It holds
+   one marker per LIVE SESSION, named by that session's cookie value (the
+   day-global `<private>/media_auth.json` is retired — boot renames it
+   `.migrated`):
 
     ```shell
     ls -l /srv/dedalo/media/.publication/auth/

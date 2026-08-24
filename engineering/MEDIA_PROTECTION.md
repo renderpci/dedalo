@@ -87,40 +87,64 @@ three classify one table of real filenames identically.
 ## 5. The cookie
 
 Fixed NAME (`dedalo_media_auth`), rotating VALUE (128-char sha512 hex). **The fixed name
-is what makes the generated rules static and lets nginx survive the daily rotation with no
+is what makes the generated rules static and lets nginx survive every rotation with no
 reload** — the rules never mention a value, only the marker whose filename IS the value.
 Never reintroduce rotating cookie names.
 
-Today's and yesterday's values are both valid, so sessions do not break at midnight, and a
-second login the same day RECYCLES rather than rotating every other editor out.
+**One value per SESSION** (2026-08-24). The marker set under `.publication/auth/` is a
+PROJECTION of the sessions table: `createSession` stores the key on the row,
+`issueSessionMediaKey()` mints it and lays the marker, and every way a session ends
+unlinks it. `src/core/security/session_media.ts` is the one door that does both halves —
+`endSession` (logout, expiry), `endUserSessions` (password reset, single-session
+eviction), `sweepExpiredSessions` (prune + orphan reconcile).
 
 Attributes (`server.ts mediaAuthCookieHeader`): `HttpOnly; SameSite=Lax; Path=/`, `Secure`
 under `SESSION_COOKIE_SECURE`, `Max-Age` = **the session idle window**
 (`SESSION_TTL_SECONDS`). HttpOnly still lets the browser attach it to `<img>`/`<video>`
 subresource loads — that is the whole mechanism.
 
-**The cookie's life is the SESSION's life (WC-051).** It is re-issued on any
-authenticated request whose cookie is missing or no longer today's value — a string
-compare against a day-cached value (`currentMediaAuthCookie()`, read-only: it never mints,
-never rotates, never rewrites the rule files, because it runs on every request). It was
-previously minted ONLY at login with a fixed `Max-Age=86400`, which failed in both
-directions: an editor logged in longer than a day kept a working session and lost the
-cookie, so **every media file 404'd while the app itself looked healthy** (with no
-publication markers, Rule A is the only door); and a cookie minted just before logout
-stayed a valid credential for up to 48 h with no session behind it. Logout still clears
-the browser cookie only — see below.
+**The cookie's life is the SESSION's life (WC-051).** It is re-issued on any authenticated
+request whose cookie is missing or is not this session's key — one string compare against
+a value already on the session row. It was previously minted ONLY at login with a fixed
+`Max-Age=86400`, which failed in both directions: an editor logged in longer than a day
+kept a working session and lost the cookie, so **every media file 404'd while the app
+itself looked healthy** (with no publication markers, Rule A is the only door); and a
+cookie minted just before logout stayed a valid credential with no session behind it.
 
-**The value is install-global**, not per-user: every logged-in editor shares today's value.
-Two consequences:
-- **Logout must never unlink the marker** — it clears the browser cookie only. Unlinking
-  would lock out every other editor.
-- A leaked value grants media read until the next daily rotation. That is the price of a
-  reload-free, zero-config web-server gate.
+Two populations are RE-KEYED on that path rather than re-issued: sessions predating the
+`media_key` column (the upgrade), and sessions created while protection was off on an
+install that has since switched it on. Re-keying lays a marker and updates the row; it
+must **never** call `writeRuleFiles()` — that is the authenticated hot path.
 
-**The auth store** (`<private>/media_auth.json`, mode 0600) persists today/yesterday across
-restarts. It must live OUTSIDE every served tree — a fetchable store lets anyone set the
-cookie and read the whole tree for up to 48 h. `writeAuthStore()` refuses to write it under
-the media root, and the tripwire pins that.
+### Why it used to be install-global, and what that cost
+
+Until 2026-08-24 the value was one per INSTALL per DAY: every logged-in editor held the
+identical cookie, today's and yesterday's both valid. Two rules followed, and both were
+written into the code:
+
+- *"Logout must never unlink the marker"* — unlinking the shared value would have logged
+  every other editor out of the media tree. So logout cleared the browser cookie only.
+- A leaked value therefore granted media read until the next daily rotation, **surviving
+  logout AND a password reset for up to ~48 hours**, entirely outside the session store's
+  reach. The reset flow, whose whole purpose is cutting off whoever holds a stolen token,
+  could not cut off that one.
+
+That is now inverted: logout unlinks THIS session's marker and no other, and
+`password_reset` goes through `endUserSessions`, so both credentials die together.
+
+**The auth store is retired.** `<private>/media_auth.json` held the day-global values; a
+fetchable one would have let anyone set the cookie and read the whole tree for ~48 h,
+which is why it lived outside every served root. There is no shared value to persist any
+more, so boot renames the file to `media_auth.json.migrated` once
+(`retireLegacyAuthStore`) rather than leaving credentials on disk to be restored from a
+backup years later.
+
+**The orphan sweep does NOT run at boot**, deliberately. The session store is repointable
+(`DEDALO_SESSION_DB_PATH`) and the media root is not: the update's smoke boot starts the
+candidate tree with an empty throwaway session store and the inherited `MEDIA_PATH`, so a
+boot reconcile would unlink every live editor's marker on the production tree — on every
+`bun run test:update` and every real update. It runs from the maintenance widget and after
+a prune, where the caller is definitionally holding the real store.
 
 ## 6. Modes and precedence
 
@@ -156,8 +180,32 @@ inputs are unchanged — never regenerate.
 
 `'off'` writes the **hardening-only** template. It must NEVER unlink the files: the media
 root is full of user-uploaded files, and an `.htaccess`-less media dir is one where Apache
-will execute an uploaded `.php`. The SEC-088 script-execution block and the marker-store
-deny are emitted in **every** mode.
+will execute an uploaded `.php`. The SEC-088 script-execution block, the MEDIA-03 response
+headers and the marker-store deny are emitted in **every** mode.
+
+### MEDIA-03: the response headers (2026-08-24)
+
+SVG is the one image format that is also a DOCUMENT, and this origin is the application
+origin. The generated rules emit `X-Content-Type-Options: nosniff` for the whole tree and
+split SVG into two populations from ONE definition, `src/core/media/svg_safety.ts`, which
+the Bun media route consumes too:
+
+- the **server-generated image envelope** (`<imageFolder>/…/svg/…/*.svg`) stays **inline**
+  with `script-src 'none'` — the edit view embeds it through `<object type="image/svg+xml">`
+  and needs same-origin `contentDocument` access, which a CSP `sandbox` would sever;
+- **every other** `.svg`/`.xml`/`.xsl`/`.xslt` is served `attachment` + `default-src 'none';
+  sandbox`;
+- `html|htm|xhtml|xht|shtml|swf|hta` are denied outright — no media model accepts them.
+
+Two things about this are load-bearing. The envelope lives one bucket directory BELOW its
+`svg/` segment, so a pattern anchoring the file directly inside `svg/` matches no real
+envelope and blanks every edit view. And **headers may not fail open**: without
+`mod_headers`, Apache cannot emit the CSP, so that branch DENIES the uploader-supplied
+population rather than serving it inline unprotected.
+
+Uploaded SVG is never refused or sanitized — refusing a curator's vector file is data
+loss, and the quarantine is what makes it inert. Active content in an upload is NOTICED in
+the log so it can be found. Wire contract: `WC-2026-08-24-media-svg-response-headers`.
 
 ### The nginx asymmetry — read this before switching modes
 
@@ -188,9 +236,9 @@ Note what does **not** need a reload: the daily cookie rotation.
   `rebuild_media_index` run.
 - **"All my images suddenly 404 but the app works"** is almost always Rule A: the browser is
   not sending a cookie whose value has a marker. Check, in order — `.publication/auth/`
-  holds today's value from `<private>/media_auth.json`; the browser actually holds
+  holds THIS SESSION's key (the `media_key` column on its row); the browser actually holds
   `dedalo_media_auth` (it is HttpOnly, so read it in DevTools → Application → Cookies, not
-  from JS); and `curl -H "Cookie: dedalo_media_auth=<today's value>" <a real media URL>`
+  from JS); and `curl -H "Cookie: dedalo_media_auth=<that session's key>" <a real media URL>`
   returns 200. If curl passes and the browser does not, the cookie is missing or stale, not
   the rules.
 - **The #1 misconfiguration** is an unset `MEDIA_PATH`: publishes succeed but anonymous
@@ -226,9 +274,28 @@ rule files (never hand-written ones) over a scratch media tree, then:
 | any protected file | `../../../etc/passwd`, short, non-hex, 128-hex non-marker | **404**, never 500 |
 | uploaded `.php` under the media root | valid | **denied — never executed** (also in mode `off`) |
 | AV file, `Range: bytes=0-99` | none | **206** + `Content-Range` |
+| any media file | any | `X-Content-Type-Options: nosniff` (MEDIA-03) |
+| raw uploaded `.svg` (`svg/…`) | valid | **200** + `Content-Disposition: attachment` + `Content-Security-Policy: default-src 'none'; sandbox` |
+| server-generated envelope (`<image>/…/svg/…/*.svg`) | valid | **200**, NO disposition, CSP with `script-src 'none'` — and the `<object>` edit view still renders |
+| `.xml` under the media root | valid | **200** + `attachment` + sandbox CSP |
+| uploaded `.html` / `.swf` under the media root | valid | **404 — denied outright** (also in mode `off`) |
 | published file, then `rm` its `pub/` marker | none | **404 on the very next request**; `touch` it back → 200 |
 
-**Status:** the Apache matrix above was run end-to-end and passes every row, including the
-`206` Range check and the `off`-mode hardening. The **nginx block is pattern-verified only**
+**Status (2026-08-24): the whole matrix, including the five MEDIA-03 header rows, was run
+end-to-end against a live Apache 2.4.66 AND a live nginx — the first time the nginx block
+has been executed rather than pattern-checked.** Both engines agree on every row: envelope
+inline with the script-blocking CSP, raw SVG and XML `attachment` + sandbox, `nosniff`
+everywhere, active documents 404, published/unpublished rule-B behaviour, rule A by cookie,
+hostile cookies denied, `.publication` denied, an unpublish taking effect on the very next
+request, and `Range: bytes=0-4` answering **206** on both.
+
+That run changed the implementation once, which is the argument for doing it: on Apache the
+active-document deny was written as `Require all denied` and answered **403**, confirming
+the file exists. In a `.htaccess` mod_rewrite runs in the FIXUP phase, i.e. AFTER
+authorization, so an authz denial answers first — the opposite of what the code assumed. It
+is now a `RewriteRule … [R=404,L]`, and both engines answer 404. Pattern gates cannot see
+this class of defect at all.
+
+Historic note: the **nginx block used to be pattern-verified only**
 (the tripwire compiles its regexes and pins the `^~`/named-capture traps) — it has not yet
 been run against a live nginx. Do that before the first nginx deployment.

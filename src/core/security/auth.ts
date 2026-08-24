@@ -22,13 +22,14 @@
 
 import { config } from '../../config/config.ts';
 import { sql } from '../db/postgres.ts';
+import { ARGON2_OPTIONS, needsPasswordRehash } from './argon2_params.ts';
 import { resolvePrincipal } from './permissions.ts';
+import { endUserSessions } from './session_media.ts';
 import {
 	buildAccountThrottleKey,
 	buildThrottleKey,
 	clearAttempts,
 	createSession,
-	destroyUserSessions,
 	isThrottled,
 	LOGIN_ACCOUNT_MAX_ATTEMPTS,
 	recordFailedAttempt,
@@ -218,9 +219,15 @@ export async function login(
 		}
 	}
 
-	// MEDIA ACCESS CONTROL, Rule A (PHP login::init_cookie_auth). Mints/recycles the
-	// daily media-auth cookie, lays its marker, and refreshes the generated web-server
-	// rules. Returns null when the mode is false — then this is a TOTAL no-op.
+	// MEDIA ACCESS CONTROL, Rule A (PHP login::init_cookie_auth). Mints THIS SESSION's
+	// media credential, lays its marker, and refreshes the generated web-server rules.
+	// Returns null when the mode is false — then this is a TOTAL no-op.
+	//
+	// PER SESSION since 2026-08-24. It used to mint one value per INSTALL per DAY, which
+	// is why logout could not revoke it (unlinking the shared marker would have logged
+	// every other editor out of the media tree) and why a stolen cookie outlived a
+	// password reset by up to ~48 hours. Now the value goes onto the session row below,
+	// and ending the session unlinks the marker — see security/session_media.ts.
 	//
 	// It lives HERE, beside createSession, and not in the login HANDLER, so that no
 	// future login door (SAML is a ledgered open item) can ship without it and leave its
@@ -230,11 +237,11 @@ export async function login(
 	// (CONVENTIONS §1 — a configured gate that cannot be written must not degrade into
 	// silently unprotected media), and doing it first means a throw leaves no orphan
 	// session behind. Divergence from PHP, recorded: PHP unlinked its cookie store on a
-	// rules-write failure — we do NOT. The markers are already laid, and deleting the
-	// store would rotate every other editor's cookie value out on the next login,
-	// revoking media access install-wide over a transient EPERM.
-	const { initMediaAuthCookie } = await import('../media/protection.ts');
-	const mediaAuthCookieValue = initMediaAuthCookie();
+	// rules-write failure — we do NOT. This session's marker is already laid, and there
+	// is no longer any shared value whose deletion could revoke media access
+	// install-wide over a transient EPERM.
+	const { issueSessionMediaKey } = await import('../media/protection.ts');
+	const mediaAuthCookieValue = issueSessionMediaKey();
 
 	// GLOBAL-ADMIN SESSION STAMP (PHP login sets $_SESSION['dedalo']['auth']
 	// ['is_global_admin'] from security::is_global_admin(), class.security.php
@@ -259,7 +266,10 @@ export async function login(
 	// regardless — that path is already covered in password_reset.ts.) Runs AFTER
 	// createSession, keeping the token just minted.
 	if (config.features.singleSession) {
-		destroyUserSessions(user.section_id, sessionToken);
+		// endUserSessions, not destroyUserSessions: an evicted session's MEDIA marker
+		// must go with it, or single-session mode would revoke the token while leaving
+		// the stolen media cookie working — the precise gap this policy exists to close.
+		endUserSessions(user.section_id, sessionToken);
 	}
 	await logLoginActivity('allow', 'correct user and password', username, clientIp, user.section_id);
 	return {

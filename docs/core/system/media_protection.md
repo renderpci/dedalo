@@ -33,9 +33,9 @@ publication state, so a diffusion failure can never lock editors out.
 | Module | Owns |
 |---|---|
 | `src/core/media/protection.ts` | The engine: mode resolution, the public-quality filter, the rule-file templates and their idempotent write, the `auth/` markers. |
-| `src/core/security/auth.ts` | The login hook `initMediaAuthCookie()` — mints or recycles the daily value, lays its marker, refreshes the rule files, returns the value to set. |
+| `src/core/security/auth.ts` | The login hook `issueSessionMediaKey()` — mints THIS SESSION's value, lays its marker, refreshes the rule files, returns the value to set (it is then stored on the session row). |
 | `src/server.ts` | Boot-time `writeRuleFiles()`, and the `Set-Cookie` assembly (`HttpOnly; SameSite=Lax; Path=/`, `Max-Age` = the session idle window, `Secure` when the session cookie is secure) — plus the per-request re-issue below. |
-| `currentMediaAuthCookie()` | The **read-only** accessor the re-issue uses: it never mints, rotates, or rewrites the rule files, because it runs on every authenticated request. |
+| `src/core/security/session_media.ts` | The one door that ENDS a session: `endSession` / `endUserSessions` / `sweepExpiredSessions` delete the row **and** unlink the marker it freed. Nothing in `src/` should call `destroySession` / `pruneExpiredSessions` directly. |
 | `src/diffusion/targets/mediastore/media_index.ts` | The rule-B marker **writer**: `pub/` and `dbs/`, and the `rebuild`/`reconcile` resync. |
 | `src/core/area_maintenance/widgets/media_control.ts` | The admin widget: status, the **root-only** mode switch, *Rebuild media index*. |
 
@@ -83,14 +83,15 @@ Other invariants the gates pin, each of which shipped as a real bug or a near mi
   literal `original`/`modified` plus this install's configured original quality per media type.
 * **The script-execution hardening and the marker-store deny are emitted in every mode,
   including `off`**, and `off` never unlinks a rule file.
-* **The auth store is never written under the media root.** It holds today's and yesterday's
-  cookie values in cleartext; serving it would hand any visitor a working cookie for 48 hours.
+* **The credential is per session, and the marker set is a projection of the sessions table.**
+  Every way a session ends unlinks its marker, which is what makes logout and a password reset
+  actually revoke media access.
 
 ## The cookie's life is the session's life
 
 The Rule-A cookie is **re-issued on any authenticated request** whose value is missing or is
-no longer today's, with `Max-Age` = `SESSION_TTL_SECONDS`. In the steady state that costs a
-string compare against a day-cached value — no store read, no write.
+not this session's key, with `Max-Age` = `SESSION_TTL_SECONDS`. In the steady state that costs
+one string compare against a value already on the session row — no filesystem read, no write.
 
 !!! danger "Why this is not an optimisation"
     The cookie used to be minted **only at login**, with a fixed `Max-Age=86400`, while the
@@ -107,8 +108,21 @@ string compare against a day-cached value — no store read, no write.
     Tying the two together removes both. Gate:
     `test/unit/media_protection_cookies.test.ts`.
 
-Logout still clears the browser cookie **only** — it must never unlink the marker, because the
-value is install-global and unlinking would lock out every other editor.
+## Logout revokes it (2026-08-24)
+
+Logging out unlinks **this session's** marker and no other, and a password reset unlinks every
+marker belonging to that user. Both go through `src/core/security/session_media.ts`.
+
+!!! danger "The rule this replaced, and what it cost"
+    The value used to be one per **install per day** — every logged-in editor held the
+    identical cookie. So logout could not unlink the marker (it would have logged every other
+    editor out of the media tree), and the price was that a stolen cookie kept working for up
+    to **48 hours** across a logout *and* a password reset, entirely outside the session
+    store's reach. A recovery flow whose whole purpose is to cut off whoever holds a stolen
+    token could not cut off one of the two credentials it had issued.
+
+    Making the value per-session is what makes revocation possible without collateral.
+    Gate: `test/unit/media_session_revocation_native.test.ts`.
 
 ## Related
 

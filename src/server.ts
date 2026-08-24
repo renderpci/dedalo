@@ -44,11 +44,20 @@ import { handleTagRequest } from './core/components/component_text_area/tag_endp
 import { provisionMediaTreeAtBoot } from './core/install/media_tree.ts';
 import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
 import {
-	currentMediaAuthCookie,
+	layAuthMarker,
 	MEDIA_AUTH_COOKIE,
+	mintAuthCookieValue,
 	resolveMediaAccessMode,
+	resolveMediaAccessModeDetail,
+	retireLegacyAuthStore,
 	writeRuleFiles,
 } from './core/media/protection.ts';
+import {
+	isImageEnvelopeSvg,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+} from './core/media/svg_safety.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -59,12 +68,14 @@ import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/exp
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
 import { DedaloError } from './core/errors/dedalo_error.ts';
+import { describeInstallAllowPolicy, installInProgress } from './core/install/gate.ts';
 import { HIERARCHY_IMPORT_DIR } from './core/install/paths.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
 import {
 	getSession,
 	SESSION_COOKIE,
 	SESSION_IDLE_TTL_SECONDS,
+	setSessionMediaKey,
 } from './core/security/session_store.ts';
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
@@ -135,10 +146,27 @@ const MEDIA_URL_PREFIX = `/dedalo/${config.mediaDir}/`;
  * socket), 'false' forces it off even in dev. With protection configured it is inert.
  */
 function mediaFallbackAllowed(context: RequestContext): boolean {
-	// (1) A configured gate is never bypassable — check it before the flag, so the flag
+	// (1) A CONFIGURED gate is never bypassable — check it before the flag, so the flag
 	// cannot re-open what an admin closed. Cheap on the hot path: the mode read only
 	// happens for requests actually addressed to the media prefix (see the call site).
-	if (resolveMediaAccessMode() !== false) return false;
+	//
+	// (!) 'CONFIGURED', not 'on'. Since 2026-08-24 an install that configured nothing
+	// resolves to the fail-closed default 'publication', and reading that as "a gate is
+	// in place" would stand this route down on every install with NO WEB SERVER in front
+	// of its media — the documented dev_quickstart flow — so every image, video and PDF
+	// would 404 for logged-in editors, with MEDIA_DEV_ROUTE_ENABLED unable to help
+	// (it is inert once a mode is set). A security default whose first effect is that
+	// teaches operators exactly one thing: how to switch it off. The DEFAULT stands this
+	// route down only where the generated rules are actually being read — i.e. where an
+	// operator made the choice.
+	const { mode, source } = resolveMediaAccessModeDetail();
+	if (mode !== false && source !== 'default') return false;
+	if (mode !== false && source === 'default' && context.devListener !== true) {
+		// The unconfigured default still refuses the SOCKET listener: there a web server
+		// IS in front, reading rules that now gate the tree, and this route would serve
+		// the same bytes with weaker checks.
+		return false;
+	}
 
 	const explicit = readEnv('MEDIA_DEV_ROUTE_ENABLED');
 	if (explicit === 'true') return true; // force-on, unprotected installs only
@@ -704,10 +732,20 @@ const COUNTERS_PATHS: ReadonlySet<string> = new Set([
  * `object-src` admits the envelope folder (core/api/static_asset.ts), a rotted
  * selection here is no longer backstopped by the app CSP.
  *
- * HONEST SCOPE: this is the Bun dev/fallback media route only. In the documented
- * production topology the web server serves media from the generated access
- * rules (core/media/protection.ts), which emit access control and NO headers —
- * so these guarantees do not hold there. Ledgered, not implied.
+ * SCOPE (2026-08-24): this is the Bun dev/fallback media route, and it is no
+ * longer the only enforcer. The generated Apache/nginx rules
+ * (core/media/protection.ts) now emit the SAME two header sets in the documented
+ * production topology, from the SAME definition — core/media/svg_safety.ts owns
+ * the selection rule, the CSPs and the disposition, and
+ * media_protection_tripwire pins that the generated rule text classifies a table
+ * of real paths exactly as this function does. Until that landed, the sentence
+ * here read "these guarantees do not hold there", and DECISION 2's closing
+ * requirement ("the production template must mirror the two path-scoped rules")
+ * was unpaid for six weeks.
+ *
+ * HONEST LIMIT: the tripwire proves the PATTERNS agree, not that Apache and
+ * nginx execute them as intended — that is the curl matrix in
+ * engineering/MEDIA_PROTECTION.md §9.
  *
  * @param relSegments media-root-relative path segments, e.g. ['image','svg','0','x.svg']
  * @param contentType the file's resolved MIME type
@@ -718,17 +756,68 @@ export function mediaSvgSafetyHeaders(
 ): Record<string, string> {
 	const isSvg = contentType.includes('svg');
 	if (!isSvg) return {};
-	const imageFolder = config.media.image.folder.replace(/^\//, '');
-	const isImageEnvelope = relSegments[0] === imageFolder && relSegments.includes('svg');
-	return isImageEnvelope
-		? {
-				'Content-Security-Policy':
-					"default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'; form-action 'none'; base-uri 'none'",
-			}
+	return isImageEnvelopeSvg(relSegments)
+		? { 'Content-Security-Policy': SVG_ENVELOPE_CSP }
 		: {
-				'Content-Disposition': 'attachment',
-				'Content-Security-Policy': "default-src 'none'; sandbox",
+				'Content-Disposition': SVG_QUARANTINE_DISPOSITION,
+				'Content-Security-Policy': SVG_QUARANTINE_CSP,
 			};
+}
+
+/**
+ * Say ONCE, at boot, when media protection is in force because nobody chose it.
+ *
+ * The fail-closed default (2026-08-24) changes what anonymous visitors can read on every
+ * install that never configured a mode, and on nginx it does so ONLY AFTER A RELOAD —
+ * Apache reads .htaccess per request, nginx reads its include at reload. An operator whose
+ * public site quietly starts 404ing images, or whose install keeps serving everything
+ * because nobody reloaded, must be able to find out why from the log rather than by
+ * bisecting a release. Silent security changes are how operators learn to distrust them.
+ *
+ * Advisory only: it never throws and never changes what is served.
+ */
+function announceUnconfiguredMediaProtection(): void {
+	const { mode, source } = resolveMediaAccessModeDetail();
+	if (source !== 'default' || mode === false) return;
+	console.warn(
+		`[media_protection] no media access mode is configured, so the FAIL-CLOSED DEFAULT '${mode}' applies: ` +
+			'logged-in users see everything; anonymous visitors see only media of PUBLISHED records in the ' +
+			'public quality folders. Apache picks this up immediately; NGINX NEEDS A RELOAD ' +
+			'(include both generated files, then `nginx -t && nginx -s reload`). Set ' +
+			'DEDALO_MEDIA_ACCESS_MODE explicitly — including to `false` — to make the choice yours.',
+	);
+}
+
+/**
+ * The media-auth cookie value this live session SHOULD be carrying, or null.
+ *
+ * Normally just the key already on the session row. The re-key branch exists for two
+ * real populations, both of which would otherwise hold a session with no media access
+ * at all and no way to get one short of logging out and back in:
+ *
+ *  - sessions that predate the `media_key` column (every session live across the
+ *    upgrade that introduced the per-session credential);
+ *  - sessions created while protection was off, on an install where an operator has
+ *    since switched it on from the maintenance widget.
+ *
+ * READ-MOSTLY, and the write it does is one zero-byte marker plus one UPDATE, once per
+ * session ever. It deliberately does NOT regenerate the rule files: that is a login/boot
+ * job, and doing it on the authenticated hot path would rewrite the whole gate under
+ * load.
+ */
+function sessionMediaKeyFor(
+	session: { mediaKey?: string | null } | null,
+	cookieHeader: string,
+): string | null {
+	if (session === null) return null;
+	if (typeof session.mediaKey === 'string' && session.mediaKey !== '') return session.mediaKey;
+	if (resolveMediaAccessMode() === false) return null;
+	const rawToken = readCookie(cookieHeader, SESSION_COOKIE);
+	if (rawToken === undefined) return null;
+	const minted = mintAuthCookieValue();
+	layAuthMarker(minted);
+	setSessionMediaKey(rawToken, minted);
+	return minted;
 }
 
 /**
@@ -1147,9 +1236,19 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			//
 			// Re-issuing here ties the two together by construction: same idle window,
 			// refreshed by the same requests, and dropped by the same logout. Only when
-			// the browser's value is actually stale — a string compare against a
-			// day-cached value, no store read — so the steady state costs nothing.
-			const expected = currentMediaAuthCookie();
+			// the browser's value is actually stale — one string compare against a value
+			// already on the session row, no filesystem read — so the steady state costs
+			// nothing.
+			//
+			// (2026-08-24) The expected value is now THIS SESSION's, not the install's
+			// value for today, which is what makes logout able to revoke it. Two states
+			// need re-keying rather than re-issuing, and both arrive here: a session
+			// created before the media_key column existed (the upgrade path), and one
+			// created while protection was off and later switched on from the widget.
+			// Re-keying lays a marker; it must NEVER call writeRuleFiles() — this is the
+			// authenticated hot path, and a rule-file writer here rewrites the whole gate
+			// under load.
+			const expected = sessionMediaKeyFor(apiContext.session, cookieHeader);
 			if (expected !== null && readCookie(cookieHeader, MEDIA_AUTH_COOKIE) !== expected) {
 				headers.append('Set-Cookie', mediaAuthCookieHeader(expected));
 			}
@@ -1660,6 +1759,13 @@ export async function startServer() {
 		// meantime. Config-hash guarded, so this is normally a no-op.
 		try {
 			writeRuleFiles();
+			announceUnconfiguredMediaProtection();
+			// One-shot migration: the day-global auth store is dead once the credential
+			// is per-session, and a file full of live-looking credentials left on disk is
+			// what gets restored from a backup years later. Renamed, not unlinked, so an
+			// operator debugging the upgrade can still see it. NOT a marker reconcile —
+			// see session_media.sweepExpiredSessions for why that must not run at boot.
+			retireLegacyAuthStore();
 		} catch (error) {
 			console.error(
 				'[media_protection] could not write the media rule files at boot — the media ' +

@@ -163,4 +163,44 @@ describe.skipIf(mediaRoot === null)('engine media fallback ↔ listener binding'
 		);
 		expect(response.status).toBe(404);
 	});
+	// -------------------------------------------------------------------------
+	// The FAIL-CLOSED DEFAULT must not close this route (2026-08-24)
+	// -------------------------------------------------------------------------
+
+	test('the UNCONFIGURED fail-closed default still serves the dev listener', async () => {
+		// Since the media default became 'publication', reading "a mode is set" as
+		// "a web server is enforcing it" would stand this route down on every install
+		// that configured nothing — the documented dev_quickstart flow, where there is
+		// NO web server in front of the media at all. Every image, video and PDF would
+		// 404 for logged-in editors, and MEDIA_DEV_ROUTE_ENABLED could not help (it is
+		// inert once a mode is set). The first thing a fresh operator would learn is
+		// how to switch the protection off.
+		//
+		// The distinction is the mode's SOURCE, not its value: no ts_state override and
+		// no env key means nobody chose, so the engine keeps serving here.
+		// Absence is spelled '' , not `delete`: readEnv merges process.env OVER the
+		// parsed ../private/.env, and this checkout's private file really does set the
+		// mode — deleting would uncover that value instead of unsetting the key.
+		setServerState({ media_access_mode: null });
+		const saved = process.env.DEDALO_MEDIA_ACCESS_MODE;
+		process.env.DEDALO_MEDIA_ACCESS_MODE = '';
+		process.env.DEDALO_PROTECT_MEDIA_FILES = '';
+		try {
+			expect(await get(true)).toBe(200);
+		} finally {
+			if (saved === undefined) delete process.env.DEDALO_MEDIA_ACCESS_MODE;
+			else process.env.DEDALO_MEDIA_ACCESS_MODE = saved;
+			delete process.env.DEDALO_PROTECT_MEDIA_FILES;
+		}
+	});
+
+	test('an EXPLICIT mode still stands the route down, on both listeners', async () => {
+		// The other half: where an operator DID choose, the generated web-server rules
+		// are authoritative and this route must never serve the same bytes with weaker
+		// checks (session-only, no per-record ACL).
+		setServerState({ media_access_mode: 'publication' });
+		expect(await get(true)).toBe(404);
+		expect(await get(false)).toBe(404);
+		setServerState({ media_access_mode: null });
+	});
 });

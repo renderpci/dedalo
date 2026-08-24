@@ -24,8 +24,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-	currentMediaAuthCookie,
-	initMediaAuthCookie,
+	issueSessionMediaKey,
 	MEDIA_AUTH_COOKIE,
 	overrideMediaProtectionPathsForTests,
 } from '../../src/core/media/protection.ts';
@@ -135,9 +134,6 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 			authStorePath: join(scratch, 'private', 'media_auth.json'),
 		});
 		setServerState({ media_access_mode: 'publication' });
-		// Lay the store + markers exactly as a login would, so the re-issue path has
-		// a value to serve.
-		initMediaAuthCookie();
 	});
 
 	afterEach(() => {
@@ -177,7 +173,32 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 			.getSetCookie()
 			.find((cookie) => cookie.startsWith(`${MEDIA_AUTH_COOKIE}=`));
 		expect(mediaCookie).toBeDefined();
-		expect(mediaCookie).toContain(`${MEDIA_AUTH_COOKIE}=${currentMediaAuthCookie()}`);
+		// The value is the session's OWN key. A session created three-arity (as every
+		// harness and every pre-upgrade session is) carries none, so the re-issue path
+		// mints one, lays its marker and stores it — otherwise those sessions would hold
+		// a valid token and no media access at all, with no way to get one but to log
+		// out and back in.
+		expect(mediaCookie).toMatch(new RegExp(`${MEDIA_AUTH_COOKIE}=[a-f0-9]{128}`));
+	});
+
+	test('a re-keyed session KEEPS its key — it is not re-minted on every request', async () => {
+		const token = createSession(-1, 'root', true);
+		const first = await authenticatedRequest(token, `${SESSION_COOKIE}=${token}`);
+		const issued = first.headers
+			.getSetCookie()
+			.find((cookie) => cookie.startsWith(`${MEDIA_AUTH_COOKIE}=`))
+			?.slice(MEDIA_AUTH_COOKIE.length + 1)
+			.split(';')[0];
+		expect(issued).toMatch(/^[a-f0-9]{128}$/);
+		// Second request, now carrying it: nothing to re-issue, and the marker stands.
+		const second = await authenticatedRequest(
+			token,
+			`${SESSION_COOKIE}=${token}; ${MEDIA_AUTH_COOKIE}=${issued}`,
+		);
+		expect(second.headers.getSetCookie().some((c) => c.startsWith(`${MEDIA_AUTH_COOKIE}=`))).toBe(
+			false,
+		);
+		expect(existsSync(join(scratch, 'media', '.publication', 'auth', String(issued)))).toBe(true);
 	});
 
 	test('the re-issued Max-Age is the SESSION idle window, not a fixed day', async () => {
@@ -195,9 +216,9 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 	test('a session already holding the CURRENT value gets no redundant Set-Cookie', async () => {
 		// Steady state is every request after the first: re-sending the identical
 		// cookie on each one would be pure header weight.
-		const token = createSession(-1, 'root', true);
-		const current = currentMediaAuthCookie();
+		const current = issueSessionMediaKey();
 		expect(current).not.toBeNull();
+		const token = createSession(-1, 'root', true, current);
 
 		const response = await authenticatedRequest(
 			token,
@@ -209,8 +230,9 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 	});
 
 	test('a STALE value is replaced — the day-old-cookie 404 bug', async () => {
-		const token = createSession(-1, 'root', true);
-		const stale = 'f'.repeat(128); // well-formed, but not today's value
+		const own = issueSessionMediaKey();
+		const token = createSession(-1, 'root', true, own);
+		const stale = 'f'.repeat(128); // well-formed, but not this session's value
 		const response = await authenticatedRequest(
 			token,
 			`${SESSION_COOKIE}=${token}; ${MEDIA_AUTH_COOKIE}=${stale}`,
@@ -221,7 +243,7 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 			.find((cookie) => cookie.startsWith(`${MEDIA_AUTH_COOKIE}=`));
 		expect(mediaCookie).toBeDefined();
 		expect(mediaCookie).not.toContain(stale);
-		expect(mediaCookie).toContain(`${MEDIA_AUTH_COOKIE}=${currentMediaAuthCookie()}`);
+		expect(mediaCookie).toContain(`${MEDIA_AUTH_COOKIE}=${own}`);
 	});
 
 	test('an UNAUTHENTICATED request is never handed a media credential', async () => {
@@ -244,19 +266,16 @@ describe('WC-051: the media-auth cookie is re-issued for a live session', () => 
 		);
 	});
 
-	test('currentMediaAuthCookie NEVER writes — it runs on every authenticated request', async () => {
-		// A writer on this path would rewrite the whole gate (markers + Apache/nginx
-		// rule files) under load. Prove it by removing the store and confirming that
-		// a read does not recreate it.
-		const storePath = join(scratch, 'private', 'media_auth.json');
-		expect(existsSync(storePath)).toBe(true);
-		rmSync(storePath);
-		// Re-point the seam to drop the day cache, so this reads from disk.
-		overrideMediaProtectionPathsForTests({
-			mediaRoot: join(scratch, 'media'),
-			authStorePath: storePath,
-		});
-		expect(currentMediaAuthCookie()).toBeNull();
-		expect(existsSync(storePath)).toBe(false);
+	test('the re-issue read path NEVER regenerates the rule files', async () => {
+		// A rule-file writer on this path would rewrite the whole gate (Apache + nginx
+		// + the http{} map) on every authenticated request, under load. Re-keying may
+		// lay ONE marker; it may not touch the generated rules.
+		const key = issueSessionMediaKey();
+		const token = createSession(-1, 'root', true, key);
+		const htaccess = join(scratch, 'media', '.htaccess');
+		expect(existsSync(htaccess)).toBe(true);
+		rmSync(htaccess);
+		await authenticatedRequest(token, `${SESSION_COOKIE}=${token}; ${MEDIA_AUTH_COOKIE}=${key}`);
+		expect(existsSync(htaccess)).toBe(false);
 	});
 });

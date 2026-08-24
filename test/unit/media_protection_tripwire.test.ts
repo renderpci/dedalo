@@ -28,14 +28,24 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { config } from '../../src/config/config.ts';
 import {
 	buildHtaccess,
 	buildNginxConf,
+	buildNginxMap,
 	filterPublicQualities,
 	getPublicQualities,
 	MEDIA_AUTH_COOKIE,
 } from '../../src/core/media/protection.ts';
+import {
+	MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+} from '../../src/core/media/svg_safety.ts';
 import { makeMarkerKey } from '../../src/diffusion/targets/mediastore/media_index.ts';
+import { mediaSvgSafetyHeaders } from '../../src/server.ts';
 
 /** The quality folders every generated rule set in this test allows. */
 const QUALITIES = [
@@ -289,5 +299,230 @@ describe('media protection: the fail-closed constants', () => {
 
 	test('the auth cookie NAME is fixed — rotating names would need a web-server reload', () => {
 		expect(MEDIA_AUTH_COOKIE).toBe('dedalo_media_auth');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The FOURTH lockstep axis: the MEDIA-03 response headers (2026-08-24)
+// ---------------------------------------------------------------------------
+
+/**
+ * SVG is the one image format that is also a DOCUMENT, and the media origin is the
+ * application origin. The rule for which SVG population may be served inline is now
+ * implemented for THREE consumers — the Bun media route (`mediaSvgSafetyHeaders`), the
+ * generated Apache text and the generated nginx map — and a fourth definition of the
+ * same rule is exactly the drift this file exists to catch. The rule itself lives in
+ * ONE place, src/core/media/svg_safety.ts; these tests pull the patterns back out of
+ * the generated web-server text, compile them, and assert that both generators
+ * classify a table of REAL paths exactly as the route function does.
+ *
+ * Why the table is paths and not extensions: the envelope really lives one bucket
+ * directory below its `svg/` segment (`image/svg/0/rsc29_rsc170_1.svg`). A pattern
+ * anchoring the file directly inside `svg/` compiles, looks right, matches no real
+ * envelope, and blanks every `<object type="image/svg+xml">` edit view on every
+ * Apache/nginx install. That is the failure this table is shaped to catch.
+ *
+ * HONEST LIMIT (the same one as above): this proves the PATTERNS agree, not that
+ * Apache's `<If>`/`<FilesMatch>` merge order or nginx's map evaluation behave as
+ * intended. Those are the four header rows of the curl matrix in
+ * engineering/MEDIA_PROTECTION.md §9.
+ */
+describe('media protection: the MEDIA-03 response headers stay in lockstep', () => {
+	const MEDIA_URL = `/dedalo/${config.mediaDir}`;
+	const IMAGE_FOLDER = config.media.image.folder.replace(/^\/+/, '').replace(/\/+$/, '');
+
+	/** media-root-relative segments → the URI the web server sees. */
+	const uriOf = (relSegments: readonly string[]): string => `${MEDIA_URL}/${relSegments.join('/')}`;
+
+	const CASES: { what: string; rel: string[]; type: string }[] = [
+		{
+			what: 'a server-generated image envelope (inline, script-free CSP)',
+			rel: [IMAGE_FOLDER, 'svg', '0', 'rsc29_rsc170_1.svg'],
+			type: 'image/svg+xml',
+		},
+		{
+			what: 'an envelope below a non-empty initial media path',
+			rel: [IMAGE_FOLDER, 'sub', 'svg', '12', 'rsc29_rsc170_9.svg'],
+			type: 'image/svg+xml',
+		},
+		{
+			what: 'a raw uploaded vector (attachment + sandbox)',
+			rel: ['svg', 'web', '0', 'svg29_svg170_1.svg'],
+			type: 'image/svg+xml',
+		},
+		{
+			what: 'an SVG in an image quality folder that is NOT the envelope folder',
+			rel: [IMAGE_FOLDER, '1.5MB', '0', 'rsc29_rsc170_1.svg'],
+			type: 'image/svg+xml',
+		},
+		{
+			what: 'a raster (no SVG headers at all)',
+			rel: [IMAGE_FOLDER, '1.5MB', '0', 'rsc29_rsc170_1.jpg'],
+			type: 'image/jpeg',
+		},
+	];
+
+	/** Compile the envelope PCRE out of the generated Apache `<If>` line. */
+	function apacheEnvelopePattern(): RegExp {
+		const line = HTACCESS.split('\n').find((l) => l.includes('%{REQUEST_URI} =~ m#'));
+		if (line === undefined) throw new Error('the MEDIA-03 <If> is missing from the .htaccess');
+		const match = /=~ m#(.+?)#">$/.exec(line.trim());
+		if (match?.[1] === undefined) throw new Error(`could not extract the Apache <If>: ${line}`);
+		return new RegExp(match[1]);
+	}
+
+	/** Compile the quarantine extension pattern out of the generated Apache text. */
+	function apacheQuarantinePattern(): RegExp {
+		const line = HTACCESS.split('\n').find(
+			(l) =>
+				l.includes('<FilesMatch') &&
+				l.includes('Content-Disposition') === false &&
+				l.includes('svg|'),
+		);
+		if (line === undefined) throw new Error('the MEDIA-03 <FilesMatch> is missing');
+		const match = /<FilesMatch "\(\?i\)(.+?)">/.exec(line.trim());
+		if (match?.[1] === undefined) throw new Error(`could not extract the FilesMatch: ${line}`);
+		return new RegExp(match[1], 'i');
+	}
+
+	/** Compile one nginx `map` block into an ordered list of [pattern, value]. */
+	function nginxMapEntries(variable: string): { pattern: RegExp; value: string }[] {
+		const text = buildNginxMap();
+		const start = text.indexOf(`map $uri $${variable} {`);
+		if (start < 0) throw new Error(`the ${variable} map is missing from the generated map file`);
+		const body = text.slice(start, text.indexOf('\n}', start));
+		const entries: { pattern: RegExp; value: string }[] = [];
+		for (const line of body.split('\n').slice(1)) {
+			const match = /^\s*"~(.+?)"\s+"(.*)";$/.exec(line);
+			if (match?.[1] !== undefined && match[2] !== undefined) {
+				entries.push({ pattern: new RegExp(match[1]), value: match[2] });
+			}
+		}
+		if (entries.length === 0) throw new Error(`the ${variable} map compiled to no entries`);
+		return entries;
+	}
+
+	/** nginx map semantics: FIRST matching regex wins; no match ⇒ the default. */
+	function nginxMapValue(variable: string, uri: string): string {
+		for (const { pattern, value } of nginxMapEntries(variable)) {
+			if (pattern.test(uri)) return value;
+		}
+		return '';
+	}
+
+	for (const testCase of CASES) {
+		test(`${testCase.what}: route, Apache and nginx agree`, () => {
+			const uri = uriOf(testCase.rel);
+			const routeHeaders = mediaSvgSafetyHeaders(testCase.rel, testCase.type);
+			const expectedCsp = routeHeaders['Content-Security-Policy'] ?? '';
+			const expectedDisposition = routeHeaders['Content-Disposition'] ?? '';
+
+			// nginx: the two maps ARE the classification, so they must equal the route.
+			expect(nginxMapValue('dedalo_svg_csp', uri)).toBe(expectedCsp);
+			expect(nginxMapValue('dedalo_svg_disposition', uri)).toBe(expectedDisposition);
+
+			// Apache: the <FilesMatch> sets the quarantine pair, the <If> overrides it
+			// for the envelope. Reconstruct that merge and compare the same way.
+			const quarantined = apacheQuarantinePattern().test(uri);
+			const isEnvelope = apacheEnvelopePattern().test(uri);
+			const apacheCsp = isEnvelope ? SVG_ENVELOPE_CSP : quarantined ? SVG_QUARANTINE_CSP : '';
+			const apacheDisposition = isEnvelope ? '' : quarantined ? SVG_QUARANTINE_DISPOSITION : '';
+			expect(apacheCsp).toBe(expectedCsp);
+			expect(apacheDisposition).toBe(expectedDisposition);
+		});
+	}
+
+	test('ANTI-VACUITY: the case table really exercises both verdicts', () => {
+		// A table that only ever produced one verdict would pass against a generator
+		// that classified everything identically — the exact bug this axis exists for.
+		const verdicts = new Set(
+			CASES.map((c) => JSON.stringify(mediaSvgSafetyHeaders(c.rel, c.type))),
+		);
+		expect(verdicts.size).toBe(3); // envelope / quarantine / no headers
+	});
+
+	test('the nginx envelope pattern is tested BEFORE the extension pattern', () => {
+		// nginx map regexes are evaluated in order and an envelope is also an `.svg`.
+		// Reversed, every envelope becomes an attachment and the edit view goes blank.
+		for (const variable of ['dedalo_svg_csp', 'dedalo_svg_disposition']) {
+			const entries = nginxMapEntries(variable);
+			// The envelope entry is the PATH-anchored one; the quarantine entry keys on
+			// the extension alone. (Do not match on 'svg/': RegExp.source escapes the
+			// slash, so the needle would never be found and the test would be vacuous.)
+			const envelopeIndex = entries.findIndex((e) => e.pattern.source.startsWith('^'));
+			const extensionIndex = entries.findIndex((e) => e.pattern.source.startsWith('\\.'));
+			expect(envelopeIndex).toBeGreaterThanOrEqual(0);
+			expect(extensionIndex).toBeGreaterThan(envelopeIndex);
+		}
+	});
+
+	test('EVERY byte-serving nginx location carries the full header set, in every mode', () => {
+		// add_header does NOT inherit into a location that declares any add_header of
+		// its own, so there is no server-level shortcut: a location that serves bytes
+		// and omits these serves them bare.
+		for (const mode of ['off', 'private', 'publication'] as const) {
+			const text = buildNginxConf(mode, mode === 'publication' ? QUALITIES : []);
+			const serving = text
+				.split('\n')
+				.filter((l) => l.startsWith('location') && !l.includes('deny all'));
+			expect(serving.length).toBeGreaterThan(0);
+			// Split on the LINE START only — the word 'location' also occurs in the
+			// generated prose, and splitting on the bare word invents empty blocks.
+			const blocks = text.split('\nlocation ').slice(1);
+			for (const block of blocks) {
+				if (block.includes('deny all')) continue; // a deny location serves no bytes
+				expect(block).toContain('add_header X-Content-Type-Options');
+				expect(block).toContain('add_header Content-Disposition $dedalo_svg_disposition');
+				expect(block).toContain('add_header Content-Security-Policy $dedalo_svg_csp');
+			}
+		}
+	});
+
+	test('the headers cannot FAIL OPEN when mod_headers is absent', () => {
+		// Without mod_headers the CSP simply is not emitted. An install in that state
+		// must refuse the uploader-supplied population, not serve it inline unprotected.
+		expect(HTACCESS).toContain('<IfModule !mod_headers.c>');
+		const branch = HTACCESS.slice(
+			HTACCESS.indexOf('<IfModule !mod_headers.c>'),
+			HTACCESS.indexOf('# Protect working files'),
+		);
+		expect(branch).toContain('Require all denied');
+		expect(branch).toContain('Require all granted'); // the envelope stays reachable
+	});
+
+	test('the Apache <If> is merged AFTER the <FilesMatch> it overrides', () => {
+		// Apache merges <If> last; if the envelope override were emitted first the
+		// FilesMatch would win and every envelope would be an attachment.
+		expect(HTACCESS.indexOf('<FilesMatch "(?i)\\.(svg|')).toBeLessThan(
+			HTACCESS.indexOf('%{REQUEST_URI} =~ m#'),
+		);
+	});
+
+	test('active-document extensions are DENIED on both surfaces, in every mode', () => {
+		// Nothing legitimate under the media root is named .html/.swf/.hta — no media
+		// model's allowedExtensions list contains one. These are refused, not quarantined.
+		for (const extension of MEDIA_ACTIVE_DOCUMENT_EXTENSIONS) {
+			expect(buildHtaccess('off', [], [])).toContain(extension);
+			expect(buildNginxConf('off', [])).toContain(extension);
+		}
+	});
+
+	test('the nginx map carries its own config hash (it is no longer static)', () => {
+		// It used to be written only when ABSENT. Now that the server block references
+		// variables the map defines, an install that keeps an old map cannot reload
+		// nginx at all — so the map must be rewritten on drift like the other two.
+		expect(buildNginxMap()).toContain('# config-hash: ');
+	});
+	test('the auth marker directory is created 0750, never world-listable', () => {
+		// The FILENAMES in that directory are live media credentials: a 0755 marker dir
+		// hands every local user a working cookie by `ls`. This used to be pinned
+		// indirectly by the MEDIA_DIR_MODE census, which scans for inline mkdir mode
+		// LITERALS — the per-session credential gave the directory a second creator, so
+		// the mode became one named constant and left that census with nothing to see.
+		// Pin the value here instead of leaving the blind spot open.
+		const source = readFileSync('src/core/media/protection.ts', 'utf8');
+		expect(source).toContain('const AUTH_MARKER_DIR_MODE = 0o750;');
+		const inlineModes = source.match(/mkdirSync\([^)]*mode:\s*0o\d+/g) ?? [];
+		expect(inlineModes).toEqual([]); // every creator goes through the constant
 	});
 });

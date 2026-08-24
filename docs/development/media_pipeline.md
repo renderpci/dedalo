@@ -265,17 +265,18 @@ generates the rule files (`buildHtaccess()` / `buildNginxConf()`, written by
 
 | Mode | Logged-in users (rule A) | Anonymous (rule B) |
 | --- | --- | --- |
-| `false` | media world-readable | — |
+| `false` | media world-readable (an EXPLICIT opt-out; **unset now resolves to `'publication'`**) | — |
 | `'private'` | ✓ (cookie + `auth/` marker) | — |
 | `'publication'` | ✓ | ✓ — **public qualities only**, when published |
 
-- **Rule A** — logged-in users carry the fixed-name, daily-rotated
-  `dedalo_media_auth` cookie, minted at login by `initMediaAuthCookie()`
+- **Rule A** — logged-in users carry the fixed-name `dedalo_media_auth` cookie,
+  whose value is minted PER SESSION at login by `issueSessionMediaKey()`
   (`src/core/media/protection.ts`, called from `src/core/security/auth.ts` and set
   as a second `Set-Cookie` in `src/server.ts`). Its value must exist as a zero-byte
-  marker in `.publication/auth/` (today + yesterday are valid, which is what makes
-  the rotation seamless). Rule A is engine-owned and independent of publication
-  state, so a diffusion failure can never lock editors out.
+  marker in `.publication/auth/`, and ending the session unlinks that marker — the
+  marker set is a projection of the sessions table. Rule A is engine-owned and
+  independent of publication state, so a diffusion failure can never lock editors
+  out.
 - **Rule B** — anonymous publication access is limited to the allowlisted
   **public qualities** (`getPublicQualities()`; `original`/`modified` masters are
   always refused) and only when a `.publication/pub/{section_tipo}_{section_id}`
