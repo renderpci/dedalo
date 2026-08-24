@@ -23,26 +23,6 @@ export interface UpdatePreconditions {
 }
 
 /**
- * Run the required checks in PHP order (superuser first, then maintenance
- * mode) and compute the backup warning. A REQUIRED check that fails THROWS
- * (engineering/ERRORS_SPEC.md §4 — a refusal is a typed throw, never a body):
- * `perm.superuser_required` for a non-superuser (403; operator-disclosure, the
- * sentence stays in the log by design), `maintenance.mode_required` for a
- * server that is not in maintenance mode (409, operator — the registry sentence
- * names the switch to flip).
- *
- * `backupWarn: false` skips the backup scan for callers whose response is
- * byte-frozen (update_data_version). `backupDir` is a test seam; production
- * callers use the configured dir.
- *
- * `backupRequire: true` (code update, 2026-08-23) turns the same scan into a
- * REFUSAL: a code swap replaces the whole tree and its rollback contract leans
- * on a restorable state, so "no backup / stale backup" is `update.refused`,
- * not a warning. The warn path above stays byte-frozen — update_data_version's
- * responses are pinned. The refusal is waived ONLY by an explicit
- * `waive_backup: true` in the request, which the CALLER must log loudly.
- */
-/**
  * The ONE backup-freshness verdict, shared by the refusal below and the
  * update_code panel's `backup_fresh` check (core/update/status.ts).
  *
@@ -77,6 +57,26 @@ function staleBackupFinding(backupDir?: string): string | null {
 	return null;
 }
 
+/**
+ * Run the required checks in PHP order (superuser first, then maintenance
+ * mode) and compute the backup warning. A REQUIRED check that fails THROWS
+ * (engineering/ERRORS_SPEC.md §4 — a refusal is a typed throw, never a body):
+ * `perm.superuser_required` for a non-superuser (403; operator-disclosure, the
+ * sentence stays in the log by design), `maintenance.mode_required` for a
+ * server that is not in maintenance mode (409, operator — the registry sentence
+ * names the switch to flip).
+ *
+ * `backupWarn: false` skips the backup scan for callers whose response is
+ * byte-frozen (update_data_version). `backupDir` is a test seam; production
+ * callers use the configured dir.
+ *
+ * `backupRequire: true` (code update, 2026-08-23) turns the same scan into a
+ * REFUSAL: a code swap replaces the whole tree and its rollback contract leans
+ * on a restorable state, so "no backup / stale backup" is `update.refused`,
+ * not a warning. The warn path above stays byte-frozen — update_data_version's
+ * responses are pinned. The refusal is waived ONLY by an explicit
+ * `waive_backup: true` in the request, which the CALLER must log loudly.
+ */
 export function checkUpdatePreconditions(
 	principal: Principal,
 	options: { backupWarn?: boolean; backupDir?: string; backupRequire?: boolean } = {},
