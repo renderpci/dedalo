@@ -1036,6 +1036,15 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 	const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
 	const release_dir	= `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`
 
+	// THE DEVELOPER CHANNEL'S REF IS THE SERVER'S CHECKED-OUT BRANCH. The
+	// server sends it as source.branch; source.release_ref is the master
+	// channel's ref, and a branch equal to it publishes nothing new.
+	const source		= (code_server && code_server.source) || {}
+	const release_ref	= source.release_ref || 'master'
+	const dev_branch	= (source.branch && source.branch!==release_ref && source.branch!=='HEAD')
+		? source.branch
+		: null
+
 	const channels = {
 		master : {
 			// the panel's main publishing action — filled (widget_kit .primary)
@@ -1050,10 +1059,16 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 			// secondary, but still unmistakably a control (see .build_action button)
 			button_class	: 'light',
 			submit_label	: get_label.update_code_build_developer || 'Build developer release',
-			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of version %s will be created from branch 'v7' as: %s The master build of the same version is kept.")
+			// %branch% is NAMED, not positional: the branch appears in a
+			// different place in each translated sentence, and a third '%s'
+			// would land wherever that language happens to put it.
+			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of version %s will be created from branch '%branch%' as: %s The master build of the same version is kept.")
 				.replace('%s', version)
-				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`),
-			branch			: 'v7'
+				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`)
+				// LAST: a branch name may legally contain '%s', and substituting it
+				// first would hand the positional pass a token of its own.
+				.replaceAll('%branch%', String(dev_branch)),
+			branch			: dev_branch
 		}
 	}
 
@@ -1061,6 +1076,20 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 
 		const def = channels[channel]
 		if (!def) {
+			return
+		}
+
+		// A DEVELOPER BUILD IS A BUILD OF THE BRANCH THIS SERVER HAS CHECKED
+		// OUT — never a branch name baked into the client. The hardcoded 'v7'
+		// refused on every server that does not carry that branch ("Could not
+		// read src/core/update/version.ts at ref 'v7'"). When HEAD IS the
+		// release ref there is no development work to publish, and a
+		// '<v>-dev.zip' that is byte-identical to the master build would be a
+		// lie: the row says so instead of offering a button.
+		if (channel==='dev' && !dev_branch) {
+			node.classList.add('none')
+			node.textContent = get_label.update_code_build_developer_unavailable
+				|| 'No developer branch: this code server has the release branch checked out'
 			return
 		}
 

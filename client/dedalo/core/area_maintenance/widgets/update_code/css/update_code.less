@@ -91,6 +91,13 @@
 					text-transform: none;
 					letter-spacing: normal;
 
+					// a channel with no branch to build: stated, not blank —
+					// the same muted-italic voice as an unbuilt artifact cell
+					&.none {
+						color: var(--fg_muted);
+						font-style: italic;
+					}
+
 					// the form wrapper must not eat the cell (build_form emits a
 					// <form> around the button)
 					>.form_container {

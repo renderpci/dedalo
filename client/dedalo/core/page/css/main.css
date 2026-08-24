@@ -16773,6 +16773,10 @@ dd-modal:has(.tool_header) {
   text-transform: none;
   letter-spacing: normal;
 }
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action.none {
+  color: var(--fg_muted);
+  font-style: italic;
+}
 .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action > .form_container {
   width: 100%;
   margin: 0px;
