@@ -14,6 +14,8 @@ Core Dédalo API for the section/record lifecycle and page context. It is the AP
 
 - `source` and `sqo` are central: when one is missing, the server builds a sensible default from the `source` metadata.
 - For file uploads, use `multipart/form-data`; the media ingest branch of the API path (`src/server.ts`) handles them, not the JSON dispatcher.
+- **Envelope v2.** Success is `{ ok: true, request_id, data, … }` — the payload lives in `data` and nowhere else; keys a client reads by their own name (`environment`, `table`, …) ride at the top level as **extension keys**. A refusal is `{ ok: false, request_id, error: { code, category, message, label_key, retryable } }` and carries the registry's HTTP status. The v1 `{ result, msg, errors }` shape was removed on 2026-08-16 and `result` is a **forbidden** top-level key.
+- **`section_id` is an int.** A matrix record address is a safe integer, negatives included (`-1` is the root/superuser record). A numeric string still coerces at the boundary but is deprecated and counted; a value that addresses no record refuses as `section_id.not_an_address`.
 
 ## start
 
@@ -30,11 +32,11 @@ Initialize the application, retrieve environment and session state.
 
 ### Returns
 
-`{ result: true|false, msg: string, environment: {...} }`
+`{ ok: true, request_id, data: { context: [ … ], data: [] }, environment: { page_globals, plain_vars, get_label } }`. `environment` is a top-level extension key, not part of `data`.
 
 ### Usage
 
-Typically called on page load. Sets up session, checks recovery mode, and returns environment data.
+Typically called on page load. `data.context` describes the element the client is to mount; `data.data` is always empty here.
 
 ### Example Request
 
@@ -53,13 +55,14 @@ Typically called on page load. Sets up session, checks recovery mode, and return
 
 ```json
 {
-  "result": { "context": [ /* section/menu element contexts */ ], "data": [] },
-  "environment": { "page_globals": {}, "plain_vars": {}, "labels": {} },
-  "msg": "OK"
+  "ok": true,
+  "request_id": "c0ffea00",
+  "data": { "context": [ /* section/menu element contexts */ ], "data": [] },
+  "environment": { "page_globals": {}, "plain_vars": {}, "get_label": {} }
 }
 ```
 
-> Unauthenticated `start` returns the login element context (this is what renders the login form). The environment block is built by `src/core/resolve/environment.ts`.
+> Unauthenticated `start` returns the **login** element context (this is what renders the login form) — or, on a fresh unconfigured machine, the **installer** element context, which keeps the wizard mounted across the restart that follows persisting the configuration. The environment block is built by `src/core/resolve/environment.ts`.
 
 ## read
 
@@ -84,7 +87,7 @@ Retrieve record/component data with optional filtering.
 
 ### Returns
 
-`{ result: { context: [...], data: [...] }, msg: string }` — the section (or component) structure contexts plus the resolved records.
+`{ ok: true, request_id, data: { context: [ … ], data: [ … ] } }` — the section (or component) structure contexts plus the resolved records. Note the nesting: the read's own `{context, data}` pair **is** the envelope's `data`.
 
 ### Usage
 
@@ -98,7 +101,7 @@ Core method for reading record data. Can fetch full section data or a single com
   "action": "read",
   "source": {
     "section_tipo": "rsc167",
-    "section_id": 1,
+    "section_id": 528,
     "action": null
   },
   "sqo": {
@@ -112,13 +115,14 @@ Core method for reading record data. Can fetch full section data or a single com
 
 ```json
 {
-  "result": {
+  "ok": true,
+  "request_id": "c0ffea01",
+  "data": {
     "context": [ /* structure contexts */ ],
     "data": [
-      { "section_id": 1, "section_tipo": "rsc167", "tipo": "oh1", "value": ["Sample Title"] }
+      { "section_id": 528, "section_tipo": "rsc167", "tipo": "rsc36", "value": ["Sample transcription"] }
     ]
-  },
-  "msg": "OK"
+  }
 }
 ```
 
@@ -141,11 +145,11 @@ Note: `read_raw` reads its identifiers from **`options`** (not `source`), matchi
 
 ### Returns
 
-`{ result: [...], table: string, msg: string }` — the raw stored value(s) for the SQO's matched records.
+`{ ok: true, request_id, data: [ … ], table: "<matrix table>" }` — `data` is the raw stored value(s) for the SQO's matched records; `table` is a top-level extension key the raw view reads by name.
 
 ### Usage
 
-Returns raw stored data for the SQO's matched records. Read requires level ≥ 1 on every SQO target section.
+Read requires level ≥ 1 on every SQO target section. A missing `options.section_tipo` or `options.tipo` refuses with `request.invalid_source`; an insufficient grant with `perm.denied`.
 
 ### Example Request
 
@@ -168,9 +172,10 @@ Returns raw stored data for the SQO's matched records. Read requires level ≥ 1
 
 ```json
 {
-  "result": [ /* raw stored values per matched record */ ],
-  "table": "matrix",
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffea02",
+  "data": [ /* raw stored values per matched record */ ],
+  "table": "matrix"
 }
 ```
 
@@ -187,11 +192,11 @@ Create a new record in a section.
 
 ### Returns
 
-`{ result: <new section_id>, msg: string }`
+`{ ok: true, request_id, data: <new section_id> }` — an int.
 
 ### Usage
 
-Creates a new blank record and returns its `section_id`. Requires permission level ≥ 2 on the section.
+Creates a new blank record. Requires permission level ≥ 2 on the section (`perm.denied` otherwise); a missing `source.section_tipo` refuses with `request.invalid_source`.
 
 ### Example Request
 
@@ -209,8 +214,9 @@ Creates a new blank record and returns its `section_id`. Requires permission lev
 
 ```json
 {
-  "result": 125,
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffea03",
+  "data": 125
 }
 ```
 
@@ -228,11 +234,11 @@ Duplicate an existing record with all its data.
 
 ### Returns
 
-`{ result: <new section_id>, msg: string }`
+`{ ok: true, request_id, data: <new section_id> }` — an int.
 
 ### Usage
 
-Creates a complete copy of the source record, including all component data. Requires level ≥ 2; non-admins must also have the source record in their projects scope.
+Creates a complete copy of the source record, including all component data. Requires level ≥ 2 (`perm.denied`); a non-admin must also have the source record inside their projects scope (`perm.out_of_scope`). A `section_id` that is not a record address refuses with `section_id.not_an_address`.
 
 ### Example Request
 
@@ -251,8 +257,9 @@ Creates a complete copy of the source record, including all component data. Requ
 
 ```json
 {
-  "result": 126,
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffea04",
+  "data": 126
 }
 ```
 
@@ -272,11 +279,24 @@ Delete a record or section data.
 
 ### Returns
 
-`{ result: [<deleted ids>], msg: string }`
+`{ ok: true, request_id, data: [ <deleted section_id>, … ] }` — an array of **ints**, the records actually deleted.
+
+Parents whose children refused to go are **not** a failure: what was deleted really was deleted and stays the payload, and the refusal travels as one coded notice in `notices[]`:
+
+```json
+"notices": [
+  {
+    "code": "record.delete_children_refused",
+    "label_key": "error_record_delete_children_refused",
+    "retryable": false,
+    "details": { "not_deleted": "12,17" }
+  }
+]
+```
 
 ### Usage
 
-Deletes a record. Requires level ≥ 2 on the section. Ontology-main sections cascade (uninstall the TLD) under `delete_record`, global-admin only.
+Requires level ≥ 2 on the section (`perm.denied`), and a non-admin must have the record in their projects scope (`perm.out_of_scope`). Ontology-main sections cascade (uninstall the TLD) under `delete_record`, global-admin only. Deleting a user or profile record also drops the affected security caches, so access reflects the deletion on the next request.
 
 ### Example Request
 
@@ -286,7 +306,7 @@ Deletes a record. Requires level ≥ 2 on the section. Ontology-main sections ca
   "action": "delete",
   "source": {
     "section_tipo": "rsc167",
-    "section_id": 1,
+    "section_id": 528,
     "delete_mode": "delete_record"
   }
 }
@@ -296,8 +316,9 @@ Deletes a record. Requires level ≥ 2 on the section. Ontology-main sections ca
 
 ```json
 {
-  "result": ["rsc167_1"],
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffea05",
+  "data": [1]
 }
 ```
 
@@ -322,7 +343,7 @@ The TS handler reads these from `source` (`src/core/api/dispatch.ts` → `saveCo
 
 ### Returns
 
-`{ result: { context: [...], data: [<saved DataItem>] }, msg: string }`
+`{ ok: true, request_id, data: { context: [ … ], data: [ <saved DataItem> ] } }`.
 
 ### Usage
 
@@ -359,7 +380,9 @@ The echo is the **twin of the edit read**: for a translatable literal (the `comp
 
 ```json
 {
-  "result": {
+  "ok": true,
+  "request_id": "c0ffea06",
+  "data": {
     "context": [],
     "data": [
       {
@@ -372,8 +395,7 @@ The echo is the **twin of the edit read**: for a translatable literal (the `comp
         "entries": [ { "id": 1, "lang": "lg-eng", "value": "Updated Title" } ]
       }
     ]
-  },
-  "msg": "OK"
+  }
 }
 ```
 
@@ -395,7 +417,7 @@ Count records matching SQO criteria.
 
 ### Returns
 
-`{ result: { total: number }, msg: string }`
+`{ ok: true, request_id, data: { total: <int> } }`.
 
 ### Usage
 
@@ -417,8 +439,9 @@ Returns the total count of records matching the SQO. The read strategy owns coun
 
 ```json
 {
-  "result": { "total": 42 },
-  "msg": "OK"
+  "ok": true,
+  "request_id": "c0ffea07",
+  "data": { "total": 42 }
 }
 ```
 
@@ -441,11 +464,11 @@ Covered models: `section`, `component_*`, and the area models. Tool contexts req
 
 ### Returns
 
-`{ result: [<one context entry>], msg: string }`
+`{ ok: true, request_id, data: [ <one context entry> ] }` — an array of one (empty when nothing resolves), because the client build looks its own element up inside it.
 
 ### Usage
 
-Returns the structure context (no data) for one element. Requires level ≥ 1 on `(section_tipo, tipo)`.
+Returns the structure context (no data) for one element. Requires level ≥ 1 on `(section_tipo, tipo)` (`perm.denied`). A `tipo` that resolves to no node refuses with `request.invalid_source`; a model this action does not cover with `request.invalid_model`; an unauthorized tool with `tool.not_authorized`.
 
 ### Example Request
 
@@ -454,21 +477,25 @@ Returns the structure context (no data) for one element. Requires level ≥ 1 on
   "dd_api": "dd_core_api",
   "action": "get_element_context",
   "source": {
-    "section_tipo": "rsc167",
+    "section_tipo": "oh1",
     "tipo": "oh16",
     "mode": "edit"
   }
 }
 ```
 
+!!! note
+    `oh16` is the `component_input_text` "Title" of the **Oral History** section `oh1` on the `monedaiberica` install — `section_tipo` must be the section the component actually lives in.
+
 ### Example Response
 
 ```json
 {
-  "result": [
+  "ok": true,
+  "request_id": "c0ffea08",
+  "data": [
     { "tipo": "oh16", "model": "component_input_text", "label": "Title", "permissions": 3 }
-  ],
-  "msg": "OK"
+  ]
 }
 ```
 
@@ -484,7 +511,7 @@ Retrieve context for all components in a section.
 
 ### Returns
 
-`{ result: [{ context_for_each_element }], msg: string }`
+`{ ok: true, request_id, data: [ { context_for_each_element }, … ] }`.
 
 ### Usage
 
@@ -497,7 +524,7 @@ Returns the "simple" structure-context set for a section — the edit-mode searc
   "dd_api": "dd_core_api",
   "action": "get_section_elements_context",
   "options": {
-    "section_tipo": "rsc167"
+    "section_tipo": "oh1"
   }
 }
 ```
@@ -506,19 +533,20 @@ Returns the "simple" structure-context set for a section — the edit-mode searc
 
 ```json
 {
-  "result": [
+  "ok": true,
+  "request_id": "c0ffea09",
+  "data": [
     {
-      "tipo": "oh1",
+      "tipo": "oh16",
       "label": "Title",
       "model": "component_input_text"
     },
     {
-      "tipo": "oh2",
-      "label": "Description",
-      "model": "component_text_area"
+      "tipo": "oh25",
+      "label": "Audiovisual",
+      "model": "component_portal"
     }
-  ],
-  "msg": "OK"
+  ]
 }
 ```
 
@@ -538,7 +566,7 @@ The locators, scope and lang ride at the **top level** of the RQO (not under `so
 
 ### Returns
 
-`{ result: { "<section_tipo>_<section_id>": "<term>|null", ... }, msg: string, errors: [] }` — keyed per resolved record, deduped by composite key. An empty or invalid `locators` array returns `{ result: false, msg, errors: ["bad_locators"] }`.
+`{ ok: true, request_id, data: { "<section_tipo>_<section_id>": "<term>|null", … } }` — keyed per resolved record, deduped by composite key. An empty or invalid `locators` array refuses with `section.bad_locators` (HTTP 400).
 
 ### Usage
 
@@ -551,8 +579,8 @@ Read permission (level ≥ 1) is required per section; unreadable, invalid, or n
   "dd_api": "dd_core_api",
   "action": "get_section_terms",
   "locators": [
-    { "section_tipo": "oh1", "section_id": 3 },
-    { "section_tipo": "rsc197", "section_id": 12 }
+    { "section_tipo": "oh1", "section_id": 368 },
+    { "section_tipo": "es1", "section_id": 13919 }
   ]
 }
 ```
@@ -561,9 +589,9 @@ Read permission (level ≥ 1) is required per section; unreadable, invalid, or n
 
 ```json
 {
-  "result": { "oh1_3": "Interview with…", "rsc197_12": "Smith, John" },
-  "msg": "OK. Request done successfully",
-  "errors": []
+  "ok": true,
+  "request_id": "c0ffea10",
+  "data": { "oh1_368": "Interview with…", "es1_13919": "Valle" }
 }
 ```
 
@@ -576,18 +604,21 @@ Build the thesaurus "show indexations" grid for a term component in a record.
 ### Accepts
 
 - `source`: object (required)
-  - `section_tipo`: string (required) — the term's section type
-  - `section_id`: int (required) — the term record
-  - `tipo`: string (required) — the component whose indexations are gridded
-- `sqo`: object (optional) — grid paging/filter tuning.
+    - `section_tipo`: string (required) — the term's section.
+    - `section_id`: int (required) — the term record.
+    - `tipo`: string (required) — the element the grid was opened from. The door requires it; the grid content itself is driven by the SQO below.
+- `sqo`: object (required in practice)
+    - `section_tipo`: string or array (required) — the sections to search for records indexing the term. `"all"` searches every section. **Absent or empty answers an empty grid.**
+    - `filter_by_locators`: array (required) — the term locators to find inverse references to. **An empty list answers an empty grid.**
+    - `limit` (default 500) / `offset`.
 
 ### Returns
 
-`{ result: <grid object>, msg: string, errors: [] }`. When any of the mandatory `source` fields is missing the handler returns `{ result: false, msg, errors: ["invalid rqo source"] }` (HTTP 200).
+`{ ok: true, request_id, data: [ <grid cell>, … ] }` — the nested grid-cell tree the thesaurus indexation view renders, grouped by the top record each indexation belongs to. Records outside the caller's scope are dropped from the groups; a section with no indexation-list configuration is skipped and logged, never guessed at.
 
 ### Usage
 
-Read permission (level ≥ 1) on the term's section is required; a denial rides as an HTTP-200 `result: false` with `errors: ["permissions_denied"]`.
+Read permission (level ≥ 1) on the term's section is required (`perm.denied`, HTTP 403). A missing `section_tipo` / `section_id` / `tipo` — or a `section_id` that is not a record address — refuses with `request.invalid_source` (HTTP 400).
 
 ### Example Request
 
@@ -596,20 +627,28 @@ Read permission (level ≥ 1) on the term's section is required; a denial rides 
   "dd_api": "dd_core_api",
   "action": "get_indexation_grid",
   "source": {
-    "section_tipo": "oh1",
-    "section_id": 3,
-    "tipo": "oh16"
+    "section_tipo": "es1",
+    "section_id": 13919,
+    "tipo": "hierarchy25"
+  },
+  "sqo": {
+    "section_tipo": ["oh1"],
+    "filter_by_locators": [ { "section_tipo": "es1", "section_id": 13919 } ],
+    "limit": 100
   }
 }
 ```
+
+!!! note
+    `es1` is a thesaurus section (a virtual section of the core **Thesaurus** section `hierarchy20`) on the `monedaiberica` install, and `hierarchy25` is its `component_input_text` term component — the one `es1`'s `section_map` names as `thesaurus.term`.
 
 ### Example Response
 
 ```json
 {
-  "result": { "columns": [ /* … */ ], "rows": [ /* … */ ] },
-  "msg": "OK. Request done successfully",
-  "errors": []
+  "ok": true,
+  "request_id": "c0ffea11",
+  "data": [ { "type": "column", "label": "Oral History", "value": [ /* … */ ] } ]
 }
 ```
 
@@ -627,11 +666,11 @@ Fetch an on-demand activity-metric dataset for the area dashboard's timeline ran
 
 ### Returns
 
-`{ result: true, data: <activity dataset>, msg: string }`
+`{ ok: true, request_id, data: <activity dataset> }`.
 
 ### Usage
 
-Gated identically to the dashboard read — read permission (level ≥ 1) on the area. An invalid `area_tipo`, a non-area tipo, or an unsupported `range_days` returns a 400.
+Gated identically to the dashboard read — read permission (level ≥ 1) on the area (`perm.denied`). An unresolvable `area_tipo` refuses with `request.invalid_tipo`, a tipo that is not an area model with `request.invalid_model`, and an unsupported `range_days` with `request.invalid_options` — all HTTP 400.
 
 ### Example Request
 
@@ -650,9 +689,9 @@ Gated identically to the dashboard read — read permission (level ≥ 1) on the
 
 ```json
 {
-  "result": true,
-  "data": { /* timeline buckets for the requested range */ },
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffea12",
+  "data": { /* timeline buckets for the requested range */ }
 }
 ```
 
@@ -669,11 +708,11 @@ Resolve an IP address to a country for the Activity (`dd542`) IP-list view. Reso
 
 ### Returns
 
-`{ result: true, data: { country_code: <ISO code|null> }, msg: string }`. `country_code` is `null` for private/reserved/unresolved addresses and when the database is not loaded, so the client simply shows no flag.
+`{ ok: true, request_id, data: { country_code: <ISO code|null> } }`. `country_code` is `null` for private/reserved/unresolved addresses and when the database is not loaded, so the client simply shows no flag.
 
 ### Usage
 
-Authenticated (the dispatch session + CSRF gates already ran). Returns a 400 for a missing or malformed `ip`.
+Authenticated (the dispatch session + CSRF gates already ran). A missing or malformed `ip` refuses with `request.invalid_options` (HTTP 400).
 
 ### Example Request
 
@@ -691,9 +730,9 @@ Authenticated (the dispatch session + CSRF gates already ran). Returns a 400 for
 
 ```json
 {
-  "result": true,
-  "data": { "country_code": "US" },
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffea13",
+  "data": { "country_code": "US" }
 }
 ```
 
@@ -709,7 +748,7 @@ No arguments. The block is built for the current session (or the anonymous envir
 
 ### Returns
 
-The environment object (`page_globals`, `plain_vars`, `get_label`), built by `src/core/resolve/environment.ts`.
+`{ ok: true, request_id, data: { page_globals, plain_vars, get_label } }`, built by `src/core/resolve/environment.ts`. It is the same block `start` ships as its `environment` extension key.
 
 ### Usage
 
@@ -728,9 +767,13 @@ The environment object (`page_globals`, `plain_vars`, `get_label`), built by `sr
 
 ```json
 {
-  "page_globals": { /* … */ },
-  "plain_vars": { /* … */ },
-  "get_label": { /* … */ }
+  "ok": true,
+  "request_id": "c0ffea14",
+  "data": {
+    "page_globals": { /* … */ },
+    "plain_vars": { /* … */ },
+    "get_label": { /* … */ }
+  }
 }
 ```
 

@@ -21,10 +21,7 @@ The registry entry is `src/core/api/dispatch.ts` → `errorReportApiActions` (`s
 
 - **Purpose:** Accept and store one error report relayed from a remote installation.
 - **Accepts:** the report body in `options`, matching the strict wire schema; the shared token (when configured) travels out-of-band, checked constant-time.
-- **Returns:** the `{result, msg, errors}` envelope:
-- `result`: `true` on a stored report, `false` on any refusal.
-- `msg`: `"OK"` on success; a terse generic string otherwise — never the payload or field-level detail.
-- `errors`: array — empty on success; `report_id` accompanies a stored report.
+- **Returns:** envelope v2. A stored report is `{ ok: true, request_id, data: true, report_id: <int> }` — `report_id` is the top-level extension key the relaying installation reads beside `ok`. Any refusal is `{ ok: false, request_id, error: { code, category, message, label_key, retryable } }`; the message is always a terse registry sentence, never the payload or field-level detail.
 
 ### Example Request: receive_report
 
@@ -49,14 +46,21 @@ The registry entry is `src/core/api/dispatch.ts` → `errorReportApiActions` (`s
 
 ```json
 {
-  "result": true,
-  "msg": "OK",
-  "errors": [],
+  "ok": true,
+  "request_id": "c0ffee70",
+  "data": true,
   "report_id": 128
 }
 ```
 
 ## Notes
 
-- Refusals are deliberately indistinguishable: a disabled receiver, a wrong token, and an unregistered action all answer `{result:false, msg:"Undefined or unauthorized method (action)"}`. An oversize or schema-invalid body answers `{result:false, msg:"Invalid error report"}`; a throttled caller gets HTTP 429.
+- Refusals are deliberately indistinguishable: a disabled receiver, a wrong token, and an unregistered action all answer the **same** body — `request.unknown_action` (HTTP 400, *"Undefined or unauthorized method (action)"*), down to the echoed `details.action`. An oversize or schema-invalid body answers `request.invalid` (HTTP 400, *"Invalid error report"*); a throttled caller gets `rate.limited` (HTTP 429); a store failure answers `internal.unexpected` (HTTP 500) and never echoes the report.
+
+| code | status | when |
+| --- | --- | --- |
+| `request.unknown_action` | 400 | receiver disabled, caller IP not allowed, wrong/missing shared token, or the action is not `receive_report`. |
+| `request.invalid` | 400 | body over the endpoint size clamp, or it failed the strict schema (unknown fields included). |
+| `rate.limited` | 429 | the trusted-hop IP spent its sliding-window budget. |
+| `internal.unexpected` | 500 | the intake store could not append. |
 - Only `source_ip` (the trusted-hop address) and `received_at` are master-trusted; every other field is stored as **self-reported** context.

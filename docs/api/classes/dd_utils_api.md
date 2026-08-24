@@ -4,7 +4,7 @@
 
 Utility API for system operations: authentication, language, system info, and upload assembly.
 
-Registered actions (`src/core/api/dispatch.ts`): `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `request_password_reset`, `confirm_password_reset`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `get_job_events`, `get_process_status`, `stop_process`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
+Registered actions (`src/core/api/handlers/dd_utils_api.ts`): `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `request_password_reset`, `confirm_password_reset`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `delete_uploaded_file`, `get_job_events`, `get_process_status`, `get_record_jobs`, `get_activity`, `stop_process`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
 
 ## How to call
 
@@ -16,6 +16,7 @@ Registered actions (`src/core/api/dispatch.ts`): `login`, `quit`, `get_login_con
 - `login` and `quit` are the entry points for session management: Argon2id (via `Bun.password`) over rotating, server-side sessions.
 - `join_chunked_files_uploaded` reassembles a completed chunked upload; `get_system_info` is the pre-transfer init call the client makes before uploading.
 - `get_server_ready_status`, `get_ontology_update_info` and `get_code_update_info` are the master-server surface: remote installations call them without a session to probe reachability and fetch an update manifest. They fail closed unless the host is configured as an ontology or code server.
+- **Envelope v2 throughout.** Success is `{ ok: true, request_id, data, … }` — the payload lives in `data`, and the names a client reads by their own name (`user_id`, `csrf_token`, `file_data`, `dedalo_version`, `in_use`, `jobs`, `msg`, …) ride at the top level as **extension keys**. A refusal is `{ ok: false, request_id, error: { code, category, message, label_key, retryable } }` and carries the registry's HTTP status; failures are no longer HTTP-200 bodies. The v1 `{ result, msg, errors }` shape was removed on 2026-08-16 and `result` is a **forbidden** top-level key.
 
 ## login
 
@@ -31,7 +32,7 @@ Authenticate user with username and password.
 
 ### Returns
 
-`{ result: true|false, msg: string, user_id: number, csrf_token: string }`
+`{ ok: true, request_id, data: true, user_id: <int>, csrf_token: <string> }`. `user_id` and `csrf_token` are handler-owned top-level extension keys: the session is minted mid-handler, so the dispatcher's own token append cannot see it.
 
 ### Usage
 
@@ -39,7 +40,9 @@ Validates credentials and, on success, creates a rotating server-side session. T
 
 When media protection is active the response carries a **second** cookie, the fixed-name `dedalo_media_auth` (see [media protection](../../core/system/media_protection.md)). Every later authenticated response re-issues it if the caller's value is stale, so it never outlives — nor dies before — the session.
 
-Once the session expires, any non-exempt action answers **HTTP 401** with `errors: ['not_logged']`. See [login](../../core/system/login.md) for the two expiry clocks and the client's recovery.
+A wrong username, a wrong password and an unknown account all answer the **same** body — `auth.login_failed` (HTTP 401). The sentence is the registry's and its disclosure is operator-only, so no call site can narrow it into an account-existence oracle.
+
+Once the session expires, any non-exempt action answers `auth.not_logged` (**HTTP 401**). See [login](../../core/system/login.md) for the two expiry clocks and the client's recovery.
 
 ### Example Request
 
@@ -58,8 +61,9 @@ Once the session expires, any non-exempt action answers **HTTP 401** with `error
 
 ```json
 {
-  "result": true,
-  "msg": "ok",
+  "ok": true,
+  "request_id": "c0ffee90",
+  "data": true,
   "user_id": 1,
   "csrf_token": "…"
 }
@@ -77,11 +81,11 @@ Logout current user session.
 
 ### Returns
 
-`{ result: true|false, msg: string }`
+`{ ok: true, request_id, data: true }`.
 
 ### Usage
 
-Destroys the server-side session and clears the session cookie on the response.
+Destroys the server-side session and clears the session cookie on the response — and the media-auth cookie with it, unconditionally, since clearing an absent cookie costs nothing while leaving a live one behind does not. An activity row is written **before** the session is destroyed, while the actor is still known.
 
 ### Example Request
 
@@ -96,8 +100,9 @@ Destroys the server-side session and clears the session cookie on the response.
 
 ```json
 {
-  "result": true,
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffee91",
+  "data": true
 }
 ```
 
@@ -119,7 +124,13 @@ Reassemble a completed chunked upload (the JSON follow-up to the multipart chunk
 
 ### Returns
 
-`{ result: true|false, msg: string, file_data: { key_dir, tmp_name, extension, chunked: false, complete: true } }`. `tmp_name` is the name the assembled file really has in the staging directory, which may carry a `-1`, `-2` … suffix when another staged file already held the sanitised name. Fail-closed: an anonymous caller gets a 404.
+`{ ok: true, request_id, data: true, file_data: { key_dir, tmp_name, name, extension, chunked: false, complete: true, thumbnail_url } }` — `file_data` is a top-level extension key.
+
+- `tmp_name` is the name the assembled file really has in the staging directory, which may carry a `-1`, `-2` … suffix when another staged file already held the sanitised name.
+- `name` is the **human** file name, taken from the server's own per-transfer record, not from the relayed request — which is why a caller that does not echo it back still archives `María Piñón.jpg` rather than a mangled transliteration.
+- `thumbnail_url` is the preview the queue row draws, or `null` when the format is not rasterisable. A chunked transfer's only completion moment is this call, so the thumbnail is built here exactly as the single-shot upload path builds it.
+
+Fail-closed: an anonymous caller gets `resource.not_found` (HTTP 404) — the same shape a route miss answers, so the endpoint leaks no existence. A failed join answers `media.action_failed`; the engine's reason names filesystem paths and stays on the log line.
 
 ## list_uploaded_files
 
@@ -129,18 +140,22 @@ List files in upload directory.
 
 ### Accepts
 
-- `options`: object — no fields are required.
+- `options.key_dir`: string (required in practice) — the staging sub-directory to scan. **Without it the answer is an empty array**, not the whole staging root.
 
 ### Returns
 
-`{ result: [{ url, name, size }], msg: string }`. The action is registered and honors that shape, but currently always returns an empty array — the common boot state, where the user has no pending chunked upload.
+`{ ok: true, request_id, data: [ { url, name, size }, … ] }` — the caller's own staged files under `key_dir`. This is the mechanism by which a pending upload queue survives a page reload: the queue renderer lists the already-staged files on every render and injects them as existing rows.
+
+!!! note
+    The answer is **always** a 200 with an array, even when the staging scan itself fails (a malformed `key_dir`, an unreadable root): the failure is logged and an empty array returned. An error here would accumulate into the page's API-error list, which makes the *next* element's render bail before it finishes — one bad scan would break unrelated widgets on the page.
 
 ### Example Request
 
 ```json
 {
   "dd_api": "dd_utils_api",
-  "action": "list_uploaded_files"
+  "action": "list_uploaded_files",
+  "options": { "key_dir": "upload" }
 }
 ```
 
@@ -148,10 +163,29 @@ List files in upload directory.
 
 ```json
 {
-  "result": [],
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffee92",
+  "data": []
 }
 ```
+
+## delete_uploaded_file
+
+### Purpose
+
+Remove one staged file — the queue renderer's row-removal path.
+
+### Accepts
+
+- `options`: object (required)
+    - `key_dir`: string (required) and `file_name`: string (required).
+    - `upload_id`: string (optional) — an explicit cancel. A row removed *before* its transfer completed has no assembled file, only chunk parts; with this key they go now, without it the age sweep collects them. It is also the release for a **quarantined** transfer — one whose assembled bytes failed content verification and were kept rather than destroyed.
+
+### Returns
+
+`{ ok: true, request_id, data: true }`. Deleting an already-absent file is a successful **no-op**: the client has already removed the row, and a retry must not surface an error the user cannot act on.
+
+A traversal attempt or a malformed name answers `request.invalid_options` with a generic *"Invalid file reference"* — the resolver's own message names the resolved path and is never serialized.
 
 ## get_system_info
 
@@ -165,7 +199,7 @@ Retrieve system and server information.
 
 ### Returns
 
-`{ result: SystemInfo, msg: string }`. The payload (`src/core/api/handlers/system_info.ts`) is the upload-limit negotiation the client reads before it can transfer a file. The numbers come from the media/upload config catalog — there is no runtime `.ini` to consult. Shape: `{ max_size_bytes, sys_get_temp_dir, upload_tmp_dir, upload_tmp_perms, session_cache_expire, upload_service_chunk_files, pdf_ocr_engine }`.
+`{ ok: true, request_id, data: <SystemInfo> }`. The payload (`src/core/api/handlers/system_info.ts`) is the upload-limit negotiation the client reads before it can transfer a file. The numbers come from the media/upload config catalog — there is no runtime `.ini` to consult. Shape: `{ max_size_bytes, sys_get_temp_dir, upload_tmp_dir, upload_tmp_perms, session_cache_expire, upload_service_chunk_files, pdf_ocr_engine }`.
 
 ### Example Request
 
@@ -180,7 +214,9 @@ Retrieve system and server information.
 
 ```json
 {
-  "result": {
+  "ok": true,
+  "request_id": "c0ffee93",
+  "data": {
     "max_size_bytes": 10485760,
     "sys_get_temp_dir": "/tmp",
     "upload_tmp_dir": "/…/media/tmp",
@@ -188,8 +224,7 @@ Retrieve system and server information.
     "session_cache_expire": 180,
     "upload_service_chunk_files": 20,
     "pdf_ocr_engine": true
-  },
-  "msg": "OK. Request done"
+  }
 }
 ```
 
@@ -209,11 +244,13 @@ At least one must be present. Each value is validated against the language ident
 
 ### Returns
 
-`{ result: true|false, msg: string }`. With no valid language supplied, `result` is `false`.
+`{ ok: true, request_id, data: true }`. With no valid language supplied the call **refuses** with `request.invalid_options` (*"No valid language supplied"*) — an invalid tag is dropped before validation, so naming only invalid tags is the same as naming none.
 
 ### Usage
 
 State-changing. For an authenticated caller the router runs the CSRF gate and the choice is stored on the server-side session; every later request rebuilds with the stored language (`src/core/resolve/request_lang.ts`). The client posts here, then full-reloads.
+
+An **anonymous** call naming only `dedalo_data_lang` answers `auth.not_logged` (HTTP 401): there is nowhere to store a data language before login, and answering success while storing nothing would be a silent no-op.
 
 The action is **also reachable without a session** — the login panel carries its own language selector, and there is no session row to store into before login. The server answers with the pre-auth language cookie (`dedalo_lang`, HttpOnly, one year) carrying the **application** language only — an anonymous call naming only `dedalo_data_lang` is refused (`auth.not_logged`), since there is nowhere to put it. The cookie is honored on the next anonymous request and adopted onto the session at login, so the app opens in the language the login form was switched to; **authenticated** calls refresh it too, so the two stores never disagree. The value is checked against this install's `DEDALO_APPLICATION_LANGS` when read back — a cookie naming any other language is ignored, not persisted. Divergence entry: `engineering/wire_contract/WC-2026-08-22-preauth-language-cookie.md`.
 
@@ -234,8 +271,9 @@ The action is **also reachable without a session** — the login panel carries i
 
 ```json
 {
-  "result": true,
-  "msg": "OK. Request done. Changed dedalo_application_lang to lg-eng, dedalo_data_lang to lg-spa"
+  "ok": true,
+  "request_id": "c0ffee94",
+  "data": true
 }
 ```
 
@@ -251,7 +289,7 @@ Return the login form's own structure context.
 
 ### Returns
 
-`{ result: [<login context>], msg: string }`.
+`{ ok: true, request_id, data: [ <login context> ] }` — `data` is an **array** of one element, because the client build looks its own element up inside it by model.
 
 ### Usage
 
@@ -269,7 +307,7 @@ Return the install wizard's structure context on a fresh, unconfigured machine.
 
 ### Returns
 
-`{ result: [<installer element context>], msg: string }`.
+`{ ok: true, request_id, data: [ <installer element context> ] }` — an array of one, for the same reason as `get_login_context`.
 
 ### Usage
 
@@ -289,7 +327,7 @@ The install wizard's step router — every wizard step rides this one action.
 
 ### Returns
 
-The top-level envelope the client reads (`{ result, msg, ... }`), shaped per step.
+The step's own envelope-v2 body, shaped per step: `data` carries the step's payload and each step adds the top-level extension keys the wizard reads by name.
 
 ### Usage
 
@@ -363,7 +401,7 @@ Record a component soft-lock focus/blur event (the edit-lock mechanism).
 
 ### Returns
 
-The lock-state outcome (plus a `dedalo_notification` field).
+`{ ok: true, request_id, data: <applied bool>, in_use, full_username, msg, dedalo_notification: null, … }`. `data` is whether the event was applied; the keys the client reads by name ride at the top level as extension keys.
 
 ### Usage
 
@@ -376,8 +414,8 @@ Read permission (level ≥ 1) on the section is required — the gate runs uncon
   "dd_api": "dd_utils_api",
   "action": "update_lock_components_state",
   "options": {
-    "section_tipo": "rsc167",
-    "section_id": 1,
+    "section_tipo": "oh1",
+    "section_id": 368,
     "component_tipo": "oh16",
     "action": "lock"
   }
@@ -399,7 +437,7 @@ Read-only poll: is the component currently held by another user?
 
 ### Returns
 
-The lock-status object for the component.
+`{ ok: true, request_id, data: true, in_use, full_username, … }` — the status fields ride as top-level extension keys (`in_use` is what the client's release poll reads); `data` stays a truthy answer.
 
 ### Usage
 
@@ -488,6 +526,39 @@ An SSE status stream (`src/core/api/process_status.ts`).
 
 Session-gated and **owner-gated** — a job that carries user data streams only to its owner, since the ids are guessable. The legacy poll counterpart to `get_job_events`.
 
+## get_record_jobs
+
+### Purpose
+
+Answer "what is running for **this** record?" — the question that made an upload's background transcode invisible and an empty media tier indistinguishable from "never built".
+
+### Accepts
+
+- `options`: object (required)
+    - `section_tipo`: string (required) and `section_id`: int (required, positive).
+
+### Returns
+
+`{ ok: true, request_id, data: true, jobs: [ … ] }` — `jobs` is the top-level key the activity tray reads by name.
+
+### Usage
+
+Authorized **by the record**, not by job ownership (read level ≥ 1 on the section) — a second operator looking at the same record must see that a tier is already being built, or they start a duplicate encode over the same output path. The payload is therefore reduced to operational shape: a foreign job's own `data` stays owner-only. A missing `section_tipo` or a non-integer `section_id` answers `request.invalid_options`; an insufficient grant answers `perm.denied`.
+
+## get_activity
+
+### Purpose
+
+The activity tray's read model: the caller's **own** work, aggregated across both job systems.
+
+### Accepts
+
+- No arguments.
+
+### Returns
+
+`{ ok: true, request_id, data: true, jobs: [ … ] }`.
+
 ## stop_process
 
 ### Purpose
@@ -518,11 +589,16 @@ The SQO → SQL developer console (the `sqo_test_environment` maintenance widget
 
 ### Returns
 
-`{ result: true|false, msg: string, sql: string, ar_section_id: array, db_data: array }` — `msg` is the resolved SQL (params substituted, display-only), `sql` is the parameterized template, `ar_section_id` the distinct returned ids, `db_data` the rows. On any error, `result` is `false` and `msg`/`errors` carry the message.
+`{ ok: true, request_id, data: { sql_resolved, sql, ar_section_id, db_data } }`. The console's answer is the four pieces **together**, so they are the payload, not top-level keys beside a boolean:
+
+- `sql_resolved` — the resolved SQL with its parameters substituted, **display only**. Envelope v2 has no prose channel, so it is a named field of the data rather than a message.
+- `sql` — the parameterized template actually executed.
+- `ar_section_id` — the distinct `section_id`s the rows returned.
+- `db_data` — the rows.
 
 ### Usage
 
-**Global-admin only.** The executed query always uses bound params; the substituted `msg` string is for display, never execution.
+**Global-admin only** (`perm.denied`, HTTP 403, for everyone else). The executed query always uses bound params; the substituted string is for display, never execution. A build or execution failure answers `search.failed`.
 
 ### Example Request
 
@@ -550,7 +626,7 @@ Remote reachability probe: is this host an available ontology / code master serv
 
 ### Returns
 
-`{ result: true|false, msg: string, errors: [] }`. `result` is `true` only when the requested check matches a role this host is configured for; otherwise the generic refusal.
+`{ ok: true, request_id, data: true }` when the requested check matches a role this host is configured for. Every other outcome is the **same** refusal — `update_server.refused` (HTTP 403, *"Error. This is not an accessible Server"*). One code for every reason is deliberate: a probe must not be able to tell "not that kind of server" from "unknown check" by elimination.
 
 ### Usage
 
@@ -582,7 +658,7 @@ Serve an ontology-update manifest to a remote installation.
 
 ### Returns
 
-The update-info manifest when this host is an ontology master and the code/version validate; otherwise `{ result: false, msg, errors }`.
+`{ ok: true, request_id, data: <manifest> }` when this host is an ontology master and the code and version both validate. Every refusal — not a master, wrong code, malformed or unsupported version, a version with no ontology files — is the same `update_server.refused` (HTTP 403), for the same anti-enumeration reason as the probe.
 
 ### Usage
 
@@ -611,7 +687,7 @@ Serve a code-release manifest to a remote installation.
 
 ### Returns
 
-`{ result: <manifest>, msg: string, errors: [] }` when this host is a code master and the code/version validate; otherwise `{ result: false, msg, errors }`. It advertises only built release archives on the caller's linear upgrade path.
+`{ ok: true, request_id, data: <manifest> }` when this host is a code master and the code and version both validate; every refusal is `update_server.refused` (HTTP 403). It advertises only built release archives on the caller's linear upgrade path. Unlike the ontology master, a code master honours **no** localhost pseudo-code: it answers configured peers only.
 
 ### Usage
 

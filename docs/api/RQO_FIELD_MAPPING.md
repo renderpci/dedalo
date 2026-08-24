@@ -4,6 +4,8 @@
 
 This page documents the precise, method-specific RQO field usage for the actions the server implements. Every action here is verified against the action registry in `src/core/api/dispatch.ts` — if an action is not in that registry, it is not callable and it is not documented here.
 
+**Every response below is envelope v2**: `{ ok: true, request_id, data, … }` on success — the payload lives in `data`, and the keys a client reads by their own name (`environment`, `table`, `user_id`, `csrf_token`, …) ride at the top level as extension keys — and `{ ok: false, request_id, error: { code, category, message, label_key, retryable } }` on a refusal, carrying the registry's HTTP status. The v1 `{ result, msg, errors }` shape was removed on 2026-08-16 and `result` is a **forbidden** top-level key. Canon: `engineering/ERRORS_SPEC.md` and [the error system](../core/system/errors.md).
+
 ## dd_core_api
 
 ### start()
@@ -27,9 +29,10 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 **Example response** (authenticated):
 ```json
 {
-  "result": { "context": [ /* section/menu element contexts */ ], "data": [] },
-  "environment": { "page_globals": {}, "plain_vars": {}, "labels": {} },
-  "msg": "OK"
+  "ok": true,
+  "request_id": "c0ffeb00",
+  "data": { "context": [ /* section/menu element contexts */ ], "data": [] },
+  "environment": { "page_globals": {}, "plain_vars": {}, "get_label": {} }
 }
 ```
 
@@ -63,8 +66,9 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 **Example response**:
 ```json
 {
-  "result": { "context": [ /* structure contexts */ ], "data": [ /* records */ ] },
-  "msg": "OK"
+  "ok": true,
+  "request_id": "c0ffeb01",
+  "data": { "context": [ /* structure contexts */ ], "data": [ /* records */ ] }
 }
 ```
 
@@ -95,9 +99,10 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 **Example response**:
 ```json
 {
-  "result": [ /* raw stored values per matched record */ ],
-  "table": "matrix",
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffeb02",
+  "data": [ /* raw stored values per matched record */ ],
+  "table": "matrix"
 }
 ```
 
@@ -109,7 +114,7 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 - `source`: object (required)
   - `section_tipo`: string (required) — target section type
 
-**Permission gate**: level ≥ 2 on the section. Returns the new `section_id`.
+**Permission gate**: level ≥ 2 on the section. `data` is the new `section_id` (an int).
 
 **Example request**:
 ```json
@@ -123,8 +128,9 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 **Example response**:
 ```json
 {
-  "result": 125,
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffeb03",
+  "data": 125
 }
 ```
 
@@ -137,7 +143,7 @@ Unauthenticated (`session === null`) `start` returns the **login element context
   - `section_id`: int (required) — source record to duplicate
   - `section_tipo`: string (required) — section type
 
-**Permission gate**: level ≥ 2 on the section; non-admins must also have the source record in their projects scope. Returns the new `section_id`.
+**Permission gate**: level ≥ 2 on the section; a non-admin must also have the source record in their projects scope. `data` is the new `section_id` (an int).
 
 **Example request**:
 ```json
@@ -151,8 +157,9 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 **Example response**:
 ```json
 {
-  "result": 126,
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffeb04",
+  "data": 126
 }
 ```
 
@@ -167,22 +174,23 @@ Unauthenticated (`session === null`) `start` returns the **login element context
   - `delete_mode`: string (optional, default `"delete_data"`) — `"delete_data"` empties every component and keeps the row; `"delete_record"` removes the row (TM snapshot first).
 - `sqo`: object (optional) — bulk delete by search; **global-admin only**, and constrained to the gated section.
 
-Returns the array of deleted ids. Ontology-main sections cascade (uninstall the TLD) under `delete_record`, global-admin only.
+`data` is the array of deleted `section_id`s (**ints**). Children that refused to go do not fail the call: they ride as one `record.delete_children_refused` entry in `notices[]`, listing the refused ids. Ontology-main sections cascade (uninstall the TLD) under `delete_record`, global-admin only.
 
 **Example request**:
 ```json
 {
   "dd_api": "dd_core_api",
   "action": "delete",
-  "source": { "section_tipo": "rsc167", "section_id": 1, "delete_mode": "delete_record" }
+  "source": { "section_tipo": "rsc167", "section_id": 528, "delete_mode": "delete_record" }
 }
 ```
 
 **Example response**:
 ```json
 {
-  "result": ["rsc167_1"],
-  "msg": "OK. Request done"
+  "ok": true,
+  "request_id": "c0ffeb05",
+  "data": [1]
 }
 ```
 
@@ -198,9 +206,9 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
   - `lang`: string (optional, default `"lg-nolan"`) — language code
   - `caller_dataframe`: object (optional) — dataframe pairing context (`main_component_tipo`, `id_key`)
 - `data`: object (required)
-  - `changed_data`: array (required) — change objects, each `{ action, key, value }` where `action` ∈ `update` / `insert` / `remove` / `set_data` / `sort_data` / `sort_by_column` / `add_new_element`.
+  - `changed_data`: array (required) — change objects, each `{ action, id?, value, key? }` where `action` ∈ `update` / `insert` / `remove` / `set_data` / `sort_data` / `sort_by_column` / `add_new_element`. `id` targets an existing item; `value` is `{ id, lang, value }` for a literal and a locator for a relation.
 
-**Permission gate**: level ≥ 2 on `(section_tipo, tipo)`. On success the server echoes the saved component in the canonical DataItem envelope (relation/select-family saves also carry `datalist` / `pagination` / `context`), triggers server-side observers, and writes an activity-log entry.
+**Permission gate**: level ≥ 2 on `(section_tipo, tipo)`. On success the server echoes the saved component in the canonical DataItem envelope (relation/select-family saves also carry `datalist` / `pagination` / `context`), triggers server-side observers, and writes an activity-log entry. The echo of a translatable literal carries only the `source.lang` slice — see [dd_core_api → save](classes/dd_core_api.md#save).
 
 **Example request**:
 ```json
@@ -210,11 +218,13 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
   "source": {
     "tipo": "oh16",
     "section_tipo": "oh1",
-    "section_id": 124,
+    "section_id": 368,
     "lang": "lg-eng"
   },
   "data": {
-    "changed_data": [ { "action": "update", "key": 0, "value": "Updated Title" } ]
+    "changed_data": [
+      { "action": "update", "id": 1, "value": { "id": 1, "lang": "lg-eng", "value": "Updated Title" } }
+    ]
   }
 }
 ```
@@ -222,11 +232,22 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 **Example response**:
 ```json
 {
-  "result": {
+  "ok": true,
+  "request_id": "c0ffeb06",
+  "data": {
     "context": [],
-    "data": [ { "tipo": "oh16", "section_tipo": "oh1", "section_id": 124, "mode": "edit", "lang": "lg-eng", "value": ["Updated Title"] } ]
-  },
-  "msg": "OK"
+    "data": [
+      {
+        "tipo": "oh16",
+        "section_tipo": "oh1",
+        "section_id": 368,
+        "mode": "edit",
+        "lang": "lg-eng",
+        "from_component_tipo": "oh16",
+        "entries": [ { "id": 1, "lang": "lg-eng", "value": "Updated Title" } ]
+      }
+    ]
+  }
 }
 ```
 
@@ -251,8 +272,9 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 **Example response**:
 ```json
 {
-  "result": { "total": 42 },
-  "msg": "OK"
+  "ok": true,
+  "request_id": "c0ffeb07",
+  "data": { "total": 42 }
 }
 ```
 
@@ -268,14 +290,14 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
   - `lang`: string (optional)
   - `model`: string (optional)
 
-**Permission gate**: level ≥ 1 on `(section_tipo, tipo)`. Returns `result` as an array of one context entry.
+**Permission gate**: level ≥ 1 on `(section_tipo, tipo)`. `data` is an array of one context entry (empty when nothing resolves).
 
 **Example request**:
 ```json
 {
   "dd_api": "dd_core_api",
   "action": "get_element_context",
-  "source": { "section_tipo": "rsc167", "tipo": "oh16", "mode": "edit" }
+  "source": { "section_tipo": "oh1", "tipo": "oh16", "mode": "edit" }
 }
 ```
 
@@ -291,7 +313,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 {
   "dd_api": "dd_core_api",
   "action": "get_section_elements_context",
-  "options": { "section_tipo": "rsc167" }
+  "options": { "section_tipo": "oh1" }
 }
 ```
 
@@ -322,8 +344,9 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 **Example response** (a session cookie is set on the HTTP response; the session token is never returned in the body — the client uses the fresh `csrf_token`):
 ```json
 {
-  "result": true,
-  "msg": "ok",
+  "ok": true,
+  "request_id": "c0ffeb08",
+  "data": true,
   "user_id": 1,
   "csrf_token": "…"
 }
@@ -342,7 +365,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 
 **Example response**:
 ```json
-{ "result": true, "msg": "OK. Request done" }
+{ "ok": true, "request_id": "c0ffeb09", "data": true }
 ```
 
 ---
@@ -359,7 +382,9 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 **Example response** (shape from `src/core/api/handlers/system_info.ts`):
 ```json
 {
-  "result": {
+  "ok": true,
+  "request_id": "c0ffeb10",
+  "data": {
     "max_size_bytes": 10485760,
     "sys_get_temp_dir": "/tmp",
     "upload_tmp_dir": "/…/media/tmp",
@@ -367,8 +392,7 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
     "session_cache_expire": 180,
     "upload_service_chunk_files": 20,
     "pdf_ocr_engine": true
-  },
-  "msg": "OK. Request done"
+  }
 }
 ```
 
@@ -392,18 +416,21 @@ Returns the array of deleted ids. Ontology-main sections cascade (uninstall the 
 
 **Example response**:
 ```json
-{ "result": true, "msg": "OK. Request done. Changed dedalo_application_lang to lg-eng, dedalo_data_lang to lg-eng" }
+{ "ok": true, "request_id": "c0ffeb11", "data": true }
 ```
 
 ---
 
 ### list_uploaded_files()
-**Purpose**: List the user's pending chunked uploads. The action is registered and honors the `[{url, name, size}]` shape, but currently always returns an empty array — the common boot state, where the user has no pending chunked upload.
-**RQO fields used**: none required.
+**Purpose**: List the caller's already-staged files under one staging sub-directory — the mechanism by which a pending upload queue survives a page reload.
+**RQO fields used**:
+- `options.key_dir`: string — the staging sub-directory to scan. Without it the answer is an empty array, never the whole staging root.
+
+`data` is `[{ url, name, size }]`. A failed scan is logged and answered as an empty array rather than an error, so one bad `key_dir` cannot break the sibling renders on the page.
 
 **Example response**:
 ```json
-{ "result": [], "msg": "OK. Request done" }
+{ "ok": true, "request_id": "c0ffeb12", "data": [] }
 ```
 
 ---
