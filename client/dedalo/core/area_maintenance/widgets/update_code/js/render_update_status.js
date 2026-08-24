@@ -272,15 +272,24 @@ export const render_consumer_status = function(parent, consumer) {
 		const engine = consumer.engine || {}
 		const installation = section(wrapper, get_label.update_code_installation || 'This installation')
 		fact_row(installation, get_label.update_code_current_version || 'Current version', engine.engine_version, true)
+		// THREE postures, not two: 'dev' now covers a working checkout AND an
+		// installed developer build (a branch archive, same version as the
+		// release it replaced). Naming the second one a "checkout" would send an
+		// operator hunting for a git tree that is not there.
+		const posture_text = engine.posture==='release'
+			? (get_label.update_code_posture_release || 'Release build')
+			: engine.install_channel==='dev'
+				? (get_label.update_code_posture_dev_build || 'Developer build (unreleased branch code)')
+				: (get_label.update_code_posture_dev || 'Development checkout')
 		fact_row(
 			installation,
 			get_label.update_code_posture || 'Build posture',
-			engine.posture==='release'
-				? (get_label.update_code_posture_release || 'Release build')
-				: (get_label.update_code_posture_dev || 'Development checkout')
+			posture_text
 		)
 		fact_row(installation, get_label.update_code_current_build || 'Current build', engine.build, true)
 		fact_row(installation, get_label.update_code_commit || 'Commit', engine.sha, true)
+		// The installed ARCHIVE — the identity a same-version install turns on.
+		fact_row(installation, get_label.update_code_install_digest || 'Installed archive', engine.install_digest, true)
 		fact_row(installation, get_label.update_code_bun || 'Bun runtime', engine.bun, true)
 		const tree = consumer.tree || {}
 		fact_row(installation, get_label.update_code_tree_root || 'Code tree', tree.root, true)

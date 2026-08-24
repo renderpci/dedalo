@@ -142,7 +142,9 @@ export function buildCodeUpdateInfo(options: {
 		// BOTH switches, or nothing: a master that never opted in answers a dev ask
 		// exactly as it answers a release one.
 		if (options.channel === 'dev' && options.devChannelEnabled === true) {
-			files.push(...devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets));
+			files.push(
+				...devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets),
+			);
 		}
 		for (const triple of targets) {
 			const item = releaseItemFor(options.codeFilesDir, options.publicBaseUrl, triple);

@@ -69,8 +69,8 @@ import {
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
 import { DEDALO_ENGINE_VERSION } from './core/update/build_stamp.ts';
-import { INSTALLED_DIGEST } from './core/update/install_stamp.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
+import { INSTALLED_DIGEST } from './core/update/install_stamp.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
 const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');

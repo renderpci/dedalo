@@ -26,6 +26,26 @@
 			margin: 0.5rem 0;
 		}
 
+		// DEVELOPER-BUILDS switch — the arming for same-version (branch) builds.
+		// Deliberately quiet: it sits above the submit button as one checkbox row
+		// plus its note, never a warning bar (the note carries the caution).
+		>.dev_channel_row {
+			margin: 0.75rem 0 0.25rem 0;
+
+			>.dev_channel_label {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				cursor: pointer;
+				font-weight: bold;
+			}
+
+			>.dd_note.dev_channel_note {
+				margin: 0.25rem 0 0 1.75rem;
+				max-width: 60rem;
+			}
+		}
+
 		// STATUS readouts (render_update_status.js) — LAYOUT ONLY.
 		// The severity vocabulary is the shared widget_kit's (.dd_badge +
 		// pill_ok / pill_warning / pill_danger, .dd_eyebrow, .dd_readout): a

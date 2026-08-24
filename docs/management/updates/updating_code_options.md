@@ -68,3 +68,5 @@ If the swap itself fails midway, the update restores the previous tree in place 
 ## Confirming the update
 
 After the restart, confirm success by **both** values in the panel's readout changing: the engine **version** and the **build stamp** (the release's commit date — a real per-release value, so an unchanged stamp means old code is still running). The panel then prompts for a reload: the browser still holds the previous client code, and only logging in again loads the new one. If you dismiss the prompt, a persistent "Reload required" note with its own button remains.
+
+For a **developer build** the version cannot change (it is installed over the same version), so the value to watch is **Installed archive** — the digest of the archive that was installed. The rollback sentinel records the same digest, which is how a restarted install proves it is running the new tree and not the restored old one.

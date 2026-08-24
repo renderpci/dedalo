@@ -86,6 +86,15 @@ The live-oracle era is over. The baselines of record are FROZEN:
     `test/unit/client_situations_native.test.ts`. 
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run test:update` — the code-updater's REAL-SCENARIO drill (opt-in, `scripts/update_drill.ts`): a scratch `git clone` gets the release commit (version bump + bun pin), a REAL master instance builds + serves the 7.0.1 release through the wire, a git-archive copy of this checkout under a supervisor loop installs it across the planned-death restart — panel probe → manifest → tampered-sha refusal → job frames → `/health` answering 7.0.1 → sentinel confirmed. Needs the suite DB (`test:db:setup`) + network for the quarantine `bun install`; ~3–5 min; never touches the app DB or the live private state. 
+- `bun run test:update:dev` — the same drill on the DEVELOPER CHANNEL: the
+  release is cut from a branch that is not `master` (built and served as
+  `<v>-dev.zip`) and installed OVER THE SAME VERSION, which is how unreleased
+  branch work reaches a remote installation. The only pass that proves the
+  post-swap identity story — with the version fixed on both sides, `/health`'s
+  `install_digest` is what tells the new tree from a rolled-back one.
+  NOTE both drills bind a smoke-boot unix socket under the scratch dir and
+  macOS caps that path at 104 bytes: on a long default `TMPDIR` every run dies
+  at `preflight`. Use `TMPDIR=/tmp/dd bun run test:update…`.
 - `bun run probe:update` — the MUSEUM-CYCLE probe against the REAL stacks (`scripts/update_probe.ts`): the docker simple stack plays a museum install (recreated with its code tree bind-mounted, so the channel is `tree_swap`), the local dev server plays master; prepares origin consistency (LAN-IP `DEDALO_HOST`), cuts the 7.0.1 release into `<repo>/code/`, materializes the museum tree + override, then verifies channel/serving/manifest — or drives the whole update with `--drive --user/--pass`. Touches the real docker install and appends to `../private/.env` when the advertised origin drifted. 
 - `bun run lint` — biome (burn-down owned by a dedicated pass). 
 

@@ -32,6 +32,7 @@ import {
 	archiveSymlinkNames,
 	codeServerStatus,
 	consumerStatus,
+	enginePosture,
 	type StatusCheck,
 } from '../../src/core/update/status.ts';
 
@@ -59,7 +60,16 @@ describe('consumer status', () => {
 		expect(typeof status.ready).toBe('boolean');
 		expect(status.checks.length).toBeGreaterThan(0);
 		expect(status.engine.version).toMatch(/^\d+\.\d+\.\d+$/);
-		expect(status.engine.posture).toBe(status.engine.build === null ? 'dev' : 'release');
+		// POSTURE is not "was this git-archived" — every `git archive` expands the
+		// build stamp, branch builds included. A tree installed from the developer
+		// channel is 'dev' however well-stamped it is (2026-08-24).
+		expect(status.engine.posture).toBe(enginePosture(status.engine.build as string | null, null));
+		expect(enginePosture('2026-08-24T10:00:00Z', 'dev')).toBe('dev');
+		expect(enginePosture('2026-08-24T10:00:00Z', 'master')).toBe('release');
+		expect(enginePosture(null, null)).toBe('dev');
+		// the tree also SAYS which channel it came from, so the panel can name it
+		expect(status.engine).toHaveProperty('install_channel');
+		expect(status.engine).toHaveProperty('install_digest');
 	});
 
 	test('every check uses the closed state vocabulary', () => {
@@ -134,6 +144,14 @@ describe('code server status', () => {
 	test('answers without throwing and states a verdict', () => {
 		expect(typeof status.ready).toBe('boolean');
 		expect(status.ready).toBe(!status.checks.some((check) => check.state === 'blocked'));
+	});
+
+	test('states whether this master PUBLISHES developer builds', () => {
+		// The only way an operator can tell "the consumer asked and I said no"
+		// from "the consumer never asked" (DEDALO_CODE_SERVER_DEV_CHANNEL).
+		const { config } =
+			require('../../src/config/config.ts') as typeof import('../../src/config/config.ts');
+		expect(status.dev_channel).toBe(config.update.devChannelEnabled);
 	});
 
 	test('every check id carries a label', () => {

@@ -105,7 +105,8 @@ describe('update_code source shape', () => {
 
 	test('arrow-on-prototype trap removed in the model layer', () => {
 		expect(model_src).toContain(
-			'update_code.prototype.get_code_update_info = async function ( server ) {',
+			// `channel` joined the signature on 2026-08-24 (the dev channel)
+			'update_code.prototype.get_code_update_info = async function ( server, channel ) {',
 		);
 		expect(model_src).toContain('update_code.prototype.update_code = async function ( options ) {');
 		// the 1-hour timeouts are gone with the background-job contract
@@ -128,9 +129,14 @@ describe('update_code source shape', () => {
 			render_src.indexOf('const check_process_data'),
 			render_src.indexOf('check_process_data()'),
 		);
-		expect(resume_block).toContain('track_process(local_data.value.pid, local_data.value.pfile');
+		expect(resume_block).toContain('track_process(');
+		expect(resume_block).toContain('local_data.value.pid');
+		expect(resume_block).toContain('local_data.value.pfile');
+		// the archive digest survives the resume too (same-version installs)
+		expect(resume_block).toContain('local_data.value.digest');
 		const modal_block = render_src.slice(render_src.indexOf('const render_info_modal'));
-		expect(modal_block).toContain('track_process(pid, pfile, body_response');
+		expect(modal_block).toContain('track_process(');
+		expect(modal_block).toContain('file_active.sha256');
 	});
 
 	test('stream-mirror coupling: the two common.js behaviours the reducer feed rides on', () => {
@@ -173,7 +179,9 @@ describe('update_code source shape', () => {
 		);
 		expect(interrupted_block).toContain('data_manager.set_local_db_data(');
 		expect(interrupted_block).toContain(
-			'{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile } }',
+			// the digest rides along so a RESUMED panel can still judge a
+			// same-version install (2026-08-24)
+			'{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile, digest : expected_digest } }',
 		);
 		expect(interrupted_block).toContain('update_code_connection_lost');
 		// FINDING 4 (client half): a job that ENDED (final frame, is_running:false)
@@ -461,5 +469,50 @@ describe('resolve_health_outcome on a same-version (dev channel) install', () =>
 		const release = { ...init_phase_state('7.0.1'), mode: 'polling' };
 		expect(resolve_health_outcome(release, '7.0.1', OLD).outcome).toBe('updated');
 		expect(resolve_health_outcome(release, '7.0.0', OLD).outcome).toBe('rolled_back');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE DEVELOPER-BUILDS SWITCH (2026-08-24). Source-shape gates: the wiring
+// these behaviours need is spread across a DOM factory this suite cannot boot,
+// so the gate is that the load-bearing lines exist and stay honest.
+// ---------------------------------------------------------------------------
+describe('update_code developer-builds switch', () => {
+	test('the manifest request carries the channel the operator asked for', () => {
+		// The switch is the ARMING: a master only offers developer builds to a
+		// consumer that explicitly asks, and only when it opted in itself.
+		expect(model_src).toContain('channel');
+		expect(/options\s*:\s*\{[^}]*channel/s.test(model_src)).toBe(true);
+	});
+
+	test('the panel offers the switch and re-lists through it', () => {
+		expect(render_src).toContain('dev_channel');
+		expect(render_src).toContain('update_code_dev_channel');
+	});
+
+	test('the status readout names a DEVELOPER BUILD as such, not "development checkout"', () => {
+		// posture 'dev' now covers two very different trees: a working checkout
+		// and an installed branch build. Calling the second one a checkout would
+		// send an operator looking for a git tree that is not there.
+		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
+		expect(status_src).toContain('install_channel');
+		expect(status_src).toContain('update_code_posture_dev_build');
+	});
+
+	test('the health poll reads install_digest and hands it to the verdict', () => {
+		// Without this the panel decides a same-version install by version alone —
+		// which reports every rollback as a success.
+		expect(render_src).toContain('install_digest');
+		expect(/resolve_health_outcome\(\s*state\s*,\s*version\s*,\s*digest/.test(render_src)).toBe(
+			true,
+		);
+	});
+
+	test('the installed archive digest is what the tracker expects (from the manifest item)', () => {
+		expect(render_src).toContain('expected_digest');
+		// and it SURVIVES the panel-resume path, like pid/pfile already do
+		expect(/value\s*:\s*\{\s*pid\s*:\s*pid,\s*pfile\s*:\s*pfile,\s*digest/.test(render_src)).toBe(
+			true,
+		);
 	});
 });

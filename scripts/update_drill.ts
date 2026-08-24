@@ -9,6 +9,19 @@
  * by the other, the serving process dying mid-job BY DESIGN, a supervisor
  * bringing it back on the new tree, and /health answering on the new version.
  *
+ * NOTE the smoke boot binds a unix socket UNDER THE SCRATCH DIR, and macOS caps
+ * a socket path at 104 bytes. On a machine whose `TMPDIR` is long (the default
+ * per-user `/var/folders/…` is ~49 chars) every run dies at `preflight` with
+ * "failed its pre-swap boot check". Run it with a short scratch root —
+ * `TMPDIR=/tmp/dd bun run test:update` — rather than hunting a phantom bug.
+ *
+ * `--dev` rehearses the DEVELOPER CHANNEL instead: the release is cut from a
+ * branch that is not `master` (so it is built and served as `<v>-dev.zip`) and
+ * installed OVER THE SAME VERSION, which is how unreleased branch work reaches
+ * a real installation. It is the only pass that proves the identity story —
+ * with the version fixed on both sides of the swap, only the installed archive
+ * digest can tell the new tree from a rolled-back one.
+ *
  * This drill IS that scenario, end to end, entirely on scratch surfaces:
  *
  *   RELEASE.md steps 1–7 (the master side)
@@ -121,14 +134,39 @@ function newestCatalogRung(): { from: number[]; to: number[] } {
 	};
 }
 
+/**
+ * `--dev` rehearses the DEVELOPER CHANNEL instead of a published rung: the
+ * release is built from a branch NOT named `master` (so `code_build_plan.ts`
+ * names it `<v>-dev.zip`), the consumer is NOT moved a rung — it installs the
+ * SAME version over itself, which is the whole point of the channel.
+ *
+ * It is the only drill that can prove the identity story: with the version
+ * fixed on both sides of the swap, "did the new tree boot?" can only be
+ * answered by the installed archive digest (/health `install_digest`), and the
+ * rolled-back tree would answer the version check just as happily.
+ */
+const DEV_CHANNEL_MODE = process.argv.includes('--dev');
+/** The branch the release is cut from: `master` publishes, anything else is a dev build. */
+const RELEASE_BRANCH = DEV_CHANNEL_MODE ? 'drill_dev_branch' : 'master';
+
 const RUNG = newestCatalogRung();
 /** The version the consumer install is pinned to (the upgrade's FROM end). */
 const CURRENT_VERSION = RUNG.from.join('.');
-/** The version the release clone is bumped to and the master publishes. */
-const RELEASE_VERSION = RUNG.to.join('.');
+/**
+ * The version the release clone is bumped to and the master publishes. On the
+ * dev channel there IS no bump: a branch build carries the version it was
+ * branched from, and installing it over the same version is the feature.
+ */
+const RELEASE_VERSION = DEV_CHANNEL_MODE ? CURRENT_VERSION : RUNG.to.join('.');
 /** The literal `DEDALO_VERSION_TRIPLE` bodies the two trees must carry. */
 const CURRENT_TRIPLE_LITERAL = `[${RUNG.from.join(', ')}]`;
-const RELEASE_TRIPLE_LITERAL = `[${RUNG.to.join(', ')}]`;
+const RELEASE_TRIPLE_LITERAL = DEV_CHANNEL_MODE
+	? CURRENT_TRIPLE_LITERAL
+	: `[${RUNG.to.join(', ')}]`;
+/** The archive's file name on each channel (code_build_plan.ts releaseFileName). */
+const RELEASE_FILE_NAME = DEV_CHANNEL_MODE
+	? `${RELEASE_VERSION}-dev.zip`
+	: `${RELEASE_VERSION}.zip`;
 /** Shared secret: the consumer's CODE_SERVERS code and the master's accepted code. */
 const DRILL_CODE = 'dedalo_update_drill_shared_code';
 const API_PATH = '/api/v1/json';
@@ -179,6 +217,8 @@ interface Auth {
 interface HealthBody {
 	result?: string;
 	version?: string;
+	/** sha256 of the installed archive (install_stamp.ts) — the same-version identity. */
+	install_digest?: string | null;
 	db?: string;
 	[key: string]: unknown;
 }
@@ -480,6 +520,8 @@ function updateRequestBody(file: {
 	version: string;
 	url: string;
 	sha256?: string;
+	/** Forwarded VERBATIM from the manifest item — the dev channel travels here. */
+	channel?: string;
 }): Record<string, unknown> {
 	return {
 		dd_api: 'dd_area_maintenance_api',
@@ -642,8 +684,11 @@ async function main(): Promise<void> {
 			],
 			'commit',
 		);
-		// Only a ref named `master` claims the published <v>.zip name (code_build_plan).
-		await runGit(['-C', cloneDir, 'branch', '-m', 'master'], 'branch -m master');
+		// Only a ref named `master` claims the published <v>.zip name
+		// (code_build_plan.ts). `--dev` deliberately renames to something else, so
+		// the build lands as `<v>-dev.zip` — a real developer build, not a release
+		// wearing a different name.
+		await runGit(['-C', cloneDir, 'branch', '-m', RELEASE_BRANCH], `branch -m ${RELEASE_BRANCH}`);
 
 		// ---------------------------------------------------------------
 		// STEPS 2–4 — the MASTER: boot, build through the wire, serve
@@ -662,6 +707,10 @@ async function main(): Promise<void> {
 				DRILL_ROLE: 'master',
 				DEDALO_TEST_MEDIA_ROOT: testMediaRoot,
 				IS_A_CODE_SERVER: 'true',
+				// The master half of the dev channel's TWO switches: without it the
+				// master answers a `channel:'dev'` ask with releases only (which the
+				// release pass of this drill relies on staying true).
+				...(DEV_CHANNEL_MODE ? { DEDALO_CODE_SERVER_DEV_CHANNEL: 'true' } : {}),
 				DEDALO_CODE_FILES_DIR: codeFilesDir,
 				DEDALO_CODE_SERVER_GIT_DIR: cloneDir,
 				CODE_SERVERS: JSON.stringify([
@@ -698,7 +747,7 @@ async function main(): Promise<void> {
 					model: 'update_code',
 					action: 'build_version_from_git_master',
 				},
-				options: { version: RELEASE_VERSION, ref: 'master' },
+				options: { version: RELEASE_VERSION, ref: RELEASE_BRANCH },
 			},
 			masterAuth,
 		);
@@ -708,7 +757,7 @@ async function main(): Promise<void> {
 		must(/^[a-f0-9]{64}$/.test(builtSha), 'built sha256 is not 64 hex chars');
 
 		// The artifact on disk, exactly where RELEASE.md step 6 looks.
-		const releaseZip = join(codeFilesDir, '7', '7.0', `${RELEASE_VERSION}.zip`);
+		const releaseZip = join(codeFilesDir, '7', '7.0', RELEASE_FILE_NAME);
 		must(existsSync(releaseZip), `release archive missing at ${releaseZip}`);
 		const sidecarDigest = (
 			readFileSync(`${releaseZip}.sha256`, 'utf8').trim().split(/\s+/)[0] ?? ''
@@ -717,7 +766,7 @@ async function main(): Promise<void> {
 
 		// STEP 4 — the serving URL answers anonymously (code_serving route).
 		const manifestBase = `${masterOrigin}/dedalo/install/code`;
-		const served = await fetch(`${manifestBase}/${RELEASE_VERSION}/${RELEASE_VERSION}.zip`);
+		const served = await fetch(`${manifestBase}/${RELEASE_VERSION}/${RELEASE_FILE_NAME}`);
 		must(served.ok, `serving URL answered ${served.status}`);
 		await served.body?.cancel();
 
@@ -814,11 +863,15 @@ async function main(): Promise<void> {
 			action: 'get_code_update_info',
 			prevent_lock: true,
 			source: {},
-			options: { version: CURRENT_VERSION, code: DRILL_CODE },
+			options: {
+				version: CURRENT_VERSION,
+				code: DRILL_CODE,
+				...(DEV_CHANNEL_MODE ? { channel: 'dev' } : {}),
+			},
 		});
 		must(manifest.ok === true, `manifest refused: ${JSON.stringify(manifest.error ?? manifest)}`);
 		const info = manifest.data as {
-			files: { version: string; url: string; sha256?: string }[];
+			files: { version: string; url: string; sha256?: string; channel?: string }[];
 			info: { version: string };
 		};
 		// `info.version` is the MASTER's OWN version (code_manifest.ts passes
@@ -832,12 +885,27 @@ async function main(): Promise<void> {
 			info.info.version === masterDataVersion,
 			`manifest reports server version ${info.info.version}, expected ${masterDataVersion}`,
 		);
+		// On the dev channel the master answers with the developer build FIRST and
+		// may add published rungs behind it; on the release channel it is exactly
+		// the one rung.
 		must(
-			Array.isArray(info.files) && info.files.length === 1,
-			`expected exactly the ${RELEASE_VERSION} rung`,
+			Array.isArray(info.files) &&
+				(DEV_CHANNEL_MODE ? info.files.length >= 1 : info.files.length === 1),
+			`expected ${DEV_CHANNEL_MODE ? 'at least the developer build' : `exactly the ${RELEASE_VERSION} rung`}`,
 		);
-		const file = info.files[0] as { version: string; url: string; sha256?: string };
+		const file = info.files[0] as {
+			version: string;
+			url: string;
+			sha256?: string;
+			channel?: string;
+		};
 		must(file.version === RELEASE_VERSION, 'wrong rung advertised');
+		if (DEV_CHANNEL_MODE) {
+			must(file.channel === 'dev', 'the developer build is not marked channel:dev');
+			must(file.url.endsWith('-dev.zip'), `the advertised URL is not the dev archive: ${file.url}`);
+			// The point of the whole exercise: the version does NOT move.
+			must(file.version === CURRENT_VERSION, 'the dev build should carry the INSTALLED version');
+		}
 		must(new URL(file.url).origin === new URL(manifestBase).origin, 'manifest URL off-origin');
 		must(file.sha256 === builtSha, 'advertised digest differs from the sidecar');
 
@@ -941,22 +1009,41 @@ async function main(): Promise<void> {
 		}
 
 		// The supervisor brings the NEW tree up; /health must answer the release.
+		//
+		// ON THE DEV CHANNEL THE VERSION CANNOT BE THE PROOF. The installed tree
+		// carries the version it replaced, so the string only gains its `.dev`
+		// tag (install_stamp channel → build_stamp) — and a ROLLED-BACK tree
+		// would answer with a version just as expected-looking. What actually
+		// separates the two is `install_digest`: the sha256 of the archive that
+		// was verified and swapped in.
+		const expectedHealthVersion = DEV_CHANNEL_MODE ? `${RELEASE_VERSION}.dev` : RELEASE_VERSION;
+		const healthLanded = (body: HealthBody): boolean =>
+			body.db === 'ok' &&
+			body.version === expectedHealthVersion &&
+			(!DEV_CHANNEL_MODE || body.install_digest === builtSha);
 		const healthUntil = Date.now() + 150_000;
 		let health: HealthBody = {};
 		while (Date.now() < healthUntil) {
 			checkDeadline('post-restart health');
 			try {
 				health = await fetchHealth(consumerOrigin);
-				if (health.version === RELEASE_VERSION && health.db === 'ok') break;
+				if (healthLanded(health)) break;
 			} catch {
 				/* down — keep polling */
 			}
 			await Bun.sleep(700);
 		}
 		must(
-			health.version === RELEASE_VERSION,
-			`server never came back on ${RELEASE_VERSION}: ${JSON.stringify(health)}`,
+			health.version === expectedHealthVersion,
+			`server never came back on ${expectedHealthVersion}: ${JSON.stringify(health)}`,
 		);
+		if (DEV_CHANNEL_MODE) {
+			must(
+				health.install_digest === builtSha,
+				`/health names archive ${String(health.install_digest)}, expected the one just installed (${builtSha}) — a same-version rollback looks exactly like this`,
+			);
+			console.log('[drill] /health install_digest matches the installed archive');
+		}
 		console.log(`[drill] /health answers ${String(health.version)} — the new tree is LIVE`);
 
 		// ---------------------------------------------------------------
@@ -980,6 +1067,24 @@ async function main(): Promise<void> {
 			sentinel.version === RELEASE_VERSION && sentinel.previousVersion === CURRENT_VERSION,
 			'sentinel names the wrong versions',
 		);
+		must(
+			sentinel.installDigest === builtSha,
+			`sentinel installDigest ${String(sentinel.installDigest)} is not the installed archive ${builtSha}`,
+		);
+		if (DEV_CHANNEL_MODE) {
+			// The confirmation above is only meaningful BECAUSE the digest differs
+			// while the versions do not: boot_confirm compared versions until
+			// 2026-08-24, and on this exact path that check confirms a rollback.
+			must(
+				sentinel.version === sentinel.previousVersion,
+				'the dev drill is not rehearsing a same-version install',
+			);
+			const stamp = JSON.parse(
+				readFileSync(join(consumerTree, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+			) as Record<string, unknown>;
+			must(stamp.digest === builtSha, 'the installed tree is stamped with another archive');
+			must(stamp.channel === 'dev', 'the installed tree does not know it is a developer build');
+		}
 
 		const backups = readdirSync(consumerBackupRoot).filter((n) => n.startsWith('dedalo_'));
 		must(backups.length === 1, `expected exactly one backup dir, got ${backups.join(', ')}`);
@@ -992,6 +1097,9 @@ async function main(): Promise<void> {
 			'new tree has no node_modules (quarantine install missing)',
 		);
 		must(!existsSync(join(consumerBackupRoot, '.code_staging')), 'staging dir was not swept');
+		// NOTE on the dev channel this says little (both trees declare the same
+		// triple) — the load-bearing tree assertion there is the install stamp
+		// checked above, which names the exact archive.
 		must(
 			readFileSync(join(consumerTree, 'src', 'core', 'update', 'version.ts'), 'utf8').includes(
 				RELEASE_TRIPLE_LITERAL,

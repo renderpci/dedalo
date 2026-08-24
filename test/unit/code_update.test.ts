@@ -1230,8 +1230,7 @@ describe('boot_confirm under a same-version (dev channel) install', () => {
 		const dir = join(ROOT, 'confirm_legacy');
 		mkdirSync(dir, { recursive: true });
 		const sentinelPath = join(dir, 'last_code_update.json');
-		const legacy = pendingSentinel(dir);
-		delete legacy.installDigest;
+		const { installDigest: _dropped, ...legacy } = pendingSentinel(dir);
 		writeFileSync(sentinelPath, JSON.stringify(legacy));
 
 		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', null);
@@ -1265,8 +1264,12 @@ describe('assertLinearUpgrade on the dev channel', () => {
 	});
 
 	test('dev still refuses a rung skip', () => {
-		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 3], 'dev')).toBe('patch version skip is not allowed');
-		expect(assertLinearUpgrade([7, 0, 0], [9, 0, 0], 'dev')).toBe('major version skip is not allowed');
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 3], 'dev')).toBe(
+			'patch version skip is not allowed',
+		);
+		expect(assertLinearUpgrade([7, 0, 0], [9, 0, 0], 'dev')).toBe(
+			'major version skip is not allowed',
+		);
 	});
 
 	test('dev allows the next rung, exactly like the release channel', () => {

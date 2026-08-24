@@ -159,6 +159,8 @@ export const update_code = function() {
 * @param {string} server.code - Server authentication / identifier code passed
 *   to the remote API so it can scope the response to this installation.
 * @param {string} server.url  - Full URL of the remote dd_utils_api endpoint.
+* @param {string} [channel] - 'dev' to ALSO ask for developer builds (the panel's
+*   "Developer builds" switch); anything else asks for published releases only.
 * @returns {Promise<Object>} api_response — envelope from the remote server:
 *   {
 *     data : {
@@ -180,7 +182,7 @@ export const update_code = function() {
 *     errors : string[]
 *   }
 */
-update_code.prototype.get_code_update_info = async function ( server ) {
+update_code.prototype.get_code_update_info = async function ( server, channel ) {
 
 	// short vars
 		const code				= server.code
@@ -196,7 +198,12 @@ update_code.prototype.get_code_update_info = async function ( server ) {
 			source			: {},
 			options			: {
 				version	: dedalo_version,
-				code	: code
+				code	: code,
+				// 'dev' asks the master to ALSO offer developer builds (branch
+				// builds, same version — no bump). It is an ask, not a right: a
+				// master that did not opt in answers exactly as it does for
+				// 'master'. Anything but 'dev' is the release channel.
+				channel	: channel==='dev' ? 'dev' : 'master'
 			}
 		},
 		retries : 1, // one try only

@@ -86,3 +86,9 @@ CHANGELOG.md
 
 # Release archives cut by scripts/update_probe.ts (machine-local, ~180MB each)
 /code/
+
+# The install stamp the code updater writes INTO an installed tree
+# (src/core/update/install_stamp.ts): per-install provenance, never source.
+# It must stay untracked so `git archive` can never ship one master's stamp
+# inside another install's release.
+src/core/update/install_stamp.json

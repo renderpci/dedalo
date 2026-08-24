@@ -52,6 +52,7 @@ import {
 	STAGING_KEEP_MARKER,
 	stagingHoldsParkedTree,
 } from './code_update.ts';
+import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
 import { backupFreshness } from './preconditions.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
 
@@ -146,6 +147,10 @@ export interface ConsumerStatus {
 		build: string | null;
 		sha: string | null;
 		posture: 'release' | 'dev';
+		/** Which channel this tree was installed from — null on a dev checkout. */
+		install_channel: InstallChannel | null;
+		/** sha256 of the archive it was installed from — null on a dev checkout. */
+		install_digest: string | null;
 		bun: string;
 		bun_pin: string | null;
 	};
@@ -368,7 +373,12 @@ export function consumerStatus(principal: Principal): ConsumerStatus {
 			engine_version: DEDALO_ENGINE_VERSION,
 			build: DEDALO_BUILD,
 			sha: DEDALO_BUILD_SHA,
-			posture: DEDALO_BUILD === null ? 'dev' : 'release',
+			posture: enginePosture(DEDALO_BUILD, INSTALLED_CHANNEL),
+			// WHICH ARCHIVE is live, and from which channel (install_stamp.ts).
+			// The digest is what an operator compares against the release they
+			// meant to install when the version cannot tell them apart.
+			install_channel: INSTALLED_CHANNEL,
+			install_digest: INSTALLED_DIGEST,
 			bun: Bun.version,
 			bun_pin: livePin,
 		},
@@ -419,6 +429,12 @@ export interface PublishedRelease {
 
 export interface CodeServerStatus {
 	is_a_code_server: boolean;
+	/**
+	 * This master OFFERS developer builds to consumers that ask for them
+	 * (DEDALO_CODE_SERVER_DEV_CHANNEL). Without it on the panel, an operator
+	 * cannot tell "the consumer never asked" from "I refused to answer".
+	 */
+	dev_channel: boolean;
 	checks: StatusCheck[];
 	ready: boolean;
 	source: {
@@ -698,6 +714,23 @@ function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRe
 }
 
 /** The code-server half of the panel: role, build source, artifacts, manifest. */
+/**
+ * 'dev' | 'release' — what this tree IS, not merely how it was produced.
+ *
+ * Build provenance alone answers the wrong question: `git archive` expands the
+ * build stamp for EVERY ref, so a `v7` branch build looks exactly as
+ * "released" as a `master` one. A tree installed from the developer channel is
+ * therefore 'dev' however well-stamped it is; a tree with no install stamp
+ * (any release predating them) is judged on provenance, as before.
+ */
+export function enginePosture(
+	build: string | null,
+	installChannel: InstallChannel | null,
+): 'dev' | 'release' {
+	if (build === null) return 'dev';
+	return installChannel === 'dev' ? 'dev' : 'release';
+}
+
 export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 	const gitDir = config.update.codeServerGitDir ?? null;
 	const filesDir = config.update.codeFilesDir ?? null;
@@ -766,6 +799,7 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 		checks,
 		ready: !checks.some((entry) => entry.state === 'blocked'),
 		source,
+		dev_channel: config.update.devChannelEnabled,
 		files_dir: filesDir,
 		releases: published.releases,
 		releases_unreadable: published.unreadable,

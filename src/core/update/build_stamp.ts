@@ -79,10 +79,7 @@ export const DEDALO_BUILD_SHA: string | null = INFO.sha;
  * install stamp (any release built before stamps existed) keeps the bare
  * string: absence of evidence is not evidence of a branch build.
  */
-export function prereleaseTagFor(
-	build: string | null,
-	channel: InstallChannel | null,
-): string {
+export function prereleaseTagFor(build: string | null, channel: InstallChannel | null): string {
 	if (build === null) return '.dev';
 	return channel === 'dev' ? '.dev' : '';
 }

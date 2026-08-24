@@ -226,8 +226,16 @@ const get_content_data_edit = async function(self) {
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					// resume path: the expected version was lost with the page, the
-					// /health comparison degrades honestly (see resolve_health_outcome)
-					track_process(local_data.value.pid, local_data.value.pfile, body_response, null)
+					// /health comparison degrades honestly (see resolve_health_outcome).
+					// The DIGEST survives it, though — it is stored with the job handle
+					// — and on a same-version install it is the only usable token.
+					track_process(
+						local_data.value.pid,
+						local_data.value.pfile,
+						body_response,
+						null,
+						local_data.value.digest ?? null
+					)
 				}
 			})
 		}
@@ -242,6 +250,40 @@ const get_content_data_edit = async function(self) {
 				parent			: content_data
 			})
 		}
+
+	// dev_channel switch — ask the code server for DEVELOPER BUILDS too.
+	// A developer build is a branch build (any ref but 'master'), so it carries
+	// NO version bump and installs over the same version: it is how unreleased
+	// work is tested on a real installation. Flipping this switch is the ARMING
+	// on this side — everything else (superuser, maintenance mode, a recent
+	// backup, the sha256 check) is unchanged. The code server must have opted in
+	// too, and one that did not simply answers with releases only.
+		const dev_channel_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dev_channel_row',
+			parent			: content_data
+		})
+		// label WRAPS the input (the house pattern — move_lang/move_locator): the
+		// click target is the whole row without an id/for pair to keep in sync.
+		const dev_channel_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'dev_channel_label',
+			text_content	: get_label.update_code_dev_channel || 'Developer builds',
+			parent			: dev_channel_row
+		})
+		const dev_channel_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'dev_channel_check',
+			name			: 'update_code_dev_channel'
+		})
+		dev_channel_label.prepend(dev_channel_input)
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note dev_channel_note',
+			text_content	: get_label.update_code_dev_channel_note || 'Also offers unreleased builds made from a development branch. They carry the same version number as the installed one, so they are installed over it. Use them to test development work, never on a production installation.',
+			parent			: dev_channel_row
+		})
 
 	// button_submit (check available updates)
 		const button_submit = ui.create_dom_element({
@@ -305,7 +347,11 @@ const get_content_data_edit = async function(self) {
 				body_response.prepend(spinner)
 
 			// Code information. Call selected remote server API to get updates list
-				const server_code_api_response = await self.get_code_update_info(server)
+				const dev_channel = dev_channel_input.checked===true
+				const server_code_api_response = await self.get_code_update_info(
+					server,
+					dev_channel ? 'dev' : 'master'
+				)
 				if(SHOW_DEBUG===true) {
 					console.log('))) get_content_data_edit server_code_api_response:', server_code_api_response);
 				}
@@ -494,9 +540,13 @@ const render_phase_track = function(parent) {
 * @param {string} pfile
 * @param {HTMLElement} body_response - panel response surface
 * @param {string|null} expected_version - version the job installs (null on resume)
+* @param {string|null} [expected_digest] - sha256 of the archive the job installs
+*   (the manifest item's own digest). On a DEVELOPER build the version is
+*   identical on both sides of the swap, so this is the only token that can tell
+*   the new tree from a rolled-back one.
 * @returns {void}
 */
-const track_process = function(pid, pfile, body_response, expected_version) {
+const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null) {
 
 	// clean previous surface
 		while (body_response.firstChild) {
@@ -505,7 +555,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 
 	// phase track + reducer state
 		const track = render_phase_track(body_response)
-		let state = init_phase_state(expected_version)
+		let state = init_phase_state(expected_version, expected_digest)
 		track.paint(state)
 
 	// stream surface (render_stream owns this node)
@@ -615,7 +665,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 		const finish_interrupted = () => {
 			track.paint(state)
 			data_manager.set_local_db_data(
-				{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile } },
+				{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile, digest : expected_digest } },
 				'status'
 			)
 			ui.create_dom_element({
@@ -630,17 +680,21 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 			const deadline = Date.now() + 120000
 			const tick = async () => {
 				let version = null
+				let digest = null
 				try {
 					const health_response = await fetch('/health')
 					if (health_response.ok) {
 						const health = await health_response.json()
 						version = health?.version ?? null
+						// null on a server older than the install stamp — the verdict
+						// falls back to the version compare in that case.
+						digest = health?.install_digest ?? null
 					}
 				} catch (_error) {
 					// server still restarting: keep polling until the deadline
 				}
 				if (version!==null) {
-					const ending = resolve_health_outcome(state, version)
+					const ending = resolve_health_outcome(state, version, digest)
 					if (ending.outcome==='updated') {
 						finish_success(version)
 						return
@@ -1129,7 +1183,13 @@ const render_info_modal = function( self, versions_info, body_response ) {
 					if (typeof modal.close==='function') {
 						modal.close()
 					}
-					track_process(pid, pfile, body_response, String(file_active.version ?? '') || null)
+					track_process(
+						pid,
+						pfile,
+						body_response,
+						String(file_active.version ?? '') || null,
+						String(file_active.sha256 ?? '') || null
+					)
 				}
 				button_update.addEventListener('click', click_handler)
 				// Focus the Update button immediately so keyboard users can confirm

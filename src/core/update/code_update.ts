@@ -94,7 +94,7 @@ import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
-import { type InstallChannel, INSTALL_STAMP_PATH, parseInstallStamp } from './install_stamp.ts';
+import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
@@ -642,8 +642,9 @@ function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
  */
 function installedDigestOf(targetRoot: string): string | null {
 	try {
-		return parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest
-			?? null;
+		return (
+			parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest ?? null
+		);
 	} catch {
 		return null;
 	}
@@ -656,7 +657,11 @@ function installedDigestOf(targetRoot: string): string | null {
  * short digest of the tree the dir HOLDS makes it identifiable; a tree with no
  * stamp keeps the old name rather than inventing a token.
  */
-function backupDirName(previousVersion: string, previousDigest: string | null, stamp: string): string {
+function backupDirName(
+	previousVersion: string,
+	previousDigest: string | null,
+	stamp: string,
+): string {
 	return previousDigest === null
 		? `dedalo_${previousVersion}_${stamp}`
 		: `dedalo_${previousVersion}_${previousDigest.slice(0, 7)}_${stamp}`;

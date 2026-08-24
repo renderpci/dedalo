@@ -16704,6 +16704,20 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code > .content_data > .dd_note {
   margin: 0.5rem 0;
 }
+.wrapper_widget.update_code > .content_data > .dev_channel_row {
+  margin: 0.75rem 0 0.25rem 0;
+}
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+.wrapper_widget.update_code > .content_data > .dev_channel_row > .dd_note.dev_channel_note {
+  margin: 0.25rem 0 0 1.75rem;
+  max-width: 60rem;
+}
 .wrapper_widget.update_code > .content_data .update_status {
   margin-bottom: 1rem;
 }

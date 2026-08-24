@@ -35,10 +35,13 @@ const phase_index = (id) => UPDATE_PHASES.indexOf(id)
 
 /**
 * INIT_PHASE_STATE
-* @param {string|null} expected_version - the version the job installs
+* @param {string|null} [expected_version] - the version the job installs
+* @param {string|null} [expected_digest] - sha256 of the ARCHIVE the job installs.
+*   On a developer build the version is identical before and after the swap, so
+*   this is the only token that tells the new tree from a rolled-back one.
 * @returns {Object} state
 */
-export const init_phase_state = function(expected_version=null) {
+export const init_phase_state = function(expected_version=null, expected_digest=null) {
 	return {
 		phases				: UPDATE_PHASES.map(id => ({ id : id, status : 'pending' })),
 		last_phase			: null,			// last phase id the stream reported
@@ -46,6 +49,7 @@ export const init_phase_state = function(expected_version=null) {
 		message				: null,			// last human message (the last error sentence on failure)
 		version				: null,			// version the server last reported
 		expected_version	: expected_version,
+		expected_digest		: expected_digest,	// sha256 of the archive being installed
 		rollback			: null			// {performed, to} when the server rolled back
 	}
 }//end init_phase_state
@@ -166,16 +170,35 @@ export const resolve_final_frame = function(state, frame) {
 /**
 * RESOLVE_HEALTH_OUTCOME
 * Decides the ending once /health answers (or the deadline passes).
+*
+* WHICH TOKEN DECIDES. The version cannot, on its own: a developer-channel
+* install replaces the tree WITHOUT a version bump, so the rolled-back old tree
+* answers /health with exactly the version the update expected — every such
+* update would report success. When the panel knows which ARCHIVE it installed
+* (`expected_digest`, straight from the manifest item's sha256) the digest
+* decides, because that is what actually differs between the two trees.
+*
+* The fallback stays deliberate: a server too old to publish `install_digest`
+* answers null, and calling that a rollback would break every update against an
+* older install. Version compare is the honest answer there — the same answer
+* this function always gave.
+*
 * @param {Object} state - reducer state (mode 'polling')
 * @param {string|null} health_version - `version` from /health, null when the
 *   server never came back before the deadline
+* @param {string|null} [health_digest] - `install_digest` from /health
 * @returns {{outcome:string, message:(string|null)}}
 *   outcome ∈ updated | rolled_back | server_gone
 */
-export const resolve_health_outcome = function(state, health_version) {
+export const resolve_health_outcome = function(state, health_version, health_digest=null) {
 
 	if (health_version===null || health_version===undefined || health_version==='') {
 		return { outcome : 'server_gone', message : state.message }
+	}
+	if (state.expected_digest && health_digest) {
+		return health_digest===state.expected_digest
+			? { outcome : 'updated', message : null }
+			: { outcome : 'rolled_back', message : state.message }
 	}
 	if (state.expected_version && health_version===state.expected_version) {
 		return { outcome : 'updated', message : null }
