@@ -13,7 +13,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
@@ -26,6 +26,7 @@ import {
 	planCodeBuild,
 	VERSION_TS_PATH,
 } from './code_build_plan.ts';
+import { ensureCodeFilesDir } from './code_files_dir.ts';
 import { refuseUpdate } from './refuse.ts';
 
 /**
@@ -142,10 +143,17 @@ export async function buildVersionFromGit(options: {
 		});
 	}
 	const { gitDir, targetDir, filePath } = plan;
-	try {
-		mkdirSync(targetDir, { recursive: true });
-	} catch (error) {
-		refuseUpdate('update.failed', 'Error. Unable to create the release directory', error);
+	// THE SAME provisioner as the boot pass (code_files_dir.ts): the version
+	// levels a build mints must not be looser than the root they sit in, and a
+	// bare `mkdirSync(mode)` is umask-dependent. It never throws — the refusal
+	// below is this call site's, so the operator sentence stays the wire's.
+	const dirReport = ensureCodeFilesDir(targetDir);
+	if (dirReport.error !== null || !dirReport.isDirectory) {
+		refuseUpdate(
+			'update.failed',
+			'Error. Unable to create the release directory',
+			dirReport.error ?? new Error(`${targetDir} exists but is not a directory`),
+		);
 	}
 
 	await runGitArchiveOrRefuse(gitDir, ref, filePath);

@@ -69,6 +69,7 @@ import {
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
 import { DEDALO_ENGINE_VERSION } from './core/update/build_stamp.ts';
+import { ensureCodeFilesDirAtBoot } from './core/update/code_files_dir.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 import { INSTALLED_DIGEST } from './core/update/install_stamp.ts';
 
@@ -1652,6 +1653,15 @@ export async function startServer() {
 		// logs everything (S1-15 posture: a broken media root is loud, not a refusal
 		// to serve the archive's records).
 		provisionMediaTreeAtBoot();
+
+		// RELEASE FILES DIRECTORY (core/update/code_files_dir.ts): a code server's
+		// DEDALO_CODE_FILES_DIR is created here, at a deliberate mode, when the key
+		// is set and the directory is not. Same reason the media tree is provisioned
+		// at boot rather than at install: IS_A_CODE_SERVER is an .env edit away on a
+		// box that installed years ago, and until the root exists the build refuses,
+		// the manifest advertises nothing and the readiness panel reads `blocked`.
+		// No-op on every install that is not a code server. Never fatal.
+		ensureCodeFilesDirAtBoot();
 
 		// Media access control (Rule A): refresh the generated web-server rules at BOOT,
 		// not only at login. On a fresh deploy or a wiped media dir the rule files would
