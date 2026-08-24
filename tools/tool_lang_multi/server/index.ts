@@ -14,6 +14,8 @@ export const tool: ToolServerModule = {
 	apiActions: {
 		automatic_translation: {
 			permission: null,
+			gatedInHandler:
+				'assertTranslationPermissions(...) inside runAutomaticTranslation (src/core/tools/translation.ts) — the same tipo-PAIR level-2 check plus the `record` in-scope half as tool_lang, since PHP delegates here too (TOOLS-10).',
 			handler: async (ctx) => (await runAutomaticTranslation(ctx, 'tool_lang')) as ToolResponse,
 		},
 	},

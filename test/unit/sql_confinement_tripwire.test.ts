@@ -266,6 +266,15 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		owners: ['src/core/error_report/store.ts'],
 	},
 	{
+		// The engine records WHO started an agent session, because the site-builder
+		// daemon's own SessionMeta has no owner field — so this table is the only
+		// answer to "may this user drive that session", and a second module writing
+		// it could hand one user another's running agent.
+		family: 'site-builder session ownership (2026-08-24, P2-8b)',
+		tablePattern: /dedalo_ts_sitebuilder_sessions/,
+		owners: ['tools/tool_sitebuilder/server/session_owner.ts'],
+	},
+	{
 		family: 'test-database marker (2026-08-19)',
 		tablePattern: /dedalo_test_marker/,
 		owners: ['src/core/test_data/test_database_marker.ts'],

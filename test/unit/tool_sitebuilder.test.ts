@@ -198,23 +198,29 @@ describe('tool_sitebuilder proxy', () => {
 	});
 
 	/**
-	 * The delete_site gate (audit §4.3). The line is drawn where the daemon draws it:
-	 * `deleteSite(slug, purgeProd)` (site_builder src/sites/workspace.ts) unconditionally
-	 * removes the WORKSPACE + preprod copy — builder-owned state that create_site/build
-	 * (ungated beyond the tool grant) produced, and whose prod release history survives, so
-	 * re-creating the slug restores rollback. Only `purgeProd` touches config.PROD_ROOT: it
-	 * deletes the LIVE copy and its .releases history. That is the destructive half of
-	 * publish, so it takes publish's gate — publisher AND an explicit confirm — because a
-	 * user who cannot take a site live must not be able to take it down, and an unconfirmed
-	 * call must not be able to either.
+	 * The delete_site gate, as P2-8(b) redrew it. It used to be split where the daemon
+	 * splits `deleteSite(slug, purgeProd)` (site_builder src/sites/workspace.ts): only the
+	 * `purgeProd` half — the one touching PROD_ROOT — was gated, and the plain half, which
+	 * destroys the WORKSPACE and the preprod copy, was ordinary tool work for any grantee.
+	 * That was wrong in the same way the rest of the tool was: destroying somebody's
+	 * unpublished work needs authorization too, and an unpublished site has no prod release
+	 * history to be restored from. So the publisher grant now covers BOTH halves, and
+	 * purge_prod keeps its extra explicit-confirm requirement on top.
 	 */
-	test('delete_site without purge_prod is ordinary tool work for any grantee', async () => {
-		const res = await tool.apiActions.delete_site!.handler(ctx(PLAIN, { slug: 'demo' }));
+	test('delete_site without purge_prod is now publisher-gated too, and never reaches the daemon for a plain user', async () => {
+		const before = requests.length;
+		const denied = await refusalOf(
+			tool.apiActions.delete_site!.handler(ctx(PLAIN, { slug: 'demo' })),
+		);
+		expect(denied.code).toBe('site_builder.rejected');
+		expect(requests.length).toBe(before);
+
+		const res = await tool.apiActions.delete_site!.handler(ctx(DEV, { slug: 'demo' }));
 		expect(res.data).toMatchObject({ deleted: 'demo', purged_prod: false });
 		const req = lastRequest();
 		expect(req.method).toBe('DELETE');
 		expect(req.path).toBe('/v1/sites/demo');
-		expect(req.body).toMatchObject({ actor: { user_id: 9 } });
+		expect(req.body).toMatchObject({ actor: { user_id: 7 } });
 	});
 
 	test('delete_site --purge_prod is refused to a plain user and never reaches the daemon', async () => {
@@ -279,9 +285,15 @@ describe('tool_sitebuilder proxy', () => {
 
 		const savedUrl = siteBuilder.url;
 		siteBuilder.url = 'http://127.0.0.1:1'; // nothing listening
-		const down = await tool.apiActions.get_status!.handler(ctx(PLAIN, {}));
-		expect(down.data).toMatchObject({ configured: true, reachable: false, can_publish: false });
+		// A PUBLISHER asks: since P2-8(b) get_status is gated like everything else, so a
+		// plain user gets a refusal here rather than a status body (the reachability
+		// answer is itself a disclosure about the installation's infrastructure).
+		const down = await tool.apiActions.get_status!.handler(ctx(ADMIN, {}));
+		expect(down.data).toMatchObject({ configured: true, reachable: false, can_publish: true });
 		siteBuilder.url = savedUrl;
+
+		const denied = await refusalOf(tool.apiActions.get_status!.handler(ctx(PLAIN, {})));
+		expect(denied.code).toBe('site_builder.rejected');
 	});
 
 	test('unconfigured install: every action fails closed and isAvailable is false', async () => {
@@ -325,9 +337,13 @@ describe('tool_sitebuilder proxy', () => {
 		expect(requests.length).toBe(before);
 	});
 
+	// ADMIN, not DEV: session_stream is ownership-gated since P2-8(b) and 'abc' has no
+	// owner row, so a developer would (correctly) be refused before the stream opens. The
+	// global-admin bypass keeps THIS test about the SSE bytes; the ownership rule itself is
+	// gated in tool_sitebuilder_authz_native.test.ts.
 	test('session_stream forwards the SSE bytes and sets the anti-buffering header', async () => {
 		const res = await tool.apiActions.session_stream!.handler(
-			ctx(DEV, { session_id: 'abc', after: -1 }),
+			ctx(ADMIN, { session_id: 'abc', after: -1 }),
 		);
 		expect(res.ok).toBe(true);
 		expect(res.streamContentType).toContain('text/event-stream');

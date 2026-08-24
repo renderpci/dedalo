@@ -235,9 +235,11 @@ export function buildSendReportHandler(deps: SendReportDeps = defaultDeps) {
 export const tool: ToolServerModule = {
 	name: 'tool_error_report',
 	apiActions: {
-		// permission: null — the gate is imperative: isGlobalAdmin, first line of
-		// the handler (the registry non-grant already hides the tool from
-		// non-admins; this is the defense-in-depth backstop).
-		send_report: { permission: null, handler: buildSendReportHandler() },
+		send_report: {
+			permission: null,
+			gatedInHandler:
+				'context.principal.isGlobalAdmin — the first statement of the built sendReport handler, throwing perm.denied otherwise. Defense in depth over the registry non-grant that already hides the tool from non-admins; there is no section/record target (the payload is a browser error report relayed to the master install).',
+			handler: buildSendReportHandler(),
+		},
 	},
 };

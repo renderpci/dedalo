@@ -124,7 +124,12 @@ async function longJob(context: ToolActionContext): Promise<ToolResponse> {
 export const tool: ToolServerModule = {
 	name: 'tool_dev_template',
 	apiActions: {
-		status: { permission: null, handler: status },
+		status: {
+			permission: null,
+			gatedInHandler:
+				"UNGATED — the exemplar's demonstration of the null exemption: status() returns a constant literal, addresses no record and writes nothing, so any authenticated user granted tool_dev_template may call it. A tool author copying this file must replace this string with what THEIR handler actually does — or choose a declarative kind.",
+			handler: status,
+		},
 		read_demo: { permission: 'tipo', minLevel: 1, handler: readDemo },
 		write_demo: { permission: 'record', minLevel: 2, handler: writeDemo },
 		component_write_demo: {

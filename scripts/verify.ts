@@ -99,6 +99,7 @@ const TRIPWIRES = [
 	'test/unit/error_report_xss_tripwire.test.ts',
 	'test/unit/security_audit_2026_07_23_tripwire.test.ts',
 	'test/unit/human_write_scope_tripwire.test.ts',
+	'test/unit/tool_permission_census_tripwire.test.ts',
 	'test/unit/diffusion_scope_tripwire.test.ts',
 	'test/unit/diffusion_queue_stream_tripwire.test.ts',
 	'test/unit/dataframe_scan_coverage_tripwire.test.ts',

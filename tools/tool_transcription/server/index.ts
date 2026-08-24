@@ -408,7 +408,12 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 		scheduleBackground(
 			loaded,
 			BACKGROUND_POLL_ACTION,
-			{ permission: null, handler: backgroundTranscriberPoll },
+			{
+				permission: null,
+				gatedInHandler:
+					'UNGATED BY DESIGN — a BACKGROUND-ONLY spec: BACKGROUND_POLL_ACTION is absent from apiActions, so it is unroutable from the wire and can only be enqueued from here, after automaticTranscription has run its gateRecordWrite/gateRecord pair. Principal, user and target ddo are captured at enqueue time (isolation Rule 6), so the poll never re-derives authority.',
+				handler: backgroundTranscriberPoll,
+			},
 			{
 				key: cfg.key,
 				url: cfg.uri,
@@ -1332,7 +1337,12 @@ async function scheduleModelJob(input: {
 	const scheduled = input.schedule(
 		input.loaded,
 		input.action,
-		{ permission: null, handler: input.handler },
+		{
+			permission: null,
+			gatedInHandler:
+				'UNGATED BY DESIGN — a BACKGROUND-ONLY spec for BACKGROUND_DOWNLOAD_ACTION / BACKGROUND_REPAIR_ACTION, both absent from apiActions and therefore unroutable from the wire. The wire-facing caller (downloadModelAction / repairModelAction) has already refused a non-isGlobalAdmin principal before scheduleModelJob is reached.',
+			handler: input.handler,
+		},
 		{ model: entry.name, dtype: entry.dtype, kind: entry.kind },
 		ctx.principal,
 		ctx.userId,
@@ -1582,16 +1592,65 @@ async function runModelRepair(
 
 export const tool: ToolServerModule = {
 	name: 'tool_transcription',
+	// `permission: null` throughout, because the target of every media action is a
+	// NESTED `media_ddo` (or a model name), not the top-level section_tipo/tipo the
+	// declarative gate reads. Each string below is the P2-8(a) census entry
+	// (test/unit/tool_permission_census_tripwire.test.ts) naming the in-handler gate.
 	apiActions: {
-		get_model_sources: { permission: null, handler: getModelSources },
-		download_model: { permission: null, handler: downloadModelAction },
-		verify_model: { permission: null, handler: verifyModelAction },
-		repair_model: { permission: null, handler: repairModelAction },
-		create_transcribable_audio_file: { permission: null, handler: createTranscribableAudioFile },
-		delete_transcribable_audio_file: { permission: null, handler: deleteTranscribableAudioFile },
-		automatic_transcription: { permission: null, handler: automaticTranscription },
-		check_server_transcriber_status: { permission: null, handler: checkServerTranscriberStatus },
-		build_subtitles_file: { permission: null, handler: buildSubtitlesFile },
+		get_model_sources: {
+			permission: null,
+			gatedInHandler:
+				'UNGATED — no authorization check: the answer is install configuration (AI_MODEL_URL_PREFIX, modelHubAllowed(), modelStoreAvailable()) plus the catalog and the model store on disk. No record is addressed and nothing is written; reachable by any authenticated user granted tool_transcription.',
+			handler: getModelSources,
+		},
+		download_model: {
+			permission: null,
+			gatedInHandler:
+				'ctx.principal.isGlobalAdmin — the first statement of downloadModelAction, throwing perm.denied otherwise. A model download is an install-wide, network-touching write to the shared model store, so it is admin-only rather than section-scoped.',
+			handler: downloadModelAction,
+		},
+		verify_model: {
+			permission: null,
+			gatedInHandler:
+				'ctx.principal.isGlobalAdmin — the first statement of verifyModelAction, throwing perm.denied otherwise. It reports the install-wide model state, not any record.',
+			handler: verifyModelAction,
+		},
+		repair_model: {
+			permission: null,
+			gatedInHandler:
+				'ctx.principal.isGlobalAdmin — the first statement of repairModelAction, throwing perm.denied otherwise. Repair DELETES and re-downloads files in the shared model store.',
+			handler: repairModelAction,
+		},
+		create_transcribable_audio_file: {
+			permission: null,
+			gatedInHandler:
+				'gateRecordWrite(ddo, ctx) — gateRecord(ddo, ctx, 2), i.e. assertActionPermission with the `record` kind on the LIFTED media_ddo (section write level + record-in-scope), before the WAV is built. It does NOT assert the (section, component) PAIR: the media component_tipo in the ddo is never consulted.',
+			handler: createTranscribableAudioFile,
+		},
+		delete_transcribable_audio_file: {
+			permission: null,
+			gatedInHandler:
+				'gateRecordWrite(ddo, ctx) — the same lifted `record` gate at level 2 (section write + record-in-scope, pair NOT asserted), before the throwaway WAV is unlinked.',
+			handler: deleteTranscribableAudioFile,
+		},
+		automatic_transcription: {
+			permission: null,
+			gatedInHandler:
+				'gateRecordWrite(transcriptionDdo, ctx) on the WRITE target plus gateRecord(mediaDdo, ctx, 1) on the media SOURCE (TOOLS-06) — both lifted `record` gates (section level + record-in-scope, pair NOT asserted), before anything is submitted to the ASR server.',
+			handler: automaticTranscription,
+		},
+		check_server_transcriber_status: {
+			permission: null,
+			gatedInHandler:
+				'CONDITIONAL — gateRecord(ddo, ctx, 1), a lifted `record` READ gate (section level + record-in-scope), but only when media_ddo.section_tipo is present (PHP parity). A payload with no section_tipo in the ddo reaches the poll ungated; it then fails validation, which is not the same thing as being authorized.',
+			handler: checkServerTranscriberStatus,
+		},
+		build_subtitles_file: {
+			permission: null,
+			gatedInHandler:
+				'CONDITIONAL — assertActionPermission with `tipo` (level 2) and then `record` (level 2), but only when BOTH section_tipo and component_tipo are present in the options (PHP SEC-024 parity); section_id is scoped only when it too is present.',
+			handler: buildSubtitlesFile,
+		},
 	},
 	// Background-only actions: allowlisted here, absent from apiActions
 	// (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.

@@ -655,13 +655,24 @@ export const tool: ToolServerModule = {
 			minLevel: 1,
 			handler: getSectionComponentsList,
 		},
-		get_csv_files: { permission: null, handler: getCsvFiles },
-		delete_csv_file: { permission: null, handler: deleteCsvFile },
-		// permission: null — there is no section target to gate on: the client posts
-		// only {file_data}. The action is user-scoped by construction (both the staged
-		// source and the import destination are REBUILT from ctx.userId) and writes no
-		// record. The write gate lives on import_files, where the targets exist.
-		process_uploaded_file: { permission: null, handler: processUploadedFile },
+		get_csv_files: {
+			permission: null,
+			gatedInHandler:
+				"NOT AN AUTHORIZATION GATE — importDir(ctx.userId) confines the listing to the caller's OWN staging directory, rebuilt server-side from the authenticated user id, so there is no cross-user reach and no ontology target to gate on. No permission is checked; the CSV column map it returns resolves ontology labels for any header cell the file names.",
+			handler: getCsvFiles,
+		},
+		delete_csv_file: {
+			permission: null,
+			gatedInHandler:
+				"NOT AN AUTHORIZATION GATE — importDir(ctx.userId) + safeImportFile() rebuild the target path from the authenticated user id and a sanitized name, so the delete cannot leave the caller's own staging directory. Nothing else is checked; the file is the caller's own upload, not a record.",
+			handler: deleteCsvFile,
+		},
+		process_uploaded_file: {
+			permission: null,
+			gatedInHandler:
+				"NOT AN AUTHORIZATION GATE — sanitizeSegment() + the staging-root confinement rebuild BOTH ends from ctx.userId (parity with PHP sanitize_key_dir), so one user cannot claim another's staged upload; importDir(ctx.userId) is the destination. No permission is checked and none applies: no record is written. The write gate lives on import_files, where the section targets exist.",
+			handler: processUploadedFile,
+		},
 		// The preflight READS the same targets the import writes, so it is gated at
 		// READ level on every one of them — it must never become a way to probe a
 		// section the caller cannot see.

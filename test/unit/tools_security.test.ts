@@ -15,8 +15,21 @@ const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: tru
 const PLAIN_USER: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 
 const noopHandler = async () => ok(true, { requestId: 'tools-security-test' });
+/**
+ * A spec fixture. The base is the `permission: null` member, which since P2-8(a)
+ * REQUIRES `gatedInHandler` — a test fixture must satisfy the same contract a
+ * production spec does, or the union would be provable only in production code.
+ * The cast is on the SPREAD, not on the shape: `Partial<A|B>` widens to
+ * `Partial<A>|Partial<B>`, so TS cannot see that a partial carrying a real
+ * permission kind has dropped the null member's required field.
+ */
 function spec(partial: Partial<ToolActionSpec>): ToolActionSpec {
-	return { permission: null, handler: noopHandler, ...partial };
+	return {
+		permission: null,
+		gatedInHandler: 'test fixture — the handler is a noop; no gate exists or is claimed',
+		handler: noopHandler,
+		...partial,
+	} as ToolActionSpec;
 }
 
 describe('resolveAction', () => {
