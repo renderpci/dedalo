@@ -6,7 +6,7 @@ Dédalo is an active, rapidly developing software project. It is therefore impor
 
 There are two ways to update the server's code: the maintenance-panel **self-update** (below), driven by a configured code server, and a **manual** `git pull` (see [Updating manually](#updating-manually)). Both operate on this install's own tree — there is no separate install they delegate to.
 
-The update process is based on the Dédalo cadence numbering. Versions are installed step by step — the updater refuses to skip a major or minor version — and a code version sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
+The update process is based on the Dédalo cadence numbering. Versions are installed step by step — the updater refuses to skip **any** version, patch releases included: the only target it accepts is the very next rung — and a code version sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
 
 Updating the Dédalo code should be supervised by the IT team. Some changes — such as **new configuration settings** — must be applied manually in `../private/.env`, because neither update path touches your configuration.
 

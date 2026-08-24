@@ -277,6 +277,26 @@ async function main(): Promise<void> {
 	const RELEASE_VERSION = `${triple[0]}.${triple[1]}.${(triple[2] ?? 0) + 1}`;
 	console.log(`[probe] cycle: ${CURRENT_VERSION} -> ${RELEASE_VERSION}`);
 
+	// THE RUNG MUST EXIST IN THE CATALOG — asserted here, before ~180 MB of
+	// archive is cut and before the museum is touched at all.
+	//
+	// The probe invents its rung from the museum's own /health (patch + 1), but
+	// `buildCodeUpdateInfo` walks UPDATE_CATALOG to decide what a master may
+	// advertise, and that catalog is hand-written. Nothing on the prepare path
+	// could notice the gap: the serving route is catalog-independent (the zip
+	// downloads fine), and the manifest was only ever fetched under --drive. So
+	// a museum sitting at the last catalogued rung got a cheerful "PREPARED"
+	// and a printed operator procedure for a release the master can never
+	// offer — the panel simply shows nothing, with no error to search for.
+	{
+		const { UPDATE_CATALOG } = await import('../src/core/update/catalog.ts');
+		const rungKey = RELEASE_VERSION.split('.').join('');
+		must(
+			UPDATE_CATALOG[rungKey] !== undefined,
+			`UPDATE_CATALOG has no '${rungKey}' descriptor, so the master can never ADVERTISE ${RELEASE_VERSION} (buildCodeUpdateInfo walks the catalog) — the museum's panel would just show nothing. Add the descriptor to src/core/update/catalog.ts, or reset the museum tree to a version whose next rung IS catalogued.`,
+		);
+	}
+
 	// --- the consumer's runtime facts --------------------------------------
 	const consumerBun = await dockerExec(
 		CONSUMER_CONTAINER,
@@ -328,22 +348,31 @@ async function main(): Promise<void> {
 	// value becomes PART OF THE VALUE (quotes are stripped only when the WHOLE
 	// value is quoted), so the running engine's files-dir was garbage and every
 	// release URL answered 404. Append canonical bare paths.
+	//
+	// A CONFIGURED value is the operator's, not ours. This used to overwrite
+	// DEDALO_CODE_FILES_DIR whenever it merely DIFFERED from <repo>/code, and
+	// to append DEDALO_CODE_SERVER_GIT_DIR — a key the probe never reads, since
+	// it cuts the archive from its own throwaway clone — shadowing a
+	// deliberate `ssh://…` setting in an append-only file that cannot be
+	// un-appended. Now: fill in only what is UNSET, and where a set value is
+	// genuinely unusable, name it and stop rather than silently shadow it.
 	const wantedFilesDir = join(projectRoot, 'code');
-	if (readString('DEDALO_CODE_FILES_DIR') !== wantedFilesDir) {
-		appendEnvLine(
-			'DEDALO_CODE_FILES_DIR',
-			wantedFilesDir,
-			'previous value carried quotes/comment text',
-		);
+	const configuredFilesDir = readString('DEDALO_CODE_FILES_DIR');
+	if (configuredFilesDir === undefined || configuredFilesDir === '') {
+		appendEnvLine('DEDALO_CODE_FILES_DIR', wantedFilesDir, 'was unset');
 		needsRestart = true;
-	}
-	if (readString('DEDALO_CODE_SERVER_GIT_DIR') !== projectRoot) {
-		appendEnvLine(
-			'DEDALO_CODE_SERVER_GIT_DIR',
-			projectRoot,
-			'previous value was a remote URL / quoted comment text — a LOCAL checkout enables wire builds',
+	} else if (!existsSync(configuredFilesDir)) {
+		// An inline `# comment` after a value becomes PART OF THE VALUE (quotes
+		// are stripped only when the WHOLE value is quoted), which is how this
+		// key silently became garbage and every release URL answered 404.
+		must(
+			false,
+			`DEDALO_CODE_FILES_DIR is set to '${configuredFilesDir}', which does not exist. Fix that line in ../private/.env (a bare path, no inline # comment) — the probe will not shadow a value you set.`,
 		);
-		needsRestart = true;
+	} else if (configuredFilesDir !== wantedFilesDir) {
+		console.log(
+			`[probe] note: publishing into the CONFIGURED DEDALO_CODE_FILES_DIR (${configuredFilesDir}), not <repo>/code`,
+		);
 	}
 	if (needsRestart) {
 		console.log(
@@ -558,6 +587,21 @@ services:
       CODE_SERVERS: '${JSON.stringify([
 				{ name: 'Local dev master', url: `${origin}/dedalo/core/api/v1/json/`, code: sharedCode },
 			])}'
+  nginx:
+    volumes:
+      # nginx serves the client tree IN PLACE, from
+      # /opt/dedalo/master_dedalo/client (deploy/nginx.simple.conf alias). The
+      # base stack binds THE MASTER'S OWN client/ there, which in this probe is
+      # the developer's working tree — so the museum's browser was loading the
+      # MASTER's uncommitted client against the museum's old server. A real
+      # museum's client ships INSIDE its own tree and is replaced BY the swap.
+      # Mount the museum tree here too, so the client the operator drives is the
+      # one being updated, and the new client goes live with the new server.
+      # Compose MERGES volume lists, so the base stack's more-specific
+      # ./client:/opt/dedalo/master_dedalo/client bind would still shadow the
+      # mount above — re-declare that exact TARGET against the museum's tree.
+      - ${join(PROBE_DIR, 'opt')}:/opt/dedalo
+      - ${join(PROBE_DIR, 'opt', 'master_dedalo', 'client')}:/opt/dedalo/master_dedalo/client:ro
 `,
 	);
 	console.log(`[probe] wrote ${overridePath}`);
