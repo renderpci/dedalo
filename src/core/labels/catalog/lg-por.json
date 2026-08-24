@@ -444,7 +444,7 @@
 	"type_root_password": "Escreva e volte a escrever a senha de super usuário desejada e guarde-a em um lugar seguro. Utilize uma senha segura de 8 a 32 caracteres que contenha, pelo menos, uma letra maiúscula, uma letra minúscula e um número. Não se permitem caracteres idênticos em orden sequencial ('aa', '11', 'BB', etc.). Não se permite orden numérica ('123', '345', etc.) ou alfabética ('aBC', 'hIjK', etc.).",
 	"unsaved_changes": "Sem salvar!",
 	"update": "Atualizar",
-	"update_code_lead": "Descarrega, verifica e instala uma nova versão do código e reinicia. A árvore anterior é mantida como ponto de restauro.",
+	"update_code_lead": "Descarrega, verifica e instala uma nova versão do código e reinicia o servidor. O código anterior é mantido como ponto de restauro.",
 	"update_mode_mandatory": "O modo de atualização é obrigatório",
 	"update_ontology": "Atualizar Ontologia",
 	"update_ontology_code_older": "O seu código do Dédalo é mais antigo do que esta ontologia exige (≥ %s). Atualize o código em breve para evitar incompatibilidades.",

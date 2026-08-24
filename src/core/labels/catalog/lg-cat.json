@@ -444,7 +444,7 @@
 	"type_root_password": "Escriviu i torneu a escriure la contrasenya de superusuari desitjada i deseu-la en un lloc segur. Feu servir una contrasenya segura de 8 a 32 caràcters que contingui, com a mínim, una lletra majúscula, una lletra minúscula i un número. No es permeten caràcters idèntics en ordre seqüencial ('aa', '11', 'BB', etc.). No es permet l'ordre numèric ('123', '345', etc.) ni alfabètic ('aBC', 'hIjK', etc.).",
 	"unsaved_changes": "Canvis no desats!",
 	"update": "Actualitzar",
-	"update_code_lead": "Baixa, verifica i instal·la una nova versió del codi i reinicia. L’arbre anterior es conserva com a punt de restauració.",
+	"update_code_lead": "Baixa, verifica i instal·la una nova versió del codi i reinicia el servidor. El codi anterior es conserva com a punt de restauració.",
 	"update_mode_mandatory": "El mode d'actualització és obligatori",
 	"update_ontology": "Actualitzar Ontologia",
 	"update_ontology_code_older": "El vostre codi de Dèdalo és més antic del que aquesta ontologia necessita (≥ %s). Actualitzeu el codi aviat per evitar incompatibilitats.",
