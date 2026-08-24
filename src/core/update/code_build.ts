@@ -86,9 +86,12 @@ export async function buildVersionFromGit(options: {
 		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
 	}
 	// All refusal gates (code-server flag → dirs → version → ref → confinement)
-	// and the release path live in the pure planner.
+	// and the release path live in the pure planner. The ref goes in EXPLICITLY:
+	// the planner's own fallback is the version string, which would have named a
+	// plain `master` build `<v>-dev.zip` (releaseFileName reads the ref) while
+	// `git archive` below packaged `master`.
 	const plan = planCodeBuild(
-		{ version, ...(options.ref === undefined ? {} : { ref: options.ref }) },
+		{ version, ref },
 		{
 			isCodeServer: config.update.isCodeServer,
 			codeServerGitDir: config.update.codeServerGitDir,
