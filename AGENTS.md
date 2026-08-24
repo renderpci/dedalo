@@ -57,7 +57,33 @@ The live-oracle era is over. The baselines of record are FROZEN:
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
 - `bun run test:db:setup` — build the SUITE database (stamps `dedalo_test_marker`) AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
-- `bun run test:client` — the browser client suite (Mocha in headless Chrome).   It STARTS ITS OWN SERVER on the dedicated SUITE database and stops it again:   no dev server to start first, no port to pass, and no client test can reach   the application's data (`scripts/client_test_server.ts`; build the database   once with `bun run test:db:setup`). `--url <page>` still drives a server you   started yourself — VERIFIED, not trusted: any target must answer `/health`   with the fingerprint of the same `dedalo_test_marker` row this process reads   (dev-mode-only, an opaque hash, never the DB name), or the run refuses before   Chrome launches. `--port` moves the run's own listener (default 4390, next   free). It authenticates for real: the run sets the suite database's own   credential (`src/core/test_data/suite_login.ts` — the install seed ships   `root` passwordless) and then calls `login()` in-process and injects the   session cookie; `--auth form` uses the login UI, `--auth mint --user <existing>`   is the no-password escape hatch. The baseline is IN the runner: `KNOWN_FAILING`   (shrink-only, reasons inline — a listed suite that PASSES is red too) and   `--strict` ignores it. `KNOWN_FAILING` is currently EMPTY, so a plain run   equals `--strict`. Last measured 2026-08-22 on the run's OWN server, on the   suite database, with real authentication: 131 suites, 131 pass. ALWAYS measure   with the reseed on — a polluted test3 fakes ~7 failures. **The run PINS what two suites need   instead of borrowing it from the machine**: the diffusion domain is   `SUITE_DIFFUSION_DOMAIN` (`test`, the repo-owned generic domain — the engine   matches a domain BY TERM, so the installation's name resolves to a truncated   clone here and `tool_diffusion` silently disappears), asserted before Chrome   starts; the `dd153` second project `component_filter` needs (there is no   unchecked box without it) is installed pre-run and swept after   (`src/core/test_data/projects_fixture.ts`, explicit id in the reserved   `>= 900000` band so the shared counter never moves). Gate:   `test/unit/client_situations_native.test.ts`. 
+- `bun run test:client` — the browser client suite (Mocha in headless Chrome).   It STARTS ITS OWN SERVER on the dedicated SUITE database and stops it again:   no dev server to start first, no port to pass, no client test can reach the   application's data (`scripts/client_test_server.ts`; build the database once   with `bun run test:db:setup`). 
+  - **Auth is real**: the run sets the suite database's own credential
+    (`src/core/test_data/suite_login.ts` — the install seed ships `root`
+    passwordless), calls `login()` in-process, injects the session cookie.
+    `--auth form` uses the login UI; `--auth mint --user <existing>` is the
+    no-password escape hatch. 
+  - **`--url <page>`** still drives a server you started yourself — VERIFIED,
+    not trusted: any target must answer `/health` with the fingerprint of the
+    same `dedalo_test_marker` row this process reads (dev-mode-only, an opaque
+    hash, never the DB name), or the run refuses before Chrome launches.
+    **`--port`** moves the run's own listener (default 4390, next free). 
+  - **The baseline is IN the runner**: `KNOWN_FAILING` (shrink-only, reasons
+    inline — a listed suite that PASSES is red too); `--strict` ignores it.
+    `KNOWN_FAILING` is currently EMPTY, so a plain run equals `--strict`. 
+  - **Last measured 2026-08-22** on the run's OWN server, on the suite
+    database, with real authentication: 131 suites, 131 pass. ALWAYS measure
+    with the reseed on — a polluted test3 fakes ~7 failures. 
+  - **The run PINS what two suites need instead of borrowing it from the
+    machine**. The diffusion domain is `SUITE_DIFFUSION_DOMAIN` (`test`, the
+    repo-owned generic domain — the engine matches a domain BY TERM, so the
+    installation's name resolves to a truncated clone here and
+    `tool_diffusion` silently disappears), asserted before Chrome starts. The
+    second project the `dd153` `component_filter` needs (there is no unchecked
+    box without it) is installed pre-run and swept after
+    (`src/core/test_data/projects_fixture.ts`, explicit id in the reserved
+    `>= 900000` band so the shared counter never moves). Gate:
+    `test/unit/client_situations_native.test.ts`. 
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run lint` — biome (burn-down owned by a dedicated pass). 
 
