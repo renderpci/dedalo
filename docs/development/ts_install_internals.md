@@ -64,10 +64,22 @@ login form, never the wizard.
 ## Pre-auth window
 
 `dispatch.ts` Gate 1b: the install surface (`dd_utils_api:install` +
-`get_install_context`) is pre-auth WHILE UNSEALED and IP-gated
-(`DEDALO_INSTALL_ALLOWED_IPS`, `loopback` token; unset = open, dev). Once sealed
-the surface returns **404**. CSRF is unchanged (Gate 3 only runs for sessions),
-and the record-writing steps re-check the session in the handler.
+`get_install_context`) is pre-auth WHILE UNSEALED and IP-gated by
+`installIpAllowed` (`gate.ts`). The gate is **fail-closed since 2026-08-24**
+(`engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md`): an
+unset or empty `DEDALO_INSTALL_ALLOWED_IPS` means the local machine only
+(`DEFAULT_INSTALL_ALLOW_ENTRIES = ['loopback']`), and `any` is the single
+spelling that admits every address. An entry is `loopback`, a literal address, or
+a CIDR block matched bitwise by the pure `ipInCidr` (malformed ⇒ no match, never
+a throw). The refusal is `install.ip_denied` (403) and carries **no details** —
+the caller is unauthenticated, so neither the resolved address nor the policy
+source is echoed back; the operator reads the effective policy off the boot log
+instead (`describeInstallAllowPolicy`). Honest limit: `clientIp` is the
+trusted-hop `X-Forwarded-For` value, and a request without that header resolves
+to the sentinel `'local'`, so on a bare TCP listener with no proxy the gate
+cannot see the real peer. Once sealed the surface returns **404**. CSRF is
+unchanged (Gate 3 only runs for sessions), and the record-writing steps re-check
+the session in the handler.
 
 ## Languages (mandatory)
 

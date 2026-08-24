@@ -354,7 +354,7 @@ Environment=DEDALO_INSTALL_ALLOWED_IPS=loopback
 ```
 
 !!! danger "That TCP listener binds every interface"
-    The engine's `SERVER_TCP_PORT` listener is plain HTTP on `0.0.0.0`, and until the wizard is finished it serves a **pre-auth** install surface. Port 3600 must be closed at the firewall before the unit starts — `sudo ufw status` — and the drop-in is removed the moment the install is over (8.4.4). `DEDALO_INSTALL_ALLOWED_IPS=loopback` is the second lock: over the tunnel the caller *is* the loopback address, so it matches here (behind a proxy it would not).
+    The engine's `SERVER_TCP_PORT` listener is plain HTTP on `0.0.0.0`, and until the wizard is finished it serves a **pre-auth** install surface. Port 3600 must be closed at the firewall before the unit starts — `sudo ufw status` — and the drop-in is removed the moment the install is over (8.4.4). `DEDALO_INSTALL_ALLOWED_IPS=loopback` is the second lock: over the tunnel the caller *is* the loopback address, so it matches here (behind a proxy it would not). It is also what the engine applies when the key is unset — the default admits the local machine and nobody else — so the line above is written out to say so, not to change it. The firewall stays the first lock regardless: a request that reaches this listener with no `X-Forwarded-For` is *seen* as local whatever machine it came from.
 
 8.4.2 Start the engine and confirm it is in install mode:
 

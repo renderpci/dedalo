@@ -75,9 +75,14 @@ services:
       DEDALO_PRIVATE_DIR: /private
       SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
       MEDIA_PATH: /srv/dedalo/media
-      # No DEDALO_MEDIA_ACCESS_MODE: the gate is OFF. The engine writes no rule
-      # files and nginx serves the media tree openly. This is the one line that
-      # separates this stack from the full one.
+      # MEDIA IS SERVED OPENLY HERE, and since 2026-08-24 that is a property of
+      # THIS STACK'S NGINX, not of the engine's mode. deploy/nginx.simple.conf
+      # does not `include` the generated rule files, so nothing enforces a gate
+      # no matter what mode the engine resolves — and the engine's default is now
+      # fail-closed `publication`, so it WILL write those files and they WILL be
+      # ignored here. Say it rather than imply it: an operator who needs
+      # per-record media access control wants the full stack
+      # (docker-compose.yml), whose nginx includes both files.
       #
       # TRUE whenever there is TLS — which install.sh makes the default. It is
       # flipped to "false" only by the no-HTTPS mode, because a browser silently
@@ -88,6 +93,16 @@ services:
       TRUSTED_PROXY_HOPS: "1"
       DEDALO_DEV_MODE: "false"
       DEDALO_DEBUG_API_ERRORS: "false"
+      # WHO MAY REACH THE INSTALL WIZARD. Until the wizard SEALS the instance its
+      # actions are pre-auth — they write /private/.env and restart the engine —
+      # so since 2026-08-24 an unset value means LOOPBACK ONLY. In a container
+      # that is exactly nobody: nginx forwards your browser's real address
+      # (TRUSTED_PROXY_HOPS above), which is never this namespace's loopback. A
+      # browser install through this stack therefore REQUIRES naming the address
+      # you browse from:
+      #   export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10   # or 10.0.0.0/24, or `any`
+      # Drop the value once the instance is sealed.
+      DEDALO_INSTALL_ALLOWED_IPS: ${DEDALO_INSTALL_ALLOWED_IPS:-}
       # The engine never serves media here — nginx does, from the shared volume.
       MEDIA_DEV_ROUTE_ENABLED: "false"
     volumes:

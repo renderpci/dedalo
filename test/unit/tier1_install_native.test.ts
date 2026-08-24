@@ -8,7 +8,11 @@
  *  - installIpAllowed: it is the ONLY address check in front of an
  *    UNAUTHENTICATED installer that rewrites ../private/.env and spawns psql.
  *    A regression that widens it exposes that surface; one that narrows the
- *    `loopback` token locks the operator out of their own fresh box.
+ *    `loopback` token locks the operator out of their own fresh box. The
+ *    DEFAULT half of that contract (unset ⇒ loopback only, fail-closed since
+ *    2026-08-24) plus the CIDR grammar are pinned by
+ *    test/unit/install_ip_gate_tripwire.test.ts; what stays here is the
+ *    per-entry matching behaviour this tier already owned.
  *  - pgBinaryCandidates: a client OLDER than the server refuses to connect, so
  *    "newest first" and "configured dir wins" are the difference between a
  *    working backup/restore and an install that dies at the psql step.
@@ -41,18 +45,28 @@ afterEach(() => {
 });
 
 describe('installIpAllowed — the pre-auth install surface address gate (§4.1.9)', () => {
-	test('an EMPTY / whitespace value leaves the surface open (dev default)', () => {
+	// INVERTED 2026-08-24 (audit P2-6,
+	// engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md):
+	// these two cases used to assert that an unset/empty key left the surface
+	// OPEN. It is now LOOPBACK ONLY — the operator opts out explicitly with `any`.
+	test('an EMPTY / whitespace value is the DEFAULT, not "open"', () => {
 		process.env[KEY] = '';
-		expect(installIpAllowed('203.0.113.7')).toBe(true);
+		expect(installIpAllowed('203.0.113.7')).toBe(false);
+		expect(installIpAllowed('127.0.0.1')).toBe(true);
 		process.env[KEY] = '   ';
-		expect(installIpAllowed('203.0.113.7')).toBe(true);
+		expect(installIpAllowed('203.0.113.7')).toBe(false);
+		// A value of nothing but separators is still "the operator said nothing".
+		process.env[KEY] = ' , , ';
+		expect(installIpAllowed('203.0.113.7')).toBe(false);
+		expect(installIpAllowed('local')).toBe(true);
 	});
 
-	test('UNSET leaves the surface open (dev default, PHP parity)', () => {
+	test('UNSET is LOOPBACK ONLY — the unauthenticated installer is not exposed', () => {
 		delete process.env[KEY];
 		// Only meaningful when this checkout's ../private/.env does not set the key.
 		if (readEnv(KEY) === undefined) {
-			expect(installIpAllowed('203.0.113.7')).toBe(true);
+			expect(installIpAllowed('203.0.113.7')).toBe(false);
+			expect(installIpAllowed('local')).toBe(true);
 		}
 	});
 

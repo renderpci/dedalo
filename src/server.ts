@@ -1643,6 +1643,16 @@ export async function startServer() {
 		);
 	}
 
+	// The install surface is PRE-AUTH while unsealed — persist_config rewrites
+	// ../private/.env and forces a restart, test_db_connection spawns psql — and its
+	// address allowlist is fail-closed by default since 2026-08-24
+	// (WC-2026-08-24-install-ip-gate-fail-closed). Print the effective policy so an
+	// operator locked out of their own wizard reads WHY off the log instead of guessing
+	// at a key; the catalog doc for DEDALO_INSTALL_ALLOWED_IPS promises this line.
+	if (config.installMode || installInProgress()) {
+		console.warn(`[boot] ${describeInstallAllowPolicy()}`);
+	}
+
 	// Ordered TS-owned schema migrations (audit S2-39) — run BEFORE serving so a
 	// request never observes a half-migrated schema. A failure logs loudly and
 	// continues: the lazy CREATE IF NOT EXISTS bootstraps remain the fallback,

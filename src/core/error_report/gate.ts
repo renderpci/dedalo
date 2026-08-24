@@ -22,6 +22,7 @@
 import crypto from 'node:crypto';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { allowEntryMatches } from '../install/gate.ts';
 
 /** The (class:action) pairs that make up the pre-auth intake surface. */
 export const ERROR_REPORT_ACTION_KEYS: ReadonlySet<string> = new Set([

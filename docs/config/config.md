@@ -4485,15 +4485,17 @@ DEDALO_INSTALL_ALLOWED_IPS `string` *comma list*
 
 This parameter defines which addresses may reach the install wizard.
 
-A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page. That is harmless on a laptop and dangerous on a network. Set this parameter — a comma-separated list of addresses, where the word `loopback` stands for the local machine — before you expose an unsealed installation to anything but yourself.
+A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page — and those actions write the configuration file and restart the server. **Unset, the wizard answers the local machine and nobody else.** To install from another machine — which is the normal case for a container, a virtual machine or a hosted server — you must name the address you will browse from, before you start the wizard.
 
-Unset, the wizard is open to any address, which is the convenient default for a local installation. The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
+An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas.
+
+The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. If a request arrives with no such information the engine treats it as local, so put the wizard behind the proxy the production guide prescribes, or behind a closed port, whenever the machine is reachable from a network. The effective list is printed in the server log when the engine starts, so an installation you cannot reach tells you why. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
 
 ```bash
-DEDALO_INSTALL_ALLOWED_IPS="loopback,203.0.113.10"
+DEDALO_INSTALL_ALLOWED_IPS="loopback,203.0.113.10,10.0.0.0/24"
 ```
 
-*Default: (unset)*
+*Default: loopback*
 
 ---
 

@@ -72,6 +72,16 @@ services:
       DB_POOL_ACQUIRE_TIMEOUT_MS: "30000"
       DB_STATEMENT_TIMEOUT_MS: "60000"
       TRUSTED_PROXY_HOPS: "1"
+      # WHO MAY REACH THE INSTALL WIZARD. Until the wizard SEALS the instance its
+      # actions are pre-auth — they write /private/.env and restart the engine — so
+      # since 2026-08-24 an unset value means LOOPBACK ONLY. In a container that is
+      # exactly nobody: nginx forwards your browser's real address (TRUSTED_PROXY_HOPS
+      # above), which is never the loopback of this network namespace. So a browser
+      # install through this stack REQUIRES naming the address you browse from:
+      #   export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10       # or 10.0.0.0/24, or `any`
+      # Leave it empty (the default here) when you install with the CLI recipe at the
+      # top of this file, which needs no wizard at all. Drop the value once sealed.
+      DEDALO_INSTALL_ALLOWED_IPS: ${DEDALO_INSTALL_ALLOWED_IPS:-}
       DEDALO_DEV_MODE: "false"
       DEDALO_DEBUG_API_ERRORS: "false"
       MEDIA_DEV_ROUTE_ENABLED: "false"

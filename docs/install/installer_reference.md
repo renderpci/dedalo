@@ -224,16 +224,22 @@ appended to `../private/.env` at any later time.
 
 !!! danger "The install surface is pre-auth until it is sealed"
     A fresh instance has no users, so the install actions are reachable **without
-    a login**. Before exposing an unsealed install to a network, restrict it by
-    address:
+    a login**. Unset, `DEDALO_INSTALL_ALLOWED_IPS` therefore admits **the local
+    machine only** — installing from anywhere else means naming the address
+    first:
 
     ```dotenv
-    # comma list; the token `loopback` matches the local host
-    DEDALO_INSTALL_ALLOWED_IPS=loopback,203.0.113.10
+    # comma list. Entries: `loopback` (the local host), a literal address,
+    # a CIDR range, or `any` (every address — the only way to open it).
+    DEDALO_INSTALL_ALLOWED_IPS=loopback,203.0.113.10,10.0.0.0/24
     ```
 
     The address is resolved from the trusted `X-Forwarded-For` hop, so **behind a
-    proxy, `loopback` will not match** — name the real client address.
+    proxy, `loopback` will not match** — name the real client address. A request
+    that carries no such hop is treated as local, so an unsealed instance on a
+    bare TCP port with no proxy in front must be closed at the firewall as well:
+    the allowlist alone cannot see who is calling. The engine prints the list in
+    force in its start-up log.
 
     Once **sealed**, the whole install surface answers `404` for good.
 
