@@ -11,11 +11,18 @@
 
 	>.content_data {
 
-		.dd_readout {
+		// main submit button for Check available updates
+		>.button_submit {
+			margin: 1rem;
+			margin-left: 0px;
+			margin-bottom: 2rem;
+		}
+
+		>.dd_readout {
 			margin-bottom: 0.75rem;
 		}
 
-		.dd_note {
+		>.dd_note {
 			margin: 0.5rem 0;
 		}
 
@@ -37,8 +44,10 @@
 
 			// the headline verdict of a role, above its checks
 			.status_verdict {
+				font-size: 1rem;
 				font-weight: bold;
-				margin-bottom: 0.4rem;
+				margin-top: 0.5rem;
+				margin-bottom: 2rem;
 
 				&.state_ok {
 					color: @color_success;
