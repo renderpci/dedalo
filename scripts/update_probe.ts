@@ -732,23 +732,35 @@ services:
 
 	// --- done (or drive) ----------------------------------------------------
 	if (!drive) {
+		// The dev cycle differs in two places an operator WILL trip over: the
+		// build is only offered once the panel's own switch asks for it, and the
+		// version cannot be the proof that it landed.
+		const devTick = devChannel
+			? `
+      · tick DEVELOPER BUILDS first — without it the master offers releases only`
+			: '';
+		const passBar = devChannel
+			? `/health answers ${RELEASE_VERSION}.dev and its install_digest
+    becomes ${digest.slice(0, 16)}… (the VERSION cannot move on this channel —
+    the panel shows the same change as 'Installed archive')`
+			: `/health answers ${RELEASE_VERSION}; the panel shows the new
+    version + build stamp`;
 		console.log(`
 === PREPARED. The operator cycle, in the browser ===
  1. open http://127.0.0.1/dedalo/ and log in as the museum's admin
  2. System Map → area_maintenance → the UPDATE CODE panel:
-      · 'Local dev master' must show REACHABLE (green radio)
-      · select it → the modal lists ${RELEASE_VERSION} with its checksum
+      · 'Local dev master' must show REACHABLE (green radio)${devTick}
+      · select it → the modal lists ${RELEASE_VERSION}${devChannel ? ' (developer build, listed first)' : ''} with its checksum
  3. flip MAINTENANCE MODE on (check_config panel)
  4. confirm the update → watch the phase track
       download → verify → extract → deps → preflight → swap → restart…
     …the page's stream DIES at restart (BY DESIGN): it switches to polling
     /health; the container exits 75 and Docker brings the NEW tree up.
- 5. pass bar: /health answers ${RELEASE_VERSION}; the panel shows the new
-    version + build stamp; sentinel
+ 5. pass bar: ${passBar}; sentinel
       ../update_probe/opt/backups/code/last_code_update.json
     reads status:"confirmed"; one dedalo_<current>_* backup beside it holds the
     OLD tree (package.json + node_modules).
-Or let the probe drive it: bun run probe:update --drive --user=root --pass=<the museum's admin password>
+Or let the probe drive it: bun run probe:update${devChannel ? ' --dev' : ''} --drive --user=root --pass=<the museum's admin password>
 `);
 		return;
 	}

@@ -11,25 +11,163 @@
 
 	>.content_data {
 
-		// main submit button for Check available updates
-		>.button_submit {
+		// main submit button for Check available updates.
+		// NOTE these three live inside a ROLE BLOCK since 2026-08-24, so they are
+		// children of `.role_body`, not of `.content_data` — a plain `>` here
+		// silently stopped matching anything.
+		.role_body >.button_submit {
 			margin: 1rem;
 			margin-left: 0px;
 			margin-bottom: 2rem;
 		}
 
-		>.dd_readout {
+		.role_body >.dd_readout {
 			margin-bottom: 0.75rem;
 		}
 
-		>.dd_note {
+		.role_body >.dd_note {
 			margin: 0.5rem 0;
+		}
+
+		// ROLE BLOCKS — the widget serves two owners on one screen: the code this
+		// installation RUNS (consumer) and the code it PUBLISHES (code server).
+		// Each is a titled panel so a readout can never be read against the wrong
+		// one ('Published releases' used to float among the update readouts).
+		>.role_block {
+			margin: 0 0 1.5rem 0;
+			padding: 0.9rem 1rem 1rem 1rem;
+			border: 1px solid var(--border_default);
+			border-radius: 4px;
+			background-color: var(--bg_surface_alt);
+
+			>.role_header {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				font-size: 1.05em;
+				font-weight: 600;
+				color: var(--fg_default);
+
+				.role_icon {
+					background-color: var(--fg_muted);
+				}
+			}
+
+			>.role_note {
+				margin: 0.35rem 0 0.9rem 1.6rem;
+				font-size: 0.85em;
+				color: var(--fg_muted);
+			}
+
+			// FOLDED: the header alone, with no bottom air — a stack of two
+			// collapsed blocks must read as a compact index, not as two empty cards
+			&.collapsed {
+				padding-bottom: 0.9rem;
+
+				>.role_header {
+					margin-bottom: 0px;
+				}
+			}
+
+			// the role's own icon (masked svg, area_maintenance vocabulary)
+			&.role_consumer >.role_header .role_icon { .fn_maintenance_icon('download.svg'); }
+			&.role_code_server >.role_header .role_icon { .fn_maintenance_icon('upload.svg'); }
+
+			// inside a block the halves already carry their own spacing
+			>.role_body >.update_status:first-child {
+				margin-top: 0;
+			}
+
+			// BUILD AND PUBLISH — one row per channel: the action button in the
+			// key cell, the archive it writes in the value cell. The key cell is
+			// the readout's label column, so its label styling (uppercase, small)
+			// has to be undone for a real control to sit in it.
+			.build_row {
+
+				>.dd_k.build_action {
+					display: flex;
+					align-items: center;
+					padding: 0.4rem 0.5rem;
+					text-transform: none;
+					letter-spacing: normal;
+
+					// the form wrapper must not eat the cell (build_form emits a
+					// <form> around the button)
+					>.form_container {
+						width: 100%;
+						margin: 0px;
+					}
+
+					// READ AS A BUTTON. In the readout's label column these were a
+					// pale outline on a grey cell — the one thing in the panel that
+					// DOES something looked like a caption. Solid fill for the
+					// published channel (widget_kit .primary), a real raised border
+					// for the developer one, and both keep a button's own padding.
+					button.build_button {
+						display: block;
+						width: 100%;
+						margin: 0px;
+						padding: 0.55rem 0.8rem;
+						border-radius: 4px;
+						font-weight: 600;
+						line-height: 1.25;
+						white-space: normal;
+						cursor: pointer;
+
+						// THE PUBLISHED CHANNEL is the panel's main publishing act:
+						// filled, like widget_kit's .primary. It is restated here
+						// because `build_form` also stamps `.light` on every submit
+						// button, and THIS scope is more specific than the kit's — the
+						// kit's fill lost to the secondary styling below, leaving the
+						// primary action looking exactly like everything else.
+						&.primary {
+							color: var(--color_white);
+							background-color: var(--color_primary);
+							border: 1px solid var(--color_primary);
+
+							&:hover {
+								filter: brightness(1.08);
+							}
+						}
+
+						// the developer channel: secondary, but raised — a real
+						// control, not a caption in a label cell
+						&.light:not(.primary) {
+							color: var(--fg_default);
+							border: 1px solid var(--border_strong);
+							background-color: var(--bg_surface);
+							box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+
+							&:hover {
+								background-color: var(--bg_surface_alt);
+							}
+						}
+					}
+				}
+
+				>.dd_v.build_file {
+					display: flex;
+					flex-wrap: wrap;
+					align-items: center;
+					gap: 0.5rem;
+
+					>.build_file_meta {
+						color: var(--fg_muted);
+					}
+
+					// a channel with no archive yet: stated, not blank
+					&.none {
+						color: var(--fg_muted);
+						font-style: italic;
+					}
+				}
+			}
 		}
 
 		// DEVELOPER-BUILDS switch — the arming for same-version (branch) builds.
 		// Deliberately quiet: it sits above the submit button as one checkbox row
 		// plus its note, never a warning bar (the note carries the caution).
-		>.dev_channel_row {
+		.role_body >.dev_channel_row {
 			margin: 0.75rem 0 0.25rem 0;
 
 			>.dev_channel_label {
@@ -44,10 +182,20 @@
 				>.dev_channel_check {
 					height: initial;
 				}
+
+				// reads BEFORE the words: the one development-facing control on an
+				// otherwise production panel. Masked svg in the area_maintenance
+				// vocabulary — the same bug.svg its map uses for the 'dev' category.
+				// Tinted with the row's own accent, not the muted grey, so the icon
+				// belongs to the label rather than to the panel chrome.
+				>.dev_channel_icon {
+					.fn_maintenance_icon('bug.svg');
+					background-color: var(--color_blue_2);
+				}
 			}
 
 			>.dd_note.dev_channel_note {
-				margin: 0.25rem 0 0 1.75rem;
+				margin: 0.25rem 0 0 3.1rem;
 				max-width: 60rem;
 			}
 		}
@@ -128,13 +276,6 @@
 				opacity: 0.75;
 				margin-top: 0.2rem;
 			}
-		}
-
-		.build_version_group {
-			border: 1px solid @color_orange;
-			border-radius: 4px;
-			padding: 0.66rem;
-			margin-top: 0.5rem;
 		}
 
 		// phase track: the shared-kit progress bar + one row per job phase

@@ -505,6 +505,90 @@ describe('update_code developer-builds switch', () => {
 		expect(status_src).toContain('update_code_posture_dev_build');
 	});
 
+	test('the panel is split into TWO ROLE BLOCKS, each naming whose code it is about', () => {
+		// One screen answers two unrelated questions — what THIS install runs, and
+		// what it PUBLISHES. Flat, they read as one list and 'Published releases'
+		// looks like something the install might receive.
+		expect(render_src).toContain('role_block');
+		expect(render_src).toContain("role_block(\n\t\t\tcontent_data,\n\t\t\t'consumer'");
+		expect(render_src).toContain("'code_server'");
+		expect(render_src).toContain('update_code_role_consumer');
+		expect(render_src).toContain('update_code_role_server');
+	});
+
+	test('each build action is ONE entry with the archive it produces', () => {
+		// The buttons and the archives were two blocks, and nothing said the first
+		// writes the second. The readout now lays out a row per channel and calls
+		// back to mount the action into it.
+		expect(render_src).toContain('make_builder_mounter');
+		// rendered through render_code_server_half, so a build can re-run it
+		expect(/render_code_server_status\(\s*server_body,\s*code_server,\s*make_builder_mounter/.test(render_src)).toBe(true);
+		expect(render_src).toContain('render_code_server_half(value.code_server)');
+		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
+		expect(status_src).toContain('mount_builder(channel, action)');
+		expect(status_src).toContain('build_row');
+		expect(status_src).toContain('update_code_build_publish');
+		// an unbuilt channel still shows its row, saying so
+		expect(status_src).toContain('update_code_not_built');
+		// and archives of other versions are listed, never dropped
+		expect(status_src).toContain('update_code_other_archives');
+		// ONE writer for the archive facts, called from BOTH lists (the duplicate
+		// is how the stale 'developer (not offered)' wording survived in one)
+		expect(status_src).toContain('const release_facts = function(');
+		expect((status_src.match(/release_facts\(/g) ?? []).length).toBe(2);
+	});
+
+	test('the build actions read as BUTTONS, weighted by channel', () => {
+		// In the readout's label column a pale outline reads as a caption; the one
+		// thing on the row that DOES something must not be the quietest mark on it.
+		expect(render_src).toContain("button_class\t: 'primary'");
+		expect(render_src).toContain("classList.add('build_button', def.button_class)");
+		expect(css_src).toContain('button.build_button');
+	});
+
+	test('a finished build REFRESHES the archive list beside the button', () => {
+		// The row next to the button is a claim about the disk that the build just
+		// changed: stale, it shows the old timestamp — or 'Not built yet' next to a
+		// build that succeeded.
+		expect(render_src).toContain('on_built');
+		expect(render_src).toContain('refresh_code_server');
+		// re-read from the SERVER, not from the value this render closed over
+		expect(/refresh_code_server\s*=\s*async\s*\(\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(render_src)).toBe(true);
+		// and the half is re-rendered from that fresh value
+		expect(render_src).toContain('render_code_server_half(fresh.code_server)');
+		// a failed refresh must not take the panel down
+		expect(/catch \(error\) \{[\s\S]{0,240}console\.error\('update_code: could not refresh/.test(render_src)).toBe(true);
+	});
+
+	test('both role blocks fold, and remember it', () => {
+		expect(render_src).toContain('role_header icon_arrow');
+		expect(render_src).toContain('dedalo.update_code.fold.');
+		expect(render_src).toContain('read_fold');
+		expect(render_src).toContain('store_fold');
+		// storage failures degrade to an OPEN block, never to an error
+		expect(render_src).toContain('} catch (_error) {\n\t\treturn false');
+	});
+
+	test('the switch carries an icon, and both role blocks carry theirs', () => {
+		expect(render_src).toContain('dev_channel_icon');
+		expect(render_src).toContain('role_icon');
+		expect(css_src).toContain(".fn_maintenance_icon('bug.svg')");
+		expect(css_src).toContain(".fn_maintenance_icon('download.svg')");
+		expect(css_src).toContain(".fn_maintenance_icon('upload.svg')");
+	});
+
+	test('no `>` selector still points at content_data for a node that moved into a role block', () => {
+		// The restructure re-parented these; a direct-child selector left behind
+		// matches NOTHING and fails silently — the styles simply vanish.
+		for (const moved of ['button_submit', 'dd_readout', 'dd_note', 'dev_channel_row']) {
+			expect(
+				new RegExp(`^\\t\\t>\\.${moved}\\b`, 'm').test(css_src),
+				`.${moved} moved into .role_body — its selector must not be a direct child of content_data`,
+			).toBe(false);
+		}
+		expect(css_src).toContain('.role_body >.dev_channel_row');
+	});
+
 	test('the health poll reads install_digest and hands it to the verdict', () => {
 		// Without this the panel decides a same-version install by version alone —
 		// which reports every rollback as a success.
