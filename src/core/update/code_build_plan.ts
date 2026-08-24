@@ -100,7 +100,12 @@ export function planCodeBuild(
 	}
 	const gitDir = cfg.codeServerGitDir;
 	const filesDir = cfg.codeFilesDir;
-	if (gitDir === undefined || filesDir === undefined) {
+	// `''` IS UNSET (readEnv returns an empty value verbatim, and config stores
+	// it raw). Treating it as configured made `join('', '7', '7.0')` a RELATIVE
+	// path, so a build mkdir'd its release tree under the process cwd — inside
+	// the very code tree the updater renames away. Same rule as the boot
+	// provisioner (code_files_dir.ts).
+	if (gitDir === undefined || gitDir === '' || filesDir === undefined || filesDir === '') {
 		return {
 			ok: false,
 			msg: 'Error. Define DEDALO_CODE_SERVER_GIT_DIR and DEDALO_CODE_FILES_DIR to build releases',

@@ -164,6 +164,26 @@ describe('install restart supervisor contract', () => {
 		// nginx's upstream must reach the same socket the engine binds.
 		expect(nginx).toContain(CANONICAL_SOCKET);
 		expect(nginx).not.toContain(STALE_SOCKET);
+
+		// Same for the Apache twin: a drifted socket there is the same 502.
+		const apache = await Bun.file(new URL('../../deploy/apache.conf', import.meta.url)).text();
+		expect(apache).toContain(CANONICAL_SOCKET);
+		expect(apache).not.toContain(STALE_SOCKET);
+	});
+
+	// THE /health ROUTE (2026-08-24): the engine serves its liveness check at the
+	// ORIGIN ROOT (src/server.ts) and the BROWSER client probes it over HTTP
+	// (data_manager.js getHealthUrl, the system_info + update_code widgets, sw.js).
+	// A proxy config that does not route it does not fail loudly: the engine stays
+	// healthy while the widget reports it down and the post-update restart poll
+	// can never confirm the new version — observed as Apache AH01630 denying
+	// /var/www/html/health. Both shipped proxy configs must carry the route.
+	test('both shipped proxy configs route /health to the engine', async () => {
+		const nginx = await Bun.file(new URL('../../deploy/nginx.conf', import.meta.url)).text();
+		const apache = await Bun.file(new URL('../../deploy/apache.conf', import.meta.url)).text();
+
+		expect(nginx).toMatch(/location\s*=\s*\/health\s*\{/);
+		expect(apache).toMatch(/^\s*ProxyPass\s+\/health\s+unix:/m);
 	});
 
 	// -----------------------------------------------------------------------

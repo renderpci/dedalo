@@ -508,6 +508,11 @@ function directoryCheck(id: string, dir: string | null | undefined): StatusCheck
 	return probe(id, () => {
 		if (dir === undefined || dir === null || dir === '') return check(id, 'blocked', 'unset');
 		if (!existsSync(dir)) return check(id, 'blocked', dir);
+		// EXISTS is not ENOUGH. A regular file at the configured path passes
+		// existsSync, so the panel used to read `ok` while nothing could be built
+		// or served from it (code_manifest's own existsSync guard then returned an
+		// empty release list, and the boot provisioner blamed permissions).
+		if (!statSync(dir).isDirectory()) return check(id, 'blocked', `${dir} (not a directory)`);
 		return check(id, 'ok', dir);
 	});
 }

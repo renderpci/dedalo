@@ -16773,6 +16773,10 @@ dd-modal:has(.tool_header) {
   text-transform: none;
   letter-spacing: normal;
 }
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action.none {
+  color: var(--fg_muted);
+  font-style: italic;
+}
 .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action > .form_container {
   width: 100%;
   margin: 0px;
@@ -16787,6 +16791,7 @@ dd-modal:has(.tool_header) {
   line-height: 1.25;
   white-space: normal;
   cursor: pointer;
+  font-size: 0.8rem;
 }
 .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.primary {
   color: var(--color_white);

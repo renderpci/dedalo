@@ -261,14 +261,18 @@ server {
 
 ## Apache
 
-Install Apache, enable the modules, then use an `Alias`-based vhost:
+The full reference vhost is shipped as **`deploy/apache.conf`** (the twin of `deploy/nginx.conf`). Install Apache, enable the modules, then copy it:
 
 ```shell
 apt install -y apache2      # RHEL family: dnf install -y httpd
+
+cp /opt/dedalo/master_dedalo/deploy/apache.conf \
+   /etc/apache2/sites-available/dedalo.conf     # RHEL: /etc/httpd/conf.d/dedalo.conf
+a2ensite dedalo && apachectl configtest && systemctl reload apache2
 ```
 
 The `ProxyPass` rules must
-come **before** the aliases, and `Alias /dedalo/media` must come before `Alias /dedalo`: the first match wins.
+come **before** the aliases, and `Alias /dedalo/media` must come before `Alias /dedalo`: the first match wins. The abridged shape (see the file for the full comments):
 
 ```shell
 a2enmod ssl headers http2 rewrite proxy proxy_http
@@ -290,7 +294,17 @@ a2enmod ssl headers http2 rewrite proxy proxy_http
     Include /etc/letsencrypt/options-ssl-apache.conf
 
     ProxyPreserveHost On
-    ProxyTimeout 300                # >= SERVER_IDLE_TIMEOUT_S (255)
+    # >= SERVER_IDLE_TIMEOUT_S (255). Apache honours `#` only at the start of a
+    # line — a comment appended to a directive is parsed as an argument.
+    ProxyTimeout 300
+
+    # --- Liveness probe → the unix socket ---------------------------------
+    # The engine serves /health at the ORIGIN ROOT and the browser client
+    # probes it there. Omit this and Apache resolves /health against the
+    # DocumentRoot and denies it (AH01630), so the maintenance widget reports
+    # a healthy engine as down and the post-update restart poll never confirms.
+    ProxyPass        /health unix:/run/dedalo/dedalo_ts.sock|http://localhost/health
+    ProxyPassReverse /health unix:/run/dedalo/dedalo_ts.sock|http://localhost/health
 
     # --- API + dynamic routes → the unix socket ---------------------------
     ProxyPass /api/v1/                              unix:/run/dedalo/dedalo_ts.sock|http://localhost/api/v1/
@@ -300,6 +314,11 @@ a2enmod ssl headers http2 rewrite proxy proxy_http
     ProxyPass /dedalo/core/tools_common/            unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/core/tools_common/
     ProxyPass /dedalo/core/component_text_area/tag/ unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/core/component_text_area/tag/
     ProxyPass /dedalo/install/import/ontology/      unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/import/ontology/
+
+    # --- Entry points: the client tree has no index.html above core/page/ --
+    RedirectMatch 302 "^/dedalo/?$"      /dedalo/core/page/
+    RedirectMatch 302 "^/dedalo/core/?$" /dedalo/core/page/
+    RedirectMatch 302 "^/$"              /dedalo/core/page/
 
     # --- Media: the generated .htaccess lives inside MEDIA_PATH -----------
     Alias /dedalo/media /srv/dedalo/media
