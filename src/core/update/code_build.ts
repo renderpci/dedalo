@@ -20,7 +20,12 @@ import { envSnapshot } from '../../config/env.ts';
 import { DedaloError, ok } from '../errors/index.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentRequestContext } from '../security/request_context.ts';
-import { planCodeBuild } from './code_build_plan.ts';
+import {
+	isSafeGitRef,
+	parseDeclaredTriple,
+	planCodeBuild,
+	VERSION_TS_PATH,
+} from './code_build_plan.ts';
 import { refuseUpdate } from './refuse.ts';
 
 /**
@@ -37,21 +42,59 @@ function currentRequestId(): string {
 }
 
 /**
+ * The version a git REF declares, read straight out of the object store
+ * (`git show <ref>:src/core/update/version.ts`) — never the working tree, and
+ * never the running process. Null when the ref or the file cannot be read.
+ */
+async function declaredVersionOfRef(
+	gitDir: string | undefined,
+	ref: string,
+): Promise<string | null> {
+	if (gitDir === undefined || gitDir === '') return null;
+	if (!isSafeGitRef(ref)) return null;
+	const child = Bun.spawn(['git', '-C', gitDir, 'show', `${ref}:${VERSION_TS_PATH}`], {
+		stdout: 'pipe',
+		stderr: 'ignore',
+		env: envSnapshot() as Record<string, string>,
+	});
+	const [exitCode, source] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+	return exitCode === 0 ? parseDeclaredTriple(source) : null;
+}
+
+/**
  * `git archive --format=zip --prefix=dedalo_code/ <ref>` of the code-server
  * checkout into the release path for `version`. `version` names the release
  * (e.g. '7.0.1'); `ref` is the git ref to archive (default the same tag).
  */
 export async function buildVersionFromGit(options: {
-	version: string;
+	version?: string;
 	ref?: string;
 }): Promise<CodeBuildResponse> {
+	// THE BYTES NAME THE RELEASE. Resolve the version the REF declares before
+	// planning, so the artifact can never be named after the running process
+	// (see parseDeclaredTriple). An explicit caller `version` is now a claim to
+	// be CHECKED, not the source of the name.
+	const ref = options.ref ?? options.version ?? 'master';
+	const declared = await declaredVersionOfRef(config.update.codeServerGitDir, ref);
+	if (declared !== null && options.version !== undefined && options.version !== declared) {
+		const sentence = `Error. The ref '${ref}' declares version ${declared}, but the build asked for ${options.version} — a release must be named after its own bytes.`;
+		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
+	}
+	const version = declared ?? options.version;
+	if (version === undefined) {
+		const sentence = `Error. Could not read ${VERSION_TS_PATH} at ref '${ref}', so the release's own version is unknown and it cannot be named.`;
+		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
+	}
 	// All refusal gates (code-server flag → dirs → version → ref → confinement)
 	// and the release path live in the pure planner.
-	const plan = planCodeBuild(options, {
-		isCodeServer: config.update.isCodeServer,
-		codeServerGitDir: config.update.codeServerGitDir,
-		codeFilesDir: config.update.codeFilesDir,
-	});
+	const plan = planCodeBuild(
+		{ version, ...(options.ref === undefined ? {} : { ref: options.ref }) },
+		{
+			isCodeServer: config.update.isCodeServer,
+			codeServerGitDir: config.update.codeServerGitDir,
+			codeFilesDir: config.update.codeFilesDir,
+		},
+	);
 	if (plan.ok !== true) {
 		// `plan.msg` is the operator sentence; `plan.error` the machine detail —
 		// the latter goes to the LOG side only (`message`), never to the wire.
@@ -60,7 +103,7 @@ export async function buildVersionFromGit(options: {
 			publicMessage: plan.msg,
 		});
 	}
-	const { gitDir, ref, targetDir, filePath } = plan;
+	const { gitDir, targetDir, filePath } = plan;
 	try {
 		mkdirSync(targetDir, { recursive: true });
 	} catch (error) {

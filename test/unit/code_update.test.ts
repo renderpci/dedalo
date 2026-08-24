@@ -23,6 +23,7 @@ import {
 	existsSync,
 	lstatSync,
 	mkdirSync,
+	mkdtempSync,
 	readdirSync,
 	readFileSync,
 	renameSync,
@@ -30,6 +31,7 @@ import {
 	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
@@ -39,15 +41,18 @@ import { confirmBootedCodeUpdate } from '../../src/core/update/boot_confirm.ts';
 import { UPDATE_CATALOG } from '../../src/core/update/catalog.ts';
 import { buildCodeUpdateInfo, linearUpgradeTargets } from '../../src/core/update/code_manifest.ts';
 import {
+	acquireRunLockOrRefuse,
 	assertLinearUpgrade,
 	type CodeUpdateSeams,
+	codeRunLockPath,
 	extractArchive,
 	preValidateArchive,
 	type UpdatePhaseFrame,
 	updateCode,
 } from '../../src/core/update/code_update.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
-import { refusalOf } from '../helpers/refusal.ts';
+import { compareVersionArrays, DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
+import { refusalOf, refusalOfSync } from '../helpers/refusal.ts';
 
 // Capture the REAL modules ONCE at top level; mock.restore() does NOT revert
 // mock.module, so afterAll re-installs them — a per-test `await import()` would
@@ -180,20 +185,55 @@ describe('assertLinearUpgrade (strict path backstop)', () => {
 		expect(assertLinearUpgrade([7, 0, 0], [7, 2, 0])).toContain('minor version skip');
 		expect(assertLinearUpgrade([7, 0, 0], [7, 1, 3])).toContain('must land on .0');
 	});
+
+	// The PATCH AXIS. `versionSkipReason` did not destructure `cPatch` at all,
+	// so an arbitrary patch jump passed the swap path's only version gate — and
+	// the client-supplied sha matches the skipped-to release's real published
+	// sidecar, so nothing downstream caught it either.
+	test('a patch skip is refused (the axis the guard never read)', () => {
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 2])).toContain('patch version skip');
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 3])).toContain('patch version skip');
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 99999])).toContain('patch version skip');
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 3])).toContain('patch version skip');
+		// …and the legal rung from each of those is still legal.
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 2])).toBeNull();
+		expect(assertLinearUpgrade([7, 0, 2], [7, 0, 3])).toBeNull();
+	});
+
+	// The two notions of "next rung" — the manifest's (what a master OFFERS)
+	// and the swap guard's (what a consumer ACCEPTS) — are written separately
+	// and must never disagree: anything advertised has to be installable.
+	test('every rung the manifest advertises passes the swap guard', () => {
+		for (const current of [
+			[7, 0, 0],
+			[7, 0, 1],
+			[7, 0, 2],
+			[7, 0, 3],
+			[7, 1, 4],
+			[8, 2, 0],
+		]) {
+			for (const target of linearUpgradeTargets(current)) {
+				expect(assertLinearUpgrade(current, target)).toBeNull();
+			}
+		}
+	});
 });
 
 describe('linearUpgradeTargets + buildCodeUpdateInfo (the LIVE catalog)', () => {
 	// BRANCH COVERAGE FOR BOTH FUNCTIONS LIVES IN test/unit/code_manifest.test.ts,
 	// driven through the injectable `catalog` parameter. What is pinned here is
-	// the stock-master FACT for the CURRENT catalog: the probe-published rungs
-	// '701'/'702'/'703' (update_probe.ts cuts their archives into <repo>/code/).
+	// the stock-master FACT for the CURRENT catalog: the ONE real rung, 7.0.0 →
+	// 7.0.1. The probe-only '702'/'703' that used to sit beside it are gone —
+	// see the "may not run ahead of the engine" tripwire below for why.
 	// A client is offered exactly its next patch rung; the manifest advertises
 	// no file while no archive exists on disk for that rung.
-	test('the stock catalog walks 7.0.1 → 7.0.2 → 7.0.3 (and advertises only existing archives)', () => {
-		expect(Object.keys(UPDATE_CATALOG).sort()).toEqual(['701', '702', '703']);
+	test('the stock catalog offers exactly the real 7.0.0 → 7.0.1 rung', () => {
+		expect(Object.keys(UPDATE_CATALOG).sort()).toEqual(['701']);
 		expect(linearUpgradeTargets([7, 0, 0])).toEqual([[7, 0, 1]]);
-		expect(linearUpgradeTargets([7, 0, 1])).toEqual([[7, 0, 2]]);
-		expect(linearUpgradeTargets([7, 0, 2])).toEqual([[7, 0, 3]]);
+		// …and nothing beyond it: a museum already on 7.0.1 is offered nothing,
+		// which is the HONEST answer until a 7.0.2 is really cut.
+		expect(linearUpgradeTargets([7, 0, 1])).toEqual([]);
+		expect(linearUpgradeTargets([7, 0, 2])).toEqual([]);
 		const info = buildCodeUpdateInfo({
 			clientVersion: [7, 0, 0],
 			serverVersion: [7, 0, 0],
@@ -365,15 +405,25 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 			const sentinel = JSON.parse(
 				readFileSync(join(backupRoot, 'last_code_update.json'), 'utf8'),
 			) as Record<string, unknown>;
+			// `installDigest` JOINED the sentinel on 2026-08-24 (dev channel): it is
+			// what boot_confirm.ts compares, because a same-version install leaves
+			// `version` unable to tell the new tree from the rolled-back old one.
 			expect(sentinel).toEqual({
 				version: '7.0.1',
 				previousVersion: '7.0.0',
 				updateMode: 'clean',
 				stamp: sentinel.stamp,
 				backupDir,
+				installDigest: sha,
 				status: 'pending',
 				rollback_attempted: false,
 			});
+			// A release install stamps the tree too, on the master channel — so a
+			// published tree keeps its release posture and its plain version string.
+			const installStamp = JSON.parse(
+				readFileSync(join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(installStamp).toMatchObject({ digest: sha, channel: 'master' });
 			expect(existsSync(sentinel.backupDir as string)).toBe(true);
 			// phase frames: the last one before the restart carries expected_version
 			const last = frames.at(-1) as UpdatePhaseFrame;
@@ -1025,5 +1075,295 @@ describe('boot_confirm (the sentinel second half)', () => {
 
 		// an already-confirmed sentinel is a no-op
 		await confirmBootedCodeUpdate(sentinelPath, '7.0.1');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The EXCLUSIVE RUN LOCK — the pipeline's single-flight invariant.
+// Before it, two concurrent updates shared one `<backupRoot>/.code_staging`
+// and the second swept the first's already-smoke-booted quarantine.
+// ---------------------------------------------------------------------------
+describe('code-update run lock (single-flight)', () => {
+	function scratchRoot(name: string): string {
+		const dir = join(mkdtempSync(join(tmpdir(), 'dedalo_run_lock_')), name);
+		mkdirSync(dir, { recursive: true });
+		return dir;
+	}
+
+	test('a second run REFUSES while the first holds the lock', () => {
+		const backupRoot = scratchRoot('held');
+		const release = acquireRunLockOrRefuse(backupRoot, '7.0.1');
+		expect(existsSync(codeRunLockPath(backupRoot))).toBe(true);
+
+		// The live owner is THIS process, so the dead-owner rule cannot apply.
+		const refusal = refusalOfSync(() => acquireRunLockOrRefuse(backupRoot, '7.0.1'));
+		expect(refusal.code).toBe('update.refused');
+		expect(refusal.publicMessage).toContain('already running');
+		expect(refusal.publicMessage).toContain('7.0.1');
+
+		release();
+		expect(existsSync(codeRunLockPath(backupRoot))).toBe(false);
+		// Released — the next run may proceed.
+		acquireRunLockOrRefuse(backupRoot, '7.0.2')();
+	});
+
+	test('a STALE lock from a dead owner is reclaimed, not a permanent wedge', () => {
+		const backupRoot = scratchRoot('stale');
+		// The success path ALWAYS leaves one of these: the process dies in the
+		// planned restart moments after releasing. A pid that cannot exist must
+		// never block the next update.
+		writeFileSync(
+			codeRunLockPath(backupRoot),
+			JSON.stringify({ pid: 2147483646, version: '7.0.1', startedAt: '2026-01-01T00:00:00Z' }),
+		);
+		const release = acquireRunLockOrRefuse(backupRoot, '7.0.2');
+		expect(JSON.parse(readFileSync(codeRunLockPath(backupRoot), 'utf8')).pid).toBe(process.pid);
+		release();
+	});
+
+	test('a lock whose owner is unreadable is treated as dead (never a wedge)', () => {
+		const backupRoot = scratchRoot('garbage');
+		writeFileSync(codeRunLockPath(backupRoot), 'not json at all');
+		acquireRunLockOrRefuse(backupRoot, '7.0.1')();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE CATALOG MAY NOT RUN AHEAD OF THE ENGINE.
+//
+// UPDATE_CATALOG once shipped '702' and '703' — rungs for releases nobody had
+// cut, added so the museum-cycle probe could walk several hops. They were not
+// inert: `scripts/update_drill.ts` picks the NEWEST descriptor, so
+// `bun run test:update` rehearsed 7.0.2 → 7.0.3, a hop that will never be cut,
+// instead of the rung a release manager actually ships. Meanwhile the shipped
+// manifest advertised upgrade paths to archives that do not exist.
+//
+// The rule: every catalog target is at most ONE rung past the running engine.
+// A probe that needs to repeat resets the museum to the rung's FROM end.
+// ---------------------------------------------------------------------------
+describe('UPDATE_CATALOG may not run ahead of the engine', () => {
+	test('every target is at most one rung past DEDALO_VERSION_TRIPLE', () => {
+		const engine = [...DEDALO_VERSION_TRIPLE];
+		const ahead = Object.entries(UPDATE_CATALOG).filter(([, descriptor]) => {
+			const target = [descriptor.versionMajor, descriptor.versionMedium, descriptor.versionMinor];
+			// Legal: the engine's own version, or exactly one legal rung past it.
+			if (assertLinearUpgrade(engine, target) === null) return false;
+			return compareVersionArrays(target, engine) === 1;
+		});
+		expect(
+			ahead.map(([key]) => key),
+			'a catalog rung beyond the next one advertises a release nobody can cut, and makes update_drill.ts rehearse a fiction — reset the probe museum instead',
+		).toEqual([]);
+	});
+
+	test('every catalog rung chains from a version the engine can reach', () => {
+		// No orphan islands: each descriptor's `updateFrom` is either the
+		// engine's version or another descriptor's target.
+		const targets = new Set(
+			Object.values(UPDATE_CATALOG).map(
+				(d) => `${d.versionMajor}.${d.versionMedium}.${d.versionMinor}`,
+			),
+		);
+		targets.add(DEDALO_VERSION_TRIPLE.join('.'));
+		for (const [key, d] of Object.entries(UPDATE_CATALOG)) {
+			const from = `${d.updateFromMajor}.${d.updateFromMedium}.${d.updateFromMinor}`;
+			expect(
+				targets.has(from),
+				`catalog rung '${key}' upgrades from ${from}, which nothing reaches`,
+			).toBe(true);
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE SAME-VERSION IDENTITY GATE (dev channel, 2026-08-24).
+// A dev install swaps a tree whose VERSION IS UNCHANGED, so the version can no
+// longer answer "did the new tree boot?": after a rollback the OLD tree matches
+// the pending sentinel exactly, boot confirmation flips it to `confirmed`, and
+// the supervisor-side rollback (deploy/dedalo-code-rollback.sh) is silently
+// disarmed for the class of build most likely to fail. The installed ARCHIVE
+// DIGEST is the identity token instead.
+// ---------------------------------------------------------------------------
+describe('boot_confirm under a same-version (dev channel) install', () => {
+	const DIGEST_NEW = 'a'.repeat(64);
+	const DIGEST_OLD = 'b'.repeat(64);
+
+	function pendingSentinel(dir: string): Record<string, unknown> {
+		return {
+			version: '7.0.1',
+			previousVersion: '7.0.1', // SAME version — the dev-channel case
+			updateMode: 'clean',
+			stamp: '2026-08-24T10-00-00',
+			backupDir: dir,
+			installDigest: DIGEST_NEW,
+			status: 'pending',
+			rollback_attempted: false,
+		};
+	}
+
+	test('the rolled-back OLD tree does NOT confirm: same version, different installed digest', async () => {
+		const dir = join(ROOT, 'confirm_same_version_rollback');
+		mkdirSync(dir, { recursive: true });
+		const sentinelPath = join(dir, 'last_code_update.json');
+		writeFileSync(sentinelPath, JSON.stringify(pendingSentinel(dir)));
+
+		// The tree that actually booted carries the PREVIOUS archive's digest.
+		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', DIGEST_OLD);
+
+		const after = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+		expect(after.status).toBe('pending');
+	});
+
+	test('the NEW tree confirms: same version, matching installed digest', async () => {
+		const dir = join(ROOT, 'confirm_same_version_ok');
+		mkdirSync(dir, { recursive: true });
+		const sentinelPath = join(dir, 'last_code_update.json');
+		writeFileSync(sentinelPath, JSON.stringify(pendingSentinel(dir)));
+
+		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', DIGEST_NEW);
+
+		const after = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+		expect(after.status).toBe('confirmed');
+	});
+
+	test('a legacy sentinel with no installDigest still confirms on the version alone', async () => {
+		const dir = join(ROOT, 'confirm_legacy');
+		mkdirSync(dir, { recursive: true });
+		const sentinelPath = join(dir, 'last_code_update.json');
+		const { installDigest: _dropped, ...legacy } = pendingSentinel(dir);
+		writeFileSync(sentinelPath, JSON.stringify(legacy));
+
+		await confirmBootedCodeUpdate(sentinelPath, '7.0.1', null);
+
+		const after = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+		expect(after.status).toBe('confirmed');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The DEV CHANNEL relaxes an ORDERING guard, never an authenticity one: the
+// same version becomes installable (that IS the feature — a `v7` branch build
+// carries no version bump), while downgrades and rung skips stay refused.
+// ---------------------------------------------------------------------------
+describe('assertLinearUpgrade on the dev channel', () => {
+	test('the SAME version is allowed on dev and still refused on the release channel', () => {
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 1], 'dev')).toBeNull();
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 1], 'master')).toBe(
+			'refusing a downgrade or same-version install',
+		);
+		// the default is the release channel — an omitted channel never relaxes
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 1])).toBe(
+			'refusing a downgrade or same-version install',
+		);
+	});
+
+	test('dev still refuses a downgrade', () => {
+		expect(assertLinearUpgrade([7, 0, 1], [7, 0, 0], 'dev')).toBe(
+			'refusing a downgrade or same-version install',
+		);
+	});
+
+	test('dev still refuses a rung skip', () => {
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 3], 'dev')).toBe(
+			'patch version skip is not allowed',
+		);
+		expect(assertLinearUpgrade([7, 0, 0], [9, 0, 0], 'dev')).toBe(
+			'major version skip is not allowed',
+		);
+	});
+
+	test('dev allows the next rung, exactly like the release channel', () => {
+		expect(assertLinearUpgrade([7, 0, 0], [7, 0, 1], 'dev')).toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE DEV-CHANNEL SWAP end to end: same version, and the tree that lands must
+// be IDENTIFIABLE afterwards — the version no longer distinguishes it from the
+// tree it replaced, so the install stamp and the sentinel's digest are the only
+// things standing between a landed swap and a rollback that looks identical.
+// ---------------------------------------------------------------------------
+describe('full swap chain on the DEV CHANNEL (same version)', () => {
+	test('a same-version dev release installs, stamps the tree, and records its digest in the sentinel', async () => {
+		if (!zipAvailable) return;
+		const base = join(ROOT, 'dev_swap');
+		const zipPath = await buildReleaseZip(base);
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const previousDigest = 'd'.repeat(64);
+
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const origin = `http://localhost:${server.port}`;
+
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		// the live tree was itself installed by an earlier dev iteration
+		mkdirSync(join(targetRoot, 'src', 'core', 'update'), { recursive: true });
+		writeFileSync(
+			join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'),
+			JSON.stringify({ digest: previousDigest, channel: 'dev' }),
+		);
+		const backupRoot = join(base, 'backups');
+		const version = DEDALO_VERSION_TRIPLE.join('.'); // the SAME version we run
+
+		try {
+			mockUpdateEnv(origin);
+			const out = await updateCode(
+				{
+					file: {
+						version,
+						url: `${origin}/${version}-dev.zip`,
+						sha256: sha,
+						channel: 'dev',
+					},
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({ targetRoot, backupRoot, restart: () => {} }),
+			);
+			expect(out.ok).toBe(true);
+			expect(out.data).toEqual({ version });
+
+			// THE INSTALL STAMP: the new tree names the archive it came from and
+			// the channel that built it (which is what restores its `.dev` tag).
+			const stamp = JSON.parse(
+				readFileSync(join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(stamp.digest).toBe(sha);
+			expect(stamp.channel).toBe('dev');
+			expect(stamp.source_url).toBe(`${origin}/${version}-dev.zip`);
+
+			// THE SENTINEL carries the same digest: boot_confirm compares THAT,
+			// not the (unchanged) version, so a rollback stays loud.
+			const sentinel = JSON.parse(
+				readFileSync(join(backupRoot, 'last_code_update.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(sentinel.installDigest).toBe(sha);
+			expect(sentinel.version).toBe(version);
+			expect(sentinel.previousVersion).toBe(version);
+
+			// THE RESTORE POINT is identifiable: same version every iteration, so
+			// the name carries the digest of the tree it holds.
+			const backups = readdirSync(backupRoot).filter((n) => n.startsWith('dedalo_'));
+			expect(backups.length).toBe(1);
+			expect(backups[0]).toContain(`_${previousDigest.slice(0, 7)}_`);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
+	test('the same-version release is REFUSED without the dev channel', async () => {
+		const version = DEDALO_VERSION_TRIPLE.join('.');
+		const refusal = await refusalOf(
+			updateCode(
+				{
+					file: { version, url: `http://localhost:1/${version}.zip`, sha256: 'e'.repeat(64) },
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({ targetRoot: join(ROOT, 'never_touched') }),
+			),
+		);
+		expect(refusal.message).toContain('same-version install');
 	});
 });

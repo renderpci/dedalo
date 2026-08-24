@@ -6,7 +6,7 @@ Dédalo is an active, rapidly developing software project. It is therefore impor
 
 There are two ways to update the server's code: the maintenance-panel **self-update** (below), driven by a configured code server, and a **manual** `git pull` (see [Updating manually](#updating-manually)). Both operate on this install's own tree — there is no separate install they delegate to.
 
-The update process is based on the Dédalo cadence numbering. Versions are installed step by step — the updater refuses to skip a major or minor version — and a code version sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
+The update process is based on the Dédalo cadence numbering. Versions are installed step by step — the updater refuses to skip **any** version, patch releases included: the only target it accepts is the very next rung — and a code version sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
 
 Updating the Dédalo code should be supervised by the IT team. Some changes — such as **new configuration settings** — must be applied manually in `../private/.env`, because neither update path touches your configuration.
 
@@ -190,11 +190,39 @@ Each archive is written together with its `.sha256` sidecar — that sidecar is
 what remote installs verify against; keep the two files together, because an
 archive without its sidecar cannot be installed.
 
-!!! note "Developer builds are never advertised"
-    The release manifest only looks for `<version>.zip`, so a `-dev` archive is
-    never offered to consuming installs. It is still served at its own URL
-    (`/dedalo/install/code/<version>/<version>-dev.zip`), so an operator who
-    knows the name can fetch it for manual testing.
+!!! note "Developer builds are only offered when both sides ask for them"
+    A `-dev` archive is never offered to an install that did not ask for one.
+    Two switches must be on: this code server must set
+    `DEDALO_CODE_SERVER_DEV_CHANNEL=true`, and the receiving install must tick
+    **Developer builds** in its own "Update code" panel. A code server that
+    leaves the setting unset answers a developer-channel request exactly as it
+    answers a normal one. The archive is served at its own URL either way
+    (`/dedalo/install/code/<version>/<version>-dev.zip`).
+
+### Testing branch work on a real installation
+
+A developer build carries **no version bump** — it is the same version as the
+release it was branched from. That is deliberate: a version number that moves
+without a release stops naming a release. So a developer build is installed
+*over* the same version, and it can be installed again as often as the branch
+moves.
+
+The receiving install ticks **Developer builds**, checks for updates, and picks
+the build (marked as a developer build, and listed first). Everything else is
+the ordinary update: superuser, maintenance mode, a recent backup, the same
+`.sha256` verification, the same backup, smoke boot, swap and rollback.
+
+Because the version cannot move, the panel does **not** use it to tell you the
+update landed. Each installed tree records the archive it came from, and the
+panel shows it as **Installed archive** — that value changing is the proof, and
+it is also what the rollback machinery compares. An install running a developer
+build says so everywhere: its version reads `<version>.dev` and its build
+posture is *Developer build (unreleased branch code)*.
+
+!!! warning "Not for production installations"
+    A developer build is unreleased branch code. Use it to test development
+    work on an installation you can afford to break — never on a production
+    one.
 
 ### Serving a release
 

@@ -138,16 +138,23 @@ async function updateCodeOwned(
  */
 async function buildVersionOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
-	const { DEDALO_VERSION } = await import('../../update/version.ts');
 	// The panel's two buttons send a BRANCH ('master' / 'developer') and nothing
-	// else — the release they build is the engine's CURRENT version, exactly as
-	// their confirm text promises. Until 2026-08-15 only `version`/`ref` were read,
-	// so both buttons refused with 'Invalid version number' and a code master
-	// could not build a single release. Explicit version/ref still win (API callers).
+	// else. The release they build is the version THE REF DECLARES — no longer
+	// the engine's current version: taking the name from the running process
+	// while the bytes came from a ref meant a master left running across a
+	// version bump published mislabelled archives, and a master whose ref
+	// declares its OWN version published a same-version zip that
+	// assertLinearUpgrade refuses as a downgrade (measured 2026-08-24: a 7.0.0
+	// master produced an uninstallable 7.0.0.zip). An explicit `version` from an
+	// API caller is now a CLAIM, checked against the ref and refused on mismatch.
 	const branch = typeof options.branch === 'string' ? options.branch : undefined;
-	const version = typeof options.version === 'string' ? options.version : DEDALO_VERSION;
 	const ref = typeof options.ref === 'string' ? options.ref : branch;
-	return fromEnvelope(await buildVersionFromGit({ version, ref }));
+	return fromEnvelope(
+		await buildVersionFromGit({
+			...(typeof options.version === 'string' ? { version: options.version } : {}),
+			...(ref === undefined ? {} : { ref }),
+		}),
+	);
 }
 
 export const widget: WidgetModule = {

@@ -113,6 +113,20 @@ interface Auth {
 	csrf: string;
 }
 
+/** The DEDALO_VERSION_TRIPLE a tree declares ('7.0.1'), or null. Whitespace- and
+ * line-break-insensitive: the committed source spans three lines, the probe's
+ * own bump writes one. */
+function treeTripleOf(versionTsPath: string): string | null {
+	try {
+		const matched = /Object\.freeze\(\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,?\s*\]\)/.exec(
+			readFileSync(versionTsPath, 'utf8'),
+		);
+		return matched === null ? null : `${matched[1]}.${matched[2]}.${matched[3]}`;
+	} catch {
+		return null;
+	}
+}
+
 function must(condition: boolean, message: string): asserts condition {
 	if (!condition) {
 		throw new Error(`FAIL: ${message}`);
@@ -237,6 +251,14 @@ async function healthOf(url: string): Promise<Record<string, unknown> | null> {
 async function main(): Promise<void> {
 	const args = process.argv.slice(2);
 	const drive = args.includes('--drive');
+	/**
+	 * `--dev` rehearses the DEVELOPER CHANNEL: the archive is cut from a branch
+	 * that is NOT `master` (so it is built and served as `<v>-dev.zip`) and
+	 * installed over THE SAME VERSION — no bump, which is how unreleased branch
+	 * work reaches a museum install. It is also the BOOTSTRAP: a museum whose
+	 * tree predates the channel is re-materialized from HEAD on the way through.
+	 */
+	const devChannel = args.includes('--dev');
 	const restartMaster = args.includes('--restart-master');
 	const driveUser = args.find((a) => a.startsWith('--user='))?.slice(7) ?? 'root';
 	const drivePassArg = args.find((a) => a.startsWith('--pass='))?.slice(7);
@@ -265,17 +287,69 @@ async function main(): Promise<void> {
 		`[probe] master: ${String(masterHealth.version)} (${String(masterHealth.entity)}) · museum: ${String(consumerHealth.version ?? '<pre-version-health>')} (${String(consumerHealth.entity)})`,
 	);
 
-	// The cycle's versions derive from the museum itself (repeatable probe):
+	// The cycle's versions.
+	//
+	// RELEASE CHANNEL: derived from the museum itself (repeatable probe) —
 	// CURRENT = what it serves now, RELEASE = the next patch rung.
-	const museumVersion = String(consumerHealth.version ?? '');
+	//
+	// DEV CHANNEL: derived from THIS CHECKOUT. A developer build carries the
+	// version its own `version.ts` declares and installs over it, so the museum
+	// is brought TO that version (re-materialized below when it does not match)
+	// rather than the version being derived from the museum.
+	//
+	// The `.dev` tag is stripped before parsing either way: a museum already
+	// running a developer build reports `7.0.1.dev`, and the strict triple test
+	// below would otherwise refuse to start a second cycle on it.
+	const museumVersion = String(consumerHealth.version ?? '').replace(/\.dev$/, '');
 	must(
 		/^\d+\.\d+\.\d+$/.test(museumVersion),
 		`the museum's /health carries no parseable version ('${museumVersion}') — it must be on a post-2026-08 build for repeat cycles`,
 	);
-	const triple = museumVersion.split('.').map(Number);
-	const CURRENT_VERSION = museumVersion;
-	const RELEASE_VERSION = `${triple[0]}.${triple[1]}.${(triple[2] ?? 0) + 1}`;
-	console.log(`[probe] cycle: ${CURRENT_VERSION} -> ${RELEASE_VERSION}`);
+	const checkoutVersion = treeTripleOf(join(projectRoot, 'src', 'core', 'update', 'version.ts'));
+	must(
+		!devChannel || checkoutVersion !== null,
+		'could not read DEDALO_VERSION_TRIPLE from this checkout — the dev build takes its version from there',
+	);
+	const CURRENT_VERSION = devChannel ? (checkoutVersion as string) : museumVersion;
+	const triple = CURRENT_VERSION.split('.').map(Number);
+	const RELEASE_VERSION = devChannel
+		? CURRENT_VERSION
+		: `${triple[0]}.${triple[1]}.${(triple[2] ?? 0) + 1}`;
+	/** The archive's name on each channel (code_build_plan.ts releaseFileName). */
+	const RELEASE_FILE = devChannel ? `${RELEASE_VERSION}-dev.zip` : `${RELEASE_VERSION}.zip`;
+	console.log(
+		devChannel
+			? `[probe] DEV cycle: ${CURRENT_VERSION} -> ${RELEASE_VERSION} (same version, ${RELEASE_FILE})`
+			: `[probe] cycle: ${CURRENT_VERSION} -> ${RELEASE_VERSION}`,
+	);
+	if (devChannel && museumVersion !== CURRENT_VERSION) {
+		console.log(
+			`[probe] the museum serves ${museumVersion} but the dev build is ${CURRENT_VERSION} — its tree will be re-materialized to match (the bootstrap)`,
+		);
+	}
+
+	// THE RUNG MUST EXIST IN THE CATALOG — asserted here, before ~180 MB of
+	// archive is cut and before the museum is touched at all.
+	//
+	// The probe invents its rung from the museum's own /health (patch + 1), but
+	// `buildCodeUpdateInfo` walks UPDATE_CATALOG to decide what a master may
+	// advertise, and that catalog is hand-written. Nothing on the prepare path
+	// could notice the gap: the serving route is catalog-independent (the zip
+	// downloads fine), and the manifest was only ever fetched under --drive. So
+	// a museum sitting at the last catalogued rung got a cheerful "PREPARED"
+	// and a printed operator procedure for a release the master can never
+	// offer — the panel simply shows nothing, with no error to search for.
+	// A SAME-VERSION dev build needs NO descriptor: `buildCodeUpdateInfo` offers
+	// it from the caller's own version, never from a catalog walk (see the
+	// 2026-08-24 wire-contract entry). The assertion below is release-only.
+	if (!devChannel) {
+		const { UPDATE_CATALOG } = await import('../src/core/update/catalog.ts');
+		const rungKey = RELEASE_VERSION.split('.').join('');
+		must(
+			UPDATE_CATALOG[rungKey] !== undefined,
+			`UPDATE_CATALOG has no '${rungKey}' descriptor, so the master can never ADVERTISE ${RELEASE_VERSION} (buildCodeUpdateInfo walks the catalog) — the museum's panel would just show nothing. Add the descriptor to src/core/update/catalog.ts, or reset the museum tree to a version whose next rung IS catalogued.`,
+		);
+	}
 
 	// --- the consumer's runtime facts --------------------------------------
 	const consumerBun = await dockerExec(
@@ -328,22 +402,31 @@ async function main(): Promise<void> {
 	// value becomes PART OF THE VALUE (quotes are stripped only when the WHOLE
 	// value is quoted), so the running engine's files-dir was garbage and every
 	// release URL answered 404. Append canonical bare paths.
+	//
+	// A CONFIGURED value is the operator's, not ours. This used to overwrite
+	// DEDALO_CODE_FILES_DIR whenever it merely DIFFERED from <repo>/code, and
+	// to append DEDALO_CODE_SERVER_GIT_DIR — a key the probe never reads, since
+	// it cuts the archive from its own throwaway clone — shadowing a
+	// deliberate `ssh://…` setting in an append-only file that cannot be
+	// un-appended. Now: fill in only what is UNSET, and where a set value is
+	// genuinely unusable, name it and stop rather than silently shadow it.
 	const wantedFilesDir = join(projectRoot, 'code');
-	if (readString('DEDALO_CODE_FILES_DIR') !== wantedFilesDir) {
-		appendEnvLine(
-			'DEDALO_CODE_FILES_DIR',
-			wantedFilesDir,
-			'previous value carried quotes/comment text',
-		);
+	const configuredFilesDir = readString('DEDALO_CODE_FILES_DIR');
+	if (configuredFilesDir === undefined || configuredFilesDir === '') {
+		appendEnvLine('DEDALO_CODE_FILES_DIR', wantedFilesDir, 'was unset');
 		needsRestart = true;
-	}
-	if (readString('DEDALO_CODE_SERVER_GIT_DIR') !== projectRoot) {
-		appendEnvLine(
-			'DEDALO_CODE_SERVER_GIT_DIR',
-			projectRoot,
-			'previous value was a remote URL / quoted comment text — a LOCAL checkout enables wire builds',
+	} else if (!existsSync(configuredFilesDir)) {
+		// An inline `# comment` after a value becomes PART OF THE VALUE (quotes
+		// are stripped only when the WHOLE value is quoted), which is how this
+		// key silently became garbage and every release URL answered 404.
+		must(
+			false,
+			`DEDALO_CODE_FILES_DIR is set to '${configuredFilesDir}', which does not exist. Fix that line in ../private/.env (a bare path, no inline # comment) — the probe will not shadow a value you set.`,
 		);
-		needsRestart = true;
+	} else if (configuredFilesDir !== wantedFilesDir) {
+		console.log(
+			`[probe] note: publishing into the CONFIGURED DEDALO_CODE_FILES_DIR (${configuredFilesDir}), not <repo>/code`,
+		);
 	}
 	if (needsRestart) {
 		console.log(
@@ -431,10 +514,15 @@ async function main(): Promise<void> {
 		],
 		'release commit',
 	);
-	await run(['git', '-C', cloneDir, 'branch', '-m', 'master'], 'branch master');
+	// Only a ref named `master` claims the published `<v>.zip` name
+	// (code_build_plan.ts). The dev cycle deliberately names it otherwise, so
+	// the artifact is a real developer build and can never overwrite the
+	// published release of the same version.
+	const releaseBranch = devChannel ? 'probe_dev_branch' : 'master';
+	await run(['git', '-C', cloneDir, 'branch', '-m', releaseBranch], `branch ${releaseBranch}`);
 	const targetDir = join(CODE_FILES_DIR, '7', '7.0');
 	mkdirSync(targetDir, { recursive: true });
-	const zipPath = join(targetDir, `${RELEASE_VERSION}.zip`);
+	const zipPath = join(targetDir, RELEASE_FILE);
 	await run(
 		[
 			'git',
@@ -445,13 +533,13 @@ async function main(): Promise<void> {
 			'--prefix=dedalo_code/',
 			'-o',
 			zipPath,
-			'master',
+			releaseBranch,
 		],
 		'cut archive',
 	);
 	const { createHash } = await import('node:crypto');
 	const digest = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
-	writeFileSync(`${zipPath}.sha256`, `${digest}  ${RELEASE_VERSION}.zip\n`);
+	writeFileSync(`${zipPath}.sha256`, `${digest}  ${RELEASE_FILE}\n`);
 	console.log(
 		`[probe] release published: ${zipPath} (${readdirSync(targetDir).join(', ')}) — served live by the master`,
 	);
@@ -465,19 +553,39 @@ async function main(): Promise<void> {
 	// Reuse it verbatim when its version matches what the museum serves;
 	// only sweep root junk. A first preparation still exports HEAD + modules.
 	const liveVersionTs = join(treeDir, 'src', 'core', 'update', 'version.ts');
+	// PARSE the triple; do NOT substring-match it. `includes('[7, 0, 0]')` only
+	// ever matched the SINGLE-LINE form this probe's own bump writes — the
+	// committed version.ts spreads the triple across three lines, so a tree
+	// exported straight from git (a hand reset, or a first preparation) was
+	// never recognised as current. The probe then took the re-materialize
+	// branch against a tree it should have reused and, with the container still
+	// holding the bind mount, wiped it half-way before failing on EACCES.
 	const treeIsCurrent =
-		existsSync(liveVersionTs) &&
-		readFileSync(liveVersionTs, 'utf8').includes(`[${triple.join(', ')}]`);
+		existsSync(liveVersionTs) && treeTripleOf(liveVersionTs) === triple.join('.');
 	if (treeIsCurrent) {
 		for (const junk of ['.claude', 'CLAUDE.md', '.DS_Store']) {
 			rmSync(join(treeDir, junk), { recursive: true, force: true });
 		}
 		console.log(`[probe] museum tree already holds ${CURRENT_VERSION} — reused as the old release`);
 	} else {
+		// STOP THE CONSUMER FIRST. This branch deletes the very tree the running
+		// container has bind-mounted at /opt/dedalo; on Docker Desktop the mount
+		// makes the directory itself undeletable, so `rmSync` emptied the tree
+		// and THEN threw EACCES on the mount point — turning a re-materialize
+		// into a half-wiped museum whose engine only kept answering because the
+		// running process already held its modules in memory. Recreating the
+		// container is step 5 anyway, so stopping here costs nothing.
+		await run(
+			['docker', 'compose', '-f', COMPOSE_BASE, 'stop', 'dedalo'],
+			'stop the museum before re-materializing its tree',
+		);
 		const modulesDir = join(treeDir, 'node_modules');
 		const savedModules = join(PROBE_DIR, 'node_modules.keep');
 		const hadModules = existsSync(modulesDir);
-		if (hadModules) renameSync(modulesDir, savedModules);
+		if (hadModules) {
+			rmSync(savedModules, { recursive: true, force: true });
+			renameSync(modulesDir, savedModules);
+		}
 		rmSync(treeDir, { recursive: true, force: true });
 		mkdirSync(join(optDir, 'backups', 'code'), { recursive: true });
 		mkdirSync(treeDir, { recursive: true });
@@ -558,6 +666,21 @@ services:
       CODE_SERVERS: '${JSON.stringify([
 				{ name: 'Local dev master', url: `${origin}/dedalo/core/api/v1/json/`, code: sharedCode },
 			])}'
+  nginx:
+    volumes:
+      # nginx serves the client tree IN PLACE, from
+      # /opt/dedalo/master_dedalo/client (deploy/nginx.simple.conf alias). The
+      # base stack binds THE MASTER'S OWN client/ there, which in this probe is
+      # the developer's working tree — so the museum's browser was loading the
+      # MASTER's uncommitted client against the museum's old server. A real
+      # museum's client ships INSIDE its own tree and is replaced BY the swap.
+      # Mount the museum tree here too, so the client the operator drives is the
+      # one being updated, and the new client goes live with the new server.
+      # Compose MERGES volume lists, so the base stack's more-specific
+      # ./client:/opt/dedalo/master_dedalo/client bind would still shadow the
+      # mount above — re-declare that exact TARGET against the museum's tree.
+      - ${join(PROBE_DIR, 'opt')}:/opt/dedalo
+      - ${join(PROBE_DIR, 'opt', 'master_dedalo', 'client')}:/opt/dedalo/master_dedalo/client:ro
 `,
 	);
 	console.log(`[probe] wrote ${overridePath}`);
@@ -601,7 +724,7 @@ services:
 			'%{http_code}',
 			'-m',
 			'10',
-			`${origin}/dedalo/install/code/${RELEASE_VERSION}/${RELEASE_VERSION}.zip.sha256`,
+			`${origin}/dedalo/install/code/${RELEASE_VERSION}/${RELEASE_FILE}.sha256`,
 		],
 		'serving URL from the container',
 	);
@@ -671,15 +794,42 @@ Or let the probe drive it: bun run probe:update --drive --user=root --pass=<the 
 		action: 'get_code_update_info',
 		prevent_lock: true,
 		source: {},
-		options: { version: CURRENT_VERSION, code: sharedCode },
+		options: {
+			version: CURRENT_VERSION,
+			code: sharedCode,
+			// The consumer half of the dev channel's two switches (the panel's
+			// "Developer builds" tick). The master answers releases only without it.
+			...(devChannel ? { channel: 'dev' } : {}),
+		},
 	});
 	must(manifest.ok === true, `manifest refused: ${JSON.stringify(manifest.error)}`);
-	const info = manifest.data as { files: { version: string; url: string; sha256?: string }[] };
-	must(
-		info.files.length === 1 && info.files[0]?.version === RELEASE_VERSION,
-		`manifest did not offer exactly ${RELEASE_VERSION}`,
-	);
-	const file = info.files[0] as { version: string; url: string; sha256?: string };
+	const info = manifest.data as {
+		files: { version: string; url: string; sha256?: string; channel?: string }[];
+	};
+	if (devChannel) {
+		// The developer build leads the list; published rungs may follow it.
+		const lead = info.files[0];
+		must(
+			lead?.channel === 'dev' && lead?.version === RELEASE_VERSION,
+			`manifest did not lead with the ${RELEASE_VERSION} developer build: ${JSON.stringify(info.files)}`,
+		);
+		must(
+			lead.url.endsWith('-dev.zip'),
+			`the advertised developer URL is not the dev archive: ${lead.url}`,
+		);
+	} else {
+		must(
+			info.files.length === 1 && info.files[0]?.version === RELEASE_VERSION,
+			`manifest did not offer exactly ${RELEASE_VERSION}`,
+		);
+	}
+	// Forwarded VERBATIM into the update request — `channel` travels with it.
+	const file = info.files[0] as {
+		version: string;
+		url: string;
+		sha256?: string;
+		channel?: string;
+	};
 
 	const tampered = await apiPost(
 		'http://127.0.0.1',
@@ -735,17 +885,33 @@ Or let the probe drive it: bun run probe:update --drive --user=root --pass=<the 
 		}`,
 	);
 
+	// WHAT COUNTS AS "IT LANDED".
+	// Release channel: the version moves, so the version is the proof.
+	// Dev channel: the version CANNOT move (that is the point) — it only gains
+	// its `.dev` tag — and a rolled-back tree would answer with the very version
+	// we are waiting for. The installed archive digest is the token that moves.
+	const expectedHealthVersion = devChannel ? `${RELEASE_VERSION}.dev` : RELEASE_VERSION;
 	const deadline = Date.now() + 240_000;
 	let updated = false;
 	while (Date.now() < deadline) {
 		const h = await healthOf(NGINX_HEALTH);
-		if (h !== null && h.version === RELEASE_VERSION && h.db === 'ok') {
+		if (
+			h !== null &&
+			h.db === 'ok' &&
+			h.version === expectedHealthVersion &&
+			(!devChannel || h.install_digest === digest)
+		) {
 			updated = true;
 			break;
 		}
 		await Bun.sleep(1500);
 	}
-	must(updated, `the museum never answered ${RELEASE_VERSION} on ${NGINX_HEALTH}`);
+	must(
+		updated,
+		devChannel
+			? `the museum never answered ${expectedHealthVersion} with the installed archive ${digest} on ${NGINX_HEALTH} — a same-version ROLLBACK looks exactly like this`
+			: `the museum never answered ${RELEASE_VERSION} on ${NGINX_HEALTH}`,
+	);
 	const sentinelPath = join(optDir, 'backups', 'code', 'last_code_update.json');
 	const sentinelUntil = Date.now() + 45_000;
 	let sentinel: Record<string, unknown> = {};
@@ -763,6 +929,10 @@ Or let the probe drive it: bun run probe:update --drive --user=root --pass=<the 
 		sentinel.version === RELEASE_VERSION && sentinel.previousVersion === CURRENT_VERSION,
 		'sentinel names the wrong versions',
 	);
+	must(
+		sentinel.installDigest === digest,
+		`sentinel installDigest ${String(sentinel.installDigest)} is not the archive just installed (${digest})`,
+	);
 	const backups = readdirSync(join(optDir, 'backups', 'code')).filter((n) =>
 		n.startsWith(`dedalo_${CURRENT_VERSION}_`),
 	);
@@ -773,6 +943,15 @@ Or let the probe drive it: bun run probe:update --drive --user=root --pass=<the 
 		),
 		`the live tree is not the ${RELEASE_VERSION} code`,
 	);
+	if (devChannel) {
+		// On this channel the version says nothing (both trees declare it), so the
+		// tree's own stamp is the assertion that carries weight.
+		const stamp = JSON.parse(
+			readFileSync(join(treeDir, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+		) as Record<string, unknown>;
+		must(stamp.digest === digest, 'the live tree is stamped with another archive');
+		must(stamp.channel === 'dev', 'the live tree does not know it is a developer build');
+	}
 	console.log(
 		`[probe] PASS — museum updated ${CURRENT_VERSION} -> ${RELEASE_VERSION}; sentinel confirmed; backup ${backups[0]}`,
 	);

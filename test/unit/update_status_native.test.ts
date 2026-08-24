@@ -32,6 +32,7 @@ import {
 	archiveSymlinkNames,
 	codeServerStatus,
 	consumerStatus,
+	enginePosture,
 	type StatusCheck,
 } from '../../src/core/update/status.ts';
 
@@ -59,7 +60,16 @@ describe('consumer status', () => {
 		expect(typeof status.ready).toBe('boolean');
 		expect(status.checks.length).toBeGreaterThan(0);
 		expect(status.engine.version).toMatch(/^\d+\.\d+\.\d+$/);
-		expect(status.engine.posture).toBe(status.engine.build === null ? 'dev' : 'release');
+		// POSTURE is not "was this git-archived" — every `git archive` expands the
+		// build stamp, branch builds included. A tree installed from the developer
+		// channel is 'dev' however well-stamped it is (2026-08-24).
+		expect(status.engine.posture).toBe(enginePosture(status.engine.build as string | null, null));
+		expect(enginePosture('2026-08-24T10:00:00Z', 'dev')).toBe('dev');
+		expect(enginePosture('2026-08-24T10:00:00Z', 'master')).toBe('release');
+		expect(enginePosture(null, null)).toBe('dev');
+		// the tree also SAYS which channel it came from, so the panel can name it
+		expect(status.engine).toHaveProperty('install_channel');
+		expect(status.engine).toHaveProperty('install_digest');
 	});
 
 	test('every check uses the closed state vocabulary', () => {
@@ -119,7 +129,10 @@ describe('consumer status', () => {
 	test('restore points report the rollback-bootability contract', () => {
 		for (const point of consumerStatus(superuser).restore_points) {
 			expect(typeof point.bootable).toBe('boolean');
-			expect(typeof point.bytes).toBe('number');
+			// NO `bytes`: it used to be statSync(dir).size — the directory
+			// INODE's size (measured 672 B–1.6 KB for multi-GB trees) — rendered
+			// through format_bytes beside a green "bootable" pill.
+			expect('bytes' in point).toBe(false);
 			expect(point.name.startsWith('dedalo_')).toBe(true);
 		}
 	});
@@ -131,6 +144,14 @@ describe('code server status', () => {
 	test('answers without throwing and states a verdict', () => {
 		expect(typeof status.ready).toBe('boolean');
 		expect(status.ready).toBe(!status.checks.some((check) => check.state === 'blocked'));
+	});
+
+	test('states whether this master PUBLISHES developer builds', () => {
+		// The only way an operator can tell "the consumer asked and I said no"
+		// from "the consumer never asked" (DEDALO_CODE_SERVER_DEV_CHANNEL).
+		const { config } =
+			require('../../src/config/config.ts') as typeof import('../../src/config/config.ts');
+		expect(status.dev_channel).toBe(config.update.devChannelEnabled);
 	});
 
 	test('every check id carries a label', () => {
@@ -158,7 +179,13 @@ describe('code server status', () => {
 		for (const release of status.releases) {
 			// Only `<v>.zip` is ever advertised; `-dev` is servable, never offered.
 			expect(release.channel).toBe(release.file.includes('-dev') ? 'dev' : 'master');
-			expect(release.url.endsWith(release.file)).toBe(true);
+			// EXACT, not endsWith: the panel used to append the
+			// /dedalo/install/code prefix to a base that already carried it,
+			// emitting a doubled path that resolveCodeReleaseFile refuses —
+			// and `endsWith(file)` was true of that broken URL too.
+			expect(release.url).toBe(
+				`https://example.test/dedalo/install/code/${release.version}/${release.file}`,
+			);
 		}
 	});
 
@@ -167,9 +194,17 @@ describe('code server status', () => {
 		// OFFERED, so `advertises` may legitimately be empty while `releases`
 		// is not. What must never happen is the reverse — offering a release
 		// that is not on disk.
-		for (const offered of status.advertises.files) {
-			expect(status.releases.some((release) => release.version === offered.version)).toBe(true);
+		for (const rung of status.advertises.rungs) {
+			for (const offered of rung.files) {
+				expect(status.releases.some((release) => release.version === offered.version)).toBe(true);
+			}
 		}
+		// …and the listing must not be silently empty because the WALK died.
+		// A single stray non-directory entry (a `.DS_Store`, which macOS plants
+		// in every browsed dir) used to abort the whole two-level walk, so the
+		// panel reported "Published releases: None" over a dir full of served
+		// archives — and fired THIS security-shaped alarm for a directory bug.
+		expect(status.releases_unreadable).toEqual([]);
 	});
 
 	test('every publish check names the ref it was evaluated against', () => {

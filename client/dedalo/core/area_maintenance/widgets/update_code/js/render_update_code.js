@@ -226,8 +226,16 @@ const get_content_data_edit = async function(self) {
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					// resume path: the expected version was lost with the page, the
-					// /health comparison degrades honestly (see resolve_health_outcome)
-					track_process(local_data.value.pid, local_data.value.pfile, body_response, null)
+					// /health comparison degrades honestly (see resolve_health_outcome).
+					// The DIGEST survives it, though — it is stored with the job handle
+					// — and on a same-version install it is the only usable token.
+					track_process(
+						local_data.value.pid,
+						local_data.value.pfile,
+						body_response,
+						null,
+						local_data.value.digest ?? null
+					)
 				}
 			})
 		}
@@ -242,6 +250,40 @@ const get_content_data_edit = async function(self) {
 				parent			: content_data
 			})
 		}
+
+	// dev_channel switch — ask the code server for DEVELOPER BUILDS too.
+	// A developer build is a branch build (any ref but 'master'), so it carries
+	// NO version bump and installs over the same version: it is how unreleased
+	// work is tested on a real installation. Flipping this switch is the ARMING
+	// on this side — everything else (superuser, maintenance mode, a recent
+	// backup, the sha256 check) is unchanged. The code server must have opted in
+	// too, and one that did not simply answers with releases only.
+		const dev_channel_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dev_channel_row',
+			parent			: content_data
+		})
+		// label WRAPS the input (the house pattern — move_lang/move_locator): the
+		// click target is the whole row without an id/for pair to keep in sync.
+		const dev_channel_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'dev_channel_label',
+			text_content	: get_label.update_code_dev_channel || 'Developer builds',
+			parent			: dev_channel_row
+		})
+		const dev_channel_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'dev_channel_check',
+			name			: 'update_code_dev_channel'
+		})
+		dev_channel_label.prepend(dev_channel_input)
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note dev_channel_note',
+			text_content	: get_label.update_code_dev_channel_note || 'Also offers unreleased builds made from a development branch. They carry the same version number as the installed one, so they are installed over it. Use them to test development work, never on a production installation.',
+			parent			: dev_channel_row
+		})
 
 	// button_submit (check available updates)
 		const button_submit = ui.create_dom_element({
@@ -305,7 +347,11 @@ const get_content_data_edit = async function(self) {
 				body_response.prepend(spinner)
 
 			// Code information. Call selected remote server API to get updates list
-				const server_code_api_response = await self.get_code_update_info(server)
+				const dev_channel = dev_channel_input.checked===true
+				const server_code_api_response = await self.get_code_update_info(
+					server,
+					dev_channel ? 'dev' : 'master'
+				)
 				if(SHOW_DEBUG===true) {
 					console.log('))) get_content_data_edit server_code_api_response:', server_code_api_response);
 				}
@@ -365,7 +411,7 @@ const get_content_data_edit = async function(self) {
 			// catalog's doing — the panel shows both instead of leaving the
 			// operator to infer it). Null on a non-code-server.
 			render_code_server_status(content_data, value.code_server)
-			render_build_version(self, content_data, body_response)
+			render_build_version(self, content_data, body_response, value.code_server)
 		}
 
 	// add at end body_response
@@ -494,9 +540,13 @@ const render_phase_track = function(parent) {
 * @param {string} pfile
 * @param {HTMLElement} body_response - panel response surface
 * @param {string|null} expected_version - version the job installs (null on resume)
+* @param {string|null} [expected_digest] - sha256 of the archive the job installs
+*   (the manifest item's own digest). On a DEVELOPER build the version is
+*   identical on both sides of the swap, so this is the only token that can tell
+*   the new tree from a rolled-back one.
 * @returns {void}
 */
-const track_process = function(pid, pfile, body_response, expected_version) {
+const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null) {
 
 	// clean previous surface
 		while (body_response.firstChild) {
@@ -505,7 +555,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 
 	// phase track + reducer state
 		const track = render_phase_track(body_response)
-		let state = init_phase_state(expected_version)
+		let state = init_phase_state(expected_version, expected_digest)
 		track.paint(state)
 
 	// stream surface (render_stream owns this node)
@@ -615,7 +665,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 		const finish_interrupted = () => {
 			track.paint(state)
 			data_manager.set_local_db_data(
-				{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile } },
+				{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile, digest : expected_digest } },
 				'status'
 			)
 			ui.create_dom_element({
@@ -630,17 +680,21 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 			const deadline = Date.now() + 120000
 			const tick = async () => {
 				let version = null
+				let digest = null
 				try {
 					const health_response = await fetch('/health')
 					if (health_response.ok) {
 						const health = await health_response.json()
 						version = health?.version ?? null
+						// null on a server older than the install stamp — the verdict
+						// falls back to the version compare in that case.
+						digest = health?.install_digest ?? null
 					}
 				} catch (_error) {
 					// server still restarting: keep polling until the deadline
 				}
 				if (version!==null) {
-					const ending = resolve_health_outcome(state, version)
+					const ending = resolve_health_outcome(state, version, digest)
 					if (ending.outcome==='updated') {
 						finish_success(version)
 						return
@@ -692,10 +746,34 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 			if (stream_final) {
 				const ending = resolve_final_frame(state, final_frame)
 				if (ending && ending.outcome==='updated') {
+					// The terminal envelope is emitted BEFORE the restart, while
+					// the rollback sentinel still reads "pending" — it means
+					// "the swap landed and I am about to restart", NOT "the new
+					// code is live". Forcing every phase (health included) to
+					// 'done' here skipped poll_health() entirely, so the panel
+					// declared success without one confirmation that the tree it
+					// installed can actually boot — and reported success just
+					// the same when the engine came back rolled back.
+					// So: everything up to and including 'restart' is done; the
+					// 'health' phase stays running and /health decides.
 					state = apply_phase_frame(state, {
-						phases : state.phases.map(p => ({ id : p.id, status : 'done' }))
+						phases : state.phases.map(p => ({
+							id		: p.id,
+							status	: p.id==='health' ? 'running' : 'done'
+						}))
 					})
-					finish_success(ending.version)
+					// expected_version is null on the panel-RESUME path; without
+					// it resolve_health_outcome would read a perfectly good
+					// update as 'rolled_back'.
+					state = {
+						...state,
+						mode				: 'polling',
+						expected_version	: state.expected_version || ending.version
+					}
+					track.paint(state)
+					// the old pid/pfile mean nothing to the restarted process
+					data_manager.delete_local_db_data(LOCAL_DB_ID, 'status')
+					poll_health()
 					return
 				}
 				state = { ...state, mode:'failed' }
@@ -750,7 +828,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 * @param {HTMLElement} body_response - the response area passed to init_form
 * @returns {boolean|undefined} Returns nothing meaningful; side-effects only.
 */
-const render_build_version = function(self, content_data, body_response) {
+const render_build_version = function(self, content_data, body_response, code_server) {
 
 	if (self.caller?.init_form) {
 
@@ -778,7 +856,14 @@ const render_build_version = function(self, content_data, body_response) {
 		}
 
 		// version parts (shared by both confirm texts)
-		const ar_version	= page_globals.dedalo_version.split('.')
+		// THE VERSION THE PUBLISH WILL ACTUALLY PRODUCE — the one the release
+		// REF declares, which the server sends as source.release_version. The
+		// running process's own version (page_globals.dedalo_version) is only a
+		// fallback: naming the artifact after it is exactly the bug that let a
+		// 7.0.0 master publish an uninstallable 7.0.0.zip, and it silently
+		// mislabels every build made by a master left running across a bump.
+		const ref_version	= code_server && code_server.source && code_server.source.release_version
+		const ar_version	= String(ref_version || page_globals.dedalo_version).split('.')
 		const major_version	= ar_version[0]
 		const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
 		const release_dir	= `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`
@@ -786,7 +871,7 @@ const render_build_version = function(self, content_data, body_response) {
 		// button Build Dédalo code MASTER branch
 		self.caller.init_form({
 			submit_label	: get_label.update_code_build_master || 'Build master release',
-			confirm_text	: (get_label.update_code_build_master_confirm || "A release of the current version (%s) will be created from branch 'master' as: %s")
+			confirm_text	: (get_label.update_code_build_master_confirm || "A release of version %s will be created from branch 'master' as: %s")
 				.replace('%s', version)
 				.replace('%s', `\n\n${release_dir}${version}.zip\n`),
 			body_info		: build_version_group,
@@ -810,7 +895,7 @@ const render_build_version = function(self, content_data, body_response) {
 		// its own `<v>-dev.zip` filename: it never overwrites the master build
 		self.caller.init_form({
 			submit_label	: get_label.update_code_build_developer || 'Build developer release',
-			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of the current version (%s) will be created from branch 'v7' as: %s The master build of the same version is kept.")
+			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of version %s will be created from branch 'v7' as: %s The master build of the same version is kept.")
 				.replace('%s', version)
 				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`),
 			body_info		: build_version_group,
@@ -1098,7 +1183,13 @@ const render_info_modal = function( self, versions_info, body_response ) {
 					if (typeof modal.close==='function') {
 						modal.close()
 					}
-					track_process(pid, pfile, body_response, String(file_active.version ?? '') || null)
+					track_process(
+						pid,
+						pfile,
+						body_response,
+						String(file_active.version ?? '') || null,
+						String(file_active.sha256 ?? '') || null
+					)
 				}
 				button_update.addEventListener('click', click_handler)
 				// Focus the Update button immediately so keyboard users can confirm

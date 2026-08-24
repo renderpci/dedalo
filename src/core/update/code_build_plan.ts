@@ -12,6 +12,33 @@ import { join, resolve, sep } from 'node:path';
 import { parseVersionString } from './version.ts';
 
 /**
+ * The version triple a tree's `src/core/update/version.ts` DECLARES ('7.0.1'),
+ * or null when the source does not carry one.
+ *
+ * THE RELEASE'S NAME MUST COME FROM ITS BYTES. Until 2026-08-24 the build took
+ * the artifact's version from the RUNNING MASTER PROCESS (`DEDALO_VERSION`)
+ * while the bytes came from an independently chosen git ref, and nothing
+ * compared the two — so `<v>.zip` could hold a tree that is not version v. The
+ * reachable trigger is not an exotic one: bump the version on `master`, forget
+ * to restart the master, and the panel keeps naming artifacts after the OLD
+ * version. That is how a 7.0.0 master, asked to publish, produced a `7.0.0.zip`
+ * that `assertLinearUpgrade` refuses as a same-version install — a release
+ * nobody can install, built by pressing the button that exists to publish.
+ *
+ * Whitespace- and linebreak-insensitive: the committed source spreads the
+ * triple over three lines, a probe's bump writes it on one.
+ */
+export function parseDeclaredTriple(versionTsSource: string): string | null {
+	const matched = /Object\.freeze\(\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,?\s*\]\)/.exec(
+		versionTsSource,
+	);
+	return matched === null ? null : `${matched[1]}.${matched[2]}.${matched[3]}`;
+}
+
+/** Where the declared triple lives inside any Dédalo tree. */
+export const VERSION_TS_PATH = 'src/core/update/version.ts';
+
+/**
  * A safe git ref: refs/heads/… or a plain branch/tag name. No shell metachars,
  * and — CMD-05 (2026-07-28 audit) — NO leading `-`: the ref is the last argv
  * element of `git archive … -o <file> <ref>`, so a `-`-leading value like
@@ -26,6 +53,16 @@ import { parseVersionString } from './version.ts';
  * nothing.
  */
 const GIT_REF_RE = /^[A-Za-z0-9._/][A-Za-z0-9._/-]{0,199}$/;
+
+/**
+ * The ONE ref allowlist. Exported because `code_build.ts` must validate a ref
+ * BEFORE the pre-plan `git show <ref>:…` read that derives the release's
+ * version — a second copy of the regex there would be exactly the duplication
+ * the "refusal gates are GONE from code_build.ts" gate exists to prevent.
+ */
+export function isSafeGitRef(ref: string): boolean {
+	return GIT_REF_RE.test(ref);
+}
 
 /** Config slice the planner needs (the `config.update` shape). */
 export interface CodeBuildConfig {

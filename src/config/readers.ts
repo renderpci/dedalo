@@ -237,28 +237,52 @@ export function readMediaAccessMode(): 'private' | 'publication' | false {
 	return readBool('DEDALO_PROTECT_MEDIA_FILES') ? 'private' : false;
 }
 
-/** A JSON array of {name,url,code} server descriptors; invalid entries are dropped. */
+/**
+ * A JSON array of {name,url,code} server descriptors; invalid entries are dropped.
+ *
+ * A MALFORMED value used to degrade to `[]` in total silence, and the two keys
+ * this reads (CODE_SERVERS, ONTOLOGY_SERVERS) are hand-edited in an append-only
+ * `.env`, so the typo that produces one is ordinary. Measured on the museum
+ * install 2026-08-24: a third object appended OUTSIDE the array
+ * (`…}],{"name":"Local code server"…`) silently dropped ALL THREE servers,
+ * including the two official ones, and the update panel rendered an empty
+ * server list with nothing anywhere saying why. Same posture as
+ * readMediaAccessMode: the resolved state is unchanged, but it is LOUD.
+ */
 export function readServerList(
 	key: string,
 ): readonly { name: string; url: string; code: string }[] {
 	const configured = raw(key);
 	if (configured === undefined || configured.trim() === '') return Object.freeze([]);
+	let parsed: unknown;
 	try {
-		const parsed: unknown = JSON.parse(configured);
-		if (!Array.isArray(parsed)) return Object.freeze([]);
-		return Object.freeze(
-			parsed.filter(
-				(entry): entry is { name: string; url: string; code: string } =>
-					entry !== null &&
-					typeof entry === 'object' &&
-					typeof (entry as { name: unknown }).name === 'string' &&
-					typeof (entry as { url: unknown }).url === 'string' &&
-					typeof (entry as { code: unknown }).code === 'string',
-			),
+		parsed = JSON.parse(configured);
+	} catch (error) {
+		console.error(
+			`[config] ${key} is not valid JSON (${error instanceof Error ? error.message : 'parse error'}) — NO servers are configured from it. Fix the value; it must be a JSON array of {name,url,code}.`,
 		);
-	} catch {
 		return Object.freeze([]);
 	}
+	if (!Array.isArray(parsed)) {
+		console.error(
+			`[config] ${key} is valid JSON but not an ARRAY — NO servers are configured from it. It must be a JSON array of {name,url,code}.`,
+		);
+		return Object.freeze([]);
+	}
+	const kept = parsed.filter(
+		(entry): entry is { name: string; url: string; code: string } =>
+			entry !== null &&
+			typeof entry === 'object' &&
+			typeof (entry as { name: unknown }).name === 'string' &&
+			typeof (entry as { url: unknown }).url === 'string' &&
+			typeof (entry as { code: unknown }).code === 'string',
+	);
+	if (kept.length !== parsed.length) {
+		console.error(
+			`[config] ${key}: ${parsed.length - kept.length} of ${parsed.length} entries were DROPPED (each needs string name, url and code).`,
+		);
+	}
+	return Object.freeze(kept);
 }
 
 /**

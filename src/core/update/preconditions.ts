@@ -42,14 +42,36 @@ export interface UpdatePreconditions {
  * responses are pinned. The refusal is waived ONLY by an explicit
  * `waive_backup: true` in the request, which the CALLER must log loudly.
  */
+/**
+ * The ONE backup-freshness verdict, shared by the refusal below and the
+ * update_code panel's `backup_fresh` check (core/update/status.ts).
+ *
+ * It exists because the two had drifted by a ROUNDING STEP: the panel compared
+ * `Math.round(hours) > backupTimeRangeHours`, this compared the raw fraction.
+ * For every age in (T, T+0.5) hours the panel therefore answered `ok` /
+ * "Ready to update" while the pipeline threw `update.refused` — a deterministic
+ * half-hour window, once per backup cycle, in which the panel disagreed with
+ * the only gate that matters. A panel whose whole job is to predict the
+ * pipeline's refusals must never compute a refusal a second time.
+ */
+export function backupFreshness(backupDir?: string): {
+	newest: number;
+	hours: number | null;
+	stale: boolean;
+} {
+	const newest = newestBackupMtimeMs(backupDir);
+	if (newest === 0) return { newest, hours: null, stale: true };
+	const hours = (Date.now() - newest) / 3600000;
+	return { newest, hours, stale: hours > config.ops.backupTimeRangeHours };
+}
+
 /** The recent-backup scan's finding (byte-frozen wording), or null when fresh enough. */
 function staleBackupFinding(backupDir?: string): string | null {
-	const newest = newestBackupMtimeMs(backupDir);
-	if (newest === 0) {
+	const { hours, stale } = backupFreshness(backupDir);
+	if (hours === null) {
 		return 'No database backup found — make a backup before updating';
 	}
-	const hours = (Date.now() - newest) / 3600000;
-	if (hours > config.ops.backupTimeRangeHours) {
+	if (stale) {
 		return `Newest database backup is about ${Math.round(hours)} hours old — make a fresh backup before updating`;
 	}
 	return null;

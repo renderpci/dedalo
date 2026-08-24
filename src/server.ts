@@ -35,6 +35,7 @@ import { AI_MODEL_URL_PREFIX, serveModelRequest } from './core/ai/model_store.ts
 import { handleCountersRequest } from './core/api/counters.ts';
 import { type ApiRequestContext, dispatchRqo } from './core/api/dispatch.ts';
 import { handleEnvironmentView } from './core/api/environment_view.ts';
+import { buildHealthPayload } from './core/api/health_payload.ts';
 import { getProcessPoison } from './core/api/process_health.ts';
 import { handleRawView } from './core/api/raw_view.ts';
 import { MIN_GZIP_BYTES, SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
@@ -69,6 +70,7 @@ import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
 import { DEDALO_ENGINE_VERSION } from './core/update/build_stamp.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
+import { INSTALLED_DIGEST } from './core/update/install_stamp.ts';
 
 /** Absolute root of the copied client tree (see scripts/sync_client.sh). */
 const CLIENT_ROOT = resolve(import.meta.dir, '../client/dedalo');
@@ -759,20 +761,21 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		}
 		const dbOk = await checkDbHealth();
 		return jsonResponse(
-			{
-				result: dbOk ? 'ok' : 'error',
+			buildHealthPayload({
+				dbOk,
 				entity: config.entity,
-				// The running engine version (update_code post-restart poll: the
-				// client compares this to the update's expected_version). NOT the
-				// database name — see test_db_marker_tripwire's /health rule.
+				// The running engine version (update_code post-restart poll) AND, since
+				// 2026-08-24, the installed archive digest — the only token that moves
+				// across a same-version dev-channel swap. NOT the database name — see
+				// test_db_marker_tripwire's /health rule.
 				version: DEDALO_ENGINE_VERSION,
-				db: dbOk ? 'ok' : 'down',
+				installDigest: INSTALLED_DIGEST,
+				requestId: context.requestId,
 				// Dev mode only, and an opaque hash even then (see above).
 				...(DEV_MODE_HEALTH_DB_IDENTITY && dbOk
-					? { test_database: await healthTestDatabaseFingerprint() }
+					? { testDatabase: await healthTestDatabaseFingerprint() }
 					: {}),
-				request_id: context.requestId,
-			},
+			}),
 			dbOk ? 200 : 503,
 		);
 	}

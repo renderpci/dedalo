@@ -18,7 +18,6 @@
 import { afterAll, describe, expect, mock, test } from 'bun:test';
 import * as realDataIoModule from '../../src/core/ontology/data_io_import.ts';
 import * as realBuildModule from '../../src/core/update/code_build.ts';
-import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
 const REAL_BUILD = { ...realBuildModule };
 const REAL_DATA_IO = { ...realDataIoModule };
@@ -35,11 +34,11 @@ async function widgetModule() {
 }
 
 describe('build_version_from_git_master option mapping', () => {
-	test('a bare branch builds the CURRENT version from that branch as ref', async () => {
-		const calls: { version: string; ref?: string }[] = [];
+	test('a bare branch forwards ONLY the ref — the bytes name the release', async () => {
+		const calls: { version?: string; ref?: string }[] = [];
 		mock.module('../../src/core/update/code_build.ts', () => ({
 			...REAL_BUILD,
-			buildVersionFromGit: async (options: { version: string; ref?: string }) => {
+			buildVersionFromGit: async (options: { version?: string; ref?: string }) => {
 				calls.push(options);
 				return { ok: true, request_id: 'test', data: { built: true } };
 			},
@@ -51,19 +50,21 @@ describe('build_version_from_git_master option mapping', () => {
 		for (const branch of ['master', 'developer']) {
 			await action?.({ branch }, {} as never);
 		}
-		// The confirm text promises "a file using current version (X)"; this is
-		// the assertion that makes that promise true.
-		expect(calls).toEqual([
-			{ version: DEDALO_VERSION, ref: 'master' },
-			{ version: DEDALO_VERSION, ref: 'developer' },
-		]);
+		// NO `version` key. The widget used to forward DEDALO_VERSION — the
+		// RUNNING PROCESS's version — while the bytes came from the ref, so a
+		// master left running across a bump published mislabelled archives, and
+		// a master whose ref declares its own version published a same-version
+		// zip that assertLinearUpgrade refuses (measured 2026-08-24: an
+		// uninstallable 7.0.0.zip). The release is now named after the version
+		// the REF declares; the widget must not supply one at all.
+		expect(calls).toEqual([{ ref: 'master' }, { ref: 'developer' }]);
 	});
 
 	test('an explicit version/ref still wins over the branch (API callers)', async () => {
-		const calls: { version: string; ref?: string }[] = [];
+		const calls: { version?: string; ref?: string }[] = [];
 		mock.module('../../src/core/update/code_build.ts', () => ({
 			...REAL_BUILD,
-			buildVersionFromGit: async (options: { version: string; ref?: string }) => {
+			buildVersionFromGit: async (options: { version?: string; ref?: string }) => {
 				calls.push(options);
 				return { ok: true, request_id: 'test', data: { built: true } };
 			},

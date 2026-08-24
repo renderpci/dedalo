@@ -25,6 +25,7 @@
 		"test:db:setup": "bun run scripts/test_db_setup.ts",
 		"test:client": "bun run scripts/client_test_runner.ts",
 		"test:update": "bun run scripts/update_drill.ts",
+		"test:update:dev": "bun run scripts/update_drill.ts --dev",
 		"probe:update": "bun run scripts/update_probe.ts",
 		"publication:install": "cd publication/server_api/v2 && bun install",
 		"start:publication": "cd publication/server_api/v2 && bun run start",

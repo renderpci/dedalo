@@ -70,27 +70,15 @@ export const UPDATE_CATALOG: Readonly<Record<string, UpdateDescriptor>> = Object
 		updateFromMinor: 0,
 		updateData: false, // code-only release — no data migration
 	},
-	// 7.0.2 — published by the museum-cycle probe (scripts/update_probe.ts cuts
-	// the archive into <repo>/code/); code-only like 701.
-	'702': {
-		versionMajor: 7,
-		versionMedium: 0,
-		versionMinor: 2,
-		updateFromMajor: 7,
-		updateFromMedium: 0,
-		updateFromMinor: 1,
-		updateData: false,
-	},
-	// 7.0.3 — third probe rung (museum walks 7.0.0 → 7.0.1 → 7.0.2 → 7.0.3).
-	'703': {
-		versionMajor: 7,
-		versionMedium: 0,
-		versionMinor: 3,
-		updateFromMajor: 7,
-		updateFromMedium: 0,
-		updateFromMinor: 2,
-		updateData: false,
-	},
+	// NO FABRICATED RUNGS BEYOND THE NEXT ONE. '702'/'703' lived here to let the
+	// museum-cycle probe walk several hops, and they cost more than they bought:
+	// `scripts/update_drill.ts` picks the NEWEST descriptor, so `bun run
+	// test:update` rehearsed 7.0.2 → 7.0.3 — a hop nobody will ever cut —
+	// instead of the rung a release manager actually ships, and the shipped
+	// manifest advertised upgrade paths to releases that do not exist. The probe
+	// is made repeatable by RESETTING the museum tree to the rung's FROM end
+	// (it already re-materializes that tree), never by inventing more rungs.
+	// Ratcheted by catalogRungIsReachable in test/unit/code_update.test.ts.
 });
 
 /** Key for a descriptor's target version (PHP implode('', [7,0,1]) = '701'). */

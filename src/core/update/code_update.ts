@@ -84,7 +84,7 @@ import {
 	statSync,
 	writeFileSync,
 } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
 import { DedaloError, ok } from '../errors/index.ts';
@@ -94,6 +94,7 @@ import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
+import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
@@ -402,35 +403,56 @@ export async function extractArchive(zipPath: string, destDir: string): Promise<
  * Strict linear upgrade guard (Opus §1.3) — a backstop against a malicious or
  * buggy code server offering a skip. Returns null when the target is a legal
  * next rung, else the reason.
+ *
+ * THE DEV CHANNEL (2026-08-24) relaxes exactly ONE clause: `target === current`
+ * becomes legal, because a branch build carries no version bump — that is the
+ * whole point of testing unreleased `v7` code on a remote install. It relaxes
+ * an ORDERING guard, not an AUTHENTICITY one: the origin allowlist, the
+ * no-redirect rule and the sha256-vs-sidecar check are untouched, so the worst
+ * a forged `channel` buys is installing a same-version archive the configured
+ * master really published. Downgrades and rung skips stay refused on both
+ * channels, and an OMITTED channel never relaxes anything.
  */
 export function assertLinearUpgrade(
 	current: readonly number[],
 	target: readonly number[],
+	channel: InstallChannel = 'master',
 ): string | null {
-	if (compareVersionArrays(target, current) !== 1)
-		return 'refusing a downgrade or same-version install';
+	const order = compareVersionArrays(target, current);
+	if (order === 0 && channel === 'dev') return null;
+	if (order !== 1) return 'refusing a downgrade or same-version install';
 	return versionSkipReason(current, target);
 }
 
-/** The skip rules over a KNOWN-ascending pair (assertLinearUpgrade gates order first). */
+/**
+ * The skip rules over a KNOWN-ascending pair (assertLinearUpgrade gates order
+ * first) — the swap path's ONLY version gate, so it must be exact.
+ *
+ * The PATCH AXIS WAS NEVER CONSTRAINED: `cPatch` was not even destructured, so
+ * `assertLinearUpgrade([7,0,0], [7,0,99999])` returned null and 7.0.0 → 7.0.3
+ * installed in one hop, skipping every intervening rung's migrations. Nothing
+ * else caught it — the sha is CLIENT-SUPPLIED and matches the genuinely
+ * published sidecar of the skipped-to release, so a consumer pointed at a
+ * master with several archives on disk could jump the queue.
+ *
+ * Now it asks ONE question, the same notion of "next rung" the manifest builds
+ * from (code_manifest.ts upgradeRung): major+1.0.0, minor+1.0, or patch+1.
+ */
 function versionSkipReason(current: readonly number[], target: readonly number[]): string | null {
-	const [cMajor = 0, cMinor = 0] = current;
+	const [cMajor = 0, cMinor = 0, cPatch = 0] = current;
 	const [tMajor = 0, tMinor = 0, tPatch = 0] = target;
-	if (tMajor > cMajor + 1) return 'major version skip is not allowed';
-	if (tMajor === cMajor && tMinor > cMinor + 1) return 'minor version skip is not allowed';
-	if (isMajorOrMinorBump(cMajor, cMinor, tMajor, tMinor) && tPatch !== 0)
-		return 'a minor/major bump must land on .0';
-	return null;
-}
-
-/** Does the target cross a major or minor boundary (vs a same-minor patch bump)? */
-function isMajorOrMinorBump(
-	cMajor: number,
-	cMinor: number,
-	tMajor: number,
-	tMinor: number,
-): boolean {
-	return tMajor > cMajor || tMinor > cMinor;
+	const isRung =
+		(tMajor === cMajor + 1 && tMinor === 0 && tPatch === 0) ||
+		(tMajor === cMajor && tMinor === cMinor + 1 && tPatch === 0) ||
+		(tMajor === cMajor && tMinor === cMinor && tPatch === cPatch + 1);
+	if (isRung) return null;
+	if (tMajor > cMajor) return 'major version skip is not allowed';
+	if (tMinor > cMinor) {
+		return tPatch !== 0
+			? 'a minor/major bump must land on .0'
+			: 'minor version skip is not allowed';
+	}
+	return 'patch version skip is not allowed';
 }
 
 /**
@@ -440,7 +462,23 @@ function isMajorOrMinorBump(
  * a staging dir carrying it — at no point may the only surviving copy of a
  * tree live somewhere the cleanup will delete.
  */
-const STAGING_KEEP_MARKER = 'DO_NOT_DELETE_holds_live_tree';
+export const STAGING_KEEP_MARKER = 'DO_NOT_DELETE_holds_live_tree';
+
+/** The ONE staging path (`<backupRoot>/.code_staging`) — never re-joined by hand. */
+export function codeStagingDir(backupRoot: string): string {
+	return join(backupRoot, '.code_staging');
+}
+
+/**
+ * Does staging hold a PARKED LIVE TREE from a failed swap restore? The pipeline
+ * hard-REFUSES on this (prepareStagingDirOrRefuse), so the panel must report it
+ * `blocked` — it used to see only "a .code_staging exists" and answer `warn`,
+ * leaving `ready: true` and a headline of "Ready to update" over an install the
+ * updater would refuse on its first act.
+ */
+export function stagingHoldsParkedTree(backupRoot: string): boolean {
+	return existsSync(join(codeStagingDir(backupRoot), STAGING_KEEP_MARKER));
+}
 
 /** The guarded staging cleanup — never deletes a staging dir holding a parked tree. */
 function cleanStagingDir(stagingDir: string): void {
@@ -574,6 +612,61 @@ function restoreAfterFailedSwap(
 	);
 }
 
+/**
+ * Stamp the QUARANTINE with what it is, before it is smoke-booted and swapped
+ * in (install_stamp.ts): the verified archive digest — the tree's only
+ * per-bytes identity once the version stops changing — plus the channel that
+ * built it, which is what makes a `v7` build report `.dev` instead of
+ * impersonating the published release.
+ *
+ * Written BEFORE the smoke boot on purpose: the tree that is validated is then
+ * byte-for-byte the tree that lands.
+ */
+function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
+	const stamp = {
+		digest: request.declaredSha,
+		channel: request.channel,
+		source_url: request.url,
+		installed_at: new Date().toISOString(),
+	};
+	const path = join(codeRoot, INSTALL_STAMP_PATH);
+	mkdirSync(dirname(path), { recursive: true });
+	writeFileSync(path, `${JSON.stringify(stamp, null, '\t')}\n`);
+}
+
+/**
+ * The digest of the archive the LIVE tree was installed from, read from that
+ * tree's own stamp (never the running module's constant — the swap may target
+ * a tree that is not this process's). Null for a tree installed before stamps
+ * existed, or a dev checkout.
+ */
+function installedDigestOf(targetRoot: string): string | null {
+	try {
+		return (
+			parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest ?? null
+		);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * The restore point's name. It carried only `dedalo_<version>_<stamp>`, which
+ * on the dev channel names every iteration identically (the version does not
+ * move) — five restore points, nothing but a timestamp to tell them apart. The
+ * short digest of the tree the dir HOLDS makes it identifiable; a tree with no
+ * stamp keeps the old name rather than inventing a token.
+ */
+function backupDirName(
+	previousVersion: string,
+	previousDigest: string | null,
+	stamp: string,
+): string {
+	return previousDigest === null
+		? `dedalo_${previousVersion}_${stamp}`
+		: `dedalo_${previousVersion}_${previousDigest.slice(0, 7)}_${stamp}`;
+}
+
 /** The rollback sentinel (deploy/dedalo-code-rollback.sh contract — flat, exact keys). */
 interface UpdateSentinel {
 	version: string;
@@ -581,6 +674,8 @@ interface UpdateSentinel {
 	updateMode: 'clean';
 	stamp: string;
 	backupDir: string;
+	/** sha256 of the installed archive — what boot_confirm.ts compares (2026-08-24). */
+	installDigest: string;
 	status: 'pending';
 	rollback_attempted: false;
 }
@@ -624,7 +719,7 @@ async function installDepsReal(codeRoot: string): Promise<void> {
 }
 
 interface UpdateCodeOptions {
-	file?: { version?: unknown; url?: unknown; sha256?: unknown };
+	file?: { version?: unknown; url?: unknown; sha256?: unknown; channel?: unknown };
 	waive_backup?: unknown;
 }
 
@@ -633,6 +728,8 @@ interface UpdateRequest {
 	url: string;
 	version: string;
 	declaredSha: string;
+	/** The channel the manifest advertised this archive on ('master' unless 'dev'). */
+	channel: InstallChannel;
 }
 
 /**
@@ -676,6 +773,9 @@ function readReleaseFields(options: UpdateCodeOptions): UpdateRequest {
 		url: typeof file.url === 'string' ? file.url : '',
 		version: typeof file.version === 'string' ? file.version : '',
 		declaredSha: typeof file.sha256 === 'string' ? file.sha256 : '',
+		// Anything that is not exactly 'dev' is the release channel: an unknown
+		// or absent value must never be the one that relaxes a guard.
+		channel: file.channel === 'dev' ? 'dev' : 'master',
 	};
 }
 
@@ -684,7 +784,7 @@ function readReleaseFields(options: UpdateCodeOptions): UpdateRequest {
  * malformed version → linear-upgrade guard → malformed/missing sha. All before
  * any network fetch, by contract.
  */
-function assertReleaseShape({ url, version, declaredSha }: UpdateRequest): void {
+function assertReleaseShape({ url, version, declaredSha, channel }: UpdateRequest): void {
 	if (url === '' || version === '') {
 		refuseUpdate(
 			'request.invalid_options',
@@ -697,7 +797,7 @@ function assertReleaseShape({ url, version, declaredSha }: UpdateRequest): void 
 			'Error. Malformed release version (a numeric dotted release is required, e.g. 7.0.1)',
 		);
 	}
-	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parseVersionString(version));
+	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parseVersionString(version), channel);
 	if (linear !== null) {
 		refuseUpdate('update.refused', `Error. ${linear}`);
 	}
@@ -978,6 +1078,96 @@ function errorText(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * The EXCLUSIVE RUN LOCK — `<backupRoot>/.code_staging.lock`.
+ *
+ * Nothing in the request path serialized code updates. `stagingDir` is a fixed
+ * path shared by every run; `prepareStagingDirOrRefuse` swept it
+ * unconditionally; the client sends `prevent_lock: true` so the record lock is
+ * bypassed; and `mediaJobs.submit` has NO duplicate guard (`hasLiveJobForTarget`
+ * is advisory and only av_versions.ts consults it). Two admins pressing Update
+ * — or one admin in two browsers, since the client's busy flag is per-browser
+ * IndexedDB and sits on a different button — therefore ran two whole-tree
+ * replacements against one staging dir. Three ways that ends badly, all
+ * unattended, all on an install whose only recovery is the tree being replaced:
+ *  - B sweeps A's quarantine AFTER A's smoke boot passed and nothing
+ *    re-validates before the rename, so a partially-unlinked tree is renamed
+ *    over the live one;
+ *  - A's restart() fires 250 ms after its swap and can kill B between
+ *    `renameToBackup` and `renameIntoPlace` — leaving NO tree at projectRoot;
+ *  - both write `last_code_update.json`, so the second pending sentinel
+ *    overwrites the first and the rollback contract names the wrong backupDir.
+ *
+ * The lock is a SIBLING of the staging dir, so the sweep cannot remove it. It
+ * is reclaimable only from a provably dead owner: a stale lock left by a
+ * successful swap (the process dies BY DESIGN in the restart) must never wedge
+ * the next update.
+ */
+const RUN_LOCK_SUFFIX = '.lock';
+
+/** `<backupRoot>/.code_staging.lock` — sibling of the staging dir it guards. */
+export function codeRunLockPath(backupRoot: string): string {
+	return `${codeStagingDir(backupRoot)}${RUN_LOCK_SUFFIX}`;
+}
+
+/** Is a pid live? `kill(pid, 0)` — EPERM means alive but not ours. */
+function pidIsAlive(pid: number): boolean {
+	if (!Number.isInteger(pid) || pid <= 0) return false;
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (error) {
+		return (error as NodeJS.ErrnoException).code === 'EPERM';
+	}
+}
+
+/**
+ * Take the run lock or REFUSE. Returns the release function; only the holder
+ * may sweep the staging dir.
+ */
+export function acquireRunLockOrRefuse(backupRoot: string, version: string): () => void {
+	const lockPath = codeRunLockPath(backupRoot);
+	mkdirSync(backupRoot, { recursive: true });
+	for (let attempt = 0; attempt < 2; attempt++) {
+		try {
+			const fd = openSync(lockPath, 'wx');
+			writeFileSync(
+				fd,
+				`${JSON.stringify({ pid: process.pid, version, startedAt: new Date().toISOString() })}
+`,
+			);
+			closeSync(fd);
+			return () => {
+				try {
+					rmSync(lockPath, { force: true });
+				} catch {
+					/* a released lock that cannot be removed is reclaimed by the dead-pid rule */
+				}
+			};
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+		}
+		// Held. Only a provably DEAD owner may be displaced.
+		let owner: { pid?: number; version?: string } = {};
+		try {
+			owner = JSON.parse(readFileSync(lockPath, 'utf8')) as typeof owner;
+		} catch {
+			owner = {};
+		}
+		if (typeof owner.pid === 'number' && pidIsAlive(owner.pid)) {
+			refuseUpdate(
+				'update.refused',
+				`Error. A code update to ${owner.version ?? 'an unknown version'} is already running on this installation (pid ${owner.pid}) — wait for it to finish before starting another.`,
+			);
+		}
+		console.error(
+			`[code update] reclaiming a stale run lock at ${lockPath} (owner pid ${String(owner.pid ?? 'unknown')} is gone)`,
+		);
+		rmSync(lockPath, { force: true });
+	}
+	refuseUpdate('update.refused', 'Error. Could not take the code-update run lock.');
+}
+
 /** Refuse a staging dir holding a PARKED tree (a previous run's failed swap
  * restore — never sweep it), else sweep and recreate it empty. */
 function prepareStagingDirOrRefuse(stagingDir: string): void {
@@ -1062,8 +1252,13 @@ export async function updateCode(
 	// Built after parseUpdateRequest because the frames carry the version.
 	const phases = createPhaseTracker(version, seams.onPhase);
 	const backupRoot = swapPreconditionsWithFrame(targetRoot, seams, phases);
-	const stagingDir = join(backupRoot, '.code_staging');
+	const stagingDir = codeStagingDir(backupRoot);
 	const restart = seams.restart ?? scheduleServerRestartReal;
+
+	// SINGLE-FLIGHT. Taken before anything reads or writes the shared staging
+	// dir, and released only in the `finally` — a second run refuses here
+	// instead of sweeping the first run's quarantine out from under it.
+	const releaseRunLock = acquireRunLockOrRefuse(backupRoot, version);
 
 	try {
 		prepareStagingDirOrRefuse(stagingDir);
@@ -1073,13 +1268,17 @@ export async function updateCode(
 		phases.start('extract');
 		const quarantine = join(stagingDir, 'extract');
 		const codeRoot = await extractArchive(zipPath, quarantine);
+		writeInstallStampSync(codeRoot, request);
 
 		await prepareQuarantine(codeRoot, targetRoot, stagingDir, seams, phases);
 
 		phases.start('swap');
 		const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
 		const previousVersion = DEDALO_VERSION_TRIPLE.join('.');
-		const backupDir = join(backupRoot, `dedalo_${previousVersion}_${stamp}`);
+		const backupDir = join(
+			backupRoot,
+			backupDirName(previousVersion, installedDigestOf(targetRoot), stamp),
+		);
 		mkdirSync(backupRoot, { recursive: true });
 
 		// ROLLBACK SENTINEL FIRST — `status:"pending"`, naming the backupDir the
@@ -1098,6 +1297,7 @@ export async function updateCode(
 				updateMode: 'clean',
 				stamp,
 				backupDir,
+				installDigest: request.declaredSha,
 				status: 'pending',
 				rollback_attempted: false,
 			},
@@ -1115,6 +1315,11 @@ export async function updateCode(
 		rethrowOrRefuseUpdate(error, 'update.failed', 'Error. Code update failed');
 	} finally {
 		cleanStagingDir(stagingDir);
+		// Released AFTER the staging sweep, so no other run can enter while this
+		// one is still touching the dir. On the success path the process dies in
+		// the restart moments later; the lock left behind names a pid that is
+		// gone, which the dead-owner rule reclaims on the next attempt.
+		releaseRunLock();
 	}
 }
 
