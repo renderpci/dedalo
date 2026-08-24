@@ -434,6 +434,7 @@
 	"type_root_password": "Idatzi eta idatzi berriro nahi duzun supererabiltzailearen pasahitza eta gorde leku seguru batean. Erabili 8-32 karaktereko pasahitz seguru bat, gutxienez letra larri bat, letra xehe bat eta zenbaki bat dituena. Ezin da karaktere berdinik erabili hurrenkera sekuentzialean (''aa'', ''11 '','' BB '', etab.). Ez da onartzen zenbakizko hurrenkera (''123 '', ''345'', etab.), ezta alfabetikoa ere (''aBC'', ''hIjK'', etab.).",
 	"unsaved_changes": "Gorde gabe!",
 	"update": "Eguneratu",
+	"update_code_lead": "Kodearen bertsio berri bat deskargatu, egiaztatu eta instalatzen du, eta berrabiarazi egiten da. Aurreko zuhaitza berreskuratze-puntu gisa gordetzen da.",
 	"update_mode_mandatory": "Eguneratze-modua derrigorrezkoa da",
 	"update_ontology": "Eguneratu Ontologia",
 	"update_ontology_code_older": "Zure Dédalo kodea ontologia honek behar duena baino zaharragoa da (≥ %s). Eguneratu kodea laster, bateraezintasunak saihesteko.",

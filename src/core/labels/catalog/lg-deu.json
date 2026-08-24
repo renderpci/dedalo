@@ -444,6 +444,7 @@
 	"type_root_password": "Geben Sie das gewünschte Superuser-Passwort ein, wiederholen Sie es und bewahren Sie es an einem sicheren Ort auf. Verwenden Sie ein starkes Passwort mit 8 bis 32 Zeichen, das mindestens einen Grossbuchstaben, einen Kleinbuchstaben und eine Zahl enthält. Identische Zeichen in fortlaufender Reihenfolge sind nicht erlaubt ('aa', '11', 'BB', usw.). Weder numerische ('123', '345', usw.) noch alphabetische ('aBC', 'hIjK', usw.) Reihenfolge ist erlaubt.",
 	"unsaved_changes": "Nicht gespeicherte Änderungen!",
 	"update": "Aktualisieren",
+	"update_code_lead": "Lädt eine neue Code-Version herunter, prüft und installiert sie und startet neu. Der vorherige Baum bleibt als Wiederherstellungspunkt erhalten.",
 	"update_mode_mandatory": "Der Aktualisierungsmodus ist obligatorisch",
 	"update_ontology": "Ontologie aktualisieren",
 	"update_ontology_code_older": "Ihr Dédalo-Code ist älter, als diese Ontologie erfordert (≥ %s). Aktualisieren Sie den Code bald, um Inkompatibilitäten zu vermeiden.",

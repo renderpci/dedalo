@@ -669,7 +669,7 @@ const build_list_view = async function(self, widgets) {
 		unit_test:					'Provisions a known-state matrix_test row from a fixture.',
 		dedalo_api_test_environment:'API endpoint testing sandbox.',
 		sqo_test_environment:		'Search-query-object testing sandbox.',
-		update_code:				'Downloads, verifies and installs a new code release. Irreversible.',
+		update_code:				'Downloads, verifies and installs a new code release, then restarts. The previous tree is kept as a restore point.',
 		update_data_version:		'Runs pending data-version migrations against live data.',
 		lock_components:			'Active user sessions and component-lock tracking.',
 		database_info:				'Live PostgreSQL catalog snapshot and maintenance actions.',
@@ -696,6 +696,7 @@ const build_list_view = async function(self, widgets) {
 	// tool id → label key, resolved at RENDER time (get_label is populated at boot,
 	// after this module is imported, so a module-level read would serve undefined).
 	const MAP_TOOL_DESC_LABEL = {
+		update_code		: 'update_code_lead',
 		update_ontology : 'update_ontology_lead'
 	}
 

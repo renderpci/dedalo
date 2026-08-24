@@ -444,6 +444,7 @@
 	"type_root_password": "Tapez et retapez le mot de passe superutilisateur souhaité et conservez-le en lieu sûr. Utilisez un mot de passe fort de 8 à 32 caractères contenant au moins une lettre majuscule, une lettre minuscule et un chiffre. Les caractères identiques dans l'ordre séquentiel ('aa', '11', 'BB', etc.) ne sont pas autorisés. L'ordre numérique ('123', '345', etc.) et l'ordre alphabétique ('aBC', 'hIjK', etc.) ne sont pas autorisés.",
 	"unsaved_changes": "Modifications non sauvegardées !",
 	"update": "Actualiser ",
+	"update_code_lead": "Télécharge, vérifie et installe une nouvelle version du code, puis redémarre. L’arborescence précédente est conservée comme point de restauration.",
 	"update_mode_mandatory": "Le mode de mise à jour est obligatoire",
 	"update_ontology": "Mise à jour de l'Ontologie",
 	"update_ontology_code_older": "Votre code Dédalo est plus ancien que ce que cette ontologie exige (≥ %s). Mettez le code à jour rapidement pour éviter les incompatibilités.",

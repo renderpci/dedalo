@@ -694,6 +694,7 @@
 	"update_code_head_branch": "Checked-out branch",
 	"update_code_installation": "This installation",
 	"update_code_last_update": "Last code update",
+	"update_code_lead": "Downloads, verifies and installs a new code release, then restarts. The previous tree is kept as a restore point.",
 	"update_code_no_server_selected": "Select a code server first.",
 	"update_code_no_updates": "There are no updates available for your version.",
 	"update_code_none": "None",
