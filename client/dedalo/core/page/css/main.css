@@ -16693,21 +16693,135 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code .server_picker .server_row .dd_badge {
   flex: 0 0 auto;
 }
-.wrapper_widget.update_code > .content_data > .button_submit {
+.wrapper_widget.update_code > .content_data .role_body > .button_submit {
   margin: 1rem;
   margin-left: 0px;
   margin-bottom: 2rem;
 }
-.wrapper_widget.update_code > .content_data > .dd_readout {
+.wrapper_widget.update_code > .content_data .role_body > .dd_readout {
   margin-bottom: 0.75rem;
 }
-.wrapper_widget.update_code > .content_data > .dd_note {
+.wrapper_widget.update_code > .content_data .role_body > .dd_note {
   margin: 0.5rem 0;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row {
+.wrapper_widget.update_code > .content_data > .role_block {
+  margin: 0 0 1.5rem 0;
+  padding: 0.9rem 1rem 1rem 1rem;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: var(--bg_surface_alt);
+}
+.wrapper_widget.update_code > .content_data > .role_block > .role_header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05em;
+  font-weight: 600;
+  color: var(--fg_default);
+}
+.wrapper_widget.update_code > .content_data > .role_block > .role_header .role_icon {
+  background-color: var(--fg_muted);
+}
+.wrapper_widget.update_code > .content_data > .role_block > .role_note {
+  margin: 0.35rem 0 0.9rem 1.6rem;
+  font-size: 0.85em;
+  color: var(--fg_muted);
+}
+.wrapper_widget.update_code > .content_data > .role_block.collapsed {
+  padding-bottom: 0.9rem;
+}
+.wrapper_widget.update_code > .content_data > .role_block.collapsed > .role_header {
+  margin-bottom: 0px;
+}
+.wrapper_widget.update_code > .content_data > .role_block.role_consumer > .role_header .role_icon {
+  content: ' ';
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1.1em;
+  height: 1.1em;
+  -webkit-mask-image: url('../../themes/default/icons/download.svg');
+  mask-image: url('../../themes/default/icons/download.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.wrapper_widget.update_code > .content_data > .role_block.role_code_server > .role_header .role_icon {
+  content: ' ';
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1.1em;
+  height: 1.1em;
+  -webkit-mask-image: url('../../themes/default/icons/upload.svg');
+  mask-image: url('../../themes/default/icons/upload.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.wrapper_widget.update_code > .content_data > .role_block > .role_body > .update_status:first-child {
+  margin-top: 0;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action > .form_container {
+  width: 100%;
+  margin: 0px;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button {
+  display: block;
+  width: 100%;
+  margin: 0px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: normal;
+  cursor: pointer;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.primary {
+  color: var(--color_white);
+  background-color: var(--color_primary);
+  border: 1px solid var(--color_primary);
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.primary:hover {
+  filter: brightness(1.08);
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.light:not(.primary) {
+  color: var(--fg_default);
+  border: 1px solid var(--border_strong);
+  background-color: var(--bg_surface);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_k.build_action button.build_button.light:not(.primary):hover {
+  background-color: var(--bg_surface_alt);
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file > .build_file_meta {
+  color: var(--fg_muted);
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.none {
+  color: var(--fg_muted);
+  font-style: italic;
+}
+.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row {
   margin: 0.75rem 0 0.25rem 0;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label {
+.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dev_channel_label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -16716,11 +16830,27 @@ dd-modal:has(.tool_header) {
   padding-bottom: 0px;
   color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_check {
+.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dev_channel_label > .dev_channel_check {
   height: initial;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dd_note.dev_channel_note {
-  margin: 0.25rem 0 0 1.75rem;
+.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dev_channel_label > .dev_channel_icon {
+  content: ' ';
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1.1em;
+  height: 1.1em;
+  -webkit-mask-image: url('../../themes/default/icons/bug.svg');
+  mask-image: url('../../themes/default/icons/bug.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  background-color: var(--color_blue_2);
+}
+.wrapper_widget.update_code > .content_data .role_body > .dev_channel_row > .dd_note.dev_channel_note {
+  margin: 0.25rem 0 0 3.1rem;
   max-width: 60rem;
 }
 .wrapper_widget.update_code > .content_data .update_status {
@@ -16771,12 +16901,6 @@ dd-modal:has(.tool_header) {
   font-size: 0.9em;
   opacity: 0.75;
   margin-top: 0.2rem;
-}
-.wrapper_widget.update_code > .content_data .build_version_group {
-  border: 1px solid var(--color_orange);
-  border-radius: 4px;
-  padding: 0.66rem;
-  margin-top: 0.5rem;
 }
 .wrapper_widget.update_code > .content_data .phase_track {
   margin: 0.75rem 0;

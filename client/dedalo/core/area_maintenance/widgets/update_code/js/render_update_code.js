@@ -50,7 +50,7 @@
 *      persistent "reload pending" note with its own button.
 *
 * On code-server installations (is_a_code_server or entity === 'development'),
-* `render_build_version` appends buttons that trigger a `git archive` build of
+* `make_builder_mounter` supplies the buttons that trigger a `git archive` build of
 * the master (`<v>.zip`) or developer (`<v>-dev.zip`) release.
 *
 * The 'development' entity REFUSES to update itself: the refusal renders in
@@ -193,10 +193,19 @@ const get_content_data_edit = async function(self) {
 	// pressing the button and reading the failure). Server: value.consumer,
 	// core/update/status.ts. Falls back to the two-row readout when an older
 	// server answers without the status halves.
+	// TWO ROLES, TWO BLOCKS. Everything from here to the update button is about
+	// the code THIS installation runs; the code-server half further down is about
+	// the code it PUBLISHES to others. Same widget, different owners.
+		const consumer_body = role_block(
+			content_data,
+			'consumer',
+			get_label.update_code_role_consumer || 'Update this installation',
+			get_label.update_code_role_consumer_note || 'The code this installation runs, and the code server it receives updates from.'
+		)
 		if (value.consumer) {
-			render_consumer_status(content_data, value.consumer)
+			render_consumer_status(consumer_body, value.consumer)
 		} else {
-			content_data.appendChild(build_readout([
+			consumer_body.appendChild(build_readout([
 				{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
 				{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
 			]))
@@ -205,7 +214,7 @@ const get_content_data_edit = async function(self) {
 	// servers. The shared picker over CODE_SERVERS with its OWN storage key:
 	// remembering the choice must not collide with the ontology picker's.
 		const servers_list = render_servers_list( value, 'CODE_SERVERS', 'dedalo.update_code.server' )
-		content_data.appendChild(servers_list)
+		consumer_body.appendChild(servers_list)
 
 	// body_response
 		const body_response = ui.create_dom_element({
@@ -247,7 +256,7 @@ const get_content_data_edit = async function(self) {
 				element_type	: 'div',
 				class_name		: 'dd_note state_warning',
 				text_content	: get_label.update_code_dev_refused || 'To avoid accidental overwrites, the development installation does not allow updating the code.',
-				parent			: content_data
+				parent			: consumer_body
 			})
 		}
 
@@ -261,7 +270,7 @@ const get_content_data_edit = async function(self) {
 		const dev_channel_row = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dev_channel_row',
-			parent			: content_data
+			parent			: consumer_body
 		})
 		// label WRAPS the input (the house pattern — move_lang/move_locator): the
 		// click target is the whole row without an id/for pair to keep in sync.
@@ -277,6 +286,14 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'dev_channel_check',
 			name			: 'update_code_dev_channel'
 		})
+		// the icon reads BEFORE the words: this row is the only development-facing
+		// control on an otherwise production panel. Masked svg, same vocabulary the
+		// area map uses for its 'dev' category (bug.svg).
+		const dev_channel_icon = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'dev_channel_icon'
+		})
+		dev_channel_label.prepend(dev_channel_icon)
 		dev_channel_label.prepend(dev_channel_input)
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -290,7 +307,7 @@ const get_content_data_edit = async function(self) {
 			element_type	: 'button',
 			class_name		: 'light button_submit',
 			inner_html		: get_label.update_code_check_updates || 'Check available updates',
-			parent			: content_data
+			parent			: consumer_body
 		})
 		if (is_development) {
 			button_submit.disabled = true
@@ -410,8 +427,48 @@ const get_content_data_edit = async function(self) {
 			// is actually offered (an empty manifest over a published zip is the
 			// catalog's doing — the panel shows both instead of leaving the
 			// operator to infer it). Null on a non-code-server.
-			render_code_server_status(content_data, value.code_server)
-			render_build_version(self, content_data, body_response, value.code_server)
+			const server_body = role_block(
+				content_data,
+				'code_server',
+				get_label.update_code_role_server || 'Publish code to other installations',
+				get_label.update_code_role_server_note || 'This installation is a code server: it builds releases from GIT and serves them to the installations that ask it for updates.'
+			)
+			// The readout lays out one row per channel and calls back to mount
+			// the build action into it, so the button and the archive it writes
+			// are one entry instead of two disconnected blocks.
+			//
+			// It is rendered through a function because a BUILD invalidates it:
+			// the archive list, and what a consumer at this version is offered,
+			// are both answers about the disk that the build just changed. The
+			// pair is mutually recursive by design — the mounter needs the
+			// refresh, the refresh needs a mounter built from the FRESH value —
+			// and `refresh_code_server` is only ever read at call time.
+			const render_code_server_half = (code_server) => {
+				while (server_body.firstChild) {
+					server_body.removeChild(server_body.firstChild)
+				}
+				render_code_server_status(
+					server_body,
+					code_server,
+					make_builder_mounter(self, body_response, code_server, refresh_code_server)
+				)
+			}
+			const refresh_code_server = async () => {
+				try {
+					const fresh = await self.get_value()
+					if (!fresh || !fresh.code_server) {
+						return
+					}
+					// keep the instance coherent too: the next render reads self.value
+					self.value = fresh
+					render_code_server_half(fresh.code_server)
+				} catch (error) {
+					// a failed refresh must never take the panel down: the build
+					// already reported its own outcome in body_response
+					console.error('update_code: could not refresh the code-server readout', error)
+				}
+			}
+			render_code_server_half(value.code_server)
 		}
 
 	// add at end body_response
@@ -805,100 +862,212 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 
 
 /**
-* RENDER_BUILD_VERSION
-* Appends GIT build action buttons to the widget panel.
+* ROLE_BLOCK
+* One titled panel for ONE ROLE of this installation.
 *
-* Only rendered when `self.caller.init_form` is available (i.e. when the
-* widget is hosted inside an area_maintenance page that provides the form
-* builder). Each button calls the server-side API action
-* `build_version_from_git_master` with the selected branch name.
+* The widget answers two unrelated questions on one screen — "what code does
+* THIS installation run, and where does it get updates?" and "what code does it
+* PUBLISH to other installations?" — and until 2026-08-24 they ran together as
+* a flat column of readouts. The ambiguity was real: 'Published releases' sat
+* among the update readouts, where it reads as something this install might
+* receive, and the GIT builders sat below everything, attached to nothing.
 *
-* Two buttons are rendered:
-*   - "Build master release"    → branch: 'master'   → `<v>.zip`
-*   - "Build developer release" → branch: 'v7'       → `<v>-dev.zip`
-* The developer build has its OWN filename and never overwrites the master
-* build of the same version.
+* @param {HTMLElement} parent
+* @param {string} role - 'consumer' | 'code_server' (drives the header icon)
+* @param {string} title
+* @param {string} note - one sentence saying whose code this half is about
+* @returns {HTMLElement} the block's body — append the role's content to it
+*/
+const role_block = function(parent, role, title, note) {
+
+	const block = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: `role_block role_${role}`,
+		parent			: parent
+	})
+	// the header IS the toggler (icon_arrow: house collapsible — chevron via
+	// :after, '.up' while open, mouseup handler)
+	const header = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'role_header icon_arrow',
+		parent			: block
+	})
+	// the icon is a CSS mask (.fn_maintenance_icon) chosen per role class
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'role_icon',
+		parent			: header
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'role_title',
+		text_content	: title,
+		parent			: header
+	})
+	// the note belongs to the OPEN state: collapsed, the title is the whole row
+	const note_node = note
+		? ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'role_note',
+			text_content	: note,
+			parent			: block
+		})
+		: null
+	const body = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'role_body',
+		parent			: block
+	})
+
+	// FOLD STATE, remembered per role. Same storage discipline as the server
+	// picker: localStorage in a try/catch, and no memory is a degradation (the
+	// block simply opens) — never an error.
+	const storage_key = `dedalo.update_code.fold.${role}`
+	const apply = (collapsed) => {
+		body.classList.toggle('hide', collapsed)
+		if (note_node) {
+			note_node.classList.toggle('hide', collapsed)
+		}
+		header.classList.toggle('up', !collapsed)
+		block.classList.toggle('collapsed', collapsed)
+	}
+	apply(read_fold(storage_key))
+	header.addEventListener('mouseup', () => {
+		const collapsed = !block.classList.contains('collapsed')
+		apply(collapsed)
+		store_fold(storage_key, collapsed)
+	})
+
+	return body
+}//end role_block
+
+
+
+/**
+* READ_FOLD / STORE_FOLD
+* The collapsed state of one role block, across navigations and reloads.
+* Default OPEN: a panel that hides its own status until the operator opens it
+* would be worse than one that is long. Private mode / disabled storage just
+* means the memory does not stick.
+* @param {string} storage_key
+*/
+const read_fold = function(storage_key) {
+	try {
+		return window.localStorage.getItem(storage_key)==='1'
+	} catch (_error) {
+		return false
+	}
+}
+const store_fold = function(storage_key, collapsed) {
+	try {
+		if (collapsed) {
+			window.localStorage.setItem(storage_key, '1')
+		} else {
+			window.localStorage.removeItem(storage_key)
+		}
+	} catch (_error) {
+		// no memory available — the fold still works for this visit
+	}
+}//end store_fold
+
+
+
+/**
+* MAKE_BUILDER_MOUNTER
+* Builds the "mount a build button HERE" function the code-server readout uses.
 *
-* When either build completes, the `on_done` callback publishes the
-* 'build_code_done' event so the data-version widget (update_data_version)
-* can refresh automatically.
+* The buttons and the archives they produce used to be two separate blocks —
+* 'Code builders from GIT' floating below a 'Published releases' list — so
+* nothing on screen said that pressing the first writes the second. Now the
+* readout owns the layout (one row per channel: the action and its artifact
+* side by side) and calls back here to mount the action, which is the only part
+* that needs the widget's wire machinery (`self.caller.init_form`).
+*
+* Two channels, and the difference is load-bearing:
+*   - 'master' → `<v>.zip`     — the published release
+*   - 'dev'    → `<v>-dev.zip` — a branch build; never overwrites the master
+*                                 archive of the same version
+*
+* When either build completes the 'build_code_done' event is published, so the
+* data-version widget (update_data_version) refreshes itself.
 *
 * @param {Object} self - update_code widget instance
-* @param {HTMLElement} content_data - the main content container to append to
 * @param {HTMLElement} body_response - the response area passed to init_form
-* @returns {boolean|undefined} Returns nothing meaningful; side-effects only.
+* @param {Object} code_server - value.code_server (its source.release_version
+*   is THE version a build will produce; see below)
+* @param {Function} [on_built] - called after a build finishes, so the readout
+*   that lists the archives can re-read them: the row next to the button is a
+*   claim about the disk, and a stale one is worse than none.
+* @returns {Function|null} (channel, node) => void, or null when this page
+*   provides no form builder
 */
-const render_build_version = function(self, content_data, body_response, code_server) {
+const make_builder_mounter = function(self, body_response, code_server, on_built) {
 
-	if (self.caller?.init_form) {
+	if (!self.caller?.init_form) {
+		return null
+	}
 
-		// build_version_group
-		const build_version_group = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'build_version_group',
-			parent			: content_data
-		})
+	// on_done. On build completion, execute this function
+	const on_done = () => {
 
-		// info_text
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label bold',
-			inner_html		: get_label.update_code_git_builders || 'Code builders from GIT',
-			parent			: build_version_group
-		})
+		// event publish
+		// listen by widget update_data_version.init
+		event_manager.publish('build_code_done', self)
 
-		// on_done. On button press, execute this function
-		const on_done = () => {
-
-			// event publish
-			// listen by widget update_data_version.init
-			event_manager.publish('build_code_done', self)
+		// COHERENCE: the archive list sitting beside these buttons was read
+		// BEFORE the build. Leaving it is how a panel comes to show '7.0.0.zip ·
+		// 16:25' next to a button that has just rewritten that very file — or
+		// 'Not built yet' next to a build that succeeded.
+		if (on_built) {
+			on_built()
 		}
+	}
 
-		// version parts (shared by both confirm texts)
-		// THE VERSION THE PUBLISH WILL ACTUALLY PRODUCE — the one the release
-		// REF declares, which the server sends as source.release_version. The
-		// running process's own version (page_globals.dedalo_version) is only a
-		// fallback: naming the artifact after it is exactly the bug that let a
-		// 7.0.0 master publish an uninstallable 7.0.0.zip, and it silently
-		// mislabels every build made by a master left running across a bump.
-		const ref_version	= code_server && code_server.source && code_server.source.release_version
-		const ar_version	= String(ref_version || page_globals.dedalo_version).split('.')
-		const major_version	= ar_version[0]
-		const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
-		const release_dir	= `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`
+	// version parts (shared by both confirm texts)
+	// THE VERSION THE PUBLISH WILL ACTUALLY PRODUCE — the one the release
+	// REF declares, which the server sends as source.release_version. The
+	// running process's own version (page_globals.dedalo_version) is only a
+	// fallback: naming the artifact after it is exactly the bug that let a
+	// 7.0.0 master publish an uninstallable 7.0.0.zip, and it silently
+	// mislabels every build made by a master left running across a bump.
+	const ref_version	= code_server && code_server.source && code_server.source.release_version
+	const ar_version	= String(ref_version || page_globals.dedalo_version).split('.')
+	const major_version	= ar_version[0]
+	const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
+	const release_dir	= `<DEDALO_CODE_FILES_DIR>/${major_version}/${ar_version[0]}.${ar_version[1]}/`
 
-		// button Build Dédalo code MASTER branch
-		self.caller.init_form({
+	const channels = {
+		master : {
+			// the panel's main publishing action — filled (widget_kit .primary)
+			button_class	: 'primary',
 			submit_label	: get_label.update_code_build_master || 'Build master release',
 			confirm_text	: (get_label.update_code_build_master_confirm || "A release of version %s will be created from branch 'master' as: %s")
 				.replace('%s', version)
 				.replace('%s', `\n\n${release_dir}${version}.zip\n`),
-			body_info		: build_version_group,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'widget_request',
-				source	: {
-					type	: 'widget',
-					model	: 'update_code',
-					action	: 'build_version_from_git_master'
-				},
-				options	: {
-					branch : 'master'
-				}
-			},
-			on_done : on_done
-		})
-
-		// button Build Dédalo code DEVELOPER branch
-		// its own `<v>-dev.zip` filename: it never overwrites the master build
-		self.caller.init_form({
+			branch			: 'master'
+		},
+		dev : {
+			// secondary, but still unmistakably a control (see .build_action button)
+			button_class	: 'light',
 			submit_label	: get_label.update_code_build_developer || 'Build developer release',
 			confirm_text	: (get_label.update_code_build_developer_confirm || "A developer release of version %s will be created from branch 'v7' as: %s The master build of the same version is kept.")
 				.replace('%s', version)
 				.replace('%s', `\n\n${release_dir}${version}-dev.zip\n\n`),
-			body_info		: build_version_group,
+			branch			: 'v7'
+		}
+	}
+
+	return function(channel, node) {
+
+		const def = channels[channel]
+		if (!def) {
+			return
+		}
+
+		const form = self.caller.init_form({
+			submit_label	: def.submit_label,
+			confirm_text	: def.confirm_text,
+			body_info		: node,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -909,13 +1078,18 @@ const render_build_version = function(self, content_data, body_response, code_se
 					action	: 'build_version_from_git_master'
 				},
 				options	: {
-					branch : 'v7'
+					branch : def.branch
 				}
 			},
 			on_done : on_done
 		})
+		// build_form always emits `light button_submit`; the channel's own weight
+		// is added here (it exposes the node for exactly this kind of reach-in).
+		if (form && form.button_submit) {
+			form.button_submit.classList.add('build_button', def.button_class)
+		}
 	}
-}//end render_build_version
+}//end make_builder_mounter
 
 
 

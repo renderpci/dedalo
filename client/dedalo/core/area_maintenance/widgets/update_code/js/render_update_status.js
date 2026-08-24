@@ -101,6 +101,64 @@ const section = function(parent, title) {
 
 
 
+/** The two build channels, in the order the readout lists them. */
+const CHANNELS = ['master', 'dev']
+
+/** What a channel is CALLED (the badge vocabulary, reused as a fallback title). */
+const channel_label = function(channel) {
+	return channel==='master'
+		? (get_label.update_code_channel_master || 'published')
+		: (get_label.update_code_channel_dev || 'developer')
+}//end channel_label
+
+
+
+/**
+* RELEASE_FACTS
+* One archive's facts into a value cell: file name, size · date, the channel
+* badge, and the missing-sidecar warning. ONE writer for both the per-channel
+* rows and the other-versions list — they showed the same facts through two
+* code paths, which is how the 'developer (not offered)' wording survived in
+* one of them after the dev channel started offering exactly those builds.
+*
+* @param {HTMLElement} value - the .dd_v cell to fill
+* @param {Object} release - {file, bytes, stamp, channel, sidecar}
+*/
+const release_facts = function(value, release) {
+
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'build_file_name mono',
+		text_content	: release.file,
+		parent			: value
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'build_file_meta',
+		text_content	: `${format_bytes(release.bytes)} · ${format_stamp(release.stamp)}`,
+		parent			: value
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: release.channel==='master' ? 'dd_badge pill_ok' : 'dd_badge',
+		text_content	: channel_label(release.channel),
+		parent			: value
+	})
+	// a missing sidecar means a consumer has no digest to verify against
+	if (release.sidecar!==true) {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'dd_badge pill_warning',
+			text_content	: get_label.update_code_sidecar_missing || 'no sha256 sidecar',
+			parent			: value
+		})
+	}
+
+	return value
+}//end release_facts
+
+
+
 /**
 * FACT_ROW
 * A plain key/value row (no state).
@@ -367,7 +425,7 @@ export const render_consumer_status = function(parent, consumer) {
 * @param {Object|null} code_server - value.code_server, null on a plain install
 * @returns {HTMLElement|null}
 */
-export const render_code_server_status = function(parent, code_server) {
+export const render_code_server_status = function(parent, code_server, mount_builder) {
 
 	if (!code_server) return null
 
@@ -427,38 +485,65 @@ export const render_code_server_status = function(parent, code_server) {
 			}
 		}
 
-	// what is already published
+	// BUILD AND PUBLISH — ONE ENTRY PER CHANNEL: the action, and the archive
+	// that action produces, on the same row.
+	//
+	// They were two blocks ('Code builders from GIT' below a 'Published
+	// releases' list) and nothing on screen said the first writes the second —
+	// nor which of two same-sized archives belonged to which button. The pairing
+	// key is the version a build WOULD produce (source.release_version), so the
+	// row shows the artifact that the button beside it would overwrite.
 		const releases = code_server.releases || []
-		const published = section(wrapper, get_label.update_code_published || 'Published releases')
-		if (!releases.length) {
-			fact_row(published, get_label.update_code_none || 'None', '')
-		}
-		releases.forEach(release => {
-			const row = fact_row(
-				published,
-				release.file,
-				`${format_bytes(release.bytes)} · ${format_stamp(release.stamp)}`,
-				true
-			)
-			const value = row.querySelector('.dd_v')
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: release.channel==='master' ? 'dd_badge pill_ok' : 'dd_badge',
-				text_content	: release.channel==='master'
-					? (get_label.update_code_channel_master || 'published')
-					: (get_label.update_code_channel_dev || 'developer (not offered)'),
-				parent			: value
+		const target_version = (code_server.source || {}).release_version || null
+		const build = section(wrapper, get_label.update_code_build_publish || 'Build and publish')
+		CHANNELS.forEach(channel => {
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_row build_row',
+				parent			: build
 			})
-			// a missing sidecar means a consumer has no digest to verify against
-			if (release.sidecar!==true) {
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'dd_badge pill_warning',
-					text_content	: get_label.update_code_sidecar_missing || 'no sha256 sidecar',
-					parent			: value
-				})
+			const action = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_k build_action',
+				parent			: row
+			})
+			if (mount_builder) {
+				mount_builder(channel, action)
+			} else {
+				// no form builder on this page: name the channel anyway, so the
+				// artifact below is still attributable
+				action.textContent = channel_label(channel)
 			}
+			const value = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_v build_file',
+				parent			: row
+			})
+			const built = releases.find(release =>
+				release.channel===channel && (target_version===null || release.version===target_version)
+			)
+			if (!built) {
+				value.classList.add('none')
+				value.textContent = get_label.update_code_not_built || 'Not built yet'
+				return
+			}
+			release_facts(value, built)
 		})
+
+	// Archives on disk for OTHER versions. They have no builder (a build always
+	// produces the release ref's version), but hiding them would leave an
+	// operator wondering where the disk space went — and a stale archive of a
+	// neighbouring version is exactly what a manifest may still advertise.
+		const others = releases.filter(release =>
+			target_version!==null && release.version!==target_version
+		)
+		if (others.length) {
+			const other_block = section(wrapper, get_label.update_code_other_archives || 'Other archives on disk')
+			others.forEach(release => {
+				const row = fact_row(other_block, release.file, '', true)
+				release_facts(row.querySelector('.dd_v'), release)
+			})
+		}
 
 	// what a consumer is ACTUALLY offered — the gap operators cannot otherwise see
 		const advertises = code_server.advertises || {files:[], rungs:[]}
