@@ -55,7 +55,6 @@
 		"split.js": "1.6.5",
 		"three": "0.185.1",
 		"vanilla-jsoneditor": "3.13.0",
-		"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {

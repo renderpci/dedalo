@@ -39,9 +39,15 @@ probe_*.ts
 
 # Client libraries: nothing to ignore, and that is the point. They come from
 # `bun install` (node_modules/, already ignored above) or they are COMMITTED under
-# vendor/ — ckeditor, json-view, pdfjs. There is no install-time fetch step and no
-# generated lib directory, so a clone is self-contained.
+# vendor/ — ckeditor, json-view, pdfjs, xlsx. There is no install-time fetch step and
+# no generated lib directory, so a clone is self-contained. The committed trees are
+# digest-pinned in vendor/vendor_manifest.json (nothing else hashes those bytes), so
+# an ignore rule here would silently un-pin them.
 # Index of record: src/core/client_libs/registry.ts.
+# The one scratch path a vendor bump uses: scripts/vendor_fetch.ts downloads and
+# extracts OUTSIDE vendor/ so a refused sha256 can never leave a half-written tree
+# where the verifier expects a vendored lib. It cleans up; this covers a crash.
+/.vendor_fetch_tmp/
 
 # Agent tooling. `.agents/` is the real home (skills + workflows ARE versioned);
 # `.claude` is a committed symlink alias to it, so Claude Code keeps working.
