@@ -209,6 +209,13 @@ export interface UpdateConfig {
 	readonly codeFilesDir: string | undefined;
 	/** Git checkout the build twin archives from (PHP DEDALO_CODE_SERVER_GIT_DIR). */
 	readonly codeServerGitDir: string | undefined;
+	/**
+	 * This code master PUBLISHES developer builds (`<v>-dev.zip`) to consumers
+	 * that explicitly ask for the dev channel. Default false: a public code
+	 * server answers a dev ask exactly as it answers a release one, so branch
+	 * builds are never enumerable from outside. v7-native (no PHP twin).
+	 */
+	readonly devChannelEnabled: boolean;
 }
 
 /** One configured ontology master (PHP ONTOLOGY_SERVERS entry). */
@@ -1086,6 +1093,7 @@ export const config: DedaloConfig = Object.freeze({
 		isCodeServer: readString('IS_A_CODE_SERVER') === 'true',
 		codeFilesDir: readEnv('DEDALO_CODE_FILES_DIR'),
 		codeServerGitDir: readEnv('DEDALO_CODE_SERVER_GIT_DIR'),
+		devChannelEnabled: readString('DEDALO_CODE_SERVER_DEV_CHANNEL') === 'true',
 	}),
 	ontologyIo: Object.freeze({
 		servers: readServerList('ONTOLOGY_SERVERS'),

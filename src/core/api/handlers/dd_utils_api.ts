@@ -807,7 +807,11 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// Ontology-update manifest (PHP dd_utils_api::get_ontology_update_info):
 		// served ONLY when this instance is an ontology master, to callers
 		// presenting a configured access code. PHP refusal bytes preserved.
-		const options = (rqo.options ?? {}) as { version?: unknown; code?: unknown };
+		const options = (rqo.options ?? {}) as {
+			version?: unknown;
+			code?: unknown;
+			channel?: unknown;
+		};
 		const auth = authorizeUpdateManifest({
 			isServer: config.ontologyIo.isOntologyServer === true,
 			configuredCodes: [
@@ -848,7 +852,11 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// ONLY when this instance is a code master, to callers presenting a
 		// configured CODE_SERVERS code. PHP refusal bytes preserved. Advertises
 		// only built release archives on the caller's linear upgrade path.
-		const options = (rqo.options ?? {}) as { version?: unknown; code?: unknown };
+		const options = (rqo.options ?? {}) as {
+			version?: unknown;
+			code?: unknown;
+			channel?: unknown;
+		};
 		const auth = authorizeUpdateManifest({
 			isServer: config.update.isCodeServer === true,
 			configuredCodes: config.update.codeServers.map((entry) => entry.code),
@@ -869,6 +877,10 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			serverVersion: DEDALO_VERSION_TRIPLE,
 			codeFilesDir: config.update.codeFilesDir,
 			publicBaseUrl: `${publicOrigin()}/dedalo/install/code`,
+			// The consumer's panel switch. Anything but the exact string 'dev' is the
+			// release channel, and it only matters on a master that opted in.
+			channel: options.channel === 'dev' ? 'dev' : 'master',
+			devChannelEnabled: config.update.devChannelEnabled,
 			info: {
 				date: new Date().toISOString(),
 				entity_id: config.identity.entityId,

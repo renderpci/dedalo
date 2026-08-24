@@ -418,3 +418,48 @@ describe('a terminal ok frame hands off to health polling, never straight to suc
 		expect(resolve_health_outcome(carried, '7.0.0').outcome).toBe('rolled_back');
 	});
 });
+
+// ---------------------------------------------------------------------------
+// THE SAME-VERSION VERDICT (2026-08-24, dev channel).
+// The frame stream dies at the swap by design, so /health decides "updated" vs
+// "rolled back". On a dev-channel install the version is IDENTICAL on both
+// sides of that swap: comparing it reports success for a rollback just as
+// eagerly as for a landed update. The installed archive digest is the token
+// that moves, and the manifest item already carries it (file.sha256).
+// ---------------------------------------------------------------------------
+describe('resolve_health_outcome on a same-version (dev channel) install', () => {
+	const NEW = 'a'.repeat(64);
+	const OLD = 'b'.repeat(64);
+
+	/** A panel mid-poll after a same-version install of the archive NEW. */
+	// biome-ignore lint/suspicious/noExplicitAny: plain-JS reducer, untyped by design
+	const polling = (): any => ({
+		...init_phase_state('7.0.1', NEW),
+		mode: 'polling',
+	});
+
+	test('the SAME version with the NEW digest is an update', () => {
+		expect(resolve_health_outcome(polling(), '7.0.1', NEW).outcome).toBe('updated');
+	});
+
+	test('the SAME version with the OLD digest is a ROLLBACK — the case a version compare misses', () => {
+		expect(resolve_health_outcome(polling(), '7.0.1', OLD).outcome).toBe('rolled_back');
+	});
+
+	test('silence is still server_gone, digest or not', () => {
+		expect(resolve_health_outcome(polling(), null, null).outcome).toBe('server_gone');
+	});
+
+	test('a server that publishes NO digest falls back to the version verdict', () => {
+		// An install running code older than this feature answers /health without
+		// install_digest. Reporting every such update as a rollback would be worse
+		// than the imprecision it replaces.
+		expect(resolve_health_outcome(polling(), '7.0.1', null).outcome).toBe('updated');
+	});
+
+	test('a RELEASE install (no expected digest) keeps the version verdict exactly', () => {
+		const release = { ...init_phase_state('7.0.1'), mode: 'polling' };
+		expect(resolve_health_outcome(release, '7.0.1', OLD).outcome).toBe('updated');
+		expect(resolve_health_outcome(release, '7.0.0', OLD).outcome).toBe('rolled_back');
+	});
+});
