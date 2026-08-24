@@ -123,6 +123,47 @@ export const apply_phase_frame = function(state, frame) {
 
 
 /**
+ * RESOLVE_FINAL_FRAME
+ * Interprets the STREAM'S TERMINAL frame (`is_running:false`) once it is seen.
+ * The job's final `data` is its RETURN ENVELOPE, not a phase snapshot — so a
+ * fast install whose `swap → restart → done` tail lands inside one poll beat
+ * delivers a track frozen mid-flight PLUS a terminal frame whose envelope
+ * already knows the truth. That envelope outranks the frozen track:
+ *
+ *   {data:{ok:true,  data:{version}}}            → updated  (install landed)
+ *   {data:{ok:false}| errors:[…]}                → failed   (the sentence rides)
+ *
+ * Returns {outcome:'updated', version} | {outcome:'failed', message} | null
+ * when the frame decides nothing (caller keeps its existing heuristics).
+ * @param {Object} state - reducer state (unused today; symmetry + future use)
+ * @param {Object|null} frame - the terminal JobStatusFrame, null when none seen
+ */
+export const resolve_final_frame = function(state, frame) {
+
+	if (!frame || frame.is_running!==false) {
+		return null
+	}
+	const result = frame.data
+	if (result && typeof result==='object') {
+		if (result.ok===true && result.data && typeof result.data.version==='string') {
+			return { outcome : 'updated', version : result.data.version }
+		}
+		const message = Array.isArray(frame.errors) && frame.errors.length > 0
+			? frame.errors.join(' ')
+			: (typeof result.msg==='string' && result.msg.length>0 ? result.msg : null)
+		if (result.ok===false || message!==null) {
+			return { outcome : 'failed', message : message }
+		}
+	}
+	if (Array.isArray(frame.errors) && frame.errors.length>0) {
+		return { outcome : 'failed', message : frame.errors.join(' ') }
+	}
+	return null
+}//end resolve_final_frame
+
+
+
+/**
 * RESOLVE_HEALTH_OUTCOME
 * Decides the ending once /health answers (or the deadline passes).
 * @param {Object} state - reducer state (mode 'polling')

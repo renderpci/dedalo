@@ -20,6 +20,7 @@
 		UPDATE_PHASES,
 		init_phase_state,
 		apply_phase_frame,
+		resolve_final_frame,
 		resolve_health_outcome
 	} from './update_code_phases.js'
 
@@ -526,6 +527,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 	// mirror is reducer feed, not operator surface: update_code.less hides it.
 		let stream_final = false	// a final frame (is_running:false) arrived
 		let final_error = null		// its normalized ApiError, when it carried one
+		let final_frame = null		// the terminal frame itself (resolve_final_frame)
 		const observer = new MutationObserver(() => {
 			const box = stream_node.querySelector('.display_json_box')
 			if (!box) return
@@ -539,6 +541,7 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 				// the JOB ended (which is not the same as the stream dying)
 				stream_final = true
 				final_error = normalize_stream_error(sse_response)
+				final_frame = sse_response
 			}
 			const frame = sse_response?.data
 			if (frame && typeof frame==='object') {
@@ -681,13 +684,26 @@ const track_process = function(pid, pfile, body_response, expected_version) {
 				finish_failed(state.message)
 				return
 			}
-			// the JOB itself ended (final frame seen) without a failed-phase
-			// frame: a pre-phase refusal (code_update.ts refuses before any
-			// phase starts) reports its sentence only in the final error —
-			// render THAT, never "connection lost".
+			// the JOB itself ended (final frame seen). The terminal frame's
+			// envelope is WIRE TRUTH and outranks the track: a fast install
+			// whose swap/restart/done tail lands inside one poll beat delivers
+			// a mid-flight track PLUS a done envelope naming the installed
+			// version — that is SUCCESS, never failure.
 			if (stream_final) {
+				const ending = resolve_final_frame(state, final_frame)
+				if (ending && ending.outcome==='updated') {
+					state = apply_phase_frame(state, {
+						phases : state.phases.map(p => ({ id : p.id, status : 'done' }))
+					})
+					finish_success(ending.version)
+					return
+				}
 				state = { ...state, mode:'failed' }
-				finish_failed(final_error ? error_text(final_error) : state.message)
+				const failure_message = (ending && ending.outcome==='failed' && ending.message)
+					|| state.message
+					|| (final_error ? error_text(final_error) : null)
+					|| (get_label.update_code_failed || 'The update failed.')
+				finish_failed(failure_message)
 				return
 			}
 			// the stream died mid-job: let the reducer decide

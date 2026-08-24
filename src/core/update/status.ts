@@ -68,10 +68,28 @@ export interface StatusCheck {
 	id: string;
 	state: 'ok' | 'blocked' | 'warn' | 'unknown';
 	detail?: string;
+	/**
+	 * WHAT the check was evaluated against, when that is not obvious — a git
+	 * ref, a path. Load-bearing on a code server: the publish checks look at
+	 * the RELEASE REF (`master`), not at the branch the operator has checked
+	 * out, so a fix committed on a working branch leaves them red and the
+	 * readout has to say why (2026-08-24: `archive_installable` blocked on
+	 * `.claude, CLAUDE.md` while HEAD had already excluded them — the panel was
+	 * right, but only the ref made that legible).
+	 */
+	scope?: string;
 }
 
-function check(id: string, state: StatusCheck['state'], detail?: string): StatusCheck {
-	return detail === undefined ? { id, state } : { id, state, detail };
+function check(
+	id: string,
+	state: StatusCheck['state'],
+	detail?: string,
+	scope?: string,
+): StatusCheck {
+	const entry: StatusCheck = { id, state };
+	if (detail !== undefined) entry.detail = detail;
+	if (scope !== undefined) entry.scope = scope;
+	return entry;
 }
 
 /** Run a probe that must never take the panel down; any throw becomes `unknown`. */
@@ -363,6 +381,15 @@ function probeBackupRoot(): string {
 // CODE-SERVER role — "can this instance publish a release others can install?"
 // ---------------------------------------------------------------------------
 
+/**
+ * The ref a PUBLISHED release is built from. Not a preference: `releaseFileName`
+ * (code_build_plan.ts) gives only a `master` build the advertised `<v>.zip`
+ * name — every other ref gets the un-advertised `-dev` suffix. So the publish
+ * checks below must ask THIS ref, whatever the operator happens to have checked
+ * out, and say which ref they asked.
+ */
+const RELEASE_REF = 'master';
+
 export interface PublishedRelease {
 	version: string;
 	/** `master` claims the advertised `<v>.zip`; `dev` is servable but never advertised. */
@@ -386,6 +413,18 @@ export interface CodeServerStatus {
 		dirty: boolean | null;
 		has_master_ref: boolean | null;
 		bun_pin: string | null;
+		/** The ref a published release is built from (never the checked-out one). */
+		release_ref: string;
+		release_sha: string | null;
+		release_date: string | null;
+		/**
+		 * How far the release ref is from the checked-out branch:
+		 * `behind` = commits on the branch that the release ref does NOT have
+		 * (work that will not ship until merged — the answer to "I fixed it,
+		 * why is the panel still red?"), `ahead` = the reverse. Null when the
+		 * two cannot be compared (a detached HEAD, a missing ref).
+		 */
+		divergence: { ahead: number; behind: number } | null;
 	};
 	files_dir: string | null;
 	releases: PublishedRelease[];
@@ -401,7 +440,7 @@ export interface CodeServerStatus {
 function buildPlanCheck(): StatusCheck {
 	return probe('build_plan', () => {
 		const plan = planCodeBuild(
-			{ version: DEDALO_VERSION, ref: 'master' },
+			{ version: DEDALO_VERSION, ref: RELEASE_REF },
 			{
 				isCodeServer: config.update.isCodeServer,
 				codeServerGitDir: config.update.codeServerGitDir,
@@ -409,8 +448,8 @@ function buildPlanCheck(): StatusCheck {
 			},
 		);
 		return plan.ok
-			? check('build_plan', 'ok', plan.filePath)
-			: check('build_plan', 'blocked', plan.error);
+			? check('build_plan', 'ok', plan.filePath, RELEASE_REF)
+			: check('build_plan', 'blocked', plan.error, RELEASE_REF);
 	});
 }
 
@@ -432,7 +471,7 @@ function directoryCheck(id: string, dir: string | undefined): StatusCheck {
  */
 function archiveShapeCheck(gitDir: string | null, ref: string): StatusCheck {
 	return probe('archive_installable', () => {
-		if (gitDir === null) return check('archive_installable', 'unknown', 'no git dir');
+		if (gitDir === null) return check('archive_installable', 'unknown', 'no git dir', ref);
 		// `set -o pipefail` is LOAD-BEARING: without it a failing `git archive`
 		// (missing ref, unreadable dir) still exits 0 because `tar` happily
 		// consumes the empty stream — and an empty listing has no symlink lines,
@@ -445,8 +484,8 @@ function archiveShapeCheck(gitDir: string | null, ref: string): StatusCheck {
 		);
 		const symlinks = archiveSymlinkNames(listing);
 		return symlinks.length === 0
-			? check('archive_installable', 'ok')
-			: check('archive_installable', 'blocked', symlinks.join(', '));
+			? check('archive_installable', 'ok', undefined, ref)
+			: check('archive_installable', 'blocked', symlinks.join(', '), ref);
 	});
 }
 
@@ -486,6 +525,10 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 			dirty: null,
 			has_master_ref: null,
 			bun_pin: null,
+			release_ref: RELEASE_REF,
+			release_sha: null,
+			release_date: null,
+			divergence: null,
 		};
 	}
 	const dirty = git(gitDir, ['status', '--porcelain']);
@@ -495,15 +538,34 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 	} catch {
 		pin = null;
 	}
+	const hasRelease = git(gitDir, ['rev-parse', '--verify', '--quiet', RELEASE_REF]) !== null;
 	return {
 		git_dir: gitDir,
 		head_sha: git(gitDir, ['rev-parse', '--short', 'HEAD']),
 		head_date: git(gitDir, ['log', '-1', '--format=%cI']),
 		branch: git(gitDir, ['rev-parse', '--abbrev-ref', 'HEAD']),
 		dirty: dirty === null ? null : dirty !== '',
-		has_master_ref: git(gitDir, ['rev-parse', '--verify', '--quiet', 'master']) !== null,
+		has_master_ref: hasRelease,
 		bun_pin: pin,
+		release_ref: RELEASE_REF,
+		release_sha: hasRelease ? git(gitDir, ['rev-parse', '--short', RELEASE_REF]) : null,
+		release_date: hasRelease ? git(gitDir, ['log', '-1', '--format=%cI', RELEASE_REF]) : null,
+		divergence: hasRelease ? readDivergence(gitDir) : null,
 	};
+}
+
+/**
+ * `<ahead> <behind>` between the release ref and HEAD, via git's own
+ * rev-list --count --left-right. `behind` counts commits HEAD has that the
+ * release ref does not — the number an operator needs when the publish checks
+ * are red on work they have already committed.
+ */
+function readDivergence(gitDir: string): { ahead: number; behind: number } | null {
+	const counted = git(gitDir, ['rev-list', '--left-right', '--count', `${RELEASE_REF}...HEAD`]);
+	if (counted === null) return null;
+	const [ahead, behind] = counted.split(/\s+/).map(Number);
+	if (!Number.isInteger(ahead) || !Number.isInteger(behind)) return null;
+	return { ahead: ahead as number, behind: behind as number };
 }
 
 /** Every archive already published under the code-files dir, newest first. */
@@ -552,8 +614,8 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 		buildPlanCheck(),
 		probe('master_ref', () =>
 			source.has_master_ref === null
-				? check('master_ref', 'unknown')
-				: check('master_ref', source.has_master_ref ? 'ok' : 'blocked'),
+				? check('master_ref', 'unknown', undefined, RELEASE_REF)
+				: check('master_ref', source.has_master_ref ? 'ok' : 'blocked', undefined, RELEASE_REF),
 		),
 		// A dirty worktree does not refuse the build — `git archive` silently
 		// packages HEAD, so the uncommitted work is simply ABSENT from the
@@ -563,7 +625,24 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 				? check('worktree_clean', 'unknown')
 				: check('worktree_clean', source.dirty ? 'warn' : 'ok'),
 		),
-		archiveShapeCheck(gitDir, 'master'),
+		archiveShapeCheck(gitDir, RELEASE_REF),
+		// The commits-not-in-the-release-ref line. It is a WARNING, not a
+		// blocker: publishing an older `master` is a legitimate act. It exists
+		// because without it a publish check red on work the operator has
+		// ALREADY committed reads as a false alarm — the fix is on their branch,
+		// and the panel was looking at the release ref all along.
+		probe('release_ref_current', () =>
+			source.divergence === null
+				? check('release_ref_current', 'unknown', undefined, RELEASE_REF)
+				: source.divergence.behind === 0
+					? check('release_ref_current', 'ok', undefined, RELEASE_REF)
+					: check(
+							'release_ref_current',
+							'warn',
+							`${source.divergence.behind} / ${source.branch ?? 'HEAD'}`,
+							RELEASE_REF,
+						),
+		),
 	];
 	return {
 		is_a_code_server: config.update.isCodeServer,

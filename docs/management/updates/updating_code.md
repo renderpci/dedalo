@@ -134,8 +134,12 @@ instance can publish at all:
   use. Also whether a `master` ref exists (only a `master` build claims the
   published release name), whether the worktree is clean, and whether an
   archive of it carries symbolic links.
-- **Build source** — the commit, its date and the branch a release would be
-  built from, plus the checkout's Bun pin.
+- **Build source** — the commit, its date and the branch currently checked
+  out, plus the checkout's Bun pin.
+- **Release ref** — the ref a *published* release is actually built from
+  (`master`), its own commit and date, and how many commits the checked-out
+  branch has that it does not. Every check in the first block reads this ref,
+  not the checked-out branch, and each says so ("checked against master").
 - **Published releases** — every archive already on disk with its size and
   date, marked *published* or *developer*, and flagged when its `.sha256`
   sidecar is missing (without it a remote install has no digest to verify).
@@ -149,6 +153,14 @@ instance can publish at all:
     A release archives the **committed** `HEAD` of the configured checkout.
     Uncommitted changes are simply absent from the archive, which is why the
     panel marks a dirty worktree as a warning before you press Build.
+
+!!! warning "The checks read the release ref, not your branch"
+    Work committed on a working branch is not in a release until it is merged
+    into the release ref. Until then the publish checks keep reporting the old
+    state — correctly, because that is what a release built now would contain.
+    The panel names the ref on every such line, and counts the commits the
+    release ref is missing, so a check that looks like a false alarm can be
+    told apart from a real one.
 
 !!! warning "An archive with symbolic links cannot be installed"
     The installer refuses an entire archive that contains a symbolic-link

@@ -70,6 +70,27 @@ export const UPDATE_CATALOG: Readonly<Record<string, UpdateDescriptor>> = Object
 		updateFromMinor: 0,
 		updateData: false, // code-only release — no data migration
 	},
+	// 7.0.2 — published by the museum-cycle probe (scripts/update_probe.ts cuts
+	// the archive into <repo>/code/); code-only like 701.
+	'702': {
+		versionMajor: 7,
+		versionMedium: 0,
+		versionMinor: 2,
+		updateFromMajor: 7,
+		updateFromMedium: 0,
+		updateFromMinor: 1,
+		updateData: false,
+	},
+	// 7.0.3 — third probe rung (museum walks 7.0.0 → 7.0.1 → 7.0.2 → 7.0.3).
+	'703': {
+		versionMajor: 7,
+		versionMedium: 0,
+		versionMinor: 3,
+		updateFromMajor: 7,
+		updateFromMedium: 0,
+		updateFromMinor: 2,
+		updateData: false,
+	},
 });
 
 /** Key for a descriptor's target version (PHP implode('', [7,0,1]) = '701'). */

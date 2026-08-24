@@ -167,6 +167,20 @@ const check_row = function(parent, check) {
 		parent			: row
 	})
 	value.appendChild(state_chip(check.state))
+
+	// WHAT the check looked at, when the server says. Always rendered, not only
+	// on a failure: on a code server the publish checks read the RELEASE ref,
+	// never the branch the operator has checked out, and a red line whose scope
+	// is invisible reads as a false alarm on work they have already committed.
+	if (check.scope) {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'check_scope',
+			text_content	: `${get_label.update_code_scope || 'checked against'} ${check.scope}`,
+			parent			: value
+		})
+	}
+
 	if (check.detail!==undefined && check.detail!==null && check.detail!=='') {
 		ui.create_dom_element({
 			element_type	: 'span',
@@ -367,8 +381,39 @@ export const render_code_server_status = function(parent, code_server) {
 		fact_row(build_source, get_label.update_code_check_git_dir || 'Git source directory', source.git_dir, true)
 		fact_row(build_source, get_label.update_code_commit || 'Commit', source.head_sha, true)
 		fact_row(build_source, get_label.update_code_current_build || 'Current build', source.head_date, true)
-		fact_row(build_source, 'branch', source.branch, true)
+		fact_row(build_source, get_label.update_code_head_branch || 'Checked-out branch', source.branch, true)
 		fact_row(build_source, get_label.update_code_bun || 'Bun runtime', source.bun_pin, true)
+
+	// THE RELEASE REF — what a published release is actually built from. It is
+	// its own block because it is routinely NOT the checked-out branch, and the
+	// publish checks above all read it: without these rows a red check on a
+	// fix the operator just committed is unexplainable from the panel.
+		const release = section(wrapper, get_label.update_code_release_ref || 'Release ref')
+		fact_row(release, get_label.update_code_release_ref || 'Release ref', source.release_ref, true)
+		fact_row(release, get_label.update_code_release_commit || 'Release ref commit', source.release_sha, true)
+		fact_row(release, get_label.update_code_release_date || 'Release ref date', source.release_date, true)
+		if (source.divergence) {
+			const behind_row = fact_row(
+				release,
+				get_label.update_code_behind || 'Commits not in the release ref',
+				String(source.divergence.behind)
+			)
+			if (source.divergence.behind > 0) {
+				const behind_value = behind_row.querySelector('.dd_v')
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'dd_badge pill_warning',
+					text_content	: source.branch || 'HEAD',
+					parent			: behind_value
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'check_note',
+					text_content	: get_label.update_code_note_release_ref_current || '',
+					parent			: behind_value
+				})
+			}
+		}
 
 	// what is already published
 		const releases = code_server.releases || []

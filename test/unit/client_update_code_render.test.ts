@@ -55,6 +55,7 @@ const master_labels = JSON.parse(
 import {
 	apply_phase_frame,
 	init_phase_state,
+	resolve_final_frame,
 	resolve_health_outcome,
 	UPDATE_PHASES,
 } from '../../client/dedalo/core/area_maintenance/widgets/update_code/js/update_code_phases.js';
@@ -310,5 +311,68 @@ describe('update_code phase reducer (pure)', () => {
 		const rolled = resolve_health_outcome(state, '6.4.0');
 		expect(rolled.outcome).toBe('rolled_back');
 		expect(resolve_health_outcome(state, null).outcome).toBe('server_gone');
+	});
+});
+
+describe('update_code terminal frame (resolve_final_frame)', () => {
+	// The 2026-08-24 museum-probe false FAILURE: a fast install lands
+	// swap→restart→done inside ONE SSE poll beat, so the client sees a track
+	// frozen at an early phase PLUS the terminal frame — whose `data` is the
+	// job's RETURN ENVELOPE (mediaJobs overwrites the last payload), never a
+	// phase snapshot. That envelope is wire truth and decides the ending.
+	const terminal = (body: Record<string, unknown>, errors: string[] = []) => ({
+		is_running: false,
+		data: body,
+		errors,
+	});
+
+	test('a done envelope naming the installed version is SUCCESS despite a frozen track', () => {
+		// biome-ignore lint/suspicious/noExplicitAny: plain-JS reducer, untyped by design
+		let state: any = init_phase_state('7.0.1');
+		state = apply_phase_frame(state, {
+			phase: 'preflight',
+			phases: [{ id: 'preflight', status: 'running' }],
+		}); // …then the beats stop
+		const ending = resolve_final_frame(state, {
+			is_running: false,
+			data: { msg: 'OK. Installed Dédalo 7.0.1 (clean).', ok: true, data: { version: '7.0.1' } },
+			errors: [],
+		});
+		expect(ending).toEqual({ outcome: 'updated', version: '7.0.1' });
+	});
+
+	test('an error envelope / error list names the failure', () => {
+		const refused = resolve_final_frame(
+			// biome-ignore lint/suspicious/noExplicitAny: plain-JS reducer
+			init_phase_state('7.0.1') as any,
+			terminal({ ok: false, msg: 'Error. Release checksum mismatch' }),
+		);
+		expect(refused?.outcome).toBe('failed');
+		expect(refused?.message).toContain('checksum');
+
+		const errored = resolve_final_frame(
+			// biome-ignore lint/suspicious/noExplicitAny: plain-JS reducer
+			init_phase_state('7.0.1') as any,
+			terminal({ ok: true }, ['Error. Code update failed']),
+		);
+		expect(errored?.outcome).toBe('failed');
+		expect(errored?.message).toContain('Code update failed');
+	});
+
+	test('a frame that decides nothing stays null (caller keeps its heuristics)', () => {
+		for (const frame of [
+			null,
+			{ is_running: true, data: null, errors: [] },
+			{ is_running: false, data: null, errors: [] },
+			{ is_running: false, data: { unexpected: 'shape' }, errors: [] },
+		]) {
+			// biome-ignore lint/suspicious/noExplicitAny: plain-JS reducer
+			expect(resolve_final_frame(init_phase_state('7.0.1') as any, frame as any)).toBeNull();
+		}
+	});
+
+	test('the renderer consults it before concluding failure (source shape)', () => {
+		expect(render_src).toContain('resolve_final_frame(state, final_frame)');
+		expect(render_src).toContain("ending.outcome==='updated'");
 	});
 });

@@ -185,15 +185,15 @@ describe('assertLinearUpgrade (strict path backstop)', () => {
 describe('linearUpgradeTargets + buildCodeUpdateInfo (the LIVE catalog)', () => {
 	// BRANCH COVERAGE FOR BOTH FUNCTIONS LIVES IN test/unit/code_manifest.test.ts,
 	// driven through the injectable `catalog` parameter. What is pinned here is
-	// the stock-master FACT for the CURRENT catalog: since 2026-08-23 it carries
-	// exactly the '701' code-only descriptor, so a 7.0.0 client is offered
-	// 7.0.1 — and nothing else — and the manifest advertises no file while no
-	// archive exists on disk.
-	test('the stock master offers exactly the 7.0.1 rung (and no file without an archive)', () => {
-		expect(Object.keys(UPDATE_CATALOG)).toEqual(['701']);
+	// the stock-master FACT for the CURRENT catalog: the probe-published rungs
+	// '701'/'702'/'703' (update_probe.ts cuts their archives into <repo>/code/).
+	// A client is offered exactly its next patch rung; the manifest advertises
+	// no file while no archive exists on disk for that rung.
+	test('the stock catalog walks 7.0.1 → 7.0.2 → 7.0.3 (and advertises only existing archives)', () => {
+		expect(Object.keys(UPDATE_CATALOG).sort()).toEqual(['701', '702', '703']);
 		expect(linearUpgradeTargets([7, 0, 0])).toEqual([[7, 0, 1]]);
-		// already on 7.0.1: nothing further is in the catalog
-		expect(linearUpgradeTargets([7, 0, 1])).toEqual([]);
+		expect(linearUpgradeTargets([7, 0, 1])).toEqual([[7, 0, 2]]);
+		expect(linearUpgradeTargets([7, 0, 2])).toEqual([[7, 0, 3]]);
 		const info = buildCodeUpdateInfo({
 			clientVersion: [7, 0, 0],
 			serverVersion: [7, 0, 0],

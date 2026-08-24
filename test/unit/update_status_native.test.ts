@@ -172,6 +172,38 @@ describe('code server status', () => {
 		}
 	});
 
+	test('every publish check names the ref it was evaluated against', () => {
+		// The 2026-08-24 confusion: `archive_installable` was blocked on paths
+		// HEAD had already excluded, because it reads the RELEASE ref. A check
+		// whose scope is invisible reads as a false alarm.
+		const scoped = ['build_plan', 'master_ref', 'archive_installable', 'release_ref_current'];
+		for (const id of scoped) {
+			expect(byId(status.checks, id).scope, `${id} must name its ref`).toBe(
+				status.source.release_ref,
+			);
+		}
+	});
+
+	test('the release ref is reported separately from the checked-out branch', () => {
+		// They are routinely different, and every publish check reads the
+		// former — so the panel must never conflate them.
+		expect(status.source.release_ref).toBe('master');
+		if (status.source.divergence !== null) {
+			expect(Number.isInteger(status.source.divergence.behind)).toBe(true);
+			expect(Number.isInteger(status.source.divergence.ahead)).toBe(true);
+			// `behind` is what explains a red check on already-committed work.
+			expect(byId(status.checks, 'release_ref_current').state).toBe(
+				status.source.divergence.behind === 0 ? 'ok' : 'warn',
+			);
+		}
+	});
+
+	test('a release ref behind the branch WARNS, never blocks', () => {
+		// Publishing an older release ref is a legitimate act; the line exists
+		// to explain a red neighbour, not to add a gate of its own.
+		expect(byId(status.checks, 'release_ref_current').state).not.toBe('blocked');
+	});
+
 	test('a broken archive probe degrades to unknown, never a false ok', () => {
 		// The `set -o pipefail` contract: a failing `git archive` must not read
 		// as "no symlink entries found" (found 2026-08-24 against a code-server
