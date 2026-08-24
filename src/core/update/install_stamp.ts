@@ -55,15 +55,33 @@ export function parseInstallStamp(content: string): InstallStamp | null {
 		return null;
 	}
 	if (raw === null || typeof raw !== 'object') return null;
-	const { digest, channel, source_url, installed_at } = raw as Record<string, unknown>;
+	const fields = raw as Record<string, unknown>;
+	const required = requiredStampFields(fields);
+	if (required === null) return null;
+	return Object.freeze({
+		...required,
+		...optionalText('source_url', fields.source_url),
+		...optionalText('installed_at', fields.installed_at),
+	});
+}
+
+/**
+ * The two fields a stamp cannot be trusted without: a plain 64-hex sha256 and
+ * one of the two built channels. Null when either fails — a stamp is never
+ * PARTIALLY trusted.
+ */
+function requiredStampFields(
+	raw: Record<string, unknown>,
+): { digest: string; channel: InstallChannel } | null {
+	const { digest, channel } = raw;
 	if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) return null;
 	if (channel !== 'master' && channel !== 'dev') return null;
-	return Object.freeze({
-		digest,
-		channel,
-		...(typeof source_url === 'string' ? { source_url } : {}),
-		...(typeof installed_at === 'string' ? { installed_at } : {}),
-	});
+	return { digest, channel };
+}
+
+/** An optional forensic field: present only when it is actually a string. */
+function optionalText(key: string, value: unknown): Record<string, string> {
+	return typeof value === 'string' ? { [key]: value } : {};
 }
 
 function readInstallStamp(): InstallStamp | null {

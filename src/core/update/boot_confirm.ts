@@ -83,20 +83,35 @@ export async function confirmBootedCodeUpdate(
 		if (sentinelPath === null || !existsSync(sentinelPath)) return;
 		const sentinel = JSON.parse(readFileSync(sentinelPath, 'utf8')) as CodeUpdateSentinel;
 		if (sentinel.status !== 'pending') return;
-		if (bootedTreeMatches(sentinel, runningVersion, runningDigest)) {
-			await Bun.write(
-				sentinelPath,
-				JSON.stringify({ ...sentinel, status: 'confirmed' }, null, '\t'),
-			);
-			console.log(
-				`[code update] boot CONFIRMED: running ${runningVersion} (installed digest ${runningDigest ?? 'none'}) matches the pending update (sentinel flipped to confirmed)`,
-			);
+		if (!bootedTreeMatches(sentinel, runningVersion, runningDigest)) {
+			reportBootMismatch(sentinel, sentinelPath, runningVersion, runningDigest);
 			return;
 		}
-		console.error(
-			`[code update] LOUD: a PENDING code-update sentinel names version ${sentinel.version} / digest ${sentinel.installDigest ?? 'none'} but this process runs ${runningVersion} / digest ${runningDigest ?? 'none'} — a rollback happened, or the swap half-applied. The sentinel at ${sentinelPath} is left untouched; inspect it and the backup at ${sentinel.backupDir}.`,
-		);
+		await Bun.write(sentinelPath, JSON.stringify({ ...sentinel, status: 'confirmed' }, null, '\t'));
+		reportBootConfirmed(runningVersion, runningDigest);
 	} catch (error) {
 		console.error('[code update] boot confirmation failed (sentinel unreadable?):', error);
 	}
+}
+
+/** The booted tree IS what the sentinel installed. */
+function reportBootConfirmed(runningVersion: string, runningDigest: string | null): void {
+	console.log(
+		`[code update] boot CONFIRMED: running ${runningVersion} (installed digest ${runningDigest ?? 'none'}) matches the pending update (sentinel flipped to confirmed)`,
+	);
+}
+
+/**
+ * It is NOT. The sentinel is left untouched on purpose: it is the only evidence
+ * that a swap was in flight, and a rollback must not erase it.
+ */
+function reportBootMismatch(
+	sentinel: CodeUpdateSentinel,
+	sentinelPath: string,
+	runningVersion: string,
+	runningDigest: string | null,
+): void {
+	console.error(
+		`[code update] LOUD: a PENDING code-update sentinel names version ${sentinel.version} / digest ${sentinel.installDigest ?? 'none'} but this process runs ${runningVersion} / digest ${runningDigest ?? 'none'} — a rollback happened, or the swap half-applied. The sentinel at ${sentinelPath} is left untouched; inspect it and the backup at ${sentinel.backupDir}.`,
+	);
 }

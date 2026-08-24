@@ -62,6 +62,50 @@ async function declaredVersionOfRef(
 }
 
 /**
+ * The version THIS release will be named after: the one the ref's own
+ * `version.ts` declares. A caller-supplied `version` that disagrees is a
+ * refusal, not an override — a release must be named after its own bytes — and
+ * a ref whose version cannot be read at all cannot be named either.
+ */
+async function resolveReleaseVersionOrRefuse(
+	ref: string,
+	asked: string | undefined,
+): Promise<string> {
+	const declared = await declaredVersionOfRef(config.update.codeServerGitDir, ref);
+	if (declared !== null && asked !== undefined && asked !== declared) {
+		const sentence = `Error. The ref '${ref}' declares version ${declared}, but the build asked for ${asked} — a release must be named after its own bytes.`;
+		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
+	}
+	const version = declared ?? asked;
+	if (version === undefined) {
+		const sentence = `Error. Could not read ${VERSION_TS_PATH} at ref '${ref}', so the release's own version is unknown and it cannot be named.`;
+		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
+	}
+	return version;
+}
+
+/** `git archive` into `filePath`, or a refusal. A zero-byte artifact is a failure. */
+async function runGitArchiveOrRefuse(gitDir: string, ref: string, filePath: string): Promise<void> {
+	// -C <gitDir> selects the repo; argv array, no shell.
+	const child = Bun.spawn(
+		['git', '-C', gitDir, 'archive', '--format=zip', '--prefix=dedalo_code/', '-o', filePath, ref],
+		{
+			stdout: 'ignore',
+			stderr: 'pipe',
+			env: envSnapshot() as Record<string, string>,
+		},
+	);
+	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+	if (exitCode === 0 && existsSync(filePath) && statSync(filePath).size > 0) return;
+	// The git stderr is a LOG-side detail (paths, refs) — it stays out of the
+	// wire sentence and travels on the thrown error's `message`.
+	throw new DedaloError('update.failed', {
+		message: `git archive failed: ${stderr.trim() || 'git archive produced no output'}`,
+		publicMessage: 'Error. git archive failed',
+	});
+}
+
+/**
  * `git archive --format=zip --prefix=dedalo_code/ <ref>` of the code-server
  * checkout into the release path for `version`. `version` names the release
  * (e.g. '7.0.1'); `ref` is the git ref to archive (default the same tag).
@@ -75,16 +119,7 @@ export async function buildVersionFromGit(options: {
 	// (see parseDeclaredTriple). An explicit caller `version` is now a claim to
 	// be CHECKED, not the source of the name.
 	const ref = options.ref ?? options.version ?? 'master';
-	const declared = await declaredVersionOfRef(config.update.codeServerGitDir, ref);
-	if (declared !== null && options.version !== undefined && options.version !== declared) {
-		const sentence = `Error. The ref '${ref}' declares version ${declared}, but the build asked for ${options.version} — a release must be named after its own bytes.`;
-		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
-	}
-	const version = declared ?? options.version;
-	if (version === undefined) {
-		const sentence = `Error. Could not read ${VERSION_TS_PATH} at ref '${ref}', so the release's own version is unknown and it cannot be named.`;
-		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
-	}
+	const version = await resolveReleaseVersionOrRefuse(ref, options.version);
 	// All refusal gates (code-server flag → dirs → version → ref → confinement)
 	// and the release path live in the pure planner. The ref goes in EXPLICITLY:
 	// the planner's own fallback is the version string, which would have named a
@@ -113,24 +148,7 @@ export async function buildVersionFromGit(options: {
 		refuseUpdate('update.failed', 'Error. Unable to create the release directory', error);
 	}
 
-	// git archive → the zip file. -C <gitDir> selects the repo; argv array, no shell.
-	const child = Bun.spawn(
-		['git', '-C', gitDir, 'archive', '--format=zip', '--prefix=dedalo_code/', '-o', filePath, ref],
-		{
-			stdout: 'ignore',
-			stderr: 'pipe',
-			env: envSnapshot() as Record<string, string>,
-		},
-	);
-	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
-	if (exitCode !== 0 || !existsSync(filePath) || statSync(filePath).size === 0) {
-		// The git stderr is a LOG-side detail (paths, refs) — it stays out of the
-		// wire sentence and travels on the thrown error's `message`.
-		throw new DedaloError('update.failed', {
-			message: `git archive failed: ${stderr.trim() || 'git archive produced no output'}`,
-			publicMessage: 'Error. git archive failed',
-		});
-	}
+	await runGitArchiveOrRefuse(gitDir, ref, filePath);
 
 	// sha256 sidecar (WC-024 — the integrity guarantee PHP never emitted).
 	// The sidecar line names the plan's ACTUAL artifact: the planner emits

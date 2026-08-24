@@ -120,11 +120,8 @@ function tripleEquals(
 	return triple[0] === major && triple[1] === minor && triple[2] === patch;
 }
 
-/**
- * Build the release manifest (PHP get_code_update_info). Advertises a release
- * only when its `<major.minor.patch>.zip` exists under `codeFilesDir`.
- */
-export function buildCodeUpdateInfo(options: {
+/** Everything `buildCodeUpdateInfo` needs to answer one consumer's ask. */
+export interface CodeUpdateInfoOptions {
 	clientVersion: readonly number[];
 	serverVersion: readonly number[];
 	codeFilesDir: string | undefined;
@@ -135,26 +132,47 @@ export function buildCodeUpdateInfo(options: {
 	channel?: 'master' | 'dev';
 	/** Whether THIS master publishes developer builds (DEDALO_CODE_SERVER_DEV_CHANNEL). */
 	devChannelEnabled?: boolean;
-}): CodeUpdateInfo {
-	const files: CodeReleaseItem[] = [];
+}
+
+/**
+ * Build the release manifest (PHP get_code_update_info). Advertises a release
+ * only when its `<major.minor.patch>.zip` exists under `codeFilesDir`.
+ */
+export function buildCodeUpdateInfo(options: CodeUpdateInfoOptions): CodeUpdateInfo {
 	const targets = linearUpgradeTargets(options.clientVersion, options.catalog ?? UPDATE_CATALOG);
-	if (options.codeFilesDir !== undefined && existsSync(options.codeFilesDir)) {
-		// BOTH switches, or nothing: a master that never opted in answers a dev ask
-		// exactly as it answers a release one.
-		if (options.channel === 'dev' && options.devChannelEnabled === true) {
-			files.push(
-				...devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets),
-			);
-		}
-		for (const triple of targets) {
-			const item = releaseItemFor(options.codeFilesDir, options.publicBaseUrl, triple);
-			if (item !== null) files.push(item);
-		}
-	}
 	return {
 		info: { version: options.serverVersion.join('.'), ...options.info },
-		files,
+		files: manifestFiles(options, targets),
 	};
+}
+
+/** Every item this manifest advertises: the dev rows (when both switches are on) then the published ones. */
+function manifestFiles(
+	options: CodeUpdateInfoOptions,
+	targets: readonly number[][],
+): CodeReleaseItem[] {
+	if (options.codeFilesDir === undefined || !existsSync(options.codeFilesDir)) return [];
+	// BOTH switches, or nothing: a master that never opted in answers a dev ask
+	// exactly as it answers a release one.
+	const dev =
+		options.channel === 'dev' && options.devChannelEnabled === true
+			? devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets)
+			: [];
+	return [...dev, ...masterItemsFor(options.codeFilesDir, options.publicBaseUrl, targets)];
+}
+
+/** The published (`master`-channel) rungs that actually exist on disk. */
+function masterItemsFor(
+	codeFilesDir: string,
+	publicBaseUrl: string,
+	targets: readonly number[][],
+): CodeReleaseItem[] {
+	const items: CodeReleaseItem[] = [];
+	for (const triple of targets) {
+		const item = releaseItemFor(codeFilesDir, publicBaseUrl, triple);
+		if (item !== null) items.push(item);
+	}
+	return items;
 }
 
 /**

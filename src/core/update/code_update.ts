@@ -441,18 +441,21 @@ export function assertLinearUpgrade(
 function versionSkipReason(current: readonly number[], target: readonly number[]): string | null {
 	const [cMajor = 0, cMinor = 0, cPatch = 0] = current;
 	const [tMajor = 0, tMinor = 0, tPatch = 0] = target;
-	const isRung =
-		(tMajor === cMajor + 1 && tMinor === 0 && tPatch === 0) ||
-		(tMajor === cMajor && tMinor === cMinor + 1 && tPatch === 0) ||
-		(tMajor === cMajor && tMinor === cMinor && tPatch === cPatch + 1);
-	if (isRung) return null;
+	if (isNextRung([cMajor, cMinor, cPatch], [tMajor, tMinor, tPatch])) return null;
 	if (tMajor > cMajor) return 'major version skip is not allowed';
-	if (tMinor > cMinor) {
-		return tPatch !== 0
-			? 'a minor/major bump must land on .0'
-			: 'minor version skip is not allowed';
-	}
-	return 'patch version skip is not allowed';
+	if (tMinor <= cMinor) return 'patch version skip is not allowed';
+	return tPatch !== 0 ? 'a minor/major bump must land on .0' : 'minor version skip is not allowed';
+}
+
+/** Is `target` the ONE rung above `current`: major+1.0.0, minor+1.0, or patch+1? */
+function isNextRung(
+	[cMajor, cMinor, cPatch]: readonly [number, number, number],
+	[tMajor, tMinor, tPatch]: readonly [number, number, number],
+): boolean {
+	if (tMajor === cMajor + 1) return tMinor === 0 && tPatch === 0;
+	if (tMajor !== cMajor) return false;
+	if (tMinor === cMinor + 1) return tPatch === 0;
+	return tMinor === cMinor && tPatch === cPatch + 1;
 }
 
 /**
@@ -1129,43 +1132,63 @@ export function acquireRunLockOrRefuse(backupRoot: string, version: string): () 
 	const lockPath = codeRunLockPath(backupRoot);
 	mkdirSync(backupRoot, { recursive: true });
 	for (let attempt = 0; attempt < 2; attempt++) {
-		try {
-			const fd = openSync(lockPath, 'wx');
-			writeFileSync(
-				fd,
-				`${JSON.stringify({ pid: process.pid, version, startedAt: new Date().toISOString() })}
-`,
-			);
-			closeSync(fd);
-			return () => {
-				try {
-					rmSync(lockPath, { force: true });
-				} catch {
-					/* a released lock that cannot be removed is reclaimed by the dead-pid rule */
-				}
-			};
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-		}
+		const release = takeRunLock(lockPath, version);
+		if (release !== null) return release;
 		// Held. Only a provably DEAD owner may be displaced.
-		let owner: { pid?: number; version?: string } = {};
-		try {
-			owner = JSON.parse(readFileSync(lockPath, 'utf8')) as typeof owner;
-		} catch {
-			owner = {};
-		}
-		if (typeof owner.pid === 'number' && pidIsAlive(owner.pid)) {
-			refuseUpdate(
-				'update.refused',
-				`Error. A code update to ${owner.version ?? 'an unknown version'} is already running on this installation (pid ${owner.pid}) — wait for it to finish before starting another.`,
-			);
-		}
-		console.error(
-			`[code update] reclaiming a stale run lock at ${lockPath} (owner pid ${String(owner.pid ?? 'unknown')} is gone)`,
-		);
-		rmSync(lockPath, { force: true });
+		reclaimStaleRunLockOrRefuse(lockPath);
 	}
 	refuseUpdate('update.refused', 'Error. Could not take the code-update run lock.');
+}
+
+/**
+ * One exclusive `wx` attempt: the release function when this process took the
+ * lock, null when another holder has it. Any OTHER filesystem error is not a
+ * contention answer and propagates.
+ */
+function takeRunLock(lockPath: string, version: string): (() => void) | null {
+	let fd: number;
+	try {
+		fd = openSync(lockPath, 'wx');
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === 'EEXIST') return null;
+		throw error;
+	}
+	writeFileSync(
+		fd,
+		`${JSON.stringify({ pid: process.pid, version, startedAt: new Date().toISOString() })}\n`,
+	);
+	closeSync(fd);
+	return () => {
+		try {
+			rmSync(lockPath, { force: true });
+		} catch {
+			/* a released lock that cannot be removed is reclaimed by the dead-pid rule */
+		}
+	};
+}
+
+/**
+ * REFUSE while the recorded owner is alive; remove the lock when it is provably
+ * gone. A stale lock left by a successful swap (the process dies BY DESIGN in
+ * the restart) must never wedge the next update.
+ */
+function reclaimStaleRunLockOrRefuse(lockPath: string): void {
+	let owner: { pid?: number; version?: string } = {};
+	try {
+		owner = JSON.parse(readFileSync(lockPath, 'utf8')) as typeof owner;
+	} catch {
+		owner = {};
+	}
+	if (typeof owner.pid === 'number' && pidIsAlive(owner.pid)) {
+		refuseUpdate(
+			'update.refused',
+			`Error. A code update to ${owner.version ?? 'an unknown version'} is already running on this installation (pid ${owner.pid}) — wait for it to finish before starting another.`,
+		);
+	}
+	console.error(
+		`[code update] reclaiming a stale run lock at ${lockPath} (owner pid ${String(owner.pid ?? 'unknown')} is gone)`,
+	);
+	rmSync(lockPath, { force: true });
 }
 
 /** Refuse a staging dir holding a PARKED tree (a previous run's failed swap
