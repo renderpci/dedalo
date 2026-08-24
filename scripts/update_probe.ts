@@ -113,6 +113,20 @@ interface Auth {
 	csrf: string;
 }
 
+/** The DEDALO_VERSION_TRIPLE a tree declares ('7.0.1'), or null. Whitespace- and
+ * line-break-insensitive: the committed source spans three lines, the probe's
+ * own bump writes one. */
+function treeTripleOf(versionTsPath: string): string | null {
+	try {
+		const matched = /Object\.freeze\(\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,?\s*\]\)/.exec(
+			readFileSync(versionTsPath, 'utf8'),
+		);
+		return matched === null ? null : `${matched[1]}.${matched[2]}.${matched[3]}`;
+	} catch {
+		return null;
+	}
+}
+
 function must(condition: boolean, message: string): asserts condition {
 	if (!condition) {
 		throw new Error(`FAIL: ${message}`);
@@ -494,19 +508,38 @@ async function main(): Promise<void> {
 	// Reuse it verbatim when its version matches what the museum serves;
 	// only sweep root junk. A first preparation still exports HEAD + modules.
 	const liveVersionTs = join(treeDir, 'src', 'core', 'update', 'version.ts');
-	const treeIsCurrent =
-		existsSync(liveVersionTs) &&
-		readFileSync(liveVersionTs, 'utf8').includes(`[${triple.join(', ')}]`);
+	// PARSE the triple; do NOT substring-match it. `includes('[7, 0, 0]')` only
+	// ever matched the SINGLE-LINE form this probe's own bump writes — the
+	// committed version.ts spreads the triple across three lines, so a tree
+	// exported straight from git (a hand reset, or a first preparation) was
+	// never recognised as current. The probe then took the re-materialize
+	// branch against a tree it should have reused and, with the container still
+	// holding the bind mount, wiped it half-way before failing on EACCES.
+	const treeIsCurrent = existsSync(liveVersionTs) && treeTripleOf(liveVersionTs) === triple.join('.');
 	if (treeIsCurrent) {
 		for (const junk of ['.claude', 'CLAUDE.md', '.DS_Store']) {
 			rmSync(join(treeDir, junk), { recursive: true, force: true });
 		}
 		console.log(`[probe] museum tree already holds ${CURRENT_VERSION} — reused as the old release`);
 	} else {
+		// STOP THE CONSUMER FIRST. This branch deletes the very tree the running
+		// container has bind-mounted at /opt/dedalo; on Docker Desktop the mount
+		// makes the directory itself undeletable, so `rmSync` emptied the tree
+		// and THEN threw EACCES on the mount point — turning a re-materialize
+		// into a half-wiped museum whose engine only kept answering because the
+		// running process already held its modules in memory. Recreating the
+		// container is step 5 anyway, so stopping here costs nothing.
+		await run(
+			['docker', 'compose', '-f', COMPOSE_BASE, 'stop', 'dedalo'],
+			'stop the museum before re-materializing its tree',
+		);
 		const modulesDir = join(treeDir, 'node_modules');
 		const savedModules = join(PROBE_DIR, 'node_modules.keep');
 		const hadModules = existsSync(modulesDir);
-		if (hadModules) renameSync(modulesDir, savedModules);
+		if (hadModules) {
+			rmSync(savedModules, { recursive: true, force: true });
+			renameSync(modulesDir, savedModules);
+		}
 		rmSync(treeDir, { recursive: true, force: true });
 		mkdirSync(join(optDir, 'backups', 'code'), { recursive: true });
 		mkdirSync(treeDir, { recursive: true });
