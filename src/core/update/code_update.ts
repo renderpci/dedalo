@@ -124,7 +124,13 @@ const MAX_EXTRACTED_TOTAL_BYTES = 1024 * 1024 * 1024;
  * keeps the OLD tree's node_modules — which is exactly what makes the
  * supervisor-side rollback (deploy/dedalo-code-rollback.sh) bootable offline.
  */
-const PRESERVE_ROOT_ENTRIES: ReadonlySet<string> = new Set(['.git']);
+/**
+ * Root entries the swap PRESERVES across the rename (never shipped by a
+ * release, never "unaccounted"). Exported because `status.ts` reports the live
+ * tree's unaccounted root entries BEFORE a download — it must derive that list
+ * from this set, never from a second copy that could drift.
+ */
+export const PRESERVE_ROOT_ENTRIES: ReadonlySet<string> = new Set(['.git']);
 
 /**
  * The pipeline's answer IS the wire body (the update_code widget's job payload
@@ -243,8 +249,10 @@ function sha256Of(filePath: string): string {
 }
 
 /** Is a process supervisor present (systemd/docker/pm2)? A self-exit only
- * restarts under one — otherwise the live swap would kill the server dead. */
-function isSupervised(): boolean {
+ * restarts under one — otherwise the live swap would kill the server dead.
+ * Exported so the panel's readiness readout asks THIS function rather than
+ * re-reading the env itself (a second copy would drift from the refusal). */
+export function isSupervised(): boolean {
 	const explicit = readEnv('DEDALO_SUPERVISED');
 	if (explicit !== undefined) return explicit === 'true';
 	return readEnv('INVOCATION_ID') !== undefined || readEnv('JOURNAL_STREAM') !== undefined;
@@ -759,22 +767,37 @@ function refuseRuntimeDataInsideTree(targetRoot: string): void {
 	}
 }
 
+/**
+ * WHERE the code-update backup root resolves — the location half only, with no
+ * verdict attached. `status.ts` reports it (and the restore points inside it)
+ * on a panel that must not throw; the refusal below adds the verdict.
+ */
+export function resolveCodeBackupRoot(): string {
+	return (
+		(readEnv('DEDALO_BACKUP_PATH') as string | undefined) ??
+		join(projectRoot, '..', 'backups', 'code')
+	);
+}
+
 /** Resolve the backup root and refuse one that sits inside the tree the swap
  * renames away (its own swap would move it). */
 function resolveBackupRootOrRefuse(targetRoot: string, seams: CodeUpdateSeams): string {
-	const backupRoot =
-		seams.backupRoot ??
-		(readEnv('DEDALO_BACKUP_PATH') as string | undefined) ??
-		join(projectRoot, '..', 'backups', 'code');
-	const rootResolved = resolve(targetRoot);
-	const backupResolved = resolve(backupRoot);
-	if (backupResolved === rootResolved || backupResolved.startsWith(rootResolved + sep)) {
+	const backupRoot = seams.backupRoot ?? resolveCodeBackupRoot();
+	if (backupRootIsInsideTree(backupRoot, targetRoot)) {
 		refuseUpdate(
 			'update.refused',
 			'Error. The code-backup dir resolves INSIDE the code tree — its own swap would move it. Point DEDALO_BACKUP_PATH outside the tree.',
 		);
 	}
 	return backupRoot;
+}
+
+/** Does a backup root sit inside the tree the swap renames away? The ONE
+ * predicate behind both the refusal above and the panel's readiness line. */
+export function backupRootIsInsideTree(backupRoot: string, targetRoot: string): boolean {
+	const rootResolved = resolve(targetRoot);
+	const backupResolved = resolve(backupRoot);
+	return backupResolved === rootResolved || backupResolved.startsWith(rootResolved + sep);
 }
 
 /**

@@ -57,6 +57,14 @@ const INFO = readBuildInfo();
 export const DEDALO_BUILD: string | null = INFO.build;
 
 /**
+ * The COMMIT the running release was built from — null on a dev checkout.
+ * The date alone answers "is new code live?"; the sha answers "WHICH code",
+ * which is what an operator needs when comparing an install against a master's
+ * HEAD (update_code's status panel shows both side by side).
+ */
+export const DEDALO_BUILD_SHA: string | null = INFO.sha;
+
+/**
  * Prerelease tag appended to the code-version string: '.dev' on a dev
  * checkout, '' on a release archive (PHP appended '.dev' when
  * DEVELOPMENT_SERVER; here the signal is build provenance, not config).

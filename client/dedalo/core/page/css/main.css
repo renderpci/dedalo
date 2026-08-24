@@ -16699,6 +16699,43 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code > .content_data .dd_note {
   margin: 0.5rem 0;
 }
+.wrapper_widget.update_code > .content_data .update_status {
+  margin-bottom: 1rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .status_block {
+  margin-bottom: 0.75rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .status_block .dd_eyebrow {
+  margin-bottom: 0.33rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .status_verdict {
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .status_verdict.state_ok {
+  color: var(--color_success);
+}
+.wrapper_widget.update_code > .content_data .update_status .status_verdict.state_danger {
+  color: var(--color_danger);
+}
+.wrapper_widget.update_code > .content_data .update_status .check_row .dd_v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .check_row .check_detail {
+  overflow-wrap: anywhere;
+  opacity: 0.85;
+}
+.wrapper_widget.update_code > .content_data .update_status .check_row .check_note {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.wrapper_widget.update_code > .content_data .update_status .dd_v > .dd_badge {
+  margin-left: 0.4rem;
+}
 .wrapper_widget.update_code > .content_data .build_version_group {
   border: 1px solid var(--color_orange);
   border-radius: 4px;

@@ -22,15 +22,34 @@ import {
 } from './support.ts';
 
 /**
- * update_code panel (PHP get_value bytes).
+ * update_code panel.
+ *
+ * Answers BOTH ROLES in one payload, because one installation can be either or
+ * both and the operator should not have to guess which half applies:
+ *  - `consumer` — the readiness readout (core/update/status.ts): every gate the
+ *    update pipeline would refuse on, asked through the SAME predicates, plus
+ *    the running build's provenance, the last update's sentinel and the
+ *    restore points on disk. Before 2026-08-24 every one of those refusals was
+ *    discoverable only by pressing the button and reading the failure;
+ *  - `code_server` — the publish readiness: role + dirs through `planCodeBuild`
+ *    itself, the build source's git state, the archives already on disk, and
+ *    the manifest a consumer at this version would actually be offered (an
+ *    empty manifest over a published zip is the catalog's doing, and the panel
+ *    now shows both rather than leaving the operator to infer it).
+ * The code-server half is computed ONLY for a code server: on a plain install
+ * it is null, so no git spawn or directory walk happens at all.
  *
  * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
  * engineering/crap_coverage_exempt.json): a NETWORK probe loop over
  * `config.update.codeServers`, which is EMPTY on every default install (so the
  * loop body is unreachable there), spreading `checkRemoteServer`'s own response
  * fields. A gate would either assert an empty loop or make an outbound request.
+ * The status halves it now spreads are gated in update_status_native.test.ts.
  */
-async function updateCodeGetValue(): Promise<WidgetResponse> {
+async function updateCodeGetValue(
+	_options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
 	const servers: Record<string, unknown>[] = [];
 	for (const server of config.update.codeServers) {
@@ -47,6 +66,8 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 			result: probe.data,
 		});
 	}
+	const { codeServerStatus, consumerStatus } = await import('../../update/status.ts');
+	const { publicOrigin } = await import('../../resolve/public_origin.ts');
 	return {
 		data: {
 			servers,
@@ -55,6 +76,10 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 			// <DEDALO_BACKUP_PATH>/.code_staging — and the client no longer
 			// displays it. The config-catalog key is a retirement candidate.
 			is_a_code_server: config.update.isCodeServer,
+			consumer: consumerStatus(principal),
+			code_server: config.update.isCodeServer
+				? codeServerStatus(`${publicOrigin()}/dedalo/install/code`)
+				: null,
 		},
 	};
 }

@@ -19,6 +19,67 @@
 			margin: 0.5rem 0;
 		}
 
+		// STATUS readouts (render_update_status.js) — LAYOUT ONLY.
+		// The severity vocabulary is the shared widget_kit's (.dd_badge +
+		// pill_ok / pill_warning / pill_danger, .dd_eyebrow, .dd_readout): a
+		// second chip system local to this widget would drift from every other
+		// maintenance panel, so nothing here defines a state colour.
+		.update_status {
+			margin-bottom: 1rem;
+
+			.status_block {
+				margin-bottom: 0.75rem;
+
+				.dd_eyebrow {
+					margin-bottom: 0.33rem;
+				}
+			}
+
+			// the headline verdict of a role, above its checks
+			.status_verdict {
+				font-weight: bold;
+				margin-bottom: 0.4rem;
+
+				&.state_ok {
+					color: @color_success;
+				}
+				&.state_danger {
+					color: @color_danger;
+				}
+			}
+
+			// a check's value cell: chip, then the server's fact, then the why
+			.check_row {
+
+				.dd_v {
+					display: flex;
+					flex-wrap: wrap;
+					align-items: baseline;
+					gap: 0.4rem;
+				}
+
+				// paths and offender lists can be long: wrap, never widen the
+				// grid column (the readout is a two-column grid — an unbroken
+				// path would push the whole panel sideways)
+				.check_detail {
+					overflow-wrap: anywhere;
+					opacity: 0.85;
+				}
+
+				// the explanation, rendered only on a non-ok check
+				.check_note {
+					flex-basis: 100%;
+					font-size: 0.9em;
+					opacity: 0.75;
+				}
+			}
+
+			// restore points / releases put their chips after the value
+			.dd_v > .dd_badge {
+				margin-left: 0.4rem;
+			}
+		}
+
 		.build_version_group {
 			border: 1px solid @color_orange;
 			border-radius: 4px;

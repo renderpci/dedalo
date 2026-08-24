@@ -15,6 +15,7 @@
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
+	import {render_code_server_status, render_consumer_status} from './render_update_status.js'
 	import {
 		UPDATE_PHASES,
 		init_phase_state,
@@ -184,11 +185,21 @@ const get_content_data_edit = async function(self) {
 			class_name	 : 'content_data'
 		})
 
-	// running version/build readout
-		content_data.appendChild(build_readout([
-			{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
-			{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
-		]))
+	// STATUS: what is running, whether an update can even proceed, what
+	// happened last time, and what could be rolled back to. Replaces the old
+	// two-row version/build readout — same facts, plus every gate the pipeline
+	// would refuse on (before 2026-08-24 those were discoverable only by
+	// pressing the button and reading the failure). Server: value.consumer,
+	// core/update/status.ts. Falls back to the two-row readout when an older
+	// server answers without the status halves.
+		if (value.consumer) {
+			render_consumer_status(content_data, value.consumer)
+		} else {
+			content_data.appendChild(build_readout([
+				{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
+				{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
+			]))
+		}
 
 	// servers. The shared picker over CODE_SERVERS with its OWN storage key:
 	// remembering the choice must not collide with the ontology picker's.
@@ -346,6 +357,13 @@ const get_content_data_edit = async function(self) {
 	// These buttons invoke build_version_from_git_master on the server side to
 	// produce the distributable ZIP archives from the GIT repository.
 		if(is_a_code_server || is_development){
+			// The publish-side status BEFORE the builders: role and dirs through
+			// planCodeBuild itself, the commit a release would be built from,
+			// the archives already on disk, and what a consumer at this version
+			// is actually offered (an empty manifest over a published zip is the
+			// catalog's doing — the panel shows both instead of leaving the
+			// operator to infer it). Null on a non-code-server.
+			render_code_server_status(content_data, value.code_server)
 			render_build_version(self, content_data, body_response)
 		}
 

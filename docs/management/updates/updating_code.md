@@ -48,6 +48,32 @@ containerised (image) deployment, a Bun version mismatch, a failed dependency
 install or pre-flight boot of the new tree; see
 [How a code update works](updating_code_options.md#what-else-makes-the-update-refuse).
 
+### What the panel tells you before you start
+
+Opening the panel shows the installation's own status, so the answer to "can
+this install take an update?" comes **before** the button, not from a failed
+run:
+
+- **This installation** — the running version, whether it is a release build
+  or a development checkout, the release's build date and commit, the code
+  tree and the backup root.
+- **Update readiness** — one line per condition the update actually refuses
+  on, each marked *ok*, *warning* or *blocked*, with the reason: supervisor
+  detected, deployment channel, maintenance mode, superuser identity, recent
+  database backup, backup root outside the code tree, runtime data outside the
+  code tree, the archive tools, the Bun version pin, and a leftover staging
+  directory. The panel is *ready* only when nothing is blocked.
+- **Last code update** — which version replaced which, when, and whether the
+  new tree confirmed itself at boot. A status still reading *pending
+  confirmation* means the update did not complete its own health check.
+- **Restore points** — the code backups on disk, each marked *bootable* or
+  *incomplete* (a backup without its dependencies cannot be started again).
+
+Two readiness lines cannot be decided in advance and say so rather than
+guessing: the release's own root file list and its Bun pin are only known once
+the archive has been downloaded. For those the panel reports the inputs — the
+count of root entries in the live tree, the running Bun and this tree's pin.
+
 1. Close access to the work system.
 
     Change the Dédalo status to maintenance — the update refuses to run otherwise. Follow [this guide](../maintenace_status.md) to change the Dédalo status and disable Dédalo access.
@@ -97,6 +123,38 @@ or an institution's own mirror. Set in `../private/.env` (see the
 | `DEDALO_CODE_SERVER_GIT_DIR` | A git checkout of the engine, only needed to BUILD releases. A pure mirror does not need it. |
 | `CODE_SERVERS` | Must include this server's own entry: the `code` in it is the shared secret a caller has to present. |
 | `DEDALO_CORS_ALLOWED_ORIGINS` | The origins allowed to read the manifest. Each client fetches it **from the browser**, so without this the update panel of every remote install fails with a network error. Use `*` for a public master. |
+
+### What the panel tells a code server
+
+On a code server the panel adds a second status block, answering whether this
+instance can publish at all:
+
+- **Code server** — the role flag, the two directories, and whether the build
+  itself would be accepted, checked through the same planner the Build buttons
+  use. Also whether a `master` ref exists (only a `master` build claims the
+  published release name), whether the worktree is clean, and whether an
+  archive of it carries symbolic links.
+- **Build source** — the commit, its date and the branch a release would be
+  built from, plus the checkout's Bun pin.
+- **Published releases** — every archive already on disk with its size and
+  date, marked *published* or *developer*, and flagged when its `.sha256`
+  sidecar is missing (without it a remote install has no digest to verify).
+- **Offered to an installation at this version** — the release list a remote
+  install would actually receive. This is not the same as the archives on
+  disk: a version is offered only when it is the next step of the upgrade
+  path, so a perfectly good archive can be present and still not be offered.
+  The panel shows both so the difference is visible rather than inferred.
+
+!!! warning "A dirty worktree does not stop a build"
+    A release archives the **committed** `HEAD` of the configured checkout.
+    Uncommitted changes are simply absent from the archive, which is why the
+    panel marks a dirty worktree as a warning before you press Build.
+
+!!! warning "An archive with symbolic links cannot be installed"
+    The installer refuses an entire archive that contains a symbolic-link
+    entry. If the panel marks this blocked, releases built from this checkout
+    will be refused by every install that downloads them — exclude those paths
+    from the archive (`export-ignore` in `.gitattributes`) before publishing.
 
 ### Building a release
 
