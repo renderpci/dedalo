@@ -7,7 +7,7 @@
  * and whose hierarchy portals resolved nothing: `<tld>1` is not a section the
  * engine knows until its ONTOLOGY exists, and the hierarchy1 registry record was
  * never flagged ACTIVE — so the `field_value` active filter behind every portal's
- * target_sections matched zero hierarchies. Live symptom (2026-07-14): 69,889 `es1`
+ * target_sections matched zero hierarchies. Live symptom (2026-07-14): 69,889 Spain-hierarchy
  * terms in the database, zero `es` dd_ontology nodes, and Spain's General term
  * portal unable to resolve its target.
  *

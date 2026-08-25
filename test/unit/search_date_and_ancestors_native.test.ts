@@ -40,6 +40,7 @@ import type { BuilderContext } from '../../src/core/search/builders/types.ts';
 import { conformFilter } from '../../src/core/search/conform.ts';
 import { ParamsCollector } from '../../src/core/search/params.ts';
 import { renderConformedFilter } from '../../src/core/search/sql_assembler.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 
 /** Conform one SQO node and render it to `{sql, params}` (the live pipeline). */
 async function conformToSql(
@@ -263,14 +264,19 @@ describe('partial-date search — the remaining date_modes PHP dispatches', () =
  * SCRATCH TWINS of the two live shapes. `test205` is a legacy
  * component_autocomplete_hi on section `test3`.
  *
- * 998801 — NARROW term. Links cl1/39 directly and carries its parent chain
- * (cl1/33 … cl1/1) in `relation_search` — byte-for-byte the shape
+ * The term ADDRESSES are locator strings in the synthetic hierarchy's terms
+ * section (`testgeoa1` — the records are never dereferenced: the gate plants
+ * its own relation/relation_search JSON; migrated off a real country
+ * hierarchy 2026-08-25, address-only by construction).
+ *
+ * 998801 — NARROW term. Links term/39 directly and carries its parent chain
+ * (term/33 … term/1) in `relation_search` — byte-for-byte the shape
  * `maintainRelationSearchIndex` writes and the shape the live install stores
  * (verified read-only against `dedalo7_mht`: oh1/72 `relation_search.oh19`,
- * rsc197/1 `relation_search.rsc92`). Searching the ROOT term cl1/1 must
+ * rsc197/1 `relation_search.rsc92`). Searching the ROOT term term/1 must
  * return it.
  *
- * 998802 — ROOT term. Links cl1/1, a hierarchy root, so it has NO ancestors:
+ * 998802 — ROOT term. Links term/1, a hierarchy root, so it has NO ancestors:
  * `maintainRelationSearchIndex` passes `null` for the key and
  * `updateMatrixKeyData` DELETES it, leaving `relation_search` without a
  * `test205` key at all (relations/save.ts:368-375). This is not an exotic
@@ -281,13 +287,15 @@ describe('partial-date search — the remaining date_modes PHP dispatches', () =
 const SCRATCH_SECTION_ID = 998801;
 const SCRATCH_ROOT_SECTION_ID = 998802;
 const ANCESTOR_TIPO = 'test205';
+/** The thesaurus the locators point into — address-only (see the header). */
+const ANCESTOR_THESAURUS = `${SYNTHETIC_HIERARCHY_A_TLD}1`;
 const NARROW_TERM = {
-	section_tipo: 'cl1',
+	section_tipo: ANCESTOR_THESAURUS,
 	section_id: '39',
 	from_component_tipo: ANCESTOR_TIPO,
 };
 const BROADER_TERM = {
-	section_tipo: 'cl1',
+	section_tipo: ANCESTOR_THESAURUS,
 	section_id: '1',
 	from_component_tipo: ANCESTOR_TIPO,
 };
@@ -307,19 +315,19 @@ beforeAll(async () => {
 					{
 						type: 'dd151',
 						section_id: '33',
-						section_tipo: 'cl1',
+						section_tipo: ANCESTOR_THESAURUS,
 						from_component_tipo: ANCESTOR_TIPO,
 					},
 					{
 						type: 'dd151',
 						section_id: '3',
-						section_tipo: 'cl1',
+						section_tipo: ANCESTOR_THESAURUS,
 						from_component_tipo: ANCESTOR_TIPO,
 					},
 					{
 						type: 'dd151',
 						section_id: '1',
-						section_tipo: 'cl1',
+						section_tipo: ANCESTOR_THESAURUS,
 						from_component_tipo: ANCESTOR_TIPO,
 					},
 				],
@@ -356,7 +364,9 @@ describe('broader-term search reads the maintained ancestor index', () => {
 			 FROM matrix_test WHERE section_tipo = 'test3' AND section_id = $1`,
 			[
 				String(SCRATCH_SECTION_ID),
-				JSON.stringify({ [ANCESTOR_TIPO]: [{ section_tipo: 'cl1', section_id: '1' }] }),
+				JSON.stringify({
+					[ANCESTOR_TIPO]: [{ section_tipo: ANCESTOR_THESAURUS, section_id: '1' }],
+				}),
 			],
 		)) as { direct: boolean; ancestor: boolean }[];
 		expect(rows[0]).toEqual({ direct: false, ancestor: true });
@@ -386,7 +396,7 @@ describe('broader-term search reads the maintained ancestor index', () => {
 		// index is maintained for it, so no relation_search clause may appear.
 		const where = await conformToSql(
 			{
-				q: [{ section_tipo: 'cl1', section_id: '1' }],
+				q: [{ section_tipo: ANCESTOR_THESAURUS, section_id: '1' }],
 				path: [{ section_tipo: 'test3', component_tipo: 'test80' }],
 			} as SqoFilterLeaf,
 			'te3',
@@ -403,8 +413,8 @@ describe('broader-term search reads the maintained ancestor index', () => {
 		);
 		expect(where.sql).toContain('relation_search');
 		expect(where.sql).toContain(' AND ');
-		// The record IS indexed under cl1/1 through its ancestors, so a
-		// "different from cl1/1" search must NOT return it.
+		// The record IS indexed under term/1 through its ancestors, so a
+		// "different from term/1" search must NOT return it.
 		expect(await idsMatching('matrix_test', 'te3', 'test3', where)).not.toContain(
 			SCRATCH_SECTION_ID,
 		);
@@ -426,10 +436,10 @@ describe('broader-term search reads the maintained ancestor index', () => {
 			'matrix_test',
 		);
 		const ids = await idsMatching('matrix_test', 'te3', 'test3', where);
-		// The root-term record does NOT hold cl1/39, so "different from cl1/39"
+		// The root-term record does NOT hold term/39, so "different from term/39"
 		// must return it — its empty ancestor index is not a reason to hide it.
 		expect(ids).toContain(SCRATCH_ROOT_SECTION_ID);
-		// …and the record that DOES hold cl1/39 is still excluded.
+		// …and the record that DOES hold term/39 is still excluded.
 		expect(ids).not.toContain(SCRATCH_SECTION_ID);
 		// The ancestor half must not carry a key-existence test at all.
 		expect(where.sql).toContain('relation_search');
@@ -467,7 +477,7 @@ describe('broader-term search reads the maintained ancestor index', () => {
 		expect(where.sql).toContain("COALESCE(te3.relation_search, '{}'::jsonb)");
 		const ids = await idsMatching('matrix_test', 'te3', 'test3', where);
 		// The canonical playground rows carry a `relation` but no relation_search
-		// at all; none of them holds cl1/1, so all of them are "different from" it.
+		// at all; none of them holds term/1, so all of them are "different from" it.
 		const nullIndexed = (await sql.unsafe(
 			`SELECT section_id FROM matrix_test
 			 WHERE section_tipo = 'test3' AND relation_search IS NULL ORDER BY 1`,

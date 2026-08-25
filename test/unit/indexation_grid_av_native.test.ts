@@ -17,7 +17,10 @@
  *    cell): the differential's exact scratch chain — a fresh test3 record
  *    (a tagged transcription with TC marks + av media files_info
  *    shape) topped by a fresh test6813 record whose test6837 portal points at it,
- *    dd96-tagged to term cu1_3 (existing term, zero live indexations).
+ *    dd96-tagged to a synthetic-hierarchy term (existing record, zero live
+ *    indexations — the grid keys on the term's ADDRESS, never its label; the
+ *    goldens contain no term label, verified when the seed moved off a real
+ *    country hierarchy 2026-08-25).
  *    Exercises the 11-column AV layout, the TC math (in 5s / out 12.5s /
  *    duration 7.5s) and the posterframe URL.
  * 2. MEDIA branch (resolveAtoms media branch → mediaCellUrl, image thumbs):
@@ -46,6 +49,7 @@ import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
 import avGolden from './fixtures/indexation_grid_native/av_grid.golden.json';
 import mediaGolden from './fixtures/indexation_grid_native/media_grid.golden.json';
@@ -55,7 +59,7 @@ const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => 
 
 const SCRATCH_ID = 90002; // test3 + test6813 + test6101 twins
 const SCRATCH_RSC170_ID = 90000002; // test2 lives among ~440k live rows
-const SCRATCH_TERM = { section_tipo: 'cu1', section_id: '3' };
+const SCRATCH_TERM = { section_tipo: `${SYNTHETIC_HIERARCHY_A_TLD}1`, section_id: '3' };
 
 function adminContext(): ApiRequestContext {
 	return {
@@ -130,7 +134,7 @@ async function sweepScratch(): Promise<void> {
  * AV chain — byte-identical to the differential's seedScratchChain (only the
  * scratch id differs): test3 twin (a tagged lg-spa transcription with TC
  * marks; rsc35 av media files_info shape — get_url never stats the disk;
- * dd96 tag → cu1_3 topped by the test6813 twin) + test6813 twin (test6837 portal → the
+ * dd96 tag → the scratch term topped by the test6813 twin) + test6813 twin (test6837 portal → the
  * test3 twin, test6826 code for the head row).
  */
 async function seedAvChain(): Promise<void> {
@@ -198,7 +202,7 @@ async function seedAvChain(): Promise<void> {
 }
 
 /**
- * MEDIA chain: test6101 holder (dd96 tag → cu1_3 through testplace1015 —
+ * MEDIA chain: test6101 holder (dd96 tag → the scratch term through testplace1015 —
  * the live-corpus relation shape; testplace1035 image portal → the test2
  * twin) + test2 twin WITH stored image media (the media branch renders the
  * thumb URL whenever the media key is stored; no disk stat).

@@ -36,6 +36,14 @@ const NOT_A_TWIN: ReadonlyMap<string, string> = new Map([
 		'test/unit/parity_baseline_tripwire.test.ts',
 		'names the SYNTHETIC path test/parity/x.test.ts inside planted JUnit XML and in-memory drift fixtures — it is the parity ratchet, not a twin of any gate',
 	],
+	[
+		'test/unit/scratch_tld_uniqueness_tripwire.test.ts',
+		'its shrink-only baseline pins the CARRIER FILES of each shared zz* scratch TLD, and one carrier set includes test/parity/regenerate_differential.test.ts — census data about which files touch a TLD, not a twin of that gate',
+	],
+	[
+		'test/unit/corpus_scope_ownership_tripwire.test.ts',
+		'its shrink-only baseline pins the OWNING FILES of each shared ensureTestCorpus/dropTestCorpus scope, and several owners are test/parity/*_differential.test.ts files — census data about who drives a corpus scope, not a twin of any of them',
+	],
 ]);
 
 export type TwinMap = {

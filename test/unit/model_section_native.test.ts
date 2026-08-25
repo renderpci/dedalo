@@ -26,7 +26,7 @@
  *     — and refusal does NOT stop the walk: the tld fallback still runs.
  *     A hierarchy58 equal to its own row's hierarchy53 is refused even when
  *     it IS a valid section (the terms-section guard — landing on a terms
- *     section would enumerate es1's 69,148 records into a datalist).
+ *     section would enumerate a whole terms section — tens of thousands of records on a real install — into a datalist).
  *
  *  4. THE FAMILY IS DERIVED, NOT A HARD-CODED PAIR. Every section whose
  *     getSectionRealTipo is hierarchy1 is a registry; a scratch THIRD
@@ -185,7 +185,7 @@ describe('getModelSectionForSection — VALIDATE refusals', () => {
 	test('a hierarchy58 equal to its own hierarchy53 is refused even though it IS a section', async () => {
 		// The terms-section guard: zzmsg1 passes getModelByTipo === 'section',
 		// so only the guard stands between this row and a datalist that would
-		// enumerate a whole terms section (es1 = 69,148 records). No zzmsg2
+		// enumerate a whole terms section (tens of thousands of records on a real install). No zzmsg2
 		// exists → nothing valid at all.
 		expect(await getModelSectionForSection('zzmsg1')).toEqual([]);
 	});

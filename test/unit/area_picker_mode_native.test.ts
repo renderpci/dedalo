@@ -65,7 +65,7 @@ registerSessionCleanup();
 const AREA = 'dd100';
 /** The scratch thesaurus (synthetic tld — no real install uses it). */
 const TLD = 'zzpm';
-/** Its descriptor section: a VIRTUAL section over hierarchy20, exactly like es1. */
+/** Its descriptor section: a VIRTUAL section over hierarchy20, exactly like an activated thesaurus instance (testgeoa1). */
 const TERMS = `${TLD}1`;
 /** The scratch caller components live in their own synthetic tld. */
 const CALLER_TLD = 'zzpc';

@@ -557,7 +557,7 @@ describe('parser_helper::count', () => {
 			json(['a', 'b']), // 2
 			scalar('x'), // 1
 			scalar(''), // 0
-			chain([link('es1', 5), link('es1', 6)]), // 2 (one per resolved link)
+			chain([link('testgeoa1', 5), link('testgeoa1', 6)]), // 2 (one per resolved link)
 		]);
 		expect(strip(out)).toEqual([{ kind: 'scalar', value: 5, lang: null }]);
 	});
@@ -692,7 +692,7 @@ describe('parser_locator::get_section_id', () => {
 	test('split:true emits one atom per id with synthetic section provenance', () => {
 		const out = run(
 			'parser_locator::get_section_id',
-			[chain([link('es1', '5'), link('es1', '7')])],
+			[chain([link('testgeoa1', '5'), link('testgeoa1', '7')])],
 			{ split: true },
 		) as MetaValueIR[];
 		expect(strip(out)).toEqual([

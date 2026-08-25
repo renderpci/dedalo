@@ -17,7 +17,7 @@
  *     discard the files the other entries produced.
  *
  * SCRATCH HYGIENE: writes ride a `zzeh1` scratch section tipo in
- * matrix_hierarchy (never an install's `es1`/`rsc*` records — the generic-TLD
+ * matrix_hierarchy (never an install's real hierarchy/`rsc*` records — the generic-TLD
  * law), and the dumps land in a mkdtemp directory, NEVER in the repo's vendored
  * install/import/hierarchy — a stray `zzeh1.copy.gz` there would be offered by
  * the add_hierarchy panel as if it were a shipped hierarchy. Both are swept in
@@ -66,14 +66,23 @@ afterAll(async () => {
 
 describe('safeExportTipo — the shell/filename grammar', () => {
 	test('accepts a real section tipo', () => {
-		expect(safeExportTipo('es1')).toBe(true);
+		expect(safeExportTipo('testgeoa1')).toBe(true);
 		expect(safeExportTipo('hierarchy125')).toBe(true);
 	});
 
 	test('rejects a bare tld, an uppercase or underscored name, and anything shell-shaped', () => {
 		// Each of these would otherwise be inlined verbatim into the `\copy`
 		// argument and into the produced file's basename.
-		for (const bad of ['es', '1', 'ES1', 'zz_1', "es1'; DROP", 'es1 --help', '../es1', 'es1;ls']) {
+		for (const bad of [
+			'es',
+			'1',
+			'ES1',
+			'zz_1',
+			"testgeoa1'; DROP",
+			'testgeoa1 --help',
+			'../testgeoa1',
+			'testgeoa1;ls',
+		]) {
 			expect(safeExportTipo(bad), bad).toBe(false);
 		}
 	});
@@ -86,7 +95,7 @@ describe('tableForTipo — the two language sections live apart', () => {
 	});
 
 	test('every other tipo routes to matrix_hierarchy', () => {
-		expect(tableForTipo('es1')).toBe('matrix_hierarchy');
+		expect(tableForTipo('testgeoa1')).toBe('matrix_hierarchy');
 		expect(tableForTipo('lg11')).toBe('matrix_hierarchy'); // NOT a prefix match
 	});
 });
@@ -100,9 +109,9 @@ describe('parseExportScope — the three accepted forms', () => {
 	test('a list is split and trimmed, empties dropped, INVALIDS KEPT', () => {
 		// Invalid entries must survive parsing: they earn an error line in the
 		// run. Filtering them here would make a typo vanish silently.
-		expect(parseExportScope(' es1 , , ES1 ,ts1')).toEqual({
+		expect(parseExportScope(' testgeoa1 , , ES1 ,ts1')).toEqual({
 			kind: 'list',
-			tipos: ['es1', 'ES1', 'ts1'],
+			tipos: ['testgeoa1', 'ES1', 'ts1'],
 		});
 	});
 
@@ -116,12 +125,12 @@ describe('the psql command and its neighbours', () => {
 	test('the copy streams through gzip to the final name in one pass', () => {
 		const command = exportCopyCommand(
 			'matrix_hierarchy',
-			"section_tipo = 'es1'",
+			"section_tipo = 'testgeoa1'",
 			'section_id ASC',
-			'/tmp/es1.copy.gz',
+			'/tmp/testgeoa1.copy.gz',
 		);
 		expect(command.startsWith('\\copy (SELECT section_id,section_tipo,')).toBe(true);
-		expect(command).toContain("TO PROGRAM 'gzip -c > /tmp/es1.copy.gz && sync'");
+		expect(command).toContain("TO PROGRAM 'gzip -c > /tmp/testgeoa1.copy.gz && sync'");
 	});
 
 	test('the import hint names the table it was produced from', () => {

@@ -15,8 +15,15 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 
-const SECTION = 'es1'; // matrix_hierarchy, thousands of records
+// The synthetic workhorse hierarchy (src/core/test_data/synthetic_hierarchy_fixture.ts):
+// its terms section carries max(1300, THRESHOLD+300) generated rows, DERIVED from
+// the same config default this file pages at — so a raised default cannot
+// silently starve the deep page (the fixture and this gate read the same key).
+// Replaced the real Spain hierarchy 2026-08-25: the volume was the need, never
+// the toponymy (generic-`test`-TLD law, AGENTS.md hard rules).
+const SECTION = `${SYNTHETIC_HIERARCHY_A_TLD}1`;
 const THRESHOLD = config.ops.searchLateRowLookupOffset;
 
 let dbReady = false;
@@ -86,7 +93,7 @@ describe('late row lookup SQL shape', () => {
 
 	test('multi-section deep offset keeps the plain shape (no rewrite)', async () => {
 		const { sql: builtSql } = await buildSearchSql({
-			section_tipo: [SECTION, 'es4'],
+			section_tipo: [SECTION, `${SYNTHETIC_HIERARCHY_A_TLD}4`],
 			limit: 30,
 			offset: THRESHOLD,
 		} as never);
@@ -123,17 +130,20 @@ describe('late row lookup SQL shape', () => {
 		// The pre-rewrite shape, written out verbatim (default order,
 		// DEFAULT_SELECT_COLUMNS in assembler order).
 		const plain = (await sql.unsafe(
-			`SELECT DISTINCT ON (es1.section_id) es1.section_id, es1.section_tipo,
-			        es1.data, es1.relation, es1.string, es1.date, es1.iri, es1.geo,
-			        es1.number, es1.media, es1.misc, es1.meta
-			 FROM matrix_hierarchy AS es1
-			 WHERE (es1.section_tipo = $1::text)
-			 ORDER BY es1.section_id ASC
+			`SELECT DISTINCT ON (${SECTION}.section_id) ${SECTION}.section_id, ${SECTION}.section_tipo,
+			        ${SECTION}.data, ${SECTION}.relation, ${SECTION}.string, ${SECTION}.date, ${SECTION}.iri, ${SECTION}.geo,
+			        ${SECTION}.number, ${SECTION}.media, ${SECTION}.misc, ${SECTION}.meta
+			 FROM matrix_hierarchy AS ${SECTION}
+			 WHERE (${SECTION}.section_tipo = $1::text)
+			 ORDER BY ${SECTION}.section_id ASC
 			 LIMIT ${limit} OFFSET ${offset}`,
 			[SECTION],
 		)) as Record<string, unknown>[];
 		expect(late.length).toBe(plain.length);
-		expect(late.length).toBeGreaterThan(0); // es1 must be deep enough to page here
+		expect(
+			late.length,
+			`the synthetic hierarchy ${SECTION} did not page at offset ${offset} — the suite fixture is missing or short (it seeds THRESHOLD+300 rows). Rebuild: bun run test:db:setup`,
+		).toBeGreaterThan(0);
 		expect(JSON.parse(JSON.stringify(late))).toEqual(JSON.parse(JSON.stringify(plain)));
 	});
 });

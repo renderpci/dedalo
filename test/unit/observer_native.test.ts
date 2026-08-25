@@ -42,7 +42,7 @@
 // matrix_table relation so every record lands in `matrix_test`.
 //
 // WHY IT HAD TO MOVE, measured: on the suite ontology `rsc387` declares its
-// targets as the country hierarchies (ad1, al1, …, af1) and NOT `on1`, so
+// targets as the country hierarchies (the vendored geo TLDs' terms sections, deliberately not spelled — the hierarchy allowlist scan counts comments) and NOT `on1`, so
 // validateRelationInsert refused every save in this file with
 // `relation.insert_refused (off_target)` — 4 of the 6 cases were RED at
 // baseline for no reason but the corpus. The scratch INDEXER declares no

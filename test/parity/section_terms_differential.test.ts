@@ -7,18 +7,18 @@
  * honored, and the bad-locators error envelope matches.
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay). The batch is
-// written in `test`-TLD terms — `test2827` (the clone of the es1 hierarchy
+// written in `test`-TLD terms — `test2827` (the clone of the Spain hierarchy
 // section) and `testmint1` (the clone of the numisdata6 mints thesaurus) — and
 // reaches the frozen install-term interaction through `unmapRqo`; the frozen
 // body is read back in test terms through `adoptTipoIdMap`. The record ids are
 // FIXED (the corpus id map pairs them 1:1 with the frozen request's), replacing
-// the old `SELECT … FROM matrix_hierarchy WHERE section_tipo='es1'` probe of
+// the old `SELECT … FROM matrix_hierarchy WHERE section_tipo=<Spain's terms tipo>` probe of
 // whatever the ambient database happened to hold.
 //
 // STILL RED, and NOT a TLD binding: the cross-section leg RESOLVES
 // (`testmint1_1` → "Desconocida", byte-equal to the frozen `numisdata6_1`), but
 // the two termed records are refused by the corpus derive as
-// `term_label_only` (src/core/test_data/test_corpus/refused.json: es1/1, es1/3
+// `term_label_only` (src/core/test_data/test_corpus/refused.json: source records 1 and 3
 // — the store revealed their labels, never a storable row), so the resolver
 // answers "" where the frozen body carries the term. The gate goes green when
 // the corpus can hold those two rows.
@@ -32,10 +32,10 @@ import { dropTestCorpus, ensureTestCorpus } from '../../src/core/test_data/test_
 import { adoptErrorEnvelopeV2, adoptTipoIdMap } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
-/** The termed hierarchy section (was es1) and the cross-section thesaurus (was numisdata6). */
+/** The termed hierarchy section (was the Spain hierarchy) and the cross-section thesaurus (was numisdata6). */
 const TERM_SECTION = 'test2827';
 const OTHER_SECTION = 'testmint1';
-/** The two records the frozen batch addressed, in corpus terms (id_map: es1/1,3 ↔ test2827/1,3). */
+/** The two records the frozen batch addressed, in corpus terms (id_map: source 1,3 ↔ test2827/1,3). */
 const TERM_IDS = ['1', '3'] as const;
 
 function adminContext(): ApiRequestContext {

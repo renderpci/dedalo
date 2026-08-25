@@ -154,8 +154,8 @@ describe('criterionToSqoLeaf — same_term', () => {
 		const value: CriterionValue = {
 			kind: 'locators',
 			locators: [
-				{ section_tipo: 'es1', section_id: '185' },
-				{ section_tipo: 'es1', section_id: '186' },
+				{ section_tipo: 'testgeoa1', section_id: '185' },
+				{ section_tipo: 'testgeoa1', section_id: '186' },
 			],
 		};
 		expect(criterionToSqoLeaf(criterion('same_term'), value)).toEqual(
@@ -166,7 +166,7 @@ describe('criterionToSqoLeaf — same_term', () => {
 	test('emits NO relation_search / ancestor flag — the wrap is deliberately not wired', () => {
 		const compiled = criterionToSqoLeaf(criterion('same_term'), {
 			kind: 'locators',
-			locators: [{ section_tipo: 'es1', section_id: '185' }],
+			locators: [{ section_tipo: 'testgeoa1', section_id: '185' }],
 		});
 		expect(JSON.stringify(compiled)).not.toContain('relation_search');
 		expect(JSON.stringify(compiled)).not.toContain('ancestor');

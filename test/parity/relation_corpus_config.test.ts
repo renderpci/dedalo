@@ -34,6 +34,7 @@ import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invali
 import { getElementTargetSectionTipos } from '../../src/core/relations/request_config/build.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 import { adoptTipoIdMap, installTokensIn, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
@@ -362,17 +363,22 @@ describe.if(hasPhpCredentials())(
 // The model was in NO corpus sweep when the frozen store was harvested
 // (2026-07-11), and a re-harvest is impossible by definition — so these cases
 // cannot ride the PhpApiClient replay above (a fixture lookup for
-// hierarchy27@es1 would MISS and throw). They pin the CONTRACT directly
+// hierarchy27@<caller> would MISS and throw). They pin the CONTRACT directly
 // against the suite database instead, oracle-of-record v6
 // class.component_relation_model.php:115-177: target = registry pairing
 // hierarchy53 == caller → hierarchy58, falling back to tld(caller)+'2' — for
-// es1 both agree on es2 (registry row hierarchy1/66: es1 → es2). TS resolution:
+// an activated hierarchy's terms section both agree on its model twin. The
+// caller here is the SYNTHETIC hierarchy testgeoa1 → testgeoa2
+// (src/core/test_data/synthetic_hierarchy_fixture.ts; migrated off the real
+// Spain pair 2026-08-25 — the need is the registry pairing SHAPE, which
+// activateHierarchy mints identically, never one install's registry row).
+// TS resolution:
 // the descriptor-declared `targetSource: 'section_model'` default
 // (request_config/target_sources.ts → ontology/model_section.ts), applied at
 // the ONE seam buildRequestConfigForElement.
 //
 // Two shapes, matching the two builder branches the seam must cover:
-//  1. hierarchy27 in es1 (edit AND list) — EXPLICIT config whose ontology sqo
+//  1. hierarchy27 in the terms section (edit AND list) — EXPLICIT config whose ontology sqo
 //     declares section_tipo: [] (defined-but-empty; the node's retired `_info`
 //     admits the target "is calculated in class"). Pre-fix TS resolved NO
 //     target here — empty edit options, blank list labels.
@@ -380,7 +386,7 @@ describe.if(hasPhpCredentials())(
 //     IMPLICIT branch (buildImplicitComponentListConfig), whose relation-graph
 //     walk picks the first section-model entry of node.relations. Mirroring
 //     hierarchy27's live graph ([{hierarchy20},{hierarchy25}]) that pick is
-//     hierarchy20, the raw 69,148-row thesaurus TEMPLATE: plausible, silent
+//     hierarchy20, the raw whole-thesaurus TEMPLATE: plausible, silent
 //     and wrong. The model default must BEAT that pick (implicit.ts — a walk
 //     pick is not a declaration). No live node exercises this branch (every
 //     shipped relation_model node carries an explicit config), so the case is
@@ -396,9 +402,10 @@ describe.if(hasPhpCredentials())(
 /** The scratch implicit-branch relation_model node (dd_ontology, tld 'test'). */
 const SCRATCH_IMPLICIT_TIPO = 'test9881';
 
-/** hierarchy27's model-default resolution, per caller (the plan's worked example). */
-const RELATION_MODEL_OWNER = 'es1';
-const RELATION_MODEL_TWIN = 'es2';
+/** hierarchy27's model-default resolution, per caller (the plan's worked
+ * example, restated on the synthetic hierarchy's twins). */
+const RELATION_MODEL_OWNER = `${SYNTHETIC_HIERARCHY_A_TLD}1`;
+const RELATION_MODEL_TWIN = `${SYNTHETIC_HIERARCHY_A_TLD}2`;
 
 describe.if(hasPhpCredentials())(
 	'component_relation_model target resolution (plan gate #5, TS-native)',

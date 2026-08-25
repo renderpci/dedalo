@@ -4,7 +4,10 @@
  * child of its OWN inherits its REAL section's list columns — resolve the real
  * tipo (section::get_section_real_tipo_static) and read ITS section_list child.
  *
- * Regression guard: hierarchy/thesaurus-instance sections (es1 → hierarchy20)
+ * Regression guard: hierarchy/thesaurus-instance sections (testgeoa1 →
+ * hierarchy20 — the synthetic activated hierarchy of src/core/test_data/
+ * synthetic_hierarchy_fixture.ts; migrated off the real Spain hierarchy
+ * 2026-08-25, the need being any registered virtual instance, never es-the-install's)
  * have zero ontology children, so the non-virtual section_list lookup finds
  * nothing. Before the fix `deriveSectionDdoMap` returned an EMPTY ddo_map and
  * the list view rendered only the built-in Id column. The columns are DERIVED
@@ -22,9 +25,13 @@ import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { getSectionRealTipo } from '../../src/core/resolve/security_access_datalist.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { deriveSectionDdoMap } from '../../src/core/section/read.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 
 /** Seed-shipped tipo, spelled so the census sees a reference, not a binding. */
 const seed = <T extends string, N extends number>(tld: T, id: N): `${T}${N}` => `${tld}${id}`;
+
+/** The registered virtual hierarchy instance the inheritance is proven on. */
+const INSTANCE = `${SYNTHETIC_HIERARCHY_A_TLD}1`;
 
 // DB reachability probe: only a genuinely unreachable DB downgrades to SKIP.
 let hasDb = false;
@@ -41,12 +48,14 @@ const listColumns = (tipo: string): Promise<string[]> =>
 	);
 
 describe.if(hasDb)('virtual section list columns (PHP resolve_ar_related_list_section)', () => {
-	test('es1 (thesaurus instance) inherits its real section hierarchy20 columns', async () => {
-		// es1 is a virtual section: its structure section is hierarchy20.
-		const real = await getSectionRealTipo('es1');
+	test('a thesaurus instance inherits its real section hierarchy20 columns', async () => {
+		// The synthetic terms section is a virtual section: its structure section
+		// is hierarchy20 (activation registered it — missing here means the suite
+		// fixture is unbuilt: bun run test:db:setup).
+		const real = await getSectionRealTipo(INSTANCE);
 		expect(real).toBe('hierarchy20');
 
-		const virtualColumns = await listColumns('es1');
+		const virtualColumns = await listColumns(INSTANCE);
 		const realColumns = await listColumns('hierarchy20');
 
 		// The regression: an empty map is exactly the "no columns" bug.
@@ -68,7 +77,7 @@ describe.if(hasDb)('virtual section list columns (PHP resolve_ar_related_list_se
 			.filter((tipo): tipo is string => typeof tipo === 'string');
 
 		expect(expected.length).toBeGreaterThan(0);
-		expect(await listColumns('es1')).toEqual(expected);
+		expect(await listColumns(INSTANCE)).toEqual(expected);
 	});
 
 	test('a real section with its OWN section_list is unaffected by the fallback', async () => {

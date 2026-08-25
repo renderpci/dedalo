@@ -10,16 +10,25 @@
  * quoted-literal shapes keep their prior semantics (both engines agree there;
  * pinned in ts_search/sqo differentials).
  *
- * Fixture: es1 toponymy — exactly ONE term equals 'Ea' (a Biscayan town)
- * while >1000 terms CONTAIN 'ea' (re-derived in-test, never hardcoded).
+ * Fixture: the SYNTHETIC workhorse hierarchy (src/core/test_data/
+ * synthetic_hierarchy_fixture.ts, replaced the real Spain toponymy
+ * 2026-08-25 — the DATA property here is a DISTRIBUTION, never a country's
+ * place names): for each probe name exactly ONE branch term equals it while
+ * HUNDREDS of generated leaves CONTAIN it (~(N-4)/3 + 1 per probe, ~433 at
+ * the shipped volume — the drowning the '=' operator exists to fix, at
+ * fixture scale). Ground truth is re-derived in-test, never hardcoded.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
+import {
+	SYNTHETIC_HIERARCHY_A_TLD,
+	SYNTHETIC_PROBE_TERMS,
+} from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 
-const SECTION = 'es1';
+const SECTION = `${SYNTHETIC_HIERARCHY_A_TLD}1`;
 const TERM = 'hierarchy25';
 
 async function runCount(q: string): Promise<number> {
@@ -65,9 +74,12 @@ beforeAll(async () => {
 describe("string '=' exact operator (WC-014)", () => {
 	test('=<short name> matches exactly the ground-truth set, not contains', async () => {
 		if (!dbReady) return;
-		for (const name of ['Ea', 'Ye', 'Ibi']) {
+		for (const name of SYNTHETIC_PROBE_TERMS) {
 			const truth = await groundTruthExact(name);
-			expect(truth).toBeGreaterThan(0); // fixture guard
+			expect(
+				truth,
+				`no ${SECTION} term equals '${name}' — the synthetic hierarchy fixture is missing its probe branches. Rebuild: bun run test:db:setup`,
+			).toBeGreaterThan(0);
 			expect(await runCount(`=${name}`)).toBe(truth);
 			// the whole point: plain contains is orders of magnitude wider
 			expect(await runCount(name)).toBeGreaterThan(truth);
@@ -97,8 +109,9 @@ describe("string '=' exact operator (WC-014)", () => {
 
 	test("'==' and quoted-literal exact shapes are unchanged (same result as '=')", async () => {
 		if (!dbReady) return;
-		const viaEq = await runCount('=Ea');
-		expect(await runCount('==Ea')).toBe(viaEq);
-		expect(await runCount("'Ea'")).toBe(viaEq);
+		const probe = SYNTHETIC_PROBE_TERMS[0] as string;
+		const viaEq = await runCount(`=${probe}`);
+		expect(await runCount(`==${probe}`)).toBe(viaEq);
+		expect(await runCount(`'${probe}'`)).toBe(viaEq);
 	});
 });

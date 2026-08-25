@@ -20,6 +20,13 @@
  * SKIPPED by default (non-destructive), and `{replace:true}` DELETEs the tld's rows first
  * then re-copies (the explicit "reset to seed"). Both are pinned below so the reported
  * duplicate-key error can never come back.
+ *
+ * CRASH TEARDOWN: `afterAll` is not a guarantee — a killed process runs no
+ * code — so every DROP here is `WITH (FORCE)` and `beforeAll` first sweeps
+ * this gate's own orphaned `<prefix><dead pid>` scratch databases through the
+ * SHARED helper (test/helpers/scratch_database.ts — ONE implementation; its
+ * header carries the measured incident, `dedalo_install_p4_48373`, 218 MB, the
+ * refusal grammar, and what the sweep does NOT prove).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -31,10 +38,15 @@ import { installHierarchies } from '../../src/core/install/hierarchy_import.ts';
 import { HIERARCHY_IMPORT_DIR } from '../../src/core/install/paths.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
+import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
-const SCRATCH_DB = `dedalo_install_p4_${process.pid}`;
-// A small, always-vendored TLD (Spain terms).
-const TLD = 'es';
+const SCRATCH_PREFIX = 'dedalo_install_p4_';
+const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
+// The SMALLEST always-vendored TLD (Andorra terms, 9 records / 1.3K gzipped —
+// repointed from the 4.9MB Spain file 2026-08-25: the vendored FILE is the
+// subject here, and the import/skip/replace contract is byte-identical on any
+// of them; the small one keeps a real-restore gate cheap).
+const TLD = 'ad';
 
 const admin: DbConnDescriptor = {
 	database: 'postgres',
@@ -47,21 +59,27 @@ const scratch: DbConnDescriptor = { ...admin, database: SCRATCH_DB };
 
 let available = false;
 
+// Crash teardown: the sweep lives ONCE in test/helpers/scratch_database.ts —
+// its header carries the measured incident, the refusal grammar, and what the
+// sweep does not prove.
 beforeAll(async () => {
 	const probe = await runPsql(admin, ['-tAc', 'SELECT 1']);
 	if (probe.exitCode !== 0) return;
-	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	// Reclaim what a killed predecessor could not (see the header).
+	await sweepOrphanScratchDatabases(admin, SCRATCH_PREFIX);
+	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 	const created = await runPsql(admin, ['-c', `CREATE DATABASE "${SCRATCH_DB}"`]);
 	available = created.exitCode === 0;
 	if (available) await installDbFromSeed(scratch);
 }, 90000);
 
 afterAll(async () => {
-	if (available) await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	if (available)
+		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 });
 
 describe('hierarchy import + register_tools (P4)', () => {
-	test('the es TLD data file is vendored', () => {
+	test('the chosen TLD data file is vendored', () => {
 		expect(existsSync(join(HIERARCHY_IMPORT_DIR, `${TLD}1.copy.gz`))).toBe(true);
 	});
 
@@ -88,7 +106,7 @@ describe('hierarchy import + register_tools (P4)', () => {
 		]);
 		expect(Number(rows.stdout.trim())).toBeGreaterThan(0);
 
-		// The counter for es1 was set to MAX(section_id) of the imported rows.
+		// The terms-section counter was set to MAX(section_id) of the imported rows.
 		const counter = await runPsql(scratch, [
 			'-tAc',
 			`SELECT c.value = m.mx FROM matrix_counter c,
@@ -100,8 +118,8 @@ describe('hierarchy import + register_tools (P4)', () => {
 
 	test('re-importing an already-installed tld is SKIPPED, not a duplicate-key error', async () => {
 		if (!available) return;
-		// es was imported by the previous test → its es1 rows are present. A second import
-		// must skip it (the raw \copy would otherwise throw on the PK) and stay error-free.
+		// The TLD was imported by the previous test → its terms rows are present. A second
+		// import must skip it (the raw \copy would otherwise throw on the PK) and stay error-free.
 		const result = await installHierarchies([TLD], scratch);
 
 		const response = result.responses.find((r) => r.tld === TLD);

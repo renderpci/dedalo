@@ -46,7 +46,7 @@
 // already BUILT almost everything it asserts on (the zzpq thesaurus, the zzwt
 // caller nodes, the test3 host); only the two ONTOLOGY-SHAPE fixtures named an
 // install: the virtual/real pair rsc170→rsc2 is now test7007→testheritagecatalog1,
-// and the "different thesaurus" probe es1 is now test2827 — the same shapes
+// and the "different thesaurus" probe (the Spain hierarchy) is now test2827 — the same shapes
 // (a section whose relations name another section; a terms section virtual over
 // hierarchy20), taken from the `test` clone set instead of an install.
 
@@ -73,7 +73,7 @@ registerSessionCleanup();
 
 /** The scratch thesaurus (synthetic tld — no real install uses it). */
 const TLD = 'zzpq';
-/** Its descriptor section: a VIRTUAL section over hierarchy20, exactly like es1. */
+/** Its descriptor section: a VIRTUAL section over hierarchy20, exactly like an activated thesaurus instance (testgeoa1). */
 const TERMS = `${TLD}1`;
 const CALLER_TLD = 'zzwt';
 /** Targets test3; declares no view and no cap. */

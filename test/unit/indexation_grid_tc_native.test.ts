@@ -56,6 +56,7 @@ import {
 import { scopeIndexationGroups } from '../../src/core/section/indexation_grid.ts';
 import { getPermissions, type Principal } from '../../src/core/security/permissions.ts';
 import { isRecordInScope } from '../../src/core/security/record_scope.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 import oracle from './fixtures/optimize_tc_native/optimize_tc.oracle.json';
 
 interface OracleCase {
@@ -164,15 +165,20 @@ describe('OptimizeTC: the grid computes the SAME fragment time codes as the v1 p
 
 /**
  * Real principals of the test database (read-only). user 0 is the shape the
- * audit found: it holds NO read grant on `ad1` yet `ad1` lives in
+ * audit found: it holds NO read grant on the synthetic hierarchy's terms
+ * section (`testgeoa1` — src/core/test_data/synthetic_hierarchy_fixture.ts;
+ * migrated off a real country hierarchy 2026-08-25, ANY grantless
+ * matrix_hierarchy record satisfies the premise) yet that record lives in
  * matrix_hierarchy, which the projects filter exempts — so the projects half
- * alone admits the record.
+ * alone admits the record. The premise test below re-asserts both halves
+ * loudly, so a fixture that grew a grant cannot green this for the wrong reason.
  */
 const NON_ADMIN: Principal = { userId: 0, isGlobalAdmin: false, isDeveloper: false };
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
-/** UNGATED section + a real record: read grant 0, projects filter says yes. */
-const DENIED = { tipo: 'ad1', id: '1' };
+/** UNGATED section + a fixture record (the activation-minted root at id 1):
+ * read grant 0, projects filter says yes. */
+const DENIED = { tipo: `${SYNTHETIC_HIERARCHY_A_TLD}1`, id: '1' };
 /** Same table, but user 0 does hold a read grant. */
 const ALLOWED = { tipo: 'dd1000', id: '1' };
 

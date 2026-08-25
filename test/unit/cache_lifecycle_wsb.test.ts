@@ -28,7 +28,10 @@
  * the 2026-07-11 cutover with the TTL itself: single-writer invalidation via
  * the save_event channel needs no staleness bound.)
  *
- * Scratch surfaces only: a reserved-high-id es1 row (matrix_hierarchy) + its
+ * Scratch surfaces only: a reserved-high-id row in the SYNTHETIC hierarchy's
+ * terms section (matrix_hierarchy; src/core/test_data/synthetic_hierarchy_fixture.ts
+ * — migrated off the real Spain hierarchy 2026-08-25: any section whose
+ * section_map resolves thesaurus.term = hierarchy25 hosts this case) + its
  * time-machine rows, a scratch dd_ontology tipo that only ever exists inside a
  * rolled-back transaction, and the synthetic 'test2' datalist component from
  * the data_cache_staleness precedent. All cleaned up.
@@ -45,6 +48,7 @@ import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { persistRecordColumns } from '../../src/core/section_record/record_write.ts';
 import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
 import { getUserProjects } from '../../src/core/security/permissions.ts';
+import { SYNTHETIC_HIERARCHY_A_TLD } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 import { getTermByLocator } from '../../src/core/ts_object/term_resolver.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -111,7 +115,7 @@ describe('in-tx reads never seed shared ontology caches (S1-14 residual)', () =>
 
 // --- 3. S2-10 thesaurus term staleness through ordinary saves ------------------
 
-const TERM_SECTION = 'es1'; // real thesaurus section: section_map thesaurus.term = hierarchy25
+const TERM_SECTION = `${SYNTHETIC_HIERARCHY_A_TLD}1`; // activated thesaurus section: section_map thesaurus.term = hierarchy25
 const TERM_TABLE = 'matrix_hierarchy';
 const TERM_COMPONENT = 'hierarchy25';
 const TERM_ID = 900431; // reserved scratch id — collides with nothing real

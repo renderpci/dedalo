@@ -14,8 +14,21 @@
  * WHAT IT BUILDS — a COMPLETE install, from files vendored in this repo, never by copying
  * a live database:
  *   1. the install seed (install/db/dedalo_install.pgsql.gz) — schema + canonical test3;
- *   2. hierarchies (install/import/hierarchy/*.copy.gz) via the installer's own
- *      installHierarchies() — the tools/tree/virtual-section gates need them;
+ *   2. the REFERENCED hierarchies via the installer's own installHierarchies()
+ *      — the tools/tree/virtual-section gates need them. NOT all 150 vendored
+ *      `<tld>1.copy.gz` files: that glob made the fixture 7612 MB, 97.6% of it
+ *      geography no test names (measured 2026-08-25 — 2,267,790 geo
+ *      matrix_hierarchy rows deriving 13.9M relation-index and 5.6M
+ *      string-search rows). The installed set is `imports` DERIVED from the
+ *      test tree by scripts/lib/hierarchy_allowlist.ts (2 TLDs after the
+ *      consumer-gate migration onto the step-5c SYNTHETIC hierarchies,
+ *      2026-08-25; over-inclusive by design — see that header) — `lg` (the
+ *      engine-hardwired languages thesaurus, 21,705 rows) is the permanent
+ *      floor, `ad` (10 rows) is held by tier1_install_native's literal
+ *      filename. The other vendored files STAY in the repo: a full install
+ *      still needs them. Measured 2026-08-25 with this composition
+ *      (ad+lg imports + the 1,312 generated synthetic rows):
+ *      pg_database_size = 233 MB (244,586,175 bytes), rebuild ~40-45 s;
  *   3. the registered tools, via the installer's own registerInstallTools();
  *   4. the generic `test` TLD ontology, materialized from
  *      src/core/test_data/test_tld_ontology.json through the engine's doors
@@ -54,6 +67,30 @@
  * That row — not this script's name check, and not the `_test` suffix — is what
  * every test-data writer in the tree asks before it moves a single row. This is
  * the ONLY producer of that row anywhere.
+ *
+ * AND A READ-ONLY ROLE. Step 5b ensures `dedalo_test_ro` — a LOGIN role with
+ * SELECT-only access to this database, for the shard bands that never write.
+ * Created idempotently on every rebuild, ONLY behind the guards above (never
+ * as a convenience step that runs first), and re-granted after every
+ * DROP/CREATE, because the per-database grants and default privileges die with
+ * the dropped database — re-issuing them here is what keeps the role from
+ * dangling half-granted between rebuilds. Its password is a fixed, committed
+ * literal ON PURPOSE: the database it can read is disposable by its own
+ * declaration (the marker row), so the credential protects nothing — but the
+ * role MUST have one, because config.db carries exactly one user/password pair
+ * (src/core/db/postgres.ts buildSqlOptions) and a password-less role would
+ * ride this Mac's local `trust` pg_hba and then fail in CI, where the service
+ * container forces scram over TCP — green locally, broken where nobody looks.
+ *
+ * IT REFUSES SHARD CLONES. A third name guard (below, beside the other two)
+ * rejects any target matching /__shard\d+$/: the shard workflow teaches
+ * developers to export DEDALO_TEST_DATABASE at a clone, and a clone PASSES the
+ * app-DB name guard (it only compares against the install's name) and passes
+ * the provenance guard's 'marked' branch — precisely BECAUSE the clone's
+ * marker was rewritten to name it. Without this guard a leftover export turns
+ * `bun run test:db:setup` into a ~15-minute rebuild of a shard-named database
+ * and a multi-GiB write aimed at the wrong target. Shards are CLONED from the
+ * template, never built directly.
  */
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -71,6 +108,7 @@ import {
 } from '../src/core/test_data/test_database_marker_constants.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
 import { rebuildTestMediaRoot } from '../test/helpers/test_media_root.ts';
+import { deriveHierarchyAllowlist } from './lib/hierarchy_allowlist.ts';
 
 const REPO = join(import.meta.dir, '..');
 const SEED = join(REPO, 'install', 'db', 'dedalo_install.pgsql.gz');
@@ -109,6 +147,22 @@ if (testDb === appDb || testDb === '') {
 if (!/^[A-Za-z0-9_.-]+$/.test(testDb)) {
 	console.error(
 		`REFUSING: test database name '${testDb}' contains characters outside [A-Za-z0-9_.-]; it is interpolated into SQL identifiers. Pick a plain name. Nothing was touched.`,
+	);
+	process.exit(1);
+}
+
+// GUARD 3 of the name guards — SHARD CLONES ARE NEVER BUILD TARGETS. Checked
+// BEFORE any side effect (the media sweep below is the first one), because a
+// shard clone is the one wrong target the OTHER two guards wave through: the
+// app-DB guard only compares against this checkout's install name, and the
+// provenance guard's 'marked' branch is satisfied precisely BECAUSE the
+// clone's marker row was rewritten to name it. The shard workflow teaches
+// developers to export DEDALO_TEST_DATABASE at a clone — a leftover export
+// must die here, not after a ~15-minute rebuild aimed at a shard name.
+if (/__shard\d+$/.test(testDb)) {
+	const base = testDb.replace(/__shard\d+$/, '');
+	console.error(
+		`REFUSING: '${testDb}' is a shard clone of ${base}; rebuild the template with DEDALO_TEST_DATABASE unset, or sweep clones with bun run test:shard:sweep. Nothing was touched.`,
 	);
 	process.exit(1);
 }
@@ -407,22 +461,85 @@ console.log(
 
 // 5. Hierarchies + tools, through the INSTALLER'S OWN code paths, from repo-vendored data —
 // the tools/tree/virtual-section gates need a complete install, not a bare seed.
-const tlds = [
-	...new Set(
-		(await Array.fromAsync(new Bun.Glob('*1.copy.gz').scan({ cwd: HIERARCHY_DIR }))).map((file) =>
-			file.replace(/1\.copy\.gz$/, ''),
-		),
-	),
-].sort();
+//
+// NOT the whole vendored set. This used to glob every `*1.copy.gz` (153 TLDs,
+// 127 MB gzipped) — which is how the fixture reached 7612 MB, 97.6% of it one
+// install's geography no test names (see the header). The set is DERIVED from
+// the tests' own references by scripts/lib/hierarchy_allowlist.ts — same
+// installer path, same vendored files, over-inclusive where uncertain, and
+// LOUD if the scan comes back empty. The derivation is exported so a gate can
+// hold the installed set equal to the referenced set: a new test naming a new
+// TLD reddens the fixture rather than failing mysteriously on one machine.
+const allowlist = deriveHierarchyAllowlist(HIERARCHY_DIR);
+const tlds = allowlist.imports;
 const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 const hierarchies = await installHierarchies(tlds);
 console.log(
-	`[test-db] hierarchies imported: ${tlds.length} TLDs${hierarchies.ok === true ? '' : ` (WITH ERRORS: ${JSON.stringify(hierarchies.errors)})`}`,
+	`[test-db] hierarchies imported: ${tlds.length} of ${allowlist.vendored.length} vendored TLDs (${tlds.join(', ')} — derived from test-tree references, see scripts/lib/hierarchy_allowlist.ts)${hierarchies.ok === true ? '' : ` (WITH ERRORS: ${JSON.stringify(hierarchies.errors)})`}`,
 );
 
 const { registerInstallTools } = await import('../src/core/install/register_tools.ts');
 const tools = await registerInstallTools();
 console.log(`[test-db] tools registered (ok: ${tools.ok})`);
+
+// 5c. THE SYNTHETIC HIERARCHIES — the GENERATED replacement for the imported
+// geography above (src/core/test_data/synthetic_hierarchy_fixture.ts, whose
+// header carries the census and the row-count arithmetic). Two activated
+// `test*`-namespace thesauri built through the installer's own
+// activateHierarchy door and populated deterministically: hierarchy A carries
+// the volume + term-text-distribution corpus the search gates need
+// (~1,300 rows, derived from the SEARCH_LATE_ROW_LOOKUP_OFFSET default at
+// seed time), hierarchy B the second registry pairing (~10 rows). This is the
+// shape every migratable geo-bound gate moves onto; the vendored imports in
+// step 5 drain away as those migrations land (`lg` is the permanent floor —
+// the engine-hardwired languages thesaurus).
+const { ensureSyntheticHierarchies } = await import(
+	'../src/core/test_data/synthetic_hierarchy_fixture.ts'
+);
+const synthetic = await ensureSyntheticHierarchies();
+console.log(
+	`[test-db] synthetic hierarchies generated: ${Object.entries(synthetic.termRows)
+		.map(([tld, rows]) => `${tld} (${rows} terms)`)
+		.join(', ')} — data lang ${synthetic.dataLang}, activated through the installer's own door`,
+);
+
+// 5b. THE READ-ONLY ROLE for the DB-free shard bands (see the header). Sits
+// HERE — after every guard and after the schema exists — never as a
+// convenience step that could run before a refusal. Everything is idempotent:
+// the role survives rebuilds at the cluster level, while the per-database
+// grants and default privileges just died with the DROP above and are
+// re-issued in full, so a rebuild can never leave the role half-granted.
+//
+// The password is a FIXED, COMMITTED literal, deliberately not a secret: the
+// only database it can read declares itself disposable (the marker row). It
+// exists because the role must authenticate the same way everywhere — a
+// password-less role rides local `trust` pg_hba and fails under CI's scram —
+// and because config.db carries exactly one user/password credential pair.
+// ALTER ROLE re-asserts LOGIN + the password every run, so drift heals.
+await psql(
+	'postgres',
+	['-f', '-'],
+	`DO $$ BEGIN
+	  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dedalo_test_ro') THEN
+	    CREATE ROLE dedalo_test_ro;
+	  END IF;
+	END $$;
+	ALTER ROLE dedalo_test_ro LOGIN PASSWORD 'dedalo_test_ro';
+	GRANT CONNECT ON DATABASE "${testDb}" TO dedalo_test_ro;\n`,
+);
+await psql(
+	testDb,
+	['-f', '-'],
+	`GRANT USAGE ON SCHEMA public TO dedalo_test_ro;
+	GRANT SELECT ON ALL TABLES IN SCHEMA public TO dedalo_test_ro;
+	-- Tables created AFTER this build (runtime dedalo_ts_test_* scratch tables,
+	-- future migrations) get SELECT too — granted for the building user, which
+	-- is the engine's one configured user, i.e. the creator of every such table.
+	ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO dedalo_test_ro;\n`,
+);
+console.log(
+	`[test-db] read-only role 'dedalo_test_ro' ensured and granted SELECT on '${testDb}' (fixed non-secret credential; the database is disposable by declaration)`,
+);
 
 // 6. THE TEST CORPUS IS **NOT** SEEDED HERE — and that is the design, not an
 // omission. The corpus (src/core/test_data/test_corpus/, 446 records over 36

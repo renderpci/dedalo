@@ -33,7 +33,7 @@ describe('installedTldFromSectionTipo — what is a term section', () => {
 	test('a real hierarchy term section yields its tld', () => {
 		expect(installedTldFromSectionTipo('hierarchy1')).toBe('hierarchy');
 		expect(installedTldFromSectionTipo(seed('rsc', 1))).toBe('rsc');
-		expect(installedTldFromSectionTipo('es1')).toBe('es');
+		expect(installedTldFromSectionTipo('testgeoa1')).toBe('testgeoa');
 	});
 
 	test('the trailing anchor is REQUIRED — a longer tipo is not a term section', () => {

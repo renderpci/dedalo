@@ -220,6 +220,8 @@ describe('locator schema + helpers', () => {
 	});
 
 	test('getTermIdFromLocator', () => {
-		expect(getTermIdFromLocator(loc({ section_tipo: 'es1', section_id: 185 }))).toBe('es1_185');
+		expect(getTermIdFromLocator(loc({ section_tipo: 'testgeoa1', section_id: 185 }))).toBe(
+			'testgeoa1_185',
+		);
 	});
 });

@@ -74,8 +74,38 @@
  *    answer is N TEXTUAL bindings, never a count of gates that touch an
  *    install's shape.
  *
- * HERMETIC: filesystem reads of tracked source only. No DB, no network, no
- * clock; imports nothing from src/.
+ * ── THE DATA SIDE (added 2026-08-25) ─────────────────────────────────────────
+ * The law has TWO surfaces: what the tests NAME (the source ratchet above) and
+ * what the suite database HOLDS. Until 2026-08-25 only the first was enforced,
+ * and that is exactly how 7.4 GiB of records no test could name — 150
+ * glob-installed country hierarchies, 97.6% of the 7612 MB fixture — sat
+ * inside the suite database while this gate reported green: an invariant
+ * enforced on one of its two surfaces is half a tripwire. The last describe
+ * block therefore asks the DATABASE: every distinct `matrix_hierarchy`
+ * section_tipo must belong to the generic families (the INVARIANT_TLDS —
+ * test/dd/hierarchy/ontology/ontologytype/lg — or a zz* scratch head) or to
+ * the DERIVED hierarchy allowlist (scripts/lib/hierarchy_allowlist.ts — the
+ * SAME symbol scripts/test_db_setup.ts installs from, imported, never
+ * re-typed).
+ *
+ * PENDING STATE, and which option was chosen. The suite fixture on this
+ * workstation predates the allowlist (built by the old glob; the 907 s rebuild
+ * has not run), so this assertion IS RED today, deliberately. Of the two
+ * honest shapes — gate it behind "the allowlist is in force", or bind now with
+ * a failure message that says the fixture predates it — the SECOND was chosen:
+ * any "in force" detector would be derived from the same installed set being
+ * asserted (circular), and a detector-gated skip would also skip a FUTURE
+ * regression back to the glob. So the failure message itself distinguishes the
+ * two red classes: a vendored geo TLD is "stale fixture, rebuild with
+ * `bun run test:db:setup`"; anything else is a REAL data-side law violation
+ * (an install's records inside the suite fixture). Neither is weakened into a
+ * skip, and the classifier has its own positive controls below.
+ *
+ * HERMETIC — for the SOURCE tiers: filesystem reads of tracked source, no
+ * network, no clock. The DATA tier reads the suite database READ-ONLY (one
+ * SELECT DISTINCT) and SKIPS LOUDLY via `describe.if(DB_READY)` when there is
+ * no Postgres — an explicit bun SKIP plus a warn naming the build command,
+ * never a silent pass. Nothing here writes a row anywhere.
  *
  * Registered in engineering/TRIPWIRES.md + scripts/verify.ts.
  */
@@ -90,6 +120,7 @@ import {
 	formatDrift,
 	loadBaseline,
 } from '../../scripts/generic_tld_baseline.ts';
+import { deriveHierarchyAllowlist } from '../../scripts/lib/hierarchy_allowlist.ts';
 import {
 	census,
 	deniedTldsIn,
@@ -99,6 +130,9 @@ import {
 	SCAN_ROOTS,
 	scannedFileCount,
 } from '../../scripts/lib/tld_census.ts';
+import { sql } from '../../src/core/db/postgres.ts';
+import { SYNTHETIC_HIERARCHY_TLDS } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
+import { DB_READY } from '../helpers/db_ready.ts';
 
 const RESULTS = census();
 const BASELINE = loadBaseline();
@@ -176,7 +210,9 @@ describe('generic_tld ratchet — the measure is what it claims', () => {
 			deniedTldsIn(`// never use ${NUMIS} here\n/* ${RSC} was the old way */\nconst t = 'test3';`),
 		).toEqual({});
 		expect(
-			deniedTldsIn(`const a = 'test3', b = 'dd6', c = 'hierarchy1', d = 'zzsit1', e = 'es1';`),
+			deniedTldsIn(
+				`const a = 'test3', b = 'dd6', c = 'hierarchy1', d = 'zzsit1', e = 'testgeoa1';`,
+			),
 		).toEqual({});
 		// A bare TLD word is prose, not a binding.
 		expect(deniedTldsIn(`const why = 'the ${'numis' + 'data'} install';`)).toEqual({});
@@ -195,3 +231,127 @@ describe('generic_tld ratchet — the measure is what it claims', () => {
 		expect(list).toEqual([...list].sort());
 	});
 });
+
+// ── THE DATA SIDE — what the suite database HOLDS (header: "THE DATA SIDE") ──
+
+/**
+ * The tipo's TLD head is its leading alphabetic run (`'es'` from a geo tipo,
+ * `'test'` from `'test3'`) — the same unit every census in this file measures.
+ * PURE, so the positive controls below can feed it synthetic corpora.
+ */
+function hierarchyTldViolations(
+	observedTipos: readonly string[],
+	allowedTlds: ReadonlySet<string>,
+): string[] {
+	const violations: string[] = [];
+	for (const tipo of observedTipos) {
+		const head = /^[a-z]+/.exec(tipo)?.[0] ?? '';
+		if (head.startsWith('zz')) continue; // scratch situations — torn down by their owners
+		if (allowedTlds.has(head)) continue;
+		violations.push(tipo);
+	}
+	return violations.sort();
+}
+
+// Derived ONCE — the same symbol scripts/test_db_setup.ts installs from.
+// deriveHierarchyAllowlist() throws on an empty scan (its own anti-vacuity),
+// so a broken derivation reddens this file at load, never greens it.
+const HIERARCHY_ALLOWLIST = deriveHierarchyAllowlist();
+const DATA_ALLOWED_TLDS: ReadonlySet<string> = new Set([
+	...INVARIANT_TLDS,
+	...HIERARCHY_ALLOWLIST.tlds,
+]);
+
+if (!DB_READY) {
+	console.warn(
+		'[generic_tld] DATA-side assertion SKIPPED — no suite Postgres reachable. The source-side ratchet above still ran; build the database with: bun run test:db:setup',
+	);
+}
+
+describe('generic_tld data side — the classifier is what it claims (positive controls)', () => {
+	// Tokens are BUILT, never spelled: a literal install tipo here would be a
+	// source-side binding by this file's own census, and a literal `<geo>1`
+	// would feed the hierarchy allowlist's raw-text evidence scan — the gate
+	// must never keep a hierarchy installed by naming it.
+	const NUMIS = `${'numis'}${'data6'}`;
+	const GEO_ES = `${'e'}${'s1'}`;
+	const SCRATCH = `${'z'}${'zsit1'}`;
+
+	test('an install tipo is convicted; generic families and the allowlist are not', () => {
+		const allowed = new Set(['test', 'dd', 'es']);
+		expect(hierarchyTldViolations([NUMIS], allowed)).toEqual([NUMIS]);
+		expect(hierarchyTldViolations(['test3', 'dd15', SCRATCH, GEO_ES], allowed)).toEqual([]);
+	});
+
+	test('ANTI-VACUITY: an emptied allowlist turns RED, never green', () => {
+		// A broken derivation (or a gutted INVARIANT_TLDS) must convict even the
+		// generic playground — the failure direction is loud, not permissive.
+		expect(hierarchyTldViolations(['test3', GEO_ES], new Set())).toEqual([GEO_ES, 'test3']);
+	});
+
+	test('the derived allowlist is alive and carries its permanent floor', () => {
+		// `lg` is the engine-hardwired languages thesaurus (select_lang's lg1,
+		// import_csv's pinned id 17344) and can NEVER leave the derivation — if it
+		// does, the scan broke. The synthetic `test*` hierarchies are what the
+		// fixture GENERATES (they replaced the volume-bound es import 2026-08-25,
+		// when search_late_row_lookup migrated onto testgeoa1); they ride `tlds`
+		// unconditionally, so their absence also means the module is broken.
+		expect(HIERARCHY_ALLOWLIST.tlds.length).toBeGreaterThan(0);
+		expect(HIERARCHY_ALLOWLIST.tlds).toContain('lg');
+		for (const tld of SYNTHETIC_HIERARCHY_TLDS) {
+			expect(HIERARCHY_ALLOWLIST.tlds).toContain(tld);
+		}
+		expect(HIERARCHY_ALLOWLIST.vendored.length).toBeGreaterThan(100);
+		// CEILING, not just a floor: a derivation that marks EVERY vendored TLD
+		// referenced has reproduced the glob it replaced (the allowlist module's
+		// own header calls that outcome vacuous) — the data assertion below would
+		// then pass against any pile of geo records. Strictly fewer than all.
+		expect(HIERARCHY_ALLOWLIST.tlds.length).toBeLessThan(HIERARCHY_ALLOWLIST.vendored.length);
+	});
+});
+
+describe.if(DB_READY)(
+	'generic_tld data side — the suite database holds only what the law allows',
+	() => {
+		test('every matrix_hierarchy section_tipo is generic, scratch, or allowlisted (DELIBERATELY RED until the fixture is rebuilt — see the header)', async () => {
+			const rows = (await sql`
+			SELECT DISTINCT section_tipo FROM matrix_hierarchy ORDER BY section_tipo
+		`) as { section_tipo: string | null }[];
+			const observed = rows
+				.map((row) => row.section_tipo)
+				.filter((tipo): tipo is string => tipo !== null && tipo !== '');
+
+			// Anti-vacuity floor: a rebuilt fixture installs the allowlisted
+			// hierarchies, so an EMPTY table means the query or the fixture broke —
+			// and an empty scan must never report the law upheld.
+			expect(
+				observed.length,
+				'matrix_hierarchy answered ZERO distinct section_tipo — the suite fixture has no hierarchy data at all (or the query broke). Rebuild: bun run test:db:setup',
+			).toBeGreaterThan(0);
+
+			const violations = hierarchyTldViolations(observed, DATA_ALLOWED_TLDS);
+			// Two red classes, told apart for the operator (header: "PENDING STATE"):
+			// a vendored geo TLD is the pre-allowlist glob's leftover; anything else
+			// is an install's records inside the suite fixture — the real law breach.
+			const vendored = new Set(HIERARCHY_ALLOWLIST.vendored);
+			const heads = new Map<string, number>();
+			for (const tipo of violations) {
+				const head = /^[a-z]+/.exec(tipo)?.[0] ?? '';
+				heads.set(head, (heads.get(head) ?? 0) + 1);
+			}
+			const stale = [...heads.keys()].filter((head) => vendored.has(head)).sort();
+			const foreign = [...heads.keys()].filter((head) => !vendored.has(head)).sort();
+			expect(
+				foreign.concat(stale.length > 0 ? [`… +${stale.length} stale geo TLDs`] : []),
+				`matrix_hierarchy holds section_tipos outside the generic families + the derived allowlist (${violations.length} tipos over ${heads.size} TLDs).\n` +
+					(stale.length > 0
+						? `STALE FIXTURE (${stale.length} vendored geo TLDs: ${stale.slice(0, 12).join(', ')}${stale.length > 12 ? ', …' : ''}): this database predates the 2026-08-25 hierarchy allowlist — the old setup script glob-installed every vendored country hierarchy. The one fix: rebuild the suite database once with \`bun run test:db:setup\`.\n`
+						: '') +
+					(foreign.length > 0
+						? `LAW VIOLATION (${foreign.length} non-vendored TLDs: ${foreign.join(', ')}): these are records of a specific install (or unknown data) inside the suite fixture — the exact class this gate exists to refuse. Find what wrote them; never widen the allowlist to absorb them.\n`
+						: '') +
+					'The allowlist is DERIVED (scripts/lib/hierarchy_allowlist.ts) — a test that newly needs a hierarchy earns it by NAMING the tipo, then rebuilding.',
+			).toEqual([]);
+		});
+	},
+);

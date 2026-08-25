@@ -331,7 +331,7 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 	test('component_relation_model declares the target source its node cannot state', () => {
 		// This model exists BECAUSE its target is caller-dependent: ONE node
 		// (hierarchy27 "Tipología") is reused by every hierarchy's virtual section
-		// and must point at that caller's MODEL section — es1 → es2, fr1 → fr2,
+		// and must point at that caller's MODEL section — testgeoa1 → testgeoa2, testgeob1 → testgeob2,
 		// mht72 → ww2 — which no per-node sqo can express. Its shipped ontology
 		// admits as much: `sqo.section_tipo: []` plus an `_info` note saying the
 		// value "is calculated in class" (PHP computed it in a class override, v6

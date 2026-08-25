@@ -17,7 +17,7 @@
  *    [{value, label}] on the edit item (a=b ∧ b=c ⇒ c=a walk + label build).
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
-// The RQOs are written in `test`-TLD terms (dz1 → test2822, numisdata4 →
+// The RQOs are written in `test`-TLD terms (the source geo hierarchy → test2822, numisdata4 →
 // test6100, its relation_related numisdata55 → test6137; the rsc/hierarchy
 // tipos are SEED-shipped and pinned, spelled through `seed()`), and the frozen
 // PHP interactions are reached through `unmapRqo` (fixture lookup) +

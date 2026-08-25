@@ -103,7 +103,7 @@ describe('WC-052 rows ddinfo suppression + from_ddo_tipo stamp', () => {
 
 	test('a locator-shaped entry (no value face) counts as a value', async () => {
 		const { context, emission } = contextFor(
-			{ h25: [{ tipo: 'h25', entries: [{ section_tipo: 'es1', section_id: 5 }] }] },
+			{ h25: [{ tipo: 'h25', entries: [{ section_tipo: 'testgeoa1', section_id: 5 }] }] },
 			[{ tipo: 'h25', parent: 'caller1', value_with_parents: true }],
 		);
 		await matrixReadSource.emitRow(context);
@@ -125,14 +125,14 @@ describe('portal-cell ddinfo config trigger (portalCellEmitsDdinfo)', () => {
 	// generic `matrix` table, so ONLY this config-driven trigger keeps its
 	// edit-cell breadcrumb.
 	const ddos = [
-		{ tipo: 'h25', section_tipo: ['es1', 'testimmovable1'], value_with_parents: true },
+		{ tipo: 'h25', section_tipo: ['testgeoa1', 'testimmovable1'], value_with_parents: true },
 		{ tipo: 't15', section_tipo: 'testimmovable1', value_with_parents: true },
 		{ tipo: 't13', section_tipo: 'testimmovable1' },
 	] as unknown as Ddo[];
 
 	test('a vwp child compatible with the target triggers', () => {
 		expect(portalCellEmitsDdinfo(ddos, 'testimmovable1')).toBe(true);
-		expect(portalCellEmitsDdinfo(ddos, 'es1')).toBe(true);
+		expect(portalCellEmitsDdinfo(ddos, 'testgeoa1')).toBe(true);
 	});
 
 	test('a target no vwp child declares does NOT trigger', () => {

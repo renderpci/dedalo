@@ -114,7 +114,7 @@ describe('hierarchy_terms source (PHP :2850-65)', () => {
 });
 
 describe('a SCALAR `value` is one element, not nothing (D20)', () => {
-	test("{source:'section', value:'lg1'} resolves to ['lg1']", async () => {
+	test("{source:'section', value:<tipo>} resolves to [<tipo>]", async () => {
 		// D20, FIXED 2026-08-09: the branch read `Array.isArray(value) ? value : []`,
 		// so this LIVE declaration — dd_ontology carries it on 8 component_select_lang
 		// nodes (hierarchy8, test6832, test89, test147, rsc251, rsc666, rsc263, rsc854) —
@@ -125,12 +125,12 @@ describe('a SCALAR `value` is one element, not nothing (D20)', () => {
 		// "IGNORED: Trying to import invalid target_section_tipo", and the client
 		// received empty target_sections.
 		expect(
-			await resolveSqoSectionTipos([{ source: 'section', value: 'lg1' }], context('test3')),
-		).toEqual(['lg1']);
+			await resolveSqoSectionTipos([{ source: 'section', value: 'testgeoa1' }], context('test3')),
+		).toEqual(['testgeoa1']);
 		// the array form is unchanged, and the two agree
 		expect(
-			await resolveSqoSectionTipos([{ source: 'section', value: ['lg1'] }], context('test3')),
-		).toEqual(['lg1']);
+			await resolveSqoSectionTipos([{ source: 'section', value: ['testgeoa1'] }], context('test3')),
+		).toEqual(['testgeoa1']);
 		// a scalar 'self' still resolves to the owner section
 		expect(
 			await resolveSqoSectionTipos([{ source: 'section', value: 'self' }], context('test3')),

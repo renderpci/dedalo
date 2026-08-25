@@ -173,10 +173,10 @@ describe('normalizeTermLocators — dedup', () => {
 		const out = normalizeTermLocators([
 			{ section_tipo: 'test3', section_id: 1 },
 			{ section_tipo: 'test3', section_id: 2 },
-			{ section_tipo: 'es1', section_id: 1 },
+			{ section_tipo: 'testgeoa1', section_id: 1 },
 			{ section_tipo: 'test3', section_id: 1 },
 		]);
-		expect(out.map((entry) => entry.key)).toEqual(['test3_1', 'test3_2', 'es1_1']);
+		expect(out.map((entry) => entry.key)).toEqual(['test3_1', 'test3_2', 'testgeoa1_1']);
 	});
 });
 

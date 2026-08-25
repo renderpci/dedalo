@@ -59,7 +59,7 @@ registerSessionCleanup();
 
 /** The scratch thesaurus (synthetic tld — no real install uses it). */
 const TLD = 'zzpt';
-/** Its descriptor section: a VIRTUAL section over hierarchy20, exactly like es1. */
+/** Its descriptor section: a VIRTUAL section over hierarchy20, exactly like an activated thesaurus instance (testgeoa1). */
 const TERMS = `${TLD}1`;
 /**
  * The typology the scratch hierarchy is registered under. The sqo below asks

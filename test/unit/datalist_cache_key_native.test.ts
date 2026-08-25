@@ -5,15 +5,20 @@
  * WHY THIS FILE EXISTS. `getDatalist`'s target sections can resolve FROM THE
  * CALLER: any `{source:'self'}` sqo, and — since 2026-08-14 — the
  * component_relation_model default (`targetSource: 'section_model'`, the
- * caller section's terms→model twin: `hierarchy27` in `es1` targets `es2`, the
- * SAME node in `fr1` targets `fr2`). A `componentTipo_lang` key cannot express
- * that answer, so the first caller's list would be served to every other owner
- * section. The consequence is not a display bug: the widget posts the picked
- * option's locator back verbatim and save persists those bytes, so a cataloguer
- * editing an `fr1` term would be offered ES typologies and writing one would
- * store `{section_tipo:'es2'}` into an `fr1` record — silent cross-thesaurus
- * corruption. `getRelationListValue` then matches stored locators against that
- * same wrong list, blanking the Tipología column of every other hierarchy.
+ * caller section's terms→model twin: `hierarchy27` in `testgeoa1` targets
+ * `testgeoa2`, the SAME node in `testgeob1` targets `testgeob2` — the two
+ * SYNTHETIC activated hierarchies of src/core/test_data/
+ * synthetic_hierarchy_fixture.ts, which replaced the real Spain/France pair
+ * 2026-08-25: the need was two DISTINCT registry-paired twins, never any
+ * country's data). A `componentTipo_lang` key cannot express that answer, so
+ * the first caller's list would be served to every other owner section. The
+ * consequence is not a display bug: the widget posts the picked option's
+ * locator back verbatim and save persists those bytes, so a cataloguer
+ * editing a `testgeob1` term would be offered the A hierarchy's typologies
+ * and writing one would store `{section_tipo:'testgeoa2'}` into a `testgeob1`
+ * record — silent cross-thesaurus corruption. `getRelationListValue` then
+ * matches stored locators against that same wrong list, blanking the
+ * Tipología column of every other hierarchy.
  *
  * This gate is what makes shipping the target resolution WITHOUT the
  * owner-aware key fail: with the old key every case below serves the
@@ -23,7 +28,7 @@
  *
  * WHAT IS GATED:
  *  - the two ways a target resolves from the caller — the model default
- *    (hierarchy27 in es1 vs fr1) and a plain `{source:'self'}` sqo (the same
+ *    (hierarchy27 in testgeoa1 vs testgeob1) and a plain `{source:'self'}` sqo (the same
  *    latent bleed, which predates this change);
  *  - ORDER INDEPENDENCE: the answer must not depend on which owner asked
  *    first — that is precisely the pre-fix failure mode;
@@ -40,10 +45,12 @@
  * a bleed would be indistinguishable from a correct answer. Both are asserted
  * as fixture preconditions with their own loud messages, never assumed.
  *
- * SCRATCH SURFACE: matrix_hierarchy rows 941001-941999 in `es2` and `fr2`
- * ONLY — seeded here, swept in afterAll (rows + their TM tail, fail-loud). The
- * sections' own records are read but never written or asserted against by id:
- * assertions project the built list onto the seeded ids.
+ * SCRATCH SURFACE: matrix_hierarchy rows 941001-941999 in `testgeoa2` and
+ * `testgeob2` ONLY — seeded here, swept in afterAll (rows + their TM tail,
+ * fail-loud). The synthetic model twins hold the engine-minted root at id 1
+ * (a truly empty twin cannot activate), so assertions never compare whole
+ * lists: they project the built list onto the seeded ids, and the length
+ * cases compare the two owners' totals (root included on both sides).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -55,12 +62,19 @@ import {
 	probeDatalistSize,
 } from '../../src/core/relations/datalist.ts';
 import { fireSaveEvent } from '../../src/core/section_record/save_event.ts';
+import {
+	SYNTHETIC_HIERARCHY_A_TLD,
+	SYNTHETIC_HIERARCHY_B_TLD,
+} from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 
-/** The two callers of the ONE component node, and the model section each must reach. */
-const ES_OWNER = 'es1';
-const ES_TARGET = 'es2';
-const FR_OWNER = 'fr1';
-const FR_TARGET = 'fr2';
+/** The two callers of the ONE component node, and the model section each must
+ * reach — the SYNTHETIC hierarchies' terms/model twins (ES_/FR_ names kept:
+ * they read as "first owner"/"second owner", and the seeded labels below
+ * keep the same initials). */
+const ES_OWNER = `${SYNTHETIC_HIERARCHY_A_TLD}1`;
+const ES_TARGET = `${SYNTHETIC_HIERARCHY_A_TLD}2`;
+const FR_OWNER = `${SYNTHETIC_HIERARCHY_B_TLD}1`;
+const FR_TARGET = `${SYNTHETIC_HIERARCHY_B_TLD}2`;
 /** The live node this rule exists for (Tipología, model component_relation_model). */
 const RELATION_MODEL_TIPO = 'hierarchy27';
 /** The label ddo of a thesaurus model record. */

@@ -76,7 +76,7 @@ describe('mapTldToTargetSectionTipo (PHP safe_tld + "0")', () => {
 
 describe('buildTipo / isMainTipo', () => {
 	test('buildTipo concatenates', () => {
-		expect(buildTipo('es', 1)).toBe('es1');
+		expect(buildTipo('testgeoa', 1)).toBe('testgeoa1');
 		expect(buildTipo('es', '2')).toBe('es2');
 		expect(buildTipo('dd', 0)).toBe('dd0');
 	});
