@@ -52,6 +52,9 @@
  * chokepoint appends for OUR record ids are swept in afterAll
  * (matrix_activity is consultation-only for the engine doors; direct SQL
  * cleanup of our own rows mirrors delete_multi_native.test.ts).
+ *
+ * @twin-of      test/parity/portal_edit_writes_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
 // install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;

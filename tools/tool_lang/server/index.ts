@@ -12,10 +12,10 @@ import { runAutomaticTranslation } from '../../../src/core/tools/translation.ts'
 export const tool: ToolServerModule = {
 	name: 'tool_lang',
 	apiActions: {
-		// PHP asserts write level 2 on the (section_tipo, component_tipo) pair +
-		// record scope; the shared handler gates imperatively (permission: null).
 		automatic_translation: {
 			permission: null,
+			gatedInHandler:
+				'assertTranslationPermissions(...) inside runAutomaticTranslation (src/core/tools/translation.ts): getPermissions on the (section_tipo, component_tipo) PAIR at level 2 — which a section-level check does not imply — followed by assertActionPermission with the `record` kind for the record-in-scope half (TOOLS-10). Both run before any provider call or write.',
 			handler: async (ctx) => (await runAutomaticTranslation(ctx, 'tool_lang')) as ToolResponse,
 		},
 	},

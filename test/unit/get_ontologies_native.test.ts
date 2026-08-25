@@ -26,6 +26,9 @@
  *
  * Scratch: three ontology35 rows at explicit ids 969101-969103 (reserved
  * >= 900000 band), zz* TLD names, swept with a loud 0-row guard.
+ *
+ * @twin-of      test/parity/get_ontologies_differential.test.ts
+ * @twin-status  frozen-record
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

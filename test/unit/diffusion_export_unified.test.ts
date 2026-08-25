@@ -21,6 +21,9 @@
  *       tripwire — no second implementation can regrow in the tool dir).
  *
  * READ-ONLY: every request is a read; no tables are touched.
+ *
+ * @twin-of      test/parity/tool_export_breakdown_differential.test.ts
+ * @twin-status  frozen-record
  */
 // Migrated to the generic `test` TLD 2026-08-19: the fixtures are the phase-2
 // `test`-TLD twins (src/core/test_data/test_tld_tipo_map.json) and the RECORDS

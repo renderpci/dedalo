@@ -420,28 +420,39 @@ Hierarchies, Tools, Finish — are documented once, in the [installer
 reference](installer_reference.md#the-browser-wizard). What follows is only what
 containers change.
 
-### B1 — Close the pre-auth window first
+### B1 — Name the address you will install from
 
 A fresh instance has no users, so **every install action is reachable without a
 login** until you press *Finish*. Path A never opens that window; Path B does,
-and `docker compose up` publishes ports 80 and 443 in the same breath. So set the
-allowlist in the `dedalo` service's `environment:` **before** the stack ever
-comes up:
+and `docker compose up` publishes ports 80 and 443 in the same breath.
+
+The engine closes that window for you: with `DEDALO_INSTALL_ALLOWED_IPS` unset,
+the wizard answers **the local machine and nobody else**. In a container that is
+nobody at all — nginx forwards your browser's real address, which is never the
+loopback of the engine's namespace — so Path B does not work until you say who
+you are. Set it in the `dedalo` service's `environment:` **before** the stack
+ever comes up (the shipped compose file already passes the variable through, so
+exporting it is enough):
 
 ```yaml
 environment:
   DEDALO_INSTALL_ALLOWED_IPS: "203.0.113.10"     # the address YOU will browse from
 ```
 
+A value is a comma list of four possible things: `loopback`, a literal address,
+a range such as `10.0.0.0/24`, or `any`.
+
 !!! warning "`loopback` will not match behind the proxy"
     The address is resolved from the trusted `X-Forwarded-For` hop — and the
     compose file sets `TRUSTED_PROXY_HOPS: "1"` for exactly this — so behind the
     nginx container the caller is never the loopback address. Naming `loopback`
     locks **you** out while leaving nobody else out. Name the real client
-    address.
+    address, or the range your workstations sit in.
 
-    Unset the key entirely and the surface is **open** — that is the development
-    default, and it is the wrong choice for anything with a public port.
+    `any` opens the surface to every address. It is the one spelling that does
+    that, it is never a default, and it is the wrong choice for anything with a
+    public port — use it only when a firewall already stands in front, and drop
+    it the moment the instance is sealed.
 
 ### B2 — Bring the stack up on an empty `private` volume
 
@@ -515,7 +526,8 @@ Hierarchies → Tools → **Finish**. *Finish* is refused unless a root user wit
 password actually exists, so a half-built instance cannot be sealed.
 
 Once sealed, the whole install surface answers `404` permanently, and
-`DEDALO_INSTALL_ALLOWED_IPS` has no further job — you can leave it or drop it.
+`DEDALO_INSTALL_ALLOWED_IPS` has no further job — drop it (and if you wrote
+`any`, drop it now rather than later).
 
 ```shell
 docker compose exec dedalo cat /private/ts_state.json   # install_status: "sealed"
@@ -639,7 +651,7 @@ Container-specific symptoms; everything else is in
 | `nginx -t`: `pcre2_compile() failed` | the unquoted rule-B regex | quote it — [step 10](#step-10-turn-the-media-gate-on) |
 | The wizard appears after a successful install | `/private` is not on a volume, so `.env` was lost | [problem 1](#1-private-has-no-parent-to-live-in) |
 | The wizard never appears — normal login instead | `/private/.env` already exists, so the engine is not in install mode | [B2](#b2-bring-the-stack-up-on-an-empty-private-volume) |
-| The install surface 404s from your browser | your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` | [B1](#b1-close-the-pre-auth-window-first) |
+| The install surface 403s from your browser | the key is unset (the default is the local machine only), your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` behind the proxy | [B1](#b1-name-the-address-you-will-install-from) |
 | The wizard hangs at *Save config*, engine down | no restart policy — the engine exits there by design | [B4](#b4-survive-the-restart-at-save-config) |
 | Every media file 404s, gate looks healthy | proxy `root` and `MEDIA_PATH` disagree | the root rule at the top of `deploy/nginx.conf` |
 | Uploads fail with **413** | `client_max_body_size` | already 300m in the shipped config — check you did not replace it |

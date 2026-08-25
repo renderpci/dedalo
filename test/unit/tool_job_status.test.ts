@@ -136,6 +136,7 @@ function makeLoaded(name: string, result: unknown): LoadedTool {
 		apiActions: {
 			long_job: {
 				permission: null,
+				gatedInHandler: 'test fixture — the job-status wire is under test, not any gate',
 				handler: async () => ok(result, { requestId: 'tool-job-status-test' }),
 			},
 		},

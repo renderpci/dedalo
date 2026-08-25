@@ -993,11 +993,6 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 		reason:
 			'upload staging dir (0750, right value, still a literal) + the two per-upload chunk scratch dirs (0700, deliberately tighter: transient artefacts the web server must never serve) — the 0700 pair needs its OWN named constant, not MEDIA_DIR_MODE',
 	},
-	'src/core/media/protection.ts': {
-		modes: ['0o750'],
-		kind: 'media_debt',
-		reason: '.publication/auth marker dir — right value, still a literal',
-	},
 	'src/core/media/tools/posterframe.ts': {
 		modes: ['0o750', '0o775'],
 		kind: 'media_debt',

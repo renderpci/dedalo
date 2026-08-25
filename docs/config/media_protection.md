@@ -23,9 +23,9 @@ One media tree serves two audiences at the same URLs, **with no file duplication
   the media **file name**. Those markers are written by the diffusion engine
   (`src/diffusion/targets/mediastore/media_index.ts`) — never by the protection module.
 
-Without this, every media file is world-readable by anyone who knows or guesses its URL,
-including unpublished masters and the `.vtt` subtitle files that carry unpublished
-transcriptions. The classic workaround — copying published media to a second public tree —
+Without this, every media file is readable by anyone who knows or guesses its URL, including
+unpublished masters and the `.vtt` subtitle files that carry unpublished transcriptions. That
+is why an install that configures nothing now gets `publication` rather than nothing at all. The classic workaround — copying published media to a second public tree —
 doubles terabytes of storage and desynchronizes on every publish.
 
 ### The web server enforces, not the application
@@ -101,13 +101,28 @@ All keys live in `../private/.env`.
 
 ### `DEDALO_MEDIA_ACCESS_MODE`
 
-`private` | `publication` (unset = protection off)
+`private` | `publication` | `false` (**unset = `publication`**, fail-closed since 2026-08-24)
 
 | Mode | Logged-in users | Anonymous users |
 |---|---|---|
-| *unset / anything else* | everything | **everything** — media is world-readable |
-| `private` | everything | nothing |
+| *unset* | everything | **published records only** — the fail-closed default |
 | `publication` | everything | published records only, and only in the public quality folders |
+| `private` | everything | nothing |
+| `false` / `off` / `0` | everything | everything — an EXPLICIT choice to serve an open tree |
+| *an unrecognised value* | everything | published records only (a typo fails closed, and is logged) |
+
+!!! warning "The default changed on 2026-08-24"
+    It used to be "protection off". An institution that installed Dédalo and configured
+    nothing served its entire media tree — unpublished records, master-quality originals,
+    rights-restricted material — to anyone who could guess a URL.
+
+    `publication` rather than `private`, because on an install with no publications the two
+    behave identically, while `private` would later 404 the archive's own published site the
+    day diffusion writes its first marker.
+
+    Setting `false` is still a real choice and is honoured; what is no longer honoured is
+    silence. **nginx installs must reload** for this to take effect
+    (`nginx -t && nginx -s reload`); the Apache `.htaccess` applies immediately.
 
 ```ini
 # ../private/.env
@@ -283,13 +298,34 @@ Operational notes, also written into the generated file:
 
 ## Always-on hardening
 
-Two things are emitted in **every** mode, including `off`, because neither is part of the
-access gate:
+Three things are emitted in **every** mode, including `off`, because none of them is part of
+the access gate:
 
 * **Script execution under the media root is denied.** The media root is full of user-uploaded
-  files, and the web server must never interpret one as code.
+  files, and the web server must never interpret one as code. Extensions no media model
+  accepts at all (`.html`, `.swf`, `.hta`…) are refused outright.
+* **SVG is served inert.** SVG is the one image format that is also a *document*: it can carry
+  `<script>`, inline event handlers and `<foreignObject>`. Since the media origin is the
+  application origin, an uploaded `.svg` served inline is stored XSS against a curator's
+  session. So every uploader-supplied `.svg`/`.xml` is handed over as a **download**
+  (`Content-Disposition: attachment`) inside an opaque origin
+  (`Content-Security-Policy: default-src 'none'; sandbox`), while the *server-generated*
+  image envelope — the file the edit view embeds through `<object>` — stays inline under a
+  CSP that blocks script but preserves the same-origin access that view needs.
+  `X-Content-Type-Options: nosniff` is emitted for the whole tree.
 * **The marker store is denied.** The names under `auth/` are working media credentials and the
   ones under `pub/` enumerate every published record.
+
+!!! note "Uploaded SVG is never refused or rewritten"
+    Refusing a curator's vector file would be data loss — a heritage archive legitimately
+    holds files it did not author — and sanitising SVG is lossy and unverifiable. The serving
+    rule above is what makes such a file harmless; active content in an upload is *noticed* in
+    the server log so it can be found, never rejected.
+
+!!! warning "Apache needs `mod_headers`"
+    Without it the CSP cannot be emitted, so the rules **deny** uploader-supplied vector and
+    XML rather than serve it unprotected. Headers may not fail open. The engine-written
+    envelopes stay served.
 
 !!! danger "`off` disables the gate — it never deletes the rule file"
     Turning protection off writes a **hardening-only** rule file. It must never unlink it: a
@@ -299,10 +335,10 @@ access gate:
 
 ## The auth cookie
 
-* **Fixed name**, `dedalo_media_auth`; rotating **value**, 128 hex characters.
-* Today's and yesterday's values are both valid, so sessions do not break at midnight and a
-  second login on the same day **recycles** the value instead of rotating every other editor
-  out.
+* **Fixed name**, `dedalo_media_auth`; **one value per session**, 128 hex characters.
+* Each login mints its own value and lays its own marker, so two sessions of the same user
+  hold two credentials and neither displaces the other. The fixed *name* is what keeps the
+  generated rules static: they never mention a value, so no rotation needs an nginx reload.
 * Attributes: `HttpOnly; SameSite=Lax; Path=/`, `Max-Age` = the session idle window
   (`SESSION_TTL_SECONDS`), plus `Secure` when the session cookie is configured secure.
   `HttpOnly` still lets the browser attach it to `<img>` and `<video>` subresource loads —
@@ -310,15 +346,20 @@ access gate:
 * **The cookie lives exactly as long as the session.** It is re-issued on any authenticated
   request whose value is missing or stale, so it can neither expire under a live session nor
   outlive a dead one. See [login](../core/system/login.md) for the two session clocks.
-* Logout clears the cookie in the browser. It **must not** remove the marker: the value is
-  install-global, so unlinking it would lock out every other editor.
-* The persisted store, `<private>/media_auth.json` (mode `0600`), lives outside every served
-  tree by construction, and the engine refuses to write it under the media root. Its contents
-  are valid media credentials: a fetchable store would let any visitor set the cookie and read
-  the whole tree for up to 48 hours.
+* **Logout revokes it.** The value is one per SESSION, so logging out unlinks that session's
+  marker and no other; a password reset unlinks every marker belonging to that user.
+* The old day-global store, `<private>/media_auth.json`, is retired: boot renames it
+  `.migrated` once. There is no shared value left to persist.
 
-A leaked value grants media read access until the next daily rotation. That is the price of a
-reload-free, zero-configuration web-server gate.
+!!! danger "What the old design cost"
+    Until 2026-08-24 the value was one per **install per day** — every logged-in editor held
+    the identical cookie — so logout could not unlink the marker without locking everyone out,
+    and a stolen cookie stayed valid for up to **48 hours** across a logout *and* a password
+    reset. Holders of an old cookie lose access at the first boot after the upgrade and are
+    re-issued on their next request; no re-login is needed.
+
+A leaked value now grants media read access until that session ends. The cookie NAME is still
+fixed and the value is still 128 hex characters, so none of this needs an nginx reload.
 
 ## The media_control widget
 

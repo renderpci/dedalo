@@ -116,9 +116,25 @@ function verifyTripwires(): string[] {
 /** hermetic.sh HERMETIC_TRIPWIRES entries. */
 function hermeticTripwires(): string[] {
 	const src = read('scripts/ci/hermetic.sh');
-	const block = src.match(/HERMETIC_TRIPWIRES=\(([\s\S]*?)\)/)?.[1];
+	// Terminate at a LINE-START ')', not the first ')' anywhere: section comments
+	// inside the array legitimately contain parentheses, and a non-greedy match
+	// stopped dead at the first one. Measured 2026-08-24: that truncation hid 20
+	// of the 41 entries from this gate — the rule guarding the hermetic list was
+	// itself only checking half of it, silently, since 2026-08-03.
+	const block = src.match(/HERMETIC_TRIPWIRES=\(\n([\s\S]*?)\n\)/)?.[1];
 	if (!block) throw new Error('scripts/ci/hermetic.sh: HERMETIC_TRIPWIRES array not found');
-	return [...block.matchAll(/(test\/[^\s)]+\.test\.ts)/g)].map((m) => m[1] as string);
+	// Entries only: a path must BE the line, so a path mentioned inside a comment
+	// is not mistaken for a wired gate.
+	return block
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line !== '' && !line.startsWith('#'))
+		.map((line) => {
+			const m = line.match(/^(test\/[^\s]+\.test\.ts)$/);
+			if (!m)
+				throw new Error(`scripts/ci/hermetic.sh: unparsable HERMETIC_TRIPWIRES line: ${line}`);
+			return m[1] as string;
+		});
 }
 
 /** engineering/TRIPWIRES.md table rows (first column, test paths). */
@@ -128,6 +144,103 @@ function ledgerTripwires(): string[] {
 	if (rows.length === 0) throw new Error('engineering/TRIPWIRES.md: no tripwire rows found');
 	return rows;
 }
+
+/**
+ * Rule 3c — tripwires that do NOT run on the hermetic tier, each with a written
+ * reason. This is the CONVERSE of the subset rule below it, and it exists
+ * because the subset rule alone is a one-way silence: for months a tripwire
+ * could be added to verify.ts, never wired into hermetic.sh, and run on NO
+ * executing tier while every gate stayed green. Measured 2026-08-24: the index
+ * held 89 gates and hermetic.sh 41 — and five more landed that same day, taking
+ * the unrun set from 48 to 53, with nothing red at any point.
+ *
+ * The map is exact in BOTH directions: an unlisted exclusion is red (the new
+ * gate must be wired or explained) and a stale entry is red too (a listed gate
+ * that now runs hermetically, or that is no longer a tripwire at all).
+ *
+ * Every entry below is a DB-tier gate — verified by reading its closure, not its
+ * name. To move one here it is not enough that it looks pure: hermetic.sh's
+ * standing rule is that an entry is EMPIRICALLY re-verified with DB_PORT closed
+ * before being added.
+ */
+const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
+	[
+		'test/unit/consultation_only_sections_tripwire.test.ts',
+		'The engine-guard refusals resolve pre-DB but the readSection end-to-end leg and the ontology-backed permission/structure lookups query the suite Postgres, so the gate cannot run on the hosted tier',
+	],
+	[
+		'test/unit/error_taxonomy_tripwire.test.ts',
+		'Legs A–C and E are pure tracked-source scans, but leg D needs the suite Postgres and would report an explicit SKIP forever on the hosted tier — putting the whole file there would silently drop the runtime-envelope leg, so it belongs on the DB tier (or needs a split)',
+	],
+	[
+		'test/unit/external_degradation_tripwire.test.ts',
+		'The derivation and import-refusal halves read the suite database’s ontology (test TLD nodes) through the postgres-backed resolver, so it needs the live suite DB even though it writes nothing',
+	],
+	[
+		'test/unit/external_egress_tripwire.test.ts',
+		'The adapter-shape tests are pure, but the sentinel-control legs resolve the test3 section’s api_config from dd_ontology through the live Postgres before the stubbed fetch ever runs',
+	],
+	[
+		'test/unit/external_isolation_tripwire.test.ts',
+		'The behavioural tests run fetchExternalRows against real ontology properties of section test3, so the closure both loads the postgres pool and issues live queries against the suite DB (fetch itself is stubbed, so no network)',
+	],
+	[
+		'test/unit/external_search_target_tripwire.test.ts',
+		'The frozen-copy half is credless but the ’real ontology’ describe must resolve the generic test61/test204 callers in the suite database and is deliberately red when it cannot, so the gate as a whole needs postgres',
+	],
+	[
+		'test/unit/external_write_refusal_tripwire.test.ts',
+		'It performs real matrix reads and a real scratch-record write/save round trip on the marked suite database — a genuine DB-tier gate that cannot run hosted',
+	],
+	[
+		'test/unit/info_widget_registry_tripwire.test.ts',
+		'The ontology-census test queries the shared dd_ontology table for every declared widget_name, so it needs the live matrix Postgres and cannot run on a bare runner',
+	],
+	[
+		'test/unit/matrix_index_asset_policy_agreement.test.ts',
+		'By design it creates indexes on and reads pg_get_indexdef from a live Postgres catalog — the signature-not-hand-writable rule cannot be checked without one',
+	],
+	[
+		'test/unit/media_thumb_census_tripwire.test.ts',
+		'Its assertions are pure path math and source scans (no query is ever issued — the media root is a marked tmpdir), but the dynamic posterframe.ts import drags the postgres pool module (and its DB config requirements) into the closure, which the hermetic criteria disqualify; splitting posterframeAbsolutePath out of the file_ops chain would make this gate hermetic',
+	],
+	[
+		'test/unit/root_user_hidden_tripwire.test.ts',
+		'Half the gate is the exemption direction — proving the direct-fetch paths still resolve the seeded root row from the suite database — so it cannot run without live postgres',
+	],
+	[
+		'test/unit/sql_confinement_tripwire.test.ts',
+		'The T1/T3/T4 halves are pure source scans, but the T3 behavioural half writes and queries scratch ontology rows in the live matrix Postgres, so the file as a whole cannot go hermetic without splitting the accessor-semantics tests out',
+	],
+	[
+		'test/unit/temporal_instance_tripwire.test.ts',
+		'Drives the real write door against the suite database’s test3 fixture, including a deliberate canary write to a scratch record, so a live Postgres with the suite fixture is required',
+	],
+	[
+		'test/unit/test3_canonical_fixture.test.ts',
+		'It restores, resets and snapshots the matrix_test table and matrix_counter in the live suite database — it is the DB fixture’s own gate and is meaningless without Postgres',
+	],
+	[
+		'test/unit/test_db_marker_tripwire.test.ts',
+		'The gate’s core proof is behavioural against the live suite database (delete-marker-in-transaction, real refusals, real installer bypass), so it is DB-bound by design',
+	],
+	[
+		'test/unit/test_media_root_tripwire.test.ts',
+		'Most legs are fs/source scans, but the ensureMediaKit refusal door must reach the suite Postgres for the test-database marker check before its media-root refusal fires, so the gate needs the DB tier (or that one door split out)',
+	],
+	[
+		'test/unit/test_tld_ontology_gate.test.ts',
+		'Tiers (c)/(d) are declared DATABASE tiers and query/round-trip dd_ontology and matrix tables on the suite DB; only tiers (a)/(b) are hermetic, so the file as a whole cannot go on the hosted tier without being split',
+	],
+	[
+		'test/unit/tm_mode_retired_tripwire.test.ts',
+		'Its final test’s dynamic import pulls the postgres pool module into the closure (no query is ever executed — pickReadSource only selects a function — so splitting that one test out or asserting the wiring from source would make the remainder hermetic), but as written the gate reaches the DB layer',
+	],
+	[
+		'test/unit/tools_cache_invalidation.test.ts',
+		'Its reachability and registry-cache tests create, duplicate and delete real records in the suite database to observe cache invalidation end-to-end, so it requires the live matrix Postgres',
+	],
+]);
 
 describe('CI workflow tripwire', () => {
 	test('every GitHub workflow using setup-bun pins via bun-version-file, never inline', () => {
@@ -323,6 +436,33 @@ describe('CI workflow tripwire', () => {
 			expect(read(file), `${file}: hermetic tier must run scripts/ci/hermetic.sh`).toContain(
 				'scripts/ci/hermetic.sh',
 			);
+		}
+	});
+
+	// Rule 3c — the converse of 3b. Without this, an unwired tripwire is silent.
+	test('every tripwire either runs on the hermetic tier or has a written exclusion reason', () => {
+		const hermetic = new Set(hermeticTripwires());
+		const verify = verifyTripwires();
+		const excluded = verify.filter((t) => !hermetic.has(t));
+
+		for (const t of excluded) {
+			expect(
+				NOT_HERMETIC.has(t),
+				`${t} runs on NO executing tier: it is in verify.ts TRIPWIRES but not in ` +
+					'hermetic.sh, and carries no reason. Wire it into HERMETIC_TRIPWIRES ' +
+					'(re-verify it DB-less first, with DB_PORT closed) or add it to ' +
+					'NOT_HERMETIC with the live dependency that keeps it off the hosted tier.',
+			).toBe(true);
+		}
+
+		// Stale entries are red in both directions.
+		const verifySet = new Set(verify);
+		for (const t of NOT_HERMETIC.keys()) {
+			expect(verifySet.has(t), `NOT_HERMETIC lists ${t}, which is no longer a tripwire`).toBe(true);
+			expect(
+				hermetic.has(t),
+				`NOT_HERMETIC lists ${t} as un-hostable, but hermetic.sh now runs it — delete the row`,
+			).toBe(false);
 		}
 	});
 

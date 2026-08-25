@@ -30,6 +30,9 @@
  * appended are deleted in afterAll (matrix_activity is consultation-only for
  * the engine doors; direct SQL cleanup of our own rows mirrors the
  * differential's cleanup).
+ *
+ * @twin-of      test/parity/activity_log_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

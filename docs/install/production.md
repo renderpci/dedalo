@@ -38,7 +38,7 @@ Media is served **by the web server**, not by Dédalo — but the **access rules
 
 | `DEDALO_MEDIA_ACCESS_MODE` | Who can read a media file |
 | --- | --- |
-| *(unset)* | everyone — the media tree is world-readable |
+| *(unset)* | **the `publication` default** — logged-in users plus anonymous readers of *published* records (fail-closed since 2026-08-24; set `false` to deliberately serve an open tree) |
 | `private` | logged-in Dédalo users only |
 | `publication` | logged-in users **plus** anonymous readers of *published* records, in *public quality* folders only |
 
@@ -354,7 +354,7 @@ Environment=DEDALO_INSTALL_ALLOWED_IPS=loopback
 ```
 
 !!! danger "That TCP listener binds every interface"
-    The engine's `SERVER_TCP_PORT` listener is plain HTTP on `0.0.0.0`, and until the wizard is finished it serves a **pre-auth** install surface. Port 3600 must be closed at the firewall before the unit starts — `sudo ufw status` — and the drop-in is removed the moment the install is over (8.4.4). `DEDALO_INSTALL_ALLOWED_IPS=loopback` is the second lock: over the tunnel the caller *is* the loopback address, so it matches here (behind a proxy it would not).
+    The engine's `SERVER_TCP_PORT` listener is plain HTTP on `0.0.0.0`, and until the wizard is finished it serves a **pre-auth** install surface. Port 3600 must be closed at the firewall before the unit starts — `sudo ufw status` — and the drop-in is removed the moment the install is over (8.4.4). `DEDALO_INSTALL_ALLOWED_IPS=loopback` is the second lock: over the tunnel the caller *is* the loopback address, so it matches here (behind a proxy it would not). It is also what the engine applies when the key is unset — the default admits the local machine and nobody else — so the line above is written out to say so, not to change it. The firewall stays the first lock regardless: a request that reaches this listener with no `X-Forwarded-For` is *seen* as local whatever machine it came from.
 
 8.4.2 Start the engine and confirm it is in install mode:
 
@@ -654,7 +654,7 @@ Hardening recap — verify each, because each is a real hole:
 | `DEDALO_DEV_MODE` | `false` | dev mode exposes the browser test harness and developer payloads |
 | `DEDALO_DEBUG_API_ERRORS` | `false` | otherwise exception text is echoed to the client |
 | `MEDIA_DEV_ROUTE_ENABLED` | **unset** | unset is already safe: the engine media fallback answers only on the TCP dev listener (unset in production) and only while protection is unconfigured. Setting it to `true` FORCES it on for every listener — the socket included — serving media with **no per-record ACL** and bypassing the generated rules entirely |
-| `DEDALO_INSTALL_ALLOWED_IPS` | set, while unsealed | the install surface is pre-auth until the instance is sealed |
+| `DEDALO_INSTALL_ALLOWED_IPS` | unset (= the local machine only), or the exact address you install from | the install surface is pre-auth until the instance is sealed; the default is fail-closed, and `any` is the only spelling that opens it |
 | `SESSION_COOKIE_SECURE` | `true` (the default) | requires TLS — the browser drops a `Secure` cookie over plain HTTP |
 | `../private/.env` | `0600`, owned by `dedalo` | it holds every secret |
 | `../private/` | `0700` | it holds the session store and the media-auth store |

@@ -44,11 +44,20 @@ import { handleTagRequest } from './core/components/component_text_area/tag_endp
 import { provisionMediaTreeAtBoot } from './core/install/media_tree.ts';
 import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
 import {
-	currentMediaAuthCookie,
+	layAuthMarker,
 	MEDIA_AUTH_COOKIE,
+	mintAuthCookieValue,
 	resolveMediaAccessMode,
+	resolveMediaAccessModeDetail,
+	retireLegacyAuthStore,
 	writeRuleFiles,
 } from './core/media/protection.ts';
+import {
+	isImageEnvelopeSvg,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+} from './core/media/svg_safety.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -59,12 +68,14 @@ import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/exp
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
 import { DedaloError } from './core/errors/dedalo_error.ts';
+import { describeInstallAllowPolicy, installInProgress } from './core/install/gate.ts';
 import { HIERARCHY_IMPORT_DIR } from './core/install/paths.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
 import {
 	getSession,
 	SESSION_COOKIE,
 	SESSION_IDLE_TTL_SECONDS,
+	setSessionMediaKey,
 } from './core/security/session_store.ts';
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
@@ -136,10 +147,27 @@ const MEDIA_URL_PREFIX = `/dedalo/${config.mediaDir}/`;
  * socket), 'false' forces it off even in dev. With protection configured it is inert.
  */
 function mediaFallbackAllowed(context: RequestContext): boolean {
-	// (1) A configured gate is never bypassable — check it before the flag, so the flag
+	// (1) A CONFIGURED gate is never bypassable — check it before the flag, so the flag
 	// cannot re-open what an admin closed. Cheap on the hot path: the mode read only
 	// happens for requests actually addressed to the media prefix (see the call site).
-	if (resolveMediaAccessMode() !== false) return false;
+	//
+	// (!) 'CONFIGURED', not 'on'. Since 2026-08-24 an install that configured nothing
+	// resolves to the fail-closed default 'publication', and reading that as "a gate is
+	// in place" would stand this route down on every install with NO WEB SERVER in front
+	// of its media — the documented dev_quickstart flow — so every image, video and PDF
+	// would 404 for logged-in editors, with MEDIA_DEV_ROUTE_ENABLED unable to help
+	// (it is inert once a mode is set). A security default whose first effect is that
+	// teaches operators exactly one thing: how to switch it off. The DEFAULT stands this
+	// route down only where the generated rules are actually being read — i.e. where an
+	// operator made the choice.
+	const { mode, source } = resolveMediaAccessModeDetail();
+	if (mode !== false && source !== 'default') return false;
+	if (mode !== false && source === 'default' && context.devListener !== true) {
+		// The unconfigured default still refuses the SOCKET listener: there a web server
+		// IS in front, reading rules that now gate the tree, and this route would serve
+		// the same bytes with weaker checks.
+		return false;
+	}
 
 	const explicit = readEnv('MEDIA_DEV_ROUTE_ENABLED');
 	if (explicit === 'true') return true; // force-on, unprotected installs only
@@ -171,14 +199,36 @@ export interface RequestContext {
 	 * than by an operator remembering a flag. Transport fact, not identity.
 	 */
 	readonly devListener?: boolean;
+	/**
+	 * The TRANSPORT's own peer address (Bun `server.requestIP`), or null on the unix
+	 * socket, where the peer is a local socket with no address to report. Unforgeable:
+	 * it comes from the connection, not from a header.
+	 */
+	readonly peerIp?: string | null;
+	/**
+	 * May this request's `X-Forwarded-For` be believed? True only when a reverse proxy
+	 * is known to stand in front of THIS listener (TRUSTED_PROXY_TRANSPORT). A header
+	 * is only as trustworthy as the transport that delivered it.
+	 */
+	readonly proxyTrusted?: boolean;
 }
 
-/** Exported for tests that call `handleRequest` directly (no socket). */
-export function createRequestContext(options: { devListener?: boolean } = {}): RequestContext {
+/**
+ * Exported for tests that call `handleRequest` directly (no socket).
+ *
+ * `proxyTrusted` defaults to FALSE — a context nobody described is a context with no
+ * proxy behind it, and defaulting the other way would hand every future caller the
+ * spoofable behaviour by omission. The listeners set it explicitly.
+ */
+export function createRequestContext(
+	options: { devListener?: boolean; peerIp?: string | null; proxyTrusted?: boolean } = {},
+): RequestContext {
 	return {
 		requestId: crypto.randomUUID(),
 		startedAt: performance.now(),
 		devListener: options.devListener === true,
+		peerIp: options.peerIp ?? null,
+		proxyTrusted: options.proxyTrusted === true,
 	};
 }
 
@@ -189,28 +239,84 @@ export function createRequestContext(options: { devListener?: boolean } = {}): R
  * left is client-supplied and MUST NOT be trusted. Default 1 (the standard single
  * nginx/Apache in front). The reverse proxy must append (not replace-with-client)
  * XFF for this to hold — the production default.
+ *
+ * Read through a function rather than captured at module load, so a test can set
+ * the key and observe the effect: a module-level const is fixed at import, and a
+ * gate written against one would be asserting nothing but its own default.
  */
-const TRUSTED_PROXY_HOPS = Math.max(1, Number(readString('TRUSTED_PROXY_HOPS')) || 1);
+function trustedProxyHops(): number {
+	return Math.max(1, Number(readString('TRUSTED_PROXY_HOPS')) || 1);
+}
 
 /**
- * The client IP for throttle/audit — resolved from the TRUSTED hop of
- * X-Forwarded-For, never the spoofable left-most value. Taking the left-most
- * entry let an attacker rotate a fake XFF to mint a fresh login-throttle bucket
- * per request (brute-force bypass). This is never an authorization input.
+ * WHICH TRANSPORT MAY SPEAK X-Forwarded-For. `socket` (the default) means only the
+ * unix-socket listener — the documented production topology, where the socket is
+ * reachable only by the local reverse proxy. `tcp` is the escape hatch for a
+ * topology that really does put a proxy in front of SERVER_TCP_PORT; `none`
+ * disables XFF entirely.
  */
-export function clientIpFromRequest(request: Request): string {
+function trustedProxyTransport(): string {
+	const value = readString('TRUSTED_PROXY_TRANSPORT');
+	return value === undefined || value === '' ? 'socket' : value;
+}
+
+/**
+ * The client IP for throttle and audit.
+ *
+ * X-Forwarded-For is a request HEADER: anything that can open a connection can
+ * write it. It is trustworthy only because a reverse proxy is known to have
+ * rewritten it — so it may be read only on a transport where a proxy is known to
+ * stand in front, and on any other transport the transport's own peer address is
+ * the only honest answer.
+ *
+ * That distinction was missing until 2026-08-24: the hop arithmetic was right, but
+ * it ran on EVERY listener. On the direct TCP listener, which has no proxy in
+ * front, a client simply sent its own `X-Forwarded-For` and chose what this
+ * function returned — unlimited login-throttle buckets (the brute-force protection
+ * this value exists for), forged addresses in dd544 activity rows, and, since the
+ * install gate matches the literal `127.0.0.1`, a spoofable claim to be loopback.
+ * The old comment's "this is never an authorization input" was not true.
+ *
+ * A short header is treated as forged, not as a shorter chain: fewer entries than
+ * there are trusted hops means the request did not come through the proxy chain
+ * the operator described.
+ */
+export function clientIpFromRequest(request: Request, context?: RequestContext): string {
+	// No context: a direct handleRequest() call from a test. Fall back to the
+	// production shape (socket transport, no peer address) rather than inventing
+	// trust — the socket listener is the one this default describes.
+	const proxyTrusted = context === undefined ? true : context.proxyTrusted;
+	const peerIp = context?.peerIp ?? null;
+
+	if (!proxyTrusted) return peerIp ?? 'local';
+
 	const xff = request.headers.get('x-forwarded-for');
-	if (xff === null || xff.trim() === '') return 'local';
+	if (xff === null || xff.trim() === '') return peerIp ?? 'local';
 	const parts = xff
 		.split(',')
 		.map((entry) => entry.trim())
 		.filter((entry) => entry !== '');
-	if (parts.length === 0) return 'local';
-	// The trusted proxies own the right-most TRUSTED_PROXY_HOPS entries; the real
-	// client is the entry the outermost trusted proxy appended (index len - hops).
-	const index = Math.max(0, parts.length - TRUSTED_PROXY_HOPS);
-	return parts[index] ?? parts[parts.length - 1] ?? 'local';
+	const hops = trustedProxyHops();
+	// FEWER ENTRIES THAN HOPS: the chain the operator described did not happen, so
+	// every entry present is client-written. This used to clamp the index to 0 and
+	// return the LEFT-MOST entry — i.e. the attacker's own value, which is exactly
+	// the spoof the hop arithmetic exists to prevent.
+	if (parts.length < hops) return peerIp ?? PROXY_MALFORMED_IP;
+	return parts[parts.length - hops] ?? peerIp ?? PROXY_MALFORMED_IP;
 }
+
+/**
+ * The address for a request whose X-Forwarded-For is shorter than the configured
+ * hop count and whose transport has no peer address to fall back on.
+ *
+ * A distinct token rather than 'local': it must never satisfy a loopback check,
+ * and it must be visible to an operator reading an audit row. It cannot amplify
+ * into an install-wide lockout, because a login throttle key carries the USERNAME
+ * as well (`buildThrottleKey`), so a misconfigured hop count degrades to one
+ * bucket per account rather than one bucket for everybody. The exception worth
+ * knowing is the password-reset VERIFY throttle, which is keyed by reset id.
+ */
+const PROXY_MALFORMED_IP = 'proxy-malformed';
 
 /** Parse the Content-Length header to a non-negative integer, else undefined. */
 export function parseContentLength(header: string | null): number | undefined {
@@ -705,10 +811,20 @@ const COUNTERS_PATHS: ReadonlySet<string> = new Set([
  * `object-src` admits the envelope folder (core/api/static_asset.ts), a rotted
  * selection here is no longer backstopped by the app CSP.
  *
- * HONEST SCOPE: this is the Bun dev/fallback media route only. In the documented
- * production topology the web server serves media from the generated access
- * rules (core/media/protection.ts), which emit access control and NO headers —
- * so these guarantees do not hold there. Ledgered, not implied.
+ * SCOPE (2026-08-24): this is the Bun dev/fallback media route, and it is no
+ * longer the only enforcer. The generated Apache/nginx rules
+ * (core/media/protection.ts) now emit the SAME two header sets in the documented
+ * production topology, from the SAME definition — core/media/svg_safety.ts owns
+ * the selection rule, the CSPs and the disposition, and
+ * media_protection_tripwire pins that the generated rule text classifies a table
+ * of real paths exactly as this function does. Until that landed, the sentence
+ * here read "these guarantees do not hold there", and DECISION 2's closing
+ * requirement ("the production template must mirror the two path-scoped rules")
+ * was unpaid for six weeks.
+ *
+ * HONEST LIMIT: the tripwire proves the PATTERNS agree, not that Apache and
+ * nginx execute them as intended — that is the curl matrix in
+ * engineering/MEDIA_PROTECTION.md §9.
  *
  * @param relSegments media-root-relative path segments, e.g. ['image','svg','0','x.svg']
  * @param contentType the file's resolved MIME type
@@ -719,17 +835,68 @@ export function mediaSvgSafetyHeaders(
 ): Record<string, string> {
 	const isSvg = contentType.includes('svg');
 	if (!isSvg) return {};
-	const imageFolder = config.media.image.folder.replace(/^\//, '');
-	const isImageEnvelope = relSegments[0] === imageFolder && relSegments.includes('svg');
-	return isImageEnvelope
-		? {
-				'Content-Security-Policy':
-					"default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'; form-action 'none'; base-uri 'none'",
-			}
+	return isImageEnvelopeSvg(relSegments)
+		? { 'Content-Security-Policy': SVG_ENVELOPE_CSP }
 		: {
-				'Content-Disposition': 'attachment',
-				'Content-Security-Policy': "default-src 'none'; sandbox",
+				'Content-Disposition': SVG_QUARANTINE_DISPOSITION,
+				'Content-Security-Policy': SVG_QUARANTINE_CSP,
 			};
+}
+
+/**
+ * Say ONCE, at boot, when media protection is in force because nobody chose it.
+ *
+ * The fail-closed default (2026-08-24) changes what anonymous visitors can read on every
+ * install that never configured a mode, and on nginx it does so ONLY AFTER A RELOAD —
+ * Apache reads .htaccess per request, nginx reads its include at reload. An operator whose
+ * public site quietly starts 404ing images, or whose install keeps serving everything
+ * because nobody reloaded, must be able to find out why from the log rather than by
+ * bisecting a release. Silent security changes are how operators learn to distrust them.
+ *
+ * Advisory only: it never throws and never changes what is served.
+ */
+function announceUnconfiguredMediaProtection(): void {
+	const { mode, source } = resolveMediaAccessModeDetail();
+	if (source !== 'default' || mode === false) return;
+	console.warn(
+		`[media_protection] no media access mode is configured, so the FAIL-CLOSED DEFAULT '${mode}' applies: ` +
+			'logged-in users see everything; anonymous visitors see only media of PUBLISHED records in the ' +
+			'public quality folders. Apache picks this up immediately; NGINX NEEDS A RELOAD ' +
+			'(include both generated files, then `nginx -t && nginx -s reload`). Set ' +
+			'DEDALO_MEDIA_ACCESS_MODE explicitly — including to `false` — to make the choice yours.',
+	);
+}
+
+/**
+ * The media-auth cookie value this live session SHOULD be carrying, or null.
+ *
+ * Normally just the key already on the session row. The re-key branch exists for two
+ * real populations, both of which would otherwise hold a session with no media access
+ * at all and no way to get one short of logging out and back in:
+ *
+ *  - sessions that predate the `media_key` column (every session live across the
+ *    upgrade that introduced the per-session credential);
+ *  - sessions created while protection was off, on an install where an operator has
+ *    since switched it on from the maintenance widget.
+ *
+ * READ-MOSTLY, and the write it does is one zero-byte marker plus one UPDATE, once per
+ * session ever. It deliberately does NOT regenerate the rule files: that is a login/boot
+ * job, and doing it on the authenticated hot path would rewrite the whole gate under
+ * load.
+ */
+function sessionMediaKeyFor(
+	session: { mediaKey?: string | null } | null,
+	cookieHeader: string,
+): string | null {
+	if (session === null) return null;
+	if (typeof session.mediaKey === 'string' && session.mediaKey !== '') return session.mediaKey;
+	if (resolveMediaAccessMode() === false) return null;
+	const rawToken = readCookie(cookieHeader, SESSION_COOKIE);
+	if (rawToken === undefined) return null;
+	const minted = mintAuthCookieValue();
+	layAuthMarker(minted);
+	setSessionMediaKey(rawToken, minted);
+	return minted;
 }
 
 /**
@@ -1085,7 +1252,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			requestId: context.requestId,
 			// Behind the reverse proxy the socket has no peer IP; the client IP comes
 			// from the TRUSTED X-Forwarded-For hop (never the spoofable left-most).
-			clientIp: clientIpFromRequest(request),
+			clientIp: clientIpFromRequest(request, context),
 			session: sessionToken !== undefined ? getSession(sessionToken) : null,
 			sessionToken: sessionToken ?? null,
 			// Anonymous language preference (login panel). Allowlisted in dispatch.
@@ -1148,9 +1315,19 @@ export async function handleRequest(request: Request, context: RequestContext): 
 			//
 			// Re-issuing here ties the two together by construction: same idle window,
 			// refreshed by the same requests, and dropped by the same logout. Only when
-			// the browser's value is actually stale — a string compare against a
-			// day-cached value, no store read — so the steady state costs nothing.
-			const expected = currentMediaAuthCookie();
+			// the browser's value is actually stale — one string compare against a value
+			// already on the session row, no filesystem read — so the steady state costs
+			// nothing.
+			//
+			// (2026-08-24) The expected value is now THIS SESSION's, not the install's
+			// value for today, which is what makes logout able to revoke it. Two states
+			// need re-keying rather than re-issuing, and both arrive here: a session
+			// created before the media_key column existed (the upgrade path), and one
+			// created while protection was off and later switched on from the widget.
+			// Re-keying lays a marker; it must NEVER call writeRuleFiles() — this is the
+			// authenticated hot path, and a rule-file writer here rewrites the whole gate
+			// under load.
+			const expected = sessionMediaKeyFor(apiContext.session, cookieHeader);
 			if (expected !== null && readCookie(cookieHeader, MEDIA_AUTH_COOKIE) !== expected) {
 				headers.append('Set-Cookie', mediaAuthCookieHeader(expected));
 			}
@@ -1467,6 +1644,16 @@ export async function startServer() {
 		);
 	}
 
+	// The install surface is PRE-AUTH while unsealed — persist_config rewrites
+	// ../private/.env and forces a restart, test_db_connection spawns psql — and its
+	// address allowlist is fail-closed by default since 2026-08-24
+	// (WC-2026-08-24-install-ip-gate-fail-closed). Print the effective policy so an
+	// operator locked out of their own wizard reads WHY off the log instead of guessing
+	// at a key; the catalog doc for DEDALO_INSTALL_ALLOWED_IPS promises this line.
+	if (config.installMode || installInProgress()) {
+		console.warn(`[boot] ${describeInstallAllowPolicy()}`);
+	}
+
 	// Ordered TS-owned schema migrations (audit S2-39) — run BEFORE serving so a
 	// request never observes a half-migrated schema. A failure logs loudly and
 	// continues: the lazy CREATE IF NOT EXISTS bootstraps remain the fallback,
@@ -1670,6 +1857,13 @@ export async function startServer() {
 		// meantime. Config-hash guarded, so this is normally a no-op.
 		try {
 			writeRuleFiles();
+			announceUnconfiguredMediaProtection();
+			// One-shot migration: the day-global auth store is dead once the credential
+			// is per-session, and a file full of live-looking credentials left on disk is
+			// what gets restored from a backup years later. Renamed, not unlinked, so an
+			// operator debugging the upgrade can still see it. NOT a marker reconcile —
+			// see session_media.sweepExpiredSessions for why that must not run at boot.
+			retireLegacyAuthStore();
 		} catch (error) {
 			console.error(
 				'[media_protection] could not write the media rule files at boot — the media ' +
@@ -1870,7 +2064,15 @@ export async function startServer() {
 		// options shape; the runtime accepts it (verified on the pinned 1.3.9).
 		idleTimeout: config.ops.idleTimeoutSeconds as unknown as undefined,
 		fetch(request) {
-			return handleRequest(request, createRequestContext());
+			// The unix socket is reachable only by whatever can open that file — in the
+			// documented topology, the local reverse proxy and nothing else. That is what
+			// makes its X-Forwarded-For believable, and why `socket` is the default
+			// TRUSTED_PROXY_TRANSPORT. A socket peer has no address to report, so there
+			// is no peerIp: on this listener the header is the only source there is.
+			return handleRequest(
+				request,
+				createRequestContext({ proxyTrusted: trustedProxyTransport() === 'socket' }),
+			);
 		},
 		// Catch-all for any throw that escapes handleRequest (API-01 hardening).
 		// Without it, an un-try/caught throw returns Bun's raw 500 stack page,
@@ -1914,11 +2116,24 @@ export async function startServer() {
 				port: Number(tcpPort),
 				maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
 				idleTimeout: config.ops.idleTimeoutSeconds,
-				fetch(request) {
+				fetch(request, server) {
 					// devListener: THIS listener is the only one a browser can reach without a
 					// web server in front, so it is the only one that may answer media from the
 					// engine (mediaFallbackAllowed). The socket listener never sets it.
-					return handleRequest(request, createRequestContext({ devListener: true }));
+					//
+					// And by the same fact it is the one listener a BROWSER talks to directly,
+					// so its X-Forwarded-For is written by whoever connected — not by a proxy.
+					// The peer address from the connection is the honest client identity here,
+					// and the header is believed only if an operator declared a proxy in front
+					// of this port (TRUSTED_PROXY_TRANSPORT=tcp).
+					return handleRequest(
+						request,
+						createRequestContext({
+							devListener: true,
+							peerIp: server.requestIP(request)?.address ?? null,
+							proxyTrusted: trustedProxyTransport() === 'tcp',
+						}),
+					);
 				},
 				error(error) {
 					console.error('[server] unhandled fetch error (dev listener):', error);

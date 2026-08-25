@@ -34,6 +34,9 @@
  * Scratch hygiene: two fresh test6247 records (matrix_test — the clone's own
  * table), rows + TM swept
  * fail-loud in afterAll.
+ *
+ * @twin-of      test/parity/calculation_widget_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
 // were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the

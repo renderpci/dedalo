@@ -38,6 +38,9 @@
  * 932000-932999 only, direct SQL (saveUserActivity cannot mint the malformed
  * shapes), swept fail-loud in afterAll from matrix_stats AND
  * matrix_time_machine.
+ *
+ * @twin-of      test/parity/get_widget_data_differential.test.ts
+ * @twin-status  supplement
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

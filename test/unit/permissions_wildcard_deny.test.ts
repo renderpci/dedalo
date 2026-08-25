@@ -7,6 +7,9 @@
  *
  * The allow direction (concrete parent + 'all'/inverse tipo → 1) is pinned in
  * test/parity/permissions_differential.test.ts; THIS file pins the refusals.
+ *
+ * @twin-of      test/parity/permissions_differential.test.ts
+ * @twin-status  supplement
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rule). Install tipos
 // were replaced by their twins from src/core/test_data/test_tld_tipo_map.json; the

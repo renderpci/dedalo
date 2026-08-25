@@ -6,9 +6,23 @@
  * color, total, recent_7d} in ONTOLOGY ORDER, area_label, metrics, and the
  * activity_30d aggregate (date window, day series, users, ranges). `generated_at`
  * is the only normalized field (volatile unix seconds; PHP time() vs TS
- * Date.now() differ by <2s). The dates are "now"-relative but both engines are
- * driven within the same test tick, so they match (a midnight-boundary race is
- * the sole theoretical exception).
+ * Date.now() differ by <2s).
+ *
+ * PERMANENTLY RED BY CONSTRUCTION — NOT FLAKY, DO NOT RE-RUN FOR GREEN
+ * (restated 2026-08-24). The original premise was that the dates are
+ * "now"-relative but both engines are driven within the same test tick, so they
+ * match. That premise died with the live oracle. Under ORACLE_MODE=fixtures the
+ * PHP side is FROZEN at its harvest window (date_from 2026-06-11 → date_to
+ * 2026-07-11, in this gate's own fixture) while the TS side computes a LIVE
+ * today−30 window (src/core/area/dashboard.ts:284 → :148-149, zonedToday() /
+ * addDays(-30)). The proof is in which cases fail: the two reds frozen in
+ * engineering/parity_baseline.json are dd69 and dd770 — exactly the two cases
+ * WITH activity — while the empty areas (dd222, dd35) still pass. That is the
+ * signature of a date-window mismatch, not of a shape bug.
+ *
+ * The remedy is a DEC-14b twin that BUILDS its own activity window on the
+ * generic `test` TLD, not a widened comparison here and not a fixture edit (a
+ * re-harvest is impossible by definition). Queued as a twin candidate.
  *
  * Corpus (kept fast): empty areas (area_publication dd222, area_tool dd35 —
  * children are section_tool, excluded from the stats walk) + small (area_activity

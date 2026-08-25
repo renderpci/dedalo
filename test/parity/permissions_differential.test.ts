@@ -7,6 +7,8 @@
  * (the source of truth the resolver reads) plus the hard-coded bypass rules.
  * It needs no oracle: the frozen store never held a get_permissions body, and
  * the matrix IS the specification.
+ *
+ * @twinned-by   test/unit/permissions_wildcard_deny.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay).
 // The gate used to read the monedaiberica install's user 16 / profile 8 (148

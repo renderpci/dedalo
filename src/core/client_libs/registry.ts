@@ -20,10 +20,21 @@
  * release) and `chai` (the old copy was a CDN UMD build; since chai 6 the package is
  * ESM-only and the harness imports it through its import map — test-harness-only either way).
  *
+ * INTEGRITY — the two sources are guarded by two different mechanisms, and BOTH
+ * must exist. An `npm` lib is pinned by the lockfile's `sha512-` integrity; a
+ * `vendor` lib has no lockfile line at all, so its bytes are pinned by a tree
+ * digest in `vendor/vendor_manifest.json`, recomputed by
+ * `scripts/vendor_verify.ts` on every `bun test` and in hermetic CI. A dependency
+ * shape that gets NEITHER — a bare archive URL in package.json, which bun records
+ * without integrity — is refused by
+ * `test/unit/dependency_integrity_tripwire.test.ts`; that is why `xlsx` below is
+ * vendored rather than installed.
+ *
  * Adding a lib: add an entry here, add the dep to package.json (or drop it in
- * `vendor/` with a `reason`), and point `probe` at a file that must exist. The
- * client_libs tripwire GETs every probe — a lib that is missing, misplaced, or
- * renamed by an upstream reshuffle fails loudly instead of 404ing in the browser.
+ * `vendor/` with a `reason` AND a vendor_manifest.json row), and point `probe` at a
+ * file that must exist. The client_libs tripwire GETs every probe — a lib that is
+ * missing, misplaced, or renamed by an upstream reshuffle fails loudly instead of
+ * 404ing in the browser.
  */
 
 import { resolve } from 'node:path';
@@ -99,13 +110,6 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'npm',
 		probe: 'es/core.min.js',
 	},
-	xlsx: {
-		// SheetJS left the npm registry (npm's `xlsx` is abandoned at 0.18.5), so the
-		// dep is pinned to their own tarball URL — bun installs it like any other.
-		base: 'node_modules/xlsx',
-		source: 'npm',
-		probe: 'xlsx.mjs',
-	},
 	transformers: {
 		// The in-browser AI runtime (tool_transcription's speech recognition,
 		// tool_lang's translation). It USED to be imported straight from a CDN by
@@ -144,7 +148,7 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 	// specifiers), loaded through the harness import map. See client/dedalo/test/client/.
 	chai: { base: 'node_modules/chai', source: 'npm', probe: 'index.js', devOnly: true },
 
-	// --- COMMITTED under vendor/ (2.2 MB gzipped) --------------------------------
+	// --- COMMITTED under vendor/ (4 trees; digest-pinned, see the header) ---------
 	ckeditor: {
 		base: 'vendor/ckeditor',
 		source: 'vendor',
@@ -157,6 +161,14 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'vendor',
 		probe: 'jsonview.bundle.js',
 		reason: 'pgrabovets/json-view is distributed via GitHub/jsDelivr only; never published to npm.',
+	},
+
+	xlsx: {
+		base: 'vendor/xlsx',
+		source: 'vendor',
+		probe: 'xlsx.mjs',
+		reason:
+			"SheetJS left the npm registry (npm's `xlsx` is abandoned at 0.18.5), so this was a bare CDN tarball URL in package.json — and a tarball-URL dependency is the ONE shape bun records with no integrity: bun.lock carried `sha512-` for all 581 other entries and nothing for this one. That is not a paperwork gap. These bytes are SERVED TO BROWSERS (tools/tool_export/js/tool_export.js imports /dedalo/lib/xlsx/xlsx.mjs), and every code update re-runs `bun install` in the quarantine, so each update re-fetched unverified third-party client code over the network — a supply-chain write into the page, once per update, forever. Committed 2026-08-24 from the installed 0.20.3 tree, byte-identical to a fresh download of the upstream .tgz (archive sha256 8dc73fc3…, recorded in vendor/vendor_manifest.json and hashed by scripts/vendor_verify.ts). Trimmed to xlsx.mjs — the only file the client loads — plus the Apache-2.0 LICENSE. Bump it with scripts/vendor_fetch.ts, which refuses a download whose sha256 is not the stated one.",
 	},
 
 	pdfjs: {

@@ -4,6 +4,8 @@
  * every cell must equal PHP's flat display string, including a
  * portal-resolved label. Columns compare on the stable identity fields
  * (key/label/cell_type/i); the enriched path internals stay PHP-side detail.
+ *
+ * @twinned-by   test/unit/tool_export_native.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-tools-gates-test-tld).
 // Every section and component below is either a phase-2 clone in the generic

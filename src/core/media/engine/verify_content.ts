@@ -75,6 +75,7 @@
 
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { DedaloError } from '../../errors/dedalo_error.ts';
+import { detectActiveSvgContent } from '../svg_safety.ts';
 import { sniffAndValidate, sniffBytes } from './mime.ts';
 
 /** Bytes fed to the signature sniffer (the historic SEC-066 head bound). */
@@ -542,6 +543,42 @@ function verifyStructure(fd: number, size: number, kind: string): void {
  * A throw from here does NOT authorise deleting the file — see
  * `joinChunkedUpload`, which quarantines the transfer instead.
  */
+/**
+ * An uploaded SVG that carries active content is NOTICED, never refused.
+ *
+ * Refusing would be data loss: a heritage archive legitimately holds vector files it
+ * did not author, and a <foreignObject> or a DOCTYPE in one of them is not an attack —
+ * it is a file. What makes such a file harmless is the SERVING side: the generated
+ * Apache/nginx rules and the Bun media route hand every uploader-supplied SVG over as
+ * a download inside an opaque origin (core/media/svg_safety.ts). This line exists so an
+ * operator can FIND those files — after an incident, or before publishing a collection —
+ * not so the engine can reject them. The engine-written image envelope, whose bytes come
+ * from our own vector editor, is a different population and IS refused (svg_overlay.ts).
+ *
+ * Bounded at 8 MB: past that a vector file is not a drawing, and a scan of an arbitrarily
+ * large upload is a denial-of-service the notice does not justify. A file larger than the
+ * bound is reported as unscanned rather than silently treated as clean.
+ */
+function noticeActiveSvgContent(fd: number, size: number, path: string): void {
+	const SCAN_LIMIT = 8 * 1024 * 1024;
+	if (size > SCAN_LIMIT) {
+		console.warn(
+			`[media][svg] ${path}: ${String(size)} bytes exceeds the ${String(SCAN_LIMIT)}-byte active-content scan bound — NOT scanned. It is still served download-only (media/svg_safety.ts).`,
+		);
+		return;
+	}
+	// NOT readAt(): that helper clamps to WINDOW_BYTES, which is the right bound for a
+	// structural probe and the wrong one here — a <script> 9 KB into a drawing would be
+	// reported clean. Read the whole (already bounded) file.
+	const buffer = new Uint8Array(size);
+	const read = readSync(fd, buffer, 0, size, 0);
+	const found = detectActiveSvgContent(new TextDecoder().decode(buffer.subarray(0, read)));
+	if (found.length === 0) return;
+	console.warn(
+		`[media][svg] ${path}: the uploaded vector carries ${found.join(', ')}. ACCEPTED and stored — it is served download-only inside an opaque origin, never inline (media/svg_safety.ts). Noticed so it can be found, not refused.`,
+	);
+}
+
 export function verifyFileContent(path: string, declaredExtension: string): string {
 	const fd = openSync(path, 'r');
 	try {
@@ -564,6 +601,7 @@ export function verifyFileContent(path: string, declaredExtension: string): stri
 			);
 		}
 		if (policy.depth === 'structural') verifyStructure(fd, size, kind);
+		if (kind === 'svg') noticeActiveSvgContent(fd, size, path);
 		return extension;
 	} finally {
 		closeSync(fd);

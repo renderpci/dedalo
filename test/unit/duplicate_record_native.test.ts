@@ -33,6 +33,9 @@
  * own native gates. Fixture: one test3 source with a two-lang test52 value
  * (direct-SQL seed; the differential used test2/numisdata16 — same
  * matrix_test contract). Source + duplicate + TM swept in afterAll.
+ *
+ * @twin-of      test/parity/duplicate_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -209,6 +212,11 @@ describe('duplicate core contract (TS-native, differential-pinned anatomy)', () 
 	});
 
 	test('TM: one backfill+save pair for the copied component (full value → lg-spa slice)', () => {
+		// Exactly two rows, asserted BEFORE the shape: an observer hop, a re-run
+		// without teardown or a concurrent writer taking an id between the pair
+		// otherwise surfaces as a value diff and sends the reader to the wrong
+		// subsystem. The delta below indexes positionally and needs this.
+		expect(tmRows.length, 'unexpected TM row count — the pair is not a pair').toBe(2);
 		const shapes = tmRows.map((tm) => ({ tipo: tm.tipo, lang: tm.lang, data: tm.data }));
 		expect(shapes).toEqual([
 			{ tipo: COMPONENT, lang: 'lg-spa', data: SEED_VALUE }, // backfill: FULL copied value

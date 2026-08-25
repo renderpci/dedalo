@@ -78,8 +78,14 @@ async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
  * entry in engineering/crap_coverage_exempt.json).
  */
 async function runtimeInfoClearSessions(): Promise<WidgetResponse> {
-	const { pruneExpiredSessions } = await import('../../security/session_store.ts');
-	const pruned = pruneExpiredSessions();
+	// sweepExpiredSessions, not pruneExpiredSessions: an expired session's MEDIA marker
+	// must go with its row, or the web server keeps honouring a `dedalo_media_auth`
+	// cookie whose session no longer exists. This is also the one place the ORPHAN sweep
+	// runs — an operator action, holding the real session store, which is why it is not
+	// done at boot (the update's smoke boot starts with an empty throwaway store and the
+	// inherited MEDIA_PATH, so a boot reconcile would unlink every live editor's marker).
+	const { sweepExpiredSessions } = await import('../../security/session_media.ts');
+	const pruned = sweepExpiredSessions();
 	return { data: { pruned } };
 }
 

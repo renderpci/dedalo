@@ -37,6 +37,9 @@
  * The four locators are stored in a NON-MONOTONIC order so "locator order" is
  * distinguishable from "id order", and one target (§900702) is left EMPTY so a
  * page that includes it pins the WC-001 empty contract.
+ *
+ * @twin-of      test/parity/portal_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

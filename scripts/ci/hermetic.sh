@@ -25,30 +25,33 @@
 # test/unit/ci_workflow_tripwire.test.ts: add a required key to src/config/config.ts
 # without stubbing it here and the tripwire goes red BEFORE CI does.
 #
-# THE COVERAGE HOLE THIS LIST WALKED INTO (2026-08-03). The hermetic list had 20 of
-# the 48 tripwires in scripts/verify.ts, and the other 28 ran on NO tier that actually
-# executes: the DB/parity tier lives in .github/workflows-selfhosted/, which GitHub does
-# not run (public-repo posture), and the private mirror is not wired yet. So a PR could
-# land an `innerHTML` sink in the error-report client, a CDN `import` in a tool, an
-# unclassified agent read tool, or an unscoped human write handler, and every gate the
-# repo owns would report GREEN — the invariants existed, nothing ran them. Each entry
-# below was empirically re-verified DB-less (DB_PORT closed) before being added.
+# THE COVERAGE HOLE THIS LIST WALKED INTO (2026-08-03), AND WHY IT REOPENED.
+# The hermetic list had 20 of the 48 tripwires in scripts/verify.ts, and the other
+# 28 ran on NO tier that actually executes: the DB/parity tier lives in
+# .github/workflows-selfhosted/, which GitHub does not run (public-repo posture),
+# and the private mirror is not wired yet. So a PR could land an `innerHTML` sink
+# in the error-report client, a CDN `import` in a tool, an unclassified agent read
+# tool, or an unscoped human write handler, and every gate the repo owns would
+# report GREEN — the invariants existed, nothing ran them.
 #
-# NOT in this list, and WHY — the honest boundary, not a convenient subset:
-#   sql_confinement_tripwire            — needs the live matrix Postgres
-#   consultation_only_sections_tripwire — needs the live matrix Postgres
-#   root_user_hidden_tripwire           — needs the live matrix Postgres (9 red DB-less)
-#   info_widget_registry_tripwire       — needs the live matrix Postgres
-#   temporal_instance_tripwire          — needs the live matrix Postgres
-#   install_seed_drift_tripwire         — needs the live matrix Postgres
-#   test3_canonical_fixture             — IS the DB fixture
-#   matrix_index_asset_policy_agreement — needs the live matrix Postgres
-#   tools_cache_invalidation            — needs the live matrix Postgres
-#   client_serving                      — needs the sibling PHP tree (byte-identity)
-#   client_libs_tripwire                — probes client/dedalo/lib/, which is NOT tracked
-#                                         (118 MB, sibling-linked): green here would be
-#                                         green over an absent tree
-#   test/parity/oracle_canary           — needs the oracle contract
+# It reopened, because nothing ENFORCED the list. By 2026-08-24 the index had
+# grown to 89 gates against the same 41 here, and five more landed that day: 53
+# running nowhere, with every gate green throughout. Fixed in that pass — rule 3c
+# of test/unit/ci_workflow_tripwire.test.ts is the converse of the old subset
+# rule: a tripwire must either appear below or carry a written reason in its
+# NOT_HERMETIC map, and a stale row there is red too. The list can no longer rot
+# quietly. Same pass hardened the parser that reads this array: a section comment
+# containing '(' had been truncating it at 21 of 41 entries since 2026-08-03, so
+# the subset rule was itself only checking half the list.
+#
+# NOT in this list, and WHY: that boundary is no longer prose here — it is the
+# NOT_HERMETIC map in test/unit/ci_workflow_tripwire.test.ts, one written reason
+# per excluded gate, mechanically enforced in both directions. This comment used
+# to carry a hand list; four of its entries were stale (client_serving,
+# client_libs_tripwire, oracle_canary and install_seed_drift all run here now).
+# Link, never duplicate.
+#
+# Each entry below was empirically re-verified DB-less (DB_PORT closed).
 #
 # Usage: bash scripts/ci/hermetic.sh   (from anywhere; cd's to repo root)
 
@@ -131,6 +134,51 @@ HERMETIC_TRIPWIRES=(
 	test/unit/ontology_single_writer_tripwire.test.ts
 	test/unit/client_caller_chain_tripwire.test.ts
 	test/unit/generic_tld_tripwire.test.ts
+	# --- 2026-08-24: the 53 gates that ran on NO executing tier. Each entry below
+	#     was classified by reading its import closure (dynamic imports included)
+	#     and then EMPIRICALLY re-verified with DB_PORT closed: 343 pass / 0 fail.
+	#     The 19 that genuinely need Postgres carry a written reason in
+	#     test/unit/ci_workflow_tripwire.test.ts NOT_HERMETIC -- rule 3c.
+	#     KNOWN SKIPS, named rather than silent: oracle_canary skips its 2
+	#     live-oracle legs -- ORACLE_MODE defaults to fixtures -- and
+	#     parity_baseline_tripwire skips 5 legs behind DEDALO_PARITY_DRIFT — so
+	#     the latter buys its parser/planted self-tests here, NOT the drift
+	#     ratchet, which stays in `bun run scripts/parity_baseline.ts --check`.
+	test/parity/oracle_canary.test.ts
+	test/unit/external_secret_confinement_tripwire.test.ts
+	test/unit/install_table_write_tripwire.test.ts
+	test/unit/media_job_target_tripwire.test.ts
+	test/unit/parity_baseline_tripwire.test.ts
+	test/unit/twin_map_tripwire.test.ts
+	test/unit/runtime_paths_census_tripwire.test.ts
+	test/unit/tool_permission_census_tripwire.test.ts
+	test/unit/client_error_contract_tripwire.test.ts
+	test/unit/date_flat_value_single_source_tripwire.test.ts
+	test/unit/error_throw_ratchet.test.ts
+	test/unit/log_section_policy_tripwire.test.ts
+	test/unit/password_cost_tripwire.test.ts
+	test/unit/section_id_int_tripwire.test.ts
+	test/unit/tool_picker_wiring_tripwire.test.ts
+	test/unit/client_libs_tripwire.test.ts
+	test/unit/dependency_integrity_tripwire.test.ts
+	test/unit/external_client_render_tripwire.test.ts
+	test/unit/external_outbound_tripwire.test.ts
+	test/unit/maintenance_widget_get_value_tripwire.test.ts
+	test/unit/media_writer_discipline_tripwire.test.ts
+	test/unit/proxy_trust_tripwire.test.ts
+	test/unit/client_serving.test.ts
+	test/unit/docs_locator_shape_tripwire.test.ts
+	test/unit/external_config_narrowing_census.test.ts
+	test/unit/external_registry_totality_tripwire.test.ts
+	test/unit/install_ip_gate_tripwire.test.ts
+	test/unit/migration_shared_row_tripwire.test.ts
+	test/unit/release_archive_tripwire.test.ts
+	test/unit/thesaurus_picker_tripwire.test.ts
+	test/unit/config_declaration_tripwire.test.ts
+	test/unit/engine_install_tld_tripwire.test.ts
+	test/unit/install_seed_drift_tripwire.test.ts
+	test/unit/media_alternate_versions_tripwire.test.ts
+	test/unit/mock_isolation_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

@@ -27,6 +27,9 @@
  * Scratch hygiene: every record this file touches lives on the two sections it
  * builds, in `matrix_test`, and is swept whole in afterAll. There is no longer
  * a real record to capture-and-restore.
+ *
+ * @twin-of      test/parity/observer_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated to the generic `test` TLD 2026-08-20 (AGENTS.md hard rules). This
 // file used to drive the SHIPPED seed edges (rsc387 → hierarchy93 and

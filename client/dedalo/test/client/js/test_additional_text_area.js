@@ -27,6 +27,16 @@ import {pause} from '../../../core/common/js/utils/util.js'
 
 	let pause_time = 300
 
+	// suite database guard. The map-of-grapes ontology (test480/test506/test507)
+	// is materialized ONLY into the suite database ('bun run test:db:setup');
+	// on any other database every build below dies in request.invalid_tipo and
+	// the failures read like an editor bug. Same refusal the CLI runner makes
+	// before it launches Chrome (/health must carry a test_database marker).
+	const health	= await fetch('/health').then(r => r.json())
+	if (!health?.test_database) {
+		throw new Error(`test_additional_text_area needs the SUITE database (its test480/test506/test507 ontology exists nowhere else) and this server has none: /health answered test_database=${JSON.stringify(health?.test_database ?? null)}. Build it once with 'bun run test:db:setup', then use 'bun run test:client' — or 'bun run test:client:server' to browse this page against the right database.`)
+	}
+
 	const section_tipo	= 'test480' // map of grapes
 	const section_id	= 1;
 

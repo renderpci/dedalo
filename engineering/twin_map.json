@@ -1,0 +1,248 @@
+{
+	"generated_by": "bun run scripts/twin_map.ts",
+	"rule": "The DEC-14b twin map, read from @twin-of/@twin-status directives in each twin's own header (engineering/ORACLE_HARVEST.md keeps the prose; this file is the enforcement). unmapped_reds is SHRINK-ONLY: a parity file with frozen reds and no twin. Status is DERIVED from the tree — retired (the gate is gone), frozen-record (the gate survives WITH frozen reds; this is the portable half), supplement (the gate survives GREEN; the twin adds coverage). A header claim that disagrees with the tree is a gate failure.",
+	"measured": {
+		"twins": 41,
+		"retired": 26,
+		"frozen_record": 7,
+		"supplement": 8,
+		"back_links": 12,
+		"unmapped_red_files": 23,
+		"unmapped_red_tests": 54
+	},
+	"twins": [
+		{
+			"file": "test/unit/activity_log_native.test.ts",
+			"target": "test/parity/activity_log_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/activity_read_native.test.ts",
+			"target": "test/parity/activity_read_differential.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/calculation_widget_native.test.ts",
+			"target": "test/parity/calculation_widget_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/component_info_widget_data_native.test.ts",
+			"target": "test/parity/info_widget_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/create_record_audit.test.ts",
+			"target": "test/parity/create_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/dataframe_idkey_native.test.ts",
+			"target": "test/parity/dataframe_roundtrip_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/delete_data_native.test.ts",
+			"target": "test/parity/delete_data_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/delete_inverse_refs_native.test.ts",
+			"target": "test/parity/delete_inverse_refs_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/delete_multi_native.test.ts",
+			"target": "test/parity/delete_multi_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/delete_record_tm_native.test.ts",
+			"target": "test/parity/delete_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/diffusion_export_unified.test.ts",
+			"target": "test/parity/tool_export_breakdown_differential.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/duplicate_record_native.test.ts",
+			"target": "test/parity/duplicate_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/engine_denied_boundary.test.ts",
+			"target": "test/parity/tools_register_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/get_ontologies_native.test.ts",
+			"target": "test/parity/get_ontologies_differential.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/has_dataframe_literal_native.test.ts",
+			"target": "test/parity/has_dataframe_literal_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/hierarchy_provision_native.test.ts",
+			"target": "test/parity/generate_virtual_section_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/indexation_grid_av_native.test.ts",
+			"target": "test/parity/indexation_grid_media_av_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/info_widget_native.test.ts",
+			"target": "test/parity/info_widget_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/iri_dataframe_native.test.ts",
+			"target": "test/parity/iri_dataframe_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/menu_tree_datalist_native.test.ts",
+			"target": "test/parity/menu_differential.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/observer_native.test.ts",
+			"target": "test/parity/observer_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/permissions_wildcard_deny.test.ts",
+			"target": "test/parity/permissions_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/portal_drag_capture_native.test.ts",
+			"target": "test/parity/portal_drag_capture_replay.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/portal_edit_subdatum_native.test.ts",
+			"target": "test/parity/portal_edit_subdatum_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/portal_edit_writes_native.test.ts",
+			"target": "test/parity/portal_edit_writes_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/portal_list_cell_pagination_native.test.ts",
+			"target": "test/parity/portal_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/relation_hierarchy_types_native.test.ts",
+			"target": "test/parity/relation_corpus_config.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/relation_list_grid_native.test.ts",
+			"target": "test/parity/relation_list_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/request_config_presets.test.ts",
+			"target": "test/parity/request_config_presets_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/save_multilang_siblings.test.ts",
+			"target": "test/parity/save_multilang_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/search_projects_filter_multisection.test.ts",
+			"target": "test/parity/projects_filter_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/section_elements_context_native.test.ts",
+			"target": "test/parity/section_elements_context_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/section_tool_context.test.ts",
+			"target": "test/parity/section_tool_start_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/tm_wallclock.test.ts",
+			"target": "test/parity/tm_wallclock_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/tool_export_breakdown_native.test.ts",
+			"target": "test/parity/tool_export_breakdown_differential.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/tool_export_native.test.ts",
+			"target": "test/parity/tool_export_differential.test.ts",
+			"status": "frozen-record"
+		},
+		{
+			"file": "test/unit/tool_export_relation_dataframe_fanout_native.test.ts",
+			"target": "test/parity/tool_export_dataframe_differential.test.ts",
+			"status": "retired"
+		},
+		{
+			"file": "test/unit/user_stats_interval_native.test.ts",
+			"target": "test/parity/get_widget_data_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/user_stats_merge_native.test.ts",
+			"target": "test/parity/get_widget_data_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/user_stats_range_native.test.ts",
+			"target": "test/parity/get_widget_data_differential.test.ts",
+			"status": "supplement"
+		},
+		{
+			"file": "test/unit/widget_request_native.test.ts",
+			"target": "test/parity/widget_request_differential.test.ts",
+			"status": "retired"
+		}
+	],
+	"not_a_twin": {
+		"test/unit/parity_baseline_tripwire.test.ts": "names the SYNTHETIC path test/parity/x.test.ts inside planted JUnit XML and in-memory drift fixtures — it is the parity ratchet, not a twin of any gate"
+	},
+	"unmapped_reds": {
+		"test/parity/area_dashboard_differential.test.ts": 2,
+		"test/parity/area_hierarchy_differential.test.ts": 2,
+		"test/parity/autocomplete_hi_search_differential.test.ts": 1,
+		"test/parity/autocomplete_search_differential.test.ts": 3,
+		"test/parity/complex_relation_sweep.test.ts": 8,
+		"test/parity/component_datalist_lifecycle_differential.test.ts": 6,
+		"test/parity/component_list_css_strip_differential.test.ts": 2,
+		"test/parity/count_differential.test.ts": 2,
+		"test/parity/dedalo_files_differential.test.ts": 1,
+		"test/parity/indexation_grid_differential.test.ts": 7,
+		"test/parity/list_column_sortable_differential.test.ts": 1,
+		"test/parity/model_coverage_sweep.test.ts": 1,
+		"test/parity/multihop_order_differential.test.ts": 1,
+		"test/parity/multihop_search_differential.test.ts": 1,
+		"test/parity/related_count_differential.test.ts": 2,
+		"test/parity/relation_inverse_differential.test.ts": 3,
+		"test/parity/relation_search_pipelines_differential.test.ts": 3,
+		"test/parity/section_context_extras_differential.test.ts": 1,
+		"test/parity/section_terms_differential.test.ts": 2,
+		"test/parity/sqo_differential.test.ts": 1,
+		"test/parity/start_differential.test.ts": 1,
+		"test/parity/ts_node_read_differential.test.ts": 2,
+		"test/parity/ts_search_differential.test.ts": 1
+	}
+}

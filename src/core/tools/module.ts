@@ -98,14 +98,16 @@ export function toolRequestId(context: ToolActionContext): string {
  *                     either silently drops the other — which is how a user denied
  *                     level 2 on one media component could still delete its files;
  *  - 'developer'    → caller must be a developer (no section target asserted);
- *  - null           → listed but ungated here (the handler gates imperatively).
+ *  - null           → NOT gated here. A NAMED EXEMPTION: see ExemptToolActionSpec
+ *                     below, which requires a `gatedInHandler` string saying what
+ *                     the handler does instead (or that it does nothing).
  *
  * Choosing between them: does the action name a component AND a record id? Then
  * it is 'record_tipo'. PHP asserted both at every such door
  * (assert_tipo_permission + assert_record_in_user_scope).
  */
-export interface ToolActionSpec {
-	permission: 'section' | 'section_list' | 'tipo' | 'record' | 'record_tipo' | 'developer' | null;
+export interface GatedToolActionSpec {
+	permission: 'section' | 'section_list' | 'tipo' | 'record' | 'record_tipo' | 'developer';
 	/** dd774 level required on the target (1=read, 2=write, 3=admin). Default 2. */
 	minLevel?: number;
 	/**
@@ -118,6 +120,51 @@ export interface ToolActionSpec {
 	sectionTipos?: (options: Record<string, unknown>) => unknown[];
 	handler: (context: ToolActionContext) => Promise<ToolResponse>;
 }
+
+/**
+ * The OTHER member: `permission: null` — the action opts OUT of the declarative
+ * gate. P2-8(a) (2026-08-24) makes that a NAMED EXEMPTION instead of a silent
+ * one: the null member REQUIRES `gatedInHandler`, substantive prose naming the
+ * in-handler symbol that stands in for the gate the framework is not running.
+ *
+ * WHY A TYPE AND NOT A CONVENTION: `permission: null` was choosable by typing
+ * four characters, and nothing anywhere proved the handler gated at all. 34 specs
+ * had chosen it; several of them do NOT gate. The union makes the author WRITE
+ * DOWN what they are relying on, and `test/unit/tool_permission_census_tripwire.test.ts`
+ * pins that set shrink-only and checks the named symbol is actually called on the
+ * handler's entry path.
+ *
+ * WHAT THE STRING MUST SAY — the truth, not an aspiration. Three honest shapes:
+ *  - a real authorization check: name the symbol, e.g. `assertPublisher()`;
+ *  - a confinement that is NOT authorization (every path rebuilt from
+ *    ctx.userId): say `NOT AN AUTHORIZATION GATE` and name the symbol;
+ *  - nothing at all: say `UNGATED` and who can therefore reach it.
+ * Inventing a gate that is not in the handler is the one unacceptable answer —
+ * the census exists to be read as a to-do list, and a lie removes the entry from
+ * it.
+ *
+ * `minLevel` / `sectionTipos` are `never` here: they are inputs to the
+ * declarative gate, so on an action that has no declarative gate they would be
+ * dead decoration that reads like protection.
+ */
+export interface ExemptToolActionSpec {
+	permission: null;
+	/**
+	 * The in-handler gate this exemption stands on, in prose that names its
+	 * symbol — or the truthful admission that there is none (`UNGATED — …`).
+	 * Census + gate: test/unit/tool_permission_census_tripwire.test.ts.
+	 */
+	gatedInHandler: string;
+	minLevel?: never;
+	sectionTipos?: never;
+	handler: (context: ToolActionContext) => Promise<ToolResponse>;
+}
+
+/**
+ * One entry in a tool's apiActions map: either a DECLARATIVELY gated action or
+ * the named `permission: null` exemption above.
+ */
+export type ToolActionSpec = GatedToolActionSpec | ExemptToolActionSpec;
 
 /** The caller context passed to a tool's is_available() hook (PHP get_tools context). */
 export interface ToolAvailabilityContext {

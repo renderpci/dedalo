@@ -23,6 +23,8 @@
  * engineering/ORACLE_HARVEST.md. This file stays as the frozen record of the
  * decommissioned install's census and stays red on the suite DB by
  * construction.
+ *
+ * @twinned-by   test/unit/get_ontologies_native.test.ts
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';

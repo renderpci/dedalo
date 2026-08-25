@@ -306,13 +306,25 @@ surface answers `404` from then on, across restarts, from any address.
 — log in. (If you truly need to re-install: empty database, empty private
 directory, start again.)
 
-### The wizard refuses your address
+### The wizard refuses your address (`403`)
 
-**Cause.** `DEDALO_INSTALL_ALLOWED_IPS` is set and your address is not in it.
+**Cause.** Your address is not on the install allowlist. Note that this is the
+default state, not an unusual one: with `DEDALO_INSTALL_ALLOWED_IPS` **unset**
+the wizard answers **the local machine and nobody else**, because until it is
+sealed the installer runs without a password.
 
-**Fix.** Add it. And note that **`loopback` will not match behind a reverse
-proxy**: the address is resolved from the trusted `X-Forwarded-For` hop, so name
-the real client address.
+**Fix.** Name the machine you install from — a literal address, a CIDR range, or
+`any` (every address; only behind a firewall, and removed once sealed). The
+engine prints the list in force in its start-up log, next to the `INSTALL MODE`
+line, so you can see what it is actually applying:
+
+```dotenv
+DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10,10.0.0.0/24
+```
+
+And note that **`loopback` will not match behind a reverse proxy**: the address
+is resolved from the trusted `X-Forwarded-For` hop, so name the real client
+address.
 
 ### The boot fails with `core module warm-up: N module(s) failed to evaluate`
 
@@ -617,8 +629,10 @@ markers it never matches, so Rule A is the only door for unpublished media.
 
 **Fix.** Work outward from the file to the browser:
 
-1. Confirm the marker store exists and is readable by the web server, and that
-   it holds the value in `<private>/media_auth.json`:
+1. Confirm the marker store exists and is readable by the web server. It holds
+   one marker per LIVE SESSION, named by that session's cookie value (the
+   day-global `<private>/media_auth.json` is retired — boot renames it
+   `.migrated`):
 
     ```shell
     ls -l /srv/dedalo/media/.publication/auth/

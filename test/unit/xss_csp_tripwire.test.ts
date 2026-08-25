@@ -31,8 +31,9 @@ import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import {
 	APP_CSP,
+	buildEmbedDirectives,
 	deriveUpdateMasterOrigins,
-	MEDIA_CSP_OBJECT_SOURCE,
+	MEDIA_CSP_EMBED_SOURCE,
 	MEDIA_CSP_ORIGIN,
 	SECURITY_HEADERS,
 	UPDATE_MASTER_CSP_ORIGINS,
@@ -159,16 +160,73 @@ describe('XSS-02 — enforcing app CSP', () => {
 		// need an .svg on disk and SKIP without one).
 		const objectSrc = directive(APP_CSP, 'object-src');
 		expect(objectSrc).toEqual(
-			MEDIA_CSP_OBJECT_SOURCE === '' ? ["'self'"] : ["'self'", MEDIA_CSP_OBJECT_SOURCE],
+			MEDIA_CSP_EMBED_SOURCE === '' ? ["'self'"] : ["'self'", MEDIA_CSP_EMBED_SOURCE],
 		);
-		if (MEDIA_CSP_OBJECT_SOURCE !== '') {
+		if (MEDIA_CSP_EMBED_SOURCE !== '') {
 			// Path-scoped to the envelope folder — never the bare media host, which
-			// also serves uploader-supplied svg/ files with no sandbox/CSP (the
-			// generated rules emit no headers). A trailing '/' is what makes CSP
-			// treat it as a prefix rather than one exact file.
-			expect(MEDIA_CSP_OBJECT_SOURCE.startsWith(`${MEDIA_CSP_ORIGIN}/`)).toBe(true);
-			expect(MEDIA_CSP_OBJECT_SOURCE.endsWith(`${config.media.image.folder}/`)).toBe(true);
+			// also serves uploader-supplied svg/ files. A trailing '/' is what makes
+			// CSP treat it as a prefix rather than one exact file. (Since MEDIA-03
+			// those uploader files are served `attachment` + sandboxed by the
+			// generated rules too, but the scoping is the control that does not
+			// depend on the web server being configured correctly.)
+			expect(MEDIA_CSP_EMBED_SOURCE.startsWith(`${MEDIA_CSP_ORIGIN}/`)).toBe(true);
+			expect(MEDIA_CSP_EMBED_SOURCE.endsWith(`${config.media.image.folder}/`)).toBe(true);
 			expect(objectSrc).not.toContain(MEDIA_CSP_ORIGIN);
+		}
+	});
+
+	test('the embed directives agree on a SYNTHETIC split-origin media host', () => {
+		// BOX-INDEPENDENT, and that is the whole point of this case: under `bun test`
+		// media is same-origin, so MEDIA_CSP_EMBED_SOURCE is '' and every assertion
+		// about the split-origin shape below is vacuous on this machine. The
+		// pre-existing object-src gate had the same blind spot, which is exactly how
+		// frame-src and object-src came to disagree without anything going red.
+		const synthetic = 'https://media.example/dedalo/media/image/';
+		const built = buildEmbedDirectives(synthetic);
+		expect(built.frameSrc).toBe(`frame-src 'self' blob: ${synthetic}`);
+		expect(built.objectSrc).toBe(`object-src 'self' ${synthetic}`);
+		// THE INVARIANT: whatever off-origin source one embed directive admits, the
+		// other admits too. An <object> loading a document opens a nested browsing
+		// context, which Chrome checks against BOTH — so a source in one and not the
+		// other is a policy that contradicts itself, and the symptom is a blank image
+		// in every component_image edit view on a split-origin install.
+		const offOrigin = (directiveText: string): string[] =>
+			directiveText.split(' ').filter((source) => source.includes('://'));
+		expect(offOrigin(built.frameSrc)).toEqual([synthetic]);
+		expect(offOrigin(built.frameSrc)).toEqual(offOrigin(built.objectSrc));
+		// And never the bare host: the uploader-supplied population lives under svg/,
+		// which this prefix excludes.
+		expect(built.frameSrc).not.toContain(' https://media.example ');
+		// Same-origin install: no off-origin source anywhere, and no dangling space.
+		const empty = buildEmbedDirectives('');
+		expect(empty.frameSrc).toBe("frame-src 'self' blob:");
+		expect(empty.objectSrc).toBe("object-src 'self'");
+	});
+
+	test('frame-src carries the SAME envelope source as object-src (2026-08-24)', () => {
+		// MEASURED IN CHROME, not reasoned: an `<object>` that loads a document opens
+		// a nested browsing context, and Chrome checks it against `frame-src` as well
+		// as `object-src`. With the prefix in object-src ONLY, a split-origin install
+		// reported
+		//   Framing 'http://<media host>/' violates … "frame-src 'self' blob:"
+		// and every image in the component_image edit view rendered blank — the exact
+		// symptom `object-src 'none'` used to produce. A policy whose two embed
+		// directives disagree is a policy that contradicts itself, and the
+		// contradiction is invisible until a split-origin install opens an image.
+		const frameSrc = directive(APP_CSP, 'frame-src');
+		const objectSrc = directive(APP_CSP, 'object-src');
+		expect(frameSrc).toEqual(
+			MEDIA_CSP_EMBED_SOURCE === ''
+				? ["'self'", 'blob:']
+				: ["'self'", 'blob:', MEDIA_CSP_EMBED_SOURCE],
+		);
+		// The invariant, stated as such: whatever media source either one admits,
+		// both admit — and it is never the bare host.
+		const mediaOf = (sources: string[]): string[] =>
+			sources.filter((source) => source.includes('://'));
+		expect(mediaOf(frameSrc)).toEqual(mediaOf(objectSrc));
+		if (MEDIA_CSP_EMBED_SOURCE !== '') {
+			expect(frameSrc).not.toContain(MEDIA_CSP_ORIGIN);
 		}
 	});
 

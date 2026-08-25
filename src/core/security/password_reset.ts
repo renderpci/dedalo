@@ -30,7 +30,8 @@
  *   login keys — deliberate, same values PHP used).
  * - A successful reset does NOT establish a session; the user logs in normally.
  * - DIVERGENCE (hardening, wire-invisible): a successful reset EVICTS the
- *   user's existing sessions (destroyUserSessions) — PHP did not, which let a
+ *   user's existing sessions (endUserSessions — tokens AND their media markers)
+ *   — PHP did not, which let a
  *   stolen session survive the very reset meant to revoke it.
  *
  * Activity log: PHP wrote a 'PASSWORD RESET' activity row; the TS activity
@@ -43,12 +44,13 @@ import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import { cleanEmail, isValidEmail, sendMail } from '../mailer/mailer.ts';
+import { ARGON2_OPTIONS } from './argon2_params.ts';
 import { normalizeTiming } from './auth.ts';
+import { endUserSessions } from './session_media.ts';
 import {
 	buildThrottleKey,
 	clearAttempts,
 	deletePasswordReset,
-	destroyUserSessions,
 	incrementPasswordResetAttempts,
 	isThrottled,
 	loadPasswordReset,
@@ -256,7 +258,7 @@ export async function requestPasswordReset(
 		storePasswordReset(
 			resetId,
 			resolved.userId,
-			await Bun.password.hash(code, { algorithm: 'argon2id' }),
+			await Bun.password.hash(code, ARGON2_OPTIONS),
 			ttlSeconds,
 		);
 	} catch (error) {
@@ -414,7 +416,14 @@ export async function confirmPasswordReset(
 	// HARDENING (divergence from PHP, wire-invisible): revoke every existing
 	// session of this user — a reset must also cut off whoever holds a stolen
 	// token, or the recovery flow cannot recover a compromised account.
-	destroyUserSessions(entry.userId);
+	//
+	// endUserSessions, not destroyUserSessions: it unlinks each session's MEDIA marker
+	// too. Until 2026-08-24 this call left exactly one credential standing — the media
+	// auth cookie, which was install-global and therefore unrevokable, so an attacker
+	// locked out of the account kept reading the whole media tree for up to ~48 hours.
+	// A recovery flow that cannot recover one of the two credentials has not recovered
+	// the account.
+	endUserSessions(entry.userId);
 
 	// Notify the account owner so an unauthorized reset is noticed. Best-effort.
 	await sendPasswordChangedNotice(entry.userId);

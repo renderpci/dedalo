@@ -1,0 +1,41 @@
+{
+	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. reviewed = the ISO date a human last checked THIS lib's upstream release feed for advisories (Dependabot cannot watch a vendored tree; scripts/ci/audit.ts prints these dates and how stale they are). It is NOT the date this census was written: ckeditor, json-view and pdfjs carry 2026-07-12, when their trees were last touched, because nobody reviewed them on 2026-08-24 and stamping today's date on all four would have seeded the staleness axis with a review that did not happen — which is the one thing this field exists to prevent.",
+	"libs": {
+		"ckeditor": {
+			"version": "CKEditor 5 42.0.1 (custom Dédalo build)",
+			"upstream": "none — a bespoke Dédalo webpack build (ddEditor + the dedalo_image_tags and reference plugins); no upstream artifact exists to re-fetch",
+			"archive_sha256": null,
+			"tree_sha256": "efdba3473f8d4bf492c205def8db842cd0a79d7e4ee737faa55a957e869c33d2",
+			"files": 73,
+			"reviewed": "2026-07-12",
+			"note": "Not reproducible: the build project no longer exists in any checkout, and build/ckeditor.js.map is the only surviving copy of the plugin source — which is why the map is committed. Standing risk: the bundle can only be replaced wholesale, never patched."
+		},
+		"json-view": {
+			"version": "pgrabovets/json-view (unversioned bundle)",
+			"upstream": "https://github.com/pgrabovets/json-view",
+			"archive_sha256": null,
+			"tree_sha256": "fbc6f5a78caf9e8261e9cae3e46dcfaea089f60cdac03f4473b58e1b499ec154",
+			"files": 3,
+			"reviewed": "2026-07-12",
+			"note": "Distributed via GitHub/jsDelivr only, never published to npm. The bundle carries no version string, so the tree digest IS the identity of this copy."
+		},
+		"pdfjs": {
+			"version": "5.7.284",
+			"upstream": "https://github.com/mozilla/pdf.js/releases/download/v5.7.284/pdfjs-5.7.284-dist.zip",
+			"archive_sha256": null,
+			"tree_sha256": "52fdcd8d4f59eb53da1ca0bd1900cf17c8cbd92429c23db3ea0889aed9a89f12",
+			"files": 401,
+			"reviewed": "2026-07-12",
+			"note": "The standalone viewer app (web/viewer.html), which npm's pdfjs-dist does not ship and bun cannot install (a .zip, not a .tgz). Vendored from the sha256-verified release — only the digest PREFIX 6d1b8125… was recorded at vendoring time, so archive_sha256 stays null rather than half-true; re-fetching through scripts/vendor_fetch.ts records the full digest. The tree is TRIMMED anyway (9 MB of sourcemaps + the 1 MB demo PDF removed), so it would never equal the archive."
+		},
+		"xlsx": {
+			"version": "0.20.3",
+			"upstream": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+			"archive_sha256": "8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8",
+			"tree_sha256": "ecf869fdacb8fa2e7479461484974c1a2130c8d8ebd1f23b1a1287cef3c7ea5d",
+			"files": 2,
+			"reviewed": "2026-08-24",
+			"note": "SheetJS left the npm registry (npm's xlsx is abandoned at 0.18.5), so this used to be a bare tarball URL in package.json — and bun.lock recorded NO integrity for it while all 581 other entries carried sha512-, so every quarantine `bun install` during a code update re-fetched browser-served bytes unverified (P2-5). Vendored 2026-08-24 from the already-installed node_modules/xlsx, byte-verified against a fresh download of the upstream .tgz (both kept files hash identically). Trimmed to what is actually served: xlsx.mjs (the only file tools/tool_export/js/tool_export.js imports) plus LICENSE. Dropped: bin/, dist/, types/, xlsx.js (CJS — nothing imports it), xlsxworker.js, bower.json, CHANGELOG.md, README.md, package.json."
+		}
+	}
+}

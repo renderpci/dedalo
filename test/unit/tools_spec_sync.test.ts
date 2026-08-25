@@ -23,6 +23,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8');
@@ -44,15 +45,27 @@ function expandBraces(token: string): string[] {
 	return (m[2] as string).split(',').map((part) => `${m[1]}${part.trim()}${m[3]}`);
 }
 
-/** Parse a `permission: A | B | null;` union out of any source text. */
+/**
+ * Parse the `permission:` kinds out of any source text.
+ *
+ * EVERY `permission:` property declaration is read, in source order, and the
+ * kinds are concatenated. One declaration was enough until P2-8(a) (2026-08-24)
+ * split ToolActionSpec into a DISCRIMINATED UNION — the gated member declares
+ * the six real kinds, the exempt member declares `null` and requires
+ * `gatedInHandler` beside it — so the code now states the full set across two
+ * interfaces while the doc states it as one union. Reading all of them keeps
+ * this gate comparing the same fact it always compared: the set of kinds a tool
+ * author may choose from. The doc side has a single declaration, so it is
+ * unaffected.
+ */
 function permissionUnion(src: string, where: string): string[] {
-	const match = src.match(/\bpermission:\s*([^;]+);/);
-	if (match === null) throw new Error(`${where}: no permission union found`);
-	const kinds = (match[1] as string)
-		.split('|')
-		.map((k) => k.trim())
-		.filter((k) => k.length > 0);
-	if (kinds.length === 0) throw new Error(`${where}: the parsed permission union is empty`);
+	const kinds = [...src.matchAll(/\bpermission:\s*([^;]+);/g)].flatMap((match) =>
+		(match[1] as string)
+			.split('|')
+			.map((k) => k.trim())
+			.filter((k) => k.length > 0),
+	);
+	if (kinds.length === 0) throw new Error(`${where}: no permission union found`);
 	return kinds;
 }
 
@@ -79,7 +92,10 @@ describe('TOOLS_SPEC.md — the server module contract', () => {
 	 * by a stale hand-copy.
 	 */
 	test('the documented permission union is EXACTLY the one in src/core/tools/module.ts', () => {
-		const fromCode = permissionUnion(read('src/core/tools/module.ts'), 'module.ts');
+		// COMMENTS STRIPPED on the code side: module.ts's own prose discusses
+		// `permission: null` at length, and a scanner that reads its own
+		// explanation as a declaration is the failure this helper exists to avoid.
+		const fromCode = permissionUnion(stripComments(read('src/core/tools/module.ts')), 'module.ts');
 		const fromDoc = permissionUnion(SPEC, 'engineering/TOOLS_SPEC.md');
 		expect(
 			fromDoc,

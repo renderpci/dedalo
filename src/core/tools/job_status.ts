@@ -119,6 +119,8 @@ async function mediaJobStatus(ctx: ToolActionContext): Promise<ToolResponse> {
  */
 export const MEDIA_JOB_STATUS_ACTION: ToolActionSpec = {
 	permission: null,
+	gatedInHandler:
+		'mayStreamJob(record, ctx.principal) — the job-record OWNERSHIP rule (own job, or global admin; unowned AV transcodes stay readable), applied before the frame is built and answering a refusal as the same job_not_found a missing id gets. There is no section/record target in the payload for a declarative gate to read, and job ids are DERIVED, hence guessable, so ownership is the whole boundary.',
 	handler: mediaJobStatus,
 };
 

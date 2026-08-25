@@ -26,26 +26,26 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
 	buildHtaccess,
 	buildNginxConf,
+	dropAuthMarker,
 	filterPublicQualities,
 	getAddonLines,
 	getConfigHash,
 	getDefaultPublicQualities,
 	getPublicQualities,
 	getRulesStatus,
-	initMediaAuthCookie,
+	issueSessionMediaKey,
 	MEDIA_AUTH_COOKIE,
 	mintAuthCookieValue,
 	overrideMediaProtectionPathsForTests,
-	readAuthStore,
+	reconcileAuthMarkers,
 	resolveMediaAccessMode,
+	retireLegacyAuthStore,
 	ruleFilePaths,
 	syncAuthMarkers,
-	syncAuthMarkersFromStore,
-	writeAuthStore,
 	writeRuleFiles,
 } from '../../src/core/media/protection.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
@@ -388,66 +388,88 @@ describe('the auth markers (rule A)', () => {
 	});
 });
 
-describe('the login hook (initMediaAuthCookie)', () => {
+describe('the login hook (issueSessionMediaKey)', () => {
 	test('mode false is a TOTAL no-op: no cookie, no markers, no rule files', () => {
 		setServerState({ media_access_mode: false });
-		expect(initMediaAuthCookie()).toBeNull();
+		expect(issueSessionMediaKey()).toBeNull();
 		expect(existsSync(join(mediaRoot, '.publication'))).toBe(false);
 		expect(existsSync(join(mediaRoot, '.htaccess'))).toBe(false);
 	});
 
-	test("mode 'private' mints a cookie, lays its marker and writes the rules", () => {
+	test("mode 'private' mints a key, lays its marker and writes the rules", () => {
 		setServerState({ media_access_mode: 'private' });
-		const value = initMediaAuthCookie();
+		const value = issueSessionMediaKey();
 		expect(value).toMatch(/^[a-f0-9]{128}$/);
 		if (value === null) return;
 		expect(existsSync(join(mediaRoot, '.publication', 'auth', value))).toBe(true);
 		expect(existsSync(join(mediaRoot, '.htaccess'))).toBe(true);
 	});
 
-	test('a second login the same day RECYCLES the value (it does not rotate everyone out)', () => {
+	test('every login mints a DISTINCT key, and neither displaces the other', () => {
+		// This is the whole change (2026-08-24). The value used to be one per INSTALL per
+		// DAY, so a second login recycled it — which is also why logging out could not
+		// revoke anything: unlinking the shared marker would have logged every other
+		// editor out of the media tree, so nothing was unlinked and a stolen cookie
+		// stayed valid for up to ~48 hours. Two sessions must now hold two credentials.
 		setServerState({ media_access_mode: 'private' });
-		const first = initMediaAuthCookie();
-		const second = initMediaAuthCookie();
-		expect(second).toBe(first);
-	});
-
-	test('today AND yesterday stay valid, so sessions do not break at midnight', () => {
-		setServerState({ media_access_mode: 'private' });
-		initMediaAuthCookie();
-		const store = readAuthStore();
-		expect(store).not.toBeNull();
-		expect(Object.keys(store ?? {})).toHaveLength(2);
-		// both values have markers
+		const first = issueSessionMediaKey();
+		const second = issueSessionMediaKey();
+		expect(second).not.toBe(first);
 		const authDir = join(mediaRoot, '.publication', 'auth');
-		expect(readdirSync(authDir)).toHaveLength(2);
+		expect(existsSync(join(authDir, String(first)))).toBe(true);
+		expect(existsSync(join(authDir, String(second)))).toBe(true);
 	});
 
-	test('the auth store is written 0600 — it holds live credentials', () => {
+	test('laying a marker never disturbs another session marker', () => {
+		// layAuthMarker, not syncAuthMarkers: the latter unlinks everything it was not
+		// given, which is right for a reconcile and catastrophic for a login.
 		setServerState({ media_access_mode: 'private' });
-		initMediaAuthCookie();
-		expect(statSync(authStore).mode & 0o777).toBe(0o600);
+		const keys = [issueSessionMediaKey(), issueSessionMediaKey(), issueSessionMediaKey()];
+		expect(readdirSync(join(mediaRoot, '.publication', 'auth'))).toHaveLength(3);
+		for (const key of keys) expect(key).toMatch(/^[a-f0-9]{128}$/);
 	});
 
-	test('it REFUSES to write the auth store inside the media root', () => {
-		// A served auth store is the worst failure in the subsystem: anyone could fetch
-		// today's value and read the whole tree for up to 48h.
-		overrideMediaProtectionPathsForTests({
-			mediaRoot,
-			authStorePath: join(mediaRoot, 'media_auth.json'),
-		});
-		expect(() => writeAuthStore({})).toThrow(/REFUSING/);
-	});
-
-	test('re-enabling restores markers for cookies users already hold', () => {
+	test('dropAuthMarker revokes ONE credential and leaves the rest', () => {
 		setServerState({ media_access_mode: 'private' });
-		const value = initMediaAuthCookie();
-		// operator disables, and the marker dir gets wiped with the store still on disk
-		rmSync(join(mediaRoot, '.publication'), { recursive: true, force: true });
+		const doomed = issueSessionMediaKey();
+		const survivor = issueSessionMediaKey();
+		if (doomed === null || survivor === null) return;
+		dropAuthMarker(doomed);
+		const authDir = join(mediaRoot, '.publication', 'auth');
+		expect(existsSync(join(authDir, doomed))).toBe(false);
+		expect(existsSync(join(authDir, survivor))).toBe(true);
+	});
 
-		syncAuthMarkersFromStore();
-		if (value === null) return;
-		expect(existsSync(join(mediaRoot, '.publication', 'auth', value))).toBe(true);
+	test('dropAuthMarker never builds a path from an unvetted value', () => {
+		// The value is a literal FILENAME, so the hex grammar is the traversal guard.
+		setServerState({ media_access_mode: 'private' });
+		const survivor = issueSessionMediaKey();
+		expect(() => {
+			dropAuthMarker('../../../etc/passwd');
+		}).not.toThrow();
+		if (survivor === null) return;
+		expect(existsSync(join(mediaRoot, '.publication', 'auth', survivor))).toBe(true);
+	});
+
+	test('reconcileAuthMarkers keeps the live keys and collects orphans', () => {
+		setServerState({ media_access_mode: 'private' });
+		const live = issueSessionMediaKey();
+		const orphan = issueSessionMediaKey();
+		if (live === null || orphan === null) return;
+		reconcileAuthMarkers([live]);
+		const authDir = join(mediaRoot, '.publication', 'auth');
+		expect(existsSync(join(authDir, live))).toBe(true);
+		expect(existsSync(join(authDir, orphan))).toBe(false);
+	});
+
+	test('the retired day-global auth store is moved aside, not left on disk', () => {
+		// It held INSTALL-WIDE cookie values. Dead credentials still on disk are what
+		// get restored from a backup years later.
+		mkdirSync(dirname(authStore), { recursive: true });
+		writeFileSync(authStore, '{"2026_08_08":{"cookie_name":"x","cookie_value":"y"}}');
+		retireLegacyAuthStore();
+		expect(existsSync(authStore)).toBe(false);
+		expect(existsSync(`${authStore}.migrated`)).toBe(true);
 	});
 
 	test('a configured mode with no media root fails LOUD, never silently unprotected', () => {
@@ -455,7 +477,7 @@ describe('the login hook (initMediaAuthCookie)', () => {
 		overrideMediaProtectionPathsForTests(null); // no MEDIA_PATH in this test env
 		const { config } = require('../../src/config/config.ts');
 		if (config.media.rootPath !== null) return; // a configured dev env: not applicable
-		expect(() => initMediaAuthCookie()).toThrow(/MEDIA_PATH is not configured/);
+		expect(() => issueSessionMediaKey()).toThrow(/MEDIA_PATH is not configured/);
 	});
 });
 

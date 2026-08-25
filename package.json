@@ -24,6 +24,7 @@
 		"test": "bun test",
 		"test:db:setup": "bun run scripts/test_db_setup.ts",
 		"test:client": "bun run scripts/client_test_runner.ts",
+		"test:client:server": "bun run scripts/client_test_serve.ts",
 		"test:update": "bun run scripts/update_drill.ts",
 		"test:update:dev": "bun run scripts/update_drill.ts --dev",
 		"probe:update": "bun run scripts/update_probe.ts",
@@ -55,7 +56,6 @@
 		"split.js": "1.6.5",
 		"three": "0.185.1",
 		"vanilla-jsoneditor": "3.13.0",
-		"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {

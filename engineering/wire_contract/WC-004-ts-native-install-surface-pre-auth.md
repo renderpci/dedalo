@@ -14,8 +14,9 @@
   installer context while not installed.
 - **Shape after (TS):** `dd_utils_api:install` (routing by `options.action`) and
   `dd_utils_api:get_install_context` are **registered and pre-auth WHILE
-  UNSEALED**, IP-gated by `DEDALO_INSTALL_ALLOWED_IPS` (unset = open, dev),
-  enforced in dispatch Gate 1b. Once `install_finish` seals the instance
+  UNSEALED**, IP-gated by `DEDALO_INSTALL_ALLOWED_IPS` (unset = open, dev —
+  **SUPERSEDED 2026-08-24: unset now means LOOPBACK ONLY, see
+  `WC-2026-08-24-install-ip-gate-fail-closed`**), enforced in dispatch Gate 1b. Once `install_finish` seals the instance
   (`ts_state.json` `install_status='sealed'`) the whole surface returns **404**.
   `get_install_context` returns a **synthetic** installer element (built by
   hand, `buildInstallContext` — no ontology needed pre-restore) whose

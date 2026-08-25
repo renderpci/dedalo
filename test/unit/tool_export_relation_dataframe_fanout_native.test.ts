@@ -54,6 +54,9 @@
  *
  * Sibling gate (literal main, dedalo_raw only, re-import round trip):
  * test/unit/tool_export_raw_dataframe_native.test.ts.
+ *
+ * @twin-of      test/parity/tool_export_dataframe_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

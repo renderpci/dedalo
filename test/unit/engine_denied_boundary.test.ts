@@ -5,6 +5,9 @@
  * engine_denied refusal — a named reason, not a generic unauthorized_method.
  * This test enumerates the boundary; a new denial belongs here, and a denial
  * that becomes portable leaves here with its port.
+ *
+ * @twin-of      test/parity/tools_register_differential.test.ts
+ * @twin-status  supplement
  */
 
 import { describe, expect, test } from 'bun:test';

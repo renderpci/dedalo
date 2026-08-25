@@ -31,6 +31,7 @@ import {
 	type MediaPathOptions,
 	requireMediaRoot,
 } from './path.ts';
+import { ENVELOPE_REFUSALS } from './svg_safety.ts';
 
 /** A resolved SVG-envelope location (relative URL/path + absolute FS path). */
 export interface SvgLocation {
@@ -229,43 +230,21 @@ export function repointEnvelopeRaster(
 const MAX_ENVELOPE_BYTES = 8 * 1024 * 1024;
 
 /**
- * SVG CONSTRUCTS AN ENVELOPE MAY NOT CARRY. The envelope is the one file under
- * the media root whose bytes come from a CLIENT (`svg_file_data`, exported by the
- * vector editor), and it is served back to browsers from the media origin — where
- * the documented production topology is a web server applying access rules and NO
- * headers, so the app's CSP is not there to catch anything. PHP wrote whatever
- * arrived (`file_put_contents`, class.component_image.php:987); porting that
- * verbatim would port a stored-XSS surface with it.
+ * SVG CONSTRUCTS AN ENVELOPE MAY NOT CARRY — the table now lives in ./svg_safety.ts,
+ * because the SERVING side needs the same list: the generated Apache/nginx rules and
+ * the Bun media route decide from it which SVG population a file belongs to. Two hand
+ * -written copies of a security rule drift, and the drift is invisible.
  *
- * Each entry is REFUSED, not stripped. A drawing export contains none of them, so
- * a refusal means the payload is not what it claims to be — and silently deleting
- * part of an operator's save is exactly the "plausible-but-narrowed result" this
- * codebase forbids. The write fails, loudly, and `lib_data` (the layer source of
- * truth) is untouched either way.
+ * The verdict stays DIFFERENT per consumer and that is deliberate: here each entry is
+ * REFUSED, not stripped. The envelope is the one file under the media root whose bytes
+ * come from a CLIENT (`svg_file_data`, exported by the vector editor); a drawing export
+ * contains none of these, so a match means the payload is not what it claims to be —
+ * and silently deleting part of an operator's save is exactly the "plausible-but-narrowed
+ * result" this codebase forbids. The write fails, loudly, and `lib_data` (the layer
+ * source of truth) is untouched either way. The UPLOAD path, by contrast, only notices
+ * them: refusing a curator's SVG would be data loss, and the serving-side quarantine is
+ * what makes it inert.
  */
-const ENVELOPE_REFUSALS: readonly { pattern: RegExp; what: string }[] = [
-	{ pattern: /<\s*script\b/i, what: '<script>' },
-	{ pattern: /<\s*foreignObject\b/i, what: '<foreignObject> (arbitrary HTML)' },
-	{
-		pattern: /<\s*(iframe|embed|object|animate|set|handler)\b/i,
-		what: 'an embedding/animation element',
-	},
-	{ pattern: /<!DOCTYPE/i, what: 'a DOCTYPE (entity expansion / XXE)' },
-	{ pattern: /<!ENTITY/i, what: 'an ENTITY declaration' },
-	// The QUOTE is required, and that is not a weakening: an envelope is served as
-	// image/svg+xml and loaded by the client through an <object>, i.e. parsed as
-	// XML, where an unquoted attribute value is a fatal parse error — `onload=x`
-	// without quotes cannot execute because the document never renders. Requiring
-	// it keeps the ANNOTATION TEXT of a drawing out of the refusal: a curator
-	// marking up a switch position ("on=off") wrote no attribute, and a save that
-	// refuses their drawing forever — the stored item replays through this gate on
-	// every later save — is a false positive with no way out.
-	{ pattern: /\son[a-z]+\s*=\s*["']/i, what: 'an inline event handler (on…=)' },
-	{
-		pattern: /(?:href|src|from|to|values)\s*=\s*["']?\s*(?:javascript|data:text\/html|vbscript)/i,
-		what: 'a script URL',
-	},
-];
 
 /**
  * Persist the vector-editor's SVG string as the record's envelope (PHP

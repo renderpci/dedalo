@@ -80,6 +80,18 @@ export interface Session {
 	 */
 	tokenHash?: string;
 	/**
+	 * This session's MEDIA credential: the value of its `dedalo_media_auth` cookie and
+	 * the name of the zero-byte marker under `<media>/.publication/auth/` that the web
+	 * server stats to authorize rule A. Per-SESSION since 2026-08-24 — it used to be one
+	 * value per install per day, which meant a stolen cookie could not be revoked by
+	 * logging out or by resetting the password, for up to ~48 hours.
+	 *
+	 * null when protection is off, when the media root is unset, or on a session created
+	 * before the column existed — the per-request re-issue re-keys those lazily. OPTIONAL
+	 * for synthetic harness sessions.
+	 */
+	mediaKey?: string | null;
+	/**
 	 * Per-section navigation SQOs (PHP $_SESSION['dedalo']['config']['sqo'],
 	 * keyed by section::build_sqo_id = the caller tipo). Written by section
 	 * list/edit reads (dd_core_api :2276-98), stamped on section contexts as
@@ -192,7 +204,7 @@ database.exec(`
 // Migration: the per-session language columns were added after the sessions
 // table shipped. ADD COLUMN on an existing DB throws "duplicate column" once
 // applied, so each is guarded — SQLite has no idempotent ADD COLUMN.
-for (const column of ['application_lang', 'data_lang', 'sqo_session']) {
+for (const column of ['application_lang', 'data_lang', 'sqo_session', 'media_key']) {
 	try {
 		database.exec(`ALTER TABLE sessions ADD COLUMN ${column} TEXT`);
 	} catch (error) {
@@ -214,16 +226,36 @@ function sha256Hex(value: string): string {
 	return new Bun.CryptoHasher('sha256').update(value).digest('hex');
 }
 
-/** Create a session for a verified user. Returns the RAW token (cookie value). */
-export function createSession(userId: number, username: string, isGlobalAdmin: boolean): string {
+/**
+ * Create a session for a verified user. Returns the RAW token (cookie value).
+ *
+ * `mediaKey` is this session's MEDIA credential — the value of the `dedalo_media_auth`
+ * cookie and the name of its marker file under `<media>/.publication/auth/`. It is
+ * per-session precisely so that logging out can revoke it: it used to be one value per
+ * INSTALL per DAY, which meant no logout and no password reset could take it away from
+ * whoever had stolen it, for up to ~48 hours (today's and yesterday's markers are both
+ * valid). Storing it on the session row makes the marker set a PROJECTION of this table.
+ *
+ * OPTIONAL, and that is deliberate rather than lax: more than a hundred test files and
+ * the client-suite runner construct sessions three-arity, and a required fourth argument
+ * would turn a security fix into a mass edit of unrelated call sites. A session with no
+ * media key simply holds no media credential and is re-keyed lazily on its next
+ * authenticated request — the same path that carries sessions across the upgrade.
+ */
+export function createSession(
+	userId: number,
+	username: string,
+	isGlobalAdmin: boolean,
+	mediaKey: string | null = null,
+): string {
 	const rawToken =
 		crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
 	const csrfToken =
 		crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
 	database
 		.query(
-			`INSERT INTO sessions (token_hash, user_id, username, is_global_admin, csrf_token, created_at, last_seen)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO sessions (token_hash, user_id, username, is_global_admin, csrf_token, created_at, last_seen, media_key)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		)
 		.run(
 			sha256Hex(rawToken),
@@ -233,6 +265,7 @@ export function createSession(userId: number, username: string, isGlobalAdmin: b
 			csrfToken,
 			nowSeconds(),
 			nowSeconds(),
+			mediaKey,
 		);
 	// Language columns start NULL (installation default) — a fresh login carries
 	// no per-user language preference until the user picks one from the menu.
@@ -265,7 +298,7 @@ export function setSessionLangs(
 export function getSession(rawToken: string): Session | null {
 	const row = database
 		.query(
-			'SELECT user_id, username, is_global_admin, csrf_token, created_at, last_seen, application_lang, data_lang, sqo_session FROM sessions WHERE token_hash = ?',
+			'SELECT user_id, username, is_global_admin, csrf_token, created_at, last_seen, application_lang, data_lang, sqo_session, media_key FROM sessions WHERE token_hash = ?',
 		)
 		.get(sha256Hex(rawToken)) as {
 		user_id: number;
@@ -277,6 +310,7 @@ export function getSession(rawToken: string): Session | null {
 		application_lang: string | null;
 		data_lang: string | null;
 		sqo_session: string | null;
+		media_key: string | null;
 	} | null;
 	if (row === null) return null;
 	if (nowSeconds() - row.last_seen > SESSION_TTL_SECONDS) {
@@ -313,6 +347,10 @@ export function getSession(rawToken: string): Session | null {
 		dataLang: row.data_lang,
 		tokenHash: sha256Hex(rawToken),
 		sqoSession,
+		// This session's media credential (the `dedalo_media_auth` cookie value and the
+		// name of its marker file). null on a session created before the column existed
+		// or before a media mode was configured — the re-issue path re-keys it lazily.
+		mediaKey: row.media_key,
 		// Computed from the JUST-refreshed last_seen, so the client is told what it
 		// has left starting now — not what was left before this request landed.
 		expiresIn: secondsUntilExpiry({ created_at: row.created_at, last_seen: touchedAt }, touchedAt),
@@ -408,8 +446,20 @@ export function setSessionSqo(session: Session, sqoId: string, sqo: unknown): vo
 	}
 }
 
-export function destroySession(rawToken: string): void {
-	database.query('DELETE FROM sessions WHERE token_hash = ?').run(sha256Hex(rawToken));
+/**
+ * Delete one session, returning its MEDIA KEY so the caller can unlink the marker that
+ * key names. RETURNING is what makes revocation possible: the marker set is a projection
+ * of this table, and a delete that did not say which credential it freed would leave the
+ * web server honouring a cookie whose session no longer exists.
+ *
+ * Callers inside `src/` go through `session_media.endSession` instead, which does both
+ * halves; a bare destroy here leaves an orphan marker for the sweep to collect.
+ */
+export function destroySession(rawToken: string): string | null {
+	const row = database
+		.query('DELETE FROM sessions WHERE token_hash = ? RETURNING media_key')
+		.get(sha256Hex(rawToken)) as { media_key: string | null } | null;
+	return row?.media_key ?? null;
 }
 
 /**
@@ -420,12 +470,45 @@ export function destroySession(rawToken: string): void {
  * single-session semantics.
  */
 export function destroyUserSessions(userId: number, keepRawToken?: string): number {
-	if (keepRawToken !== undefined) {
-		return database
-			.query('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?')
-			.run(userId, sha256Hex(keepRawToken)).changes;
-	}
-	return database.query('DELETE FROM sessions WHERE user_id = ?').run(userId).changes;
+	return destroyUserSessionsDetail(userId, keepRawToken).removed;
+}
+
+/**
+ * The same eviction, reporting the MEDIA KEYS it freed. A password reset uses this: the
+ * reset exists to cut off whoever holds a stolen token, and before the media credential
+ * became per-session there was one thing it could not cut off — the media cookie, which
+ * stayed valid at the web server for up to ~48 hours no matter what the account did.
+ */
+export function destroyUserSessionsDetail(
+	userId: number,
+	keepRawToken?: string,
+): { removed: number; mediaKeys: string[] } {
+	const rows = (
+		keepRawToken !== undefined
+			? database
+					.query('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ? RETURNING media_key')
+					.all(userId, sha256Hex(keepRawToken))
+			: database.query('DELETE FROM sessions WHERE user_id = ? RETURNING media_key').all(userId)
+	) as { media_key: string | null }[];
+	return {
+		removed: rows.length,
+		mediaKeys: rows.map((row) => row.media_key).filter((key): key is string => key !== null),
+	};
+}
+
+/** Every live session's media key — the exact set of markers that should exist. */
+export function listActiveMediaKeys(): string[] {
+	const rows = database
+		.query('SELECT media_key FROM sessions WHERE media_key IS NOT NULL')
+		.all() as { media_key: string }[];
+	return rows.map((row) => row.media_key);
+}
+
+/** Attach a media key to an existing session (the lazy re-key path). */
+export function setSessionMediaKey(rawToken: string, mediaKey: string): void {
+	database
+		.query('UPDATE sessions SET media_key = ? WHERE token_hash = ?')
+		.run(mediaKey, sha256Hex(rawToken));
 }
 
 /** Constant-time CSRF comparison (PHP hash_equals equivalent). */
@@ -583,13 +666,19 @@ export function resetSessionStoreForTests(): void {
  * exact population the cap exists to remove.
  */
 export function pruneExpiredSessions(): number {
+	return pruneExpiredSessionsDetail().pruned;
+}
+
+/** The same prune, reporting the media keys it freed (see destroyUserSessionsDetail). */
+export function pruneExpiredSessionsDetail(): { pruned: number; mediaKeys: string[] } {
 	const now = Math.floor(Date.now() / 1000);
 	const idleCutoff = now - SESSION_TTL_SECONDS;
-	// 0 disables the absolute cap — then no row may be pruned on age, so use a
-	// cutoff no created_at can precede rather than special-casing the SQL.
 	const ageCutoff = SESSION_ABSOLUTE_TTL_SECONDS > 0 ? now - SESSION_ABSOLUTE_TTL_SECONDS : 0;
-	const result = database
-		.query('DELETE FROM sessions WHERE last_seen < ? OR created_at < ?')
-		.run(idleCutoff, ageCutoff);
-	return Number((result as { changes?: number }).changes ?? 0);
+	const rows = database
+		.query('DELETE FROM sessions WHERE last_seen < ? OR created_at < ? RETURNING media_key')
+		.all(idleCutoff, ageCutoff) as { media_key: string | null }[];
+	return {
+		pruned: rows.length,
+		mediaKeys: rows.map((row) => row.media_key).filter((key): key is string => key !== null),
+	};
 }

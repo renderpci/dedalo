@@ -30,6 +30,7 @@
  */
 
 import { createDecipheriv, createHash } from 'node:crypto';
+import { ARGON2_OPTIONS } from './argon2_params.ts';
 
 export interface LegacyKeyMaterial {
 	/** PHP DEDALO_INFORMATION — the encryption key. */
@@ -112,5 +113,5 @@ export async function rehashLegacyPassword(
 ): Promise<string | null> {
 	const plaintext = decryptLegacyPassword(stored, material);
 	if (plaintext === null) return null;
-	return await Bun.password.hash(plaintext, { algorithm: 'argon2id' });
+	return await Bun.password.hash(plaintext, ARGON2_OPTIONS);
 }

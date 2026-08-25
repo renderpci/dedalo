@@ -44,6 +44,7 @@ function makeLoaded(backgroundRunnable: readonly string[] | undefined): {
 	const ran = { value: false };
 	const spec: ToolActionSpec = {
 		permission: null,
+		gatedInHandler: 'test fixture — the background executor is under test, not any gate',
 		handler: async () => {
 			ran.value = true;
 			return ok(true, { requestId: 'tools-background-test' });

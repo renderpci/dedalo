@@ -32,8 +32,9 @@ const DEFAULT_MIN_LEVEL = 2; // PHP default: write
  * Enforce one action's declarative permission spec against the request options
  * and the caller. Returns {ok:true} to proceed or a fail result to return to the
  * client. The permission kinds mirror PHP tool_security's assert_* helpers; a
- * null permission is "listed but gated inside the handler" and always passes
- * here. Note that PHP composed its asserts freely per method, so a TS kind may
+ * null permission is the NAMED EXEMPTION (module.ts ExemptToolActionSpec: the
+ * spec must say in `gatedInHandler` what the handler does instead) and always
+ * passes here — see the `case null` comment for why that is documentary. Note that PHP composed its asserts freely per method, so a TS kind may
  * stand for a COMBINATION ('record_tipo' = the tipo pair + the record scope).
  */
 export async function assertActionPermission(
@@ -41,10 +42,24 @@ export async function assertActionPermission(
 	options: Record<string, unknown>,
 	principal: Principal,
 ): Promise<PermissionCheck> {
+	// `minLevel` is readable on the WHOLE union because the exempt member declares
+	// it `never` (module.ts): an action with no declarative gate cannot carry a
+	// level that reads like protection but is never consulted. So the one read
+	// stays here, before the switch, instead of being repeated in six branches.
 	const minLevel = spec.minLevel ?? DEFAULT_MIN_LEVEL;
 
 	switch (spec.permission) {
 		case null:
+			// THE EXEMPTION, AND THE HONEST LIMIT OF IT. This gate passes, always.
+			// P2-8(a) (2026-08-24) makes the exemption NAMED — the spec must carry a
+			// `gatedInHandler` string, and test/unit/tool_permission_census_tripwire.test.ts
+			// pins the set of exempt actions shrink-only and checks the named symbol
+			// is really called on the handler's entry path. That is a DOCUMENTARY
+			// construction, not an enforcement one: nothing here can verify the
+			// handler's check is the RIGHT check, that it runs before the action's
+			// first side effect, or that no branch reaches the effect around it.
+			// Whoever needs authorization enforced by the framework must choose a
+			// declarative kind above — this branch cannot be made to enforce anything.
 			return { ok: true };
 
 		case 'developer':

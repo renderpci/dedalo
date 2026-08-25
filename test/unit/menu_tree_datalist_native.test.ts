@@ -35,6 +35,9 @@
  * TLD, situations/situation.ts) and dropped whole in afterAll with the residue
  * ASSERTED. The runtime deny/skip lists are set through `setServerState` and
  * restored, so the gate never depends on — or leaves behind — a config edit.
+ *
+ * @twin-of      test/parity/menu_differential.test.ts
+ * @twin-status  frozen-record
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

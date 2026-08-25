@@ -226,9 +226,12 @@ under maintenance` — together with the attempted username, under the WHO
 ## The media-auth cookie
 
 A successful login also arms the **media-auth cookie**. `login()` calls
-`initMediaAuthCookie()` (`src/core/media/protection.ts`), which returns the daily
-media cookie value, lays its marker file and refreshes the generated web-server
-rule files. `src/server.ts` sets it alongside the session cookie.
+`issueSessionMediaKey()` (`src/core/media/protection.ts`), which mints THIS
+SESSION's media credential, lays its marker file and refreshes the generated
+web-server rule files; the value is then stored on the session row and
+`src/server.ts` sets it alongside the session cookie. Because it belongs to one
+session, logging out revokes it — see
+[media protection](media_protection.md).
 
 This is what lets the web server authorize a protected-media read with a single
 `stat()`, without calling back into the application. The cookie is arranged

@@ -35,19 +35,29 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import {
-	chmodSync,
 	existsSync,
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	renameSync,
 	statSync,
 	unlinkSync,
 	writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { getServerState } from '../resolve/server_state.ts';
+import {
+	imageEnvelopePcre,
+	MEDIA_ACTIVE_DOCUMENT_EXTENSIONS,
+	MEDIA_NOSNIFF,
+	SVG_ENVELOPE_CSP,
+	SVG_QUARANTINE_CSP,
+	SVG_QUARANTINE_DISPOSITION,
+	SVG_QUARANTINE_EXTENSIONS,
+	svgQuarantinePcre,
+} from './svg_safety.ts';
 import { assertTestMediaRoot } from './test_media_root.ts';
 
 /**
@@ -64,7 +74,7 @@ export const MEDIA_AUTH_COOKIE = 'dedalo_media_auth';
  * whose inputs are otherwise unchanged. Forget it and installs keep the old rules
  * forever.
  */
-export const TEMPLATE_VERSION = 2;
+export const TEMPLATE_VERSION = 3;
 
 /** The effective access mode. 'off' is a GENERATOR-only value — never returned here. */
 export type MediaAccessMode = 'private' | 'publication' | false;
@@ -74,6 +84,14 @@ export type RuleMode = 'off' | 'private' | 'publication';
 /** A cookie value is a sha512 hex digest. It becomes a literal FILENAME in auth/, so
  * this pattern is the path-traversal guard — nothing else may ever reach the disk. */
 const COOKIE_VALUE_REGEX = /^[a-f0-9]{128}$/;
+
+/**
+ * Permissions for the auth marker directory. The FILENAMES in it are live media
+ * credentials, so other local users must not be able to list it — 0750, never 0755.
+ * Named once because two writers create the directory (a login lays one marker, a
+ * reconcile lays the live set), and two mode literals are two chances to drift.
+ */
+const AUTH_MARKER_DIR_MODE = 0o750;
 
 /** Quality folder names an admin may configure. Deliberately strict (these land in a
  * regex alternation inside a web-server config). */
@@ -115,9 +133,6 @@ export function overrideMediaProtectionPathsForTests(
 		}
 	}
 	pathOverridesForTests = overrides;
-	// Redirecting the store also invalidates anything read from the old one — without
-	// this, a scratch-dir test would keep serving the previous tree's cookie value.
-	cachedAuthCookie = null;
 }
 
 /**
@@ -150,42 +165,23 @@ export function authMarkerDir(): string | null {
 }
 
 /**
- * The auth store: today's + yesterday's cookie values, persisted across restarts so a
- * second login the same day recycles them instead of invalidating everyone's cookie.
+ * The RETIRED day-global auth store, kept addressable for exactly one reason: a
+ * migrating install has one on disk and it must be got rid of.
  *
- * Lives in <private>/, NOT in the media tree: the values in it ARE credentials, and
- * <private>/ is already outside every web root. (PHP kept it under DEDALO_EXTRAS_PATH
- * behind a `<?php exit();` guard line — a hack that is meaningless without a PHP
- * interpreter, so it is dropped rather than imitated.)
+ * It held today's and yesterday's install-wide cookie values so a second login the same
+ * day recycled them instead of invalidating everyone's cookie — which is also why a
+ * stolen cookie could not be revoked by anything a user or an admin could do. Since
+ * 2026-08-24 the credential is per SESSION and lives on the session row, so there is no
+ * shared value to persist and this file is only ever DELETED (see retireLegacyAuthStore).
+ *
+ * It lived in <private>/, NOT in the media tree: its contents were valid media
+ * credentials, and a fetchable store would have handed any anonymous visitor a working
+ * cookie for up to 48 hours, leaving no trace.
  */
 export function authStorePath(): string {
 	if (pathOverridesForTests !== null) return pathOverridesForTests.authStorePath;
 	return join(privateDir, 'media_auth.json');
 }
-
-/**
- * THE worst failure mode in this subsystem, made impossible: the auth store must never
- * sit anywhere the web server serves. It holds today's and yesterday's cookie VALUES in
- * cleartext, so a fetchable store lets any anonymous visitor set `dedalo_media_auth` and
- * read the entire media tree — for up to 48 hours, leaving no trace. It therefore lives
- * in <private>/, which is outside every served root by construction; this guard refuses
- * to write it under the media root even if a future path change puts it there.
- */
-function assertAuthStoreIsNotServed(path: string): void {
-	const root = mediaRoot();
-	if (root !== null && (path === root || path.startsWith(`${root.replace(/\/+$/, '')}/`))) {
-		throw new Error(
-			`[media_protection] REFUSING to write the media auth store inside the media root (${path}). Its contents are valid media credentials; serving it would hand every anonymous visitor a working cookie.`,
-		);
-	}
-}
-
-/** One day slot of the auth store. Keyed by 'YYYY_MM_DD' (the PHP shape). */
-interface AuthDay {
-	cookie_name: string;
-	cookie_value: string;
-}
-export type AuthStore = Record<string, AuthDay>;
 
 /** The rule files this module generates and the web server reads. */
 export interface RuleFileStatus {
@@ -216,12 +212,42 @@ export interface RuleFileStatus {
  * takes effect immediately — no restart.
  */
 export function resolveMediaAccessMode(): MediaAccessMode {
+	return resolveMediaAccessModeDetail().mode;
+}
+
+/**
+ * Where the effective mode CAME FROM, alongside the mode itself.
+ *
+ * The source is not cosmetic. Since the default became fail-closed (2026-08-24) there
+ * are two very different states that both answer 'publication':
+ *
+ *  - an operator CONFIGURED it. Then a media root that cannot be written is a
+ *    misconfiguration the operator must see, and the engine's own media fallback route
+ *    must stand down because the generated web-server rules are authoritative.
+ *  - NOBODY configured anything and the safe default applied. Then the same two
+ *    situations must degrade instead: a login may not fail because MEDIA_PATH is unset,
+ *    and an install with no web server in front of its media (the documented
+ *    dev_quickstart flow) must still show its editors their images — otherwise a
+ *    security default silently breaks every fresh install, and the first thing every
+ *    operator learns is how to turn it off.
+ *
+ * Collapsing the two is how a fail-closed default turns into a fail-closed PRODUCT.
+ */
+export function resolveMediaAccessModeDetail(): {
+	mode: MediaAccessMode;
+	source: 'state' | 'env' | 'legacy' | 'default';
+} {
 	if (hasStateOverride()) {
 		const override = getServerState().media_access_mode;
-		return override === 'private' || override === 'publication' ? override : false;
+		const mode = override === 'private' || override === 'publication' ? override : false;
+		return { mode, source: 'state' };
 	}
-	// The catalog already folds DEDALO_MEDIA_ACCESS_MODE + the legacy flag into one value.
-	return config.features.mediaAccessMode;
+	// The catalog already folds DEDALO_MEDIA_ACCESS_MODE + the legacy flag into one value;
+	// only the SOURCE has to be recovered from the raw keys here.
+	const mode = config.features.mediaAccessMode;
+	if (getConfigFileMode() !== null) return { mode, source: 'env' };
+	if (getLegacyProtectFlag() !== null) return { mode, source: 'legacy' };
+	return { mode, source: 'default' };
 }
 
 /**
@@ -268,7 +294,7 @@ export function resolveModeSource(): string {
 	if (getLegacyProtectFlag() === true) {
 		return '../private/.env (legacy DEDALO_PROTECT_MEDIA_FILES)';
 	}
-	return 'default — no media protection configured (media is world-readable)';
+	return "default — fail-closed ('publication'): logged-in users see everything, anonymous users only published records in the public quality folders. No mode is configured; set DEDALO_MEDIA_ACCESS_MODE to make the choice explicit.";
 }
 
 // ---------------------------------------------------------------------------
@@ -425,19 +451,59 @@ export function getConfigHash(mode: RuleMode, qualities: string[], addons: strin
 }
 
 /**
+ * The map file's own hash. It is shaped by a DIFFERENT input set than the two rule
+ * files — no mode, no qualities, no addons; only the template version and the two
+ * config values the MEDIA-03 URI patterns interpolate. Judging it by the rule files'
+ * hash would rewrite it on every quality change (noise) and, worse, miss a change to
+ * the image folder (a stale envelope pattern = blank edit views).
+ */
+function getNginxMapConfigHash(): string {
+	return createHash('sha256')
+		.update(
+			JSON.stringify({
+				version: TEMPLATE_VERSION,
+				media_dir: config.mediaDir,
+				image_folder: config.media.image.folder,
+				cookie: MEDIA_AUTH_COOKIE,
+			}),
+		)
+		.digest('hex');
+}
+
+/**
  * The always-on hardening block. Emitted in EVERY mode, including 'off' — none of it is
  * part of the access gate, and all of it must hold even when protection is disabled.
  *
  *  - SEC-088 script execution: the media root is full of USER-UPLOADED files, and the web
  *    server must never interpret one as code.
+ *  - MEDIA-03 response headers (2026-08-24): SVG is the one image format that is also a
+ *    DOCUMENT. Blocking script EXTENSIONS does nothing about it — `.svg` is a legitimate,
+ *    accepted media extension (component_svg), and served inline from this origin an
+ *    uploaded one is stored XSS against a curator's session. The two populations get
+ *    opposite treatment and the rule comes from ONE definition, ./svg_safety.ts, shared
+ *    with the Bun media route. See DECISION 2's "MEDIA-03 refined close", whose closing
+ *    requirement — that this template mirror the two path-scoped rules — is what this is.
+ *  - Active-document extensions no media model accepts (html/swf/hta…) are DENIED, not
+ *    quarantined: nothing legitimate under the media root has those names.
  *  - The marker store deny: STRICTER THAN PHP, whose 'off' template omitted it. The
  *    filenames under `.publication/auth/` ARE valid media credentials and the ones under
  *    `pub/` enumerate every published record id. Neither is ever something to serve, in
  *    any mode — and "protection is off today" must not mean "the credentials that work
  *    tomorrow were harvestable yesterday". The gated modes deny it again in the rewrite
  *    stage (rule 0); this is the belt to that pair of braces.
+ *
+ * (!) HEADERS MAY NOT FAIL OPEN. mod_headers is not guaranteed to be loaded, and an
+ * install without it would silently serve every uploaded SVG inline with no CSP — the
+ * exact hole this closes, invisible because the rule file LOOKS right. So the
+ * `<IfModule !mod_headers.c>` branch DENIES the quarantine population outright (the
+ * engine-written envelopes, whose bytes come from a fixed template, stay served). An
+ * operator loses the ability to download a curator's raw SVG until they enable
+ * mod_headers; they never lose the guarantee.
  */
 function htaccessHardeningBlock(): string {
+	const quarantine = SVG_QUARANTINE_EXTENSIONS.join('|');
+	const activeDocs = MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|');
+	const envelope = imageEnvelopePcre();
 	return [
 		'# SEC-088: block script execution inside the media root.',
 		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht)$">',
@@ -446,6 +512,48 @@ function htaccessHardeningBlock(): string {
 		'<FilesMatch "(?i)\\.(phps?|phtml|phar|pht|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$">',
 		'\tRequire all denied',
 		'</FilesMatch>',
+		// MEDIA-03: active-document extensions no media model accepts are never served.
+		//
+		// A REWRITE, not `Require all denied`, and the difference was measured rather
+		// than reasoned: in a .htaccess mod_rewrite runs in the FIXUP phase, which is
+		// AFTER authorization — so a `Require all denied` alongside this answers first
+		// and the client gets 403, which CONFIRMS the file exists. This subsystem denies
+		// as 404, never 403 (§2), and the nginx side already did. Verified against
+		// Apache 2.4.66 and nginx 1.29: both now answer 404 for the same request.
+		//
+		// Losing the authz belt costs nothing real: every rule in this file below the
+		// hardening block is a RewriteRule, so an install without mod_rewrite has no
+		// access gate at all — a belt for one extension list would not save it.
+		'<IfModule mod_rewrite.c>',
+		'RewriteEngine On',
+		`RewriteRule (?i)\\.(${activeDocs})$ - [R=404,L]`,
+		'</IfModule>',
+		'# MEDIA-03: SVG/XML is a DOCUMENT, not just an image. Uploader-supplied vector',
+		'# and XML is handed over as a download inside an opaque origin; the',
+		'# server-generated image envelope stays inline (the edit view embeds it through',
+		'# <object> and needs same-origin contentDocument access) but can run no script.',
+		'# The <If> is merged AFTER <FilesMatch>, so the envelope override wins.',
+		'<IfModule mod_headers.c>',
+		`\tHeader always set X-Content-Type-Options "${MEDIA_NOSNIFF}"`,
+		`\t<FilesMatch "(?i)\\.(${quarantine})$">`,
+		`\t\tHeader always set Content-Disposition "${SVG_QUARANTINE_DISPOSITION}"`,
+		`\t\tHeader always set Content-Security-Policy "${SVG_QUARANTINE_CSP}"`,
+		'\t</FilesMatch>',
+		`\t<If "%{REQUEST_URI} =~ m#${envelope}#">`,
+		'\t\tHeader always unset Content-Disposition',
+		`\t\tHeader always set Content-Security-Policy "${SVG_ENVELOPE_CSP}"`,
+		'\t</If>',
+		'</IfModule>',
+		'# (!) FAIL CLOSED: without mod_headers the CSP above cannot be emitted, so the',
+		'# uploader-supplied population is refused rather than served inline unprotected.',
+		'<IfModule !mod_headers.c>',
+		`\t<FilesMatch "(?i)\\.(${quarantine})$">`,
+		'\t\tRequire all denied',
+		'\t</FilesMatch>',
+		`\t<If "%{REQUEST_URI} =~ m#${envelope}#">`,
+		'\t\tRequire all granted',
+		'\t</If>',
+		'</IfModule>',
 		'# Protect working files from prying eyes.',
 		'<FilesMatch "\\.(deleted|temp|tmp|import|csv)$">',
 		'\tRequire all denied',
@@ -603,11 +711,28 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 		'\treturn 404;',
 		'}',
 		'',
+		// The Apache twin of this lives in htaccessHardeningBlock(); the three-surface
+		// lockstep gate compares them, so a deny added to one and forgotten in the other
+		// is red rather than a quiet asymmetry between two installs of the same version.
+		'# MEDIA-03: active-document extensions no media model accepts are never served.',
+		`location ~* ^${escapeRegexLiteral(url)}/.+\\.(${MEDIA_ACTIVE_DOCUMENT_EXTENSIONS.join('|')})$ {`,
+		'\tdeny all;',
+		'\treturn 404;',
+		'}',
+		'',
 	];
 
 	if (mode === 'off') {
 		lines.push(
-			'# Protection is OFF: no access gate is generated (hardening above still applies).',
+			'# Protection is OFF: no ACCESS gate is generated. The hardening above and the',
+			'# MEDIA-03 response headers below still apply — "off" means no per-record',
+			'# authorization, never "serve uploaded documents inline with no CSP". Apache',
+			'# gets the same treatment through htaccessHardeningBlock(), which is emitted',
+			'# in every mode; nginx needs a location to hang the headers on, so here it is.',
+			`location ${url}/ {`,
+			...nginxSvgHeaderLines(),
+			"\tmp4;   # '?start='/'?end=' clipping",
+			'}',
 			'',
 		);
 		return lines.join('\n');
@@ -628,6 +753,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 			`\tif (-f ${root}/.publication/auth/$dedalo_auth_key) { set $dd_pass 1; }`,
 			`\tif (-f ${root}/.publication/pub/\${dd_s}_\${dd_i})   { set $dd_pass 1; }`,
 			'\tif ($dd_pass = 0) { return 404; }',
+			...nginxSvgHeaderLines(),
 			"\tmp4;   # ngx_http_mp4_module: '?start='/'?end=' clipping (no-op for non-mp4)",
 			'}',
 			'',
@@ -641,6 +767,7 @@ export function buildNginxConf(mode: RuleMode, qualities: string[] = []): string
 		'#    published media would 404. Classic pitfall; keep it plain.',
 		`location ${url}/ {`,
 		`\tif (!-f ${root}/.publication/auth/$dedalo_auth_key) { return 404; }`,
+		...nginxSvgHeaderLines(),
 		"\tmp4;   # '?start='/'?end=' clipping for logged-in users too",
 		'}',
 		'',
@@ -664,20 +791,67 @@ function nginxNamedGrammar(): string {
 	);
 }
 
-/** The http{}-context companion: sanitizes the cookie to hex-only BEFORE it is ever used
- * in a filesystem path. Static (the cookie NAME never changes), but generated alongside
- * the gate so an operator has both files in hand. */
+/**
+ * The http{}-context companion. Two jobs, both of which a `map` can do and a `server{}`
+ * block cannot:
+ *
+ *  1. sanitize the auth cookie to hex-only BEFORE it is ever used in a filesystem path;
+ *  2. MEDIA-03: classify the request URI into one of the three SVG populations, so the
+ *     byte-serving locations can emit the right headers with ONE `add_header` line each
+ *     instead of a new regex location — a new location would shadow rule B and take the
+ *     publication marker gate with it. An empty map value makes nginx omit the header.
+ *
+ * (!) NOT STATIC ANY MORE. Until 2026-08-24 this file was written only when ABSENT (it
+ * carried no config hash, because the cookie name never changes). Adding variables here
+ * while the server block starts referencing them would mean every EXISTING install keeps
+ * its old map, and nginx then refuses to reload with `unknown "dd_svg_csp" variable` —
+ * the media gate down, on upgrade, everywhere. So it now carries its own `# config-hash:`
+ * and is rewritten on drift like the other two artifacts. Bump TEMPLATE_VERSION when its
+ * text changes, or installs whose other inputs are unchanged never regenerate it.
+ */
 export function buildNginxMap(): string {
+	const hash = getNginxMapConfigHash();
 	return [
 		'# Dédalo media access control — GENERATED by src/core/media/protection.ts.',
 		'# Include this in the http{} context (a map cannot live inside server{}).',
-		'# It sanitizes the auth cookie to hex-only before it is used in a file path.',
+		`# config-hash: ${hash}`,
+		'# It sanitizes the auth cookie to hex-only before it is used in a file path,',
+		'# and classifies the URI for the MEDIA-03 response headers.',
 		`map $cookie_${MEDIA_AUTH_COOKIE} $dedalo_auth_key {`,
 		'\t"~^(?<h>[a-f0-9]{128})$"  $h;',
 		'\tdefault                   "_invalid_";',
 		'}',
 		'',
+		'# MEDIA-03: the ENVELOPE pattern must come FIRST — nginx map regexes are tested in',
+		'# order and an envelope is also an `.svg`. Getting this order wrong sends every',
+		'# server-generated envelope down the attachment branch and blanks the edit view.',
+		'map $uri $dedalo_svg_disposition {',
+		`\t"~${imageEnvelopePcre()}"  "";`,
+		`\t"~${svgQuarantinePcre()}"  "${SVG_QUARANTINE_DISPOSITION}";`,
+		'\tdefault                    "";',
+		'}',
+		'',
+		'map $uri $dedalo_svg_csp {',
+		`\t"~${imageEnvelopePcre()}"  "${SVG_ENVELOPE_CSP}";`,
+		`\t"~${svgQuarantinePcre()}"  "${SVG_QUARANTINE_CSP}";`,
+		'\tdefault                    "";',
+		'}',
+		'',
 	].join('\n');
+}
+
+/**
+ * The MEDIA-03 response headers, for one nginx location. Emitted in EVERY byte-serving
+ * location and in every mode — `add_header` does NOT inherit into a location that
+ * declares any add_header of its own, so there is no server-level shortcut here; each
+ * location must carry the full set or it silently serves bare.
+ */
+function nginxSvgHeaderLines(): string[] {
+	return [
+		`\tadd_header X-Content-Type-Options "${MEDIA_NOSNIFF}" always;`,
+		'\tadd_header Content-Disposition $dedalo_svg_disposition always;',
+		'\tadd_header Content-Security-Policy $dedalo_svg_csp always;',
+	];
 }
 
 /** Escape a literal for embedding in an Apache/nginx regex (quality folders carry '.'
@@ -752,17 +926,18 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 			text: buildNginxConf(mode, qualities),
 			hash: getConfigHash(mode, qualities, []),
 		},
-		{ path: paths.nginxMap, text: buildNginxMap(), hash: '' },
+		// The map file carries its OWN hash and is rewritten on drift like the others.
+		// It used to be written only when absent, on the reasoning that it was static.
+		// It is not static any more (MEDIA-03 put two $uri classification maps in it),
+		// and "written only when absent" would mean every existing install keeps a map
+		// with no $dedalo_svg_csp while the server block references it — nginx then
+		// refuses to reload, and the media gate goes down on upgrade.
+		{ path: paths.nginxMap, text: buildNginxMap(), hash: getNginxMapConfigHash() },
 	];
 
 	for (const artifact of artifacts) {
 		// Idempotency guard: compare the EMBEDDED hash comment rather than the whole body,
-		// so incidental whitespace drift never forces a rewrite. The map file carries no
-		// hash (it is static), so it is written only when absent.
-		if (artifact.path === paths.nginxMap) {
-			if (!existsSync(artifact.path)) writeFileSync(artifact.path, artifact.text);
-			continue;
-		}
+		// so incidental whitespace drift never forces a rewrite.
 		if (existsSync(artifact.path)) {
 			const current = readFileSync(artifact.path, 'utf8');
 			if (current.includes(`# config-hash: ${artifact.hash}`)) continue;
@@ -775,7 +950,11 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 
 /** Read-only inspection of the generated files against the current config, for the
  * media_control widget. Never writes. */
-export function getRulesStatus(): { htaccess: RuleFileStatus; nginx: RuleFileStatus } {
+export function getRulesStatus(): {
+	htaccess: RuleFileStatus;
+	nginx: RuleFileStatus;
+	nginx_map: RuleFileStatus;
+} {
 	const paths = ruleFilePaths();
 	const mode = resolveMediaAccessMode();
 
@@ -797,9 +976,26 @@ export function getRulesStatus(): { htaccess: RuleFileStatus; nginx: RuleFileSta
 		};
 	};
 
+	// The map is judged by its OWN hash — and, unlike the two rule files, its
+	// staleness is not cosmetic: the server block references variables that only a
+	// current map defines, so an out-of-date map means `nginx -t` FAILS. The widget
+	// has to be able to say so.
+	const mapStatus = (): RuleFileStatus => {
+		const path = paths?.nginxMap ?? null;
+		const exists = path !== null && existsSync(path);
+		if (path === null) return { path, exists, up_to_date: null };
+		return {
+			path,
+			exists,
+			up_to_date:
+				exists && readFileSync(path, 'utf8').includes(`# config-hash: ${getNginxMapConfigHash()}`),
+		};
+	};
+
 	return {
 		htaccess: statusOf(paths?.htaccess ?? null, true),
 		nginx: statusOf(paths?.nginx ?? null, false),
+		nginx_map: mapStatus(),
 	};
 }
 
@@ -812,30 +1008,27 @@ export function mintAuthCookieValue(): string {
 	return createHash('sha512').update(randomBytes(64)).digest('hex');
 }
 
-/** 'YYYY_MM_DD' — the auth store's day key (PHP date("Y_m_d")). */
-function dayKey(date: Date): string {
-	const pad = (n: number): string => String(n).padStart(2, '0');
-	return `${date.getFullYear()}_${pad(date.getMonth() + 1)}_${pad(date.getDate())}`;
-}
-
-export function readAuthStore(): AuthStore | null {
-	try {
-		const parsed = JSON.parse(readFileSync(authStorePath(), 'utf8')) as unknown;
-		return typeof parsed === 'object' && parsed !== null ? (parsed as AuthStore) : null;
-	} catch {
-		return null; // absent or malformed: the caller mints a fresh store (PROBE catch)
-	}
-}
-
-export function writeAuthStore(store: AuthStore): void {
+/**
+ * Delete the retired day-global auth store, once, on the way past.
+ *
+ * A migrating install has `<private>/media_auth.json` on disk holding two INSTALL-WIDE
+ * cookie values. Their markers are gone the moment the marker set becomes a projection
+ * of the sessions table, so the file is dead — but a file full of credentials that is
+ * dead and still on disk is exactly the kind of thing that gets restored from a backup
+ * or copied to a new host years later. Renamed rather than unlinked (`.migrated`) so an
+ * operator debugging an upgrade can still see what was there; best-effort, never fatal.
+ */
+export function retireLegacyAuthStore(): void {
 	const path = authStorePath();
-	assertAuthStoreIsNotServed(path);
-	mkdirSync(dirname(path), { recursive: true });
-	writeFileSync(path, `${JSON.stringify(store, null, '\t')}\n`, { mode: 0o600 });
-	// writeFileSync's `mode` applies only when CREATING the file — rewriting an existing
-	// one keeps whatever bits it already had. The values in here ARE valid media
-	// credentials, so tighten unconditionally.
-	chmodSync(path, 0o600);
+	if (!existsSync(path)) return;
+	try {
+		renameSync(path, `${path}.migrated`);
+		console.warn(
+			`[media_protection] the day-global media auth store is retired — the media credential is now per SESSION, so logout and password reset actually revoke it. Moved ${path} to ${path}.migrated; holders of the old cookie are re-issued on their next authenticated request.`,
+		);
+	} catch (error) {
+		console.error(`[media_protection] could not retire the legacy auth store ${path}:`, error);
+	}
 }
 
 /**
@@ -853,9 +1046,7 @@ export function syncAuthMarkers(values: string[]): void {
 	const dir = authMarkerDir();
 	if (dir === null) return; // media root unset — feature off
 
-	// 0750: the filenames here are valid cookie values; other local users must not be
-	// able to list them.
-	mkdirSync(dir, { recursive: true, mode: 0o750 });
+	mkdirSync(dir, { recursive: true, mode: AUTH_MARKER_DIR_MODE });
 
 	const keep = new Set<string>();
 	for (const value of values) {
@@ -881,103 +1072,102 @@ export function syncAuthMarkers(values: string[]): void {
 }
 
 /**
- * Recreate the auth markers from the values already persisted on disk. Used when
- * protection is (re-)enabled from the widget, so users who ALREADY hold a valid cookie
- * keep media access instead of being locked out until their next login.
- * No-op when no store exists yet — the next login creates one.
+ * Bring the marker directory into agreement with the CURRENT set of live sessions.
+ *
+ * `syncAuthMarkers` already does the work — it lays what it is given and unlinks
+ * everything else — so reconciliation is just "give it the live keys". Used when
+ * protection is re-enabled from the widget (so editors who already hold a cookie keep
+ * media access instead of 404ing until their next login) and to collect orphans: a
+ * marker can outlive its row only if the process died between the DELETE and the
+ * unlink, or if the session database was replaced underneath it.
+ *
+ * (!) NOT CALLED AT BOOT, deliberately. The session store is repointable
+ * (DEDALO_SESSION_DB_PATH) while the media root is not: the update's smoke boot starts
+ * the candidate tree with an EMPTY throwaway session store and the inherited MEDIA_PATH,
+ * so a boot-time reconcile would unlink every live editor's marker on the production
+ * tree — on every `bun run test:update` and every real update. The sweep is operator-
+ * triggered (media_control) and runs after a prune, where the caller's session store is
+ * by definition the real one.
  */
-export function syncAuthMarkersFromStore(): void {
-	const store = readAuthStore();
-	if (store === null) return;
-	const values = Object.values(store)
-		.map((day) => day?.cookie_value)
-		.filter((value): value is string => typeof value === 'string');
-	if (values.length > 0) syncAuthMarkers(values);
+export function reconcileAuthMarkers(liveKeys: string[]): void {
+	syncAuthMarkers(liveKeys);
 }
 
 /**
- * Today's cookie value, cached for the day.
+ * Lay ONE session's marker without disturbing anyone else's.
  *
- * Request-INDEPENDENT by construction: the value is one per INSTALL per DAY — every
- * user holds the identical cookie — so it carries no request identity and cannot bleed.
- * It exists so the per-request re-issue below (WC-051) costs a string compare instead
- * of a JSON read of the auth store on every authenticated request. Keyed by day, so it
- * self-invalidates at midnight; a rotation performed by a login in THIS process
- * refreshes it through `rememberAuthCookie`.
+ * `syncAuthMarkers` cannot be used for this: it unlinks every marker it was not given,
+ * which is correct for a reconcile and catastrophic for a login (it would log every
+ * other editor out of the media tree). The value becomes a literal FILENAME, so it is
+ * validated against the strict hex grammar first — that check is the path-traversal
+ * guard, not a formality.
  */
-let cachedAuthCookie: { day: string; value: string } | null = null;
-
-function rememberAuthCookie(day: string, value: string): void {
-	cachedAuthCookie = { day, value };
+export function layAuthMarker(value: string): void {
+	const dir = authMarkerDir();
+	if (dir === null) return; // media root unset — feature off
+	if (!COOKIE_VALUE_REGEX.test(value)) {
+		console.error('[media_protection] refused invalid auth cookie value (expected sha512 hex)');
+		return;
+	}
+	mkdirSync(dir, { recursive: true, mode: AUTH_MARKER_DIR_MODE });
+	const marker = join(dir, value);
+	if (!existsSync(marker)) writeFileSync(marker, '');
 }
 
 /**
- * The value a live session's `dedalo_media_auth` cookie SHOULD carry right now, or null
- * when protection is off / no store exists yet.
- *
- * READ-ONLY: unlike initMediaAuthCookie it never mints, never rotates, never writes a
- * marker and never regenerates the rule files — it is called on the hot path of every
- * authenticated request, and a writer there would rewrite the whole gate under load.
- * A missing store simply returns null: the next LOGIN creates one.
+ * Revoke ONE session's media credential. This is the whole point of the per-session
+ * design: logout and password reset can now actually take the cookie away, where before
+ * the value was install-global and unlinking it would have locked out every other
+ * editor — so nothing was unlinked, and a stolen cookie stayed valid for up to ~48h.
  */
-export function currentMediaAuthCookie(now: Date = new Date()): string | null {
-	if (resolveMediaAccessMode() === false) return null;
-	const today = dayKey(now);
-	if (cachedAuthCookie !== null && cachedAuthCookie.day === today) return cachedAuthCookie.value;
-	const value = readAuthStore()?.[today]?.cookie_value;
-	if (typeof value !== 'string' || !COOKIE_VALUE_REGEX.test(value)) return null;
-	rememberAuthCookie(today, value);
-	return value;
+export function dropAuthMarker(value: string): void {
+	const dir = authMarkerDir();
+	if (dir === null) return;
+	if (!COOKIE_VALUE_REGEX.test(value)) return; // never build a path from an unvetted value
+	try {
+		unlinkSync(join(dir, value));
+	} catch {
+		// Already gone (a concurrent logout, a reconcile). Revocation is idempotent.
+	}
 }
 
 /**
- * The login hook. Recycles or rotates the auth store, syncs the markers, refreshes the
- * generated rules, and returns the cookie value the response must set — or null when
- * protection is off (a TOTAL no-op: no cookie, no markers, no files).
+ * Mint this session's media credential and lay its marker. The login hook.
  *
- * Today's AND yesterday's values are both kept valid so a session does not break at
- * midnight, and so a second login the same day recycles rather than invalidating the
- * cookie every other user is holding.
+ * Returns the cookie value the response must set, or null when protection is off or the
+ * media root is unset under the fail-closed DEFAULT (a total no-op: no cookie, no
+ * marker, no files). Replaces `initMediaAuthCookie`, whose value was one per INSTALL
+ * per DAY.
  *
- * Throws on filesystem failure (CONVENTIONS §1: fail-loud). A configured gate that
- * cannot be written must not degrade into silently unprotected media.
+ * Throws on filesystem failure for a CONFIGURED mode (CONVENTIONS §1: fail-loud) — a
+ * gate that cannot be written must not degrade into silently unprotected media. It runs
+ * BEFORE createSession deliberately, so a throw leaves no orphan session behind.
+ *
+ * (!) The DEFAULT source degrades instead of throwing. An operator who wrote a mode and
+ * no MEDIA_PATH has a misconfiguration and must be stopped; an install that configured
+ * nothing and got the safe default has not made a mistake, and a security default that
+ * makes login impossible is not a safe default.
  */
-export function initMediaAuthCookie(now: Date = new Date()): string | null {
-	const mode = resolveMediaAccessMode();
+export function issueSessionMediaKey(): string | null {
+	const { mode, source } = resolveMediaAccessModeDetail();
 	if (mode === false) return null;
 	if (mediaRoot() === null) {
+		if (source === 'default') {
+			console.error(
+				`[media_protection] media protection defaults to '${mode}' (fail-closed) but MEDIA_PATH is not configured, so no gate can be written and no media cookie is issued. This process serves no media tree — nothing is exposed. Configure MEDIA_PATH, or set DEDALO_MEDIA_ACCESS_MODE explicitly.`,
+			);
+			return null;
+		}
 		throw new Error(
 			`[media_protection] DEDALO_MEDIA_ACCESS_MODE is '${mode}' but MEDIA_PATH is not configured — the gate cannot be written and media would be served unprotected.`,
 		);
 	}
 
-	const today = dayKey(now);
-	const yesterday = dayKey(new Date(now.getTime() - 86_400_000));
-
-	const existing = readAuthStore();
-	const newDay = (): AuthDay => ({
-		cookie_name: MEDIA_AUTH_COOKIE,
-		cookie_value: mintAuthCookieValue(),
-	});
-
-	const todayEntry = existing?.[today] ?? newDay();
-	const yesterdayEntry = existing?.[yesterday] ?? newDay();
-	const store: AuthStore = { [today]: todayEntry, [yesterday]: yesterdayEntry };
-
-	// Persist only when something actually changed — a second login the same day RECYCLES
-	// the values rather than rotating every other editor's cookie out from under them.
-	const recycled =
-		existing?.[today]?.cookie_value !== undefined &&
-		existing?.[yesterday]?.cookie_value !== undefined;
-	if (!recycled) {
-		writeAuthStore(store);
-	}
-
-	syncAuthMarkers([todayEntry.cookie_value, yesterdayEntry.cookie_value]);
+	const value = mintAuthCookieValue();
+	layAuthMarker(value);
+	// Rule files are refreshed at LOGIN as well as at boot, because a fresh deploy or a
+	// wiped media dir must not serve the tree unprotected until someone happens to
+	// restart. Config-hash guarded, so this is normally two hash compares.
 	writeRuleFiles();
-
-	// Keep the per-request read-side in step with a rotation performed here, so the
-	// re-issue path never hands out a value whose marker this login just deleted.
-	rememberAuthCookie(today, todayEntry.cookie_value);
-	return todayEntry.cookie_value;
+	return value;
 }

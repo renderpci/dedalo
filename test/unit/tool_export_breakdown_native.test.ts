@@ -39,6 +39,9 @@
  * (columns, rows, cells, end) over a chain whose every hop lands on a record
  * that exists, so an engine that stops walking produces a different grid, not
  * an empty comparison.
+ *
+ * @twin-of      test/parity/tool_export_breakdown_differential.test.ts
+ * @twin-status  frozen-record
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

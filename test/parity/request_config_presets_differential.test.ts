@@ -27,6 +27,8 @@
  *  2. the TS section EDIT context collapses to exactly the preset's ddos;
  *  3. it equals live PHP EXACTLY (same tipos, same order);
  *  4. LIST mode does NOT inherit the edit-mode preset (mode-keyed match).
+ *
+ * @twinned-by   test/unit/request_config_presets.test.ts
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

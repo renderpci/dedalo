@@ -20,6 +20,8 @@
  * hashes, not plaintext.
  */
 
+import { ARGON2_OPTIONS } from './argon2_params.ts';
+
 /** An Argon2 (any variant) PHC string, as produced by Bun.password / PHP password_hash. */
 export function isArgon2Hash(value: unknown): boolean {
 	return typeof value === 'string' && value.startsWith('$argon2');
@@ -45,7 +47,7 @@ export function isLegacyEncryptedPassword(value: unknown): boolean {
 export async function hashPasswordForStorage(value: unknown): Promise<unknown> {
 	if (typeof value !== 'string' || value === '') return value;
 	if (isArgon2Hash(value)) return value;
-	return await Bun.password.hash(value, { algorithm: 'argon2id' });
+	return await Bun.password.hash(value, ARGON2_OPTIONS);
 }
 
 /**

@@ -200,13 +200,14 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// cleared around each case; never request identity (the production paths are
 	// install-static: config.media.rootPath and <private>/).
 	'core/media/protection.ts:pathOverridesForTests',
-	// Today's media-auth cookie value (WC-051). ONE value per install per DAY — every
-	// user holds the identical cookie, so it carries no request identity and cannot
-	// bleed between principals. Lifecycle: keyed by day so it self-invalidates at
-	// midnight, refreshed by initMediaAuthCookie on any rotation this process performs,
-	// and cleared by overrideMediaProtectionPathsForTests. It exists to keep the
-	// per-request cookie re-issue a string compare instead of a JSON store read.
-	'core/media/protection.ts:cachedAuthCookie',
+	// REMOVED 2026-08-24 with the per-session media credential
+	// (WC-2026-08-24-media-auth-session-scoped). It cached "today's install-wide cookie
+	// value" so the per-request re-issue could be a string compare instead of a JSON
+	// store read. There is no install-wide value any more: the credential lives on the
+	// session row, so the re-issue compares against data the request already loaded and
+	// the module holds no cross-request state at all. Deleted rather than left as a dead
+	// allowlist line — a stale exemption pre-authorizes the next binding to land there
+	// unseen, which is why this gate treats staleness as red.
 	// The external subsystem's ONE settings door (src/external/settings.ts). Holds
 	// OPERATOR settings only — the frozen config is built at import, and `bun test`
 	// shares one module graph, so a test cannot state a scenario any other way

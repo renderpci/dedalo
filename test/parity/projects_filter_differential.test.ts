@@ -6,6 +6,8 @@
  * EXACTLY the records referencing one of THEIR projects — the same set a direct
  * EXISTS query returns. Admins and internal (no principal) searches see
  * everything.
+ *
+ * @twinned-by   test/unit/search_projects_filter_multisection.test.ts
  */
 // GENERIC-TLD MIGRATED 2026-08-19 (WC-2026-08-19-test-tld-replay-search-group).
 // This gate never had a PHP oracle: it compares the TS search engine with a

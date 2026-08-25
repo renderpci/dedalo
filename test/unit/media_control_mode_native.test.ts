@@ -17,7 +17,7 @@
  *   4. mediaRoot() === null && value ∉ {off,config}  → not reachable under the seam
  *   5. override mapping config→null / off→false / mode→mode, persisted
  *   6. writeRuleFiles(EXPLICIT effective mode)       → throws → mismatch envelope
- *   7. effective !== false                           → syncAuthMarkersFromStore()
+ *   7. effective !== false                           → reconcileAuthMarkers(live sessions)
  *   8. the three conditional notes + the mode label
  *
  * Branch 3 is not exercised: `isStateWritable()` reads DEDALO_TS_STATE_PATH through the
@@ -38,10 +38,11 @@ import {
 	MEDIA_AUTH_COOKIE,
 	overrideMediaProtectionPathsForTests,
 	resolveModeSource,
-	writeAuthStore,
 } from '../../src/core/media/protection.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { endSession } from '../../src/core/security/session_media.ts';
+import { createSession } from '../../src/core/security/session_store.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
 // Fail loud if the action is ever unregistered: a missing apiAction must break this
@@ -260,35 +261,60 @@ describe('the generated rule files — the artifact the web server actually enfo
 });
 
 describe('auth markers', () => {
-	test('re-enabling protection re-lays the markers from the persisted store', async () => {
-		// A user who is ALREADY logged in holds the cookie but has no marker after the
+	test('re-enabling protection re-lays the markers for LIVE SESSIONS', async () => {
+		// An editor who is ALREADY logged in holds the cookie but has no marker after the
 		// media dir was wiped / protection was off: without this resync every one of
 		// their media requests 404s until they log in again.
-		writeAuthStore({ '2026_08_08': { cookie_name: MEDIA_AUTH_COOKIE, cookie_value: HEX } });
+		//
+		// The source of truth is the sessions table, not a persisted store — the media
+		// credential became per-session on 2026-08-24, so "which cookies are valid" is
+		// exactly "which sessions are live".
+		const token = createSession(-1, 'root', true, HEX);
 
 		await seedAsRoot('private');
 
 		expect(existsSync(join(mediaRoot, '.publication', 'auth', HEX))).toBe(true);
+		endSession(token);
 	});
 
 	test("'off' does NOT lay markers — there is nothing to authorize", async () => {
-		writeAuthStore({ '2026_08_08': { cookie_name: MEDIA_AUTH_COOKIE, cookie_value: HEX } });
+		const token = createSession(-1, 'root', true, HEX);
 
 		await seedAsRoot('off');
 
 		expect(existsSync(join(mediaRoot, '.publication', 'auth', HEX))).toBe(false);
+		endSession(token);
 	});
 
-	test('a non-hex store value never reaches the disk as a filename (traversal guard)', async () => {
-		writeAuthStore({
-			'2026_08_08': { cookie_name: MEDIA_AUTH_COOKIE, cookie_value: '../../../../etc/passwd' },
-		});
+	test('a non-hex session value never reaches the disk as a filename (traversal guard)', async () => {
+		// The marker filename IS the credential, so the hex grammar is the traversal
+		// guard — and a session row is hand-editable state like any other.
+		const token = createSession(-1, 'root', true, '../../../../etc/passwd');
 
 		await seedAsRoot('private');
 
 		expect(
 			existsSync(join(mediaRoot, '.publication', 'auth', '..', '..', '..', '..', 'etc', 'passwd')),
 		).toBe(false);
+		endSession(token);
+	});
+
+	test('ending a session revokes ITS marker and no other', async () => {
+		// The reason the per-session design exists: revocation that does not lock
+		// everyone else out of the media tree.
+		const other = 'b'.repeat(128); // NOT HEX — the point is that the two differ
+		const keptToken = createSession(-1, 'root', true, other);
+		const doomedToken = createSession(-1, 'root', true, HEX);
+		await seedAsRoot('private');
+		const authDir = join(mediaRoot, '.publication', 'auth');
+		expect(existsSync(join(authDir, HEX))).toBe(true);
+		expect(existsSync(join(authDir, other))).toBe(true);
+
+		endSession(doomedToken);
+
+		expect(existsSync(join(authDir, HEX))).toBe(false);
+		expect(existsSync(join(authDir, other))).toBe(true);
+		endSession(keptToken);
 	});
 });
 
@@ -302,7 +328,7 @@ describe('the notes and the mode label in the success message', () => {
 			"If this instance has existing publications, run 'Rebuild media index' once.",
 		);
 		expect(response.msg).toContain(
-			'Users without the media auth cookie receive it at their next login.',
+			'Live sessions were re-keyed; anyone without a media auth cookie receives one on their next request.',
 		);
 		// The nginx conf was just written, so the operator must be told it is inert
 		// until a reload (unlike the per-request .htaccess).
@@ -314,7 +340,7 @@ describe('the notes and the mode label in the success message', () => {
 
 		expect(response.msg).toContain('OK. Media access mode applied: private.');
 		expect(response.msg).toContain(
-			'Users without the media auth cookie receive it at their next login.',
+			'Live sessions were re-keyed; anyone without a media auth cookie receives one on their next request.',
 		);
 		expect(response.msg).not.toContain('Rebuild media index');
 	});

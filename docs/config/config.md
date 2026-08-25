@@ -2080,15 +2080,28 @@ DEDALO_MEDIA_ACCESS_MODE `false | string`
 
 This parameter defines if the directory of the media files (av, images, pdf, subtitles, ...) will be protected and controlled for undesired/external access. The full documentation, with the architecture, use cases, web server configuration and examples, is in [Media protection (media file access control)](./media_protection.md).
 
-* `false` : no protection — media files are world-readable (default)
+* `'publication'` (**default**) : logged-in users access everything; anonymous users access only media of published records in the configured public quality folders (see `DEDALO_MEDIA_PUBLIC_QUALITIES`)
 * `'private'` : only logged-in Dédalo users can access media files
-* `'publication'` : logged-in users access everything; anonymous users access only media of published records in the configured public quality folders (see `DEDALO_MEDIA_PUBLIC_QUALITIES`)
+* `false` : no protection — media files are world-readable
+
+**The default is fail-closed, and that is deliberate.** Until 2026-08-24 an install that
+configured nothing served its whole media tree — unpublished records, master-quality
+originals, rights-restricted material — to anyone who could guess a URL. `'publication'`
+rather than `'private'` because on an install with no publications the two behave
+identically, while `'private'` would later 404 the archive's own published site the day
+diffusion writes its first marker.
+
+Setting `false` is still a real choice and is honoured — an operator who deliberately
+serves an open media tree said so. What is no longer honoured is silence.
+
+**nginx installs must reload** after this takes effect (`nginx -t && nginx -s reload`);
+the Apache `.htaccess` applies immediately. See the maintenance widget, which reports it.
 
 ```bash
-DEDALO_MEDIA_ACCESS_MODE=false
+DEDALO_MEDIA_ACCESS_MODE=publication
 ```
 
-*Default: (empty)*
+*Default: publication*
 
 ---
 
@@ -2558,6 +2571,39 @@ SERVER_UNIX_SOCKET="/run/dedalo/dedalo_ts.sock"
 ```
 
 *Default: /tmp/dedalo_ts.sock*
+
+---
+
+### Defining which transport may be believed about the client address
+
+TRUSTED_PROXY_TRANSPORT `socket | tcp | none`
+
+Which of this engine's listeners sits behind the reverse proxy, and therefore
+whose `X-Forwarded-For` header may be believed.
+
+`X-Forwarded-For` is a request **header**: anything that can open a connection can write
+it. It is trustworthy only because a proxy is known to have rewritten it — so it is read
+on one transport and ignored on the other, and on the other the connection's own peer
+address is used instead.
+
+* `socket` (**default**) — the unix socket (`SERVER_UNIX_SOCKET`), which only the local
+  reverse proxy can open. This is the documented production topology.
+* `tcp` — a proxy really does stand in front of `SERVER_TCP_PORT`. Set this ONLY when
+  that is true: on a port a browser reaches directly, it lets any client choose its own
+  address.
+* `none` — never read the header. Every request is attributed to its peer address.
+
+Until 2026-08-24 the header was read on every listener, so on the direct TCP port a client
+could pick the address used for the login throttle (a fresh brute-force bucket per
+request), for `dd544` activity rows, and for any check that matches a literal loopback
+address. The address is used for throttling and audit; the hop arithmetic is
+`TRUSTED_PROXY_HOPS`.
+
+```bash
+TRUSTED_PROXY_TRANSPORT=socket
+```
+
+*Default: socket*
 
 ---
 
@@ -4439,15 +4485,17 @@ DEDALO_INSTALL_ALLOWED_IPS `string` *comma list*
 
 This parameter defines which addresses may reach the install wizard.
 
-A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page. That is harmless on a laptop and dangerous on a network. Set this parameter — a comma-separated list of addresses, where the word `loopback` stands for the local machine — before you expose an unsealed installation to anything but yourself.
+A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page — and those actions write the configuration file and restart the server. **Unset, the wizard answers the local machine and nobody else.** To install from another machine — which is the normal case for a container, a virtual machine or a hosted server — you must name the address you will browse from, before you start the wizard.
 
-Unset, the wizard is open to any address, which is the convenient default for a local installation. The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
+An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas.
+
+The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. If a request arrives with no such information the engine treats it as local, so put the wizard behind the proxy the production guide prescribes, or behind a closed port, whenever the machine is reachable from a network. The effective list is printed in the server log when the engine starts, so an installation you cannot reach tells you why. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
 
 ```bash
-DEDALO_INSTALL_ALLOWED_IPS="loopback,203.0.113.10"
+DEDALO_INSTALL_ALLOWED_IPS="loopback,203.0.113.10,10.0.0.0/24"
 ```
 
-*Default: (unset)*
+*Default: loopback*
 
 ---
 

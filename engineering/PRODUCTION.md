@@ -404,8 +404,14 @@ with `RESTART_EXIT_CODE` (75 — `src/core/install/restart.ts`); the supervisor
 restarts it into configured mode. The wizard's separate manual
 `verify_active_config` click + the client's request retries bridge the gap. The
 pre-auth install surface is gated: reachable only while UNSEALED and only from
-`DEDALO_INSTALL_ALLOWED_IPS` (unset = open, dev default); once `install_finish`
-seals the instance the surface returns 404. The CLI needs no restart (it sets
+`DEDALO_INSTALL_ALLOWED_IPS` — FAIL-CLOSED since 2026-08-24
+(`engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md`): unset
+or empty means LOOPBACK ONLY, entries are `loopback` / a literal address / a CIDR
+block, and `any` is the one explicit opt-out that opens it to every address. The
+effective policy is printed at boot next to the INSTALL MODE banner. Its limit is
+the resolved client address: a request with no `X-Forwarded-For` reads as
+`'local'`, so a bare TCP listener with no proxy in front must still be closed at
+the firewall. Once `install_finish` seals the instance the surface returns 404. The CLI needs no restart (it sets
 the env before importing config).
 
 The supervisor is:

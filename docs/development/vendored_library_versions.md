@@ -8,9 +8,10 @@ compensate for.
 
 The old model was a 118 MB gitignored `client/dedalo/lib/` directory of hand-dropped
 bundles that no package manager watched — so **SEC-103** made a human re-check every
-one against the CVE feeds each release. That gap is now mostly closed: 17 of the 20
+one against the CVE feeds each release. That gap is now mostly closed: 16 of the 20
 libs are pinned dependencies in `package.json`, so Dependabot and `bun audit` see
-them like any other dep.
+them like any other dep. The other four are committed under `vendor/` and pinned by
+a digest instead — see [Integrity](#integrity-the-manifest-and-why-vendored-code-needs-one).
 
 **The index of record is `src/core/client_libs/registry.ts`.** It maps each lib to
 its root, and it is the allowlist the serving route enforces. This document is the
@@ -23,8 +24,8 @@ the repo any more. **Two** sources back that URL, and that is the whole story:
 
 | Source | Count | Root | In git? |
 |---|---|---|---|
-| **npm** | 17 | `node_modules/` | no — `bun install` |
-| **vendor** | 3 | `vendor/` | **yes** — committed (ckeditor, json-view, pdfjs) |
+| **npm** | 16 | `node_modules/` | no — `bun install` |
+| **vendor** | 4 | `vendor/` | **yes** — committed (ckeditor, json-view, pdfjs, xlsx) |
 
 !!! note "No install-time fetch step, deliberately"
     An earlier design downloaded pdf.js from its GitHub release via a `postinstall`
@@ -62,7 +63,7 @@ byte-identical** to what shipped before this migration.
 | highlightjs | `@highlightjs/cdn-assets` | 11.9.0 | Not `highlight.js` — see below. |
 | svgedit | `@svgedit/svgcanvas` | 7.4.2 | **Upgraded 2026-07-12** from a vendored ~7.2.x build. See below. |
 | d3 | `d3` | 7.9.0 | The version no longer appears in the URL. |
-| xlsx | `xlsx` (SheetJS tarball URL) | 0.20.3 | See below. |
+| xlsx | *(vendor)* | 0.20.3 | **Vendored 2026-08-24** — was a CDN tarball URL with no lockfile integrity. See below. |
 | flatpickr | `flatpickr` | 4.6.3 | |
 | split | `split.js` | 1.6.5 | Used by `tool_indexation`. |
 | iro | `@jaames/iro` | 5.5.2 | |
@@ -123,7 +124,7 @@ Verified as a drop-in in a **real browser**, not by inspection:
 
 The import path moved from `lib/svgedit/svgcanvas.js` to `lib/svgedit/dist/svgcanvas.js`.
 
-## The three that cannot come from npm
+## The four that cannot come from npm
 
 Each carries its `reason` in the registry, next to the code, not only here.
 
@@ -137,8 +138,8 @@ Each carries its `reason` in the registry, next to the code, not only here.
   *component library* (`web/pdf_viewer.mjs`), **not** the standalone viewer app;
   `component_pdf` iframes `web/viewer.html`, the whole Mozilla app. That exists only
   in the `pdfjs-<version>-dist.zip` GitHub release. Second, **bun installs a tarball
-  URL but not a zip** — which is exactly why `xlsx` needs no special handling
-  (SheetJS publishes a `.tgz`) and pdf.js does (Mozilla publishes a `.zip`).
+  URL but not a zip** (Mozilla publishes a `.zip`) — and the tarball-URL half of that
+  sentence is precisely what `xlsx` used to rely on, and why it is vendored now.
 
     So it is committed, taken from the sha256-verified 5.7.284 release
     (`6d1b8125…`, corroborated by GitHub's own published digest). Two prunes make
@@ -160,26 +161,80 @@ Each carries its `reason` in the registry, next to the code, not only here.
 - **json-view** — `pgrabovets/json-view` is distributed via GitHub/jsDelivr only and
   was never published to npm. It is 16 KB, so it is simply committed.
 
-**xlsx** deserves a note: SheetJS **left the npm registry** (npm's `xlsx` is
-abandoned at 0.18.5), so the dep is pinned to *their* tarball URL —
-`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. Bun installs it like any
-other dependency, so it is still lockfile-pinned; it just will not get Dependabot
-alerts.
+- **xlsx** — SheetJS **left the npm registry** (npm's `xlsx` is abandoned at
+  0.18.5), so the dep used to be pinned to *their* tarball URL,
+  `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. That looked lockfile-pinned
+  and was not: **a tarball-URL dependency is the one shape bun records with no
+  integrity** — 581 entries in `bun.lock` carried `sha512-`, that one carried
+  nothing. And these bytes are *served to browsers* (`tool_export` imports
+  `/dedalo/lib/xlsx/xlsx.mjs`), while every code update re-runs `bun install` in the
+  quarantine, so each update re-fetched unverified third-party client code.
+  Committed 2026-08-24 from the installed 0.20.3 tree, byte-verified against a fresh
+  download of the upstream `.tgz` (archive sha256 `8dc73fc3…`), trimmed to
+  `xlsx.mjs` — the only file the client loads — plus the LICENSE.
+
+## Integrity: the manifest, and why vendored code needs one
+
+An npm lib is pinned by the lockfile's `sha512-`. A **vendored** lib has no lockfile
+line at all, so `vendor/vendor_manifest.json` is the pin: one row per tree with its
+version, upstream URL, the upstream **archive sha256** when one was verified, a
+**tree digest**, the file count, and the date a human last reviewed it.
+
+The tree digest is `sha256` over the sorted `<relpath>\0<sha256(bytes)>` lines of
+every file under the lib root, so it moves when a byte changes *and* when a file is
+added or removed.
+
+| Command | What |
+|---|---|
+| `bun run scripts/vendor_verify.ts` | Recompute every tree digest and compare. |
+| `bun run scripts/vendor_verify.ts --write` | Rewrite the derived fields (digest, file count) after a deliberate bump. |
+| `bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>` | Download a bump and **refuse** unless the archive's sha256 is the stated one. |
+
+Where it runs: `test/unit/dependency_integrity_tripwire.test.ts` (every `bun test`)
+and `scripts/ci/audit.ts`, which the hermetic CI tier already invokes — the vendor
+pass runs *before* the networked advisory audit so the offline skip cannot skip
+integrity. It does **not** run at boot: hashing 11 MB of pdf.js on every start would
+only re-read code the process is already running.
+
+That same gate refuses the shape that caused all this: **no `dependencies` /
+`devDependencies` / `peerDependencies` / `overrides` / `resolutions` entry may be a
+`http(s):`, `git`, `github:`, `file:` or `link:` specifier, and no lockfile tuple may
+resolve outside the registry or lack an integrity hash** — across all three packages
+that have a lockfile.
+
+!!! warning "What this does not cover"
+    The manifest proves the **checkout** is intact. It says nothing about the
+    contents being benign, and nothing about distribution:
+    `test/unit/release_archive_tripwire.test.ts` hashes nothing (it only rejects
+    symlinks), so an installation receiving an update is protected by the update's
+    own archive-sha refusal, not by an independent signature over `vendor/`.
+
+**Staleness is the vendored tree's real weakness.** Dependabot cannot watch one and
+no advisory feed is keyed to it, so `scripts/ci/audit.ts` prints every manifest row
+with its version and how long ago it was reviewed. It nudges, it does not fail:
+there is no honest cutoff shared by a dead-upstream bundle (ckeditor) and an actively
+released viewer (pdf.js). Moving a `reviewed` date is a claim that a human read the
+upstream release feed.
 
 ## Upgrade checklist (SEC-103, reduced)
 
 For the 15 npm-tracked libs this is now ordinary dependency hygiene: read the
 Dependabot/advisory alert, bump the pin, run the gates.
 
-For the four above, the old manual ritual still applies once per release cycle:
+For the four vendored trees the old manual ritual still applies once per release
+cycle (and `bun run scripts/ci/audit.ts` prints when each was last reviewed):
 
 1. Check the upstream release feed for security advisories since the pinned version.
 2. If a fix applies, drop the new files into `vendor/<name>/`. For **pdfjs**, take
    the `pdfjs-<version>-dist.zip` GitHub release, check its sha256 against the digest
    GitHub publishes in the release API, and unzip it **excluding `*.map` and
    `compressed.tracemonkey-pldi-09.pdf`** (see above — they are 10 MB of dead weight).
-3. Update the version in the table above and reference the CVE in the commit.
-4. Run `bun test test/unit/client_libs_tripwire.test.ts` and `bun run test:client`,
+3. Update the version in the table above **and the row in
+   `vendor/vendor_manifest.json`** (version, upstream, `archive_sha256`, `reviewed`,
+   note), then `bun run scripts/vendor_verify.ts --write`. Reference the CVE in the
+   commit.
+4. Run `bun test test/unit/client_libs_tripwire.test.ts
+   test/unit/dependency_integrity_tripwire.test.ts` and `bun run test:client`,
    then smoke-test the component that uses the lib.
 
 ## What was removed
@@ -202,6 +257,9 @@ from `package.json`. See [Services](../core/system/services.md).
 ## References
 
 - Registry / allowlist: `src/core/client_libs/registry.ts`
-- Gate: `test/unit/client_libs_tripwire.test.ts` (in `engineering/TRIPWIRES.md`)
+- Gates: `test/unit/client_libs_tripwire.test.ts` and
+  `test/unit/dependency_integrity_tripwire.test.ts` (both in `engineering/TRIPWIRES.md`)
+- Manifest: `vendor/vendor_manifest.json`; scripts `scripts/vendor_verify.ts`,
+  `scripts/vendor_fetch.ts`
 - Audit finding **SEC-103** (phase-2 master register); companion **SEC-097** (pdfjs
   CVE-2024-4367 — the pinned 5.7.284 is well past the 4.2.67 fix line).

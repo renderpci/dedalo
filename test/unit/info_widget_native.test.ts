@@ -75,6 +75,9 @@
  * Direct INSERTs (no counter bump) so goldens pin ids byte-stable. Swept in
  * afterAll with the loud 0-row guard (matrix_users lesson, 2026-07-10);
  * belt-and-braces pre-clean in beforeAll for crashed runs.
+ *
+ * @twin-of      test/parity/info_widget_differential.test.ts
+ * @twin-status  retired
  */
 // Migrated OFF install TLDs 2026-08-20 (AGENTS.md hard rule). What moved and why:
 //  - every install SECTION became its committed twin (src/core/test_data/

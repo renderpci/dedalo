@@ -232,6 +232,8 @@ const MOVE_ONLY_RENAME: Record<string, string> = {
 		'THREE legitimate uses, none of them a derivative: it claims the FINAL staged name for a completed upload (atomic wx-open then move of the assembled chunks, WC-2026-08-03), publishes the upload meta.json through its own temp, and moves a rejected upload into quarantine. All three move or publish RECEIVED bytes; no ImageMagick run, nothing to sweep',
 	'src/core/media/tools/posterframe.ts':
 		'moves an UPLOADED posterframe/subtitle file to its av derived path; the thumb it then builds from it does go through the atomic writer',
+	'src/core/media/protection.ts':
+		'retireLegacyAuthStore moves the DEAD day-global auth store aside, once, on the upgrade past the per-session media credential (2026-08-24). It is not a derivative and it is not even in the media tree — the file lives in <private>/, deliberately outside every served root, because it held cleartext media credentials. Nothing is produced, there is no temp and there is nothing to sweep; the rename is chosen over an unlink so an operator debugging the upgrade can still see what was there',
 };
 
 /**

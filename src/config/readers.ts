@@ -218,23 +218,52 @@ export function readMap(key: string): Readonly<Record<string, string>> {
 // ---------------------------------------------------------------------------
 
 /**
- * Media access mode: DEDALO_MEDIA_ACCESS_MODE when it names a real mode, else the
- * deprecated DEDALO_PROTECT_MEDIA_FILES=true → 'private', else false (open media).
- * Two keys, one answer — which is why it cannot be a generic reader.
+ * Media access mode: DEDALO_MEDIA_ACCESS_MODE when it names a real mode, an explicit
+ * opt-out on EITHER key when the operator asked for none, else the FAIL-CLOSED default
+ * 'publication'. Two keys, one answer — which is why it cannot be a generic reader.
+ *
+ * THE DEFAULT IS CLOSED (2026-08-24). It used to be `false`, and
+ * `resolveModeSource()` reported that state, verbatim, as "default — no media protection
+ * configured (media is world-readable)": an install that never made a decision published
+ * its entire media tree — including unpublished records, master-quality originals and
+ * rights-restricted material — to anyone who could guess a URL. A heritage system's
+ * default must be the safe one; "the operator will configure it" is not a mechanism.
+ *
+ * 'publication' rather than 'private', deliberately. On an install with no publications
+ * the two behave identically (the `pub/` marker dir is empty, so every anonymous request
+ * fails rule B and 404s). They diverge only later — and there, `private` would silently
+ * 404 the archive's OWN published site the day diffusion writes its first marker. A
+ * default that becomes wrong once the system is used as intended is a trap; this one
+ * is closed now and still correct then.
+ *
+ * An explicit `false` on either key stays a real opt-out: an operator who deliberately
+ * serves an open media tree (a fully public collection behind its own web server rules)
+ * said so, and this must not silently overrule them. What is refused is SILENCE.
  */
 export function readMediaAccessMode(): 'private' | 'publication' | false {
 	const mode = readString('DEDALO_MEDIA_ACCESS_MODE');
 	if (mode === 'private' || mode === 'publication') return mode;
-	// A non-empty value that is neither known mode is almost certainly a typo
-	// ('privat', 'public'); it silently coerces to OFF (open media), which reads
-	// as protection-configured when it is not. Log it loudly rather than let the
-	// footgun pass unseen — the resolved state is unchanged (still off).
+	// The EXPLICIT opt-out, on either key. `readBool` is not used for the mode key
+	// because it must distinguish "the operator wrote false" from "unset".
+	if (mode === 'false' || mode === 'off' || mode === '0') return false;
+	// The legacy key, whose EMPTY value is absence and not an opt-out — an append-only
+	// .env accumulates empty keys, and reading one as "the operator chose an open tree"
+	// would hand the old world-readable behaviour back to exactly the installs this
+	// default exists for.
+	const legacy = readString('DEDALO_PROTECT_MEDIA_FILES');
+	if (legacy !== undefined && legacy !== '') {
+		return readBool('DEDALO_PROTECT_MEDIA_FILES') ? 'private' : false;
+	}
+	// A non-empty value that is neither a known mode nor an opt-out is almost
+	// certainly a typo ('privat', 'public'). It used to coerce to OFF — a typo that
+	// opened the whole media tree. It now falls through to the fail-closed default,
+	// which is the direction a typo must fail in, and is still logged loudly.
 	if (mode !== undefined && mode !== '') {
 		console.error(
-			`[config] DEDALO_MEDIA_ACCESS_MODE='${mode}' is not a valid mode ('private' | 'publication') — media access control is OFF. Fix the value or unset it.`,
+			`[config] DEDALO_MEDIA_ACCESS_MODE='${mode}' is not a valid mode ('private' | 'publication' | 'false') — falling back to the fail-closed default 'publication'. Fix the value or unset it.`,
 		);
 	}
-	return readBool('DEDALO_PROTECT_MEDIA_FILES') ? 'private' : false;
+	return 'publication';
 }
 
 /**

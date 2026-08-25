@@ -314,7 +314,12 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 export const tool: ToolServerModule = {
 	name: 'tool_propagate_component_data',
 	apiActions: {
-		propagate_component_data: { permission: null, handler: propagateComponentData },
+		propagate_component_data: {
+			permission: null,
+			gatedInHandler:
+				'getPermissions(principal, sectionTipo, componentTipo) < 2 refuses up front on the CLIENT-DECLARED pair (the batch has no single record, so no declarative kind fits), and the per-row loop re-authorizes every write target it actually reaches — principalCanAccessRecord(row.section_tipo, …) plus getPermissions(principal, row.section_tipo, componentTipo) — before persistRecordKeys (TOOLS-01, pinned by test/unit/human_write_scope_tripwire.test.ts).',
+			handler: propagateComponentData,
+		},
 	},
 	backgroundRunnable: ['propagate_component_data'],
 };

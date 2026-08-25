@@ -5,6 +5,9 @@
  * rewrite and the `start` reroute depend on. DB-backed (ontology lookups), no
  * oracle needed; the wire shape itself is pinned by
  * test/parity/section_tool_start_differential.test.ts and menu_differential.
+ *
+ * @twin-of      test/parity/section_tool_start_differential.test.ts
+ * @twin-status  supplement
  */
 // Migrated to the generic `test` TLD 2026-08-19 (AGENTS.md hard rules): every
 // install tipo was rewritten through src/core/test_data/test_tld_tipo_map.json;

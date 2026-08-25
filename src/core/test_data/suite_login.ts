@@ -30,6 +30,7 @@
 import { updateMatrixRecord } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
+import { ARGON2_OPTIONS } from '../security/argon2_params.ts';
 import { assertTestDatabase } from './test_database_marker.ts';
 
 const USERS_TABLE = 'matrix_users';
@@ -99,7 +100,7 @@ export async function ensureSuiteLoginPassword(
 		return 'unchanged';
 	}
 
-	const hash = await Bun.password.hash(password, { algorithm: 'argon2id' });
+	const hash = await Bun.password.hash(password, ARGON2_OPTIONS);
 	const merged = { ...(row.string ?? {}) };
 	merged[PASSWORD_COMPONENT] = [{ id: 1, value: hash, lang: 'lg-nolan' }] as never;
 	await updateMatrixRecord(USERS_TABLE, USERS_SECTION_TIPO, row.section_id, { string: merged });

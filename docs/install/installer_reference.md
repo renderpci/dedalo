@@ -77,7 +77,7 @@ bun run scripts/install.ts \
 | `--hierarchies` | no | none | comma list of hierarchy codes, e.g. `es,lg,ts` |
 | `--media-path` | no | *(unset)* | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
 | `--socket` | no | `/tmp/dedalo_ts.sock` | persisted as `SERVER_UNIX_SOCKET`; set `/run/dedalo/dedalo_ts.sock` for a systemd + reverse-proxy deploy (the default does not match that layout) |
-| `--media-access-mode` | no | *(unset = world-readable)* | persisted as `DEDALO_MEDIA_ACCESS_MODE` — `private` or `publication` |
+| `--media-access-mode` | no | *(unset = `publication`, fail-closed)* | persisted as `DEDALO_MEDIA_ACCESS_MODE` — `private`, `publication`, or `false` to deliberately serve an open media tree |
 | `--diffusion` | no | off | writes the MariaDB keys; pair with `--mysql-host/-port/-socket/-name/-user/-password` |
 | `--mailer` | no | off | writes the outbound-email (SMTP) keys, enabling [password recovery](../management/password_recovery.md); requires `--smtp-host`, pair with `--smtp-port` (587), `--smtp-secure` (`tls`\|`ssl`\|`none`), `--smtp-user`, `--smtp-password`, `--smtp-from`, `--smtp-from-name`. The relay is probed (connection + auth, no email sent); a failure warns but does not stop the install |
 | `--skip-tools` | no | off | skips tool registration (register them later from the Development Area) |
@@ -224,16 +224,22 @@ appended to `../private/.env` at any later time.
 
 !!! danger "The install surface is pre-auth until it is sealed"
     A fresh instance has no users, so the install actions are reachable **without
-    a login**. Before exposing an unsealed install to a network, restrict it by
-    address:
+    a login**. Unset, `DEDALO_INSTALL_ALLOWED_IPS` therefore admits **the local
+    machine only** — installing from anywhere else means naming the address
+    first:
 
     ```dotenv
-    # comma list; the token `loopback` matches the local host
-    DEDALO_INSTALL_ALLOWED_IPS=loopback,203.0.113.10
+    # comma list. Entries: `loopback` (the local host), a literal address,
+    # a CIDR range, or `any` (every address — the only way to open it).
+    DEDALO_INSTALL_ALLOWED_IPS=loopback,203.0.113.10,10.0.0.0/24
     ```
 
     The address is resolved from the trusted `X-Forwarded-For` hop, so **behind a
-    proxy, `loopback` will not match** — name the real client address.
+    proxy, `loopback` will not match** — name the real client address. A request
+    that carries no such hop is treated as local, so an unsealed instance on a
+    bare TCP port with no proxy in front must be closed at the firewall as well:
+    the allowlist alone cannot see who is calling. The engine prints the list in
+    force in its start-up log.
 
     Once **sealed**, the whole install surface answers `404` for good.
 

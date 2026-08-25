@@ -78,6 +78,9 @@
  * exclusions, filter → ['dd153'], portal → ['test3'], dataframe → []). NOTHING
  * here reads a record or a registry row the situation did not create: the only
  * ambient structure is core `dd` ontology (dd196's children, dd153, dd542).
+ *
+ * @twin-of      test/parity/section_elements_context_differential.test.ts
+ * @twin-status  retired
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
