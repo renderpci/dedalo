@@ -266,14 +266,41 @@ async function main(): Promise<void> {
 	console.log('=== update probe — facts ===');
 
 	// --- the shared origin --------------------------------------------------
-	const lanIp = (
-		await sh(
-			`ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null`,
-			'detect LAN IP',
-		)
-	).trim();
-	must(lanIp !== '', 'no LAN IP found (en0/en1) — set UPDATE_PROBE_ORIGIN manually');
-	const origin = `http://${lanIp}:${MASTER_PORT}`;
+	// The interface comes from the DEFAULT ROUTE, not a guessed name. This used
+	// to be a hardcoded `en0 || en1`, which is only the common case: on a Mac
+	// whose default route is en11 (2026-08-25) BOTH lookups exit non-zero, `sh`
+	// threw "detect LAN IP failed (1)", and the probe died before its first
+	// fact — while the message below promised an `UPDATE_PROBE_ORIGIN` escape
+	// hatch that WAS NEVER IMPLEMENTED and, being after a throwing `sh`, could
+	// not have printed anyway. The hatch is real now, and it is honoured first
+	// so an operator can always override the detection.
+	const originOverride = (process.env.UPDATE_PROBE_ORIGIN ?? '').trim();
+	let origin: string;
+	// host:port as the .env's DEDALO_HOST wants it — derived from whichever
+	// branch produced the origin, so an overridden origin still writes a
+	// CONSISTENT advertised host rather than the detected one.
+	let originHost: string;
+	if (originOverride !== '') {
+		origin = originOverride.replace(/\/$/, '');
+		originHost = origin.replace(/^https?:\/\//, '');
+		console.log('[probe] origin overridden by UPDATE_PROBE_ORIGIN');
+	} else {
+		const lanIp = (
+			await sh(
+				// default-route interface first, then the historical guesses.
+				`iface=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}'); ` +
+					`{ [ -n "$iface" ] && ipconfig getifaddr "$iface"; } 2>/dev/null || ` +
+					`ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true`,
+				'detect LAN IP',
+			)
+		).trim();
+		must(
+			lanIp !== '',
+			'no LAN IP found (default route, en0, en1) — set UPDATE_PROBE_ORIGIN=http://<ip>:PORT manually',
+		);
+		origin = `http://${lanIp}:${MASTER_PORT}`;
+		originHost = `${lanIp}:${MASTER_PORT}`;
+	}
 	console.log(`[probe] shared origin: ${origin}`);
 
 	const masterHealth = await healthOf(`${origin}/health`);
@@ -394,7 +421,7 @@ async function main(): Promise<void> {
 		const envHostRaw = envFileLastValue('DEDALO_HOST');
 		appendEnvLine(
 			'DEDALO_HOST',
-			`${lanIp}:${MASTER_PORT}`,
+			originHost,
 			`stale value ${envHostRaw ?? '<unset>'}: the manifest would advertise an origin no container can download from`,
 		);
 	}
