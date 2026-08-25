@@ -5,10 +5,21 @@
 # two are complementary: without the ratchet an update PR is optional forever; without
 # the updates the ratchet's baseline only ever grows.
 #
-# THREE npm ECOSYSTEMS, because this repo holds three packages with three lockfiles —
+# THREE bun ECOSYSTEMS, because this repo holds three packages with three lockfiles —
 # the root engine and the two isolated publication daemons. Dependabot does not discover
 # them; a directory left out of this file is a lockfile nobody updates (the same shape of
 # hole that left publication/server_api/v2 out of CI until 2026-08-03).
+#
+# `bun`, NOT `npm` (fixed 2026-08-25). The three packages lock with `bun.lock`, which the
+# npm ecosystem cannot write: every PR it opened rewrote `package.json` ALONE, and
+# scripts/ci/hermetic.sh's first step is `bun install --frozen-lockfile`, so all four open
+# dependency PRs (#82/#84/#85/#86) were red on arrival — "lockfile had changes, but
+# lockfile is frozen". A proposal that cannot go green is not a proposal; the supply side
+# was delivering nothing mergeable. The `bun` ecosystem updates manifest AND lockfile
+# together. KNOWN COST, stated rather than discovered later: Dependabot does not do
+# SECURITY updates for the bun ecosystem, only version updates. That axis stays where it
+# already was — `scripts/ci/audit.ts` (the advisory ratchet, which fails the build on a
+# new advisory) — and an npm-shaped security PR could not have passed CI anyway.
 #
 # `github-actions` is here because every `uses:` in .github/ is SHA-pinned (rule 8 of
 # test/unit/ci_workflow_tripwire.test.ts). A pinned action never updates itself — the pin
@@ -17,7 +28,7 @@
 version: 2
 
 updates:
-  - package-ecosystem: npm
+  - package-ecosystem: bun
     directory: "/"
     schedule:
       interval: weekly
@@ -28,14 +39,14 @@ updates:
       dev-dependencies:
         dependency-type: development
 
-  - package-ecosystem: npm
+  - package-ecosystem: bun
     directory: "/publication/server_api/v2"
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
 
-  - package-ecosystem: npm
+  - package-ecosystem: bun
     directory: "/publication/site_builder"
     schedule:
       interval: weekly
