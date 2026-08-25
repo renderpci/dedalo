@@ -57,8 +57,15 @@ oracle instead of silently skipping. Ignore any older text below telling you to
 Two tiers, by dependency footprint:
 
 **Suite-database build cost, measured 2026-08-25 (the repo recorded no figure
-before):** the hierarchy import is **~302 s** and the built database is
-**~7.5 GB**. The cost is not the 127 MB of `\copy` input — `matrix_hierarchy`
+before):** `scripts/ci/db_tier.sh` end to end is **~907 s (~15 min)** on a warm
+developer Mac — of which the install-seed restore is ~5 s (the marker row is
+stamped at +5 s) and essentially all the rest is the `test` TLD ontology
+materialization plus the 150-TLD hierarchy import. The built database is
+**~7.65 GB**. The 19 gates themselves run in ~6 s: this tier is a build with a
+test suite attached, not the other way round.
+
+(An earlier note here said ~302 s. That was wrong — it timed the tail of a build
+already 120 TLDs in, not the phase. Superseded by the end-to-end run above.) The cost is not the 127 MB of `\copy` input — `matrix_hierarchy`
 carries two `AFTER INSERT … FOR EACH ROW` triggers that derive
 `matrix_relation_index` (13.9 M rows) and `matrix_string_search` (5.6 M rows).
 That is also why a `pg_dump -Fc` cache is NOT a free win: restoring normally

@@ -70,7 +70,7 @@ if [ -z "${DEDALO_APPLICATION_LANGS:-}" ]; then
 fi
 : "${DEDALO_APPLICATION_LANGS_DEFAULT:=lg-spa}"
 : "${DEDALO_DATA_LANG_DEFAULT:=lg-spa}"
-: "${PROJECTS_DEFAULT_LANGS:=[\"lg-spa\",\"lg-cat\",\"lg-eng\"]}"
+: "${PROJECTS_DEFAULT_LANGS:=[\"lg-spa\",\"lg-cat\",\"lg-vlca\",\"lg-eus\",\"lg-eng\",\"lg-por\",\"lg-fra\",\"lg-ara\",\"lg-ell\",\"lg-deu\",\"lg-ita\",\"lg-nep\"]}"
 
 # Wall-clock. Europe/Madrid is the catalog default and the dev install does not
 # set the key, so both sides already agree -- pinning it means a change to that

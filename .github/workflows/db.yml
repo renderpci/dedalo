@@ -44,10 +44,12 @@ concurrency:
 jobs:
   db:
     runs-on: ubuntu-latest
-    # The suite build is the long pole: the hierarchy import is ~5 min (2.27M
-    # rows through two per-row sync triggers, measured 2026-08-24), and the 19
-    # gates themselves are fast. 20 leaves headroom without hiding a hang.
-    timeout-minutes: 20
+    # The suite build is the long pole by a wide margin: MEASURED end to end at
+    # ~15 min on a warm developer Mac (2.27M hierarchy rows through two per-row
+    # sync triggers deriving ~19.5M more), against ~6 s for the 19 gates. A
+    # hosted runner is not faster than that Mac, so 20 would have been a coin
+    # flip — 40 leaves real headroom while still catching a genuine hang.
+    timeout-minutes: 40
 
     services:
       postgres:
