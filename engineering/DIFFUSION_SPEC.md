@@ -74,6 +74,19 @@ principle:
 
 ## 2. Absolute constraints
 
+> **Runtime note (2026-08-25, Bun 1.3.9 -> 1.4.0).** The `Bun.sql` MariaDB adapter
+> changed two decodings, both verified against MariaDB 12.2.2 with a scratch table:
+> `DATETIME`/`TIMESTAMP` now decode as **UTC**, where 1.3.9 read them as local time
+> and shifted them (a `14:30` column came back as `13:30Z` under CET); and `JSON`
+> columns now decode to **objects** instead of strings. Neither reaches the engine:
+> every query Dedalo issues against a target pool reads only `section_id`, `lang`,
+> `COUNT(*)` or INFORMATION_SCHEMA metadata, and the writer binds projected
+> **strings**, never a JS `Date` — so a decode change cannot move written bytes.
+> Recorded because the 1.3.9 hour-shift was real: anything that starts reading a
+> DATETIME or JSON column back from a target must be written against the 1.4
+> behaviour, not against what the old adapter did.
+
+
 1. **The v7 diffusion ontology is the baseline input — but it is beta, not
    frozen.** Existing dd1190 subtrees (models
    `diffusion_domain/group/element[_alias]/database[_alias]/table[_alias]/diffusion_section/diffusion_component`

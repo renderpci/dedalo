@@ -3,6 +3,7 @@
  * violations produced the audit's realized corruption incidents:
  *
  *  1. JSONB BINDING DISCIPLINE (S2-07; incidents S1-07, S1-08): on Bun 1.3.9
+ *     — and, re-probed 2026-08-25, UNCHANGED on 1.4.0 —
  *     a parameter whose inferred type is jsonb gets JSON-encoded by BUN — a
  *     pre-encoded JSON string arrives DOUBLE-encoded (a jsonb string scalar,
  *     silently corrupting the SHARED database). The rule: every `$n::jsonb`
@@ -89,7 +90,7 @@ describe('S2-07 — jsonb parameter binds are ::text::jsonb (json_codec owns enc
 		}
 		expect(
 			violations,
-			`Bare $n::jsonb bind: on Bun 1.3.9 this DOUBLE-encodes pre-encoded JSON into a jsonb string scalar (the S1-07/S1-08 corruption). Bind encodeForJsonb(...) as $n::text::jsonb, or — for raw-object binds into a TS-owned table — add the file to the allowlist WITH justification: ${violations.join(', ')}`,
+			`Bare $n::jsonb bind: on every Bun this engine has run (1.3.9 through 1.4.0) this DOUBLE-encodes pre-encoded JSON into a jsonb string scalar (the S1-07/S1-08 corruption). Bind encodeForJsonb(...) as $n::text::jsonb, or — for raw-object binds into a TS-owned table — add the file to the allowlist WITH justification: ${violations.join(', ')}`,
 		).toEqual([]);
 	});
 });

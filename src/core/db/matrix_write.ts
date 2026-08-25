@@ -17,7 +17,9 @@
  * save pipeline (Phase 6); the hook contract lives in time_machine.ts as
  * TimeMachineWriteHook so this layer stays free of business logic.
  *
- * BUN GOTCHA (discovered 2026-07-01, Bun 1.3.9): when a parameter's inferred
+ * BUN GOTCHA (discovered 2026-07-01 on Bun 1.3.9; re-probed on 1.4.0
+ * 2026-08-25 and STILL PRESENT — the Rust rewrite did not change it, so this
+ * is a live trap, not a historical note): when a parameter's inferred
  * type is jsonb, Bun's SQL client JSON-ENCODES the JS value itself — a
  * pre-encoded JSON string arrives DOUBLE-encoded (a jsonb string!). We
  * therefore bind every jsonb value as $n::text::jsonb: the param is typed

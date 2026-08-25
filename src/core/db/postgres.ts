@@ -10,8 +10,9 @@
  *   T2 — MATRIX DML: writes to matrix jsonb columns go through
  *        db/matrix_write.ts + db/json_codec.ts (the byte-compat chokepoint);
  *        raw `sql.unsafe` matrix writes are the audited exception list, and
- *        every `$n::jsonb` bind must be `$n::text::jsonb` (the Bun 1.3.9
- *        double-encode trap) unless the file is on the object-binding
+ *        every `$n::jsonb` bind must be `$n::text::jsonb` (the Bun
+ *        double-encode trap — found on 1.3.9, RE-VERIFIED STILL PRESENT on
+ *        1.4.0, 2026-08-25) unless the file is on the object-binding
  *        allowlist — grep-gated by test/unit/ws_a_tripwires.test.ts.
  *   T3 — dd_ontology READS: converge on ontology/resolver.ts accessors
  *        (ratcheted; see WS-D).
