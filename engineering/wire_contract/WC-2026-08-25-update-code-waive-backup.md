@@ -55,14 +55,24 @@ STATUS — `consumerStatus().checks[id='backup_fresh']`
 - Consequence: a stale or absent backup no longer forces `ready:false`. Every
   other `blocked` check still does.
 - **`ready` therefore stops meaning "the default request will succeed"**, and
-  the panel says so rather than pretending otherwise. `ready:true` with a
-  waivable `warn` outstanding headlines *Ready to update, but only with a
-  waiver*, in the warning voice — because the request the Update button sends by
-  DEFAULT is `waive_backup:false`, which is still refused on that account. A
-  bare "Ready to update" there would over-report exactly as loudly as the
-  "Update blocked" it replaced. `ready:false` still headlines blocked, waiver or
-  not. The wording is the client's (`render_update_status.js`); the wire keeps
-  reporting states and facts.
+  the panel says so rather than pretending otherwise. `ready:true` with the
+  backup waiver PENDING headlines *Ready to update, but only with a waiver*, in
+  the warning voice — because the request the Update button sends by DEFAULT is
+  `waive_backup:false`, which is still refused on that account. A bare "Ready to
+  update" there would over-report exactly as loudly as the "Update blocked" it
+  replaced. `ready:false` still headlines blocked, waiver or not. The wording is
+  the client's (`render_update_status.js`); the wire keeps reporting states and
+  facts.
+- **"Pending waiver" is `backup_fresh` specifically, never "any warning".** The
+  consumer half has three warn-capable checks — `backup_fresh`, `bun_pin`,
+  `staging_clean` — and only the first is waivable. A headline keyed on any
+  `warn` demanded a waiver over a leftover `.code_staging` dir or a bun-pin
+  drift, with a fresh backup and no checkbox anywhere in the modal to give one:
+  the same panel/pipeline disagreement, entered from the other side. The
+  headline and the checkbox therefore read ONE exported predicate,
+  `backup_waiver_check` (`render_update_status.js`), so they cannot drift — down
+  to agreeing that an `unknown` backup check (a probe that threw) is a pending
+  waiver rather than a stranded operator.
 
 THE PANEL
 - The readiness half is re-stated from the fresh value when the modal opens, so

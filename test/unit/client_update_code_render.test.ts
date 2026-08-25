@@ -504,8 +504,10 @@ describe('update_code waive-backup control', () => {
 		// The server's `backup_fresh` check is `ok` exactly when the pipeline will
 		// not refuse on this account. Rendering the waiver unconditionally would
 		// invite an operator to disarm a guard that is not blocking anything.
-		expect(render_src).toContain("el.id==='backup_fresh'");
-		expect(render_src).toContain("backup_check.state!=='ok'");
+		// via the shared predicate (see the ONE-predicate test below), which is
+		// where the `backup_fresh` / `state!=='ok'` decision actually lives
+		expect(render_src).toContain('backup_waiver_check(self.value?.consumer)');
+		expect(/if\s*\(backup_check\)\s*\{/.test(render_src)).toBe(true);
 	});
 
 	test('the checkbox is a wrapping label, and its note carries the caution', () => {
@@ -539,8 +541,20 @@ describe('update_code waive-backup control', () => {
 		// blocked" it replaced.
 		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
 		expect(status_src).toContain('update_code_ready_with_waiver');
-		expect(status_src).toContain("check.state==='warn'");
 		expect(typeof master_labels.update_code_ready_with_waiver).toBe('string');
+	});
+
+	test('the headline and the checkbox read ONE predicate, scoped to the waivable gate', () => {
+		// `bun_pin` and `staging_clean` also emit `warn` on the consumer half and
+		// neither is waivable, so a headline keyed on "any warn" demanded a waiver
+		// the modal offered no way to give. One exported predicate, both sites.
+		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
+		expect(status_src).toContain('export const backup_waiver_check');
+		expect(status_src).toContain("el.id==='backup_fresh'");
+		// neither site may re-derive the answer for itself
+		expect(status_src).not.toContain("some(check => check.state==='warn')");
+		expect(render_src).toContain('backup_waiver_check(self.value?.consumer)');
+		expect(status_src).toContain('backup_waiver_check(consumer)');
 	});
 
 	test('the panel is re-stated from the value the modal reads', () => {

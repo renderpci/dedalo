@@ -15,7 +15,7 @@
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
-	import {render_code_server_status, render_consumer_status, refresh_readiness} from './render_update_status.js'
+	import {render_code_server_status, render_consumer_status, refresh_readiness, backup_waiver_check} from './render_update_status.js'
 	import {
 		UPDATE_PHASES,
 		init_phase_state,
@@ -1328,9 +1328,13 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 	// check (core/update/status.ts) is `ok` exactly when the pipeline will not
 	// refuse on this account; on an `ok` install the row is not rendered at all,
 	// so the panel never invites anyone to disarm a guard that is not in the way.
-		const backup_check = (self.value?.consumer?.checks || []).find(el => el.id==='backup_fresh')
+	// The predicate is SHARED with the readiness headline (render_update_status)
+	// — a headline naming a waiver this modal does not offer, or a checkbox the
+	// headline never warned about, would be the same panel/pipeline disagreement
+	// from the other side.
+		const backup_check = backup_waiver_check(self.value?.consumer)
 		let waive_backup_input = null
-		if (backup_check && backup_check.state!=='ok') {
+		if (backup_check) {
 
 			const waive_backup_row = ui.create_dom_element({
 				element_type	: 'div',

@@ -270,17 +270,48 @@ const check_row = function(parent, check) {
 
 
 /**
+* BACKUP_WAIVER_CHECK
+* THE ONE PREDICATE for "this install needs the backup waiver to update".
+*
+* Both the readiness HEADLINE (below) and the version modal's waiver CHECKBOX
+* (render_update_code.js) have to answer the same question, and they must
+* answer it the same way: a headline naming a waiver the modal does not offer —
+* or a checkbox the headline never warned about — is the panel/pipeline
+* disagreement core/update/status.ts forbids, just wearing a different hat.
+*
+* It is `backup_fresh` SPECIFICALLY, never "any warning". The consumer half has
+* three warn-capable checks (`backup_fresh`, `bun_pin`, `staging_clean`) and
+* only the first is waivable: a leftover `.code_staging` dir or a bun-pin drift
+* over a FRESH backup must not make the panel demand a waiver that nothing can
+* give. Any state but `ok` counts, so a probe that threw (`unknown`) also
+* offers the way through rather than stranding the operator.
+*
+* @param {Object} consumer - consumerStatus payload
+* @returns {Object|null} the backup_fresh check when a waiver is pending, else null
+*/
+export const backup_waiver_check = function(consumer) {
+
+	const check = ((consumer || {}).checks || []).find(el => el.id==='backup_fresh')
+
+	return (check && check.state!=='ok') ? check : null
+}//end backup_waiver_check
+
+
+
+/**
 * VERDICT
 * The headline line of a role: ready, ready-but-only-with-a-waiver, or blocked.
 *
 * THE THIRD STATE IS NOT DECORATION. `ready` is `!checks.some(blocked)`, and
-* since 2026-08-25 the one waivable gate (`backup_fresh`) reports `warn`, so an
+* since 2026-08-25 the waivable gate (`backup_fresh`) reports `warn`, so an
 * install with a stale or missing database backup is `ready:true` — while the
 * request the Update button sends by DEFAULT (`waive_backup:false`) is still
 * refused on exactly that account. A bare "Ready to update" over that install
 * would over-report as loudly as the "Update blocked" it replaced, only in the
-* other direction. So: ready AND a waivable warning ⇒ say the waiver is the
+* other direction. So: ready AND a PENDING WAIVER ⇒ say the waiver is the
 * condition, in the warning voice.
+*
+* Pending waiver, not "any warning": see backup_waiver_check above.
 *
 * @param {HTMLElement} parent
 * @param {boolean} ready
@@ -320,9 +351,11 @@ const render_readiness = function(parent, consumer) {
 	const readiness = section(parent, get_label.update_code_readiness || 'Update readiness')
 	readiness.parentNode.classList.add('readiness_block')
 
-	// a WAIVABLE warning is what stands between `ready:true` and the DEFAULT
-	// request actually succeeding — name it, never headline a plain "ready"
-	const waivable = (consumer.checks || []).some(check => check.state==='warn')
+	// a PENDING WAIVER is what stands between `ready:true` and the DEFAULT
+	// request actually succeeding — name it, never headline a plain "ready".
+	// The SAME predicate the modal draws its checkbox from, so the two can
+	// never disagree about whether a waiver is on the table.
+	const waivable = backup_waiver_check(consumer)!==null
 	verdict(
 		readiness.parentNode,
 		consumer.ready===true,

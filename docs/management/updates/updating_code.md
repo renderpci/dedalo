@@ -65,7 +65,13 @@ run:
   detected, deployment channel, maintenance mode, superuser identity, recent
   database backup, backup root outside the code tree, runtime data outside the
   code tree, the archive tools, the Bun version pin, a leftover staging
-  directory, and the free disk space where the update stages. The panel is *ready* only when nothing is blocked.
+  directory, and the free disk space where the update stages. The panel is
+  *ready* only when nothing is blocked. A stale or missing database backup is
+  a **warning**, not a block, because the update can be run with a waiver — so
+  the headline reads *Ready to update, but only with a waiver* rather than a
+  plain *Ready to update*, and the waiver checkbox waits in the version modal.
+  Other warnings (a Bun pin drift, a leftover staging directory) do not change
+  the headline: nothing has to be waived for them.
 - **Last code update** — which version replaced which, when, and whether the
   new tree confirmed itself at boot. A status still reading *pending
   confirmation* means the update did not complete its own health check.

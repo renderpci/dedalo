@@ -300,7 +300,7 @@ describe('UPDATE_CODE WIDGET', function() {
 			render_consumer_status(wrapper, consumer)
 			return wrapper
 		}
-		const consumer_with = (backup_state) => {
+		const consumer_with = (backup_state, extra_checks) => {
 			return {
 				ready	: true,
 				engine	: {},
@@ -308,7 +308,7 @@ describe('UPDATE_CODE WIDGET', function() {
 				checks	: [
 					{ id : 'superuser', state : 'ok' },
 					{ id : 'backup_fresh', state : backup_state, detail : backup_state==='ok' ? '2' : '73' }
-				]
+				].concat(extra_checks || [])
 			}
 		}
 
@@ -332,6 +332,40 @@ describe('UPDATE_CODE WIDGET', function() {
 				const headline = wrapper.querySelector('.status_verdict')
 				assert.include(headline.className, 'state_ok', 'a clean install still headlines ready')
 				assert.notInclude(headline.className, 'state_warning')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('a NON-waivable warning never makes the headline demand a waiver', function() {
+
+			// The consumer half has three warn-capable checks and only
+			// `backup_fresh` is waivable. A leftover `.code_staging` dir, or a
+			// bun-pin drift, over a FRESH backup used to headline "only with a
+			// waiver" while the modal offered no checkbox to give one — a waiver
+			// demanded, impossible to supply, and unnecessary anyway.
+			const wrapper = render(consumer_with('ok', [
+				{ id : 'staging_clean', state : 'warn' },
+				{ id : 'bun_pin', state : 'warn', detail : '1.4.0 != 1.3.9' }
+			]))
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.include(headline.className, 'state_ok', 'a fresh backup still headlines plainly ready')
+				assert.notInclude(headline.className, 'state_warning', 'no waiver is pending')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('an UNKNOWN backup check is treated as a pending waiver, like the modal', function() {
+
+			// `probe()` degrades a throwing check to `unknown`. The modal offers
+			// the waiver there (state!=='ok'), so the headline must warn about it
+			// too — the two read ONE predicate precisely so they cannot diverge.
+			const wrapper = render(consumer_with('unknown'))
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.include(headline.className, 'state_warning', 'an unmeasurable backup still needs the waiver')
 			} finally {
 				wrapper.remove()
 			}
