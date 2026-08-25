@@ -175,16 +175,22 @@ function ledgerTripwires(): string[] {
 }
 
 /**
- * Rule 3c — tripwires that do NOT run on the hermetic tier, each with a written
- * reason. This is the CONVERSE of the subset rule below it, and it exists
- * because the subset rule alone is a one-way silence: for months a tripwire
- * could be added to verify.ts, never wired into hermetic.sh, and run on NO
- * executing tier while every gate stayed green. Measured 2026-08-24: the index
+ * Rule 3c — tripwires that do NOT run on the hermetic tier. Each row is an
+ * ASSIGNMENT, not an excuse: the reason says why the gate cannot run DB-less,
+ * and the gate MUST also appear in scripts/ci/db_tier.sh DB_TIER_TRIPWIRES (the
+ * hosted DB tier, .github/workflows/db.yml). The two lists are asserted EQUAL,
+ * so "excused from hermetic" can never again quietly mean "runs nowhere".
+ *
+ * This began as the CONVERSE of the subset rule below it, because that rule
+ * alone is a one-way silence: for months a tripwire could be added to verify.ts,
+ * never wired into hermetic.sh, and run on NO executing tier while every gate
+ * stayed green. Measured 2026-08-24: the index
  * held 89 gates and hermetic.sh 41 — and five more landed that same day, taking
  * the unrun set from 48 to 53, with nothing red at any point.
  *
  * The map is exact in BOTH directions: an unlisted exclusion is red (the new
- * gate must be wired or explained) and a stale entry is red too (a listed gate
+ * gate must be wired hermetically or ASSIGNED to the DB tier — a reason alone no
+ * longer suffices) and a stale entry is red too (a listed gate
  * that now runs hermetically, or that is no longer a tripwire at all).
  *
  * Every entry below is a DB-tier gate — verified by reading its closure, not its
