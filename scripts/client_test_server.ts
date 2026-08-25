@@ -44,7 +44,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readEnv } from '../src/config/env.ts';
-import { testDatabaseName } from '../test/helpers/test_database.ts';
+import { applicationDatabaseName, testDatabaseName } from '../test/helpers/test_database.ts';
 import { ensureTestMediaRoot } from '../test/helpers/test_media_root.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
@@ -58,9 +58,19 @@ const REPO_ROOT = join(import.meta.dir, '..');
  * suite uses (test/helpers/test_database.ts), never a second copy of the rule.
  * Refuses when it resolves to the application's: that is the one mistake this
  * whole file exists to make impossible.
+ *
+ * THE APPLICATION SIDE COMES FROM `applicationDatabaseName()` — the private
+ * file, NEVER `readEnv('DB_NAME')`. Inside a `bun test` process the preload
+ * has already rewritten `process.env.DB_NAME` to the suite database and
+ * `readEnv` gives process env precedence, so a `readEnv`-based comparison is
+ * VACUOUS (it compared `<suite>_test` against `<suite>` — neither is the app
+ * DB) and FALSE-fires the moment `DEDALO_TEST_DATABASE` is explicit (both
+ * sides then resolve to the same value). Measured 2026-08-25; the full trap
+ * is written up on `applicationDatabaseName()` itself, and the anti-vacuity
+ * probe lives in test/unit/test_db_marker_tripwire.test.ts rule 6.
  */
 export function resolveSuiteDatabase(): { suiteDb: string; appDb: string } {
-	const appDb = readEnv('DB_NAME') ?? readEnv('DEDALO_DATABASE_CONN') ?? '';
+	const appDb = applicationDatabaseName() ?? '';
 	const suiteDb = testDatabaseName();
 	if (suiteDb === '' || suiteDb === appDb) {
 		throw new Error(

@@ -12,7 +12,7 @@
  * ITSELF declaring what it is (the `dedalo_test_marker` row), and every
  * test-data writer asking it first.
  *
- * SIX RULES, and every one of them has an anti-vacuity probe:
+ * SEVEN RULES, and every one of them has an anti-vacuity probe:
  *
  *  1. THE INVENTORY (source scan). Every file under `src/core/test_data/**` and
  *     `test/helpers/**` that HAS A WRITE SEAM must call `assertTestDatabase(`,
@@ -46,17 +46,44 @@
  *     mode only, never the database name). Asserted as source (the runner has no
  *     unverified path to a target) and behaviourally (the probe refuses a server
  *     with no fingerprint and one with the wrong fingerprint, and accepts the
- *     right one — against real stub servers).
+ *     right one — against real stub servers). And the name-level distinctness
+ *     refusal is probed in BOTH directions (2026-08-25): it fires on a genuine
+ *     suite-db == app-db collision and stays quiet on a distinct explicit
+ *     DEDALO_TEST_DATABASE — the readEnv-based version of that guard was
+ *     vacuous inside a test process (the preload rewrites DB_NAME) and this
+ *     gate's happy-path-only assertion never noticed.
+ *  7. A CLONE INHERITS THE MARKER, AND REWRITES THE ONE FIELD THE COPY MADE A
+ *     LIE (2026-08-25, the parallel-shard work). A shard database is a
+ *     `CREATE DATABASE … TEMPLATE <suite>` copy — 7612 MB and 907 s is not
+ *     something a run can build N times — so it arrives carrying the template's
+ *     marker row, which names the TEMPLATE and which rule 3 therefore refuses.
+ *     The provisioning path rewrites `database_name = current_database()` (the
+ *     connection's own identity, never a caller-supplied name), in INTERPOLATED
+ *     form: demanding the literal table name here would demand exactly what
+ *     rule 5 forbids, and the two rules could never both be green. Derived, not
+ *     enumerated — the set of files performing that rewrite must be empty or
+ *     exactly the one provisioner, so a rewrite landing elsewhere is red rather
+ *     than a rule that skips forever. Rule 7b is its companion on the other
+ *     side: `test:db:setup` builds the TEMPLATE and sweeps the TEMPLATE's media
+ *     tree, so it must refuse a `<template>__shard<N>` target BEFORE any side
+ *     effect (both existing name guards pass a shard name happily).
  *
  * HONEST LIMITS. The inventory is a REGEX classifier over stripped sources: it
  * sees DML text and the named write doors, not a write reached through an
  * arbitrary dynamic indirection. It covers the two directories test data lives
  * in — a writer someone puts in a third place is outside it, exactly as the
  * corpus of every source-scan gate in this tree is.
+ *
+ * And rule 7's binding half is PRESENCE-GATED on `scripts/lib/test_shard_db.ts`
+ * (written in parallel with this gate, 2026-08-25): while the provisioner is
+ * absent those tests do not run. What is NOT gated is the census — the "no
+ * other file rewrites the marker" assertion, and every positive control, run
+ * either way — so the window this leaves open is "the provisioner exists and is
+ * correct", never "someone rewrote the marker somewhere else".
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
 import {
@@ -77,6 +104,7 @@ import {
 } from '../../src/core/test_data/test_database_marker.ts';
 import { materializeTestTldOntology } from '../../src/core/test_data/test_tld_materialize.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
+import { applicationDatabaseName } from '../helpers/test_database.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const read = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf-8');
@@ -318,6 +346,20 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 		run: async () => (await import('../helpers/test_data.ts')).cleanScratchTipo('zzmk1'),
 	},
 	{
+		name: 'ensureSyntheticHierarchies',
+		run: async () =>
+			(
+				await import('../../src/core/test_data/synthetic_hierarchy_fixture.ts')
+			).ensureSyntheticHierarchies(),
+	},
+	{
+		name: 'dropSyntheticHierarchies',
+		run: async () =>
+			(
+				await import('../../src/core/test_data/synthetic_hierarchy_fixture.ts')
+			).dropSyntheticHierarchies(),
+	},
+	{
 		name: 'installAclIdentityFixture',
 		run: async () =>
 			(await import('../helpers/acl_identity_fixture.ts')).installAclIdentityFixture(),
@@ -539,6 +581,13 @@ describe('rule 4 — the installer is the only bypass', () => {
 
 describe('rule 5 — one producer of the marker', () => {
 	test('`writeTestDatabaseMarker` is called from the setup script and nowhere else', () => {
+		// STILL ONE ITEM after the shard work (2026-08-25), and that was CHECKED,
+		// not assumed: the shard provisioning path does NOT produce a marker — a
+		// clone INHERITS the template's row and rewrites only `database_name`
+		// (rule 7). Minting one there would fabricate provenance the shard never
+		// performed, and would create a second path able to stamp the row onto a
+		// database nobody proved was a clone. Rule 7 asserts that absence, so this
+		// list can only grow through a deliberate edit in both places.
 		const callers = engineSources().filter(
 			(file) =>
 				file !== 'src/core/test_data/test_database_marker.ts' &&
@@ -669,5 +718,348 @@ describe('rule 6 — the client run cannot drive a server on the app database', 
 		const { suiteDb, appDb } = resolveSuiteDatabase();
 		expect(suiteDb).not.toBe(appDb);
 		expect(suiteDb).not.toBe('');
+		// The app side must be the INSTALLATION's database (../private/.env), not
+		// this process's rewritten env — the preload set DB_NAME to the suite DB,
+		// so a readEnv-based appDb would silently be the suite's own name.
+		expect(appDb).toBe(applicationDatabaseName() ?? '');
+	});
+
+	test('the distinctness refusal is not vacuous: a genuine collision refuses', () => {
+		// HOW THE HAPPY-PATH-ONLY VERSION OF THIS GATE LET THE DEFECT LIVE.
+		// resolveSuiteDatabase() used readEnv('DB_NAME') for the app side, but
+		// the preload rewrites process.env.DB_NAME to the SUITE database and
+		// readEnv gives process env precedence — so inside every bun test run the
+		// guard compared `<suite>_test` against `<suite>`: always distinct, never
+		// the application database, and the test above stayed green forever
+		// (measured 2026-08-25). Worse, with DEDALO_TEST_DATABASE explicit the
+		// same trap FALSE-fired: both sides resolved to the identical explicit
+		// value and the guard refused a perfectly safe run. This test drives BOTH
+		// directions over a mutated env, so a regression to readEnv on either
+		// side of the comparison is red the day it lands.
+		const appDb = applicationDatabaseName();
+		if (appDb === undefined) {
+			// No ../private/.env on this machine — but this gate already requires
+			// the suite database that file configures, so absence here is a broken
+			// checkout, not a case to pass silently (never narrow scope quietly).
+			throw new Error(
+				'anti-vacuity probe needs ../private/.env with DB_NAME set — the suite this gate runs on is configured there',
+			);
+		}
+		const savedExplicit = process.env.DEDALO_TEST_DATABASE;
+		try {
+			// (a) GENUINE COLLISION — the operator points DEDALO_TEST_DATABASE at
+			// the application database itself. This is the one mistake the guard
+			// exists to make impossible, and it must refuse.
+			process.env.DEDALO_TEST_DATABASE = appDb;
+			expect(() => resolveSuiteDatabase()).toThrow(/REFUSING to run the client suite/);
+			// (b) EXPLICIT BUT DISTINCT — the parallel-shard shape. The old
+			// readEnv-based guard refused exactly this safe case; it must pass.
+			process.env.DEDALO_TEST_DATABASE = `${appDb}_test_shard_probe`;
+			expect(resolveSuiteDatabase()).toEqual({
+				suiteDb: `${appDb}_test_shard_probe`,
+				appDb,
+			});
+			// (c) UNSET — the everyday derived name. Must pass too, and against the
+			// REAL app database name, not this process's rewritten one.
+			delete process.env.DEDALO_TEST_DATABASE;
+			const derived = resolveSuiteDatabase();
+			expect(derived.appDb).toBe(appDb);
+			expect(derived.suiteDb).not.toBe(appDb);
+		} finally {
+			// Restore the snapshot exactly — other files in this run derive the
+			// suite database from the same env.
+			if (savedExplicit === undefined) {
+				delete process.env.DEDALO_TEST_DATABASE;
+			} else {
+				process.env.DEDALO_TEST_DATABASE = savedExplicit;
+			}
+		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 7 — CLONE PROVENANCE: a shard database INHERITS the marker, and rewrites
+// the ONE field the copy turned into a lie.
+// ---------------------------------------------------------------------------
+
+/**
+ * WHY THIS RULE EXISTS (2026-08-25, the parallel-shard work).
+ *
+ * The suite database is 7612 MB and takes 907 s to build from the seed, so a
+ * sharded run cannot build N of them: each shard gets a `CREATE DATABASE
+ * <shard> TEMPLATE <suite>` clone (Postgres 18.4 here, STRATEGY = FILE_COPY),
+ * which copies the template's files — the `dedalo_test_marker` row INCLUDED.
+ *
+ * That copy is what makes this rule necessary. The inherited row still says
+ * `database_name = '<template>'`, and rule 3's law is that a marker naming
+ * ANOTHER database is refused (`assertTestDatabase` throws "does not belong").
+ * So every shard would refuse every write, on a database that is in fact a
+ * disposable clone of a disposable database. The provisioning path therefore
+ * rewrites exactly one field, on the clone's own connection:
+ *
+ *     UPDATE "<marker table>" SET database_name = current_database()
+ *
+ * `current_database()` and not a name the caller passed in: the value must come
+ * from the connection that is about to be written through, so a provisioner
+ * pointed at the wrong database cannot stamp a correct-looking marker onto it.
+ *
+ * THE SHAPE IS INTERPOLATED, NEVER THE LITERAL, and that is not a style
+ * preference — it is what keeps this rule and RULE 5 simultaneously
+ * satisfiable. Rule 5 allows the string `dedalo_test_marker` in exactly ONE
+ * file under `src/`, `tools/` and `scripts/` (the DB-free constants module). A
+ * rule 7 that demanded the literal in the provisioner would demand precisely
+ * what rule 5 forbids, and the two gates could never both be green. So the
+ * provisioner IMPORTS `TEST_MARKER_TABLE` and interpolates it, and this rule
+ * asserts THAT — plus the absence of the literal, so the escape hatch is shut
+ * from this side too.
+ *
+ * WHY IT IS NOT A SECOND MARKER PRODUCER (rule 5's list stays one item long).
+ * The clone does not MINT a marker: minting one means asserting provenance —
+ * `build_stamp`, `git_rev`, `seed_sha256`, `ontology_sha256` — about a build
+ * the shard never performed, and it means a path that can create the row on a
+ * database nobody proved was a clone (which is exactly the production-shaped
+ * accident the whole marker law exists to make impossible). A shard's
+ * provenance IS the template's; the only fact the copy invalidated is the name,
+ * and the name is the only thing rewritten. `writeTestDatabaseMarker` therefore
+ * stays pinned to `scripts/test_db_setup.ts` in rule 5, and this rule asserts
+ * the provisioner does not call it — so a future change to a mint-shaped
+ * provisioner is a deliberate edit to BOTH lists, not a quiet widening.
+ *
+ * PRESENCE-GATED, BUT NOT ON `existsSync` ALONE. `scripts/lib/test_shard_db.ts`
+ * is being written in parallel with this gate. A rule that merely skipped while
+ * the file was missing would also skip forever if the provisioner landed under
+ * a different name — a silent narrowing. So the census is DERIVED: every file
+ * under `src/`, `tools/` and `scripts/` is classified, and the set that
+ * rewrites the marker must be EXACTLY the empty set (tier not landed) or
+ * EXACTLY `[SHARD_PROVISIONER]`. A provisioner somewhere else is red, and the
+ * fix is to move it or to change the pin on purpose.
+ */
+
+/** The ONE provisioning path allowed to rewrite an inherited marker. */
+const SHARD_PROVISIONER = 'scripts/lib/test_shard_db.ts';
+
+/**
+ * The shard namespace. `<template>__shard<N>` — the double underscore is what
+ * makes a shard name recognisable to `scripts/test_db_setup.ts` without a
+ * second source of truth about the shard list.
+ */
+const SHARD_NAME_SHAPE = /__shard\d+$/;
+
+const shardTierLanded = existsSync(join(REPO_ROOT, SHARD_PROVISIONER));
+
+/**
+ * Does this source perform the clone's marker rewrite, in the interpolated
+ * form? Returns the REASONS it does not, so a half-written provisioner fails
+ * naming what is missing instead of vanishing from a census.
+ */
+function markerRewriteFaults(source: string): string[] {
+	const code = stripComments(source);
+	const faults: string[] = [];
+	if (
+		!/import\s*(?:type\s*)?\{[^}]*\bTEST_MARKER_TABLE\b[^}]*\}\s*from\s*['"][^'"]*test_database_marker(?:_constants)?\.ts['"]/.test(
+			code,
+		)
+	) {
+		faults.push('it does not IMPORT TEST_MARKER_TABLE from the marker constants module');
+	}
+	if (!/UPDATE\s+"?\$\{TEST_MARKER_TABLE\}"?\s+SET\b/.test(code)) {
+		faults.push('it has no `UPDATE "${TEST_MARKER_TABLE}" SET …` (the interpolated shape)');
+	}
+	if (!/database_name\s*=\s*current_database\(\)/.test(code)) {
+		faults.push(
+			'the rewrite does not set database_name = current_database() (the value must come from the connection being written through, never from a caller-supplied name)',
+		);
+	}
+	if (code.includes(TEST_MARKER_TABLE)) {
+		faults.push(
+			`it spells the marker table LITERALLY; rule 5 allows that literal in one file only, so the literal form would make rules 5 and 7 mutually unsatisfiable — import ${'TEST_MARKER_TABLE'} instead`,
+		);
+	}
+	return faults;
+}
+
+/** The files that perform the rewrite, derived — never enumerated. */
+function markerRewriters(): string[] {
+	return engineSources().filter((file) => markerRewriteFaults(read(file)).length === 0);
+}
+
+describe('rule 7 — clone provenance: the shard marker rewrite', () => {
+	test('the matcher fires and refuses correctly on synthetic sources (positive control)', () => {
+		const importLine = `import { TEST_MARKER_TABLE } from '../../src/core/test_data/test_database_marker_constants.ts';`;
+		// The conforming shape, spelled in single quotes so `${…}` stays TEXT.
+		const conforming = [
+			importLine,
+			'await sql.unsafe(`UPDATE "${TEST_MARKER_TABLE}" SET database_name = current_database() WHERE id = 1`);',
+		].join('\n');
+		expect(markerRewriteFaults(conforming)).toEqual([]);
+
+		// THE POSITIVE CONTROL THAT MATTERS: the literal form. It is what a
+		// well-meaning author writes, it would satisfy a naive "does it rewrite
+		// the marker" matcher, and it is exactly what rule 5 forbids.
+		const literalForm = [
+			importLine,
+			`await sql.unsafe('UPDATE "${TEST_MARKER_TABLE}" SET database_name = current_database() WHERE id = 1');`,
+		].join('\n');
+		expect(markerRewriteFaults(literalForm).length).toBeGreaterThan(0);
+
+		// A caller-supplied name instead of the connection's own identity.
+		const hardcodedName = [
+			importLine,
+			'await sql.unsafe(`UPDATE "${TEST_MARKER_TABLE}" SET database_name = ${shardDb}`);',
+		].join('\n');
+		expect(markerRewriteFaults(hardcodedName).length).toBeGreaterThan(0);
+
+		// No import of the constant at all.
+		expect(
+			markerRewriteFaults(
+				'await sql.unsafe(`UPDATE "${TEST_MARKER_TABLE}" SET database_name = current_database()`);',
+			).length,
+		).toBeGreaterThan(0);
+
+		// And PROSE about the rewrite is not the rewrite (comments are stripped).
+		expect(
+			markerRewriteFaults(
+				`${importLine}\n// UPDATE "\${TEST_MARKER_TABLE}" SET database_name = current_database()\n`,
+			).length,
+		).toBeGreaterThan(0);
+	});
+
+	test('the source census is not vacuous (anti-vacuity floor)', () => {
+		// If engineSources() or the reader broke, every assertion below would pass
+		// over an empty tree. Same floor the sibling rules use.
+		const sources = engineSources();
+		expect(sources.length).toBeGreaterThan(200);
+		expect(sources).toContain('scripts/test_db_setup.ts');
+		expect(sources).toContain('src/core/test_data/test_database_marker.ts');
+	});
+
+	test('exactly one file rewrites the marker, and only the shard provisioner may', () => {
+		const rewriters = markerRewriters();
+		expect(
+			rewriters,
+			shardTierLanded
+				? `The shard provisioning path (${SHARD_PROVISIONER}) is the ONLY file that may rewrite an inherited marker. A second rewriter is a second way for a database to claim it is a disposable clone: ${rewriters.join(', ')}`
+				: `${SHARD_PROVISIONER} is not present, so NOTHING may rewrite the marker yet. A rewrite landing anywhere else would leave this rule permanently skipped — move it to ${SHARD_PROVISIONER}, or change the pin deliberately: ${rewriters.join(', ')}`,
+		).toEqual(shardTierLanded ? [SHARD_PROVISIONER] : []);
+	});
+
+	test.if(shardTierLanded)('the provisioner rewrites the marker in the interpolated shape', () => {
+		const faults = markerRewriteFaults(read(SHARD_PROVISIONER));
+		expect(
+			faults,
+			`${SHARD_PROVISIONER} clones the suite database, so it inherits a marker naming the TEMPLATE — which rule 3 refuses. It must rewrite it, and in the interpolated form: ${faults.join(' | ')}`,
+		).toEqual([]);
+	});
+
+	test.if(shardTierLanded)(
+		'the provisioner is NOT a second marker PRODUCER (rule 5 addendum)',
+		() => {
+			// Rule 5's first test pins `writeTestDatabaseMarker` callers to exactly
+			// ['scripts/test_db_setup.ts']. CHECKED AND DELIBERATELY NOT WIDENED: the
+			// provisioner inherits the row through the clone and edits one field, so
+			// it never produces a marker and must not appear in that list. This test
+			// makes the decision mechanical — the day the provisioner starts minting
+			// markers it goes red HERE, forcing the edit to rule 5's list to be an
+			// argued one rather than a green side effect.
+			expect(
+				stripComments(read(SHARD_PROVISIONER)).includes('writeTestDatabaseMarker'),
+				`${SHARD_PROVISIONER} must NOT call writeTestDatabaseMarker: minting a marker asserts provenance (build_stamp, git_rev, seed/ontology sha) about a build the shard never performed, and creates a path that can stamp the row onto a database nobody proved was a clone. A shard's provenance IS the template's; only the name is rewritten.`,
+			).toBe(false);
+		},
+	);
+});
+
+// ---------------------------------------------------------------------------
+// RULE 7b — `test:db:setup` refuses a SHARD name before it touches anything.
+// ---------------------------------------------------------------------------
+
+/**
+ * `scripts/test_db_setup.ts` builds THE TEMPLATE: it DROPs its target and
+ * SWEEPS that target's media tree. Point `DEDALO_TEST_DATABASE` at a shard
+ * clone (`<template>__shard3` — a leftover env var from a sharded run is the
+ * everyday way this happens) and it would rebuild an ephemeral clone as if it
+ * were the fixture, at 907 s, and delete the media tree keyed to that shard.
+ * Both existing name guards let it through: a shard name IS distinct from the
+ * application database, and it IS `[A-Za-z0-9_.-]+`.
+ *
+ * So the script must refuse the shard namespace, and refuse it BEFORE any side
+ * effect — `rebuildTestMediaRoot()` sweeps a tree before the first psql call,
+ * so "it fails eventually" is not the same as "nothing was touched".
+ */
+const SETUP_SIDE_EFFECTS = [
+	'rebuildTestMediaRoot(',
+	'DROP DATABASE',
+	'CREATE DATABASE',
+	'await psql(',
+];
+
+/** Reasons the source does NOT refuse shard names before its first side effect. */
+function shardRefusalFaults(source: string): string[] {
+	const code = stripComments(source);
+	const faults: string[] = [];
+	const refusalAt = code.indexOf('__shard');
+	if (refusalAt === -1) {
+		return ['it never mentions the `__shard` namespace at all'];
+	}
+	const firstSideEffect = SETUP_SIDE_EFFECTS.map((token) => code.indexOf(token))
+		.filter((at) => at !== -1)
+		.sort((a, b) => a - b)[0];
+	if (firstSideEffect === undefined) {
+		// The side-effect tokens are the anti-vacuity floor for THIS matcher: if
+		// none of them is found the ordering assertion below would be trivially
+		// true, so refuse instead of passing.
+		return ['none of the known side-effect tokens was found — the ordering check would be vacuous'];
+	}
+	if (refusalAt > firstSideEffect) {
+		faults.push(
+			'the shard refusal comes AFTER a side effect (a tree is swept / a database dropped first)',
+		);
+	}
+	const block = code.slice(Math.max(0, refusalAt - 900), refusalAt + 900);
+	if (!block.includes('REFUSING'))
+		faults.push('the shard check does not REFUSE (no refusal message)');
+	if (!block.includes('process.exit(1)')) faults.push('the shard check does not exit non-zero');
+	return faults;
+}
+
+describe('rule 7b — the setup script refuses a shard name, before touching anything', () => {
+	test('the matcher fires on synthetic offenders (positive control)', () => {
+		const refusal = [
+			'if (SHARD.test(testDb)) {',
+			"  console.error(`REFUSING: '${testDb}' is in the __shard namespace`);",
+			'  process.exit(1);',
+			'}',
+		].join('\n');
+		const sideEffect = 'const mediaRoot = rebuildTestMediaRoot(testDb);\nawait psql(testDb, []);';
+		expect(shardRefusalFaults(`${refusal}\n${sideEffect}`)).toEqual([]);
+		// Ordering inverted — the tree is swept before the refusal.
+		expect(shardRefusalFaults(`${sideEffect}\n${refusal}`).length).toBeGreaterThan(0);
+		// Present, ordered, but not actually a refusal.
+		expect(shardRefusalFaults(`const shardish = /__shard/;\n${sideEffect}`).length).toBeGreaterThan(
+			0,
+		);
+		// Absent entirely.
+		expect(shardRefusalFaults(sideEffect)).toEqual([
+			'it never mentions the `__shard` namespace at all',
+		]);
+		// Prose is not a refusal.
+		expect(
+			shardRefusalFaults(`// refuse __shard names here one day\n${sideEffect}`).length,
+		).toBeGreaterThan(0);
+	});
+
+	test('the shard name shape is the one both sides agree on', () => {
+		// The contract between this gate, the provisioner and the setup script.
+		expect(SHARD_NAME_SHAPE.test('dedalo_v7_mht_test__shard3')).toBe(true);
+		expect(SHARD_NAME_SHAPE.test('dedalo_v7_mht_test')).toBe(false);
+		expect(SHARD_NAME_SHAPE.test('dedalo_v7_mht_test__shard')).toBe(false);
+	});
+
+	test.if(shardTierLanded)('scripts/test_db_setup.ts refuses before any side effect', () => {
+		const faults = shardRefusalFaults(read('scripts/test_db_setup.ts'));
+		expect(
+			faults,
+			`scripts/test_db_setup.ts DROPs its target and SWEEPS that target's media tree. With shard provisioning present, a stale DEDALO_TEST_DATABASE pointing at a '<template>__shard<N>' clone must be refused before either happens: ${faults.join(' | ')}`,
+		).toEqual([]);
 	});
 });
