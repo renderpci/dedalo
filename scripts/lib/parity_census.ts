@@ -20,14 +20,25 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { TEST_TIMEOUT_FLAG } from './test_flags.ts';
 
 export const REPO_ROOT = join(import.meta.dir, '..', '..');
 
 /** The tier under ratchet. One string, so a re-point is one edit. */
 export const TIER_PATH = 'test/parity';
 
-/** The exact command the census runs (also quoted in failure messages). */
-export const TIER_COMMAND = `bun test ${TIER_PATH}`;
+/**
+ * The exact command the census runs (also quoted in failure messages).
+ *
+ * THE TIMEOUT IS PART OF THE MEASURE. Bun 1.4.0 ignores bunfig.toml's
+ * `[test] timeout`, so a bare `bun test` runs under the built-in 5000 ms cap
+ * while `bun run test` (and verify, and the CI tiers) now pass 30000 ms. If the
+ * census kept the 5000 ms cap, the frozen parity floor and a developer's own run
+ * would disagree about which parity tests are red — a slow gate would be red in
+ * the ratchet and green on the desk, which makes the ratchet a liar. Same
+ * constant, one import: scripts/lib/test_flags.ts.
+ */
+export const TIER_COMMAND = `bun test ${TIER_PATH} ${TEST_TIMEOUT_FLAG}`;
 
 /** Status of one test case, as JUnit reports it. */
 export type CaseStatus = 'pass' | 'fail' | 'skip';
@@ -186,8 +197,14 @@ export function parseJunit(xml: string): ParityRun {
  * `ORACLE_MODE` is PINNED rather than defaulted: it only defaults to `fixtures`,
  * so a shell that once ran a harvest would silently make the census measure a
  * different tier than the baseline was frozen against.
+ *
+ * EXPORTED because `scripts/test_baseline.ts` spawns child `bun test` runs with
+ * exactly the same launch-context hazard (a parent test run's rewritten DB_NAME
+ * derives `<app>_test_test` in the child) and must strip exactly the same keys.
+ * One list, one strip function — a seam added here protects both spawners; a
+ * second copy would drift the day the next seam key lands.
  */
-const PER_RUN_SEAMS = [
+export const PER_RUN_SEAMS = [
 	'DEDALO_SESSION_DB_PATH',
 	'DEDALO_TEST_SKIP_CANONICAL_RESTORE',
 	'DEDALO_TEST_DB_DISABLE',
@@ -201,7 +218,7 @@ const PER_RUN_SEAMS = [
 	'DEDALO_TEST_MEDIA_ROOT',
 ] as const;
 
-function childEnv(): Record<string, string | undefined> {
+export function childEnv(): Record<string, string | undefined> {
 	const env: Record<string, string | undefined> = { ...process.env };
 	for (const key of PER_RUN_SEAMS) delete env[key];
 	env.ORACLE_MODE = 'fixtures';
@@ -213,7 +230,14 @@ export function runParityTier(): ParityRun {
 	const outfile = join(dir, 'parity.junit.xml');
 	try {
 		const proc = Bun.spawnSync(
-			['bun', 'test', TIER_PATH, '--reporter=junit', `--reporter-outfile=${outfile}`],
+			[
+				'bun',
+				'test',
+				TIER_PATH,
+				TEST_TIMEOUT_FLAG,
+				'--reporter=junit',
+				`--reporter-outfile=${outfile}`,
+			],
 			{ cwd: REPO_ROOT, stdout: 'pipe', stderr: 'pipe', env: childEnv() },
 		);
 		let xml: string;

@@ -42,9 +42,16 @@ jobs:
         run: bash scripts/ci/env_guard.sh
       - name: Install
         run: bun install --frozen-lockfile
+      # --timeout=30000 is a LITERAL COPY of TEST_TIMEOUT_MS in scripts/lib/test_flags.ts,
+      # which is the source of truth; a workflow file cannot import it, and a `bun -e`
+      # readback would add a bun subprocess to every CI tier for a copy that would still
+      # exist. A tripwire gate keeps this literal in step with the constant. It is on the
+      # command line and not in bunfig.toml because Bun 1.4.0 SILENTLY IGNORES
+      # `[test] timeout` — the nightly's recorded baseline was cut under a 5000 ms cap
+      # nobody chose.
       - name: Full suite (unit + parity + integration)
         shell: bash
-        run: bun test 2>&1 | tee nightly-suite.log
+        run: bun test --timeout=30000 2>&1 | tee nightly-suite.log
       - name: Client gate (browser suite vs CI server on :3510)
         shell: bash
         run: bash scripts/ci/client_gate.sh 2>&1 | tee client-gate.log

@@ -34,6 +34,7 @@ import {
 	oracleHarvestDir,
 } from '../test/parity/oracle_fixtures.ts';
 import { hasPhpCredentials, PhpApiClient } from '../test/parity/php_client.ts';
+import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
 
 const projectRoot = resolve(import.meta.dir, '..');
 const parityDir = join(projectRoot, 'test', 'parity');
@@ -130,10 +131,14 @@ const outcomes: GateOutcome[] = [];
 for (const gate of selectedGates) {
 	const stem = gate.replace(/\.test\.ts$/, '');
 	const startedAt = performance.now();
-	// --timeout: a gate run STANDALONE pays cold-start (DB pool, ontology
+	// TEST_TIMEOUT_FLAG: a gate run STANDALONE pays cold-start (DB pool, ontology
 	// caches) inside its hooks; the full-suite run amortizes that across files,
-	// so the default 5s hook budget is too tight here.
-	const child = Bun.spawnSync(['bun', 'test', '--timeout', '30000', join('test', 'parity', gate)], {
+	// so bun's built-in 5s budget is too tight here. This spawn always passed the
+	// flag explicitly — which is why harvesting worked while the rest of the suite
+	// quietly ran under 5000 ms: bunfig.toml's `[test] timeout` is IGNORED by Bun
+	// 1.4.0, and this was the one site that did not rely on it. The number is now
+	// the shared constant (scripts/lib/test_flags.ts), not a local literal.
+	const child = Bun.spawnSync(['bun', 'test', TEST_TIMEOUT_FLAG, join('test', 'parity', gate)], {
 		cwd: projectRoot,
 		env: {
 			...process.env,

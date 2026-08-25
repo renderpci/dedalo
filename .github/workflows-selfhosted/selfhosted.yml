@@ -84,9 +84,15 @@ jobs:
         run: bash scripts/ci/env_guard.sh
       - name: Install
         run: bun install --frozen-lockfile
+      # --timeout=30000 is a LITERAL COPY of TEST_TIMEOUT_MS in scripts/lib/test_flags.ts,
+      # which is the source of truth; a workflow file cannot import it, and a `bun -e`
+      # readback would add a bun subprocess to every CI tier for a copy that would still
+      # exist. A tripwire gate keeps this literal in step with the constant. It is on the
+      # command line and not in bunfig.toml because Bun 1.4.0 SILENTLY IGNORES
+      # `[test] timeout`.
       - name: Full suite (unit + parity, frozen-fixture oracle)
         shell: bash
-        run: bun test test/unit test/parity 2>&1 | tee full-suite.log
+        run: bun test --timeout=30000 test/unit test/parity 2>&1 | tee full-suite.log
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:

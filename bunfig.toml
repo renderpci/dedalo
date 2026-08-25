@@ -2,8 +2,16 @@
 console.depth = 10
 
 [test]
-# Parity tests talk to a live PHP server / real DB; keep a generous timeout.
-timeout = 30000
+# NO `timeout` KEY HERE — ON PURPOSE. Bun 1.4.0 (the pinned version) SILENTLY
+# IGNORES `[test] timeout`: measured 2026-08-25, an 8 s test under this exact
+# bunfig died at 5001.50 ms with "this test timed out after 5000ms", while the
+# same test under `bun test --timeout=30000` passed in 8.01 s. The key sat here
+# declaring 30000 and buying nothing — a stated-but-unenforced invariant, which
+# is precisely what DEC-12 forbids. The number now lives in
+# scripts/lib/test_flags.ts (TEST_TIMEOUT_MS / TEST_TIMEOUT_FLAG) and is passed
+# on the COMMAND LINE at every site that spawns `bun test`. Do not re-add it
+# here: a future Bun that honours it would make this file a second source of
+# truth for the same number.
 # Confine test discovery to our test/ tree — the COPIED CLIENT (client/dedalo)
 # contains view files whose names match test globs (core/widgets/test/…).
 root = "test"
