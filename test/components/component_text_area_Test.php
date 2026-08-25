@@ -1180,10 +1180,18 @@ final class component_text_area_test extends TestCase {
 		    "lang": "all"
 		}');
 
-		$value = component_text_area::resolve_query_object_sql(
+		$tree = component_text_area::resolve_query_object_sql(
 			$query_object
 		);
-		// dump($value, ' value ++ '.to_string());
+		// dump($tree, ' tree ++ '.to_string());
+
+		// (!) regex cases are wrapped in one leaf per lang, so the regex runs against the
+		// values of a single lang and never against the whole multi-language blob
+		$this->assertTrue(
+			property_exists($tree, '$or'),
+			'expected the regex case wrapped in an $or group per lang'
+		);
+		$value = $tree->{'$or'}[0];
 
 		$this->assertTrue(
 			$value->operator==='~*',
