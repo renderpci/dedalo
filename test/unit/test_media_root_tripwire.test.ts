@@ -16,7 +16,7 @@
  * root, nor repointed with the guard asleep (src/core/media/test_media_root.ts;
  * src/config/config.ts `buildMediaConfig`).
  *
- * FIVE RULES, each with an anti-vacuity probe:
+ * SIX RULES, each with an anti-vacuity probe:
  *
  *  1. INVENTORY — DERIVED, not enumerated. Every file under `src/` and `tools/`
  *     that RESOLVES a media root (reads `config.media.rootPath`, comments
@@ -42,6 +42,21 @@
  *     server it spawns) — and the preload is registered in `bunfig.toml`. A
  *     fourth setter, or a missing preload line, is how a tier quietly stops
  *     being covered.
+ *  6. DB↔TREE PAIRING (2026-08-25, the parallel-shard work). A shard database is
+ *     a clone (`<template>__shard<N>`), and its media tree must FOLLOW that name
+ *     through `testMediaRootPath()` — NO shard-tier file sets
+ *     `DEDALO_TEST_MEDIA_ROOT`. Setting both halves by hand is precisely how they
+ *     come to disagree; the `<app>_test_test` debris this header records was that
+ *     bug at N=1, and at N shards it can hand two shards ONE tree over TWO
+ *     databases, where one shard's sweep deletes the other's corpus media
+ *     mid-assertion. The tier is DERIVED (the provisioner plus its importers) and
+ *     the forbidden-setter half is presence-gated on
+ *     `scripts/lib/test_shard_db.ts`, written in parallel with this gate; the
+ *     PAIRING half is behavioural and binds now — basename == database name, no
+ *     two shards share a tree, no shard tree is (or contains, or is inside) the
+ *     template's, and the DEFAULT derivation follows `DEDALO_TEST_DATABASE`, which
+ *     is what makes "the runner sets only the database" a mechanism rather than a
+ *     hope.
  *
  * HONEST LIMIT. This proves that every door RESOLVING a root asks the marker,
  * and that the doors refuse. It does not prove a module cannot compose an
@@ -49,13 +64,19 @@
  * calling a resolver — the confinement chokepoint (`assertInsideMediaRoot`) is
  * what covers that direction, and it too resolves through `requireMediaRoot`.
  *
+ * And rule 6's forbidden-setter half does not run while `scripts/lib/test_shard_db.ts`
+ * is absent. What it leaves open is only "the provisioner exists and obeys" —
+ * rule 5's three-setter census still refuses a fourth setter anywhere under
+ * `scripts/`, shard tier or not, and rule 6b's pairing proof runs either way.
+ *
  * Registered in engineering/TRIPWIRES.md + scripts/verify.ts.
  */
 
 import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
+import { Glob } from 'bun';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 import { config } from '../../src/config/config.ts';
 import { NEW_IN_V7 } from '../../src/config/migration_map.ts';
@@ -356,11 +377,18 @@ const SETTERS = [
 
 describe('test media root — RULE 5: one setter per tier', () => {
 	test('the three tiers set the key, and nothing else does', () => {
+		// `scripts/` is scanned RECURSIVELY (the sibling test_db_marker gate's
+		// Glob idiom). Until 2026-08-25 this was a flat readdirSync, so a setter
+		// hidden under scripts/ci/ or scripts/lib/ would have been INVISIBLE to
+		// this census — exactly the "fourth setter" this rule exists to refuse.
+		// Verified at the widening: nothing under those subdirectories sets the
+		// key today (scripts/lib/parity_census.ts only NAMES it in a string), so
+		// the census membership did not change.
 		const candidates = [
 			...scannedFiles(),
-			...readdirSync(join(REPO_ROOT, 'scripts'))
-				.filter((n) => n.endsWith('.ts'))
-				.map((n) => `scripts/${n}`),
+			...[...new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, 'scripts') })].map(
+				(n) => `scripts/${n}`,
+			),
 			...readdirSync(join(REPO_ROOT, 'test/preload'))
 				.filter((n) => n.endsWith('.ts'))
 				.map((n) => `test/preload/${n}`),
@@ -392,5 +420,202 @@ describe('test media root — RULE 5: one setter per tier', () => {
 	test('the client suite hands the key to the server it spawns', () => {
 		const source = stripComments(read('scripts/client_test_server.ts'));
 		expect(source).toContain('DEDALO_TEST_MEDIA_ROOT:');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// RULE 6 — DB↔TREE PAIRING: a shard's media tree FOLLOWS its database name.
+// ---------------------------------------------------------------------------
+
+/**
+ * WHY THIS RULE EXISTS (2026-08-25, the parallel-shard work).
+ *
+ * A sharded run gives each child process its own database — `<template>__shardN`,
+ * a `CREATE DATABASE … TEMPLATE` clone, because the 7612 MB suite fixture cannot
+ * be built N times. The database and the media tree are ONE fixture (`files_info`
+ * rows in the database name files in the tree, test/helpers/test_media_root.ts),
+ * so each shard needs its own tree too — and there are exactly two ways to give
+ * it one:
+ *
+ *   (a) let it FOLLOW the database name through `testMediaRootPath()`, which
+ *       keys the tree by the suite database and is already what the `bun test`
+ *       preload calls; or
+ *   (b) have the shard runner set `DEDALO_TEST_MEDIA_ROOT` itself, beside
+ *       `DEDALO_TEST_DATABASE`.
+ *
+ * (b) IS THE BUG CLASS THIS FILE'S OWN HEADER ALREADY RECORDS. Setting the two
+ * halves by hand is how they come to disagree: the measured `<app>_test_test`
+ * debris came from exactly that — one side derived the name, the other passed
+ * it, and the two landed in different directories with the database rows of one
+ * fixture pointing at the files of another. With N shards the same mistake is
+ * worse than debris: two shards can be handed the SAME tree while holding
+ * DIFFERENT databases, and the corpus media one plants is deleted by the other's
+ * sweep mid-assertion, with a failure naming a missing file nowhere near the
+ * cause.
+ *
+ * So the law is (a), and it is stated negatively because that is the half a
+ * runner can violate: NO shard-tier file sets `DEDALO_TEST_MEDIA_ROOT`. Rule 5
+ * already pins the setter census to three files and would catch a fourth; this
+ * rule says WHY the shard tier is not the fourth, and — the part rule 5 cannot
+ * express — proves the derivation actually pairs, so "follow the database name"
+ * is a mechanism rather than a hope.
+ *
+ * DERIVED, NOT ENUMERATED, and PRESENCE-GATED the same way rule 7 of
+ * test_db_marker_tripwire is: `scripts/lib/test_shard_db.ts` is being written in
+ * parallel with this gate. The tier is computed (the provisioner, plus every
+ * file under `scripts/` that imports it), so a runner added later is covered the
+ * day it lands; the pairing half below is BEHAVIOURAL and binds right now,
+ * whether or not the provisioner exists.
+ */
+
+/** The shard provisioning path, and the namespace its clones live in. */
+const SHARD_PROVISIONER = 'scripts/lib/test_shard_db.ts';
+const SHARD_NAME_SHAPE = /__shard\d+$/;
+
+/** Every `.ts` under `scripts/`, repo-relative — the tier can only live here. */
+function scriptFiles(): string[] {
+	return [...new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, 'scripts') })]
+		.filter((name) => !name.endsWith('.test.ts'))
+		.map((name) => `scripts/${name}`)
+		.sort();
+}
+
+/**
+ * THE SHARD TIER, derived: the provisioner itself plus every script that imports
+ * it. An enumerated list would go stale the first time a runner is added, and a
+ * stale list here means an uncovered setter — the exact failure rule 5's census
+ * widening (flat readdir → recursive Glob, 2026-08-25) was fixed for.
+ */
+function shardTierFiles(): string[] {
+	if (!existsSync(join(REPO_ROOT, SHARD_PROVISIONER))) return [];
+	// Membership is "names the provisioner", comments stripped. Deliberately
+	// OVER-inclusive: a script that merely mentions the module in a string joins
+	// the tier and is held to the no-setter law it would not otherwise be held
+	// to. Over-inclusion costs a false red on a file that must then say why it
+	// sets the key; under-inclusion costs an uncovered setter, which is the
+	// failure this rule exists for.
+	return scriptFiles().filter(
+		(file) => file === SHARD_PROVISIONER || stripComments(read(file)).includes('test_shard_db'),
+	);
+}
+
+/** Does this source SET the media-root key? The same matcher rule 5 censuses with. */
+function setsMediaRootKey(source: string): boolean {
+	return /process\.env\.DEDALO_TEST_MEDIA_ROOT\s*=/.test(stripComments(source));
+}
+
+describe('test media root — RULE 6a: no shard sets DEDALO_TEST_MEDIA_ROOT', () => {
+	test('the setter matcher is not vacuous (positive control)', () => {
+		expect(setsMediaRootKey('process.env.DEDALO_TEST_MEDIA_ROOT = root;')).toBe(true);
+		expect(setsMediaRootKey('process.env.DEDALO_TEST_MEDIA_ROOT=mediaRoot')).toBe(true);
+		// …and prose about the key, or merely READING it, is not setting it.
+		expect(setsMediaRootKey('// the shard must never set DEDALO_TEST_MEDIA_ROOT = x\n')).toBe(
+			false,
+		);
+		expect(setsMediaRootKey('const root = process.env.DEDALO_TEST_MEDIA_ROOT ?? "";')).toBe(false);
+		// The floor for the tier census itself: `scripts/` must be readable and
+		// non-trivial, or every assertion below would pass over an empty set.
+		expect(scriptFiles().length).toBeGreaterThan(10);
+		expect(scriptFiles()).toContain('scripts/test_db_setup.ts');
+		expect(scriptFiles()).toContain('scripts/lib/test_flags.ts');
+	});
+
+	test('the derived tier is empty (not landed) or contains the provisioner', () => {
+		const tier = shardTierFiles();
+		if (existsSync(join(REPO_ROOT, SHARD_PROVISIONER))) {
+			expect(tier, 'the tier census must find the provisioner it is derived from').toContain(
+				SHARD_PROVISIONER,
+			);
+		} else {
+			expect(
+				tier,
+				`${SHARD_PROVISIONER} is absent, so there is no shard tier yet. This rule binds the day it lands.`,
+			).toEqual([]);
+		}
+	});
+
+	test('no shard-tier file sets the media-root key', () => {
+		const offenders = shardTierFiles().filter((file) => setsMediaRootKey(read(file)));
+		expect(
+			offenders,
+			`A shard must let its media tree FOLLOW its database name through testMediaRootPath() — setting DEDALO_TEST_MEDIA_ROOT beside DEDALO_TEST_DATABASE is how the two halves come to disagree (this file's header records the measured '<app>_test_test' debris from exactly that), and with N shards it can hand two shards the SAME tree over two DIFFERENT databases: ${offenders.join(', ')}`,
+		).toEqual([]);
+	});
+
+	test('the three legitimate setters are not shard-tier files', () => {
+		// Rule 5 pins the setter census to three; this states the relationship the
+		// shard work must preserve — the tier and the setter set stay DISJOINT.
+		const tier = new Set(shardTierFiles());
+		const overlap = SETTERS.filter((file) => tier.has(file));
+		expect(
+			overlap,
+			`A shard-tier file became a media-root setter. If a tier really must set the key, that is a change to the pairing law and belongs in rule 6's header, not in the setter list: ${overlap.join(', ')}`,
+		).toEqual([]);
+	});
+});
+
+describe('test media root — RULE 6b: the tree pairs with the database, by derivation', () => {
+	/** Four shard names over the database THIS process is actually running on. */
+	const templateDb = process.env.DB_NAME ?? '';
+	const shardDbs = [1, 2, 3, 4].map((n) => `${templateDb}__shard${n}`);
+
+	test('the probe has a real template name to work from (anti-vacuity)', () => {
+		expect(templateDb).not.toBe('');
+		for (const shard of shardDbs) expect(SHARD_NAME_SHAPE.test(shard)).toBe(true);
+	});
+
+	test("each shard's tree basename IS its database name, and no two collide", () => {
+		const paths = shardDbs.map((db) => testMediaRootPath(db));
+		for (const [index, path] of paths.entries()) {
+			expect(
+				path.slice(path.lastIndexOf(sep) + 1),
+				'the tree is keyed by the database name — that pairing is the whole mechanism',
+			).toBe(shardDbs[index] as string);
+		}
+		expect(new Set(paths).size, 'two shards must never share a tree').toBe(paths.length);
+	});
+
+	test("no shard's tree is the template's, and none contains another", () => {
+		const template = testMediaRootPath(templateDb);
+		for (const db of shardDbs) {
+			const shardRoot = testMediaRootPath(db);
+			expect(shardRoot, 'a shard must not sweep or plant in the template tree').not.toBe(template);
+			// Containment either way would make one sweep destroy the other.
+			expect(shardRoot.startsWith(template + sep)).toBe(false);
+			expect(template.startsWith(shardRoot + sep)).toBe(false);
+			// And it is still under the suite's own base, i.e. it inherits rule 4's
+			// distinctness from the installation's media root.
+			expect(assertDistinctFromInstallMediaRoot(shardRoot)).toBe(shardRoot);
+		}
+	});
+
+	test('the DEFAULT derivation follows DEDALO_TEST_DATABASE — nobody has to set the tree', () => {
+		// THE LOAD-BEARING HALF. The `bun test` preload calls ensureTestMediaRoot()
+		// with NO argument, so a shard child process gets its tree from
+		// testDatabaseName(), where an explicit DEDALO_TEST_DATABASE wins. This
+		// proves the shard runner only has to set the DATABASE, which is precisely
+		// why rule 6a can forbid it setting the tree.
+		//
+		// The env is mutated and restored exactly as the sibling marker gate's
+		// distinctness probe does it: `test/` is outside the process.env ban (it is
+		// where a process environment is composed), and other files in this run
+		// derive the suite database from the same variable.
+		const saved = process.env.DEDALO_TEST_DATABASE;
+		try {
+			for (const db of shardDbs) {
+				process.env.DEDALO_TEST_DATABASE = db;
+				expect(
+					testMediaRootPath(),
+					`with DEDALO_TEST_DATABASE=${db} the derived tree must be that shard's`,
+				).toBe(testMediaRootPath(db));
+			}
+			// NEGATIVE CONTROL: with the key cleared the derivation must move — a
+			// helper that ignored it would have passed every assertion above.
+			delete process.env.DEDALO_TEST_DATABASE;
+			expect(testMediaRootPath()).not.toBe(testMediaRootPath(shardDbs[0] as string));
+		} finally {
+			if (saved === undefined) delete process.env.DEDALO_TEST_DATABASE;
+			else process.env.DEDALO_TEST_DATABASE = saved;
+		}
 	});
 });

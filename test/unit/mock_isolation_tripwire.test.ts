@@ -63,14 +63,33 @@
  *        undefined and assigning them defines a shim rather than destroying a
  *        builtin) — those are allowed deliberately, not overlooked.
  *
+ * ── SCOPE (widened 2026-08-25) ───────────────────────────────────────────────
+ * The scan used to read `test/unit/` ONLY (`UNIT_DIR = import.meta.dir`), while
+ * `bun test` runs test/unit, test/parity AND test/integration in the SAME
+ * process — a mock installed by a parity or integration file was invisible to
+ * this gate by construction. The scan now walks `test/**` for `*.test.ts`
+ * (fixtures carry no `.test.ts` files, and the gate excludes itself), and file
+ * identity is the path RELATIVE TO `test/` (`unit/foo.test.ts`), so two tiers
+ * can never collide on a basename. Measured at the widening: the 82 files
+ * outside test/unit install NO module mock and assign NO global — the only
+ * occurrence of `mock.module(` outside unit/ is PROSE in
+ * `integration/publication_api_v2_smoke.test.ts`'s header (it describes a mock
+ * in the publication app's OWN suite, a separate Bun process), which is why the
+ * restore rule now CONVICTS on comment-stripped source: a gate must not
+ * baseline a file for MENTIONING the thing it bans. (Its acquittal side stays
+ * raw — see `installsWithoutRestore` for the measured reason.)
+ *
  * HERMETIC: filesystem reads of tracked test source. No DB, no network, no clock.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { isAbsolute, join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { Glob } from 'bun';
+import { stripComments } from '../helpers/strip_comments.ts';
 
-const UNIT_DIR = join(import.meta.dir);
+/** The scan root: all of `test/`, not just this gate's own tier. */
+const TEST_DIR = join(import.meta.dir, '..');
 
 /**
  * A SHRINK-ONLY BASELINE, not an approval list.
@@ -88,10 +107,10 @@ const UNIT_DIR = join(import.meta.dir);
 const PARTIAL_MOCK_BASELINE: readonly string[] = [
 	// Both capture the REAL module up front and re-mock it back (a restore by
 	// another name), but the stub is narrower than record_scope.ts while active.
-	'record_scope_gates.test.ts',
-	'tools_record_tipo_permission.test.ts',
+	'unit/record_scope_gates.test.ts',
+	'unit/tools_record_tipo_permission.test.ts',
 	// A VIRTUAL module id ('/virtual/…'): there is no file on disk to spread.
-	'transcription_status_panel.test.ts',
+	'unit/transcription_status_panel.test.ts',
 	// (The css.js truncations in client_render_queue_deadlock and
 	// client_show_interface_ownership were FIXED, not baselined, in the same
 	// change that gave this gate its eyes — they were the two the old
@@ -101,14 +120,16 @@ const PARTIAL_MOCK_BASELINE: readonly string[] = [
 
 /** Same shape: files that install a module mock and never call `mock.restore()`. */
 const NO_RESTORE_BASELINE: readonly string[] = [
-	'client_open_window_guard.test.ts',
-	'client_show_interface_ownership.test.ts',
-	'media_master_qualities_config.test.ts',
-	'tm_bulk_revert.test.ts',
+	'unit/client_open_window_guard.test.ts',
+	'unit/client_show_interface_ownership.test.ts',
+	'unit/media_master_qualities_config.test.ts',
+	'unit/tm_bulk_revert.test.ts',
 ];
 
 interface Site {
 	file: string;
+	/** The mocking file's own directory — the base a RELATIVE module id resolves from. */
+	fileDir: string;
 	body: string;
 	/** Absolute module id, or null when it could not be resolved statically. */
 	moduleId: string | null;
@@ -149,7 +170,7 @@ const RUNTIME_CONSTRUCTOR_GLOBALS: readonly string[] = [
 const GLOBAL_NO_RESTORE_BASELINE: readonly string[] = [
 	// Assigns SHOW_DEBUG in `beforeAll`; its `afterAll` restores console.warn /
 	// console.error only, so the flag leaks to every later file in the process.
-	'component_change_value_refresh.test.ts',
+	'unit/component_change_value_refresh.test.ts',
 ];
 
 /** `const x = globalThis;` / `const x = globalThis as …;` — an ALIAS, not a save. */
@@ -165,8 +186,8 @@ type GlobalSite = { file: string; key: string; rhs: string; line: number };
 /** Every global assignment in a unit test, through any alias spelling. */
 function globalAssignments(): GlobalSite[] {
 	const sites: GlobalSite[] = [];
-	for (const file of unitFiles()) {
-		const source = readFileSync(join(UNIT_DIR, file), 'utf8');
+	for (const file of testFiles()) {
+		const source = readFileSync(join(TEST_DIR, file), 'utf8');
 		const targets = new Set<string>(['globalThis']);
 		for (const m of source.matchAll(GLOBAL_ALIAS)) targets.add(m[1] as string);
 
@@ -194,8 +215,8 @@ function globalAssignments(): GlobalSite[] {
 /** Files with teardown (`afterAll`/`afterEach`/`finally`) that touches a global. */
 function filesRestoringGlobals(): Set<string> {
 	const restoring = new Set<string>();
-	for (const file of unitFiles()) {
-		const source = readFileSync(join(UNIT_DIR, file), 'utf8');
+	for (const file of testFiles()) {
+		const source = readFileSync(join(TEST_DIR, file), 'utf8');
 		const targets = new Set<string>(['globalThis']);
 		for (const m of source.matchAll(GLOBAL_ALIAS)) targets.add(m[1] as string);
 
@@ -224,11 +245,11 @@ function filesRestoringGlobals(): Set<string> {
 }
 
 /** This file NAMES `mock.module(` in its prose and its regex; it never calls it. */
-const SELF = 'mock_isolation_tripwire.test.ts';
+const SELF = 'unit/mock_isolation_tripwire.test.ts';
 
-function unitFiles(): string[] {
-	return readdirSync(UNIT_DIR)
-		.filter((name) => name.endsWith('.test.ts') && name !== SELF)
+function testFiles(): string[] {
+	return [...new Glob('**/*.test.ts').scanSync({ cwd: TEST_DIR })]
+		.filter((name) => name !== SELF)
 		.sort();
 }
 
@@ -256,18 +277,25 @@ function splitArguments(source: string): string[] {
  * literals, `import.meta.dir`, file-local consts and `join(...)` over those.
  * Anything else ⇒ null (unresolvable, handled as its own class).
  */
-function evaluatePath(expression: string, consts: Map<string, string>): string | null {
+function evaluatePath(
+	expression: string,
+	consts: Map<string, string>,
+	fileDir: string,
+): string | null {
 	const text = expression.trim();
 	if (/^'[^']*'$/.test(text)) return text.slice(1, -1);
 	if (/^`[^`$]*`$/.test(text)) return text.slice(1, -1);
-	if (text === 'import.meta.dir') return UNIT_DIR;
+	// `import.meta.dir` is the MOCKING FILE's directory, not this gate's: with the
+	// scan spanning tiers the two are no longer the same path, so the caller hands
+	// the file's own directory in.
+	if (text === 'import.meta.dir') return fileDir;
 	const known = consts.get(text);
 	if (known !== undefined) return known;
 	const call = text.match(/^join\(([\s\S]*)\)$/);
 	if (call === null) return null;
 	const parts: string[] = [];
 	for (const argument of splitArguments(call[1] ?? '')) {
-		const value = evaluatePath(argument, consts);
+		const value = evaluatePath(argument, consts, fileDir);
 		if (value === null) return null;
 		parts.push(value);
 	}
@@ -275,12 +303,12 @@ function evaluatePath(expression: string, consts: Map<string, string>): string |
 }
 
 /** File-local `const X = <path expression>` table, in source order. */
-function pathConsts(source: string): Map<string, string> {
+function pathConsts(source: string, fileDir: string): Map<string, string> {
 	const consts = new Map<string, string>();
 	for (const match of source.matchAll(
 		/const\s+([A-Za-z_$][\w$]*)\s*=\s*(join\([^;]*?\)|'[^']*'|`[^`$]*`)\s*;/g,
 	)) {
-		const value = evaluatePath(match[2] ?? '', consts);
+		const value = evaluatePath(match[2] ?? '', consts, fileDir);
 		if (value !== null) consts.set(match[1] as string, value);
 	}
 	return consts;
@@ -336,9 +364,10 @@ function moduleExports(path: string): Set<string> {
 /** Every `mock.module(<id>, () => ({ … }))` site — the REPLACEMENT shape. */
 function objectLiteralMockSites(): Site[] {
 	const sites: Site[] = [];
-	for (const file of unitFiles()) {
-		const source = readFileSync(join(UNIT_DIR, file), 'utf8');
-		const consts = pathConsts(source);
+	for (const file of testFiles()) {
+		const source = readFileSync(join(TEST_DIR, file), 'utf8');
+		const fileDir = dirname(join(TEST_DIR, file));
+		const consts = pathConsts(source, fileDir);
 		let cursor = 0;
 		while (true) {
 			const start = source.indexOf('mock.module(', cursor);
@@ -361,8 +390,9 @@ function objectLiteralMockSites(): Site[] {
 			if (factory === null) continue;
 			sites.push({
 				file,
+				fileDir,
 				body: factory[1] ?? '',
-				moduleId: evaluatePath(source.slice(argsStart, index), consts),
+				moduleId: evaluatePath(source.slice(argsStart, index), consts, fileDir),
 			});
 		}
 	}
@@ -377,7 +407,7 @@ function objectLiteralMockSites(): Site[] {
 function narrowsItsModule(site: Site): boolean {
 	if (site.body.includes('...')) return false;
 	if (site.moduleId === null) return true;
-	const absolute = isAbsolute(site.moduleId) ? site.moduleId : resolve(UNIT_DIR, site.moduleId);
+	const absolute = isAbsolute(site.moduleId) ? site.moduleId : resolve(site.fileDir, site.moduleId);
 	if (!existsSync(absolute)) return true; // virtual id: nothing to spread
 	const real = moduleExports(absolute);
 	if (real.size === 0) return false; // no named exports to lose
@@ -396,6 +426,30 @@ function narrowingFiles(): string[] {
 	].sort();
 }
 
+/**
+ * Does this file install a module mock and never restore it? ASYMMETRIC on
+ * purpose, measured 2026-08-25 at the test/** widening:
+ *
+ *  - CONVICTION reads comment-stripped source. The only `mock.module(` outside
+ *    unit/ is PROSE in `integration/publication_api_v2_smoke.test.ts`'s header
+ *    (it describes a mock inside the publication app's OWN 253-test suite — a
+ *    separate Bun process this gate's process-isolation law does not reach). A
+ *    raw read would have baselined a file for MENTIONING the thing the rule bans.
+ *  - ACQUITTAL reads RAW source, and that is load-bearing, not sloppiness:
+ *    stripping comments here convicted 12 COMPLIANT files. They restore by the
+ *    only means that works — `mock.restore()` does NOT revert `mock.module` in
+ *    bun, so they snapshot the real module and re-mock it back in teardown —
+ *    and each states that fact in a comment naming `mock.restore()`. The raw
+ *    match keeps honoring that documented pattern exactly as the rule always
+ *    has; a textual per-site "re-mocked the real module back" detector would be
+ *    a rebuild of RULE 1's resolver for no new protection. The header's honest
+ *    limitation stands: this reads SOURCE, not behaviour.
+ */
+function installsWithoutRestore(file: string): boolean {
+	const raw = readFileSync(join(TEST_DIR, file), 'utf8');
+	return stripComments(raw).includes('mock.module(') && !raw.includes('mock.restore()');
+}
+
 describe('mock isolation — one process, so a mock is everyone’s', () => {
 	test('NO NEW partial module mock (shrink-only)', () => {
 		const added = narrowingFiles().filter((file) => !PARTIAL_MOCK_BASELINE.includes(file));
@@ -406,10 +460,7 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 	});
 
 	test('NO NEW unrestored module mock (shrink-only)', () => {
-		const unrestored = unitFiles().filter((file) => {
-			const source = readFileSync(join(UNIT_DIR, file), 'utf8');
-			return source.includes('mock.module(') && !source.includes('mock.restore()');
-		});
+		const unrestored = testFiles().filter(installsWithoutRestore);
 		const added = unrestored.filter((file) => !NO_RESTORE_BASELINE.includes(file));
 		expect(
 			added,
@@ -423,12 +474,7 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 			PARTIAL_MOCK_BASELINE.filter((file) => !partial.has(file)),
 			'fixed — delete these names in the same change that fixed them',
 		).toEqual([]);
-		const unrestored = new Set(
-			unitFiles().filter((file) => {
-				const source = readFileSync(join(UNIT_DIR, file), 'utf8');
-				return source.includes('mock.module(') && !source.includes('mock.restore()');
-			}),
-		);
+		const unrestored = new Set(testFiles().filter(installsWithoutRestore));
 		expect(
 			NO_RESTORE_BASELINE.filter((file) => !unrestored.has(file)),
 			'fixed — delete these names in the same change that fixed them',
@@ -436,8 +482,8 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 	});
 
 	test('ANTI-VACUITY: the scan actually finds mock sites', () => {
-		const mockers = unitFiles().filter((file) =>
-			readFileSync(join(UNIT_DIR, file), 'utf8').includes('mock.module('),
+		const mockers = testFiles().filter((file) =>
+			stripComments(readFileSync(join(TEST_DIR, file), 'utf8')).includes('mock.module('),
 		);
 		// 40+ files mock a module today; a scan that found none would pass every
 		// rule above while measuring nothing.
@@ -463,7 +509,7 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 				if (/^class\b/.test(site.rhs)) return false;
 				const id = site.rhs.match(/^([A-Za-z_$][\w$]*)/)?.[1];
 				if (id === undefined) return true;
-				const source = readFileSync(join(UNIT_DIR, site.file), 'utf8');
+				const source = readFileSync(join(TEST_DIR, site.file), 'utf8');
 				return !new RegExp(`class\\s+${id}\\b`).test(source);
 			});
 		expect(
@@ -498,6 +544,8 @@ describe('mock isolation — one process, so a mock is everyone’s', () => {
 		expect(sites.length).toBeGreaterThan(40);
 		// The alias forms must keep being seen: an earlier corpus counted only two
 		// spellings and missed three files, two of which were real offenders.
-		expect([...files].filter((f) => !/^client_/.test(f)).length).toBeGreaterThan(2);
+		// File identity is tier-prefixed since the 2026-08-25 widening — a bare
+		// /^client_/ would match nothing and make this count vacuous.
+		expect([...files].filter((f) => !/^unit\/client_/.test(f)).length).toBeGreaterThan(2);
 	});
 });

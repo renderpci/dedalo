@@ -9,6 +9,13 @@
  *
  * Requires a reachable local Postgres (the same one the parity suite uses). When
  * the admin connection is unavailable the suite skips loudly rather than failing.
+ *
+ * CRASH TEARDOWN: `afterAll` is not a guarantee — a killed process runs no
+ * code — so every DROP here is `WITH (FORCE)` and `beforeAll` first sweeps
+ * this gate's own orphaned `<prefix><dead pid>` scratch databases through the
+ * SHARED helper (test/helpers/scratch_database.ts — ONE implementation; its
+ * header carries the measured incident, `dedalo_install_p4_48373`, 218 MB, the
+ * refusal grammar, and what the sweep does NOT prove).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -19,8 +26,10 @@ import { installFinish } from '../../src/core/install/finish.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
 import { setRootPassword } from '../../src/core/install/root_pw.ts';
+import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
-const SCRATCH_DB = `dedalo_install_p3_${process.pid}`;
+const SCRATCH_PREFIX = 'dedalo_install_p3_';
+const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
 const ROOT_PW = 'Testpw12345';
 
 /** Admin descriptor (target the maintenance DB to CREATE/DROP the scratch one). */
@@ -35,16 +44,22 @@ const scratch: DbConnDescriptor = { ...admin, database: SCRATCH_DB };
 
 let available = false;
 
+// Crash teardown: the sweep lives ONCE in test/helpers/scratch_database.ts —
+// its header carries the measured incident, the refusal grammar, and what the
+// sweep does not prove.
 beforeAll(async () => {
 	const probe = await runPsql(admin, ['-tAc', 'SELECT 1']);
 	if (probe.exitCode !== 0) return;
-	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	// Reclaim what a killed predecessor could not (see the header).
+	await sweepOrphanScratchDatabases(admin, SCRATCH_PREFIX);
+	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 	const created = await runPsql(admin, ['-c', `CREATE DATABASE "${SCRATCH_DB}"`]);
 	available = created.exitCode === 0;
 });
 
 afterAll(async () => {
-	if (available) await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	if (available)
+		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 	// installFinish sealed the scratch state file — reset so sibling suites in
 	// the same run do not observe a sealed install.
 	const { setServerState } = await import('../../src/core/resolve/server_state.ts');

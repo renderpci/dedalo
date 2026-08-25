@@ -6,6 +6,15 @@
  * scratch DATABASE (the install-suite pattern: CREATE DATABASE + seed +
  * DbConnDescriptor seam — never the shared dev DB). The orchestrator's
  * refusal paths run against the real (closed) ownership gate.
+ *
+ * CRASH TEARDOWN: `afterAll` is not a guarantee — a killed process runs no
+ * code — so every DROP here is `WITH (FORCE)` and `beforeAll` first sweeps
+ * this gate's own orphaned `<prefix><dead pid>` scratch databases through the
+ * SHARED helper (test/helpers/scratch_database.ts — ONE implementation; its
+ * header carries the measured incident, `dedalo_install_p4_48373`, 218 MB, the
+ * refusal grammar, and what the sweep does NOT prove).
+ * It also says nothing about the scratch DIRECTORY this gate makes under the
+ * system temp dir, which has its own teardown and its own leak.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -33,6 +42,7 @@ import {
 	snapshotTableRows,
 	updateOntology,
 } from '../../src/core/ontology/ontology_update.ts';
+import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
 const SCRATCH_ROOT = join(
 	process.env.TMPDIR ?? '/tmp',
@@ -345,7 +355,8 @@ describe('checkRemoteServer posts a JSON body (TS API wire)', () => {
 // DESTRUCTIVE copy-file import — throwaway scratch DATABASE only
 // ---------------------------------------------------------------------------
 
-const SCRATCH_DB = `dedalo_ontology_ingest_${process.pid}`;
+const SCRATCH_PREFIX = 'dedalo_ontology_ingest_';
+const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
 const admin: DbConnDescriptor = {
 	database: 'postgres',
 	host: config.db.host,
@@ -356,17 +367,23 @@ const admin: DbConnDescriptor = {
 const scratch: DbConnDescriptor = { ...admin, database: SCRATCH_DB };
 let scratchAvailable = false;
 
+// Crash teardown: the sweep lives ONCE in test/helpers/scratch_database.ts —
+// its header carries the measured incident, the refusal grammar, and what the
+// sweep does not prove.
 beforeAll(async () => {
 	const probe = await runPsql(admin, ['-tAc', 'SELECT 1']);
 	if (probe.exitCode !== 0) return;
-	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	// Reclaim what a killed predecessor could not (see the header).
+	await sweepOrphanScratchDatabases(admin, SCRATCH_PREFIX);
+	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 	const created = await runPsql(admin, ['-c', `CREATE DATABASE "${SCRATCH_DB}"`]);
 	scratchAvailable = created.exitCode === 0;
 	if (scratchAvailable) await installDbFromSeed(scratch);
 }, 120000);
 
 afterAll(async () => {
-	if (scratchAvailable) await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	if (scratchAvailable)
+		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 });
 
 async function scratchCount(table: string, where = ''): Promise<number> {

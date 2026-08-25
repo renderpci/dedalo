@@ -7,6 +7,15 @@
  *   root pw → seal → root login verified.
  *
  * Skips loudly when no admin Postgres connection is available.
+ *
+ * CRASH TEARDOWN: `afterAll` is not a guarantee — a killed process runs no
+ * code — so every DROP here is `WITH (FORCE)` and `beforeAll` first sweeps
+ * this gate's own orphaned `<prefix><dead pid>` scratch databases through the
+ * SHARED helper (test/helpers/scratch_database.ts — ONE implementation; its
+ * header carries the measured incident, `dedalo_install_p4_48373`, 218 MB, the
+ * refusal grammar, and what the sweep does NOT prove).
+ * It also says nothing about the scratch DIRECTORY this gate makes under the
+ * system temp dir, which has its own teardown and its own leak.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -16,8 +25,10 @@ import { join, resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
+import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
-const SCRATCH_DB = `dedalo_install_e2e_${process.pid}`;
+const SCRATCH_PREFIX = 'dedalo_install_e2e_';
+const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
 const CLI = resolve(import.meta.dir, '../../scripts/install.ts');
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_install_e2e_'));
 
@@ -31,16 +42,22 @@ const admin: DbConnDescriptor = {
 
 let available = false;
 
+// Crash teardown: the sweep lives ONCE in test/helpers/scratch_database.ts —
+// its header carries the measured incident, the refusal grammar, and what the
+// sweep does not prove.
 beforeAll(async () => {
 	const probe = await runPsql(admin, ['-tAc', 'SELECT 1']);
 	if (probe.exitCode !== 0) return;
-	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	// Reclaim what a killed predecessor could not (see the header).
+	await sweepOrphanScratchDatabases(admin, SCRATCH_PREFIX);
+	await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 	const created = await runPsql(admin, ['-c', `CREATE DATABASE "${SCRATCH_DB}"`]);
 	available = created.exitCode === 0;
 });
 
 afterAll(async () => {
-	if (available) await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}"`]);
+	if (available)
+		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${SCRATCH_DB}" WITH (FORCE)`]);
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
