@@ -282,58 +282,427 @@ final class component_input_text_test extends TestCase {
 
 
 	/**
+	* BUILD_SEARCH_QUERY_OBJECT
+	* Helper. Creates a search query_object like the client sends for this component
+	* @param string|array $q
+	* @param string|null $q_operator
+	* @param bool $q_split
+	* @return object $query_object
+	*/
+	private function build_search_query_object( $q, ?string $q_operator=null, bool $q_split=true ) : object {
+
+		$query_object = new stdClass();
+			$query_object->q			= is_array($q) ? $q : [$q];
+			$query_object->q_operator	= $q_operator;
+			$query_object->q_split		= $q_split;
+			$query_object->type			= 'jsonb';
+			$query_object->lang			= 'all';
+			$query_object->component_path = ['components', self::$tipo, 'dato'];
+
+			$path_item = new stdClass();
+				$path_item->section_tipo	= self::$section_tipo;
+				$path_item->component_tipo	= self::$tipo;
+				$path_item->model			= self::$model;
+				$path_item->name			= 'Title';
+			$query_object->path = [$path_item];
+
+		return $query_object;
+	}//end build_search_query_object
+
+
+
+	/**
+	* FIRST_LEAF
+	* Helper. Regex cases are wrapped in one group per lang, descend to the first real leaf
+	* @param object $node
+	* @return object $node
+	*/
+	private function first_leaf(object $node) : object {
+		while (!property_exists($node, 'path')) {
+			$op   = array_key_first(get_object_vars($node));
+			$node = $node->{$op}[0];
+		}
+		return $node;
+	}
+
+	/**
+	* LANG_GROUPS
+	* Helper. Returns the list of per lang groups of a wrapped regex case
+	* @param object $node
+	* @param string $expected_operator	as '$or' | '$and'
+	* @return array
+	*/
+	private function lang_groups(object $node, string $expected_operator) : array {
+		$this->assertTrue(
+			property_exists($node, $expected_operator),
+			'Expected the regex case wrapped in a '.$expected_operator.' group per lang'
+		);
+		return $node->{$expected_operator};
+	}
+
+	/**
+	* SEARCH_LANGS
+	* @return array
+	*/
+	private function search_langs() : array {
+		return component_common::get_search_langs('all', RecordObj_dd::get_translatable(self::$tipo));
+	}
+
+
+
+	/**
 	* TEST_resolve_query_object_sql
+	* Default case. Free text without operator is resolved as 'contains'
 	* @return void
 	*/
 	public function test_resolve_query_object_sql() {
 
-		$query_object = json_decode('{
-			    "q": [
-			        "as"
-			    ],
-			    "q_operator": null,
-			    "path": [
-			        {
-			            "section_tipo": "test3",
-			            "component_tipo": "test52",
-			            "model": "component_input_text",
-			            "name": "Title"
-			        }
-			    ],
-			    "type": "jsonb",
-			    "component_path": [
-			        "components",
-			        "test3",
-			        "dato"
-			    ],
-			    "lang": "all"
-			}
-		');
+		$tree = component_input_text::resolve_query_object_sql(
+			$this->build_search_query_object('as')
+		);
 
-		$value = component_text_area::resolve_query_object_sql(
-			$query_object
+		// positive regex cases are an $or of one leaf per lang
+		$groups = $this->lang_groups($tree, '$or');
+		$this->assertCount(count($this->search_langs()), $groups, 'Expected one leaf per lang');
+		$this->assertSame(
+			$this->search_langs(),
+			array_map(fn($g)=>$g->lang, $groups),
+			'Each leaf must target one lang, so the regex never sees the lang keys'
 		);
-		// dump($value, ' value ++ '.to_string());
+		$value = $this->first_leaf($tree);
 
-		$this->assertTrue(
-			$value->operator==='~*',
-				'expected value do not match:' . PHP_EOL
-				.' expected: ~*' . PHP_EOL
-				.' value: '.to_string($value->operator)
+		$this->assertSame(
+			'~*',
+			$value->operator,
+			'Unexpected operator for the default contains case'
+		);
+		$this->assertSame(
+			"'.*\\[\".*as.*'",
+			$value->q_parsed,
+			'Unexpected q_parsed for the default contains case'
 		);
 		$this->assertTrue(
-			$value->q_parsed==="'.*\".*as.*'",
-				'expected value do not match:' . PHP_EOL
-				.' expected: '. "'.*\".*as.*'" . PHP_EOL
-				.' value: '.to_string($value->q_parsed)
-		);
-		$this->assertTrue(
-			$value->unaccent===true,
-				'expected value do not match:' . PHP_EOL
-				.' expected: true' . PHP_EOL
-				.' value: '.to_string($value->unaccent)
+			$value->unaccent,
+			'Expected unaccent true for the default contains case'
 		);
 	}//end test_resolve_query_object_sql
+
+
+
+	/**
+	* TEST_resolve_query_object_sql_split
+	* Multiple words without operator are still split in one clause per word
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_split() {
+
+		$value = component_input_text::resolve_query_object_sql(
+			$this->build_search_query_object('Pepe Garcia')
+		);
+
+		$this->assertTrue(
+			property_exists($value, '$and'),
+			'Expected an $and group when the search term is split'
+		);
+		$this->assertCount(
+			2,
+			$value->{'$and'},
+			'Expected one clause per word'
+		);
+	}//end test_resolve_query_object_sql_split
+
+
+
+	/**
+	* TEST_resolve_query_object_sql_similar
+	* Operator '=' typed inline, with and without a space, and with multiple words.
+	* The operator is applied always to the whole search term
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_similar() {
+
+		$ar_cases = [
+			'=Pepe'			=> 'Pepe',
+			'= Pepe'		=> 'Pepe',
+			'=Pepe Garcia'	=> 'Pepe Garcia',
+			'= Pepe Garcia'	=> 'Pepe Garcia'
+		];
+
+		foreach ($ar_cases as $q => $expected_value) {
+
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object($q)
+			));
+
+			$this->assertSame(
+				'~*',
+				$value->operator,
+				'Unexpected operator for the similar case: ' . $q
+			);
+			$this->assertSame(
+				"'.*\"" . $expected_value . "\".*'",
+				$value->q_parsed,
+				'The operator must be applied to the whole search term: ' . $q
+			);
+			$this->assertTrue(
+				$value->unaccent,
+				'Expected unaccent true for the similar case: ' . $q
+			);
+		}
+	}//end test_resolve_query_object_sql_similar
+
+
+
+	/**
+	* TEST_resolve_query_object_sql_different
+	* Operator '!=' must be the exact complement of '=', so same operator family
+	* and unaccent, plus the records without value
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_different() {
+
+		foreach (['!=Pepe Garcia', '!= Pepe Garcia'] as $q) {
+
+			$tree = component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object($q)
+			);
+
+			// negative regex cases are an $and over langs (must not match in ANY lang)
+			$groups = $this->lang_groups($tree, '$and');
+			$this->assertCount(count($this->search_langs()), $groups, 'Expected one group per lang: ' . $q);
+
+			$this->assertTrue(
+				property_exists($groups[0], '$or'),
+				'Expected an $or group with the null case: ' . $q
+			);
+			$this->assertCount(
+				2,
+				$groups[0]->{'$or'},
+				'Expected the regex clause plus the null clause: ' . $q
+			);
+
+			$regex_clause = $groups[0]->{'$or'}[0];
+			$null_clause  = $groups[0]->{'$or'}[1];
+
+			$this->assertSame(
+				'!~*',
+				$regex_clause->operator,
+				'The different case must be case insensitive, as the similar one: ' . $q
+			);
+			$this->assertTrue(
+				$regex_clause->unaccent,
+				'The different case must use unaccent, as the similar one: ' . $q
+			);
+			$this->assertSame(
+				"'.*\"Pepe Garcia\".*'",
+				$regex_clause->q_parsed,
+				'The operator must be applied to the whole search term: ' . $q
+			);
+			$this->assertSame(
+				'IS NULL',
+				$null_clause->operator,
+				'A record without value is different from the given value too: ' . $q
+			);
+		}
+	}//end test_resolve_query_object_sql_different
+
+
+
+	/**
+	* TEST_resolve_query_object_sql_empty
+	* Operator '!*'. A record is empty only when it's empty in every lang, so the
+	* lang groups are combined with $and, and every lang checks null and empty array
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_empty() {
+
+		$translatable	= RecordObj_dd::get_translatable(self::$tipo);
+		$ar_langs		= component_common::get_search_langs('all', $translatable);
+
+		// The operator can arrive typed inline or in his own channel
+		$ar_query_object = [
+			$this->build_search_query_object('!*'),
+			$this->build_search_query_object('only_operator', '!*')
+		];
+
+		foreach ($ar_query_object as $query_object) {
+
+			$value = component_input_text::resolve_query_object_sql($query_object);
+
+			$this->assertTrue(
+				property_exists($value, '$and'),
+				'Expected empty in every lang ($and between langs)'
+			);
+			$this->assertCount(
+				count($ar_langs),
+				$value->{'$and'},
+				'Expected one group per lang'
+			);
+
+			foreach ($value->{'$and'} as $key => $lang_group) {
+
+				$this->assertTrue(
+					property_exists($lang_group, '$or'),
+					'Expected null or empty array inside every lang ($or)'
+				);
+				$this->assertSame(
+					'IS NULL',
+					$lang_group->{'$or'}[0]->operator,
+					'Unexpected null operator'
+				);
+				$this->assertSame(
+					'=',
+					$lang_group->{'$or'}[1]->operator,
+					'Unexpected empty array operator'
+				);
+				$this->assertSame(
+					"'[]'",
+					$lang_group->{'$or'}[1]->q_parsed,
+					'Unexpected empty array value'
+				);
+				$this->assertSame(
+					$ar_langs[$key],
+					$lang_group->{'$or'}[0]->lang,
+					'Both checks of a group must share the same lang'
+				);
+				$this->assertSame(
+					$ar_langs[$key],
+					$lang_group->{'$or'}[1]->lang,
+					'Both checks of a group must share the same lang'
+				);
+			}
+		}
+	}//end test_resolve_query_object_sql_empty
+
+
+
+	/**
+	* TEST_resolve_query_object_sql_not_empty
+	* Operator '*'. Exact complement of '!*': content in some lang ($or between
+	* langs) and, inside a lang, not null AND not an empty array
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_not_empty() {
+
+		$translatable	= RecordObj_dd::get_translatable(self::$tipo);
+		$ar_langs		= component_common::get_search_langs('all', $translatable);
+
+		$value = component_input_text::resolve_query_object_sql(
+			$this->build_search_query_object('*')
+		);
+
+		$this->assertTrue(
+			property_exists($value, '$or'),
+			'Expected content in some lang ($or between langs)'
+		);
+		$this->assertCount(
+			count($ar_langs),
+			$value->{'$or'},
+			'Expected one group per lang'
+		);
+
+		foreach ($value->{'$or'} as $lang_group) {
+
+			$this->assertTrue(
+				property_exists($lang_group, '$and'),
+				'Expected not null AND not empty array inside every lang'
+			);
+			$this->assertSame(
+				'IS NOT NULL',
+				$lang_group->{'$and'}[0]->operator,
+				'Unexpected not null operator'
+			);
+			$this->assertSame(
+				'!=',
+				$lang_group->{'$and'}[1]->operator,
+				'Unexpected not empty array operator'
+			);
+			$this->assertSame(
+				"'[]'",
+				$lang_group->{'$and'}[1]->q_parsed,
+				'Unexpected empty array value'
+			);
+		}
+	}//end test_resolve_query_object_sql_not_empty
+
+
+
+	/**
+	* TEST_resolve_query_object_sql_operators
+	* Remaining operators of search_operators_info()
+	* @return void
+	*/
+	public function test_resolve_query_object_sql_operators() {
+
+		// not contain. The inner hyphens of the search term must be preserved
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('-2000-2010')
+			));
+			$this->assertSame(
+				'!~*',
+				$value->operator,
+				'Unexpected operator for the does not contain case'
+			);
+			$this->assertSame(
+				"'.*\\[\".*2000-2010.*'",
+				$value->q_parsed,
+				'Only the leading operator must be removed, not every hyphen'
+			);
+
+		// ends with. The closing quote must follow the value, else it's a plain contains
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('*caso')
+			));
+			$this->assertSame(
+				"'.*\\[\".*caso\".*'",
+				$value->q_parsed,
+				'Unexpected q_parsed for the ends with case'
+			);
+
+		// begins with
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('caso*')
+			));
+			$this->assertSame(
+				"'.*[,[] ?\"caso.*'",
+				$value->q_parsed,
+				'Begins with must accept the first value ([\") and any following one (, \")'
+			);
+
+		// contains explicit
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('*caso*')
+			));
+			$this->assertSame(
+				"'.*\\[\".*caso.*'",
+				$value->q_parsed,
+				'Unexpected q_parsed for the contains case'
+			);
+
+		// literal. Operators are never parsed inside a literal
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object("'= Pepe'")
+			));
+			$this->assertSame(
+				'~',
+				$value->operator,
+				'Unexpected operator for the literal case'
+			);
+			$this->assertSame(
+				"'.*\"= Pepe\".*'",
+				$value->q_parsed,
+				'A literal must keep his content untouched'
+			);
+
+		// duplicated
+			$value = $this->first_leaf( component_input_text::resolve_query_object_sql(
+				$this->build_search_query_object('!!')
+			));
+			$this->assertTrue(
+				$value->duplicated,
+				'Expected duplicated true for the !! case'
+			);
+	}//end test_resolve_query_object_sql_operators
 
 
 

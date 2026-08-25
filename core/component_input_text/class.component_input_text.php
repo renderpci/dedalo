@@ -430,9 +430,46 @@ class component_input_text extends component_common {
 				? (!empty($query_object->q[0]) ? $query_object->q[0] : '')
 				: ($query_object->q ?? '');
 
+		// force string. API callers can send numbers (as a section_id)
+			if (!is_string($q)) {
+				$q = to_string($q);
+			}
+
+		// q_operator. Operator received in his own channel (as the search user presets or the API)
+			$q_operator = $query_object->q_operator ?? null;
+
+		// only_operator case. The client (search/js/search.js) overwrites q with this
+		// sentinel when the user sets an operator but no value. It's not a search term
+			if ($q==='only_operator') {
+				$q = '';
+			}
+
+		// trim. The typed operator is usually separated from the value, as '= Pepe'
+			$q = trim($q);
+
+		// inline operator case. This component has no q_operator input in search mode,
+		// so the user types the operator inside the value, as '!=Pepe'.
+		// Move it to the q_operator channel and remove it from the search term
+			$inline_q_operator = component_common::extract_inline_q_operator(
+				$q,
+				['!*', '*', '!=', '==', '=', '-', '!!']
+			);
+			if ($inline_q_operator!==null) {
+				$q_operator	= $inline_q_operator->operator;
+				$q			= $inline_q_operator->value;
+			}
+
+		// wildcard shape case, as '*text*', 'text*' or '*text'. They are operators too,
+		// but they are resolved from the value itself and not from the q_operator channel
+			$is_wildcard_shape = ($q!=='' && (mb_substr($q, 0, 1)==='*' || mb_substr($q, -1)==='*'));
+
 		// split q case
+		// (!) Only free phrases are split. An operator is always applied to the whole
+		// search term, splitting '= Pepe Garcia' would resolve the operator alone
+		// in one side and lose it in the other one, and splitting '*Pepe Garcia*'
+		// would turn one 'contains' into 'ends with' AND 'begins with'
 			$q_split = $query_object->q_split ?? false;
-			if ($q_split===true && !search::is_literal($q)) {
+			if ($q_split===true && empty($q_operator) && $is_wildcard_shape===false && !search::is_literal($q)) {
 				$q_items = preg_split('/\s/', $q);
 				if (count($q_items)>1) {
 					return self::handle_query_splitting($query_object, $q_items, '$and');
@@ -442,133 +479,90 @@ class component_input_text extends component_common {
 		// escape q string for DB
 			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
-		// q_operator
-			$q_operator = $query_object->q_operator ?? null;
-
 		// type. Always set fixed values
 			$query_object->type = 'string';
 
+		// regex cases control. Every case that builds a REGEX must run against the values
+		// of ONE lang, never against the whole multi-language blob (see after the switch)
+			$regex_case		= false;
+			$regex_negative	= false;
+
 		switch (true) {
 			# EMPTY VALUE
-			case ($q==='!*'):
-				$operator	= 'IS NULL';
-				$q_clean	= '';
+			case ($q_operator==='!*'):
 
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-
-				// Search empty only in current lang
-				// Resolve based on if is translatable
+				// Resolve lang based on if the component is translatable
 					$path_end		= end($query_object->path);
 					$component_tipo	= $path_end->component_tipo;
-					$translatable = RecordObj_dd::get_translatable($component_tipo);
+					$translatable	= RecordObj_dd::get_translatable($component_tipo);
 
 					$lang = (isset($query_object->lang) && $query_object->lang!=='all')
 						? $query_object->lang
 						: 'all';
 
-					$lang_query_not_null = component_common::resolve_query_object_lang_behavior( (object)[
+				// A record is empty only when it's empty in every lang
+					$query_object = component_common::resolve_query_object_empty_behavior( (object)[
 						'query_object'	=> $query_object,
-						'operator'		=> 'IS NULL',
 						'lang'			=> $lang,
-						'translatable'	=> $translatable
+						'translatable'	=> $translatable,
+						'empty'			=> true
 					]);
-					$lang_query_empty = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> '=',
-						'q_parsed'		=> '\'[]\'',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-
-					$lang_query_objects = array_merge($lang_query_not_null, $lang_query_empty);
-
-					$logical_operator = '$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $lang_query_objects;
-
-				$logical_operator = '$and';
-				$final_query_json = new stdClass;
-					$final_query_json->$logical_operator = [$langs_query_json];
-				$query_object = $final_query_json;
 				break;
 			# NOT EMPTY
-			case ($q==='*'):
-				$operator = 'IS NOT NULL';
-				$q_clean  = '';
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
+			case ($q_operator==='*'):
+
+				// Resolve lang based on if the component is translatable
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$translatable	= RecordObj_dd::get_translatable($component_tipo);
 
 					$lang = (isset($query_object->lang) && $query_object->lang!=='all')
 						? $query_object->lang
 						: 'all';
 
-					$path_end		= end($query_object->path);
-					$component_tipo	= $path_end->component_tipo;
-
-					$translatable = RecordObj_dd::get_translatable($component_tipo);
-
-					$lang_query_objects_null = component_common::resolve_query_object_lang_behavior( (object)[
+				// A record has content when it has content in some lang
+					$query_object = component_common::resolve_query_object_empty_behavior( (object)[
 						'query_object'	=> $query_object,
-						'operator'		=> 'IS NOT NULL',
 						'lang'			=> $lang,
-						'translatable'	=> $translatable
+						'translatable'	=> $translatable,
+						'empty'			=> false
 					]);
-					$lang_query_objects_empty = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> '!=',
-						'q_parsed'		=> '\'[]\'',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-
-					$lang_query_objects = array_merge($lang_query_objects_null, $lang_query_objects_empty);
-
-					$logical_operator = '$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $lang_query_objects;
-
-				# override
-				$logical_operator = '$and';
-				$final_query_json = new stdClass;
-					$final_query_json->$logical_operator = [$langs_query_json];
-				$query_object = $final_query_json;
 				break;
 			# IS DIFFERENT
-			case (strpos($q, '!=')===0 || $q_operator==='!='):
-				$operator = '!=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator	= '!~';
+			case ($q_operator==='!='):
+				$regex_case = true;
+				$regex_negative = true;
+				$q_clean = $q;
+				// (!) Must be the exact complement of the 'IS SIMILAR' case below,
+				// so the same operator family (case insensitive) and unaccent are used
+				$query_object->operator	= '!~*';
+				$query_object->unaccent	= true;
 				$first_char	= mb_substr($q_clean, 0, 1);
 				$last_char	= mb_substr($q_clean, -1);
 				switch (true) {
-					// contains
+					// not contains
 					case ($first_char==='*' && $last_char==='*'):
 						$q_clean = str_replace('*', '', $q_clean);
-						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+						$query_object->q_parsed	= '\'.*\[".*'.component_common::escape_search_regex($q_clean).'.*\'';
 						break;
-					// begins with
+					// not ends with
 					case ($first_char==='*'):
 						$q_clean = str_replace('*', '', $q_clean);
-						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+						$query_object->q_parsed	= '\'.*\[".*'.component_common::escape_search_regex($q_clean).'".*\'';
 						break;
-					// ends with
+					// not begins with
 					case ($last_char==='*'):
 						$q_clean = str_replace('*', '', $q_clean);
-						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*"\'';
+						$query_object->q_parsed	= '\'.*[,[] ?"'.component_common::escape_search_regex($q_clean).'.*\'';
 						break;
 					default:
-						$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+						$query_object->q_parsed	= '\'.*"'.component_common::escape_search_regex($q_clean).'".*\'';
 						break;
 				}
-				$query_object->unaccent	= false;
 				break;
 			# IS EXACTLY EQUAL ==
-			case (strpos($q, '==')===0 || $q_operator==='=='):
-				$operator = '==';
-				$q_clean  = str_replace($operator, '', $q);
+			case ($q_operator==='=='):
+				$q_clean = $q;
 				$query_object->operator = '@>';
 				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
 				$query_object->unaccent = false;
@@ -593,57 +587,25 @@ class component_input_text extends component_common {
 				}
 				break;
 			# IS SIMILAR
-			case (strpos($q, '=')===0 || $q_operator==='='):
-				$operator = '=';
-				$q_clean  = str_replace($operator, '', $q);
+			case ($q_operator==='='):
+				$regex_case = true;
+				$q_clean = $q;
 				$query_object->operator	= '~*';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->q_parsed	= '\'.*"'.component_common::escape_search_regex($q_clean).'".*\'';
 				$query_object->unaccent	= true;
 				break;
 			# NOT CONTAIN
-			case (strpos($q, '-')===0 || $q_operator==='-'):
-				$operator = '!~*';
-				$q_clean  = str_replace('-', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
-				break;
-			# CONTAIN EXPLICIT
-			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
-				break;
-			# ENDS WITH
-			case (substr($q, 0, 1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*"\'';
-				$query_object->unaccent	= true;
-				break;
-			# BEGINS WITH
-			case (substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
-				break;
-			# LITERAL
-			case (search::is_literal($q)===true):
-				$operator = '~';
-				$q_clean  = str_replace("'", '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+			case ($q_operator==='-'):
+				$regex_case = true;
+				$regex_negative = true;
+				$q_clean = $q;
+				$query_object->operator	= '!~*';
+				$query_object->q_parsed	= '\'.*\[".*'.component_common::escape_search_regex($q_clean).'.*\'';
 				$query_object->unaccent	= true;
 				break;
 			# DUPLICATED
-			case (strpos($q, '!!')===0 || $q_operator==='!!'):
-				$operator = '=';
-				$query_object->operator 	= $operator;
+			case ($q_operator==='!!'):
+				$query_object->operator 	= '=';
 				$query_object->unaccent		= false; // (!) always false
 				$query_object->duplicated	= true;
 				// Resolve lang based on if is translatable
@@ -651,15 +613,76 @@ class component_input_text extends component_common {
 					$component_tipo		= $path_end->component_tipo;
 					$query_object->lang	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				break;
+			# CONTAIN EXPLICIT
+			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
+				$regex_case = true;
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*\[".*'.component_common::escape_search_regex($q_clean).'.*\'';
+				$query_object->unaccent	= true;
+				break;
+			# ENDS WITH
+			case (substr($q, 0, 1)==='*'):
+				$regex_case = true;
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator	= $operator;
+				// (!) The closing quote must follow the value, else it's a plain 'contains'
+				$query_object->q_parsed	= '\'.*\[".*'.component_common::escape_search_regex($q_clean).'".*\'';
+				$query_object->unaccent	= true;
+				break;
+			# BEGINS WITH
+			case (substr($q, -1)==='*'):
+				$regex_case = true;
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator	= $operator;
+				// (!) A value starts right after '["' (first value of the array) or after
+				// ', "' (any following value), so both separators must be accepted
+				$query_object->q_parsed	= '\'.*[,[] ?"'.component_common::escape_search_regex($q_clean).'.*\'';
+				$query_object->unaccent	= true;
+				break;
+			# LITERAL
+			case (search::is_literal($q)===true):
+				$regex_case = true;
+				$operator = '~';
+				$q_clean  = str_replace("'", '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*"'.component_common::escape_search_regex($q_clean).'".*\'';
+				$query_object->unaccent	= true;
+				break;
 			# DEFAULT CONTAIN
 			default:
+				$regex_case = true;
 				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);
+				// (!) '+' is not a search operator, it must be kept as part of the
+				// search term (as 'C++'), so it's NOT stripped here
+				$q_clean  = $q;
 				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*\[".*'.component_common::escape_search_regex($q_clean).'.*\'';
 				$query_object->unaccent	= true;
 				break;
 		}//end switch (true)
+
+		// regex cases. Wrap the resolved leaf into one group per lang
+			if ($regex_case===true) {
+
+				$path_end		= end($query_object->path);
+				$component_tipo	= $path_end->component_tipo;
+				$translatable	= RecordObj_dd::get_translatable($component_tipo);
+
+				$lang = (isset($query_object->lang) && $query_object->lang!=='all')
+					? $query_object->lang
+					: 'all';
+
+				$query_object = component_common::resolve_query_object_langs_behavior( (object)[
+					'query_object'	=> $query_object,
+					'lang'			=> $lang,
+					'translatable'	=> $translatable,
+					'negative'		=> $regex_negative
+				]);
+			}
 
 
 		return $query_object;
