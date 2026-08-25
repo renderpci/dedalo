@@ -1,7 +1,10 @@
 /**
  * R2 gate: tool_import_files. The basename matcher + named-processor allowlist
  * are unit-tested; the module loads with its 4 actions; file_processor fails
- * CLOSED for unregistered names (SEC-053 collapse / crop_50 ledgered).
+ * CLOSED for unregistered names (SEC-053 collapse). `crop_50` is the first
+ * ported processor (`tools/tool_import_files/server/script_files/numisdata/crop_50.ts`,
+ * registered at module load) — its region-detection/pairing pure logic is
+ * covered separately in `test/unit/coin_split.test.ts` (no ImageMagick spawn).
  *
  * DDO-map role writes (setComponentsData): pure routing/lang/copy-plan logic
  * runs credless; the WRITE drives run scratch-twin against the REAL DB
@@ -156,7 +159,7 @@ describe('basename matcher', () => {
 
 describe('named-processor allowlist (SEC-053 collapse)', () => {
 	test('unregistered / invalid names are refused', () => {
-		expect(getFileProcessor('crop_50')).toBeNull();
+		expect(getFileProcessor('not_a_registered_processor_xyz')).toBeNull();
 		expect(getFileProcessor('../evil')).toBeNull();
 		expect(getFileProcessor('a b')).toBeNull();
 	});
@@ -166,6 +169,14 @@ describe('named-processor allowlist (SEC-053 collapse)', () => {
 		expect(() =>
 			registerFileProcessor('bad name', async () => ({ ok: true, message: '' })),
 		).toThrow();
+	});
+	test('crop_50 is registered once the tool module has loaded', async () => {
+		// Load-order independent: force the registration side effect (module-load
+		// time `registerFileProcessor('crop_50', ...)` in
+		// tools/tool_import_files/server/index.ts) regardless of which other test
+		// in this file/process happened to trigger it first.
+		await getLoadedTool('tool_import_files');
+		expect(getFileProcessor('crop_50')).not.toBeNull();
 	});
 });
 
@@ -313,11 +324,30 @@ describe('tool_import_files module', () => {
 				principal,
 				userId: -1,
 				background: false,
-				options: { file_processor: 'crop_50' },
+				options: { file_processor: 'not_a_registered_processor_xyz' },
 			}),
 		);
 		expect(refusal.code).toBe('tool.unsupported_target');
 		expect(refusal.publicMessage).toContain('not a registered processor');
+	});
+
+	test('crop_50 is registered and itself fails closed on insufficient options', async () => {
+		// crop_50 is the first ported file_processor (script_files/numisdata/crop_50.ts) — it
+		// is now REGISTERED, so this exercises its own guard clause rather than
+		// the allowlist refusal: no file_path/file_name/user_id/key_dir means it
+		// cannot even attempt the ImageMagick pipeline, and says so.
+		const loaded = await getLoadedTool('tool_import_files');
+		const principal = await resolvePrincipal(-1);
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.file_processor, 'file_processor').handler({
+				principal,
+				userId: -1,
+				background: false,
+				options: { file_processor: 'crop_50' },
+			}),
+		);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain('missing file_path/file_name/user_id/key_dir');
 	});
 
 	test('import_files rejects missing required params (no run without a media component)', async () => {
@@ -339,6 +369,33 @@ describe('tool_import_files module', () => {
 		);
 		expect(refusal.code).toBe('request.invalid_options');
 		expect(refusal.publicMessage).toContain('Missing');
+	});
+
+	testIfDb('import_files refuses a MISSING section_id rather than defaulting it to 0', async () => {
+		// Regression: `Number(o.section_id ?? 0)` used to silently address "record
+		// 0" for a request that never carried a caller section_id at all — 0 is a
+		// structurally valid SectionId elsewhere in the engine (concepts/
+		// section_id.ts allows negatives too), so nothing downstream caught it,
+		// and a portal write against that bogus address left an undeletable
+		// orphan record. Absent must refuse loudly, never coerce to 0.
+		const loaded = await getLoadedTool('tool_import_files');
+		const principal = await resolvePrincipal(-1);
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+				principal,
+				userId: -1,
+				background: true,
+				options: {
+					tool_config: { ddo_map: [{ role: 'target_component', tipo: 'test99' }] },
+					section_tipo: 'test2',
+					tipo: 'test99',
+					// section_id deliberately omitted.
+					files_data: [{ name: 'a.jpg' }],
+				},
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('section_id');
 	});
 
 	testIfDb('import_files with a ddo_map requires the target_component role', async () => {

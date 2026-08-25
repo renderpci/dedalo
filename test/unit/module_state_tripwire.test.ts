@@ -252,9 +252,10 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// (keys are code-authored door names); cleared only by the test seam
 	// resetSectionIdCoercionStateForTests.
 	'core/concepts/section_id.ts:warnCounts',
-	// File-processor registry (SEC-053 fail-closed, EMPTY until crop_50 is
-	// ported): registration-only like the two channels above — a Readonly type
-	// would outlaw the registerFileProcessor door it exists to provide.
+	// File-processor registry (SEC-053 fail-closed allowlist — crop_50 is the
+	// first ported entry, tools/tool_import_files/server/index.ts registers it
+	// at module load): registration-only like the two channels above — a
+	// Readonly type would outlaw the registerFileProcessor door it exists to provide.
 	'core/tools/import_files_match.ts:FILE_PROCESSORS',
 	// (The former "frozen constant tables" block — 17 Sets — was annotated
 	// ReadonlySet at the declarations 2026-07-10 and removed from this list:
