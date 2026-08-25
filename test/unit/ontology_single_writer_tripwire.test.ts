@@ -37,6 +37,16 @@ const DELETE_TLD_ALLOWLIST = new Set([
 	// born through upsertDdOntologyNode and die with the test. situation()
 	// refuses any TLD outside /^zz[a-z]*$/, so this door cannot reach a real TLD.
 	'src/core/test_data/situations/situation.ts',
+	// dropSyntheticHierarchies: teardown of the SUITE's generated geography
+	// hierarchies (2026-08-25). The call iterates ONLY the closed
+	// SYNTHETIC_HIERARCHY_TLDS pair (testgeoa/testgeob — compile-time
+	// constants, no caller-supplied TLD can reach it), runs behind
+	// assertTestDatabase, and sweeps the dd_ontology PROJECTION only AFTER
+	// deleteOntologyByTld has removed the matrix_ontology source through the
+	// delete driver — full teardown of both sides, not a second rebuild
+	// authority. The T3 SQL ratchet is what forbids a raw dd_ontology DELETE
+	// there, making deleteTldNodes the one sanctioned sweep.
+	'src/core/test_data/synthetic_hierarchy_fixture.ts',
 ]);
 
 function sourceFiles(): string[] {

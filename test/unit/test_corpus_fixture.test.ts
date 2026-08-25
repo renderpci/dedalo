@@ -41,6 +41,7 @@ import { join } from 'node:path';
 import { readAreaHierarchyData } from '../../src/core/area/tree.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { SYNTHETIC_HIERARCHY_TLDS } from '../../src/core/test_data/synthetic_hierarchy_constants.ts';
 import {
 	dropTestCorpus,
 	ensureMediaKit,
@@ -488,8 +489,22 @@ describe('test corpus — the test* hierarchy registry rows', () => {
 			root_terms: unknown[];
 			active_in_thesaurus: boolean;
 		}[];
-		const mine = items.filter((item) => item.target_section_tipo.startsWith('test'));
+		// `test*` rows come from TWO fixtures now: this corpus's registry AND
+		// the synthetic geography hierarchies (testgeoa/testgeob,
+		// src/core/test_data/synthetic_hierarchy_fixture.ts, 2026-08-25). The
+		// corpus count pins ONLY its own rows; the synthetic pair is asserted
+		// separately below so a missing geo hierarchy is still red here.
+		const syntheticTermsSections = new Set(SYNTHETIC_HIERARCHY_TLDS.map((tld) => `${tld}1`));
+		const testRows = items.filter((item) => item.target_section_tipo.startsWith('test'));
+		const syntheticRows = testRows.filter((item) =>
+			syntheticTermsSections.has(item.target_section_tipo),
+		);
+		const mine = testRows.filter((item) => !syntheticTermsSections.has(item.target_section_tipo));
 		expect(mine.length).toBe(HIERARCHY_ROWS);
+		// The synthetic geography pair browses too — both of them, exactly.
+		expect(syntheticRows.map((row) => row.target_section_tipo).sort()).toEqual(
+			[...syntheticTermsSections].sort(),
+		);
 		for (const item of mine) {
 			// The tree drops a hierarchy with no children component, no root
 			// term or no active-in-thesaurus flag — arriving here proves all
