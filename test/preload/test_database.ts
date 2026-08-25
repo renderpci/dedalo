@@ -27,6 +27,7 @@
  * an explicit, typed-out choice to point the suite at your own data, never a default.
  */
 
+import { readEnv } from '../../src/config/env.ts';
 import { testDatabaseName } from '../helpers/test_database.ts';
 
 // Pin the media WEB base to the same-origin relative default for the WHOLE suite
@@ -52,12 +53,33 @@ process.env.DEDALO_SMTP_HOST = '';
 
 if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 	const testDb = testDatabaseName();
-	const appDb = process.env.DB_NAME ?? process.env.DEDALO_DATABASE_CONN;
+	// readEnv, NOT process.env: the raw read sees only the shell, so on an install
+	// that keeps DB_NAME in ../private/.env (the normal case) appDb was `undefined`
+	// and the guard below — the ONE check stopping the suite from pointing at a real
+	// database — could never fire. readEnv also carries the DEDALO_DATABASE_CONN
+	// alias itself (src/config/env.ts PHP_KEY_ALIASES), so the `??` chain was
+	// redundant as well as misordered.
+	const appDb = readEnv('DB_NAME');
 
 	// Never let the "test" DB resolve to the app DB — that is the whole point of the file.
 	if (testDb === appDb) {
-		console.warn(
-			`[test-preload] DEDALO_TEST_DATABASE resolves to the APPLICATION database (${testDb}). Refusing to redirect: the suite would write to your app. Set DEDALO_TEST_DATABASE.`,
+		// THROW, do not warn. Warning here left DB_NAME naming the APPLICATION
+		// database and let the run continue — "refusing to redirect" is exactly the
+		// wrong move when the thing you are declining to redirect is already
+		// pointed at the app. Only assertTestDatabase() (the marker) then stood
+		// between the suite and the developer's records, and it only guards
+		// test_data writers, not an arbitrary gate's own INSERT.
+		//
+		// This is a MISCONFIGURATION, not an absent environment, which is why it
+		// throws where the no-Postgres path warns (bunfig.toml documents that
+		// distinction: a throw for a missing DB would take down the hermetic tier;
+		// a throw for "the suite is aimed at your app" is the point).
+		//
+		// NOTE this branch was unreachable on any install keeping DB_NAME in
+		// ../private/.env until the readEnv fix above, because appDb was undefined.
+		// Use DEDALO_TEST_DB_DISABLE=true for the deliberate run-against-my-own-DB case.
+		throw new Error(
+			`[test-preload] DEDALO_TEST_DATABASE resolves to the APPLICATION database (${testDb}). Refusing to run: the suite would write to your app. Set DEDALO_TEST_DATABASE to a distinct name, or DEDALO_TEST_DB_DISABLE=true if you mean it.`,
 		);
 	} else {
 		const exists = await databaseExists(testDb);
@@ -81,15 +103,42 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 	}
 }
 
+/**
+ * Host or unix socket, the same way the engine resolves it.
+ *
+ * DUPLICATED UNDER PROTEST from `src/core/db/postgres.ts` buildSqlOptions
+ * (:72-76), which owns this rule. This preload MAY NOT import that module: it
+ * builds the pool at module scope, and pulling it in here would freeze the
+ * connection before the env is repointed — the very thing this file exists to do.
+ *
+ * The rule: a host starting with `/` is a socket DIRECTORY, and the socket
+ * inside it is named `.s.PGSQL.<port>`. Passing that directory as `hostname`
+ * does not fail loudly — it fails as `PostgresError: Connection closed`, which
+ * the probe swallowed, so on every socket-based install the answer was a
+ * confident, permanent "the test database does not exist" about a database that
+ * was right there. Keep the two copies in step.
+ */
+function connectionTarget(): { path: string } | { hostname: string; port: number } {
+	const host = readEnv('DB_HOST') ?? 'localhost';
+	const port = Number(readEnv('DB_PORT') ?? 5432);
+	return host.startsWith('/') ? { path: `${host}/.s.PGSQL.${port}` } : { hostname: host, port };
+}
+
 /** Cheap existence probe. Any failure (no Postgres at all — the hermetic tier) ⇒ false. */
 async function databaseExists(name: string): Promise<boolean> {
 	try {
 		const { SQL } = await import('bun');
 		const admin = new SQL({
-			hostname: process.env.DEDALO_HOSTNAME_CONN ?? 'localhost',
-			port: Number(process.env.DEDALO_DB_PORT_CONN ?? 5432),
-			username: process.env.DEDALO_USERNAME_CONN,
-			password: process.env.DEDALO_PASSWORD_CONN,
+			// The TS-native spellings are PRIMARY (src/config/config.ts requires
+			// DB_HOST/DB_USER/DB_NAME); the DEDALO_*_CONN forms are the PHP-era
+			// fallback, which readEnv applies for us. Reading the fallback spellings
+			// off process.env — as this did — meant the probe almost never saw the
+			// real connection and reported "the test database does not exist" against
+			// a perfectly healthy one. A DB_*-only environment is exactly what CI
+			// composes, so the wrong answer was about to become the CI default.
+			...connectionTarget(),
+			username: readEnv('DB_USER'),
+			password: readEnv('DB_PASSWORD') || undefined,
 			database: 'postgres',
 			max: 1,
 		});

@@ -137,6 +137,35 @@ function hermeticTripwires(): string[] {
 		});
 }
 
+/**
+ * db_tier.sh DB_TIER_TRIPWIRES entries — the hosted DB tier's list.
+ *
+ * Same parsing discipline as hermeticTripwires() above, for the same measured
+ * reason: terminate at a LINE-START ')' — a '(' inside a section comment
+ * silently truncated the hermetic array at 21 of its 41 entries from 2026-08-03
+ * to 2026-08-24, so the rule guarding that list was checking half of it — and a
+ * path must BE the line, so a path named inside a comment is never mistaken for
+ * a wired gate.
+ *
+ * NOT existsSync-guarded, deliberately: read() throwing ENOENT on a missing
+ * db_tier.sh IS the loud red. A soft guard would let rule 3c pass vacuously over
+ * an empty list, which is exactly the runs-on-no-tier state the rule forbids.
+ */
+function dbTierTripwires(): string[] {
+	const src = read('scripts/ci/db_tier.sh');
+	const block = src.match(/DB_TIER_TRIPWIRES=\(\n([\s\S]*?)\n\)/)?.[1];
+	if (!block) throw new Error('scripts/ci/db_tier.sh: DB_TIER_TRIPWIRES array not found');
+	return block
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line !== '' && !line.startsWith('#'))
+		.map((line) => {
+			const m = line.match(/^(test\/[^\s]+\.test\.ts)$/);
+			if (!m) throw new Error(`scripts/ci/db_tier.sh: unparsable DB_TIER_TRIPWIRES line: ${line}`);
+			return m[1] as string;
+		});
+}
+
 /** engineering/TRIPWIRES.md table rows (first column, test paths). */
 function ledgerTripwires(): string[] {
 	const src = read('engineering/TRIPWIRES.md');
@@ -276,11 +305,7 @@ describe('CI workflow tripwire', () => {
 	 * hermetic script that reads a file it swears it does not read is not hermetic —
 	 * and only CI could tell us. Now the stub list cannot drift from the catalog.
 	 */
-	test('scripts/ci/hermetic.sh stubs every required-no-default config key', () => {
-		// Read the required set from the CATALOG, not by regex-scraping config.ts. That scrape
-		// broke the moment defaults moved into src/config/catalog/ — and a gate that silently
-		// parses zero keys would have passed vacuously forever. `required: true` is now data,
-		// so this cannot go stale again.
+	test('hermetic.sh and db_tier.sh stub every required-no-default config key', () => {
 		const required = new Set(
 			Object.entries(CONFIG_CATALOG)
 				.filter(([, entry]) => entry.required === true)
@@ -291,18 +316,39 @@ describe('CI workflow tripwire', () => {
 			'no required config keys in the catalog — src/config/catalog/ moved or lost its `required` flags',
 		).toBeGreaterThan(0);
 
-		const hermetic = read('scripts/ci/hermetic.sh');
-		// Both stub forms: `: "${KEY:=default}"` and the if-block used for JSON values
-		// (a `}` inside a `:=` default terminates the expansion — see hermetic.sh).
-		const stubbed = new Set(
-			[...hermetic.matchAll(/\$\{([A-Z0-9_]+):[=-]/g)].map((m) => m[1] as string),
-		);
-
-		const unstubbed = [...required].filter((key) => !stubbed.has(key)).sort();
-		expect(
-			unstubbed,
-			'Required config keys with no stub in scripts/ci/hermetic.sh. On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole hermetic tier dies (with cascading "Cannot access \'config\' before initialization" TDZ noise). Add a harmless stub — it only has to parse:',
-		).toEqual([]);
+		for (const script of ['scripts/ci/hermetic.sh', 'scripts/ci/db_tier.sh']) {
+			const src = read(script);
+			// A key counts as stubbed iff it is ASSIGNED and EXPORTED. The old grammar
+			// (`${KEY:[=-]`) credited any `${KEY:-fallback}` READ anywhere in the file:
+			// the DEDALO_APPLICATION_LANGS if-block passed only through its guard's
+			// `[ -z "${…:-}" ]`, while the assignment and the export were invisible to
+			// it. So deleting that block while any diagnostic `${KEY:-}` read survived
+			// would have kept this gate green and killed the bare runner at module
+			// init — the exact 2026-07-11 class this rule exists to prevent.
+			//
+			// Two assignment forms are accepted (`: "${KEY:=…}"` and a line-start
+			// `KEY=…`, which is the if-block body), and the key must additionally
+			// reach an `export` line: the catalog reads process.env, and an
+			// unexported shell variable never gets there.
+			const assigned = new Set(
+				[
+					...src.matchAll(/^\s*: "\$\{([A-Z0-9_]+):=/gm),
+					...src.matchAll(/^\s*([A-Z0-9_]+)=/gm),
+				].map((m) => m[1] as string),
+			);
+			const exported = new Set(
+				[...src.matchAll(/^\s*export\s+(.+)$/gm)].flatMap((m) =>
+					(m[1] as string).split(/\s+/).map((token) => token.split('=')[0] as string),
+				),
+			);
+			const unstubbed = [...required]
+				.filter((key) => !(assigned.has(key) && exported.has(key)))
+				.sort();
+			expect(
+				unstubbed,
+				`Required config keys not assigned-and-exported in ${script}. On a bare CI runner there is no ../private/.env, so the config catalog THROWS at module init and the whole tier dies (with cascading "Cannot access 'config' before initialization" TDZ noise). Add a harmless stub — it only has to parse — and put the key on an export line:`,
+			).toEqual([]);
+		}
 	});
 
 	// The self-hosted tier must stay IN THE REPO. Gitignoring it would (a) never reach
@@ -372,6 +418,49 @@ describe('CI workflow tripwire', () => {
 	 * has to be mechanical: whoever takes that PR gets a red gate here until both lines
 	 * move together.
 	 */
+	// Rule 11 (2026-08-25) — FORK SAFETY: the executed tier references NO secret.
+	// renderpci/dedalo is PUBLIC. GitHub withholds secrets from fork-PR
+	// `pull_request` runs, but that protection is one trigger edit away
+	// (`pull_request_target` hands them back alongside the fork's code), and a
+	// hosted test tier NEEDS no secret: its Postgres service password is a
+	// throwaway the workflow hardcodes. `${{ secrets.X }}` stays legal in
+	// .github/workflows-selfhosted/, which GitHub does not execute and where the
+	// private mirror supplies the values.
+	//
+	// Matched as the EXPRESSION, not a bare substring, so these files stay free to
+	// DISCUSS the posture in their headers — the same courtesy rule 5 extends to
+	// the phrase "self-hosted".
+	test('no .github/workflows/ file references a secret (public repo, fork PRs)', () => {
+		const offenders = workflowFiles
+			.map((file) => join('.github', 'workflows', file))
+			.filter((rel) => /\$\{\{\s*secrets\./.test(read(rel)));
+		expect(
+			offenders,
+			'A secret reference in the EXECUTED tier of a public repo is a standing invitation: one trigger change and fork-PR code runs with it populated. A test tier needs none — hardcode the throwaway service password, and put anything genuinely secret in .github/workflows-selfhosted/ for the private mirror:',
+		).toEqual([]);
+	});
+
+	// Rule 12 (2026-08-25) — container images are DIGEST-pinned. Rule 8 above
+	// inspects only `uses:` lines, so a `services:` (or `container:`) image was
+	// invisible to it — and that is rule 8's own threat with MORE reach: the
+	// container shares the runner with the checkout, and a tag is repointable by
+	// its publisher at any time. security.yml:42-44 already digest-pins the
+	// gitleaks image by hand for exactly this stated reason; this makes the
+	// convention a gate. Binds both tiers, like rule 8.
+	test('every workflow image: is pinned by digest, never a tag', () => {
+		const offenders: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			for (const [, image] of src.matchAll(/^\s*image:\s*(\S+)/gm)) {
+				if (!/@sha256:[0-9a-f]{64}$/.test(image as string))
+					offenders.push(`${rel}: image: ${image}`);
+			}
+		}
+		expect(
+			offenders,
+			'A workflow image referenced by tag runs whatever its publisher points that tag at TODAY, on the same runner as the checkout. Pin the digest and keep the human-readable version in a trailing comment — the security.yml gitleaks precedent:',
+		).toEqual([]);
+	});
+
 	test('every codeql-action step is pinned to the same SHA (init and analyze cannot split)', () => {
 		const CODEQL_USES = /uses:\s*github\/codeql-action\/[a-z-]+@([0-9a-f]{40})/g;
 		const bySha = new Map<string, string[]>();
@@ -439,9 +528,16 @@ describe('CI workflow tripwire', () => {
 		}
 	});
 
-	// Rule 3c — the converse of 3b. Without this, an unwired tripwire is silent.
-	test('every tripwire either runs on the hermetic tier or has a written exclusion reason', () => {
+	// Rule 3c — every tripwire has exactly ONE executing home. NOT_HERMETIC is an
+	// ASSIGNMENT to the DB tier, not an excuse: its key set and db_tier.sh's
+	// DB_TIER_TRIPWIRES must be EQUAL. Without that equality "excluded from
+	// hermetic" still meant "runs nowhere" — and the registration trap was live:
+	// wiring a DB gate into HERMETIC_TRIPWIRES to make it run SOMEWHERE reddened
+	// its own NOT_HERMETIC row. Now a DB gate registers on the DB tier, where it
+	// belongs, and "runs on no tier" is mechanically impossible.
+	test('every tripwire runs on exactly one executing tier (hermetic.sh XOR db_tier.sh)', () => {
 		const hermetic = new Set(hermeticTripwires());
+		const dbTier = dbTierTripwires();
 		const verify = verifyTripwires();
 		const excluded = verify.filter((t) => !hermetic.has(t));
 
@@ -449,21 +545,56 @@ describe('CI workflow tripwire', () => {
 			expect(
 				NOT_HERMETIC.has(t),
 				`${t} runs on NO executing tier: it is in verify.ts TRIPWIRES but not in ` +
-					'hermetic.sh, and carries no reason. Wire it into HERMETIC_TRIPWIRES ' +
-					'(re-verify it DB-less first, with DB_PORT closed) or add it to ' +
-					'NOT_HERMETIC with the live dependency that keeps it off the hosted tier.',
+					'hermetic.sh, and carries no assignment. Wire it into HERMETIC_TRIPWIRES ' +
+					'(re-verify it DB-less first, with DB_PORT closed) or assign it to the DB ' +
+					'tier: a NOT_HERMETIC row naming the live dependency PLUS the matching ' +
+					'DB_TIER_TRIPWIRES entry in scripts/ci/db_tier.sh.',
 			).toBe(true);
 		}
 
-		// Stale entries are red in both directions.
+		// Stale rows are red in both directions.
 		const verifySet = new Set(verify);
 		for (const t of NOT_HERMETIC.keys()) {
 			expect(verifySet.has(t), `NOT_HERMETIC lists ${t}, which is no longer a tripwire`).toBe(true);
 			expect(
 				hermetic.has(t),
-				`NOT_HERMETIC lists ${t} as un-hostable, but hermetic.sh now runs it — delete the row`,
+				`NOT_HERMETIC lists ${t} as un-hostable, but hermetic.sh now runs it — delete the row AND its db_tier.sh entry`,
 			).toBe(false);
 		}
+
+		// THE ASSIGNMENT, exact in both directions. Equality rather than ⊆ is
+		// deliberate, and each direction closes a real hole:
+		//  - a NOT_HERMETIC key missing from db_tier.sh is a gate excused but not
+		//    running — the original hole, back;
+		//  - a db_tier.sh entry with no NOT_HERMETIC row is a gate running with no
+		//    written reason — the list rots into a dumping ground;
+		//  - combined with the hermetic-disjointness check above, equality also
+		//    FORBIDS a gate on both tiers. That would burn hosted-Postgres minutes
+		//    re-proving what the hermetic tier already proved, and dissolves the
+		//    one-stated-home property this rule exists to create. A gate that ever
+		//    genuinely needs both (behaviour differs with a DB present) is a
+		//    deliberate rule change with its reason written here, not a quiet overlap.
+		// Equality also gives D ⊆ verify.ts for free, so the DB tier needs no
+		// separate subset rule of its own.
+		expect([...dbTier].sort()).toEqual([...NOT_HERMETIC.keys()].sort());
+	});
+
+	// The DB tier's WIRING: db_tier.sh alone is a script nothing runs. Before
+	// 2026-08-25 these 19 gates ran on NO executing tier precisely because the only
+	// DB workflow lived in workflows-selfhosted/, which GitHub does not execute.
+	test('the hosted DB tier is wired: db.yml invokes db_tier.sh and declares its service image', () => {
+		const src = read('.github/workflows/db.yml');
+		expect(src, '.github/workflows/db.yml: the DB tier must run scripts/ci/db_tier.sh').toContain(
+			'scripts/ci/db_tier.sh',
+		);
+		expect(
+			/^\s*services:/m.test(src),
+			'.github/workflows/db.yml: no services: block — the tier needs its own Postgres; without one the DB gates die at connect and the run is noise, not a gate',
+		).toBe(true);
+		expect(
+			[...src.matchAll(/^\s*image:\s*(\S+)/gm)].length,
+			'.github/workflows/db.yml: the services: block declares no image:, so the digest-pin rule would pass over nothing',
+		).toBeGreaterThan(0);
 	});
 
 	test('hermetic.sh tripwires are a subset of verify.ts TRIPWIRES', () => {
@@ -502,7 +633,12 @@ describe('CI workflow tripwire', () => {
 	});
 
 	test('every tripwire file listed anywhere actually exists', async () => {
-		for (const t of new Set([...verifyTripwires(), ...hermeticTripwires(), ...ledgerTripwires()])) {
+		for (const t of new Set([
+			...verifyTripwires(),
+			...hermeticTripwires(),
+			...dbTierTripwires(),
+			...ledgerTripwires(),
+		])) {
 			expect(await Bun.file(join(repoRoot, t)).exists(), `${t} listed but missing on disk`).toBe(
 				true,
 			);

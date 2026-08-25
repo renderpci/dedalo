@@ -130,12 +130,39 @@ const conn = [
 ];
 const pgEnv = { ...process.env, PGPASSWORD: password };
 
+/**
+ * The psql binary, resolved the way the ENGINE resolves it.
+ *
+ * This script used to spawn a bare `psql`, i.e. PATH only — while the hierarchy
+ * import it calls goes through `resolvePgBinary` (src/core/install/pg_exec.ts).
+ * So `DEDALO_PG_BIN_PATH` moved one half of the build and not the other, and on a
+ * machine whose PATH psql is a different major than the server the two phases
+ * could disagree about which client to use. That asymmetry matters most exactly
+ * where it was never exercised: a Linux runner, where pg_bin.ts's probe list is
+ * Apple-Silicon Homebrew only and PATH is the sole fallback.
+ *
+ * Imported LAZILY and dynamically: pg_bin reads `config.ops.pgBinPath`, and a
+ * static import would pull src/config/config.ts in at parse time — before the
+ * env repoint above, which is the one ordering this whole file is built around.
+ */
+let resolvedPsql: string | undefined;
+async function psqlBinary(): Promise<string> {
+	if (resolvedPsql === undefined) {
+		const { resolvePgBinary } = await import('../src/core/install/pg_bin.ts');
+		resolvedPsql = resolvePgBinary('psql');
+	}
+	return resolvedPsql;
+}
+
 async function psql(database: string, args: string[]): Promise<string> {
-	const proc = Bun.spawn(['psql', ...conn, '-d', database, '-v', 'ON_ERROR_STOP=1', ...args], {
-		env: pgEnv,
-		stdout: 'pipe',
-		stderr: 'pipe',
-	});
+	const proc = Bun.spawn(
+		[await psqlBinary(), ...conn, '-d', database, '-v', 'ON_ERROR_STOP=1', ...args],
+		{
+			env: pgEnv,
+			stdout: 'pipe',
+			stderr: 'pipe',
+		},
+	);
 	const [out, err, code] = await Promise.all([
 		new Response(proc.stdout).text(),
 		new Response(proc.stderr).text(),

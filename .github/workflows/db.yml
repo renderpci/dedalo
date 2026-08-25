@@ -1,0 +1,93 @@
+# DB TIER — the gates that need a live Postgres, on a HOSTED runner.
+#
+# WHAT THIS CLOSES. The DB tier existed only in .github/workflows-selfhosted/,
+# which GitHub does not execute, so its nightly cron has never fired. Measured
+# 2026-08-24: 19 tripwires ran on NO executing tier while every gate the repo
+# owns reported green. This workflow runs them on every PR.
+#
+# FORK SAFETY IS THE WHOLE DESIGN. renderpci/dedalo is PUBLIC and anyone may open
+# a PR, which is exactly why the DB tier could never be self-hosted (rule 5 of
+# test/unit/ci_workflow_tripwire.test.ts: that would be RCE on the machine
+# holding ../private/.env and the live matrix Postgres). Here a fork PR gets its
+# own empty, throwaway Postgres service container and NOTHING else: this file
+# references no repository secret at all, and the tripwire asserts that.
+#
+# (Rule 11 matches the EXPRESSION form, so prose like this sentence is fine —
+# unlike rule 1, whose whole-file substring match makes a mere mention read as a
+# use. docs.yml:18-20 records that trap.)
+#
+# The database is BUILT, not restored: scripts/test_db_setup.ts installs a
+# complete Dedalo from bytes vendored in this repo (install/db/*.pgsql.gz, the
+# hierarchy copies, the generic `test` TLD ontology) and stamps the
+# dedalo_test_marker row every test-data writer demands. Nothing here reads an
+# installation's data, because there is no installation on this runner.
+#
+# Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
+
+name: db
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Rule 7: every workflow declares its token scope at the top level. Read-only is
+# all a test tier can possibly need.
+permissions:
+  contents: read
+
+concurrency:
+  group: db-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    # The suite build is the long pole: the hierarchy import is ~5 min (2.27M
+    # rows through two per-row sync triggers, measured 2026-08-24), and the 19
+    # gates themselves are fast. 20 leaves headroom without hiding a hang.
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        # DIGEST-pinned, not `postgres:18`: a tag is mutable, and this container
+        # holds the database every assertion below is made against. Same reason
+        # security.yml digest-pins gitleaks. Mirrors docker-compose.yml's major.
+        image: postgres@sha256:1957b2ff3137e4ef7f3bc813e74fff50b1e1ffddc85c8b9d6f14ade972be8687
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Without a health gate the first psql races the server's own init.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version # the load-bearing pin — never inline a version
+
+      # ubuntu-latest ships psql 16, and pg_dump/pg_restore/psql refuse a NEWER
+      # server than the client. The engine resolves the binary through
+      # DEDALO_PG_BIN_PATH (src/core/install/pg_bin.ts), which db_tier.sh points
+      # at this install.
+      - name: Install postgresql-client 18
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: DB tier (build the suite database + the DB-backed tripwires)
+        run: bash scripts/ci/db_tier.sh
