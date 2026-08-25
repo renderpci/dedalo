@@ -30,6 +30,10 @@
  */
 
 import { $ } from 'bun';
+// The per-test timeout the root suite runs under. Bun 1.4.0 ignores bunfig.toml's
+// `[test] timeout`, so the number has to ride the command line — see
+// scripts/lib/test_flags.ts for the measurement that proves it.
+import { TEST_TIMEOUT_FLAG } from './lib/test_flags.ts';
 
 $.throws(false); // we inspect exit codes ourselves; a red stage is data, not a crash
 
@@ -132,7 +136,13 @@ const TRIPWIRES = [
 	'test/unit/test_tld_ontology_gate.test.ts',
 	'test/unit/test_db_marker_tripwire.test.ts',
 	'test/unit/test_media_root_tripwire.test.ts',
+	'test/unit/test_timeout_tripwire.test.ts',
+	'test/unit/test_baseline_tripwire.test.ts',
+	'test/unit/scratch_tld_uniqueness_tripwire.test.ts',
+	'test/unit/corpus_scope_ownership_tripwire.test.ts',
 	'test/unit/runtime_paths_census_tripwire.test.ts',
+	'test/unit/shard_partition_tripwire.test.ts',
+	'test/unit/dbread_role_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 
@@ -231,7 +241,7 @@ async function runTestFiles(name: string, files: string[]): Promise<void> {
 		results.push({ name, ok: true, detail: 'no files' });
 		return;
 	}
-	const r = await $`bun test ${files}`.quiet();
+	const r = await $`bun test ${TEST_TIMEOUT_FLAG} ${files}`.quiet();
 	const output = r.stdout.toString() + r.stderr.toString();
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: \x1b is the ANSI escape being stripped
 	const clean = output.replace(/\x1b\[[0-9;]*m/g, '');
@@ -261,8 +271,18 @@ if (changedOnly) {
 
 console.log(`\x1b[1mVERIFY\x1b[0m — ${changed.length} changed file(s) vs ${base}`);
 
-await typecheck();
-await lint();
+// TYPECHECK AND LINT RUN CONCURRENTLY. Both are whole-tree, independent and
+// read-only; sequencing them only added their wall clocks together. Both
+// verdicts are always recorded, so a red lint cannot mask a red typecheck.
+// Their console output is buffered inside each stage and printed on completion,
+// so a concurrent run still reads top-to-bottom rather than interleaving.
+await Promise.all([typecheck(), lint()]);
+// Concurrency made the PUSH order a race, which made the summary's row order
+// vary between runs — a verdict table that reshuffles is a verdict table people
+// stop reading. Pin the two static stages to their declared order; the test
+// stages below append after them, as they always did.
+const STATIC_STAGE_ORDER = ['typecheck', 'lint'];
+results.sort((a, b) => STATIC_STAGE_ORDER.indexOf(a.name) - STATIC_STAGE_ORDER.indexOf(b.name));
 
 if (runTests) {
 	await runTestFiles('tripwires', TRIPWIRES);
@@ -275,6 +295,17 @@ if (runTests) {
 	// src/+test/ trees the neighbour scan covers — so its suite runs as a targeted stage
 	// whenever the change touches it. Hermetic (no DB, no oracle); CI runs it always via
 	// scripts/ci/hermetic.sh.
+	//
+	// NO --timeout HERE, DELIBERATELY. The root suite gets TEST_TIMEOUT_FLAG because it
+	// LOST a number it had chosen: bunfig.toml declared `[test] timeout = 30000` and Bun
+	// 1.4.0 silently ignored it. This package never made that claim —
+	// publication/site_builder has NO bunfig.toml at all — the file does not exist, measured
+	// 2026-08-25, so no timeout was ever declared (its sibling
+	// publication/server_api/v2/bunfig.toml declares only coverage/coverageThreshold) — so
+	// its green baseline was measured under bun's built-in 5000 ms cap and stays
+	// comparable run to run. Widening it on no evidence would be silently loosening a
+	// gate, not restoring one. Same reasoning, same wording, at the other exempt site:
+	// scripts/ci/hermetic.sh daemon_gate().
 	if (changed.some((f) => f.startsWith('publication/site_builder/'))) {
 		banner('site_builder (tsc + bun test in publication/site_builder)');
 		const r = await $`bash -c "cd publication/site_builder && bunx tsc --noEmit && bun test 2>&1"`
