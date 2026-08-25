@@ -271,24 +271,102 @@ const check_row = function(parent, check) {
 
 /**
 * VERDICT
-* The headline line of a role: ready or blocked, as a chip.
+* The headline line of a role: ready, ready-but-only-with-a-waiver, or blocked.
+*
+* THE THIRD STATE IS NOT DECORATION. `ready` is `!checks.some(blocked)`, and
+* since 2026-08-25 the one waivable gate (`backup_fresh`) reports `warn`, so an
+* install with a stale or missing database backup is `ready:true` — while the
+* request the Update button sends by DEFAULT (`waive_backup:false`) is still
+* refused on exactly that account. A bare "Ready to update" over that install
+* would over-report as loudly as the "Update blocked" it replaced, only in the
+* other direction. So: ready AND a waivable warning ⇒ say the waiver is the
+* condition, in the warning voice.
+*
 * @param {HTMLElement} parent
 * @param {boolean} ready
 * @param {string} ok_label
 * @param {string} bad_label
+* @param {string} [waived_label] - shown instead of ok_label when the role is
+*   ready only because a warning is waivable (omitted ⇒ the two-state verdict).
 * @returns {HTMLElement}
 */
-const verdict = function(parent, ready, ok_label, bad_label) {
+const verdict = function(parent, ready, ok_label, bad_label, waived_label) {
 
+	const waived = ready===true && typeof waived_label==='string'
 	const node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: `status_verdict ${ready ? 'state_ok' : 'state_danger'}`,
-		text_content	: ready ? ok_label : bad_label,
+		class_name		: `status_verdict ${ready ? (waived ? 'state_warning' : 'state_ok') : 'state_danger'}`,
+		text_content	: ready ? (waived ? waived_label : ok_label) : bad_label,
 		parent			: parent
 	})
 
 	return node
 }//end verdict
+
+
+
+/**
+* RENDER_READINESS
+* The consumer's readiness half — the headline verdict plus one row per check.
+* ONE writer, so the panel can be re-stated from a fresher value without a
+* second copy of the layout drifting from this one.
+*
+* @param {HTMLElement} parent - the consumer status wrapper
+* @param {Object} consumer - consumerStatus payload {ready, checks}
+* @returns {HTMLElement} the block, marked so refresh_readiness can find it
+*/
+const render_readiness = function(parent, consumer) {
+
+	const readiness = section(parent, get_label.update_code_readiness || 'Update readiness')
+	readiness.parentNode.classList.add('readiness_block')
+
+	// a WAIVABLE warning is what stands between `ready:true` and the DEFAULT
+	// request actually succeeding — name it, never headline a plain "ready"
+	const waivable = (consumer.checks || []).some(check => check.state==='warn')
+	verdict(
+		readiness.parentNode,
+		consumer.ready===true,
+		get_label.update_code_ready || 'Ready to update',
+		get_label.update_code_blocked || 'Update blocked',
+		waivable
+			? (get_label.update_code_ready_with_waiver || 'Ready to update, but only with a waiver')
+			: undefined
+	)
+	;(consumer.checks || []).forEach(check => check_row(readiness, check))
+
+	return readiness.parentNode
+}//end render_readiness
+
+
+
+/**
+* REFRESH_READINESS
+* Re-state the readiness half from a FRESHER consumer payload, in place.
+*
+* Why it exists: `backup_fresh` AGES. The panel is built once and the version
+* modal re-reads the value before it opens, so without this the operator can
+* see the modal's red waiver row and its "25 h" over a panel still showing
+* "Recent database backup · 23 h · ok" — one fact, two states, both on screen.
+*
+* @param {HTMLElement} root - the node render_consumer_status wrote into
+* @param {Object} consumer - the fresh consumerStatus payload
+* @returns {boolean} true when a block was found and replaced
+*/
+export const refresh_readiness = function(root, consumer) {
+
+	if (!root || !consumer) {
+		return false
+	}
+	const current = root.querySelector('.readiness_block')
+	if (!current) {
+		return false
+	}
+	const parent = current.parentNode
+	const rebuilt = render_readiness(parent, consumer)
+	parent.replaceChild(rebuilt, current)
+
+	return true
+}//end refresh_readiness
 
 
 
@@ -319,9 +397,13 @@ const format_stamp = function(ms) {
 * update, what happened last time, and what it could roll back to.
 * @param {HTMLElement} parent
 * @param {Object} consumer - value.consumer (core/update/status.ts ConsumerStatus)
+* @param {Function} [on_restore] - (point) => void, mounted on each restore
+*   point's Restore button. Omitted on any surface that cannot start a job (the
+*   browser suite renders this module standalone), and then no button is drawn at
+*   all: an inert control on a destructive action is worse than none.
 * @returns {HTMLElement|null}
 */
-export const render_consumer_status = function(parent, consumer) {
+export const render_consumer_status = function(parent, consumer, on_restore) {
 
 	if (!consumer) return null
 
@@ -359,14 +441,7 @@ export const render_consumer_status = function(parent, consumer) {
 		fact_row(installation, get_label.update_code_backup_root || 'Backup root', tree.backup_root, true)
 
 	// readiness
-		const readiness = section(wrapper, get_label.update_code_readiness || 'Update readiness')
-		verdict(
-			readiness.parentNode,
-			consumer.ready===true,
-			get_label.update_code_ready || 'Ready to update',
-			get_label.update_code_blocked || 'Update blocked'
-		)
-		;(consumer.checks || []).forEach(check => check_row(readiness, check))
+		render_readiness(wrapper, consumer)
 
 	// last update — only when there has been one
 		const sentinel = consumer.last_update
@@ -404,7 +479,20 @@ export const render_consumer_status = function(parent, consumer) {
 			// (a few hundred bytes for a multi-GB tree) and this printed it
 			// through format_bytes as if it were the backup's size.
 			const row = fact_row(restore, point.name, format_stamp(point.stamp), true)
+			row.classList.add('restore_row')
 			const value = row.querySelector('.dd_v')
+			// THE VERSION THE POINT DECLARES, read from its own install stamp.
+			// Without it the row is a directory name and a date: two points cut by
+			// consecutive updates are indistinguishable at exactly the moment the
+			// operator has to choose which code to make live again.
+			if (point.version) {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'restore_version mono',
+					text_content	: String(point.version),
+					parent			: value
+				})
+			}
 			// bootability is the rollback contract: a backup without
 			// package.json + node_modules cannot be booted back into
 			ui.create_dom_element({
@@ -414,6 +502,37 @@ export const render_consumer_status = function(parent, consumer) {
 					? (get_label.update_code_restore_bootable || 'bootable')
 					: (get_label.update_code_restore_incomplete || 'incomplete'),
 				parent			: value
+			})
+			// RESTORE. The panel must never offer what the pipeline would refuse,
+			// nor refuse what it would accept: `restorable` is computed by the SAME
+			// predicate the restore pipeline refuses on (core/update/code_restore.ts,
+			// re-exported through status.ts), so this button is a mirror of that
+			// verdict and never a second opinion.
+			if (!on_restore) {
+				return
+			}
+			const button_restore = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_restore',
+				inner_html		: get_label.update_code_restore || 'Restore',
+				parent			: value
+			})
+			if (point.restorable!==true) {
+				button_restore.disabled = true
+				// the server sends a reason ID, this side the sentence — same
+				// contract as the readiness checks above, so a reason added
+				// tomorrow renders as its id rather than as an invented excuse.
+				// It used to fall back to the not-bootable sentence, which told an
+				// operator whose point declares no version — or pins another Bun —
+				// that it was "incomplete", beside the green `bootable` pill the
+				// same row draws: two contradictory statements about one directory.
+				button_restore.title = get_label['update_code_restore_reason_' + point.restorable_reason]
+					|| String(point.restorable_reason || '')
+				return
+			}
+			button_restore.addEventListener('click', (e) => {
+				e.stopPropagation()
+				on_restore(point)
 			})
 		})
 

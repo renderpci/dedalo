@@ -39,9 +39,12 @@ refuses rather than risk a self-exit with nothing to restart it.
 
 The update **refuses to start** — it does not merely warn — unless the operator
 is the superuser (`root`), the server is in **maintenance mode**, and a
-**recent database backup** exists. The backup requirement can be waived only by
-an explicit `waive_backup: true` in the update request (there is no panel
-control for it), and every waiver is logged loudly in the server log. It also
+**recent database backup** exists. The backup requirement is the one an
+operator can waive: when the backup is stale or missing, the version modal
+offers an **Update without a recent database backup** checkbox above the Update
+button, and every waiver is logged loudly in the server log with the requesting
+user. It waives the *database* backup only — the code backup is the swap itself
+and is never optional. It also
 refuses, without changing anything, on a number of unsafe situations — runtime
 data inside the code tree, an unaccounted file at the tree root, a
 containerised (image) deployment, a Bun version mismatch, a failed dependency
@@ -66,8 +69,16 @@ run:
 - **Last code update** — which version replaced which, when, and whether the
   new tree confirmed itself at boot. A status still reading *pending
   confirmation* means the update did not complete its own health check.
-- **Restore points** — the code backups on disk, each marked *bootable* or
-  *incomplete* (a backup without its dependencies cannot be started again).
+- **Restore points** — the code copies on disk, each with the Dédalo version
+  it holds and a **Restore** button that puts it back on the tree (see
+  [Restoring a previous code version](#restoring-a-previous-code-version)).
+  Each row is marked *bootable* or *incomplete* (a copy without its
+  dependencies cannot be started again). The Restore button is **disabled**,
+  with the reason on the button itself, when the copy is incomplete, when it
+  declares no Dédalo version (its provenance cannot be read), or when it pins a
+  different Bun than the one this server runs — install that Bun first, as for
+  an update. A development checkout gets no Restore button at all, for the same
+  reason it gets no Update button.
 
 Some readiness lines cannot be decided in advance and say so rather than
 guessing: the release's own root file list and its Bun pin are only known once
@@ -126,6 +137,66 @@ running Bun and this tree's pin, and the bytes free where the update stages.
     Revert the maintenance status to `false`.
 
 7. Log out and re-login with a normal user.
+
+## Restoring a previous code version
+
+Every update renames the outgoing tree aside as a **restore point**, kept with
+its dependencies so it can be started again with no network. The panel's
+Restore button puts one of those copies back on the live tree, running the
+update's road backwards: same preconditions, same phase track, same rollback
+sentinel, same restart.
+
+!!! danger "Restoring code does NOT revert database migrations"
+    A restore moves **code only**. Migrations already applied by the newer
+    version stay applied, and older code running against a newer database can
+    fail. When the outcome that is actually wanted is the previous *state*, the
+    database backup has to be restored separately — see
+    [Backup](../backup.md). The panel refuses a restore across versions unless
+    that hazard is explicitly acknowledged (below), and logs the
+    acknowledgement.
+
+Restoring is a **move, not a copy**: the restore point is consumed, and the
+tree that was running is renamed aside as a **new** restore point. Nothing is
+deleted, disk usage does not double, and the move can be undone the same way.
+
+1. Close access to the work system — maintenance mode, superuser, as for an
+   update ([maintenance status](../maintenance_status.md)). A restore refuses
+   on the same preconditions, except the recent-backup one: it has its own
+   confirmation instead.
+
+2. In the "Update code" panel, find the copy under **Restore points** and press
+   `Restore`.
+
+3. Read the confirmation modal. It names the version running now, the version
+   the copy holds, and the copy's name.
+
+    When the two versions **differ**, the modal adds a checkbox that must be
+    ticked before the Restore button unlocks: it acknowledges that the
+    installation will run the older code while the database stays as it is. At
+    an equal version — a developer build restored over itself — no checkbox is
+    shown, because there is nothing to acknowledge.
+
+4. The phase track runs as for an update, with `download`, `verify`, `extract`
+   and `deps` reported *skipped* (a restore fetches and installs nothing — the
+   copy carries its own dependencies). The server restarts itself and the panel
+   polls its health endpoint.
+
+5. Confirm the result in the panel's readout. Across versions the **version**
+   changes; for a developer build restored over the same version the value to
+   watch is **Installed archive**, the digest of the tree now running.
+
+!!! note "The copy is boot-tested first — when it can be"
+    Before the live tree is moved, the restore point is started once in
+    isolation and must answer a health check, exactly like a new release in
+    quarantine. A restore point cut before 2026-08-23 does not honour the
+    smoke-boot flag: booting it would run its **full** boot — migrations,
+    schedulers, diffusion runners, watchers — against the live database while
+    this server is still serving. Such a copy is therefore restored **without**
+    that check, the `preflight` phase is reported *skipped* rather than passed,
+    and the server log says which copy it was and why.
+
+The refusals a restore can produce are listed in
+[How a code update works](updating_code_options.md#what-makes-a-restore-refuse).
 
 ## Running a code server
 

@@ -515,7 +515,12 @@ function setVersionTriple(text: string, tripleLiteral: string, whose: string): s
 	return replaced;
 }
 
-/** The exact body update_code.js::update_code puts on the wire (+ waive_backup). */
+/**
+ * The exact body update_code.js::update_code puts on the wire. Since
+ * 2026-08-25 that includes `waive_backup` (the version modal's checkbox), so
+ * this is the client's body verbatim — the drill waives because a scratch
+ * clone has no database backup at all.
+ */
 function updateRequestBody(file: {
 	version: string;
 	url: string;

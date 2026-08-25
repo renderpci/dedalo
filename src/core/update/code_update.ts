@@ -62,6 +62,19 @@
  * with no network and no `bun install`. LOAD-BEARING: if that ever changes,
  * deploy/dedalo-code-rollback.sh changes with it.
  *
+ * REUSED BY code_restore.ts (2026-08-25): the swap machinery below is exported
+ * — `codeStagingDir`, `assertSwapPreconditions`/`swapPreconditionsWithFrame`,
+ * `resolveBackupRootOrRefuse`, `acquireRunLockOrRefuse` (the SAME run lock, so
+ * a restore and an update can never interleave), `prepareStagingDirOrRefuse`,
+ * `backupDirName`, `installedDigestOf`, `sentinelGuardedSwap`,
+ * `createPhaseTracker`, `cleanStagingDir`, `errorText`,
+ * `refuseUnaccountedLiveEntries` — because a restore is this pipeline run in
+ * reverse. It must never grow a second copy of any of it. The LIVE-TREE gates
+ * in particular are about the SWAP, not about the archive: whatever moves the
+ * live tree aside owes the operator the same refusal (2026-08-25 review — the
+ * restore path shipped without them and would have carried `certs/` and
+ * operator drop-ins into a backup dir in silence).
+ *
  * The engine is seam-driven (`targetRoot`/`backupRoot`/`restart`/`verifySha`/
  * `supervised`/`installDeps`/`smokeBoot`/`channel`/`renameIntoPlace`) so tests
  * drive the full pipeline against a TEMP tree — the live projectRoot swap is
@@ -184,12 +197,14 @@ export interface UpdatePhaseFrame {
 	rollback?: { performed: boolean; to: string };
 }
 
-interface PhaseTracker {
+export interface PhaseTracker {
 	start: (phase: UpdatePhaseId, extra?: Partial<UpdatePhaseFrame>) => void;
+	/** Mark a phase this pipeline does not run (code_restore.ts fetches nothing). */
+	skip: (phase: UpdatePhaseId) => void;
 	fail: (message: string) => void;
 }
 
-function createPhaseTracker(
+export function createPhaseTracker(
 	version: string,
 	onPhase: ((frame: UpdatePhaseFrame) => void) | undefined,
 ): PhaseTracker {
@@ -206,6 +221,11 @@ function createPhaseTracker(
 		});
 	};
 	return {
+		skip(phase) {
+			// Silent on purpose: the NEXT started phase carries the whole track,
+			// so a restore does not open with four frames saying nothing happened.
+			statuses.set(phase, 'skipped');
+		},
 		start(phase, extra = {}) {
 			if (current !== null) statuses.set(current, 'done');
 			statuses.set(phase, 'running');
@@ -492,8 +512,16 @@ export function stagingHoldsParkedTree(backupRoot: string): boolean {
 	return existsSync(join(codeStagingDir(backupRoot), STAGING_KEEP_MARKER));
 }
 
+/** Is `dir` the staging dir itself, or under it? The one question
+ * STAGING_KEEP_MARKER answers truthfully (see restoreAfterFailedSwap). */
+function isInsideDir(dir: string, parent: string): boolean {
+	const inner = resolve(dir);
+	const outer = resolve(parent);
+	return inner === outer || inner.startsWith(outer + sep);
+}
+
 /** The guarded staging cleanup — never deletes a staging dir holding a parked tree. */
-function cleanStagingDir(stagingDir: string): void {
+export function cleanStagingDir(stagingDir: string): void {
 	if (existsSync(join(stagingDir, STAGING_KEEP_MARKER))) {
 		console.error(
 			`[code update] staging dir KEPT — it holds a parked tree after a failed swap restore: ${stagingDir}`,
@@ -581,8 +609,9 @@ function carryPreservedEntries(backupDir: string, codeRoot: string, moved: strin
  * The failed-second-rename repair: preserved entries back into the backup
  * FIRST (so a restore-rename failure never leaves them in staging), then the
  * old tree straight back where it was; on success refuse with the original
- * cause. A DOUBLE failure parks the new tree in staging under
- * STAGING_KEEP_MARKER and throws naming both surviving trees.
+ * cause. A DOUBLE failure hands over to `refuseAfterDoubleFailure`, which parks
+ * the incoming tree (when staging is where it sits) and throws naming both
+ * surviving trees.
  */
 function restoreAfterFailedSwap(
 	preservedMoved: readonly string[],
@@ -600,9 +629,39 @@ function restoreAfterFailedSwap(
 		}
 		renameRestore(backupDir, targetRoot);
 	} catch (restoreError) {
-		// DOUBLE FAILURE: no tree at targetRoot. The old tree survives in
-		// backupDir (pending sentinel → supervisor rollback restores it); the
-		// new tree survives parked in staging, marked against deletion.
+		refuseAfterDoubleFailure(codeRoot, backupDir, stagingDir, error, restoreError);
+	}
+	refuseUpdate(
+		'update.failed',
+		'Error. Code swap failed after the backup rename — the previous tree was restored in place; nothing changed',
+		error,
+	);
+}
+
+/**
+ * THE DOUBLE FAILURE: the swap's second rename failed AND the restore rename
+ * failed too, so there is no tree at targetRoot. The old tree survives in
+ * `backupDir` (the pending sentinel is still there, so the supervisor-side
+ * rollback can restore it); the incoming tree survives where it already was.
+ *
+ * THE MARKER IS A STATEMENT ABOUT STAGING, NOT ABOUT THE FAILURE (2026-08-25
+ * review). An UPDATE's incoming tree is the quarantine UNDER `stagingDir`, so
+ * STAGING_KEEP_MARKER both stops the sweep and tells the next run why. A
+ * RESTORE's incoming tree is the restore point inside the BACKUP ROOT and
+ * staging is empty: dropping the marker there parked nothing, kept an empty
+ * directory forever, and made `prepareStagingDirOrRefuse` hard-refuse every
+ * later update AND restore — quoting a recovery instruction that names a
+ * directory holding no tree, on an installation that has just lost its live one.
+ */
+function refuseAfterDoubleFailure(
+	codeRoot: string,
+	backupDir: string,
+	stagingDir: string,
+	error: unknown,
+	restoreError: unknown,
+): never {
+	const parkedInStaging = isInsideDir(codeRoot, stagingDir);
+	if (parkedInStaging) {
 		try {
 			writeFileSync(
 				join(stagingDir, STAGING_KEEP_MARKER),
@@ -611,17 +670,13 @@ function restoreAfterFailedSwap(
 		} catch {
 			// marker write best-effort — the error below still names both trees
 		}
-		throw new DedaloError('update.failed', {
-			message: `code swap failed (${String(error)}) AND the restore failed (${String(restoreError)}): old tree at ${backupDir}, new tree parked at ${codeRoot} — staging dir KEPT`,
-			publicMessage:
-				'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the new tree is parked in staging (NOT deleted), and the pending rollback sentinel is in place. Operator recovery required; see the server log.',
-		});
 	}
-	refuseUpdate(
-		'update.failed',
-		'Error. Code swap failed after the backup rename — the previous tree was restored in place; nothing changed',
-		error,
-	);
+	throw new DedaloError('update.failed', {
+		message: `code swap failed (${String(error)}) AND the restore failed (${String(restoreError)}): old tree at ${backupDir}, new tree at ${codeRoot}${parkedInStaging ? ' — staging dir KEPT' : ''}`,
+		publicMessage: parkedInStaging
+			? 'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the new tree is parked in staging (NOT deleted), and the pending rollback sentinel is in place. Operator recovery required; see the server log.'
+			: 'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the tree that was being installed remains where it was, and the pending rollback sentinel is in place. Operator recovery required; see the server log.',
+	});
 }
 
 /**
@@ -652,7 +707,7 @@ function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
  * a tree that is not this process's). Null for a tree installed before stamps
  * existed, or a dev checkout.
  */
-function installedDigestOf(targetRoot: string): string | null {
+export function installedDigestOf(targetRoot: string): string | null {
 	try {
 		return (
 			parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest ?? null
@@ -669,7 +724,7 @@ function installedDigestOf(targetRoot: string): string | null {
  * short digest of the tree the dir HOLDS makes it identifiable; a tree with no
  * stamp keeps the old name rather than inventing a token.
  */
-function backupDirName(
+export function backupDirName(
 	previousVersion: string,
 	previousDigest: string | null,
 	stamp: string,
@@ -680,14 +735,18 @@ function backupDirName(
 }
 
 /** The rollback sentinel (deploy/dedalo-code-rollback.sh contract — flat, exact keys). */
-interface UpdateSentinel {
+export interface UpdateSentinel {
 	version: string;
 	previousVersion: string;
 	updateMode: 'clean';
 	stamp: string;
 	backupDir: string;
-	/** sha256 of the installed archive — what boot_confirm.ts compares (2026-08-24). */
-	installDigest: string;
+	/** sha256 of the installed archive — what boot_confirm.ts compares (2026-08-24).
+	 * OPTIONAL since 2026-08-25: a restore point installed before stamps existed
+	 * has no digest, and boot_confirm.ts falls back to the version compare only
+	 * when the FIELD IS ABSENT — writing an empty string would make it compare a
+	 * digest that can never match and scream on every boot. */
+	installDigest?: string;
 	status: 'pending';
 	rollback_attempted: false;
 }
@@ -846,7 +905,7 @@ function assertReleaseShape({ url, version, declaredSha, channel }: UpdateReques
  *    by the swap.
  *  - The backup root itself must not sit inside the tree the swap renames away.
  */
-function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
+export function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
 	const supervised = seams.supervised ?? isSupervised();
 	if (targetRoot === projectRoot && !supervised) {
 		refuseUpdate(
@@ -901,7 +960,7 @@ export function resolveCodeBackupRoot(): string {
 
 /** Resolve the backup root and refuse one that sits inside the tree the swap
  * renames away (its own swap would move it). */
-function resolveBackupRootOrRefuse(targetRoot: string, seams: CodeUpdateSeams): string {
+export function resolveBackupRootOrRefuse(targetRoot: string, seams: CodeUpdateSeams): string {
 	const backupRoot = seams.backupRoot ?? resolveCodeBackupRoot();
 	if (backupRootIsInsideTree(backupRoot, targetRoot)) {
 		refuseUpdate(
@@ -1031,8 +1090,12 @@ function isSecretShapedName(name: string): boolean {
 
 /** The ROOT WHITELIST + nested secret-pattern refusals (prepareQuarantine's
  * first gates — see its doc comment; the module header states the nested
- * check's honest limit). */
-function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
+ * check's honest limit).
+ *
+ * EXPORTED for code_restore.ts (2026-08-25): `codeRoot` is simply "the tree
+ * about to land", quarantine or restore point. Both paths move the live tree
+ * into a backup dir with the same first rename, so both owe this refusal. */
+export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
 	const shipped = new Set(readdirSync(codeRoot));
 	const unknown = readdirSync(targetRoot).filter(
 		(name) => !shipped.has(name) && !PRESERVE_ROOT_ENTRIES.has(name) && name !== 'node_modules',
@@ -1080,7 +1143,7 @@ async function prepareQuarantine(
  * fire before any phase has started — without this the operator watched an
  * all-pending track and got only a generic sentence.
  */
-function swapPreconditionsWithFrame(
+export function swapPreconditionsWithFrame(
 	targetRoot: string,
 	seams: CodeUpdateSeams,
 	phases: PhaseTracker,
@@ -1094,7 +1157,7 @@ function swapPreconditionsWithFrame(
 }
 
 /** The message a phase-frame carries for any thrown value. */
-function errorText(error: unknown): string {
+export function errorText(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
@@ -1210,7 +1273,7 @@ function reclaimStaleRunLockOrRefuse(lockPath: string): void {
 
 /** Refuse a staging dir holding a PARKED tree (a previous run's failed swap
  * restore — never sweep it), else sweep and recreate it empty. */
-function prepareStagingDirOrRefuse(stagingDir: string): void {
+export function prepareStagingDirOrRefuse(stagingDir: string): void {
 	if (existsSync(join(stagingDir, STAGING_KEEP_MARKER))) {
 		refuseUpdate(
 			'update.refused',
@@ -1229,7 +1292,7 @@ function prepareStagingDirOrRefuse(stagingDir: string): void {
  * (the rollback script tolerates a leftover pending sentinel naming a
  * nonexistent backupDir).
  */
-async function sentinelGuardedSwap(
+export async function sentinelGuardedSwap(
 	codeRoot: string,
 	targetRoot: string,
 	backupRoot: string,

@@ -7,6 +7,8 @@
  * update_code EXECUTE: ownership-gated. Closed keeps the frozen engine_denied;
  * open downloads the selected release, verifies + extracts + swaps the TS
  * tree, and restarts (core/update/code_update.ts, WC-024).
+ * restore_code EXECUTE: ownership-gated; open puts a RESTORE POINT back on the
+ * tree — the same swap, run in reverse (core/update/code_restore.ts).
  * build_version_from_git_master: ownership-gated; open runs the git-archive
  * release build (core/update/code_build.ts).
  */
@@ -129,6 +131,44 @@ async function updateCodeOwned(
 }
 
 /**
+ * The OPEN (owned) code RESTORE: a BACKGROUND mediaJobs job putting a restore
+ * point back on the tree (pre-flight smoke boot + swap + restart), answering
+ * the same {pid, pfile} poll handle and streaming the same
+ * `UpdatePhaseFrame`s — `download`/`verify`/`extract`/`deps` arrive `skipped`,
+ * so the client's phase reducer needs no restore-specific branch.
+ *
+ * The SAME known limit as the update, by design: the restart kills this
+ * process and orphans the job, and the client switches to /health polling on
+ * the `restart` frame's `expected_version`. Do not "fix" the interruption away.
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a thin job-submission wrapper over
+ * `core/update/code_restore.ts`, gated in its own suite. EXECUTING it replaces
+ * the code tree on disk and restarts the process.
+ */
+async function restoreCodeOwned(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const { restoreCode } = await import('../../update/code_restore.ts');
+	const { mediaJobs } = await import('../../media/jobs.ts');
+	const record = mediaJobs.submit(
+		'restore_code',
+		async ({ onData }) => {
+			// core/update/** REFUSES BY THROWING (update.refused / update.failed);
+			// phase frames stream through the job's data channel as it advances.
+			return await restoreCode(options, principal, { onPhase: (frame) => onData(frame) });
+		},
+		{ userId: principal.userId },
+	);
+	return {
+		data: true,
+		msg: `OK. Running publication ${process.pid}`,
+		extend: { pid: process.pid, pfile: `${record.id}.json` },
+	};
+}
+
+/**
  * The OPEN (owned) release build: git archive of a ref.
  *
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
@@ -169,6 +209,11 @@ export const widget: WidgetModule = {
 			'update_code.update_code',
 			engineDenied('update_code.update_code', 'it downloads and REPLACES the PHP code tree'),
 			updateCodeOwned,
+		),
+		restore_code: gated(
+			'update_code.restore_code',
+			engineDenied('update_code.restore_code', 'it REPLACES the live code tree with a backup copy'),
+			restoreCodeOwned,
 		),
 		build_version_from_git_master: gated(
 			'update_code.build_version_from_git_master',

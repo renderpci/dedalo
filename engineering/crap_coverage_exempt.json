@@ -171,6 +171,12 @@
 		},
 		{
 			"file": "src/core/area_maintenance/widgets/update_code.ts",
+			"symbol": "restoreCodeOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A one-field unwrap forwarding to core/update/code_restore.ts, gated in its own suite (update_restore_native.test.ts drives the whole pipeline seam-first against a temp tree); executing THIS wrapper replaces the live code tree with a backup copy and restarts the process."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_code.ts",
 			"symbol": "buildVersionOwned",
 			"class": "unrunnable-destructive",
 			"reason": "A three-field unwrap forwarding to core/update/code_build.ts, gated in its own suite; running it shells out to git and writes a release archive into the tree."
