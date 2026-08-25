@@ -48,6 +48,24 @@
  *      becomes the expected condition and trains the regeneration reflex the
  *      ratchets exist to starve — and it was never load-bearing: rule 4's parser
  *      takes only the first column, and scripts/verify.ts has no allowlist.
+ *  13. DB TIER NEEDS NO PRIVATE ENV (2026-08-25) — scripts/ci/db_tier.sh may
+ *      contain NO command that requires ../private/.env. Its own header states
+ *      the tier needs "no secrets, no ../private/.env, no sibling tree", but the
+ *      script called env_guard.sh, whose check 2 hard-fails on a missing
+ *      ../private/.env — so on every GitHub run the tier died BEFORE
+ *      `bun run test:db:setup`, and its tripwires were "wired" but had never
+ *      once executed there. "Wired" must never again quietly mean "never
+ *      reached", so the incompatibility is now a scan with a positive control,
+ *      not a prose claim.
+ *  14. DIFFUSION TABLE OVERRIDES CARRY THE ENGINE'S PREFIX (2026-08-25) — every
+ *      literal assigned to DIFFUSION_JOBS_TABLE / DIFFUSION_ACTIVITY_TABLE under
+ *      scripts/ and test/ matches the engine's own /^dedalo_ts_test_…/ guard,
+ *      which THROWS AT MODULE LOAD (src/diffusion/jobs/schema.ts,
+ *      src/core/diffusion_bridge/diffusion_delete.ts). db_tier.sh exported
+ *      `dedalo_ts_ci_*` names — latent only because no db-tier gate imported
+ *      schema.ts yet; adding one (diffusion_jobs_table_seam.test.ts statically
+ *      imports it) would have killed the whole tier at import. The regex is
+ *      EXTRACTED from the two engine sources, never re-typed here.
  *
  * SCANNERS THAT ARE NOT GATED HERE, deliberately: CodeQL (.github/workflows/codeql.yml)
  * and the secret scan (.github/workflows/security.yml) are third-party analyses whose
@@ -62,6 +80,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
@@ -166,6 +185,74 @@ function dbTierTripwires(): string[] {
 		});
 }
 
+/**
+ * Rule 13's matcher — the lines of a shell script that REQUIRE ../private/.env.
+ *
+ * Three shapes count, each one a way db_tier.sh could re-acquire the dependency
+ * its header forswears:
+ *   - any non-comment line naming `../private/.env` itself (reading, sourcing,
+ *     testing it — the file must not be needed, so it must not be named);
+ *   - an env_guard.sh invocation WITHOUT --no-private-env (check 2 of that
+ *     guard hard-fails on the missing file — the exact line that killed the
+ *     tier on every GitHub run until 2026-08-25);
+ *   - any link_siblings.sh invocation (its whole job is materializing the
+ *     sibling ../private tree — a hosted runner has no sibling to link).
+ *
+ * Comment lines are exempt: the header DISCUSSES ../private/.env (it documents
+ * why the tier does not need it), and flagging the warning that prevents the
+ * bug is the trap rule 5's targetsSelfHosted() already refuses to fall into.
+ * `mkdir -p ../private` stays legal — it creates the parent directory the suite
+ * media root derives under, and never touches the .env file.
+ *
+ * What this does NOT prove: that no INVOKED program reads the file on its own.
+ * `bun run test:db:setup` runs fine without it because the script exports the
+ * full config into the process env (rule 6 pins that stub list to the catalog);
+ * a future subcommand that insists on the file would pass this scan and die at
+ * runtime — loudly, in CI, which is the failure mode this rule downgraded the
+ * silent never-ran state to.
+ */
+function privateEnvOffenders(src: string): string[] {
+	const offenders: string[] = [];
+	for (const raw of src.split('\n')) {
+		const line = raw.trim();
+		if (line === '' || line.startsWith('#')) continue;
+		if (line.includes('../private/.env')) offenders.push(line);
+		else if (/\benv_guard\.sh\b/.test(line) && !line.includes('--no-private-env'))
+			offenders.push(line);
+		else if (line.includes('link_siblings.sh')) offenders.push(line);
+	}
+	return offenders;
+}
+
+/**
+ * Rule 14's regex source: extract the seam-override guard regex FROM the two
+ * engine modules rather than re-typing it. This gate cannot import them — both
+ * drag src/core/db/postgres.ts into the closure, and resolveJobsTable() runs at
+ * module load, which would disqualify this file from the hermetic tier (the
+ * exact NOT_HERMETIC criterion several rows above document) — so the next-best
+ * mechanical bond is reading their SOURCE: if either regex changes shape or the
+ * two modules disagree, this throws and the rule goes red instead of silently
+ * validating against a stale copy.
+ */
+function diffusionSeamGuardRegex(): RegExp {
+	const sources = [
+		'src/diffusion/jobs/schema.ts',
+		'src/core/diffusion_bridge/diffusion_delete.ts',
+	] as const;
+	const literals = sources.map((rel) => {
+		const m = read(rel).match(/if \(!(\/\^[^/]+\/)\.test\(override\)\)/);
+		if (!m) throw new Error(`${rel}: seam-override guard regex not found — rule 14 is now blind`);
+		return m[1] as string;
+	});
+	if (new Set(literals).size !== 1) {
+		throw new Error(
+			`the two seam-guard regexes disagree (${literals.join(' vs ')}) — they are one contract and must move together`,
+		);
+	}
+	const literal = literals[0] as string;
+	return new RegExp(literal.slice(1, -1));
+}
+
 /** engineering/TRIPWIRES.md table rows (first column, test paths). */
 function ledgerTripwires(): string[] {
 	const src = read('engineering/TRIPWIRES.md');
@@ -202,6 +289,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/consultation_only_sections_tripwire.test.ts',
 		'The engine-guard refusals resolve pre-DB but the readSection end-to-end leg and the ontology-backed permission/structure lookups query the suite Postgres, so the gate cannot run on the hosted tier',
+	],
+	[
+		'test/unit/dbread_role_tripwire.test.ts',
+		'Its entire subject is a database object — it connects AS the dedalo_test_ro role and fires zero-row write probes that Postgres must refuse with 42501; without a live suite DB every test skips (empirically verified DB_HOST=127.0.0.1 DB_PORT=1: 5 skip / 0 pass), so on the hermetic tier the gate would be 100% skip, i.e. vacuous — it runs on the DB tier, where test:db:setup step 5b has just ensured the role',
 	],
 	[
 		'test/unit/error_taxonomy_tripwire.test.ts',
@@ -601,6 +692,272 @@ describe('CI workflow tripwire', () => {
 			[...src.matchAll(/^\s*image:\s*(\S+)/gm)].length,
 			'.github/workflows/db.yml: the services: block declares no image:, so the digest-pin rule would pass over nothing',
 		).toBeGreaterThan(0);
+	});
+
+	/**
+	 * Rule 13 — db_tier.sh must not require ../private/.env. See the header for
+	 * the measured breakage: the tier's guard call hard-failed on the file every
+	 * GitHub run, so "wired" meant "never reached" from the day the tier landed.
+	 */
+	test('db_tier.sh contains no command that requires ../private/.env (rule 13)', () => {
+		// Positive controls FIRST — a matcher that cannot catch the planted
+		// offender proves nothing about a clean scan. Each control is one of the
+		// three shapes the matcher claims to catch, plus the two shapes it must
+		// NOT catch (the flagged guard call, and a comment discussing the file).
+		expect(
+			privateEnvOffenders('cat ../private/.env'),
+			'matcher control: a direct ../private/.env read must be flagged — the matcher is blind and this rule is vacuous',
+		).toHaveLength(1);
+		expect(
+			privateEnvOffenders('bash scripts/ci/env_guard.sh'),
+			'matcher control: a bare env_guard.sh call (check 2 hard-fails on the missing file) must be flagged',
+		).toHaveLength(1);
+		expect(
+			privateEnvOffenders('bash scripts/ci/link_siblings.sh'),
+			'matcher control: link_siblings.sh materializes the sibling ../private tree and must be flagged',
+		).toHaveLength(1);
+		expect(
+			privateEnvOffenders('bash scripts/ci/env_guard.sh --no-private-env'),
+			'matcher control: the flagged guard call is the SANCTIONED form and must NOT be flagged',
+		).toHaveLength(0);
+		expect(
+			privateEnvOffenders('# the tier needs no ../private/.env'),
+			'matcher control: comments must stay free to discuss the file they forswear',
+		).toHaveLength(0);
+
+		const src = read('scripts/ci/db_tier.sh');
+		expect(
+			privateEnvOffenders(src),
+			'scripts/ci/db_tier.sh requires ../private/.env, which never exists on a hosted runner: the tier dies before test:db:setup and its tripwires run NOWHERE while reporting as wired — the exact never-reached state measured 2026-08-25. Compose the config in-process (the export block) or pass --no-private-env to env_guard.sh:',
+		).toEqual([]);
+
+		// Guard the guard, both halves: the bun-pin check must still be reached
+		// (deleting the env_guard call would also pass the scan above), and
+		// env_guard.sh must still HAVE a private-env check for its self-hosted
+		// callers — if check 2 were deleted outright, --no-private-env would be
+		// skipping nothing and the flag's meaning silently rots.
+		expect(
+			src.includes('env_guard.sh --no-private-env'),
+			'db_tier.sh no longer calls env_guard.sh at all — the scan is happy but the bun-pin verification is gone; keep the call with --no-private-env',
+		).toBe(true);
+		const guard = read('scripts/ci/env_guard.sh');
+		expect(
+			guard.includes('REQUIRE_PRIVATE_ENV') && guard.includes('../private/.env'),
+			'env_guard.sh lost its skippable private-env check — --no-private-env now skips nothing, so either restore check 2 or retire the flag and this assertion together, deliberately',
+		).toBe(true);
+	});
+
+	/**
+	 * Rule 14 — every DIFFUSION_JOBS_TABLE / DIFFUSION_ACTIVITY_TABLE literal
+	 * under scripts/ and test/ satisfies the engine's own seam-guard regex,
+	 * which throws AT MODULE LOAD on violation. See the header for the latent
+	 * db_tier.sh kill this closes. Three assignment shapes are scanned; an
+	 * override reaching the env by a route none of them cover (e.g. a computed
+	 * string) is NOT caught here — the engine's load-time throw remains the
+	 * backstop, and diffusion_jobs_table_seam.test.ts proves that throw fires.
+	 */
+	test('diffusion table-override literals under scripts/ and test/ carry the engine prefix (rule 14)', () => {
+		const guardRe = diffusionSeamGuardRegex();
+		// The engine's guard must still be the prefix guard this rule narrates;
+		// if it loosened to something that admits the old dedalo_ts_ci_* names,
+		// the extraction "succeeded" but the rule's premise is gone.
+		expect(
+			guardRe.test('dedalo_ts_test_ci_diffusion_jobs'),
+			'the extracted engine regex rejects the canonical dedalo_ts_test_ci_* form — the guard changed shape; re-read schema.ts before touching this rule',
+		).toBe(true);
+		expect(guardRe.test('dedalo_ts_ci_diffusion_jobs')).toBe(false);
+
+		// The three assignment shapes. Key names are BUILT by concatenation in
+		// the controls below so this file's own source never contains a
+		// literal-assignment shape for its own scan to trip over.
+		const SHAPES: readonly RegExp[] = [
+			// shell parameter-expansion default:   : "${<KEY>:=some_table}"
+			// (the key is spelled by the alternation — writing the real key in
+			// this comment would make this file its own first offender).
+			/:\s*"\$\{(DIFFUSION_(?:JOBS|ACTIVITY)_TABLE):=([a-z][a-z0-9_]*)\}"/g,
+			// '=' with a QUOTED lowercase literal — TS process.env assignment and
+			// the SCRATCH_*_TABLE const indirection the retry-queue /
+			// delete-outcomes tests use. The quote is REQUIRED: an unquoted
+			// grammar captured the leading identifier of any expression RHS
+			// (`= process.env.X` yielded a phantom literal 'process'), so
+			// expression assignments are deliberately not this shape's business.
+			/\b([A-Z0-9_]*(?:JOBS|ACTIVITY)_TABLE)\s*=\s*'([a-z][a-z0-9_]*)'/g,
+			// shell plain assignment, whole line:   KEY=some_table
+			/^\s*(?:export\s+)?([A-Z0-9_]*(?:JOBS|ACTIVITY)_TABLE)=([a-z][a-z0-9_]*)\s*$/gm,
+			// object/env property, with the optional readEnv(...) ?? fallback the
+			// client test server uses (value may sit on the next line).
+			/\b(DIFFUSION_(?:JOBS|ACTIVITY)_TABLE)\s*:\s*[\r\n\t ]*(?:readEnv\([^)]*\)\s*\?\?\s*)?'([a-z][a-z0-9_]*)'/g,
+		];
+		const extract = (src: string): Array<{ key: string; value: string }> => {
+			const found: Array<{ key: string; value: string }> = [];
+			for (const re of SHAPES) {
+				for (const m of src.matchAll(re)) {
+					found.push({ key: m[1] as string, value: m[2] as string });
+				}
+			}
+			return found;
+		};
+
+		// Positive control: each shape must catch a planted bad literal, or the
+		// scan below is a walk over files it cannot read.
+		const K = `DIFFUSION_JOBS${'_TABLE'}`;
+		const controls = [
+			`: "\${${K}:=dedalo_bad}"`,
+			`process.env.${K} = 'dedalo_bad'`,
+			`${K}=dedalo_bad`,
+			`${K}: readEnv('${K}') ?? 'dedalo_bad'`,
+		];
+		for (const control of controls) {
+			const hits = extract(control);
+			expect(hits.length, `shape control not matched, the scan is blind to it: ${control}`).toBe(1);
+			expect(guardRe.test((hits[0] as { value: string }).value)).toBe(false);
+		}
+		// Negative control: an expression RHS is not a literal — the unquoted
+		// grammar this replaces read `= process.env.X` as a literal 'process'.
+		expect(
+			extract(`const PRELOAD = process.env.${K};`),
+			'the scan captured a phantom literal out of an expression assignment — the quoted-literal grammar regressed',
+		).toHaveLength(0);
+
+		// EXEMPT, with its reason: the seam gate's own negative controls are
+		// deliberately invalid literals — they exist to prove the engine's
+		// load-time refusal fires. The exemption is kept LIVE below: if that file
+		// stops containing a non-conforming literal, the row is stale and red.
+		const EXEMPT = 'test/unit/diffusion_jobs_table_seam.test.ts';
+
+		const glob = new Glob('**/*.{ts,sh}');
+		const offenders: string[] = [];
+		let sites = 0;
+		let exemptBadLiterals = 0;
+		for (const dir of ['scripts', 'test']) {
+			for (const rel of glob.scanSync({ cwd: join(repoRoot, dir) })) {
+				const file = join(dir, rel).replaceAll('\\', '/');
+				for (const { key, value } of extract(read(file))) {
+					sites++;
+					if (guardRe.test(value)) continue;
+					if (file === EXEMPT) {
+						exemptBadLiterals++;
+						continue;
+					}
+					offenders.push(`${file}: ${key} = '${value}'`);
+				}
+			}
+		}
+		expect(
+			offenders,
+			`A diffusion table-override literal violates the engine's seam guard ${guardRe} (src/diffusion/jobs/schema.ts / diffusion_delete.ts). The guard THROWS AT MODULE LOAD, so the first gate whose closure imports either module dies at import with this value in the env — the db_tier.sh latent kill of 2026-08-25. Rename the table, never the regex; the prefix is what stops production being redirected to an arbitrary table:`,
+		).toEqual([]);
+		// Anti-vacuity floor: 12 assignment sites measured 2026-08-25 (db_tier.sh
+		// 2, test/preload/session_db.ts 2, scripts/update_drill.ts 2,
+		// scripts/client_test_server.ts 2, the seam gate's 2 negative controls,
+		// the 2 SCRATCH_ACTIVITY_TABLE consts). Under 8 means the shapes or the
+		// walk broke, not that the repo cleaned itself up.
+		expect(
+			sites,
+			`only ${sites} diffusion table-override assignment sites found under scripts/ and test/ — the scan shapes or the directory walk are broken and this rule is passing over nothing`,
+		).toBeGreaterThanOrEqual(8);
+		expect(
+			exemptBadLiterals,
+			`${EXEMPT} is exempted as the home of the deliberate BAD literals that prove the engine refusal, but it no longer contains any — the exemption is stale; delete it`,
+		).toBeGreaterThan(0);
+	});
+
+	/**
+	 * RULE 15 — CONCURRENCY MAY NEVER COST A VERDICT.
+	 *
+	 * Phase 4 of the parallel-test work made three whole-tree stages run at the
+	 * same time: typecheck ∥ lint in BOTH `scripts/ci/hermetic.sh` and
+	 * `scripts/verify.ts`, and the two isolated daemon packages
+	 * (publication/site_builder, publication/server_api/v2) concurrently in
+	 * hermetic.sh. Every one of those is safe ONLY while both branches are still
+	 * waited on and both verdicts still reported. The failure mode is silent and
+	 * it is the reason this rule exists rather than a comment: under `set -e` a
+	 * first failing background job that is not explicitly waited on aborts the
+	 * script, and the SECOND package's result — pass or fail — is never printed.
+	 * The tier stays "red", so nobody notices that half its coverage stopped
+	 * being reported at all.
+	 *
+	 * MEASURED, both directions, on Bun 1.4.0: `bun run --parallel a b` exits 1
+	 * when a script fails WITH AND WITHOUT `--no-exit-on-error`. The flag does not
+	 * swallow the failure; it only lets the other script finish first. So the flag
+	 * is required here (a red lint must not pre-empt the typecheck's verdict), and
+	 * dropping it is a real regression in what the tier reports.
+	 */
+	test('parallelised CI stages still wait on and report every verdict (rule 15)', () => {
+		const hermeticRaw = readFileSync(join(repoRoot, 'scripts/ci/hermetic.sh'), 'utf8');
+		// COMMENTS ARE NOT CODE, and this file's comments DISCUSS the very command
+		// the matcher looks for ("`bun run --parallel` runs SCRIPTS, not arbitrary
+		// commands"). Scanning raw text flagged the prose explaining the rule —
+		// the same shape mock_isolation_tripwire records: a raw read baselines a
+		// file for MENTIONING the thing the rule bans. Strip shell comment lines
+		// for the CODE assertions; the toContain checks below still read the raw
+		// text, since they are looking for a line that must literally be present.
+		const hermetic = hermeticRaw
+			.split('\n')
+			.filter((line) => !line.trimStart().startsWith('#'))
+			.join('\n');
+		const verify = readFileSync(join(repoRoot, 'scripts/verify.ts'), 'utf8');
+
+		// Positive controls FIRST: a matcher that cannot catch the planted
+		// offender proves nothing about a clean scan.
+		// Anchored to the START of a line: an INVOCATION, never a mention. The
+		// unanchored form flagged this file's own `echo "== hermetic: typecheck +
+		// lint (bun run --parallel)"` label and its explanatory comments — a
+		// matcher that cannot tell a command from prose about the command reports
+		// the rule's own documentation as the violation.
+		const parallelWithoutFlag = (text: string): boolean =>
+			/^[ \t]*bun run --parallel(?! --no-exit-on-error)/m.test(text);
+		expect(
+			parallelWithoutFlag('bun run --parallel typecheck lint'),
+			'matcher control: a --parallel call missing --no-exit-on-error must be flagged, or this rule is vacuous',
+		).toBe(true);
+		expect(parallelWithoutFlag('bun run --parallel --no-exit-on-error typecheck lint')).toBe(false);
+		// ...and a MENTION in prose or an echo label is not an invocation.
+		expect(parallelWithoutFlag('# see `bun run --parallel` for the script runner')).toBe(false);
+		expect(parallelWithoutFlag('echo "== typecheck + lint (bun run --parallel)"')).toBe(false);
+
+		// hermetic.sh: the concurrent typecheck+lint keeps the flag that makes
+		// both verdicts survive.
+		expect(hermeticRaw).toContain('bun run --parallel --no-exit-on-error typecheck lint');
+		expect(
+			parallelWithoutFlag(hermetic),
+			"scripts/ci/hermetic.sh runs `bun run --parallel` without --no-exit-on-error: one red stage will pre-empt the other stage's verdict",
+		).toBe(false);
+
+		// Both scripts it names must be real package.json scripts — `bun run
+		// --parallel` runs SCRIPTS, so a renamed script turns the stage into a
+		// "script not found" that `set -e` converts into an unexplained tier failure.
+		const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
+			scripts: Record<string, string>;
+		};
+		for (const name of ['typecheck', 'lint']) {
+			expect(
+				pkg.scripts[name],
+				`package.json must define the "${name}" script that hermetic.sh runs in parallel`,
+			).toBeString();
+		}
+
+		// hermetic.sh: BOTH daemon jobs are backgrounded, BOTH are waited on by
+		// pid, and BOTH exit codes are consulted. Anti-vacuity floor: exactly two
+		// of each, so deleting one job silently is red.
+		const backgrounded = hermeticRaw.match(/daemon_gate \S+ > \S+ 2>&1 &/g) ?? [];
+		expect(
+			backgrounded.length,
+			'hermetic.sh must background exactly the two daemon packages — a third or a missing one means this rule no longer describes the tier',
+		).toBe(2);
+		const waits = hermeticRaw.match(/wait "\$\w+" \|\| \w+=\$\?/g) ?? [];
+		expect(
+			waits.length,
+			"every backgrounded daemon gate must be waited on with its exit status captured, or `set -e` drops the other package's verdict",
+		).toBe(2);
+
+		// verify.ts: the concurrent static stages have a PINNED report order, so
+		// the summary table cannot reshuffle between runs.
+		expect(verify).toContain('await Promise.all([typecheck(), lint()]);');
+		expect(
+			verify,
+			'verify.ts runs its static stages concurrently, so it must pin their summary order — a verdict table that reshuffles is one people stop reading',
+		).toContain('STATIC_STAGE_ORDER');
 	});
 
 	test('hermetic.sh tripwires are a subset of verify.ts TRIPWIRES', () => {

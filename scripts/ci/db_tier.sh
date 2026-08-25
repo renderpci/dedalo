@@ -87,8 +87,18 @@ fi
 : "${DEDALO_PG_BIN_PATH:=/usr/lib/postgresql/18/bin}"
 
 # Run-scoped scratch surfaces, exported so two jobs on one host cannot collide.
-: "${DIFFUSION_JOBS_TABLE:=dedalo_ts_ci_diffusion_jobs}"
-: "${DIFFUSION_ACTIVITY_TABLE:=dedalo_ts_ci_activity_diffusion}"
+# The two table names MUST carry the `dedalo_ts_test_` prefix: the overrides are
+# TEST SEAMS and the engine enforces /^dedalo_ts_test_[a-z0-9_]*$/ AT MODULE
+# LOAD (src/diffusion/jobs/schema.ts resolveJobsTable + its diffusion_delete.ts
+# twin — do not weaken those; the prefix IS the guard against redirecting
+# production to an arbitrary table). The original `dedalo_ts_ci_*` values were a
+# latent module-load throw: no db-tier gate happened to import schema.ts yet,
+# but test/unit/diffusion_jobs_table_seam.test.ts does, so wiring it (or any
+# schema.ts importer) into this tier with the old names would have killed the
+# whole run at import. ci_workflow_tripwire.test.ts now scans every literal
+# under scripts/ and test/ against the engine's own regex.
+: "${DIFFUSION_JOBS_TABLE:=dedalo_ts_test_ci_diffusion_jobs}"
+: "${DIFFUSION_ACTIVITY_TABLE:=dedalo_ts_test_ci_activity_diffusion}"
 : "${DEDALO_SESSION_DB_PATH:=${TMPDIR:-/tmp}/dedalo_ci_sessions.sqlite}"
 : "${DEDALO_TS_STATE_PATH:=${TMPDIR:-/tmp}/dedalo_ci_ts_state.json}"
 
@@ -112,7 +122,15 @@ export DIFFUSION_JOBS_TABLE DIFFUSION_ACTIVITY_TABLE DEDALO_SESSION_DB_PATH DEDA
 mkdir -p ../private
 
 echo "== db_tier: bun $(bun --version) (pin: $(cat .bun-version))"
-bash scripts/ci/env_guard.sh
+# --no-private-env is LOAD-BEARING, not an optimization: env_guard's check 2
+# hard-fails on a missing ../private/.env, and this tier composes its entire
+# config in-process (the exports above) precisely so no such file exists on the
+# runner. Before the flag (2026-08-25) this line exited 1 on every GitHub run —
+# the tier died before `bun run test:db:setup`, so its tripwires had NEVER
+# actually executed on GitHub while reporting as "wired". The guard still
+# verifies the bun pin, which is why the call stays instead of being deleted.
+# ci_workflow_tripwire.test.ts forbids any command here that needs the file.
+bash scripts/ci/env_guard.sh --no-private-env
 
 echo "== db_tier: build the suite database (from repo-vendored bytes)"
 bun run test:db:setup
@@ -132,6 +150,7 @@ bun run test:db:setup
 # ---------------------------------------------------------------------------
 DB_TIER_TRIPWIRES=(
 	test/unit/consultation_only_sections_tripwire.test.ts
+	test/unit/dbread_role_tripwire.test.ts
 	test/unit/error_taxonomy_tripwire.test.ts
 	test/unit/external_degradation_tripwire.test.ts
 	test/unit/external_egress_tripwire.test.ts
@@ -153,6 +172,12 @@ DB_TIER_TRIPWIRES=(
 )
 
 echo "== db_tier: DB-backed tripwires (${#DB_TIER_TRIPWIRES[@]})"
-bun test "${DB_TIER_TRIPWIRES[@]}"
+# --timeout=30000 is a LITERAL COPY of TEST_TIMEOUT_MS in scripts/lib/test_flags.ts, which is
+# the source of truth; a shell script cannot import it, and a `bun -e` readback would add a
+# bun subprocess to every CI tier for a copy that would still exist. A tripwire gate keeps
+# this literal in step with the constant. It is on the command line and not in bunfig.toml
+# because Bun 1.4.0 SILENTLY IGNORES `[test] timeout`. These gates are DB-backed, so they are
+# the ones a 5000 ms cap truncates first.
+bun test --timeout=30000 "${DB_TIER_TRIPWIRES[@]}"
 
 echo "== db_tier: OK"

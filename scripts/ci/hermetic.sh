@@ -151,6 +151,27 @@ HERMETIC_TRIPWIRES=(
 	test/unit/parity_baseline_tripwire.test.ts
 	test/unit/twin_map_tripwire.test.ts
 	test/unit/runtime_paths_census_tripwire.test.ts
+	# --- 2026-08-25: the timeout single-source gate. DB-free (file scans + one import of
+	#     scripts/lib/test_flags.ts); hermetic is its ONLY executing tier by design — it is
+	#     the gate the --timeout=30000 literal comment below promises, keeping every copy
+	#     (this script included) equal to TEST_TIMEOUT_MS.
+	test/unit/test_timeout_tripwire.test.ts
+	# --- 2026-08-25: the Phase 1/2 test-infrastructure gates. Empirically verified
+	#     DB-less (DB_HOST=127.0.0.1 DB_PORT=59999: 20 pass / 0 fail). All three are
+	#     fs-only: the baseline gate reads engineering/test_baseline/ (loud skip when
+	#     absent, so it earns its schema/ratchet checks the day the campaign artifacts
+	#     land), the two census gates read tracked test source through
+	#     scripts/lib/test_components.ts.
+	test/unit/test_baseline_tripwire.test.ts
+	test/unit/scratch_tld_uniqueness_tripwire.test.ts
+	test/unit/corpus_scope_ownership_tripwire.test.ts
+	# --- 2026-08-25: the Phase 3 shard-partition gate. Plan-only by construction
+	#     -- no clone, no child process, no byte written; pure computation over
+	#     bun's own discovery, the test_components census and the footprint
+	#     classifier. Empirically verified DB-less (DB_HOST=127.0.0.1 DB_PORT=1:
+	#     21 pass / 0 fail). Its sibling dbread_role_tripwire is NOT here: with
+	#     no database it is 100% skip, i.e. vacuous -- it runs on the DB tier.
+	test/unit/shard_partition_tripwire.test.ts
 	test/unit/tool_permission_census_tripwire.test.ts
 	test/unit/client_error_contract_tripwire.test.ts
 	test/unit/date_flat_value_single_source_tripwire.test.ts
@@ -184,14 +205,32 @@ HERMETIC_TRIPWIRES=(
 echo "== hermetic: bun install (frozen lockfile)"
 bun install --frozen-lockfile
 
-echo "== hermetic: typecheck (bunx tsc --noEmit)"
-bunx tsc --noEmit
-
-echo "== hermetic: lint (biome check .)"
-bun run lint
+# TYPECHECK AND LINT RUN CONCURRENTLY (Bun 1.4 `bun run --parallel`).
+#
+# They are whole-tree, independent and read-only, so nothing orders them; running
+# them one after the other simply added their wall clocks. MEASURED on this tree:
+# 1.76s together at 709% CPU, against the sum of two sequential passes.
+#
+# `--no-exit-on-error` is NOT a way of ignoring failures — MEASURED both ways on
+# Bun 1.4.0: with it and without it, a failing script still makes the run exit 1.
+# What it changes is that the OTHER script is allowed to finish first, so a red
+# lint can no longer hide a red typecheck by aborting before it runs. That is the
+# whole reason it is here; `set -e` below still stops the tier on the non-zero exit.
+#
+# Both are package.json scripts because `bun run --parallel` runs SCRIPTS, not
+# arbitrary commands (it is the script runner; the test runner's own worker
+# parallelism is the unrelated `bun test --parallel=N`).
+echo "== hermetic: typecheck + lint (bun run --parallel)"
+bun run --parallel --no-exit-on-error typecheck lint
 
 echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
-bun test "${HERMETIC_TRIPWIRES[@]}"
+# --timeout=30000 is a LITERAL COPY of TEST_TIMEOUT_MS in scripts/lib/test_flags.ts, which
+# is the source of truth; a shell script cannot import it, and a `bun -e` readback would add
+# a bun subprocess to every CI tier for a copy that would still exist. A tripwire gate keeps
+# this literal in step with the constant. It is on the command line and not in bunfig.toml
+# because Bun 1.4.0 SILENTLY IGNORES `[test] timeout` (measured: 5001.50 ms kill on an 8 s
+# test), which is how the repo ran its whole history under a 5000 ms cap nobody chose.
+bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}"
 
 # Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
 # a NEW advisory is red, a known one is not (the tree already carried 7 on the day this
@@ -215,6 +254,16 @@ if ! command -v git >/dev/null 2>&1; then
   apt-get update -qq && apt-get install -y -qq git >/dev/null
 fi
 # Run one isolated daemon package's gate, and NAME the failure.
+#
+# NO --timeout HERE, DELIBERATELY. The root suite gets it because it LOST a number it had
+# chosen: bunfig.toml declared `[test] timeout = 30000` and Bun 1.4.0 silently ignored it.
+# These packages never made that claim — publication/site_builder has NO bunfig.toml at all
+# (measured 2026-08-25: the file does not exist, so no timeout was ever declared) and
+# publication/server_api/v2/bunfig.toml declares only coverage/coverageThreshold — so their
+# green baselines were measured under bun's built-in 5000 ms cap and stay comparable run to
+# run. Widening them on no evidence would be silently loosening a gate, not restoring one.
+# Same reasoning, same wording, at the other exempt site: the site_builder stage in
+# scripts/verify.ts.
 #
 # Both daemons set `coverageThreshold` in their bunfig.toml, and a threshold miss makes
 # `bun test` exit 1 while printing NOTHING about coverage — the log reads
@@ -247,17 +296,42 @@ daemon_gate() {
 	return 1
 }
 
-echo "== hermetic: site builder daemon (publication/site_builder)"
-daemon_gate publication/site_builder
+# THE TWO DAEMON PACKAGES RUN CONCURRENTLY, and this is where the tier's minutes
+# actually are: each does its OWN `bun install --frozen-lockfile` (separate
+# lockfiles) plus its own tsc and its own suite. They share no state — separate
+# directories, separate node_modules, separate bunfig, no database, no ../private
+# — so nothing orders them.
+#
+# Bash background jobs rather than `bun run --parallel`: that flag runs
+# package.json SCRIPTS, and daemon_gate() is a shell function carrying the
+# coverageThreshold diagnostic (a threshold miss makes `bun test` exit 1 while
+# printing NOTHING about coverage — the log reads "290 pass / 0 fail" then a bare
+# exit 1). Moving these into package.json scripts to reach the flag would throw
+# that diagnostic away to use a mechanism that buys the same concurrency.
+#
+# BOTH ARE ALWAYS WAITED ON AND BOTH VERDICTS ARE REPORTED: `set -e` must not
+# abort on the first failure here, or one red daemon would hide the other's
+# result — the same reason --no-exit-on-error is used for typecheck+lint above.
+echo "== hermetic: daemon packages, concurrently (site_builder + publication API v2)"
+daemon_status=0
 
-# The publication API v2 (publication/server_api/v2) is the same case as the site builder
-# above and was missed by the same reasoning gap: it is an ISOLATED package with its own
-# lockfile, so verify.ts's src/+test/ neighbour scan never reaches it and `bun test` at the
-# root never descends into it. `bun run test:publication` existed and ran on NO gate. Its
-# suite is hermetic (24 files, no DB — the pool/integration tests stub their transport),
-# and it is the READ-ONLY PUBLIC door of the whole install: auth, rate limiting and the
-# query builder are exactly the invariants that must not rot unwatched.
-echo "== hermetic: publication API v2 (publication/server_api/v2)"
-daemon_gate publication/server_api/v2
+daemon_gate publication/site_builder > /tmp/dedalo_daemon_sb.$$ 2>&1 &
+sb_pid=$!
+daemon_gate publication/server_api/v2 > /tmp/dedalo_daemon_pa.$$ 2>&1 &
+pa_pid=$!
+
+# `wait <pid>` returns the job's exit status; `|| rc=$?` keeps `set -e` from
+# aborting before the second job has been waited on and reported.
+sb_rc=0; wait "$sb_pid" || sb_rc=$?
+pa_rc=0; wait "$pa_pid" || pa_rc=$?
+
+echo "---- publication/site_builder ----"
+cat /tmp/dedalo_daemon_sb.$$ ; rm -f /tmp/dedalo_daemon_sb.$$
+echo "---- publication/server_api/v2 ----"
+cat /tmp/dedalo_daemon_pa.$$ ; rm -f /tmp/dedalo_daemon_pa.$$
+
+[ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
+[ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }
+[ "$daemon_status" -eq 0 ] || exit 1
 
 echo "== hermetic: GREEN"
