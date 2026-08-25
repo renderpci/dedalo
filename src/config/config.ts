@@ -65,6 +65,12 @@ export interface DatabaseConfig {
 	readonly user: string;
 	/** Empty string means trust/peer auth (typical local dev over the socket). */
 	readonly password: string;
+	/**
+	 * PostgreSQL `sslmode`, passed to Bun.sql EXPLICITLY on every connection.
+	 * Explicit because Bun 1.4 started reading ambient PGSSLMODE/PG_SSLMODE — a
+	 * value the catalog cannot audit. Default 'disable' = the pre-1.4 behaviour.
+	 */
+	readonly sslMode: string;
 }
 
 export interface ServerConfig {
@@ -992,6 +998,7 @@ export const config: DedaloConfig = Object.freeze({
 		port: Number(readString('DB_PORT')),
 		user: requireString('DB_USER'),
 		password: readString('DB_PASSWORD'),
+		sslMode: readString('DB_SSLMODE'),
 	}),
 	server: Object.freeze({
 		unixSocketPath: readString('SERVER_UNIX_SOCKET'),

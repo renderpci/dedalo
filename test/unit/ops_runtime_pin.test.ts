@@ -1,14 +1,21 @@
 /**
  * Runtime-pin lockstep tripwire (audit S2-36, WS-E item 1).
  *
- * THE INVARIANT under test: the verified Bun version is pinned in THREE
- * places that must never drift — `.bun-version`, `package.json` engines.bun,
- * and the system_info widget's MIN_BUN floor — and the diffusion zip writer
+ * THE INVARIANT under test: the verified Bun version is pinned in FIVE places
+ * that must never drift — `.bun-version` (the source of truth), `package.json`
+ * engines.bun, the system_info widget's MIN_BUN floor, the `Dockerfile` base
+ * image tag, and `init_test.ts`'s installer floor (compared on major.minor,
+ * since it is deliberately a floor rather than an exact pin). A SIXTH copy, the
+ * `.gitlab-ci.yml` `oven/bun:<tag>` image and the GitHub workflows'
+ * `bun-version-file` wiring, is owned by `ci_workflow_tripwire.test.ts` — that
+ * is the complete census as of 2026-08-25. Add a copy anywhere else and it must
+ * be added here too. This file also asserts the diffusion zip writer
  * carries NO runtime `Bun.zip` probe (a future Bun shipping Bun.zip must not
  * silently change archive bytes). Also pins the deterministic-bytes property
  * of the PKZIP STORE writer itself.
  */
 
+import { Glob } from 'bun';
 import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -97,5 +104,60 @@ describe('zip determinism (the property the probe removal protects)', () => {
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+/**
+ * AMBIENT-ENV CONNECTION INPUTS (2026-08-25, found reviewing the 1.3.9 -> 1.4.0 bump).
+ *
+ * Bun 1.4's Bun.sql option parser falls back to the ambient `PGSSLMODE` /
+ * `PG_SSLMODE` environment variables when `tls` is absent — 1.3.9's parser
+ * never read them (verified by grepping both binaries: the string is present
+ * in 1.4.0 and absent in 1.3.9). Those variables are routinely exported for
+ * `psql`/`pg_dump`, so an absent `tls` would let the surrounding shell, the
+ * systemd unit or a CI image decide the engine's TLS mode — behaviour that
+ * differs by launch method with nothing in `../private/.env` to correct, which
+ * is precisely the failure class `config_env_tripwire` exists to forbid.
+ *
+ * The rule is therefore mechanical, not prose: the pool's options must name
+ * `tls` explicitly, and the value must come from the typed catalog.
+ */
+/**
+ * A pin check that can silently test the WRONG binary is not a pin check.
+ *
+ * `ops_shutdown` spawned a bare `'bun'` off `$PATH` while asserting the boot
+ * echo equals `Bun.version`. Running the suite on 1.4.0 with `$PATH` still on
+ * 1.3.9 (the 2026-08-25 bump), it booted and validated the old runtime; only
+ * the S2-36 version echo caught it, and the second spawn in the same file went
+ * unnoticed for a whole review cycle. `process.execPath` is the runtime UNDER
+ * TEST — `$PATH` is whatever the shell happens to hold.
+ */
+describe('server-spawning gates use the runtime under test, not $PATH', () => {
+	test('no test/unit gate spawns a bare `bun` for src/server.ts', () => {
+		const offenders: string[] = [];
+		for (const match of new Glob('**/*.test.ts').scanSync({ cwd: join(ROOT, 'test/unit') })) {
+			const source = readFileSync(join(ROOT, 'test/unit', match), 'utf-8');
+			if (/Bun\.spawn\(\s*\[\s*['"`]bun['"`]/.test(source)) offenders.push(`test/unit/${match}`);
+		}
+		expect(
+			offenders,
+			`Spawn the server with process.execPath, not a bare 'bun' off $PATH — otherwise the gate can boot a DIFFERENT runtime than the one under test: ${offenders.join(', ')}`,
+		).toEqual([]);
+	});
+});
+
+describe('ambient env may not steer the DB connection (Bun 1.4 PGSSLMODE)', () => {
+	const source = readFileSync(join(ROOT, 'src/core/db/postgres.ts'), 'utf-8');
+
+	test('buildSqlOptions passes tls EXPLICITLY, from the catalog', () => {
+		expect(source).toContain('tls: sslMode as PostgresSslMode');
+		expect(source).toMatch(/const \{[^}]*sslMode[^}]*\} = config\.db;/);
+	});
+
+	test('the sslmode value is a catalogued key, not a raw env read', () => {
+		const catalog = readFileSync(join(ROOT, 'src/config/catalog/db.ts'), 'utf-8');
+		expect(catalog).toContain('DB_SSLMODE:');
+		const configSource = readFileSync(join(ROOT, 'src/config/config.ts'), 'utf-8');
+		expect(configSource).toContain("sslMode: readString('DB_SSLMODE')");
 	});
 });

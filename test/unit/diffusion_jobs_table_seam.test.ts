@@ -27,7 +27,11 @@ describe('diffusion jobs table seam (S1-17/DEC-18a)', () => {
 
 	test('a non-scratch override is REJECTED at module load (fail-loud guard)', async () => {
 		const probe = Bun.spawn(
-			['bun', '-e', `await import('${import.meta.dir}/../../src/diffusion/jobs/schema.ts');`],
+			[
+				process.execPath,
+				'-e',
+				`await import('${import.meta.dir}/../../src/diffusion/jobs/schema.ts');`,
+			],
 			{
 				env: { ...process.env, DIFFUSION_JOBS_TABLE: 'dedalo_ts_diffusion_jobs_evil' },
 				stdout: 'pipe',
@@ -57,7 +61,7 @@ describe('diffusion activity table seam (dd1758 ledger)', () => {
 	test('a non-scratch override is REJECTED at module load (fail-loud guard)', async () => {
 		const probe = Bun.spawn(
 			[
-				'bun',
+				process.execPath,
 				'-e',
 				`await import('${import.meta.dir}/../../src/core/diffusion_bridge/diffusion_delete.ts');`,
 			],

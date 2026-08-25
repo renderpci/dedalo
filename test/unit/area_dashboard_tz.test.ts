@@ -21,7 +21,7 @@ process.exit(0);
 `;
 
 async function windowUnderTz(tz: string): Promise<{ date_from: string; date_to: string }> {
-	const probe = Bun.spawn(['bun', '-e', PROBE], {
+	const probe = Bun.spawn([process.execPath, '-e', PROBE], {
 		env: { ...process.env, TZ: tz },
 		stdout: 'pipe',
 		stderr: 'pipe',

@@ -281,9 +281,36 @@ async function main(): Promise<void> {
 	// CONSISTENT advertised host rather than the detected one.
 	let originHost: string;
 	if (originOverride !== '') {
-		origin = originOverride.replace(/\/$/, '');
-		originHost = origin.replace(/^https?:\/\//, '');
-		console.log('[probe] origin overridden by UPDATE_PROBE_ORIGIN');
+		// VALIDATED before it can reach a write. The rest of the script hardcodes
+		// MASTER_PORT: it finds the master pid by that port (:408), restarts the
+		// dev server bound to it (:481) and matches the consumer's CODE_SERVERS
+		// entry on `:${MASTER_PORT}` (:669). An override on another port, or with
+		// a scheme the engine does not advertise, therefore could never converge —
+		// `advertisedOrigin !== origin` on EVERY run, so the probe would append a
+		// fresh DEDALO_HOST line to the APPEND-ONLY ../private/.env each time and
+		// still fail. Refuse it loudly instead, before anything is written.
+		let parsed: URL;
+		try {
+			parsed = new URL(originOverride);
+		} catch {
+			throw new Error(`UPDATE_PROBE_ORIGIN is not a URL: ${originOverride}`);
+		}
+		must(
+			parsed.protocol === 'http:' || parsed.protocol === 'https:',
+			`UPDATE_PROBE_ORIGIN must be http(s), got ${parsed.protocol}`,
+		);
+		must(parsed.hostname !== '', 'UPDATE_PROBE_ORIGIN has no host');
+		must(
+			parsed.pathname === '/' || parsed.pathname === '',
+			`UPDATE_PROBE_ORIGIN must be a bare origin (no path), got ${parsed.pathname}`,
+		);
+		must(
+			parsed.port === MASTER_PORT,
+			`UPDATE_PROBE_ORIGIN must use port ${MASTER_PORT} — the probe finds, restarts and matches the master on that port`,
+		);
+		origin = `${parsed.protocol}//${parsed.host}`;
+		originHost = parsed.host;
+		console.log(`[probe] origin overridden by UPDATE_PROBE_ORIGIN: ${origin}`);
 	} else {
 		const lanIp = (
 			await sh(

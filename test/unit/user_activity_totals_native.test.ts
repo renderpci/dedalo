@@ -152,7 +152,7 @@ describe('activityWindow — TZ-pinned subprocesses (the local-vs-UTC getter gat
 			const out = ${JSON.stringify(dates)}.map((d) => activityWindow(d));
 			console.log(JSON.stringify(out));
 		`;
-		const proc = Bun.spawn(['bun', '-e', script], {
+		const proc = Bun.spawn([process.execPath, '-e', script], {
 			env: { ...process.env, TZ: tz },
 			stdout: 'pipe',
 			stderr: 'pipe',

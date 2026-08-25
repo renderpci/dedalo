@@ -102,6 +102,32 @@ DB_POOL_MAX=10
 DB_PORT=5432
 \`\`\``,
 	},
+	DB_SSLMODE: {
+		type: 'string',
+		scope: 'operator',
+		default: 'disable',
+		heading: 'Database TLS mode',
+		typeLabel: 'string',
+		doc: `Whether the engine negotiates TLS on its PostgreSQL connections, in PostgreSQL's
+own \`sslmode\` vocabulary: \`disable\` (the default), \`allow\`, \`prefer\`, \`require\`,
+\`verify-ca\` or \`verify-full\`.
+
+**Why this key exists at all.** Bun 1.4 began honouring the ambient \`PGSSLMODE\` /
+\`PG_SSLMODE\` environment variables inside \`Bun.sql\` (Bun 1.3 ignored them). Those are
+set on plenty of machines for \`psql\`/\`pg_dump\`, so without an explicit value here the
+engine's own TLS mode would be decided by whatever the surrounding shell, systemd unit
+or CI image happened to export — an input the typed config catalog cannot see and the
+operator has nothing to correct in \`../private/.env\`. Dédalo therefore always passes
+this value explicitly, and the ambient variables can never apply.
+
+The default \`disable\` preserves the behaviour every installation had before Bun 1.4.
+A typical install talks to PostgreSQL over a unix socket or localhost, where TLS buys
+nothing. Set \`require\` (or a verifying mode) when the database lives on another host.
+
+\`\`\`bash
+DB_SSLMODE=disable
+\`\`\``,
+	},
 	DB_STATEMENT_TIMEOUT_MS: {
 		type: 'number',
 		scope: 'operator',

@@ -4544,6 +4544,8 @@ This parameter defines the path to the release archives on a code server. Releas
 /srv/dedalo/code/7/7.0/7.0.1.zip.sha256
 ```
 
+The directory is CREATED AT BOOT when this key is set on a code server (`IS_A_CODE_SERVER`) and the path does not exist — recursively, at mode `0750`, since only this process reads the archives. An existing directory is left exactly as it is, mode included.
+
 The build action writes both. Remote installs never read this path: they fetch `/dedalo/install/code/<version>/<version>.zip`, which the server maps back to it — so the directory does not need to be inside the web root, and should not be.
 
 ```bash

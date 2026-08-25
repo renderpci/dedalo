@@ -55,13 +55,29 @@ const ACQUIRE_TIMEOUT_MS = config.ops.dbAcquireTimeoutMs;
 const DB_STATEMENT_TIMEOUT_MS = config.ops.dbStatementTimeoutMs;
 const SLOW_QUERY_MS = config.ops.slowQueryMs;
 
+/**
+ * PostgreSQL's own `sslmode` vocabulary, which Bun.sql accepts verbatim for
+ * `tls`. Spelled out rather than derived from @types/bun so a types change
+ * cannot silently widen what the catalog is allowed to hand the driver.
+ */
+type PostgresSslMode = 'disable' | 'allow' | 'prefer' | 'require' | 'verify-ca' | 'verify-full';
+
 /** Build the Bun SQL options for the configured database. */
 function buildSqlOptions(): ConstructorParameters<typeof SQL>[0] {
-	const { database, host, port, user, password } = config.db;
+	const { database, host, port, user, password, sslMode } = config.db;
 	const commonOptions = {
 		database,
 		username: user,
 		password: password || undefined,
+		// ALWAYS explicit (2026-08-25, Bun 1.3.9 -> 1.4.0). Bun 1.4's option parser
+		// falls back to the ambient `PGSSLMODE`/`PG_SSLMODE` environment variables
+		// when `tls` is absent; 1.3.9's did not read them at all. Those variables
+		// are commonly exported for psql/pg_dump, so leaving this unset would let
+		// the surrounding shell, systemd unit or CI image decide the engine's TLS
+		// mode — an input `readEnv`/the typed catalog cannot see, and one the
+		// operator has nothing to correct in ../private/.env. Passing the value
+		// always means the fallback can never apply. Gate: ws_a_tripwires.
+		tls: sslMode as PostgresSslMode,
 		// Modest pool: the server is long-lived; Postgres default max_connections is 100.
 		max: POOL_MAX,
 		// Postgres client runtime GUCs applied on connect; only set the timeout when

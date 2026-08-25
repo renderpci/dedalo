@@ -81,7 +81,7 @@ afterAll(async () => {
 
 describe('/health with the database DOWN (S3-48 db:down branch)', () => {
 	test('server boots, /health answers 503 db:down, and fast (2 s probe race)', async () => {
-		server = Bun.spawn(['bun', 'run', 'src/server.ts'], {
+		server = Bun.spawn([process.execPath, 'run', 'src/server.ts'], {
 			cwd: ROOT,
 			env: childEnv as Record<string, string>,
 			stdout: 'pipe',

@@ -94,7 +94,7 @@ setTimeout(() => {
 }, 500);
 `;
 		await Bun.write(PROBE_SCRIPT, script);
-		const child = Bun.spawn(['bun', 'run', PROBE_SCRIPT], {
+		const child = Bun.spawn([process.execPath, 'run', PROBE_SCRIPT], {
 			cwd: REPO_ROOT,
 			stdout: 'pipe',
 			stderr: 'pipe',

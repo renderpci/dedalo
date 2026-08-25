@@ -222,7 +222,7 @@ const SCRIPT = new URL('../../scripts/repair_geolocation_studio_default.ts', imp
 	.pathname;
 
 async function run(...args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
-	const child = Bun.spawn(['bun', SCRIPT, ...args], { stdout: 'pipe', stderr: 'pipe' });
+	const child = Bun.spawn([process.execPath, SCRIPT, ...args], { stdout: 'pipe', stderr: 'pipe' });
 	const [stdout, stderr] = await Promise.all([
 		new Response(child.stdout).text(),
 		new Response(child.stderr).text(),

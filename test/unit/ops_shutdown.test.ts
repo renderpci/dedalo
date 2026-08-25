@@ -102,12 +102,12 @@ describe('server boot/shutdown smoke (S2-17/S2-36/S3-48)', () => {
 
 		// Double-start guard (S2-17b): a second instance on the SAME socket must
 		// refuse loudly instead of unlinking the live socket.
-		const usurper = Bun.spawn(['bun', 'run', 'src/server.ts'], {
-			cwd: ROOT,
-			env: childEnv as Record<string, string>,
-			stdout: 'pipe',
-			stderr: 'pipe',
-		});
+		// Through spawnServer() so this file names the runtime binary in exactly
+		// ONE place: this spawn used to resolve a bare 'bun' off $PATH, which on a
+		// box mid-bump proves the double-start refusal against the OLD runtime
+		// while reporting the pinned one green (and fails ENOENT wherever bun is
+		// installed only under a versioned path, e.g. the update quarantine).
+		const usurper = spawnServer();
 		const usurperExit = await usurper.exited;
 		const usurperErr = await new Response(usurper.stderr).text();
 		expect(usurperExit).toBe(1);
