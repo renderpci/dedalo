@@ -58,6 +58,11 @@ The live-oracle era is over. The baselines of record are FROZEN:
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
 - `bun run test:db:setup` — build the SUITE database (stamps `dedalo_test_marker`) AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
 - `bun run test:client` — the browser client suite (Mocha in headless Chrome).   It STARTS ITS OWN SERVER on the dedicated SUITE database and stops it again:   no dev server to start first, no port to pass, no client test can reach the   application's data (`scripts/client_test_server.ts`; build the database once   with `bun run test:db:setup`). 
+  - `bun run test:client:server` — the SAME suite server kept alive for BROWSING
+    the page by hand (`scripts/client_test_serve.ts`): same repoint, same login
+    credential, same `/health` fingerprint verification. The replacement for the
+    retired habit of opening the page on a dev server — fixture-bound suites
+    (e.g. test_additional_text_area's test480/506/507) refuse loudly there.
   - **Auth is real**: the run sets the suite database's own credential
     (`src/core/test_data/suite_login.ts` — the install seed ships `root`
     passwordless), calls `login()` in-process, injects the session cookie.
