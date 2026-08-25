@@ -91,9 +91,11 @@ async function systemInfoGetValue(): Promise<WidgetResponse> {
 	const requeriments_list: { name: string; value: boolean | string | null; info: string }[] = [];
 
 	// The actually-verified runtime floor (audit S2-36): postgres.ts, the Bun.sql
-	// mariadb adapter and the jsonb param conventions are verified against 1.3.9.
+	// mariadb adapter and the jsonb param conventions are verified against 1.4.0
+	// (re-probed 2026-08-25 on the 1.3.9 -> 1.4.0 bump; the jsonb double-encode
+	// trap is UNCHANGED, the mariadb adapter now decodes DATETIME as UTC).
 	// Keep in lockstep with .bun-version + package.json engines.bun.
-	const MIN_BUN = '1.3.9';
+	const MIN_BUN = '1.4.0';
 	requeriments_list.push({
 		name: 'Bun supported version',
 		value: compareSemver(Bun.version, MIN_BUN) >= 0,

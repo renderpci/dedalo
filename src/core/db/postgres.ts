@@ -28,7 +28,7 @@
  *
  * Connection: DB_HOST starting with '/' is a unix-socket DIRECTORY (Postgres
  * convention, e.g. '/tmp'); we derive the full socket path Bun expects.
- * Otherwise it is a TCP hostname. Verified against Bun 1.3.9.
+ * Otherwise it is a TCP hostname. Verified against Bun 1.4.0 (2026-08-25).
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';

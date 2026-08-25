@@ -2061,7 +2061,10 @@ export async function startServer() {
 		// slow request on the TCP listener; both listeners now share the pinned,
 		// configurable value. The proxy in front must be tuned to match
 		// (engineering/PRODUCTION.md). Cast: @types/bun omits idleTimeout on the unix
-		// options shape; the runtime accepts it (verified on the pinned 1.3.9).
+		// options shape (still true of @types/bun 1.4.0 — idleTimeout lives on
+		// HostnamePortServeOptions, never on BaseServeOptions, so UnixServeOptions
+		// does not inherit it); the runtime accepts it. Re-checked on 1.4.0
+		// 2026-08-25: do NOT drop the cast on the strength of the types.
 		idleTimeout: config.ops.idleTimeoutSeconds as unknown as undefined,
 		fetch(request) {
 			// The unix socket is reachable only by whatever can open that file — in the

@@ -184,8 +184,8 @@ sudo -u postgres psql -c 'SELECT version();'
 The runtime version is **pinned** in `.bun-version` and in `package.json` (`engines.bun`). Read the pin from the repo you are about to clone — do not copy a version number out of a document:
 
 ```shell
-# at the time of writing: 1.3.9
-BUN_VERSION=1.3.9
+# at the time of writing: 1.4.0
+BUN_VERSION=1.4.0
 curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v${BUN_VERSION}"
 chown -R dedalo:dedalo /opt/dedalo/.bun
 /opt/dedalo/.bun/bin/bun --version

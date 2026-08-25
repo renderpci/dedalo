@@ -218,7 +218,7 @@ chown ded_$SITE:ded_$SITE /srv/dedalo/$SITE/media
 
 # The pinned runtime, per instance. Read the pin from the repo — do not hardcode.
 sudo -u ded_$SITE bash -c \
-  'curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.3.9'
+  'curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.4.0'
 
 # The code
 sudo -u ded_$SITE git clone <your-dedalo-remote> /home/ded_$SITE/dedalo

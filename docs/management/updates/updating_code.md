@@ -74,13 +74,24 @@ guessing: the release's own root file list and its Bun pin are only known once
 the archive has been downloaded. For those the panel reports the inputs — the
 count of root entries in the live tree, the running Bun and this tree's pin.
 
+!!! warning "When a release changes the Bun version"
+
+    The update **refuses** — without changing anything — if the release pins a
+    different Bun than the one this server is running. Install the pinned Bun on
+    the machine first, restart Dédalo onto it, and only then apply the update:
+
+    ```bash
+    # the version the release pins is shown in the panel's readiness list
+    curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.4.0
+    ```
+
+    Then point the service at that binary (`ExecStart`, see the production
+    guide), restart, and confirm the boot line reads
+    `starting on Bun 1.4.0 (pinned: 1.4.0)` with no mismatch warning.
+
 1. Close access to the work system.
 
-<<<<<<< HEAD
-    Before updating the code, it is highly recommended to change the Dédalo status to maintenance. Follow [this guide](../maintenance_status.md) to change the Dédalo status and disable Dédalo access.
-=======
     Change the Dédalo status to maintenance — the update refuses to run otherwise. Follow [this guide](../maintenance_status.md) to change the Dédalo status and disable Dédalo access.
->>>>>>> refs/remotes/gitdedalo/v7
 
 2. Enter the maintenance panel.
 

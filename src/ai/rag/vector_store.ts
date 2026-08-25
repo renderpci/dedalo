@@ -233,7 +233,8 @@ export async function lexicalSearch(
 // parent_key, chunk_meta) and diff by source_hash so unchanged chunks are never
 // re-embedded. Vectors are bound as parameters, cast `::vector` — never
 // interpolated. chunk_meta binds `$17::text::jsonb` (S1-08): a bare jsonb-typed
-// param makes Bun 1.3.9 JSON-encode the already-stringified value AGAIN, landing
+// param makes Bun JSON-encode the already-stringified value AGAIN (still true on
+// 1.4.0, re-probed 2026-08-25), landing
 // a jsonb STRING scalar — PHP readers of the shared store then json_decode to a
 // string and `$meta['view']`/`chunk_meta['thumb_url']` silently null. The
 // parseChunkMeta string-tolerance branch below stays: it shields reads of any

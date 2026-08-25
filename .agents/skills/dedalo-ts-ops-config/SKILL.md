@@ -113,7 +113,7 @@ behavior through a REAL restart, which no unit test exercises.
 
 ## Bun coupling
 
-- Version is **pinned**: `.bun-version` = `1.3.9`, `package.json` `engines.bun` = `1.3.9`.
+- Version is **pinned**: `.bun-version` = `1.4.0`, `package.json` `engines.bun` = `1.4.0`.
   Ops surfaces (Bun.serve unix socket, `Bun.spawn` for media/pg_dump, Bun.sql for
   postgres+mariadb) are version-sensitive — do not float the version.
 - The **Bun.sql jsonb/array param trap**: a plain object / native array bound into a jsonb

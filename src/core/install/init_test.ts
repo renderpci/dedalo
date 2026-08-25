@@ -21,7 +21,7 @@ export interface InitTestResult {
 }
 
 /** The minimum Bun the server is verified against (matches .bun-version pin). */
-const MIN_BUN = [1, 3, 0];
+const MIN_BUN = [1, 4, 0];
 
 function bunAtLeast(min: number[]): boolean {
 	const parts = Bun.version.split('.').map((n) => Number.parseInt(n, 10) || 0);

@@ -7,7 +7,7 @@
  * operator upgrades nothing and the engine runs on a runtime it is not
  * validated for — or the inverse, a healthy install painted red.
  *
- * The row is `compareSemver(Bun.version, MIN_BUN) >= 0` with MIN_BUN '1.3.9';
+ * The row is `compareSemver(Bun.version, MIN_BUN) >= 0` with MIN_BUN '1.4.0';
  * the cases below are chosen so that a lexical / localeCompare
  * "simplification" cannot pass (a `1.4` vs `1.3` case would — that is theatre).
  */

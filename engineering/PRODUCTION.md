@@ -7,13 +7,33 @@ concern; the reference systemd units live in `deploy/`.
 ## 1. Runtime (S2-36)
 
 The Bun runtime is **pinned**: `.bun-version` + `package.json` `engines.bun`
-(currently `1.3.9`). The code is coupled to version-specific Bun behavior —
+(currently `1.4.0`). The code is coupled to version-specific Bun behavior —
 `Bun.sql` jsonb parameter inference (a drift here is the realized S1-07/S1-08
 corruption class), the Bun.sql MariaDB adapter (diffusion), `Bun.serve`
 defaults. The server echoes its runtime at boot and **warns loudly** when it
 differs from the pin. Never run `bun upgrade` on a production box; upgrade =
 change the pin, run the full suite, deploy. `ExecStart` should point at the
 pinned binary path, not a floating `bun` on `$PATH`.
+
+**Upgrading the pin — what an operator must do (2026-08-25, 1.3.9 -> 1.4.0).**
+The code updater REFUSES a release whose `.bun-version` differs from the running
+runtime (`src/core/update/code_update.ts`), so an installation still on the old
+Bun will decline the next release rather than half-install it. That is the gate
+working. The order is therefore: **install the new Bun on the box first, restart
+onto it, then apply the update.** The panel's readiness list shows this as the
+"Bun version pin" line and cannot pre-decide it — the release's pin is only known
+once the archive is downloaded.
+
+**Ambient input added by Bun 1.4:** `Bun.sql` now honours `PGSSLMODE` /
+`PG_SSLMODE` from the environment. That is a Postgres connection input the typed
+config catalog does NOT see, so it cannot be audited through `readEnv`. Leave
+both unset unless you mean them.
+
+**Verified on 1.4.0 (2026-08-25), the version-coupled behaviours above:** the
+`Bun.sql` jsonb double-encode trap is UNCHANGED, so the `$n::text::jsonb` idiom
+remains load-bearing; the MariaDB adapter now decodes `DATETIME`/`TIMESTAMP` as
+UTC (1.3.9 shifted them to local) and `JSON` columns as objects; `Bun.serve`
+unix-socket options are unchanged. Full evidence: the bump's findings log.
 
 ## 2. Process supervision (S2-38, S2-17)
 

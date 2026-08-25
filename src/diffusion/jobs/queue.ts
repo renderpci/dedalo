@@ -138,7 +138,8 @@ export async function enqueueDiffusionJob(input: {
 			input.ownerUserId,
 			// Objects, NEVER JSON.stringify: a pre-stringified value binds as a
 			// jsonb STRING scalar (spec->>'key' = NULL, unique index inert) —
-			// verified against Bun 1.3.9. Bun serializes objects to jsonb objects.
+			// verified against Bun 1.4.0 (2026-08-25; unchanged since 1.3.9). Bun
+			// serializes objects to jsonb objects.
 			input.spec,
 			{
 				counter: 0,
