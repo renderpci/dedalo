@@ -582,6 +582,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'DB_POOL_MAX',
 	'DB_POOL_ACQUIRE_TIMEOUT_MS',
 	'DB_STATEMENT_TIMEOUT_MS',
+	// Postgres TLS mode. NEW_IN_V7 and, more precisely, new in Bun 1.4: that
+	// release taught Bun.sql to fall back to the ambient PGSSLMODE/PG_SSLMODE
+	// when no `tls` option is given, so the engine now passes this value
+	// EXPLICITLY and the ambient variables can never decide it. v6 had no
+	// counterpart — PHP's pg_connect string never carried sslmode here.
+	'DB_SSLMODE',
 	// query performance
 	'SEARCH_LATE_ROW_LOOKUP_OFFSET',
 	'TM_COUNT_CACHE_TTL_MS',
