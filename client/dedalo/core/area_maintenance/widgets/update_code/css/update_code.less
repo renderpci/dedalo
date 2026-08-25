@@ -301,6 +301,30 @@
 
 		.body_response {
 
+			// the panel is long and this surface is its LAST child: a running
+			// update would otherwise report progress below the fold. The tracker
+			// scrolls it into view on start (render_update_code.js) — leave room
+			// so it does not land glued to the top edge…
+			scroll-margin-top: 1rem;
+
+			// …and while the job runs, PIN the phase track to the top of the
+			// viewport, so the notes appended underneath (refusal, rollback,
+			// reload prompt) never push the progress bar out of sight.
+			// `tracking` is added on job start and removed by every ending.
+			&.tracking {
+
+				>.phase_track {
+					position: sticky;
+					top: 0;
+					z-index: 2;
+					background-color: var(--bg_surface);
+					padding: 0.5rem 0.6rem;
+					margin: 0 0 0.75rem 0;
+					border: 1px solid var(--border_default);
+					border-radius: 4px;
+				}
+			}
+
 			>.error {
 				margin: 0.5rem 0;
 			}
