@@ -15,14 +15,25 @@ ratcheted with a reason).
 ## Pipeline map
 
 **Two repos, by trust level.** GitHub is public and gets the hermetic tier only;
-everything that needs the live Postgres runs on a PRIVATE mirror with the
-self-hosted runner. GitHub executes ONLY `.github/workflows/` — so the
-self-hosted tier is parked, inert but preserved, in `.github/workflows-selfhosted/`.
+everything that needs the live matrix Postgres, the PHP oracle or a browser runs
+on a PRIVATE mirror with the self-hosted runner. GitHub executes ONLY
+`.github/workflows/` — so that tier is parked, inert but preserved, in
+`.github/workflows-selfhosted/`.
+
+**A DB tier is no longer part of that parked set (2026-08-25).** The gates that
+need *a* Postgres — as opposed to *the installation's* Postgres — now run hosted,
+against a throwaway service container, in `.github/workflows/db.yml`. That became
+possible once the suite stopped borrowing the developer's database: the preload
+repoints to a dedicated one and refuses to fall back, and `test:db:setup` builds
+it from bytes vendored in this repo. Before it, 19 tripwires ran on NO executing
+tier at all — the DB tier's only home was the inert directory, so its nightly
+cron has never fired.
 
 | Workflow | Trigger | Runner | Runs |
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request | hosted ubuntu | `hermetic` (scripts/ci/hermetic.sh) |
 | `.github/workflows/main.yml` | push to **master** | hosted ubuntu | `hermetic` |
+| `.github/workflows/db.yml` | pull_request + push master + dispatch | hosted ubuntu + `postgres` service (digest-pinned) | `db` tier (scripts/ci/db_tier.sh): builds the suite database from repo-vendored bytes, then the 19 DB-backed tripwires |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
 | `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners | hermetic tier only — the SAME scripts/ci/hermetic.sh |
@@ -44,6 +55,17 @@ oracle instead of silently skipping. Ignore any older text below telling you to
 "restart PHP at :8080" — there is no PHP to restart.
 
 Two tiers, by dependency footprint:
+
+**Suite-database build cost, measured 2026-08-25 (the repo recorded no figure
+before):** the hierarchy import is **~302 s** and the built database is
+**~7.5 GB**. The cost is not the 127 MB of `\copy` input — `matrix_hierarchy`
+carries two `AFTER INSERT … FOR EACH ROW` triggers that derive
+`matrix_relation_index` (13.9 M rows) and `matrix_string_search` (5.6 M rows).
+That is also why a `pg_dump -Fc` cache is NOT a free win: restoring normally
+re-fires those triggers *and* loads the dumped derived rows into tables with no
+unique constraint — silent duplication, slower than the build it replaces. A
+cache would need `pg_restore --disable-triggers` (superuser) and `--no-owner
+--no-acl`.
 
 - **Hermetic** (any bare runner, no secrets): `bun install` + `bunx tsc
   --noEmit` + `bun run lint` + the **76** DB-less/sibling-less tripwires + the
@@ -70,8 +92,14 @@ Two tiers, by dependency footprint:
   was empirically re-verified DB-less (`DB_PORT` closed) before being added.
 - **Self-hosted** (this Mac — the machine that has the live matrix Postgres
   with real Dédalo data, the PHP oracle at :8080, the sibling PHP tree, and
-  Chrome): everything else — the DB-backed unit tier, the parity tier against a
-  live oracle, and the client gate (puppeteer + a booted server).
+  Chrome): the FULL unit tier against a populated database, the parity tier
+  against a live oracle, the client gate (puppeteer + a booted server), and
+  `test/integration/**` (MariaDB, and three of its four files are bound to a
+  specific installation's records).
+
+  **What moved off it (2026-08-25):** the 19 tripwires that need only *a*
+  Postgres now run hosted — see `db.yml` above. What stays needs something a
+  hosted runner cannot have: an installation's records, an oracle, a browser.
 
   Two claims that used to live here were stale and are deleted rather than
   amended: unit tests do **not** "read real records" — `test/preload/test_database.ts`
