@@ -94,6 +94,13 @@ import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
+import {
+	availableBytesAt,
+	checkUpdateSpace,
+	formatGb,
+	looksLikeNoSpace,
+	type SpaceSeams,
+} from './disk_space.ts';
 import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
@@ -243,6 +250,8 @@ export interface CodeUpdateSeams {
 	renameRestore?: (from: string, to: string) => void;
 	/** Progress frames (the widget wires this to the job's onData). */
 	onPhase?: (frame: UpdatePhaseFrame) => void;
+	/** Disk-space measurement (tests inject a full filesystem; see disk_space.ts). */
+	space?: SpaceSeams;
 }
 
 function sha256Of(filePath: string): string {
@@ -713,10 +722,18 @@ async function installDepsReal(codeRoot: string): Promise<void> {
 	});
 	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
 	if (exitCode !== 0) {
+		// A FULL DISK is the one failure whose sentence must not be generic: bun
+		// reports it as a wall of per-package `NoSpaceLeft`/`FileNotFound`
+		// extraction errors that read like a corrupt registry cache, and the
+		// operator's action (free space) is nothing like "retry the download".
+		const noSpace = looksLikeNoSpace(stderr);
+		const available = availableBytesAt(codeRoot);
 		// 503/retryable — correct for the offline case (registry unreachable).
 		throw new DedaloError('update.failed', {
 			message: `bun install failed in the quarantine (exit ${exitCode}): ${stderr.trim().split('\n').slice(-20).join('\n')}`,
-			publicMessage: 'Error. Installing the release dependencies failed — nothing was swapped',
+			publicMessage: noSpace
+				? `Error. The disk filled up while installing the release dependencies${available === null ? '' : ` (${formatGb(available)} available)`} — free space and retry; nothing was swapped`
+				: 'Error. Installing the release dependencies failed — nothing was swapped',
 		});
 	}
 }
@@ -1254,6 +1271,43 @@ function retractSentinelIfFullyRestored(
 	}
 }
 
+/**
+ * THE DISK-SPACE GATE, before the first byte is downloaded. Peak cost of an
+ * update is a second copy of the live tree in staging (archive + extracted tree
+ * + its own node_modules); disk_space.ts measures both sides. An unmeasurable
+ * side never refuses — see checkUpdateSpace.
+ *
+ * Placed here, and not later, because every phase after it SPENDS disk: the
+ * remote install of 2026-08-25 downloaded, verified and extracted a release
+ * before dying inside `bun install` with a screenful of NoSpaceLeft.
+ *
+ * PRESERVE_ROOT_ENTRIES is handed to the measure because those entries are
+ * MOVED by the swap, never staged — counting `.git` would refuse updates that
+ * fit comfortably (see disk_space.ts).
+ */
+async function refuseOnInsufficientSpace(
+	targetRoot: string,
+	backupRoot: string,
+	seams: SpaceSeams,
+): Promise<void> {
+	const space = await checkUpdateSpace(targetRoot, backupRoot, PRESERVE_ROOT_ENTRIES, seams);
+	if (space.sufficient) {
+		// A null side means the gate could not run. It does not refuse (see
+		// checkUpdateSpace), but it says so — an update that later dies of
+		// ENOSPC must not look like one this check cleared.
+		if (space.available === null || space.required === null) {
+			console.warn(
+				`[code update] disk-space gate DISARMED (available=${space.available}, required=${space.required}) — proceeding unchecked`,
+			);
+		}
+		return;
+	}
+	refuseUpdate(
+		'update.refused',
+		`Error. Not enough free disk space to install a release: ${formatGb(space.available ?? 0)} available where the update stages (${backupRoot}), about ${formatGb(space.required ?? 0)} needed — free space and retry.`,
+	);
+}
+
 /** The full code-update pipeline. Seam-driven; production passes no seams. */
 export async function updateCode(
 	rawOptions: unknown,
@@ -1285,6 +1339,7 @@ export async function updateCode(
 
 	try {
 		prepareStagingDirOrRefuse(stagingDir);
+		await refuseOnInsufficientSpace(targetRoot, backupRoot, seams.space ?? {});
 
 		const zipPath = await acquireVerifiedArchive(request, stagingDir, seams, phases);
 

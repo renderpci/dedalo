@@ -45,10 +45,16 @@ Each of these refuses with a message naming the problem, and changes nothing:
 - **Unknown entries at the tree root** — any top-level file or directory that the release does not ship and the engine does not account for would vanish into the backup. Move it out (or delete it) first.
 - **Secret-shaped files under shipped directories** — untracked certificates, keys or `.env*` files nested inside the tree (for example under `deploy/certs/`) refuse for the same reason.
 - **A containerised (image) deployment** — when the code tree lives inside a container image, a swap lands in the container's writable layer and is discarded on the next recreation. Such installs update by replacing the image, not through this panel. A bind-mounted checkout inside a container is fine.
+- **Not enough free disk space** — measured *before the download*, so a full disk costs nothing to discover. An update needs room for a second copy of the code tree: the archive, the extracted release, and that release's own freshly installed `node_modules`. The check measures the live tree (minus `.git`, which the swap moves rather than copies) and compares it with the space available where the update stages. If either side cannot be measured the update proceeds — the server log says the check was disarmed.
 - **A Bun version mismatch** — the release's `.bun-version` pin must match the running runtime; install the pinned Bun first, then retry.
 - **No process supervisor detected** — see [Updating code](updating_code.md#panel-self-update).
 - **A failed dependency install or a failed smoke boot** of the quarantine tree.
 - **A checksum mismatch, a malformed archive, or an unsafe archive entry.**
+
+!!! warning "A disk that fills up during `deps`"
+    Before this check existed, a full disk surfaced as a wall of `NoSpaceLeft` / `FileNotFound` extraction errors from the dependency install, several minutes into the update. That failure now names itself ("The disk filled up while installing the release dependencies"), and nothing was swapped — the live tree is untouched. Free space and retry.
+
+    Restore points are the usual culprit: each one keeps a whole previous tree, `node_modules` included. Delete the ones you no longer need from the code backup directory.
 
 ## What is backed up
 

@@ -240,10 +240,15 @@ const check_row = function(parent, check) {
 	}
 
 	if (check.detail!==undefined && check.detail!==null && check.detail!=='') {
+		// `disk_space` sends the raw available byte count (the server sends
+		// FACTS): read it like every other size on this panel.
+		const detail_text = check.id==='disk_space' && isFinite(Number(check.detail))
+			? (format_bytes(Number(check.detail)) + ' ' + (get_label.update_code_free || 'free'))
+			: String(check.detail)
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'check_detail mono',
-			text_content	: String(check.detail),
+			text_content	: detail_text,
 			parent			: value
 		})
 	}

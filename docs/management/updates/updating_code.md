@@ -61,18 +61,20 @@ run:
   on, each marked *ok*, *warning* or *blocked*, with the reason: supervisor
   detected, deployment channel, maintenance mode, superuser identity, recent
   database backup, backup root outside the code tree, runtime data outside the
-  code tree, the archive tools, the Bun version pin, and a leftover staging
-  directory. The panel is *ready* only when nothing is blocked.
+  code tree, the archive tools, the Bun version pin, a leftover staging
+  directory, and the free disk space where the update stages. The panel is *ready* only when nothing is blocked.
 - **Last code update** — which version replaced which, when, and whether the
   new tree confirmed itself at boot. A status still reading *pending
   confirmation* means the update did not complete its own health check.
 - **Restore points** — the code backups on disk, each marked *bootable* or
   *incomplete* (a backup without its dependencies cannot be started again).
 
-Two readiness lines cannot be decided in advance and say so rather than
+Some readiness lines cannot be decided in advance and say so rather than
 guessing: the release's own root file list and its Bun pin are only known once
-the archive has been downloaded. For those the panel reports the inputs — the
-count of root entries in the live tree, the running Bun and this tree's pin.
+the archive has been downloaded, and how much disk an update needs is measured
+when it starts (walking the whole tree is too slow for a panel). For those the
+panel reports the inputs — the count of root entries in the live tree, the
+running Bun and this tree's pin, and the bytes free where the update stages.
 
 !!! warning "When a release changes the Bun version"
 

@@ -52,6 +52,7 @@ import {
 	STAGING_KEEP_MARKER,
 	stagingHoldsParkedTree,
 } from './code_update.ts';
+import { availableBytesAt } from './disk_space.ts';
 import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
 import { backupFreshness } from './preconditions.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
@@ -277,6 +278,30 @@ function stagingCheck(backupRoot: string): StatusCheck {
 }
 
 /**
+ * FREE DISK SPACE where the update stages — an INPUT, never a verdict.
+ *
+ * The verdict is the pipeline's (`refuseOnInsufficientSpace` → disk_space.ts)
+ * and needs a `du -skx` of the live tree: ~10^5 inodes, not something a
+ * synchronous panel path may walk. So this line does what `root_entries` does —
+ * report the fact and stay `unknown`.
+ *
+ * NO FLOOR. A hard-coded "under N GB is blocked" would be a SECOND RULE the
+ * pipeline does not have, and this module's law is that it never re-implements
+ * a refusal: the two would disagree in both directions (a big-`.git` install
+ * with 2 GB free is fine for the panel and refused by the pipeline; a small
+ * install with 900 MB free is the reverse). An honest `unknown` beats a verdict
+ * the pipeline will not honour.
+ */
+function diskSpaceCheck(backupRoot: string): StatusCheck {
+	return probe('disk_space', () => {
+		const available = availableBytesAt(backupRoot);
+		return available === null
+			? check('disk_space', 'unknown', 'statfs unsupported', backupRoot)
+			: check('disk_space', 'unknown', String(available), backupRoot);
+	});
+}
+
+/**
  * The root-whitelist INPUT: live root entries that a release would have to
  * ship, or `refuseUnaccountedLiveEntries` moves them into the backup and
  * refuses. Derived from the pipeline's own PRESERVE_ROOT_ENTRIES + the census,
@@ -365,6 +390,7 @@ export function consumerStatus(principal: Principal): ConsumerStatus {
 		toolchainCheck(),
 		bunPinCheck(livePin),
 		stagingCheck(backupRoot),
+		diskSpaceCheck(backupRoot),
 		rootEntries.check,
 	];
 	return {

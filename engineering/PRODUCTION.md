@@ -549,6 +549,20 @@ refused with the live tree untouched) → the SENTINEL is written
 live tree is renamed into the backup dir (same-device asserted, so both
 renames are atomic) → the new tree moves in → planned restart (exit 75).
 
+**DISK SPACE is a pre-download gate (2026-08-25).** A remote install died mid
+`bun install` with a wall of bun `NoSpaceLeft`/`FileNotFound` extraction errors
+— a full filesystem, discovered only after download, verify and extract had
+spent minutes and disk. `src/core/update/disk_space.ts` now measures first:
+required = the live tree MINUS `PRESERVE_ROOT_ENTRIES` (`.git` is renamed into
+the new tree, never staged — counting it over-states the need by the whole
+repository history) times a 1.15 margin; available = `statfs` where staging
+lives (one probe covers both sides, since `renameSwap` asserts backup and tree
+are same-device). A measured shortfall REFUSES before the first byte is
+fetched; an unmeasurable side never refuses and logs that the gate is
+disarmed. The panel cannot pre-decide it (`du` over ~10^5 inodes is not a
+panel-path walk), so `status.ts` reports the free bytes as an INPUT line and
+stays `unknown` — a second, cheaper rule there would disagree with this one.
+
 **The sentinel** (`<backup root>/last_code_update.json`, backup root =
 `<install>/../backups/code`, `DEDALO_BACKUP_PATH` overrides) is the rollback
 contract: written `status:"pending"` BEFORE the swap's first rename, so a

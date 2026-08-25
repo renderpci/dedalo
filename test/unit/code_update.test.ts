@@ -476,6 +476,53 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 		}
 	}, 60000);
 
+	test('a FULL DISK refuses before anything is fetched (the space gate precedes the download)', async () => {
+		// 2026-08-25: a remote install downloaded, verified and extracted a
+		// release and only then died inside `bun install` with a wall of
+		// NoSpaceLeft. The gate must spend nothing to say no — so: no request
+		// reaches the server, and the live tree is untouched.
+		let fetched = 0;
+		const server = Bun.serve({
+			port: 0,
+			fetch: () => {
+				fetched += 1;
+				return new Response('should never be requested');
+			},
+		});
+		const origin = `http://localhost:${server.port}`;
+		const base = join(ROOT, 'nospace');
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		try {
+			mockUpdateEnv(origin);
+			const refusal = await refusalOf(
+				updateCode(
+					{
+						file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: 'a'.repeat(64) },
+						waive_backup: true,
+					},
+					SUPERUSER,
+					pipelineSeams({
+						targetRoot,
+						backupRoot: join(base, 'b'),
+						// a filesystem with one byte left, and a tree that needs more
+						space: {
+							available: () => 1,
+							measure: async (dir) => (dir.endsWith('live') ? 500_000_000 : 0),
+						},
+					}),
+				),
+			);
+			expect(refusal.code).toBe('update.refused');
+			expect(refusal.message).toContain('disk space');
+			expect(fetched).toBe(0);
+			expect(readFileSync(join(targetRoot, 'package.json'), 'utf8')).toBe('{"name":"old"}');
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
 	test('a release with NO declared checksum is refused before anything is fetched (preconditions precede the download too)', async () => {
 		// VERIFY-OR-REFUSE (2026-08-15). The check used to be `declaredSha !== '' &&
 		// …`, so a request carrying no hash skipped verification entirely — and the
