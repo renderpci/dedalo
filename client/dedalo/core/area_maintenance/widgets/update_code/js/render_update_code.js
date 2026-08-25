@@ -243,7 +243,8 @@ const get_content_data_edit = async function(self) {
 						local_data.value.pfile,
 						body_response,
 						null,
-						local_data.value.digest ?? null
+						local_data.value.digest ?? null,
+						false
 					)
 				}
 			})
@@ -601,19 +602,33 @@ const render_phase_track = function(parent) {
 *   (the manifest item's own digest). On a DEVELOPER build the version is
 *   identical on both sides of the swap, so this is the only token that can tell
 *   the new tree from a rolled-back one.
+* @param {boolean} [scroll_into_view=true] - bring the tracking surface into
+*   view. The panel is long and `body_response` sits at its END: a user who
+*   pressed Update in the modal would otherwise watch nothing until they
+*   scrolled by hand. FALSE on the resume path, where the widget is just
+*   opening and stealing the scroll would be a surprise.
 * @returns {void}
 */
-const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null) {
+const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null, scroll_into_view=true) {
 
 	// clean previous surface
 		while (body_response.firstChild) {
 			body_response.removeChild(body_response.firstChild);
 		}
 
+	// tracking surface: while a job runs, the phase track sticks to the top of
+	// the viewport (update_code.less) so appended notes never push it away.
+		body_response.classList.add('tracking')
+
 	// phase track + reducer state
 		const track = render_phase_track(body_response)
 		let state = init_phase_state(expected_version, expected_digest)
 		track.paint(state)
+
+	// bring the progress into view (see scroll_into_view above)
+		if (scroll_into_view===true && typeof body_response.scrollIntoView==='function') {
+			body_response.scrollIntoView({ behavior:'smooth', block:'start' })
+		}
 
 	// stream surface (render_stream owns this node)
 		const stream_node = ui.create_dom_element({
@@ -660,7 +675,12 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 
 	// endings
 
+		// the job is over: release the sticky track (it only earns the top of
+		// the viewport while there is progress to watch)
+		const end_tracking = () => body_response.classList.remove('tracking')
+
 		const finish_success = async (version) => {
+			end_tracking()
 			state = { ...state, mode:'done' }
 			track.paint(state)
 			// success state FIRST…
@@ -702,6 +722,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		}
 
 		const finish_failed = (message) => {
+			end_tracking()
 			track.paint(state)
 			// a PRE-PHASE refusal (bad checksum, no supervisor, image channel…)
 			// starts no phase at all: the track is all-pending, so the refusal
@@ -720,6 +741,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		// render_stream's teardown already deleted the resume key, so RESTORE it:
 		// reopening the panel re-attaches to the (possibly still running) job.
 		const finish_interrupted = () => {
+			end_tracking()
 			track.paint(state)
 			data_manager.set_local_db_data(
 				{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile, digest : expected_digest } },
@@ -757,6 +779,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 						return
 					}
 					// the server is back on the OLD version → the job rolled back
+					end_tracking()
 					state = { ...state, mode:'rolled_back' }
 					track.paint(state)
 					const rolled_back_text = (get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.')

@@ -16916,6 +16916,19 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code > .content_data .phase_track .dd_readout {
   margin-top: 0.5rem;
 }
+.wrapper_widget.update_code > .content_data .body_response {
+  scroll-margin-top: 1rem;
+}
+.wrapper_widget.update_code > .content_data .body_response.tracking > .phase_track {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--bg_surface);
+  padding: 0.5rem 0.6rem;
+  margin: 0 0 0.75rem 0;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+}
 .wrapper_widget.update_code > .content_data .body_response > .error {
   margin: 0.5rem 0;
 }
