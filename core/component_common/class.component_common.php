@@ -3571,12 +3571,7 @@ abstract class component_common extends common {
 
 		$ar_query_object = [];
 		// get the ar langs when the $lang is set with 'all'
-		$ar_all_langs	 = $lang==='all'
-			? common::get_ar_all_langs()
-			: [$lang];
-		if(!$translatable){
-			$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-		}
+		$ar_all_langs	 = self::get_search_langs($lang, $translatable);
 
 		// create the specific language query object
 			foreach ($ar_all_langs as $current_lang) {
@@ -3593,6 +3588,288 @@ abstract class component_common extends common {
 
 		return $ar_query_object;
 	}//end resolve_query_object_lang_behavior
+
+
+
+	/**
+	* GET_SEARCH_LANGS
+	* Resolves the list of langs that a search needs to check.
+	* When $lang is 'all', every project lang is used. Non translatable components
+	* store their data in the no lang key, so it's always added in that case.
+	* @param string $lang
+	*	As 'all' for all languages or 'lg-spa' for an specific one
+	* @param bool $translatable
+	* @return array $ar_langs
+	*	As ['lg-spa','lg-cat','lg-eng','lg-fra']
+	*/
+	public static function get_search_langs(string $lang='all', bool $translatable=true) : array {
+
+		$ar_langs = $lang==='all'
+			? common::get_ar_all_langs()
+			: [$lang];
+
+		if ($translatable===false) {
+			$ar_langs[] = DEDALO_DATA_NOLAN; // Added no lang also
+		}
+
+
+		return $ar_langs;
+	}//end get_search_langs
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_EMPTY_BEHAVIOR
+	* Builds the query object group used by the search operators '!*' (empty) and '*' (not empty).
+	* A component is empty only when it's empty in EVERY lang, and it has content when it has
+	* content in SOME lang. Because of that, the lang groups can't share the same logical
+	* operator, each case is the exact complement of the other one:
+	*	'!*' : $and[ $or [ IS NULL lg-spa, = '[]' lg-spa ], $or [ ... lg-cat ], ... ]
+	*	'*'  : $or [ $and[ IS NOT NULL lg-spa, != '[]' lg-spa ], $and[ ... lg-cat ], ... ]
+	* Note that the value is always read as text (#>>), so an empty array is the string '[]'
+	* and not null. Both checks are needed to cover the record with the key removed (null)
+	* and the record with the key set as an empty array.
+	* @param object $options
+	* {
+	*	query_object	: object $query_object;
+	*	lang			: string $lang;			// as 'all' or 'lg-spa'
+	*	translatable	: bool $translatable;
+	*	empty			: bool $empty;			// true for '!*', false for '*'
+	* }
+	* @return object $query_object
+	*	New group object as {"$and":[..]} | {"$or":[..]}
+	*/
+	public static function resolve_query_object_empty_behavior( object $options ) : object {
+
+		// short vars
+			$query_object	= $options->query_object;
+			$lang			= $options->lang ?? 'all';
+			$translatable	= $options->translatable ?? true;
+			$is_empty		= $options->empty ?? true;
+
+		// langs to check
+			$ar_langs = self::get_search_langs($lang, $translatable);
+
+		// operators. Note that the not empty case is the complement of the empty one
+			$lang_operator	= $is_empty ? '$or'  : '$and';		// between the 2 checks of one lang
+			$langs_operator	= $is_empty ? '$and' : '$or';		// between langs
+			$null_operator	= $is_empty ? 'IS NULL' : 'IS NOT NULL';
+			$array_operator	= $is_empty ? '=' : '!=';
+
+		// one group for every lang
+			$ar_langs_query_object = [];
+			foreach ($ar_langs as $current_lang) {
+
+				// null case. The component key doesn't exists in the record
+					$query_object_null = clone($query_object);
+						$query_object_null->operator	= $null_operator;
+						$query_object_null->q_parsed	= '';
+						$query_object_null->unaccent	= false;
+						$query_object_null->lang		= $current_lang;
+
+				// empty array case. The component key exists but the value is []
+					$query_object_array = clone($query_object);
+						$query_object_array->operator	= $array_operator;
+						$query_object_array->q_parsed	= '\'[]\'';
+						$query_object_array->unaccent	= false;
+						$query_object_array->lang		= $current_lang;
+
+				$lang_query_object = new stdClass();
+					$lang_query_object->{$lang_operator} = [$query_object_null, $query_object_array];
+
+				$ar_langs_query_object[] = $lang_query_object;
+			}
+
+		// final group with all langs
+			$final_query_object = new stdClass();
+				$final_query_object->{$langs_operator} = $ar_langs_query_object;
+
+
+		return $final_query_object;
+	}//end resolve_query_object_empty_behavior
+
+
+
+	/**
+	* EXTRACT_INLINE_Q_OPERATOR
+	* Lifts a leading search operator from the raw q string, as '!=Pepe' or '= Pepe Garcia'.
+	* String components (input_text, text_area) have no q_operator input in search mode,
+	* the user types the operator inline in the value box, so it must be moved to the
+	* q_operator channel before anything else is done with the search term.
+	* Literals (as 'Pepe') are never parsed, there the quotes are the operator itself.
+	* @param string $q
+	* @param array $ar_operators
+	*	Operators to look for, as ['!*','*','!=','=']. Order is not relevant,
+	*	the longest operator always wins, so '!=' is matched before '='.
+	* @return object|null $response
+	*	As {operator:'!=', value:'Pepe'} or null when q has no leading operator
+	*/
+	public static function extract_inline_q_operator(string $q, array $ar_operators) : ?object {
+
+		// literal case. As 'Pepe'. Don't parse the operators inside a literal
+			if (search::is_literal($q)===true) {
+				return null;
+			}
+
+		// unary operators. They are the whole search term, nothing can follow them
+			$ar_unary_operators = ['*', '!*'];
+
+		// sort by length desc to always match the longest operator first
+			usort($ar_operators, function($a, $b) {
+				return mb_strlen($b) - mb_strlen($a);
+			});
+
+		foreach ($ar_operators as $current_operator) {
+
+			if (mb_strpos($q, $current_operator)!==0) {
+				continue;
+			}
+
+			// value. Remove the operator by length.
+			// (!) str_replace can't be used here, it would remove every occurrence
+			// of the operator, as the inner '-' of the search term '-2000-2010'
+				$value = ltrim( mb_substr($q, mb_strlen($current_operator)) );
+
+			// unary case. As '*text', that is the 'ends with' shape and not the '*' operator
+				if ($value!=='' && in_array($current_operator, $ar_unary_operators, true)) {
+					continue;
+				}
+
+			$response = new stdClass();
+				$response->operator	= $current_operator;
+				$response->value	= $value;
+
+			return $response;
+		}
+
+
+		return null;
+	}//end extract_inline_q_operator
+
+
+
+	/**
+	* ESCAPE_SEARCH_REGEX
+	* Escapes the POSIX regex metacharacters of a user search term.
+	* Components build their WHERE with the regex operators (~, ~*, !~, !~*), so a term
+	* like 'N.º 1' or '12.03.2020' would otherwise be used as a PATTERN and the dot would
+	* match ANY character, returning wrong records.
+	* (!) '(' and ')' are deliberately NOT escaped here: search::get_sql_where() already
+	* escapes them when the search object type is 'string'. Escaping them twice would
+	* produce '\\(' (a literal backslash plus a group) and break the query.
+	* @param string $q
+	* @return string $q
+	*/
+	public static function escape_search_regex(string $q) : string {
+
+		// backslash always first, else the backslashes added below would be escaped again
+			$q = str_replace('\\', '\\\\', $q);
+
+		$ar_metacharacters = ['.', '[', ']', '{', '}', '*', '+', '?', '|', '^', '$'];
+		foreach ($ar_metacharacters as $current_metacharacter) {
+			$q = str_replace($current_metacharacter, '\\'.$current_metacharacter, $q);
+		}
+
+
+		return $q;
+	}//end escape_search_regex
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_LANGS_BEHAVIOR
+	* Wraps a resolved REGEX leaf into one group per lang.
+	* (!) Needed because get_sql_where() appends the lang to the component_path only when
+	* the lang is not 'all'. With lang='all' the regex would run against the WHOLE
+	* per-language blob text, as {"lg-eng": ["House"], "lg-spa": ["Casa"]}, and would then
+	* match the LANG KEYS themselves: searching 'spa' or 'lg-' returned every record.
+	* Splitting into one leaf per lang makes every regex run against the value array only.
+	*	positive : $or  [ lg-spa matches, lg-cat matches, ... ]        // matches in SOME lang
+	*	negative : $and [ $or[ lg-spa doesn't match, lg-spa IS NULL ], ... ]	// in EVERY lang
+	* A lang without data must not contradict a negative match, hence the IS NULL companion
+	* (a NULL never matches a regex, so without it every record with no value is dropped).
+	* @param object $options
+	* {
+	*	query_object	: object $query_object;	// leaf with operator/q_parsed/unaccent already set
+	*	lang			: string $lang;			// as 'all' or 'lg-spa'
+	*	translatable	: bool $translatable;
+	*	negative		: bool $negative;		// true for '!=' and '-'
+	* }
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_langs_behavior( object $options ) : object {
+
+		// short vars
+			$query_object	= $options->query_object;
+			$lang			= $options->lang ?? 'all';
+			$translatable	= $options->translatable ?? true;
+			$negative		= $options->negative ?? false;
+
+		// langs to check
+			$ar_langs = self::get_search_langs($lang, $translatable);
+
+		// logical operator between langs
+			$langs_operator = $negative ? '$and' : '$or';
+
+		// alternatives. Some cases need more than one regex to express one operator
+		// (as 'begins with' in rich text: the start of the value OR the start of a paragraph)
+			$ar_q_parsed = !empty($query_object->q_parsed_ar)
+				? $query_object->q_parsed_ar
+				: [$query_object->q_parsed ?? ''];
+
+		$ar_langs_query_object = [];
+		foreach ($ar_langs as $current_lang) {
+
+			// one clone per alternative regex
+				$ar_clone = [];
+				foreach ($ar_q_parsed as $current_q_parsed) {
+					$clone = clone($query_object);
+						$clone->lang		= $current_lang;
+						$clone->q_parsed	= $current_q_parsed;
+					unset($clone->q_parsed_ar);
+					$ar_clone[] = $clone;
+				}
+
+			if ($negative===false) {
+
+				// the value matches SOME alternative
+					if (count($ar_clone)===1) {
+						$ar_langs_query_object[] = $ar_clone[0];
+					}else{
+						$alternatives_query_object = new stdClass();
+							$alternatives_query_object->{'$or'} = $ar_clone;
+						$ar_langs_query_object[] = $alternatives_query_object;
+					}
+				continue;
+			}
+
+			// negative case. The value matches NO alternative
+				$not_query_object = (count($ar_clone)===1)
+					? $ar_clone[0]
+					: (function() use ($ar_clone) {
+						$group = new stdClass();
+							$group->{'$and'} = $ar_clone;
+						return $group;
+					})();
+
+			// A lang without value doesn't contradict the search
+				$clone_null = clone($ar_clone[0]);
+					$clone_null->operator	= 'IS NULL';
+					$clone_null->q_parsed	= '';
+					$clone_null->unaccent	= false;
+
+				$lang_query_object = new stdClass();
+					$lang_query_object->{'$or'} = [$not_query_object, $clone_null];
+
+			$ar_langs_query_object[] = $lang_query_object;
+		}
+
+		$final_query_object = new stdClass();
+			$final_query_object->{$langs_operator} = $ar_langs_query_object;
+
+
+		return $final_query_object;
+	}//end resolve_query_object_langs_behavior
 
 
 
