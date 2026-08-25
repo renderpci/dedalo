@@ -114,7 +114,7 @@ beforeEach(() => {
 	process.env.DEDALO_INSTALL_PRIVATE_DIR = privateScratch;
 });
 afterEach(() => {
-	process.env.DEDALO_INSTALL_PRIVATE_DIR = undefined;
+	delete process.env.DEDALO_INSTALL_PRIVATE_DIR;
 	rmSync(privateScratch, { recursive: true, force: true });
 });
 

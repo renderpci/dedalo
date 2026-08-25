@@ -24,7 +24,7 @@ beforeEach(() => {
 	process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch;
 });
 afterEach(() => {
-	process.env.DEDALO_INSTALL_PRIVATE_DIR = undefined;
+	delete process.env.DEDALO_INSTALL_PRIVATE_DIR;
 	setServerState({ install_status: undefined, information: undefined, info_key: undefined });
 });
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));

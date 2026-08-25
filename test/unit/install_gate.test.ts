@@ -28,7 +28,7 @@ function anon(clientIp = 'local'): ApiRequestContext {
 
 afterEach(() => {
 	setServerState({ install_status: undefined });
-	process.env.DEDALO_INSTALL_ALLOWED_IPS = undefined;
+	delete process.env.DEDALO_INSTALL_ALLOWED_IPS;
 });
 
 describe('install window gate (P1)', () => {

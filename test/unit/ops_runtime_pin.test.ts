@@ -40,6 +40,34 @@ describe('runtime pin (S2-36)', () => {
 		expect(match?.[1]).toBe(pinned);
 	});
 
+	// THE DRIFT HAZARD THIS CLOSES (found 2026-08-25, during the 1.3.9 -> 1.4.0 bump):
+	// the pin census turned up two more copies of the runtime version that NOTHING
+	// gated — the Dockerfile's base-image tag and init_test's installer floor. The
+	// Dockerfile header already ASKS for lockstep in prose, and init_test's comment
+	// already CLAIMS to match .bun-version while sitting a patch train behind it
+	// (it read [1,3,0] against a 1.3.9 pin). A stated rule with no mechanical gate
+	// is the thing DEC-12 forbids, and a half-landed bump is exactly how the
+	// container ends up on a different runtime than the suite verified.
+	test('Dockerfile base image tag matches .bun-version', () => {
+		const source = readFileSync(join(ROOT, 'Dockerfile'), 'utf-8');
+		const match = /^FROM oven\/bun:([^-\s]+)/m.exec(source);
+		expect(match?.[1]).toBe(pinned);
+	});
+
+	// A FLOOR, not an exact pin: the installer accepts any patch of the pinned
+	// minor, so only major.minor is compared. That keeps init_test's looser intent
+	// (it answers "is this runtime new enough to install on?") while making a
+	// minor-train drift — the 1.3 -> 1.4 case — impossible to leave behind.
+	test('init_test MIN_BUN floor tracks the pinned major.minor', () => {
+		const source = readFileSync(join(ROOT, 'src/core/install/init_test.ts'), 'utf-8');
+		const match = /const MIN_BUN = \[([^\]]+)\]/.exec(source);
+		expect(match).not.toBeNull();
+		const floor = (match?.[1] ?? '').split(',').map((n) => Number.parseInt(n.trim(), 10));
+		const [major, minor] = pinned.split('.').map((n) => Number.parseInt(n, 10));
+		expect(floor[0]).toBe(major);
+		expect(floor[1]).toBe(minor);
+	});
+
 	test('diffusion zip writer has no Bun.zip runtime probe', () => {
 		const source = readFileSync(join(ROOT, 'src/diffusion/writers/files.ts'), 'utf-8');
 		// The deterministic STORE writer must be UNCONDITIONAL: no feature-probe
