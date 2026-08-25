@@ -61,6 +61,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { readEnv } from '../src/config/env.ts';
+// DB-free ON PURPOSE (see that module's header): the provenance check below must
+// name the marker table WITHOUT importing the marker module, whose postgres.ts
+// import connects the pool at module scope — a session held on the target makes
+// the DROP fail with "being accessed by other users".
+import {
+	TEST_MARKER_PURPOSE,
+	TEST_MARKER_TABLE,
+} from '../src/core/test_data/test_database_marker_constants.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
 import { rebuildTestMediaRoot } from '../test/helpers/test_media_root.ts';
 
@@ -94,26 +102,38 @@ if (testDb === appDb || testDb === '') {
 	process.exit(1);
 }
 
+// The name reaches SQL as a double-quoted identifier (the DROP/CREATE below) and
+// the provenance probes interpolate it too. A quote or a backslash inside it
+// could escape both, so REFUSE rather than escape — escaping is where the next
+// injection lives, and no database an operator would really use needs one.
+if (!/^[A-Za-z0-9_.-]+$/.test(testDb)) {
+	console.error(
+		`REFUSING: test database name '${testDb}' contains characters outside [A-Za-z0-9_.-]; it is interpolated into SQL identifiers. Pick a plain name. Nothing was touched.`,
+	);
+	process.exit(1);
+}
+
+// --force is the operator's explicit "yes, I know what that database is". It
+// overrides EXACTLY ONE refusal: the provenance gate below, i.e. a target that
+// EXISTS but carries no marker this script wrote. It never overrides the app-DB
+// name guard above. Parsed before any side effect, so a mistyped flag dies here
+// rather than after the media tree has been swept.
+const cliArgs = process.argv.slice(2);
+const force = cliArgs.includes('--force');
+{
+	const unknown = cliArgs.filter((arg) => arg !== '--force');
+	if (unknown.length > 0) {
+		console.error(
+			`REFUSING: unknown argument(s): ${unknown.join(', ')}. The only flag is --force (drop an existing target this script cannot prove it built). Nothing was touched.`,
+		);
+		process.exit(1);
+	}
+}
+
 // Repoint the WHOLE PROCESS before config is imported (see the header). Everything after
 // this — connFromConfig(), the pool, the installer helpers — resolves to the test DB.
 process.env.DB_NAME = testDb;
 process.env.DEDALO_DATABASE_CONN = testDb;
-
-// AND THE MEDIA ROOT, in the same breath and for the same reason. The database is
-// not the only surface the suite shared with the installation: `MEDIA_PATH` was,
-// so a client-suite upload, an `ensureMediaKit` and every derivative a gate built
-// landed in the install's media tree. `DEDALO_TEST_MEDIA_ROOT` repoints the root
-// AND arms the `.dedalo_test_media` guard (src/core/media/test_media_root.ts) —
-// one key, so a run cannot be armed at the wrong root or repointed with the guard
-// asleep. The tree is SWEPT and rebuilt here, beside the database it belongs to:
-// the two are ONE fixture (files_info rows name files in it) — which is why the
-// SUITE DATABASE NAME is passed EXPLICITLY: the tree is keyed by it, and the
-// derivation (`<DB_NAME>_test`) has just been invalidated by the repoint above.
-const mediaRoot = rebuildTestMediaRoot(testDb);
-process.env.DEDALO_TEST_MEDIA_ROOT = mediaRoot;
-console.log(
-	`[test-db] test media root rebuilt: ${mediaRoot} (marked '.dedalo_test_media'; the installation's media tree is never touched)`,
-);
 
 const host = readEnv('DB_HOST') ?? readEnv('DEDALO_HOSTNAME_CONN') ?? 'localhost';
 const portRaw = readEnv('DB_PORT') ?? readEnv('DEDALO_DB_PORT_CONN') ?? '';
@@ -154,11 +174,12 @@ async function psqlBinary(): Promise<string> {
 	return resolvedPsql;
 }
 
-async function psql(database: string, args: string[]): Promise<string> {
+async function psql(database: string, args: string[], stdin?: string): Promise<string> {
 	const proc = Bun.spawn(
 		[await psqlBinary(), ...conn, '-d', database, '-v', 'ON_ERROR_STOP=1', ...args],
 		{
 			env: pgEnv,
+			stdin: stdin === undefined ? 'ignore' : new TextEncoder().encode(stdin),
 			stdout: 'pipe',
 			stderr: 'pipe',
 		},
@@ -171,6 +192,137 @@ async function psql(database: string, args: string[]): Promise<string> {
 	if (code !== 0) throw new Error(`psql (${database}) exited ${code}: ${err.trim()}`);
 	return out;
 }
+
+// ---------------------------------------------------------------------------
+// GUARD 2 of 2 — PROVENANCE (coverage plan §4.4 D13, closed 2026-08-25).
+//
+// The name guard above is a claim ABOUT a database; this one asks the database
+// itself. Three states may proceed:
+//   ABSENT   — nothing to lose; the build creates it fresh.
+//   MARKED   — it carries the marker row naming ITSELF with the exact purpose
+//              sentence, i.e. a database THIS script built (step 2b below is
+//              that row's only producer in the tree). Disposable by its own
+//              declaration.
+//   --force  — the operator overrides an existing-but-unproven target, by name.
+// Anything else — a second checkout's install, a colleague's database, a
+// production restore sitting at the configured name — REFUSES, having touched
+// nothing.
+//
+// MECHANICS THAT ARE LOAD-BEARING, not style:
+//  - Asked over this script's own short-lived psql subprocesses, NEVER the
+//    engine pool: importing the marker module would connect postgres.ts's
+//    module-scope pool to the target, and a held session makes the very
+//    DROP DATABASE this gate protects fail with "being accessed by other
+//    users". Each probe has fully exited before the DROP runs.
+//  - The table name and purpose sentence come from the marker's DB-FREE
+//    constants module, so this file never types the literal (rule 5 of
+//    test_db_marker_tripwire scans scripts/ for it).
+//  - Values reach SQL as psql variables (:'db', :'purpose'), never spliced into
+//    the statement: the purpose sentence is 200 characters of prose and the one
+//    honest way to compare it is to let psql quote it. The statements go in on
+//    STDIN (-f -) rather than -c, because psql interpolates variables only when
+//    lexing file/stdin input — with -c the `:'db'` arrives at the server
+//    literally and it is a syntax error. Verified against psql 18 before use.
+//  - FAIL-CLOSED by shape: a probe that ERRORS throws (ON_ERROR_STOP + exit
+//    code) and aborts the run. Only a SUCCESSFUL empty result means "absent",
+//    so a surprise can over-refuse but never over-drop.
+// ---------------------------------------------------------------------------
+
+type TargetProvenance =
+	| { state: 'absent' }
+	| { state: 'marked' }
+	| { state: 'unmarked' }
+	| { state: 'wrong_purpose' }
+	| { state: 'misrouted'; markerDatabase: string };
+
+async function inspectDropTarget(): Promise<TargetProvenance> {
+	// Does the target exist at all? Asked on the `postgres` maintenance database,
+	// so a truly absent target is never even connected to.
+	const exists = (
+		await psql(
+			'postgres',
+			['-t', '-A', '-v', `db=${testDb}`, '-f', '-'],
+			"SELECT 1 FROM pg_database WHERE datname = :'db'\n",
+		)
+	).trim();
+	if (exists === '') return { state: 'absent' };
+
+	// It exists: ask the DATABASE ITSELF whether it is the disposable one.
+	const tablePresent = (
+		await psql(testDb, [
+			'-t',
+			'-A',
+			'-c',
+			`SELECT to_regclass('public.${TEST_MARKER_TABLE}') IS NOT NULL`,
+		])
+	).trim();
+	if (tablePresent !== 't') return { state: 'unmarked' };
+
+	const row = (
+		await psql(
+			testDb,
+			['-t', '-A', '-F', '\t', '-v', `purpose=${TEST_MARKER_PURPOSE}`, '-f', '-'],
+			`SELECT (purpose = :'purpose')::text, database_name FROM "${TEST_MARKER_TABLE}" WHERE id = 1\n`,
+		)
+	).trim();
+	if (row === '') return { state: 'unmarked' };
+	// Split on the FIRST tab only: database_name is data from a database we do
+	// not yet trust, and must not be able to smuggle a field boundary.
+	const tab = row.indexOf('\t');
+	const purposeMatches = tab === -1 ? row : row.slice(0, tab);
+	const markerDatabase = tab === -1 ? '' : row.slice(tab + 1);
+	if (purposeMatches !== 'true') return { state: 'wrong_purpose' };
+	if (markerDatabase !== testDb) return { state: 'misrouted', markerDatabase };
+	return { state: 'marked' };
+}
+
+const provenance = await inspectDropTarget();
+switch (provenance.state) {
+	case 'absent':
+		console.log(`[test-db] '${testDb}' does not exist — building it fresh.`);
+		break;
+	case 'marked':
+		console.log(
+			`[test-db] '${testDb}' carries its own '${TEST_MARKER_TABLE}' row — a database this script built. Dropping and rebuilding.`,
+		);
+		break;
+	default: {
+		if (force) {
+			// The operator said so, by flag. Name what is about to happen and to
+			// WHICH database, so the scrollback is the audit trail.
+			console.warn(
+				`[test-db] --force: dropping EXISTING database '${testDb}' WITHOUT provenance (state: ${provenance.state}). If that was someone's real data, this line is where it went.`,
+			);
+			break;
+		}
+		const why =
+			provenance.state === 'unmarked'
+				? `it EXISTS but carries no '${TEST_MARKER_TABLE}' row, so this script did not build it — it may be a real install: a second checkout's, a colleague's, a production restore`
+				: provenance.state === 'wrong_purpose'
+					? `its '${TEST_MARKER_TABLE}' row does not carry the purpose sentence this engine ships — the marker was not written by this script (a hand-made table, or a different engine version)`
+					: `its '${TEST_MARKER_TABLE}' row names database '${provenance.markerDatabase}', not '${testDb}' — a test-database dump restored somewhere it does not belong. Investigate the misrouted restore before anything else`;
+		console.error(
+			`REFUSING to DROP database '${testDb}': ${why}. Nothing was dropped, nothing was written. If it truly is disposable, re-run with --force; otherwise point DEDALO_TEST_DATABASE elsewhere.`,
+		);
+		process.exit(1);
+	}
+}
+
+// AND THE MEDIA ROOT, in the same breath and for the same reason. The database is
+// not the only surface the suite shared with the installation: `MEDIA_PATH` was,
+// so a client-suite upload, an `ensureMediaKit` and every derivative a gate built
+// landed in the install's media tree. `DEDALO_TEST_MEDIA_ROOT` repoints the root
+// AND arms the `.dedalo_test_media` guard (src/core/media/test_media_root.ts) —
+// one key, so a run cannot be armed at the wrong root or repointed with the guard
+// asleep. The tree is SWEPT and rebuilt here, beside the database it belongs to:
+// the two are ONE fixture (files_info rows name files in it) — which is why the
+// SUITE DATABASE NAME is passed EXPLICITLY: the tree is keyed by it, and the
+// derivation (`<DB_NAME>_test`) has just been invalidated by the repoint above.
+const mediaRoot = rebuildTestMediaRoot(testDb);
+process.env.DEDALO_TEST_MEDIA_ROOT = mediaRoot;
+console.log(
+	`[test-db] test media root rebuilt: ${mediaRoot} (marked '.dedalo_test_media'; the installation's media tree is never touched)`,
+);
 
 console.log(`[test-db] rebuilding '${testDb}' (application DB '${appDb}' is never touched)`);
 

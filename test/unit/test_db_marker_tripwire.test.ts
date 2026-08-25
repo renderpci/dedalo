@@ -551,6 +551,11 @@ describe('rule 5 — one producer of the marker', () => {
 		const namers = engineSources().filter(
 			(file) =>
 				file !== 'src/core/test_data/test_database_marker.ts' &&
+				// The literal's ONE definition site — split DB-free (D13, 2026-08-25) so
+				// scripts/test_db_setup.ts can ask a target for the marker over psql
+				// without importing the pool (postgres.ts connects at module scope) and
+				// without a second copy of the name.
+				file !== 'src/core/test_data/test_database_marker_constants.ts' &&
 				stripComments(read(file)).includes(TEST_MARKER_TABLE),
 		);
 		expect(

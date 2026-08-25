@@ -69,16 +69,14 @@ import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 
-/** The marker table. One name, one owner (this file) — sql_confinement T4. */
-export const TEST_MARKER_TABLE = 'dedalo_test_marker';
+// The name and the purpose sentence live in a DB-FREE sibling so the setup
+// script's pre-DROP provenance check can use them over psql WITHOUT importing
+// this module — whose postgres.ts import connects the pool at module scope, and
+// a held session would make the very DROP it guards fail. Re-exported here so
+// every engine-side consumer keeps one import site.
+import { TEST_MARKER_PURPOSE, TEST_MARKER_TABLE } from './test_database_marker_constants.ts';
 
-/**
- * The literal a CHECK constraint pins the single row's `purpose` to. Long and
- * specific ON PURPOSE: it is the part of the shape that cannot be typed by
- * accident (module header, property 2).
- */
-export const TEST_MARKER_PURPOSE =
-	'DISPOSABLE DEDALO TEST DATABASE — built by `bun run test:db:setup`, dropped and rebuilt at will. Every test-data writer REFUSES without this row. Never create it on a database holding real records.';
+export { TEST_MARKER_PURPOSE, TEST_MARKER_TABLE };
 
 /** The one row, as every reader sees it. */
 export interface TestDatabaseMarker {

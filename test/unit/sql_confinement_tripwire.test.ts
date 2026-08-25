@@ -277,7 +277,13 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 	{
 		family: 'test-database marker (2026-08-19)',
 		tablePattern: /dedalo_test_marker/,
-		owners: ['src/core/test_data/test_database_marker.ts'],
+		owners: [
+			'src/core/test_data/test_database_marker.ts',
+			// The literal's DB-FREE definition half (split 2026-08-25, D13): the same
+			// owner module in two files, so scripts/test_db_setup.ts can name the
+			// table through the constant without importing the pool.
+			'src/core/test_data/test_database_marker_constants.ts',
+		],
 		// NAME-ONLY exemptions (no SQL against the table): two test-data doors
 		// NAME the marker row in the comment that explains why they call
 		// `assertTestDatabase()` first — the guard is the owner's exported API,
