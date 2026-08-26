@@ -244,27 +244,45 @@ const get_content_data_edit = async function(self) {
 			get_label.update_code_role_consumer || 'Update this installation',
 			get_label.update_code_role_consumer_note || 'The code this installation runs, and the code server it receives updates from.'
 		)
-		if (value.consumer) {
-			// the restore points are ACTIONABLE here: each bootable one gets a
-			// Restore button that opens the confirm modal. The development entity
-			// refuses to overwrite its own tree (same posture as the update button
-			// below), so it gets no restore affordance either.
-			render_consumer_status(
-				consumer_body,
-				value.consumer,
-				is_development
-					? null
-					// The SERVER's own version string travels with the point: the
-					// modal's downgrade decision must be the pipeline's, and the
-					// page global carries a prerelease tag the pipeline never sees.
-					: (point) => render_restore_modal(self, point, body_response, (value.consumer.engine || {}).version)
-			)
-		} else {
-			consumer_body.appendChild(build_readout([
-				{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
-				{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
-			]))
+		// ONE writer for the consumer half, callable again from the re-seed: a
+		// panel first painted through the FALLBACK (no `consumer` in the payload)
+		// could otherwise never gain a readiness block, because refresh_readiness
+		// finds nothing to replace — leaving the panel on version+build while the
+		// modal in front of it reads the same fresh value and offers a waiver for
+		// a check the panel never shows.
+		let consumer_half = null
+		const render_consumer_half = function(consumer) {
+			const holder = ui.create_dom_element({ element_type : 'div' })
+			if (consumer_half===null) {
+				consumer_body.appendChild(holder)
+			} else {
+				consumer_body.replaceChild(holder, consumer_half)
+			}
+			consumer_half = holder
+			if (consumer) {
+				// the restore points are ACTIONABLE here: each bootable one gets a
+				// Restore button that opens the confirm modal. The development entity
+				// refuses to overwrite its own tree (same posture as the update button
+				// below), so it gets no restore affordance either.
+				render_consumer_status(
+					holder,
+					consumer,
+					is_development
+						? null
+						// The SERVER's own version string travels with the point: the
+						// modal's downgrade decision must be the pipeline's, and the
+						// page global carries a prerelease tag the pipeline never sees.
+						: (point) => render_restore_modal(self, point, body_response, (consumer.engine || {}).version)
+				)
+			} else {
+				holder.appendChild(build_readout([
+					{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
+					{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
+				]))
+			}
+			return holder
 		}
+		render_consumer_half(value.consumer)
 
 	// servers. The shared picker over CODE_SERVERS with its OWN storage key:
 	// remembering the choice must not collide with the ontology picker's.
@@ -481,7 +499,12 @@ const get_content_data_edit = async function(self) {
 							// …and RE-STATE the panel from it. Without this the
 							// modal's waiver row and the readiness row behind it
 							// can show the same fact in two states at once.
-							refresh_readiness(consumer_body, fresh_value.consumer)
+							// refresh_readiness answers false when there is no
+							// readiness block to replace — the FALLBACK painting —
+							// and then the whole half is rendered again.
+							if (refresh_readiness(consumer_half, fresh_value.consumer)!==true) {
+								render_consumer_half(fresh_value.consumer)
+							}
 						}
 					} catch (error) {
 						// get_value resolves an error envelope rather than throwing,
@@ -1332,15 +1355,24 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 	// — a headline naming a waiver this modal does not offer, or a checkbox the
 	// headline never warned about, would be the same panel/pipeline disagreement
 	// from the other side.
-		const backup_check = backup_waiver_check(self.value?.consumer)
+		// declared BEFORE mount_waive_row: the row inserts itself above the
+		// button, and `let` in the same block would leave it in the TDZ.
+		let button_update = null
 		let waive_backup_input = null
-		if (backup_check) {
-
+		const mount_waive_row = function(check) {
+			if (waive_backup_input!==null) {
+				return waive_backup_input
+			}
 			const waive_backup_row = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'waive_backup_row',
 				parent			: footer
 			})
+			// it must precede the Update button even when mounted LATE (the
+			// deadline-crossing path below): the caution is read, not stumbled on.
+			if (button_update && button_update.parentNode===footer) {
+				footer.insertBefore(waive_backup_row, button_update)
+			}
 			// label WRAPS the input (the house pattern, same as dev_channel_row):
 			// the click target is the whole row without an id/for pair to keep in sync.
 			const waive_backup_label = ui.create_dom_element({
@@ -1358,7 +1390,7 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 			waive_backup_label.prepend(waive_backup_input)
 			// the age FACT, when the server measured one ('none' means no backup
 			// was found at all). The server sends facts, the client the wording.
-			const backup_age = Number(backup_check.detail)
+			const backup_age = Number(check.detail)
 			const note_text = (get_label.update_code_waive_backup_note || 'The database will not be restorable if the update goes wrong. Make a backup first whenever you can; every waiver is recorded in the server log with your user.')
 			ui.create_dom_element({
 				element_type	: 'div',
@@ -1368,6 +1400,12 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 					: note_text,
 				parent			: waive_backup_row
 			})
+
+			return waive_backup_input
+		}
+		const backup_check = backup_waiver_check(self.value?.consumer)
+		if (backup_check) {
+			mount_waive_row(backup_check)
 		}
 
 	// files. One radio row each; the <label> WRAPS the input (no ids), the
@@ -1376,7 +1414,6 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 		const files = versions_info.files || []
 		const files_length = files.length
 		const valid_files = []
-		let button_update = null
 		for (let i = 0; i < files_length; i++) {
 
 			const current_version = files[i];
@@ -1496,6 +1533,36 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 						return
 					}
 					response.classList.remove('error')
+
+					// THE DEADLINE CAN FALL WHILE THE MODAL IS OPEN. The panel
+					// value is re-seeded when the modal opens, but freshness ages:
+					// a backup at 23.9 h renders no checkbox, and six minutes later
+					// the very same request is refused for a stale backup — the job
+					// answering with the byte-frozen sentence that names a wire flag
+					// the operator has no control for, which is precisely the dead
+					// end this feature exists to abolish, narrowed to a window.
+					// So re-ask right here, and if a waiver has become necessary,
+					// MOUNT the row and stop instead of submitting a refusal.
+					if (waive_backup_input===null) {
+						try {
+							const late_value = await self.get_value()
+							if (late_value) {
+								self.value = late_value
+								const late_check = backup_waiver_check(late_value.consumer)
+								if (late_check) {
+									mount_waive_row(late_check)
+									response.textContent = get_label.update_code_waive_backup_now_required
+										|| 'The database backup went stale while this dialog was open. Make a backup, or accept the waiver below, then press Update again.'
+									response.classList.add('error')
+									return
+								}
+							}
+						} catch (error) {
+							// never block the update on a failed re-ask: the server
+							// still refuses correctly if the backup really did age
+							console.error('update_code: could not re-check backup freshness before submitting', error)
+						}
+					}
 
 					// the operator's explicit waiver of the recent-backup
 					// precondition. `false` whenever the row was not offered

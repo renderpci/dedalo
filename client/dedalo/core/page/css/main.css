@@ -16904,6 +16904,8 @@ dd-modal:has(.tool_header) {
 }
 .wrapper_widget.update_code > .content_data .update_status .dd_v > .dd_badge {
   margin-left: 0.4rem;
+  margin-right: 0.33rem;
+  white-space: nowrap;
 }
 .wrapper_widget.update_code > .content_data .update_status .restore_row .dd_v {
   display: flex;

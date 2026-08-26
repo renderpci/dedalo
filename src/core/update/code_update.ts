@@ -116,7 +116,7 @@ import {
 } from './disk_space.ts';
 import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
-import { checkUpdatePreconditions } from './preconditions.ts';
+import { backupFreshness, checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
@@ -831,15 +831,30 @@ interface UpdateRequest {
 function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRequest {
 	const options = (rawOptions ?? {}) as UpdateCodeOptions;
 	const waiveBackup = options.waive_backup === true;
-	if (waiveBackup) {
-		console.warn(
-			`[code update] BACKUP REQUIREMENT WAIVED by request (waive_backup: true, user ${principal.userId}) — proceeding without a recent database backup`,
-		);
-	}
 	checkUpdatePreconditions(
 		principal,
 		waiveBackup ? { backupWarn: false } : { backupRequire: true },
 	);
+	// The audit line records the FACT of a waiver, never the flag that asked for
+	// one, and only AFTER the identity gates have passed. Until 2026-08-26 it did
+	// the opposite: it fired before checkUpdatePreconditions, so any global admin
+	// (the widget door is `isGlobalAdmin`, not SUPERUSER_ID) could fill the log
+	// with `WAIVED … proceeding without a recent database backup` lines for
+	// requests that were refused on the very next statement and proceeded with
+	// nothing. It also fired over a FRESH backup — both drills always send the
+	// flag — so the line implied a missing backup that was not missing.
+	if (waiveBackup) {
+		const { hours, stale } = backupFreshness();
+		if (hours === null || stale) {
+			console.warn(
+				`[code update] BACKUP REQUIREMENT WAIVED by user ${principal.userId} — proceeding with ${
+					hours === null
+						? 'NO database backup at all'
+						: `a database backup about ${Math.round(hours)} hours old`
+				}`,
+			);
+		}
+	}
 	const request = readReleaseFields(options);
 	assertReleaseShape(request);
 	return request;

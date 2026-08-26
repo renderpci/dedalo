@@ -25,7 +25,7 @@ import {event_manager} from '../../../core/common/js/event_manager.js'
 import {render_servers_list} from '../../../core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js'
 import {update_code} from '../../../core/area_maintenance/widgets/update_code/js/update_code.js'
 import {render_info_modal, render_restore_modal} from '../../../core/area_maintenance/widgets/update_code/js/render_update_code.js'
-import {render_consumer_status} from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js'
+import {render_consumer_status, refresh_readiness, backup_waiver_check} from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js'
 import {
 	UPDATE_PHASES,
 	init_phase_state,
@@ -482,6 +482,66 @@ describe('UPDATE_CODE WIDGET', function() {
 		})
 	})
 
+
+
+	describe('refresh_readiness (the panel re-stated in place)', function() {
+
+		const consumer = (backup) => ({ready:true, engine:{}, tree:{},
+			checks:[{id:'superuser',state:'ok'},{id:'backup_fresh',state:backup.state,detail:backup.detail}]})
+
+		it('replaces exactly one block, in position, with the new verdict', function() {
+
+			// The DOM surgery is non-obvious: render_readiness APPENDS the rebuilt
+			// block at the end of the wrapper and replaceChild then moves it into
+			// the old one's slot. A refactor that stops stamping .readiness_block,
+			// or returns the readout instead of its parent, leaves the source-shape
+			// gates green while the panel silently stops refreshing — or grows a
+			// second block.
+			const wrapper = ui.create_dom_element({element_type:'div', parent:container})
+			render_consumer_status(wrapper, consumer({state:'ok', detail:'2'}))
+			try {
+				const before = [...wrapper.children].indexOf(wrapper.querySelector('.readiness_block'))
+				assert.strictEqual(wrapper.querySelectorAll('.readiness_block').length, 1, 'one block to start with')
+				assert.include(wrapper.querySelector('.status_verdict').className, 'state_ok')
+
+				const answered = refresh_readiness(wrapper, consumer({state:'warn', detail:'73'}))
+
+				assert.strictEqual(answered, true, 'it reports that it replaced a block')
+				assert.strictEqual(wrapper.querySelectorAll('.readiness_block').length, 1, 'still exactly one block — no duplicate')
+				assert.strictEqual([...wrapper.children].indexOf(wrapper.querySelector('.readiness_block')), before, 'in the same position')
+				assert.include(wrapper.querySelector('.status_verdict').className, 'state_warning', 'restated from the new value')
+				assert.include(wrapper.textContent, '73', 'carrying the new age fact')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('answers false when there is no block to replace, so the caller can re-render', function() {
+
+			// the FALLBACK painting (a payload without `consumer`): there is no
+			// readiness block, and silently doing nothing would strand the panel
+			// on version+build while the modal offers a waiver for a check the
+			// panel never shows.
+			const wrapper = ui.create_dom_element({element_type:'div', parent:container})
+			try {
+				assert.strictEqual(refresh_readiness(wrapper, consumer({state:'warn', detail:'73'})), false)
+				assert.strictEqual(refresh_readiness(null, consumer({state:'ok', detail:'2'})), false, 'no root')
+				assert.strictEqual(refresh_readiness(wrapper, null), false, 'no consumer')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('backup_waiver_check is the one predicate, and it is scoped', function() {
+
+			assert.isNull(backup_waiver_check(consumer({state:'ok', detail:'2'})), 'a fresh backup needs no waiver')
+			assert.isNotNull(backup_waiver_check(consumer({state:'warn', detail:'73'})), 'a stale one does')
+			assert.isNotNull(backup_waiver_check(consumer({state:'unknown', detail:'boom'})), 'so does an unmeasurable one')
+			assert.isNull(backup_waiver_check({checks:[{id:'staging_clean', state:'warn'}]}), 'a non-waivable warning is not a waiver')
+			assert.isNull(backup_waiver_check(null), 'no payload, no waiver')
+			assert.isNull(backup_waiver_check({}), 'no checks, no waiver')
+		})
+	})
 
 	describe('phase reducer (served module)', function() {
 

@@ -617,6 +617,7 @@
 	"update_code_waive_backup": "Aggiorna senza una copia di sicurezza recente della base di dati",
 	"update_code_waive_backup_confirm": "senza una copia di sicurezza recente della base di dati",
 	"update_code_waive_backup_note": "La base di dati non sarà ripristinabile se l'aggiornamento va male. Fai prima una copia di sicurezza ogni volta che puoi; ogni rinuncia viene registrata nel log del server con il tuo utente.",
+	"update_code_waive_backup_now_required": "La copia di sicurezza della base di dati è scaduta mentre questa finestra era aperta. Fai una copia di sicurezza, o accetta la rinuncia qui sotto, e premi di nuovo Aggiorna.",
 	"update_mode_mandatory": "La modalità di aggiornamento è obbligatoria",
 	"update_ontology": "Aggiornare Ontologia",
 	"update_ontology_code_older": "Il vostro codice Dédalo è più vecchio di quanto richiesto da questa ontologia (≥ %s). Aggiornate il codice al più presto per evitare incompatibilità.",

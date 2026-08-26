@@ -617,6 +617,7 @@
 	"update_code_waive_backup": "Actualitza sense una còpia de seguretat recent de la base de dades",
 	"update_code_waive_backup_confirm": "sense una còpia de seguretat recent de la base de dades",
 	"update_code_waive_backup_note": "La base de dades no es podrà restaurar si l'actualització falla. Fes abans una còpia de seguretat sempre que puguis; tota exempció queda registrada al log del servidor amb el teu usuari.",
+	"update_code_waive_backup_now_required": "La còpia de seguretat de la base de dades ha caducat mentre aquest diàleg era obert. Fes una còpia de seguretat, o accepta l'exempció de sota, i prem Actualitza de nou.",
 	"update_mode_mandatory": "El mode d'actualització és obligatori",
 	"update_ontology": "Actualitzar Ontologia",
 	"update_ontology_code_older": "El vostre codi de Dèdalo és més antic del que aquesta ontologia necessita (≥ %s). Actualitzeu el codi aviat per evitar incompatibilitats.",

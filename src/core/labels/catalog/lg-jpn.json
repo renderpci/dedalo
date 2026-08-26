@@ -617,6 +617,7 @@
 	"update_code_waive_backup": "最近のデータベースバックアップなしで更新する",
 	"update_code_waive_backup_confirm": "最近のデータベースバックアップなしで",
 	"update_code_waive_backup_note": "更新に失敗した場合、データベースは復元できません。可能な限り先にバックアップを取ってください。放棄はすべて、あなたのユーザーとともにサーバーログに記録されます。",
+	"update_code_waive_backup_now_required": "このダイアログを開いている間にデータベースのバックアップが古くなりました。バックアップを取るか、下の放棄に同意してから、もう一度「更新」を押してください。",
 	"update_mode_mandatory": "更新モードは必須です",
 	"update_ontology": "オントロジーを更新",
 	"update_ontology_code_older": "お使いの Dédalo のコードは、このオントロジーが必要とするバージョン（≥ %s）より古いです。非互換を避けるため、早めにコードを更新してください。",

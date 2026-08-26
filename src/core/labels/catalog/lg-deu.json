@@ -617,6 +617,7 @@
 	"update_code_waive_backup": "Ohne aktuelle Datenbanksicherung aktualisieren",
 	"update_code_waive_backup_confirm": "ohne aktuelle Datenbanksicherung",
 	"update_code_waive_backup_note": "Die Datenbank lässt sich nicht wiederherstellen, wenn die Aktualisierung fehlschlägt. Erstellen Sie nach Möglichkeit zuerst eine Sicherung; jeder Verzicht wird mit Ihrem Benutzer im Serverprotokoll festgehalten.",
+	"update_code_waive_backup_now_required": "Die Datenbanksicherung ist veraltet, während dieser Dialog offen war. Erstellen Sie eine Sicherung oder akzeptieren Sie den Verzicht unten, und drücken Sie erneut auf Aktualisieren.",
 	"update_mode_mandatory": "Der Aktualisierungsmodus ist obligatorisch",
 	"update_ontology": "Ontologie aktualisieren",
 	"update_ontology_code_older": "Ihr Dédalo-Code ist älter, als diese Ontologie erfordert (≥ %s). Aktualisieren Sie den Code bald, um Inkompatibilitäten zu vermeiden.",

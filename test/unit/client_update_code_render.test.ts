@@ -560,7 +560,12 @@ describe('update_code waive-backup control', () => {
 	test('the panel is re-stated from the value the modal reads', () => {
 		// otherwise the modal's waiver row ("25 h") sits over a readiness row
 		// still reading "23 h · ok": one fact, two states, both on screen.
-		expect(render_src).toContain('refresh_readiness(consumer_body');
+		expect(/refresh_readiness\(consumer_half/.test(render_src)).toBe(true);
+		// …and when there is no readiness block to replace (the FALLBACK painting,
+		// a payload without `consumer`), the whole half is rendered again rather
+		// than left stranded on version+build. See the browser suite for the
+		// behavioural gate on refresh_readiness itself.
+		expect(render_src).toContain('render_consumer_half(fresh_value.consumer)');
 		expect(readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8')).toContain(
 			'export const refresh_readiness',
 		);
@@ -606,8 +611,16 @@ describe('update_code restore control', () => {
 			'export const render_restore_modal = function( self, point, body_response, running_version )',
 		);
 		expect(render_src).toContain('const from_version		= String(running_version ||');
-		// …and the panel hands it the server's own field
-		expect(render_src).toContain('(value.consumer.engine || {}).version');
+		// …and the panel hands it the server's own field. Matched by SHAPE, not by
+		// the holder's name: the consumer half became one re-callable writer
+		// (render_consumer_half) on 2026-08-26 and `value.consumer` there is now
+		// simply `consumer` — what must not drift is that the version comes off
+		// the payload's engine, never off the page global.
+		expect(/\(\s*consumer\.engine \|\| \{\}\)\.version/.test(render_src)).toBe(true);
+		expect(
+			/render_restore_modal\([^)]*page_globals\.dedalo_version/.test(render_src),
+			'the restore modal must never be handed the page global as the running version',
+		).toBe(false);
 	});
 
 	test('a blocked point’s tooltip is its OWN reason, and every reason id has a label', () => {

@@ -49,9 +49,13 @@ REQUEST — `update_code.update_code`
   itself (two renames of a tree already on disk) and is never optional.
 
 STATUS — `consumerStatus().checks[id='backup_fresh']`
-- `state` is now `'ok' | 'warn'`; it is never `'blocked'`. `warn` is the check
-  vocabulary's own word for a waivable condition ("allowed, but the operator
-  should know"). `detail` is unchanged: the rounded age in hours, or `'none'`.
+- `state` is now `'ok' | 'warn' | 'unknown'`; it is never `'blocked'`. `warn` is
+  the check vocabulary's own word for a waivable condition ("allowed, but the
+  operator should know"). `unknown` is neither new nor reachable from the
+  freshness logic — it is what `probe()` returns for ANY check whose body
+  throws, and a consumer coding to a two-value set would mishandle it (this
+  entry's own panel bullets rely on it existing). `detail` is unchanged: the
+  rounded age in hours, or `'none'` — or, on `unknown`, the error text.
 - Consequence: a stale or absent backup no longer forces `ready:false`. Every
   other `blocked` check still does.
 - **`ready` therefore stops meaning "the default request will succeed"**, and
@@ -99,6 +103,23 @@ unchanged and all still `blocked` when they fail.
 Making `backup_fresh` a `warn` changes what the panel SAYS, never what the
 pipeline DOES: the pipeline's verdict on an unwaived request is the same
 refusal it was yesterday. The panel now agrees with it instead of over-reporting.
+
+## The waiver's audit line
+
+`[code update] BACKUP REQUIREMENT WAIVED by user <id> — proceeding with …` is
+written by `parseUpdateRequest` AFTER `checkUpdatePreconditions` has passed, and
+only when the freshness scan actually finds a stale or absent backup. It records
+the FACT of a waiver, never the flag that asked for one. Logging on receipt (as
+it did until 2026-08-26) was wrong twice over:
+
+- the widget door is `isGlobalAdmin`, not `SUPERUSER_ID`, so any admin could
+  fill the log with "proceeding without a recent database backup" lines for
+  requests refused on the very next statement — proceeding with nothing;
+- both drills always send `waive_backup:true`, so it also claimed a waiver over
+  a perfectly fresh backup.
+
+The line now names what was actually waived (no backup at all, or one of a
+stated age), which is what an operator reading the log needs to know.
 
 ## Gate reconciliation
 
