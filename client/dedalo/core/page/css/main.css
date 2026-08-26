@@ -16916,6 +16916,11 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code > .content_data .update_status .restore_row .restore_version {
   opacity: 0.85;
 }
+.wrapper_widget.update_code > .content_data .update_status .restore_row .restore_reason {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
 .wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_restore {
   margin-left: auto;
   padding: 0.15rem 0.7rem;

@@ -835,4 +835,33 @@ describe('update_code developer-builds switch', () => {
 			true,
 		);
 	});
+
+	test('the client interruption marker IS the one core/media/jobs.ts writes', () => {
+		// The client tells "the owning process died" apart from "the job failed"
+		// by a PREFIX in errors[], because JobStatusFrame carries no `status` —
+		// it collapses into is_running:false (jobs.ts frameOf). That makes a
+		// server string a client contract, so it gets a gate: a reworded marker
+		// on the server would otherwise silently turn every resumed, completed
+		// restore back into "the update failed" (the 2026-08-26 defect).
+		const phases_src = readFileSync(join(WIDGET_DIR, 'js/update_code_phases.js'), 'utf8');
+		const declared = /JOB_INTERRUPTED_PREFIX\s*=\s*'([^']+)'/.exec(phases_src)?.[1];
+		expect(declared).toBe('interrupted: ');
+
+		const jobs_src = readFileSync(join(import.meta.dir, '../../src/core/media/jobs.ts'), 'utf8');
+		// every errors.push of an interruption uses that exact prefix…
+		const pushes = jobs_src.match(/errors\.push\(\s*[`'"]interrupted[^`'"]*/g) ?? [];
+		expect(pushes.length).toBeGreaterThanOrEqual(3);
+		for (const push of pushes) {
+			expect(push).toContain(`interrupted: `);
+		}
+		// …and no OTHER errors.push starts with the word, which would read as an
+		// interruption to the client while meaning something else.
+		const strays = (jobs_src.match(/errors\.push\(\s*[`'"][^`'"]*/g) ?? []).filter(
+			(push) => /interrupted/i.test(push) && !push.includes('interrupted: '),
+		);
+		expect(strays).toEqual([]);
+
+		// and the frame the client reads still has no `status` to use instead
+		expect(/function frameOf\([^)]*\): JobStatusFrame \{[^}]*status:/s.test(jobs_src)).toBe(false);
+	});
 });

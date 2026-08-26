@@ -559,8 +559,20 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 				// operator whose point declares no version — or pins another Bun —
 				// that it was "incomplete", beside the green `bootable` pill the
 				// same row draws: two contradictory statements about one directory.
-				button_restore.title = get_label['update_code_restore_reason_' + point.restorable_reason]
+				const reason_text = get_label['update_code_restore_reason_' + point.restorable_reason]
 					|| String(point.restorable_reason || '')
+				button_restore.title = reason_text
+				// RENDERED, not only hovered (2026-08-26): a `title` is a hover
+				// tooltip — it does not exist on a touch screen and the operator
+				// manual promised the reason was on the button. A disabled button
+				// whose refusal cannot be read is a dead end, so the sentence gets
+				// its own line under the row (the top line keeps its layout).
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'restore_reason',
+					text_content	: reason_text,
+					parent			: value
+				})
 				return
 			}
 			button_restore.addEventListener('click', (e) => {

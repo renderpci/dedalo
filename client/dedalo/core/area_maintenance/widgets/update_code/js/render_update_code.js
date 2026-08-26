@@ -297,17 +297,27 @@ const get_content_data_edit = async function(self) {
 	// The two keys are read separately and re-attached under their OWN key: only
 	// one job can run at a time (server side they share one run lock), but a
 	// restore resumed as an update would be judged against the wrong version.
-		const check_process_data = (local_db_id) => {
+		const check_process_data = (local_db_id, operation) => {
 			data_manager.get_local_db_data(
 				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
 				if (local_data && local_data.value) {
-					// resume path: the expected version was lost with the page, the
-					// /health comparison degrades honestly (see resolve_health_outcome).
-					// The DIGEST survives it, though — it is stored with the job handle
-					// — and on a same-version install it is the only usable token.
+					// WHAT ACTUALLY SURVIVES THE PAGE (corrected 2026-08-26; the
+					// comment here used to claim the digest always did).
+					// The handle is written at job start by render_stream
+					// (common/js/render_common.js ~:458) and holds {pid, pfile} —
+					// nothing else. The DIGEST is added only by finish_interrupted,
+					// i.e. only when THIS page session watched the stream die
+					// pre-swap and rewrote the key itself; a page that was simply
+					// refreshed or closed leaves both tokens behind.
+					// So the real fallback is downstream: the terminal envelope's
+					// own `version` (on_done: `state.expected_version ||
+					// ending.version`). When even that is missing — a job the
+					// server reconciled, which reports no version at all — the
+					// /health verdict is not decidable and poll_health says so
+					// (update_code_unconfirmed) instead of inventing a rollback.
 					track_process(
 						local_data.value.pid,
 						local_data.value.pfile,
@@ -315,13 +325,14 @@ const get_content_data_edit = async function(self) {
 						null,
 						local_data.value.digest ?? null,
 						false,
-						local_db_id
+						local_db_id,
+						operation
 					)
 				}
 			})
 		}
-		check_process_data(LOCAL_DB_ID)
-		check_process_data(LOCAL_DB_ID_RESTORE)
+		check_process_data(LOCAL_DB_ID, 'update')
+		check_process_data(LOCAL_DB_ID_RESTORE, 'restore')
 
 	// development refusal — BEFORE any picker/modal: ask nothing, refuse first.
 		if (is_development) {
@@ -693,6 +704,46 @@ const render_phase_track = function(parent) {
 
 
 /**
+* RUN_WORDING
+* The ENDING SENTENCES of one run, per operation (2026-08-26).
+*
+* The restore reuses the update's tracker verbatim — same frames, same reducer,
+* same phase track — and until now it also reused its words: a finished restore
+* said "Code updated to version 6.9.9", a dropped connection warned "do not
+* start another update", and the reload prompt was headed "Update". All four
+* describe the opposite of what the operator asked for.
+*
+* A wording SET, not a forked tracker: the shared code path is the reason the
+* restore is followed correctly at all, and the caller already knows which of
+* the two it started.
+*
+* @param {string} operation - 'update' | 'restore'
+* @returns {Object} {done_header, done, connection_lost, failed, rolled_back}
+*/
+const run_wording = function(operation) {
+
+	if (operation==='restore') {
+		return {
+			done_header		: get_label.update_code_restore || 'Restore',
+			done			: get_label.update_code_restored || 'Code restored to version %s.',
+			connection_lost	: get_label.update_code_restore_connection_lost || 'Connection lost — the restore may still be running on the server. Reopen this panel to re-attach, and do not start another restore.',
+			failed			: get_label.update_code_restore_failed || 'The restore failed.',
+			rolled_back		: get_label.update_code_restore_rolled_back || 'The restore was rolled back — the server is running the code it was running before.'
+		}
+	}
+
+	return {
+		done_header		: get_label.update || 'Update',
+		done			: get_label.update_code_updated || 'Code updated to version %s.',
+		connection_lost	: get_label.update_code_connection_lost || 'Connection lost — the update may still be running on the server. Reopen this panel to re-attach, and do not start another update.',
+		failed			: get_label.update_code_failed || 'The update failed.',
+		rolled_back		: get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.'
+	}
+}//end run_wording
+
+
+
+/**
 * TRACK_PROCESS
 * Follows a running update job: streams its status via update_process_status
 * (which also persists/cleans the IndexedDB resume key), feeds every frame to
@@ -718,9 +769,19 @@ const render_phase_track = function(parent) {
 * @param {string} [local_db_id=LOCAL_DB_ID] - the resume key this job is
 *   persisted under. The RESTORE job passes LOCAL_DB_ID_RESTORE: same tracker,
 *   same reducer, but a resumed restore must never be re-attached as an update.
+* @param {string} [operation='update'] - 'update' | 'restore'. The tracker is
+*   deliberately SHARED, but its ENDING SENTENCES are not: "Code updated to
+*   version 6.9.9" at the end of a rollback is a false statement about what the
+*   operator just did. The caller always knows which operation it started, so
+*   the wording travels with the run instead of the tracker guessing (run_wording).
 * @returns {void}
 */
-const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null, scroll_into_view=true, local_db_id=LOCAL_DB_ID) {
+const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null, scroll_into_view=true, local_db_id=LOCAL_DB_ID, operation='update') {
+
+	// per-run wording: ONE tracker, two vocabularies (see @param operation).
+	// Read at run time, never at import time — get_label is a page global the
+	// login fills in.
+		const wording = run_wording(operation)
 
 	// clean previous surface
 		while (body_response.firstChild) {
@@ -798,14 +859,14 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_ok update_done',
-				text_content	: (get_label.update_code_updated || 'Code updated to version %s.')
+				text_content	: wording.done
 					.replace('%s', String(version || state.expected_version || '')),
 				parent			: body_response
 			})
 			// …then the reload prompt: the browser still holds the OLD ES modules
 			// and only a full re-login reloads them.
 			const accepted = await ui.confirm({
-				header			: get_label.update || 'Update',
+				header			: wording.done_header,
 				body			: get_label.update_code_reload_required || 'Reload required: log in again to load the new code.',
 				accept_label	: get_label.update_code_reload_now || 'Reload now'
 			})
@@ -842,7 +903,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: is_refusal ? 'dd_note state_danger update_refusal' : 'dd_note state_danger',
-				text_content	: String(message || state.message || (get_label.update_code_failed || 'The update failed.')),
+				text_content	: String(message || state.message || wording.failed),
 				parent			: body_response
 			})
 		}
@@ -861,7 +922,10 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_warning connection_lost',
-				text_content	: get_label.update_code_connection_lost || 'Connection lost — the update may still be running on the server. Reopen this panel to re-attach, and do not start another update.',
+				// per-run wording (run_wording): `update_code_connection_lost` for
+				// an update, `update_code_restore_connection_lost` for a restore —
+				// the sentence names the operation the operator must NOT start twice.
+				text_content	: wording.connection_lost,
 				parent			: body_response
 			})
 		}
@@ -889,11 +953,31 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 						finish_success(version)
 						return
 					}
+					// NOTHING TO COMPARE AGAINST. On the panel-RESUME path both
+					// tokens can be null (the stored job handle holds pid+pfile
+					// only — see check_process_data), and resolve_health_outcome
+					// answers 'rolled_back' for want of anything better. Reporting
+					// a rollback the panel cannot see is as false as reporting a
+					// success: say what is known — the server is back, on this
+					// version — and let the operator compare.
+					if (!state.expected_version && !state.expected_digest) {
+						end_tracking()
+						state = { ...state, mode:'polling' }
+						track.paint(state)
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'dd_note state_warning update_unconfirmed',
+							text_content	: (get_label.update_code_unconfirmed || 'The server is back and running version %s. This panel was reopened after the run started, so it cannot confirm by itself whether the operation completed — compare that version with the one you expected.')
+								.replace('%s', String(version)),
+							parent			: body_response
+						})
+						return
+					}
 					// the server is back on the OLD version → the job rolled back
 					end_tracking()
 					state = { ...state, mode:'rolled_back' }
 					track.paint(state)
-					const rolled_back_text = (get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.')
+					const rolled_back_text = wording.rolled_back
 						+ (ending.message ? (' ' + ending.message) : '')
 					ui.create_dom_element({
 						element_type	: 'div',
@@ -921,7 +1005,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 				return
 			}
 			if (state.mode==='rolled_back') {
-				finish_failed((get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.')
+				finish_failed(wording.rolled_back
 					+ (state.message ? (' ' + state.message) : ''))
 				return
 			}
@@ -967,11 +1051,31 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 					poll_health()
 					return
 				}
+				// TERMINAL, BUT INTERRUPTED — NOT FAILED (2026-08-26).
+				// The panel-resume path re-attaches to a job the SERVER already
+				// reconciled: the operator refreshed mid-run, the swap restarted
+				// the process, and boot marked the orphaned pfile 'interrupted'
+				// (core/media/jobs.ts). The first frame is then terminal with the
+				// reconcile marker as its only error — and this branch printed
+				// "The update failed / interrupted: owning server process died"
+				// over an operation that had COMPLETED, without ever asking
+				// /health. That frame says the stream's owner died and nothing
+				// else, which is precisely the live path's post-swap situation:
+				// hand off to the same poll and let /health be the verdict.
+				if (ending && ending.outcome==='interrupted') {
+					state = apply_phase_frame(state, { phases : [{ id : 'health', status : 'running' }] })
+					state = { ...state, mode:'polling' }
+					track.paint(state)
+					// the old pid/pfile mean nothing to the restarted process
+					data_manager.delete_local_db_data(local_db_id, 'status')
+					poll_health()
+					return
+				}
 				state = { ...state, mode:'failed' }
 				const failure_message = (ending && ending.outcome==='failed' && ending.message)
 					|| state.message
 					|| (final_error ? error_text(final_error) : null)
-					|| (get_label.update_code_failed || 'The update failed.')
+					|| wording.failed
 				finish_failed(failure_message)
 				return
 			}
@@ -1760,7 +1864,10 @@ export const render_restore_modal = function( self, point, body_response, runnin
 		body.appendChild(build_readout([
 			{ k : (get_label.update_code_restore_from || 'Currently running'), v : from_version, mono : true },
 			{ k : (get_label.update_code_restore_to || 'Will run after the restore'), v : to_version, mono : true },
-			{ k : (get_label.update_code_restore_points || 'Restore points'), v : point.name, mono : true },
+			// its OWN key: `update_code_restore_points` is the panel SECTION title
+			// (plural), and used here it read "Restore points: dedalo_7.0.0_…" —
+			// a list heading labelling one directory name.
+			{ k : (get_label.update_code_restore_point_name || 'Restore point'), v : point.name, mono : true },
 			{ k : (get_label.update_code_install_digest || 'Installed archive'), v : point.digest, mono : true }
 		]))
 
@@ -1914,7 +2021,8 @@ export const render_restore_modal = function( self, point, body_response, runnin
 				to_version,
 				point.digest ? String(point.digest) : null,
 				true,
-				LOCAL_DB_ID_RESTORE
+				LOCAL_DB_ID_RESTORE,
+				'restore'
 			)
 		}
 		button_restore.addEventListener('click', click_handler)

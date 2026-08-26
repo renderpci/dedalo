@@ -323,25 +323,30 @@ describe('restoreCode refusals (nothing on disk moves)', () => {
 		expect(treeDigest(targetRoot)).toBe(before);
 	});
 
-	test('an operator drop-in the point does not ship refuses BEFORE the swap could bury it', async () => {
+	test('an operator SECRET the point does not ship refuses BEFORE the swap could bury it', async () => {
 		// The first rename carries the WHOLE live tree into the backup dir. The
-		// update refuses this exact state (refuseUnaccountedLiveEntries); a
-		// restore that proceeded would leave the installation running without its
-		// TLS material and with the files in a backup nobody was told about.
+		// update refuses this exact state; a restore that proceeded would leave
+		// the installation running without its TLS material and with the files in
+		// a backup nobody was told about. Both ends of the walk: an entry at the
+		// ROOT (the walk starts at prefix '' — this is why dropping the update's
+		// root whitelist from this path lost no secret coverage), and one NESTED
+		// under a directory the point ships.
 		const { targetRoot, backupRoot } = caseDirs('drop_in');
 		buildLiveTree(targetRoot, DIGEST_A);
 		const name = `dedalo_${RUNNING}_kkkkkkk_s`;
 		buildRestorePoint(backupRoot, name, RUNNING, DIGEST_B);
-		writeFileSync(join(targetRoot, '.dedalo.env'), 'DB_PASSWORD=x\n');
+		mkdirSync(join(targetRoot, 'certs'), { recursive: true });
+		writeFileSync(join(targetRoot, 'certs', 'server.pem'), '-----BEGIN-----\n');
 		const before = treeDigest(targetRoot);
 
 		const rootRefusal = await refusalOf(
 			restoreCode({ name }, SUPERUSER, restoreSeams({ targetRoot, backupRoot })),
 		);
 		expect(rootRefusal.code).toBe('update.refused');
-		expect(rootRefusal.message).toContain('Unknown entries at the code-tree root');
+		expect(rootRefusal.message).toContain('secret-shaped');
+		expect(rootRefusal.message).toContain('certs');
 		expect(treeDigest(targetRoot)).toBe(before);
-		rmSync(join(targetRoot, '.dedalo.env'));
+		rmSync(join(targetRoot, 'certs'), { recursive: true });
 
 		// …and the NESTED secret-shaped walk, under a directory the point ships.
 		mkdirSync(join(targetRoot, 'src', 'certs'), { recursive: true });
@@ -352,6 +357,33 @@ describe('restoreCode refusals (nothing on disk moves)', () => {
 		expect(nestedRefusal.code).toBe('update.refused');
 		expect(nestedRefusal.message).toContain('secret-shaped');
 		expect(existsSync(join(targetRoot, 'src', 'certs', 'server.pem'))).toBe(true);
+	});
+
+	test('an OLDER point restores even though later releases added root entries', async () => {
+		// THE REGRESSION (2026-08-26). The restore path inherited the update's
+		// ROOT WHITELIST, which reads `shipped` from the tree about to land —
+		// sound only while that tree is NEWER. Here it is OLDER, so every root
+		// entry a later release added (SECURITY.md in f6ded58d80, cliff.toml in
+		// 8a26b27a6d, install.sh in 7e3a27e026 …) read as "unaccounted" and the
+		// restore refused, telling the operator to DELETE SHIPPED FILES. Neither
+		// the first gate nor the live drill caught it: both built the point and
+		// the live tree from the same shape, so no root-entry delta existed.
+		const { targetRoot, backupRoot } = caseDirs('older_point');
+		buildLiveTree(targetRoot, DIGEST_A);
+		const name = `dedalo_${RUNNING}_ppppppp_s`;
+		buildRestorePoint(backupRoot, name, RUNNING, DIGEST_B);
+		// shipped by the RUNNING release, absent from the older point
+		writeFileSync(join(targetRoot, 'SECURITY.md'), '# Security\n');
+		writeFileSync(join(targetRoot, 'cliff.toml'), '[changelog]\n');
+
+		const answer = await restoreCode({ name }, SUPERUSER, restoreSeams({ targetRoot, backupRoot }));
+		expect(answer.ok).toBe(true);
+		// the point landed, and the outgoing tree (with its extra root files) is
+		// the new restore point — nothing was lost, it just moved aside
+		expect(existsSync(join(targetRoot, 'src', 'live_only.ts'))).toBe(false);
+		const parked = readdirSync(backupRoot).filter((entry) => entry.startsWith('dedalo_'));
+		expect(parked).toHaveLength(1);
+		expect(existsSync(join(backupRoot, parked[0] as string, 'SECURITY.md'))).toBe(true);
 	});
 
 	test('a point declaring no version refuses — provenance that cannot be read is not restored', async () => {
@@ -512,6 +544,46 @@ describe('the full restore swap against a temp tree', () => {
 		expect(
 			first.phases.filter((phase) => phase.status === 'skipped').map((phase) => phase.id),
 		).toEqual(['download', 'verify', 'extract', 'deps', 'preflight']);
+	});
+
+	test('a point that FAILS its pre-flight boot never touches the live tree', async () => {
+		// The one behaviour that makes a restore more than `mv`: a backup dir is a
+		// tree nobody has executed since the day it was moved aside. Every other
+		// gate in this file seams smokeBoot to a no-op, so without this case the
+		// module's whole reason to exist was asserted nowhere.
+		const { targetRoot, backupRoot } = caseDirs('preflight_fail');
+		buildLiveTree(targetRoot, DIGEST_A);
+		const name = `dedalo_${RUNNING}_qqqqqqq_s`;
+		const dir = buildRestorePoint(backupRoot, name, RUNNING, DIGEST_B);
+		const before = treeDigest(targetRoot);
+		const frames: UpdatePhaseFrame[] = [];
+
+		const refusal = await refusalOf(
+			restoreCode(
+				{ name },
+				SUPERUSER,
+				restoreSeams({
+					targetRoot,
+					backupRoot,
+					smokeBoot: async () => {
+						throw new Error('the restored tree exited 1 during its boot check');
+					},
+					onPhase: (frame) => frames.push(frame),
+				}),
+			),
+		);
+
+		expect(refusal.code).toBe('update.failed');
+		// NOTHING moved: the live tree is byte-identical and the point still exists
+		expect(treeDigest(targetRoot)).toBe(before);
+		expect(existsSync(join(dir, 'package.json'))).toBe(true);
+		expect(readdirSync(backupRoot).filter((entry) => entry.startsWith('dedalo_'))).toEqual([name]);
+		// no sentinel was written — it is written INSIDE the swap, which never ran
+		expect(existsSync(join(backupRoot, 'last_code_update.json'))).toBe(false);
+		// the track blames the phase that actually stopped, and staging + lock are clean
+		expect(frames.at(-1)?.phases.find((phase) => phase.status === 'failed')?.id).toBe('preflight');
+		expect(existsSync(join(backupRoot, '.code_staging'))).toBe(false);
+		expect(existsSync(codeRunLockPath(backupRoot))).toBe(false);
 	});
 
 	test('a DOUBLE rename failure never wedges staging with a marker for a tree that is not there', async () => {

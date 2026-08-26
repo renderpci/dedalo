@@ -303,6 +303,16 @@
 					opacity: 0.85;
 				}
 
+				// the refusal sentence of a disabled Restore button: its own line
+				// UNDER the row (flex-basis 100% in the wrapping value cell), so
+				// the stamp/version/pill/button line keeps its layout and the
+				// reason is readable without a hover.
+				.restore_reason {
+					flex-basis: 100%;
+					font-size: 0.9em;
+					opacity: 0.75;
+				}
+
 				>.dd_v >button.button_restore {
 					margin-left: auto;
 					padding: 0.15rem 0.7rem;

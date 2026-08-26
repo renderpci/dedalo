@@ -1103,13 +1103,48 @@ function isSecretShapedName(name: string): boolean {
  *    that cannot start never replaces a working one.
  */
 
-/** The ROOT WHITELIST + nested secret-pattern refusals (prepareQuarantine's
- * first gates — see its doc comment; the module header states the nested
- * check's honest limit).
+/**
+ * The SECRET-SHAPE refusal, on its own (2026-08-26). The first rename carries
+ * the WHOLE live tree into the backup dir, so an operator's `certs/`,
+ * `.env.local` or `deploy/*.pem` — absent from the tree about to land — would
+ * follow it there and the new tree would come up without them.
  *
- * EXPORTED for code_restore.ts (2026-08-25): `codeRoot` is simply "the tree
- * about to land", quarantine or restore point. Both paths move the live tree
- * into a backup dir with the same first rename, so both owe this refusal. */
+ * DIRECTION-FREE, which is why it is the half a RESTORE can reuse: it asks
+ * only "is this secret-shaped thing missing from the incoming tree?", a
+ * question whose answer does not depend on which tree is newer. The walk
+ * starts at `prefix: ''`, so root-level secrets are covered here too — the
+ * root whitelist below adds nothing to the secret story.
+ */
+export function refuseUntrackedSecrets(codeRoot: string, targetRoot: string): void {
+	const nestedSecrets = nestedUntrackedSecrets(codeRoot, targetRoot);
+	if (nestedSecrets.length > 0) {
+		refuseArchive(
+			`Error. Untracked secret-shaped entries under shipped directories would be moved into the backup by the swap: ${nestedSecrets.join(', ')} — move them out of the tree before updating.`,
+		);
+	}
+}
+
+/** The ROOT WHITELIST + the secret walk (prepareQuarantine's first gates — see
+ * its doc comment; the module header states the nested check's honest limit).
+ *
+ * UPDATE-ONLY, and the `shipped` set is why (2026-08-26). It reads the root of
+ * the tree ABOUT TO LAND and refuses every live root entry missing from it —
+ * sound only while the incoming tree is NEWER, so that what it ships is a
+ * superset of what the outgoing one did. A RESTORE inverts that: the incoming
+ * tree is older, so every root entry added by a release since the point was cut
+ * (`SECURITY.md` + `.gitleaks.toml` in f6ded58d80, `cliff.toml` in 8a26b27a6d,
+ * `install.sh` + `docker-compose.simple.yml` in 7e3a27e026 …) reads as
+ * "unaccounted". Measured: restoring across 2026-08-03 refused with "move them
+ * out of the tree (or delete them)" — telling the operator to delete SHIPPED
+ * release files, in a sentence that says "before updating", on the one path
+ * whose whole purpose is recovering a broken install. Worse, the verdict is
+ * invisible to `restorabilityOf`, so the panel offered a button the pipeline
+ * then refused — the disagreement both modules' headers forbid.
+ *
+ * So the restore path calls `refuseUntrackedSecrets` alone. What it gives up is
+ * the non-secret-shaped operator drop-in, which on a restore is indistinguishable
+ * from ordinary release drift; what it keeps is the hazard that actually loses
+ * data. */
 export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
 	const shipped = new Set(readdirSync(codeRoot));
 	const unknown = readdirSync(targetRoot).filter(
@@ -1120,12 +1155,7 @@ export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: strin
 			`Error. Unknown entries at the code-tree root would be moved into the backup by the swap: ${unknown.join(', ')} — move them out of the tree (or delete them) before updating.`,
 		);
 	}
-	const nestedSecrets = nestedUntrackedSecrets(codeRoot, targetRoot);
-	if (nestedSecrets.length > 0) {
-		refuseArchive(
-			`Error. Untracked secret-shaped entries under shipped directories would be moved into the backup by the swap: ${nestedSecrets.join(', ')} — move them out of the tree before updating.`,
-		);
-	}
+	refuseUntrackedSecrets(codeRoot, targetRoot);
 }
 
 async function prepareQuarantine(

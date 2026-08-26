@@ -127,6 +127,36 @@ export const apply_phase_frame = function(state, frame) {
 
 
 /**
+ * JOB_INTERRUPTED_PREFIX
+ * The job manager's OWN marker for "this job's owning process died", written by
+ * core/media/jobs.ts into `record.errors` on every interruption path:
+ *   reconcileProcessFiles()  → 'interrupted: owning server process died (boot reconcile)'
+ *   status() lazy reconcile  → 'interrupted: owning server process died (lazy reconcile)'
+ *   interruptRunning(reason) → `interrupted: ${reason}`
+ *
+ * WHY A PREFIX AND NOT A FIELD. The record HAS a structured `status`
+ * ('interrupted' vs 'error'), but the wire frame does not: JobStatusFrame is
+ * `{pid, pfile, is_running, data, errors, total_time}` (jobs.ts frameOf, mirrored
+ * by core/api/process_status.ts). The status collapses into `is_running:false`
+ * before it reaches this client, so the only token that survives the wire is the
+ * marker the same module stamps into `errors[]`. It is a machine-written
+ * constant, not an operator sentence — a translation or a reworded message
+ * cannot move it, and a worker's own thrown sentence never carries it.
+ */
+export const JOB_INTERRUPTED_PREFIX = 'interrupted: '
+
+/** True when EVERY error the frame carries is that marker — i.e. the job was
+ * reconciled, and nothing else went wrong. One real error in the array makes
+ * this false, and the failure path keeps it. */
+const is_job_interruption = function(errors) {
+	return Array.isArray(errors)
+		&& errors.length>0
+		&& errors.every(e => typeof e==='string' && e.startsWith(JOB_INTERRUPTED_PREFIX))
+}
+
+
+
+/**
  * RESOLVE_FINAL_FRAME
  * Interprets the STREAM'S TERMINAL frame (`is_running:false`) once it is seen.
  * The job's final `data` is its RETURN ENVELOPE, not a phase snapshot — so a
@@ -135,10 +165,22 @@ export const apply_phase_frame = function(state, frame) {
  * already knows the truth. That envelope outranks the frozen track:
  *
  *   {data:{ok:true,  data:{version}}}            → updated  (install landed)
+ *   {errors:['interrupted: …']}                  → interrupted (see below)
  *   {data:{ok:false,error:{message}} | errors:[…]} → failed  (the sentence rides)
  *
- * Returns {outcome:'updated', version} | {outcome:'failed', message} | null
- * when the frame decides nothing (caller keeps its existing heuristics).
+ * INTERRUPTED IS NOT FAILED (2026-08-26). An operator who refreshes the panel
+ * mid-run leaves the job orphaned; the swap restarts the server, and the NEW
+ * process reconciles the pfile to status 'interrupted' (jobs.ts). When the panel
+ * re-attaches, its FIRST frame is already terminal and carries only that marker
+ * — an update or restore that COMPLETED was being reported as "the update
+ * failed / interrupted: owning server process died", and /health was never
+ * asked. Such a frame decides nothing about the outcome: it says the STREAM'S
+ * owner died, exactly like the synthetic {interrupted:true} the live path emits
+ * post-swap, so the caller must degrade to the same /health handoff.
+ *
+ * Returns {outcome:'updated', version} | {outcome:'interrupted', message}
+ * | {outcome:'failed', message} | null when the frame decides nothing (caller
+ * keeps its existing heuristics).
  * @param {Object} state - reducer state (unused today; symmetry + future use)
  * @param {Object|null} frame - the terminal JobStatusFrame, null when none seen
  */
@@ -148,10 +190,17 @@ export const resolve_final_frame = function(state, frame) {
 		return null
 	}
 	const result = frame.data
-	if (result && typeof result==='object') {
-		if (result.ok===true && result.data && typeof result.data.version==='string') {
-			return { outcome : 'updated', version : result.data.version }
-		}
+	const is_envelope = !!(result && typeof result==='object')
+	if (is_envelope && result.ok===true && result.data && typeof result.data.version==='string') {
+		return { outcome : 'updated', version : result.data.version }
+	}
+	// the reconciled job: terminal, but it never reported an outcome. An
+	// EXPLICIT ok:false envelope outranks it — that is the pipeline itself
+	// saying it failed, whatever the job manager stamped afterwards.
+	if (!(is_envelope && result.ok===false) && is_job_interruption(frame.errors)) {
+		return { outcome : 'interrupted', message : frame.errors.join(' ') }
+	}
+	if (is_envelope) {
 		// The failure sentence, in wire order: the job frame's own `errors[]`
 		// first (it collects the throw the worker caught), else envelope v2's
 		// `error.message`. NEVER `result.msg` — `msg` is a handler extension key

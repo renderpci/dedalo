@@ -154,12 +154,20 @@ Each of these refuses with a message naming the problem, and changes nothing:
   cannot be caught later. It is not waivable: install the pinned Bun, restart
   Dédalo onto it, then retry. Also disabled in the panel.
 - **A version change without the confirmation** — see above.
-- **An unaccounted entry at the live tree root, or a secret-shaped file nested
-  inside it** — the first rename carries the *whole* live tree into the new
-  restore point, so a `certs/` directory, a `.dedalo.env` or a `deploy/*.pem`
-  that the copy being restored does not ship would land in the backup and the
-  restored tree would come up without them. The same gates as the update
-  ([above](#what-else-makes-the-update-refuse)).
+- **A secret-shaped file the restored copy does not ship** — the first rename
+  carries the *whole* live tree into the new restore point, so a `certs/`
+  directory, a `.env.local` or a `deploy/*.pem` absent from the copy being
+  restored would land in the backup and the restored tree would come up without
+  them. Anywhere in the tree, its root included.
+
+    Note that a restore does **not** apply the update's *unknown entries at the
+    tree root* gate ([above](#what-else-makes-the-update-refuse)). That gate
+    asks whether the incoming tree ships each of the live tree's root entries,
+    which only makes sense while the incoming tree is the newer one. Restoring
+    goes the other way: every file a later release added at the root is, by
+    definition, missing from an older copy, so the gate would refuse every
+    backward restore across such a release — and it is the ordinary case, not
+    an error.
 - **The backup root inside the code tree, or on another filesystem** — the
   renames must be atomic, as for an update.
 - **A leftover staging directory**, or **an update or another restore already

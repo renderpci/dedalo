@@ -80,7 +80,7 @@ run:
   [Restoring a previous code version](#restoring-a-previous-code-version)).
   Each row is marked *bootable* or *incomplete* (a copy without its
   dependencies cannot be started again). The Restore button is **disabled**,
-  with the reason on the button itself, when the copy is incomplete, when it
+  with the reason written under the row, when the copy is incomplete, when it
   declares no Dédalo version (its provenance cannot be read), or when it pins a
   different Bun than the one this server runs — install that Bun first, as for
   an update. A development checkout gets no Restore button at all, for the same

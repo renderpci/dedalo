@@ -18,7 +18,7 @@
  * NOTHING IS RE-IMPLEMENTED. Every gate is the update's own function
  * (`assertSwapPreconditions`, `acquireRunLockOrRefuse` — the SAME lock, so a
  * restore and an update can never interleave —, `prepareStagingDirOrRefuse`,
- * `refuseUnaccountedLiveEntries`, `sentinelGuardedSwap`, `backupDirName`,
+ * `refuseUntrackedSecrets`, `sentinelGuardedSwap`, `backupDirName`,
  * `installedDigestOf`, `createPhaseTracker`). The one genuinely NEW step is the
  * pre-flight SMOKE BOOT of the restore point (smoke_boot.ts): a backup dir is a
  * tree nobody has executed since the day it was moved aside, and it must be
@@ -28,12 +28,19 @@
  * THE UPDATE'S SWAP GATES ARE ABOUT THE SWAP, so they belong here too
  * (2026-08-25 review). They lived inside `prepareQuarantine`, which a restore
  * never calls, and the first cut of this module inherited none of them:
- *  - the ROOT WHITELIST + nested secret walk (`refuseUnaccountedLiveEntries`).
- *    The first rename carries the WHOLE live tree into the backup dir, so an
- *    operator's `certs/`, `.dedalo.env` or `deploy/*.pem` — absent from a
- *    restore point cut before they existed — would land in the backup and the
- *    restored tree would come up without them. The update refuses exactly this;
- *    silence here would have been the same loss with no message.
+ *  - the SECRET WALK (`refuseUntrackedSecrets`). The first rename carries the
+ *    WHOLE live tree into the backup dir, so an operator's `certs/`,
+ *    `.dedalo.env` or `deploy/*.pem` — absent from a restore point cut before
+ *    they existed — would land in the backup and the restored tree would come
+ *    up without them. The update refuses exactly this; silence here would have
+ *    been the same loss with no message.
+ *    NOT the update's ROOT WHITELIST, which the first fix wrongly took with it
+ *    (2026-08-26 review). That half reads `shipped` from the tree about to land
+ *    and is sound only while that tree is NEWER; here it is OLDER, so every
+ *    root entry a later release added read as "unaccounted" and the restore
+ *    refused — telling the operator to delete SHIPPED files, on the one path
+ *    meant to recover a broken install. The secret walk starts at the root
+ *    anyway, so nothing about secrets was lost with it. See its header.
  *  - the HARD BUN PIN. The swap hands the tree to the RUNNING bun, and the
  *    smoke boot spawns `process.execPath`, so a point pinning another Bun can
  *    pass pre-flight and then be started by the supervisor on a runtime its
@@ -98,7 +105,7 @@ import {
 	installedDigestOf,
 	type PhaseTracker,
 	prepareStagingDirOrRefuse,
-	refuseUnaccountedLiveEntries,
+	refuseUntrackedSecrets,
 	resolveBackupRootOrRefuse,
 	sentinelGuardedSwap,
 	swapPreconditionsWithFrame,
@@ -457,10 +464,15 @@ export async function restoreCode(
 	try {
 		prepareStagingDirOrRefuse(stagingDir);
 
-		// THE SWAP'S OWN GATES, the update's verbatim: the first rename carries
-		// the whole live tree into the backup, so anything of the operator's that
-		// the incoming tree does not ship must refuse HERE, not vanish silently.
-		refuseUnaccountedLiveEntries(point.dir, targetRoot);
+		// THE SWAP'S OWN GATE, the DIRECTION-FREE half: the first rename carries
+		// the whole live tree into the backup, so an operator's secret-shaped
+		// entry the incoming tree does not ship must refuse HERE, not vanish
+		// silently. NOT the update's root whitelist — see its header: reading
+		// `shipped` from an OLDER tree makes every root entry a newer release
+		// added ('SECURITY.md', 'cliff.toml', 'install.sh'…) read as unaccounted,
+		// which refused the restore across any such release and told the operator
+		// to delete shipped files (measured 2026-08-26).
+		refuseUntrackedSecrets(point.dir, targetRoot);
 
 		await preflightRestorePoint(point, stagingDir, seams, phases);
 

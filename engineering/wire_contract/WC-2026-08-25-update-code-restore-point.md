@@ -94,9 +94,11 @@ commit. Modifying these files, as this entry does, does not.
 
 - `test/unit/update_restore_native.test.ts` — the pipeline: the name grammar and
   the membership check, each `restorable_reason`, the downgrade waiver, the
-  live-tree root/secret gates, the pre-flight boot (and its skip on a
-  flag-blind tree), the sentinel's ordering and its digest, the double-rename
-  repair, and the shared run lock. Also that `readRestorePoints` rows and
+  live-tree secret gate (root and nested), that an OLDER point restores across
+  a release that added root entries, the pre-flight boot — its skip on a
+  flag-blind tree AND its failure leaving the live tree untouched —, the
+  sentinel's ordering and its digest, the double-rename repair, and the shared
+  run lock. Also that `readRestorePoints` rows and
   `restorabilityOf` agree, row by row.
 - `test/unit/update_status_native.test.ts` — the listing's shape.
 - `test/unit/update_ownership_tripwire.test.ts` — `restore_code` is
