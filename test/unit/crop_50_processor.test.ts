@@ -19,7 +19,10 @@ describe('destinationPortalTipos', () => {
 				custom_arguments: { destination_1: 'numisdata164', destination_2: 'numisdata165' },
 			},
 		];
-		expect(destinationPortalTipos(fileProcessorProperties)).toEqual(['numisdata164', 'numisdata165']);
+		expect(destinationPortalTipos(fileProcessorProperties)).toEqual([
+			'numisdata164',
+			'numisdata165',
+		]);
 	});
 
 	test('other processors in the same array are ignored', () => {
@@ -35,8 +38,12 @@ describe('destinationPortalTipos', () => {
 		expect(destinationPortalTipos(null)).toEqual([]);
 		expect(destinationPortalTipos([])).toEqual([]);
 		expect(destinationPortalTipos([{ function_name: 'crop_50' }])).toEqual([]); // no custom_arguments
-		expect(destinationPortalTipos([{ function_name: 'crop_50', custom_arguments: null }])).toEqual([]);
-		expect(destinationPortalTipos([{ function_name: 'not_crop_50', custom_arguments: { a: 'x' } }])).toEqual([]);
+		expect(destinationPortalTipos([{ function_name: 'crop_50', custom_arguments: null }])).toEqual(
+			[],
+		);
+		expect(
+			destinationPortalTipos([{ function_name: 'not_crop_50', custom_arguments: { a: 'x' } }]),
+		).toEqual([]);
 	});
 
 	test('non-string values are dropped rather than propagated as a bad tipo', () => {

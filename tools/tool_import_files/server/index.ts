@@ -720,9 +720,13 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const callerSectionIdIsAbsent =
 		rawCallerSectionId === null || rawCallerSectionId === undefined || rawCallerSectionId === '';
 	if (!callerSectionIdIsAbsent && !Number.isSafeInteger(Number(rawCallerSectionId))) {
-		throw invalidRequest(`Invalid section_id (caller record address): ${JSON.stringify(rawCallerSectionId)}`);
+		throw invalidRequest(
+			`Invalid section_id (caller record address): ${JSON.stringify(rawCallerSectionId)}`,
+		);
 	}
-	const callerSectionId: number | null = callerSectionIdIsAbsent ? null : Number(rawCallerSectionId);
+	const callerSectionId: number | null = callerSectionIdIsAbsent
+		? null
+		: Number(rawCallerSectionId);
 	const componentsTempData = (o.components_temp_data ?? []) as TempDataEntry[];
 	const optionsKeyDir = String(o.key_dir ?? '');
 	// The Quality selector's choice (render_tool_import_files.js :989). PHP
@@ -980,8 +984,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					return 'skipped';
 				}
 				// 'self' placeholder substitution (PHP :1128-1130).
-				portalDdo =
-					found.section_tipo === 'self' ? { ...found, section_tipo: sectionTipo } : found;
+				portalDdo = found.section_tipo === 'self' ? { ...found, section_tipo: sectionTipo } : found;
 			} else {
 				// PHP 'default' import_mode: the CALLING component is the portal.
 				portalDdo = { tipo: componentTipo, section_tipo: sectionTipo };
@@ -1029,7 +1032,10 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				sectionId: resolvedSectionId,
 				targetSectionId,
 				currentFileName: resolvedFileName,
-				mediaFilePath: join(stagingDir(ctx.userId, resolvedKeyDir), sanitizeSegment(resolvedTmpName)),
+				mediaFilePath: join(
+					stagingDir(ctx.userId, resolvedKeyDir),
+					sanitizeSegment(resolvedTmpName),
+				),
 				targetComponentModel: targetComponentModel ?? '',
 				componentsTempData,
 				userId: ctx.userId,
@@ -1108,14 +1114,24 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				sectionId: hostSectionId,
 				targetSectionId: created,
 				currentFileName: resolvedFileName,
-				mediaFilePath: join(stagingDir(ctx.userId, resolvedKeyDir), sanitizeSegment(resolvedTmpName)),
+				mediaFilePath: join(
+					stagingDir(ctx.userId, resolvedKeyDir),
+					sanitizeSegment(resolvedTmpName),
+				),
 				targetComponentModel: targetComponentModel ?? '',
 				componentsTempData,
 				userId: ctx.userId,
 				dataLang,
 			});
 		}
-		await ingest(portalTarget, created, resolvedKeyDir, resolvedTmpName, resolvedExtension, resolvedFileName);
+		await ingest(
+			portalTarget,
+			created,
+			resolvedKeyDir,
+			resolvedTmpName,
+			resolvedExtension,
+			resolvedFileName,
+		);
 		return 'imported';
 	};
 
@@ -1198,7 +1214,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				const processorName = String(file.file_processor);
 				const processor = getFileProcessor(processorName);
 				if (processor === null) {
-					errors.push(`${fileName}: file_processor '${processorName}' is not a registered processor`);
+					errors.push(
+						`${fileName}: file_processor '${processorName}' is not a registered processor`,
+					);
 					continue;
 				}
 				// Resolve a REAL host record BEFORE running the processor — the same
@@ -1227,7 +1245,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					components_temp_data: componentsTempData,
 				});
 				if (!outcome.ok || outcome.outputs === undefined || outcome.outputs.length === 0) {
-					errors.push(`${fileName}: ${outcome.message || `file_processor '${processorName}' produced no output`}`);
+					errors.push(
+						`${fileName}: ${outcome.message || `file_processor '${processorName}' produced no output`}`,
+					);
 					continue;
 				}
 				let producedAny = false;
@@ -1258,7 +1278,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				if (producedAny) {
 					filesProcessed += 1;
 				} else {
-					errors.push(`${fileName}: file_processor '${processorName}' produced no importable output`);
+					errors.push(
+						`${fileName}: file_processor '${processorName}' produced no importable output`,
+					);
 				}
 				continue;
 			}
@@ -1275,7 +1297,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				// named/default it has no "create a fresh record instead" fallback,
 				// because matching only makes sense FROM an already-open record.
 				if (callerSectionId === null) {
-					errors.push(`${fileName}: match/match_freename requires an open record (caller section_id)`);
+					errors.push(
+						`${fileName}: match/match_freename requires an open record (caller section_id)`,
+					);
 					continue;
 				}
 				const targetSectionTipo = String(targetDdoComponent.section_tipo ?? '');

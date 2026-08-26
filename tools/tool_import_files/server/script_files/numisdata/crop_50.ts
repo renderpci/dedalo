@@ -48,13 +48,19 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+	assertPlausibleCoinPair,
+	parseConnectedComponentsReport,
+} from '../../../../../src/core/media/coin_split.ts';
+import {
 	buildBilevelMask,
 	cropAndPadImage,
 	runConnectedComponents,
 } from '../../../../../src/core/media/engine/imagemagick.ts';
 import { sanitizeSegment, stagingDir } from '../../../../../src/core/media/ingest/add_file.ts';
-import { assertPlausibleCoinPair, parseConnectedComponentsReport } from '../../../../../src/core/media/coin_split.ts';
-import type { FileProcessor, FileProcessorOutput } from '../../../../../src/core/tools/import_files_match.ts';
+import type {
+	FileProcessor,
+	FileProcessorOutput,
+} from '../../../../../src/core/tools/import_files_match.ts';
 
 /** ImageMagick connected-components noise floor (pixels) — same default the PHP original used. */
 const DEFAULT_AREA_THRESHOLD = 30000;
@@ -82,7 +88,9 @@ export function destinationPortalTipos(rawProperties: unknown): string[] {
 	);
 	const args = mine?.custom_arguments;
 	if (args === undefined || args === null || typeof args !== 'object') return [];
-	return Object.values(args).filter((value): value is string => typeof value === 'string' && value !== '');
+	return Object.values(args).filter(
+		(value): value is string => typeof value === 'string' && value !== '',
+	);
 }
 
 export const cropCoinPair: FileProcessor = async (input) => {

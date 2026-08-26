@@ -5,7 +5,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { assertPlausibleCoinPair, parseConnectedComponentsReport } from '../../src/core/media/coin_split.ts';
+import {
+	assertPlausibleCoinPair,
+	parseConnectedComponentsReport,
+} from '../../src/core/media/coin_split.ts';
 
 /** One synthetic ImageMagick verbose connected-components report line. */
 function ccLine(

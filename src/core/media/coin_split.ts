@@ -65,7 +65,10 @@ export function parseConnectedComponentsReport(report: string, minDimension: num
  *     error at all. This is the failure mode that actually corrupts data,
  *     as opposed to just rejecting a bad photo.
  */
-export function assertPlausibleCoinPair(regions: Region[], minSimilarity: number): [Region, Region] {
+export function assertPlausibleCoinPair(
+	regions: Region[],
+	minSimilarity: number,
+): [Region, Region] {
 	if (regions.length !== 2) {
 		const summary = regions
 			.map((r) => `${r.width}x${r.height}+${r.x}+${r.y} (area ${r.area})`)
@@ -85,12 +88,14 @@ export function assertPlausibleCoinPair(regions: Region[], minSimilarity: number
 	const a = regions[0];
 	const b = regions[1];
 	if (a === undefined || b === undefined) {
-		throw new DedaloError('internal.invariant', { message: 'assertPlausibleCoinPair: length was 2 but an index was undefined' });
+		throw new DedaloError('internal.invariant', {
+			message: 'assertPlausibleCoinPair: length was 2 but an index was undefined',
+		});
 	}
 	const ratio = Math.min(a.area, b.area) / Math.max(a.area, b.area);
 	if (ratio < minSimilarity) {
 		const message =
-			'Found 2 regions but their sizes are too different to be one coin\'s two faces ' +
+			"Found 2 regions but their sizes are too different to be one coin's two faces " +
 			`(areas ${a.area} vs ${b.area}, ratio ${ratio.toFixed(2)}, need >= ${minSimilarity.toFixed(2)}). ` +
 			'Likely cause: a single coin split into two blobs by a hole, crack, or glare — not two separate coin faces.';
 		throw new DedaloError('tool.action_failed', {

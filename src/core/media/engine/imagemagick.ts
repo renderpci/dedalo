@@ -763,12 +763,17 @@ export async function buildBilevelMask(source: string, target: string): Promise<
  * a warning exit" case for a text report — either the report is trustworthy or it
  * is not used.
  */
-export async function runConnectedComponents(source: string, areaThreshold: number): Promise<string> {
+export async function runConnectedComponents(
+	source: string,
+	areaThreshold: number,
+): Promise<string> {
 	const result = await runBinary(buildConnectedComponentsArgv(source, areaThreshold), {
 		env: magickPolicyEnv(),
 	});
 	if (!result.ok) {
-		throw new Error(`ImageMagick connected-components analysis failed: ${describeSpawnFailure(result)}`);
+		throw new Error(
+			`ImageMagick connected-components analysis failed: ${describeSpawnFailure(result)}`,
+		);
 	}
 	return result.stdout;
 }
