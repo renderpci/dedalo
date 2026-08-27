@@ -271,6 +271,51 @@ const get_content_data = async function(self) {
 				})
 				self.button_apply.addEventListener('click', function(){
 
+					// CONFIRM before overwriting (DATA-03). 'Apply and save' writes the
+					// historical snapshot straight onto the live record — it was the ONE
+					// destructive door in this tool tree that fired on a single click,
+					// while the bulk-revert button above it, and every other destructive
+					// action in the tree, asked first. It is also the door with the widest
+					// blast radius per click, because the operator is by definition looking
+					// at an OLD value: the current one is what disappears.
+					//
+					// The message NAMES what is overwritten — the component, the record and
+					// the language — instead of a generic are-you-sure, which teaches
+					// nothing and is clicked through. It states the server's own rule
+					// (tool_time_machine.ts mergeRestoredLangSlice, and bulk_revert.ts
+					// through the same helper) rather than deciding it here: a translatable
+					// component keeps the languages the snapshot does not carry, everything
+					// else is replaced whole. That predicate is the write engine's
+					// (isLangSlicedModel) and must not be re-derived in the client, where it
+					// would drift.
+					//
+					// The sentence is a PROMISE the server keeps in every branch — a NULL or
+					// scalar snapshot on a translatable component clears that one language
+					// and no other, it does not fall back to replacing the key. It was
+					// untrue when written; both holes are closed
+					// (WC-2026-08-27-tm-lang-slice-restore-merge).
+					//
+					// The text is TRANSLATED: `apply_value_confirm_msg` ships in every lang
+					// block of register.json with three positional tokens ({0} component,
+					// {1} language, {2} record), which the translator may reorder. The
+					// English literal below is the fallback for an install whose registered
+					// tool data predates the key, never the normal path.
+					const component_label	= self.main_element.label || self.main_element.tipo
+					const record_address	= `${self.main_element.section_tipo}/${self.main_element.section_id}`
+					const apply_confirm_msg = self.get_tool_label(
+							'apply_value_confirm_msg',
+							component_label,
+							self.main_element.lang,
+							record_address
+						)
+						|| `The current data of "${component_label}" (language ${self.main_element.lang}) in record ${record_address} will be OVERWRITTEN with the selected historical version.\n\n`
+						+ `A translatable component keeps its other languages: only the one named here is replaced. Any other component is replaced in full.\n\n`
+						+ `Continue?`
+
+					if (!confirm(apply_confirm_msg)) {
+						return
+					}
+
 					self.apply_value({
 						section_id		: self.main_element.section_id,
 						section_tipo	: self.main_element.section_tipo,

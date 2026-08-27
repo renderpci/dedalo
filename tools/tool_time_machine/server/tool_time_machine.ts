@@ -51,7 +51,10 @@
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { MATRIX_JSONB_COLUMNS } from '../../../src/core/db/matrix.ts';
-import { absorbComponentItemIds } from '../../../src/core/db/matrix_write.ts';
+import {
+	absorbComponentItemIds,
+	readMatrixKeyForUpdate,
+} from '../../../src/core/db/matrix_write.ts';
 import { withTransaction } from '../../../src/core/db/postgres.ts';
 import {
 	readTimeMachineRow,
@@ -63,7 +66,9 @@ import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
+	getTranslatableByTipo,
 } from '../../../src/core/ontology/resolver.ts';
+import { isLangSlicedModel } from '../../../src/core/section/record/save_component.ts';
 import { persistRecordColumns, persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
@@ -126,6 +131,122 @@ async function restoreSection(
 	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
 	// LEDGERED (no TS twin / no fixture): deleted-media relink, session-SQO
 	// reset, and consuming (deleting) the restored TM row.
+}
+
+/**
+ * The LANGUAGES a component TM snapshot speaks for — the set whose live items
+ * the restore is entitled to replace (DATA-03,
+ * WC-2026-08-27-tm-lang-slice-restore-merge).
+ *
+ * A lang-sliced component's TM row is NOT the component's value: it is the
+ * EFFECTIVE-LANGUAGE SLICE of it. `save_component.ts` writes it that way
+ * (`tmSnapshot = langSliced ? items.filter(item => item.lang === effectiveLang)`
+ * :1231-1238, PHP get_data_lang parity), so a trilingual literal has three
+ * independent one-language histories and no row anywhere holds all three.
+ *
+ * The languages are read from the SNAPSHOT ITSELF rather than from the TM row's
+ * `lang` column, because the items are what the write actually carries: a row
+ * whose column and payload disagree would otherwise decide the fate of a
+ * language the payload never mentions. The column is the fallback for the two
+ * cases the items cannot answer, and both must still touch exactly ONE language
+ * rather than turn the restore into a no-op or into a whole-key replace:
+ *   - an EMPTY snapshot (the slice was cleared that day);
+ *   - a snapshot that is not an item array at all — SQL NULL (what an empty
+ *     slice is stored as) or a bare scalar. The caller passes `[]` for those:
+ *     an unrepresentable snapshot is the EMPTY SLICE of its own language, never
+ *     a licence to reach a sibling language.
+ *
+ * SHARED with the bulk door (`bulk_revert.ts`), which applies the same law to
+ * the same per-language snapshots — one predicate, never a second copy.
+ */
+export function snapshotLangs(
+	snapshotItems: readonly unknown[],
+	fallbackLang: string,
+): Set<string> {
+	const langs = new Set<string>();
+	for (const item of snapshotItems) {
+		if (item === null || typeof item !== 'object') continue;
+		const itemLang = (item as { lang?: unknown }).lang;
+		if (typeof itemLang === 'string' && itemLang !== '') langs.add(itemLang);
+	}
+	if (langs.size === 0) langs.add(fallbackLang);
+	return langs;
+}
+
+/**
+ * MERGE a restored snapshot OVER the live value instead of replacing the key
+ * (DATA-03 — the divergence from PHP, ledgered in
+ * `engineering/wire_contract/WC-2026-08-27-tm-lang-slice-restore-merge.md`).
+ *
+ * THE LAW, stated once: *a component restore never deletes a language the
+ * snapshot does not carry.* PHP's apply_value wrote the one-language slice as
+ * the whole component key, so restoring the Spanish version of a trilingual
+ * literal DELETED the Basque and the English value — silently, with `ok:true`,
+ * and the fresh TM row the restore wrote carried only the restored slice, so
+ * the loss was invisible even in the history the restore itself created.
+ * Sequential per-language restores ping-ponged, which is why the tool could not
+ * reassemble a multilingual value at all.
+ *
+ * Survivors keep their stored object VERBATIM (same reference, therefore the
+ * same key order through json_codec), so an untouched language is byte-identical
+ * before and after. They come first and the restored items last, which is the
+ * order `save_component.ts` already writes a lang-sliced save in
+ * (`items = [...otherLangs, ...stamped]`, PHP set_data_lang :1052-1128) — the
+ * restore must not invent a second array shape for the same component.
+ *
+ * DELIBERATELY MORE CONSERVATIVE than set_data_lang in one respect: a live item
+ * with no `lang` (a lang orphan) is KEPT here, where the save path drops it.
+ * This door's mandate is to replay a snapshot, not to garbage-collect data no
+ * snapshot mentions — and an orphan deleted by a restore is deleted with no row
+ * anywhere to recover it from.
+ *
+ * SHARED with `bulk_revert.ts`: both restore doors write the same shape from the
+ * same per-language snapshots, so they merge through this one function. A second
+ * copy would drift into a second notion of "the slice" — and the bulk door's
+ * blast radius is a whole batch per click.
+ */
+export function mergeRestoredLangSlice(
+	liveItems: readonly unknown[],
+	restoredItems: readonly unknown[],
+	restoredLangs: ReadonlySet<string>,
+): unknown[] {
+	const survivors = liveItems.filter((item) => {
+		if (item === null || typeof item !== 'object') return true;
+		const itemLang = (item as { lang?: unknown }).lang;
+		return typeof itemLang !== 'string' || !restoredLangs.has(itemLang);
+	});
+	return [...survivors, ...restoredItems];
+}
+
+/**
+ * The ONE-LANGUAGE slice a restore's own TM AUDIT row carries (DATA-03,
+ * WC-2026-08-27-tm-lang-slice-restore-merge).
+ *
+ * Byte-for-byte the rule the save path applies to the same write —
+ * `save_component.ts:1231-1238`, `items.filter(item => item.lang ===
+ * effectiveLang)` stamped `lang: effectiveLang` — because ONE TM ROW IS ONE
+ * LANGUAGE everywhere else in the engine: the dd15 history list filters the
+ * rows by `filter_by_locators.lang` (`js/tool_time_machine.js` :381-386), the
+ * preview and list emit resolve a row against the request lang
+ * (`section/read.ts` :715-722 grafts the row, :751 injects it; the lang filter
+ * is `resolve/component_data.ts` :123-125), and both
+ * restore doors decide what they may replace from the row's own items
+ * (`snapshotLangs`). A row that carried several languages under one `lang` tag
+ * therefore reverted languages nobody selected — restoring it from the Spanish
+ * timeline put an English value back that the English timeline had already
+ * moved past.
+ *
+ * The tag and the payload are derived from the SAME lang, so the row is
+ * self-consistent by construction: a written value whose items do not speak the
+ * audit language yields the empty slice for it, which is the invariant being
+ * enforced rather than propagated.
+ */
+export function tmAuditSlice(writtenValue: unknown, auditLang: string): unknown {
+	if (!Array.isArray(writtenValue)) return writtenValue;
+	return writtenValue.filter(
+		(item) =>
+			item !== null && typeof item === 'object' && (item as { lang?: unknown }).lang === auditLang,
+	);
 }
 
 /**
@@ -267,6 +388,49 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// value the user previewed is exactly what this restore writes.
 	const data = stripDataframeFramesFromTmMain(model, canonicalSnapshot);
 
+	// IS THIS SNAPSHOT A LANGUAGE SLICE? (DATA-03). The predicate is the WRITE
+	// engine's own export — `isLangSlicedModel` (save_component.ts :326, PHP
+	// supports_translation && !is_relation) — never a second copy and never the
+	// ontology `translatable` flag alone: the flag mis-slices, because an
+	// ontology-non-translatable input_text still slices, on the `lg-nolan` the
+	// engine normalizes it to. Read and write must agree on what "the slice" is,
+	// or a restore replaces a language the save never wrote there. For every
+	// OTHER model the TM row holds the component's whole value, and this door
+	// keeps replacing the key exactly as PHP did — merging there would resurrect
+	// portal locators and select values a later save legitimately removed.
+	const langSliced = isLangSlicedModel(model);
+	// The request's effective lang — the same translatable-or-iri rule the save
+	// path stamps with (save_component.ts :680). It is only the FALLBACK here:
+	// see `snapshotLang` below.
+	const translatable = await getTranslatableByTipo(tipo);
+	const requestEffectiveLang = translatable || model === 'component_iri' ? lang : 'lg-nolan';
+	// THE LANGUAGE THIS RESTORE SPEAKS FOR — the TM ROW's own lang column, and
+	// only when that is null/empty (pre-migration rows) the request's effective
+	// lang. The bulk door derives it the same way (`bulk_revert.ts` :292,
+	// `auditLang = rowLang ?? …`), and the two doors must agree.
+	//
+	// (!) `options.lang` is NOT validated against `tmRow.lang` — the target check
+	// above covers section_tipo / section_id / tipo only — so a caller may hand
+	// this door a Spanish row with `lang: lg-eng`. The MERGE was already right
+	// there (it reads its languages from the snapshot items), but tagging and
+	// slicing the audit row with the REQUEST lang wrote that row into the
+	// UNTOUCHED language's timeline, carrying that language's surviving items:
+	// the changed language recorded nothing, and the untouched one gained a row
+	// duplicating its current value — restoring which later reverts an edit
+	// nobody selected. Deriving both from the ROW closes it (DATA-03).
+	const snapshotLang = tmRow.lang !== null && tmRow.lang !== '' ? tmRow.lang : requestEffectiveLang;
+	// The snapshot's ITEMS — `[]` for a snapshot that is not an item array.
+	// (!) The lang branch is NOT gated on that array shape. `matrix_time_machine.data`
+	// is a NULLABLE jsonb column, so a lang-sliced component's row can hold SQL
+	// NULL (what an empty slice is written as) or a bare scalar — PHP-era rows do.
+	// Such a snapshot is the EMPTY SLICE of its own language; sending it down the
+	// whole-key path instead deleted EVERY language the component had and wrote a
+	// bare string into a key that must hold an item array. The snapshot's shape may
+	// decide how much of ONE language is restored; it may never decide whether a
+	// SIBLING language lives.
+	const restoredItems = Array.isArray(data) ? data : [];
+	const restoredLangs = langSliced ? snapshotLangs(restoredItems, snapshotLang) : null;
+
 	// Overwrite the live component value.
 	const column = getColumnNameByModel(model);
 	const table = await getMatrixTableFromTipo(sectionTipo);
@@ -317,7 +481,32 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// restore DROPS (targets whose mirror still references the record).
 	const preRestoreItems = await readComponentItems(table, sectionTipo, sectionId, column, tipo);
 
+	// What the restore WRITES. Identical to the snapshot for every non-sliced
+	// model; for a sliced one it is the snapshot merged over the languages the
+	// snapshot does not speak for, computed under the row lock below.
+	let restoredValue: unknown = data;
+
 	await withTransaction(async () => {
+		// LANG-SLICE MERGE (DATA-03). The read is `FOR UPDATE` and lives INSIDE
+		// the transaction on purpose: this is a read-modify-write of a whole
+		// component key, so an unlocked read would silently revert whatever a
+		// concurrent save committed on the sibling languages between the read and
+		// the write — the same lost-update shape the merge exists to close, moved
+		// one layer down. The lock is taken FIRST, before the frame writes, so the
+		// whole restore holds one consistent view of the record.
+		if (restoredLangs !== null) {
+			const liveItems = await readMatrixKeyForUpdate(
+				table,
+				sectionTipo,
+				sectionId,
+				column as MatrixJsonbColumn,
+				tipo,
+			);
+			// null = the ROW does not exist; there is nothing to merge over and
+			// nothing this door can write either.
+			restoredValue = mergeRestoredLangSlice(liveItems ?? [], restoredItems, restoredLangs);
+		}
+
 		// Frames FIRST (PHP restores the slots before saving the main).
 		await applyDataframeRestore(writeTarget, framePlan);
 
@@ -325,7 +514,7 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		// update (PHP: apply_value restores via element->save(), which stamps).
 		await persistRecordKeys(
 			writeTarget,
-			[{ column: column as MatrixJsonbColumn, key: tipo, value: data }],
+			[{ column: column as MatrixJsonbColumn, key: tipo, value: restoredValue }],
 			{ userId },
 		);
 		// Restored items carry explicit ids; raise the counter so a later insert
@@ -337,7 +526,7 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 			sectionTipo,
 			sectionId,
 			tipo,
-			Array.isArray(data) ? data : [],
+			Array.isArray(restoredValue) ? restoredValue : [],
 		);
 
 		// Fresh TM audit for the restore itself (PHP: the component save creates a
@@ -345,14 +534,32 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		// restored frame (PHP get_time_machine_data_to_save), so reverting the
 		// restore brings the frames back with it. Stamp via the ONE shared
 		// DEDALO_TIMEZONE-aware helper (S1-03) — never an inline UTC formatter.
+		//
+		// For a lang-sliced component that row is ONE LANGUAGE — `snapshotLang`,
+		// the language the restored ROW speaks for, sliced out of the post-merge
+		// value exactly as the save path slices the same write (`tmAuditSlice`,
+		// save_component.ts :1231-1238). DATA-03: writing the whole merged value
+		// under a single-language `lang` tag broke the one-row-one-language
+		// assumption every other consumer of this table holds (see
+		// `tmAuditSlice`), so restoring the row this door had just written
+		// reverted languages the operator never selected — English came back from
+		// the Spanish timeline while the English timeline's newest row said
+		// something else. The merge is what makes a one-language row sufficient:
+		// reverting it replaces that language and leaves the others standing.
+		// The tag is the ROW's language and not the REQUEST's for the same
+		// reason: they can differ, and then the request lang files the row under
+		// a timeline this restore did not touch.
 		await recordTimeMachine(
 			{
 				sectionTipo,
 				sectionId,
 				componentTipo: tipo,
-				lang,
+				lang: langSliced ? snapshotLang : lang,
 				userId,
-				data: composeTimeMachineSnapshot(data, framePlan),
+				data: composeTimeMachineSnapshot(
+					langSliced ? tmAuditSlice(restoredValue, snapshotLang) : restoredValue,
+					framePlan,
+				),
 			},
 			dbTimestamp(),
 		);
@@ -364,7 +571,17 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// an observed component left every mirror stale and logged no observer TM
 	// row). Post-commit because a cascade hop refuses to run inside an ambient
 	// transaction (B6, observers.ts).
-	await propagateRestoreToObservers(tipo, sectionTipo, sectionId, preRestoreItems, data, userId);
+	// The cascade diffs against what was WRITTEN, not against the snapshot: fed
+	// the slice, it would report every surviving sibling language as a removed
+	// target and unwire mirrors the restore never touched.
+	await propagateRestoreToObservers(
+		tipo,
+		sectionTipo,
+		sectionId,
+		preRestoreItems,
+		restoredValue,
+		userId,
+	);
 
 	await logRecoverActivity(
 		context,

@@ -31,11 +31,23 @@
  * The observer cascade fires per reverted component, POST-COMMIT — PHP
  * reverted through `element->save()`, whose last act is
  * `propagate_to_observers()`.
+ *
+ * LANG SLICE (DATA-03, WC-2026-08-27-tm-lang-slice-restore-merge): a batch row's
+ * pre-batch snapshot of a lang-sliced component is the EFFECTIVE-LANGUAGE SLICE
+ * of that component, not its value. Writing it as the whole key deleted every
+ * sibling language of every reverted component — the same defect `apply_value`
+ * carries, with a whole batch's blast radius per click. This door merges through
+ * the SAME helpers as that one (`mergeRestoredLangSlice` / `snapshotLangs` /
+ * `tmAuditSlice`, imported from `tool_time_machine.ts`), so there is one law and
+ * one implementation of it.
  */
 
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
-import { absorbComponentItemIds } from '../../../src/core/db/matrix_write.ts';
+import {
+	absorbComponentItemIds,
+	readMatrixKeyForUpdate,
+} from '../../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
@@ -45,6 +57,7 @@ import {
 	getModelByTipo,
 } from '../../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
+import { isLangSlicedModel } from '../../../src/core/section/record/save_component.ts';
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
@@ -64,6 +77,7 @@ import {
 	resolveDataframeSlotTipos,
 } from './dataframe_restore.ts';
 import { propagateRestoreToObservers, readComponentItems } from './restore_common.ts';
+import { mergeRestoredLangSlice, snapshotLangs, tmAuditSlice } from './tool_time_machine.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
@@ -73,7 +87,9 @@ interface TmRow {
 	section_id: number;
 	section_tipo: string;
 	tipo: string;
-	lang: string;
+	/** NULLABLE in the table (`matrix_time_machine.lang`) — pre-migration rows
+	 *  carry no language, which is why the lang plan below has to name one. */
+	lang: string | null;
 	bulk_process_id: number | null;
 	data: unknown;
 }
@@ -255,6 +271,34 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				continue;
 			}
 
+			// THE LANG PLAN (DATA-03). `revertLangs` is the set of languages this
+			// row's snapshot speaks for — the only ones the revert may replace. For
+			// a model the engine does not slice by language it stays null and the
+			// key is replaced whole, exactly as before (merging there would
+			// resurrect locators and select values a later save legitimately
+			// removed).
+			const langSliced = isLangSlicedModel(model);
+			const snapshotItems = Array.isArray(mainData) ? mainData : [];
+			// Not gated on that array shape: a NULL or scalar snapshot is the EMPTY
+			// SLICE of its own language, never a licence to replace the key.
+			const rowLang = row.lang === null || row.lang === '' ? null : row.lang;
+			const revertLangs = langSliced ? snapshotLangs(snapshotItems, rowLang ?? '') : null;
+			// The language the audit row is TAGGED with and SLICED to — both from
+			// the same source, so the row this door writes is one-language by
+			// construction (tmAuditSlice). The batch row's own lang column names it;
+			// a row without one (pre-migration) is named by its snapshot when the
+			// snapshot names exactly one language.
+			const namedLangs = [...(revertLangs ?? [])].filter((entry) => entry !== '');
+			const auditLang = rowLang ?? (namedLangs.length === 1 ? (namedLangs[0] as string) : null);
+			if (langSliced && auditLang === null) {
+				// Nothing here can say WHICH language this snapshot speaks for, and
+				// unlike apply_value there is no request lang to fall back on. A guess
+				// deletes curated content nothing can name — refuse this row
+				// (surfaced in `skipped`), never the batch.
+				errors.push(`no lang for the slice: ${row.section_tipo}/${row.tipo}#${row.section_id}`);
+				continue;
+			}
+
 			// The locators this revert DROPS — the observer cascade needs them.
 			const preRevertItems = await readComponentItems(
 				table,
@@ -264,12 +308,36 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				row.tipo,
 			);
 
+			// What this revert WRITES: the snapshot for an unsliced model, the
+			// snapshot merged over the languages it does not speak for otherwise.
+			// Declared out here because the observer cascade below diffs against it
+			// — fed the slice, it would report every surviving sibling language as
+			// a removed target and unwire mirrors the revert never touched.
+			let revertedValue: unknown = mainData;
+
 			await withTransaction(async () => {
+				// The merge's read is `FOR UPDATE` and INSIDE the transaction: this
+				// is a read-modify-write of a whole component key, so an unlocked
+				// read would silently revert whatever a concurrent save committed on
+				// the sibling languages in between. Taken FIRST, before the frame
+				// writes, so the whole revert holds one view of the record.
+				if (revertLangs !== null) {
+					const liveItems = await readMatrixKeyForUpdate(
+						table,
+						row.section_tipo,
+						row.section_id,
+						column as MatrixJsonbColumn,
+						row.tipo,
+					);
+					// null = the ROW does not exist; there is nothing to merge over.
+					revertedValue = mergeRestoredLangSlice(liveItems ?? [], snapshotItems, revertLangs);
+				}
+
 				// Frames FIRST (PHP apply_value's order; see dataframe_restore.ts).
 				await applyDataframeRestore(writeTarget, framePlan);
 				await persistRecordKeys(
 					writeTarget,
-					[{ column: column as MatrixJsonbColumn, key: row.tipo, value: mainData }],
+					[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertedValue }],
 					{ userId },
 				);
 				// Reverted items carry explicit ids; raise the counter so a later
@@ -279,16 +347,26 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 					row.section_tipo,
 					row.section_id,
 					row.tipo,
-					Array.isArray(mainData) ? mainData : [],
+					Array.isArray(revertedValue) ? revertedValue : [],
 				);
+				// ONE ROW IS ONE LANGUAGE (tmAuditSlice): the audit row this revert
+				// appends carries the batch row's own language, sliced out of the
+				// post-merge value, so reverting THE REVERT replaces that language
+				// and leaves the others standing.
 				await recordTimeMachine(
 					{
 						sectionTipo: row.section_tipo,
 						sectionId: row.section_id,
 						componentTipo: row.tipo,
-						lang: row.lang,
+						// The column is nullable; the UNSLICED branch preserves whatever
+						// the batch row held (PHP wrote it verbatim), so the cast widens
+						// the type, never the value.
+						lang: (langSliced ? auditLang : row.lang) as string,
 						userId,
-						data: composeTimeMachineSnapshot(mainData, framePlan),
+						data: composeTimeMachineSnapshot(
+							langSliced ? tmAuditSlice(revertedValue, auditLang as string) : revertedValue,
+							framePlan,
+						),
 						bulkProcessId: newBulkId,
 					},
 					dbTimestamp(),
@@ -301,7 +379,7 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				row.section_tipo,
 				row.section_id,
 				preRevertItems,
-				mainData,
+				revertedValue,
 				userId,
 			);
 			// One activity row PER REVERTED COMPONENT — PHP logs inside its loop
