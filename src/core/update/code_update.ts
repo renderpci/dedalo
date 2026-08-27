@@ -828,6 +828,35 @@ interface UpdateRequest {
  *    made WC-024's whole integrity guarantee inert (the manifest never carried
  *    a hash at all).
  */
+/**
+ * The waiver's audit line: it records the FACT of a waiver, never the flag that
+ * asked for one, and only over a backup that is actually missing or stale.
+ *
+ * Called only AFTER the identity gates have passed. Until 2026-08-26 it fired
+ * before checkUpdatePreconditions, so any global admin (the widget door is
+ * `isGlobalAdmin`, not SUPERUSER_ID) could fill the log with
+ * `WAIVED … proceeding without a recent database backup` lines for requests
+ * that were refused on the very next statement and proceeded with nothing. It
+ * also fired over a FRESH backup — both drills always send the flag — so the
+ * line implied a missing backup that was not missing.
+ *
+ * Extracted from parseUpdateRequest (2026-08-27): the caller carries the
+ * DECISION, this carries the diagnostic, which is what keeps the door under the
+ * complexity cap. No behaviour change.
+ */
+function warnBackupWaiver(waiveBackup: boolean, principal: Principal): void {
+	if (!waiveBackup) return;
+	const { hours, stale } = backupFreshness();
+	if (hours !== null && !stale) return;
+	console.warn(
+		`[code update] BACKUP REQUIREMENT WAIVED by user ${principal.userId} — proceeding with ${
+			hours === null
+				? 'NO database backup at all'
+				: `a database backup about ${Math.round(hours)} hours old`
+		}`,
+	);
+}
+
 function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRequest {
 	const options = (rawOptions ?? {}) as UpdateCodeOptions;
 	const waiveBackup = options.waive_backup === true;
@@ -835,26 +864,7 @@ function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRe
 		principal,
 		waiveBackup ? { backupWarn: false } : { backupRequire: true },
 	);
-	// The audit line records the FACT of a waiver, never the flag that asked for
-	// one, and only AFTER the identity gates have passed. Until 2026-08-26 it did
-	// the opposite: it fired before checkUpdatePreconditions, so any global admin
-	// (the widget door is `isGlobalAdmin`, not SUPERUSER_ID) could fill the log
-	// with `WAIVED … proceeding without a recent database backup` lines for
-	// requests that were refused on the very next statement and proceeded with
-	// nothing. It also fired over a FRESH backup — both drills always send the
-	// flag — so the line implied a missing backup that was not missing.
-	if (waiveBackup) {
-		const { hours, stale } = backupFreshness();
-		if (hours === null || stale) {
-			console.warn(
-				`[code update] BACKUP REQUIREMENT WAIVED by user ${principal.userId} — proceeding with ${
-					hours === null
-						? 'NO database backup at all'
-						: `a database backup about ${Math.round(hours)} hours old`
-				}`,
-			);
-		}
-	}
+	warnBackupWaiver(waiveBackup, principal);
 	const request = readReleaseFields(options);
 	assertReleaseShape(request);
 	return request;
