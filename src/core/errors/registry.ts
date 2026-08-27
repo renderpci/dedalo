@@ -409,6 +409,20 @@ export const ERROR_REGISTRY = {
 	},
 
 	// ── record ──────────────────────────────────────────────────────────────
+	'record.dataframe_unduplicable': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_record_dataframe_unduplicable',
+		message:
+			'The record cannot be duplicated: a dataframe field frames a record the copy cannot own',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		// The slot the curator has to repair, and which of the five refusal
+		// branches fired. PUBLIC because acting on this needs both: the actor
+		// holds write on the host record, so neither is news to them.
+		details_keys: ['component_tipo', 'reason'],
+	},
 	'record.delete_children_refused': {
 		category: 'conflict',
 		status: 409,

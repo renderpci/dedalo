@@ -241,6 +241,7 @@
 	"error_rag_generation_failed": "The grounded answer could not be generated",
 	"error_rag_media_disabled": "Image similarity (RAG media) is disabled on this server",
 	"error_rate_limited": "Too many requests; try again later",
+	"error_record_dataframe_unduplicable": "This record cannot be duplicated: its dataframe field '{component_tipo}' frames a record the copy cannot own ({reason})",
 	"error_record_delete_children_refused": "Some child records could not be deleted, so the record was kept: {not_deleted}",
 	"error_record_delete_failed": "The record could not be deleted",
 	"error_record_external_write_refused": "Write refused: the component value is derived from an external service",
