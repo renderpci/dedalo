@@ -27,15 +27,23 @@ import { sanitizeSegment } from '../../../src/core/media/ingest/add_file.ts';
 import { assertTestMediaRoot } from '../../../src/core/media/test_media_root.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../../../src/core/ontology/resolver.ts';
+import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import {
+	assertCsvStructure,
 	type CsvAnalysis,
 	type CsvColumn,
+	type CsvParseResult,
 	planCsvImport,
 } from '../../../src/core/tools/import_csv.ts';
 import { executeCsvImport } from '../../../src/core/tools/import_csv_execute.ts';
-import type { ImportFileReport, ImportProgressFrame } from '../../../src/core/tools/import_wire.ts';
+import type {
+	ImportFileReport,
+	ImportProgressFrame,
+	ImportRowIssue,
+} from '../../../src/core/tools/import_wire.ts';
+import { readIngestTextFile } from '../../../src/core/tools/ingest_encoding.ts';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -67,13 +75,13 @@ function mediaRootMissing(): DedaloError {
  * call (startup is milliseconds against multi-second parses; no idle thread
  * lingers) running the identical pure parser — see csv_worker.ts.
  */
-function parseCsvOffLoop(text: string, delimiter?: string): Promise<string[][]> {
+function parseCsvOffLoop(text: string, delimiter?: string): Promise<CsvParseResult> {
 	const worker = new Worker(new URL('./csv_worker.ts', import.meta.url).href);
-	return new Promise<string[][]>((resolvePromise, rejectPromise) => {
+	return new Promise<CsvParseResult>((resolvePromise, rejectPromise) => {
 		worker.onmessage = (event: MessageEvent) => {
-			const data = event.data as { rows?: string[][]; error?: string };
+			const data = event.data as { result?: CsvParseResult; error?: string };
 			if (data.error !== undefined) rejectPromise(new Error(data.error));
-			else resolvePromise(data.rows ?? []);
+			else resolvePromise(data.result ?? { rows: [], unterminatedEnclosureRow: null });
 		};
 		worker.onerror = (event: ErrorEvent) => {
 			rejectPromise(new Error(String(event.message ?? 'csv worker failed')));
@@ -202,9 +210,17 @@ async function getCsvFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const dir = importDir(ctx.userId);
 	const filesInfo: Record<string, unknown>[] = [];
 	const errors: string[] = [];
+	// A conversion is NOT a read error (see the report contract in
+	// import_csv_execute.ts): it travels in its own channel at every door.
+	const notices: string[] = [];
 	for (const name of readdirSync(dir).filter((n) => n.toLowerCase().endsWith('.csv'))) {
 		try {
-			const analysis = await analyzeCsvOffLoop(await Bun.file(resolve(dir, name)).text());
+			// DATA-09: decode DELIBERATELY (convert or refuse), never `Bun.file().text()`
+			// — that is a fatal:false UTF-8 decode, and every byte it cannot read becomes
+			// an irreversible U+FFFD in the preview the operator maps their columns from.
+			const decoded = await readIngestTextFile(resolve(dir, name), name);
+			if (decoded.notice !== null) notices.push(decoded.notice);
+			const analysis = await analyzeCsvOffLoop(decoded.text);
 			if (analysis === null) {
 				errors.push(`error reading file: ${name}`);
 				continue;
@@ -225,8 +241,9 @@ async function getCsvFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		}
 	}
 	// `errors` is the per-file read problem list — payload, not a failed request
-	// (one unreadable CSV must not hide the files that DID parse).
-	return ok({ files: filesInfo, errors }, { requestId: toolRequestId(ctx) });
+	// (one unreadable CSV must not hide the files that DID parse). `notices` is
+	// the same shape for what we DID to a file we could read.
+	return ok({ files: filesInfo, errors, notices }, { requestId: toolRequestId(ctx) });
 }
 
 async function deleteCsvFile(ctx: ToolActionContext): Promise<ToolResponse> {
@@ -372,7 +389,13 @@ async function resolveMappedColumns(
 			tipo: mapTo,
 			model,
 			columnName: headerCell,
-			lang: translatable ? config.menu.dataLang : 'lg-nolan',
+			// THE REQUEST's data language (audit DATA-01), never the static
+			// DEDALO_DATA_LANG: the write is lang-sliced, so the install default
+			// REPLACED the operator's actual working language and an empty cell
+			// CLEARED it. currentDataLang() survives into the background job this
+			// import runs in — mediaJobs.submit exits only the transaction stores,
+			// so the request-language ALS is still in scope on the worker.
+			lang: translatable ? currentDataLang() : 'lg-nolan',
 			decimal: typeof entry.decimal === 'string' ? entry.decimal : undefined,
 		});
 	}
@@ -407,8 +430,20 @@ async function createBulkProcessRecord(
 	return bulkProcessId;
 }
 
-/** Read + parse one staged CSV, or throw with a caller-facing message. */
-async function readCsvRows(userId: number, fileName: string): Promise<string[][]> {
+/**
+ * Read + parse one staged CSV, or throw with a caller-facing message.
+ *
+ * THE INGEST DOOR (DATA-04/DATA-09). Three things happen here and nowhere else:
+ * the bytes are decoded deliberately (converted or refused, never substituted),
+ * the parse result is checked for a shape we can trust (an unterminated
+ * enclosure, a row that disagrees with the header), and only then do the rows
+ * reach the planner. `notices` are the operator-facing facts about the read
+ * itself — the caller folds them into the file's report.
+ */
+async function readCsvRows(
+	userId: number,
+	fileName: string,
+): Promise<{ rows: string[][]; notices: string[] }> {
 	const target = safeImportFile(importDir(userId), fileName);
 	if (!existsSync(target)) {
 		throw new DedaloError('tool.target_not_found', {
@@ -416,9 +451,12 @@ async function readCsvRows(userId: number, fileName: string): Promise<string[][]
 			message: `File not found: ${fileName}`,
 		});
 	}
-	const rows = await parseCsvOffLoop(await Bun.file(target).text());
+	const decoded = await readIngestTextFile(target, fileName);
+	const parsed = await parseCsvOffLoop(decoded.text);
+	assertCsvStructure(parsed, fileName);
+	const rows = parsed.rows;
 	if (rows[0] === undefined || rows.length < 2) throw invalidRequest('CSV has no data rows');
-	return rows;
+	return { rows, notices: decoded.notice === null ? [] : [decoded.notice] };
 }
 
 /** The component labels a progress tick may need, resolved ONCE per file. */
@@ -443,6 +481,16 @@ async function resolveColumnLabels(
  * The conform is dry-run over a bounded sample of rows, so a 10k-row file with a
  * date column in the wrong order is caught in milliseconds instead of after a
  * 10k-row failed run.
+ *
+ * IT IS THE ONLY PREFLIGHT THE OPERATOR HAS, so everything the DOOR would refuse
+ * or skip has to be visible HERE, or "validated clean" means nothing:
+ *  - a STRUCTURAL refusal (a row whose width disagrees with the header, an
+ *    unterminated enclosure) is raised by readCsvRows -> assertCsvStructure and
+ *    lands in this file's `errors` through the catch below, with ok:false. It is
+ *    the same refusal import_files makes, taken at the same door;
+ *  - a row whose section_id cell is NOT A RECORD ID (DATA-22) is reported per
+ *    row, because the import will SKIP that row: a file whose key column is
+ *    unreadable used to validate clean and then import nothing.
  */
 const VALIDATE_SAMPLE_ROWS = 20;
 
@@ -457,7 +505,7 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 		try {
 			if (fileName === '' || sectionTipo === '')
 				throw invalidRequest('Missing file or section_tipo');
-			const rows = await readCsvRows(ctx.userId, fileName);
+			const { rows, notices } = await readCsvRows(ctx.userId, fileName);
 			const header = rows[0] as string[];
 
 			const errors: string[] = [];
@@ -499,23 +547,46 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 					column.conform.warnings.map((warning) => ({ ...warning, row: record.row })),
 				),
 			);
+			// The KEY the planner could not read (DATA-22). The import SKIPS such a
+			// row, so a preflight that ignores it validates a file that will write
+			// nothing — the blindness this door existed to remove.
+			const keyIssues: ImportRowIssue[] = plan
+				.filter((record) => record.keyError !== null)
+				.map((record) => ({
+					section_id: 0,
+					component_tipo: '',
+					msg: `the row would be SKIPPED — ${record.keyError}`,
+					data: null,
+					row: record.row,
+				}));
 
+			const failed = [...issues, ...keyIssues];
 			result.push({
-				ok: errors.length === 0 && issues.length === 0,
+				// The encoding notice is REPORTED, never a verdict: a file we converted
+				// is importable, and the operator has to be told what we did with it —
+				// blocking the run instead would only hide the conversion behind a retry.
+				// It rides `notices`, not `errors`: those two words mean different
+				// things to the panel and to a caller reading `ok`.
+				ok: errors.length === 0 && failed.length === 0,
 				file: fileName,
 				section_tipo: sectionTipo,
 				rows_total: rows.length - 1,
 				rows_sampled: sample.length,
 				errors,
-				failed: issues,
+				notices,
+				failed,
 				warnings: sampleWarnings,
 			});
 		} catch (error) {
+			// EVERY door refusal arrives here — including the structural ones
+			// (assertCsvStructure) and an undecodable upload — and each is reported
+			// with its own sentence, which is the operator's repair instruction.
 			result.push({
 				ok: false,
 				file: fileName,
 				section_tipo: sectionTipo,
 				errors: [(error as Error).message],
+				notices: [],
 				failed: [],
 				warnings: [],
 			});
@@ -578,9 +649,14 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				warnings: 0,
 			} satisfies ImportProgressFrame);
 
-			const rows = await readCsvRows(ctx.userId, fileName);
+			const { rows, notices } = await readCsvRows(ctx.userId, fileName);
 			const header = rows[0] as string[];
 
+			// `errors` starts EMPTY: the read's notices ride the report's NOTICE
+			// channel instead. The panel paints `errors` red, and an intended,
+			// successful encoding conversion reported as a failure is a lie about a
+			// good import — the report is still the only place the operator learns
+			// of the conversion, just not in the colour of a refusal.
 			const errors: string[] = [];
 			const columnsMap = Array.isArray(current.ar_columns_map)
 				? (current.ar_columns_map as (CsvColumnMapEntry | null)[])
@@ -604,6 +680,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					bulkProcessId,
 					saveTm,
 					errors,
+					notices,
 					progress: {
 						file: fileName,
 						fileIndex: index + 1,
@@ -624,6 +701,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				failed: [],
 				warnings: [],
 				errors: [(error as Error).message],
+				// A file refused at the door (unreadable bytes, a shape we cannot map)
+				// never reached a read notice.
+				notices: [],
 				rows_total: 0,
 				ms: 0,
 			});

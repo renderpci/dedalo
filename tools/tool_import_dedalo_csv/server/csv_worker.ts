@@ -11,7 +11,7 @@
  *  - default (parse): return the full parsed rows — import_files needs them.
  */
 
-import { analyzeCsv, parseCsv } from '../../../src/core/tools/import_csv.ts';
+import { analyzeCsv, parseCsvDetailed } from '../../../src/core/tools/import_csv.ts';
 
 declare let self: Worker;
 
@@ -25,7 +25,12 @@ self.onmessage = (event: MessageEvent) => {
 		if (analyze === true) {
 			postMessage({ analysis: analyzeCsv(text, delimiter) });
 		} else {
-			postMessage({ rows: parseCsv(text, delimiter) });
+			// The full parse RESULT, not just the rows: the ingest door refuses a file
+			// whose enclosure never closes (DATA-04), and that diagnostic exists only
+			// inside the parse — recomputing it on the main thread would put the whole
+			// CPU-bound parse back on the serving loop, which is what this worker exists
+			// to prevent (audit S3-42).
+			postMessage({ result: parseCsvDetailed(text, delimiter) });
 		}
 	} catch (error) {
 		postMessage({ error: error instanceof Error ? error.message : String(error) });

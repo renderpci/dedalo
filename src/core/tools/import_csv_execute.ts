@@ -69,6 +69,9 @@ export interface CsvExecuteRequest {
 	saveTm: boolean;
 	/** File-level errors accumulated before the plan (unmapped columns, …). */
 	errors: string[];
+	/** Read-time notices (an encoding conversion) — carried through, never merged
+	 * into `errors`: the panel paints an error red, and a conversion is not one. */
+	notices: string[];
 	/** Progress context: what the panel shows while this runs. */
 	progress: {
 		file: string;
@@ -264,6 +267,13 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 
 	for (const record of plan) {
 		const sectionId = record.sectionId;
+		// DATA-22: a key that was PRESENT and unreadable is named exactly, so the
+		// operator sees which cell to fix instead of "missing or not a number" for a
+		// cell that plainly holds something.
+		if (record.keyError !== null) {
+			errors.push(`Row ${record.row}: SKIPPED — ${record.keyError}`);
+			continue;
+		}
 		if (sectionId === null || sectionId <= 0) {
 			errors.push(
 				`Row ${record.row}: SKIPPED — the mandatory section_id is missing or not a number`,
@@ -363,8 +373,15 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 				}
 			});
 
-			if (isNew) created.push(sectionId);
-			else updated.push(sectionId);
+			if (isNew) {
+				created.push(sectionId);
+				// DATA-21: the existence set was read ONCE before the loop and never
+				// added to, so a file carrying the same section_id twice reported TWO
+				// records created where one exists — the second row's values silently
+				// REPLACED the first row's. The record exists from here on; a later row
+				// with this id is an update, and the report says so.
+				existing.add(sectionId);
+			} else updated.push(sectionId);
 		} catch (error) {
 			// The row's transaction rolled back: the record is exactly as it was.
 			failed.push({
@@ -388,6 +405,7 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 		failed,
 		warnings,
 		errors,
+		notices: [...request.notices],
 		rows_total: plan.length,
 		ms: Math.round(performance.now() - startedAt),
 	};

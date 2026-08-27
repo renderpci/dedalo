@@ -16,7 +16,8 @@ Key behaviours to know before importing:
 - An **empty cell clears** the existing component data for that record (and that data language, when translatable). Omit a column entirely to leave a component untouched.
 - A **multi-language cell** (lang-keyed object or flat items carrying `lang` — both v6 and v7 raw exports) imports **every language it carries**; each language is saved as its own slice, and languages not present in the cell are preserved. See [Multiple languages](../../../core/importing_data.md#multiple-languages).
 - A CSV header must match its mapped column name **exactly** (including suffixes like `tch56_dmy` or `tch191_rsc723`); mismatched columns are silently skipped.
-- Two report channels: **`failed`** (the cell was rejected and NOT written — the record keeps its previous value) and **`warnings`** (the cell WAS written but needs attention, e.g. a `select_lang` code that resolves but is not one of the project languages).
+- Three report channels: **`failed`** (the cell was rejected and NOT written — the record keeps its previous value), **`warnings`** (the cell WAS written but needs attention, e.g. a `select_lang` code that resolves but is not one of the project languages) and **`notices`** (what the engine DID to the file in order to read it — today, an encoding conversion). A notice is not a defect in the file and is never rendered as one: the panel paints `errors` red, and a successful conversion is not a failure.
+- A file that cannot be trusted is refused whole, before anything is written: a row whose width disagrees with the header (every value after the mismatch would land in the wrong component), a quoted value that is never closed, and an upload that cannot be honestly converted to text. Nothing is imported, and the refusal names the file — and the row, when a row is what is wrong. See [Importing data](../../../core/importing_data.md#format).
 - A component with no flat-value form (media, for instance) **refuses** a flat cell rather than writing it: a refused cell leaves the existing value intact, where a "conform to nothing and save" would silently clear it.
 - The report's `created` / `updated` are **arrays of `section_id`s**, not counts — the panel lists them and offers "copy as column" so you can paste them straight into a search.
 
@@ -58,9 +59,9 @@ The render layer lets the user, per file: confirm/override the auto-detected tar
 
 | Action | Permission gate | Key options it reads | Returns |
 | --- | --- | --- | --- |
-| `get_csv_files` | `permission: null` — always scoped to the caller's own per-user dir | *(none — client `files_path` is ignored)* | `result`: array of `{dir, name, n_records, n_columns, file_info, ar_columns_map, sample_data, sample_data_errors}` |
+| `get_csv_files` | `permission: null` — always scoped to the caller's own per-user dir | *(none — client `files_path` is ignored)* | `{files, errors, notices}` — `files`: array of `{dir, name, n_records, n_columns, file_info, ar_columns_map, sample_data, sample_data_errors}`; `errors`: the per-file read problems (one unreadable CSV must not hide the files that did parse); `notices`: what was done to a file that WAS read (an encoding conversion — the sample values below it are the converted text) |
 | `delete_csv_file` | `permission: null` — path-confined to per-user dir | `file_name` (basename-confined; client `files_path` ignored) | `result`: bool — moves the file to `deleted/<name>_deleted_<date>.csv` |
-| `validate_import` | declarative `permission: 'section_list', minLevel: 1` on every file's `section_tipo` | `files` (same shape as `import_files`) | `result`: per-file `{ok, file, section_tipo, rows_total, rows_sampled, errors, failed, warnings}` — **preflight only, writes nothing** |
+| `validate_import` | declarative `permission: 'section_list', minLevel: 1` on every file's `section_tipo` | `files` (same shape as `import_files`) | `{ready, files}` — `ready`: every file validated clean; per file `{ok, file, section_tipo, rows_total, rows_sampled, errors, notices, failed, warnings}`. **Preflight only, writes nothing.** `ok` is computed from `errors` + `failed` ONLY, so a converted file validates (`ok: true`) and says what was done to it |
 | `import_files` | declarative `permission: 'section_list', minLevel: 2` on **every** file's `section_tipo` (the targets ride inside `options.files[]`, one section per file) | `files` (array of `{file, section_tipo, ar_columns_map, bulk_process_label}`), `time_machine_save` (bool) | `job_id` (the handle); the job's terminal frame carries `result`: per-file array of `ImportFileReport` |
 | `process_uploaded_file` | `permission: null` — user-scoped by construction (staged source and destination are both rebuilt from the caller's id) | `file_data` (`{name, tmp_name, key_dir, …}`) | `result`: bool, `file_name` — moves the temp upload into the user's import dir |
 | `get_section_components_list` | declarative `permission: 'section', minLevel: 1` | `section_tipo` | `result`: array of `{label, value, model}` for the section's components + section-info components; `label`: section label |
@@ -141,6 +142,7 @@ Hand-authored CSVs can skip the wrapper and use flat strings instead (`062`, a d
     "failed": [],
     "warnings": [],
     "errors": [],
+    "notices": [],
     "rows_total": 2,
     "ms": 34
   }],
@@ -150,6 +152,12 @@ Hand-authored CSVs can skip the wrapper and use flat strings instead (`062`, a d
 ```
 
 `created` and `updated` are the `section_id`s themselves, so the panel can list them and copy them to the clipboard. `failed` and `warnings` hold `{section_id, component_tipo, msg, data, row}` — `row` being the 1-based CSV line, so a rejected cell points at the spreadsheet row that produced it.
+
+`errors` and `notices` are both file-level lists of sentences, and the difference between them is what the panel does with each. `errors` is what went wrong (rendered red); `notices` is what was DONE (rendered as ordinary report text) — an import that converted a windows-1252 file reports `"ok": true` with the conversion in `notices`, e.g.:
+
+```json
+"notices": ["types_clean-numisdata3.csv: the file is not UTF-8 — it was read as windows-1252 and converted. Check the imported values; saving the file as UTF-8 before importing removes the guess."]
+```
 
 While the job runs, each frame instead carries an `ImportProgressFrame`:
 
