@@ -24,6 +24,8 @@ import {ui} from '../../../core/common/js/ui.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 import {render_servers_list} from '../../../core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js'
 import {update_code} from '../../../core/area_maintenance/widgets/update_code/js/update_code.js'
+import {render_info_modal, render_restore_modal} from '../../../core/area_maintenance/widgets/update_code/js/render_update_code.js'
+import {render_consumer_status, refresh_readiness, backup_waiver_check} from '../../../core/area_maintenance/widgets/update_code/js/render_update_status.js'
 import {
 	UPDATE_PHASES,
 	init_phase_state,
@@ -159,6 +161,387 @@ describe('UPDATE_CODE WIDGET', function() {
 		})
 	})
 
+
+
+	describe('waive-backup control', function() {
+
+		// The panel value the modal reads. `checks` is the server's readiness
+		// vocabulary (core/update/status.ts): {id, state, detail}, where the
+		// state is 'ok' exactly when the pipeline will not refuse on that account.
+		const build_self = (backup_state, detail) => {
+			const self = new update_code()
+			self.id		= 'test_update_code_modal'
+			self.value	= {
+				servers				: [],
+				is_a_code_server	: false,
+				consumer			: {
+					ready	: true,
+					checks	: [
+						{ id : 'superuser', state : 'ok' },
+						{ id : 'backup_fresh', state : backup_state, detail : detail }
+					]
+				}
+			}
+			self.caller			= null
+			self.events_tokens	= []
+			return self
+		}
+		const versions_info = {
+			info	: { version : '9.9.9', host : 'code.example.test', entity : 'Test' },
+			files	: [{ version : '9.9.10', url : 'https://code.example.test/9.9.10.zip', date : '2026-08-25' }]
+		}
+		const open_modal = (self) => {
+			const body_response = ui.create_dom_element({ element_type : 'div', parent : container })
+			const modal = render_info_modal(self, versions_info, body_response)
+			return { modal : modal, body_response : body_response }
+		}
+		const close = (opened) => {
+			if (opened.modal && typeof opened.modal.close==='function') {
+				opened.modal.close()
+			}
+			opened.body_response.remove()
+		}
+
+		it('a STALE backup offers the waiver, with the age fact and the caution', function() {
+
+			const opened = open_modal(build_self('warn', '73'))
+			try {
+				// scoped to THIS modal: a previous test's node may still be closing
+				const row = opened.modal.querySelector('.waive_backup_row')
+				assert.ok(row, 'a stale backup renders the waive row')
+
+				// the <label> WRAPS the input (no id/for pair to keep in sync)
+				const input = row.querySelector('input[type="checkbox"].waive_backup_check')
+				assert.ok(input, 'the row carries a checkbox')
+				assert.strictEqual(input.parentElement.className, 'waive_backup_label', 'the label wraps the input')
+				assert.strictEqual(input.checked, false, 'it is never pre-armed')
+
+				// the server sends a FACT, the client the wording
+				const note = row.querySelector('.waive_backup_note')
+				assert.ok(note, 'the row carries its caution note')
+				assert.include(note.textContent, '73', 'the measured age is stated')
+				assert.include(note.className, 'state_warning', 'in the shared severity vocabulary')
+
+				// it sits ABOVE the Update button: read before pressed
+				const button = row.parentElement.querySelector('button.success')
+				assert.ok(button, 'the modal renders the Update button')
+				assert.strictEqual(
+					row.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+					Node.DOCUMENT_POSITION_FOLLOWING,
+					'the waive row precedes the Update button'
+				)
+			} finally {
+				close(opened)
+			}
+		})
+
+		it('NO backup at all still offers it (detail "none", no age to state)', function() {
+
+			const opened = open_modal(build_self('warn', 'none'))
+			try {
+				const row = opened.modal.querySelector('.waive_backup_row')
+				assert.ok(row, 'a missing backup renders the waive row too')
+				// the raw server FACT ('none') is never shown; only a measured age is
+				assert.notMatch(row.querySelector('.waive_backup_note').textContent, /\bnone\b|NaN/, 'the raw fact is never rendered')
+			} finally {
+				close(opened)
+			}
+		})
+
+		it('a FRESH backup renders no waiver at all', function() {
+
+			// Nothing to waive → no invitation to disarm a guard that is not in
+			// the way. This is the assertion that makes the control honest.
+			const opened = open_modal(build_self('ok', '2'))
+			try {
+				assert.strictEqual(opened.modal.querySelector('.waive_backup_row'), null, 'a fresh backup renders no waive row')
+			} finally {
+				close(opened)
+			}
+		})
+
+		it('the ticked box is what the wire body carries', async function() {
+
+			// The model layer is the wire: a checkbox the server never hears
+			// about is decoration. Both states, through the real method.
+			const self = build_self('warn', '73')
+			const sent = []
+			const original = window.fetch
+			// update_code.prototype.update_code goes through data_manager; drive
+			// the method directly and read the options bag it assembles by
+			// intercepting at the transport.
+			assert.strictEqual(typeof self.update_code, 'function', 'the model exposes update_code')
+			window.fetch = async (url, options) => {
+				sent.push(JSON.parse(options.body))
+				return new Response(JSON.stringify({ ok : true, data : null }), { headers : { 'Content-Type' : 'application/json' } })
+			}
+			try {
+				await self.update_code({ info : versions_info.info, file_active : versions_info.files[0], waive_backup : true })
+				await self.update_code({ info : versions_info.info, file_active : versions_info.files[0] })
+				assert.isAtLeast(sent.length, 2, 'both calls reached the transport')
+				assert.strictEqual(sent[0].options.waive_backup, true, 'a ticked box travels as true')
+				assert.strictEqual(sent[sent.length-1].options.waive_backup, false, 'an untouched box travels as false, never absent')
+			} finally {
+				window.fetch = original
+			}
+		})
+	})
+
+
+	describe('readiness headline vs the request the button sends', function() {
+
+		// `ready` is `!checks.some(blocked)`, and the ONE waivable gate reports
+		// `warn`. So a stale backup is `ready:true` while the DEFAULT request
+		// (waive_backup:false) is still refused on exactly that account. A bare
+		// "Ready to update" there over-reports as loudly as the "Update blocked"
+		// it replaced — the headline has to name the waiver.
+		const render = (consumer) => {
+			const wrapper = ui.create_dom_element({ element_type : 'div', parent : container })
+			render_consumer_status(wrapper, consumer)
+			return wrapper
+		}
+		const consumer_with = (backup_state, extra_checks) => {
+			return {
+				ready	: true,
+				engine	: {},
+				tree	: {},
+				checks	: [
+					{ id : 'superuser', state : 'ok' },
+					{ id : 'backup_fresh', state : backup_state, detail : backup_state==='ok' ? '2' : '73' }
+				].concat(extra_checks || [])
+			}
+		}
+
+		it('a waivable warning is named in the headline, in the warning voice', function() {
+
+			const wrapper = render(consumer_with('warn'))
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.ok(headline, 'the consumer half renders a headline verdict')
+				assert.include(headline.className, 'state_warning', 'neither green nor red')
+				assert.notInclude(headline.className, 'state_ok', 'it must not read as plainly ready')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('with nothing waivable outstanding it is plainly ready', function() {
+
+			const wrapper = render(consumer_with('ok'))
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.include(headline.className, 'state_ok', 'a clean install still headlines ready')
+				assert.notInclude(headline.className, 'state_warning')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('a NON-waivable warning never makes the headline demand a waiver', function() {
+
+			// The consumer half has three warn-capable checks and only
+			// `backup_fresh` is waivable. A leftover `.code_staging` dir, or a
+			// bun-pin drift, over a FRESH backup used to headline "only with a
+			// waiver" while the modal offered no checkbox to give one — a waiver
+			// demanded, impossible to supply, and unnecessary anyway.
+			const wrapper = render(consumer_with('ok', [
+				{ id : 'staging_clean', state : 'warn' },
+				{ id : 'bun_pin', state : 'warn', detail : '1.4.0 != 1.3.9' }
+			]))
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.include(headline.className, 'state_ok', 'a fresh backup still headlines plainly ready')
+				assert.notInclude(headline.className, 'state_warning', 'no waiver is pending')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('an UNKNOWN backup check is treated as a pending waiver, like the modal', function() {
+
+			// `probe()` degrades a throwing check to `unknown`. The modal offers
+			// the waiver there (state!=='ok'), so the headline must warn about it
+			// too — the two read ONE predicate precisely so they cannot diverge.
+			const wrapper = render(consumer_with('unknown'))
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.include(headline.className, 'state_warning', 'an unmeasurable backup still needs the waiver')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('a blocked check still headlines blocked, waiver or not', function() {
+
+			const blocked = consumer_with('warn')
+			blocked.ready = false
+			blocked.checks.push({ id : 'maintenance_mode', state : 'blocked' })
+			const wrapper = render(blocked)
+			try {
+				const headline = wrapper.querySelector('.status_verdict')
+				assert.include(headline.className, 'state_danger', 'a hard gate outranks the waiver wording')
+			} finally {
+				wrapper.remove()
+			}
+		})
+	})
+
+	describe('restore modal — the downgrade waiver', function() {
+
+		// The DECISION the source-shape gate cannot see (test/unit/
+		// client_update_code_render.test.ts says so): the submit unlocks only
+		// when the checkbox is ticked, and the checkbox is asked for only when
+		// the versions actually differ — measured against the SERVER's bare
+		// version triple, never the page global's '.dev'-tagged string.
+		const point_of = (version) => {
+			return {
+				name				: 'dedalo_' + version + '_abc1234_2026-08-25T10-00-00',
+				stamp				: Date.now(),
+				bootable			: true,
+				version				: version,
+				bun_pin				: null,
+				digest				: 'a'.repeat(64),
+				restorable			: true,
+				restorable_reason	: null
+			}
+		}
+		const open_restore = (point, running_version) => {
+			const self = new update_code()
+			self.id				= 'test_update_code_restore_modal'
+			self.value			= {}
+			self.caller			= null
+			self.events_tokens	= []
+			const body_response = ui.create_dom_element({ element_type : 'div', parent : container })
+			return {
+				modal			: render_restore_modal(self, point, body_response, running_version),
+				body_response	: body_response
+			}
+		}
+		const close = (opened) => {
+			if (opened.modal && typeof opened.modal.close==='function') {
+				opened.modal.close()
+			}
+			opened.body_response.remove()
+		}
+
+		it('the SAME version asks for no waiver and the submit is live', function() {
+
+			// The developer-channel case: a branch build installed over its own
+			// release. page_globals.dedalo_version reads '…​.dev' here and the
+			// point declares the bare triple, so a page-global comparison would
+			// draw a waiver for a version change that is not one.
+			const running = String(page_globals.dedalo_version || '7.0.0').replace('.dev', '')
+			const opened = open_restore(point_of(running), running)
+			try {
+				assert.strictEqual(opened.modal.querySelector('.confirm_downgrade_row'), null, 'no waiver where nothing changes')
+				const button = opened.modal.querySelector('button.button_restore_submit')
+				assert.ok(button, 'the modal renders the Restore button')
+				assert.strictEqual(button.disabled, false, 'and it is not gated')
+			} finally {
+				close(opened)
+			}
+		})
+
+		it('a DIFFERENT version locks the submit until the waiver is ticked', function() {
+
+			const running = String(page_globals.dedalo_version || '7.0.0').replace('.dev', '')
+			const opened = open_restore(point_of('6.9.9'), running)
+			try {
+				const row = opened.modal.querySelector('.confirm_downgrade_row')
+				assert.ok(row, 'a version change renders the waiver row')
+				// the <label> WRAPS the input (the house pattern), and names the target
+				const input = row.querySelector('input[type="checkbox"].confirm_downgrade_check')
+				assert.ok(input, 'the row carries a checkbox')
+				assert.strictEqual(input.parentElement.className, 'confirm_downgrade_label', 'the label wraps the input')
+				assert.strictEqual(input.checked, false, 'it is never pre-armed')
+				assert.include(input.parentElement.textContent, '6.9.9', 'the waiver names the version it waives to')
+
+				const button = opened.modal.querySelector('button.button_restore_submit')
+				assert.strictEqual(button.disabled, true, 'the submit is locked while the waiver is not given')
+				input.checked = true
+				input.dispatchEvent(new Event('change'))
+				assert.strictEqual(button.disabled, false, 'ticking it unlocks the submit')
+				input.checked = false
+				input.dispatchEvent(new Event('change'))
+				assert.strictEqual(button.disabled, true, 'un-ticking it locks it again')
+			} finally {
+				close(opened)
+			}
+		})
+
+		it('a point whose version cannot be read always asks for the waiver', function() {
+
+			// version:null means the compare cannot be made; the hazard is then
+			// assumed, never waived away by silence.
+			const opened = open_restore(point_of(null), '7.0.0')
+			try {
+				assert.ok(opened.modal.querySelector('.confirm_downgrade_row'), 'an unreadable version still asks')
+			} finally {
+				close(opened)
+			}
+		})
+	})
+
+
+
+	describe('refresh_readiness (the panel re-stated in place)', function() {
+
+		const consumer = (backup) => ({ready:true, engine:{}, tree:{},
+			checks:[{id:'superuser',state:'ok'},{id:'backup_fresh',state:backup.state,detail:backup.detail}]})
+
+		it('replaces exactly one block, in position, with the new verdict', function() {
+
+			// The DOM surgery is non-obvious: render_readiness APPENDS the rebuilt
+			// block at the end of the wrapper and replaceChild then moves it into
+			// the old one's slot. A refactor that stops stamping .readiness_block,
+			// or returns the readout instead of its parent, leaves the source-shape
+			// gates green while the panel silently stops refreshing — or grows a
+			// second block.
+			const wrapper = ui.create_dom_element({element_type:'div', parent:container})
+			render_consumer_status(wrapper, consumer({state:'ok', detail:'2'}))
+			try {
+				const before = [...wrapper.children].indexOf(wrapper.querySelector('.readiness_block'))
+				assert.strictEqual(wrapper.querySelectorAll('.readiness_block').length, 1, 'one block to start with')
+				assert.include(wrapper.querySelector('.status_verdict').className, 'state_ok')
+
+				const answered = refresh_readiness(wrapper, consumer({state:'warn', detail:'73'}))
+
+				assert.strictEqual(answered, true, 'it reports that it replaced a block')
+				assert.strictEqual(wrapper.querySelectorAll('.readiness_block').length, 1, 'still exactly one block — no duplicate')
+				assert.strictEqual([...wrapper.children].indexOf(wrapper.querySelector('.readiness_block')), before, 'in the same position')
+				assert.include(wrapper.querySelector('.status_verdict').className, 'state_warning', 'restated from the new value')
+				assert.include(wrapper.textContent, '73', 'carrying the new age fact')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('answers false when there is no block to replace, so the caller can re-render', function() {
+
+			// the FALLBACK painting (a payload without `consumer`): there is no
+			// readiness block, and silently doing nothing would strand the panel
+			// on version+build while the modal offers a waiver for a check the
+			// panel never shows.
+			const wrapper = ui.create_dom_element({element_type:'div', parent:container})
+			try {
+				assert.strictEqual(refresh_readiness(wrapper, consumer({state:'warn', detail:'73'})), false)
+				assert.strictEqual(refresh_readiness(null, consumer({state:'ok', detail:'2'})), false, 'no root')
+				assert.strictEqual(refresh_readiness(wrapper, null), false, 'no consumer')
+			} finally {
+				wrapper.remove()
+			}
+		})
+
+		it('backup_waiver_check is the one predicate, and it is scoped', function() {
+
+			assert.isNull(backup_waiver_check(consumer({state:'ok', detail:'2'})), 'a fresh backup needs no waiver')
+			assert.isNotNull(backup_waiver_check(consumer({state:'warn', detail:'73'})), 'a stale one does')
+			assert.isNotNull(backup_waiver_check(consumer({state:'unknown', detail:'boom'})), 'so does an unmeasurable one')
+			assert.isNull(backup_waiver_check({checks:[{id:'staging_clean', state:'warn'}]}), 'a non-waivable warning is not a waiver')
+			assert.isNull(backup_waiver_check(null), 'no payload, no waiver')
+			assert.isNull(backup_waiver_check({}), 'no checks, no waiver')
+		})
+	})
 
 	describe('phase reducer (served module)', function() {
 

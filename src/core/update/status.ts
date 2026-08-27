@@ -44,14 +44,23 @@ import { detectDeploymentChannel } from './channel.ts';
 import { parseDeclaredTriple, planCodeBuild, VERSION_TS_PATH } from './code_build_plan.ts';
 import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
+	bunPinOf,
+	declaredVersionOf,
+	type RestoreBlockReason,
+	restorabilityOf,
+	restorePointIsBootable,
+} from './code_restore.ts';
+import {
 	backupRootIsInsideTree,
 	codeStagingDir,
+	installedDigestOf,
 	isSupervised,
 	PRESERVE_ROOT_ENTRIES,
 	resolveCodeBackupRoot,
 	STAGING_KEEP_MARKER,
 	stagingHoldsParkedTree,
 } from './code_update.ts';
+import { availableBytesAt } from './disk_space.ts';
 import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
 import { backupFreshness } from './preconditions.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
@@ -138,6 +147,23 @@ export interface RestorePoint {
 	stamp: number;
 	/** Carries package.json + node_modules — the rollback-BOOTABILITY contract. */
 	bootable: boolean;
+	/** The version the held tree DECLARES (its own version.ts), null when unreadable. */
+	version: string | null;
+	/** The Bun the held tree PINS (its own `.bun-version`), null when it pins
+	 * none. A pin other than the running runtime is a HARD blocker: the swap
+	 * hands the tree to the running bun (code_update.ts prepareQuarantine says
+	 * the same about a release), so the panel states the pin it would need. */
+	bun_pin: string | null;
+	/** sha256 of the archive it was installed from (its install_stamp), null on an
+	 * unstamped tree — what the restore's sentinel carries so the restored tree
+	 * confirms itself instead of screaming a mismatch. */
+	digest: string | null;
+	/** Would the restore pipeline accept this point? Computed by the pipeline's
+	 * OWN predicate (code_restore.ts restorabilityOf) — see the module header:
+	 * the panel may never reach a verdict the pipeline reaches differently. */
+	restorable: boolean;
+	/** The machine reason id when it would not (the wire carries ids, not sentences). */
+	restorable_reason: RestoreBlockReason | null;
 }
 
 export interface ConsumerStatus {
@@ -200,8 +226,14 @@ function operatorChecks(principal: Principal): StatusCheck[] {
 
 /**
  * The recent-backup gate. Since 2026-08-23 this REFUSES a code update
- * (`backupRequire`), so it is `blocked`, not a warning — but it is the one
- * gate the request can waive, which the panel says by keeping the age fact.
+ * (`backupRequire`) — but it is the ONE gate the request can waive, and since
+ * 2026-08-25 the panel offers that waiver (the update_code modal's
+ * `waive_backup` checkbox). So the state is `warn`, the vocabulary's own word
+ * for "allowed, but the operator should know (a waivable condition)": a stale
+ * backup no longer forces `ready:false`, which would have headlined "Update
+ * blocked" over a run the pipeline accepts — the panel/pipeline disagreement
+ * this module's header forbids. The age fact rides in `detail` unchanged, and
+ * an UNWAIVED request still refuses exactly as before.
  */
 function backupFreshnessCheck(): StatusCheck {
 	return probe('backup_fresh', () => {
@@ -209,8 +241,8 @@ function backupFreshnessCheck(): StatusCheck {
 		// rounded and the refusal did not, which made them disagree for the
 		// half hour after every freshness deadline (see backupFreshness).
 		const { hours, stale } = backupFreshness();
-		if (hours === null) return check('backup_fresh', 'blocked', 'none');
-		return check('backup_fresh', stale ? 'blocked' : 'ok', String(Math.round(hours)));
+		if (hours === null) return check('backup_fresh', 'warn', 'none');
+		return check('backup_fresh', stale ? 'warn' : 'ok', String(Math.round(hours)));
 	});
 }
 
@@ -277,6 +309,30 @@ function stagingCheck(backupRoot: string): StatusCheck {
 }
 
 /**
+ * FREE DISK SPACE where the update stages — an INPUT, never a verdict.
+ *
+ * The verdict is the pipeline's (`refuseOnInsufficientSpace` → disk_space.ts)
+ * and needs a `du -skx` of the live tree: ~10^5 inodes, not something a
+ * synchronous panel path may walk. So this line does what `root_entries` does —
+ * report the fact and stay `unknown`.
+ *
+ * NO FLOOR. A hard-coded "under N GB is blocked" would be a SECOND RULE the
+ * pipeline does not have, and this module's law is that it never re-implements
+ * a refusal: the two would disagree in both directions (a big-`.git` install
+ * with 2 GB free is fine for the panel and refused by the pipeline; a small
+ * install with 900 MB free is the reverse). An honest `unknown` beats a verdict
+ * the pipeline will not honour.
+ */
+function diskSpaceCheck(backupRoot: string): StatusCheck {
+	return probe('disk_space', () => {
+		const available = availableBytesAt(backupRoot);
+		return available === null
+			? check('disk_space', 'unknown', 'statfs unsupported', backupRoot)
+			: check('disk_space', 'unknown', String(available), backupRoot);
+	});
+}
+
+/**
  * The root-whitelist INPUT: live root entries that a release would have to
  * ship, or `refuseUnaccountedLiveEntries` moves them into the backup and
  * refuses. Derived from the pipeline's own PRESERVE_ROOT_ENTRIES + the census,
@@ -317,8 +373,13 @@ function readSentinel(): CodeUpdateSentinel | null {
 	}
 }
 
-/** The rollback candidates on disk, newest first, with their bootability. */
-function readRestorePoints(backupRoot: string): RestorePoint[] {
+/**
+ * The rollback candidates on disk, newest first, with their bootability and the
+ * restore pipeline's own verdict. EXPORTED because code_restore.ts resolves the
+ * requested point BY NAME against this very listing — a client never names a
+ * path, and the two must be looking at the same set.
+ */
+export function readRestorePoints(backupRoot: string): RestorePoint[] {
 	try {
 		return readdirSync(backupRoot)
 			.filter((name) => name.startsWith('dedalo_'))
@@ -330,10 +391,19 @@ function readRestorePoints(backupRoot: string): RestorePoint[] {
 				// "bootable" pill, so every restore point advertised a
 				// nonsense KB figure. Walking the tree is not the fix either:
 				// node_modules is ~10^5 inodes on a synchronous panel path.
+				const facts = {
+					bootable: restorePointIsBootable(dir),
+					version: declaredVersionOf(dir),
+					bun_pin: bunPinOf(dir),
+				};
+				const verdict = restorabilityOf(facts);
 				return {
 					name,
 					stamp: statSync(dir).mtimeMs,
-					bootable: existsSync(join(dir, 'package.json')) && existsSync(join(dir, 'node_modules')),
+					...facts,
+					digest: installedDigestOf(dir),
+					restorable: verdict.restorable,
+					restorable_reason: verdict.reason,
 				};
 			})
 			.sort((a, b) => b.stamp - a.stamp);
@@ -365,6 +435,7 @@ export function consumerStatus(principal: Principal): ConsumerStatus {
 		toolchainCheck(),
 		bunPinCheck(livePin),
 		stagingCheck(backupRoot),
+		diskSpaceCheck(backupRoot),
 		rootEntries.check,
 	];
 	return {

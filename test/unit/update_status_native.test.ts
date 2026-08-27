@@ -28,6 +28,7 @@ import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { detectDeploymentChannel } from '../../src/core/update/channel.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 import { backupRootIsInsideTree, isSupervised } from '../../src/core/update/code_update.ts';
+import { backupFreshness } from '../../src/core/update/preconditions.ts';
 import {
 	archiveSymlinkNames,
 	codeServerStatus,
@@ -102,6 +103,21 @@ describe('consumer status', () => {
 		const channel = detectDeploymentChannel(projectRoot);
 		expect(check.detail).toBe(channel);
 		expect(check.state).toBe(channel === 'image' ? 'blocked' : 'ok');
+	});
+
+	test('the backup-freshness line is WAIVABLE, never a hard block', () => {
+		// A code update refuses without a recent DATABASE backup — but that is the
+		// ONE gate the request can waive, and since 2026-08-25 the update_code
+		// modal offers the waiver. `blocked` here would headline "Update blocked"
+		// over a run the pipeline accepts: the panel/pipeline disagreement
+		// status.ts forbids. So it is `warn`, and it never forces `ready:false`.
+		const status = consumerStatus(superuser);
+		const check = byId(status.checks, 'backup_fresh');
+		expect(check.state).not.toBe('blocked');
+		const { hours, stale } = backupFreshness();
+		expect(check.state).toBe(hours !== null && !stale ? 'ok' : 'warn');
+		// the age FACT survives — the panel words it, the server measures it
+		expect(check.detail).toBe(hours === null ? 'none' : String(Math.round(hours)));
 	});
 
 	test('the backup-root line agrees with backupRootIsInsideTree', () => {

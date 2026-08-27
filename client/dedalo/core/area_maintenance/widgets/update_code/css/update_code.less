@@ -237,6 +237,11 @@
 				&.state_danger {
 					color: @color_danger;
 				}
+				// ready, but only because a gate is waivable: neither green nor
+				// red — the operator has one more decision to make.
+				&.state_warning {
+					color: @color_warning;
+				}
 			}
 
 			// a check's value cell: chip, then the server's fact, then the why
@@ -276,6 +281,48 @@
 			// restore points / releases put their chips after the value
 			.dd_v > .dd_badge {
 				margin-left: 0.4rem;
+				margin-right: 0.33rem;
+				white-space: nowrap;
+			}
+
+			// A RESTORE POINT IS AN ACTION ROW: stamp, version, bootability chip
+			// and the Restore button share one value cell, so the button must be
+			// laid out with them instead of dropping onto its own line. The
+			// button stays `light` — a destructive action is confirmed in the
+			// modal, never advertised by weight in a list.
+			.restore_row {
+
+				.dd_v {
+					display: flex;
+					flex-wrap: wrap;
+					align-items: center;
+					gap: 0.4rem;
+				}
+
+				.restore_version {
+					opacity: 0.85;
+				}
+
+				// the refusal sentence of a disabled Restore button: its own line
+				// UNDER the row (flex-basis 100% in the wrapping value cell), so
+				// the stamp/version/pill/button line keeps its layout and the
+				// reason is readable without a hover.
+				.restore_reason {
+					flex-basis: 100%;
+					font-size: 0.9em;
+					opacity: 0.75;
+				}
+
+				>.dd_v >button.button_restore {
+					margin-left: auto;
+					padding: 0.15rem 0.7rem;
+					font-size: 0.9em;
+
+					&[disabled] {
+						opacity: 0.5;
+						cursor: not-allowed;
+					}
+				}
 			}
 
 			// the divergence note lives in a plain fact row, not a check row
@@ -377,6 +424,18 @@
 			margin-top: 1rem;
 		}
 
+		// the restore modal's two consequence sentences. Full width and left
+		// aligned: the modal body centres its children, and a centred paragraph
+		// is the one shape a warning must not have. Named one by one, never as a
+		// bare `>.dd_note`: that selector is the panel's, and a second definition
+		// of it at this depth is what client_update_code_render.test.ts refuses.
+		.restore_note_migrations,
+		.restore_note_becomes_restore_point {
+			width: 100%;
+			text-align: left;
+			margin-top: 1rem;
+		}
+
 		.files_container {
 			width: 100%;
 			text-align: left;
@@ -422,6 +481,62 @@
 		text-align: center;
 		margin-top: 2rem;
 		min-height: 6rem;
+
+		// waive_backup row. It lives in the MODAL FOOTER, above the Update
+		// button — not in .role_body with the dev-channel switch — because it is
+		// a decision about THIS install, taken at the moment of pressing Update.
+		// Rendered only when the `backup_fresh` check is not `ok`, so its mere
+		// presence is the warning; the note carries the caution in the shared
+		// widget_kit severity vocabulary (.dd_note.state_warning), never a
+		// global warning bar.
+		.waive_backup_row {
+			text-align: left;
+			max-width: 60rem;
+			margin: 0 auto 1.5rem auto;
+
+			>.waive_backup_label {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				cursor: pointer;
+				font-weight: bold;
+				padding-bottom: 0px;
+				color: @color_danger;
+
+				>.waive_backup_check {
+					height: initial;
+				}
+			}
+
+			>.dd_note.waive_backup_note {
+				margin: 0.25rem 0 0 1.6rem;
+				max-width: 60rem;
+			}
+		}
+
+		// confirm_downgrade row — the restore modal's twin of waive_backup, and
+		// deliberately the same shape: same place (footer, above the button),
+		// same wrapping label, same danger colour. An operator who has met one
+		// of these has met both.
+		.confirm_downgrade_row {
+			text-align: left;
+			max-width: 60rem;
+			margin: 0 auto 1.5rem auto;
+
+			>.confirm_downgrade_label {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				cursor: pointer;
+				font-weight: bold;
+				padding-bottom: 0px;
+				color: @color_danger;
+
+				>.confirm_downgrade_check {
+					height: initial;
+				}
+			}
+		}
 
 		>button[disabled] {
 			opacity: 0.5;

@@ -16879,6 +16879,9 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code > .content_data .update_status .status_verdict.state_danger {
   color: var(--color_danger);
 }
+.wrapper_widget.update_code > .content_data .update_status .status_verdict.state_warning {
+  color: var(--color_warning);
+}
 .wrapper_widget.update_code > .content_data .update_status .check_row .dd_v {
   display: flex;
   flex-wrap: wrap;
@@ -16901,6 +16904,31 @@ dd-modal:has(.tool_header) {
 }
 .wrapper_widget.update_code > .content_data .update_status .dd_v > .dd_badge {
   margin-left: 0.4rem;
+  margin-right: 0.33rem;
+  white-space: nowrap;
+}
+.wrapper_widget.update_code > .content_data .update_status .restore_row .dd_v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.wrapper_widget.update_code > .content_data .update_status .restore_row .restore_version {
+  opacity: 0.85;
+}
+.wrapper_widget.update_code > .content_data .update_status .restore_row .restore_reason {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_restore {
+  margin-left: auto;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.9em;
+}
+.wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_restore[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .wrapper_widget.update_code > .content_data .update_status .dd_v > .check_note {
   font-size: 0.9em;
@@ -16958,6 +16986,12 @@ dd-modal:has(.tool_header) {
   width: 100%;
   margin-top: 1rem;
 }
+.widget_update_code_modal .body .restore_note_migrations,
+.widget_update_code_modal .body .restore_note_becomes_restore_point {
+  width: 100%;
+  text-align: left;
+  margin-top: 1rem;
+}
 .widget_update_code_modal .body .files_container {
   width: 100%;
   text-align: left;
@@ -16996,6 +17030,44 @@ dd-modal:has(.tool_header) {
   text-align: center;
   margin-top: 2rem;
   min-height: 6rem;
+}
+.widget_update_code_modal .footer .waive_backup_row {
+  text-align: left;
+  max-width: 60rem;
+  margin: 0 auto 1.5rem auto;
+}
+.widget_update_code_modal .footer .waive_backup_row > .waive_backup_label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: bold;
+  padding-bottom: 0px;
+  color: var(--color_danger);
+}
+.widget_update_code_modal .footer .waive_backup_row > .waive_backup_label > .waive_backup_check {
+  height: initial;
+}
+.widget_update_code_modal .footer .waive_backup_row > .dd_note.waive_backup_note {
+  margin: 0.25rem 0 0 1.6rem;
+  max-width: 60rem;
+}
+.widget_update_code_modal .footer .confirm_downgrade_row {
+  text-align: left;
+  max-width: 60rem;
+  margin: 0 auto 1.5rem auto;
+}
+.widget_update_code_modal .footer .confirm_downgrade_row > .confirm_downgrade_label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: bold;
+  padding-bottom: 0px;
+  color: var(--color_danger);
+}
+.widget_update_code_modal .footer .confirm_downgrade_row > .confirm_downgrade_label > .confirm_downgrade_check {
+  height: initial;
 }
 .widget_update_code_modal .footer > button[disabled] {
   opacity: 0.5;

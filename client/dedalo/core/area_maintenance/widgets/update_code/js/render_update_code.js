@@ -15,7 +15,7 @@
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
-	import {render_code_server_status, render_consumer_status} from './render_update_status.js'
+	import {render_code_server_status, render_consumer_status, refresh_readiness, backup_waiver_check} from './render_update_status.js'
 	import {
 		UPDATE_PHASES,
 		init_phase_state,
@@ -56,6 +56,13 @@
 * The 'development' entity REFUSES to update itself: the refusal renders in
 * the panel (disabled button + warning note) BEFORE any picker opens.
 *
+* RESTORE runs the same road backwards. Every restore point listed by the
+* consumer readout carries a Restore button (render_update_status.js); it opens
+* `render_restore_modal`, which calls `self.restore_code({name, confirm_downgrade})`
+* and hands the resulting `{pid, pfile}` to the SAME `track_process` — same phase
+* reducer, same /health ending — under its own resume key. There is exactly one
+* progress machine in this widget, and a restore is one of its jobs.
+*
 * Exports:
 *   render_update_code — constructor (prototype-only; no instance state)
 */
@@ -70,6 +77,31 @@ export const render_update_code = function() {
 // job start, cleared by it on stream end, and cleared HERE before health
 // polling (the old pid/pfile mean nothing to the restarted process).
 const LOCAL_DB_ID = 'process_update_code'
+
+// The RESTORE job's own resume key. A restore is a different job with a
+// different expectation of /health (it lands on an OLDER version), so a resumed
+// restore read back under the update's key would be judged 'rolled_back' by the
+// very reducer that is supposed to confirm it. Two keys, never one.
+const LOCAL_DB_ID_RESTORE = 'process_restore_code'
+
+/**
+* JOB_IN_PROGRESS
+* True while EITHER resume key holds a job handle. The update and the restore
+* move the same tree under the same server-side run lock, so from the panel's
+* side there is one busy state, not two: a guard that only looked at its own key
+* would let an operator start an update on top of a running restore and only
+* learn about it from the server's lock refusal, mid-swap.
+* @returns {Promise<boolean>}
+*/
+const job_in_progress = async function() {
+
+	const running_update	= await data_manager.get_local_db_data(LOCAL_DB_ID, 'status')
+	const running_restore	= await data_manager.get_local_db_data(LOCAL_DB_ID_RESTORE, 'status')
+
+	return !!(running_update && running_update.value) || !!(running_restore && running_restore.value)
+}//end job_in_progress
+
+
 
 // per-modal radio group sequence: a radio group is document-wide by name, so
 // each modal instance owns its own group (mirrors the picker_seq pattern of
@@ -186,6 +218,16 @@ const get_content_data_edit = async function(self) {
 			class_name	 : 'content_data'
 		})
 
+	// body_response
+	// Declared BEFORE the status half: the restore buttons the consumer readout
+	// mounts hand their job to `track_process` on this surface, so it has to
+	// exist before that readout is built. It is appended to content_data at the
+	// END, where it belongs on screen.
+		const body_response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body_response'
+		})
+
 	// STATUS: what is running, whether an update can even proceed, what
 	// happened last time, and what could be rolled back to. Replaces the old
 	// two-row version/build readout — same facts, plus every gate the pipeline
@@ -202,54 +244,95 @@ const get_content_data_edit = async function(self) {
 			get_label.update_code_role_consumer || 'Update this installation',
 			get_label.update_code_role_consumer_note || 'The code this installation runs, and the code server it receives updates from.'
 		)
-		if (value.consumer) {
-			render_consumer_status(consumer_body, value.consumer)
-		} else {
-			consumer_body.appendChild(build_readout([
-				{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
-				{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
-			]))
+		// ONE writer for the consumer half, callable again from the re-seed: a
+		// panel first painted through the FALLBACK (no `consumer` in the payload)
+		// could otherwise never gain a readiness block, because refresh_readiness
+		// finds nothing to replace — leaving the panel on version+build while the
+		// modal in front of it reads the same fresh value and offers a waiver for
+		// a check the panel never shows.
+		let consumer_half = null
+		const render_consumer_half = function(consumer) {
+			const holder = ui.create_dom_element({ element_type : 'div' })
+			if (consumer_half===null) {
+				consumer_body.appendChild(holder)
+			} else {
+				consumer_body.replaceChild(holder, consumer_half)
+			}
+			consumer_half = holder
+			if (consumer) {
+				// the restore points are ACTIONABLE here: each bootable one gets a
+				// Restore button that opens the confirm modal. The development entity
+				// refuses to overwrite its own tree (same posture as the update button
+				// below), so it gets no restore affordance either.
+				render_consumer_status(
+					holder,
+					consumer,
+					is_development
+						? null
+						// The SERVER's own version string travels with the point: the
+						// modal's downgrade decision must be the pipeline's, and the
+						// page global carries a prerelease tag the pipeline never sees.
+						: (point) => render_restore_modal(self, point, body_response, (consumer.engine || {}).version)
+				)
+			} else {
+				holder.appendChild(build_readout([
+					{ k : (get_label.update_code_current_version || 'Current version'), v : page_globals.dedalo_version, mono : true },
+					{ k : (get_label.update_code_current_build || 'Current build'), v : page_globals.dedalo_build, mono : true }
+				]))
+			}
+			return holder
 		}
+		render_consumer_half(value.consumer)
 
 	// servers. The shared picker over CODE_SERVERS with its OWN storage key:
 	// remembering the choice must not collide with the ontology picker's.
 		const servers_list = render_servers_list( value, 'CODE_SERVERS', 'dedalo.update_code.server' )
 		consumer_body.appendChild(servers_list)
 
-	// body_response
-		const body_response = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'body_response'
-		})
-
-	// resume a running update
-	// If a previous update was started (browser closed or page refreshed during
+	// resume a running update OR restore
+	// If a previous job was started (browser closed or page refreshed during
 	// the long-running server process), IndexedDB still holds its PID + pfile.
 	// Resume the stream so the user sees live phase status on widget open —
 	// routed through the SAME tracker (and the same ending) as a fresh start.
-		const check_process_data = () => {
+	// The two keys are read separately and re-attached under their OWN key: only
+	// one job can run at a time (server side they share one run lock), but a
+	// restore resumed as an update would be judged against the wrong version.
+		const check_process_data = (local_db_id, operation) => {
 			data_manager.get_local_db_data(
-				LOCAL_DB_ID,
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
 				if (local_data && local_data.value) {
-					// resume path: the expected version was lost with the page, the
-					// /health comparison degrades honestly (see resolve_health_outcome).
-					// The DIGEST survives it, though — it is stored with the job handle
-					// — and on a same-version install it is the only usable token.
+					// WHAT ACTUALLY SURVIVES THE PAGE (corrected 2026-08-26; the
+					// comment here used to claim the digest always did).
+					// The handle is written at job start by render_stream
+					// (common/js/render_common.js ~:458) and holds {pid, pfile} —
+					// nothing else. The DIGEST is added only by finish_interrupted,
+					// i.e. only when THIS page session watched the stream die
+					// pre-swap and rewrote the key itself; a page that was simply
+					// refreshed or closed leaves both tokens behind.
+					// So the real fallback is downstream: the terminal envelope's
+					// own `version` (on_done: `state.expected_version ||
+					// ending.version`). When even that is missing — a job the
+					// server reconciled, which reports no version at all — the
+					// /health verdict is not decidable and poll_health says so
+					// (update_code_unconfirmed) instead of inventing a rollback.
 					track_process(
 						local_data.value.pid,
 						local_data.value.pfile,
 						body_response,
 						null,
 						local_data.value.digest ?? null,
-						false
+						false,
+						local_db_id,
+						operation
 					)
 				}
 			})
 		}
-		check_process_data()
+		check_process_data(LOCAL_DB_ID, 'update')
+		check_process_data(LOCAL_DB_ID_RESTORE, 'restore')
 
 	// development refusal — BEFORE any picker/modal: ask nothing, refuse first.
 		if (is_development) {
@@ -321,9 +404,11 @@ const get_content_data_edit = async function(self) {
 				body_response.querySelectorAll('.error').forEach(el => el.remove())
 				servers_list.classList.remove('empty')
 
-			// busy guard: a running update owns the panel (make_backup pattern)
-				const running = await data_manager.get_local_db_data(LOCAL_DB_ID, 'status')
-				if (running && running.value) {
+			// busy guard: a running update OR restore owns the panel (make_backup
+			// pattern). Both move the same tree under the same server-side run
+			// lock, so either one blocks the other here too.
+				const running = await job_in_progress()
+				if (running) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'error',
@@ -404,6 +489,40 @@ const get_content_data_edit = async function(self) {
 							})
 						}
 						return
+					}
+
+				// RE-SEED the widget payload before opening the modal. The modal
+				// decides whether to offer the waive-backup control from the
+				// `backup_fresh` check, and self.value was read at build() time:
+				// a panel left open across the freshness deadline would hide the
+				// only control that lets the operator proceed. A failed re-seed
+				// is never a reason not to show the release list — keep the
+				// value we have.
+				// COST, stated: get_value re-probes every configured code server
+				// (5 s timeout each) and recomputes the whole status. It is
+				// bounded and the button is still locked with its spinner up,
+				// but on an install with dead CODE_SERVERS entries this is what
+				// delays the modal.
+					try {
+						const fresh_value = await self.get_value()
+						if (fresh_value) {
+							self.value = fresh_value
+							// …and RE-STATE the panel from it. Without this the
+							// modal's waiver row and the readiness row behind it
+							// can show the same fact in two states at once.
+							// refresh_readiness answers false when there is no
+							// readiness block to replace — the FALLBACK painting —
+							// and then the whole half is rendered again.
+							if (refresh_readiness(consumer_half, fresh_value.consumer)!==true) {
+								render_consumer_half(fresh_value.consumer)
+							}
+						}
+					} catch (error) {
+						// get_value resolves an error envelope rather than throwing,
+						// so the real degrade path is the guard above; this is the
+						// backstop, and a failed re-seed must never take the panel
+						// down (same posture as refresh_code_server above)
+						console.error('update_code: could not re-seed the panel value before the modal', error)
 					}
 
 				// show info modal
@@ -585,6 +704,46 @@ const render_phase_track = function(parent) {
 
 
 /**
+* RUN_WORDING
+* The ENDING SENTENCES of one run, per operation (2026-08-26).
+*
+* The restore reuses the update's tracker verbatim — same frames, same reducer,
+* same phase track — and until now it also reused its words: a finished restore
+* said "Code updated to version 6.9.9", a dropped connection warned "do not
+* start another update", and the reload prompt was headed "Update". All four
+* describe the opposite of what the operator asked for.
+*
+* A wording SET, not a forked tracker: the shared code path is the reason the
+* restore is followed correctly at all, and the caller already knows which of
+* the two it started.
+*
+* @param {string} operation - 'update' | 'restore'
+* @returns {Object} {done_header, done, connection_lost, failed, rolled_back}
+*/
+const run_wording = function(operation) {
+
+	if (operation==='restore') {
+		return {
+			done_header		: get_label.update_code_restore || 'Restore',
+			done			: get_label.update_code_restored || 'Code restored to version %s.',
+			connection_lost	: get_label.update_code_restore_connection_lost || 'Connection lost — the restore may still be running on the server. Reopen this panel to re-attach, and do not start another restore.',
+			failed			: get_label.update_code_restore_failed || 'The restore failed.',
+			rolled_back		: get_label.update_code_restore_rolled_back || 'The restore was rolled back — the server is running the code it was running before.'
+		}
+	}
+
+	return {
+		done_header		: get_label.update || 'Update',
+		done			: get_label.update_code_updated || 'Code updated to version %s.',
+		connection_lost	: get_label.update_code_connection_lost || 'Connection lost — the update may still be running on the server. Reopen this panel to re-attach, and do not start another update.',
+		failed			: get_label.update_code_failed || 'The update failed.',
+		rolled_back		: get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.'
+	}
+}//end run_wording
+
+
+
+/**
 * TRACK_PROCESS
 * Follows a running update job: streams its status via update_process_status
 * (which also persists/cleans the IndexedDB resume key), feeds every frame to
@@ -607,9 +766,22 @@ const render_phase_track = function(parent) {
 *   pressed Update in the modal would otherwise watch nothing until they
 *   scrolled by hand. FALSE on the resume path, where the widget is just
 *   opening and stealing the scroll would be a surprise.
+* @param {string} [local_db_id=LOCAL_DB_ID] - the resume key this job is
+*   persisted under. The RESTORE job passes LOCAL_DB_ID_RESTORE: same tracker,
+*   same reducer, but a resumed restore must never be re-attached as an update.
+* @param {string} [operation='update'] - 'update' | 'restore'. The tracker is
+*   deliberately SHARED, but its ENDING SENTENCES are not: "Code updated to
+*   version 6.9.9" at the end of a rollback is a false statement about what the
+*   operator just did. The caller always knows which operation it started, so
+*   the wording travels with the run instead of the tracker guessing (run_wording).
 * @returns {void}
 */
-const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null, scroll_into_view=true) {
+const track_process = function(pid, pfile, body_response, expected_version, expected_digest=null, scroll_into_view=true, local_db_id=LOCAL_DB_ID, operation='update') {
+
+	// per-run wording: ONE tracker, two vocabularies (see @param operation).
+	// Read at run time, never at import time — get_label is a page global the
+	// login fills in.
+		const wording = run_wording(operation)
 
 	// clean previous surface
 		while (body_response.firstChild) {
@@ -687,14 +859,14 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_ok update_done',
-				text_content	: (get_label.update_code_updated || 'Code updated to version %s.')
+				text_content	: wording.done
 					.replace('%s', String(version || state.expected_version || '')),
 				parent			: body_response
 			})
 			// …then the reload prompt: the browser still holds the OLD ES modules
 			// and only a full re-login reloads them.
 			const accepted = await ui.confirm({
-				header			: get_label.update || 'Update',
+				header			: wording.done_header,
 				body			: get_label.update_code_reload_required || 'Reload required: log in again to load the new code.',
 				accept_label	: get_label.update_code_reload_now || 'Reload now'
 			})
@@ -731,7 +903,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: is_refusal ? 'dd_note state_danger update_refusal' : 'dd_note state_danger',
-				text_content	: String(message || state.message || (get_label.update_code_failed || 'The update failed.')),
+				text_content	: String(message || state.message || wording.failed),
 				parent			: body_response
 			})
 		}
@@ -744,13 +916,16 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			end_tracking()
 			track.paint(state)
 			data_manager.set_local_db_data(
-				{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile, digest : expected_digest } },
+				{ id : local_db_id, value : { pid : pid, pfile : pfile, digest : expected_digest } },
 				'status'
 			)
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_warning connection_lost',
-				text_content	: get_label.update_code_connection_lost || 'Connection lost — the update may still be running on the server. Reopen this panel to re-attach, and do not start another update.',
+				// per-run wording (run_wording): `update_code_connection_lost` for
+				// an update, `update_code_restore_connection_lost` for a restore —
+				// the sentence names the operation the operator must NOT start twice.
+				text_content	: wording.connection_lost,
 				parent			: body_response
 			})
 		}
@@ -778,11 +953,31 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 						finish_success(version)
 						return
 					}
+					// NOTHING TO COMPARE AGAINST. On the panel-RESUME path both
+					// tokens can be null (the stored job handle holds pid+pfile
+					// only — see check_process_data), and resolve_health_outcome
+					// answers 'rolled_back' for want of anything better. Reporting
+					// a rollback the panel cannot see is as false as reporting a
+					// success: say what is known — the server is back, on this
+					// version — and let the operator compare.
+					if (!state.expected_version && !state.expected_digest) {
+						end_tracking()
+						state = { ...state, mode:'polling' }
+						track.paint(state)
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'dd_note state_warning update_unconfirmed',
+							text_content	: (get_label.update_code_unconfirmed || 'The server is back and running version %s. This panel was reopened after the run started, so it cannot confirm by itself whether the operation completed — compare that version with the one you expected.')
+								.replace('%s', String(version)),
+							parent			: body_response
+						})
+						return
+					}
 					// the server is back on the OLD version → the job rolled back
 					end_tracking()
 					state = { ...state, mode:'rolled_back' }
 					track.paint(state)
-					const rolled_back_text = (get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.')
+					const rolled_back_text = wording.rolled_back
 						+ (ending.message ? (' ' + ending.message) : '')
 					ui.create_dom_element({
 						element_type	: 'div',
@@ -810,7 +1005,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 				return
 			}
 			if (state.mode==='rolled_back') {
-				finish_failed((get_label.update_code_rolled_back || 'The update was rolled back — the server is running the previous version.')
+				finish_failed(wording.rolled_back
 					+ (state.message ? (' ' + state.message) : ''))
 				return
 			}
@@ -852,7 +1047,27 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 					}
 					track.paint(state)
 					// the old pid/pfile mean nothing to the restarted process
-					data_manager.delete_local_db_data(LOCAL_DB_ID, 'status')
+					data_manager.delete_local_db_data(local_db_id, 'status')
+					poll_health()
+					return
+				}
+				// TERMINAL, BUT INTERRUPTED — NOT FAILED (2026-08-26).
+				// The panel-resume path re-attaches to a job the SERVER already
+				// reconciled: the operator refreshed mid-run, the swap restarted
+				// the process, and boot marked the orphaned pfile 'interrupted'
+				// (core/media/jobs.ts). The first frame is then terminal with the
+				// reconcile marker as its only error — and this branch printed
+				// "The update failed / interrupted: owning server process died"
+				// over an operation that had COMPLETED, without ever asking
+				// /health. That frame says the stream's owner died and nothing
+				// else, which is precisely the live path's post-swap situation:
+				// hand off to the same poll and let /health be the verdict.
+				if (ending && ending.outcome==='interrupted') {
+					state = apply_phase_frame(state, { phases : [{ id : 'health', status : 'running' }] })
+					state = { ...state, mode:'polling' }
+					track.paint(state)
+					// the old pid/pfile mean nothing to the restarted process
+					data_manager.delete_local_db_data(local_db_id, 'status')
 					poll_health()
 					return
 				}
@@ -860,7 +1075,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 				const failure_message = (ending && ending.outcome==='failed' && ending.message)
 					|| state.message
 					|| (final_error ? error_text(final_error) : null)
-					|| (get_label.update_code_failed || 'The update failed.')
+					|| wording.failed
 				finish_failed(failure_message)
 				return
 			}
@@ -871,7 +1086,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			if (state.mode==='polling') {
 				// the old pid/pfile are meaningless to the restarted process:
 				// delete the resume key BEFORE polling
-				data_manager.delete_local_db_data(LOCAL_DB_ID, 'status')
+				data_manager.delete_local_db_data(local_db_id, 'status')
 				poll_health()
 			} else {
 				finish_interrupted()
@@ -879,7 +1094,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		}
 
 	// stream the job (persists the resume key, renders msg/stop, cleans up)
-		update_process_status(LOCAL_DB_ID, pid, pfile, stream_node, 1000, on_done)
+		update_process_status(local_db_id, pid, pfile, stream_node, 1000, on_done)
 }//end track_process
 
 
@@ -1156,8 +1371,11 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 *     row per available ZIP (version, URL, build date). The FIRST entry — the
 *     server sorts ascending, so the next rung on the linear upgrade path — is
 *     pre-selected; the Update button stays DISABLED until one is selected.
-*   - Footer: the "Update" button (confirm-gated via ui.confirm; the version +
-*     host travel in the injection-safe `note` slot) + response surface.
+*   - Footer: the waive-backup row (rendered ONLY when the panel's `backup_fresh`
+*     check is not `ok` — the one precondition a request may waive) + the
+*     "Update" button (confirm-gated via ui.confirm; the version + host travel in
+*     the injection-safe `note` slot, and a waived backup is restated there) +
+*     response surface.
 *
 * versions_info shape (update_code.prototype.get_code_update_info):
 *   {
@@ -1172,12 +1390,17 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 * SEC-XSS-009: API error strings and update messages are written via
 * `textContent` / `createTextNode`, never via `innerHTML`.
 *
+* EXPORTED for the browser suite (client/dedalo/test/client/js/test_update_code.js):
+* the waive-backup row's whole contract is "rendered only when the pipeline
+* would refuse", which is a decision, not a shape — and a source-shape gate
+* cannot see a decision.
+*
 * @param {Object} self - update_code widget instance
 * @param {Object} versions_info - result object from get_code_update_info
 * @param {HTMLElement} body_response - the PANEL response surface (phase track home)
 * @returns {HTMLElement} modal element (already attached to the DOM)
 */
-const render_info_modal = function( self, versions_info, body_response ) {
+export const render_info_modal = function( self, versions_info, body_response ) {
 
 	// blur any selection
 		document.activeElement.blur();
@@ -1221,13 +1444,80 @@ const render_info_modal = function( self, versions_info, body_response ) {
 			class_name		: 'response content'
 		})
 
+	// waive_backup row — the ONE precondition an operator can waive.
+	// A code update REFUSES without a recent DATABASE backup
+	// (core/update/preconditions.ts, backupRequire) and the refusal sentence
+	// itself names the escape hatch. This is that escape hatch, put where the
+	// decision is actually made — beside the Update button, not on the panel.
+	// It waives the DATABASE backup only: the CODE backup is the swap itself
+	// (two renames of a tree already on disk) and is never optional.
+	// OFFERED ONLY WHEN IT WOULD CHANGE THE OUTCOME. The server's `backup_fresh`
+	// check (core/update/status.ts) is `ok` exactly when the pipeline will not
+	// refuse on this account; on an `ok` install the row is not rendered at all,
+	// so the panel never invites anyone to disarm a guard that is not in the way.
+	// The predicate is SHARED with the readiness headline (render_update_status)
+	// — a headline naming a waiver this modal does not offer, or a checkbox the
+	// headline never warned about, would be the same panel/pipeline disagreement
+	// from the other side.
+		// declared BEFORE mount_waive_row: the row inserts itself above the
+		// button, and `let` in the same block would leave it in the TDZ.
+		let button_update = null
+		let waive_backup_input = null
+		const mount_waive_row = function(check) {
+			if (waive_backup_input!==null) {
+				return waive_backup_input
+			}
+			const waive_backup_row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'waive_backup_row',
+				parent			: footer
+			})
+			// it must precede the Update button even when mounted LATE (the
+			// deadline-crossing path below): the caution is read, not stumbled on.
+			if (button_update && button_update.parentNode===footer) {
+				footer.insertBefore(waive_backup_row, button_update)
+			}
+			// label WRAPS the input (the house pattern, same as dev_channel_row):
+			// the click target is the whole row without an id/for pair to keep in sync.
+			const waive_backup_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'waive_backup_label',
+				text_content	: get_label.update_code_waive_backup || 'Update without a recent database backup',
+				parent			: waive_backup_row
+			})
+			waive_backup_input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'waive_backup_check',
+				name			: 'update_code_waive_backup'
+			})
+			waive_backup_label.prepend(waive_backup_input)
+			// the age FACT, when the server measured one ('none' means no backup
+			// was found at all). The server sends facts, the client the wording.
+			const backup_age = Number(check.detail)
+			const note_text = (get_label.update_code_waive_backup_note || 'The database will not be restorable if the update goes wrong. Make a backup first whenever you can; every waiver is recorded in the server log with your user.')
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note waive_backup_note state_warning',
+				text_content	: Number.isFinite(backup_age)
+					? ((get_label.update_code_check_backup_fresh || 'Recent database backup') + ': ' + String(backup_age) + ' h — ' + note_text)
+					: note_text,
+				parent			: waive_backup_row
+			})
+
+			return waive_backup_input
+		}
+		const backup_check = backup_waiver_check(self.value?.consumer)
+		if (backup_check) {
+			mount_waive_row(backup_check)
+		}
+
 	// files. One radio row each; the <label> WRAPS the input (no ids), the
 	// group name is per-modal.
 		const group_name = 'update_code_version_' + (++modal_seq)
 		const files = versions_info.files || []
 		const files_length = files.length
 		const valid_files = []
-		let button_update = null
 		for (let i = 0; i < files_length; i++) {
 
 			const current_version = files[i];
@@ -1348,12 +1638,52 @@ const render_info_modal = function( self, versions_info, body_response ) {
 					}
 					response.classList.remove('error')
 
+					// THE DEADLINE CAN FALL WHILE THE MODAL IS OPEN. The panel
+					// value is re-seeded when the modal opens, but freshness ages:
+					// a backup at 23.9 h renders no checkbox, and six minutes later
+					// the very same request is refused for a stale backup — the job
+					// answering with the byte-frozen sentence that names a wire flag
+					// the operator has no control for, which is precisely the dead
+					// end this feature exists to abolish, narrowed to a window.
+					// So re-ask right here, and if a waiver has become necessary,
+					// MOUNT the row and stop instead of submitting a refusal.
+					if (waive_backup_input===null) {
+						try {
+							const late_value = await self.get_value()
+							if (late_value) {
+								self.value = late_value
+								const late_check = backup_waiver_check(late_value.consumer)
+								if (late_check) {
+									mount_waive_row(late_check)
+									response.textContent = get_label.update_code_waive_backup_now_required
+										|| 'The database backup went stale while this dialog was open. Make a backup, or accept the waiver below, then press Update again.'
+									response.classList.add('error')
+									return
+								}
+							}
+						} catch (error) {
+							// never block the update on a failed re-ask: the server
+							// still refuses correctly if the backup really did age
+							console.error('update_code: could not re-check backup freshness before submitting', error)
+						}
+					}
+
+					// the operator's explicit waiver of the recent-backup
+					// precondition. `false` whenever the row was not offered
+					// (waive_backup_input stays null on a fresh-backup install).
+					const waive_backup = waive_backup_input?.checked === true
+
 					// confirm. The version + host are DATA → the `note` text slot.
+					// A waived backup is restated HERE, at the last gate: the
+					// checkbox is one click, the consequence is not.
 					const accepted = await ui.confirm({
 						header			: get_label.update || 'Update',
 						note			: (get_label.update_code_confirm_note || 'install version %s from %s')
 							.replace('%s', String(file_active.version ?? ''))
-							.replace('%s', String(info.host ?? '')),
+							.replace('%s', String(info.host ?? ''))
+							+ (waive_backup
+								? ' ' + (get_label.update_code_waive_backup_confirm || 'without a recent database backup')
+								: ''),
 						body			: get_label.sure || 'Are you sure?',
 						accept_label	: get_label.update || 'Update'
 					})
@@ -1374,8 +1704,9 @@ const render_info_modal = function( self, versions_info, body_response ) {
 					// update_code. Submits the BACKGROUND JOB; the response returns
 					// immediately with `pid` + `pfile` extension keys.
 					const api_response = await self.update_code({
-						info		: info,
-						file_active	: file_active
+						info			: info,
+						file_active		: file_active,
+						waive_backup	: waive_backup
 					})
 
 					body.classList.remove('loading')
@@ -1446,6 +1777,283 @@ const render_info_modal = function( self, versions_info, body_response ) {
 
 	return modal
 }//end render_info_modal
+
+
+
+/**
+* RENDER_RESTORE_MODAL
+* The confirm dialog for putting a previous code tree back into place.
+*
+* A restore is not an undo. Three facts decide whether an operator should press
+* the button, and all three are stated here rather than left to be inferred:
+*
+*   1. WHICH CODE — from the running version TO the restore point's version,
+*      named on the same line, because "restore" alone says nothing about which
+*      direction the installation moves in.
+*   2. THE DATABASE IS NOT MOVED WITH IT. Migrations already applied stay
+*      applied; older code meeting a newer schema is the real hazard of this
+*      button and the reason the version-changing case needs an explicit,
+*      logged acknowledgement (`confirm_downgrade`) exactly like `waive_backup`
+*      above — the checkbox is the ONLY waiver, and the server refuses without it.
+*   3. NOTHING IS LOST. The swap is two renames: the live tree does not
+*      disappear, it becomes a new restore point.
+*
+* SAME VERSION, NO CHECKBOX. Restoring a point that declares the version already
+* running (the developer-channel case: a branch build installed over its own
+* release) carries no schema hazard, so no waiver is asked for — a guard offered
+* where it changes nothing teaches operators to tick guards.
+*
+* On accept the restore starts as a BACKGROUND JOB with the SAME frames as an
+* update, so it is followed by the SAME `track_process` on the panel surface —
+* under its own resume key (LOCAL_DB_ID_RESTORE).
+*
+* SEC-XSS-009: every server-sent value (the point's name, version, digest) is
+* written via `textContent`, never `innerHTML`.
+*
+* EXPORTED for the browser suite (client/dedalo/test/client/js/test_update_code.js):
+* "the submit unlocks only when the checkbox is ticked, and only when the versions
+* differ" is a decision, not a shape, and a source-shape gate cannot see one.
+*
+* THE COMPARISON BASIS IS THE SERVER'S, NOT THE PAGE'S (2026-08-25 review).
+* `page_globals.dedalo_version` is DEDALO_ENGINE_VERSION, which carries the
+* prerelease tag — '7.0.1.dev' on a dev checkout or a dev-channel install —
+* while the pipeline compares `DEDALO_VERSION_TRIPLE.join('.')`, a bare
+* '7.0.1'. Read from the page, every developer-channel restore of its OWN
+* version drew the downgrade waiver, locked the button behind it, and then had
+* the server log a "VERSION CHANGE CONFIRMED … from 7.0.1 to 7.0.1" audit line
+* for a change that was not one — the panel/pipeline disagreement this widget's
+* headers forbid, in the exact case this header calls the no-checkbox case.
+* `running_version` is `value.consumer.engine.version`: the string the server
+* itself compares.
+*
+* @param {Object} self - update_code widget instance
+* @param {Object} point - one value.consumer.restore_points[] entry:
+*   {name, stamp, bootable, version, bun_pin, digest, restorable, restorable_reason}
+* @param {HTMLElement} body_response - the PANEL response surface (phase track home)
+* @param {string} running_version - value.consumer.engine.version, the BARE
+*   version triple the server's own compare uses
+* @returns {HTMLElement} modal element (already attached to the DOM)
+*/
+export const render_restore_modal = function( self, point, body_response, running_version ) {
+
+	// blur any selection
+		document.activeElement.blur();
+
+	// the two ends of the move. The running version is the SERVER's bare triple
+	// (see above) — the restore point's is what its own version.ts declares
+	// (null when it cannot be read: then the version compare cannot be made and
+	// the waiver is asked for, never skipped).
+		const from_version		= String(running_version || page_globals.dedalo_version || '')
+		const to_version		= point.version ? String(point.version) : null
+		const version_changes	= to_version===null || to_version!==from_version
+
+	// header. TEXT only: the directory name is disk data
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			text_content	: get_label.update_code_restore_confirm || 'Restore this code copy'
+		})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body widget_update_code'
+		})
+
+	// what moves where
+		body.appendChild(build_readout([
+			{ k : (get_label.update_code_restore_from || 'Currently running'), v : from_version, mono : true },
+			{ k : (get_label.update_code_restore_to || 'Will run after the restore'), v : to_version, mono : true },
+			// its OWN key: `update_code_restore_points` is the panel SECTION title
+			// (plural), and used here it read "Restore points: dedalo_7.0.0_…" —
+			// a list heading labelling one directory name.
+			{ k : (get_label.update_code_restore_point_name || 'Restore point'), v : point.name, mono : true },
+			{ k : (get_label.update_code_install_digest || 'Installed archive'), v : point.digest, mono : true }
+		]))
+
+	// the two consequences, in plain words. They are NOTES, not warnings, in the
+	// shared severity vocabulary: the migration one is a hazard (state_warning),
+	// the new-restore-point one is a reassurance and must not read as an alarm.
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_warning restore_note_migrations',
+			text_content	: get_label.update_code_restore_note_migrations || 'Database changes already applied are NOT undone: only the code goes back. Older code running against a newer database can fail.',
+			parent			: body
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note restore_note_becomes_restore_point',
+			text_content	: get_label.update_code_restore_note_becomes_restore_point || 'Nothing is deleted: the code running now is kept as a new restore point, so this move can be undone the same way.',
+			parent			: body
+		})
+
+	// footer + response
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content'
+		})
+		const response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response content'
+		})
+
+	// button_restore, declared before the checkbox that gates it
+		const button_restore = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'success button_restore_submit',
+			inner_html		: get_label.update_code_restore || 'Restore',
+			parent			: footer
+		})
+
+	// confirm_downgrade row — the version-changing case's ONE waiver, put where
+	// the decision is made (beside the button), exactly as waive_backup is.
+	// Same house pattern: the <label> WRAPS the input, so the whole row is the
+	// click target without an id/for pair to keep in sync.
+		let confirm_downgrade_input = null
+		if (version_changes) {
+
+			const confirm_row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'confirm_downgrade_row',
+				parent			: footer
+			})
+			const confirm_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'confirm_downgrade_label',
+				text_content	: (get_label.update_code_restore_confirm_downgrade || 'I understand this installation will run version %s while the database stays as it is')
+					.replace('%s', to_version || '—'),
+				parent			: confirm_row
+			})
+			confirm_downgrade_input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'confirm_downgrade_check',
+				name			: 'update_code_confirm_downgrade'
+			})
+			confirm_label.prepend(confirm_downgrade_input)
+			// the button stays locked until the waiver is given: the server
+			// refuses without it, and a submit that can only fail is not an offer
+			button_restore.disabled = true
+			confirm_downgrade_input.addEventListener('change', () => {
+				button_restore.disabled = confirm_downgrade_input.checked!==true
+			})
+			// the row moves BELOW the readout and ABOVE the button in source
+			// order too — insertBefore keeps the button last in the footer
+			footer.insertBefore(confirm_row, button_restore)
+		}
+
+	// click event
+		const click_handler = async (e) => {
+			e.stopPropagation()
+
+			response.classList.remove('error')
+
+			// busy guard: the update and the restore share the server's run lock
+				if (await job_in_progress()) {
+					response.textContent = get_label.update_code_busy || 'An update is already running.'
+					response.classList.add('error')
+					return
+				}
+
+			const confirm_downgrade = confirm_downgrade_input?.checked === true
+
+			// confirm. The versions are DATA → the injection-safe `note` slot.
+			const accepted = await ui.confirm({
+				header			: get_label.update_code_restore || 'Restore',
+				note			: (get_label.update_code_restore_confirm || 'Restore this code copy')
+					+ ': ' + from_version + ' → ' + (to_version || '—'),
+				body			: get_label.sure || 'Are you sure?',
+				accept_label	: get_label.update_code_restore || 'Restore'
+			})
+			if (accepted!==true) {
+				return
+			}
+
+			// button_spinner: the ring lives ON the button while the submit is in
+			// flight (the area_maintenance widget convention) — no separate
+			// spinner node competing with it for the operator's attention.
+			button_restore.disabled = true
+			button_restore.classList.add('button_spinner')
+
+			// restore_code. Submits the BACKGROUND JOB; the response returns
+			// immediately with `pid` + `pfile` extension keys.
+			const api_response = await self.restore_code({
+				name				: point.name,
+				confirm_downgrade	: confirm_downgrade
+			})
+
+			button_restore.classList.remove('button_spinner')
+
+			// the restore's own findings: EXTENSION KEYS of the success body —
+			// a FAILURE says it once, coded, through `error`.
+			const restore_errors	= response_extension(api_response, 'errors') || []
+			const pid				= response_extension(api_response, 'pid')
+			const pfile				= response_extension(api_response, 'pfile')
+			if (request_failed(api_response) || !response_data(api_response) || restore_errors.length || !pid || !pfile) {
+
+				// SEC-XSS-009: server sentences and shell output may contain HTML
+				// metacharacters — TEXT nodes only.
+				response.replaceChildren()
+				if (restore_errors.length) {
+					restore_errors.forEach((err, idx) => {
+						if (idx > 0) response.appendChild(document.createElement('br'))
+						response.appendChild(document.createTextNode(String(err)))
+					})
+				} else {
+					response.textContent = request_failed(api_response)
+						? error_text(api_response.error)
+						: (response_extension(api_response, 'msg') || 'Unknown error on API restore_code')
+				}
+				response.classList.add('error')
+				button_restore.disabled = false
+				return
+			}
+
+			// job accepted: close the modal, follow it on the panel surface with
+			// the SAME tracker the update uses — under the RESTORE resume key.
+			if (typeof modal.close==='function') {
+				modal.close()
+			}
+			track_process(
+				pid,
+				pfile,
+				body_response,
+				to_version,
+				point.digest ? String(point.digest) : null,
+				true,
+				LOCAL_DB_ID_RESTORE,
+				'restore'
+			)
+		}
+		button_restore.addEventListener('click', click_handler)
+
+	// response add at end (after buttons)
+		footer.appendChild(response)
+
+	// modal
+		const modal = ui.attach_to_modal({
+			header		: header,
+			body		: body,
+			footer		: footer,
+			size		: 'normal'
+		})
+		modal.classList.add('widget_update_code_modal', 'widget_update_code_restore_modal')
+
+	// Focus the Restore button so keyboard users can confirm without leaving the
+	// modal — unless the waiver gates it, where focus belongs on the checkbox.
+		dd_request_idle_callback(
+			() => {
+				if (confirm_downgrade_input) {
+					confirm_downgrade_input.focus()
+				} else {
+					button_restore.focus()
+				}
+			}
+		)
+
+
+	return modal
+}//end render_restore_modal
 
 
 

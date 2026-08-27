@@ -62,6 +62,19 @@
  * with no network and no `bun install`. LOAD-BEARING: if that ever changes,
  * deploy/dedalo-code-rollback.sh changes with it.
  *
+ * REUSED BY code_restore.ts (2026-08-25): the swap machinery below is exported
+ * — `codeStagingDir`, `assertSwapPreconditions`/`swapPreconditionsWithFrame`,
+ * `resolveBackupRootOrRefuse`, `acquireRunLockOrRefuse` (the SAME run lock, so
+ * a restore and an update can never interleave), `prepareStagingDirOrRefuse`,
+ * `backupDirName`, `installedDigestOf`, `sentinelGuardedSwap`,
+ * `createPhaseTracker`, `cleanStagingDir`, `errorText`,
+ * `refuseUnaccountedLiveEntries` — because a restore is this pipeline run in
+ * reverse. It must never grow a second copy of any of it. The LIVE-TREE gates
+ * in particular are about the SWAP, not about the archive: whatever moves the
+ * live tree aside owes the operator the same refusal (2026-08-25 review — the
+ * restore path shipped without them and would have carried `certs/` and
+ * operator drop-ins into a backup dir in silence).
+ *
  * The engine is seam-driven (`targetRoot`/`backupRoot`/`restart`/`verifySha`/
  * `supervised`/`installDeps`/`smokeBoot`/`channel`/`renameIntoPlace`) so tests
  * drive the full pipeline against a TEMP tree — the live projectRoot swap is
@@ -94,9 +107,16 @@ import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
+import {
+	availableBytesAt,
+	checkUpdateSpace,
+	formatGb,
+	looksLikeNoSpace,
+	type SpaceSeams,
+} from './disk_space.ts';
 import { INSTALL_STAMP_PATH, type InstallChannel, parseInstallStamp } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
-import { checkUpdatePreconditions } from './preconditions.ts';
+import { backupFreshness, checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
@@ -177,12 +197,14 @@ export interface UpdatePhaseFrame {
 	rollback?: { performed: boolean; to: string };
 }
 
-interface PhaseTracker {
+export interface PhaseTracker {
 	start: (phase: UpdatePhaseId, extra?: Partial<UpdatePhaseFrame>) => void;
+	/** Mark a phase this pipeline does not run (code_restore.ts fetches nothing). */
+	skip: (phase: UpdatePhaseId) => void;
 	fail: (message: string) => void;
 }
 
-function createPhaseTracker(
+export function createPhaseTracker(
 	version: string,
 	onPhase: ((frame: UpdatePhaseFrame) => void) | undefined,
 ): PhaseTracker {
@@ -199,6 +221,11 @@ function createPhaseTracker(
 		});
 	};
 	return {
+		skip(phase) {
+			// Silent on purpose: the NEXT started phase carries the whole track,
+			// so a restore does not open with four frames saying nothing happened.
+			statuses.set(phase, 'skipped');
+		},
 		start(phase, extra = {}) {
 			if (current !== null) statuses.set(current, 'done');
 			statuses.set(phase, 'running');
@@ -243,6 +270,8 @@ export interface CodeUpdateSeams {
 	renameRestore?: (from: string, to: string) => void;
 	/** Progress frames (the widget wires this to the job's onData). */
 	onPhase?: (frame: UpdatePhaseFrame) => void;
+	/** Disk-space measurement (tests inject a full filesystem; see disk_space.ts). */
+	space?: SpaceSeams;
 }
 
 function sha256Of(filePath: string): string {
@@ -483,8 +512,16 @@ export function stagingHoldsParkedTree(backupRoot: string): boolean {
 	return existsSync(join(codeStagingDir(backupRoot), STAGING_KEEP_MARKER));
 }
 
+/** Is `dir` the staging dir itself, or under it? The one question
+ * STAGING_KEEP_MARKER answers truthfully (see restoreAfterFailedSwap). */
+function isInsideDir(dir: string, parent: string): boolean {
+	const inner = resolve(dir);
+	const outer = resolve(parent);
+	return inner === outer || inner.startsWith(outer + sep);
+}
+
 /** The guarded staging cleanup — never deletes a staging dir holding a parked tree. */
-function cleanStagingDir(stagingDir: string): void {
+export function cleanStagingDir(stagingDir: string): void {
 	if (existsSync(join(stagingDir, STAGING_KEEP_MARKER))) {
 		console.error(
 			`[code update] staging dir KEPT — it holds a parked tree after a failed swap restore: ${stagingDir}`,
@@ -572,8 +609,9 @@ function carryPreservedEntries(backupDir: string, codeRoot: string, moved: strin
  * The failed-second-rename repair: preserved entries back into the backup
  * FIRST (so a restore-rename failure never leaves them in staging), then the
  * old tree straight back where it was; on success refuse with the original
- * cause. A DOUBLE failure parks the new tree in staging under
- * STAGING_KEEP_MARKER and throws naming both surviving trees.
+ * cause. A DOUBLE failure hands over to `refuseAfterDoubleFailure`, which parks
+ * the incoming tree (when staging is where it sits) and throws naming both
+ * surviving trees.
  */
 function restoreAfterFailedSwap(
 	preservedMoved: readonly string[],
@@ -591,9 +629,39 @@ function restoreAfterFailedSwap(
 		}
 		renameRestore(backupDir, targetRoot);
 	} catch (restoreError) {
-		// DOUBLE FAILURE: no tree at targetRoot. The old tree survives in
-		// backupDir (pending sentinel → supervisor rollback restores it); the
-		// new tree survives parked in staging, marked against deletion.
+		refuseAfterDoubleFailure(codeRoot, backupDir, stagingDir, error, restoreError);
+	}
+	refuseUpdate(
+		'update.failed',
+		'Error. Code swap failed after the backup rename — the previous tree was restored in place; nothing changed',
+		error,
+	);
+}
+
+/**
+ * THE DOUBLE FAILURE: the swap's second rename failed AND the restore rename
+ * failed too, so there is no tree at targetRoot. The old tree survives in
+ * `backupDir` (the pending sentinel is still there, so the supervisor-side
+ * rollback can restore it); the incoming tree survives where it already was.
+ *
+ * THE MARKER IS A STATEMENT ABOUT STAGING, NOT ABOUT THE FAILURE (2026-08-25
+ * review). An UPDATE's incoming tree is the quarantine UNDER `stagingDir`, so
+ * STAGING_KEEP_MARKER both stops the sweep and tells the next run why. A
+ * RESTORE's incoming tree is the restore point inside the BACKUP ROOT and
+ * staging is empty: dropping the marker there parked nothing, kept an empty
+ * directory forever, and made `prepareStagingDirOrRefuse` hard-refuse every
+ * later update AND restore — quoting a recovery instruction that names a
+ * directory holding no tree, on an installation that has just lost its live one.
+ */
+function refuseAfterDoubleFailure(
+	codeRoot: string,
+	backupDir: string,
+	stagingDir: string,
+	error: unknown,
+	restoreError: unknown,
+): never {
+	const parkedInStaging = isInsideDir(codeRoot, stagingDir);
+	if (parkedInStaging) {
 		try {
 			writeFileSync(
 				join(stagingDir, STAGING_KEEP_MARKER),
@@ -602,17 +670,13 @@ function restoreAfterFailedSwap(
 		} catch {
 			// marker write best-effort — the error below still names both trees
 		}
-		throw new DedaloError('update.failed', {
-			message: `code swap failed (${String(error)}) AND the restore failed (${String(restoreError)}): old tree at ${backupDir}, new tree parked at ${codeRoot} — staging dir KEPT`,
-			publicMessage:
-				'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the new tree is parked in staging (NOT deleted), and the pending rollback sentinel is in place. Operator recovery required; see the server log.',
-		});
 	}
-	refuseUpdate(
-		'update.failed',
-		'Error. Code swap failed after the backup rename — the previous tree was restored in place; nothing changed',
-		error,
-	);
+	throw new DedaloError('update.failed', {
+		message: `code swap failed (${String(error)}) AND the restore failed (${String(restoreError)}): old tree at ${backupDir}, new tree at ${codeRoot}${parkedInStaging ? ' — staging dir KEPT' : ''}`,
+		publicMessage: parkedInStaging
+			? 'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the new tree is parked in staging (NOT deleted), and the pending rollback sentinel is in place. Operator recovery required; see the server log.'
+			: 'Error. Code swap failed and the automatic restore also failed — the previous tree remains in the backup dir, the tree that was being installed remains where it was, and the pending rollback sentinel is in place. Operator recovery required; see the server log.',
+	});
 }
 
 /**
@@ -643,7 +707,7 @@ function writeInstallStampSync(codeRoot: string, request: UpdateRequest): void {
  * a tree that is not this process's). Null for a tree installed before stamps
  * existed, or a dev checkout.
  */
-function installedDigestOf(targetRoot: string): string | null {
+export function installedDigestOf(targetRoot: string): string | null {
 	try {
 		return (
 			parseInstallStamp(readFileSync(join(targetRoot, INSTALL_STAMP_PATH), 'utf8'))?.digest ?? null
@@ -660,7 +724,7 @@ function installedDigestOf(targetRoot: string): string | null {
  * short digest of the tree the dir HOLDS makes it identifiable; a tree with no
  * stamp keeps the old name rather than inventing a token.
  */
-function backupDirName(
+export function backupDirName(
 	previousVersion: string,
 	previousDigest: string | null,
 	stamp: string,
@@ -671,14 +735,18 @@ function backupDirName(
 }
 
 /** The rollback sentinel (deploy/dedalo-code-rollback.sh contract — flat, exact keys). */
-interface UpdateSentinel {
+export interface UpdateSentinel {
 	version: string;
 	previousVersion: string;
 	updateMode: 'clean';
 	stamp: string;
 	backupDir: string;
-	/** sha256 of the installed archive — what boot_confirm.ts compares (2026-08-24). */
-	installDigest: string;
+	/** sha256 of the installed archive — what boot_confirm.ts compares (2026-08-24).
+	 * OPTIONAL since 2026-08-25: a restore point installed before stamps existed
+	 * has no digest, and boot_confirm.ts falls back to the version compare only
+	 * when the FIELD IS ABSENT — writing an empty string would make it compare a
+	 * digest that can never match and scream on every boot. */
+	installDigest?: string;
 	status: 'pending';
 	rollback_attempted: false;
 }
@@ -713,10 +781,18 @@ async function installDepsReal(codeRoot: string): Promise<void> {
 	});
 	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
 	if (exitCode !== 0) {
+		// A FULL DISK is the one failure whose sentence must not be generic: bun
+		// reports it as a wall of per-package `NoSpaceLeft`/`FileNotFound`
+		// extraction errors that read like a corrupt registry cache, and the
+		// operator's action (free space) is nothing like "retry the download".
+		const noSpace = looksLikeNoSpace(stderr);
+		const available = availableBytesAt(codeRoot);
 		// 503/retryable — correct for the offline case (registry unreachable).
 		throw new DedaloError('update.failed', {
 			message: `bun install failed in the quarantine (exit ${exitCode}): ${stderr.trim().split('\n').slice(-20).join('\n')}`,
-			publicMessage: 'Error. Installing the release dependencies failed — nothing was swapped',
+			publicMessage: noSpace
+				? `Error. The disk filled up while installing the release dependencies${available === null ? '' : ` (${formatGb(available)} available)`} — free space and retry; nothing was swapped`
+				: 'Error. Installing the release dependencies failed — nothing was swapped',
 		});
 	}
 }
@@ -755,15 +831,30 @@ interface UpdateRequest {
 function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRequest {
 	const options = (rawOptions ?? {}) as UpdateCodeOptions;
 	const waiveBackup = options.waive_backup === true;
-	if (waiveBackup) {
-		console.warn(
-			`[code update] BACKUP REQUIREMENT WAIVED by request (waive_backup: true, user ${principal.userId}) — proceeding without a recent database backup`,
-		);
-	}
 	checkUpdatePreconditions(
 		principal,
 		waiveBackup ? { backupWarn: false } : { backupRequire: true },
 	);
+	// The audit line records the FACT of a waiver, never the flag that asked for
+	// one, and only AFTER the identity gates have passed. Until 2026-08-26 it did
+	// the opposite: it fired before checkUpdatePreconditions, so any global admin
+	// (the widget door is `isGlobalAdmin`, not SUPERUSER_ID) could fill the log
+	// with `WAIVED … proceeding without a recent database backup` lines for
+	// requests that were refused on the very next statement and proceeded with
+	// nothing. It also fired over a FRESH backup — both drills always send the
+	// flag — so the line implied a missing backup that was not missing.
+	if (waiveBackup) {
+		const { hours, stale } = backupFreshness();
+		if (hours === null || stale) {
+			console.warn(
+				`[code update] BACKUP REQUIREMENT WAIVED by user ${principal.userId} — proceeding with ${
+					hours === null
+						? 'NO database backup at all'
+						: `a database backup about ${Math.round(hours)} hours old`
+				}`,
+			);
+		}
+	}
 	const request = readReleaseFields(options);
 	assertReleaseShape(request);
 	return request;
@@ -829,7 +920,7 @@ function assertReleaseShape({ url, version, declaredSha, channel }: UpdateReques
  *    by the swap.
  *  - The backup root itself must not sit inside the tree the swap renames away.
  */
-function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
+export function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
 	const supervised = seams.supervised ?? isSupervised();
 	if (targetRoot === projectRoot && !supervised) {
 		refuseUpdate(
@@ -884,7 +975,7 @@ export function resolveCodeBackupRoot(): string {
 
 /** Resolve the backup root and refuse one that sits inside the tree the swap
  * renames away (its own swap would move it). */
-function resolveBackupRootOrRefuse(targetRoot: string, seams: CodeUpdateSeams): string {
+export function resolveBackupRootOrRefuse(targetRoot: string, seams: CodeUpdateSeams): string {
 	const backupRoot = seams.backupRoot ?? resolveCodeBackupRoot();
 	if (backupRootIsInsideTree(backupRoot, targetRoot)) {
 		refuseUpdate(
@@ -1012,10 +1103,49 @@ function isSecretShapedName(name: string): boolean {
  *    that cannot start never replaces a working one.
  */
 
-/** The ROOT WHITELIST + nested secret-pattern refusals (prepareQuarantine's
- * first gates — see its doc comment; the module header states the nested
- * check's honest limit). */
-function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
+/**
+ * The SECRET-SHAPE refusal, on its own (2026-08-26). The first rename carries
+ * the WHOLE live tree into the backup dir, so an operator's `certs/`,
+ * `.env.local` or `deploy/*.pem` — absent from the tree about to land — would
+ * follow it there and the new tree would come up without them.
+ *
+ * DIRECTION-FREE, which is why it is the half a RESTORE can reuse: it asks
+ * only "is this secret-shaped thing missing from the incoming tree?", a
+ * question whose answer does not depend on which tree is newer. The walk
+ * starts at `prefix: ''`, so root-level secrets are covered here too — the
+ * root whitelist below adds nothing to the secret story.
+ */
+export function refuseUntrackedSecrets(codeRoot: string, targetRoot: string): void {
+	const nestedSecrets = nestedUntrackedSecrets(codeRoot, targetRoot);
+	if (nestedSecrets.length > 0) {
+		refuseArchive(
+			`Error. Untracked secret-shaped entries under shipped directories would be moved into the backup by the swap: ${nestedSecrets.join(', ')} — move them out of the tree before updating.`,
+		);
+	}
+}
+
+/** The ROOT WHITELIST + the secret walk (prepareQuarantine's first gates — see
+ * its doc comment; the module header states the nested check's honest limit).
+ *
+ * UPDATE-ONLY, and the `shipped` set is why (2026-08-26). It reads the root of
+ * the tree ABOUT TO LAND and refuses every live root entry missing from it —
+ * sound only while the incoming tree is NEWER, so that what it ships is a
+ * superset of what the outgoing one did. A RESTORE inverts that: the incoming
+ * tree is older, so every root entry added by a release since the point was cut
+ * (`SECURITY.md` + `.gitleaks.toml` in f6ded58d80, `cliff.toml` in 8a26b27a6d,
+ * `install.sh` + `docker-compose.simple.yml` in 7e3a27e026 …) reads as
+ * "unaccounted". Measured: restoring across 2026-08-03 refused with "move them
+ * out of the tree (or delete them)" — telling the operator to delete SHIPPED
+ * release files, in a sentence that says "before updating", on the one path
+ * whose whole purpose is recovering a broken install. Worse, the verdict is
+ * invisible to `restorabilityOf`, so the panel offered a button the pipeline
+ * then refused — the disagreement both modules' headers forbid.
+ *
+ * So the restore path calls `refuseUntrackedSecrets` alone. What it gives up is
+ * the non-secret-shaped operator drop-in, which on a restore is indistinguishable
+ * from ordinary release drift; what it keeps is the hazard that actually loses
+ * data. */
+export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
 	const shipped = new Set(readdirSync(codeRoot));
 	const unknown = readdirSync(targetRoot).filter(
 		(name) => !shipped.has(name) && !PRESERVE_ROOT_ENTRIES.has(name) && name !== 'node_modules',
@@ -1025,12 +1155,7 @@ function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): voi
 			`Error. Unknown entries at the code-tree root would be moved into the backup by the swap: ${unknown.join(', ')} — move them out of the tree (or delete them) before updating.`,
 		);
 	}
-	const nestedSecrets = nestedUntrackedSecrets(codeRoot, targetRoot);
-	if (nestedSecrets.length > 0) {
-		refuseArchive(
-			`Error. Untracked secret-shaped entries under shipped directories would be moved into the backup by the swap: ${nestedSecrets.join(', ')} — move them out of the tree before updating.`,
-		);
-	}
+	refuseUntrackedSecrets(codeRoot, targetRoot);
 }
 
 async function prepareQuarantine(
@@ -1063,7 +1188,7 @@ async function prepareQuarantine(
  * fire before any phase has started — without this the operator watched an
  * all-pending track and got only a generic sentence.
  */
-function swapPreconditionsWithFrame(
+export function swapPreconditionsWithFrame(
 	targetRoot: string,
 	seams: CodeUpdateSeams,
 	phases: PhaseTracker,
@@ -1077,7 +1202,7 @@ function swapPreconditionsWithFrame(
 }
 
 /** The message a phase-frame carries for any thrown value. */
-function errorText(error: unknown): string {
+export function errorText(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
@@ -1193,7 +1318,7 @@ function reclaimStaleRunLockOrRefuse(lockPath: string): void {
 
 /** Refuse a staging dir holding a PARKED tree (a previous run's failed swap
  * restore — never sweep it), else sweep and recreate it empty. */
-function prepareStagingDirOrRefuse(stagingDir: string): void {
+export function prepareStagingDirOrRefuse(stagingDir: string): void {
 	if (existsSync(join(stagingDir, STAGING_KEEP_MARKER))) {
 		refuseUpdate(
 			'update.refused',
@@ -1212,7 +1337,7 @@ function prepareStagingDirOrRefuse(stagingDir: string): void {
  * (the rollback script tolerates a leftover pending sentinel naming a
  * nonexistent backupDir).
  */
-async function sentinelGuardedSwap(
+export async function sentinelGuardedSwap(
 	codeRoot: string,
 	targetRoot: string,
 	backupRoot: string,
@@ -1254,6 +1379,43 @@ function retractSentinelIfFullyRestored(
 	}
 }
 
+/**
+ * THE DISK-SPACE GATE, before the first byte is downloaded. Peak cost of an
+ * update is a second copy of the live tree in staging (archive + extracted tree
+ * + its own node_modules); disk_space.ts measures both sides. An unmeasurable
+ * side never refuses — see checkUpdateSpace.
+ *
+ * Placed here, and not later, because every phase after it SPENDS disk: the
+ * remote install of 2026-08-25 downloaded, verified and extracted a release
+ * before dying inside `bun install` with a screenful of NoSpaceLeft.
+ *
+ * PRESERVE_ROOT_ENTRIES is handed to the measure because those entries are
+ * MOVED by the swap, never staged — counting `.git` would refuse updates that
+ * fit comfortably (see disk_space.ts).
+ */
+async function refuseOnInsufficientSpace(
+	targetRoot: string,
+	backupRoot: string,
+	seams: SpaceSeams,
+): Promise<void> {
+	const space = await checkUpdateSpace(targetRoot, backupRoot, PRESERVE_ROOT_ENTRIES, seams);
+	if (space.sufficient) {
+		// A null side means the gate could not run. It does not refuse (see
+		// checkUpdateSpace), but it says so — an update that later dies of
+		// ENOSPC must not look like one this check cleared.
+		if (space.available === null || space.required === null) {
+			console.warn(
+				`[code update] disk-space gate DISARMED (available=${space.available}, required=${space.required}) — proceeding unchecked`,
+			);
+		}
+		return;
+	}
+	refuseUpdate(
+		'update.refused',
+		`Error. Not enough free disk space to install a release: ${formatGb(space.available ?? 0)} available where the update stages (${backupRoot}), about ${formatGb(space.required ?? 0)} needed — free space and retry.`,
+	);
+}
+
 /** The full code-update pipeline. Seam-driven; production passes no seams. */
 export async function updateCode(
 	rawOptions: unknown,
@@ -1285,6 +1447,7 @@ export async function updateCode(
 
 	try {
 		prepareStagingDirOrRefuse(stagingDir);
+		await refuseOnInsufficientSpace(targetRoot, backupRoot, seams.space ?? {});
 
 		const zipPath = await acquireVerifiedArchive(request, stagingDir, seams, phases);
 

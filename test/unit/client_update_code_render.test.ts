@@ -115,8 +115,12 @@ describe('update_code source shape', () => {
 
 	test('both the start and the resume path stream through update_process_status', () => {
 		// ONE tracker serves both paths; the mandated call lives inside it…
-		expect(render_src).toContain('update_process_status(LOCAL_DB_ID, pid, pfile,');
+		// PARAMETRIZED since the restore joined (2026-08-25): the resume key is
+		// the tracker's last argument, so the two jobs cannot resume as each
+		// other, and BOTH keys are pinned here.
+		expect(render_src).toContain('update_process_status(local_db_id, pid, pfile,');
 		expect(render_src).toContain("const LOCAL_DB_ID = 'process_update_code'");
+		expect(render_src).toContain("const LOCAL_DB_ID_RESTORE = 'process_restore_code'");
 		// …and both paths route into it
 		const track_calls = render_src.match(/track_process\(/g) ?? [];
 		expect(
@@ -180,8 +184,10 @@ describe('update_code source shape', () => {
 		expect(interrupted_block).toContain('data_manager.set_local_db_data(');
 		expect(interrupted_block).toContain(
 			// the digest rides along so a RESUMED panel can still judge a
-			// same-version install (2026-08-24)
-			'{ id : LOCAL_DB_ID, value : { pid : pid, pfile : pfile, digest : expected_digest } }',
+			// same-version install (2026-08-24); the key is the tracker's own
+			// parameter since the restore joined (2026-08-25), so an interrupted
+			// restore is restored under the RESTORE key, never the update's
+			'{ id : local_db_id, value : { pid : pid, pfile : pfile, digest : expected_digest } }',
 		);
 		expect(interrupted_block).toContain('update_code_connection_lost');
 		// FINDING 4 (client half): a job that ENDED (final frame, is_running:false)
@@ -479,6 +485,178 @@ describe('resolve_health_outcome on a same-version (dev channel) install', () =>
 });
 
 // ---------------------------------------------------------------------------
+// THE WAIVE-BACKUP CONTROL (2026-08-25). A code update REFUSES without a recent
+// DATABASE backup, and the refusal sentence names `waive_backup` as the way
+// through — a flag ONLY the drills could send, so a stale backup was a dead end
+// for every operator. Source-shape gates, same reason as the switch below: the
+// wiring lives in a DOM factory this suite cannot boot.
+// ---------------------------------------------------------------------------
+describe('update_code waive-backup control', () => {
+	test('the flag reaches the wire, strictly and only as a boolean', () => {
+		// The server reads `options.waive_backup === true` (code_update.ts). If
+		// the client never puts the key in the bag, the checkbox is decoration.
+		expect(/options\s*:\s*\{[^}]*waive_backup/s.test(model_src)).toBe(true);
+		// a truthy stray must never be what disarms a guard — on BOTH sides
+		expect(model_src).toContain('options.waive_backup === true');
+	});
+
+	test('the control is offered only when the backup gate is actually in the way', () => {
+		// The server's `backup_fresh` check is `ok` exactly when the pipeline will
+		// not refuse on this account. Rendering the waiver unconditionally would
+		// invite an operator to disarm a guard that is not blocking anything.
+		// via the shared predicate (see the ONE-predicate test below), which is
+		// where the `backup_fresh` / `state!=='ok'` decision actually lives
+		expect(render_src).toContain('backup_waiver_check(self.value?.consumer)');
+		expect(/if\s*\(backup_check\)\s*\{/.test(render_src)).toBe(true);
+	});
+
+	test('the checkbox is a wrapping label, and its note carries the caution', () => {
+		// house pattern (dev_channel_row / move_lang): the <label> WRAPS the input,
+		// so there is no id/for pair to keep in sync.
+		expect(render_src).toContain('waive_backup_label.prepend(waive_backup_input)');
+		expect(render_src).toContain('update_code_waive_backup');
+		expect(render_src).toContain('dd_note waive_backup_note state_warning');
+	});
+
+	test('a waived backup is restated in the final confirm', () => {
+		// The checkbox is one click; the consequence is that the database is not
+		// restorable. The last gate must say so, and via ui.confirm (never a
+		// native dialog — see the blocking-dialogs test above).
+		expect(render_src).toContain('update_code_waive_backup_confirm');
+		expect(/waive_backup\s*:\s*waive_backup/.test(render_src)).toBe(true);
+	});
+
+	test('the modal reads a FRESH panel value, not the one build() seeded', () => {
+		// self.value is read at build() time and backup freshness AGES: a panel
+		// left open across the deadline would hide the only control that lets the
+		// operator proceed.
+		expect(render_src).toContain('self.value = fresh_value');
+	});
+
+	test('the headline never claims plain readiness over an outstanding waiver', () => {
+		// `ready` is `!checks.some(blocked)` and the waivable gate now reports
+		// `warn`, so `ready:true` no longer means "the DEFAULT request succeeds"
+		// — that request sends waive_backup:false and is still refused. A bare
+		// "Ready to update" there over-reports exactly as loudly as the "Update
+		// blocked" it replaced.
+		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
+		expect(status_src).toContain('update_code_ready_with_waiver');
+		expect(typeof master_labels.update_code_ready_with_waiver).toBe('string');
+	});
+
+	test('the headline and the checkbox read ONE predicate, scoped to the waivable gate', () => {
+		// `bun_pin` and `staging_clean` also emit `warn` on the consumer half and
+		// neither is waivable, so a headline keyed on "any warn" demanded a waiver
+		// the modal offered no way to give. One exported predicate, both sites.
+		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
+		expect(status_src).toContain('export const backup_waiver_check');
+		expect(status_src).toContain("el.id==='backup_fresh'");
+		// neither site may re-derive the answer for itself
+		expect(status_src).not.toContain("some(check => check.state==='warn')");
+		expect(render_src).toContain('backup_waiver_check(self.value?.consumer)');
+		expect(status_src).toContain('backup_waiver_check(consumer)');
+	});
+
+	test('the panel is re-stated from the value the modal reads', () => {
+		// otherwise the modal's waiver row ("25 h") sits over a readiness row
+		// still reading "23 h · ok": one fact, two states, both on screen.
+		expect(/refresh_readiness\(consumer_half/.test(render_src)).toBe(true);
+		// …and when there is no readiness block to replace (the FALLBACK painting,
+		// a payload without `consumer`), the whole half is rendered again rather
+		// than left stranded on version+build. See the browser suite for the
+		// behavioural gate on refresh_readiness itself.
+		expect(render_src).toContain('render_consumer_half(fresh_value.consumer)');
+		expect(readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8')).toContain(
+			'export const refresh_readiness',
+		);
+	});
+
+	test('its labels are defined in the master catalog', () => {
+		for (const key of [
+			'update_code_waive_backup',
+			'update_code_waive_backup_note',
+			'update_code_waive_backup_confirm',
+		]) {
+			expect(typeof master_labels[key], `${key} missing from master.json`).toBe('string');
+		}
+	});
+
+	test('the row is styled in the MODAL footer, never under .role_body', () => {
+		// The panel's own switch lives under `.role_body >.dev_channel_row`; a
+		// selector pointing there for a node that renders in the modal footer
+		// matches NOTHING and the styles simply vanish (the same silent failure
+		// the `>` test below gates for the nodes that moved into a role block).
+		expect(css_src).not.toContain('.role_body >.waive_backup_row');
+		expect(css_src).toContain('.waive_backup_row');
+		expect(css_src).toContain('>.waive_backup_check');
+		expect(css_src).toContain('>.dd_note.waive_backup_note');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE RESTORE CONTROL (2026-08-25). The DECISION it makes — whether to demand
+// the downgrade waiver — is exercised in the browser suite; what is pinned here
+// is what that decision is computed FROM, because reading the wrong version
+// string is invisible in the DOM until a dev-channel install meets it.
+// ---------------------------------------------------------------------------
+describe('update_code restore control', () => {
+	test('the downgrade decision compares the SERVER’s version, not the page global', () => {
+		// page_globals.dedalo_version is DEDALO_ENGINE_VERSION and carries the
+		// prerelease tag ('7.0.1.dev'); the pipeline compares
+		// DEDALO_VERSION_TRIPLE.join('.'), a bare '7.0.1'. Comparing the page
+		// global drew the waiver on every developer-channel restore of the
+		// version already running, locked the submit behind it, and had the
+		// server log "VERSION CHANGE CONFIRMED … from 7.0.1 to 7.0.1".
+		expect(render_src).toContain(
+			'export const render_restore_modal = function( self, point, body_response, running_version )',
+		);
+		expect(render_src).toContain('const from_version		= String(running_version ||');
+		// …and the panel hands it the server's own field. Matched by SHAPE, not by
+		// the holder's name: the consumer half became one re-callable writer
+		// (render_consumer_half) on 2026-08-26 and `value.consumer` there is now
+		// simply `consumer` — what must not drift is that the version comes off
+		// the payload's engine, never off the page global.
+		expect(/\(\s*consumer\.engine \|\| \{\}\)\.version/.test(render_src)).toBe(true);
+		expect(
+			/render_restore_modal\([^)]*page_globals\.dedalo_version/.test(render_src),
+			'the restore modal must never be handed the page global as the running version',
+		).toBe(false);
+	});
+
+	test('a blocked point’s tooltip is its OWN reason, and every reason id has a label', () => {
+		// The reason ids are code_restore.ts's RestoreBlockReason. A missing label
+		// used to fall back to the not-bootable sentence, which contradicted the
+		// green `bootable` pill the same row draws.
+		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
+		expect(status_src).toContain(
+			"get_label['update_code_restore_reason_' + point.restorable_reason]",
+		);
+		const restore_src = readFileSync(
+			join(import.meta.dir, '../../src/core/update/code_restore.ts'),
+			'utf8',
+		);
+		const reasons = /export type RestoreBlockReason =([^;]+);/.exec(restore_src)?.[1] ?? '';
+		const ids = [...reasons.matchAll(/'([a-z_]+)'/g)].map((match) => match[1]);
+		expect(ids.length).toBeGreaterThan(0);
+		for (const id of ids) {
+			expect(
+				typeof master_labels[`update_code_restore_reason_${id}`],
+				`update_code_restore_reason_${id} missing from master.json`,
+			).toBe('string');
+		}
+	});
+
+	test('the waiver label carries the %s the client substitutes', () => {
+		// Both halves of one bug: the confirm header printed a raw %s nobody
+		// substituted, and the waiver label had no %s for the .replace() that
+		// names the target version.
+		expect(render_src).toContain(".replace('%s', to_version");
+		expect(master_labels.update_code_restore_confirm_downgrade).toContain('%s');
+		expect(master_labels.update_code_restore_confirm).not.toContain('%s');
+	});
+});
+
+// ---------------------------------------------------------------------------
 // THE DEVELOPER-BUILDS SWITCH (2026-08-24). Source-shape gates: the wiring
 // these behaviours need is spread across a DOM factory this suite cannot boot,
 // so the gate is that the load-bearing lines exist and stay honest.
@@ -656,5 +834,34 @@ describe('update_code developer-builds switch', () => {
 		expect(/value\s*:\s*\{\s*pid\s*:\s*pid,\s*pfile\s*:\s*pfile,\s*digest/.test(render_src)).toBe(
 			true,
 		);
+	});
+
+	test('the client interruption marker IS the one core/media/jobs.ts writes', () => {
+		// The client tells "the owning process died" apart from "the job failed"
+		// by a PREFIX in errors[], because JobStatusFrame carries no `status` —
+		// it collapses into is_running:false (jobs.ts frameOf). That makes a
+		// server string a client contract, so it gets a gate: a reworded marker
+		// on the server would otherwise silently turn every resumed, completed
+		// restore back into "the update failed" (the 2026-08-26 defect).
+		const phases_src = readFileSync(join(WIDGET_DIR, 'js/update_code_phases.js'), 'utf8');
+		const declared = /JOB_INTERRUPTED_PREFIX\s*=\s*'([^']+)'/.exec(phases_src)?.[1];
+		expect(declared).toBe('interrupted: ');
+
+		const jobs_src = readFileSync(join(import.meta.dir, '../../src/core/media/jobs.ts'), 'utf8');
+		// every errors.push of an interruption uses that exact prefix…
+		const pushes = jobs_src.match(/errors\.push\(\s*[`'"]interrupted[^`'"]*/g) ?? [];
+		expect(pushes.length).toBeGreaterThanOrEqual(3);
+		for (const push of pushes) {
+			expect(push).toContain(`interrupted: `);
+		}
+		// …and no OTHER errors.push starts with the word, which would read as an
+		// interruption to the client while meaning something else.
+		const strays = (jobs_src.match(/errors\.push\(\s*[`'"][^`'"]*/g) ?? []).filter(
+			(push) => /interrupted/i.test(push) && !push.includes('interrupted: '),
+		);
+		expect(strays).toEqual([]);
+
+		// and the frame the client reads still has no `status` to use instead
+		expect(/function frameOf\([^)]*\): JobStatusFrame \{[^}]*status:/s.test(jobs_src)).toBe(false);
 	});
 });

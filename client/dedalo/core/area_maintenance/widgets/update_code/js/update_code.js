@@ -15,13 +15,17 @@
 *      destroy) by delegating those prototype methods to widget_common.
 *   2. Provide `get_value` (loading this widget's server-side data payload) from
 *      area_maintenance (dd_area_maintenance_api::get_widget_value).
-*   3. Expose two async methods that drive the two-phase update workflow:
+*   3. Expose three async methods that drive the update and restore workflows:
 *      - `get_code_update_info`  — interrogates a remote Dédalo distribution
 *        server and returns the list of available release zips plus metadata about
 *        the current running version.
 *      - `update_code`           — submits the server-side update as a BACKGROUND
 *        JOB; the response returns immediately with `pid` + `pfile` extension
 *        keys and the render layer follows the job's status stream.
+*      - `restore_code`          — the same swap machinery run in REVERSE: a
+*        restore point left behind by an earlier update is moved back into place.
+*        Same background-job contract (`pid` + `pfile`), same phase frames, so the
+*        render layer follows it through exactly the same tracker.
 *
 * The DOM layer (modal, file-selection radio list, phase-track progress,
 * error display, build-from-git buttons) is handled entirely by
@@ -241,6 +245,13 @@ update_code.prototype.get_code_update_info = async function ( server, channel ) 
 *   { version, date, entity_id, entity, host }
 * @param {Object} options.file_active - The release zip entry selected by the
 *   operator: { version, url, date, active }
+* @param {boolean} [options.waive_backup] - The operator's explicit waiver of the
+*   RECENT DATABASE BACKUP precondition (the modal's checkbox, offered only when
+*   the panel's `backup_fresh` check is not `ok`). Strict `=== true` here as on
+*   the server (core/update/code_update.ts): a truthy stray must never be what
+*   disarms a guard; every waiver is logged loudly, with the requesting user, in
+*   the server log. It waives the DATABASE backup only — the code backup is the
+*   swap itself (two renames of a tree already on disk) and is never optional.
 * @returns {Promise<Object>} api_response — envelope with `pid` + `pfile`
 *   extension keys on success (the job handle), `error` on failure.
 */
@@ -249,6 +260,7 @@ update_code.prototype.update_code = async function ( options ) {
 	// options
 	const file_active	= options.file_active
 	const info			= options.info
+	const waive_backup	= options.waive_backup === true
 
 	const api_response = await data_manager.request({
 		body		: {
@@ -261,8 +273,9 @@ update_code.prototype.update_code = async function ( options ) {
 				action	: 'update_code'
 			},
 			options	: {
-				file	: file_active,
-				info	: info
+				file			: file_active,
+				info			: info,
+				waive_backup	: waive_backup
 			}
 		},
 		retries : 1, // one try only
@@ -275,6 +288,65 @@ update_code.prototype.update_code = async function ( options ) {
 
 	return api_response
 }//end update_code
+
+
+
+/**
+* RESTORE_CODE
+* Submits the server-side RESTORE of a previous code tree as a BACKGROUND JOB.
+*
+* Every update renames the outgoing tree aside as a restore point (kept WITH its
+* node_modules, so it boots with no network). This asks the engine to move one of
+* those points back into place: the same atomic rename swap the update performs,
+* run in reverse, with the currently live tree becoming a NEW restore point.
+*
+* THE POINT IS NAMED, NEVER PATHED. The server matches `name` against its own
+* listing of the backup root and joins it itself; a client that could send a path
+* would be choosing which directory to make live.
+*
+* @param {Object} options
+* @param {string} options.name - Restore-point directory name exactly as the
+*   panel received it in `value.consumer.restore_points[].name`.
+* @param {boolean} [options.confirm_downgrade] - The operator's explicit
+*   acknowledgement that the restored tree declares a DIFFERENT version than the
+*   running one, and that database migrations already applied are NOT reverted by
+*   moving code back. Strict `=== true` here as on the server: a truthy stray must
+*   never be what disarms a guard, and every waiver is logged loudly with the
+*   requesting user. The server refuses a version-changing restore without it.
+* @returns {Promise<Object>} api_response — envelope with `pid` + `pfile`
+*   extension keys on success (the job handle), `error` on failure.
+*/
+update_code.prototype.restore_code = async function ( options ) {
+
+	// options
+	const name					= options.name
+	const confirm_downgrade		= options.confirm_downgrade === true
+
+	const api_response = await data_manager.request({
+		body		: {
+			dd_api		: 'dd_area_maintenance_api',
+			action		: 'widget_request',
+			prevent_lock	: true,
+			source		: {
+				type	: 'widget',
+				model	: 'update_code',
+				action	: 'restore_code'
+			},
+			options	: {
+				name				: name,
+				confirm_downgrade	: confirm_downgrade
+			}
+		},
+		retries : 1, // one try only
+		timeout : 60 * 1000 // the job is submitted, not awaited
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) restore_code update_code api_response:', api_response);
+	}
+
+
+	return api_response
+}//end restore_code
 
 
 

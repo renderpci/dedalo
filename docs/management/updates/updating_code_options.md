@@ -34,7 +34,11 @@ Before anything is downloaded, the update **refuses** unless all of the followin
 - the server is in **maintenance mode** (see [maintenance status](../maintenance_status.md));
 - a **recent database backup** exists (newer than the configured backup window).
 
-The backup requirement can be waived only by an explicit `waive_backup: true` in the update request — there is no panel checkbox for it, and every waiver is logged loudly in the server log with the requesting user.
+The backup requirement is the only one of the three an operator can waive. When the newest backup is stale — or there is none at all — the version modal offers an **Update without a recent database backup** checkbox above the Update button; ticking it puts `waive_backup: true` in the update request, the confirmation restates the waiver, and the server logs it loudly with the requesting user. The checkbox is not rendered when the backup is fresh, since there would be nothing to waive.
+
+Because the waiver exists, the readiness panel reports a stale or absent backup as a **warning**, not as a block: it does not make the panel say "Update blocked" for a run the updater will accept. The headline says so precisely — *Ready to update, but only with a waiver* — since an update submitted **without** the waiver still refuses outright.
+
+The waiver covers the **database** backup only. The code backup is the swap itself — the outgoing tree is renamed aside, not copied — and is never optional.
 
 ## What else makes the update refuse
 
@@ -45,10 +49,16 @@ Each of these refuses with a message naming the problem, and changes nothing:
 - **Unknown entries at the tree root** — any top-level file or directory that the release does not ship and the engine does not account for would vanish into the backup. Move it out (or delete it) first.
 - **Secret-shaped files under shipped directories** — untracked certificates, keys or `.env*` files nested inside the tree (for example under `deploy/certs/`) refuse for the same reason.
 - **A containerised (image) deployment** — when the code tree lives inside a container image, a swap lands in the container's writable layer and is discarded on the next recreation. Such installs update by replacing the image, not through this panel. A bind-mounted checkout inside a container is fine.
+- **Not enough free disk space** — measured *before the download*, so a full disk costs nothing to discover. An update needs room for a second copy of the code tree: the archive, the extracted release, and that release's own freshly installed `node_modules`. The check measures the live tree (minus `.git`, which the swap moves rather than copies) and compares it with the space available where the update stages. If either side cannot be measured the update proceeds — the server log says the check was disarmed.
 - **A Bun version mismatch** — the release's `.bun-version` pin must match the running runtime; install the pinned Bun first, then retry.
 - **No process supervisor detected** — see [Updating code](updating_code.md#panel-self-update).
 - **A failed dependency install or a failed smoke boot** of the quarantine tree.
 - **A checksum mismatch, a malformed archive, or an unsafe archive entry.**
+
+!!! warning "A disk that fills up during `deps`"
+    Before this check existed, a full disk surfaced as a wall of `NoSpaceLeft` / `FileNotFound` extraction errors from the dependency install, several minutes into the update. That failure now names itself ("The disk filled up while installing the release dependencies"), and nothing was swapped — the live tree is untouched. Free space and retry.
+
+    Restore points are the usual culprit: each one keeps a whole previous tree, `node_modules` included. Delete the ones you no longer need from the code backup directory.
 
 ## What is backed up
 
@@ -64,6 +74,117 @@ Before the first rename, the update writes a **rollback sentinel** (`last_code_u
 - **Under any other supervisor** (a plain restart loop, pm2, …), there is no automatic rollback. You still have the full previous tree in the backup directory; the manual procedure is to stop the server, move the backup directory back to the install path, and start the server again.
 
 If the swap itself fails midway, the update restores the previous tree in place and reports that nothing changed; in the rare case where the restore also fails, both trees are preserved (the old one in the backup directory, the new one parked in staging) and the panel tells you operator recovery is required — see the server log.
+
+## Restoring a restore point
+
+Rollback as described above is the *supervisor's*, and only for a swap that
+never confirmed itself. An update that succeeded and is now to be undone is a
+**restore** (`src/core/update/code_restore.ts`), driven from the panel — the
+operator walkthrough is in
+[Updating code](updating_code.md#restoring-a-previous-code-version).
+
+A restore is the update run backwards, out of the update's own machinery: the
+same run lock (a restore and an update can never interleave), the same swap
+preconditions, the same sentinel-guarded rename, the same phase frames. It
+differs in three ways:
+
+- **It is a move, not a copy.** The restore point is consumed by the swap, and
+  the outgoing tree is renamed aside as a new restore point
+  (`dedalo_<running version>[_<digest>]_<timestamp>/`). A restore is therefore
+  itself undoable, and it does not need room for a second copy of the tree.
+- **`download`, `verify`, `extract` and `deps` are reported *skipped*.** There
+  is nothing to fetch or install: a restore point carries its own
+  `node_modules`.
+- **The recent-database-backup precondition does not apply.** Superuser and
+  maintenance mode still do; in place of the backup gate a restore has its own
+  explicit confirmation.
+
+### The database is not restored
+
+Restoring code does not revert migrations already applied. A restore point
+whose declared version differs from the running one is **refused** unless the
+request carries an explicit confirmation (`confirm_downgrade`, the modal's
+checkbox), and the waiver is logged loudly with the requesting user — the same
+idiom as `waive_backup`. At an equal version no confirmation is asked for.
+
+!!! danger "An acknowledged downgrade is not a repaired one"
+    The confirmation only records that the hazard was understood. The
+    installation will run the older code against the newer database schema.
+    Restoring the matching database backup is a separate operation — see
+    [Backup](../backup.md).
+
+### The pre-flight boot, and when there is none
+
+A restore point is a tree nobody has executed since the day it was moved aside,
+so it is boot-tested **before** the live tree moves: it is started once in
+isolation and must answer a health check, exactly like a release in quarantine.
+
+The check is conditional on the held tree honouring the smoke-boot flag, which
+landed on 2026-08-23. A tree cut before that date ignores the flag and would run
+its **full** boot — migrations against the shared production database,
+schedulers, diffusion runners, watchers, media provisioning — as a second live
+instance beside the process still serving. Such a copy is therefore restored
+**without** the pre-flight boot: the `preflight` phase is reported *skipped*,
+never a passed `done`, and the reason is written to the server log naming the
+copy. Refusing instead would make the feature unusable on precisely the
+installations that need it, since every restore point in existence predates the
+flag.
+
+### What makes a restore refuse
+
+Each of these refuses with a message naming the problem, and changes nothing:
+
+- **The engine does not own this install** — a closed installation cannot run a
+  code restore, exactly as it cannot run an update.
+- **Not the superuser, or not in maintenance mode.**
+- **A malformed restore point name** — the request names a restore point, never
+  a path. A name carrying `/`, `\`, a `..` segment or a NUL byte, or one that
+  does not begin with `dedalo_`, is refused before it is ever joined to a
+  directory.
+- **An unknown restore point** — the name must be in the listing the panel
+  rendered. One that is not there is not a restore point, including one that
+  existed on disk and has since gone.
+- **The copy is incomplete** — no `package.json` or no `node_modules`:
+  restoring it would leave the installation unable to start. The panel already
+  disables the button for this.
+- **The copy declares no Dédalo version** — its own version file cannot be
+  read, so its provenance is unknown. Also disabled in the panel.
+- **The copy pins a different Bun** — the swap hands the tree to the *running*
+  runtime, and the pre-flight boot uses that same runtime, so a pin mismatch
+  cannot be caught later. It is not waivable: install the pinned Bun, restart
+  Dédalo onto it, then retry. Also disabled in the panel.
+- **A version change without the confirmation** — see above.
+- **A secret-shaped file the restored copy does not ship** — the first rename
+  carries the *whole* live tree into the new restore point, so a `certs/`
+  directory, a `.env.local` or a `deploy/*.pem` absent from the copy being
+  restored would land in the backup and the restored tree would come up without
+  them. Anywhere in the tree, its root included.
+
+    Note that a restore does **not** apply the update's *unknown entries at the
+    tree root* gate ([above](#what-else-makes-the-update-refuse)). That gate
+    asks whether the incoming tree ships each of the live tree's root entries,
+    which only makes sense while the incoming tree is the newer one. Restoring
+    goes the other way: every file a later release added at the root is, by
+    definition, missing from an older copy, so the gate would refuse every
+    backward restore across such a release — and it is the ordinary case, not
+    an error.
+- **The backup root inside the code tree, or on another filesystem** — the
+  renames must be atomic, as for an update.
+- **A leftover staging directory**, or **an update or another restore already
+  running** — both share one run lock.
+- **A failed pre-flight boot** of the restore point, where one was run.
+- **A failed swap** — the previous tree is put back in place and nothing
+  changed; if that repair also fails, both trees are preserved and the panel
+  reports that operator recovery is required.
+
+!!! warning "One case the rollback sentinel cannot decide"
+    The sentinel identifies the restored tree by the digest of the archive the
+    restore point was installed from. A copy with no install stamp — a
+    development checkout renamed aside by its first update — that also declares
+    the version already running leaves the two trees indistinguishable: either
+    one would confirm the sentinel at boot. The restore proceeds and writes a
+    line to the server log saying so. If such a swap half-applies, do not trust
+    a *confirmed* status; compare the trees.
 
 ## Confirming the update
 
