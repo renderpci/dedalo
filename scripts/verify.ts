@@ -29,7 +29,11 @@
  * Exit 0 iff every enabled stage is green.
  */
 
+import { readFileSync } from 'node:fs';
 import { $ } from 'bun';
+// The neighbour selector lives in a lib so a gate can exercise it — verify.ts
+// runs on import and cannot itself be imported (scripts/lib/neighbour_tests.ts).
+import { neighbourTests } from './lib/neighbour_tests.ts';
 // The per-test timeout the root suite runs under. Bun 1.4.0 ignores bunfig.toml's
 // `[test] timeout`, so the number has to ride the command line — see
 // scripts/lib/test_flags.ts for the measurement that proves it.
@@ -88,6 +92,10 @@ const TRIPWIRES = [
 	'test/unit/css_build_tripwire.test.ts',
 	'test/unit/css_token_duplication_tripwire.test.ts',
 	'test/unit/wire_contract_tripwire.test.ts',
+	'test/unit/verify_selector_selftest.test.ts',
+	'test/unit/delete_inverse_lost_update_native.test.ts',
+	'test/unit/duplicate_record_dataframe_native.test.ts',
+	'test/unit/tm_lang_slice_restore_native.test.ts',
 	'test/unit/theme_token_parity.test.ts',
 	'test/unit/hierarchy_single_writer_tripwire.test.ts',
 	'test/unit/ontology_single_writer_tripwire.test.ts',
@@ -169,36 +177,6 @@ async function changedFiles(): Promise<string[]> {
 	return [...set];
 }
 
-/** A changed source file's import-tail — the substring test files import it by,
- *  e.g. src/core/section/record/save_component.ts → core/section/record/save_component */
-function importTail(file: string): string | null {
-	const m = file.match(/^src\/(.+)\.ts$/);
-	return m?.[1] ?? null;
-}
-
-/** Test files (unit + parity) that import any changed src file, plus changed
- *  test files themselves. Targeted — never the whole suite. */
-async function neighbourTests(changed: string[]): Promise<string[]> {
-	const out = new Set<string>();
-
-	// A changed test file is its own neighbour.
-	for (const f of changed) {
-		if (f.startsWith('test/') && f.endsWith('.test.ts')) out.add(f);
-	}
-
-	// Src files: find every test that imports their module tail.
-	const tails = changed.map(importTail).filter((t): t is string => t !== null);
-	for (const tail of tails) {
-		// grep the test tree for the import tail; tolerate "no match" (exit 1).
-		const hits = await $`grep -rl --include=*.test.ts ${tail} test/`.text().catch(() => '');
-		for (const line of hits.split('\n')) {
-			const f = line.trim();
-			if (f) out.add(f);
-		}
-	}
-	return [...out];
-}
-
 // ---------------------------------------------------------------------------
 // Stage runner
 // ---------------------------------------------------------------------------
@@ -235,7 +213,41 @@ async function lint(): Promise<void> {
 	results.push({ name: 'lint', ok, detail: ok ? 'clean' : 'errors (see above)' });
 }
 
-async function runTestFiles(name: string, files: string[]): Promise<void> {
+/**
+ * Failing test names this run is allowed to see WITHOUT going red — the parity
+ * tier's frozen corpus-bound reds (engineering/parity_baseline.json).
+ *
+ * WHY THIS EXISTS. The parity tier is red BY CONSTRUCTION: 100 of its cases are
+ * frozen because they were harvested against one installation's records, which
+ * the suite database does not and must not hold. Those files are ordinary
+ * neighbours of src/ modules, so once the neighbour selector actually selected
+ * anything (it selected NOTHING until 2026-08-27) every change touching a
+ * widely-imported module reported VERIFY RED for failures that are not the
+ * developer's and cannot be fixed here. A gate that is red for reasons the
+ * reader cannot act on is a gate the reader learns to ignore — which is exactly
+ * how this repo's verify went unread for 45 commits.
+ *
+ * So a frozen failure is FORGIVEN and COUNTED, never hidden; a failure that is
+ * NOT in the baseline still reddens the stage. The baseline itself is
+ * shrink-only and is guarded by parity_baseline_tripwire, so this cannot become
+ * a way to silence a real regression.
+ */
+function frozenParityFailures(): Set<string> {
+	try {
+		const json = JSON.parse(readFileSync('engineering/parity_baseline.json', 'utf8')) as {
+			files?: Record<string, string[]>;
+		};
+		const out = new Set<string>();
+		for (const names of Object.values(json.files ?? {})) for (const n of names) out.add(n);
+		return out;
+	} catch {
+		// No baseline, or unreadable: forgive NOTHING. Fail-closed by design —
+		// a missing baseline must never become a blanket amnesty.
+		return new Set<string>();
+	}
+}
+
+async function runTestFiles(name: string, files: string[], forgiven?: Set<string>): Promise<void> {
 	banner(`${name} (${files.length} file${files.length === 1 ? '' : 's'})`);
 	if (files.length === 0) {
 		results.push({ name, ok: true, detail: 'no files' });
@@ -245,17 +257,40 @@ async function runTestFiles(name: string, files: string[]): Promise<void> {
 	const output = r.stdout.toString() + r.stderr.toString();
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: \x1b is the ANSI escape being stripped
 	const clean = output.replace(/\x1b\[[0-9;]*m/g, '');
-	const passM = clean.match(/(\d+) pass/);
-	const failM = clean.match(/(\d+) fail/);
-	const ok = r.exitCode === 0;
+	// ANCHORED to bun's own summary lines (` 181 pass`, ` 0 fail`), never a bare
+	// substring: an unanchored /(\d+) fail/ matches log text a test EMITS — a
+	// media case logging `ffmpeg pass 1 failed` made a clean 181/0 run report
+	// "159 pass / 1 fail" while `ok` (the exit code) correctly said green.
+	// A gate's own tally must not be readable out of arbitrary stdout.
+	const passM = clean.match(/^\s*(\d+) pass$/m);
+	const failM = clean.match(/^\s*(\d+) fail$/m);
+
+	// Split the failures into the ones the baseline already froze and the ones
+	// it did not. A frozen failure is reported, not hidden — it just does not
+	// redden the stage.
+	const failedNames = clean
+		.split('\n')
+		.filter((l) => l.startsWith('(fail)'))
+		.map((l) =>
+			l
+				.replace(/^\(fail\)\s*/, '')
+				.replace(/\s*\[[\d.]+m?s\]\s*$/, '')
+				.trim(),
+		);
+	const unfrozen =
+		forgiven === undefined ? failedNames : failedNames.filter((n) => !forgiven.has(n));
+	const frozenSeen = failedNames.length - unfrozen.length;
+
+	const ok = r.exitCode === 0 || (failedNames.length > 0 && unfrozen.length === 0);
 	if (!ok) {
 		for (const l of clean.split('\n'))
 			if (l.startsWith('✗') || l.startsWith('(fail)')) console.log(l);
 	}
+	const frozenNote = frozenSeen > 0 ? ` (${frozenSeen} frozen)` : '';
 	results.push({
 		name,
 		ok,
-		detail: `${passM?.[1] ?? '?'} pass / ${failM?.[1] ?? '0'} fail`,
+		detail: `${passM?.[1] ?? '?'} pass / ${unfrozen.length} fail${frozenNote}`,
 	});
 }
 
@@ -289,7 +324,7 @@ if (runTests) {
 	const neighbours = await neighbourTests(changed);
 	// Do not re-run a tripwire as a "neighbour".
 	const only = neighbours.filter((f) => !TRIPWIRES.includes(f));
-	await runTestFiles('neighbours', only);
+	await runTestFiles('neighbours', only, frozenParityFailures());
 
 	// The site-builder daemon is its own package (publication/site_builder) — outside the
 	// src/+test/ trees the neighbour scan covers — so its suite runs as a targeted stage

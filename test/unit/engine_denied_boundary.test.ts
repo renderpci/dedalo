@@ -7,7 +7,7 @@
  * that becomes portable leaves here with its port.
  *
  * @twin-of      test/parity/tools_register_differential.test.ts
- * @twin-status  supplement
+ * @twin-status  frozen-record
  */
 
 import { describe, expect, test } from 'bun:test';

@@ -151,6 +151,8 @@ bun run test:db:setup
 DB_TIER_TRIPWIRES=(
 	test/unit/consultation_only_sections_tripwire.test.ts
 	test/unit/dbread_role_tripwire.test.ts
+	test/unit/delete_inverse_lost_update_native.test.ts
+	test/unit/duplicate_record_dataframe_native.test.ts
 	test/unit/error_taxonomy_tripwire.test.ts
 	test/unit/external_degradation_tripwire.test.ts
 	test/unit/external_egress_tripwire.test.ts
@@ -163,10 +165,11 @@ DB_TIER_TRIPWIRES=(
 	test/unit/root_user_hidden_tripwire.test.ts
 	test/unit/sql_confinement_tripwire.test.ts
 	test/unit/temporal_instance_tripwire.test.ts
+	test/unit/test3_canonical_fixture.test.ts
 	test/unit/test_db_marker_tripwire.test.ts
 	test/unit/test_media_root_tripwire.test.ts
 	test/unit/test_tld_ontology_gate.test.ts
-	test/unit/test3_canonical_fixture.test.ts
+	test/unit/tm_lang_slice_restore_native.test.ts
 	test/unit/tm_mode_retired_tripwire.test.ts
 	test/unit/tools_cache_invalidation.test.ts
 )

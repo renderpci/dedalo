@@ -287,6 +287,18 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/delete_inverse_lost_update_native.test.ts',
+		'Its whole subject is a CROSS-CONNECTION lost update: it opens two Postgres sessions, holds one transaction open on the owner row and polls pg_blocking_pids until the delete is provably waiting on that lock, so there is nothing left of the gate without a live suite database — on a bare runner every case would fail at connect, not skip, and the invariant would be untestable rather than merely unrun',
+	],
+	[
+		'test/unit/duplicate_record_dataframe_native.test.ts',
+		'It builds a host record, its dataframe frame targets and a non-admin principal through the engine own write path and then duplicates them, asserting what the copied locators POINT AT across matrix tables; every assertion reads rows back out of the suite database, so the gate cannot run on the hosted tier',
+	],
+	[
+		'test/unit/tm_lang_slice_restore_native.test.ts',
+		'It materializes a scratch ontology (zztmlang) and multilingual records through saveComponentData, drives both Time-Machine restore doors and reads matrix_time_machine rows back as stored jsonb text to prove untouched languages survive byte-identical — all of it database state, none of it reachable without the suite Postgres',
+	],
+	[
 		'test/unit/consultation_only_sections_tripwire.test.ts',
 		'The engine-guard refusals resolve pre-DB but the readSection end-to-end leg and the ontology-backed permission/structure lookups query the suite Postgres, so the gate cannot run on the hosted tier',
 	],

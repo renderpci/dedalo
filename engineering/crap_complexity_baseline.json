@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 506,
-		"functions": 4399,
-		"functionsOverCap": 691,
+		"files": 510,
+		"functions": 4431,
+		"functionsOverCap": 692,
 		"filesOverCap": 269
 	},
 	"files": {
@@ -267,7 +267,7 @@
 		"src/core/ts_object/term_resolver.ts": 13,
 		"src/core/ts_object/ts_api.ts": 12,
 		"src/core/ts_object/ts_object.ts": 22,
-		"src/core/update/code_build_plan.ts": 9,
+		"src/core/update/code_build_plan.ts": 7,
 		"src/core/update/code_download.ts": 13,
 		"src/core/update/engine.ts": 37,
 		"src/core/update/transform/definitions.ts": 9,

@@ -4,8 +4,8 @@
 	"measured": {
 		"twins": 41,
 		"retired": 26,
-		"frozen_record": 7,
-		"supplement": 8,
+		"frozen_record": 8,
+		"supplement": 7,
 		"back_links": 12,
 		"unmapped_red_files": 23,
 		"unmapped_red_tests": 54
@@ -74,7 +74,7 @@
 		{
 			"file": "test/unit/engine_denied_boundary.test.ts",
 			"target": "test/parity/tools_register_differential.test.ts",
-			"status": "supplement"
+			"status": "frozen-record"
 		},
 		{
 			"file": "test/unit/get_ontologies_native.test.ts",
