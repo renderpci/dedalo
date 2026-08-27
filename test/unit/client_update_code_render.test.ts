@@ -491,7 +491,7 @@ describe('update_code developer-builds switch', () => {
 		expect(/options\s*:\s*\{[^}]*channel/s.test(model_src)).toBe(true);
 	});
 
-	test('the developer channel builds THE SERVER\'S branch, never a literal ref', () => {
+	test("the developer channel builds THE SERVER'S branch, never a literal ref", () => {
 		// A client-baked 'v7' refused on every code server that does not carry
 		// that branch ("Could not read src/core/update/version.ts at ref 'v7'").
 		// The ref is source.branch; when it IS the release ref there is nothing

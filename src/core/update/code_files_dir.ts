@@ -181,6 +181,78 @@ export function ensureCodeFilesDir(configured: string): CodeFilesDirReport {
 }
 
 /**
+ * The provisioning FAILED outright — the directory could not be created.
+ */
+function reportCodeFilesDirFailure(configured: string, error: Error): void {
+	console.error(
+		`[code files dir] could not create the release files directory '${configured}' ` +
+			'(DEDALO_CODE_FILES_DIR) — this code server can publish and serve NOTHING until ' +
+			'it exists. Cause:',
+		error,
+	);
+}
+
+/**
+ * What CREATION produced, when it produced anything. Silent for a directory
+ * that already existed.
+ */
+function reportCodeFilesDirCreation(report: CodeFilesDirReport, configured: string): void {
+	if (!report.created) return;
+	// The OBSERVED mode, never the constant: the line is the operator's only
+	// evidence of what landed on disk, so it must not restate an intention.
+	console.warn(
+		`[code files dir] created the release files directory '${configured}' at mode ` +
+			`${(report.mode ?? 0).toString(8).padStart(4, '0')} (DEDALO_CODE_FILES_DIR).`,
+	);
+	if (report.modeForced) return;
+	console.warn(
+		`[code files dir] could not force mode ${CODE_DIR_MODE.toString(8).padStart(4, '0')} on ` +
+			`'${configured}' — it was created and is usable, at mode ` +
+			`${(report.mode ?? 0).toString(8).padStart(4, '0')}. A filesystem without POSIX ` +
+			'modes (CIFS/SMB, exFAT) refuses every chmod; set the mount options if that mode ' +
+			'is too wide for this host.',
+	);
+}
+
+/**
+ * Whether the provisioned path can actually be USED. A non-directory is
+ * terminal for this boot; a read-only directory is reported and survived, so
+ * the refusal lands at build time where the operator can act on it.
+ */
+function reportCodeFilesDirUsability(report: CodeFilesDirReport, configured: string): void {
+	if (!report.isDirectory) {
+		console.error(
+			`[code files dir] '${configured}' (DEDALO_CODE_FILES_DIR) EXISTS but is not a ` +
+				'directory — no release can be built or served from it. Move the file out of ' +
+				'the way, or point the key somewhere else.',
+		);
+		return;
+	}
+	if (!report.writable) {
+		console.error(
+			`[code files dir] the release files directory '${configured}' is NOT writable by this ` +
+				'process — release builds will refuse. Fix its ownership/permissions.',
+		);
+	}
+}
+
+/**
+ * Every operator-facing line this boot emits about the release files
+ * directory, in the order the operator needs them. Extracted from
+ * `ensureCodeFilesDirAtBoot` so the entry point carries the DECISION and this
+ * carries the DIAGNOSTICS: the report is returned unchanged on every path, so
+ * the original early returns only ever skipped later logging.
+ */
+function reportCodeFilesDir(report: CodeFilesDirReport, configured: string): void {
+	if (report.error !== null) {
+		reportCodeFilesDirFailure(configured, report.error);
+		return;
+	}
+	reportCodeFilesDirCreation(report, configured);
+	reportCodeFilesDirUsability(report, configured);
+}
+
+/**
  * THE PRODUCTION ENTRY POINT — called from `src/server.ts` on every start.
  *
  * Gated on `IS_A_CODE_SERVER`: an ordinary install that inherited the key from
@@ -193,45 +265,6 @@ export function ensureCodeFilesDirAtBoot(): CodeFilesDirReport | null {
 	if (configured === undefined || configured === '') return null;
 
 	const report = ensureCodeFilesDir(configured);
-	if (report.error !== null) {
-		console.error(
-			`[code files dir] could not create the release files directory '${configured}' ` +
-				'(DEDALO_CODE_FILES_DIR) — this code server can publish and serve NOTHING until ' +
-				'it exists. Cause:',
-			report.error,
-		);
-		return report;
-	}
-	if (report.created) {
-		// The OBSERVED mode, never the constant: the line is the operator's only
-		// evidence of what landed on disk, so it must not restate an intention.
-		console.warn(
-			`[code files dir] created the release files directory '${configured}' at mode ` +
-				`${(report.mode ?? 0).toString(8).padStart(4, '0')} (DEDALO_CODE_FILES_DIR).`,
-		);
-	}
-	if (report.created && !report.modeForced) {
-		console.warn(
-			`[code files dir] could not force mode ${CODE_DIR_MODE.toString(8).padStart(4, '0')} on ` +
-				`'${configured}' — it was created and is usable, at mode ` +
-				`${(report.mode ?? 0).toString(8).padStart(4, '0')}. A filesystem without POSIX ` +
-				'modes (CIFS/SMB, exFAT) refuses every chmod; set the mount options if that mode ' +
-				'is too wide for this host.',
-		);
-	}
-	if (!report.isDirectory) {
-		console.error(
-			`[code files dir] '${configured}' (DEDALO_CODE_FILES_DIR) EXISTS but is not a ` +
-				'directory — no release can be built or served from it. Move the file out of ' +
-				'the way, or point the key somewhere else.',
-		);
-		return report;
-	}
-	if (!report.writable) {
-		console.error(
-			`[code files dir] the release files directory '${configured}' is NOT writable by this ` +
-				'process — release builds will refuse. Fix its ownership/permissions.',
-		);
-	}
+	reportCodeFilesDir(report, configured);
 	return report;
 }

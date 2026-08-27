@@ -214,14 +214,24 @@ bun install --frozen-lockfile
 # `--no-exit-on-error` is NOT a way of ignoring failures — MEASURED both ways on
 # Bun 1.4.0: with it and without it, a failing script still makes the run exit 1.
 # What it changes is that the OTHER script is allowed to finish first, so a red
-# lint can no longer hide a red typecheck by aborting before it runs. That is the
-# whole reason it is here; `set -e` below still stops the tier on the non-zero exit.
+# lint can no longer hide a red typecheck by aborting before it runs.
+#
+# THE STAGES ARE INDEPENDENT (audit 2026-08-26, GATE-03). This stage no longer
+# aborts the tier: under `set -e` a red lint meant the tripwire block below
+# NEVER EXECUTED, so a formatting error silently disarmed all 101 invariant
+# gates — measured on a tree where lint had been red for 45 commits. Each stage
+# now records its own verdict and the tier reports every one of them, so a red
+# lint costs you a red tier and nothing else.
 #
 # Both are package.json scripts because `bun run --parallel` runs SCRIPTS, not
 # arbitrary commands (it is the script runner; the test runner's own worker
 # parallelism is the unrelated `bun test --parallel=N`).
 echo "== hermetic: typecheck + lint (bun run --parallel)"
-bun run --parallel --no-exit-on-error typecheck lint
+tier_status=0
+bun run --parallel --no-exit-on-error typecheck lint || {
+	tier_status=$?
+	echo "== hermetic: RED in typecheck/lint (exit $tier_status) — continuing so the tripwire tier still reports"
+}
 
 echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 # --timeout=30000 is a LITERAL COPY of TEST_TIMEOUT_MS in scripts/lib/test_flags.ts, which
@@ -230,7 +240,9 @@ echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 # this literal in step with the constant. It is on the command line and not in bunfig.toml
 # because Bun 1.4.0 SILENTLY IGNORES `[test] timeout` (measured: 5001.50 ms kill on an 8 s
 # test), which is how the repo ran its whole history under a 5000 ms cap nobody chose.
-bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}"
+tw_rc=0
+bun test --timeout=30000 "${HERMETIC_TRIPWIRES[@]}" || tw_rc=$?
+[ "$tw_rc" -eq 0 ] || { echo "== hermetic: RED in static tripwires (exit $tw_rc)"; tier_status=1; }
 
 # Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
 # a NEW advisory is red, a known one is not (the tree already carried 7 on the day this
@@ -333,5 +345,6 @@ cat /tmp/dedalo_daemon_pa.$$ ; rm -f /tmp/dedalo_daemon_pa.$$
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }
 [ "$daemon_status" -eq 0 ] || exit 1
+[ "$tier_status" -eq 0 ] || { echo "== hermetic: RED — typecheck, lint or the static tripwires failed above"; exit 1; }
 
 echo "== hermetic: GREEN"

@@ -72,6 +72,20 @@ const FASTSTART_LOG = join(BIN, 'faststart.log');
 process.env.DEDALO_MEDIA_PROCESSES_DIR = join(ROOT, 'processes');
 
 const REAL_CONFIG = REAL_CONFIG_MODULE.config;
+/**
+ * A PLAIN SNAPSHOT of the real module's exports, taken at IMPORT time — before
+ * `useFakeBinaries()` runs in `beforeAll`.
+ *
+ * `REAL_CONFIG_MODULE` is a LIVE module namespace: once `mock.module` has
+ * replaced `src/config/config.ts`, that binding reads back the MOCK. Restoring
+ * from it in `afterAll` therefore re-installed the fake binaries process-wide
+ * instead of removing them, and every media file that ran afterwards found
+ * `config.media.binaries.ffmpeg` pointing into this file's deleted scratch dir
+ * and SKIPPED its cases — silently, because a skip is not a failure.
+ * MEASURED before the fix: the media suite went from 7 skips to 24 when this
+ * file ran first (audit 2026-08-26, GATE-01, S1).
+ */
+const REAL_CONFIG_EXPORTS = { ...REAL_CONFIG_MODULE, config: REAL_CONFIG };
 const av = mustGet(mediaTypeOf('component_av'), 'component_av spec');
 const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: 1000, mediaRoot: ROOT };
 
@@ -260,8 +274,10 @@ afterEach(() => {
 	installFakeFaststart(); // a case may have removed it ("not installed")
 });
 afterAll(() => {
-	// Put the REAL config module back: mock.module leaks across files.
-	mock.module('../../src/config/config.ts', () => REAL_CONFIG_MODULE);
+	// Put the REAL config module back: mock.module leaks across files. Restore
+	// from the import-time SNAPSHOT, never from the live namespace — see
+	// REAL_CONFIG_EXPORTS.
+	mock.module('../../src/config/config.ts', () => REAL_CONFIG_EXPORTS);
 	rmSync(ROOT, { recursive: true, force: true });
 });
 

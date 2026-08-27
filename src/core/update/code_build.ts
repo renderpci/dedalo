@@ -107,6 +107,29 @@ async function runGitArchiveOrRefuse(gitDir: string, ref: string, filePath: stri
 }
 
 /**
+ * Provision the release directory, or refuse the build.
+ *
+ * THE SAME provisioner as the boot pass (code_files_dir.ts): the version
+ * levels a build mints must not be looser than the root they sit in, and a
+ * bare `mkdirSync(mode)` is umask-dependent. It never throws — the refusal
+ * here is the build's, so the operator sentence stays the wire's.
+ * `error` is a CREATION failure only — a refused chmod (`modeForced:false`)
+ * leaves a usable directory and must NOT refuse a build that would
+ * otherwise publish (a release dir on a CIFS/exFAT mount answers EPERM to
+ * every chmod).
+ */
+function provisionReleaseDirOrRefuse(targetDir: string): void {
+	const dirReport = ensureCodeFilesDir(targetDir);
+	if (dirReport.error !== null || !dirReport.isDirectory) {
+		refuseUpdate(
+			'update.failed',
+			'Error. Unable to create the release directory',
+			dirReport.error ?? new Error(`${targetDir} exists but is not a directory`),
+		);
+	}
+}
+
+/**
  * `git archive --format=zip --prefix=dedalo_code/ <ref>` of the code-server
  * checkout into the release path for `version`. `version` names the release
  * (e.g. '7.0.1'); `ref` is the git ref to archive (default the same tag).
@@ -143,22 +166,7 @@ export async function buildVersionFromGit(options: {
 		});
 	}
 	const { gitDir, targetDir, filePath } = plan;
-	// THE SAME provisioner as the boot pass (code_files_dir.ts): the version
-	// levels a build mints must not be looser than the root they sit in, and a
-	// bare `mkdirSync(mode)` is umask-dependent. It never throws — the refusal
-	// below is this call site's, so the operator sentence stays the wire's.
-	// `error` is a CREATION failure only — a refused chmod (`modeForced:false`)
-	// leaves a usable directory and must NOT refuse a build that would
-	// otherwise publish (a release dir on a CIFS/exFAT mount answers EPERM to
-	// every chmod).
-	const dirReport = ensureCodeFilesDir(targetDir);
-	if (dirReport.error !== null || !dirReport.isDirectory) {
-		refuseUpdate(
-			'update.failed',
-			'Error. Unable to create the release directory',
-			dirReport.error ?? new Error(`${targetDir} exists but is not a directory`),
-		);
-	}
+	provisionReleaseDirOrRefuse(targetDir);
 
 	await runGitArchiveOrRefuse(gitDir, ref, filePath);
 

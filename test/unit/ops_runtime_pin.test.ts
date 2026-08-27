@@ -15,11 +15,11 @@
  * of the PKZIP STORE writer itself.
  */
 
-import { Glob } from 'bun';
 import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { Glob } from 'bun';
 import { createZip } from '../../src/diffusion/writers/files.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');

@@ -84,6 +84,30 @@ export type CodeBuildPlan =
 	| { ok: false; msg: string; error: string };
 
 /**
+ * `''` IS UNSET (readEnv returns an empty value verbatim, and config stores it
+ * raw). Treating it as configured made `join('', '7', '7.0')` a RELATIVE path,
+ * so a build mkdir'd its release tree under the process cwd — inside the very
+ * code tree the updater renames away. Same rule as the boot provisioner
+ * (code_files_dir.ts).
+ */
+function resolveCodeBuildDirs(cfg: CodeBuildConfig): { gitDir: string; filesDir: string } | null {
+	const gitDir = cfg.codeServerGitDir;
+	const filesDir = cfg.codeFilesDir;
+	if (gitDir === undefined || gitDir === '' || filesDir === undefined || filesDir === '')
+		return null;
+	return { gitDir, filesDir };
+}
+
+/**
+ * A release version is exactly three NON-NEGATIVE INTEGERS. Load-bearing
+ * beyond validation: the path confinement below derives its safety from this
+ * guard, because it proves every interpolated path segment is `[0-9]+`.
+ */
+function isReleaseVersionTriple(triple: number[]): boolean {
+	return triple.length === 3 && triple.every((n) => Number.isInteger(n) && n >= 0);
+}
+
+/**
  * Decide whether a release build may run and where its artifact goes.
  * Pure: no I/O, no mutation of the inputs.
  */
@@ -98,22 +122,17 @@ export function planCodeBuild(
 			error: 'not a code server',
 		};
 	}
-	const gitDir = cfg.codeServerGitDir;
-	const filesDir = cfg.codeFilesDir;
-	// `''` IS UNSET (readEnv returns an empty value verbatim, and config stores
-	// it raw). Treating it as configured made `join('', '7', '7.0')` a RELATIVE
-	// path, so a build mkdir'd its release tree under the process cwd — inside
-	// the very code tree the updater renames away. Same rule as the boot
-	// provisioner (code_files_dir.ts).
-	if (gitDir === undefined || gitDir === '' || filesDir === undefined || filesDir === '') {
+	const dirs = resolveCodeBuildDirs(cfg);
+	if (dirs === null) {
 		return {
 			ok: false,
 			msg: 'Error. Define DEDALO_CODE_SERVER_GIT_DIR and DEDALO_CODE_FILES_DIR to build releases',
 			error: 'code build dirs unconfigured',
 		};
 	}
+	const { gitDir, filesDir } = dirs;
 	const triple = parseVersionString(options.version);
-	if (triple.length !== 3 || triple.some((n) => !Number.isInteger(n) || n < 0)) {
+	if (!isReleaseVersionTriple(triple)) {
 		return {
 			ok: false,
 			msg: 'Error. Invalid version number',
