@@ -149,7 +149,9 @@ bun run test:db:setup
 # entries for three weeks.
 # ---------------------------------------------------------------------------
 DB_TIER_TRIPWIRES=(
+	test/unit/bulk_process_id_tripwire.test.ts
 	test/unit/consultation_only_sections_tripwire.test.ts
+	test/unit/csv_parser_conformance_native.test.ts
 	test/unit/dbread_role_tripwire.test.ts
 	test/unit/delete_inverse_lost_update_native.test.ts
 	test/unit/duplicate_record_dataframe_native.test.ts
@@ -160,6 +162,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/external_search_target_tripwire.test.ts
 	test/unit/external_write_refusal_tripwire.test.ts
 	test/unit/info_widget_registry_tripwire.test.ts
+	test/unit/ingest_encoding_tripwire.test.ts
 	test/unit/matrix_index_asset_policy_agreement.test.ts
 	test/unit/media_thumb_census_tripwire.test.ts
 	test/unit/root_user_hidden_tripwire.test.ts
@@ -172,6 +175,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/tm_lang_slice_restore_native.test.ts
 	test/unit/tm_mode_retired_tripwire.test.ts
 	test/unit/tools_cache_invalidation.test.ts
+	test/unit/write_lang_provenance_native.test.ts
 )
 
 echo "== db_tier: DB-backed tripwires (${#DB_TIER_TRIPWIRES[@]})"

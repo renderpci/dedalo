@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 510,
-		"functions": 4431,
-		"functionsOverCap": 692,
+		"files": 513,
+		"functions": 4505,
+		"functionsOverCap": 694,
 		"filesOverCap": 269
 	},
 	"files": {
@@ -248,7 +248,7 @@
 		"src/core/tools/import_csv.ts": 12,
 		"src/core/tools/import_csv_execute.ts": 16,
 		"src/core/tools/import_data.ts": 16,
-		"src/core/tools/import_execute.ts": 15,
+		"src/core/tools/import_execute.ts": 14,
 		"src/core/tools/job_status.ts": 11,
 		"src/core/tools/loader.ts": 12,
 		"src/core/tools/marc21.ts": 12,
