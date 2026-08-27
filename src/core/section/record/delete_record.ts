@@ -131,6 +131,9 @@ export async function deleteSectionRecord(
 
 			// 3. Referential integrity: remove every locator in OTHER records that
 			//    points at this one (PHP remove_all_inverse_references, delete step 3).
+			//    Each owner it rewrites is LOCKED for the rest of this transaction
+			//    (DATA-02, see the read there): the rewrite is a read-modify-write of
+			//    a record this transaction does not otherwise hold.
 			const inverseRewrites = await removeAllInverseReferences(sectionTipo, sectionId, userId, now);
 
 			// 4. Remove the row. (Ontology-node cleanup ledgered.)
@@ -304,7 +307,7 @@ async function removeAllInverseReferences(
 	now: Date,
 ): Promise<InverseRewrite[]> {
 	const { findInverseReferenceLocators } = await import('../../search/search_related.ts');
-	const { readMatrixRecord } = await import('../../db/matrix.ts');
+	const { readMatrixKeyForUpdate } = await import('../../db/matrix_write.ts');
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
 	const { getModelByTipo, getColumnNameByModel } = await import('../../ontology/resolver.ts');
 	const { dbTimestamp: stamp } = await import('./create_record.ts');
@@ -347,17 +350,47 @@ async function removeAllInverseReferences(
 	for (const group of byOwner.values()) {
 		const model = await getModelByTipo(group.component);
 		if (model === null || getColumnNameByModel(model) !== 'relation') continue; // PHP skips non-relation holders
-		const record = await readMatrixRecord(group.table, group.ownerSection, group.ownerId);
-		if (record === null) continue;
+		// LOCKED READ (DATA-02). This loop is a read-modify-write of ANOTHER
+		// record's component key: it reads the owner's bag, filters the target
+		// out in JS, and re-persists the WHOLE key below. The delete's
+		// transaction locks only the record being DELETED — so with a plain
+		// SELECT here, every locator a curator committed on this key between
+		// the read and the write was silently destroyed: the save answered
+		// ok:true, nothing counted it, and the TM row written below canonized
+		// the stale bag as if it were the truth. `readMatrixKeyForUpdate` holds
+		// the owner's row lock to COMMIT, which is the SAME lock every
+		// component save takes before it writes (save_component.ts), so the two
+		// doors now queue instead of clobbering: whichever runs second reads
+		// what the first committed. It also refuses outside a transaction — the
+		// guarantee is the lock's LIFETIME, not the keyword.
+		//
+		// A per-key jsonb array-remove was considered as the alternative and
+		// REJECTED: the locator law below is LOOSE on section_id (a stored '05'
+		// matches 5), which SQL element-equality does not honour and a
+		// ::numeric cast cannot express safely over unswept jsonb; and the
+		// removed entries are needed as VALUES anyway (the dataframe cascade,
+		// the TM pair, the observer input), so the read never disappears — only
+		// the lock does. Cost, stated: the owner's lock is now held from here to
+		// COMMIT instead of from the UPDATE, so a wide delete serializes saves
+		// on its owners for longer. That is the price of not losing them.
+		const locked = await readMatrixKeyForUpdate(
+			group.table,
+			group.ownerSection,
+			group.ownerId,
+			'relation',
+			group.component,
+		);
+		if (locked === null) continue; // owner row gone (deleted under us) — nothing to rewrite
 		// KEPT UNION (WC-2026-08-10-section-id-int-canonical): the bag is the
 		// OWNER's stored relation payload read verbatim from unswept jsonb, and
 		// the SURVIVORS are re-persisted byte-for-byte below — canonicalizing
 		// them here would rewrite locators this delete never targeted (that is
 		// the data sweep's job) and would corrupt external remote ids.
-		const bag =
-			((record.columns.relation as Record<string, unknown[]> | null)?.[group.component] as
-				| { section_tipo?: string; section_id?: number | string; type?: string }[]
-				| undefined) ?? [];
+		const bag = locked as {
+			section_tipo?: string;
+			section_id?: number | string;
+			type?: string;
+		}[];
 		const remaining: typeof bag = [];
 		const removedEntries: typeof bag = [];
 		for (const entry of bag) {
