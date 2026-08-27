@@ -1907,6 +1907,24 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	'record.lang_not_installed': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_record_lang_not_installed',
+		// The write language named by the caller is not one this installation
+		// declares (DEDALO_PROJECTS_DEFAULT_LANGS + the default data lang + their
+		// equivalence classes + lg-nolan). The caller's lang is stamped verbatim
+		// onto every stored item, so an undeclared code stores a slice no read
+		// path reaches — P0-7 / DATA-01 / DATA-25.
+		message: 'Write refused: the language is not one this installation declares',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		details_keys: ['lang'],
+		hint:
+			'The write language must be one the installation declares. Omit `lang` to use the ' +
+			"session's data language, or name a language the install actually catalogues in.",
+	},
 	'relation.insert_refused': {
 		category: 'caller',
 		status: 400,

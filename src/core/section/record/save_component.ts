@@ -40,6 +40,7 @@
  * rewrite/STATUS.md, never in this header.
  */
 
+import { INSTALLED_DATA_LANGS } from '../../../config/config.ts';
 import { getComponentModel } from '../../components/registry.ts';
 import { dataframePairingOf } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
@@ -47,7 +48,7 @@ import type { DataframePairing } from '../../concepts/subdatum.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
 import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
-import { sql, withTransaction } from '../../db/postgres.ts';
+import { deferPostTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
@@ -117,6 +118,25 @@ export interface SaveRequest {
 	 * — an unstamped interactive save is an unauditable one.
 	 */
 	skipModifiedStamp?: boolean;
+	/**
+	 * DECLARED ESCAPE for a LANGUAGE MIGRATION IN PROGRESS (DATA-01/DATA-25).
+	 *
+	 * A non-empty sentence here lets ONE save write a language this installation
+	 * does not declare, and is logged with the lang and the component. It exists
+	 * because the membership gate below is otherwise unconditional, and a
+	 * migration that MOVES data between language codes (a rename, a retired
+	 * language being emptied out) must be able to write the code it is moving
+	 * off — the very code the install has already stopped declaring.
+	 *
+	 * NOT A WIRE FIELD: no rqo, no MCP schema and no tool option carries it, so
+	 * no remote caller and no agent can reach it. Only an in-repo, server-side
+	 * caller that OWNS the migration may set it, and it must say why — the
+	 * `reason`-field form of a named exemption (AGENTS.md "never silently narrow
+	 * scope"). The other, non-urgent escape is configuration: a language an
+	 * install is ADDING belongs in DEDALO_PROJECTS_DEFAULT_LANGS, which is what
+	 * the gate reads.
+	 */
+	langMigrationReason?: string;
 	/**
 	 * The REQUEST PRINCIPAL, threaded explicitly for the relation-insert
 	 * read-grant gate (`relations/save.ts` gate 2). Dispatch and the MCP write
@@ -223,6 +243,178 @@ async function assertNotExternalWrite(componentTipo: string, sectionTipo: string
 		sectionTipo,
 		model,
 		door: 'saveComponentData',
+	});
+}
+
+/**
+ * THE LANGUAGES THIS INSTALLATION DECLARES FOR RECORD DATA (DATA-25).
+ *
+ * THE SET ITSELF LIVES IN `src/config/data_langs.ts` and is built in
+ * `src/config/config.ts` (`INSTALLED_DATA_LANGS`), next to the keys it derives
+ * from. What matters here is the property the chokepoint below leans on: it is
+ * the READ-REACHABLE set — exactly the codes the read fallback chain
+ * (`resolve/component_data.ts`) can resolve, namely
+ * `DEDALO_PROJECTS_DEFAULT_LANGS` ∪ {`DEDALO_DATA_LANG_DEFAULT`} ∪ {`lg-nolan`}
+ * ∪ the equivalence closure of those. A slice written under any other code is a
+ * slice no read ever reaches through a language the install offers — ok:true,
+ * and the bytes are gone.
+ *
+ * `DEDALO_DATA_LANG` IS NOT A MEMBER, and that is deliberate (2026-08-27): it is
+ * the menu's current data language, not a read-chain candidate. Seeding it here
+ * to keep the engine's own default write working bought a write language no read
+ * reaches — the same silent loss through the other door. The outage it was
+ * seeded against is closed where it belongs instead: `config.menu.dataLang` is
+ * resolved AGAINST this set at boot (`resolveCurrentDataLang`), and
+ * `currentDataLang()` falls back to `DEDALO_DATA_LANG_DEFAULT` outside any
+ * request scope. So every language the engine can choose on its own behalf is
+ * already a member, and no write of its own is ever refused.
+ *
+ * The set is a constant of the PROCESS (`config` is boot-frozen), never request
+ * state. It is NOT the per-request write language — that is `currentDataLang()`,
+ * threaded by each door; this only answers "does the install know this code at
+ * all". The two accessors below are that question and its answer, kept here
+ * because the refusal message is the one place an operator is shown the set.
+ */
+
+/** Does this installation declare `lang` as a data language? (see INSTALLED_DATA_LANGS) */
+export function isInstalledDataLang(lang: string): boolean {
+	return INSTALLED_DATA_LANGS.has(lang);
+}
+
+/** The declared data languages, for a caller that must SHOW the operator the set. */
+export function installedDataLangs(): readonly string[] {
+	return [...INSTALLED_DATA_LANGS];
+}
+
+/**
+ * Does the STORED component ALREADY carry an item in `request.lang`?
+ *
+ * THE DISTINCTION THE LAW TURNS ON (P0-7 review). The membership rule governs an
+ * OPERATOR-CHOSEN write language — the language a save DECLARES its bytes to be
+ * in. Several doors choose nothing: they forward the lang of a slice they just
+ * READ, in order to write it back. `tool_update_cache`'s regenerate re-saves
+ * each stored lang group; `component_text_area`'s tag_delete removes a tag from
+ * the exact stored slice it was found in; `tool_tc` rewrites the time codes of
+ * the component being edited. For those, a membership refusal refuses a re-save
+ * of bytes ALREADY IN THE CORPUS — ordinary maintenance of a record whose
+ * language the install has since stopped declaring, broken by the guard.
+ *
+ * So the ROUND TRIP is let through, and it is VERIFIED rather than declared: the
+ * engine reads the slice its own write is about to land on and admits the
+ * language only because the stored bytes already carry it. No caller can claim
+ * it.
+ *
+ * WHAT THE ALLOWANCE ACTUALLY IS, stated plainly because an earlier version of
+ * this comment overstated it: it is PER LANG SLICE, not per bytes. The question
+ * asked is "does this component of this record already hold an item in this
+ * language" — nothing compares the incoming values with the stored ones. Once a
+ * slice exists in an undeclared language, ARBITRARY NEW CONTENT may be written
+ * into THAT slice of THAT component: a `set_data` replacing it wholesale is
+ * admitted, and so is content the record never held. What the allowance can
+ * never do is CREATE a slice in a language the component does not already carry
+ * — no new unreachable language appears, on this component or any other (the
+ * question is asked per component tipo, not per record), which is the property
+ * the law protects.
+ *
+ * Runs on the undeclared path ONLY: one unlocked read, asking a question about
+ * stored state rather than writing. Under an ambient caller transaction it runs
+ * on that connection and therefore sees the caller's uncommitted rows — correct
+ * for the question, since those bytes are the ones the write will land on.
+ */
+async function storedSliceCarriesLang(request: SaveRequest): Promise<boolean> {
+	// The search_* preset door addresses no row (section_id → NaN there).
+	if (!Number.isFinite(Number(request.sectionId))) return false;
+	const model = await getModelByTipo(request.componentTipo);
+	if (model === null) return false;
+	const column = getColumnNameByModel(model);
+	if (column === null || !MATRIX_JSONB_COLUMNS.includes(column as MatrixJsonbColumn)) return false;
+	const table = await getMatrixTableFromTipo(request.sectionTipo);
+	if (table === null) return false;
+	// The writer's own idiom (the FOR UPDATE read in applySaveComponentData),
+	// minus the lock. The tipo rides as a BOUND parameter — cast to text so the
+	// `->` operator resolves (jsonb->text vs jsonb->int is otherwise ambiguous).
+	const rows = (await sql.unsafe(
+		`SELECT "${column}"->($3::text) AS items FROM "${table}"
+		 WHERE section_tipo = $1 AND section_id = $2`,
+		[request.sectionTipo, request.sectionId, request.componentTipo],
+	)) as { items: unknown }[];
+	const items = rows[0]?.items;
+	if (!Array.isArray(items)) return false;
+	return items.some(
+		(item) =>
+			item !== null &&
+			typeof item === 'object' &&
+			(item as { lang?: unknown }).lang === request.lang,
+	);
+}
+
+/**
+ * THE LAW OF THIS DOOR: a write through `saveComponentData` may only name a
+ * language this installation declares, or one the stored slice it is re-saving
+ * already carries (DATA-01/DATA-23/DATA-24/DATA-25 — P0-7).
+ *
+ * ITS REAL SCOPE, because "THE ONE LAW" (an earlier version of this line) was
+ * not true: it governs this chokepoint, which is every SAVE door — the client
+ * API, the MCP tools, the agent change-plan, every import — and nothing else.
+ * The two Time Machine write doors (`tool_time_machine` `apply_value` and
+ * `bulk_revert_process`) deliberately bypass this function and write matrix data
+ * directly (`restore_common.ts`: only the direct path can thread a bulk id and
+ * replay a snapshot without the save pipeline's defaults firing), so a restore
+ * can still land ANY language the audit row holds — including one this install
+ * has stopped declaring. That is coherent with the round-trip allowance below
+ * (a restore re-writes bytes the corpus already held) and it is NOT gated here;
+ * naming it is the difference between a scope and a claim.
+ *
+ * A THROW, not an `ok:false` (contrast `ontologyTldRefusal`): every bulk door
+ * folds an `ok:false` into a per-field "IGNORED" line and keeps going, which
+ * would turn a whole run in a phantom language into a report nobody reads. The
+ * caller's lang is stamped verbatim onto every stored item, so a wrong one is a
+ * contract violation that must stop the write and reach the operator's log with
+ * the code that caused it. Note what this costs the caller: it is the ONE save
+ * refusal that throws where the others return `ok:false`.
+ *
+ * THREE WAYS THROUGH, in cost order: the declared set (one Set lookup on
+ * boot-frozen config — the path every ordinary write takes), the verified round
+ * trip (one unlocked read, see above), and the caller's declared migration
+ * escape.
+ *
+ * WHERE THEY RUN, exactly: before THIS function opens its transaction. On the
+ * interactive path that means no transaction exists at all — nothing to roll
+ * back, no row to lock, and the refusal is observable while another connection
+ * still holds the record's lock, which is how the gate tells a pre-flight
+ * refusal from a rollback. A caller that ALREADY holds a transaction (the
+ * per-record wrap in `import_execute`, the per-row wrap in
+ * `import_csv_execute`) is a different story: `withTransaction` joins an ambient
+ * transaction, so the checks run inside the caller's, and a refusal rolls back
+ * whatever that record's transaction had written so far. That is the intended
+ * behavior for a row-scoped import transaction — but it is not "before the
+ * transaction opens", and the pre-flight gate measures the interactive path.
+ */
+async function assertInstalledWriteLang(request: SaveRequest): Promise<void> {
+	if (INSTALLED_DATA_LANGS.has(request.lang)) return;
+	// Bytes already in the corpus, being written back — not an operator's choice.
+	if (await storedSliceCarriesLang(request)) return;
+	const reason = (request.langMigrationReason ?? '').trim();
+	if (reason !== '') {
+		// The escape is LOUD by design: an undeclared language reaching storage is
+		// an event, even when it was asked for.
+		console.warn(
+			`[save_component] language migration escape: writing undeclared lang '${request.lang}' ` +
+				`to ${request.sectionTipo}/${request.sectionId} ${request.componentTipo} — ${reason}`,
+		);
+		return;
+	}
+	throw new DedaloError('record.lang_not_installed', {
+		message:
+			`save refused: lang '${request.lang}' is not one this installation declares ` +
+			`(${installedDataLangs().join(', ')})`,
+		details: { lang: request.lang },
+		coordinates: {
+			section_tipo: request.sectionTipo,
+			section_id: request.sectionId,
+			tipo: request.componentTipo,
+			lang: request.lang,
+		},
 	});
 }
 
@@ -574,6 +766,15 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	const dataTipo = await resolveDataTipo(request.componentTipo);
 	const effectiveRequest =
 		dataTipo === request.componentTipo ? request : { ...request, componentTipo: dataTipo };
+	// THE WRITE LANGUAGE (P0-7): the caller's lang is stamped verbatim onto every
+	// stored item, so it is checked against the install's declared data languages
+	// before anything is written. AFTER the alias hop and on the effective
+	// request, so the round-trip read below inspects the slice the write will
+	// actually land on (stored data never carries the alias tipo); still BEFORE
+	// the transaction — nothing to roll back, no row to lock. The ordinary write
+	// pays one Set lookup on boot-frozen config, which is what lets this sit on
+	// the hottest write path in the engine.
+	await assertInstalledWriteLang(effectiveRequest);
 	// Derived-from-remote components are refused BEFORE the transaction opens:
 	// the answer is a property of the ontology, identical for every request, so
 	// there is nothing to roll back and no row to lock (see assertNotExternalWrite).
@@ -599,11 +800,23 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 		const { invalidatePermissionsForWrite } = await import('../../security/permissions.ts');
 		// The DATA tipo (alias hop applied) — grant/profile caches key on the
 		// real component the write landed on.
-		invalidatePermissionsForWrite(
-			effectiveRequest.sectionTipo,
-			effectiveRequest.componentTipo,
-			Number(effectiveRequest.sectionId),
-		);
+		const invalidate = (): void =>
+			invalidatePermissionsForWrite(
+				effectiveRequest.sectionTipo,
+				effectiveRequest.componentTipo,
+				Number(effectiveRequest.sectionId),
+			);
+		// "Post-commit" is only true when this door OWNS the transaction. Under an
+		// ambient caller transaction (the import doors' per-record/per-row wrap)
+		// the line above returns with the transaction still OPEN, and clearing a
+		// shared cache there re-opens the S1-14 window: a concurrent request
+		// repopulates it from the state committed so far — which does NOT include
+		// this write — and the entry is stale from the moment the caller commits.
+		// `deferPostTransaction` is the house lane for exactly this (idempotent
+		// cache clears, replayed after the transaction settles, on rollback too);
+		// it returns false when there is no ambient transaction, which is the
+		// interactive path, and then the clear runs inline exactly as before.
+		if (!deferPostTransaction(invalidate)) invalidate();
 		// Server-side observers (PHP propagate_to_observers) fire at THIS
 		// chokepoint so every save door propagates — dispatch, imports, MCP
 		// tools, transcription (2026-07-24: the api-layer-only wiring left

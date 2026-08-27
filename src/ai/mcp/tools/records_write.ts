@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 import { DedaloError } from '../../../core/errors/dedalo_error.ts';
+import { currentDataLang } from '../../../core/resolve/request_lang.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
@@ -82,12 +83,23 @@ export async function saveComponentValue(
 	await assertWritePermission(principal, sectionTipo, componentTipo);
 	await assertRecordInScope(principal, sectionTipo, Math.floor(input.section_id));
 
+	// THE WRITE LANGUAGE (audit DATA-24). This door defaulted every omitted lang
+	// to 'lg-nolan', which saveComponentData stamps verbatim: a TRANSLATABLE
+	// component then held an item no language ever serves as its value — it
+	// renders as a marked fallback in every language, forever, and a later
+	// genuine save leaves the nolan orphan in place. A translatable component
+	// takes the session's data language; a non-translatable one is lg-nolan by
+	// definition, whatever the caller asked for.
+	const { getTranslatableByTipo } = await import('../../../core/ontology/resolver.ts');
+	const translatable = await getTranslatableByTipo(componentTipo);
+	const lang = translatable ? (input.lang ?? currentDataLang()) : 'lg-nolan';
+
 	const { saveComponentData } = await import('../../../core/section/record/save_component.ts');
 	const outcome = await saveComponentData({
 		componentTipo,
 		sectionTipo,
 		sectionId: Math.floor(input.section_id),
-		lang: input.lang ?? 'lg-nolan',
+		lang,
 		changedData: [{ action: input.action, id: input.item_id ?? null, value: input.value }],
 		userId: principal.userId,
 		principal,
@@ -154,7 +166,10 @@ export const RECORDS_WRITE_SPECS: ToolSpec[] = [
 			lang: z
 				.string()
 				.optional()
-				.describe('Language of the value, e.g. "lg-eng" ("lg-nolan" default).'),
+				.describe(
+					'Language of the value, e.g. "lg-eng". Default: the session\'s data language for a ' +
+						'translatable component, "lg-nolan" for every other.',
+				),
 			action: z.enum(['update', 'insert', 'remove']).describe('The item operation.'),
 			value: z
 				.unknown()

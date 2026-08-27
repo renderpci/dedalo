@@ -61,9 +61,20 @@ export function currentApplicationLang(): string {
 }
 
 /**
- * The effective component-data language for the current request, or the
- * installation default when called outside a request scope.
+ * The effective component-data language for the current request, or
+ * `DEDALO_DATA_LANG_DEFAULT` when called outside a request scope.
+ *
+ * WHY THE DEFAULT IS `lang.dataLangDefault` AND NOT `menu.dataLang` (DATA-01,
+ * 2026-08-27). Outside a request there is no operator and no session — a
+ * background job, a boot task, a CLI script — so this value is not "the language
+ * someone chose", it is the language the ENGINE writes and reads in on its own
+ * behalf. `DEDALO_DATA_LANG` is the MENU's current selection, a per-user thing
+ * whose configured value is only a starting point, and it is NOT in the data
+ * fallback chain (`resolve/component_data.ts`): a write stamped with it can land
+ * in a slice no read resolves. `DEDALO_DATA_LANG_DEFAULT` IS that chain's first
+ * candidate and is always a declared data language
+ * (`src/config/data_langs.ts`), so a job's write is reachable by construction.
  */
 export function currentDataLang(): string {
-	return requestLangStore.getStore()?.dataLang ?? config.menu.dataLang;
+	return requestLangStore.getStore()?.dataLang ?? config.lang.dataLangDefault;
 }
