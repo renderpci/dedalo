@@ -36,7 +36,11 @@ Every code update renames the outgoing tree aside as a restore point and keeps i
 
 Pruning runs after an update the booted tree has CONFIRMED, never before: until that flip the new tree is unproven and the points behind it are the way back. The newest bootable point is never pruned whatever this is set to — it is the rollback for the code running right now.
 
-Set it higher on an installation that updates rarely and has disk to spare; \`1\` keeps only the rollback.`,
+Set it higher on an installation that updates rarely and has disk to spare; \`1\` keeps only the rollback.
+
+\`\`\`bash
+DEDALO_CODE_RESTORE_POINTS_KEEP=3
+\`\`\``,
 	},
 	DEDALO_CODE_FILES_DIR: {
 		type: 'string',

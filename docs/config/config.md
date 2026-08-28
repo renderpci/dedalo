@@ -4547,6 +4547,10 @@ Pruning runs after an update the booted tree has CONFIRMED, never before: until 
 
 Set it higher on an installation that updates rarely and has disk to spare; `1` keeps only the rollback.
 
+```bash
+DEDALO_CODE_RESTORE_POINTS_KEEP=3
+```
+
 *Default: 3*
 
 ---
