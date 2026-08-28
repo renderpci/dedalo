@@ -16823,6 +16823,21 @@ dd-modal:has(.tool_header) {
   color: var(--fg_muted);
   font-style: italic;
 }
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building {
+  animation: build_pulse 1.4s ease-in-out infinite;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building > .build_file_name,
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building > .build_file_meta {
+  opacity: 0.45;
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file > .build_file_previous {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  color: var(--fg_muted);
+}
+.wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.built_updated {
+  animation: build_settled 1.6s ease-out 1;
+}
 .wrapper_widget.update_code > .content_data .role_body > .dev_channel_row {
   margin: 0.75rem 0 0.25rem 0;
 }
@@ -16921,6 +16936,11 @@ dd-modal:has(.tool_header) {
   font-size: 0.9em;
   opacity: 0.75;
 }
+.wrapper_widget.update_code > .content_data .update_status .restore_row .restore_reason_detail {
+  flex-basis: 100%;
+  font-size: 0.9em;
+  opacity: 0.9;
+}
 .wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_restore {
   margin-left: auto;
   padding: 0.15rem 0.7rem;
@@ -16956,6 +16976,17 @@ dd-modal:has(.tool_header) {
   margin: 0 0 0.75rem 0;
   border: 1px solid var(--border_default);
   border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  max-height: 55vh;
+}
+.wrapper_widget.update_code > .content_data .body_response.tracking > .phase_track > .dd_readout {
+  overflow-y: auto;
+  min-height: 0;
+}
+.wrapper_widget.update_code > .content_data .body_response.tracking > .update_stream,
+.wrapper_widget.update_code > .content_data .body_response.tracking > .dd_note {
+  scroll-margin-top: 57vh;
 }
 .wrapper_widget.update_code > .content_data .body_response > .error {
   margin: 0.5rem 0;
@@ -17099,6 +17130,23 @@ dd-modal:has(.tool_header) {
 .widget_update_code_modal .footer .spinner {
   margin: 0px;
   top: 2rem;
+}
+@keyframes build_pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes build_settled {
+  0% {
+    background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18));
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 /**
 * dataframe_control

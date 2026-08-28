@@ -123,8 +123,14 @@ const channel_label = function(channel) {
 *
 * @param {HTMLElement} value - the .dd_v cell to fill
 * @param {Object} release - {file, bytes, stamp, channel, sidecar}
+* @param {Object} [mark] - THE BUILD THAT JUST RAN, when this row is its
+*   artifact: `{previous}` — the facts the row showed BEFORE it (null when the
+*   archive did not exist yet). A build rewrites a file IN PLACE, so the new
+*   row is byte-for-byte plausible whether or not anything happened: without
+*   the before-value the operator has nothing to compare against, and no way to
+*   tell a build that wrote from one that did not.
 */
-const release_facts = function(value, release) {
+const release_facts = function(value, release, mark) {
 
 	ui.create_dom_element({
 		element_type	: 'span',
@@ -152,6 +158,58 @@ const release_facts = function(value, release) {
 			text_content	: get_label.update_code_sidecar_missing || 'no sha256 sidecar',
 			parent			: value
 		})
+	}
+
+	// THE VERDICT ON THE BUILD THAT JUST RAN — present only on the row whose
+	// button was pressed, and only until the next render of this half.
+	if (mark) {
+		const previous	= mark.previous || null
+		// The STAMP is the evidence. A build rewrites the archive, so a stamp
+		// that did not move means the file on disk is the one already there;
+		// saying "updated" then would be a claim the disk does not support.
+		const wrote		= previous===null || previous.stamp!==release.stamp
+		value.classList.add(wrote ? 'built_updated' : 'built_unchanged')
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: wrote ? 'dd_badge pill_ok build_verdict' : 'dd_badge pill_warning build_verdict',
+			text_content	: wrote
+				? (get_label.update_code_build_updated || 'updated just now')
+				: (get_label.update_code_build_unchanged || 'unchanged: the build wrote no new file'),
+			parent			: value
+		})
+		// …and the value it replaced — but ONLY THE PART THAT MOVED. Repeating
+		// the facts unchanged ("173 MB · 28/08/2026, 11:41:43" above,
+		// "was 173 MB · 28/08/2026, 11:41:12" below) buries the one figure the
+		// operator is here to read in three that did not change. So: the size
+		// appears only when it differs, and the date only when the build crossed
+		// midnight — otherwise the time of day carries the whole difference.
+		const previous_text = (() => {
+			if (previous===null) {
+				return get_label.update_code_not_built || 'Not built yet'
+			}
+			// nothing moved: the `unchanged` badge above IS the statement, and a
+			// before-value identical to the value above it would be pure noise.
+			if (!wrote) {
+				return null
+			}
+			const parts = []
+			if (previous.bytes!==release.bytes) {
+				parts.push(format_bytes(previous.bytes))
+			}
+			parts.push(same_day(previous.stamp, release.stamp)
+				? format_time(previous.stamp)
+				: format_stamp(previous.stamp))
+			return parts.join(' · ')
+		})()
+		if (previous_text!==null) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'build_file_previous',
+				text_content	: (get_label.update_code_build_previous || 'was %s')
+					.replace('%s', previous_text),
+				parent			: value
+			})
+		}
 	}
 
 	return value
@@ -421,6 +479,18 @@ const format_stamp = function(ms) {
 	if (!ms) return '—'
 	try { return new Date(ms).toLocaleString() } catch (e) { return String(ms) }
 }
+/** Time of day only — for a before-value on the SAME day as the value beside it. */
+const format_time = function(ms) {
+	if (!ms) return '—'
+	try { return new Date(ms).toLocaleTimeString() } catch (e) { return String(ms) }
+}
+/** Same calendar day in the operator's own timezone. */
+const same_day = function(a, b) {
+	if (!a || !b) return false
+	const x = new Date(a)
+	const y = new Date(b)
+	return x.getFullYear()===y.getFullYear() && x.getMonth()===y.getMonth() && x.getDate()===y.getDate()
+}
 
 
 
@@ -561,7 +631,26 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 				// same row draws: two contradictory statements about one directory.
 				const reason_text = get_label['update_code_restore_reason_' + point.restorable_reason]
 					|| String(point.restorable_reason || '')
-				button_restore.title = reason_text
+				// …and the NUMBERS behind it, when the refusal is about a version
+				// the operator now has to go and install. The sentence alone said
+				// "a different Bun runtime than the one running" without naming
+				// either one, so an admin reading it could not tell WHICH Bun to
+				// install, nor which of several restore points was the odd one —
+				// and both facts were already on the wire (the point's own
+				// `bun_pin`, the engine's `bun`). Only this reason has numbers to
+				// add; the others stay exactly as they were.
+				const reason_detail = (point.restorable_reason==='bun_pin_mismatch' && point.bun_pin && engine.bun)
+					? (get_label.update_code_restore_bun_versions
+						|| 'This copy pins Bun %s; this server runs Bun %s. Install Bun %s to restore it.')
+						.replace('%s', String(point.bun_pin))
+						.replace('%s', String(engine.bun))
+						.replace('%s', String(point.bun_pin))
+					: ''
+				// the hover tooltip carries both lines; the rendered lines below
+				// are what a touch screen (and the operator manual) actually get.
+				button_restore.title = reason_detail
+					? (reason_text + ' ' + reason_detail)
+					: reason_text
 				// RENDERED, not only hovered (2026-08-26): a `title` is a hover
 				// tooltip — it does not exist on a touch screen and the operator
 				// manual promised the reason was on the button. A disabled button
@@ -573,6 +662,14 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 					text_content	: reason_text,
 					parent			: value
 				})
+				if (reason_detail) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'restore_reason_detail mono',
+						text_content	: reason_detail,
+						parent			: value
+					})
+				}
 				return
 			}
 			button_restore.addEventListener('click', (e) => {
@@ -594,7 +691,7 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 * @param {Object|null} code_server - value.code_server, null on a plain install
 * @returns {HTMLElement|null}
 */
-export const render_code_server_status = function(parent, code_server, mount_builder) {
+export const render_code_server_status = function(parent, code_server, mount_builder, build_mark) {
 
 	if (!code_server) return null
 
@@ -676,13 +773,11 @@ export const render_code_server_status = function(parent, code_server, mount_bui
 				class_name		: 'dd_k build_action',
 				parent			: row
 			})
-			if (mount_builder) {
-				mount_builder(channel, action)
-			} else {
-				// no form builder on this page: name the channel anyway, so the
-				// artifact below is still attributable
-				action.textContent = channel_label(channel)
-			}
+			// THE ARTIFACT CELL IS CREATED BEFORE THE BUTTON IS MOUNTED, and is
+			// handed to the mounter: while a build runs, the row that says what
+			// is on disk is the row that has to say it is being rewritten. The
+			// button's own spinner reports that the REQUEST is in flight; only
+			// this cell can report that THIS artifact is the one changing.
 			const value = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_v build_file',
@@ -691,12 +786,21 @@ export const render_code_server_status = function(parent, code_server, mount_bui
 			const built = releases.find(release =>
 				release.channel===channel && (target_version===null || release.version===target_version)
 			)
+			if (mount_builder) {
+				mount_builder(channel, action, value, built || null)
+			} else {
+				// no form builder on this page: name the channel anyway, so the
+				// artifact below is still attributable
+				action.textContent = channel_label(channel)
+			}
+			// the verdict belongs to the channel whose button was pressed
+			const mark = (build_mark && build_mark.channel===channel) ? build_mark : null
 			if (!built) {
 				value.classList.add('none')
 				value.textContent = get_label.update_code_not_built || 'Not built yet'
 				return
 			}
-			release_facts(value, built)
+			release_facts(value, built, mark)
 		})
 
 	// Archives on disk for OTHER versions. They have no builder (a build always

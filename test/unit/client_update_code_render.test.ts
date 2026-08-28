@@ -45,6 +45,7 @@ const WIDGET_DIR = join(
 const render_src = readFileSync(join(WIDGET_DIR, 'js/render_update_code.js'), 'utf8');
 const model_src = readFileSync(join(WIDGET_DIR, 'js/update_code.js'), 'utf8');
 const css_src = readFileSync(join(WIDGET_DIR, 'css/update_code.less'), 'utf8');
+const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
 const COMMON_DIR = join(import.meta.dir, '..', '..', 'client/dedalo/core/common/js');
 const common_src = readFileSync(join(COMMON_DIR, 'common.js'), 'utf8');
 const render_common_src = readFileSync(join(COMMON_DIR, 'render_common.js'), 'utf8');
@@ -747,7 +748,10 @@ describe('update_code developer-builds switch', () => {
 		).toBe(true);
 		expect(render_src).toContain('render_code_server_half(value.code_server)');
 		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
-		expect(status_src).toContain('mount_builder(channel, action)');
+		// the mounter also receives the ARTIFACT CELL and the facts it currently
+		// shows: the in-flight state belongs on the row being rewritten, and the
+		// before-value has to be captured before the refresh destroys this half.
+		expect(status_src).toContain('mount_builder(channel, action, value, built || null)');
 		expect(status_src).toContain('build_row');
 		expect(status_src).toContain('update_code_build_publish');
 		// an unbuilt channel still shows its row, saying so
@@ -776,12 +780,14 @@ describe('update_code developer-builds switch', () => {
 		expect(render_src).toContain('refresh_code_server');
 		// re-read from the SERVER, not from the value this render closed over
 		expect(
-			/refresh_code_server\s*=\s*async\s*\(\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
+			/refresh_code_server\s*=\s*async\s*\(build_mark\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
 				render_src,
 			),
 		).toBe(true);
-		// and the half is re-rendered from that fresh value
-		expect(render_src).toContain('render_code_server_half(fresh.code_server)');
+		// and the half is re-rendered from that fresh value, carrying the mark:
+		// the whole half is replaced, so without it the new archive line appears
+		// where the old one was with nothing saying which one is on screen.
+		expect(render_src).toContain('render_code_server_half(fresh.code_server, build_mark)');
 		// a failed refresh must not take the panel down
 		expect(
 			/catch \(error\) \{[\s\S]{0,240}console\.error\('update_code: could not refresh/.test(
@@ -863,5 +869,205 @@ describe('update_code developer-builds switch', () => {
 
 		// and the frame the client reads still has no `status` to use instead
 		expect(/function frameOf\([^)]*\): JobStatusFrame \{[^}]*status:/s.test(jobs_src)).toBe(false);
+	});
+});
+
+
+/**
+ * THE RUNNING SURFACE — the half a "does the error render at all?" gate misses.
+ *
+ * Measured on the docker museum in map view (2026-08-28, 640px viewport, root
+ * font 26px): every ending sentence WAS produced and WAS in the DOM, and the
+ * operator still saw nothing, because the run's own scroll parked the phase
+ * track 184px too low and the track's height did the rest. Two independent
+ * causes, so two independent assertions — either one regressing hides the
+ * progress again:
+ *
+ *   1. the scroll must be issued AFTER the surface is complete and must not be
+ *      animated (a smooth scroll animates toward an offset computed when it is
+ *      issued, so issuing it mid-build chases a stale layout);
+ *   2. a pinned track that can grow to the height of its scrollport pins
+ *      nothing — the cap and the rows' own overflow are what leave room for the
+ *      stream and the endings underneath.
+ */
+describe('update_code tracking surface', () => {
+	// the tracker function only — assertions below must not match the panel's
+	// other scrolls (the modal, the readiness half).
+	const tracker = render_src.slice(
+		render_src.indexOf('const track_process = function('),
+		render_src.indexOf('}//end track_process'),
+	);
+
+	test('the tracker exists and is the region under test', () => {
+		expect(tracker.length).toBeGreaterThan(500);
+		expect(tracker).toContain('update_stream');
+	});
+
+	test("the run's scroll is issued AFTER the stream node, and is not animated", () => {
+		const stream_at = tracker.indexOf("class_name\t\t: 'update_stream'");
+		const scroll_at = tracker.indexOf('scrollIntoView');
+		expect(stream_at, 'the stream node is created in the tracker').toBeGreaterThan(-1);
+		expect(scroll_at, 'the tracker scrolls its surface into view').toBeGreaterThan(-1);
+		// ORDER is the fix: scrolling before the stream exists chased a layout
+		// that was still growing and landed 184px short.
+		expect(scroll_at).toBeGreaterThan(stream_at);
+		// and no smooth animation on the START scroll — `behavior:'auto'` lands
+		// deterministically. (reveal(), at the endings, is a separate call.)
+		const start_scroll = tracker.slice(scroll_at, scroll_at + 200);
+		expect(start_scroll).toContain("behavior:'auto'");
+		expect(start_scroll).not.toContain("behavior:'smooth'");
+	});
+
+	test('every ending sentence is revealed, not merely appended', () => {
+		// each ending appends its note as the LAST child of a surface taller than
+		// the viewport; reveal() is what puts it where it can be read.
+		const notes = tracker.match(/(reveal\()?ui\.create_dom_element\(\{[^}]*?class_name[^}]*?dd_note/gs) ?? [];
+		expect(notes.length, 'the tracker still appends ending notes').toBeGreaterThanOrEqual(5);
+		for (const note of notes) {
+			expect(note.startsWith('reveal('), `an ending note is appended unrevealed: ${note.slice(0, 120)}`).toBe(true);
+		}
+		// reveal itself must tolerate the DOM stub this gate drives it against
+		expect(tracker).toContain("typeof node.scrollIntoView==='function'");
+	});
+
+	test('the pinned phase track cannot own its scrollport', () => {
+		const tracking = css_src.slice(css_src.indexOf('&.tracking {'));
+		expect(tracking).toContain('position: sticky');
+		// a cap, and rows that scroll INSIDE it — without both, the track grows
+		// to the full height of the box and there is nothing left to pin above.
+		expect(/max-height:\s*[^;]+;/.test(tracking)).toBe(true);
+		expect(tracking).toContain('overflow-y: auto');
+		// flex's default min-height:auto refuses to shrink below content, which
+		// would push the overflow straight back onto the page.
+		expect(tracking).toContain('min-height: 0');
+	});
+});
+
+/**
+ * THE BLOCKED-RESTORE REASON must name the versions it is about.
+ *
+ * "This copy pins a different Bun runtime than the one running" named NEITHER,
+ * so an admin could not tell which Bun to install, nor which of eleven restore
+ * points was the odd one — while both facts were already on the wire (the
+ * point's own `bun_pin`, the engine's `bun`).
+ */
+describe('update_code restore-reason detail', () => {
+	const KEY = 'update_code_restore_bun_versions';
+
+	test('the label exists and takes the three versions the sentence needs', () => {
+		const sentence = master_labels[KEY];
+		expect(sentence, `${KEY} is defined in master.json`).toBeDefined();
+		// pinned, running, pinned-again ("install X to restore it") — the client
+		// substitutes positionally, so the count is the contract.
+		expect(((sentence ?? '').match(/%s/g) ?? []).length).toBe(3);
+	});
+
+	test('the renderer fills it from the wire, not from a literal', () => {
+		expect(status_src).toContain(KEY);
+		expect(status_src).toContain('point.bun_pin');
+		expect(status_src).toContain('engine.bun');
+		// exactly the three the restore sentence takes — counted on the call that
+		// fills THAT label, so an unrelated substitution elsewhere in the file
+		// (the build readout's `was %s`) cannot satisfy this.
+		const restore_fill = status_src.slice(status_src.indexOf(KEY));
+		expect((restore_fill.match(/\.replace\('%s',/g) ?? []).length).toBe(3);
+	});
+
+	test('only the bun-pin refusal gets numbers, and only when both are known', () => {
+		// the other two reasons have no versions to add; a point whose pin cannot
+		// be read must degrade to the sentence alone, never print "undefined".
+		expect(status_src).toContain("point.restorable_reason==='bun_pin_mismatch' && point.bun_pin && engine.bun");
+		// the sentence itself is untouched — its translations stay valid
+		expect(status_src).toContain("get_label['update_code_restore_reason_' + point.restorable_reason]");
+	});
+
+	test('the detail line has somewhere to render', () => {
+		expect(status_src).toContain('restore_reason_detail');
+		expect(css_src).toContain('.restore_reason_detail');
+	});
+});
+
+
+/**
+ * THE BUILD READOUT must say WHEN it is changing and WHAT it changed from.
+ *
+ * A build rewrites `<v>.zip` / `<v>-dev.zip` IN PLACE and takes tens of
+ * seconds. Before this, the row beside the button said nothing while that ran,
+ * and afterwards the whole half was replaced with a line that looks exactly
+ * like the one it replaced (same name, near-same size, a timestamp nobody
+ * memorised). Reported 2026-08-28: "is not clear if the information changes".
+ *
+ * Both halves are asserted, because either alone leaves the operator guessing:
+ * an in-flight state with no before/after cannot confirm the write happened,
+ * and a verdict with no in-flight state leaves the panel mute while it runs.
+ */
+describe('update_code build feedback', () => {
+	test('the in-flight state is armed by the REQUEST, never by the click', () => {
+		// build_form runs window.confirm synchronously and only then adds
+		// `button_spinner`, before its first await — so a listener registered
+		// after it sees the spinner iff the operator confirmed. Marking on click
+		// would leave a declined confirm showing "building…" forever.
+		expect(render_src).toContain("form.addEventListener('submit'");
+		expect(render_src).toContain("classList.contains('button_spinner')");
+		expect(render_src).toContain("artifact_cell.classList.add('building')");
+		expect(render_src).toContain('update_code_build_building');
+		// the marker goes on the ARTIFACT cell, not on the button: the button
+		// already reports the request; only the row can report that ITS file is
+		// the one being rewritten.
+		expect(render_src).toContain('function(channel, node, artifact_cell, built_before)');
+	});
+
+	test('the before-value is captured at mount and survives the refresh', () => {
+		// the refresh destroys this half, so nothing could read it back off the
+		// DOM afterwards — it has to be closed over when the row is built.
+		expect(render_src).toContain('built_before');
+		expect(/previous\s*:\s*built_before/.test(render_src)).toBe(true);
+		expect(render_src).toContain('channel\t\t: channel');
+		// …and reaches the renderer as the mark for that channel only
+		expect(status_src).toContain('build_mark && build_mark.channel===channel');
+		expect(/render_code_server_status = function\(parent, code_server, mount_builder, build_mark\)/.test(status_src)).toBe(true);
+	});
+
+	test('the verdict is read off the STAMP, not asserted', () => {
+		// "updated" must be a statement about the disk that the disk supports: a
+		// build that wrote nothing leaves the stamp where it was, and the row
+		// says THAT instead of claiming a change.
+		expect(status_src).toContain('previous.stamp!==release.stamp');
+		expect(status_src).toContain('update_code_build_updated');
+		expect(status_src).toContain('update_code_build_unchanged');
+		// the archive that did not exist before is an update, not "unchanged"
+		expect(status_src).toContain('previous===null || previous.stamp!==release.stamp');
+	});
+
+	test('the before-value shows only what MOVED', () => {
+		// Repeating the unchanged facts ("173 MB · 28/08/2026, 11:41:43" above,
+		// "was 173 MB · 28/08/2026, 11:41:12" below) buries the one figure the
+		// operator is reading for in three that did not change.
+		expect(status_src).toContain('previous.bytes!==release.bytes');
+		expect(status_src).toContain('same_day(previous.stamp, release.stamp)');
+		expect(status_src).toContain('format_time');
+		// and an UNCHANGED build renders no before-line at all: it would be
+		// identical to the value above it, and the badge already says so.
+		expect(/if \(!wrote\) \{\s*return null/.test(status_src)).toBe(true);
+		expect(status_src).toContain('if (previous_text!==null)');
+	});
+
+	test('the value it replaced is spelled out, and every label is defined', () => {
+		expect(status_src).toContain('build_file_previous');
+		expect(status_src).toContain('update_code_build_previous');
+		for (const key of [
+			'update_code_build_building',
+			'update_code_build_previous',
+			'update_code_build_unchanged',
+			'update_code_build_updated',
+		]) {
+			expect(master_labels[key], `${key} is defined in master.json`).toBeDefined();
+		}
+		// one substitution slot: the size · date the row showed before
+		expect(((master_labels.update_code_build_previous ?? '').match(/%s/g) ?? []).length).toBe(1);
+		// and the states have somewhere to render
+		expect(css_src).toContain('&.building');
+		expect(css_src).toContain('.build_file_previous');
+		expect(css_src).toContain('&.built_updated');
 	});
 });

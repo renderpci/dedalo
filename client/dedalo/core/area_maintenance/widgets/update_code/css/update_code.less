@@ -168,6 +168,33 @@
 						color: var(--fg_muted);
 						font-style: italic;
 					}
+
+					// IN FLIGHT. The facts stay legible — the operator is meant
+					// to read what is being replaced — but they are visibly no
+					// longer current, and the row pulses so the change is
+					// noticed on a panel the eye is not resting on.
+					&.building {
+						>.build_file_name,
+						>.build_file_meta {
+							opacity: 0.45;
+						}
+
+						animation: build_pulse 1.4s ease-in-out infinite;
+					}
+
+					// THE VERDICT LINE, on its own row under the facts.
+					>.build_file_previous {
+						flex-basis: 100%;
+						font-size: 0.9em;
+						color: var(--fg_muted);
+					}
+
+					// DONE. A one-shot wash rather than a standing colour: the
+					// row is normal state again, and only the badge and the
+					// before-value have to persist.
+					&.built_updated {
+						animation: build_settled 1.6s ease-out 1;
+					}
 				}
 			}
 		}
@@ -313,6 +340,16 @@
 					opacity: 0.75;
 				}
 
+				// the version numbers behind the refusal, on their own line: the
+				// sentence says WHAT is wrong, this says WHICH Bun to install.
+				// Slightly stronger than the sentence because it is the part the
+				// operator has to act on, and mono because it is two versions.
+				.restore_reason_detail {
+					flex-basis: 100%;
+					font-size: 0.9em;
+					opacity: 0.9;
+				}
+
 				>.dd_v >button.button_restore {
 					margin-left: auto;
 					padding: 0.15rem 0.7rem;
@@ -369,6 +406,39 @@
 					margin: 0 0 0.75rem 0;
 					border: 1px solid var(--border_default);
 					border-radius: 4px;
+
+					// A STICKY BLOCK THAT OWNS THE VIEWPORT PINS NOTHING. Eight
+					// phase rows plus the bar measure ~530px, so on a short
+					// window (measured 2026-08-27, ~630px of viewport) the track
+					// filled the screen on its own: the live stream directly
+					// under it was cut off at the fold, and every ending sentence
+					// — refusal, rollback, connection lost — was appended into
+					// space the operator could not see. The pin was working and
+					// there was simply nothing left to pin it above.
+					//
+					// So bound it. The bar and its note are the part that must
+					// never move; the ROWS are the part that can scroll inside
+					// their own box. Capped at 55vh the track keeps at least
+					// 45vh of viewport for the stream and the endings, at every
+					// window height, without a media query.
+					display: flex;
+					flex-direction: column;
+					max-height: 55vh;
+
+					>.dd_readout {
+						overflow-y: auto;
+						// a flex child's default min-height:auto refuses to
+						// shrink below its content, which would defeat the cap
+						// above and put the overflow back on the page.
+						min-height: 0;
+					}
+				}
+
+				// anything revealed WHILE the track is pinned must clear it, or
+				// scrollIntoView tucks it underneath (reveal(), render_update_code.js).
+				>.update_stream,
+				>.dd_note {
+					scroll-margin-top: 57vh;
 				}
 			}
 
@@ -566,4 +636,18 @@
 			top: 2rem;
 		}
 	}
+}
+
+
+// Build feedback (see .build_file above). Kept OUT of the nesting so both
+// states read as one pair, and deliberately cheap: opacity only, no layout
+// property, so a pulsing row never reflows the panel around it.
+@keyframes build_pulse {
+	0%, 100%	{ opacity: 1; }
+	50%			{ opacity: 0.55; }
+}
+
+@keyframes build_settled {
+	0%		{ background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18)); }
+	100%	{ background-color: transparent; }
 }
