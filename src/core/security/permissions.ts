@@ -32,6 +32,7 @@ import { isErrorInDomain } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { THESAURUS_SECTION } from '../ontology/ontology_tipos.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
+import { scheduleAccountTransitionRevocation } from './revocation.ts';
 
 /**
  * Bounded-staleness backstop for the per-user caches below. Explicit
@@ -261,18 +262,67 @@ export function invalidatePermissionsForWrite(
 	componentTipo: string,
 	sectionId: number,
 ): void {
+	clearSecurityCachesForWrite(sectionTipo, componentTipo, sectionId);
+	// THE REVOCATION SEAM — the SECOND reach, for the ONE door that writes a dd128
+	// relation key without going through the record-write chokepoint.
+	//
+	// The PRIMARY reach is `section_record/record_write.ts` (persistRecordKeys /
+	// persistRecordColumns → revocation.reactToRecordComponentWrite): that is where
+	// every save door, both importers, the MCP tools, the agent change-plan,
+	// tool_propagate_component_data and both time-machine restore doors land.
+	// `relations/save.ts deletePortalLocator` does NOT — it removes a locator with a
+	// direct `updateMatrixKeyData` and then calls THIS function post-commit — so without
+	// this line a portal-unlink of a dd244 (security administrator) or dd131 locator
+	// would revoke nothing. Enumerated as such in
+	// test/unit/dd128_write_census_tripwire.test.ts.
+	//
+	// COMMIT-ONLY LANE. When this function is already post-commit (deletePortalLocator)
+	// there is no ambient transaction, `registerCommitAction` returns false and the
+	// revocation runs inline — the same answer, reached honestly.
+	//
+	// (!) A CALLER ON THE DEFERRED LANE MUST NOT USE THIS FUNCTION. `deferPostTransaction`
+	// replays on ROLLBACK, and a replay happens after the commit queue has closed, so
+	// the schedule below would degrade to an inline revocation for a write that never
+	// landed. Those callers take `clearSecurityCachesForWrite` instead — the cache half
+	// alone, which is exactly what that lane is for.
+	scheduleAccountTransitionRevocation(
+		sectionTipo,
+		sectionId,
+		[componentTipo],
+		'invalidatePermissionsForWrite',
+	);
+}
+
+/**
+ * The CACHE half of {@link invalidatePermissionsForWrite}, with no revocation.
+ *
+ * The lane decides which of the two a caller wants: cache clears are idempotent and
+ * MUST replay on rollback (`deferPostTransaction`), a revocation is destructive and must
+ * not (`registerCommitAction`). A caller that queues work on the deferred lane therefore
+ * calls THIS one — save_component.ts's post-write clear, and the cache lane inside
+ * revocation.reactToRecordComponentWrite.
+ */
+export function clearSecurityCachesForWrite(
+	sectionTipo: string,
+	componentTipo: string,
+	sectionId: number,
+): void {
 	if (sectionTipo === PROFILES_SECTION && componentTipo === SECURITY_ACCESS_COMPONENT) {
 		clearPermissionsCache();
 		return;
 	}
-	if (sectionTipo === USERS_SECTION) {
-		if (componentTipo === PROFILE_SELECT_COMPONENT) clearPermissionsCache(sectionId);
-		if (componentTipo === FILTER_MASTER_COMPONENT) clearUserProjectsCache(sectionId);
-		// A flag flip (global-admin dd244 / developer dd515) re-resolves the
-		// principal on the next request (boot backlog #4 cache).
-		if (componentTipo === GLOBAL_ADMIN_COMPONENT || componentTipo === DEVELOPER_COMPONENT) {
-			clearPrincipalCache(sectionId);
-		}
+	if (sectionTipo === USERS_SECTION) clearUsersSectionCaches(componentTipo, sectionId);
+}
+
+/** The dd128 half of {@link clearSecurityCachesForWrite}: which cache a user-record
+ *  component write invalidates. */
+function clearUsersSectionCaches(componentTipo: string, sectionId: number): void {
+	if (componentTipo === PROFILE_SELECT_COMPONENT) clearPermissionsCache(sectionId);
+	if (componentTipo === FILTER_MASTER_COMPONENT) clearUserProjectsCache(sectionId);
+	// A flag flip (global-admin dd244 / developer dd515) re-resolves the
+	// principal on the next request (boot backlog #4 cache).
+	if (componentTipo === GLOBAL_ADMIN_COMPONENT || componentTipo === DEVELOPER_COMPONENT) {
+		clearPrincipalCache(sectionId);
 	}
 }
 
@@ -608,18 +658,26 @@ const SELF_EDITABLE_COMPONENTS: ReadonlySet<string> = new Set(['dd452', 'dd134',
  * PHP guards the whole branch with `!empty($user_id)`, so user id 0 — the
  * "no logged user" sentinel — is deliberately skipped here too.
  */
+function isActorsOwnUserRecord(
+	principal: Principal,
+	sectionTipo: string,
+	sectionId: number | string | null | undefined,
+): boolean {
+	if (sectionTipo !== USERS_SECTION) return false;
+	if (sectionId === null || sectionId === undefined) return false;
+	// PHP: !empty($user_id) — 0 is "not logged in", never an own-record match.
+	if (principal.userId === 0) return false;
+	const recordId = Number(sectionId);
+	return Number.isInteger(recordId) && recordId === principal.userId;
+}
+
 export function resolveOwnUserRecordPermission(
 	principal: Principal,
 	sectionTipo: string,
 	tipo: string,
 	sectionId: number | string | null | undefined,
 ): number | null {
-	if (sectionTipo !== USERS_SECTION) return null;
-	if (sectionId === null || sectionId === undefined) return null;
-	// PHP: !empty($user_id) — 0 is "not logged in", never an own-record match.
-	if (principal.userId === 0) return null;
-	const recordId = Number(sectionId);
-	if (!Number.isInteger(recordId) || recordId !== principal.userId) return null;
+	if (!isActorsOwnUserRecord(principal, sectionTipo, sectionId)) return null;
 
 	// Order matters: the security-administrator downgrade is UNCONDITIONAL in
 	// PHP — a global admin may not raise their own global-admin flag either.
@@ -627,6 +685,84 @@ export function resolveOwnUserRecordPermission(
 	if (SELF_ELEVATION_GUARDED.has(tipo) && principal.isGlobalAdmin === false) return 1;
 	if (SELF_EDITABLE_COMPONENTS.has(tipo)) return 2;
 	return null;
+}
+
+/**
+ * IS THIS WRITE AN ACCOUNT'S OWN SELF-SERVICE EDIT? (2026-08-28, reviewer must-fix 5.)
+ *
+ * True only when ALL of: the target is the USERS section, the record IS the actor's own
+ * account, and the component is one of the four SELF-EDITABLE ones — full name (dd452),
+ * email (dd134), password (dd133), user image (dd522). Nothing else, ever: dd244, dd132,
+ * dd1725, dd515 and dd330 are deliberately excluded, so this predicate can never widen
+ * into an escalation.
+ *
+ * WHY IT EXISTS — ROOT WAS LOCKED OUT OF ITS OWN RECORD. `assertRecordWriteTarget`
+ * refuses `section_id < 1` for EVERY caller (SEC-05: root's password must not be
+ * rewritable by any global admin holding a level-2 grant on `(dd128, dd133)`), and the
+ * users section is the one place a legitimate record carries a non-positive id: root is
+ * dd128/-1. So the refusal also blocked root from saving its OWN password and its OWN
+ * email — and root is excluded from the emailed recovery flow by the same `id > 0` rule
+ * (password_reset.ts), which left an installation with NO in-engine way to rotate its
+ * most privileged credential. That was a side effect nobody chose.
+ *
+ * The carve-out is a NARROW exception to the ID rule, not to the LEVEL rule: the level
+ * still comes from `getRecordComponentPermission`, which forces dd244 to 1 for everyone
+ * including root and keeps the four self-editable components at 2. And it is bound to
+ * the ACTOR'S OWN id, so it grants a global admin nothing on root's record: their
+ * `principal.userId` is not -1, the predicate is false, and the non-positive-id refusal
+ * runs exactly as before.
+ *
+ * Divergence from the frozen PHP, recorded as
+ * `engineering/wire_contract/WC-2026-08-28-root-self-service-write.md`.
+ */
+export function isSelfServiceAccountWrite(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+	sectionId: number | string | null | undefined,
+): boolean {
+	if (!isActorsOwnUserRecord(principal, sectionTipo, sectionId)) return false;
+	return SELF_EDITABLE_COMPONENTS.has(componentTipo);
+}
+
+/**
+ * THE RECORD-ADDRESSED COMPONENT PERMISSION — `getPermissions` with the dd128
+ * own-record rule already applied (P1-2, closes SEC-03).
+ *
+ * `resolveOwnUserRecordPermission` above is a WRITE gate, and it was a helper three
+ * doors remembered to call. Every OTHER door read the raw matrix level, so a principal
+ * holding level 2 on `(dd128, dd1725)` — the departmental user-manager role the
+ * downgrade exists to neutralise — was refused by the human save door and SUCCEEDED
+ * through `tool_propagate_component_data` and through the MCP `set_field` door.
+ *
+ * The rule is now part of the RESOLUTION: any door that holds a record address asks
+ * this instead of `getPermissions`, and the answer already carries the downgrade (a
+ * user may not raise their own profile / developer flag / username / section_id) and
+ * the upgrade (the self-service profile editor keeps working on name / email /
+ * password / image, which no ordinary profile grants).
+ *
+ * `getPermissions` itself is deliberately NOT changed: it is a faithful mirror of PHP
+ * `common::get_permissions`, and the differential parity contract depends on that
+ * fidelity. What changes is which function a RECORD-ADDRESSED door calls.
+ *
+ * A door with no record address (section-level gates, batch gates) cannot consult the
+ * rule even in principle and keeps calling `getPermissions` — those are the ENUMERATED
+ * exemptions in `test/unit/dd128_write_census_tripwire.test.ts`.
+ */
+export async function getRecordComponentPermission(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+	sectionId: number | string | null | undefined,
+): Promise<number> {
+	const ownRecordLevel = resolveOwnUserRecordPermission(
+		principal,
+		sectionTipo,
+		componentTipo,
+		sectionId,
+	);
+	if (ownRecordLevel !== null) return ownRecordLevel;
+	return getPermissions(principal, sectionTipo, componentTipo);
 }
 
 /**

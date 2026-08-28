@@ -1267,7 +1267,11 @@ describe('the post-save security-cache clear runs after the ambient transaction'
 		const observed: { insideTransaction: boolean | null } = { insideTransaction: null };
 		mock.module('../../src/core/security/permissions.ts', () => ({
 			...REAL_PERMISSIONS,
-			invalidatePermissionsForWrite: (): void => {
+			// The name the save door queues on the DEFERRED lane since 2026-08-28: the
+			// CACHE half alone. `invalidatePermissionsForWrite` also ends the account's
+			// sessions, which must never replay on a rollback (P1-4), so the two were
+			// split and this door takes the pure one.
+			clearSecurityCachesForWrite: (): void => {
 				// true = a live deferred queue, i.e. an OPEN ambient transaction.
 				observed.insideTransaction = deferPostTransaction(() => {});
 			},
@@ -1299,7 +1303,7 @@ describe('the post-save security-cache clear runs after the ambient transaction'
 		let clears = 0;
 		mock.module('../../src/core/security/permissions.ts', () => ({
 			...REAL_PERMISSIONS,
-			invalidatePermissionsForWrite: (): void => {
+			clearSecurityCachesForWrite: (): void => {
 				clears += 1;
 			},
 		}));

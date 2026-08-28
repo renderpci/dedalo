@@ -21,14 +21,21 @@ import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
-/** Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw. */
+/**
+ * Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw.
+ *
+ * `sectionId` is REQUIRED (P1-2, SEC-03) so the dd128 own-record LEVEL rule is part of
+ * the answer rather than a helper this door never called. `null` where the gate
+ * addresses no record (a section-level create).
+ */
 async function assertWritePermission(
 	principal: Principal,
 	sectionTipo: string,
 	tipo: string,
+	sectionId: number | null,
 ): Promise<void> {
-	const { getPermissions } = await import('../../../core/security/permissions.ts');
-	const level = await getPermissions(principal, sectionTipo, tipo);
+	const { getRecordComponentPermission } = await import('../../../core/security/permissions.ts');
+	const level = await getRecordComponentPermission(principal, sectionTipo, tipo, sectionId);
 	if (level < 2) {
 		throw new DedaloError('perm.denied', {
 			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
@@ -80,7 +87,7 @@ export async function saveComponentValue(
 ): Promise<{ ok: boolean; message?: string; data: unknown }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.save.section_tipo');
 	const componentTipo = assertValidTipo(input.tipo, 'mcp.save.tipo');
-	await assertWritePermission(principal, sectionTipo, componentTipo);
+	await assertWritePermission(principal, sectionTipo, componentTipo, Math.floor(input.section_id));
 	await assertRecordInScope(principal, sectionTipo, Math.floor(input.section_id));
 
 	// THE WRITE LANGUAGE (audit DATA-24). This door defaulted every omitted lang
@@ -113,7 +120,8 @@ export async function createRecord(
 	input: { section_tipo: string },
 ): Promise<{ section_id: number }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.create.section_tipo');
-	await assertWritePermission(principal, sectionTipo, sectionTipo);
+	// null: a create addresses no record yet, so the own-record rule cannot apply.
+	await assertWritePermission(principal, sectionTipo, sectionTipo, null);
 	const { createSectionRecord } = await import('../../../core/section/record/create_record.ts');
 	const sectionId = await createSectionRecord(sectionTipo, principal.userId);
 	return { section_id: sectionId };
@@ -128,14 +136,19 @@ export async function deleteRecord(
 	input: { section_tipo: string; section_id: number },
 ): Promise<{ deleted: number[] }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.delete.section_tipo');
-	await assertWritePermission(principal, sectionTipo, sectionTipo);
-	await assertRecordInScope(principal, sectionTipo, Math.floor(input.section_id));
+	const sectionId = Math.floor(input.section_id);
+	await assertWritePermission(principal, sectionTipo, sectionTipo, sectionId);
+	await assertRecordInScope(principal, sectionTipo, sectionId);
 	const { deleteSectionRecord } = await import('../../../core/section/record/delete_record.ts');
-	const outcome = await deleteSectionRecord(
-		sectionTipo,
-		Math.floor(input.section_id),
-		principal.userId,
-	);
+	const outcome = await deleteSectionRecord(sectionTipo, sectionId, principal.userId);
+	// THE REVOCATION SEAM (P1-4, SEC-08): deleting a user record ends that account's
+	// sessions, media markers and pending recovery codes. A no-op for any other section.
+	if (outcome.deleted.length > 0) {
+		const { revokeDeletedAccountAccess } = await import('../../../core/security/revocation.ts');
+		for (const deletedId of outcome.deleted) {
+			revokeDeletedAccountAccess(sectionTipo, deletedId, 'mcp delete_record');
+		}
+	}
 	return { deleted: outcome.deleted };
 }
 

@@ -797,11 +797,17 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	// change takes effect on the next request rather than after a restart.
 	// No-op for ordinary content writes.
 	if (result.ok) {
-		const { invalidatePermissionsForWrite } = await import('../../security/permissions.ts');
+		// `clearSecurityCachesForWrite`, NOT `invalidatePermissionsForWrite` (2026-08-28,
+		// P1-4): the queue below REPLAYS ON ROLLBACK, and the full reaction also ends
+		// the account's sessions. A rolled-back password edit that logged the target out
+		// anyway is the fail-OPEN shape this batch exists to remove; the REVOCATION is
+		// scheduled by the write chokepoint itself (section_record/record_write.ts) on
+		// the COMMIT-ONLY lane.
+		const { clearSecurityCachesForWrite } = await import('../../security/permissions.ts');
 		// The DATA tipo (alias hop applied) — grant/profile caches key on the
 		// real component the write landed on.
 		const invalidate = (): void =>
-			invalidatePermissionsForWrite(
+			clearSecurityCachesForWrite(
 				effectiveRequest.sectionTipo,
 				effectiveRequest.componentTipo,
 				Number(effectiveRequest.sectionId),
@@ -1418,6 +1424,22 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			[sectionTipo, sectionId, encodeForJsonb(atomicInserts)],
 		);
 		if (auditStamp !== false) await persistModifiedStamp(writeTarget, auditStamp);
+		// THE SECURITY REACTION for the one branch that does NOT go through
+		// persistRecordKeys (P1-4, 2026-08-28). This path writes the component key with
+		// a raw atomic concatenation, so it reaches neither the chokepoint's cache
+		// invalidation nor the revocation seam — and it is the branch a FIRST dd244
+		// grant takes (an `insert` onto a record that carried no flag yet), i.e. exactly
+		// a promotion. Gated by the section inside reactToRecordComponentWrite; a no-op
+		// for every ordinary component.
+		{
+			const { reactToRecordComponentWrite } = await import('../../security/revocation.ts');
+			await reactToRecordComponentWrite(
+				sectionTipo,
+				Number(sectionId),
+				[componentTipo],
+				'saveComponentData atomic insert',
+			);
+		}
 	}
 
 	// Post-write absorb (PHP raises the counter at EVERY set_data): explicit

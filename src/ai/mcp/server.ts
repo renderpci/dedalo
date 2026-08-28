@@ -3,10 +3,18 @@
  * over the Model Context Protocol (REWRITE_SPEC §8, greenfield). This is a THIN
  * transport shell: every tool comes from the shared registry (registry.ts) and
  * delegates to the pure, ACL-gated handlers in tools/*.ts. The server itself
- * holds no business logic and no privilege — it resolves ONE service principal
- * at startup (from DEDALO_MCP_USER_ID) and runs every tool call under that
- * principal, so the MCP surface can never see more than the configured Dédalo
- * user would through the web client.
+ * holds no business logic and no privilege — it takes ONE service identity at
+ * startup (from DEDALO_MCP_USER_ID) and runs every tool call under it, so the
+ * MCP surface can never see more than the configured Dédalo user would through
+ * the web client.
+ *
+ * THE IDENTITY IS FIXED; THE GRANTS ARE NOT. `DEDALO_MCP_USER_ID` names the user
+ * for the life of the process and no tool can change it — but WHAT that user may
+ * do is re-asked on every call (`currentServicePrincipal`), because this process
+ * is long-lived and holds no session. A revocation reaches a web client by ending
+ * its sessions; there is nothing here to end, so a deactivated, deleted or
+ * downgraded service account would otherwise keep its startup grants until an
+ * operator happened to restart the server.
  *
  * Run it (stdio transport, the MCP default for a locally-spawned server):
  *   DEDALO_MCP_USER_ID=<dd128 section_id> bun run src/ai/mcp/server.ts
@@ -34,6 +42,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { readEnv } from '../../config/env.ts';
 import { readOptionalList } from '../../config/readers.ts';
+import { toStructuredErr } from '../../core/errors/convert.ts';
+import { DedaloError } from '../../core/errors/dedalo_error.ts';
+import { readAccountStateById } from '../../core/security/auth.ts';
 import { resolvePrincipal } from '../../core/security/permissions.ts';
 import { asToolResult } from './envelope.ts';
 import { type RegistryGates, registeredTools, runTool } from './registry.ts';
@@ -105,12 +116,65 @@ export function buildMcpServer(
 			// A refused call (permission, scope, allowlist) comes back as a
 			// structured {ok:false, error} envelope with a model-facing hint —
 			// never a transport-level crash the model cannot act on.
-			async (args: Record<string, unknown>) =>
-				asToolResult(await runTool(spec, principal, args, gates)),
+			async (args: Record<string, unknown>) => {
+				const current = await currentServicePrincipal(principal, gates);
+				if (current instanceof DedaloError) return asToolResult(toStructuredErr(current));
+				return asToolResult(await runTool(spec, current, args, gates));
+			},
 		);
 	}
 
 	return server;
+}
+
+/**
+ * RE-ASK THE SERVICE ACCOUNT'S STANDING, once per tool call.
+ *
+ * Three transitions have to reach this surface, and none of them can arrive by the
+ * usual route — ending the account's sessions — because a stdio server has none:
+ *
+ *   deactivated (dd131 = No)  the login door refuses it; so must this one, or the
+ *                             operator's one non-destructive revocation is a no-op here.
+ *   deleted (record absent)   the account no longer exists; its grants must not outlive
+ *                             it just because a process cached them.
+ *   promoted to global admin  the write-mode confused-deputy refusal is enforced at
+ *                             BUILD time. A user granted dd244 after startup would slip
+ *                             past it, which is the one direction that refusal exists to
+ *                             stop, so it is re-checked here too.
+ *
+ * `resolvePrincipal` is cached and the cache is cleared by the write seam
+ * (`clearPrincipalCache`, permissions.ts), so a re-ask normally costs nothing; the dd131
+ * read is one indexed row. Returns the refusal rather than throwing: a transport-level
+ * crash gives the model nothing it can act on, and `toStructuredErr` is the same
+ * converter every other MCP refusal goes through.
+ *
+ * Exported for its gate: test/unit/account_revocation_native.test.ts drives it against
+ * a real deactivated and a real deleted account (GATE-24 — an authorization decision may
+ * not rest on a source-substring assertion).
+ */
+export async function currentServicePrincipal(
+	startup: { userId: number; isGlobalAdmin: boolean; isDeveloper: boolean },
+	gates: RegistryGates,
+): Promise<{ userId: number; isGlobalAdmin: boolean; isDeveloper: boolean } | DedaloError> {
+	const state = await readAccountStateById(startup.userId);
+	if (state === 'absent' || state === 'inactive') {
+		return new DedaloError('perm.denied', {
+			publicMessage:
+				state === 'absent'
+					? 'The MCP service account no longer exists. Point DEDALO_MCP_USER_ID at a live dd128 user and restart the server.'
+					: "The MCP service account is deactivated (dd131 'Active account' = No). Reactivate it, or point DEDALO_MCP_USER_ID at another user.",
+			coordinates: { user_id: startup.userId },
+		});
+	}
+	const current = await resolvePrincipal(startup.userId);
+	if (gates.allowWrite === true && current.isGlobalAdmin) {
+		return new DedaloError('perm.denied', {
+			publicMessage:
+				'The MCP service account has become a global admin while the server was running. Write mode requires a least-privilege user (confused-deputy defense) and is refused until the grant is removed or the server is restarted read-only.',
+			coordinates: { user_id: startup.userId },
+		});
+	}
+	return current;
 }
 
 /**

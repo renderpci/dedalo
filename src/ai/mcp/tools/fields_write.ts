@@ -38,14 +38,24 @@ import { searchRecords } from './search.ts';
 /** Simplified types whose values are LOCATOR lists (relation column). */
 const LINK_COLUMN = 'relation';
 
-/** Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw. */
+/**
+ * Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw.
+ *
+ * `sectionId` is REQUIRED (P1-2, SEC-03). It used to be absent from this signature, so
+ * the dd128 own-record rule could not be consulted here even in principle — and a
+ * principal holding level 2 on `(dd128, dd1725)` was refused by the human save door and
+ * SUCCEEDED through `dedalo_set_field`. Pass `null` only where the gate genuinely
+ * addresses no record (a section-level create), and the resolver falls through to the
+ * raw matrix exactly as before.
+ */
 async function assertWritePermission(
 	principal: Principal,
 	sectionTipo: string,
 	tipo: string,
+	sectionId: number | null,
 ): Promise<void> {
-	const { getPermissions } = await import('../../../core/security/permissions.ts');
-	const level = await getPermissions(principal, sectionTipo, tipo);
+	const { getRecordComponentPermission } = await import('../../../core/security/permissions.ts');
+	const level = await getRecordComponentPermission(principal, sectionTipo, tipo, sectionId);
 	if (level < 2) {
 		throw new DedaloError('perm.denied', {
 			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
@@ -127,7 +137,7 @@ export async function setField(
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.set_field.section_tipo');
 	const sectionId = Math.floor(input.section_id);
 	const fieldTipo = await resolveFieldReference(sectionTipo, input.field);
-	await assertWritePermission(principal, sectionTipo, fieldTipo);
+	await assertWritePermission(principal, sectionTipo, fieldTipo, sectionId);
 	await assertRecordInScope(principal, sectionTipo, sectionId);
 
 	const model = (await getModelByTipo(fieldTipo)) ?? '';
@@ -229,7 +239,7 @@ export async function portalUnlink(
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.unlink.section_tipo');
 	const sectionId = Math.floor(input.section_id);
 	const fieldTipo = await resolveFieldReference(sectionTipo, input.field);
-	await assertWritePermission(principal, sectionTipo, fieldTipo);
+	await assertWritePermission(principal, sectionTipo, fieldTipo, sectionId);
 	await assertRecordInScope(principal, sectionTipo, sectionId);
 
 	// compareLocators is STRICT on any property present on one side only (the
@@ -315,7 +325,8 @@ export async function findOrCreate(
 	}
 
 	// No hit: create + fill (match fields first — they define the identity).
-	await assertWritePermission(principal, sectionTipo, sectionTipo);
+	// null: a create addresses no record yet, so the own-record rule cannot apply.
+	await assertWritePermission(principal, sectionTipo, sectionTipo, null);
 	const { createSectionRecord } = await import('../../../core/section/record/create_record.ts');
 	const sectionId = await createSectionRecord(sectionTipo, principal.userId);
 	for (const rule of [...input.match, ...(input.set ?? [])]) {
@@ -338,7 +349,9 @@ export async function duplicateRecord(
 ): Promise<{ section_tipo: string; section_id: number }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.duplicate.section_tipo');
 	const sourceId = Math.floor(input.section_id);
-	await assertWritePermission(principal, sectionTipo, sectionTipo);
+	// Section-level gate on a section-level operation: the own-record rule is
+	// per-COMPONENT, so it has nothing to say about a whole-record duplicate.
+	await assertWritePermission(principal, sectionTipo, sectionTipo, sourceId);
 	await assertRecordInScope(principal, sectionTipo, sourceId);
 	const { duplicateSectionRecord } = await import(
 		'../../../core/section/record/duplicate_record.ts'

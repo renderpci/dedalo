@@ -191,7 +191,9 @@ export async function validateChangePlan(
 	}
 	const plan = parsed.data as ChangePlan;
 
-	const { getPermissions } = await import('../../core/security/permissions.ts');
+	const { getPermissions, getRecordComponentPermission } = await import(
+		'../../core/security/permissions.ts'
+	);
 	const { principalCanAccessRecord } = await import('../../core/security/record_scope.ts');
 
 	const seenOps = new Set<string>();
@@ -244,7 +246,21 @@ export async function validateChangePlan(
 		// the exact component the apply will touch (never re-guessed later).
 		if (typeof op.args.field === 'string') {
 			op.args.field = await resolveFieldReference(sectionTipo, op.args.field);
-			if ((await getPermissions(principal, sectionTipo, op.args.field as string)) < 2) {
+			// P1-2 (SEC-03): through the RECORD-addressed resolver, so the dd128
+			// own-record rule applies here exactly as it does at the human save door.
+			// `op.args.section_id` is the concrete target when the op names one; a
+			// ref-shaped op has none yet, and the apply re-runs this validation with
+			// the resolved id through the tools' own gates.
+			const opSectionId =
+				typeof op.args.section_id === 'number' ? Math.floor(op.args.section_id) : null;
+			if (
+				(await getRecordComponentPermission(
+					principal,
+					sectionTipo,
+					op.args.field as string,
+					opSectionId,
+				)) < 2
+			) {
 				throw new DedaloError('perm.denied', {
 					coordinates: { section_tipo: sectionTipo, tipo: op.args.field as string },
 					extend: { op_id: op.op_id },

@@ -120,6 +120,8 @@ const EXEMPT_RESOLVERS: Record<string, string> = {
 		'REPORTS the configured root back to an administrator as a string in a JSON body. It touches no filesystem path at all.',
 	'src/core/section/record/duplicate_record.ts':
 		'Reads it only as `!== null`, to decide whether media duplication runs; every path it then builds is produced by `media/path.ts`, which is guarded.',
+	'src/core/security/session_media.ts':
+		'Reads it ONLY to ask `mediaRootIsMarked` — the guard question itself, asked in the safe direction. Before the hourly sweeper reconciles markers it checks that this process is not holding a throwaway session store against an unmarked (i.e. production) root; a marked root is what makes the reconcile SAFE there, so calling the refusing guard would invert the test. It builds no path and writes nothing.',
 };
 
 /** Every `.ts` file under the scanned dirs, tests and node_modules excluded. */

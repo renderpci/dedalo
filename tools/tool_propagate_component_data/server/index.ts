@@ -43,7 +43,10 @@ import { filterItemsByLang, readComponentItems } from '../../../src/core/resolve
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
-import { getPermissions } from '../../../src/core/security/permissions.ts';
+import {
+	getPermissions,
+	getRecordComponentPermission,
+} from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import {
 	type ToolActionContext,
@@ -228,7 +231,19 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 				errors.push(`section_id ${row.section_id}: out of the user scope`);
 				continue;
 			}
-			if ((await getPermissions(principal, row.section_tipo, componentTipo)) < 2) {
+			// P1-2 (SEC-03): the RECORD-addressed resolver, not the raw matrix level.
+			// This is the door the audit names: a principal holding level 2 on
+			// (dd128, dd1725) is refused by the human save door and used to SUCCEED
+			// here on their OWN user record, self-assigning a profile or the
+			// developer flag. `row.section_id` was already in hand two lines up.
+			if (
+				(await getRecordComponentPermission(
+					principal,
+					row.section_tipo,
+					componentTipo,
+					row.section_id,
+				)) < 2
+			) {
 				errors.push(
 					`section_id ${row.section_id}: no write permission on ${row.section_tipo}/${componentTipo}`,
 				);
@@ -317,7 +332,7 @@ export const tool: ToolServerModule = {
 		propagate_component_data: {
 			permission: null,
 			gatedInHandler:
-				'getPermissions(principal, sectionTipo, componentTipo) < 2 refuses up front on the CLIENT-DECLARED pair (the batch has no single record, so no declarative kind fits), and the per-row loop re-authorizes every write target it actually reaches — principalCanAccessRecord(row.section_tipo, …) plus getPermissions(principal, row.section_tipo, componentTipo) — before persistRecordKeys (TOOLS-01, pinned by test/unit/human_write_scope_tripwire.test.ts).',
+				'getPermissions(principal, sectionTipo, componentTipo) < 2 refuses up front on the CLIENT-DECLARED pair (the batch has no single record, so no declarative kind fits), and the per-row loop re-authorizes every write target it actually reaches — principalCanAccessRecord(row.section_tipo, …) plus getRecordComponentPermission(principal, row.section_tipo, componentTipo, row.section_id), which carries the dd128 own-record LEVEL rule (SEC-03) — before persistRecordKeys (TOOLS-01, pinned by test/unit/human_write_scope_tripwire.test.ts).',
 			handler: propagateComponentData,
 		},
 	},

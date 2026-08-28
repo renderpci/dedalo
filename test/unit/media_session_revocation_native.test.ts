@@ -24,13 +24,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
 	dropAuthMarker,
 	issueSessionMediaKey,
 	layAuthMarker,
+	MARKER_REAP_GRACE_MS,
 	overrideMediaProtectionPathsForTests,
 	reconcileAuthMarkers,
 } from '../../src/core/media/protection.ts';
@@ -155,6 +156,17 @@ describe('media credential: revocation', () => {
 	});
 });
 
+/**
+ * Age a marker past the login-in-flight grace (`MARKER_REAP_GRACE_MS`). A marker laid
+ * milliseconds ago is indistinguishable from a login sitting between `layAuthMarker`
+ * and its session INSERT, and the reconcile declines to guess — so a test about ORPHAN
+ * collection has to produce a marker that is actually old.
+ */
+function ageMarker(key: string): void {
+	const old = (Date.now() - MARKER_REAP_GRACE_MS * 2) / 1000;
+	utimesSync(join(authDir, key), old, old);
+}
+
 describe('media credential: the marker set is a projection of the sessions table', () => {
 	test('an ORPHAN marker is collected, a live one is kept', () => {
 		// A marker can outlive its row only if the process died between the DELETE and
@@ -162,6 +174,7 @@ describe('media credential: the marker set is a projection of the sessions table
 		const live = loginAs(101);
 		const orphan = 'c'.repeat(128);
 		layAuthMarker(orphan);
+		ageMarker(orphan);
 		expect(existsSync(join(authDir, orphan))).toBe(true);
 
 		reconcileAuthMarkers(listActiveMediaKeys());
@@ -174,6 +187,7 @@ describe('media credential: the marker set is a projection of the sessions table
 		const live = loginAs(101);
 		const orphan = 'd'.repeat(128);
 		layAuthMarker(orphan);
+		ageMarker(orphan);
 
 		sweepExpiredSessions();
 

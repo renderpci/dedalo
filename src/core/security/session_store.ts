@@ -34,6 +34,7 @@ import { dirname, join, resolve } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { dropAuthMarker } from '../media/protection.ts';
 
 /** Session cookie name — TS-native, distinct from any PHP cookie. */
 export const SESSION_COOKIE = 'dedalo_ts_session';
@@ -144,7 +145,10 @@ function secondsUntilExpiry(row: { created_at: number; last_seen: number }, now:
  * → test/preload/session_db.ts) points the WHOLE test process at a per-run
  * scratch file — tests and the live dev server must never share this database.
  */
-const LIVE_SESSION_DB_PATH = join(privateDir, 'dedalo_ts_sessions.sqlite');
+/** The store a SERVING process opens. Exported so `session_media` can tell a real
+ *  installation from a repointed throwaway one (the smoke boot) before it reconciles
+ *  markers against the inherited media root. */
+export const LIVE_SESSION_DB_PATH = join(privateDir, 'dedalo_ts_sessions.sqlite');
 const sessionDbPath = readEnv('DEDALO_SESSION_DB_PATH') ?? LIVE_SESSION_DB_PATH;
 /** The resolved on-disk session store path (honours the override) — read-only
  * accessor for status surfaces (e.g. the check_config maintenance widget). */
@@ -216,6 +220,73 @@ for (const column of ['application_lang', 'data_lang', 'sqo_session', 'media_key
 			throw error;
 		}
 	}
+}
+
+/** One session row as a REVOCATION addresses it: the row key and the credential it holds. */
+interface SessionRowKey {
+	token_hash: string;
+	media_key: string | null;
+}
+
+/**
+ * Bound on the token hashes bound into ONE delete statement.
+ *
+ * MEASURED on this Bun (1.4.0, bun:sqlite): a bound-parameter list is accepted up to
+ * 32766 and refused above it ("SQLite query expected 34464 values, received 100000") —
+ * so the ceiling is real, just higher than the folkloric 999. The periodic sweep is the
+ * statement that can approach it: an installation coming back from a long downtime
+ * selects every expired session at once. And this delete runs AFTER the markers are
+ * unlinked, so one oversized statement would throw with every credential in the batch
+ * already revoked and every row still present — the one shape worse than either half.
+ * Chunking keeps each statement valid, and keeps a failure part-way through in the
+ * fail-CLOSED direction (some sessions ended, the rest still work).
+ */
+const DELETE_CHUNK = 400;
+
+/**
+ * SEC-09 / the FAIL-CLOSED ORDER — every session deletion in this file goes through
+ * here, and it unlinks the MEDIA MARKER BEFORE it deletes the ROW.
+ *
+ * The two stores fail in opposite directions, which is why the order is not a detail:
+ *
+ *   delete-then-unlink — a crash in between leaves NO session row and a LIVE marker.
+ *     The web server never consults the session store, so that cookie keeps read access
+ *     to the entire digitised archive, permanently, and nothing is left to name it: the
+ *     row that held the key is gone. That was the shipped shape, on every path.
+ *   unlink-then-delete — a crash in between leaves a session that STILL WORKS. The next
+ *     request, the next logout or the periodic sweep ends it properly, and in the
+ *     meantime the account holds exactly the access it already had.
+ *
+ * So the marker goes first. The DELETE then addresses the rows BY TOKEN HASH — the same
+ * rows the SELECT read — rather than re-running the predicate, so a session that was
+ * touched between the two statements cannot escape the delete after its marker is
+ * already gone (that would be a live row with a dead credential, and nothing to fix it
+ * but a re-login).
+ *
+ * `dropAuthMarker` is a STATIC import, not a registered hook. The hook shape was tried
+ * first and it is vacuous exactly where it matters: any process that expires a session
+ * without having imported the registering module revokes nothing and only logs about
+ * it. `media/protection.ts` imports config, env, server_state and svg_safety — none of
+ * which reaches back here — so the static edge closes no cycle, and it makes the unlink
+ * unconditionally present in every process that can read a session.
+ */
+function endSessionRows(rows: SessionRowKey[]): { removed: number; mediaKeys: string[] } {
+	const mediaKeys = rows
+		.map((row) => row.media_key)
+		.filter((key): key is string => key !== null && key !== '');
+	// MARKER FIRST. Idempotent and never throws (protection.ts swallows ENOENT), so a
+	// marker already gone cannot block the row delete.
+	for (const key of mediaKeys) dropAuthMarker(key);
+	let removed = 0;
+	for (let start = 0; start < rows.length; start += DELETE_CHUNK) {
+		const chunk = rows.slice(start, start + DELETE_CHUNK);
+		const placeholders = chunk.map(() => '?').join(',');
+		const deleted = database
+			.query(`DELETE FROM sessions WHERE token_hash IN (${placeholders}) RETURNING token_hash`)
+			.all(...chunk.map((row) => row.token_hash)) as unknown[];
+		removed += deleted.length;
+	}
+	return { removed, mediaKeys };
 }
 
 function nowSeconds(): number {
@@ -447,19 +518,20 @@ export function setSessionSqo(session: Session, sqoId: string, sqo: unknown): vo
 }
 
 /**
- * Delete one session, returning its MEDIA KEY so the caller can unlink the marker that
- * key names. RETURNING is what makes revocation possible: the marker set is a projection
- * of this table, and a delete that did not say which credential it freed would leave the
- * web server honouring a cookie whose session no longer exists.
+ * Delete one session AND revoke its media credential, in that order — marker first, row
+ * second (see `endSessionRows`). Returns the media key it revoked, for logging.
  *
- * Callers inside `src/` go through `session_media.endSession` instead, which does both
- * halves; a bare destroy here leaves an orphan marker for the sweep to collect.
+ * A BARE DESTROY IS NOW SAFE, which inverts the old rule. The unlink used to live in
+ * `session_media.endSession`, so this function's own docblock had to warn that calling
+ * it directly leaked a marker; a warning is not a mechanism, and both expiry branches in
+ * `getSession` right above called it anyway. The order is enforced here instead.
  */
 export function destroySession(rawToken: string): string | null {
 	const row = database
-		.query('DELETE FROM sessions WHERE token_hash = ? RETURNING media_key')
-		.get(sha256Hex(rawToken)) as { media_key: string | null } | null;
-	return row?.media_key ?? null;
+		.query('SELECT token_hash, media_key FROM sessions WHERE token_hash = ?')
+		.get(sha256Hex(rawToken)) as SessionRowKey | null;
+	if (row === null) return null;
+	return endSessionRows([row]).mediaKeys[0] ?? null;
 }
 
 /**
@@ -482,18 +554,28 @@ export function destroyUserSessions(userId: number, keepRawToken?: string): numb
 export function destroyUserSessionsDetail(
 	userId: number,
 	keepRawToken?: string,
+	/**
+	 * Keep one session addressed by its TOKEN HASH instead of its raw token.
+	 *
+	 * The revocation seam runs post-commit, deep under a save, where the only thing
+	 * in reach is the request's `Session` object — and a Session carries `tokenHash`,
+	 * never the raw cookie value (that never leaves the HTTP layer, by design). The
+	 * self-password-change rule ("the acting session survives, every other session of
+	 * that account dies") is unimplementable without this second address.
+	 */
+	keepTokenHash?: string,
 ): { removed: number; mediaKeys: string[] } {
+	const keepHash = keepTokenHash ?? (keepRawToken !== undefined ? sha256Hex(keepRawToken) : null);
+	// SELECT, then unlink, then DELETE by token hash (endSessionRows) — never
+	// DELETE … RETURNING, which frees the credential before anything can revoke it.
 	const rows = (
-		keepRawToken !== undefined
+		keepHash !== null
 			? database
-					.query('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ? RETURNING media_key')
-					.all(userId, sha256Hex(keepRawToken))
-			: database.query('DELETE FROM sessions WHERE user_id = ? RETURNING media_key').all(userId)
-	) as { media_key: string | null }[];
-	return {
-		removed: rows.length,
-		mediaKeys: rows.map((row) => row.media_key).filter((key): key is string => key !== null),
-	};
+					.query('SELECT token_hash, media_key FROM sessions WHERE user_id = ? AND token_hash <> ?')
+					.all(userId, keepHash)
+			: database.query('SELECT token_hash, media_key FROM sessions WHERE user_id = ?').all(userId)
+	) as SessionRowKey[];
+	return endSessionRows(rows);
 }
 
 /** Every live session's media key — the exact set of markers that should exist. */
@@ -637,12 +719,52 @@ export function deletePasswordReset(resetId: string): void {
 	database.query('DELETE FROM password_resets WHERE reset_key = ?').run(sha256Hex(resetId));
 }
 
-/** Test hook: wipe volatile state (sessions + attempts). */
-export function resetSessionStoreForTests(): void {
-	// S1-18 guard: this wipes both tables, and the open store may be the LIVE
-	// ../private file. Refuse unless the store was opened at the explicit
-	// DEDALO_SESSION_DB_PATH test override — re-read at call time so a
-	// mutated/unset environment cannot leave a stale pass.
+/**
+ * SEC-15 — drop every pending recovery code of ONE account, by user.
+ *
+ * A code in flight is a live credential for the account: it rewrites the password
+ * without proving anything but possession of the mailbox. Nothing deleted these rows on
+ * a deactivation, a deletion or a competing password change, so the standard operator
+ * response to a compromise ("deactivate the account") left a code that still worked for
+ * the rest of its TTL. `user_id` is a plain column here precisely so a by-account delete
+ * is possible; nothing used it until the revocation seam.
+ *
+ * Returns the number of rows removed (the seam logs it — an operator revoking a
+ * compromised account wants to see that a code was in flight).
+ */
+export function deleteUserPasswordResets(userId: number): number {
+	const rows = database
+		.query('DELETE FROM password_resets WHERE user_id = ? RETURNING reset_key')
+		.all(userId) as unknown[];
+	return rows.length;
+}
+
+/**
+ * Test hook: age one session's clocks so the EXPIRY branches of `getSession` can be
+ * exercised without sleeping past the configured TTL. Same S1-18 guard as the wipe
+ * below — it may only touch a store opened at the DEDALO_SESSION_DB_PATH override, so a
+ * stray call can never rewrite live session state.
+ */
+export function ageSessionForTests(
+	rawToken: string,
+	ages: { lastSeenSecondsAgo?: number; createdSecondsAgo?: number },
+): void {
+	assertTestSessionStore('ageSessionForTests');
+	const now = nowSeconds();
+	if (ages.lastSeenSecondsAgo !== undefined) {
+		database
+			.query('UPDATE sessions SET last_seen = ? WHERE token_hash = ?')
+			.run(now - ages.lastSeenSecondsAgo, sha256Hex(rawToken));
+	}
+	if (ages.createdSecondsAgo !== undefined) {
+		database
+			.query('UPDATE sessions SET created_at = ? WHERE token_hash = ?')
+			.run(now - ages.createdSecondsAgo, sha256Hex(rawToken));
+	}
+}
+
+/** The S1-18 guard shared by every test-only mutator here (see resetSessionStoreForTests). */
+function assertTestSessionStore(caller: string): void {
 	const override = readEnv('DEDALO_SESSION_DB_PATH');
 	if (
 		override === undefined ||
@@ -650,9 +772,18 @@ export function resetSessionStoreForTests(): void {
 		resolve(sessionDbPath) === resolve(LIVE_SESSION_DB_PATH)
 	) {
 		throw new DedaloError('internal.invariant', {
-			message: `resetSessionStoreForTests refused: the open session store ('${sessionDbPath}') is not the DEDALO_SESSION_DB_PATH test override — wiping it would destroy live sessions (S1-18). Run under the bunfig [test] preload.`,
+			message: `${caller} refused: the open session store ('${sessionDbPath}') is not the DEDALO_SESSION_DB_PATH test override — mutating it would touch live sessions (S1-18). Run under the bunfig [test] preload.`,
 		});
 	}
+}
+
+/** Test hook: wipe volatile state (sessions + attempts). */
+export function resetSessionStoreForTests(): void {
+	// S1-18 guard: this wipes both tables, and the open store may be the LIVE
+	// ../private file. Refuse unless the store was opened at the explicit
+	// DEDALO_SESSION_DB_PATH test override — re-read at call time (inside the
+	// shared predicate) so a mutated/unset environment cannot leave a stale pass.
+	assertTestSessionStore('resetSessionStoreForTests');
 	database.exec('DELETE FROM sessions; DELETE FROM login_attempts; DELETE FROM password_resets;');
 }
 
@@ -675,10 +806,11 @@ export function pruneExpiredSessionsDetail(): { pruned: number; mediaKeys: strin
 	const idleCutoff = now - SESSION_TTL_SECONDS;
 	const ageCutoff = SESSION_ABSOLUTE_TTL_SECONDS > 0 ? now - SESSION_ABSOLUTE_TTL_SECONDS : 0;
 	const rows = database
-		.query('DELETE FROM sessions WHERE last_seen < ? OR created_at < ? RETURNING media_key')
-		.all(idleCutoff, ageCutoff) as { media_key: string | null }[];
-	return {
-		pruned: rows.length,
-		mediaKeys: rows.map((row) => row.media_key).filter((key): key is string => key !== null),
-	};
+		.query('SELECT token_hash, media_key FROM sessions WHERE last_seen < ? OR created_at < ?')
+		.all(idleCutoff, ageCutoff) as SessionRowKey[];
+	// Marker first, row second, and the DELETE addresses exactly the rows this SELECT
+	// read — a session touched between the two statements is still ended, rather than
+	// surviving with a credential that was already unlinked.
+	const { removed, mediaKeys } = endSessionRows(rows);
+	return { pruned: removed, mediaKeys };
 }

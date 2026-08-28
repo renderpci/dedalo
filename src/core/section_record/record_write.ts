@@ -19,6 +19,17 @@
  *      guard). Implemented inside updateMatrixKeysData via `#-`.
  *   3. SAVE EVENT — dependent caches invalidated after every persist
  *      (save_event.ts).
+ *   3b. THE SECURITY REACTION — a write onto a USERS (dd128) or PROFILES (dd234)
+ *      record drops the security caches AND, for the four account-transition
+ *      components, ends that account's live credentials (security/revocation.ts
+ *      reactToRecordComponentWrite). It hangs off THIS chokepoint for the same
+ *      reason the audit stamps do: the alternative was one door remembering.
+ *      `persistRecordKeys` reached NO invalidation at all, so a password rewritten
+ *      through tool_propagate_component_data, a profile restored by the time
+ *      machine, or an observer mirror onto dd128 revoked nothing and left every
+ *      security cache stale. Two lanes, not one: the cache clears are idempotent
+ *      and ride deferPostTransaction, the revocation is destructive and rides the
+ *      COMMIT-ONLY lane.
  *   4. THE COMPONENT_IMAGE SVG ENVELOPE — a `media`-column write persists any
  *      `svg_file_data` its items carry to the .svg overlay file BEFORE the row
  *      write (PHP component_image::save → create_svg_file, which likewise
@@ -143,6 +154,45 @@ export async function persistRecordKeys(
 	assertRecordStillExists(affected, target, 'persistRecordKeys');
 
 	await fireSaveEvent(target.sectionTipo);
+	await reactToSecurityWrite(
+		target,
+		writes.map((item) => item.key),
+		'persistRecordKeys',
+	);
+}
+
+/**
+ * The security sections. A plain tipo compare so the hot path of every ordinary write
+ * pays two string comparisons and nothing else — no import, no allocation. The tipos
+ * are re-asserted against `security/revocation.ts` by
+ * test/unit/dd128_write_census_tripwire.test.ts, so the two copies cannot drift.
+ */
+const SECURITY_REACTIVE_SECTIONS: ReadonlySet<string> = new Set(['dd128', 'dd234']);
+
+/**
+ * Fire the security reaction for the components this write touched (see §3b above).
+ *
+ * Best-effort and never rethrows: the row is already written by the time this runs, so
+ * turning a revocation failure into a failed save would roll back an edit the operator
+ * would simply repeat — and the revocation itself already logs loudly. It is also the
+ * reason the door name is passed down: an operator reading `[revocation] dd128/dd133
+ * write (persistRecordKeys)` can tell which door ended the sessions.
+ */
+async function reactToSecurityWrite(
+	target: RecordWriteTarget,
+	componentTipos: readonly string[],
+	door: string,
+): Promise<void> {
+	if (!SECURITY_REACTIVE_SECTIONS.has(target.sectionTipo)) return;
+	try {
+		const { reactToRecordComponentWrite } = await import('../security/revocation.ts');
+		await reactToRecordComponentWrite(target.sectionTipo, target.sectionId, componentTipos, door);
+	} catch (error) {
+		console.error(
+			`[record_write] the security reaction failed after ${door} on ${target.sectionTipo}/${String(target.sectionId)} — sessions, media markers or security caches may be stale:`,
+			error,
+		);
+	}
 }
 
 /**
@@ -242,6 +292,19 @@ export async function persistRecordColumns(
 	);
 
 	await fireSaveEvent(target.sectionTipo);
+	// The WHOLE-COLUMN door — the Time Machine's full-record restore. Its keys are the
+	// component tipos inside each column bag, so a restore that puts back an old dd133
+	// or flips dd131 is an account transition exactly like a per-key save, and used to
+	// be the one shape that reached nothing at all.
+	await reactToSecurityWrite(
+		target,
+		Object.values(values).flatMap((bag) =>
+			bag !== null && bag !== undefined && typeof bag === 'object'
+				? Object.keys(bag as Record<string, unknown>)
+				: [],
+		),
+		'persistRecordColumns',
+	);
 	await fireRagRecordEvent({
 		kind: 'index',
 		sectionTipo: target.sectionTipo,

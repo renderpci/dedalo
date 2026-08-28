@@ -1042,11 +1042,12 @@ export function retireLegacyAuthStore(): void {
  * The marker files hold no content: THE FILENAME IS THE CREDENTIAL. Values are therefore
  * validated as strict sha512 hex before they can reach the disk (path traversal).
  */
-export function syncAuthMarkers(values: string[]): void {
+export function syncAuthMarkers(values: string[], reapGraceMs = 0): void {
 	const dir = authMarkerDir();
 	if (dir === null) return; // media root unset — feature off
 
 	mkdirSync(dir, { recursive: true, mode: AUTH_MARKER_DIR_MODE });
+	const youngerThan = Date.now() - reapGraceMs;
 
 	const keep = new Set<string>();
 	for (const value of values) {
@@ -1062,12 +1063,33 @@ export function syncAuthMarkers(values: string[]): void {
 	// Rotation: drop markers for values that are no longer valid.
 	for (const entry of readdirSync(dir)) {
 		if (keep.has(entry)) continue;
-		const marker = join(dir, entry);
-		try {
-			if (statSync(marker).isFile()) unlinkSync(marker);
-		} catch {
-			// Raced with another login's rotation — the file is already gone. Benign.
-		}
+		dropRotatedMarker(join(dir, entry), youngerThan, reapGraceMs);
+	}
+}
+
+/**
+ * Unlink ONE rotated-out marker, unless it is a LOGIN IN FLIGHT.
+ *
+ * `login()` lays this session's marker BEFORE it inserts the session row (protection
+ * must fail loud before there is a session to orphan), and between the two it awaits a
+ * database round-trip. A reconcile landing in that window sees a marker no live session
+ * claims and would unlink it — the user finishes authenticating and every media file
+ * 404s until the next login, with nothing in any log to explain it. `reapGraceMs` is
+ * that window: a marker younger than it is left alone, and the next pass collects it if
+ * it really was an orphan.
+ *
+ * A REAL revocation never comes through here — it is `dropAuthMarker`, by value, with no
+ * age test at all — so the grace can delay collection but can never keep a revoked
+ * credential alive.
+ */
+function dropRotatedMarker(marker: string, youngerThan: number, reapGraceMs: number): void {
+	try {
+		const stat = statSync(marker);
+		if (!stat.isFile()) return;
+		if (reapGraceMs > 0 && stat.mtimeMs > youngerThan) return;
+		unlinkSync(marker);
+	} catch {
+		// Raced with another login's rotation — the file is already gone. Benign.
 	}
 }
 
@@ -1085,13 +1107,28 @@ export function syncAuthMarkers(values: string[]): void {
  * (DEDALO_SESSION_DB_PATH) while the media root is not: the update's smoke boot starts
  * the candidate tree with an EMPTY throwaway session store and the inherited MEDIA_PATH,
  * so a boot-time reconcile would unlink every live editor's marker on the production
- * tree — on every `bun run test:update` and every real update. The sweep is operator-
- * triggered (media_control) and runs after a prune, where the caller's session store is
- * by definition the real one.
+ * tree — on every `bun run test:update` and every real update.
+ *
+ * TWO CALLERS, both holding the real session store: the operator's media_control widget,
+ * and the hourly sweeper (`session_media.startExpiredSessionSweeper`, SEC-09) whose first
+ * pass is delayed five minutes past boot for the same reason. Both run after a prune.
+ *
+ * Every reconcile carries `MARKER_REAP_GRACE_MS`, because the hourly one can now land
+ * mid-login — see the rotation loop in `syncAuthMarkers` for why a marker younger than
+ * the grace is a login in flight rather than an orphan.
  */
-export function reconcileAuthMarkers(liveKeys: string[]): void {
-	syncAuthMarkers(liveKeys);
+export function reconcileAuthMarkers(liveKeys: string[], reapGraceMs = MARKER_REAP_GRACE_MS): void {
+	syncAuthMarkers(liveKeys, reapGraceMs);
 }
+
+/**
+ * How young a marker must be for a reconcile to treat it as a login in flight rather
+ * than an orphan. Sixty seconds is generous by three orders of magnitude for the one
+ * database round-trip that sits between `layAuthMarker` and the session INSERT, and it
+ * costs at most one extra hourly pass before a genuine orphan is collected. A constant,
+ * not a config key: `../private/.env` is append-only, and a knob nobody would turn rots.
+ */
+export const MARKER_REAP_GRACE_MS = 60_000;
 
 /**
  * Lay ONE session's marker without disturbing anyone else's.

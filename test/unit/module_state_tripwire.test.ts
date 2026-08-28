@@ -62,6 +62,22 @@ const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
  * it here WITH justification that it carries no request identity.
  */
 const ALLOWLISTED_MODULE_LET = new Set<string>([
+	// The periodic expired-session sweeper's timer handle (SEC-09, 2026-08-28). A
+	// process-lifecycle latch of the same family as `shuttingDown` below: it holds a
+	// Timeout, is set once at boot and cleared once at shutdown, and no user, session
+	// or language can reach it. It exists so a second start() call cannot stack timers.
+	'core/security/session_media.ts:sweepTimer',
+	// Warn-once latch for the reconcile refusal (SEC-09, 2026-08-28). The hourly sweeper
+	// skips the marker half when this process holds a throwaway session store against an
+	// unmarked media root; without the latch that warning repeats every hour for the life
+	// of the process. Holds a boolean, is never read for a decision about a request, and
+	// a stale `true` only means the sentence is not repeated.
+	'core/security/session_media.ts:announcedUnsafeReconcile',
+	// Once-per-process latch for the dd131 'Active account' census (SEC-07): a boolean
+	// that stops the same installation-wide COUNT(*) being re-run on every login that
+	// meets a record with no dd131 datum. Holds a boolean, never a record, a user or a
+	// language; a stale `true` only means the count is not repeated in this process.
+	'core/security/auth.ts:missingActiveAccountCensusDone',
 	// Process-lifecycle latches (audit S2-17/S3-46, WS-E): request-INDEPENDENT
 	// by construction — shuttingDown is the signal-handler idempotency latch,
 	// lastPurgeAt throttles the daily residue purge on the sweeper cadence.

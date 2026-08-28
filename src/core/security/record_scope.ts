@@ -31,6 +31,7 @@
 
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { buildSearchSql } from '../search/sql_assembler.ts';
 import { getPermissions, type Principal } from './permissions.ts';
 
@@ -97,6 +98,75 @@ export async function principalCanAccessRecord(
 	if (sectionId < 1) return false;
 	if (principal.isGlobalAdmin) return true;
 	return isRecordInScope(sectionTipo, sectionId, principal);
+}
+
+/**
+ * THE WRITE-DOOR TARGET GATE (P1-2, closes SEC-05) — the throwing form of
+ * {@link principalCanAccessRecord}, in the order that matters.
+ *
+ * The three record-lifecycle doors (save, duplicate, delete) each wrote the scope check
+ * as `if (!principal.isGlobalAdmin) { isRecordInScope(...) }`. That inlines the admin
+ * bypass ABOVE the non-positive-id refusal, so for an admin-flagged principal the
+ * refusal never executed at all — and `root_user_hidden_tripwire` asserted the property
+ * of the FUNCTION while every DOOR skipped it. Root (dd128/-1) is a strictly higher tier
+ * than global admin everywhere else in the codebase, and its password was rewritable by
+ * any global admin holding a level-2 grant on `(dd128, dd133)`.
+ *
+ * Calling this instead makes the order un-inlineable: the non-positive-id refusal is
+ * inside the same function as the bypass, ahead of it, exactly as
+ * `principalCanAccessRecord` has always had it.
+ *
+ * ONE LEGITIMATE FLOW WRITES A NON-POSITIVE RECORD ID, AND EXACTLY ONE — MEASURED, not
+ * assumed. Every `matrix*` table carrying a `section_id` was counted read-only on
+ * 2026-08-28 across the suite database and the live installation `dedalo_v7_mht`: the
+ * ONLY row with `section_id < 1` anywhere is `matrix_users` dd128/-1, root itself. And
+ * by construction: root is seeded by the install SQL
+ * (`install/db/dedalo_install.pgsql.gz`, one COPY row), not through the API;
+ * `createSectionRecord` allocates from the section counter and can only return a
+ * positive id; both delete engines already refuse `sectionId < 1` themselves
+ * (`delete_record.ts:73` and `:544`); the fixtures and the test corpus insert through
+ * `insertMatrixRecordWithCounter`, positive by construction.
+ *
+ * That one flow is ROOT EDITING ITS OWN ACCOUNT — `selfServiceAccountWrite`, below. The
+ * first shape of this gate had no exception, and the side effect nobody chose was that
+ * root could no longer change its own password or its own email through the engine
+ * either, while `password_reset.ts` excludes root from the emailed recovery flow by the
+ * same `id > 0` rule: an installation with no in-engine way to rotate its most
+ * privileged credential.
+ */
+export async function assertRecordWriteTarget(
+	sectionTipo: string,
+	sectionId: number,
+	principal: Principal,
+	operation: string,
+	options: {
+		/**
+		 * The ONE exception to the non-positive-id refusal: the actor is editing one of
+		 * its OWN account's self-editable components on its OWN record.
+		 *
+		 * A BOOLEAN, computed by the caller through `permissions.isSelfServiceAccountWrite`
+		 * — deliberately not a section tipo or a component tipo passed in here. This
+		 * module contains no section comparison at all, and none may be added: a rule
+		 * that binds a section belongs in the ASSEMBLER, where the list, the count, the
+		 * UNION branches and the existence probe all inherit it at once (see the module
+		 * docblock and WC-2026-08-09-users-section-record-scope). The predicate lives
+		 * beside `SELF_EDITABLE_COMPONENTS`, which is the only place that set is stated.
+		 *
+		 * It is re-checked against `principal.userId` here anyway, so a caller that
+		 * passes `true` for someone else's record still gets the ordinary refusal.
+		 */
+		selfServiceAccountWrite?: boolean;
+	} = {},
+): Promise<void> {
+	if (options.selfServiceAccountWrite === true && sectionId === principal.userId) return;
+	if (await principalCanAccessRecord(sectionTipo, sectionId, principal)) return;
+	throw new DedaloError('perm.out_of_scope', {
+		message:
+			sectionId < 1
+				? `${operation}: ${sectionTipo}/${String(sectionId)} is not a writable record address — a non-positive section_id is refused for EVERY caller, global admins included (only the account itself may edit its own name/email/password/image).`
+				: `${operation}: ${sectionTipo}/${String(sectionId)} is outside the caller's scope`,
+		coordinates: { section_tipo: sectionTipo, section_id: sectionId, operation },
+	});
 }
 
 /**

@@ -161,6 +161,8 @@ const TRIPWIRES = [
 	'test/unit/runtime_paths_census_tripwire.test.ts',
 	'test/unit/shard_partition_tripwire.test.ts',
 	'test/unit/dbread_role_tripwire.test.ts',
+	'test/unit/account_revocation_native.test.ts',
+	'test/unit/dd128_write_census_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

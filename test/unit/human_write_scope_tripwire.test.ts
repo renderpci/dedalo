@@ -44,9 +44,18 @@ describe('TOOLS-01 — propagate_component_data authorizes every write target', 
 	});
 
 	test('the write loop re-checks component write-permission on the ROW section', () => {
-		// getPermissions(principal, row.section_tipo, componentTipo) — the ACTUAL
-		// target section, not the client-declared section_tipo.
-		expect(src.includes('getPermissions(principal, row.section_tipo, componentTipo)')).toBe(true);
+		// The ACTUAL target section, not the client-declared section_tipo — AND
+		// through the RECORD-addressed resolver since 2026-08-28 (SEC-03): the raw
+		// matrix level let a principal holding level 2 on (dd128, dd1725) self-assign
+		// a profile here, which the human save door refuses. `row.section_id` is the
+		// argument that makes the own-record rule consultable at all.
+		expect(
+			src.includes('getRecordComponentPermission(') &&
+				src.includes('row.section_tipo,') &&
+				src.includes('row.section_id,'),
+		).toBe(true);
+		// And the raw call it replaced must not come back alongside it.
+		expect(src.includes('getPermissions(principal, row.section_tipo, componentTipo)')).toBe(false);
 	});
 });
 

@@ -287,6 +287,14 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/account_revocation_native.test.ts',
+		'Every assertion is about what a REAL write did to real state: it inserts dd128 records through the counter-allocating writer, logs them in, applies each of the six account transitions through a real door, and then asks the session store and the media marker directory what survived — a revocation gate that mocked either surface would prove nothing about the property it exists to hold',
+	],
+	[
+		'test/unit/dd128_write_census_tripwire.test.ts',
+		"Its census legs read source and are pure, but the behavioural leg (GATE-24) mints a scratch dd234 profile and a scratch dd128 user, resolves a real principal carrying level 2 on (dd128, dd1725), and drives tool_propagate_component_data at that principal's own record to prove the refusal WORKS — an authorization decision may not rest on a source substring, and none of that exists without the suite database",
+	],
+	[
 		'test/unit/client_idempotency_tripwire.test.ts',
 		'Its structural legs are pure, but the end-to-end leg drives the real create door twice under one idempotency key and asserts the RECORD COUNT is unchanged — the only assertion that proves the server honours the key rather than merely receiving it — so it needs the suite database',
 	],

@@ -29,10 +29,13 @@
  *   throttle reusing the login throttle store (window/lockout shared with the
  *   login keys — deliberate, same values PHP used).
  * - A successful reset does NOT establish a session; the user logs in normally.
- * - DIVERGENCE (hardening, wire-invisible): a successful reset EVICTS the
- *   user's existing sessions (endUserSessions — tokens AND their media markers)
- *   — PHP did not, which let a
+ * - DIVERGENCE (hardening, wire-invisible): a successful reset goes through the ONE
+ *   revocation seam (revocation.revokeAccountAccess — the user's tokens, their
+ *   media markers AND every other pending recovery code) — PHP did not, which let a
  *   stolen session survive the very reset meant to revoke it.
+ * - SEC-15 (2026-08-28): the account is RE-VALIDATED at confirm time (still exists,
+ *   still dd131-active). The request-time filter alone let a code stay usable after
+ *   the account was deactivated — i.e. after the operator's response to a compromise.
  *
  * Activity log: PHP wrote a 'PASSWORD RESET' activity row; the TS activity
  * helper skips unmapped WHAT codes and dd42 has none for password reset, so we
@@ -46,7 +49,7 @@ import { DedaloError } from '../errors/index.ts';
 import { cleanEmail, isValidEmail, sendMail } from '../mailer/mailer.ts';
 import { ARGON2_OPTIONS } from './argon2_params.ts';
 import { normalizeTiming } from './auth.ts';
-import { endUserSessions } from './session_media.ts';
+import { revokeAccountAccess } from './revocation.ts';
 import {
 	buildThrottleKey,
 	clearAttempts,
@@ -338,6 +341,25 @@ async function sendPasswordChangedNotice(userId: number): Promise<void> {
 }
 
 /**
+ * Does this account still qualify for a reset? (SEC-15 — the confirm-time twin of the
+ * request-time `resolveSingleTarget` filter.) A deleted record, or one deactivated since
+ * the code was mailed, answers false. Root (-1) never qualifies: `resolveSingleTarget`
+ * filters ids > 0, so a code for root can never have been issued, and this keeps that
+ * true no matter how the row was reached.
+ */
+async function accountStillEligibleForReset(userId: number): Promise<boolean> {
+	if (userId <= 0) return false;
+	const rows = (await sql.unsafe(
+		`SELECT section_id, string, relation FROM matrix_users
+		 WHERE section_tipo = $1 AND section_id = $2`,
+		[USERS_SECTION_TIPO, userId],
+	)) as UserRow[];
+	const row = rows[0];
+	if (row === undefined) return false;
+	return isActiveAccount(row);
+}
+
+/**
  * Step 2: verify the code against the stored hash and, on success, write the
  * new password. Every failure THROWS a generic `password_reset.*` code; the only
  * specific one is `weak_password` (the user's own input — it does not consume an
@@ -402,6 +424,20 @@ export async function confirmPasswordReset(
 		invalidOrExpired();
 	}
 
+	// SEC-15 — RE-VALIDATE THE ACCOUNT AT CONFIRM TIME. `resolveSingleTarget` checked
+	// existence and dd131 when the code was REQUESTED; nothing re-checked them here, so
+	// the standard operator response to a compromise ("deactivate the account") did not
+	// invalidate a code already in flight. The seam now deletes pending rows on those
+	// transitions, and this is the belt for the window in between (and for a row an
+	// out-of-process transition could not reach).
+	if (!(await accountStillEligibleForReset(entry.userId))) {
+		deletePasswordReset(resetId);
+		console.warn(
+			`[password_reset] refused a code for user_id=${entry.userId}: the account no longer exists or is no longer active.`,
+		);
+		invalidOrExpired();
+	}
+
 	// Correct code: write the new password and burn the code.
 	const saved = await resetUserPassword(entry.userId, newPassword);
 	deletePasswordReset(resetId);
@@ -417,13 +453,18 @@ export async function confirmPasswordReset(
 	// session of this user — a reset must also cut off whoever holds a stolen
 	// token, or the recovery flow cannot recover a compromised account.
 	//
-	// endUserSessions, not destroyUserSessions: it unlinks each session's MEDIA marker
-	// too. Until 2026-08-24 this call left exactly one credential standing — the media
-	// auth cookie, which was install-global and therefore unrevokable, so an attacker
-	// locked out of the account kept reading the whole media tree for up to ~48 hours.
-	// A recovery flow that cannot recover one of the two credentials has not recovered
-	// the account.
-	endUserSessions(entry.userId);
+	// Through the ONE revocation seam (P1-4), not `endUserSessions` directly: it ends
+	// the sessions, unlinks each one's MEDIA marker AND drops every OTHER pending
+	// recovery code for the account. Until 2026-08-24 this call left one credential
+	// standing — the media auth cookie, which was install-global and therefore
+	// unrevokable, so an attacker locked out of the account kept reading the whole media
+	// tree for ~48 hours; until 2026-08-28 it left a second, a competing reset code.
+	//
+	// `keepActingSession: false` because a reset is UNAUTHENTICATED: there is no acting
+	// session to protect, and the whole point is that whoever holds a stolen token loses
+	// it. (The seam has usually already fired from the dd133 save above; this is
+	// idempotent and covers the case where that write reported ok:false.)
+	revokeAccountAccess(entry.userId, 'password reset', { keepActingSession: false });
 
 	// Notify the account owner so an unauthorized reset is noticed. Best-effort.
 	await sendPasswordChangedNotice(entry.userId);

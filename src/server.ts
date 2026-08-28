@@ -1712,6 +1712,26 @@ export async function startServer() {
 		// DEDALO_RAG_ENABLED is off). Must run before serving so writes are captured.
 		initRagHooks();
 
+		// EXPIRED-SESSION SWEEPER (SEC-09, 2026-08-28). An expired session's media
+		// marker used to be collected only when the dead token was REPLAYED, or when an
+		// administrator opened the maintenance widget. A session nobody touches again —
+		// a closed laptop, and precisely a STOLEN token whose thief stops using it —
+		// kept its marker forever, and the web server never consults the session store,
+		// so that cookie went on reading the whole digitised archive. Hourly from five
+		// minutes after boot; the sweep also RECONCILES the marker directory, which is
+		// what collects the orphans an installation is already carrying.
+		//
+		// INSIDE this guard because there is nothing to sweep in either mode — not as
+		// the safety story. The reconcile unlinks every marker not backed by a live
+		// session, and a SMOKE BOOT holds an empty throwaway store with the production
+		// MEDIA_PATH inherited; that refusal now lives in `reconcileIsSafeHere`
+		// (session_media.ts), which reads the process's own configuration, so a second
+		// caller cannot reintroduce the hazard by forgetting this `if`.
+		{
+			const { startExpiredSessionSweeper } = await import('./core/security/session_media.ts');
+			startExpiredSessionSweeper();
+		}
+
 		// section_id deprecation counters (WC-2026-08-10-section-id-int-canonical,
 		// D10): the pure concepts leaf can't import api/counters, so the observer
 		// is wired here — every legacy string→int coercion increments a per-door

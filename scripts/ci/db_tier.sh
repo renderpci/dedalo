@@ -149,11 +149,13 @@ bun run test:db:setup
 # entries for three weeks.
 # ---------------------------------------------------------------------------
 DB_TIER_TRIPWIRES=(
+	test/unit/account_revocation_native.test.ts
 	test/unit/bulk_process_id_tripwire.test.ts
 	test/unit/client_idempotency_tripwire.test.ts
 	test/unit/consultation_only_sections_tripwire.test.ts
 	test/unit/csv_parser_conformance_native.test.ts
 	test/unit/dbread_role_tripwire.test.ts
+	test/unit/dd128_write_census_tripwire.test.ts
 	test/unit/delete_inverse_lost_update_native.test.ts
 	test/unit/duplicate_record_dataframe_native.test.ts
 	test/unit/error_taxonomy_tripwire.test.ts

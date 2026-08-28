@@ -23,6 +23,7 @@ import {
 	readFileSync,
 	rmSync,
 	statSync,
+	utimesSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -38,6 +39,7 @@ import {
 	getPublicQualities,
 	getRulesStatus,
 	issueSessionMediaKey,
+	MARKER_REAP_GRACE_MS,
 	MEDIA_AUTH_COOKIE,
 	mintAuthCookieValue,
 	overrideMediaProtectionPathsForTests,
@@ -456,10 +458,35 @@ describe('the login hook (issueSessionMediaKey)', () => {
 		const live = issueSessionMediaKey();
 		const orphan = issueSessionMediaKey();
 		if (live === null || orphan === null) return;
-		reconcileAuthMarkers([live]);
 		const authDir = join(mediaRoot, '.publication', 'auth');
+		// AGE THE ORPHAN past the login-in-flight grace. A marker laid milliseconds ago
+		// is indistinguishable from a login between `layAuthMarker` and its session
+		// INSERT, and the reconcile deliberately declines to guess — see the next test.
+		const old = (Date.now() - MARKER_REAP_GRACE_MS * 2) / 1000;
+		utimesSync(join(authDir, orphan), old, old);
+		reconcileAuthMarkers([live]);
 		expect(existsSync(join(authDir, live))).toBe(true);
 		expect(existsSync(join(authDir, orphan))).toBe(false);
+	});
+
+	test('a reconcile landing MID-LOGIN does not unlink the in-flight marker', () => {
+		// THE RACE (2026-08-28): `login()` lays this session's marker BEFORE inserting
+		// the session row, and awaits a database round-trip in between. The hourly
+		// sweeper (SEC-09) can land in that window, where the marker is backed by no
+		// live session and looks exactly like an orphan. Unlinking it logs a user who
+		// just authenticated out of the entire media tree, silently, until they log in
+		// again. Not hypothetical once the sweep became automatic: it was operator-
+		// triggered when this ordering was chosen.
+		setServerState({ media_access_mode: 'private' });
+		const inFlight = issueSessionMediaKey(); // marker laid; no session row yet
+		if (inFlight === null) return;
+		reconcileAuthMarkers([]); // ... the sweep runs, and the store knows nothing
+		expect(existsSync(join(mediaRoot, '.publication', 'auth', inFlight))).toBe(true);
+
+		// And the grace only DELAYS collection — pass 0 and it is an orphan like any
+		// other, which is what proves the marker is not permanently exempt.
+		reconcileAuthMarkers([], 0);
+		expect(existsSync(join(mediaRoot, '.publication', 'auth', inFlight))).toBe(false);
 	});
 
 	test('the retired day-global auth store is moved aside, not left on disk', () => {

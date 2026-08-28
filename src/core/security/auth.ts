@@ -11,7 +11,13 @@
  * - Argon2id verify (Bun.password — native, same algorithm);
  * - sliding-window brute-force throttle, reset on success;
  * - ambiguous failure message + no user-existence disclosure;
- * - session rotation on login (a fresh token is always issued).
+ * - session rotation on login (a fresh token is always issued);
+ * - the dd131 'Active account' refusal (2026-08-28, SEC-07) — ONE measured divergence
+ *   from the frozen PHP (a MISSING datum logs in; PHP refused it) plus the root
+ *   exemption, which is PARITY (class.login.php:1086 returns true for section_id -1).
+ *   Both are argued in full at `isRefusedForInactivity` and at the root branch in
+ *   `login()`, and recorded as
+ *   `engineering/wire_contract/WC-2026-08-28-login-active-account.md`.
  *
  * UNCOVERED SCOPE (denied loudly, never silently): legacy pre-Argon2 hashes
  * (base64 AES values still present on non-migrated accounts) — verifying them
@@ -24,6 +30,7 @@ import { config } from '../../config/config.ts';
 import { sql } from '../db/postgres.ts';
 import { ARGON2_OPTIONS, needsPasswordRehash } from './argon2_params.ts';
 import { resolvePrincipal } from './permissions.ts';
+import { runWithoutAccountRevocation } from './revocation.ts';
 import { endUserSessions } from './session_media.ts';
 import {
 	buildAccountThrottleKey,
@@ -38,6 +45,15 @@ import {
 const USERS_SECTION_TIPO = 'dd128';
 const USERNAME_COMPONENT = 'dd132';
 const PASSWORD_COMPONENT = 'dd133';
+/**
+ * component_radio_button dd131, 'Active account'. Its first locator points at the
+ * yes/no list dd64: entry 1 = 'Yes'/'Sí', entry 2 = 'No' (read out of
+ * `matrix_dd.string.dd62` on the suite DB — this is the fact the whole rule hangs on,
+ * so it was measured, not assumed).
+ */
+const ACTIVE_ACCOUNT_COMPONENT = 'dd131';
+/** dd64 list entry that means ACTIVE. Anything else present is a refusal. */
+const ACTIVE_ACCOUNT_YES_ID = 1;
 
 /**
  * The WHERE tipo every login/logout activity row carries (PHP
@@ -110,14 +126,25 @@ async function rehashStoredPassword(
 	if (!needsPasswordRehash(storedHash)) return;
 	try {
 		const { saveComponentData } = await import('../section/record/save_component.ts');
-		const result = await saveComponentData({
-			componentTipo: PASSWORD_COMPONENT,
-			sectionTipo: USERS_SECTION_TIPO,
-			sectionId: userId,
-			lang: 'lg-nolan',
-			changedData: [{ action: 'set_data', value: [{ id: 1, value: plaintext, lang: 'lg-nolan' }] }],
-			userId,
-		});
+		// NOT AN ACCOUNT TRANSITION (P1-4). A dd133 write fires the revocation seam,
+		// which ends every session of the account — and this rewrite carries the SAME
+		// plaintext the user proved they knew a millisecond ago, on the login path,
+		// racing the `createSession` below it. Unsuppressed it would intermittently
+		// destroy the session the login is in the middle of issuing: a correct password
+		// that sometimes does not log you in. ALS-scoped, so the suppression is
+		// request-local and cannot bleed into a concurrent, genuine password change.
+		const result = await runWithoutAccountRevocation('login password cost upgrade', () =>
+			saveComponentData({
+				componentTipo: PASSWORD_COMPONENT,
+				sectionTipo: USERS_SECTION_TIPO,
+				sectionId: userId,
+				lang: 'lg-nolan',
+				changedData: [
+					{ action: 'set_data', value: [{ id: 1, value: plaintext, lang: 'lg-nolan' }] },
+				],
+				userId,
+			}),
+		);
 		if (!result.ok) {
 			console.error(
 				`[auth] password cost upgrade failed for user_id=${String(userId)}: ${result.message}`,
@@ -185,24 +212,256 @@ export interface LoginResult {
 	mediaAuthCookieValue?: string;
 }
 
-/** Find a user row by exact username (jsonb containment — indexed, parameterized). */
-async function findUserByUsername(
-	username: string,
-): Promise<{ section_id: number; passwordHash: string | null } | null> {
+/**
+ * How the account's dd131 'Active account' flag reads, for the ONE row login resolved.
+ *
+ *  'active'   — the datum is present and points at dd64/1.
+ *  'inactive' — the datum is present and points at anything else (dd64/2 = 'No').
+ *  'missing'  — no dd131 datum at all, or an empty array. See the rule at the gate.
+ */
+export type ActiveAccountState = 'active' | 'inactive' | 'missing';
+
+/**
+ * Find a user row by exact username (jsonb containment — indexed, parameterized).
+ *
+ * `relation` is read in the SAME select as `string`, deliberately: a SECOND lookup for
+ * the flag could check one row's flag and verify another row's hash on an install with a
+ * duplicated username. dd132 declares `unique`, but `duplicate_record.ts` bypasses
+ * `saveComponentData` and therefore the unique check, so duplicates are reachable — and
+ * this query has no ORDER BY (a deliberate difference from password_reset's
+ * USER_ROW_SELECT, which needs determinism because it resolves ALL matches).
+ */
+async function findUserByUsername(username: string): Promise<{
+	section_id: number;
+	passwordHash: string | null;
+	activeAccount: ActiveAccountState;
+} | null> {
 	const rows = (await sql.unsafe(
-		`SELECT section_id, string FROM matrix_users
+		`SELECT section_id, string, relation FROM matrix_users
 		 WHERE section_tipo = $1
 		   AND string->$2 @> $3::text::jsonb
 		 LIMIT 1`,
 		[USERS_SECTION_TIPO, USERNAME_COMPONENT, JSON.stringify([{ value: username }])],
-	)) as { section_id: number; string: Record<string, { value?: string }[]> }[];
+	)) as {
+		section_id: number;
+		string: Record<string, { value?: string }[]> | null;
+		relation: Record<string, { section_id?: unknown }[] | undefined> | null;
+	}[];
 	const row = rows[0];
 	if (row === undefined) return null;
-	const passwordItems = row.string?.[PASSWORD_COMPONENT];
 	return {
 		section_id: row.section_id,
-		passwordHash: passwordItems?.[0]?.value ?? null,
+		passwordHash: row.string?.[PASSWORD_COMPONENT]?.[0]?.value ?? null,
+		activeAccount: readActiveAccountState(row.relation?.[ACTIVE_ACCOUNT_COMPONENT]),
 	};
+}
+
+/**
+ * THE dd131 STATE OF ONE ACCOUNT, BY ID — for the surfaces that hold a user id rather
+ * than a username, and that outlive a single request.
+ *
+ * `login()` reads this state on the way in, which is enough for a session-bearing door:
+ * ending the account's sessions is what makes a deactivation take effect there. It is
+ * NOT enough for a process that resolves an identity once and keeps serving under it —
+ * the MCP stdio server is exactly that — because such a process holds no session for a
+ * revocation to end. Those surfaces re-ask, per call, here.
+ *
+ * `'absent'` means no such dd128 record: a DELETED account, which every caller must
+ * treat at least as strictly as `'inactive'`.
+ */
+export async function readAccountStateById(userId: number): Promise<ActiveAccountState | 'absent'> {
+	const rows = (await sql.unsafe(
+		`SELECT relation FROM matrix_users WHERE section_tipo = $1 AND section_id = $2 LIMIT 1`,
+		[USERS_SECTION_TIPO, userId],
+	)) as { relation: Record<string, { section_id?: unknown }[] | undefined> | null }[];
+	const row = rows[0];
+	if (row === undefined) return 'absent';
+	return readActiveAccountState(row.relation?.[ACTIVE_ACCOUNT_COMPONENT]);
+}
+
+/**
+ * The dd131 locator -> {missing|active|inactive}. KEPT UNION on section_id
+ * (WC-2026-08-10-section-id-int-canonical): an unswept install stores the locator
+ * target as the string '1'.
+ */
+function readActiveAccountState(
+	activeItems: { section_id?: unknown }[] | undefined,
+): ActiveAccountState {
+	const first = Array.isArray(activeItems) ? activeItems[0] : undefined;
+	if (first === undefined || first === null) return 'missing';
+	return Number(first.section_id) === ACTIVE_ACCOUNT_YES_ID ? 'active' : 'inactive';
+}
+
+/**
+ * MISSING dd131 IS TREATED AS ACTIVE, AND THAT IS A MEASURED DECISION — not laziness.
+ *
+ * The frozen PHP refused a missing datum too (class.login.php:1102-1104 —
+ * `empty($active_account_data)` returns false), and copying it looks like the safe move. It is not: it is a
+ * total lockout generator for every account this engine has created since the cutover.
+ * The shipped `dd131` ontology node carries no `properties.dato_default`,
+ * `record_defaults.ts` seeds only `dato_default`, the client radio has no preselect,
+ * dd131 is not `mandatory`, and NOTHING in `src/` writes dd131 — so every user created
+ * through the TS engine is born with the datum ABSENT. "Missing = inactive" would lock
+ * out zero existing records and every future one, silently, with no message explaining
+ * why. A login outage in a museum is not a smaller harm than a stale session.
+ *
+ * MEASURED 2026-08-28, three corpora, read-only: suite DB `dedalo_v7_mht_test` 1 dd128
+ * record (root, dd131 = Yes); the shipped install seed exactly one user (root, dd131 =
+ * Yes); the live install `dedalo_v7_mht` 24 records — 8 Yes, 16 No, **0 absent, 0
+ * empty**; the pinned monedaiberica snapshot 75 records — 37 Yes, 38 No, **0 absent, 0
+ * empty**. So the PRESENT-and-No half revokes 54 already-intended deactivations across
+ * the two installs and locks out **zero accounts that can log in today** (none of those
+ * 54 carries an Argon2 hash, and `auth.ts` already refuses a non-Argon2 hash). The
+ * MISSING half would have locked out zero existing records — and every one created since.
+ *
+ * The safe order, of which this ships steps 1 and 4a (the rest are OPEN, and each is a
+ * file outside this change's scope):
+ *   1. refuse a PRESENT dd131 pointing anywhere but dd64/1  ← SHIPPED HERE
+ *   2. give the shipped dd131 ontology node `properties.dato_default` = dd64/1, so a
+ *      created user is born Active through the one chokepoint (record_defaults.ts) —
+ *      covering every door at once  ← OPEN (install seed + ontology)
+ *   3. a one-shot boot migration stamping dd131 = Yes on every dd128 record with
+ *      section_id > 0 and no dd131 datum, logging the count and the usernames  ← OPEN
+ *   4a. name every missing datum LOUDLY at login  ← SHIPPED HERE
+ *   4b. only after 2 and 3, treat missing as inactive  ← OPEN, and it must not ship
+ *       before them.
+ * Recorded as `engineering/wire_contract/WC-2026-08-28-login-active-account.md`.
+ */
+function isRefusedForInactivity(state: ActiveAccountState): boolean {
+	return state === 'inactive';
+}
+
+/**
+ * Once-per-process census of dd128 records with no dd131 datum — the population step 3
+ * above has to stamp, and the number step 4b would lock out. Fired the first time a
+ * login meets a missing datum, so an install that has none never pays for the query.
+ */
+let missingActiveAccountCensusDone = false;
+function warnMissingActiveAccountDatum(username: string, userId: number): void {
+	console.error(
+		`auth: user '${username}' (user_id=${String(userId)}) has NO dd131 'Active account' datum. Login is ALLOWED — treating a missing datum as inactive would lock out every account this engine has created (the shipped dd131 node has no dato_default). Stamp dd131 = Yes on this record; see engineering/wire_contract/WC-2026-08-28-login-active-account.md.`,
+	);
+	if (missingActiveAccountCensusDone) return;
+	missingActiveAccountCensusDone = true;
+	void (async () => {
+		try {
+			const rows = (await sql.unsafe(
+				`SELECT count(*) AS absent FROM matrix_users
+				 WHERE section_tipo = $1
+				   AND section_id > 0
+				   AND (NOT (relation ? $2) OR jsonb_array_length(coalesce(relation->$2, '[]'::jsonb)) = 0)`,
+				[USERS_SECTION_TIPO, ACTIVE_ACCOUNT_COMPONENT],
+			)) as { absent: number | string }[];
+			console.error(
+				`auth: ${String(rows[0]?.absent ?? '?')} user record(s) on this installation carry no dd131 'Active account' datum. They are not UN-deactivatable — an operator deactivates one by CREATING the datum as No, and the refusal then applies immediately like any other — but the flag cannot be flipped on a form field that renders empty, so in practice nobody discovers the control. Stamp them Yes and the deactivation path becomes a one-click flip.`,
+			);
+		} catch (error) {
+			console.error('auth: could not count dd131-less user records:', error);
+		}
+	})();
+}
+
+/**
+ * EVERY REFUSAL THAT PRECEDES THE PASSWORD VERIFY, in one place: the two throttle
+ * dimensions, the unknown account, and the legacy pre-Argon2 hash.
+ *
+ * Extracted from `login()` for readability and to keep that function under the
+ * complexity ratchet, NOT to change it: the order, the ambiguous message, the activity
+ * rows and — critically — the AUTHZ-03 timing normalization on both non-verifying paths
+ * are byte-for-byte what they were. A caller must treat `user === null` as "return the
+ * refusal verbatim"; there is no third outcome.
+ */
+async function resolveLoginCandidate(
+	request: {
+		username: string;
+		password: string;
+		clientIp: string;
+		throttleKey: string;
+		accountKey: string;
+	},
+	recordFailure: () => void,
+): Promise<
+	| { user: null; refusal: LoginResult }
+	| { user: { section_id: number; passwordHash: string; activeAccount: ActiveAccountState } }
+> {
+	const { username, password, clientIp, throttleKey, accountKey } = request;
+	const refusal = { user: null, refusal: { ok: false, message: LOGIN_FAILED_MESSAGE } } as const;
+
+	if (isThrottled(throttleKey) || isThrottled(accountKey, LOGIN_ACCOUNT_MAX_ATTEMPTS)) {
+		// Same ambiguous message: lockout must not confirm the account exists.
+		// (No PHP twin — v6 had no throttle. Logged anyway: a lockout is exactly
+		// the event an operator reviewing the audit trail wants to see.)
+		await logLoginActivity('deny', 'Too many failed attempts (throttled)', username, clientIp);
+		return refusal;
+	}
+
+	const user = await findUserByUsername(username);
+	if (user === null || user.passwordHash === null) {
+		await normalizeTiming(password); // AUTHZ-03: match the existing-user Argon2id cost
+		recordFailure();
+		await logLoginActivity('deny', 'User does not exist', username, clientIp);
+		return refusal;
+	}
+
+	if (!user.passwordHash.startsWith('$argon2')) {
+		// Legacy AES hash — uncovered scope (see module header). Deny loudly
+		// in the server log, ambiguously on the wire.
+		console.error(
+			`auth: user '${username}' still has a legacy (pre-Argon2) password hash — log into the PHP server once to upgrade it.`,
+		);
+		await normalizeTiming(password); // AUTHZ-03: no fast-path timing tell
+		recordFailure();
+		await logLoginActivity('deny', 'Legacy (pre-Argon2) password hash', username, clientIp);
+		return refusal;
+	}
+
+	return { user: { ...user, passwordHash: user.passwordHash } };
+}
+
+/**
+ * SHOUT about the two dd131 states that are ALLOWED but should not be silent.
+ *
+ * The users section has carried a component_radio_button 'Active account' since v5, and
+ * the frozen PHP refused an inactive one at login in two places; the TS login consulted
+ * NOTHING. The flag was honoured by exactly one non-test file — the password RECOVERY
+ * path — so an operator could deactivate an account, watch recovery honour it, and the
+ * account kept logging in. The refusal itself is one line in `login()`, AFTER the
+ * password verify (deliberately: a deactivated account must not be distinguishable from
+ * a wrong password by an unauthenticated prober, so it costs the same Argon2id verify
+ * and returns the same ambiguous sentence). What is left here are the two states that
+ * pass:
+ *
+ * ROOT (-1) IS EXEMPT, AND SO IS THE FROZEN PHP'S — this half is PARITY, not a
+ * divergence. `login::active_account_check()` opens with
+ * `if( (int)$section_id===-1 ){ return true; }`
+ * (v7_php_frozen/master_dedalo/core/login/class.login.php:1086-1088, read 2026-08-28).
+ * An earlier revision of this comment, and of the WC entry, claimed PHP had no root
+ * carve-out. That was wrong, and wrong in the direction that makes an engine look bolder
+ * than it is. The reason PHP had it is the reason to keep it: root is the install's
+ * recovery identity, and if a single mis-click on root's radio could refuse root's
+ * login, the recovery story for a museum is "restore a backup". Measured: root ships Yes
+ * in the install seed and IS Yes at both installs read for this change. It is also
+ * unreachable-by-escalation: no door writes root's dd131 — the record-lifecycle doors
+ * refuse a non-positive section_id ahead of the admin bypass, and the ONE exception (an
+ * account editing its OWN record) covers only the four self-editable components, of
+ * which dd131 is not one.
+ *
+ * A MISSING datum is allowed and shouted — see `isRefusedForInactivity`.
+ */
+function announceActiveAccountState(
+	sectionId: number,
+	state: ActiveAccountState,
+	username: string,
+): void {
+	if (sectionId === -1) {
+		if (isRefusedForInactivity(state)) {
+			console.error(
+				"auth: the ROOT user record (dd128/-1) is marked dd131 'Active account' = No. Root is EXEMPT from the deactivation refusal on purpose — refusing it would lock this installation out of itself with no in-engine recovery. Fix the flag on the record.",
+			);
+		}
+		return;
+	}
+	if (state === 'missing') warnMissingActiveAccountDatum(username, sectionId);
 }
 
 /**
@@ -223,33 +482,12 @@ export async function login(
 		recordFailedAttempt(throttleKey);
 		recordFailedAttempt(accountKey);
 	};
-	if (isThrottled(throttleKey) || isThrottled(accountKey, LOGIN_ACCOUNT_MAX_ATTEMPTS)) {
-		// Same ambiguous message: lockout must not confirm the account exists.
-		// (No PHP twin — v6 had no throttle. Logged anyway: a lockout is exactly
-		// the event an operator reviewing the audit trail wants to see.)
-		await logLoginActivity('deny', 'Too many failed attempts (throttled)', username, clientIp);
-		return { ok: false, message: LOGIN_FAILED_MESSAGE };
-	}
-
-	const user = await findUserByUsername(username);
-	if (user === null || user.passwordHash === null) {
-		await normalizeTiming(password); // AUTHZ-03: match the existing-user Argon2id cost
-		recordFailure();
-		await logLoginActivity('deny', 'User does not exist', username, clientIp);
-		return { ok: false, message: LOGIN_FAILED_MESSAGE };
-	}
-
-	if (!user.passwordHash.startsWith('$argon2')) {
-		// Legacy AES hash — uncovered scope (see module header). Deny loudly
-		// in the server log, ambiguously on the wire.
-		console.error(
-			`auth: user '${username}' still has a legacy (pre-Argon2) password hash — log into the PHP server once to upgrade it.`,
-		);
-		await normalizeTiming(password); // AUTHZ-03: no fast-path timing tell
-		recordFailure();
-		await logLoginActivity('deny', 'Legacy (pre-Argon2) password hash', username, clientIp);
-		return { ok: false, message: LOGIN_FAILED_MESSAGE };
-	}
+	const candidate = await resolveLoginCandidate(
+		{ username, password, clientIp, throttleKey, accountKey },
+		recordFailure,
+	);
+	if (candidate.user === null) return candidate.refusal;
+	const user = candidate.user;
 
 	const verified = await Bun.password.verify(password, user.passwordHash);
 	if (!verified) {
@@ -260,6 +498,14 @@ export async function login(
 
 	clearAttempts(throttleKey);
 	clearAttempts(accountKey);
+
+	// ACTIVE ACCOUNT (SEC-07, P1-4) — the whole rule, and the reason for every branch
+	// in it, lives in `refuseInactiveAccount` below.
+	if (isRefusedForInactivity(user.activeAccount) && user.section_id !== -1) {
+		await logLoginActivity('deny', 'Account is not active (dd131)', username, clientIp);
+		return { ok: false, message: LOGIN_FAILED_MESSAGE };
+	}
+	announceActiveAccountState(user.section_id, user.activeAccount, username);
 
 	// COST UPGRADE (P2-7, 2026-08-24). A stored hash carries the parameters it was
 	// made with, forever: `isArgon2Hash` passes any `$argon2…` string through

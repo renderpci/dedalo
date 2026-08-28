@@ -34,9 +34,10 @@ import {
 } from '../../section/record/save_component.ts';
 import {
 	getPermissions,
+	getRecordComponentPermission,
 	getSectionPermissions,
+	isSelfServiceAccountWrite,
 	type Principal,
-	resolveOwnUserRecordPermission,
 } from '../../security/permissions.ts';
 import type { Session } from '../../security/session_store.ts';
 import { getTermByLocator, getTermTipos } from '../../ts_object/term_resolver.ts';
@@ -243,30 +244,45 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// admin can raise their own global-admin flag. The UPGRADE half is what
 		// makes tool_user_admin work at all — dd128 is not project-assigned, so
 		// most profiles grant 0 on it and a user could not edit their own password.
-		const ownRecordLevel = resolveOwnUserRecordPermission(
+		// P1-2: through getRecordComponentPermission, the ONE resolver that already
+		// carries the rule, so this door and every other record-addressed door read
+		// the same number (it used to be a helper three doors remembered to call).
+		const level = await getRecordComponentPermission(
 			principal,
 			source.section_tipo,
 			source.tipo,
 			sectionId,
 		);
-		const level =
-			ownRecordLevel ?? (await getPermissions(principal, source.section_tipo, source.tipo));
 		if (level < 2) {
 			throw new DedaloError('perm.denied', {
 				coordinates: { section_tipo: source.section_tipo, tipo: source.tipo, required: 2 },
 			});
 		}
-		// Per-record scope gate (PHP assert_record_in_user_scope): a level-2 user
-		// may only edit records inside their projects filter — the level gate
+		// Per-record write-target gate (PHP assert_record_in_user_scope): a level-2
+		// user may only edit records inside their projects filter — the level gate
 		// alone would let them write a record they can never see (cross-project
-		// IDOR). Global admins are unscoped. Same rule as duplicate/delete/tools.
-		if (!principal.isGlobalAdmin) {
-			const { isRecordInScope } = await import('../../security/record_scope.ts');
-			if (!(await isRecordInScope(source.section_tipo, sectionId, principal))) {
-				throw new DedaloError('perm.out_of_scope', {
-					coordinates: { section_tipo: source.section_tipo, section_id: sectionId },
-				});
-			}
+		// IDOR) — AND no caller, global admin included, may address a non-positive
+		// section_id (SEC-05: this door used to inline the admin bypass ABOVE that
+		// refusal, so root's password was rewritable). Same rule as duplicate/delete.
+		{
+			const { assertRecordWriteTarget } = await import('../../security/record_scope.ts');
+			// The ONE exception to the non-positive-id refusal: an account editing its
+			// OWN name / email / password / image on its OWN record. Root is dd128/-1,
+			// so without this the SEC-05 refusal also locked root out of changing its
+			// own password — and root is excluded from the emailed recovery flow by the
+			// same id > 0 rule. Narrow by construction: the predicate requires
+			// sectionId === principal.userId AND one of the four SELF_EDITABLE
+			// components (permissions.isSelfServiceAccountWrite), so it grants a global
+			// admin nothing on root's record. The LEVEL gate above is unchanged and
+			// still forces dd244 to 1 for everyone, root included.
+			await assertRecordWriteTarget(source.section_tipo, sectionId, principal, 'save', {
+				selfServiceAccountWrite: isSelfServiceAccountWrite(
+					principal,
+					source.section_tipo,
+					source.tipo,
+					sectionId,
+				),
+			});
 		}
 		if (!Array.isArray(dataPayload.changed_data)) {
 			throw new DedaloError('request.invalid_data', {
@@ -733,15 +749,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				},
 			});
 		}
-		if (!principal.isGlobalAdmin) {
-			// Per-record scope gate: the source must be visible under the
-			// caller's projects filter (PHP assert_record_in_user_scope).
-			const { isRecordInScope } = await import('../../security/record_scope.ts');
-			if (!(await isRecordInScope(sectionTipo, sourceSectionId, principal))) {
-				throw new DedaloError('perm.out_of_scope', {
-					coordinates: { section_tipo: sectionTipo, section_id: sourceSectionId },
-				});
-			}
+		{
+			// Per-record write-target gate: the source must be visible under the
+			// caller's projects filter (PHP assert_record_in_user_scope), and no
+			// caller — global admin included — may duplicate a non-positive
+			// section_id. SEC-05's second consequence lived here: duplicating
+			// dd128/-1 copies the whole `string` column, minting a positive-id user
+			// record carrying ROOT's Argon2 hash and root's username, and duplicate
+			// bypasses saveComponentData so dd132's `unique` check never runs.
+			const { assertRecordWriteTarget } = await import('../../security/record_scope.ts');
+			await assertRecordWriteTarget(sectionTipo, sourceSectionId, principal, 'duplicate');
 		}
 		const { duplicateSectionRecord } = await import('../../section/record/duplicate_record.ts');
 		const newSectionId = await duplicateSectionRecord(
@@ -829,17 +846,15 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					},
 				});
 			}
-			// Per-record scope gate (PHP assert_record_in_user_scope): a level-2
-			// user may only delete records inside their projects filter — the
-			// level gate alone would let them delete a record they can never see
-			// (cross-project IDOR). Global admins are unscoped.
-			if (!principal.isGlobalAdmin) {
-				const { isRecordInScope } = await import('../../security/record_scope.ts');
-				if (!(await isRecordInScope(sectionTipo, targetId, principal))) {
-					throw new DedaloError('perm.out_of_scope', {
-						coordinates: { section_tipo: sectionTipo, section_id: targetId },
-					});
-				}
+			// Per-record write-target gate (PHP assert_record_in_user_scope): a
+			// level-2 user may only delete records inside their projects filter —
+			// the level gate alone would let them delete a record they can never
+			// see (cross-project IDOR) — and no caller, admins included, may
+			// address a non-positive section_id (SEC-05; the delete ENGINES
+			// already refused it, this door did not).
+			{
+				const { assertRecordWriteTarget } = await import('../../security/record_scope.ts');
+				await assertRecordWriteTarget(sectionTipo, targetId, principal, 'delete');
 			}
 			targets = [targetId];
 		} else {
@@ -968,6 +983,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (deleted.length > 0) {
 			const { invalidateSecurityCachesForSection } = await import('../../security/permissions.ts');
 			invalidateSecurityCachesForSection(sectionTipo);
+			// THE REVOCATION SEAM (P1-4, SEC-08). Dropping the caches is not
+			// revocation: deleting a user left the session row and its media marker
+			// untouched, so the token kept resolving and the cookie kept reading the
+			// whole media tree. `delete_data` counts too — it empties dd133, which is
+			// the same "this account is over" transition without the row removal.
+			// A no-op for every non-users section.
+			const { revokeDeletedAccountAccess } = await import('../../security/revocation.ts');
+			for (const deletedId of deleted) {
+				revokeDeletedAccountAccess(sectionTipo, deletedId, `${sectionTipo} record delete`);
+			}
 		}
 		// PHP keeps msg 'OK. Request done' even when records were skipped (its
 		// :681 errors check tests an undefined local — always false); the skip

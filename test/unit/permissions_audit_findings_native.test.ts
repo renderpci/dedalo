@@ -137,6 +137,21 @@ interface ScratchUserSpec {
 	projectLocatorType?: string;
 	createdBy?: number;
 	globalAdmin?: boolean;
+	/**
+	 * dd131 'Active account'. It used to be stamped Yes UNCONDITIONALLY here, under a
+	 * comment claiming the login path required it — prose asserting a rule the code did
+	 * not have (SEC-07), plus a fixture that made its absence unobservable: no scratch
+	 * user could ever be inactive, so nothing here could ever notice that login ignored
+	 * the flag. It is now an explicit input with three states, and the fixture's own
+	 * assertions below pin all three.
+	 *
+	 *   'yes'     — dd131 → dd64/1 (active).
+	 *   'no'      — dd131 → dd64/2 (deactivated; login must refuse).
+	 *   'absent'  — no dd131 datum at all, which is how EVERY user this engine creates
+	 *               is born (the shipped node has no dato_default). Login ALLOWS it, on
+	 *               purpose and by measurement — see auth.ts isRefusedForInactivity.
+	 */
+	activeAccount?: 'yes' | 'no' | 'absent';
 }
 
 async function insertScratchUser(spec: ScratchUserSpec): Promise<number> {
@@ -155,10 +170,21 @@ async function insertScratchUser(spec: ScratchUserSpec): Promise<number> {
 	if (spec.passwordHash !== undefined) {
 		string.dd133 = [{ id: 1, lang: 'lg-nolan', value: spec.passwordHash }];
 	}
-	// dd131 'active account' — required by the login path.
-	relation.dd131 = [
-		{ id: 1, type: 'dd151', section_id: '1', section_tipo: 'dd64', from_component_tipo: 'dd131' },
-	];
+	// dd131 'Active account' — CONSULTED by the login path since 2026-08-28 (SEC-07).
+	// Default 'yes' so the existing fixtures keep their meaning; 'absent' writes no
+	// datum at all, which is the shape a TS-created user really has.
+	const activeAccount = spec.activeAccount ?? 'yes';
+	if (activeAccount !== 'absent') {
+		relation.dd131 = [
+			{
+				id: 1,
+				type: 'dd151',
+				section_id: activeAccount === 'yes' ? '1' : '2',
+				section_tipo: 'dd64',
+				from_component_tipo: 'dd131',
+			},
+		];
+	}
 	return insertMatrixRecordWithCounter(USERS_TABLE, USERS_SECTION_TIPO, {
 		relation,
 		string,
@@ -214,6 +240,10 @@ let userD = 0;
 let userE = 0;
 /** A real global admin (dd244 → yes) with a password, for the login stamp. */
 let adminUserId = 0;
+/** dd131 = No — the deactivation an operator actually performs (SEC-07). */
+let inactiveUserId = 0;
+/** NO dd131 datum at all — the shape every TS-created user is born with. */
+let noFlagUserId = 0;
 
 let principalA: Principal;
 /** userD's principal — a REAL user with NO projects (the lockout canary). */
@@ -261,6 +291,22 @@ beforeAll(async () => {
 		globalAdmin: true,
 		createdBy: -1,
 	});
+	// The two dd131 states the old fixture could not express (SEC-07). Same password,
+	// so the ONLY variable between them and adminUserId is the flag.
+	inactiveUserId = await insertScratchUser({
+		username: `${RUN_TAG}_inactive`,
+		passwordHash: await Bun.password.hash(ADMIN_PASSWORD, { algorithm: 'argon2id' }),
+		profileId,
+		createdBy: -1,
+		activeAccount: 'no',
+	});
+	noFlagUserId = await insertScratchUser({
+		username: `${RUN_TAG}_noflag`,
+		passwordHash: await Bun.password.hash(ADMIN_PASSWORD, { algorithm: 'argon2id' }),
+		profileId,
+		createdBy: -1,
+		activeAccount: 'absent',
+	});
 
 	clearSecurityCaches();
 	principalA = await resolvePrincipal(userA);
@@ -270,7 +316,7 @@ beforeAll(async () => {
 }, 60000);
 
 afterAll(async () => {
-	for (const id of [userA, userB, userC, userD, userE, adminUserId]) {
+	for (const id of [userA, userB, userC, userD, userE, adminUserId, inactiveUserId, noFlagUserId]) {
 		await cleanupRecord(USERS_TABLE, USERS_SECTION_TIPO, id);
 	}
 	await cleanupRecord(PROFILES_TABLE, PROFILES_SECTION_TIPO, profileId);
@@ -318,6 +364,47 @@ describe('login stamps the REAL global-admin grant (audit §5.4)', () => {
 		expect(result.ok).toBe(true);
 		const session = getSession(result.sessionToken ?? '');
 		expect(session?.isGlobalAdmin).toBe(false);
+	}, 30000);
+});
+
+// ---------------------------------------------------------------------------
+// The dd131 fixture states — the vacuity this file used to carry (SEC-07)
+// ---------------------------------------------------------------------------
+
+describe("dd131 'Active account' is a real variable of this fixture, not a constant", () => {
+	test('the fixture can actually express all three states', async () => {
+		// This is the assertion whose ABSENCE was the defect: every scratch user was
+		// stamped Active unconditionally, under a comment claiming login required it,
+		// so login's total indifference to the flag was unobservable from here.
+		const rows = (await sql.unsafe(
+			`SELECT section_id, relation ? 'dd131' AS present, relation->'dd131'->0->>'section_id' AS target
+			 FROM ${USERS_TABLE}
+			 WHERE section_tipo = $1 AND section_id IN ($2, $3, $4)
+			 ORDER BY section_id`,
+			[USERS_SECTION_TIPO, adminUserId, inactiveUserId, noFlagUserId],
+		)) as { section_id: number; present: boolean; target: string | null }[];
+		const byId = new Map(rows.map((row) => [Number(row.section_id), row]));
+		expect(byId.get(adminUserId)).toMatchObject({ present: true, target: '1' });
+		expect(byId.get(inactiveUserId)).toMatchObject({ present: true, target: '2' });
+		expect(byId.get(noFlagUserId)?.present).toBe(false);
+	}, 30000);
+
+	test('login REFUSES the deactivated account and ADMITS the active twin', async () => {
+		resetSessionStoreForTests();
+		expect((await login(RUN_TAG, ADMIN_PASSWORD, '203.0.113.79')).ok).toBe(true);
+		const refused = await login(`${RUN_TAG}_inactive`, ADMIN_PASSWORD, '203.0.113.79');
+		expect(refused.ok).toBe(false);
+		expect(refused.sessionToken).toBeUndefined();
+	}, 30000);
+
+	test('login ADMITS the account with NO dd131 datum — measured, not inherited from PHP', async () => {
+		// The frozen PHP treated a missing datum as inactive. Copying that would lock
+		// out every user this engine creates (the shipped dd131 node has no
+		// dato_default, and nothing in src/ writes dd131). Measured across two real
+		// installs: 0 absent in 99 records — so the corpus cost is zero and the
+		// create-path cost would be total. See auth.ts isRefusedForInactivity.
+		resetSessionStoreForTests();
+		expect((await login(`${RUN_TAG}_noflag`, ADMIN_PASSWORD, '203.0.113.80')).ok).toBe(true);
 	}, 30000);
 });
 
