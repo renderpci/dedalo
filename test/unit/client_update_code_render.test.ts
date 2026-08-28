@@ -872,7 +872,6 @@ describe('update_code developer-builds switch', () => {
 	});
 });
 
-
 /**
  * THE RUNNING SURFACE — the half a "does the error render at all?" gate misses.
  *
@@ -921,10 +920,14 @@ describe('update_code tracking surface', () => {
 	test('every ending sentence is revealed, not merely appended', () => {
 		// each ending appends its note as the LAST child of a surface taller than
 		// the viewport; reveal() is what puts it where it can be read.
-		const notes = tracker.match(/(reveal\()?ui\.create_dom_element\(\{[^}]*?class_name[^}]*?dd_note/gs) ?? [];
+		const notes =
+			tracker.match(/(reveal\()?ui\.create_dom_element\(\{[^}]*?class_name[^}]*?dd_note/gs) ?? [];
 		expect(notes.length, 'the tracker still appends ending notes').toBeGreaterThanOrEqual(5);
 		for (const note of notes) {
-			expect(note.startsWith('reveal('), `an ending note is appended unrevealed: ${note.slice(0, 120)}`).toBe(true);
+			expect(
+				note.startsWith('reveal('),
+				`an ending note is appended unrevealed: ${note.slice(0, 120)}`,
+			).toBe(true);
 		}
 		// reveal itself must tolerate the DOM stub this gate drives it against
 		expect(tracker).toContain("typeof node.scrollIntoView==='function'");
@@ -976,9 +979,13 @@ describe('update_code restore-reason detail', () => {
 	test('only the bun-pin refusal gets numbers, and only when both are known', () => {
 		// the other two reasons have no versions to add; a point whose pin cannot
 		// be read must degrade to the sentence alone, never print "undefined".
-		expect(status_src).toContain("point.restorable_reason==='bun_pin_mismatch' && point.bun_pin && engine.bun");
+		expect(status_src).toContain(
+			"point.restorable_reason==='bun_pin_mismatch' && point.bun_pin && engine.bun",
+		);
 		// the sentence itself is untouched — its translations stay valid
-		expect(status_src).toContain("get_label['update_code_restore_reason_' + point.restorable_reason]");
+		expect(status_src).toContain(
+			"get_label['update_code_restore_reason_' + point.restorable_reason]",
+		);
 	});
 
 	test('the detail line has somewhere to render', () => {
@@ -986,7 +993,6 @@ describe('update_code restore-reason detail', () => {
 		expect(css_src).toContain('.restore_reason_detail');
 	});
 });
-
 
 /**
  * THE BUILD READOUT must say WHEN it is changing and WHAT it changed from.
@@ -1025,7 +1031,11 @@ describe('update_code build feedback', () => {
 		expect(render_src).toContain('channel\t\t: channel');
 		// …and reaches the renderer as the mark for that channel only
 		expect(status_src).toContain('build_mark && build_mark.channel===channel');
-		expect(/render_code_server_status = function\(parent, code_server, mount_builder, build_mark\)/.test(status_src)).toBe(true);
+		expect(
+			/render_code_server_status = function\(parent, code_server, mount_builder, build_mark\)/.test(
+				status_src,
+			),
+		).toBe(true);
 	});
 
 	test('the verdict is read off the STAMP, not asserted', () => {

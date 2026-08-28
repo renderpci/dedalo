@@ -13135,6 +13135,23 @@ dd-modal:has(.tool_header) {
     background-color: color-mix(in srgb, var(--color_success) 45%, transparent);
   }
 }
+@keyframes build_pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes build_settled {
+  0% {
+    background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18));
+  }
+  100% {
+    background-color: transparent;
+  }
+}
 .dd_stats {
   display: flex;
   border: 1px solid var(--border_default);
@@ -16830,6 +16847,12 @@ dd-modal:has(.tool_header) {
 .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building > .build_file_meta {
   opacity: 0.45;
 }
+@media (prefers-reduced-motion: reduce) {
+  .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file.building {
+    animation: none;
+    opacity: 1;
+  }
+}
 .wrapper_widget.update_code > .content_data > .role_block .build_row > .dd_v.build_file > .build_file_previous {
   flex-basis: 100%;
   font-size: 0.9em;
@@ -17130,23 +17153,6 @@ dd-modal:has(.tool_header) {
 .widget_update_code_modal .footer .spinner {
   margin: 0px;
   top: 2rem;
-}
-@keyframes build_pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-@keyframes build_settled {
-  0% {
-    background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18));
-  }
-  100% {
-    background-color: transparent;
-  }
 }
 /**
 * dataframe_control

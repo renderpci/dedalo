@@ -355,6 +355,22 @@
 	}
 }
 
+// ---- update_code build feedback ----------------------------------------
+// Moved here from widgets/update_code/css/update_code.less (2026-08-28): motion
+// lives in the kit so every animation is auditable in one place. Deliberately
+// cheap: opacity and colour only, no layout property, so a pulsing row never
+// reflows the panel around it. The reduced-motion resting state is declared at
+// the USE site, beside the row it describes.
+@keyframes build_pulse {
+	0%, 100%	{ opacity: 1; }
+	50%			{ opacity: 0.55; }
+}
+
+@keyframes build_settled {
+	0%		{ background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18)); }
+	100%	{ background-color: transparent; }
+}
+
 // ---- headline stats -----------------------------------------------------
 // A short row of big numbers with uppercase captions — the "how many, right
 // now" band that sits above a detail table. Same surface, radius and divider

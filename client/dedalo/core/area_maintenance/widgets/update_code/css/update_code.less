@@ -180,6 +180,16 @@
 						}
 
 						animation: build_pulse 1.4s ease-in-out infinite;
+
+						// (!) Reduced motion is an explicit STATIC STATE, never a
+						// collapsed animation: general.less squashes every animation to
+						// 0.001ms, which would park this pulse on whichever keyframe it
+						// happened to reach. A building row must read as PRESENT and
+						// active, so the resting state is fully opaque.
+						@media (prefers-reduced-motion: reduce) {
+							animation: none;
+							opacity: 1;
+						}
 					}
 
 					// THE VERDICT LINE, on its own row under the facts.
@@ -636,18 +646,4 @@
 			top: 2rem;
 		}
 	}
-}
-
-
-// Build feedback (see .build_file above). Kept OUT of the nesting so both
-// states read as one pair, and deliberately cheap: opacity only, no layout
-// property, so a pulsing row never reflows the panel around it.
-@keyframes build_pulse {
-	0%, 100%	{ opacity: 1; }
-	50%			{ opacity: 0.55; }
-}
-
-@keyframes build_settled {
-	0%		{ background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18)); }
-	100%	{ background-color: transparent; }
 }
