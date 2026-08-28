@@ -4533,6 +4533,22 @@ CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedal
 
 ---
 
+### Code restore points to keep
+
+DEDALO_CODE_RESTORE_POINTS_KEEP `number`
+
+How many code restore points this installation keeps on disk.
+
+Every code update renames the outgoing tree aside as a restore point and keeps it WITH its `node_modules`, so a rollback is a bare `mv` that boots with no network. That is what makes a bad update survivable — and it means each point is a full copy of the code tree, on the same disk the update itself measures and refuses on when it runs short.
+
+Pruning runs after an update the booted tree has CONFIRMED, never before: until that flip the new tree is unproven and the points behind it are the way back. The newest bootable point is never pruned whatever this is set to — it is the rollback for the code running right now.
+
+Set it higher on an installation that updates rarely and has disk to spare; `1` keeps only the rollback.
+
+*Default: 3*
+
+---
+
 ### Defining is a code server directory
 
 DEDALO_CODE_FILES_DIR `string`

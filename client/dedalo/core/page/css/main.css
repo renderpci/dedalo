@@ -16941,6 +16941,14 @@ dd-modal:has(.tool_header) {
   font-size: 0.9em;
   opacity: 0.9;
 }
+.wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point {
+  margin-left: 0.4rem;
+  padding: 0.15rem 0.7rem;
+  color: var(--state_danger_fg, #b3261e);
+}
+.wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_delete_point[disabled] {
+  color: var(--fg_muted);
+}
 .wrapper_widget.update_code > .content_data .update_status .restore_row > .dd_v > button.button_restore {
   margin-left: auto;
   padding: 0.15rem 0.7rem;

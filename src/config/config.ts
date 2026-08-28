@@ -216,6 +216,12 @@ export interface UpdateConfig {
 	/** Git checkout the build twin archives from (PHP DEDALO_CODE_SERVER_GIT_DIR). */
 	readonly codeServerGitDir: string | undefined;
 	/**
+	 * How many code restore points survive retention (DEDALO_CODE_RESTORE_POINTS_KEEP).
+	 * Pruning runs only after a CONFIRMED update, and never takes the newest
+	 * bootable point — the rollback for the code currently running.
+	 */
+	readonly restorePointsKeep: number;
+	/**
 	 * This code master PUBLISHES developer builds (`<v>-dev.zip`) to consumers
 	 * that explicitly ask for the dev channel. Default false: a public code
 	 * server answers a dev ask exactly as it answers a release one, so branch
@@ -1101,6 +1107,7 @@ export const config: DedaloConfig = Object.freeze({
 		codeFilesDir: readEnv('DEDALO_CODE_FILES_DIR'),
 		codeServerGitDir: readEnv('DEDALO_CODE_SERVER_GIT_DIR'),
 		devChannelEnabled: readString('DEDALO_CODE_SERVER_DEV_CHANNEL') === 'true',
+		restorePointsKeep: readNumber('DEDALO_CODE_RESTORE_POINTS_KEEP'),
 	}),
 	ontologyIo: Object.freeze({
 		servers: readServerList('ONTOLOGY_SERVERS'),

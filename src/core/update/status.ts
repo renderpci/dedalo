@@ -41,6 +41,11 @@ import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { detectDeploymentChannel } from './channel.ts';
+import {
+	deletabilityOf,
+	type DeleteBlockReason,
+	RESTORE_POINT_PREFIX,
+} from './restore_points.ts';
 import { parseDeclaredTriple, planCodeBuild, VERSION_TS_PATH } from './code_build_plan.ts';
 import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
@@ -164,6 +169,10 @@ export interface RestorePoint {
 	restorable: boolean;
 	/** The machine reason id when it would not (the wire carries ids, not sentences). */
 	restorable_reason: RestoreBlockReason | null;
+	/** May this point be REMOVED (restore_points.ts deletabilityOf)? */
+	deletable: boolean;
+	/** Why not — machine id, the panel owns the sentence. */
+	deletable_reason: DeleteBlockReason | null;
 }
 
 export interface ConsumerStatus {
@@ -381,8 +390,8 @@ function readSentinel(): CodeUpdateSentinel | null {
  */
 export function readRestorePoints(backupRoot: string): RestorePoint[] {
 	try {
-		return readdirSync(backupRoot)
-			.filter((name) => name.startsWith('dedalo_'))
+		const points = readdirSync(backupRoot)
+			.filter((name) => name.startsWith(RESTORE_POINT_PREFIX))
 			.map((name) => {
 				const dir = join(backupRoot, name);
 				// NO `bytes`. It used to report `statSync(dir).size` — the
@@ -407,6 +416,16 @@ export function readRestorePoints(backupRoot: string): RestorePoint[] {
 				};
 			})
 			.sort((a, b) => b.stamp - a.stamp);
+		// DELETABILITY IS A PROPERTY OF THE SET, not of one directory: the point
+		// that must survive is the newest BOOTABLE one, which cannot be known
+		// while mapping a single entry. Same shape as `restorable` — the panel
+		// disables the button with the predicate the delete path refuses with.
+		return points.map((point) => ({
+			...point,
+			...(({ deletable, reason }) => ({ deletable, deletable_reason: reason }))(
+				deletabilityOf(point, points),
+			),
+		}));
 	} catch {
 		return [];
 	}

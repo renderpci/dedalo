@@ -88,7 +88,8 @@ run:
   it."), so you can read which runtime to install off the row itself, and tell
   apart several restore points cut on either side of a Bun change. A
   development checkout gets no Restore button at all, for the same reason it
-  gets no Update button.
+  gets no Update button — nor a Delete button, for the same reason again. Every
+  other row carries one (see [Reclaiming disk](#reclaiming-disk)).
 
 Some readiness lines cannot be decided in advance and say so rather than
 guessing: the release's own root file list and its Bun pin are only known once
@@ -314,6 +315,45 @@ reads `was 11:41:43` beside a row dated `173 MB · 28/08/2026, 11:45:09`.
     leaves the setting unset answers a developer-channel request exactly as it
     answers a normal one. The archive is served at its own URL either way
     (`/dedalo/install/code/<version>/<version>-dev.zip`).
+
+### Reclaiming disk
+
+Every update keeps the outgoing tree **with its `node_modules`** — that is what
+makes a rollback a bare `mv` that boots with no network, and it means each
+restore point is a full copy of the code tree on the same disk the update
+measures before it starts. They used to accumulate for ever.
+
+**Retention runs by itself.** `DEDALO_CODE_RESTORE_POINTS_KEEP` (default `3`)
+prunes the oldest points down to that many. It runs *after* an update the
+booted tree has **confirmed**, never at the moment of the swap: until that flip
+the new tree is unproven and the points behind it are the way back. Pruning is
+best-effort and reported in the server log — a disk that will not give a
+directory back never fails a boot that is otherwise healthy.
+
+**Deleting one by hand** is the escape hatch, for what retention does not
+reach: a corrupt copy, a leftover, or an installation that needs the space now.
+Each row carries a `Delete` button beside `Restore`; it asks for confirmation
+naming the point, and removes that copy from disk. It is irreversible.
+
+!!! warning "The newest bootable copy cannot be deleted"
+    That copy is the rollback for the code running right now. Its Delete button
+    is **disabled** with the reason under the row — not a confirmation you can
+    click through, because a dialog is not a sufficient guard for removing
+    disaster recovery. Delete an older copy, or update first so that a newer
+    rollback exists.
+
+Deleting needs the superuser, exactly as restoring does, and every deletion is
+recorded in the server log with the user who asked for it. It does **not**
+require maintenance mode: removing a backup directory never touches the live
+tree, and an installation that has run out of disk must not have to close
+itself to the public before it may reclaim it.
+
+!!! note "If a deletion does not complete"
+    The engine re-checks the directory after removing it and reports a failure
+    naming what survived, rather than claiming a removal it cannot see. On a
+    bind-mounted tree (a container whose code directory comes from the host)
+    this is usually a mount the host still holds on a directory inside the
+    copy: free it and retry.
 
 ### Testing branch work on a real installation
 

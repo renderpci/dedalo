@@ -146,6 +146,26 @@ async function updateCodeOwned(
  * `core/update/code_restore.ts`, gated in its own suite. EXECUTING it replaces
  * the code tree on disk and restarts the process.
  */
+/**
+ * The OPEN (owned) restore-point DELETE — synchronous, unlike its two
+ * neighbours, and deliberately.
+ *
+ * `update_code` and `restore_code` submit background jobs because they end in a
+ * server restart that kills the caller. A delete ends in a directory being gone
+ * (or not), and that answer IS the product: `deleteRestorePoint` re-checks the
+ * path after removing it and refuses when anything survives, so the operator
+ * gets a verdict instead of a submission receipt. Measured 2026-08-28 on a
+ * Docker Desktop bind mount: an `rm` that reports success and leaves the
+ * directory behind is exactly the case a job handle would have hidden.
+ */
+async function deleteRestorePointOwned(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const { deleteRestorePoint } = await import('../../update/code_restore.ts');
+	return fromEnvelope(await deleteRestorePoint(options, principal));
+}
+
 async function restoreCodeOwned(
 	options: Record<string, unknown>,
 	principal: Principal,
@@ -214,6 +234,11 @@ export const widget: WidgetModule = {
 			'update_code.restore_code',
 			engineDenied('update_code.restore_code', 'it REPLACES the live code tree with a backup copy'),
 			restoreCodeOwned,
+		),
+		delete_restore_point: gated(
+			'update_code.delete_restore_point',
+			engineDenied('update_code.delete_restore_point', 'it DELETES a code backup copy'),
+			deleteRestorePointOwned,
 		),
 		build_version_from_git_master: gated(
 			'update_code.build_version_from_git_master',

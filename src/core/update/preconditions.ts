@@ -70,6 +70,13 @@ function staleBackupFinding(backupDir?: string): string | null {
  * byte-frozen (update_data_version). `backupDir` is a test seam; production
  * callers use the configured dir.
  *
+ * `maintenance: false` (restore-point DELETE, 2026-08-28) skips the maintenance
+ * gate — and ONLY that caller may: removing a backup directory never touches the
+ * live tree and serves no request differently, so demanding an install be closed
+ * to the public before it may reclaim its own disk would make the affordance
+ * useless on exactly the installation that ran out of space. The superuser check
+ * is NOT optional and has no flag.
+ *
  * `backupRequire: true` (code update, 2026-08-23) turns the same scan into a
  * REFUSAL: a code swap replaces the whole tree and its rollback contract leans
  * on a restorable state, so "no backup / stale backup" is `update.refused`,
@@ -79,12 +86,17 @@ function staleBackupFinding(backupDir?: string): string | null {
  */
 export function checkUpdatePreconditions(
 	principal: Principal,
-	options: { backupWarn?: boolean; backupDir?: string; backupRequire?: boolean } = {},
+	options: {
+		backupWarn?: boolean;
+		backupDir?: string;
+		backupRequire?: boolean;
+		maintenance?: boolean;
+	} = {},
 ): UpdatePreconditions {
 	if (principal.userId !== SUPERUSER_ID) {
 		throw new DedaloError('perm.superuser_required', { coordinates: { user: principal.userId } });
 	}
-	if (getServerState().maintenance_mode !== true) {
+	if (options.maintenance !== false && getServerState().maintenance_mode !== true) {
 		throw new DedaloError('maintenance.mode_required');
 	}
 

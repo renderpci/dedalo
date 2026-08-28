@@ -114,6 +114,10 @@ import {
 import { engineOwnsInstall } from './ownership.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
+import {
+	removeRestorePointDir,
+	resolveRestorePointOrRefuse,
+} from './restore_points.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { DEDALO_VERSION_TRIPLE } from './version.ts';
 
@@ -514,4 +518,73 @@ function scheduleServerRestartReal(reason: string): void {
 	void import('../install/restart.ts').then(({ scheduleServerRestart }) => {
 		scheduleServerRestart(`code restore: ${reason}`);
 	});
+}
+
+
+/**
+ * DELETE one restore point.
+ *
+ * A sibling of `restoreCode` and deliberately far smaller: nothing is swapped,
+ * nothing restarts, no lock is taken. It is still a DESTRUCTIVE action on
+ * disaster-recovery material, so it wears the same gates the restore does — the
+ * ownership check and the superuser identity — and refuses through the same
+ * predicate the panel disables its button with.
+ *
+ * NOT the maintenance-mode gate. Deleting a backup directory does not touch the
+ * live tree, no request is served differently while it runs, and requiring an
+ * install to be closed to the public before it may reclaim disk would make the
+ * affordance useless on exactly the installation that ran out of it.
+ *
+ * NOT a background job either. The removal is synchronous because its ANSWER is
+ * the point: an operator who is told "deleted" must be looking at a directory
+ * that is gone (see removeRestorePointDir — it verifies), and a fire-and-forget
+ * job would hand back a claim nobody checked.
+ */
+export async function deleteRestorePoint(
+	rawOptions: unknown,
+	principal: Principal,
+	seams: CodeRestoreSeams = {},
+): Promise<CodeRestoreResponse> {
+	if (!engineOwnsInstall()) {
+		refuseUpdate('update.refused', 'Error. Code restore is not runnable on this engine');
+	}
+	const request = parseRestoreRequest(rawOptions);
+	checkUpdatePreconditions(principal, { backupWarn: false, maintenance: false });
+
+	const targetRoot = seams.targetRoot ?? projectRoot;
+	const backupRoot = resolveBackupRootOrRefuse(targetRoot, seams);
+	// BY NAME, against the SAME listing the panel rendered (status.ts) — a
+	// client never names a path, and the two must be looking at one set.
+	const { readRestorePoints } = await import('./status.ts');
+	const points = readRestorePoints(backupRoot);
+	const listed = points.find((point) => point.name === request.name);
+	if (listed === undefined) {
+		refuseUpdate(
+			'update.refused',
+			'Error. Unknown restore point — no restore point of that name exists on this installation.',
+		);
+	}
+	if (listed.deletable !== true) {
+		refuseUpdate(
+			'update.refused',
+			'Error. That restore point is the rollback for the code running now — it is the newest copy this server could boot back into. Delete an older one, or update first so a newer rollback exists.',
+		);
+	}
+	// …and only THEN the path, through the confinement guard: the listing proves
+	// the name is one of ours, `resolveRestorePointOrRefuse` proves the path is.
+	const dir = resolveRestorePointOrRefuse(backupRoot, request.name);
+	const removed = removeRestorePointDir(dir, request.name);
+	// LOUD, with the actor: this is irreversible and the operator log is the
+	// only place the fact survives once the directory is gone.
+	console.warn(
+		`[code update] restore point DELETED: ${removed} (by user ${principal.userId}, backup root ${backupRoot})`,
+	);
+	const sentence = `OK. Restore point ${removed} deleted.`;
+	return ok(
+		{ deleted: removed },
+		{
+			requestId: currentRequestContext()?.requestId ?? '',
+			extend: { msg: sentence, deleted: removed },
+		},
+	);
 }

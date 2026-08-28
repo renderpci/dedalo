@@ -350,6 +350,20 @@
 					opacity: 0.9;
 				}
 
+				// DELETE, beside Restore. Secondary weight (it is not the thing an
+				// operator came here to do) but unmistakably destructive — the
+				// panel's own colour for an irreversible action, applied to the
+				// text so a disabled one reads as unavailable rather than as safe.
+				>.dd_v >button.button_delete_point {
+					margin-left: 0.4rem;
+					padding: 0.15rem 0.7rem;
+					color: var(--state_danger_fg, #b3261e);
+
+					&[disabled] {
+						color: var(--fg_muted);
+					}
+				}
+
 				>.dd_v >button.button_restore {
 					margin-left: auto;
 					padding: 0.15rem 0.7rem;

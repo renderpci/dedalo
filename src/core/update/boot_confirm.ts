@@ -89,6 +89,12 @@ export async function confirmBootedCodeUpdate(
 		}
 		await Bun.write(sentinelPath, JSON.stringify({ ...sentinel, status: 'confirmed' }, null, '\t'));
 		reportBootConfirmed(runningVersion, runningDigest);
+		// RETENTION RUNS HERE AND NOWHERE ELSE. Not when the swap happens — until
+		// this flip the new tree is unproven and the points behind it are the way
+		// back; pruning them at swap time would delete the rollbacks for an update
+		// that has not yet shown it can boot. One confirmed boot later, the tree
+		// has proven itself and the older copies are just disk.
+		await pruneConfirmedRestorePoints(sentinel);
 	} catch (error) {
 		console.error('[code update] boot confirmation failed (sentinel unreadable?):', error);
 	}
@@ -114,4 +120,35 @@ function reportBootMismatch(
 	console.error(
 		`[code update] LOUD: a PENDING code-update sentinel names version ${sentinel.version} / digest ${sentinel.installDigest ?? 'none'} but this process runs ${runningVersion} / digest ${runningDigest ?? 'none'} — a rollback happened, or the swap half-applied. The sentinel at ${sentinelPath} is left untouched; inspect it and the backup at ${sentinel.backupDir}.`,
 	);
+}
+
+/**
+ * Prune the restore points behind a CONFIRMED update to `restorePointsKeep`.
+ *
+ * Best-effort and loud: this runs on the boot path, and a disk that will not
+ * give a directory back is not a reason to fail a boot that is otherwise
+ * healthy. The sentinel's own `backupDir` is protected on top of the
+ * live-rollback rule — it is the tree this very update replaced, and the
+ * evidence of the swap.
+ */
+async function pruneConfirmedRestorePoints(sentinel: CodeUpdateSentinel): Promise<void> {
+	try {
+		const { config } = await import('../../config/config.ts');
+		const { readRestorePoints } = await import('./status.ts');
+		const { pruneRestorePoints } = await import('./restore_points.ts');
+		const { resolveCodeBackupRoot } = await import('./code_update.ts');
+		const backupRoot = resolveCodeBackupRoot();
+		const points = readRestorePoints(backupRoot);
+		const keep = config.update.restorePointsKeep;
+		if (points.length <= keep) return;
+		const protectName = sentinel.backupDir.split('/').filter(Boolean).pop() ?? null;
+		const report = pruneRestorePoints({ points, backupRoot, keep, protect: protectName });
+		if (report.deleted.length > 0) {
+			console.log(
+				`[code update] retention: kept the ${report.kept} newest restore points, deleted ${report.deleted.length} (${report.deleted.join(', ')}). Set DEDALO_CODE_RESTORE_POINTS_KEEP to change this.`,
+			);
+		}
+	} catch (error) {
+		console.error('[code update] restore-point retention failed (nothing was deleted):', error);
+	}
 }

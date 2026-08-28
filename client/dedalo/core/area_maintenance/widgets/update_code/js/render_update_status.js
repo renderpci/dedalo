@@ -506,7 +506,7 @@ const same_day = function(a, b) {
 *   all: an inert control on a destructive action is worse than none.
 * @returns {HTMLElement|null}
 */
-export const render_consumer_status = function(parent, consumer, on_restore) {
+export const render_consumer_status = function(parent, consumer, on_restore, on_delete) {
 
 	if (!consumer) return null
 
@@ -620,6 +620,44 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 				inner_html		: get_label.update_code_restore || 'Restore',
 				parent			: value
 			})
+			// DELETE, beside Restore. Rendered after it so the destructive control
+			// is never the first thing under the pointer, and `light` — the
+			// panel's own weight for a secondary action — with `.button_delete`
+			// carrying the danger colour, the way `Mover a tabla` is marked.
+			if (on_delete) {
+				const button_delete = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light button_delete_point',
+					// the generic verb: the ROW already says what it is deleting,
+					// and 'Delete restore point' on a button inside a restore-point
+					// row is the noun twice.
+					inner_html		: get_label.delete || 'Delete',
+					parent			: value
+				})
+				if (point.deletable!==true) {
+					button_delete.disabled = true
+					// SAME CONTRACT AS `restorable`: the server sends a reason id,
+					// this side the sentence, so a reason added tomorrow renders as
+					// its id rather than as an invented excuse. There is one today —
+					// the point is the rollback for the code running now — and it is
+					// a REFUSAL, not a confirm: a dialog is not a sufficient guard
+					// for deleting disaster recovery.
+					const delete_reason = get_label['update_code_delete_reason_' + point.deletable_reason]
+						|| String(point.deletable_reason || '')
+					button_delete.title = delete_reason
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'restore_reason',
+						text_content	: delete_reason,
+						parent			: value
+					})
+				} else {
+					button_delete.addEventListener('click', (e) => {
+						e.stopPropagation()
+						on_delete(point)
+					})
+				}
+			}
 			if (point.restorable!==true) {
 				button_restore.disabled = true
 				// the server sends a reason ID, this side the sentence — same

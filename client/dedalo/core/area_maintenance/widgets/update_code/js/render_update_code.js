@@ -272,7 +272,10 @@ const get_content_data_edit = async function(self) {
 						// The SERVER's own version string travels with the point: the
 						// modal's downgrade decision must be the pipeline's, and the
 						// page global carries a prerelease tag the pipeline never sees.
-						: (point) => render_restore_modal(self, point, body_response, (consumer.engine || {}).version)
+						: (point) => render_restore_modal(self, point, body_response, (consumer.engine || {}).version),
+					// DELETE, on the same terms as Restore: a development checkout
+					// gets neither, because neither may touch its tree.
+					is_development ? null : (point) => delete_restore_point(self, point, body_response)
 				)
 			} else {
 				holder.appendChild(build_readout([
@@ -283,6 +286,27 @@ const get_content_data_edit = async function(self) {
 			return holder
 		}
 		render_consumer_half(value.consumer)
+
+	// RE-READ the consumer half from the server. Deleting a restore point
+	// changes the very list this half renders, so the row that was acted on has
+	// to come back from disk rather than from the value this render closed over
+	// (the same reason the code-server half has refresh_code_server). Exposed on
+	// the instance because the actor — delete_restore_point — is a module-level
+	// function, not a closure of this render.
+		self.refresh_consumer = async () => {
+			try {
+				const fresh = await self.get_value()
+				if (!fresh || !fresh.consumer) {
+					return
+				}
+				self.value = fresh
+				render_consumer_half(fresh.consumer)
+			} catch (error) {
+				// a failed refresh must never take the panel down: the action
+				// already reported its own outcome in body_response
+				console.error('update_code: could not refresh the consumer readout', error)
+			}
+		}
 
 	// servers. The shared picker over CODE_SERVERS with its OWN storage key:
 	// remembering the choice must not collide with the ontology picker's.
@@ -1858,6 +1882,73 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 	return modal
 }//end render_info_modal
+
+
+
+/**
+* DELETE_RESTORE_POINT
+* Removes one restore point, after a confirmation that NAMES it.
+*
+* No modal and no phase track: unlike a restore this swaps nothing, restarts
+* nothing and takes no lock — it is one request whose answer is a verdict. The
+* server verifies the directory is actually gone before answering (see
+* core/update/restore_points.ts removeRestorePointDir), so a success here is a
+* statement about the disk and not about the request.
+*
+* The panel never offers this on the point the server marked `deletable:false`
+* — the rollback for the running code — so the confirm is about "this copy",
+* never about "your only way back".
+*
+* @param {Object} self - update_code widget instance
+* @param {Object} point - the restore point row {name, version, …}
+* @param {HTMLElement} body_response - where the outcome is rendered
+* @returns {Promise<void>}
+*/
+const delete_restore_point = async function(self, point, body_response) {
+
+	const accepted = await ui.confirm({
+		header			: get_label.update_code_delete_point || 'Delete restore point',
+		// the NAME is in the question: several points differ only by timestamp,
+		// and "are you sure?" about an unnamed one is not a question.
+		body			: (get_label.update_code_delete_point_confirm
+			|| 'Delete the restore point %s? The code copy it holds is removed from disk and cannot be recovered.')
+			.replace('%s', String(point.name)),
+		accept_label	: get_label.delete || 'Delete'
+	})
+	if (accepted!==true) {
+		return
+	}
+
+	while (body_response.firstChild) {
+		body_response.removeChild(body_response.firstChild)
+	}
+	const spinner = ui.create_dom_element({ element_type : 'div', class_name : 'spinner' })
+	body_response.prepend(spinner)
+	try {
+		const api_response = await self.delete_restore_point({ name : point.name })
+		if (request_failed(api_response)) {
+			// ONE error model: policy + renderer decide the surface. A PARTIAL
+			// delete arrives here — the server refuses rather than claiming a
+			// removal it could not verify — and its sentence names what survived.
+			await handle_api_error(api_response.error, {wrapper: body_response})
+			return
+		}
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_ok',
+			text_content	: String(response_extension(api_response, 'msg')
+				|| (get_label.update_code_delete_point_done || 'Restore point deleted.')),
+			parent			: body_response
+		})
+	} finally {
+		spinner.remove()
+		// the list beside the button is a claim about the disk that this call
+		// just changed — re-read it, exactly as a build does.
+		if (typeof self.refresh_consumer==='function') {
+			await self.refresh_consumer()
+		}
+	}
+}//end delete_restore_point
 
 
 
