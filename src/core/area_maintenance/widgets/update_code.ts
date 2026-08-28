@@ -79,11 +79,34 @@ async function updateCodeGetValue(
 			// displays it. The config-catalog key is a retirement candidate.
 			is_a_code_server: config.update.isCodeServer,
 			consumer: consumerStatus(principal),
+			// The self-probe is composed HERE, not inside codeServerStatus: that
+			// function is synchronous filesystem work and stays that way, while
+			// this one check has to go out over the network. It is appended to
+			// the same list so the panel renders it like any other, and it can
+			// only ever ADD a row — a probe that throws is impossible (the check
+			// catches its own failures), and `ready` still follows the same
+			// blocked-if-any rule.
 			code_server: config.update.isCodeServer
-				? codeServerStatus(`${publicOrigin()}/dedalo/install/code`)
+				? await withReachability(codeServerStatus(`${publicOrigin()}/dedalo/install/code`))
 				: null,
 		},
 	};
+}
+
+/**
+ * Append the advertised-URL self-probe to a code-server readout.
+ *
+ * Kept out of `codeServerStatus` so that function stays sync and pure — the
+ * network is the only asynchronous thing in the whole readout, and folding it
+ * in would make every caller await a fetch to read a directory listing.
+ */
+async function withReachability(
+	status: Awaited<ReturnType<typeof import('../../update/status.ts').codeServerStatus>>,
+): Promise<typeof status> {
+	const { advertisedUrlReachableCheck } = await import('../../update/status.ts');
+	const reachable = await advertisedUrlReachableCheck(status.releases);
+	const checks = [...status.checks, reachable];
+	return { ...status, checks, ready: !checks.some((entry) => entry.state === 'blocked') };
 }
 
 /**

@@ -388,6 +388,25 @@ plus `.sha256`), mapping the request back to `DEDALO_CODE_FILES_DIR`. Only that
 release's own files are reachable, and only while `IS_A_CODE_SERVER` is set —
 so the storage directory does not have to sit in the web root, and should not.
 
+!!! warning "The reverse proxy has to route it, and the panel now checks"
+    `/dedalo/install/code/` has no counterpart in the client tree, so a vhost
+    that does not forward it to the engine does not fall back — the static
+    alias answers `404` and the request never reaches the server. Everything
+    else looks healthy: the archive is on disk, the version is right, the
+    manifest is correct, and every museum fails at download time with
+    `bad server response code: 404`.
+
+    The code-server panel probes its own advertised URL and reports which layer
+    answered: **the reverse proxy is not routing** the path, **the engine
+    answered** (so routing is fine and the fault is this server's own
+    configuration), or **the origin did not answer at all**. The rule to add is
+    in [Reverse proxy and TLS](../../install/reverse_proxy.md).
+
+    The probe fetches the master's own public origin from inside its own
+    network, so it proves *this vhost routes the path* — not that the wider
+    internet can reach you. Split-horizon DNS or a firewall can still make the
+    two differ.
+
 !!! note "A built release is not automatically offered"
     A release is advertised only when the engine's update catalogue knows the
     target version, and only to callers for which it is the next step on the

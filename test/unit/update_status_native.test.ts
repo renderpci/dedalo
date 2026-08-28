@@ -30,6 +30,7 @@ import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 import { backupRootIsInsideTree, isSupervised } from '../../src/core/update/code_update.ts';
 import { backupFreshness } from '../../src/core/update/preconditions.ts';
 import {
+	advertisedUrlReachableCheck,
 	archiveSymlinkNames,
 	codeServerStatus,
 	consumerStatus,
@@ -262,6 +263,134 @@ describe('code server status', () => {
 		const check = byId(status.checks, 'archive_installable');
 		expect(STATES.has(check.state)).toBe(true);
 		if (check.state === 'unknown') expect(typeof check.detail).toBe('string');
+	});
+});
+
+/**
+ * THE ADVERTISED URL SELF-PROBE. A master must not offer a release it cannot
+ * deliver: the engine serves /dedalo/install/code/, the config marks the
+ * install a code server, and the REVERSE PROXY routes the path — and until this
+ * check nothing verified the three together. The proxy layer is the one that
+ * fails silently, because the path has no client subtree: the /dedalo/ static
+ * alias answers 404 and the request never reaches the engine, so every
+ * filesystem check stays green while every museum gets a 404 at download time.
+ *
+ * The gate is the DISCRIMINATION. A bare status code cannot say which layer
+ * broke, so the check reads the body: the engine answers refusals with the
+ * error envelope, a proxy that never reached it answers with its own HTML.
+ * Injecting fetch keeps this hermetic — nothing here touches the network.
+ */
+describe('the advertised release URL is probed, and the failure NAMES the layer', () => {
+	const RELEASES = [
+		{
+			version: '7.0.1',
+			channel: 'master' as const,
+			file: '7.0.1.zip',
+			bytes: 10,
+			stamp: 2,
+			sidecar: true,
+			url: 'https://example.test/dedalo/install/code/7.0.1/7.0.1.zip',
+		},
+		{
+			version: '7.0.2',
+			channel: 'dev' as const,
+			file: '7.0.2-dev.zip',
+			bytes: 10,
+			stamp: 9,
+			sidecar: true,
+			url: 'https://example.test/dedalo/install/code/7.0.2/7.0.2-dev.zip',
+		},
+	];
+
+	/** A fetch that records what it was asked for and answers as told. */
+	function fakeFetch(answer: Response | Error): { calls: string[]; impl: typeof fetch } {
+		const calls: string[] = [];
+		const impl = (async (input: string | URL | Request) => {
+			calls.push(String(input));
+			if (answer instanceof Error) throw answer;
+			return answer.clone();
+		}) as unknown as typeof fetch;
+		return { calls, impl };
+	}
+
+	const engine404 = () =>
+		new Response(
+			JSON.stringify({
+				ok: false,
+				request_id: 'x',
+				error: { code: 'resource.not_found', category: 'not_found' },
+			}),
+			{ status: 404, headers: { 'Content-Type': 'application/json' } },
+		);
+	const proxy404 = () =>
+		new Response('<html><head><title>404 Not Found</title></head></html>', {
+			status: 404,
+			headers: { 'Content-Type': 'text/html' },
+		});
+
+	test('a served sidecar is ok — and the SIDECAR is what gets asked for', async () => {
+		const { calls, impl } = fakeFetch(new Response('abc123', { status: 200 }));
+		const check = await advertisedUrlReachableCheck(RELEASES, impl);
+		expect(check.state).toBe('ok');
+		// Never the archive itself: a release is hundreds of megabytes and a
+		// status panel must not download one to prove a route works.
+		expect(calls).toEqual(['https://example.test/dedalo/install/code/7.0.1/7.0.1.zip.sha256']);
+	});
+
+	test('only an ADVERTISED release is probed, never the dev channel', async () => {
+		// 7.0.2-dev is newer, but no manifest ever names it, so its reachability
+		// answers no question a consumer will ask.
+		const { calls, impl } = fakeFetch(new Response('abc123', { status: 200 }));
+		await advertisedUrlReachableCheck(RELEASES, impl);
+		expect(calls[0]).toContain('7.0.1');
+		expect(calls[0]).not.toContain('-dev');
+	});
+
+	test('a NON-ENGINE 404 blames the reverse proxy, and says which rule is missing', async () => {
+		const { impl } = fakeFetch(proxy404());
+		const check = await advertisedUrlReachableCheck(RELEASES, impl);
+		expect(check.state).toBe('blocked');
+		expect(check.detail).toContain('/dedalo/install/code/');
+		expect(check.detail).toContain('proxy');
+		// The operator gets the URL that failed, not just a verdict.
+		expect(check.scope).toContain('7.0.1.zip.sha256');
+	});
+
+	test('an ENGINE 404 does NOT blame the proxy — the request got through', async () => {
+		const { impl } = fakeFetch(engine404());
+		const check = await advertisedUrlReachableCheck(RELEASES, impl);
+		expect(check.state).toBe('blocked');
+		// This is the whole point of reading the body: same status code, opposite
+		// diagnosis. Blaming the proxy here would send an operator to edit a
+		// vhost that is already correct.
+		expect(check.detail).toContain('the engine answered');
+		expect(check.detail).not.toContain('not routing');
+	});
+
+	test('no answer at all blames the origin, and reports why', async () => {
+		const { impl } = fakeFetch(new Error('getaddrinfo ENOTFOUND example.test'));
+		const check = await advertisedUrlReachableCheck(RELEASES, impl);
+		expect(check.state).toBe('blocked');
+		expect(check.detail).toContain('did not answer');
+		expect(check.detail).toContain('ENOTFOUND');
+	});
+
+	test('nothing published is UNKNOWN, never a false green', async () => {
+		const { calls, impl } = fakeFetch(new Response('', { status: 200 }));
+		const check = await advertisedUrlReachableCheck([], impl);
+		expect(check.state).toBe('unknown');
+		expect(calls).toEqual([]);
+	});
+
+	test('the probe carries a label like every other check', () => {
+		expect(labels.update_code_check_advertised_url_reachable).toBeDefined();
+	});
+
+	test('the OLD origin check no longer claims to prove reachability', () => {
+		// It parses a hostname; it has never fetched anything. While its label
+		// said "reachable" it promised exactly the property that was broken, and
+		// the promise is why nobody went looking for this gap.
+		expect(labels.update_code_check_advertised_origin).not.toContain('reachable');
 	});
 });
 

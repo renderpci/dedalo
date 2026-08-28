@@ -41,11 +41,7 @@ import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { detectDeploymentChannel } from './channel.ts';
-import {
-	deletabilityOf,
-	type DeleteBlockReason,
-	RESTORE_POINT_PREFIX,
-} from './restore_points.ts';
+import { deletabilityOf, type DeleteBlockReason, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { parseDeclaredTriple, planCodeBuild, VERSION_TS_PATH } from './code_build_plan.ts';
 import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
@@ -956,6 +952,123 @@ function releasesReadableCheck(unreadable: string[]): StatusCheck {
 	return unreadable.length === 0
 		? check('releases_readable', 'ok')
 		: check('releases_readable', 'warn', unreadable.join(', '));
+}
+
+/** How long a self-probe may take before it is reported as unknown, not as red. */
+const REACHABILITY_TIMEOUT_MS = 4000;
+
+/**
+ * `advertised_url_reachable`: does the master's OWN advertised release URL
+ * actually answer? Depends on NOTHING but its arguments — the caller decides
+ * whether a code server is being looked at, and `fetch` is injectable, so the
+ * gate is hermetic and identical on every machine.
+ *
+ * Three layers must agree for a museum to be able to update — the engine serves
+ * `/dedalo/install/code/` (core/update/code_serving.ts), the install is
+ * configured as a code server, and the REVERSE PROXY routes that path to the
+ * socket — and until now nothing checked their composition. Each layer was
+ * verified alone: `advertised_origin` proves the origin is not localhost,
+ * `releases_readable` proves the files are on disk. Neither notices that the
+ * vhost never forwards the path, because no client subtree serves it either:
+ * the `/dedalo/` static alias answers 404 and the request never reaches the
+ * engine. The consumer discovers it at download time, as
+ * `bad server response code: 404`, after maintenance mode is already on.
+ *
+ * So this check FETCHES. It asks for the `.sha256` sidecar of the newest
+ * advertised release — tens of bytes, but the same URL space, the same handler
+ * and the same confinement gate as the archive itself, so a 200 proves the
+ * whole chain end to end. Without a sidecar it asks for the archive's first
+ * byte (`Range`), never its body: a release is hundreds of megabytes and a
+ * status panel must not download one.
+ *
+ * WHAT THE FOUR OUTCOMES MEAN — the point of the check. A bare 404 cannot tell
+ * an operator which layer is broken, so the body decides: the engine answers
+ * every refusal with the error envelope (`ok:false` + `error.code`), while a
+ * proxy that never reached the engine answers with its own HTML. One status
+ * code becomes four actionable states.
+ *
+ * HONEST LIMIT: this fetches the master's own public origin FROM INSIDE its own
+ * network. Split-horizon DNS, or a firewall that treats loopback differently,
+ * can make this pass while a real museum still fails. It proves "my vhost
+ * routes this", not "the internet can reach me" — and it must not be read as
+ * the stronger claim, which is the overreach that produced this gap
+ * (`update_code_check_advertised_origin` has always been LABELLED "reachable"
+ * while only ever parsing a hostname).
+ */
+export async function advertisedUrlReachableCheck(
+	releases: PublishedRelease[],
+	fetchImpl: typeof fetch = fetch,
+): Promise<StatusCheck> {
+	const id = 'advertised_url_reachable';
+	// No `isCodeServer` guard here ON PURPOSE. The caller composes this check
+	// only for a code server, and reading ambient config inside would make the
+	// gate below pass or fail with whatever the developer's own ../private/.env
+	// happens to say — measured 2026-08-28: every case went green on a machine
+	// with IS_A_CODE_SERVER=true and would have gone `unknown` anywhere else.
+	// The function's only inputs are its arguments.
+
+	// Only an ADVERTISED release is worth probing: the dev channel is servable
+	// but never named in a manifest, so its reachability answers no question a
+	// consumer will ask.
+	const target = releases.find((release) => release.channel === 'master');
+	if (target === undefined) return check(id, 'unknown', 'nothing published yet');
+
+	const url = target.sidecar ? `${target.url}.sha256` : target.url;
+	const headers: Record<string, string> = target.sidecar ? {} : { Range: 'bytes=0-0' };
+
+	let response: Response;
+	try {
+		response = await fetchImpl(url, {
+			headers,
+			redirect: 'error',
+			signal: AbortSignal.timeout(REACHABILITY_TIMEOUT_MS),
+		});
+	} catch (error) {
+		// Never reached an HTTP server at all: DNS, TLS, refused, timed out. This
+		// is the case `advertised_origin` half-guesses from the hostname alone.
+		const reason = error instanceof Error ? error.message : String(error);
+		return check(id, 'blocked', `the advertised origin did not answer: ${reason}`, url);
+	}
+
+	if (response.ok || response.status === 206) return check(id, 'ok', undefined, url);
+
+	// The body says WHICH layer answered.
+	let body = '';
+	try {
+		body = (await response.text()).slice(0, 2048);
+	} catch {
+		body = '';
+	}
+	return check(id, 'blocked', reachabilityDetail(response.status, body), url);
+}
+
+/** Turn one non-200 into the sentence that names the layer at fault. */
+function reachabilityDetail(status: number, body: string): string {
+	if (isEngineEnvelope(body)) {
+		// The request DID reach the engine, so the proxy is fine and the refusal
+		// is the engine's own: not a code server, or the file is not where the
+		// files dir says. Its own checks above cover those.
+		return `the engine answered ${status} — the proxy routes the path, so this is a code-server configuration fault, not a routing one`;
+	}
+	return `${status}, and the answer did not come from the engine — the reverse proxy is not routing /dedalo/install/code/ to the socket. Add the rule from docs/install/reverse_proxy.md and reload`;
+}
+
+/** Did the ENGINE write this body? Its refusals are always the error envelope. */
+function isEngineEnvelope(body: string): boolean {
+	try {
+		const parsed: unknown = JSON.parse(body);
+		if (typeof parsed !== 'object' || parsed === null) return false;
+		const record = parsed as Record<string, unknown>;
+		const error = record.error;
+		return (
+			record.ok === false &&
+			typeof error === 'object' &&
+			error !== null &&
+			typeof (error as Record<string, unknown>).code === 'string'
+		);
+	} catch {
+		return false;
+	}
 }
 
 export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
