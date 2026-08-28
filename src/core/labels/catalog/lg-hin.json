@@ -576,6 +576,7 @@
 	"update_code_reload_required": "पुनः लोड आवश्यक: नया कोड लोड करने के लिए फिर से लॉग इन करें।",
 	"update_code_restore": "पुनर्स्थापित करें",
 	"update_code_restore_bootable": "बूट योग्य",
+	"update_code_restore_bun_versions": "यह प्रति Bun %s निर्धारित करती है; यह सर्वर Bun %s चला रहा है। इसे पुनर्स्थापित करने के लिए Bun %s इंस्टॉल करें।",
 	"update_code_restore_confirm": "कोड की यह प्रति पुनर्स्थापित करें",
 	"update_code_restore_confirm_downgrade": "मैं समझता हूँ कि यह संस्थापन संस्करण %s चलाएगा जबकि डेटाबेस वैसा ही रहेगा",
 	"update_code_restore_connection_lost": "संपर्क टूट गया — पुनर्स्थापना सर्वर पर अब भी चल रही हो सकती है। पुनः जुड़ने के लिए यह पटल फिर से खोलें, और दूसरी पुनर्स्थापना आरंभ न करें।",

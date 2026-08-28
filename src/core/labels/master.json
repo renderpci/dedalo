@@ -741,6 +741,7 @@
 	"update_code_reload_required": "Reload required: log in again to load the new code.",
 	"update_code_restore": "Restore",
 	"update_code_restore_bootable": "bootable",
+	"update_code_restore_bun_versions": "This copy pins Bun %s; this server runs Bun %s. Install Bun %s to restore it.",
 	"update_code_restore_confirm": "Restore this code copy",
 	"update_code_restore_confirm_downgrade": "I understand this installation will run version %s while the database stays as it is",
 	"update_code_restore_connection_lost": "Connection lost — the restore may still be running on the server. Reopen this panel to re-attach, and do not start another restore.",

@@ -576,6 +576,7 @@
 	"update_code_reload_required": "Birkargatu behar da: hasi saioa berriro kode berria kargatzeko.",
 	"update_code_restore": "Leheneratu",
 	"update_code_restore_bootable": "abiarazgarria",
+	"update_code_restore_bun_versions": "Kopia honek Bun %s finkatzen du; zerbitzari honek Bun %s exekutatzen du. Instalatu Bun %s berreskuratzeko.",
 	"update_code_restore_confirm": "Leheneratu kodearen kopia hau",
 	"update_code_restore_confirm_downgrade": "Ulertzen dut instalazio honek %s bertsioa exekutatuko duela datu-basea dagoen bezala geratzen den bitartean",
 	"update_code_restore_connection_lost": "Konexioa galduta — leheneratzea zerbitzarian exekutatzen ari daiteke oraindik. Ireki berriro panel hau berriz konektatzeko, eta ez hasi beste leheneratzerik.",

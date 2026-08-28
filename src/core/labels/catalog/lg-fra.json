@@ -576,6 +576,7 @@
 	"update_code_reload_required": "Rechargement nécessaire : reconnectez-vous pour charger le nouveau code.",
 	"update_code_restore": "Restaurer",
 	"update_code_restore_bootable": "amorçable",
+	"update_code_restore_bun_versions": "Cette copie fixe Bun %s ; ce serveur exécute Bun %s. Installez Bun %s pour la restaurer.",
 	"update_code_restore_confirm": "Restaurer cette copie du code",
 	"update_code_restore_confirm_downgrade": "Je comprends que cette installation exécutera la version %s alors que la base de données reste en l’état",
 	"update_code_restore_connection_lost": "Connexion perdue — la restauration peut encore s'exécuter sur le serveur. Rouvrez ce panneau pour vous reconnecter et ne lancez pas une autre restauration.",

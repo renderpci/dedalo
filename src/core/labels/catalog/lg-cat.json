@@ -576,6 +576,7 @@
 	"update_code_reload_required": "Cal tornar a carregar: inicieu la sessió de nou per carregar el codi nou.",
 	"update_code_restore": "Restaura",
 	"update_code_restore_bootable": "arrencable",
+	"update_code_restore_bun_versions": "Aquesta còpia fixa Bun %s; aquest servidor executa Bun %s. Instal·leu Bun %s per restaurar-la.",
 	"update_code_restore_confirm": "Restaura aquesta còpia del codi",
 	"update_code_restore_confirm_downgrade": "Entenc que aquesta instal·lació passarà a executar la versió %s mentre la base de dades es manté tal com està",
 	"update_code_restore_connection_lost": "Connexió perduda — la restauració pot continuar executant-se al servidor. Torneu a obrir aquest tauler per reconnectar i no inicieu una altra restauració.",

@@ -576,6 +576,7 @@
 	"update_code_reload_required": "Neu laden erforderlich: Melden Sie sich erneut an, um den neuen Code zu laden.",
 	"update_code_restore": "Wiederherstellen",
 	"update_code_restore_bootable": "startfähig",
+	"update_code_restore_bun_versions": "Diese Kopie ist auf Bun %s festgelegt; dieser Server führt Bun %s aus. Installieren Sie Bun %s, um sie wiederherzustellen.",
 	"update_code_restore_confirm": "Diese Codekopie wiederherstellen",
 	"update_code_restore_confirm_downgrade": "Mir ist bewusst, dass diese Installation Version %s ausführen wird, während die Datenbank unverändert bleibt",
 	"update_code_restore_connection_lost": "Verbindung verloren — die Wiederherstellung läuft möglicherweise noch auf dem Server. Öffnen Sie dieses Panel erneut, um sich wieder zu verbinden, und starten Sie keine weitere Wiederherstellung.",

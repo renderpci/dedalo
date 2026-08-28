@@ -576,6 +576,7 @@
 	"update_code_reload_required": "পুনরায় লোড করা দরকার: নতুন কোড লোড করতে আবার লগ ইন করুন।",
 	"update_code_restore": "পুনরুদ্ধার করুন",
 	"update_code_restore_bootable": "চালু করার যোগ্য",
+	"update_code_restore_bun_versions": "এই কপিটি Bun %s নির্দিষ্ট করে; এই সার্ভারটি Bun %s চালাচ্ছে। এটি পুনরুদ্ধার করতে Bun %s ইনস্টল করুন।",
 	"update_code_restore_confirm": "কোডের এই অনুলিপি পুনরুদ্ধার করুন",
 	"update_code_restore_confirm_downgrade": "আমি বুঝি যে এই ইনস্টলেশন %s সংস্করণ চালাবে যখন ডেটাবেস অপরিবর্তিত থাকবে",
 	"update_code_restore_connection_lost": "সংযোগ বিচ্ছিন্ন — পুনরুদ্ধার সার্ভারে এখনও চলতে পারে। পুনরায় সংযোগের জন্য এই প্যানেল আবার খুলুন, এবং অন্য কোনো পুনরুদ্ধার শুরু করবেন না।",

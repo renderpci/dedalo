@@ -576,6 +576,7 @@
 	"update_code_reload_required": "再読み込みが必要です: 新しいコードを読み込むには再度ログインしてください。",
 	"update_code_restore": "復元",
 	"update_code_restore_bootable": "起動可能",
+	"update_code_restore_bun_versions": "このコピーは Bun %s を固定していますが、このサーバーは Bun %s を実行しています。復元するには Bun %s をインストールしてください。",
 	"update_code_restore_confirm": "このコードのコピーを復元する",
 	"update_code_restore_confirm_downgrade": "このインストールはバージョン %s で動作し、データベースはそのまま維持されることを理解しています",
 	"update_code_restore_connection_lost": "接続が失われました — 復元はサーバー上でまだ実行中の可能性があります。このパネルを開き直して再接続し、別の復元を開始しないでください。",

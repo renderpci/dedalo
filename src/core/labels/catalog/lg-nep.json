@@ -576,6 +576,7 @@
 	"update_code_reload_required": "पुनः लोड आवश्यक: नयाँ कोड लोड गर्न फेरि लग इन गर्नुहोस्।",
 	"update_code_restore": "पुनर्स्थापना गर्नुहोस्",
 	"update_code_restore_bootable": "बुट गर्न योग्य",
+	"update_code_restore_bun_versions": "यो प्रतिले Bun %s तोक्छ; यो सर्भरले Bun %s चलाइरहेको छ। यसलाई पुनर्स्थापना गर्न Bun %s स्थापना गर्नुहोस्।",
 	"update_code_restore_confirm": "कोडको यो प्रतिलिपि पुनर्स्थापना गर्नुहोस्",
 	"update_code_restore_confirm_downgrade": "म बुझ्छु कि यो स्थापनाले संस्करण %s चलाउनेछ जबकि डाटाबेस जस्ताको तस्तै रहनेछ",
 	"update_code_restore_connection_lost": "जडान टुट्यो — पुनर्स्थापना सर्भरमा अझै चलिरहेको हुन सक्छ। पुनः जोडिन यो प्यानल फेरि खोल्नुहोस्, र अर्को पुनर्स्थापना सुरु नगर्नुहोस्।",

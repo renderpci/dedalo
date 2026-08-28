@@ -576,6 +576,7 @@
 	"update_code_reload_required": "دوبارہ لوڈ کرنا ضروری ہے: نیا کوڈ لوڈ کرنے کے لیے دوبارہ لاگ اِن کریں۔",
 	"update_code_restore": "بحال کریں",
 	"update_code_restore_bootable": "قابلِ آغاز",
+	"update_code_restore_bun_versions": "یہ کاپی Bun %s مقرر کرتی ہے؛ یہ سرور Bun %s چلا رہا ہے۔ اسے بحال کرنے کے لیے Bun %s انسٹال کریں۔",
 	"update_code_restore_confirm": "کوڈ کی یہ نقل بحال کریں",
 	"update_code_restore_confirm_downgrade": "میں سمجھتا ہوں کہ یہ تنصیب ورژن %s چلائے گی جبکہ ڈیٹابیس جوں کا توں رہے گا",
 	"update_code_restore_connection_lost": "رابطہ منقطع ہو گیا — بحالی سرور پر ابھی بھی چل رہی ہو سکتی ہے۔ دوبارہ جڑنے کے لیے یہ پینل دوبارہ کھولیں، اور کوئی دوسری بحالی شروع نہ کریں۔",

@@ -576,6 +576,7 @@
 	"update_code_reload_required": "需要重新加载：请重新登录以载入新代码。",
 	"update_code_restore": "还原",
 	"update_code_restore_bootable": "可启动",
+	"update_code_restore_bun_versions": "此副本固定 Bun %s；本服务器运行的是 Bun %s。请先安装 Bun %s 再恢复。",
 	"update_code_restore_confirm": "还原此代码副本",
 	"update_code_restore_confirm_downgrade": "我了解此安装将运行版本 %s，而数据库保持不变",
 	"update_code_restore_connection_lost": "连接已断开 — 还原可能仍在服务器上运行。请重新打开此面板以重新连接，且不要启动另一次还原。",

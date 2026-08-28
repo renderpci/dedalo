@@ -561,7 +561,26 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 				// same row draws: two contradictory statements about one directory.
 				const reason_text = get_label['update_code_restore_reason_' + point.restorable_reason]
 					|| String(point.restorable_reason || '')
-				button_restore.title = reason_text
+				// …and the NUMBERS behind it, when the refusal is about a version
+				// the operator now has to go and install. The sentence alone said
+				// "a different Bun runtime than the one running" without naming
+				// either one, so an admin reading it could not tell WHICH Bun to
+				// install, nor which of several restore points was the odd one —
+				// and both facts were already on the wire (the point's own
+				// `bun_pin`, the engine's `bun`). Only this reason has numbers to
+				// add; the others stay exactly as they were.
+				const reason_detail = (point.restorable_reason==='bun_pin_mismatch' && point.bun_pin && engine.bun)
+					? (get_label.update_code_restore_bun_versions
+						|| 'This copy pins Bun %s; this server runs Bun %s. Install Bun %s to restore it.')
+						.replace('%s', String(point.bun_pin))
+						.replace('%s', String(engine.bun))
+						.replace('%s', String(point.bun_pin))
+					: ''
+				// the hover tooltip carries both lines; the rendered lines below
+				// are what a touch screen (and the operator manual) actually get.
+				button_restore.title = reason_detail
+					? (reason_text + ' ' + reason_detail)
+					: reason_text
 				// RENDERED, not only hovered (2026-08-26): a `title` is a hover
 				// tooltip — it does not exist on a touch screen and the operator
 				// manual promised the reason was on the button. A disabled button
@@ -573,6 +592,14 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 					text_content	: reason_text,
 					parent			: value
 				})
+				if (reason_detail) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'restore_reason_detail mono',
+						text_content	: reason_detail,
+						parent			: value
+					})
+				}
 				return
 			}
 			button_restore.addEventListener('click', (e) => {

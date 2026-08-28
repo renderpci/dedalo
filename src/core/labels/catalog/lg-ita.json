@@ -576,6 +576,7 @@
 	"update_code_reload_required": "È necessario ricaricare: accedere di nuovo per caricare il nuovo codice.",
 	"update_code_restore": "Ripristina",
 	"update_code_restore_bootable": "avviabile",
+	"update_code_restore_bun_versions": "Questa copia fissa Bun %s; questo server esegue Bun %s. Installare Bun %s per ripristinarla.",
 	"update_code_restore_confirm": "Ripristina questa copia del codice",
 	"update_code_restore_confirm_downgrade": "Comprendo che questa installazione eseguirà la versione %s mentre il database resta com’è",
 	"update_code_restore_connection_lost": "Connessione persa — il ripristino potrebbe essere ancora in esecuzione sul server. Riaprire questo pannello per riconnettersi e non avviare un altro ripristino.",

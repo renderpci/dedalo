@@ -576,6 +576,7 @@
 	"update_code_reload_required": "يلزم إعادة التحميل: سجّل الدخول مجددًا لتحميل الشيفرة الجديدة.",
 	"update_code_restore": "استعادة",
 	"update_code_restore_bootable": "قابلة للإقلاع",
+	"update_code_restore_bun_versions": "تثبّت هذه النسخة Bun %s، بينما يشغّل هذا الخادم Bun %s. ثبّت Bun %s لاستعادتها.",
 	"update_code_restore_confirm": "استعادة نسخة الشيفرة هذه",
 	"update_code_restore_confirm_downgrade": "أفهم أن هذا التثبيت سيعمل بالإصدار %s بينما تبقى قاعدة البيانات كما هي",
 	"update_code_restore_connection_lost": "انقطع الاتصال — قد تكون الاستعادة ما زالت تعمل على الخادم. أعد فتح هذه اللوحة لإعادة الاتصال، ولا تبدأ استعادة أخرى.",
