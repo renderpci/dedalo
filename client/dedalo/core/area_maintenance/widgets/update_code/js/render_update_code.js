@@ -851,18 +851,33 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		// the viewport while there is progress to watch)
 		const end_tracking = () => body_response.classList.remove('tracking')
 
+		// EVERY ending appends its sentence as the LAST child of a surface that
+		// is taller than the viewport, and the run's own scroll put the TOP of
+		// that surface at the top of the screen. The phase track alone fills a
+		// short window (update_code.less caps it for exactly this reason), so a
+		// refusal, a rollback or a lost connection landed in space the operator
+		// never saw: the panel looked like it had simply stopped. The track's
+		// cap makes room; this puts the sentence IN it. Guarded on the method
+		// because the render gate drives this file against a DOM stub.
+		const reveal = (node) => {
+			if (node && typeof node.scrollIntoView==='function') {
+				node.scrollIntoView({ behavior:'smooth', block:'center' })
+			}
+			return node
+		}
+
 		const finish_success = async (version) => {
 			end_tracking()
 			state = { ...state, mode:'done' }
 			track.paint(state)
 			// success state FIRST…
-			ui.create_dom_element({
+			reveal(ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_ok update_done',
 				text_content	: wording.done
 					.replace('%s', String(version || state.expected_version || '')),
 				parent			: body_response
-			})
+			}))
 			// …then the reload prompt: the browser still holds the OLD ES modules
 			// and only a full re-login reloads them.
 			const accepted = await ui.confirm({
@@ -900,12 +915,12 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			// starts no phase at all: the track is all-pending, so the refusal
 			// sentence IS the whole story — render it prominently.
 			const is_refusal = state.last_phase===null
-			ui.create_dom_element({
+			reveal(ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: is_refusal ? 'dd_note state_danger update_refusal' : 'dd_note state_danger',
 				text_content	: String(message || state.message || wording.failed),
 				parent			: body_response
-			})
+			}))
 		}
 
 		// the stream died pre-swap: INDETERMINATE — the server-side job is not
@@ -919,7 +934,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 				{ id : local_db_id, value : { pid : pid, pfile : pfile, digest : expected_digest } },
 				'status'
 			)
-			ui.create_dom_element({
+			reveal(ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_warning connection_lost',
 				// per-run wording (run_wording): `update_code_connection_lost` for
@@ -927,7 +942,7 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 				// the sentence names the operation the operator must NOT start twice.
 				text_content	: wording.connection_lost,
 				parent			: body_response
-			})
+			}))
 		}
 
 		const poll_health = () => {
@@ -964,13 +979,13 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 						end_tracking()
 						state = { ...state, mode:'polling' }
 						track.paint(state)
-						ui.create_dom_element({
+						reveal(ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'dd_note state_warning update_unconfirmed',
 							text_content	: (get_label.update_code_unconfirmed || 'The server is back and running version %s. This panel was reopened after the run started, so it cannot confirm by itself whether the operation completed — compare that version with the one you expected.')
 								.replace('%s', String(version)),
 							parent			: body_response
-						})
+						}))
 						return
 					}
 					// the server is back on the OLD version → the job rolled back
@@ -979,12 +994,12 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 					track.paint(state)
 					const rolled_back_text = wording.rolled_back
 						+ (ending.message ? (' ' + ending.message) : '')
-					ui.create_dom_element({
+					reveal(ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'dd_note state_warning',
 						text_content	: rolled_back_text,
 						parent			: body_response
-					})
+					}))
 					return
 				}
 				if (Date.now() >= deadline) {

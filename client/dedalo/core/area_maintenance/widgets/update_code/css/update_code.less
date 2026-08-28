@@ -369,6 +369,39 @@
 					margin: 0 0 0.75rem 0;
 					border: 1px solid var(--border_default);
 					border-radius: 4px;
+
+					// A STICKY BLOCK THAT OWNS THE VIEWPORT PINS NOTHING. Eight
+					// phase rows plus the bar measure ~530px, so on a short
+					// window (measured 2026-08-27, ~630px of viewport) the track
+					// filled the screen on its own: the live stream directly
+					// under it was cut off at the fold, and every ending sentence
+					// — refusal, rollback, connection lost — was appended into
+					// space the operator could not see. The pin was working and
+					// there was simply nothing left to pin it above.
+					//
+					// So bound it. The bar and its note are the part that must
+					// never move; the ROWS are the part that can scroll inside
+					// their own box. Capped at 55vh the track keeps at least
+					// 45vh of viewport for the stream and the endings, at every
+					// window height, without a media query.
+					display: flex;
+					flex-direction: column;
+					max-height: 55vh;
+
+					>.dd_readout {
+						overflow-y: auto;
+						// a flex child's default min-height:auto refuses to
+						// shrink below its content, which would defeat the cap
+						// above and put the overflow back on the page.
+						min-height: 0;
+					}
+				}
+
+				// anything revealed WHILE the track is pinned must clear it, or
+				// scrollIntoView tucks it underneath (reveal(), render_update_code.js).
+				>.update_stream,
+				>.dd_note {
+					scroll-margin-top: 57vh;
 				}
 			}
 
