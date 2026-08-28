@@ -123,8 +123,14 @@ const channel_label = function(channel) {
 *
 * @param {HTMLElement} value - the .dd_v cell to fill
 * @param {Object} release - {file, bytes, stamp, channel, sidecar}
+* @param {Object} [mark] - THE BUILD THAT JUST RAN, when this row is its
+*   artifact: `{previous}` — the facts the row showed BEFORE it (null when the
+*   archive did not exist yet). A build rewrites a file IN PLACE, so the new
+*   row is byte-for-byte plausible whether or not anything happened: without
+*   the before-value the operator has nothing to compare against, and no way to
+*   tell a build that wrote from one that did not.
 */
-const release_facts = function(value, release) {
+const release_facts = function(value, release, mark) {
 
 	ui.create_dom_element({
 		element_type	: 'span',
@@ -150,6 +156,36 @@ const release_facts = function(value, release) {
 			element_type	: 'span',
 			class_name		: 'dd_badge pill_warning',
 			text_content	: get_label.update_code_sidecar_missing || 'no sha256 sidecar',
+			parent			: value
+		})
+	}
+
+	// THE VERDICT ON THE BUILD THAT JUST RAN — present only on the row whose
+	// button was pressed, and only until the next render of this half.
+	if (mark) {
+		const previous	= mark.previous || null
+		// The STAMP is the evidence. A build rewrites the archive, so a stamp
+		// that did not move means the file on disk is the one already there;
+		// saying "updated" then would be a claim the disk does not support.
+		const wrote		= previous===null || previous.stamp!==release.stamp
+		value.classList.add(wrote ? 'built_updated' : 'built_unchanged')
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: wrote ? 'dd_badge pill_ok build_verdict' : 'dd_badge pill_warning build_verdict',
+			text_content	: wrote
+				? (get_label.update_code_build_updated || 'updated just now')
+				: (get_label.update_code_build_unchanged || 'unchanged: the build wrote no new file'),
+			parent			: value
+		})
+		// …and the value it replaced, spelled out. This is the half that makes
+		// the change unequivocal: two figures to compare, not one to trust.
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'build_file_previous',
+			text_content	: (get_label.update_code_build_previous || 'was %s')
+				.replace('%s', previous===null
+					? (get_label.update_code_not_built || 'Not built yet')
+					: `${format_bytes(previous.bytes)} · ${format_stamp(previous.stamp)}`),
 			parent			: value
 		})
 	}
@@ -621,7 +657,7 @@ export const render_consumer_status = function(parent, consumer, on_restore) {
 * @param {Object|null} code_server - value.code_server, null on a plain install
 * @returns {HTMLElement|null}
 */
-export const render_code_server_status = function(parent, code_server, mount_builder) {
+export const render_code_server_status = function(parent, code_server, mount_builder, build_mark) {
 
 	if (!code_server) return null
 
@@ -703,13 +739,11 @@ export const render_code_server_status = function(parent, code_server, mount_bui
 				class_name		: 'dd_k build_action',
 				parent			: row
 			})
-			if (mount_builder) {
-				mount_builder(channel, action)
-			} else {
-				// no form builder on this page: name the channel anyway, so the
-				// artifact below is still attributable
-				action.textContent = channel_label(channel)
-			}
+			// THE ARTIFACT CELL IS CREATED BEFORE THE BUTTON IS MOUNTED, and is
+			// handed to the mounter: while a build runs, the row that says what
+			// is on disk is the row that has to say it is being rewritten. The
+			// button's own spinner reports that the REQUEST is in flight; only
+			// this cell can report that THIS artifact is the one changing.
 			const value = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_v build_file',
@@ -718,12 +752,21 @@ export const render_code_server_status = function(parent, code_server, mount_bui
 			const built = releases.find(release =>
 				release.channel===channel && (target_version===null || release.version===target_version)
 			)
+			if (mount_builder) {
+				mount_builder(channel, action, value, built || null)
+			} else {
+				// no form builder on this page: name the channel anyway, so the
+				// artifact below is still attributable
+				action.textContent = channel_label(channel)
+			}
+			// the verdict belongs to the channel whose button was pressed
+			const mark = (build_mark && build_mark.channel===channel) ? build_mark : null
 			if (!built) {
 				value.classList.add('none')
 				value.textContent = get_label.update_code_not_built || 'Not built yet'
 				return
 			}
-			release_facts(value, built)
+			release_facts(value, built, mark)
 		})
 
 	// Archives on disk for OTHER versions. They have no builder (a build always

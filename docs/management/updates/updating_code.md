@@ -286,6 +286,21 @@ Each archive is written together with its `.sha256` sidecar — that sidecar is
 what remote installs verify against; keep the two files together, because an
 archive without its sidecar cannot be installed.
 
+Beside each button the panel shows the archive that button writes, and it
+reports the write rather than leaving you to infer it. While the build runs the
+row is marked **building…** and its facts are dimmed, so it is clear that the
+name, size and date beside the button are about to stop being true. When it
+finishes the row is re-read from disk and marked **updated just now**, with the
+value it replaced spelled out underneath (`was 173 MB · 28/08/2026,
+11:13:24`). That before-value is the point: a build rewrites the archive in
+place and the new size is usually identical to the old one, so the timestamp is
+the only thing that moves — and one timestamp on its own tells you nothing.
+
+!!! note "A build that changes nothing says so"
+    If the archive's timestamp does not move, the row reads **unchanged: the
+    build wrote no new file** instead of claiming an update. Read the build's
+    own response underneath the panel for the reason.
+
 !!! note "Developer builds are only offered when both sides ask for them"
     A `-dev` archive is never offered to an install that did not ask for one.
     Two switches must be on: this code server must set

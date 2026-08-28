@@ -748,7 +748,10 @@ describe('update_code developer-builds switch', () => {
 		).toBe(true);
 		expect(render_src).toContain('render_code_server_half(value.code_server)');
 		const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
-		expect(status_src).toContain('mount_builder(channel, action)');
+		// the mounter also receives the ARTIFACT CELL and the facts it currently
+		// shows: the in-flight state belongs on the row being rewritten, and the
+		// before-value has to be captured before the refresh destroys this half.
+		expect(status_src).toContain('mount_builder(channel, action, value, built || null)');
 		expect(status_src).toContain('build_row');
 		expect(status_src).toContain('update_code_build_publish');
 		// an unbuilt channel still shows its row, saying so
@@ -777,12 +780,14 @@ describe('update_code developer-builds switch', () => {
 		expect(render_src).toContain('refresh_code_server');
 		// re-read from the SERVER, not from the value this render closed over
 		expect(
-			/refresh_code_server\s*=\s*async\s*\(\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
+			/refresh_code_server\s*=\s*async\s*\(build_mark\)\s*=>\s*\{[\s\S]{0,200}await self\.get_value\(\)/.test(
 				render_src,
 			),
 		).toBe(true);
-		// and the half is re-rendered from that fresh value
-		expect(render_src).toContain('render_code_server_half(fresh.code_server)');
+		// and the half is re-rendered from that fresh value, carrying the mark:
+		// the whole half is replaced, so without it the new archive line appears
+		// where the old one was with nothing saying which one is on screen.
+		expect(render_src).toContain('render_code_server_half(fresh.code_server, build_mark)');
 		// a failed refresh must not take the panel down
 		expect(
 			/catch \(error\) \{[\s\S]{0,240}console\.error\('update_code: could not refresh/.test(
@@ -961,7 +966,11 @@ describe('update_code restore-reason detail', () => {
 		expect(status_src).toContain(KEY);
 		expect(status_src).toContain('point.bun_pin');
 		expect(status_src).toContain('engine.bun');
-		expect((status_src.match(/\.replace\('%s',/g) ?? []).length).toBe(3);
+		// exactly the three the restore sentence takes — counted on the call that
+		// fills THAT label, so an unrelated substitution elsewhere in the file
+		// (the build readout's `was %s`) cannot satisfy this.
+		const restore_fill = status_src.slice(status_src.indexOf(KEY));
+		expect((restore_fill.match(/\.replace\('%s',/g) ?? []).length).toBe(3);
 	});
 
 	test('only the bun-pin refusal gets numbers, and only when both are known', () => {
@@ -975,5 +984,77 @@ describe('update_code restore-reason detail', () => {
 	test('the detail line has somewhere to render', () => {
 		expect(status_src).toContain('restore_reason_detail');
 		expect(css_src).toContain('.restore_reason_detail');
+	});
+});
+
+
+/**
+ * THE BUILD READOUT must say WHEN it is changing and WHAT it changed from.
+ *
+ * A build rewrites `<v>.zip` / `<v>-dev.zip` IN PLACE and takes tens of
+ * seconds. Before this, the row beside the button said nothing while that ran,
+ * and afterwards the whole half was replaced with a line that looks exactly
+ * like the one it replaced (same name, near-same size, a timestamp nobody
+ * memorised). Reported 2026-08-28: "is not clear if the information changes".
+ *
+ * Both halves are asserted, because either alone leaves the operator guessing:
+ * an in-flight state with no before/after cannot confirm the write happened,
+ * and a verdict with no in-flight state leaves the panel mute while it runs.
+ */
+describe('update_code build feedback', () => {
+	test('the in-flight state is armed by the REQUEST, never by the click', () => {
+		// build_form runs window.confirm synchronously and only then adds
+		// `button_spinner`, before its first await — so a listener registered
+		// after it sees the spinner iff the operator confirmed. Marking on click
+		// would leave a declined confirm showing "building…" forever.
+		expect(render_src).toContain("form.addEventListener('submit'");
+		expect(render_src).toContain("classList.contains('button_spinner')");
+		expect(render_src).toContain("artifact_cell.classList.add('building')");
+		expect(render_src).toContain('update_code_build_building');
+		// the marker goes on the ARTIFACT cell, not on the button: the button
+		// already reports the request; only the row can report that ITS file is
+		// the one being rewritten.
+		expect(render_src).toContain('function(channel, node, artifact_cell, built_before)');
+	});
+
+	test('the before-value is captured at mount and survives the refresh', () => {
+		// the refresh destroys this half, so nothing could read it back off the
+		// DOM afterwards — it has to be closed over when the row is built.
+		expect(render_src).toContain('built_before');
+		expect(/previous\s*:\s*built_before/.test(render_src)).toBe(true);
+		expect(render_src).toContain('channel\t\t: channel');
+		// …and reaches the renderer as the mark for that channel only
+		expect(status_src).toContain('build_mark && build_mark.channel===channel');
+		expect(/render_code_server_status = function\(parent, code_server, mount_builder, build_mark\)/.test(status_src)).toBe(true);
+	});
+
+	test('the verdict is read off the STAMP, not asserted', () => {
+		// "updated" must be a statement about the disk that the disk supports: a
+		// build that wrote nothing leaves the stamp where it was, and the row
+		// says THAT instead of claiming a change.
+		expect(status_src).toContain('previous.stamp!==release.stamp');
+		expect(status_src).toContain('update_code_build_updated');
+		expect(status_src).toContain('update_code_build_unchanged');
+		// the archive that did not exist before is an update, not "unchanged"
+		expect(status_src).toContain('previous===null || previous.stamp!==release.stamp');
+	});
+
+	test('the value it replaced is spelled out, and every label is defined', () => {
+		expect(status_src).toContain('build_file_previous');
+		expect(status_src).toContain('update_code_build_previous');
+		for (const key of [
+			'update_code_build_building',
+			'update_code_build_previous',
+			'update_code_build_unchanged',
+			'update_code_build_updated',
+		]) {
+			expect(master_labels[key], `${key} is defined in master.json`).toBeDefined();
+		}
+		// one substitution slot: the size · date the row showed before
+		expect(((master_labels.update_code_build_previous ?? '').match(/%s/g) ?? []).length).toBe(1);
+		// and the states have somewhere to render
+		expect(css_src).toContain('&.building');
+		expect(css_src).toContain('.build_file_previous');
+		expect(css_src).toContain('&.built_updated');
 	});
 });

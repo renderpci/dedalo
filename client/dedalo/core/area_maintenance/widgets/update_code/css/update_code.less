@@ -168,6 +168,33 @@
 						color: var(--fg_muted);
 						font-style: italic;
 					}
+
+					// IN FLIGHT. The facts stay legible — the operator is meant
+					// to read what is being replaced — but they are visibly no
+					// longer current, and the row pulses so the change is
+					// noticed on a panel the eye is not resting on.
+					&.building {
+						>.build_file_name,
+						>.build_file_meta {
+							opacity: 0.45;
+						}
+
+						animation: build_pulse 1.4s ease-in-out infinite;
+					}
+
+					// THE VERDICT LINE, on its own row under the facts.
+					>.build_file_previous {
+						flex-basis: 100%;
+						font-size: 0.9em;
+						color: var(--fg_muted);
+					}
+
+					// DONE. A one-shot wash rather than a standing colour: the
+					// row is normal state again, and only the badge and the
+					// before-value have to persist.
+					&.built_updated {
+						animation: build_settled 1.6s ease-out 1;
+					}
 				}
 			}
 		}
@@ -609,4 +636,18 @@
 			top: 2rem;
 		}
 	}
+}
+
+
+// Build feedback (see .build_file above). Kept OUT of the nesting so both
+// states read as one pair, and deliberately cheap: opacity only, no layout
+// property, so a pulsing row never reflows the panel around it.
+@keyframes build_pulse {
+	0%, 100%	{ opacity: 1; }
+	50%			{ opacity: 0.55; }
+}
+
+@keyframes build_settled {
+	0%		{ background-color: var(--state_ok_bg, rgba(46, 160, 67, 0.18)); }
+	100%	{ background-color: transparent; }
 }

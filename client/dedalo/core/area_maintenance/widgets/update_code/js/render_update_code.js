@@ -563,17 +563,23 @@ const get_content_data_edit = async function(self) {
 			// pair is mutually recursive by design — the mounter needs the
 			// refresh, the refresh needs a mounter built from the FRESH value —
 			// and `refresh_code_server` is only ever read at call time.
-			const render_code_server_half = (code_server) => {
+			const render_code_server_half = (code_server, build_mark) => {
 				while (server_body.firstChild) {
 					server_body.removeChild(server_body.firstChild)
 				}
 				render_code_server_status(
 					server_body,
 					code_server,
-					make_builder_mounter(self, body_response, code_server, refresh_code_server)
+					make_builder_mounter(self, body_response, code_server, refresh_code_server),
+					build_mark
 				)
 			}
-			const refresh_code_server = async () => {
+			// `build_mark` is {channel, previous} — the row whose button was just
+			// pressed and the facts it showed BEFORE. It survives exactly one
+			// render: the re-read below replaces the whole half, and without it
+			// the new archive line appears in place of the old one with nothing
+			// saying which of the two the operator is looking at.
+			const refresh_code_server = async (build_mark) => {
 				try {
 					const fresh = await self.get_value()
 					if (!fresh || !fresh.code_server) {
@@ -581,7 +587,7 @@ const get_content_data_edit = async function(self) {
 					}
 					// keep the instance coherent too: the next render reads self.value
 					self.value = fresh
-					render_code_server_half(fresh.code_server)
+					render_code_server_half(fresh.code_server, build_mark)
 				} catch (error) {
 					// a failed refresh must never take the panel down: the build
 					// already reported its own outcome in body_response
@@ -1283,7 +1289,7 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 	}
 
 	// on_done. On build completion, execute this function
-	const on_done = () => {
+	const on_done = (build_mark) => {
 
 		// event publish
 		// listen by widget update_data_version.init
@@ -1293,8 +1299,11 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 		// BEFORE the build. Leaving it is how a panel comes to show '7.0.0.zip ·
 		// 16:25' next to a button that has just rewritten that very file — or
 		// 'Not built yet' next to a build that succeeded.
+		//
+		// The mark rides along so the row that comes back can say WHICH of the
+		// two values it is (see render_update_status.js release_facts).
 		if (on_built) {
-			on_built()
+			on_built(build_mark)
 		}
 	}
 
@@ -1347,7 +1356,7 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 		}
 	}
 
-	return function(channel, node) {
+	return function(channel, node, artifact_cell, built_before) {
 
 		const def = channels[channel]
 		if (!def) {
@@ -1385,12 +1394,47 @@ const make_builder_mounter = function(self, body_response, code_server, on_built
 					branch : def.branch
 				}
 			},
-			on_done : on_done
+			// the mark travels from the row that was pressed to the row that
+			// comes back — captured HERE, at mount time, because the refresh
+			// destroys this half before anything could read it back off the DOM.
+			on_done : () => on_done({
+				channel		: channel,
+				previous	: built_before
+					? { bytes : built_before.bytes, stamp : built_before.stamp }
+					: null
+			})
 		})
 		// build_form always emits `light button_submit`; the channel's own weight
 		// is added here (it exposes the node for exactly this kind of reach-in).
 		if (form && form.button_submit) {
 			form.button_submit.classList.add('build_button', def.button_class)
+		}
+
+		// IN FLIGHT: say WHICH artifact is being rewritten, on the artifact.
+		// The button's spinner reports that a request is running; it does not
+		// say that the line beside it — the file name, the size, the date — is
+		// about to stop being true. A build takes tens of seconds and rewrites
+		// the file in place, so for that whole time the row states something
+		// the operator cannot act on and cannot tell is stale.
+		//
+		// build_form's lifecycle is the hook: its submit handler runs the
+		// window.confirm gate SYNCHRONOUSLY and only then adds `button_spinner`,
+		// before its first await. A listener registered after it therefore runs
+		// once the request is under way — and never when the operator cancelled
+		// the confirm. Pinned by test/unit/client_update_code_render.test.ts.
+		if (form && form.button_submit && artifact_cell) {
+			form.addEventListener('submit', () => {
+				if (!form.button_submit.classList.contains('button_spinner')) {
+					return	// the confirm was declined: nothing is being built
+				}
+				artifact_cell.classList.add('building')
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'dd_badge pill_warning build_verdict',
+					text_content	: get_label.update_code_build_building || 'building…',
+					parent			: artifact_cell
+				})
+			})
 		}
 	}
 }//end make_builder_mounter
