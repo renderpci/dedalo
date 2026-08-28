@@ -294,6 +294,30 @@ describe('retention keeps the newest and never the rollback', () => {
 		expect(existsSync(join(root, names[2] as string))).toBe(true);
 	});
 
+	test('`kept` counts what is ON DISK, not what the policy asked for', () => {
+		// five points, keep=3, but the two oldest are the live rollback and the
+		// protected one: the loop skips both, so four survive. Reporting 3 would
+		// be the log claiming a prune that did not happen — and boot_confirm
+		// renders this number verbatim.
+		const boot = `${RESTORE_POINT_PREFIX}boot`;
+		const guarded = `${RESTORE_POINT_PREFIX}guarded`;
+		const rest = ['n1', 'n2', 'n3'].map((n) => `${RESTORE_POINT_PREFIX}${n}`);
+		[boot, guarded, ...rest].forEach((n) => plant(n, { bootable: n === boot }));
+		const points = [
+			facts(rest[0] as string, 500, false),
+			facts(rest[1] as string, 400, false),
+			facts(rest[2] as string, 300, false),
+			facts(guarded, 200, false),
+			facts(boot, 100, true),
+		];
+		const report = pruneRestorePoints({ points, backupRoot: root, keep: 3, protect: guarded });
+		// only n3 is past `keep` AND neither protected nor the rollback… but the
+		// tail is [guarded, boot], both skipped, so nothing past keep goes.
+		expect(report.deleted).toEqual([]);
+		const onDisk = [boot, guarded, ...rest].filter((n) => existsSync(join(root, n)));
+		expect(report.kept).toBe(onDisk.length);
+	});
+
 	test('a point it cannot remove is REPORTED, never silently skipped', () => {
 		const points = [
 			facts(`${RESTORE_POINT_PREFIX}keep`, 200, true),

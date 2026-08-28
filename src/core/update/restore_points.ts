@@ -223,5 +223,12 @@ export function pruneRestorePoints(options: {
 			);
 		}
 	}
-	return { deleted, kept: Math.min(keep, newestFirst.length), failed };
+	// `kept` is COUNTED, not assumed from the policy. It used to be
+	// min(keep, total), which is what the policy ASKED for — but the loop skips
+	// the protected point, skips the live rollback and routes a failure to
+	// `failed`, so with five points and keep=3 the log could announce "kept the
+	// 3 newest" while four were still on disk. boot_confirm renders this
+	// verbatim; a readout that earns trust it cannot keep is worse than none
+	// (review 2026-08-28).
+	return { deleted, kept: newestFirst.length - deleted.length, failed };
 }
