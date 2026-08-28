@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 513,
-		"functions": 4505,
-		"functionsOverCap": 694,
+		"files": 514,
+		"functions": 4517,
+		"functionsOverCap": 695,
 		"filesOverCap": 269
 	},
 	"files": {
@@ -208,7 +208,7 @@
 		"src/core/search/builders/builder_section_id.ts": 19,
 		"src/core/search/builders/builder_string.ts": 36,
 		"src/core/search/builders/types.ts": 7,
-		"src/core/search/conform.ts": 40,
+		"src/core/search/conform.ts": 37,
 		"src/core/search/order_path.ts": 13,
 		"src/core/search/search_related.ts": 24,
 		"src/core/search/sql_assembler.ts": 80,

@@ -156,16 +156,19 @@ DB_TIER_TRIPWIRES=(
 	test/unit/delete_inverse_lost_update_native.test.ts
 	test/unit/duplicate_record_dataframe_native.test.ts
 	test/unit/error_taxonomy_tripwire.test.ts
+	test/unit/export_gate_b_native.test.ts
 	test/unit/external_degradation_tripwire.test.ts
 	test/unit/external_egress_tripwire.test.ts
 	test/unit/external_isolation_tripwire.test.ts
 	test/unit/external_search_target_tripwire.test.ts
 	test/unit/external_write_refusal_tripwire.test.ts
+	test/unit/frontier_class_native.test.ts
 	test/unit/info_widget_registry_tripwire.test.ts
 	test/unit/ingest_encoding_tripwire.test.ts
 	test/unit/matrix_index_asset_policy_agreement.test.ts
 	test/unit/media_thumb_census_tripwire.test.ts
 	test/unit/root_user_hidden_tripwire.test.ts
+	test/unit/search_path_acl_native.test.ts
 	test/unit/sql_confinement_tripwire.test.ts
 	test/unit/temporal_instance_tripwire.test.ts
 	test/unit/test3_canonical_fixture.test.ts

@@ -287,6 +287,18 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/export_gate_b_native.test.ts',
+		'It drives the real get_export_grid handler as a principal resolved from dd128/dd234 rows against a record it mints with a dd153 project locator, and asserts what the export actually EMITTED — every refusal and the one authorized cell alike are statements about rows the projects filter selected, unobservable without the suite database',
+	],
+	[
+		'test/unit/search_path_acl_native.test.ts',
+		'It builds a multi-hop filter as a scoped principal and asserts both the generated SQL per join alias AND a behavioural hit/miss probe against records it writes, so the oracle-closing half cannot be evaluated without a live Postgres',
+	],
+	[
+		'test/unit/frontier_class_native.test.ts',
+		'The class probe writes the hidden record twice, once per sentinel, across all three frontier surfaces and compares the scoped answers byte-for-byte while requiring the admin pair to differ — it is entirely a statement about stored rows',
+	],
+	[
 		'test/unit/csv_parser_conformance_native.test.ts',
 		'The fixture table is pure, but the duplicate-section_id case and both door-refusal cases drive the real import_files handler against matrix_test — a row must be created, then updated, and read back — so the gate cannot run on a runner with no suite database',
 	],
