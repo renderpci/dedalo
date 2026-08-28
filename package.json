@@ -18,6 +18,8 @@
 		"css:check": "bun run scripts/build_css.ts --check",
 		"config:gen": "bun run scripts/gen_config_docs.ts",
 		"config:check": "bun run scripts/gen_config_docs.ts --check",
+		"context:gen": "bun run deploy/build_context.ts",
+		"context:check": "bun run deploy/build_context.ts --check",
 		"dedalo:install": "bun run scripts/install.ts",
 		"dedalo:migrate-config": "bun run scripts/migrate_v6_config.ts",
 		"dedalo:migrate-passwords": "bun run scripts/migrate_v6_passwords.ts",

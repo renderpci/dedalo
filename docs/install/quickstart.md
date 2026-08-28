@@ -96,6 +96,8 @@ When it finishes, open the `https://…` address it prints and log in as **root*
 !!! note "Option 2: one step on each staff computer"
     A local certificate authority is trusted only where you install it, so until you do, browsers warn about the site. The script prints the path to `deploy/certs/dedalo-local-ca.pem` and how to install it on Windows, macOS and Linux. Until then the connection is still encrypted — the browser simply cannot vouch for who is on the other end.
 
+    That authority's **private key** is the most powerful secret this install creates: whoever holds it can mint a certificate any of those computers will trust, for any hostname. It stays in `deploy/certs/` — never committed, and never inside a container image. If it may have escaped, replace it: [rotating TLS material](docker.md#rotating-tls-material).
+
 !!! note "It refuses to run twice"
     Installing again would mean restoring the seed into a database that is no longer empty, which the engine refuses — a second install is never a repair. To start over you must destroy the data first: `docker compose -f docker-compose.simple.yml down -v`.
 
@@ -148,6 +150,7 @@ At **Save config** the engine writes its configuration and restarts itself — t
 2. Add your [users and projects](../management/users_and_permissions.md).
 3. Install the [hierarchies](../management/install_new_hierarchies.md) your collection needs, if you skipped them.
 4. **Set up backups** — [backup](../management/backup.md). Three things matter here: the database, the media originals, and the `private` volume (your secrets — without it a restored database is an instance you cannot start). A database dump alone is not a backup.
+5. Know how to **replace the certificate** before you need to — it is one command, and it is the same one the installer used: [rotating TLS material](docker.md#rotating-tls-material). On this stack you can drop the `--compose-file` argument shown there — `docker-compose.simple.yml` is already the script's default.
 
 ## Everyday commands
 
@@ -180,6 +183,7 @@ TLS is **not** on that list any more: the simple install sets it up, and `SESSIO
 | `port is already allocated` | something else is on port 80 or 443 | stop it, or change the `ports:` mapping in `docker-compose.simple.yml` |
 | The certificate request fails | the domain does not resolve to this machine, or port 80 is not reachable from the internet | re-run and pick option 2, or fix DNS and the firewall first |
 | "Your connection is not private" | option 2: this computer does not trust your local CA yet | install `deploy/certs/dedalo-local-ca.pem` — the script prints how |
+| The certificate is wrong, expired, or its key may have leaked | it has to be replaced, not patched | [rotate it](docker.md#rotating-tls-material) — one command, and it archives the old material first |
 | The wizard appears when you expected a login | nothing is configured yet — this is path 2 working | fill it in, or run `./install.sh` on a clean stack |
 | A login form appears when you expected the wizard | the instance is already installed | log in; to start over, `down -v` first |
 | Login seems to work, then returns to the form | `SESSION_COOKIE_SECURE` is `true` but the page is plain HTTP — the browser discards the cookie | reach it over `https://`, or re-run and choose a certificate option |

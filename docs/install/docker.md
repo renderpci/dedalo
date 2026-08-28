@@ -32,9 +32,9 @@ the directory that holds `docker-compose.yml`** — the `master_dedalo` checkout
 | --- | --- | --- |
 | `Dockerfile` | the engine image: pinned Bun, `psql` 18, the media toolchain | only to change the runtime pin |
 | `docker-compose.yml` | the stack: services, volumes, ops environment | **yes** — it is your deployment's configuration |
-| `.dockerignore` | keeps host artefacts (`node_modules`, `private`, `media`) out of the build context | no |
+| `.dockerignore` | the build-context policy: the whole root is denied, only the tracked entries the image needs are let back in, and secret-shaped names are denied at every depth. **Generated** — `bun run context:gen` | no |
 | `deploy/nginx.conf` | the reference proxy config, bind-mounted into the `nginx` container | **yes** — domain, certificate paths, the two `include` lines |
-| `deploy/certs/` | your TLS certificate and key. **Does not exist in a fresh clone — you create it** | **yes** |
+| `deploy/certs/` | your TLS certificate and key. **Does not exist in a fresh clone — `deploy/dedalo-tls-rotate.sh` creates it.** Never committed, and never inside the image: `deploy/` is excluded from the build context, and nothing in a container reads it | **yes** |
 | `.bun-version` | the runtime pin. The `Dockerfile` base tag must match it | no |
 | `scripts/install.ts` | the headless installer, run **once**, inside the container | no |
 | `client/` | the browser client, bind-mounted read-only into `nginx` | no |
@@ -251,16 +251,44 @@ Two edits, both in files you own:
 ### Step 4 — Provide a TLS certificate
 
 nginx will not start without one, and neither will a login work over plain HTTP
-(see [TLS](#tls)). For a local trial, a self-signed pair is enough:
+(see [TLS](#tls)). **One script issues every certificate this stack uses**,
+`deploy/dedalo-tls-rotate.sh` — the same one `./install.sh` calls, and the same
+one you will run to rotate. Do not hand-roll a pair with `openssl`: two
+generators drift in SAN, lifetime and file permissions the first time one of
+them is fixed, and the hand-rolled one has no archive step, so a re-run
+overwrites the material you may still need.
+
+For a LAN or a trial, issue a local certificate authority. Use the name or IP
+staff will actually type in the browser — a certificate whose SAN does not match
+is rejected outright:
 
 ```shell
-mkdir -p deploy/certs
-openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-  -keyout deploy/certs/privkey.pem -out deploy/certs/fullchain.pem \
-  -subj "/CN=localhost"
+deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.example.org --no-reload
 ```
 
-For a real deployment, bind-mount your certbot tree instead — [TLS](#tls) below.
+`--no-reload` because the stack is not up yet. It writes
+`deploy/certs/{privkey.pem,fullchain.pem}` plus the authority
+`dedalo-local-ca.{key,pem}`, sets the keys to `600`, and prints the CA file with
+its SHA-256 fingerprint — that file is the one you install on every staff
+computer.
+
+If your institution already issues certificates, install them instead of
+generating one:
+
+```shell
+deploy/dedalo-tls-rotate.sh --mode existing \
+  --cert /path/fullchain.pem --key /path/privkey.pem --no-reload
+```
+
+For a public domain, bind-mount your certbot tree instead — [TLS](#tls) below.
+
+!!! danger "Never commit or copy key material into the repo tree"
+    `deploy/certs/` is ignored by git and excluded from the container build
+    context, so the key you just created cannot reach an image, a release
+    archive or a push. That containment is mechanical, and it only holds for
+    material **inside `deploy/certs/`**. A key parked somewhere else in the
+    checkout is a different matter: it can travel. If one already has,
+    [rotate it](#rotating-tls-material).
 
 ### Step 5 — Build the image
 
@@ -563,10 +591,67 @@ docker compose exec dedalo cat /private/.env
   `server_name` and the certificate paths in `deploy/nginx.conf`. Renewal
   happens on the host; reload the proxy afterwards
   (`docker compose exec nginx nginx -s reload`).
-- **Local trial:** the self-signed pair from [step 4](#step-4-provide-a-tls-certificate).
+- **Local trial:** the local authority from [step 4](#step-4-provide-a-tls-certificate).
 
 TLS is not optional even locally: `SESSION_COOKIE_SECURE` defaults to `true`, so
 over plain HTTP the browser discards the session cookie and **nobody can log in**.
+
+### Rotating TLS material
+
+Same script, same arguments — rotation is not a different procedure from the
+first issue, which is exactly why there is only one generator:
+
+```shell
+# a new local authority and a new site certificate
+deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.example.org \
+  --compose-file docker-compose.yml
+
+# a replacement certificate from your institution
+deploy/dedalo-tls-rotate.sh --mode existing \
+  --cert /path/fullchain.pem --key /path/privkey.pem \
+  --compose-file docker-compose.yml
+```
+
+Pass `--compose-file docker-compose.yml` on this page's full stack (the script
+defaults to the simple stack) so it can reload the proxy for you; it tells you
+when it could not, and `docker compose exec nginx nginx -s reload` finishes the
+job. **The full stack's proxy does not reload itself**, so until you reload it,
+it keeps serving the old certificate.
+
+What the script does, and why each part matters:
+
+- **It archives first.** Everything in `deploy/certs/` moves to
+  `deploy/certs/rotated-<UTC stamp>/` (mode `700`, never overwritten) before
+  anything new is written, so a rotation interrupted halfway can be put back.
+- **Each authority carries its issue stamp** in its subject
+  (`CN=Dedalo local CA <stamp>`). Two entries both called "Dedalo local CA" are
+  indistinguishable in a Windows or macOS trust store, and rotating away from a
+  compromised authority means being able to say **which** entry to delete.
+- **Install the new CA on every computer, then delete the old entry.** Until the
+  old one is gone, a certificate signed with the old key is still trusted there —
+  which is the whole point of rotating. The script prints the per-platform steps.
+
+!!! warning "An image built before 2026-08-28 may contain your CA private key"
+    Until then the image copied the whole build context, and `./install.sh`
+    writes `deploy/certs/` **before** it builds. Any image built on such a host
+    carries `dedalo-local-ca.key` — the private key of an authority you were told
+    to install into the Trusted Root store of every computer that uses Dédalo.
+    Whoever holds it can mint a browser-trusted certificate for any hostname, on
+    all of those machines, and it travels wherever the image travels: a registry,
+    a `docker save` tarball, a copy handed to a supplier.
+
+    Treat it as compromised — it cannot be un-distributed. Rotate as above,
+    install the new CA everywhere and **delete the old entry**, rotate
+    `POSTGRES_PASSWORD` in `.dedalo.env`, then rebuild and re-distribute the
+    image from a current checkout. Confirm the rebuild is clean:
+
+    ```shell
+    docker run --rm --user 0 <image> ls /opt/dedalo/master_dedalo/deploy
+    # expected: "No such file or directory" — deploy/ is not in the image at all
+    ```
+
+    The full operator procedure, including the database-password step, is
+    §13 of `engineering/PRODUCTION.md` in the repo.
 
 ## Day-to-day operation
 
