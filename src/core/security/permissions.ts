@@ -488,6 +488,9 @@ export async function getPermissions(
  * filter — production requests always carry a seeded principal, and PHP's
  * not-logged-in→0 posture would empty those internal resolutions. The array
  * section form checks the FIRST target (PHP reset(), check_ddo_permissions:384).
+ * An unresolvable SECTION (absent, empty, non-string, empty array) with a
+ * DEFINED principal is DENIED, not allowed — see the fail-closed note at the
+ * branch.
  *
  * NO global-admin bypass (PHP parity, 2026-07-18): admin-flagged users resolve
  * through their profile matrix like everyone — only the superuser (-1) passes
@@ -500,7 +503,30 @@ export async function ddoIsAuthorized(
 ): Promise<boolean> {
 	if (principal === undefined) return true;
 	const checkSection = Array.isArray(sectionTipo) ? sectionTipo[0] : sectionTipo;
-	if (checkSection === undefined || checkSection === '') return true;
+	// An UNRESOLVABLE section fails CLOSED for a defined principal (SEC-01).
+	// It used to return true — "no section to check" was read as "allowed" —
+	// which handed the caller's own degenerate input the answer of an authorized
+	// one.
+	//
+	// WHAT THE CALLERS ACTUALLY DO (corrected 2026-08-28; the first wording of
+	// this note claimed every caller supplies a fallback, which is not true).
+	// The fallbacks are all `??`, and `??` does NOT catch the empty string, so
+	// three live paths can reach here with `''`:
+	//   - section/read.ts:277        `ddo.section_tipo` sent as '' by the client
+	//   - section/read_facade.ts:363 `source.section_tipo` guarded only by typeof
+	//   - relations/request_config/explicit.ts:575  `sectionTipo ?? owner`
+	// For all three the fail-closed answer is the RIGHT one and changes nothing
+	// a caller could observe: an empty section resolves through getPermissions
+	// to level 0 anyway (`parentTipo === '' → 0`), so the entry was already
+	// emitted with permissions 0 / an empty shell. It is now dropped one step
+	// earlier, by the gate rather than by the level.
+	//
+	// Measured 2026-08-28: ZERO unresolvable calls across the 51 read-path unit
+	// gates (463 tests) and the whole 132-suite browser client run — while the
+	// same instrumentation fires on a constructed '' / undefined / [] call. The
+	// undefined-PRINCIPAL posture above is untouched: internal resolutions still
+	// apply no filter.
+	if (typeof checkSection !== 'string' || checkSection === '') return false;
 	return (await getPermissions(principal, checkSection, componentTipo)) >= 1;
 }
 

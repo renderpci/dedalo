@@ -25,6 +25,7 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type { FrontierRefusal } from './frontier_scope.ts';
 import type { Principal } from './permissions.ts';
 import type { Session } from './session_store.ts';
 
@@ -38,6 +39,20 @@ export interface RequestContext {
 	readonly requestId: string;
 	/** Best-effort client IP (throttle/audit; never an authorization input). */
 	readonly clientIp: string;
+	/**
+	 * ACL narrowings this request suffered at a section frontier — appended by
+	 * security/frontier_scope.ts noteFrontierRefusal, read by the envelope
+	 * layer so a narrowed `ok:true` answer carries its `notices[]` entry.
+	 *
+	 * MUTABLE ON PURPOSE, and the ONE mutable field here. The refusal happens
+	 * deep in the assembler / the export walk, far below any layer that could
+	 * pass it upward as a return value; the scope object is created once per
+	 * request by dispatchRqo, so appending to it is request-scoped BY
+	 * CONSTRUCTION — no module state, no cross-request bleed, nothing to clear.
+	 * Absent until the first refusal: a request that narrowed nothing carries
+	 * no array at all.
+	 */
+	frontierRefusals?: FrontierRefusal[];
 }
 
 const requestContextStore = new AsyncLocalStorage<RequestContext>();

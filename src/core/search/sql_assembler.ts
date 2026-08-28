@@ -45,6 +45,7 @@ import {
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import { getUserFilterRecords } from '../security/filter_records.ts';
+import { FRONTIER_VISIBLE_TABLES, type SqlFrontierScope } from '../security/frontier_scope.ts';
 import {
 	getUserProjects,
 	PROFILES_SECTION,
@@ -188,6 +189,7 @@ async function buildOrderClauses(
 	alias: string,
 	selectExtra: string[],
 	joinSink: Map<string, string>,
+	scope?: SqlFrontierScope,
 ): Promise<string[]> {
 	const orderClauses: string[] = [];
 	// PHP build_sql_query_order iterates sqo->order and tolerates a SINGLE order
@@ -276,7 +278,23 @@ async function buildOrderClauses(
 			const chain = await buildJoinChain(
 				path as { section_tipo?: string; component_tipo?: string }[],
 				alias,
+				scope,
 			);
+			// SEC-02, the SEARCH refusal law: a sort key the caller may not read is
+			// DROPPED, not emitted. The filter twin answers `1=0` because a leaf
+			// must still contribute a truth value; an order entry contributes an
+			// ORDERING, and the only answer that leaks nothing is to not sort by it
+			// (the relative order of rows IS a comparison oracle over the hidden
+			// values, and the sort key rides the SELECT as a `*_order` alias). The
+			// rows and the row COUNT are unchanged — the ORDER BY falls back to the
+			// section_id default, exactly as it does for an order path whose last
+			// step names no component.
+			//
+			// NOT SILENT: buildJoinChain has already written the named
+			// `[frontier] REFUSED …` log line and recorded the request's
+			// `perm.out_of_scope` notice. The degraded sort is a FACT the operator
+			// can see, which is the whole difference from the shape this replaced.
+			if (!chain.authorized) continue;
 			for (const join of chain.joins) {
 				if (!joinSink.has(join.alias)) joinSink.set(join.alias, join.sql);
 			}
@@ -475,25 +493,28 @@ export interface SearchOptions {
 }
 
 /**
- * Tables EXEMPT from the projects filter (PHP search::$ar_tables_skip_projects,
- * class.search.php:115 — set_up() auto-sets skip_projects_filter for them).
- * These hold shared vocabulary/infrastructure records (thesaurus, ontology
- * data, langs, tools, notes) that carry NO project locators — gating them
- * would blank the whole surface for every non-admin. This rule was LATENT in
- * TS until getComponentFilterTipo gained the virtual→real fallback
- * (2026-07-19): hierarchy sections then resolved a component_filter through
- * their real section and non-admin thesaurus searches returned EMPTY
- * (caught 2026-07-20 while chasing an autocomplete regression).
+ * Tables EXEMPT from the projects filter (PHP search::$ar_tables_skip_projects).
+ *
+ * DERIVED, not declared: the shared vocabulary/infrastructure list lives in
+ * `core/security/frontier_scope.ts` as {@link FRONTIER_VISIBLE_TABLES}, because
+ * the frontier's COMPONENT key must read the same declaration this RECORD key
+ * does — a component gate that refuses the very targets the record gate exempts
+ * is the over-refusal that killed every non-admin's component_filter sort
+ * (2026-08-28).
+ *
+ * ONE ADDENDUM, and it is added here rather than there: `matrix_stats` is
+ * subsystem-owned (sql_confinement_tripwire T4, owner
+ * `src/core/area_maintenance/user_stats.ts`), which makes naming it outside its
+ * owner a violation everywhere except this file's long-standing name-only
+ * exemption. It is unreachable as a FRONTIER (no stored locator points into
+ * it), so the component key has nothing to say about it — but PHP's set names
+ * it and this record-key set is PHP's set. The class gate
+ * (test/unit/frontier_class_native.test.ts) asserts the two sets differ by
+ * exactly one entry, so neither can drift unnoticed.
  */
-const PROJECTS_FILTER_EXEMPT_TABLES: ReadonlySet<string> = new Set([
-	'matrix_list',
-	'matrix_dd',
-	'matrix_hierarchy',
-	'matrix_hierarchy_main',
-	'matrix_langs',
-	'matrix_tools',
+export const PROJECTS_FILTER_EXEMPT_TABLES: ReadonlySet<string> = new Set([
+	...FRONTIER_VISIBLE_TABLES,
 	'matrix_stats',
-	'matrix_notes',
 ]);
 
 /**
@@ -729,6 +750,41 @@ function allowedIdsIn(alias: string, ids: number[]): string {
 	return `${alias}.section_id IN (${ids.join(',')})`;
 }
 
+/**
+ * THE HOP SHAPE of {@link buildUserRecordsFilter} (SEC-02).
+ *
+ * A join alias is reached through a stored locator, so its section_tipo is
+ * whatever the locator names — NOT necessarily the path step's declared
+ * section (virtual sections share a table and their real section's component
+ * tipos). The dd478 allow-list is per section, so the predicate must select
+ * itself off the joined ROW's own section_tipo: a row whose section the caller
+ * has no entry for is unconstrained, exactly as it is on the main alias.
+ *
+ * Emitted for GLOBAL ADMINS too — like the main-alias twin, whose clause has no
+ * admin arm (an admin with no allow-list, the normal case, is unaffected either
+ * way). '' when the caller has no allow-list at all: the join then stays
+ * byte-identical to the no-filter one.
+ */
+async function buildHopUserRecordsFilter(
+	alias: string,
+	principal: Principal | undefined,
+	params: ParamsCollector,
+): Promise<string> {
+	if (principal === undefined) return ''; // internal search — never gated
+	const allowed = await getUserFilterRecords(principal.userId);
+	if (allowed.size === 0) return '';
+	const guards: string[] = [];
+	const disjuncts: string[] = [];
+	for (const [sectionTipo, ids] of allowed) {
+		const guard = `${alias}.section_tipo = ${params.getPlaceholder(sectionTipo)}::text`;
+		guards.push(guard);
+		// getUserFilterRecords never yields an empty id list (filter_records.ts
+		// collectEntry drops those), so `IN (…)` can never be emitted empty.
+		disjuncts.push(`(${guard} AND ${allowedIdsIn(alias, ids)})`);
+	}
+	return `(NOT (${guards.join(' OR ')}) OR ${disjuncts.join(' OR ')})`;
+}
+
 /** The per-branch shape of {@link buildUserRecordsFilter} for a UNION search. */
 function multiSectionUserRecordsFilter(
 	sectionTipos: string[],
@@ -874,6 +930,54 @@ async function projectsFilterIsSparse(
  * Covers: default listing, full_count, filter_by_locators, multi-section UNION,
  * and the per-record projects filter for non-admin principals.
  */
+/**
+ * Does THIS hop alias need the projects predicate?
+ *
+ * The same four conditions the MAIN alias applies, asked per hop — extracted so
+ * the frontier scope (audit 2026-08-26, SEC-02) does not push buildSearchSql
+ * past the complexity the ratchet froze for it. A global admin, an internal
+ * search (no principal), an explicit server-side skip, and the tables the
+ * engine declares globally visible are each exempt, exactly as on the main
+ * alias; anything else is gated.
+ */
+function hopNeedsProjectsFilter(
+	principal: Principal | undefined,
+	skipProjectsFilter: boolean,
+	hopTable: string,
+): principal is Principal {
+	if (principal === undefined || principal.isGlobalAdmin) return false;
+	if (skipProjectsFilter) return false;
+	return !PROJECTS_FILTER_EXEMPT_TABLES.has(hopTable);
+}
+
+/**
+ * The PATH ACL scope (SEC-02) handed to the conform stage.
+ *
+ * Built here rather than inline in buildSearchSql so that door keeps the
+ * complexity the ratchet froze for it: the object carries two decision points
+ * of its own (the optional-principal spread and the per-hop exemption), and
+ * buildSearchSql is already the most branching function in the tree.
+ */
+function buildPathScope(
+	principal: Principal | undefined,
+	skipProjectsFilter: boolean,
+	params: ParamsCollector,
+): SqlFrontierScope {
+	return {
+		...(principal === undefined ? {} : { principal }),
+		surface: 'search',
+		door: 'search.path',
+		recordPredicate: async ({ sectionTipo: hopSection, table: hopTable, alias: hopAlias }) => {
+			const parts: string[] = [];
+			if (hopNeedsProjectsFilter(principal, skipProjectsFilter, hopTable)) {
+				pushFragment(parts, await buildProjectsFilter(hopSection, hopAlias, principal, params));
+			}
+			pushFragment(parts, await buildHopUserRecordsFilter(hopAlias, principal, params));
+			return parts.join(' AND ');
+		},
+	};
+}
+
 export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Promise<BuiltQuery> {
 	const sectionTipos = getSectionTipos(sqo).map((tipo) =>
 		assertValidTipo(tipo, 'sqo.section_tipo'),
@@ -925,6 +1029,25 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 		mainWhere.push(`${alias}.section_id > 0`);
 	}
 
+	// --- THE PATH ACL (SEC-02) ---------------------------------------------
+	// Every JOIN alias a multi-hop filter or ORDER path opens is a read of
+	// another section's records, and until 2026-08-28 the ACL below was emitted
+	// against the MAIN alias only — so a listing the caller IS allowed to run
+	// could carry a predicate over a record they are NOT allowed to see, and the
+	// row's presence answered a question about it (a prefix oracle: begins-with,
+	// ends-with, contains and `==` are all reachable). This object hands the
+	// conform stage the SAME builders the main alias uses, so the hop predicate
+	// and the main predicate can never drift apart.
+	//
+	// Its exemptions are the main alias's, arm for arm: an absent principal is an
+	// internal search, a global admin bypasses the projects filter, the
+	// server-only `skip_projects_filter` flag bypasses it, and the shared
+	// vocabulary/infrastructure tables are never project-gated (gating them
+	// would blank the thesaurus for every non-admin — see
+	// PROJECTS_FILTER_EXEMPT_TABLES). The dd478 allow-list applies to admins too.
+	const principal = options.principal;
+	const pathScope = buildPathScope(principal, sqo.skip_projects_filter === true, params);
+
 	// --- WHERE: user filter tree -------------------------------------------
 	const whereParts: string[] = [];
 	const joinFragments = new Map<string, string>();
@@ -933,6 +1056,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 			sqo.filter as Record<string, unknown>,
 			alias,
 			matrixTable,
+			pathScope,
 		);
 		collectJoins(conformed, joinFragments);
 		const filterSql = parseConformedFilter(conformed, params);
@@ -945,7 +1069,6 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	// client SQOs by sanitizeClientSqo, so only trusted code can set it).
 	// Multi-section (covered 2026-07-09, replacing the Phase 5c fail-closed
 	// throw): per-section predicates — see buildMultiSectionProjectsFilter.
-	const principal = options.principal;
 	let projectsFilterActive = false;
 	if (principal !== undefined && !principal.isGlobalAdmin && sqo.skip_projects_filter !== true) {
 		// PHP auto-exemption (search::$ar_tables_skip_projects): shared
@@ -1000,7 +1123,7 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 
 	// --- ORDER ---------------------------------------------------------------
 	const selectExtra: string[] = [];
-	let orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments);
+	let orderClauses = await buildOrderClauses(sqo, alias, selectExtra, joinFragments, pathScope);
 	const orderDefault = [`${alias}.section_id ASC`];
 
 	// Flatten the explicit-order shape when DISTINCT ON is provably a no-op:
