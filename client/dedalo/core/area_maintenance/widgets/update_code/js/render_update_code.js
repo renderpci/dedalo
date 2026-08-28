@@ -909,12 +909,15 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 				return
 			}
 			// dismissed: a persistent "reload pending" chip with its own button
-			const pending = ui.create_dom_element({
+			// revealed like every other ending note (reveal returns the node): this
+			// one carries the button the operator must still press, so it is the
+			// LAST thing that may be left below the fold.
+			const pending = reveal(ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'dd_note state_warning reload_pending',
 				text_content	: get_label.update_code_reload_required || 'Reload required: log in again to load the new code.',
 				parent			: body_response
-			})
+			}))
 			const reload_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light',

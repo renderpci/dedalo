@@ -45,6 +45,7 @@ const WIDGET_DIR = join(
 const render_src = readFileSync(join(WIDGET_DIR, 'js/render_update_code.js'), 'utf8');
 const model_src = readFileSync(join(WIDGET_DIR, 'js/update_code.js'), 'utf8');
 const css_src = readFileSync(join(WIDGET_DIR, 'css/update_code.less'), 'utf8');
+const status_src = readFileSync(join(WIDGET_DIR, 'js/render_update_status.js'), 'utf8');
 const COMMON_DIR = join(import.meta.dir, '..', '..', 'client/dedalo/core/common/js');
 const common_src = readFileSync(join(COMMON_DIR, 'common.js'), 'utf8');
 const render_common_src = readFileSync(join(COMMON_DIR, 'render_common.js'), 'utf8');
@@ -863,5 +864,116 @@ describe('update_code developer-builds switch', () => {
 
 		// and the frame the client reads still has no `status` to use instead
 		expect(/function frameOf\([^)]*\): JobStatusFrame \{[^}]*status:/s.test(jobs_src)).toBe(false);
+	});
+});
+
+
+/**
+ * THE RUNNING SURFACE — the half a "does the error render at all?" gate misses.
+ *
+ * Measured on the docker museum in map view (2026-08-28, 640px viewport, root
+ * font 26px): every ending sentence WAS produced and WAS in the DOM, and the
+ * operator still saw nothing, because the run's own scroll parked the phase
+ * track 184px too low and the track's height did the rest. Two independent
+ * causes, so two independent assertions — either one regressing hides the
+ * progress again:
+ *
+ *   1. the scroll must be issued AFTER the surface is complete and must not be
+ *      animated (a smooth scroll animates toward an offset computed when it is
+ *      issued, so issuing it mid-build chases a stale layout);
+ *   2. a pinned track that can grow to the height of its scrollport pins
+ *      nothing — the cap and the rows' own overflow are what leave room for the
+ *      stream and the endings underneath.
+ */
+describe('update_code tracking surface', () => {
+	// the tracker function only — assertions below must not match the panel's
+	// other scrolls (the modal, the readiness half).
+	const tracker = render_src.slice(
+		render_src.indexOf('const track_process = function('),
+		render_src.indexOf('}//end track_process'),
+	);
+
+	test('the tracker exists and is the region under test', () => {
+		expect(tracker.length).toBeGreaterThan(500);
+		expect(tracker).toContain('update_stream');
+	});
+
+	test("the run's scroll is issued AFTER the stream node, and is not animated", () => {
+		const stream_at = tracker.indexOf("class_name\t\t: 'update_stream'");
+		const scroll_at = tracker.indexOf('scrollIntoView');
+		expect(stream_at, 'the stream node is created in the tracker').toBeGreaterThan(-1);
+		expect(scroll_at, 'the tracker scrolls its surface into view').toBeGreaterThan(-1);
+		// ORDER is the fix: scrolling before the stream exists chased a layout
+		// that was still growing and landed 184px short.
+		expect(scroll_at).toBeGreaterThan(stream_at);
+		// and no smooth animation on the START scroll — `behavior:'auto'` lands
+		// deterministically. (reveal(), at the endings, is a separate call.)
+		const start_scroll = tracker.slice(scroll_at, scroll_at + 200);
+		expect(start_scroll).toContain("behavior:'auto'");
+		expect(start_scroll).not.toContain("behavior:'smooth'");
+	});
+
+	test('every ending sentence is revealed, not merely appended', () => {
+		// each ending appends its note as the LAST child of a surface taller than
+		// the viewport; reveal() is what puts it where it can be read.
+		const notes = tracker.match(/(reveal\()?ui\.create_dom_element\(\{[^}]*?class_name[^}]*?dd_note/gs) ?? [];
+		expect(notes.length, 'the tracker still appends ending notes').toBeGreaterThanOrEqual(5);
+		for (const note of notes) {
+			expect(note.startsWith('reveal('), `an ending note is appended unrevealed: ${note.slice(0, 120)}`).toBe(true);
+		}
+		// reveal itself must tolerate the DOM stub this gate drives it against
+		expect(tracker).toContain("typeof node.scrollIntoView==='function'");
+	});
+
+	test('the pinned phase track cannot own its scrollport', () => {
+		const tracking = css_src.slice(css_src.indexOf('&.tracking {'));
+		expect(tracking).toContain('position: sticky');
+		// a cap, and rows that scroll INSIDE it — without both, the track grows
+		// to the full height of the box and there is nothing left to pin above.
+		expect(/max-height:\s*[^;]+;/.test(tracking)).toBe(true);
+		expect(tracking).toContain('overflow-y: auto');
+		// flex's default min-height:auto refuses to shrink below content, which
+		// would push the overflow straight back onto the page.
+		expect(tracking).toContain('min-height: 0');
+	});
+});
+
+/**
+ * THE BLOCKED-RESTORE REASON must name the versions it is about.
+ *
+ * "This copy pins a different Bun runtime than the one running" named NEITHER,
+ * so an admin could not tell which Bun to install, nor which of eleven restore
+ * points was the odd one — while both facts were already on the wire (the
+ * point's own `bun_pin`, the engine's `bun`).
+ */
+describe('update_code restore-reason detail', () => {
+	const KEY = 'update_code_restore_bun_versions';
+
+	test('the label exists and takes the three versions the sentence needs', () => {
+		const sentence = master_labels[KEY];
+		expect(sentence, `${KEY} is defined in master.json`).toBeDefined();
+		// pinned, running, pinned-again ("install X to restore it") — the client
+		// substitutes positionally, so the count is the contract.
+		expect(((sentence ?? '').match(/%s/g) ?? []).length).toBe(3);
+	});
+
+	test('the renderer fills it from the wire, not from a literal', () => {
+		expect(status_src).toContain(KEY);
+		expect(status_src).toContain('point.bun_pin');
+		expect(status_src).toContain('engine.bun');
+		expect((status_src.match(/\.replace\('%s',/g) ?? []).length).toBe(3);
+	});
+
+	test('only the bun-pin refusal gets numbers, and only when both are known', () => {
+		// the other two reasons have no versions to add; a point whose pin cannot
+		// be read must degrade to the sentence alone, never print "undefined".
+		expect(status_src).toContain("point.restorable_reason==='bun_pin_mismatch' && point.bun_pin && engine.bun");
+		// the sentence itself is untouched — its translations stay valid
+		expect(status_src).toContain("get_label['update_code_restore_reason_' + point.restorable_reason]");
+	});
+
+	test('the detail line has somewhere to render', () => {
+		expect(status_src).toContain('restore_reason_detail');
+		expect(css_src).toContain('.restore_reason_detail');
 	});
 });

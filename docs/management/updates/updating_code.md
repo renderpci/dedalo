@@ -83,8 +83,12 @@ run:
   with the reason written under the row, when the copy is incomplete, when it
   declares no Dédalo version (its provenance cannot be read), or when it pins a
   different Bun than the one this server runs — install that Bun first, as for
-  an update. A development checkout gets no Restore button at all, for the same
-  reason it gets no Update button.
+  an update. In that last case the row also names **both** versions ("This copy
+  pins Bun 1.3.9; this server runs Bun 1.4.0. Install Bun 1.3.9 to restore
+  it."), so you can read which runtime to install off the row itself, and tell
+  apart several restore points cut on either side of a Bun change. A
+  development checkout gets no Restore button at all, for the same reason it
+  gets no Update button.
 
 Some readiness lines cannot be decided in advance and say so rather than
 guessing: the release's own root file list and its Bun pin are only known once
@@ -124,6 +128,8 @@ running Bun and this tree's pin, and the bytes free where the update stages.
     Choose the server to obtain the code. By default, the panel shows the official Dédalo server, but you can configure other mirrors or providers via `CODE_SERVERS`, set in `../private/.env` (see the [Configuration Administrator Guide](../../config/administration.md)).
 
     Press "Check available updates", choose the version you want, and press `Update`. The panel then shows the pipeline's phase track (download → verify → extract → deps → preflight → swap → restart → health) while the update runs; the server restarts itself during the `restart` phase and the panel polls its health endpoint until the new version answers.
+
+    The panel scrolls that track into view when the run starts and keeps it readable without any scrolling on your part: the progress bar stays pinned while the run lasts, the phase rows scroll inside their own box rather than filling the window, and the live process output — and whatever sentence ends the run, whether it succeeded, refused or lost the connection — stays visible underneath. If a run appears to stop with nothing to show, the panel is not hiding the reason further down; look instead at the server log.
 
     Confirm success by **both** the engine version and the build stamp changing in the panel's readout — the build stamp is the release's commit date, so an unchanged stamp means old code is still running.
 
