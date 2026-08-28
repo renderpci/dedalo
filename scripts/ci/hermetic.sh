@@ -111,6 +111,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/css_token_duplication_tripwire.test.ts
 	test/unit/wire_contract_tripwire.test.ts
 	test/unit/verify_selector_selftest.test.ts
+	test/unit/build_context_secret_tripwire.test.ts
+	test/unit/vendor_advisory_tripwire.test.ts
 	test/unit/theme_token_parity.test.ts
 	test/unit/crap_complexity_ratchet.test.ts
 	# --- security tier, added 2026-08-03 (see the coverage-hole note above) ---

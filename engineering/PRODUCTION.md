@@ -644,7 +644,7 @@ script's own body: move the failed tree aside, move the backup back, start.
 | Channel | Layout | Update | Rollback |
 |---|---|---|---|
 | `tree_swap` | the repo is a checkout on a host (systemd or supervised loop) | quarantine → rename swap (above) | sentinel + `dedalo-code-rollback.sh` |
-| `image` | containerized; the code tree is INSIDE the image (`Dockerfile` `COPY . .`), only `/private`/media/socket are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. Use `deploy/dedalo-image-update.sh` (pull a new tag, or rebuild from a ref) | re-pin the previous image tag + `up -d` — atomic and complete, dependencies included |
+| `image` | containerized; the code tree is INSIDE the image (`Dockerfile` copies the build-context allowlist, §13), only `/private`/media/socket are volumes | the swap is REFUSED — a tree swap would land in the container's writable layer and be discarded on the next recreation. Use `deploy/dedalo-image-update.sh` (pull a new tag, or rebuild from a ref) | re-pin the previous image tag + `up -d` — atomic and complete, dependencies included |
 
 **Offline-dependency caveat.** A release whose `bun.lock` changed needs
 registry access at install time (the quarantine `bun install`). On an
@@ -665,3 +665,162 @@ it finds runtime data in the tree, naming the key to set). Per-key recipe:
   backups) — both default outside the tree already; never point them into it.
 - `DEDALO_PRIVATE_DIR` — the private tree is a SIBLING by default; only ever
   relocate it further out (containers use `/private`), never inward.
+
+## 13. The container build context: secrets, and rotating a key that already shipped
+
+**The invariant: secret material never travels with the code, by any lane.**
+The code updater has enforced it on the tree-swap lane for a while — it REFUSES
+a swap rather than let `deploy/certs/key.pem` ride along with the tree
+(`refuseUntrackedSecrets`). Until 2026-08-28 the IMAGE lane had no such rule:
+the `Dockerfile` was `COPY . .` and `.dockerignore` was a hand-maintained
+denylist naming neither `deploy/certs/` nor `.dedalo.env` — both of which
+`.gitignore` already treats as secrets, and both of which `install.sh` WRITES
+before it runs `compose build` (audit 2026-08-26, OPS-01).
+
+### 13.1 What the build context is now
+
+Three mechanisms, in the order Docker applies them:
+
+1. **`.dockerignore` denies the ROOT and re-includes the tracked top-level
+   entries the image needs** — deny-all **at depth 1**, and that is the precise
+   claim. A `.dockerignore` pattern is matched SEGMENT-WISE and `*` never
+   crosses a `/`, so the leading `*` denies exactly the top-level entries;
+   inheritance then carries each re-inclusion down its subtree. An operator's
+   ROOT drop-in — `deploy/` (never re-included), `.dedalo.env`, `media/`,
+   `backup.pem` — cannot enter a context that starts from nothing. A drop-in
+   NESTED inside an allowlisted tree is a different case, and it is what
+   mechanisms 2 and 4 cover.
+
+   Eight tracked top-level entries are deliberately kept out
+   (`IMAGE_EXCLUSIONS`): `deploy`, `test`, `.github`, `.gitlab`,
+   `.gitlab-ci.yml`, `.vscode`, `.claude`, `CLAUDE.md`. `test` and `.github`
+   were already excluded before this policy, so **six** are newly kept out —
+   `deploy` being the one that matters.
+2. **The census is DERIVED from EVERY tracked `.gitignore`.** Not just the root
+   one: `publication/server_api/v2/.gitignore` (`coverage/`, `dist/`) and
+   `publication/site_builder/.gitignore` (`.test-tmp/`) are translated too, each
+   RELATIVE TO ITS OWN DIRECTORY, and re-applied AFTER the allowlist (last match
+   wins). So a gitignored path INSIDE an allowlisted tree —
+   `.agents/settings.local.json`, `src/core/update/install_stamp.json`, the
+   nested `node_modules` trees, `publication/server_api/v2/dist/` — is denied
+   too. Add a secret to any `.gitignore` and it leaves the image in the same
+   change; add a NEW `.gitignore` anywhere and the artifact changes with it, so
+   there is no scope statement to go stale.
+
+   The per-directory scoping is load-bearing. Translated globally, the v2 API's
+   `dist/` would also drop `client/…/service_ckeditor/css/dist/`, which the image
+   needs — a context narrowed past what the engine needs breaks an install, which
+   is a defect, not caution.
+3. **The COPY is narrow.** The Dockerfile names each allowlisted entry instead
+   of `COPY . .`, and `deploy/` is not among them: the directory `install.sh`
+   writes private keys into cannot be reached by any COPY, whatever the ignore
+   rules say. Nothing in a container reads `deploy/` — the compose stacks
+   bind-mount the proxy config and the certificates from the HOST checkout.
+4. **Secret-SHAPED names are denied at EVERY depth**, which is the residual of
+   mechanism 1: a `certs` directory, a `.env*` name, a
+   `.pem/.key/.crt/.cer/.p12/.pfx` extension, anywhere in the tree. It is the
+   same shape the code updater already refuses on the tree-swap lane
+   (`isSecretShapedName`). The tracked files of that shape — two placeholder
+   samples — are re-included by exact path, derived from the tracked tree, so a
+   third one reddens the gate instead of riding along.
+
+**What is left, stated plainly:** a NON-secret-shaped untracked file nested
+inside an allowlisted tree (`client/scratch.js`, `src/notes.txt`) still enters
+the build context. Closing that would mean allowlisting every tracked file
+individually, and the first file someone forgot to regenerate would break an
+install. The gate asserts this residual explicitly, at its exact size, so it
+cannot quietly grow.
+
+Both artifacts are GENERATED: `bun run context:gen` (`bun run context:check`
+renders without writing and exits 1 on drift; the policy, the reasons and the
+translation rules live in `deploy/build_context.ts`). The gate is
+`test/unit/build_context_secret_tripwire.test.ts`, which re-implements Docker's
+own pattern matcher, asserts the two artifacts equal the derivation, that every
+rule of every tracked `.gitignore` is excluded, that no `COPY`/`ADD` in the
+Dockerfile names the whole context or reaches `deploy/` in any spelling, and —
+the other direction — that no tracked file the engine needs was narrowed away.
+
+**Adding a top-level entry to the repo means regenerating both artifacts.** The
+gate is red until you do, and it prints what it expected.
+
+### 13.2 Rotating TLS material
+
+`deploy/dedalo-tls-rotate.sh` is the ONE generator of local-CA material —
+`install.sh` calls it for the first issue, so an install and a rotation produce
+the same shape of certificate. It archives the previous material into
+`deploy/certs/rotated-<UTC stamp>/` (700, never overwritten, outside the build
+context and outside every release archive) before it writes anything new, so a
+half-finished rotation can always be put back.
+
+```shell
+# a local certificate authority (install.sh option 2)
+deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.local
+
+# a certificate your institution issues (install.sh option 3)
+deploy/dedalo-tls-rotate.sh --mode existing --cert /path/fullchain.pem --key /path/privkey.pem
+```
+
+The OPERATOR-facing version of this procedure is `docs/install/docker.md`
+("Rotating TLS material"), linked from the simple install's after-install steps
+and its troubleshooting table — a rotation only an engineer can find is not
+delivered. This section is the same procedure with the reasoning.
+
+It reloads nginx when it can reach the stack — `--compose-file` names the stack
+(default `docker-compose.simple.yml`; pass `docker-compose.yml` on the full
+one), `--no-reload` skips it. Only the SIMPLE stack's proxy also reloads itself
+every six hours; on the full stack a missed reload keeps serving the OLD
+certificate until you reload it yourself. It then prints the new CA file with
+its SHA-256 fingerprint. Each CA carries its issue stamp in the subject
+(`CN=Dedalo local CA <stamp>`) — two authorities both called "Dedalo local CA"
+are indistinguishable in a Windows or macOS trust store, and an operator
+rotating away from a compromised key must be able to tell which entry to delete.
+
+**Let's Encrypt (option 1) needs none of this**: its key lives in the
+`letsencrypt` named volume, never in the build context, and it renews itself.
+
+### 13.3 If you have already distributed an image — read this
+
+An image built on a host that ran `./install.sh` with the local-CA option
+CONTAINS `deploy/certs/dedalo-local-ca.key`. That is the private key of an
+authority you were told to install into the Trusted Root store of every
+computer that uses Dédalo: whoever holds it can mint a browser-trusted
+certificate for ANY hostname, for every one of those workstations. It travels
+wherever the image travels — a registry (`dedalo-image-update.sh --mode pull`),
+a `docker save` tarball, a copy handed to a supplier, or one more member of the
+host's `docker` group than you expected. Assume it is compromised; it cannot be
+un-distributed.
+
+In this order:
+
+1. **Rotate the CA and the site certificate** — §13.2. Do this first: the
+   replacement must exist before you invalidate the old one.
+2. **Install the NEW CA on every workstation, then DELETE the old entry.**
+   Until the old one is removed, a certificate signed with the leaked key is
+   still trusted by that machine, which is the whole point of rotating. The old
+   CA certificate is in the `rotated-…` archive if you need its fingerprint.
+3. **Rotate the database password.** `.dedalo.env` (`POSTGRES_PASSWORD`) was in
+   the context too. The port is never published, so the exposure is bounded by
+   who can reach the container network — but rotate it anyway:
+
+   ```shell
+   docker compose -f docker-compose.simple.yml --env-file .dedalo.env \
+       exec -T postgres psql -U dedalo -d dedalo -c "ALTER ROLE dedalo WITH PASSWORD 'new-password'"
+   ```
+
+   then set the new value in `.dedalo.env` and append `DB_PASSWORD="new-password"`
+   to the engine's own `/private/.env` (the private volume). The loader takes the
+   LAST occurrence of a key, which is what makes an append-only file rotatable
+   (`src/config/env.ts`). Restart the stack.
+4. **Rebuild and re-distribute the image**, on a tree with the current
+   `.dockerignore` + `Dockerfile`. Verify before pushing:
+
+   ```shell
+   docker run --rm --user 0 <image> ls /opt/dedalo/master_dedalo/deploy 2>&1
+   # expected: "No such file or directory" — deploy/ is not in the image at all
+   ```
+
+5. **Delete the old images and tarballs** you can still reach: registry tags,
+   `docker save` files, the rollback tag `dedalo-image-update.sh` left behind,
+   and any build cache on machines that built it (`docker builder prune -af`).
+   You cannot delete the copies you already handed out — which is why step 2 is
+   the one that actually ends the exposure.

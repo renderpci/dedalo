@@ -16,11 +16,21 @@ The Dédalo data model has an abstraction layer that uses the ontology definitio
 
 ## Format
 
-Dédalo uses the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) encoding without BOM (Byte Order Mark).
+Dédalo uses the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) to import data, and [UTF-8](http://www.unicode.org/versions/latest/) is the encoding to give it.
+
+A file that is **not** UTF-8 is not read as if it were. Dédalo either converts it or refuses it, and it always says which:
+
+- a file that carries a byte order mark (UTF-8 or UTF-16) is read in the encoding the mark declares;
+- a file that is not valid UTF-8 is converted from **windows-1252** (what a European spreadsheet writes when it saves in the system code page), and the conversion is reported as a **notice** — on the file list, in the preflight and in the import report. A notice is not an error: the file imported, and the notice tells you what was done to it;
+- a file that cannot be converted honestly is **refused, and nothing is imported**: one that contains NUL bytes (a binary file, or UTF-16 saved without its mark) and one that already carries replacement characters (`�`), which means its original encoding was lost before it reached Dédalo.
 
 !!! warning
 
-    Any encoding other than UTF is not supported. Badly encoded files can break the import process at any time, and the imported data could have typos and errors.
+    A converted file is imported from a *guess about which encoding it is*, and the guess is only a good one for Western European text. Read the notice, check the imported values, and re-export the file as UTF-8 to remove the guess. Exporting in UTF-8 in the first place is the only way to be sure an accent arrives as the character it left as.
+
+!!! note "A file whose shape cannot be trusted is refused whole"
+
+    Two more refusals belong to the same rule, and neither is about encoding: a row whose number of columns disagrees with the header (every value after the mismatch would be imported into the wrong component), and a quoted value that is opened and never closed (the rest of the file is swallowed into that one cell). Both name the row, nothing is imported, and the fix is in the file.
 
 ??? note "Byte Order Mark (BOM)"
 
@@ -29,6 +39,8 @@ Dédalo uses the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) t
     ***2.6 Encoding Schemes***
 
     *... Use of a BOM is neither required nor recommended for UTF-8, but may be encountered in contexts where UTF-8 data is converted from other encoding forms that use a BOM or where the BOM is used as a UTF-8 signature. See the “Byte Order Mark” subsection in Section 23.8, Specials, for more information...*
+
+    Dédalo's own CSV and TSV **downloads** do carry one, for exactly the signature use the standard describes: without it a spreadsheet opens the file in the system code page and saves it back in that code page, which is the badly encoded file the import door then has to convert. On import the mark is read and removed — it never reaches a record.
 
 By default Dédalo uses a stringified JSON encoding in UTF-8 with double-quote `""` escape marks for the data.
 

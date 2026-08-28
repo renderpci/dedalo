@@ -30,6 +30,11 @@ import {
 	getNode,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
+import {
+	frontierComponentAllowed,
+	noteFrontierRefusal,
+	type SqlFrontierScope,
+} from '../security/frontier_scope.ts';
 import { buildDateFragment } from './builders/builder_date.ts';
 import { buildIriFragment } from './builders/builder_iri.ts';
 import { buildJsonFragment } from './builders/builder_json.ts';
@@ -77,20 +82,74 @@ export type ConformedFilter =
 	| { kind: 'leaf'; fragment: BuilderResult; joins?: JoinFragment[] };
 
 /**
+ * THE PER-REQUEST ACL A MULTI-HOP PATH MUST OBEY (SEC-02, 2026-08-28).
+ *
+ * A hop is a READ of another section's records: `LEFT JOIN LATERAL` unnests a
+ * stored locator and joins the target row, and the leaf predicate is then built
+ * against THAT alias. Before this scope existed neither `conformLeaf` nor
+ * {@link buildJoinChain} received a principal, and `buildSearchSql` emitted its
+ * ACL clauses (projects containment + the dd478 record filter) against the MAIN
+ * alias ONLY — so the WHERE clause of a listing the caller IS allowed to run
+ * could name a component of a record the caller is NOT allowed to see, and the
+ * row's presence answered a question about it. With begins-with, ends-with,
+ * contains and `==` all available, that is a PREFIX ORACLE: the hidden value
+ * comes out character by character.
+ *
+ * THE SCOPE OBJECT ITSELF LIVES IN `core/security/frontier_scope.ts` — one
+ * shape for the search, the export and the diffusion frontier, with the refusal
+ * law for all three written down beside it. This module only re-exports the
+ * name it threads, so a reader of the search path finds the type without a
+ * second definition existing anywhere.
+ */
+export type { SqlFrontierScope } from '../security/frontier_scope.ts';
+
+/**
  * Build the PHP build_sql_join chain for a multi-hop path: per hop, a
  * LATERAL unnest of the previous alias's relation key + a LEFT JOIN of the
  * target matrix table on the unnested locator identity. Aliases derive
  * deterministically from the path chain (identical paths dedup to the same
  * joined rows — the PHP rule). Used by filter leaves AND order paths.
+ *
+ * ACL (SEC-02): when a {@link SqlFrontierScope} is threaded in, every hop
+ * carries BOTH frontier keys (frontier_scope.ts property 2):
+ *
+ *   1. the RECORD key — the caller's projects/dd478 predicate, emitted in the
+ *      join's ON clause (never the WHERE: see SqlFrontierScope's docblock).
+ *   2. the COMPONENT key — `frontierComponentAllowed`, i.e. `ddoIsAuthorized`
+ *      on this step's own (section, component), under the frontier exemptions.
+ *      That is the SAME predicate that decides whether the client could
+ *      legitimately BUILD this path at all: a multi-hop filter path is minted
+ *      by the client from `search.ddo_map` / `show.ddo_map` (common.js
+ *      build_rqo_search → get_ar_inverted_paths, one path per leaf ddo), and
+ *      `section/read.ts` buildStructureContextEntries DROPS any ddo that fails
+ *      `ddoIsAuthorized(principal, ddoSectionTipo, ddo.tipo)`.
+ *
+ * A refused step is reported through `authorized:false` — never thrown, never
+ * silent: the caller applies the SEARCH refusal law (identical hit and miss)
+ * and `noteFrontierRefusal` has already written the operator log line and the
+ * request's notice.
+ *
+ * The step's DECLARED section is authoritative for both keys, exactly as it
+ * already is for the table, the component model and the data column: a stored
+ * locator naming another section in the same table is being interpreted with
+ * this section's ontology either way.
  */
 export async function buildJoinChain(
 	path: { section_tipo?: string; component_tipo?: string }[],
 	mainAlias: string,
-): Promise<{ joins: JoinFragment[]; lastAlias: string; lastTable: string }> {
+	scope?: SqlFrontierScope,
+): Promise<{
+	joins: JoinFragment[];
+	lastAlias: string;
+	lastTable: string;
+	/** False when the principal holds no read grant on some step's component. */
+	authorized: boolean;
+}> {
 	const { getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
 	const joins: JoinFragment[] = [];
 	let previousAlias = mainAlias;
 	let lastTable = '';
+	let authorized = true;
 	const aliasChain: string[] = [];
 	for (let index = 1; index < path.length; index++) {
 		const step = path[index] as { section_tipo?: string; component_tipo?: string };
@@ -103,6 +162,16 @@ export async function buildJoinChain(
 			});
 		}
 		assertValidTipo(stepSection, 'join path');
+		// A HOP component is unnested as `relation-><tipo>`, so it must be a real
+		// ontology tipo — never one of the bare data columns the §7.6 gate also
+		// admits for a LEAF (`assertValidTipoOrColumn`, e.g. ordering by
+		// 'section_id'). This is the ORDER twin's long-standing strictness; the
+		// FILTER twin inherited it when conformLeaf stopped copy-pasting this loop
+		// (2026-08-28). It narrows nothing a producer sends — measured, no shipped
+		// caller names a column at an INTERMEDIATE step (the client builds every
+		// path step from a ddo's own tipo, and the suite ontology holds zero
+		// multi-hop fixed_filter paths) — and what it used to do instead was
+		// unnest a key no relation column has and match nothing, silently.
 		assertValidTipo(hopComponent, 'join path');
 		// component_alias (WC-020): stored locators live under the TARGET's key.
 		const { resolveDataTipo } = await import('../ontology/alias.ts');
@@ -118,16 +187,47 @@ export async function buildJoinChain(
 		aliasChain.push(`${hopDataTipo}_${stepSection}`);
 		const joinAlias = `j_${aliasChain.join('_')}`;
 		const relationAlias = `rel_${joinAlias}`;
+		// ON-clause conjuncts: the locator identity, then the caller's record ACL.
+		const onParts = [
+			`${joinAlias}.section_id = NULLIF((${relationAlias}->>'section_id'), '')::bigint`,
+			`${joinAlias}.section_tipo = (${relationAlias}->>'section_tipo')::text`,
+		];
+		if (scope !== undefined) {
+			// This step's OWN component: the leaf component on the last step, the
+			// next hop's relation component on an intermediate one — both are read
+			// through this alias, so both need the grant.
+			const frontierStep = {
+				sectionTipo: stepSection,
+				...(step.component_tipo === undefined ? {} : { componentTipo: step.component_tipo }),
+				table: stepTable,
+			};
+			if (!(await frontierComponentAllowed(scope, frontierStep))) {
+				authorized = false;
+				noteFrontierRefusal(scope, {
+					surface: scope.surface,
+					door: scope.door,
+					sectionTipo: stepSection,
+					...(step.component_tipo === undefined ? {} : { componentTipo: step.component_tipo }),
+					key: 'component',
+				});
+			}
+			const predicate = await scope.recordPredicate({
+				sectionTipo: stepSection,
+				table: stepTable,
+				alias: joinAlias,
+			});
+			if (predicate !== '') onParts.push(`(${predicate})`);
+		}
 		joins.push({
 			alias: joinAlias,
 			sql:
 				`LEFT JOIN LATERAL jsonb_array_elements(${previousAlias}.relation->'${hopDataTipo}') AS ${relationAlias} ON true\n` +
-				`LEFT JOIN ${stepTable} AS ${joinAlias} ON ${joinAlias}.section_id = NULLIF((${relationAlias}->>'section_id'), '')::bigint AND ${joinAlias}.section_tipo = (${relationAlias}->>'section_tipo')::text`,
+				`LEFT JOIN ${stepTable} AS ${joinAlias} ON ${onParts.join(' AND ')}`,
 		});
 		previousAlias = joinAlias;
 		lastTable = stepTable;
 	}
-	return { joins, lastAlias: previousAlias, lastTable };
+	return { joins, lastAlias: previousAlias, lastTable, authorized };
 }
 
 const BOOLEAN_OPERATORS: ReadonlySet<string> = new Set(['$and', '$or', '$not', '$nand', '$nor']);
@@ -274,6 +374,7 @@ async function conformLeaf(
 	leaf: SqoFilterLeaf,
 	alias: string,
 	table: string,
+	scope?: SqlFrontierScope,
 ): Promise<ConformedFilter> {
 	const path = leaf.path ?? [];
 	const lastStep = path[path.length - 1];
@@ -293,50 +394,51 @@ async function conformLeaf(
 	// at the next step's section — build the PHP build_sql_join chain (LATERAL
 	// unnest of the relation key + LEFT JOIN on the target identity) and
 	// conform the FINAL component against the last join alias.
+	//
+	// buildJoinChain IS the chain builder (it used to be copy-pasted here, which
+	// is how the ORDER twin and the FILTER twin could drift): one home, so the
+	// SEC-02 hop ACL cannot land on one of them only.
 	let leafAlias = alias;
 	let leafTable = table;
 	const joins: JoinFragment[] = [];
 	if (path.length > 1) {
-		const { getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
-		let previousAlias = alias;
-		const aliasChain: string[] = [];
-		for (let index = 1; index < path.length; index++) {
-			const step = path[index] as { section_tipo?: string; component_tipo?: string };
-			const hopComponent = (path[index - 1] as { component_tipo?: string }).component_tipo;
-			const stepSection = step.section_tipo;
-			if (stepSection === undefined || hopComponent === undefined) {
-				throw new DedaloError('search.invalid_sqo', {
-					message: 'search conform: a multi-hop path step needs section_tipo + component_tipo',
-					publicMessage: 'Every step of a multi-hop search path needs a section and a component',
-				});
-			}
-			// component_alias (WC-020): stored locators live under the TARGET's key.
-			const { resolveDataTipo } = await import('../ontology/alias.ts');
-			const hopDataTipo = await resolveDataTipo(hopComponent);
-			const stepTable = await getMatrixTableFromTipo(stepSection);
-			if (stepTable === null) {
-				throw new DedaloError('search.invalid_sqo', {
-					message: `search conform: no matrix table for join step '${stepSection}'`,
-					publicMessage: 'A section named in the search path holds no records',
-					coordinates: { step_section_tipo: stepSection },
-				});
-			}
-			// Deterministic alias from the path chain — identical paths in other
-			// clauses reuse the SAME joined rows (PHP legacy alias dedup).
-			aliasChain.push(`${hopDataTipo}_${stepSection}`);
-			const joinAlias = `j_${aliasChain.join('_')}`;
-			const relationAlias = `rel_${joinAlias}`;
-			joins.push({
-				alias: joinAlias,
-				sql:
-					`LEFT JOIN LATERAL jsonb_array_elements(${previousAlias}.relation->'${hopDataTipo}') AS ${relationAlias} ON true
-` +
-					`LEFT JOIN ${stepTable} AS ${joinAlias} ON ${joinAlias}.section_id = NULLIF((${relationAlias}->>'section_id'), '')::bigint AND ${joinAlias}.section_tipo = (${relationAlias}->>'section_tipo')::text`,
-			});
-			previousAlias = joinAlias;
-			leafTable = stepTable;
+		const chain = await buildJoinChain(
+			path as { section_tipo?: string; component_tipo?: string }[],
+			alias,
+			scope,
+		);
+		joins.push(...chain.joins);
+		leafAlias = chain.lastAlias;
+		leafTable = chain.lastTable;
+		if (!chain.authorized) {
+			// SEC-02. A step names a component this principal holds 0 on. The leaf
+			// answers FALSE for EVERY row — never a throw, and never a silent drop:
+			//
+			//  - FALSE makes HIT and MISS identical, which is precisely what closes
+			//    the prefix oracle. The caller learns nothing about the hidden
+			//    value, not even that a probe was refused (a refusal is itself a
+			//    signal, and an error would also break the ONE unauthorized leaf of
+			//    an autocomplete's `$or` filter_free for every user);
+			//  - DROPPING the leaf ({fragment:false}) would be sound under `$or`
+			//    and FAIL-OPEN under `$and`/`$not`, where removing a conjunct
+			//    WIDENS the result set. `1=0` is safe under every operator: it
+			//    contributes nothing to an OR, empties an AND, and negates to the
+			//    same answer for every record.
+			//
+			// The join chain is still emitted (aliases dedup with other clauses'
+			// identical paths, and the sort-select of an ORDER on the same path
+			// must still resolve); it simply carries no leaf predicate that can
+			// distinguish one hidden value from another.
+			//
+			// LOUD, THOUGH: buildJoinChain has already written the named
+			// `[frontier] REFUSED …` operator log line and recorded the request's
+			// `perm.out_of_scope` notice. The CALLER's answer is identical for hit
+			// and miss — the oracle stays closed — while the OPERATOR can see that
+			// the result set was narrowed and why. A narrowing nobody can observe
+			// is what AGENTS.md forbids; a narrowing the attacker cannot observe is
+			// what the refusal law requires. Both hold here.
+			return { kind: 'leaf', fragment: fragmentResult('1=0'), joins };
 		}
-		leafAlias = previousAlias;
 	}
 
 	const componentTipo = lastStep.component_tipo;
@@ -527,6 +629,7 @@ export async function conformFilter(
 	filter: SqoFilterNode | SqoFilterLeaf | Record<string, unknown>,
 	alias: string,
 	table: string,
+	scope?: SqlFrontierScope,
 ): Promise<ConformedFilter> {
 	// A node has exactly one boolean-operator key.
 	const keys = Object.keys(filter);
@@ -536,10 +639,10 @@ export async function conformFilter(
 		const items: ConformedFilter[] = [];
 		for (const item of Array.isArray(rawItems) ? rawItems : []) {
 			if (item === false || item === null || item === undefined) continue;
-			items.push(await conformFilter(item as Record<string, unknown>, alias, table));
+			items.push(await conformFilter(item as Record<string, unknown>, alias, table, scope));
 		}
 		return { kind: 'group', op: opKey, items };
 	}
 	// Leaf (has a path).
-	return conformLeaf(filter as SqoFilterLeaf, alias, table);
+	return conformLeaf(filter as SqoFilterLeaf, alias, table, scope);
 }

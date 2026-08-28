@@ -1,5 +1,5 @@
 {
-	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. reviewed = the ISO date a human last checked THIS lib's upstream release feed for advisories (Dependabot cannot watch a vendored tree; scripts/ci/audit.ts prints these dates and how stale they are). It is NOT the date this census was written: ckeditor, json-view and pdfjs carry 2026-07-12, when their trees were last touched, because nobody reviewed them on 2026-08-24 and stamping today's date on all four would have seeded the staleness axis with a review that did not happen — which is the one thing this field exists to prevent.",
+	"note": "CENSUS OF COMMITTED THIRD-PARTY TREES. Every directory under vendor/ has exactly one row here and vice versa (exact complements — test/unit/dependency_integrity_tripwire.test.ts). A vendored lib has no lockfile line, no sha512- integrity, no registry and no Dependabot: tree_sha256 is the ONLY thing in this repo that hashes those bytes. Verify: bun run scripts/vendor_verify.ts. Bump: bun run scripts/vendor_fetch.ts --lib <id> --version <v> --url <archive> --sha256 <expected>. tree_sha256 = sha256 over the sorted concatenation of `<posix relpath>\\0<sha256(file bytes)>\\n` for every regular file under the lib root, so contents AND file set are covered. THREE AXES, and a row must satisfy all three. (1) INTEGRITY — tree_sha256/files, recomputed every run. (2) IDENTITY — version_evidence: the declared version must appear verbatim in a file of the lib's OWN tree, so the label cannot be moved without the bytes (a mislabelled row would otherwise satisfy the digest, the range check and the feed query at once). A tree that states no version anywhere says so in unprovable_reason. scripts/vendor_verify.ts --write REFUSES to bless a tree whose bytes do not state the declared version. (3) ADVISORIES + STALENESS — the `advisory` block: the coordinate a feed is keyed to, a per-row review window, and a LEDGER of the published advisories known to touch that version; `reviewed` is the ISO date a human last checked THIS lib's upstream release feed AND the advisory feed (Dependabot cannot watch a vendored tree). Since CLI-26 (2026-08-28) that date is GATED, not printed: test/unit/vendor_advisory_tripwire.test.ts hard-fails when the declared version is inside a ledgered range or when `reviewed` is past the window, and scripts/ci/audit.ts asks the GitHub advisory feed the same question when it can reach it, reds on anything this ledger does not already carry, and reports a lookup that did not complete as DEGRADED rather than as a finding. All four rows were reviewed on 2026-08-28 and carry that date: ckeditor5@42.0.1 (two moderate XSS advisories in range, both ledgered and accepted on re-proved clauses), pdfjs-dist@6.2.108 and xlsx@0.20.3 (feed returns nothing), and json-view, which no feed can be keyed to at all and whose review window is therefore its only signal. Moving a `reviewed` date is a claim that a human read both feeds — which is the one thing this field exists to make expensive.",
 	"libs": {
 		"ckeditor": {
 			"version": "CKEditor 5 42.0.1 (custom Dédalo build)",
@@ -7,8 +7,78 @@
 			"archive_sha256": null,
 			"tree_sha256": "efdba3473f8d4bf492c205def8db842cd0a79d7e4ee737faa55a957e869c33d2",
 			"files": 73,
-			"reviewed": "2026-07-12",
-			"note": "Not reproducible: the build project no longer exists in any checkout, and build/ckeditor.js.map is the only surviving copy of the plugin source — which is why the map is committed. Standing risk: the bundle can only be replaced wholesale, never patched."
+			"reviewed": "2026-08-28",
+			"note": "Not reproducible: the build project no longer exists in any checkout, and build/ckeditor.js.map is the only surviving copy of the plugin source — which is why the map is committed. Standing risk: the bundle can only be replaced wholesale, never patched. Reviewed 2026-08-28 against the GitHub advisory feed (ckeditor5@42.0.1): two moderate XSS advisories in range, both requiring General HTML Support — ledgered and accepted below on a clause this repo re-proves every run.",
+			"advisory": {
+				"ecosystem": "npm",
+				"package": "ckeditor5",
+				"version": "42.0.1",
+				"unkeyable_reason": null,
+				"review_window_days": 180,
+				"advisories": [
+					{
+						"id": "GHSA-jrqm-vmqc-gm93",
+						"cve": "CVE-2026-28343",
+						"severity": "moderate",
+						"published": "2026-03-04",
+						"vulnerable_range": ">= 29.0.0, < 47.6.0",
+						"first_patched_version": "47.6.0",
+						"summary": "CKEditor 5 has Cross-site Scripting (XSS) in the HTML Support package",
+						"accepted": {
+							"reason_code": "feature_absent",
+							"reason": "The advisory fires only where General HTML Support is enabled AND configured to accept unsafe markup. This bespoke build ships neither the GeneralHtmlSupport nor the HtmlEmbed plugin (0 hits each in the served bundle), so the configuration the advisory names cannot exist here. Not fixable by upgrade: the build project no longer exists in any checkout, so the bundle can only be replaced wholesale.",
+							"assessed": "2026-08-28",
+							"expires": "2027-02-28",
+							"evidence": "audits/2026-08-26_deep/raw/cli_vendor_a11y.md §1.5 + https://github.com/advisories/GHSA-jrqm-vmqc-gm93",
+							"verify": [
+								{
+									"file": "vendor/ckeditor/build/ckeditor.js",
+									"must_not_contain": "GeneralHtmlSupport"
+								},
+								{
+									"file": "vendor/ckeditor/build/ckeditor.js",
+									"must_not_contain": "HtmlEmbed"
+								}
+							]
+						}
+					},
+					{
+						"id": "GHSA-rgg8-g5x8-wr9v",
+						"cve": "CVE-2024-45613",
+						"severity": "moderate",
+						"published": "2024-09-25",
+						"vulnerable_range": ">= 40.0.0, < 43.1.1",
+						"first_patched_version": "43.1.1",
+						"summary": "Cross-site scripting (XSS) in the clipboard package",
+						"accepted": {
+							"reason_code": "feature_absent",
+							"reason": "The advisory requires the Block Toolbar plugin AND either General HTML Support with unsafe markup or HTML Embed. Neither GeneralHtmlSupport nor HtmlEmbed is in the served bundle, and service_ckeditor.js keeps htmlEmbed commented out of the toolbar. Refuted independently by the 2026-08-26 audit on three checks. Same wholesale-replacement constraint as the row above.",
+							"assessed": "2026-08-28",
+							"expires": "2027-02-28",
+							"evidence": "audits/2026-08-26_deep/raw/cli_vendor_a11y.md §1.5 + https://github.com/advisories/GHSA-rgg8-g5x8-wr9v",
+							"verify": [
+								{
+									"file": "vendor/ckeditor/build/ckeditor.js",
+									"must_not_contain": "GeneralHtmlSupport"
+								},
+								{
+									"file": "vendor/ckeditor/build/ckeditor.js",
+									"must_not_contain": "HtmlEmbed"
+								}
+							]
+						}
+					}
+				]
+			},
+			"version_evidence": {
+				"unprovable_reason": null,
+				"clauses": [
+					{
+						"file": "vendor/ckeditor/build/ckeditor.js",
+						"must_contain": "=\"42.0.1\""
+					}
+				]
+			}
 		},
 		"json-view": {
 			"version": "pgrabovets/json-view (unversioned bundle)",
@@ -16,17 +86,65 @@
 			"archive_sha256": null,
 			"tree_sha256": "fbc6f5a78caf9e8261e9cae3e46dcfaea089f60cdac03f4473b58e1b499ec154",
 			"files": 3,
-			"reviewed": "2026-07-12",
-			"note": "Distributed via GitHub/jsDelivr only, never published to npm. The bundle carries no version string, so the tree digest IS the identity of this copy."
+			"reviewed": "2026-08-28",
+			"note": "Distributed via GitHub/jsDelivr only, never published to npm. The bundle carries no version string, so the tree digest IS the identity of this copy. Reviewed 2026-08-28: no npm advisories can be keyed to it (never published there), no upstream release since the bundle was taken, last upstream commit 2025-12-03.",
+			"advisory": {
+				"ecosystem": null,
+				"package": null,
+				"version": null,
+				"unkeyable_reason": "The bundle carries no version string and pgrabovets/json-view was never published to npm, so there is no ecosystem+name+version coordinate any advisory feed can be keyed to. The tree digest IS the identity of this copy, and the review window below is the only staleness signal this row can carry — which is why it is short rather than absent.",
+				"review_window_days": 180,
+				"advisories": []
+			},
+			"version_evidence": {
+				"unprovable_reason": "The bundle carries no version string of any kind: jsonview.bundle.js is 6316 bytes and the word \"version\" does not occur in it, so there is no literal in these bytes that could evidence a declared version. That is also why the advisory coordinate is null. tree_sha256 IS the identity of this copy — it is the whole identity, not a corroboration of one — and the review window is the only staleness signal the row can carry.",
+				"clauses": []
+			}
 		},
 		"pdfjs": {
-			"version": "5.7.284",
-			"upstream": "https://github.com/mozilla/pdf.js/releases/download/v5.7.284/pdfjs-5.7.284-dist.zip",
-			"archive_sha256": null,
-			"tree_sha256": "52fdcd8d4f59eb53da1ca0bd1900cf17c8cbd92429c23db3ea0889aed9a89f12",
-			"files": 401,
-			"reviewed": "2026-07-12",
-			"note": "The standalone viewer app (web/viewer.html), which npm's pdfjs-dist does not ship and bun cannot install (a .zip, not a .tgz). Vendored from the sha256-verified release — only the digest PREFIX 6d1b8125… was recorded at vendoring time, so archive_sha256 stays null rather than half-true; re-fetching through scripts/vendor_fetch.ts records the full digest. The tree is TRIMMED anyway (9 MB of sourcemaps + the 1 MB demo PDF removed), so it would never equal the archive."
+			"version": "6.2.108",
+			"upstream": "https://github.com/mozilla/pdf.js/releases/download/v6.2.108/pdfjs-6.2.108-dist.zip",
+			"archive_sha256": "7bf642d59582b475e8c48447da9b02b0108fad9742d7c2a35cb4ed6dd45e95ba",
+			"tree_sha256": "ab7bce4d104acd1027f81a5aa7df6413f74e62c4d88fb8b4a590bf568c838feb",
+			"files": 404,
+			"reviewed": "2026-08-28",
+			"note": "The standalone viewer app (web/viewer.html), which npm's pdfjs-dist does not ship and bun cannot install (a .zip, not a .tgz). Bumped 2026-08-28 from 5.7.284 to 6.2.108 for GHSA-hq66-cqwq-w95j / CVE-2026-16633 (HIGH, arbitrary JavaScript execution upon opening a malicious PDF, >= 5.6.83 < 6.2.108); 6.2.108 is also the npm dist-tag latest, so this is the project's latest-stable law and the advisory fix in one move. archive_sha256 is now the FULL digest and it is the one GitHub publishes for the release asset (assets[].digest), not a prefix copied by hand — the previous row could only record 6d1b8125…, which is why it stayed null. Trimmed with scripts/vendor_fetch.ts --drop '**/*.map' --drop 'web/compressed.tracemonkey-pldi-09.pdf', so the tree never equals the archive and the trim is reproducible from the command line rather than done by hand. RE-MEASURED 2026-08-28 against a fresh download of the archive above (which hashes to archive_sha256): the archive holds 409 files, this tree holds 404, the 5 missing ones are exactly build/pdf.mjs.map, build/pdf.sandbox.mjs.map, build/pdf.worker.mjs.map, web/viewer.mjs.map (9,034,413 bytes together) and web/compressed.tracemonkey-pldi-09.pdf (1,016,315 bytes, and view_default_edit_pdf.js disables it anyway by clearing defaultUrl), and every one of the 404 files is BYTE-IDENTICAL to the archive's copy. 3.5 MB gzipped (3,694,821 bytes, per-file gzip -c summed). 404 files vs 401 before: the file set is otherwise identical to 5.7.284 — the three additions are signature-properties toolbar icons. The mount also forces enableScripting:false (client/dedalo/core/component_pdf/js/view_default_edit_pdf.js), which is the advisory's own stated workaround and holds even if this bump were ever reverted — but ONLY behind disablePreferences:true, set immediately before it: enableScripting is a PREFERENCE-kind option, so a stored pdfjs.preferences entry is applied over it after the mount's handler returns. Both facts are gated (test/unit/vendor_advisory_tripwire.test.ts), and the gate EXECUTES the vendored AppOptions implementation to prove the chain rather than grepping for the strings. DELIBERATELY KEPT: pdf.sandbox.mjs and web/wasm/quickjs-eval.wasm. With enableScripting:false they are never instantiated, and dropping them would make a future re-enable fail silently while diverging this tree from the upstream layout the digest documents — a trap for the next bump, not a control.",
+			"advisory": {
+				"ecosystem": "npm",
+				"package": "pdfjs-dist",
+				"version": "6.2.108",
+				"unkeyable_reason": null,
+				"review_window_days": 90,
+				"advisories": [
+					{
+						"id": "GHSA-hq66-cqwq-w95j",
+						"cve": "CVE-2026-16633",
+						"severity": "high",
+						"published": "2026-08-06",
+						"vulnerable_range": ">= 5.6.83, < 6.2.108",
+						"first_patched_version": "6.2.108",
+						"summary": "PDF.js: Arbitrary JavaScript execution upon opening a malicious PDF. Ledgered after the fix on purpose: the row is inert at 6.2.108 and reds instantly if anyone takes this tree back below the patched version.",
+						"accepted": null
+					}
+				]
+			},
+			"version_evidence": {
+				"unprovable_reason": null,
+				"clauses": [
+					{
+						"file": "vendor/pdfjs/build/pdf.mjs",
+						"must_contain": "const version = \"6.2.108\";"
+					},
+					{
+						"file": "vendor/pdfjs/build/pdf.worker.mjs",
+						"must_contain": "const workerVersion = \"6.2.108\";"
+					},
+					{
+						"file": "vendor/pdfjs/web/viewer.mjs",
+						"must_contain": "const viewerVersion = \"6.2.108\";"
+					}
+				]
+			}
 		},
 		"xlsx": {
 			"version": "0.20.3",
@@ -34,8 +152,25 @@
 			"archive_sha256": "8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8",
 			"tree_sha256": "ecf869fdacb8fa2e7479461484974c1a2130c8d8ebd1f23b1a1287cef3c7ea5d",
 			"files": 2,
-			"reviewed": "2026-08-24",
-			"note": "SheetJS left the npm registry (npm's xlsx is abandoned at 0.18.5), so this used to be a bare tarball URL in package.json — and bun.lock recorded NO integrity for it while all 581 other entries carried sha512-, so every quarantine `bun install` during a code update re-fetched browser-served bytes unverified (P2-5). Vendored 2026-08-24 from the already-installed node_modules/xlsx, byte-verified against a fresh download of the upstream .tgz (both kept files hash identically). Trimmed to what is actually served: xlsx.mjs (the only file tools/tool_export/js/tool_export.js imports) plus LICENSE. Dropped: bin/, dist/, types/, xlsx.js (CJS — nothing imports it), xlsxworker.js, bower.json, CHANGELOG.md, README.md, package.json."
+			"reviewed": "2026-08-28",
+			"note": "SheetJS left the npm registry (npm's xlsx is abandoned at 0.18.5), so this used to be a bare tarball URL in package.json — and bun.lock recorded NO integrity for it while all 581 other entries carried sha512-, so every quarantine `bun install` during a code update re-fetched browser-served bytes unverified (P2-5). Vendored 2026-08-24 from the already-installed node_modules/xlsx, byte-verified against a fresh download of the upstream .tgz (both kept files hash identically). Trimmed to what is actually served: xlsx.mjs (the only file tools/tool_export/js/tool_export.js imports) plus LICENSE. Dropped: bin/, dist/, types/, xlsx.js (CJS — nothing imports it), xlsxworker.js, bower.json, CHANGELOG.md, README.md, package.json. Reviewed 2026-08-28 against the GitHub advisory feed (xlsx@0.20.3): none.",
+			"advisory": {
+				"ecosystem": "npm",
+				"package": "xlsx",
+				"version": "0.20.3",
+				"unkeyable_reason": null,
+				"review_window_days": 180,
+				"advisories": []
+			},
+			"version_evidence": {
+				"unprovable_reason": null,
+				"clauses": [
+					{
+						"file": "vendor/xlsx/xlsx.mjs",
+						"must_contain": "XLSX.version = '0.20.3';"
+					}
+				]
+			}
 		}
 	}
 }

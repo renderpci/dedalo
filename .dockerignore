@@ -1,26 +1,194 @@
-# Keep the build context small, and keep HOST artefacts out of the image.
+# GENERATED — do not edit by hand. Regenerate with:  bun run context:gen
+# (`bun run context:check` renders without writing; the generator itself is
+# `bun run deploy/build_context.ts`, which context:gen is an alias of).
 #
-# node_modules above all: the image installs its own (linux/arm64 or amd64
-# binaries). Copying the host's tree over it would overwrite the installed one
-# with binaries built for another platform.
+# The policy — an allowlist plus a derived census, rather than a hand-kept
+# denylist of secrets — is documented in deploy/build_context.ts (audit OPS-01 /
+# P1-5), together with the RESIDUAL this file does not close.
+# Gate: test/unit/build_context_secret_tripwire.test.ts.
 #
-# `node_modules` on its own matches ONLY the root one: .dockerignore uses Go's
-# filepath.Match, where a pattern without `**` never crosses a directory
-# boundary. The nested trees (publication/server_api/v2, publication/site_builder)
-# are the big ones — leaving them in put ~320 MB of foreign-platform binaries in
-# the context and the image, which is exactly what the paragraph above forbids.
-node_modules
-**/node_modules
-.git
-.github
-rewrite
-test
-docs/site
-site
-private
-*.log
-.DS_Store
+# Docker resolves a path by LAST MATCH WINS, so the sections below are ordered
+# deny the root -> allow the code tree -> deny the secret shapes -> deny the
+# census -> name the OPS-01 assets.
 
-# The generated media rule files and any local media/private trees never belong
-# in an image — they are runtime state on a volume.
+# --- 1. Nothing at the ROOT travels unless it is named below. ----------------
+# `*` is matched SEGMENT-WISE and never crosses a `/`, so this line denies the
+# TOP-LEVEL entries and nothing deeper — the precise claim is deny-all AT DEPTH
+# 1, not deny-all. An operator tree holds more than the repo at that depth:
+# deploy/ (certs, generated conf), .dedalo.env, media/, backups. None of it can
+# reach an image that starts from nothing. What is NOT covered here — an
+# untracked file NESTED inside an allowlisted tree — is section 3 and the
+# residual stated there.
+*
+
+# --- 2. The image tree: tracked top-level entries. ---------------------------
+# Derived from `git ls-files`; the entries deliberately left out are listed with
+# their reasons in deploy/build_context.ts IMAGE_EXCLUSIONS:
+#   deploy — THE SECRET LANE (OPS-01). install.sh writes the local-CA private key, the
+#     site key and the generated nginx conf into deploy/certs + deploy/*.generated.conf
+#     BEFORE `compose build`. Nothing inside the container ever reads deploy/ — the
+#     compose stacks bind-mount the proxy config and the certificates from the HOST
+#     checkout (docker-compose*.yml), and the systemd units are for bare-metal installs.
+#     Keeping the whole directory out of the context means no COPY can carry a key even
+#     if the ignore rules were wrong.
+#   test — The suite never runs in the image (it needs the marked suite database and the
+#     suite media root, neither of which exists in a container). ~34 MB of fixtures.
+#     Excluded before this policy too.
+#   .github — CI workflows — never read at runtime. Excluded before this policy too.
+#   .gitlab — CI templates — never read at runtime.
+#   .gitlab-ci.yml — CI pipeline definition — never read at runtime.
+#   .vscode — Editor settings — a developer-machine artifact.
+#   .claude — Committed SYMLINK alias of .agents/. A COPY whose SOURCE is a symlink
+#     dereferences it, so the alias would land as a second full copy of the tree;
+#     `.gitattributes` export-ignores it from release archives for the neighbouring
+#     reason (the installer refuses symlink entries). The real path .agents/ IS copied.
+#   CLAUDE.md — Committed SYMLINK alias of AGENTS.md — same reason as .claude/.
+!.agents
+!.bun-version
+!.dockerignore
+!.gitattributes
+!.gitignore
+!.gitleaks.toml
+!AGENTS.md
+!Dockerfile
+!License.md
+!README.md
+!SECURITY.md
+!biome.jsonc
+!bun.lock
+!bunfig.toml
+!client
+!cliff.toml
+!dev
+!docker-compose.simple.yml
+!docker-compose.yml
+!docs
+!engineering
+!install
+!install.sh
+!mkdocs.yml
+!package.json
+!publication
+!scripts
+!src
+!tools
+!tsconfig.json
+!vendor
+
+# --- 3. Secret-SHAPED names, at EVERY depth. ---------------------------------
+# Section 1 denies the root; these deny the residual — an untracked drop-in
+# nested inside an allowlisted tree (src/keys/backup.pem, client/certs/…). The
+# shape is the one the code updater already refuses on the tree-swap lane
+# (code_update.ts, isSecretShapedName): a `certs` directory, a `.env*` name, a
+# key/certificate extension. An extension pattern needs one spelling; a pattern
+# starting with a literal needs two, because moby lets a leading `**/` match a
+# PARTIAL segment (`**/.env` would also deny `sample.env`).
+#
+# WHAT IS LEFT: a NON-secret-shaped untracked file nested inside an allowlisted
+# tree still enters the context. Denying that would mean allowlisting every
+# tracked file individually, and a context narrowed past what the engine needs
+# breaks an install — which is worse than a stray scratch file in a layer.
+**/*.pem
+**/*.key
+**/*.crt
+**/*.cer
+**/*.p12
+**/*.pfx
+.env*
+**/*/.env*
+certs
+**/*/certs
+#
+# The tracked files of that shape, re-included by exact path (placeholder
+# samples, never live credentials). DERIVED from `git ls-files` — a new one
+# rewrites this artifact and reddens the gate until a human reviews it.
+!publication/server_api/v2/.env.example
+!publication/site_builder/.env.test
+
+# --- 4. The never-ship census, DERIVED from every tracked .gitignore. ---------
+# Re-applied AFTER the allowlist so a gitignored path INSIDE an allowlisted tree
+# (.agents/settings.local.json, src/core/update/install_stamp.json, the nested
+# node_modules trees — ~320 MB of foreign-platform binaries) is denied too, and
+# after section 3 so a gitignored path can never be resurrected by a re-include.
+# Nested .gitignore files are translated RELATIVE TO THEIR OWN DIRECTORY: the
+# v2 API ignores `dist/`, and applied globally that would also drop
+# client/…/service_ckeditor/css/dist/, which the image needs.
+# Sources:
+#   .gitignore
+#   publication/server_api/v2/.gitignore
+#   publication/site_builder/.gitignore
+node_modules
+**/*/node_modules
+.DS_Store
+**/*/.DS_Store
+acc
+**/*/acc
+docs/superpowers
+docs_site
+**/*/docs_site
+.cache
+**/*/.cache
+probe_*.ts
+**/*/probe_*.ts
+.env
+**/*/.env
+.dedalo.env
+**/*/.dedalo.env
+deploy/certs
+deploy/nginx.simple.generated.conf
 media
+.vendor_fetch_tmp
+.agents/settings.local.json
+.agents/scheduled_tasks.lock
+.clinerules
+**/*/.clinerules
+audits
+**/*/audits
+.claude_migration_component_alias_preimage.json
+**/*/.claude_migration_component_alias_preimage.json
+rewrite
+**/*/rewrite
+server_config_api.php
+**/*/server_config_api.php
+*.tsbuildinfo
+**/*/*.tsbuildinfo
+*.css.map
+**/*/*.css.map
+!publication/server_api/v1/docu/ui/*.map
+*.log
+**/*/*.log
+CHANGELOG.md
+**/*/CHANGELOG.md
+docker-compose.update-probe.yml
+code
+src/core/update/install_stamp.json
+publication/server_api/v2/node_modules
+publication/server_api/v2/**/*/node_modules
+publication/server_api/v2/.env
+publication/server_api/v2/**/*/.env
+publication/server_api/v2/*.log
+publication/server_api/v2/**/*/*.log
+publication/server_api/v2/.DS_Store
+publication/server_api/v2/**/*/.DS_Store
+publication/server_api/v2/coverage
+publication/server_api/v2/**/*/coverage
+publication/server_api/v2/dist
+publication/server_api/v2/**/*/dist
+publication/server_api/v2/.cache
+publication/server_api/v2/**/*/.cache
+publication/site_builder/.env
+publication/site_builder/**/*/.env
+publication/site_builder/node_modules
+publication/site_builder/**/*/node_modules
+publication/site_builder/*.tsbuildinfo
+publication/site_builder/**/*/*.tsbuildinfo
+publication/site_builder/.test-tmp
+publication/site_builder/**/*/.test-tmp
+
+# --- 5. Named explicitly (the OPS-01 assets). --------------------------------
+# Already covered by 1, 3 and 4. Stated anyway: these are the paths install.sh
+# writes before it builds, and a rule you can grep for is a rule the next
+# operator can check.
+deploy/certs
+deploy/*.generated.conf
+.dedalo.env

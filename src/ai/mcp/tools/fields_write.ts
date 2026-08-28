@@ -28,6 +28,7 @@ import {
 	getTranslatableByTipo,
 } from '../../../core/ontology/resolver.ts';
 import { deletePortalLocator } from '../../../core/relations/save.ts';
+import { currentDataLang } from '../../../core/resolve/request_lang.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
@@ -132,7 +133,13 @@ export async function setField(
 	const model = (await getModelByTipo(fieldTipo)) ?? '';
 	const column = getColumnNameByModel(model);
 	const translatable = await getTranslatableByTipo(fieldTipo);
-	const lang = translatable ? (input.lang ?? 'lg-eng') : 'lg-nolan';
+	// THE SESSION's data language, not a hardcoded 'lg-eng' (audit DATA-23): an
+	// agent write that omits `lang` on a Spanish-working install used to attach
+	// text to lg-eng — and the agent's own read-back defaulted lg-eng too, so the
+	// wrong-language attach was self-consistent and invisible. currentDataLang()
+	// is the request's (the assistant tool runs inside the API dispatch's
+	// language scope) and the installation default outside a request.
+	const lang = translatable ? (input.lang ?? currentDataLang()) : 'lg-nolan';
 	const mode = input.mode ?? 'append';
 
 	let changedData: { action: string; id?: number | string | null; value: unknown }[];
@@ -373,7 +380,10 @@ export const FIELDS_WRITE_SPECS: ToolSpec[] = [
 			value: z
 				.unknown()
 				.describe('Scalar for literal fields; {section_tipo, section_id} for link fields.'),
-			lang: z.string().optional().describe('Language for translatable literals (default lg-eng).'),
+			lang: z
+				.string()
+				.optional()
+				.describe("Language for translatable literals (default: the session's data language)."),
 			mode: z.enum(['append', 'replace']).optional().describe('Default "append".'),
 		},
 		handler: setField,

@@ -1537,6 +1537,23 @@ const render_final_report = function(options){
 				parent			: result_container
 			})
 
+		// file-level NOTICES — what the engine DID to a file it could read (today:
+		// "this file was not UTF-8, it was read as windows-1252 and converted").
+		// Deliberately NOT the error container below: painting a successful,
+		// intended conversion red told the operator their good import had failed.
+		// A notice is a fact about the read, so it renders as ordinary report text.
+			const file_notices = report.notices
+			if (file_notices && file_notices.length > 0) {
+				for (let n = 0; n < file_notices.length; n++) {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'user_msg_container notice_msg',
+						text_content	: file_notices[n],
+						parent			: result_container
+					})
+				}
+			}
+
 		// file-level errors (unreadable CSV, no mapped column, a skipped row…)
 			const file_errors = report.errors
 			if (file_errors && file_errors.length > 0) {

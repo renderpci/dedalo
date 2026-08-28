@@ -734,7 +734,12 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+					// UTF-8 BOM (DATA-09, audit 2026-08-26). Without it Excel opens the file
+					// in the system ANSI code page: every accented character is mojibake on
+					// screen and, when the curator saves, the file goes back to disk as
+					// CP1252 — which is exactly the input the CSV import door then had to
+					// guess at. The BOM is what makes this download round-trip.
+					link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF' + csv_string));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
@@ -760,7 +765,8 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
+					// UTF-8 BOM — same reason as the CSV button above (DATA-09).
+					link.setAttribute('href', 'data:text/tsv;charset=utf-8,' + encodeURIComponent('\uFEFF' + tsv_string));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();

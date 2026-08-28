@@ -13,7 +13,10 @@
  * module-level binding (the classic bleed shortcut) AND capturing
  * config.menu.applicationLang/dataLang into a module-level binding (the S2-11
  * defect class: freezes the install default where PHP uses the per-request
- * lang).
+ * lang). That last rule is WIDENED at the bottom of this file into a full
+ * per-file CENSUS of every config.menu lang read outside src/config/, in any
+ * position — the 2026-08-26 audit found the write doors reading it from
+ * function-local ternaries, which the module-binding regex cannot see (P0-7).
  *
  * CACHE-FACTORY GATE (WS-B, DEC-13 rule 1): a module-level MUTABLE
  * `const … = new Map()/new Set()` cache must be created through
@@ -539,5 +542,244 @@ describe('runDetachedFromTransaction — frozen caller set', () => {
 		expect(unexpected).toEqual([]);
 		// Allowlist stays honest — a stale entry means the rule guards nothing.
 		expect([...ALLOWED_IMPORTERS].filter((rel) => !importers.includes(rel))).toEqual([]);
+	});
+});
+
+/**
+ * THE WIDENED LANG-READ CENSUS (P0-7, audit DATA-01) — `config.menu.dataLang` /
+ * `config.menu.applicationLang` ANYWHERE outside `src/config/`, not only in a
+ * module-level binding.
+ *
+ * WHY THE OLDER RULE ABOVE WAS NOT ENOUGH. It matches one shape,
+ * `^const NAME = config.menu.dataLang`, and every site the 2026-08-26 audit
+ * found was a FUNCTION-LOCAL ternary — `translatable ? config.menu.dataLang :
+ * 'lg-nolan'` inside an import loop — which is structurally invisible to it.
+ * Three bulk import doors resolved their WRITE language that way. The write is
+ * lang-sliced, so the process-wide install default REPLACED the operator's
+ * actual working language on every imported row and an empty cell CLEARED it,
+ * with `ok:true` returned. The defect class is not "a module binding"; it is
+ * "the static install default standing in for the per-request language".
+ *
+ * SO THE RULE IS A CENSUS, not a ban: the install default has legitimate
+ * readers (the ALS accessors that fall back to it, the dispatch seed that
+ * builds the scope, a login page that has no session yet, install-wide index
+ * builders, report labels). Each is enumerated below WITH ITS REASON and its
+ * measured count, and the ratchet is SHRINK-ONLY — a file may lose reads, never
+ * gain them, and a file absent from the census may have none at all.
+ *
+ * Entries marked OPEN are not endorsements: they are the same defect class,
+ * outside the edit scope of the change that installed this census, and they are
+ * what a later pass has to remove.
+ *
+ * HONEST LIMIT: the scan is textual and skips whole-line comments (`//`, `*`,
+ * `/*`) so prose naming the anti-pattern does not count; a read sharing a line
+ * with a trailing comment still does. It cannot see an aliased read
+ * (`const {menu} = config; menu.dataLang`) — no such site exists today, and the
+ * census going stale is what would surface one.
+ */
+describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
+	/** file → {count: reads measured 2026-08-27, reason: why they are allowed}. */
+	const CONFIG_LANG_READ_CENSUS: ReadonlyMap<string, { count: number; reason: string }> = new Map([
+		// ── THE TWO HOMES ────────────────────────────────────────────────────
+		[
+			'src/core/resolve/request_lang.ts',
+			{
+				count: 1,
+				reason:
+					'THE APPLICATION-LANG ACCESSOR. currentApplicationLang() falls back to the install default outside a request scope — this IS the definition of the fallback, not a leak of it. The DATA twin no longer reads config.menu at all: currentDataLang() falls back to config.lang.dataLangDefault, the read chain\u2019s first candidate and always a declared data language (2026-08-27, DATA-01).',
+			},
+		],
+		[
+			'src/core/api/dispatch.ts',
+			{
+				count: 2,
+				reason:
+					'THE SEED. The one place the request-language ALS scope is opened; the install default is the LAST step of the cascade (session > pre-auth cookie > default). config.menu.dataLang is safe to seed a WRITE language with because src/config/ resolves it against the declared data languages first — a session that has chosen no language cannot be handed one the chokepoint refuses.',
+			},
+		],
+		// ── NO SESSION EXISTS AT THE POINT OF READ ───────────────────────────
+		[
+			'src/core/api/handlers/login_context.ts',
+			{
+				count: 1,
+				reason:
+					'The LOGIN page ddo is built before any session exists; the pre-auth cookie is handled in dispatch, and the install default is the only remaining answer.',
+			},
+		],
+		[
+			'src/ai/rag/embed_source.ts',
+			{
+				count: 1,
+				reason:
+					'The RAG indexer OPENS its own scope for a SYSTEM principal (no session, no request): the index is an install-wide artifact, so the install application lang is the deliberate value. The DATA lang it pairs with is passed in per document.',
+			},
+		],
+		[
+			'src/ai/rag/image_source.ts',
+			{
+				count: 1,
+				reason:
+					'Same system-principal scope as embed_source, for the image index; the data lang comes from the caller (input.dataLang).',
+			},
+		],
+		[
+			'src/ai/mcp/tools/llm_map.ts',
+			{
+				count: 1,
+				reason:
+					'Builds the install-wide ontology map served to every agent — one artifact for all callers, not a per-request view, and it writes nothing.',
+			},
+		],
+		[
+			'src/core/test_data/synthetic_hierarchy_fixture.ts',
+			{
+				count: 2,
+				reason:
+					'A TEST-DATA generator: it seeds its rows in the install default on purpose and REPORTS the lang it used, so the gate reading the fixture knows which slice to expect.',
+			},
+		],
+		// ── LABELS AND READ-PATH FALLBACKS (not a write language) ────────────
+		[
+			'src/core/ontology/data_io.ts',
+			{
+				count: 1,
+				reason:
+					'The ontology CENSUS label (getActiveOntologies). The write in the same file is lg-nolan, unaffected.',
+			},
+		],
+		[
+			'src/core/section/record/create_record.ts',
+			{
+				count: 1,
+				reason: "The section LABEL written into the new record's audit text, not a data value.",
+			},
+		],
+		[
+			'src/core/section/indexation_grid.ts',
+			{
+				count: 1,
+				reason:
+					'A READ fallback candidate list (main lang > nolan > project langs) — PHP get_component_data_fallback, whose main lang IS the install default.',
+			},
+		],
+		[
+			'src/core/ts_object/term_resolver.ts',
+			{
+				count: 1,
+				reason:
+					'Main-lang fallback for a hierarchy1 term READ. This is S2-11’s original site, filed UNVERIFIED by the 2026-07 foundation audit; a read serving the install default is a wrong LABEL, never a wrong stored byte.',
+			},
+		],
+		[
+			'tools/tool_import_dedalo_csv/server/index.ts',
+			{
+				count: 4,
+				reason:
+					'Four termByTipo() REPORT LABELS. The fifth read — this door’s write language, audit DATA-01’s primary site — was removed by P0-7; it now reads currentDataLang().',
+			},
+		],
+		[
+			'tools/tool_propagate_component_data/server/index.ts',
+			{ count: 1, reason: 'A termByTipo() report label for the progress panel.' },
+		],
+		// ── OPEN: the same defect class, outside P0-7's edit scope ───────────
+		[
+			'tools/tool_update_cache/server/index.ts',
+			{
+				count: 1,
+				reason:
+					'OPEN (DATA-01, third site). The regenerate re-save’s DEFAULT lang bucket: stored items carrying their own lang keep it, but a lang-LESS stored item is re-stamped with the install default and an empty component’s `set_data []` goes there too.',
+			},
+		],
+		[
+			'src/core/section/record/duplicate_record.ts',
+			{
+				count: 1,
+				reason:
+					'OPEN, same class, narrower blast radius: it picks the TM audit slice lang for the duplicate’s two Time Machine rows. The matrix data is copied whole, so no stored item is mis-stamped — the "save" TM row snapshots the wrong language’s slice.',
+			},
+		],
+		[
+			'tools/tool_posterframe/server/index.ts',
+			{
+				count: 2,
+				reason:
+					'One termByTipo() report label, plus OPEN: the MediaIdentity lang that becomes the language segment of a translatable media component’s file path.',
+			},
+		],
+	]);
+
+	/**
+	 * Reads measured over src/ + tools/ on 2026-08-27, after P0-7's threading and
+	 * BOTH of its review rounds. SHRINK-ONLY, and it has only shrunk: 23 → 22.
+	 * The two reads that went are the ones the second review removed — the write
+	 * chokepoint's declared-set read (the set is built in src/config/, which this
+	 * census exempts, and no longer takes DEDALO_DATA_LANG as an input at all) and
+	 * the data half of the ALS accessor (currentDataLang() now falls back to
+	 * config.lang.dataLangDefault, which is not a config.menu read).
+	 */
+	const CENSUS_TOTAL = 22;
+
+	const LANG_READ = /config\.menu\.(?:dataLang|applicationLang)\b/;
+
+	function censusLangReads(): Map<string, number> {
+		const counts = new Map<string, number>();
+		const glob = new Glob('**/*.ts');
+		for (const [root, prefix] of [
+			[SRC_DIR, 'src/'],
+			[join(SRC_DIR, '..', 'tools'), 'tools/'],
+		] as [string, string][]) {
+			for (const rel of glob.scanSync(root)) {
+				const path = `${prefix}${rel}`;
+				// src/config/ is where the catalog lives — reading its own keys is the point.
+				if (path.startsWith('src/config/')) continue;
+				let hits = 0;
+				for (const line of readFileSync(join(root, rel), 'utf8').split('\n')) {
+					const trimmed = line.trim();
+					// Prose naming the anti-pattern is not a read of it.
+					if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
+						continue;
+					}
+					if (LANG_READ.test(line)) hits += 1;
+				}
+				if (hits > 0) counts.set(path, hits);
+			}
+		}
+		return counts;
+	}
+
+	const measured = censusLangReads();
+
+	test('no file reads the install-default lang outside the enumerated census', () => {
+		const unexpected = [...measured.keys()].filter((path) => !CONFIG_LANG_READ_CENSUS.has(path));
+		if (unexpected.length > 0) {
+			throw new Error(
+				`config.menu.dataLang / config.menu.applicationLang read in file(s) with no census entry:\n  ${unexpected.join('\n  ')}\nThe install default is NOT the request's language. A WRITE door must resolve it from the request-language ALS (currentDataLang(), src/core/resolve/request_lang.ts) — the static value is lang-sliced onto storage, so it REPLACES the operator's actual language and an empty value CLEARS it (audit DATA-01). If the read is genuinely install-wide (an ALS seed, a login page with no session, an install-wide index, a report label), add an entry to CONFIG_LANG_READ_CENSUS WITH its reason.`,
+			);
+		}
+		expect(unexpected).toEqual([]);
+	});
+
+	test('the census is SHRINK-ONLY — no file may gain a read', () => {
+		const grown = [...measured.entries()]
+			.filter(([path, count]) => (CONFIG_LANG_READ_CENSUS.get(path)?.count ?? 0) < count)
+			.map(
+				([path, count]) => `${path}: ${CONFIG_LANG_READ_CENSUS.get(path)?.count ?? 0} → ${count}`,
+			);
+		expect(grown).toEqual([]);
+	});
+
+	test('the census stays honest — no stale entry, and every entry states WHY', () => {
+		const stale = [...CONFIG_LANG_READ_CENSUS.keys()].filter((path) => !measured.has(path));
+		expect(stale).toEqual([]);
+		const reasonless = [...CONFIG_LANG_READ_CENSUS.entries()]
+			.filter(([, entry]) => entry.reason.trim().length < 20)
+			.map(([path]) => path);
+		expect(reasonless).toEqual([]);
+	});
+
+	test('the measured TOTAL never grows past the recorded census', () => {
+		const total = [...measured.values()].reduce((sum, count) => sum + count, 0);
+		expect(total).toBeLessThanOrEqual(CENSUS_TOTAL);
 	});
 });

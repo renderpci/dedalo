@@ -12,7 +12,10 @@
  *     without parsing prose out of `msg`;
  *   - a row issue has ONE shape (ImportRowIssue), whether it failed or warned;
  *   - progress carries `rows_total`, so the panel can show a real progress BAR
- *     rather than a scrolling text line (PHP never knew the total).
+ *     rather than a scrolling text line (PHP never knew the total);
+ *   - a NOTICE IS NOT AN ERROR: what the engine DID to a file it could read
+ *     travels in `notices`, never in `errors`, because the panel paints `errors`
+ *     red and a successful, intended encoding conversion is not a failure.
  *
  * The progress frame is published through ToolActionContext.publishProgress and
  * arrives at the client as the `data` of a job frame (core/api/job_stream.ts).
@@ -52,6 +55,18 @@ export interface ImportFileReport {
 	warnings: ImportRowIssue[];
 	/** File-level errors (unreadable CSV, no mapped column, missing section_id column). */
 	errors: string[];
+	/**
+	 * Operator-facing facts about the READ itself — today: "this file was not
+	 * UTF-8, it was read as windows-1252 and converted" (DATA-09).
+	 *
+	 * ITS OWN CHANNEL, ON THE REPORT, deliberately. The DATA-09 fix first pushed
+	 * the conversion notice into `errors`, and the panel paints every string in
+	 * `errors` into the red `.dedalo_last_error_container`: a successful,
+	 * intended conversion told the operator their import had failed. A notice
+	 * must reach the operator (a converted file is never a silent one) and must
+	 * not look like a refusal. Empty when the file needed nothing said about it.
+	 */
+	notices: string[];
 	/** Rows the file offered (excludes the header). */
 	rows_total: number;
 	/** Wall-clock for this file. */

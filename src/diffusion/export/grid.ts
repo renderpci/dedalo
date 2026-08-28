@@ -53,6 +53,11 @@ import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
+import {
+	type FrontierScope,
+	noteFrontierRefusal,
+	resolveDeclaredTipo,
+} from '../../core/security/frontier_scope.ts';
 import { getPermissions } from '../../core/security/permissions.ts';
 import {
 	type ToolActionContext,
@@ -83,6 +88,16 @@ type RawPathStep = {
 	name?: string;
 	[extra: string]: unknown;
 };
+
+/*
+ * The declared-shape normalizer that used to live here (`declaredSegmentTipo`)
+ * is DELETED: it was an ad-hoc twin of the reading `ddoIsAuthorized` and the
+ * buildEntries record guard already take, and the class review found the class
+ * open precisely because each site had its own. The one reading is
+ * `core/security/frontier_scope.ts resolveDeclaredTipo`, imported above — see
+ * its docblock for the shapes it refuses and the census that says refusing them
+ * refuses no lawful export.
+ */
 
 /** A registered tabulator column (PHP export_tabulator::$columns entry). */
 interface TabColumn {
@@ -550,6 +565,20 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	const plan = await compileExportPlan(exportDdos, sectionTipo);
 	const fields = plan.sections[0]?.fields ?? [];
 	const run = createExportRun();
+	// THE EXPORT FRONTIER (SEC-01's larger half). Gate B below authorizes the
+	// DECLARED ddo path segments; this scope authorizes the RUNTIME records the
+	// walk actually reaches through stored locators — a locator may name another
+	// section entirely, and resolveRecordAtoms followed it with no principal at
+	// all until 2026-08-28. Global admins carry no scope (unscoped, as
+	// everywhere else in this tool); every internal user of the same walk passes
+	// no scope and is byte-unchanged.
+	if (!context.principal.isGlobalAdmin) {
+		run.atoms.frontier = {
+			principal: context.principal,
+			surface: 'export',
+			door: 'tool_export',
+		};
+	}
 
 	// Stage C: the export serializes the FULL filtered selection (PHP forces
 	// limit ALL). The standard assembler applies the identifier chokepoint +
@@ -567,7 +596,19 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	// not narrow them). Re-apply the read path's authorization (dd_core_api Gate
 	// A + Gate B): every SQO target section AND every exported ddo-path component
 	// must be readable by the principal. Fail CLOSED. Global admins are exempt.
+	//
+	// SEC-01 (2026-08-26 audit, which RE-OPENED TOOLS-02): the per-segment half
+	// below now NORMALIZES the declared shape through resolveDeclaredTipo and
+	// REFUSES a segment it cannot resolve. It used to run only inside
+	// `typeof seg.section_tipo === 'string' && typeof seg.component_tipo === 'string'`,
+	// so every other shape — absent, null, ARRAY — was silently SKIPPED past a
+	// gate the resolver then ignored.
 	if (!context.principal.isGlobalAdmin) {
+		const exportScope: FrontierScope = {
+			principal: context.principal,
+			surface: 'export',
+			door: 'tool_export',
+		};
 		for (const targetSectionTipo of getSectionTipos(
 			sqo as unknown as Parameters<typeof getSectionTipos>[0],
 		)) {
@@ -578,14 +619,92 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 			}
 		}
 		for (const ddo of exportDdos) {
-			for (const seg of ddo.path ?? []) {
-				if (typeof seg.section_tipo === 'string' && typeof seg.component_tipo === 'string') {
-					if ((await getPermissions(context.principal, seg.section_tipo, seg.component_tipo)) < 1) {
+			// A non-array `path` carries no segment — the same reading
+			// compileExportPlan takes, so the gate and the compiler agree on what
+			// a ddo declares (a path-less ddo compiles to an empty chain and the
+			// buildEntries record guard emits nothing for it).
+			const declaredPath = Array.isArray(ddo?.path) ? ddo.path : [];
+			for (const rawSegment of declaredPath) {
+				// The gate authorizes the segment's NORMALIZED twin — the pair the
+				// consumers below will resolve — never the raw declared fields.
+				const seg = {
+					section_tipo: resolveDeclaredTipo(rawSegment?.section_tipo),
+					component_tipo: resolveDeclaredTipo(rawSegment?.component_tipo),
+				};
+				// SEC-01. An UNRESOLVABLE segment is REFUSED, never skipped: the
+				// resolver below walks the declared path whatever the gate could
+				// read off it, so "I cannot tell which (section, component) this
+				// segment names" is the one answer that must not mean "emit it".
+				if (seg.section_tipo === null || seg.component_tipo === null) {
+					throw new DedaloError('perm.denied', {
+						message: `tool_export: a ddo path segment names no resolvable (section_tipo, component_tipo) pair — section_tipo=${JSON.stringify(rawSegment?.section_tipo ?? null)}, component_tipo=${JSON.stringify(rawSegment?.component_tipo ?? null)}`,
+						coordinates: {
+							tool: 'tool_export',
+							section_tipo: seg.section_tipo ?? '',
+							tipo: seg.component_tipo ?? '',
+						},
+					});
+				}
+				// GATE B IS THE DECLARATION GATE, and it is DELIBERATELY STRICTER
+				// than the frontier predicate (frontier_scope.ts): it answers "may
+				// this caller ASK for this column", not "may this walk cross into
+				// that record". The frontier's globally-visible exemptions exist for
+				// the hops the ENGINE mints (a component_filter's sort path into the
+				// projects section, which no profile grants and which the caller
+				// never typed); a COLUMN the user declared is refused on the bare
+				// grant, exactly as before. The distinction is stated in
+				// frontier_scope.ts and pinned by human_write_scope_tripwire's
+				// TOOLS-02 assertion, which names this call.
+				if ((await getPermissions(context.principal, seg.section_tipo, seg.component_tipo)) < 1) {
+					noteFrontierRefusal(exportScope, {
+						surface: 'export',
+						door: 'tool_export',
+						sectionTipo: seg.section_tipo,
+						componentTipo: seg.component_tipo,
+						key: 'component',
+					});
+					throw new DedaloError('perm.denied', {
+						coordinates: {
+							tool: 'tool_export',
+							section_tipo: seg.section_tipo,
+							tipo: seg.component_tipo,
+						},
+					});
+				}
+			}
+			// THE dedalo_raw DATAFRAME COLUMNS (2026-08-28). In that format
+			// buildEntries mints and FILLS one raw cell per
+			// `getDataframeChildTipos(topComponent)` frame — real components, with
+			// their own stored data, that appear in NO ddo path and therefore never
+			// reached Gate B. They are authorized HERE, once per run, on the same
+			// key: a caller who may not read the frame component may not receive a
+			// column of its data because the main component happened to be
+			// exportable.
+			if (dataFormat === 'dedalo_raw') {
+				const firstSegment = declaredPath[0];
+				const topSection = resolveDeclaredTipo(firstSegment?.section_tipo);
+				const topComponent = resolveDeclaredTipo(firstSegment?.component_tipo);
+				if (topSection !== null && topComponent !== null) {
+					for (const frameTipo of await getDataframeChildTipos(topComponent)) {
+						// The SAME declaration gate as the segments above — a frame is
+						// a declared column of this export, just one the tool UI cannot
+						// spell, so it is authorized on the bare grant too.
+						if ((await getPermissions(context.principal, topSection, frameTipo)) >= 1) {
+							continue;
+						}
+						noteFrontierRefusal(exportScope, {
+							surface: 'export',
+							door: 'tool_export',
+							sectionTipo: topSection,
+							componentTipo: frameTipo,
+							key: 'component',
+						});
 						throw new DedaloError('perm.denied', {
+							message: `tool_export: dedalo_raw would emit the dataframe column ${topSection}.${frameTipo} of ${topSection}.${topComponent}, which this caller holds no read grant on`,
 							coordinates: {
 								tool: 'tool_export',
-								section_tipo: seg.section_tipo,
-								tipo: seg.component_tipo,
+								section_tipo: topSection,
+								tipo: frameTipo,
 							},
 						});
 					}

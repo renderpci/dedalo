@@ -8,6 +8,7 @@
 		"src/ai/rag/vector_store.ts": 1,
 		"src/config/catalog/index.ts": 1,
 		"src/config/config.ts": 1,
+		"src/config/data_langs.ts": 1,
 		"src/config/env.ts": 1,
 		"src/config/readers.ts": 2,
 		"src/config/render.ts": 1,
@@ -70,7 +71,7 @@
 		"src/server.ts": 1
 	},
 	"summary": {
-		"files": 66,
-		"total": 125
+		"files": 67,
+		"total": 126
 	}
 }

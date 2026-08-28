@@ -32,6 +32,7 @@
  */
 
 import { legacyAwareDefaultDir } from './catalog/media.ts';
+import { declaredDataLangs, resolveCurrentDataLang } from './data_langs.ts';
 import { RETIRED_ENV_KEYS, readEnv } from './env.ts';
 import { INSTALL_MODE } from './install_mode.ts';
 import { isDiffusionLangCode } from './lang_code.ts';
@@ -964,10 +965,59 @@ export function resolveDiffusionLangs(
 // truth for the same install fact.
 const projectsDefaultLangs = requireList('PROJECTS_DEFAULT_LANGS');
 
+// The other two language facts the DECLARED DATA-LANGUAGE SET is built from, read
+// once each for the same reason (a second read is a second source of truth), and
+// published below as `lang.dataLangDefault` / `lang.equivalences`.
+const dataLangDefault = requireString('DEDALO_DATA_LANG_DEFAULT');
+// Parsed here (not readJsonArray, whose String() element coercion would flatten
+// the nested groups); a malformed value refuses loudly inside the parser and
+// falls back to no equivalences rather than silently ungrouping languages.
+const langEquivalences = parseLangEquivalences(readString('DEDALO_LANG_EQUIVALENCES'));
+
+/**
+ * THE LANGUAGES THIS INSTALLATION DECLARES FOR RECORD DATA — the set the write
+ * chokepoint admits and the read fallback chain can reach (DATA-01/DATA-25).
+ * Built here because every key it derives from is read here, and because
+ * `menu.dataLang` two lines down is resolved AGAINST it. Definition, rules and
+ * the omission of DEDALO_DATA_LANG: `src/config/data_langs.ts`.
+ */
+export const INSTALLED_DATA_LANGS: ReadonlySet<string> = declaredDataLangs({
+	dataLangDefault,
+	projectLangs: projectsDefaultLangs,
+	equivalences: langEquivalences,
+});
+
+// The install's CURRENT data language, kept inside the declared set: a
+// DEDALO_DATA_LANG naming a language the install does not declare is overruled by
+// DEDALO_DATA_LANG_DEFAULT rather than becoming a write language no read reaches
+// (see resolveCurrentDataLang for why this reports instead of throwing).
+const configuredDataLang = readString('DATA_LANG');
+const currentDataLang = resolveCurrentDataLang(
+	configuredDataLang,
+	INSTALLED_DATA_LANGS,
+	dataLangDefault,
+);
+if (currentDataLang.replaced && !INSTALL_MODE) {
+	// INSTALL MODE IS EXEMPT FROM THE REPORT, not from the substitution: a fresh
+	// box boots on sentinels whose PROJECTS_DEFAULT_LANGS is ['lg-eng'] while
+	// DATA_LANG holds its catalog default 'lg-spa', so the mismatch there is the
+	// wizard's starting state and not an operator's mistake.
+	console.error(
+		`[config] DEDALO_DATA_LANG = '${configuredDataLang}' is not among the data languages ` +
+			`this installation declares (${[...INSTALLED_DATA_LANGS].join(', ')}); using ` +
+			`DEDALO_DATA_LANG_DEFAULT ('${dataLangDefault}') instead. Data already stored under ` +
+			'the overruled code is reachable again by adding it to DEDALO_PROJECTS_DEFAULT_LANGS.',
+	);
+}
+
 const diffusionLangs = resolveDiffusionLangs(
 	readList('DEDALO_DIFFUSION_LANGS'),
 	projectsDefaultLangs,
-	readString('DATA_LANG'),
+	// The RESOLVED language, not the raw key: this is the last-resort single
+	// publication language for an install with no project languages at all, and
+	// publishing a rendition in a language the install does not declare is the
+	// same stranded-slice mistake one layer out.
+	currentDataLang.lang,
 );
 
 // Report at boot, but DO NOT THROW: this module is imported at module scope by
@@ -1016,7 +1066,8 @@ export const config: DedaloConfig = Object.freeze({
 	}),
 	menu: Object.freeze({
 		applicationLang: readString('APPLICATION_LANG'),
-		dataLang: readString('DATA_LANG'),
+		// Resolved against the declared data languages above, never the raw key.
+		dataLang: currentDataLang.lang,
 		dataLangSync: readString('DATA_LANG_SYNC') === 'true',
 		skipTipos: Object.freeze(readJsonArray('MENU_SKIP_TIPOS')),
 		areasDeny: Object.freeze(readJsonArray('AREAS_DENY')),
@@ -1041,13 +1092,10 @@ export const config: DedaloConfig = Object.freeze({
 		// wizard boot; the wizard persists the real values.
 		applicationLangs: requireMap('DEDALO_APPLICATION_LANGS'),
 		applicationLangsDefault: requireString('DEDALO_APPLICATION_LANGS_DEFAULT'),
-		dataLangDefault: requireString('DEDALO_DATA_LANG_DEFAULT'),
+		// Both read once, above: they build INSTALLED_DATA_LANGS as well.
+		dataLangDefault,
 		dataLangSelector: readString('DEDALO_DATA_LANG_SELECTOR') === 'true',
-		// Equivalence classes. Parsed here (not readJsonArray, whose String()
-		// element coercion would flatten the nested groups); a malformed value
-		// refuses loudly and falls back to no equivalences rather than silently
-		// ungrouping languages.
-		equivalences: parseLangEquivalences(readString('DEDALO_LANG_EQUIVALENCES')),
+		equivalences: langEquivalences,
 	}),
 	features: Object.freeze({
 		lockComponents: readString('DEDALO_LOCK_COMPONENTS') === 'true',

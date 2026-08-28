@@ -6,6 +6,7 @@
 
 // import needed modules
 	import {dd_console} from '../../../core/common/js/utils/index.js'
+	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {error_text} from '../../../core/common/js/render_api_error.js'
@@ -56,7 +57,8 @@ export const tool_import_dedalo_csv = function () {
 	this.caller			= null // the section instance that opened this tool
 
 	// Tool-specific fields.
-	this.csv_files_list	= null // {Array} fetched by load_csv_files_list; each entry is a file descriptor object
+	this.csv_files_list		= null // {Array} fetched by load_csv_files_list; each entry is a file descriptor object
+	this.csv_files_notices	= null // {Array<string>} what the server DID to a staged file to read it (an encoding conversion); rendered by render()
 }//end tool_import_dedalo_csv
 
 
@@ -66,13 +68,13 @@ export const tool_import_dedalo_csv = function () {
 * Extend tool_import_dedalo_csv with shared prototype methods from tool_common,
 * common, and the render module.
 *
-* render / destroy / refresh come from the shared bases unchanged.
+* destroy / refresh come from the shared bases unchanged; render is the shared
+* one WRAPPED below (it adds the staged-files notice surface and nothing else).
 * edit and upload_done are provided by render_tool_import_dedalo_csv so that
 * all DOM-building logic stays in the render module while the tool controller
 * (this file) remains data-focused.
 */
 // prototypes assign
-	tool_import_dedalo_csv.prototype.render			= tool_common.prototype.render
 	tool_import_dedalo_csv.prototype.destroy		= common.prototype.destroy
 	tool_import_dedalo_csv.prototype.refresh		= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
@@ -188,6 +190,77 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
 
 /**
+* RENDER
+* The shared tool render (tool_common.prototype.render), plus the ONE thing the
+* render module cannot show: what the server DID to a staged file in order to
+* read it.
+*
+* WHY IT LIVES HERE. get_csv_files answers `{files, errors, notices}`. The
+* `notices` are the encoding conversions (DATA-09: "this file is not UTF-8, it
+* was read as windows-1252 and converted") — and the file list, the column map
+* and the sample values the operator maps their columns from are all read out of
+* that converted text. Until now the panel never showed it: the notice existed
+* only in the import report, i.e. AFTER the records were written. An operator
+* who is told what was done to the file BEFORE mapping can stop and re-export it
+* as UTF-8 instead of discovering the conversion in the report.
+*
+* IN FLOW, NOT ui.show_message: `.wrapper_tool` sets `contain: content`, which
+* makes it the containing block for absolutely positioned children AND clips
+* them — and `.component_message` is `position:absolute; top:-3em`. A banner
+* there is a surface that renders nowhere. This inserts ordinary text at the top
+* of the tool body, the same shape (and the same classes) the report panel gives
+* a notice — never the red error container, which is the error channel's.
+*
+* @param {Object} [options={}] - Render options forwarded to tool_common.prototype.render
+* @returns {Promise<HTMLElement>} The node the shared render returned, unchanged
+*/
+tool_import_dedalo_csv.prototype.render = async function(options={}) {
+
+	const self = this
+
+	const result = await tool_common.prototype.render.call(self, options)
+
+	// container. A full render answers the tool wrapper (with a content_data
+	// pointer); a content-level refresh answers the content_data node itself.
+		const container = (result && result.content_data) ? result.content_data : result
+		if (!container || typeof container.insertBefore!=='function') {
+			return result
+		}
+
+	// clean previous notices (a content-level refresh re-enters with the same node)
+		const previous = container.querySelectorAll(':scope > .notice_msg')
+		for (let i = previous.length - 1; i >= 0; i--) {
+			previous[i].remove()
+		}
+
+	// notices. One line per staged file the engine had to convert, at the TOP of
+	// the panel: it is a fact about the files listed below it, so it is read
+	// before they are mapped, not after the import.
+		const notices = self.csv_files_notices
+		if (Array.isArray(notices) && notices.length>0) {
+			const notices_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'user_msg_container notice_msg'
+			})
+			const notices_length = notices.length
+			for (let i = 0; i < notices_length; i++) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'text',
+					text_content	: notices[i],
+					parent			: notices_container
+				})
+			}
+			container.insertBefore(notices_container, container.firstChild)
+		}
+
+
+	return result
+}//end render
+
+
+
+/**
 * LOAD_CSV_FILES_LIST
 * Fetches the list of CSV files currently staged in the per-user upload directory
 * on the server. The directory path is resolved server-side from the constant
@@ -237,7 +310,8 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 					dd_console("-> load_csv_files_list API response:",'DEBUG',response);
 				}
 
-				// envelope v2 payload: `{files:[…], errors:[per-file read problems]}`.
+				// envelope v2 payload:
+				// `{files:[…], errors:[per-file read problems], notices:[what we DID to a file]}`.
 				// The caller wants the LIST — an unreadable CSV is reported per file
 				// and must not hide the ones that did parse.
 				const files_data	= response_data(response)
@@ -245,6 +319,20 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 				if (Array.isArray(file_errors) && file_errors.length>0) {
 					console.error('load_csv_files_list file errors:', file_errors)
 				}
+
+				// NOTICES — kept for render() to show the operator. This is the
+				// MAPPER PREVIEW's own channel: the columns and sample values below
+				// are what the engine read AFTER converting a file that was not UTF-8
+				// (DATA-09), and the operator maps their columns from exactly that.
+				// Dropping it here (the previous behaviour: notices were not even
+				// read) left that conversion with no operator surface at all — it
+				// reached the panel only later, in the import report, after the
+				// records were written.
+				// A notice is NEVER merged into `errors`: the panel paints errors red
+				// and an intended, successful conversion is not a failure.
+				const file_notices	= files_data?.notices
+				self.csv_files_notices = Array.isArray(file_notices) ? file_notices : []
+
 				resolve(Array.isArray(files_data?.files) ? files_data.files : [])
 			})
 		})

@@ -23,6 +23,8 @@ readonly COMPOSE_FILE='docker-compose.simple.yml'
 readonly TLS_TEMPLATE='deploy/nginx.simple-tls.conf.tpl'
 readonly GENERATED_CONF='deploy/nginx.simple.generated.conf'
 readonly CERT_DIR='deploy/certs'
+# The local-CA generator, shared with the rotation path (deploy/dedalo-tls-rotate.sh).
+readonly ROTATE_TLS='deploy/dedalo-tls-rotate.sh'
 # NOT ".env": compose would read that for variable substitution, but so would the
 # engine's own configuration loader from the container's working directory.
 readonly ENV_FILE='.dedalo.env'
@@ -265,38 +267,21 @@ tls_local_ca() {
 	echo
 	ask LOCAL_HOST 'Name or IP staff will type in the browser (e.g. dedalo.local or 192.168.1.20)' "$(hostname -f 2>/dev/null || hostname)"
 
-	mkdir -p "$CERT_DIR"
-	local ca_key="$CERT_DIR/dedalo-local-ca.key" ca_crt="$CERT_DIR/dedalo-local-ca.pem"
-	local key="$CERT_DIR/privkey.pem" csr="$CERT_DIR/server.csr" crt="$CERT_DIR/fullchain.pem"
-
-	# A SAN covering the name, localhost and the loopback address: browsers have
-	# ignored the legacy CN field for years, so a certificate without a matching
-	# SAN entry is rejected outright.
-	local san="DNS:$LOCAL_HOST,DNS:localhost,IP:127.0.0.1"
-	case "$LOCAL_HOST" in
-		[0-9]*.[0-9]*.[0-9]*.[0-9]*) san="IP:$LOCAL_HOST,DNS:localhost,IP:127.0.0.1" ;;
-	esac
-
+	# ONE GENERATOR, TWO OCCASIONS. The certificate an install gets and the
+	# certificate a ROTATION gets are produced by the same script — a key that
+	# has to be replaced after it travelled inside a container image (audit
+	# OPS-01) is replaced by the same code that issued it, so the two can never
+	# drift in SAN, lifetime or permissions.
 	bold 'Creating a local certificate authority and a server certificate…'
-	openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
-		-keyout "$ca_key" -out "$ca_crt" \
-		-subj "/CN=Dedalo local CA" 2>/dev/null \
-		|| fail 'Could not create the local CA.'
-	openssl req -newkey rsa:2048 -nodes -keyout "$key" -out "$csr" \
-		-subj "/CN=$LOCAL_HOST" 2>/dev/null \
-		|| fail 'Could not create the server key.'
-	# 825 days is the maximum leaf lifetime Apple platforms accept; longer and
-	# Safari and iOS reject the certificate outright.
-	openssl x509 -req -in "$csr" -CA "$ca_crt" -CAkey "$ca_key" -CAcreateserial \
-		-out "$crt" -days 825 -sha256 \
-		-extfile <(printf 'subjectAltName=%s\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n' "$san") 2>/dev/null \
-		|| fail 'Could not sign the server certificate.'
-	rm -f "$csr"
-	chmod 600 "$ca_key" "$key"
+	# Invoked THROUGH bash, not by its exec bit: a checkout with core.fileMode
+	# off (or an unzipped copy) would otherwise die here with "permission
+	# denied" at the TLS step of a museum install.
+	bash "$ROTATE_TLS" --mode local-ca --host "$LOCAL_HOST" --dir "$CERT_DIR" --no-reload --quiet \
+		|| fail 'Could not create the local certificate authority.'
 
 	generate_tls_conf '_' '/etc/dedalo/certs/fullchain.pem' '/etc/dedalo/certs/privkey.pem'
 	PUBLIC_URL="https://$LOCAL_HOST/dedalo/core/page/"
-	LOCAL_CA_FILE="$ca_crt"
+	LOCAL_CA_FILE="$CERT_DIR/dedalo-local-ca.pem"
 }
 
 # Mode 3 — you already have a certificate (institutional CA, a wildcard, a cert

@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 510,
-		"functions": 4431,
-		"functionsOverCap": 692,
+		"files": 514,
+		"functions": 4517,
+		"functionsOverCap": 695,
 		"filesOverCap": 269
 	},
 	"files": {
@@ -208,7 +208,7 @@
 		"src/core/search/builders/builder_section_id.ts": 19,
 		"src/core/search/builders/builder_string.ts": 36,
 		"src/core/search/builders/types.ts": 7,
-		"src/core/search/conform.ts": 40,
+		"src/core/search/conform.ts": 37,
 		"src/core/search/order_path.ts": 13,
 		"src/core/search/search_related.ts": 24,
 		"src/core/search/sql_assembler.ts": 80,
@@ -248,7 +248,7 @@
 		"src/core/tools/import_csv.ts": 12,
 		"src/core/tools/import_csv_execute.ts": 16,
 		"src/core/tools/import_data.ts": 16,
-		"src/core/tools/import_execute.ts": 15,
+		"src/core/tools/import_execute.ts": 14,
 		"src/core/tools/job_status.ts": 11,
 		"src/core/tools/loader.ts": 12,
 		"src/core/tools/marc21.ts": 12,

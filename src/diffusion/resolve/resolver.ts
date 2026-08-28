@@ -63,6 +63,12 @@ import {
 	findInverseReferences,
 	getRelationTables,
 } from '../../core/search/search_related.ts';
+import {
+	type FrontierScope,
+	frontierComponentAllowed,
+	frontierRecordAllowed,
+	noteFrontierRefusal,
+} from '../../core/security/frontier_scope.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { getTermByLocator, getTermDataByLocator } from '../../core/ts_object/term_resolver.ts';
 import type { MetaValueIR, ParserContext, ValueMeta } from '../parsers/types.ts';
@@ -2102,12 +2108,70 @@ async function processBatch(
 	sectionIds: (number | string)[],
 	level: number,
 	cursor: number,
+	viaFrontier = false,
 ): Promise<ResolvedBatch> {
 	const table = await matrixTableOf(ctx, sectionPlan.sectionTipo);
 	if (table === null) {
 		throw new Error(`diffusion resolver: no matrix table for section '${sectionPlan.sectionTipo}'`);
 	}
-	const records = await readMatrixRecords(table, sectionPlan.sectionTipo, sectionIds);
+	// DIFF-C — THE DIFFUSION FRONTIER (audit 2026-08-26, closed 2026-08-28).
+	//
+	// The PRIMARY selection is principal-scoped (DIFF-01: selectRecordBatches
+	// passes the enqueuing principal to buildSearchSql), but the frontier drain
+	// below queues RELATED records straight into this reader with no principal
+	// at all — and everything this function returns is written to the PUBLIC
+	// target. So a non-admin diffusing their own section published the records
+	// of every project their records happen to link to.
+	//
+	// The DIFFUSION refusal law (security/frontier_scope.ts property 3): DROP
+	// the row, leave a ledger line, let the run finish. Never a throw — a
+	// publication run must not die on one unreachable link — and never a silent
+	// skip. Applied to the FRONTIER only: the primary batch already passed the
+	// very same predicate inside the assembler, so re-probing it would be a
+	// second answer to a question already answered (and the drift such a second
+	// copy invites is exactly WC-2026-08-09-users-section-record-scope).
+	let visibleIds = sectionIds;
+	const runPrincipal = ctx.options.principal;
+	if (viaFrontier && runPrincipal !== undefined && !runPrincipal.isGlobalAdmin) {
+		const scope: FrontierScope = {
+			principal: runPrincipal,
+			surface: 'diffusion',
+			door: 'diffusion.frontier',
+		};
+		const kept: (number | string)[] = [];
+		// Both frontier keys. The SECTION's read grant is per SECTION, not per
+		// record — resolved once for the batch, and it is the key that fires when
+		// a hop lands in a section the caller holds nothing on at all.
+		const sectionReadable = await frontierComponentAllowed(scope, {
+			sectionTipo: sectionPlan.sectionTipo,
+			componentTipo: sectionPlan.sectionTipo,
+			table,
+		});
+		for (const sectionId of sectionIds) {
+			const recordReadable =
+				sectionReadable && (await frontierRecordAllowed(scope, sectionPlan.sectionTipo, sectionId));
+			if (recordReadable) {
+				kept.push(sectionId);
+				continue;
+			}
+			// The log line names WHICH key refused — a missing section grant and an
+			// out-of-scope record are different operator problems.
+			noteFrontierRefusal(scope, {
+				surface: 'diffusion',
+				door: 'diffusion.frontier',
+				sectionTipo: sectionPlan.sectionTipo,
+				sectionId,
+				key: sectionReadable ? 'record' : 'component',
+			});
+			// DROPPED, not unpublished: this run simply has no business with the
+			// record. Marking it 'unpublish' would let a caller who cannot READ a
+			// record REMOVE it from the public target — a write through a door
+			// that only ever had a read question to answer.
+			ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, sectionId));
+		}
+		visibleIds = kept;
+	}
+	const records = await readMatrixRecords(table, sectionPlan.sectionTipo, visibleIds);
 	const byId = new Map(records.map((record) => [String(record.section_id), record]));
 
 	const outRecords: RecordIR[] = [];
@@ -2115,7 +2179,7 @@ async function processBatch(
 	const unpublishIds: (number | string)[] = [];
 	const errors: FieldResolutionError[] = [];
 
-	for (const sectionId of sectionIds) {
+	for (const sectionId of visibleIds) {
 		const record = byId.get(String(sectionId));
 		ctx.usedRecords.add(RECORD_KEY(sectionPlan.sectionTipo, sectionId));
 		if (record === undefined) {
@@ -2256,7 +2320,7 @@ export async function* resolvePublication(
 		);
 		for (let offset = 0; offset < pendingIds.length; offset += ctx.batchSize) {
 			const slice = pendingIds.slice(offset, offset + ctx.batchSize);
-			yield await processBatch(ctx, sectionPlan, slice, level, primaryCursor);
+			yield await processBatch(ctx, sectionPlan, slice, level, primaryCursor, true);
 		}
 	}
 }
@@ -2289,15 +2353,104 @@ export async function* resolvePublication(
  */
 export type ExportChainStep = Exclude<ResolveStep, { kind: 'system' } | { kind: 'degraded' }>;
 
-/** The per-request state of one export resolution run (caches only). */
+/** The per-request state of one export resolution run (caches + the ACL scope). */
 export interface ExportAtomRun {
 	tableCache: Map<string, string | null>;
 	recordCache: Map<string, MatrixRecord | null>;
+	/**
+	 * THE EXPORT FRONTIER (SEC-01's larger half, named 2026-08-28).
+	 *
+	 * {@link resolveRecordAtoms} follows STORED LOCATORS out of the selected
+	 * record into other sections' records and serializes their values. Until
+	 * this field existed it did so with NO principal: the selection was
+	 * principal-scoped (grid.ts passes the caller to buildSearchSql), and Gate B
+	 * authorized the DECLARED ddo path segments — but nothing authorized the
+	 * RUNTIME record a locator actually names, and a stored locator may name a
+	 * different section than the segment declares. So a non-admin's export
+	 * emitted the field values of records they cannot read.
+	 *
+	 * Set by the door that has a caller (tool_export). ABSENT = an internal
+	 * resolution with nothing to gate — the same posture buildSearchSql takes
+	 * for a caller-less read, so every existing internal user of this walk is
+	 * byte-unchanged.
+	 */
+	frontier?: FrontierScope;
+	/** `${section_tipo}:${section_id}` → the frontier RECORD answer. One probe
+	 * per crossed record per run: the probe is a real principal-scoped search
+	 * (record_scope.ts), and an export fans out over the same targets endlessly. */
+	frontierRecordCache: Map<string, boolean>;
 }
 
 /** Fresh per-request run state (never module-scoped — request isolation). */
 export function createExportAtomRun(): ExportAtomRun {
-	return { tableCache: new Map(), recordCache: new Map() };
+	return { tableCache: new Map(), recordCache: new Map(), frontierRecordCache: new Map() };
+}
+
+/**
+ * ONE frontier crossing of the export walk, under the EXPORT refusal law
+ * (security/frontier_scope.ts property 3): a record or component the caller may
+ * not read makes the whole export THROW `perm.denied`. An export is a
+ * deliverable — a silently short cell is a corrupted one, and a heritage
+ * archive must never hold a column that is complete for one operator and
+ * quietly truncated for another. The refusal is loud on both channels
+ * (noteFrontierRefusal) before the throw.
+ *
+ * Both frontier keys, on the RUNTIME identity the locator actually names — not
+ * on the declared segment Gate B already authorized.
+ */
+async function assertExportCrossing(
+	run: ExportAtomRun,
+	sectionTipo: string,
+	sectionId: number | string,
+	componentTipo: string | undefined,
+): Promise<void> {
+	const scope = run.frontier;
+	if (scope === undefined || scope.principal === undefined) return;
+	const refuse = (key: 'component' | 'record'): never => {
+		noteFrontierRefusal(scope, {
+			surface: scope.surface,
+			door: scope.door,
+			sectionTipo,
+			...(componentTipo === undefined ? {} : { componentTipo }),
+			sectionId,
+			key,
+		});
+		throw new DedaloError('perm.denied', {
+			message: `export frontier: no ${key} access to ${sectionTipo}${componentTipo === undefined ? '' : `.${componentTipo}`} (record ${sectionId}) — the export would have emitted a value the caller cannot read`,
+			coordinates: {
+				tool: scope.door,
+				section_tipo: sectionTipo,
+				tipo: componentTipo ?? '',
+				// coordinates accept string | number; the canonical INT form travels as-is
+				// (WC-2026-08-10-section-id-int-canonical — no String() minting here).
+				section_id: sectionId,
+			},
+		});
+	};
+	if (
+		!(await frontierComponentAllowed(scope, {
+			sectionTipo,
+			...(componentTipo === undefined ? {} : { componentTipo }),
+		}))
+	) {
+		refuse('component');
+	}
+	const key = RECORD_KEY(sectionTipo, sectionId);
+	let allowed = run.frontierRecordCache.get(key);
+	if (allowed === undefined) {
+		allowed = await frontierRecordAllowed(scope, sectionTipo, sectionId);
+		if (!allowed) {
+			// A locator whose TARGET DOES NOT EXIST leaks nothing, and a dangling
+			// locator is ordinary in heritage data (the target was deleted after
+			// the reference was stored). Refusing one would kill the whole export
+			// over a row that has no value to disclose — a guard that refuses
+			// lawful traffic. The unscoped read is the run's own cached loader, so
+			// this costs nothing the walk was not about to spend anyway.
+			allowed = (await loadExportRecord(run, sectionTipo, sectionId)) === null;
+		}
+		run.frontierRecordCache.set(key, allowed);
+	}
+	if (!allowed) refuse('record');
 }
 
 /**
@@ -2436,6 +2589,15 @@ export async function resolveRecordAtoms(
 				if (typeof locator?.section_tipo !== 'string' || locator.section_id === undefined) {
 					continue;
 				}
+				// THE FRONTIER: this locator leaves the record the caller selected.
+				// Authorized on the RUNTIME identity (the locator's own section) and
+				// on the component the NEXT step will read through it.
+				await assertExportCrossing(
+					run,
+					locator.section_tipo,
+					Number(locator.section_id),
+					(chain[position + 1] as ExportChainStep | undefined)?.tipo,
+				);
 				await walk(
 					position + 1,
 					locator.section_tipo,
@@ -2465,6 +2627,12 @@ export async function resolveRecordAtoms(
 				if (typeof locator?.section_tipo !== 'string' || locator.section_id === undefined) {
 					continue;
 				}
+				// A relation LEAF is a frontier crossing too: the projection resolves
+				// each of these targets into a label (atoms.ts → cellOpts.loadRecord),
+				// so the target record's data reaches the deliverable exactly as a
+				// hop's would. The component key names no component — the leaf reads
+				// the TARGET's label through its own ontology, not a declared tipo.
+				await assertExportCrossing(run, locator.section_tipo, locator.section_id, undefined);
 				locators.push({
 					sectionTipo: locator.section_tipo,
 					sectionId: locator.section_id as number | string,
