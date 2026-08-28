@@ -824,3 +824,45 @@ In this order:
    and any build cache on machines that built it (`docker builder prune -af`).
    You cannot delete the copies you already handed out — which is why step 2 is
    the one that actually ends the exposure.
+
+## 14. Revoking an account (and what a compromised one needs)
+
+An account's access has TWO independent halves, and the engine ends both — but only
+for the doors it can reach. Know which is which before you assume an account is out.
+
+**What a write to the record does automatically** (`src/core/security/revocation.ts`,
+fired from the record-write chokepoint): deactivating (dd131 = No), renaming (dd132),
+changing the password (dd133), removing the profile (dd1725), flipping global-admin
+(dd244) or deleting the record ENDS that user's sessions, unlinks their per-session
+media markers, and drops pending password-recovery codes. There is nothing to run by
+hand and no cache to clear. Media is the half people forget: the web server authorizes
+by `stat()`ing a marker file, so a session that ends without its marker going with it
+leaves a cookie that still reads the whole archive — that is why the two are one
+operation and not two.
+
+**The one surface a revocation cannot reach by ending sessions** is a long-lived
+process that holds no session: the MCP stdio server (`DEDALO_MCP_USER_ID`). It re-asks
+the account's standing on every tool call, so a deactivation or a deletion takes effect
+on the next call without a restart — but a process is not a session and will not
+disappear. If the service account itself is the compromised one, stop the process.
+
+### The two steps for a COMPROMISED account
+
+Order matters. Doing only the first is the common mistake, because the account stops
+being able to log in and it looks finished.
+
+1. **Cut the credentials.** Change the password (dd133) — do NOT merely deactivate.
+   Deactivation refuses the LOGIN door; it is a policy state, and a policy state is the
+   thing an operator un-flips by accident. A changed password invalidates what the
+   attacker holds. Both end every live session and every media marker.
+2. **Deal with what the account left behind.** Sessions and markers are gone; these
+   are not: any MCP/agent process configured as that user (stop it, then repoint
+   `DEDALO_MCP_USER_ID`), any API integration holding a token minted for it, and the
+   record changes it made — the Time Machine holds them by user, which is where a
+   review starts.
+
+Root (dd128/-1) is EXEMPT from the dd131 refusal, by design and in parity with the
+frozen PHP: it is the installation's recovery identity, and a mis-clicked radio must
+not lock an installation out of itself. Root's credentials are cut in step 1 like
+anyone else's — root may edit its own password, which is the only in-engine way to
+rotate it.
