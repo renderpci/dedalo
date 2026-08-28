@@ -177,13 +177,30 @@ describe('install restart supervisor contract', () => {
 	// A proxy config that does not route it does not fail loudly: the engine stays
 	// healthy while the widget reports it down and the post-update restart poll
 	// can never confirm the new version — observed as Apache AH01630 denying
-	// /var/www/html/health. Both shipped proxy configs must carry the route.
-	test('both shipped proxy configs route /health to the engine', async () => {
-		const nginx = await Bun.file(new URL('../../deploy/nginx.conf', import.meta.url)).text();
+	// /var/www/html/health. Every shipped proxy config must carry the route — AND
+	// so must every proxy sample in the manual: an operator copy-pastes the
+	// documented vhost, so a hole there reaches production exactly like a hole in
+	// deploy/. Three samples were found empty on 2026-08-28 (the docs nginx block
+	// and both multi_instance blocks), which is what this list prevents recurring.
+	test('every shipped proxy config and documented sample routes /health', async () => {
+		// deploy/: the configs an operator installs verbatim.
+		for (const path of ['deploy/nginx.conf', 'deploy/nginx.simple.conf']) {
+			const conf = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+			expect(conf, `${path} must route /health`).toMatch(/location\s*=\s*\/health\s*\{/);
+		}
 		const apache = await Bun.file(new URL('../../deploy/apache.conf', import.meta.url)).text();
-
-		expect(nginx).toMatch(/location\s*=\s*\/health\s*\{/);
 		expect(apache).toMatch(/^\s*ProxyPass\s+\/health\s+unix:/m);
+
+		// docs/: each page ships BOTH flavours, so each must carry both rules.
+		for (const path of ['docs/install/reverse_proxy.md', 'docs/install/multi_instance.md']) {
+			const page = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+			expect(page, `${path}: the nginx sample must route /health`).toMatch(
+				/location\s*=\s*\/health\s*\{/,
+			);
+			expect(page, `${path}: the Apache sample must route /health`).toMatch(
+				/^\s*ProxyPass\s+\/health\s+unix:/m,
+			);
+		}
 	});
 
 	// -----------------------------------------------------------------------

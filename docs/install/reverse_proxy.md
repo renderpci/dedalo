@@ -201,6 +201,17 @@ server {
 	# include /srv/dedalo/media/dedalo_media_protection.nginx.conf;
 	open_file_cache off;            # a stat() cache delays an unpublish
 
+	# Liveness probe. The engine serves its health check at the ORIGIN ROOT
+	# `/health`. The watchdog hits it over the unix socket, but the browser-facing
+	# system_info maintenance widget probes it over HTTP too, so it must be
+	# reachable here — otherwise the catch-all `location / { 404 }` below swallows
+	# it and the widget reports a healthy engine as down.
+	location = /health {
+		proxy_pass http://dedalo_ts;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+	}
+
 	# API + dynamic routes. A regex location outranks every prefix location, so
 	# this keeps precedence over the /dedalo/ static alias below.
 	location ~ ^/(api/v1/|dedalo/core/api/) {
@@ -379,6 +390,9 @@ certbot renew --dry-run                    # the snap installs the renewal timer
 # The engine answers over the socket, and Postgres is reachable.
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 
+# The same probe THROUGH the proxy — the surface the browser client uses.
+curl --fail https://dedalo.example.org/health
+
 # The proxy serves the client over TLS.
 curl -I https://dedalo.example.org/dedalo/core/page/
 
@@ -388,6 +402,11 @@ curl -I -H 'Range: bytes=0-99' https://dedalo.example.org/dedalo/media/image/thu
 # The marker store is never served (404).
 curl -I https://dedalo.example.org/dedalo/media/.publication/auth/
 ```
+
+A `/health` that is green over the socket but `404`s or `403`s over the domain
+means the `/health` rule above is missing: the engine is fine, and only the
+browser-facing checks — the maintenance widget and the post-update restart poll —
+can see the difference.
 
 A `Range` request that answers `200` with a full body — instead of `206` — means
 something has been put in the media byte path. Find it and take it out.

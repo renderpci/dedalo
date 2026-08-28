@@ -283,6 +283,11 @@ server {
     include /srv/dedalo/site1/media/dedalo_media_protection.nginx.conf;
     open_file_cache off;
 
+    # Liveness probe at the origin root — one per domain, each to its OWN
+    # instance. See [Reverse proxy](reverse_proxy.md) for why omitting it makes a
+    # healthy engine look down.
+    location = /health { proxy_pass http://dedalo_site1; }
+
     location ~ ^/(api/v1/|dedalo/core/api/) {
         proxy_pass http://dedalo_site1;
         proxy_buffering off;
@@ -325,6 +330,13 @@ first match wins. Every path points at **this instance's** socket, media and clo
 
     ProxyPreserveHost On
     ProxyTimeout 300                # >= SERVER_IDLE_TIMEOUT_S (255)
+
+    # --- Liveness probe → THIS instance's socket -------------------------------
+    # At the ORIGIN ROOT, one per domain. See [Reverse proxy](reverse_proxy.md):
+    # without it Apache resolves /health against the DocumentRoot and the
+    # maintenance widget reports a healthy engine as down.
+    ProxyPass        /health unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/health
+    ProxyPassReverse /health unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/health
 
     # --- API + dynamic routes → THIS instance's socket -------------------------
     ProxyPass /api/v1/                              unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/api/v1/
@@ -405,6 +417,9 @@ Run this per instance after enabling it:
 
 - [ ] `curl --fail --unix-socket /run/dedalo-site1/dedalo_ts.sock http://localhost/health`
       → `200` with `"db":"ok"`.
+- [ ] `curl --fail https://site1.example.org/health` → the same `200`, through the
+      proxy. A `404`/`403` here with the socket probe green means this vhost is
+      missing its `/health` rule.
 - [ ] `https://site1.example.org/dedalo/core/page/` serves the login form over TLS.
 - [ ] Log in, create + save + reload a record; upload an image — the derivative and
       thumbnail appear.
