@@ -20,14 +20,22 @@
  * WHAT IT DELIBERATELY DOES NOT DO: pick the trim set. Every vendored tree here is
  * trimmed (pdfjs drops 10 MB of sourcemaps and a demo PDF; xlsx keeps one .mjs and
  * a LICENSE), and which files are dead weight is a judgement about what the CLIENT
- * loads — the `--keep` globs make it an explicit argument instead of a silent
- * default. After the swap it prints the exact follow-up: rewrite the digests, set
+ * loads — the `--keep` and `--drop` globs make it an explicit argument instead of a
+ * silent default. `--keep` names subtrees to take; `--drop` names paths to remove
+ * from what was taken, which is the only way to express pdfjs's trim ("everything
+ * except the sourcemaps scattered through build/ and web/, and the demo PDF") —
+ * before it existed that trim was done BY HAND, i.e. not reproducibly, which is a
+ * poor property for the bytes a museum serves. After the swap it prints the exact follow-up: rewrite the digests, set
  * `reviewed`, run the gates.
  *
  * Usage:
  *   bun run scripts/vendor_fetch.ts --lib xlsx --version 0.20.4 \
  *       --url https://cdn.sheetjs.com/xlsx-0.20.4/xlsx-0.20.4.tgz \
  *       --sha256 <expected> [--keep 'xlsx.mjs' --keep 'LICENSE'] [--strip 1]
+ *
+ *   bun run scripts/vendor_fetch.ts --lib pdfjs --version 6.2.108 \
+ *       --url https://github.com/mozilla/pdf.js/releases/download/v6.2.108/pdfjs-6.2.108-dist.zip \
+ *       --sha256 <expected> --drop '**\/*.map' --drop 'web/compressed.tracemonkey-pldi-09.pdf'
  *
  * Supported archives: .tgz/.tar.gz and .zip (extracted with the system `tar`/`unzip`
  * — no in-repo archive parser, which is machinery this needs once per year).
@@ -36,9 +44,15 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { listVendorDirs, REPO_ROOT, treeDigest, VENDOR_ROOT } from './vendor_verify.ts';
+import {
+	listTreeFiles,
+	listVendorDirs,
+	REPO_ROOT,
+	treeDigest,
+	VENDOR_ROOT,
+} from './vendor_verify.ts';
 
-/** `--flag value` / `--flag=value`; `--keep` may repeat. */
+/** `--flag value` / `--flag=value`; `--keep` and `--drop` may repeat. */
 function parseArgs(argv: string[]): Map<string, string[]> {
 	const out = new Map<string, string[]>();
 	for (let i = 0; i < argv.length; i++) {
@@ -63,7 +77,36 @@ const version = args.get('version')?.[0] ?? '';
 const url = args.get('url')?.[0] ?? '';
 const expected = (args.get('sha256')?.[0] ?? '').toLowerCase();
 const keep = args.get('keep') ?? [];
+const drop = args.get('drop') ?? [];
 const strip = Number(args.get('strip')?.[0] ?? '1');
+
+/**
+ * A `--drop` glob as a regex over POSIX-relative paths.
+ *
+ * Deliberately tiny: `**` crosses directory separators, `*` does not, everything
+ * else is literal. Enough for "every .map anywhere" and "this one demo file", and
+ * small enough that what it will delete is obvious from reading it — which matters,
+ * because this is the one part of the script that REMOVES bytes.
+ */
+function dropMatcher(glob: string): RegExp {
+	let pattern = '';
+	for (let i = 0; i < glob.length; i++) {
+		const char = glob[i] as string;
+		if (char === '*') {
+			if (glob[i + 1] === '*') {
+				pattern += '.*';
+				i++;
+				// `**/` should also match zero directories, so swallow a following slash.
+				if (glob[i + 1] === '/') i++;
+			} else {
+				pattern += '[^/]*';
+			}
+			continue;
+		}
+		pattern += char.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+	}
+	return new RegExp(`^${pattern}$`);
+}
 
 if (lib === '' || version === '' || url === '') {
 	fail('--lib, --version and --url are all required (see the header for the full form).');
@@ -129,6 +172,26 @@ if (keep.length === 0) {
 		mkdirSync(join(to, '..'), { recursive: true });
 		renameSync(from, to);
 	}
+}
+
+// The drop pass. Runs on the STAGED tree, so a refused fetch never deletes anything
+// under vendor/, and the printed count is what the operator can compare with the
+// archive listing.
+if (drop.length > 0) {
+	const matchers = drop.map(dropMatcher);
+	let removed = 0;
+	for (const relative of listTreeFiles(staged)) {
+		if (!matchers.some((matcher) => matcher.test(relative))) continue;
+		rmSync(join(staged, relative));
+		removed++;
+	}
+	if (removed === 0) {
+		// A --drop that matched nothing is a trim the operator THINKS happened. Refuse:
+		// silently vendoring 10 MB of sourcemaps is exactly the kind of drift the
+		// manifest note would then describe wrongly.
+		fail(`--drop matched no file in the archive (${drop.join(', ')}).`);
+	}
+	console.log(`   dropped ${removed} files matching ${drop.join(', ')}`);
 }
 
 const target = join(VENDOR_ROOT, lib);

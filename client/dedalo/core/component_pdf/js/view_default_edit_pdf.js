@@ -334,11 +334,54 @@ const get_content_value = function(i, current_value, self) {
 					// PDFViewerApplicationOptions must be configured before open() is called.
 					// 'defaultUrl' is cleared to prevent PDF.js from auto-loading its bundled
 					// default document. 'enablePermissions' honours DRM flags embedded in the PDF.
-						const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
+					//
+					// (!) SYNCHRONOUS ON PURPOSE — no await before these set() calls.
+					//     PDF.js dispatches 'webviewerloaded' and then calls
+					//     PDFViewerApplication.run(config) on the very next statement
+					//     (vendor/pdfjs/web/viewer.mjs, webViewerLoad). An await here yields a
+					//     microtask, so the options would be written while run() is already
+					//     under way; it happens to work today only because initialize() awaits
+					//     the preferences promise first. That is a race we do not need: the
+					//     options object is not a promise, so nothing is gained by awaiting it.
+					//
+					// (!) enableScripting:false is a SECURITY control, not a preference.
+					//     PDF.js defaults it to TRUE, which executes a document's own embedded
+					//     JavaScript (OpenAction/AcroForm) in the quickjs sandbox. That is the
+					//     precondition of GHSA-hq66-cqwq-w95j / CVE-2026-16633 (HIGH, arbitrary
+					//     JavaScript execution upon opening a malicious PDF), whose own stated
+					//     workaround is exactly this line; the viewer iframe is same-origin with
+					//     the application under the operator's session, so an escape from the
+					//     viewer lands in the hosting origin. Dédalo never uses PDF form
+					//     scripting — a catalogued document is read, not executed — so turning it
+					//     off costs nothing and holds even if the vendored pdf.js were ever taken
+					//     back below the patched 6.2.108. Gate: test/unit/vendor_advisory_tripwire.test.ts.
+						const pdf_viewer_options = iframe.contentWindow['PDFViewerApplicationOptions'];
 						if (pdf_viewer_options) {
+							// (!) disablePreferences MUST come first, and it is what makes the next
+							//     line stick. PDF.js reads localStorage['pdfjs.preferences'] in its
+							//     BasePreferences constructor and calls AppOptions.setAll(prefs) —
+							//     AFTER this handler has run — so a stored preference silently
+							//     OVERRIDES anything set here. enableScripting is a PREFERENCE-kind
+							//     option, so without this line the security control below is defeated
+							//     by same-origin browser state: measured 2026-08-28 against pdf.js
+							//     6.2.108 with {"enableScripting":true} in that key, the viewer came
+							//     up with scripting ON and a live scripting manager attached. pdf.js
+							//     warns about exactly this in the console ("The Preferences may
+							//     override manually set AppOptions"). Nothing in the standalone
+							//     viewer ever WRITES that key (per-document view state lives in
+							//     'pdfjs.history'), so disabling the channel costs no user setting.
+							pdf_viewer_options.set('disablePreferences', true);
+							pdf_viewer_options.set('enableScripting', false);
 							pdf_viewer_options.set('defaultUrl', '');
 							pdf_viewer_options.set('locale', locale_code);
 							pdf_viewer_options.set("enablePermissions", true); // allows PDF documents to disable copying in the viewer
+						}else{
+							// Deliberately NOT a refusal to render. If the options object is missing
+							// the viewer module itself failed to load, so there is nothing to run a
+							// malicious document against — and refusing here would turn a viewer
+							// glitch into "the museum cannot read its own documents", which is the
+							// worse outcome. Loud, so it cannot pass as normal.
+							console.error('! PDFViewerApplicationOptions unavailable — enableScripting could not be forced off');
 						}
 
 					// pdf_viewer
