@@ -30,7 +30,7 @@ flowchart LR
 | `/dedalo/install/import/ontology/…` | **proxy → socket** | only when this instance is an ontology master |
 | `/dedalo/install/code/…` | **proxy → socket** | the release archives a code master serves; this is the URL the update manifest advertises |
 | `/dedalo/install/import/hierarchy/…` | **proxy → socket** | hierarchy export downloads (admin-session-gated) |
-| `/dedalo/ai_models/…` | **proxy → socket** | the local AI model store, fetched by the browser from the page origin |
+| `/dedalo/ai_models/…` | **proxy → socket** | the local AI model store, fetched by the browser from the page origin; **session-gated** — an anonymous request gets a `404` |
 | `/dedalo/upload_tmp/…` | **proxy → socket** | staged-upload previews, before the record is saved |
 | `/dedalo/media/…` | **proxy, from `MEDIA_PATH`** | gated by the generated rules — see below |
 | everything else under `/dedalo/…` | **proxy, from `client/dedalo/`** | static files |

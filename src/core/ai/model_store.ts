@@ -462,6 +462,20 @@ export function resolveModelPath(subPath: string): string | null {
  * Serve a `/dedalo/ai_models/*` request, or return null when the pathname is not
  * one (the caller falls through to the next handler).
  *
+ * SESSION-GATED, fail-closed (2026-08-28). The store is weights: single files
+ * reach the gigabyte, and they are served `immutable` with no rate limit. While
+ * no proxy config routed this path it was unreachable from outside and the
+ * anonymity cost nothing; routing it made an unauthenticated, unbounded
+ * download the only one on the vhost. The sole consumer is a same-origin worker
+ * inside the logged-in app (`remove_background.js` points transformers.js at
+ * this origin), so it always carries the session cookie — nothing legitimate
+ * asks for a model anonymously.
+ *
+ * The caller resolves the session (this module must not import the session
+ * store — it is a leaf of the AI subsystem, and the SCC tripwire keeps it one)
+ * and passes the verdict. The REFUSAL lives here, with the handler, so a future
+ * second caller cannot reintroduce the anonymous route by forgetting it.
+ *
  * Model files are immutable once written — a model id names an exact set of
  * weights — so they are served with a long-lived cache, which is what keeps a
  * second transcription from re-downloading a gigabyte over the LAN.
@@ -469,8 +483,12 @@ export function resolveModelPath(subPath: string): string | null {
 export async function serveModelRequest(
 	pathname: string,
 	request: Request,
+	hasSession: boolean,
 ): Promise<Response | null> {
 	if (!pathname.startsWith(AI_MODEL_URL_PREFIX)) return null;
+	// Same 404 as a missing file: an anonymous caller learns nothing about the
+	// store's existence or contents.
+	if (hasSession !== true) return notFound();
 
 	let decoded: string;
 	try {

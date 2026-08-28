@@ -1120,8 +1120,14 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// read-only from the install's own model store instead of a public model hub —
 	// the whole point of running inference locally. Same ordering reason as the
 	// lib route: the client tree has no ai_models/ subtree.
+	// The local AI model store. Session-gated, fail-closed: the weights are
+	// unbounded in size and served `immutable`, and the only consumer is a
+	// same-origin worker inside the logged-in app, so an anonymous request is
+	// never legitimate. The refusal itself lives in serveModelRequest.
 	if (request.method === 'GET' && url.pathname.startsWith(AI_MODEL_URL_PREFIX)) {
-		const modelResponse = await serveModelRequest(url.pathname, request);
+		const modelToken = readCookie(request.headers.get('cookie') ?? '', SESSION_COOKIE);
+		const modelSession = modelToken !== undefined ? getSession(modelToken) : null;
+		const modelResponse = await serveModelRequest(url.pathname, request, modelSession !== null);
 		if (modelResponse !== null) return modelResponse;
 	}
 

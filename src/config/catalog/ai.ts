@@ -863,7 +863,9 @@ DEDALO_RAG_RRF_K=60
 		typeLabel: 'path',
 		doc: `Where the models that run **inside the browser** are kept — speech recognition for the
 transcription tool, translation for the language tool. The directory is served read-only at
-\`/dedalo/ai_models/\`, one folder per model.
+\`/dedalo/ai_models/\`, one folder per model, **to logged-in users only** — the weights are
+large and served with a long-lived cache, so an anonymous request is refused with the same
+\`404\` as a missing model.
 
 This is what makes local inference genuinely local. Without a store, the runtime falls back
 to downloading weights from a public model hub, which an air-gapped institution cannot do at
