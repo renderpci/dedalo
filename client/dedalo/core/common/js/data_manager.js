@@ -35,6 +35,18 @@
 * they are published once as `'api_notices'` and rendered by the page's
 * `handle_api_notice` subscriber unless a caller reads them itself.
 *
+* IDEMPOTENCY CONTRACT (CLI-01 / P0-10, 2026-08-28 —
+* WC-2026-08-28-idempotency-key): the retry loop above re-sends a POST the
+* server may ALREADY be executing (the abort is client-side only; the engine
+* has no request.signal handling, so an aborted attempt runs to completion and
+* COMMITS). So every request this layer may resend is STAMPED: `execute_request`
+* mints one `idempotency_key` per logical call and puts it in the body ONCE,
+* before serialization, so all attempts of that call are byte-identical and the
+* server replays the first answer instead of executing again. A request that
+* CANNOT be stamped (a pre-serialized string body) is never resent more than
+* once. Callers do not opt in and must not pass a key themselves — a key reused
+* across two different operations is worse than no key at all.
+*
 * Main exports: `data_manager` (namespace object), `check_server_health`,
 * `render_msg_to_inspector`, `download_url`, `download_data`.
 */
@@ -209,6 +221,9 @@ const client_failure = (api_error) => ({
 *   through the policy table); 'caller' publishes NOTHING, because the caller
 *   renders the notice in its own wrapper and a second toast would duplicate it.
 * @param {boolean} [options._csrf_retried] - Internal flag; prevents recursive CSRF retry
+* @param {string} [options.idempotency_key] - Internal; the key minted for THIS
+*   logical call and carried through the transparent CSRF resend so the resend
+*   is the same operation, not a second one. Callers never set it.
 * @returns {Promise<Object>} The API envelope. Always an object; on failure it
 *   carries `error` (an ApiError) — test with `request_failed(api_response)`.
 */
@@ -287,6 +302,78 @@ const in_flight_requests = new Map()
 
 
 /**
+* IDEMPOTENCY_KEY_PATTERN
+* The wire grammar the server's rqo schema enforces (src/core/concepts/rqo.ts).
+* Kept here as the client's own statement of it: a key this file mints and the
+* server refuses would 400 every write on the install.
+* @type {RegExp}
+*/
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{16,128}$/
+
+/**
+* MINT_IDEMPOTENCY_KEY
+* One opaque, unguessable key per logical request.
+*
+* `crypto.randomUUID` is FIRST but not assumed: it exists only in a SECURE
+* context, and a Dédalo install served over plain http (a museum LAN, the docker
+* simple stack) has none — there the property is `undefined` and calling it
+* would throw inside the transport. `crypto.getRandomValues` has no such
+* restriction and is the real workhorse; `Math.random` is the last resort so a
+* key is ALWAYS produced. A weak key is not a security boundary here (the ledger
+* is scoped per authenticated principal server-side); it only has to be unique.
+* @return {string}
+*/
+const mint_idempotency_key = function() {
+
+	if (typeof crypto!=='undefined') {
+		if (typeof crypto.randomUUID==='function') {
+			try {
+				return crypto.randomUUID()
+			} catch (error) {
+				// fall through to getRandomValues
+			}
+		}
+		if (typeof crypto.getRandomValues==='function') {
+			const bytes = new Uint8Array(16)
+			crypto.getRandomValues(bytes)
+			return Array.from(bytes, (byte) => byte.toString(16).padStart(2,'0')).join('')
+		}
+	}
+
+	return (
+		'k'
+		+ Date.now().toString(36)
+		+ Math.random().toString(36).slice(2,14)
+		+ Math.random().toString(36).slice(2,14)
+	).slice(0,64)
+}//end mint_idempotency_key
+
+
+
+/**
+* SAFE_IDEMPOTENCY_KEY
+* The minter behind its own grammar check. A key the server would refuse turns
+* EVERY stamped write on the install into a 400 `request.invalid_rqo`, so the
+* check is here rather than trusted: an out-of-grammar mint (a browser whose
+* `randomUUID` is not one, a truncating polyfill) degrades to the hex fallback,
+* and only if THAT is also out of grammar does the request go unstamped — which
+* then costs it its retries (effective_retries), never its correctness.
+* @return {string|null}
+*/
+const safe_idempotency_key = function() {
+
+	const minted = mint_idempotency_key()
+	if (IDEMPOTENCY_KEY_PATTERN.test(minted)) {
+		return minted
+	}
+	console.error('data_manager: minted idempotency key is out of grammar', minted)
+
+	return null
+}//end safe_idempotency_key
+
+
+
+/**
 * EXECUTE_REQUEST
 * The single-request execution body behind `data_manager.request` (steps 1-10 of
 * the algorithm documented there). Module-private: every caller goes through
@@ -320,6 +407,42 @@ const execute_request = async function(options) {
 
 	// vars from options applying defaults
 	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, signal, retries, base_delay, timeout, notices } = merged_options;
+
+	// CLI-01 / P0-10 — THE IDEMPOTENCY STAMP (WC-2026-08-28-idempotency-key).
+	// A request this layer may RESEND must be one the server can recognise as the
+	// SAME operation, because the resend is not a replacement: the aborted attempt
+	// is aborted only here, the engine has no request.signal handling, and its
+	// handler runs to completion and COMMITS. Unstamped, one click on "New record"
+	// on a throttled link produced up to five blank records in the catalogue.
+	//
+	// Minted ONCE per logical call and injected ONCE, below, before serialization:
+	// every attempt of this call then ships byte-identical bytes, which is the
+	// property the server's ledger keys on. Reused verbatim by the transparent
+	// CSRF resend (that is the same operation retried, not a new one).
+	//
+	// Only a request that CAN be stamped gets one: a plain object body, into which
+	// a key can be injected. A string body (pre-serialized by the caller) and an
+	// array body cannot take one — see effective_retries for what that costs them.
+	const stampable_body = (
+		body!==null
+		&& typeof body==='object'
+		&& !Array.isArray(body)
+	)
+	const idempotency_key = (retries > 1 && stampable_body)
+		? (options.idempotency_key || safe_idempotency_key())
+		: null
+
+	// DEFENCE IN DEPTH (P0-10 direction (b)), and the ONE place it can be applied
+	// without depending on ~130 call sites remembering: retrying is CONDITIONAL on
+	// being stamped. A body we could not stamp (a caller that pre-serialized its
+	// own JSON string) is sent AT MOST ONCE, because a blind resend of an
+	// unrecognisable write is exactly the defect. A request with NO body at all is
+	// exempt: a bodyless GET of a static asset (util.js lang.json) duplicates
+	// nothing on the server, and killing its retry would break a legitimate
+	// recovery on a flaky link for no gain.
+	const effective_retries = (retries > 1 && !idempotency_key && body!==null && body!==undefined)
+		? 1
+		: retries
 
 	// SEC-008: attach the CSRF token captured from the previous API response
 	// (or `null` on the very first call). The server requires the
@@ -385,7 +508,14 @@ const execute_request = async function(options) {
 			request_body = body;
 		} else {
 			try {
-				request_body = JSON.stringify(body);
+				// the stamp rides in the SERIALIZED bytes, and the caller's own body
+				// object is never mutated (a caller that reuses its body for a second,
+				// genuinely different operation must not inherit this key).
+				request_body = JSON.stringify(
+					idempotency_key
+						? {...body, idempotency_key: idempotency_key}
+						: body
+				);
 			} catch (json_error) {
 				const api_error = new ApiError({
 					code	: CLIENT_ERROR.NETWORK,
@@ -419,7 +549,7 @@ const execute_request = async function(options) {
 		},
 		{
 			timeout_ms	: timeout,
-			retries		: retries,
+			retries		: effective_retries,
 			base_delay	: base_delay,
 			health_url	: self.health_url,
 			on_wait		: (attempt, delay, reason) => {
@@ -465,7 +595,14 @@ const execute_request = async function(options) {
 		&& !options._csrf_retried
 	) {
 		console.warn('CSRF token mismatch; retrying once with fresh token.');
-		return self.request({ ...options, _csrf_retried: true });
+		// SAME key: the CSRF refusal happened at the dispatch gate, so the handler
+		// never ran and the ledger holds nothing — but if the original attempt DID
+		// land on another connection, the resend must be recognised as its twin.
+		return self.request({
+			...options,
+			_csrf_retried	: true,
+			idempotency_key	: idempotency_key || options.idempotency_key
+		});
 	}
 
 	if(SHOW_DEBUG) {

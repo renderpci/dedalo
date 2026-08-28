@@ -48,6 +48,51 @@
  * duplicating user — the doors above gate the HOST section alone, and nothing
  * in a duplicate request mentions the target section at all. See
  * assertFrameTargetDuplicable.
+ *
+ * NOT ATOMIC, AND SAID OUT LOUD (2026-08-28, CLI-01 / P0-10). This writer opens
+ * NO transaction. The clone COMMITS at step 4 (insertMatrixRecordWithCounter is
+ * a single autocommit statement), and steps 3b, 4b, 5, 6 and 7 — frame-target
+ * re-minting, media file copies, the two Time Machine rows per component, the
+ * observer cascade and fireSaveEvent — run outside any transaction, before and
+ * after that commit. Consequences a caller must know:
+ *
+ *   - A THROW HERE DOES NOT MEAN NOTHING HAPPENED. A failure at step 5 leaves a
+ *     committed duplicate with no history; a failure at step 6 leaves one whose
+ *     targets' observer mirrors do not know about it. This is precisely why the
+ *     idempotency gate (api/dispatch.ts, Gate 4) refuses to re-execute after a
+ *     thrown handler and answers `idempotency.outcome_unknown` instead: freeing
+ *     the key would let the transport's automatic resend mint a SECOND clone of
+ *     a heritage record.
+ *
+ * WHY IT IS NOT SIMPLY WRAPPED IN withTransaction, verified rather than assumed
+ * — a naive wrap would introduce a WORSE defect than the one it closes:
+ *
+ *   1. THE COUNTER ROLLS BACK, THE FILES DO NOT. The id comes from a ROW in
+ *      `matrix_counter` (matrix_write.ts: `ON CONFLICT (tipo) DO UPDATE SET
+ *      value = value + 1`), not from a sequence — so a ROLLBACK returns the
+ *      counter to its previous value and the NEXT duplicate is handed the SAME
+ *      section_id. Media file names embed that id
+ *      (media/path.ts: `{component_tipo}_{section_tipo}_{section_id}`), and a
+ *      filesystem copy is not transactional, so the rolled-back attempt's files
+ *      would be ADOPTED by the next record to receive that id: a photograph
+ *      silently attached to the wrong object, which nothing detects.
+ *   2. THE OBSERVER CASCADE CHANGES MEANING INSIDE A TRANSACTION. Cascade hops
+ *      would defer to the COMMIT-ONLY lane (record/observers.ts emitCascadeHop —
+ *      runObserverCascadeHop refuses an ambient tx outright, B6), which is the
+ *      designed behaviour and fine. But propagateToObservers RETHROWS inside an
+ *      ambient transaction where it swallows loudly outside one, so an observer
+ *      failure that today leaves a good duplicate would abort the whole
+ *      duplicate instead.
+ *
+ * The structurally correct form is therefore not "add withTransaction" but a
+ * SPLIT: a transaction covering step 3b's re-mints + the insert + the Time
+ * Machine rows + the in-tx observer writes, with the media copies and
+ * fireSaveEvent moved strictly AFTER the commit (so a rollback can never leave a
+ * file addressed by a reusable id). That is a restructure of the engine's most
+ * delicate write path and belongs with its own gate, in its own change — it must
+ * not ride along inside an idempotency fix, and it does not remove the need for
+ * the ambiguous-outcome rule, which stands as long as ANY committed work can be
+ * followed by a throw.
  */
 
 import { config } from '../../../config/config.ts';

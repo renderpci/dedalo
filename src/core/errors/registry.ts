@@ -245,6 +245,72 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 	},
 
+	// ── idempotency (CLI-01 / P0-10, WC-2026-08-28-idempotency-key) ─────────
+	// The two ways a REPLAY can fail. Neither is retryable: re-sending the same
+	// key produces the same answer, so a `retryable:true` here would put the
+	// browser transport back in the loop this whole change set removes.
+	'idempotency.key_reused': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_idempotency_key_reused',
+		message: 'This idempotency key was already used for a different request',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		hint: 'Mint one key per logical operation. Do not reuse a key across different requests.',
+	},
+	// THE AMBIGUOUS OUTCOME — the rule this whole gate turns on. The first
+	// attempt's handler THREW, and the write doors it fronts commit outside any
+	// transaction (section/record/duplicate_record.ts opens none at all;
+	// dd_core_api:create commits its row and then fires save/activity), so
+	// "it threw" does NOT mean "it wrote nothing". Re-executing on that retry is
+	// exactly the duplicate-heritage-record defect CLI-01 exists to close, so the
+	// retry is refused instead — and NOT retryable, because no amount of retrying
+	// can turn an unknown outcome into a known one. The operator's own re-click
+	// mints a NEW key and executes normally; only the automatic resend of the one
+	// ambiguous attempt is stopped.
+	'idempotency.outcome_unknown': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_idempotency_outcome_unknown',
+		message: 'The first attempt failed after it may already have been applied',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		// NAMES WHAT TO CHECK, on the wire and not only in the log: which action,
+		// which request_id the failed attempt carried (so the operator can find it
+		// in the access log), and what it failed with. All three are this server's
+		// own identifiers, already disclosed elsewhere in every envelope.
+		details_keys: ['action', 'original_request_id', 'original_error_code'],
+		hint: 'Reload the record or the list and check whether the change was applied before trying again.',
+	},
+	// The first attempt is STILL RUNNING past the twin-wait bound (a leader stuck
+	// on a row lock). The most ambiguous outcome there is: refuse, never execute.
+	'idempotency.in_progress': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_idempotency_in_progress',
+		message: 'The first attempt at this operation is still running',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['action'],
+		hint: 'Wait for the operation to finish, then reload the record to see whether it was applied.',
+	},
+	// The original answer could not be stored (over the ledger's per-entry cap),
+	// and RE-EXECUTING a non-idempotent write is the defect, not the fallback —
+	// so the replay is refused and the operator reloads to see the real state.
+	'idempotency.replay_unavailable': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_idempotency_replay_unavailable',
+		message: 'The original answer for this request is no longer available',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		hint: 'The first attempt was accepted. Reload the record instead of re-sending it.',
+	},
+
 	// ── rate limit ──────────────────────────────────────────────────────────
 	'rate.limited': {
 		category: 'limit',

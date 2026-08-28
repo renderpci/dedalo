@@ -218,6 +218,16 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// same lifecycle: null in production, set and cleared around one case).
 	// Request identity can never land in it: its type is the operator config.
 	'external/settings.ts:overridesForTests',
+	// IDEMPOTENCY LEDGER byte accounting (CLI-01 / P0-10,
+	// WC-2026-08-28-idempotency-key). The running total of the answer bytes the
+	// ledger below holds — the second half of its memory bound, read by
+	// ledgerOverCapacity() and by the /health-adjacent stats seam. It is an
+	// INTEGER, never request identity: nothing user-, session- or lang-shaped can
+	// land in a byte count, and the identity that DOES exist lives inside each
+	// ledger KEY (which embeds the authenticated principal), never here.
+	// LIFECYCLE: incremented when a leader stores its outcome, decremented by
+	// dropLedgerEntry on every eviction, and zeroed with the map by the test seam.
+	'core/api/dispatch.ts:idempotencyLedgerBytes',
 ]);
 
 /**
@@ -347,6 +357,26 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// this one on purpose: a search is user-typed and high-cardinality, so its
 	// results are deliberately NOT cached (src/external/search.ts header).
 	'external/search.ts:inFlightSearches',
+	// --- the idempotency ledger (CLI-01 / P0-10) -----------------------------
+	// GATE 4's ledger (WC-2026-08-28-idempotency-key): key -> the ONE outcome of
+	// the operation that key names, so a transport resend replays it instead of
+	// executing a second time. Deliberately NOT factory-built: the factory's
+	// clearer fires after every dd_ontology write, and dropping this map would
+	// re-admit the duplicate-heritage-record defect it exists to close — an
+	// ontology save must not un-remember that a duplicate already ran.
+	// NOT a content cache and never read as one: nothing consults it for DATA,
+	// only for "has this exact operation already been performed". A key embeds the
+	// AUTHENTICATED PRINCIPAL, so one user's entry can never answer another's
+	// request; unauthenticated requests are never ledgered at all.
+	// LIFECYCLE, stated exactly (the first draft's "swept on every insert" was
+	// FALSE — the sweep ran only from the leader's success path): entries are
+	// dropped by sweepIdempotencyLedger + sweepPrincipalEntries, which run (a) on
+	// the READ path of every ledgered request, where the 15-minute TTL is actually
+	// enforced, and (b) on every leader completion, SUCCESS AND FAILURE alike. An
+	// in-flight entry is never evicted (its twin is owed an answer); a failed one
+	// is KEPT on purpose, marked ambiguous, because a thrown handler may already
+	// have committed. Cleared wholesale only by resetIdempotencyLedgerForTests.
+	'core/api/dispatch.ts:idempotencyLedger',
 ]);
 
 /** Mutation shapes for a named binding: assignment, ++/--, mutating methods. */

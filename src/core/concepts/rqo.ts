@@ -251,12 +251,52 @@ export const rqoSchema = z
 		/** Payload for write actions (save/delete/...). Shape is action-specific. */
 		data: z.unknown().optional(),
 		/**
-		 * Accepted for wire compatibility but INERT by design (SECTION_SPEC §10):
-		 * in PHP this gated session_write_close() before long queries — a
+		 * THE IDEMPOTENCY KEY (WC-2026-08-28-idempotency-key; CLI-01 / P0-10).
+		 *
+		 * An opaque, client-minted token naming ONE LOGICAL OPERATION. The browser
+		 * transport re-sends a POST after its own client-side abort, and the engine
+		 * has no `request.signal` handling — the aborted attempt runs to completion
+		 * and COMMITS — so without this the resend was a SECOND operation: one click
+		 * on "New record" on a throttled link minted up to five blank records.
+		 * `api/dispatch.ts` is the ONE reader (the idempotency gate): the first
+		 * request under a key executes, a concurrent twin awaits its answer, and a
+		 * later twin is served the STORED answer instead of executing again.
+		 *
+		 * The GRAMMAR is enforced HERE rather than at the gate, so a malformed key is
+		 * one uniform `request.invalid_rqo` at the parse door for every caller,
+		 * authenticated or not — never a field that is silently ignored on some paths
+		 * (the `prevent_lock` failure mode below, in miniature). 16-128 URL-safe
+		 * characters admits a v4 UUID and the transport's hex fallback, and refuses
+		 * a key short enough to collide across users by accident.
+		 *
+		 * OPTIONAL, and it must stay optional: a caller that sends none simply gets
+		 * today's behaviour (execute, no ledger). It is the RETRYING transport that
+		 * owes the stamp, not every client author.
+		 */
+		idempotency_key: z
+			.string()
+			.regex(/^[A-Za-z0-9_-]{16,128}$/)
+			.optional(),
+		/**
+		 * INERT, AND MECHANICALLY HELD INERT — a retired PHP fossil, not a feature.
+		 *
+		 * In PHP this gated `session_write_close()` before long queries: a
 		 * PHP-session-runtime concern with no Bun equivalent (Bun sessions are not
-		 * file-locked). The real client and the MCP write tools set it; the TS
-		 * server neither needs nor honors it. NOT related to the component edit
-		 * locks (section/locks.ts).
+		 * file-locked). 51 client files (114 occurrences, measured 2026-08-28) and ONE MCP READ tool
+		 * (src/ai/mcp/tools/records_read.ts) still SEND it; it is
+		 * declared here only so those requests do not become `request.invalid_rqo`
+		 * the day someone tightens the schema.
+		 *
+		 * It is NOT a concurrency control and never was — the name misleads, which is
+		 * why it is now gated rather than merely documented:
+		 * `test/unit/client_idempotency_tripwire.test.ts` asserts this declaration is
+		 * the ONLY mention of `prevent_lock` in `src/` and `tools/`, so the field can
+		 * never quietly acquire behaviour behind its own docblock. Request-level
+		 * de-duplication is `idempotency_key` above; the component EDIT locks are
+		 * `section/locks.ts`, a different thing again.
+		 *
+		 * REMOVAL CONDITION: when no shipped client sends it, delete the declaration
+		 * and the gate leg together.
 		 */
 		prevent_lock: z.boolean().optional(),
 		/** Action-specific options bag (file uploads, etc.). May carry a nested sqo. */
