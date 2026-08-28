@@ -291,10 +291,15 @@ reports the write rather than leaving you to infer it. While the build runs the
 row is marked **building…** and its facts are dimmed, so it is clear that the
 name, size and date beside the button are about to stop being true. When it
 finishes the row is re-read from disk and marked **updated just now**, with the
-value it replaced spelled out underneath (`was 173 MB · 28/08/2026,
-11:13:24`). That before-value is the point: a build rewrites the archive in
-place and the new size is usually identical to the old one, so the timestamp is
-the only thing that moves — and one timestamp on its own tells you nothing.
+value it replaced spelled out underneath. That before-value is the point: a
+build rewrites the archive in place and the new size is usually identical to
+the old one, so the timestamp is the only thing that moves — and one timestamp
+on its own tells you nothing.
+
+It shows **only what moved**, so the line stays short and the difference is the
+part you read: the size appears only when it changed, and the date only when
+the build crossed midnight. A rebuild minutes after the last one therefore
+reads `was 11:41:43` beside a row dated `173 MB · 28/08/2026, 11:45:09`.
 
 !!! note "A build that changes nothing says so"
     If the archive's timestamp does not move, the row reads **unchanged: the

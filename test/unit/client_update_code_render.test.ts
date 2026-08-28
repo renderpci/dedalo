@@ -1039,6 +1039,19 @@ describe('update_code build feedback', () => {
 		expect(status_src).toContain('previous===null || previous.stamp!==release.stamp');
 	});
 
+	test('the before-value shows only what MOVED', () => {
+		// Repeating the unchanged facts ("173 MB · 28/08/2026, 11:41:43" above,
+		// "was 173 MB · 28/08/2026, 11:41:12" below) buries the one figure the
+		// operator is reading for in three that did not change.
+		expect(status_src).toContain('previous.bytes!==release.bytes');
+		expect(status_src).toContain('same_day(previous.stamp, release.stamp)');
+		expect(status_src).toContain('format_time');
+		// and an UNCHANGED build renders no before-line at all: it would be
+		// identical to the value above it, and the badge already says so.
+		expect(/if \(!wrote\) \{\s*return null/.test(status_src)).toBe(true);
+		expect(status_src).toContain('if (previous_text!==null)');
+	});
+
 	test('the value it replaced is spelled out, and every label is defined', () => {
 		expect(status_src).toContain('build_file_previous');
 		expect(status_src).toContain('update_code_build_previous');

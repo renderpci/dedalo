@@ -177,17 +177,39 @@ const release_facts = function(value, release, mark) {
 				: (get_label.update_code_build_unchanged || 'unchanged: the build wrote no new file'),
 			parent			: value
 		})
-		// …and the value it replaced, spelled out. This is the half that makes
-		// the change unequivocal: two figures to compare, not one to trust.
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'build_file_previous',
-			text_content	: (get_label.update_code_build_previous || 'was %s')
-				.replace('%s', previous===null
-					? (get_label.update_code_not_built || 'Not built yet')
-					: `${format_bytes(previous.bytes)} · ${format_stamp(previous.stamp)}`),
-			parent			: value
-		})
+		// …and the value it replaced — but ONLY THE PART THAT MOVED. Repeating
+		// the facts unchanged ("173 MB · 28/08/2026, 11:41:43" above,
+		// "was 173 MB · 28/08/2026, 11:41:12" below) buries the one figure the
+		// operator is here to read in three that did not change. So: the size
+		// appears only when it differs, and the date only when the build crossed
+		// midnight — otherwise the time of day carries the whole difference.
+		const previous_text = (() => {
+			if (previous===null) {
+				return get_label.update_code_not_built || 'Not built yet'
+			}
+			// nothing moved: the `unchanged` badge above IS the statement, and a
+			// before-value identical to the value above it would be pure noise.
+			if (!wrote) {
+				return null
+			}
+			const parts = []
+			if (previous.bytes!==release.bytes) {
+				parts.push(format_bytes(previous.bytes))
+			}
+			parts.push(same_day(previous.stamp, release.stamp)
+				? format_time(previous.stamp)
+				: format_stamp(previous.stamp))
+			return parts.join(' · ')
+		})()
+		if (previous_text!==null) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'build_file_previous',
+				text_content	: (get_label.update_code_build_previous || 'was %s')
+					.replace('%s', previous_text),
+				parent			: value
+			})
+		}
 	}
 
 	return value
@@ -456,6 +478,18 @@ const format_bytes = function(bytes) {
 const format_stamp = function(ms) {
 	if (!ms) return '—'
 	try { return new Date(ms).toLocaleString() } catch (e) { return String(ms) }
+}
+/** Time of day only — for a before-value on the SAME day as the value beside it. */
+const format_time = function(ms) {
+	if (!ms) return '—'
+	try { return new Date(ms).toLocaleTimeString() } catch (e) { return String(ms) }
+}
+/** Same calendar day in the operator's own timezone. */
+const same_day = function(a, b) {
+	if (!a || !b) return false
+	const x = new Date(a)
+	const y = new Date(b)
+	return x.getFullYear()===y.getFullYear() && x.getMonth()===y.getMonth() && x.getDate()===y.getDate()
 }
 
 
