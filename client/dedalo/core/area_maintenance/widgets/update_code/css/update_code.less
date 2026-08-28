@@ -15,10 +15,34 @@
 		// NOTE these three live inside a ROLE BLOCK since 2026-08-24, so they are
 		// children of `.role_body`, not of `.content_data` — a plain `>` here
 		// silently stopped matching anything.
+		// The widget's ONE primary action. It used to inherit the shared `.light`
+		// grey-on-grey look and disappeared under the note text above it, so it is
+		// promoted here: accent fill, on-accent label, its own reading weight.
 		.role_body >.button_submit {
 			margin: 1rem;
 			margin-left: 0px;
 			margin-bottom: 2rem;
+			padding: 0.5rem 1.1rem;
+			font-size: 1em;
+			font-weight: 600;
+			color: #ffffff;
+			background-color: var(--color_orange_dedalo);
+			border: 1px solid color-mix(in srgb, var(--color_orange_dedalo) 75%, #000);
+			border-radius: 4px;
+
+			&:before {
+				background-color: var(--button-bg-color, #ffffff) !important;
+			}
+
+			&:hover:not(:disabled) {
+				background-color: color-mix(in srgb, var(--color_orange_dedalo) 88%, #000);
+			}
+
+			&:disabled {
+				color: var(--fg_muted);
+				background-color: var(--bg_surface_alt);
+				border-color: var(--border_default);
+			}
 		}
 
 		.role_body >.dd_readout {

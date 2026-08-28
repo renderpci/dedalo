@@ -16697,6 +16697,24 @@ dd-modal:has(.tool_header) {
   margin: 1rem;
   margin-left: 0px;
   margin-bottom: 2rem;
+  padding: 0.5rem 1.1rem;
+  font-size: 1em;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color_orange_dedalo);
+  border: 1px solid color-mix(in srgb, var(--color_orange_dedalo) 75%, #000);
+  border-radius: 4px;
+}
+.wrapper_widget.update_code > .content_data .role_body > .button_submit:before {
+  background-color: var(--button-bg-color, #ffffff) !important;
+}
+.wrapper_widget.update_code > .content_data .role_body > .button_submit:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color_orange_dedalo) 88%, #000);
+}
+.wrapper_widget.update_code > .content_data .role_body > .button_submit:disabled {
+  color: var(--fg_muted);
+  background-color: var(--bg_surface_alt);
+  border-color: var(--border_default);
 }
 .wrapper_widget.update_code > .content_data .role_body > .dd_readout {
   margin-bottom: 0.75rem;
