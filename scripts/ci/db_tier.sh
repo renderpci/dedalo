@@ -150,6 +150,7 @@ bun run test:db:setup
 # ---------------------------------------------------------------------------
 DB_TIER_TRIPWIRES=(
 	test/unit/bulk_process_id_tripwire.test.ts
+	test/unit/client_idempotency_tripwire.test.ts
 	test/unit/consultation_only_sections_tripwire.test.ts
 	test/unit/csv_parser_conformance_native.test.ts
 	test/unit/dbread_role_tripwire.test.ts

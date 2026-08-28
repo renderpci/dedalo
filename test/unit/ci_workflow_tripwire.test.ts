@@ -287,6 +287,10 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/client_idempotency_tripwire.test.ts',
+		'Its structural legs are pure, but the end-to-end leg drives the real create door twice under one idempotency key and asserts the RECORD COUNT is unchanged — the only assertion that proves the server honours the key rather than merely receiving it — so it needs the suite database',
+	],
+	[
 		'test/unit/export_gate_b_native.test.ts',
 		'It drives the real get_export_grid handler as a principal resolved from dd128/dd234 rows against a record it mints with a dd153 project locator, and asserts what the export actually EMITTED — every refusal and the one authorized cell alike are statements about rows the projects filter selected, unobservable without the suite database',
 	],

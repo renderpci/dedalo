@@ -105,6 +105,7 @@ const TRIPWIRES = [
 	'test/unit/frontier_class_native.test.ts',
 	'test/unit/build_context_secret_tripwire.test.ts',
 	'test/unit/vendor_advisory_tripwire.test.ts',
+	'test/unit/client_idempotency_tripwire.test.ts',
 	'test/unit/theme_token_parity.test.ts',
 	'test/unit/hierarchy_single_writer_tripwire.test.ts',
 	'test/unit/ontology_single_writer_tripwire.test.ts',
@@ -272,7 +273,6 @@ async function runTestFiles(name: string, files: string[], forgiven?: Set<string
 	// "159 pass / 1 fail" while `ok` (the exit code) correctly said green.
 	// A gate's own tally must not be readable out of arbitrary stdout.
 	const passM = clean.match(/^\s*(\d+) pass$/m);
-	const failM = clean.match(/^\s*(\d+) fail$/m);
 
 	// Split the failures into the ones the baseline already froze and the ones
 	// it did not. A frozen failure is reported, not hidden — it just does not
