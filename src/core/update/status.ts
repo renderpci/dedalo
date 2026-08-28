@@ -54,6 +54,7 @@ import {
 import {
 	backupRootIsInsideTree,
 	codeStagingDir,
+	IGNORED_ROOT_ENTRIES,
 	installedDigestOf,
 	isSupervised,
 	PRESERVE_ROOT_ENTRIES,
@@ -351,7 +352,10 @@ function rootEntriesCheck(): { entries: string[]; check: StatusCheck } {
 		);
 		const entries = readdirSync(projectRoot).filter(
 			(name) =>
-				!PRESERVE_ROOT_ENTRIES.has(name) && name !== 'node_modules' && !censusInside.has(name),
+				!PRESERVE_ROOT_ENTRIES.has(name) &&
+				!IGNORED_ROOT_ENTRIES.has(name) &&
+				name !== 'node_modules' &&
+				!censusInside.has(name),
 		);
 		// A release ships most of these; only the operator knows which are theirs.
 		return { entries, check: check('root_entries', 'unknown', String(entries.length)) };
