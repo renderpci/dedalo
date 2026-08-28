@@ -128,6 +128,10 @@ import { DEDALO_VERSION_TRIPLE } from './version.ts';
  */
 export type CodeRestoreSeams = Pick<
 	CodeUpdateSeams,
+	// `backupRoot` joined 2026-08-28 with deleteRestorePoint: its gate is the
+	// only one that ends in an irreversible rm, so it has to be exercisable
+	// against a scratch root. resolveBackupRootOrRefuse already reads it.
+	| 'backupRoot'
 	| 'targetRoot'
 	| 'backupRoot'
 	| 'restart'

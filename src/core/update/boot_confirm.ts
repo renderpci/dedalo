@@ -27,9 +27,11 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { config } from '../../config/config.ts';
 import { RUNTIME_PATH_CENSUS } from '../install/runtime_paths.ts';
 import { INSTALLED_DIGEST } from './install_stamp.ts';
+import { pruneRestorePoints } from './restore_points.ts';
 import { DEDALO_VERSION } from './version.ts';
 
 /** The one sentinel shape (flat, machine-written; the rollback script greps it). */
@@ -94,7 +96,17 @@ export async function confirmBootedCodeUpdate(
 		// back; pruning them at swap time would delete the rollbacks for an update
 		// that has not yet shown it can boot. One confirmed boot later, the tree
 		// has proven itself and the older copies are just disk.
-		await pruneConfirmedRestorePoints(sentinel);
+		// THE SENTINEL'S OWN DIRECTORY IS THE BACKUP ROOT, and passing it is what
+		// makes the seam honest. `sentinelPath` is a test seam; retention used to
+		// resolve the root itself through resolveCodeBackupRoot(), so a suite
+		// pointing this function at a scratch sentinel still pruned the REAL
+		// installation's restore points — `bun test` deleting disaster-recovery
+		// trees on a developer box (review 2026-08-28, S1). Deriving the root
+		// from the path we were handed removes the class of bug rather than
+		// asking every caller to remember a second seam: the two can no longer
+		// name different disks. codeUpdateSentinelPath() builds it as
+		// <backupRoot>/last_code_update.json, so dirname IS the root.
+		await pruneConfirmedRestorePoints(sentinel, dirname(sentinelPath));
 	} catch (error) {
 		console.error('[code update] boot confirmation failed (sentinel unreadable?):', error);
 	}
@@ -130,14 +142,23 @@ function reportBootMismatch(
  * healthy. The sentinel's own `backupDir` is protected on top of the
  * live-rollback rule — it is the tree this very update replaced, and the
  * evidence of the swap.
+ *
+ * `backupRoot` is PASSED, never resolved here — see the call site: it is the
+ * directory the sentinel we just confirmed lives in, so a caller that redirects
+ * the sentinel redirects the pruning with it.
  */
-async function pruneConfirmedRestorePoints(sentinel: CodeUpdateSentinel): Promise<void> {
+async function pruneConfirmedRestorePoints(
+	sentinel: CodeUpdateSentinel,
+	backupRoot: string,
+): Promise<void> {
 	try {
-		const { config } = await import('../../config/config.ts');
+		// CONVENTIONS §2 rationale 1, CYCLE-BREAKING, and only for this one:
+		// status.ts imports THIS module (codeUpdateSentinelPath), so a static
+		// edge back would make the two one import component. `config` and
+		// `restore_points` are static above — neither closes a cycle, and a
+		// dynamic import that is not doing work is an edge the SCC tripwire
+		// cannot see (review finding 2026-08-28).
 		const { readRestorePoints } = await import('./status.ts');
-		const { pruneRestorePoints } = await import('./restore_points.ts');
-		const { resolveCodeBackupRoot } = await import('./code_update.ts');
-		const backupRoot = resolveCodeBackupRoot();
 		const points = readRestorePoints(backupRoot);
 		const keep = config.update.restorePointsKeep;
 		if (points.length <= keep) return;
