@@ -300,6 +300,10 @@ server {
     location /dedalo/core/tools_common/              { proxy_pass http://dedalo_site1; }
     location = /dedalo/core/component_text_area/tag/ { proxy_pass http://dedalo_site1; }
     location /dedalo/install/import/ontology/        { proxy_pass http://dedalo_site1; }
+    location /dedalo/install/code/                   { proxy_pass http://dedalo_site1; }
+    location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_site1; }
+    location /dedalo/ai_models/                      { proxy_pass http://dedalo_site1; }
+    location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_site1; }
 
     location /dedalo/ {
         alias /home/ded_site1/dedalo/client/dedalo/;
@@ -346,6 +350,10 @@ first match wins. Every path points at **this instance's** socket, media and clo
     ProxyPass /dedalo/core/tools_common/            unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/tools_common/
     ProxyPass /dedalo/core/component_text_area/tag/ unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/component_text_area/tag/
     ProxyPass /dedalo/install/import/ontology/      unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/ontology/
+    ProxyPass /dedalo/install/code/                 unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/code/
+    ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
+    ProxyPass /dedalo/ai_models/                    unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/ai_models/
+    ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
 
     # --- Media: the generated .htaccess lives inside THIS instance's MEDIA_PATH -
     Alias /dedalo/media /srv/dedalo/site1/media

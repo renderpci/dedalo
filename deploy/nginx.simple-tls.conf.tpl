@@ -127,6 +127,40 @@ server {
 		proxy_set_header Host $host;
 	}
 
+	# Code-master release archives — only if this instance is a code master
+	# (IS_A_CODE_SERVER=true). This is the URL the update manifest ADVERTISES to
+	# remote installs; unrouted, every code update dies on a 404 from the client
+	# alias below. Harmless otherwise: the engine 404s.
+	location /dedalo/install/code/ {
+		proxy_pass http://dedalo_ts;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+	}
+
+	# Hierarchy export downloads (admin-session-gated).
+	location /dedalo/install/import/hierarchy/ {
+		proxy_pass http://dedalo_ts;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+	}
+
+	# The local AI model store — ONNX weights the BROWSER fetches from the page
+	# origin (transformers.js `env.remoteHost`). Served from the private dir, so
+	# no client subtree answers it.
+	location /dedalo/ai_models/ {
+		proxy_pass http://dedalo_ts;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+	}
+
+	# Staged-upload previews (the browser shows the file it just uploaded, before
+	# the record is saved). Session-gated and owner-scoped by the engine.
+	location /dedalo/upload_tmp/ {
+		proxy_pass http://dedalo_ts;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+	}
+
 	# --- Entry points --------------------------------------------------------
 	location = /dedalo      { return 302 /dedalo/core/page/; }
 	location = /dedalo/     { return 302 /dedalo/core/page/; }

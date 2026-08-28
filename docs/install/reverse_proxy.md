@@ -28,6 +28,10 @@ flowchart LR
 | `/dedalo/tools/…`, `/dedalo/core/tools_common/…` | **proxy → socket** | tool assets live in the repo's tool trees, outside `client/` |
 | `/dedalo/core/component_text_area/tag/` | **proxy → socket** | the inline-tag image factory |
 | `/dedalo/install/import/ontology/…` | **proxy → socket** | only when this instance is an ontology master |
+| `/dedalo/install/code/…` | **proxy → socket** | the release archives a code master serves; this is the URL the update manifest advertises |
+| `/dedalo/install/import/hierarchy/…` | **proxy → socket** | hierarchy export downloads (admin-session-gated) |
+| `/dedalo/ai_models/…` | **proxy → socket** | the local AI model store, fetched by the browser from the page origin |
+| `/dedalo/upload_tmp/…` | **proxy → socket** | staged-upload previews, before the record is saved |
 | `/dedalo/media/…` | **proxy, from `MEDIA_PATH`** | gated by the generated rules — see below |
 | everything else under `/dedalo/…` | **proxy, from `client/dedalo/`** | static files |
 
@@ -225,12 +229,20 @@ server {
 		proxy_buffering off;        # SSE + NDJSON streaming
 	}
 
-	# Dynamic routes that live under /dedalo/ but are NOT static files.
+	# Dynamic routes that live under /dedalo/ but are NOT static files. No client
+	# subtree answers any of them, so an omitted line does not fall back to the
+	# engine — the alias below serves a 404 and the request never reaches the
+	# socket. The last three are conditional on what this install does (code
+	# master, hierarchy export, in-browser AI) and 404 harmlessly otherwise.
 	location /dedalo/lib/                            { proxy_pass http://dedalo_ts; }
 	location /dedalo/tools/                          { proxy_pass http://dedalo_ts; }
 	location /dedalo/core/tools_common/              { proxy_pass http://dedalo_ts; }
 	location = /dedalo/core/component_text_area/tag/ { proxy_pass http://dedalo_ts; }
 	location /dedalo/install/import/ontology/        { proxy_pass http://dedalo_ts; }
+	location /dedalo/install/code/                   { proxy_pass http://dedalo_ts; }
+	location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_ts; }
+	location /dedalo/ai_models/                      { proxy_pass http://dedalo_ts; }
+	location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_ts; }
 
 	# Client static files. Served IN PLACE (not content-hashed) — they must
 	# revalidate, so they are NEVER immutable.
@@ -325,6 +337,10 @@ a2enmod ssl headers http2 rewrite proxy proxy_http
     ProxyPass /dedalo/core/tools_common/            unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/core/tools_common/
     ProxyPass /dedalo/core/component_text_area/tag/ unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/core/component_text_area/tag/
     ProxyPass /dedalo/install/import/ontology/      unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/import/ontology/
+    ProxyPass /dedalo/install/code/                 unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/code/
+    ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
+    ProxyPass /dedalo/ai_models/                    unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/ai_models/
+    ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
 
     # --- Entry points: the client tree has no index.html above core/page/ --
     RedirectMatch 302 "^/dedalo/?$"      /dedalo/core/page/

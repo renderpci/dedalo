@@ -203,6 +203,66 @@ describe('install restart supervisor contract', () => {
 		}
 	});
 
+	// EVERY ENGINE ROUTE UNDER /dedalo/ MUST BE PROXIED (2026-08-28). /health was
+	// not the only hole: `/dedalo/install/code/`, `/dedalo/ai_models/`,
+	// `/dedalo/install/import/hierarchy/` and `/dedalo/upload_tmp/` were routed in
+	// NO config and NO documented sample, while their siblings (lib/, tools/,
+	// install/import/ontology/) were routed in all six. These paths have no client
+	// subtree, so an omitted rule does not fall through to the engine: the
+	// `/dedalo/` static alias answers 404 and the request never reaches the
+	// socket. The code one is the sharp case — it is the URL the update manifest
+	// ADVERTISES to remote installs, and serving a 404 there is exactly the defect
+	// core/update/code_serving.ts was written to end.
+	//
+	// The route list is DERIVED from src/, not hand-maintained here, so adding a
+	// route and forgetting the proxy layer fails HERE rather than in an operator's
+	// install. A new `*_URL_PREFIX = '/dedalo/…'` constant must be wired into all
+	// six files (or given a reason below) before this gate goes green again.
+	test('every engine /dedalo/ route prefix is proxied in all configs and samples', async () => {
+		const repo = new URL('../../', import.meta.url);
+
+		// The engine's own declaration of what it serves. One source of truth.
+		const prefixes = new Set<string>();
+		const glob = new Bun.Glob('**/*.ts');
+		for await (const rel of glob.scan({ cwd: new URL('src/', repo).pathname })) {
+			const text = await Bun.file(new URL(`src/${rel}`, repo)).text();
+			for (const m of text.matchAll(/_URL_PREFIX\s*=\s*'(\/dedalo\/[^']+)'/g)) {
+				prefixes.add(m[1] as string);
+			}
+		}
+		// Guard the derivation itself: a regex that silently stops matching would
+		// make this whole gate vacuous.
+		expect(prefixes.size).toBeGreaterThanOrEqual(5);
+		expect(prefixes).toContain('/dedalo/install/code/');
+
+		// MEDIA is deliberately absent: the media prefix is built from
+		// config.mediaDir at runtime (a template literal, not a quoted constant),
+		// and media is served FROM DISK by the web server — never proxied. That is
+		// the load-bearing rule of engineering/PRODUCTION.md, not an omission.
+
+		const nginxFiles = [
+			'deploy/nginx.conf',
+			'deploy/nginx.simple.conf',
+			'deploy/nginx.simple-tls.conf.tpl',
+			'docs/install/reverse_proxy.md',
+			'docs/install/multi_instance.md',
+		];
+		const apacheFiles = ['deploy/apache.conf', 'docs/install/reverse_proxy.md', 'docs/install/multi_instance.md'];
+
+		for (const path of nginxFiles) {
+			const text = await Bun.file(new URL(path, repo)).text();
+			for (const prefix of prefixes) {
+				expect(text, `${path}: nginx must route ${prefix}`).toContain(`location ${prefix}`);
+			}
+		}
+		for (const path of apacheFiles) {
+			const text = await Bun.file(new URL(path, repo)).text();
+			for (const prefix of prefixes) {
+				expect(text, `${path}: Apache must route ${prefix}`).toContain(`ProxyPass ${prefix}`);
+			}
+		}
+	});
+
 	// -----------------------------------------------------------------------
 	// THE CODE-UPDATE ROLLBACK CONTRACT (2026-08-23): the update pipeline
 	// (src/core/update/code_update.ts) writes a pending sentinel and restarts;
