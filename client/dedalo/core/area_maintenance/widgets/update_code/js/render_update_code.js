@@ -797,17 +797,36 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 		let state = init_phase_state(expected_version, expected_digest)
 		track.paint(state)
 
-	// bring the progress into view (see scroll_into_view above)
-		if (scroll_into_view===true && typeof body_response.scrollIntoView==='function') {
-			body_response.scrollIntoView({ behavior:'smooth', block:'start' })
-		}
-
 	// stream surface (render_stream owns this node)
 		const stream_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'update_stream',
 			parent			: body_response
 		})
+
+	// bring the progress into view (see scroll_into_view above).
+	//
+	// AFTER the stream node exists, and NOT `behavior:'smooth'`. Both halves are
+	// load-bearing, measured on the docker museum in map view (2026-08-28,
+	// 640px viewport): called before the surface was finished, the smooth scroll
+	// settled 184px SHORT of its target — the phase track came to rest at
+	// top:210 instead of top:26, so the track's own 352px pushed the stream to
+	// 582 and the spinner inside it to the very bottom edge. That is the
+	// reported "the spinner and the progress info are hidden below the table of
+	// steps": the CSS cap was doing its job and the SCROLL was landing wrong.
+	// A smooth scroll animates toward an offset computed when it is issued, so
+	// it must not be issued while nodes are still being appended; the same call
+	// with the surface complete lands at 26 exactly. rAF lets the appended nodes
+	// lay out first — without it the offset is computed from a stale layout
+	// again, just one frame earlier.
+		if (scroll_into_view===true && typeof body_response.scrollIntoView==='function') {
+			const bring_into_view = () => body_response.scrollIntoView({ behavior:'auto', block:'start' })
+			if (typeof requestAnimationFrame==='function') {
+				requestAnimationFrame(bring_into_view)
+			} else {
+				bring_into_view()
+			}
+		}
 
 	// frame feed. update_process_status/render_stream expose no per-chunk hook
 	// to the caller (common.js is shared surface), but render_stream ALWAYS
