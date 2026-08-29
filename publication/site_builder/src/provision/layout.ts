@@ -254,6 +254,88 @@ export const DRIVER_BIN_ENV: Readonly<Record<AgentDriverId, string>> = Object.fr
  * declaration is absent from the rendered env, and the daemon's own default applies, which
  * is the only arrangement in which config.ts is still the owner.
  */
+/**
+ * THE SHARED BEARER'S KEY — the daemon's `SERVICE_TOKEN`, the engine's
+ * `DEDALO_SITE_BUILDER_TOKEN`, a credential filename, a `LoadCredential=` id and a
+ * `$CREDENTIALS_DIRECTORY` entry, all at once.
+ *
+ * It lives here because it is a NAME, and this module owns names. It was spelled in
+ * `render/engine_fragment.ts` while `plan.ts` and `render/unit.ts` also needed it, which is
+ * one owner too few for a string that has to be identical in five places or the pairing
+ * silently fails on one side.
+ */
+/**
+ * A KEY THAT WOULD BE CARRYING A SECRET if it carried a value at all.
+ *
+ * Suffix-anchored: `PUBLICATION_API_KEY_FILE` is a PATH and passes, `PUBLICATION_API_KEY`
+ * is a value and does not. Owned here because BOTH ends of the no-secret law read it —
+ * `render/env.ts` refuses to WRITE such a key into the rendered env, and
+ * `src/instance/roots.ts` refuses to BOOT a daemon whose env file carries one. Two
+ * spellings of this pattern is a law enforced on one end and decorative on the other.
+ */
+export const SECRET_LOOKING_KEY = /(TOKEN|SECRET|PASSWORD|PASSPHRASE|CREDENTIAL|_KEY)$/;
+
+export const SERVICE_TOKEN_KEY = 'SERVICE_TOKEN';
+
+/**
+ * The Publication API key: a VALUE the daemon needs and must never read out of the rendered
+ * env, and the PATH of the file it lives in, which is all the env may carry.
+ *
+ * Both spellings are here for the same reason the bearer is: `buildEnvVars()` writes the
+ * `_FILE` key, `credentialSources()` turns the same path into a `LoadCredential=` line, and
+ * `src/config.ts` reads the value at `$CREDENTIALS_DIRECTORY/PUBLICATION_API_KEY`. Three
+ * readers, one name.
+ */
+export const PUBLICATION_API_KEY_KEY = 'PUBLICATION_API_KEY';
+export const PUBLICATION_API_KEY_FILE_KEY = `${PUBLICATION_API_KEY_KEY}_FILE`;
+
+/**
+ * The name of the audit log inside the audit root.
+ *
+ * The daemon appends to it (`src/audit.ts`) and the provisioner CREATES and chowns it
+ * (`auditFile` below, `plan.ts`'s tree phase) — because the directory is root-owned, which
+ * is what makes the trail append-only in the filesystem rather than by convention. Two
+ * spellings of this filename would be a daemon appending to a file nothing had created,
+ * inside a directory it is not allowed to create one in.
+ */
+export const AUDIT_FILE_NAME = 'audit.jsonl';
+
+/**
+ * HOW THE ENGINE REACHES THE DAEMON, in the daemon's own vocabulary.
+ *
+ * The pairing fragment tells the ENGINE to connect to `layout.socketPath`; these two keys
+ * are the other half of that sentence, and until they existed the daemon was never told —
+ * it bound a TCP port while the engine dialled a unix socket nothing was listening on, and
+ * every artifact on the host looked right. A fact that only one side of a connection knows
+ * is not a convention, it is a coincidence waiting to end.
+ */
+export const LISTEN_KIND_KEY = 'LISTEN_KIND';
+export const LISTEN_SOCKET_KEY = 'LISTEN_SOCKET';
+
+/**
+ * THE SITE TABLE — the file through which the provisioner TELLS the daemon where every site
+ * of this instance lives, and the env key that names it.
+ *
+ * WHY IT EXISTS AT ALL. `sites[].webspace` is an override the provisioner honours (a host
+ * with its own www layout), so `<webspace_base>/<domain>` is only the DEFAULT placement, not
+ * a law. While the daemon computed the placement for itself, the two ends were two
+ * independent derivations of the same fact, free to disagree — and on the committed
+ * reference declaration they DID: the vhosts of site 'archive' served
+ * `/srv/legacy-www/archive-example` while the daemon published into
+ * `/home/www/archive.example.net`, a directory no web server has ever read. Measured, not
+ * theorised.
+ *
+ * So the derivation is now published, once, by the side that owns it. `derive()` produces
+ * every string; the renderer writes them into `<configDir>/sites.json`; the daemon READS
+ * them and computes nothing (`src/sites/site_table.ts`). A site missing from the table is a
+ * named refusal, never a publish into a directory no vhost serves.
+ *
+ * The file is root:root 0644 — only root writes it (`MODES.siteTable`), everybody may read
+ * it, because the daemon runs as the service user and is in none of root's groups.
+ */
+export const SITE_TABLE_FILE_NAME = 'sites.json';
+export const SITE_TABLE_FILE_KEY = 'SITE_TABLE_FILE';
+
 export const LIMIT_ENV: Readonly<Record<string, string>> = Object.freeze({
   max_sites: 'MAX_SITES',
   max_concurrent_sessions: 'MAX_CONCURRENT_SESSIONS',
@@ -378,6 +460,77 @@ export const SURFACE_DIR: Readonly<Record<Surface, string>> = Object.freeze({
   preprod: 'pre',
   prod: 'web',
 });
+
+/**
+ * The immutable release stores' parent, inside a webspace.
+ *
+ * A SIBLING of `pre` and `web`, never underneath either: the served symlink must be
+ * swappable without the store moving with it, and a store under a served path would be
+ * reachable by URL. Dot-prefixed so the generated vhosts' "deny anything hidden" rule
+ * covers it without a rule of its own.
+ */
+export const RELEASE_STORE_DIR = '.releases';
+
+/**
+ * A SURFACE IS A PAIR, NOT A ROOT — the two paths one surface of one site actually is.
+ *
+ * The daemon used to address a surface as `(root, slug)`: a release store at
+ * `<root>/.releases/<slug>` and a served link at `<root>/<slug>`, one root per SURFACE
+ * shared by every site. That is not the shape this module derives and it is not the shape
+ * the generated vhosts serve — here a surface belongs to a SITE (`<webspace>/pre`,
+ * `<webspace>/web`), because a site answers on its own domain and a vhost carries one
+ * document root. A fully converged host therefore had vhosts pointing at a document root
+ * the daemon never wrote to, and a daemon publishing into a tree no web server served.
+ *
+ * So the pair is named, derived HERE like every other path, and handed to the promote layer
+ * whole (`src/build/promote.ts`). The daemon and the provisioner do not agree about these
+ * two paths by convention — they read the same function.
+ */
+export interface SurfacePaths {
+  readonly surface: Surface;
+  /** The pair's parent, and the directory the served link's RELATIVE target resolves in. */
+  readonly webspace: string;
+  /** `<webspace>/.releases/<pre|web>` — the immutable copies, one directory per release. */
+  readonly storeDir: string;
+  /** `<webspace>/<pre|web>` — the symlink a vhost's document root names. */
+  readonly linkPath: string;
+}
+
+/**
+ * The two paths of one surface, from the webspace they both live in.
+ *
+ * TWO STORES, ONE PER SURFACE, deliberately. Sharing a store between `pre` and `web` would
+ * save copies and would let preprod's pruning delete the bytes production is serving — the
+ * one class of bug a release store exists to make impossible.
+ */
+export function surfacePaths(webspace: string, surface: Surface): SurfacePaths {
+  const dir = surfaceDir(surface);
+  return Object.freeze({
+    surface,
+    webspace,
+    storeDir: join(webspace, RELEASE_STORE_DIR, dir),
+    linkPath: join(webspace, dir),
+  });
+}
+
+/**
+ * WHERE A SITE'S WEBSPACE IS — the one derivation the provisioner and the daemon share.
+ *
+ * The provisioner CREATES `<webspace_base>/<domain>` (marks it, chowns it, renders two
+ * vhosts against it); the daemon must find that same directory at publish time knowing only
+ * its instance's `WEBSPACE_BASE` and the site's own domain (`site.json`). Two spellings of
+ * this join would be a museum publishing into a directory no vhost serves — which is
+ * exactly the defect this function exists to close, so it is ONE function, called from both
+ * ends, and neither end is allowed to re-implement it.
+ */
+export function webspaceFor(webspaceBase: string, domain: string): string {
+  return join(webspaceBase, assertMatches(DOMAIN_PATTERN, 'site domain', domain));
+}
+
+/** `<host_prefix>.<domain>` — the draft vhost's server_name, and the preview host. */
+export function preprodDomainFor(hostPrefix: string, domain: string): string {
+  return `${assertMatches(HOST_LABEL_PATTERN, 'preprod host prefix', hostPrefix)}.${domain}`;
+}
 
 /** One site: a slug, the domain it answers on, and (optionally) an explicit webspace. */
 export interface ManifestSite {
@@ -630,6 +783,14 @@ export interface InstanceLayout {
   readonly secretsDir: string;
   /** The instance's copy of the declaration. Hand-written; everything else is rendered. */
   readonly manifestPath: string;
+  /**
+   * THE SITE TABLE the daemon reads its placements out of (`<configDir>/sites.json`).
+   *
+   * Named here, in the layout, because it is a derived path like every other; rendered by
+   * `render/sites.ts` from `sites` below; found by the daemon through the `SITE_TABLE_FILE`
+   * key of `envVars`. Three consumers, one string.
+   */
+  readonly siteTablePath: string;
   /** The path of one credential file. Throws on a key outside SECRET_KEY_PATTERN. */
   secretPath(key: string): string;
   /** Declared credential KEY → the file the provisioner must find its value in. */
@@ -732,6 +893,18 @@ export const MODES = Object.freeze({
   engineFragment: artifactMode('root', 'engineGroup', 0o640),
   /** The unit and the vhosts: read by root-run daemons. */
   hostConfig: artifactMode('root', 'root', 0o644),
+  /**
+   * The SITE TABLE (`<configDir>/sites.json`). Root-owned, like every other artifact, so
+   * the daemon cannot rewrite the one file that tells it where it may publish — a daemon
+   * able to edit its own table is a daemon able to point itself at another museum's
+   * webspace, which is the derivation this file exists to take away from it.
+   *
+   * 0644 and not 0640 root:<group>, and the difference matters: the reader is the SERVICE
+   * USER, which is in its own group and in none of root's. World-readable is safe here in
+   * a way it never is for the env — the table holds paths and domains, all of them public
+   * facts already written into the vhosts on the same host.
+   */
+  siteTable: artifactMode('root', 'root', 0o644),
   /** The parent of the three roots — root-owned, so the daemon cannot replace a root. */
   stateDir: artifactMode('root', 'root', 0o755),
   workspaces: artifactMode('user', 'group', 0o750),
@@ -964,6 +1137,10 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     manifest.serving?.preprod?.auth?.realm ?? DEFAULT_REALM,
   );
 
+  // Hoisted out of the object literal below because `buildEnvVars()` needs it: the daemon
+  // is told where to listen by the same expression the engine is told where to dial.
+  const socketPath = join(runtimeDir, 'daemon.sock');
+
   const layout: InstanceLayout = {
     instance,
     description,
@@ -977,10 +1154,11 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     }),
     roots,
     stateDir,
-    auditFile: join(roots.audit, 'audit.jsonl'),
+    auditFile: join(roots.audit, AUDIT_FILE_NAME),
     configDir,
     secretsDir,
     manifestPath: join(configDir, 'instance.json'),
+    siteTablePath: join(configDir, SITE_TABLE_FILE_NAME),
     secretPath(key: string): string {
       return join(secretsDir, assertMatches(SECRET_KEY_PATTERN, 'secret key', key));
     },
@@ -988,7 +1166,15 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     htpasswd,
     preprodRealm,
     envFile: join(configDir, 'env'),
-    envVars: buildEnvVars(manifest, { instance, roots, webspaceBase, webServer }),
+    envVars: buildEnvVars(manifest, {
+      instance,
+      roots,
+      webspaceBase,
+      webServer,
+      socketPath,
+      hostPrefix,
+      siteTablePath: join(configDir, SITE_TABLE_FILE_NAME),
+    }),
     engineFragment: join(configDir, 'engine.env.fragment'),
     // ONE UNIT PER INSTANCE, not a shared template. A template (`…@.service`) can vary the
     // instance name and nothing else — but ReadWritePaths= has to name THIS museum's
@@ -1000,7 +1186,7 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     unitPath: join(unitDir, `${USER_PREFIX}builder@${instance}.service`),
     runtimeDirectory,
     runtimeDir,
-    socketPath: join(runtimeDir, 'daemon.sock'),
+    socketPath,
     webspaceBase,
     sites,
     serving: manifest.serving,
@@ -1032,15 +1218,42 @@ function buildEnvVars(
     roots: { workspaces: string; home: string; audit: string };
     webspaceBase: string;
     webServer: WebServer;
+    socketPath: string;
+    hostPrefix: string;
+    siteTablePath: string;
   },
 ): Readonly<Record<string, string>> {
   const env: Record<string, string> = {
     DEDALO_SITE_INSTANCE: derived.instance,
     DEPLOYMENT_MODE: derived.webServer,
+    // WHERE THE DAEMON LISTENS — the same socket the engine is told to dial, spelled once.
+    // Never a port: the socket's ownership (0660 <user>:<engineGroup>) IS the access
+    // decision, and a TCP listener would publish the daemon to every uid on the host.
+    [LISTEN_KIND_KEY]: 'unix',
+    [LISTEN_SOCKET_KEY]: derived.socketPath,
     SITES_ROOT: derived.roots.workspaces,
     AGENT_HOME: derived.roots.home,
     AUDIT_DIR: derived.roots.audit,
     WEBSPACE_BASE: derived.webspaceBase,
+    // WHERE EVERY SITE OF THIS INSTANCE LIVES — the file, not the rule.
+    //
+    // WEBSPACE_BASE above is still rendered because the unit confines it and an operator
+    // reads it, but the daemon no longer computes a placement out of it: `sites[].webspace`
+    // may override the default per site, and a daemon re-deriving `<base>/<domain>` would
+    // publish into a directory no vhost serves (measured on the reference declaration's
+    // 'archive' site). This key names the table that answers instead.
+    [SITE_TABLE_FILE_KEY]: derived.siteTablePath,
+    // WHERE A SITE ANSWERS, in the two halves the daemon cannot derive for itself.
+    //
+    // A site's URL is now a fact about the SITE (its domain, in site.json) and not about
+    // the instance — that is why PREPROD_BASE_URL/PROD_BASE_URL are gone; an instance-wide
+    // pair could only ever be one site's. What is left over is the part the DECLARATION
+    // owns and the daemon has no other way to learn: the draft vhost's host prefix
+    // (`pre` → https://pre.www.example.org/) and whether this host answers the public site
+    // over TLS at all. Rendered here rather than guessed there, because a guessed scheme is
+    // a "your site is live at …" link that does not open.
+    PREPROD_HOST_PREFIX: derived.hostPrefix,
+    PROD_URL_SCHEME: manifest.serving?.prod?.tls?.mode === 'none' ? 'http' : 'https',
     PUBLICATION_API_URL: assertMatches(
       API_URL_PATTERN,
       'publication_api.url',
@@ -1050,7 +1263,7 @@ function buildEnvVars(
   };
 
   if (manifest.publication_api?.key_path) {
-    env.PUBLICATION_API_KEY_FILE = absoluteRoot(
+    env[PUBLICATION_API_KEY_FILE_KEY] = absoluteRoot(
       'publication_api.key_path',
       manifest.publication_api.key_path,
     );
@@ -1079,15 +1292,14 @@ function buildSite(
 ): SiteLayout {
   const slug = assertMatches(SLUG_PATTERN, 'site slug', site.slug);
   const domain = assertMatches(DOMAIN_PATTERN, `domain for site '${slug}'`, site.domain);
+  // The DEFAULT is `webspaceFor()` — the same function `src/sites/webspace.ts` calls at
+  // runtime, so the directory this provisioner creates is the directory that daemon
+  // publishes into. An explicit override is accepted for a host with its own www layout,
+  // and it is the one shape the daemon cannot re-derive: it will refuse such a site by
+  // name at build time rather than publish into a tree no vhost serves.
   const webspace = site.webspace
     ? absoluteRoot(`webspace for site '${slug}'`, site.webspace)
-    : join(ctx.webspaceBase, domain);
-
-  // `.releases` is a SIBLING of `pre` and `web`, never underneath either: the served
-  // symlink must be swappable without the release store moving with it, and a store under
-  // a served path would be reachable by URL. Two stores, not one — sharing them would let
-  // preprod pruning delete the bytes production is serving.
-  const releaseStore = join(webspace, '.releases');
+    : webspaceFor(ctx.webspaceBase, domain);
 
   // The vhost file name is spelled from USER_PREFIX like everything else, and carries the
   // instance AND the slug: two museums on one host may both own the slug 'coleccion', and
@@ -1101,13 +1313,13 @@ function buildSite(
   return Object.freeze({
     slug,
     domain,
-    preprodDomain: `${ctx.hostPrefix}.${domain}`,
+    preprodDomain: preprodDomainFor(ctx.hostPrefix, domain),
     webspace,
     releasesDir(surface: Surface): string {
-      return join(releaseStore, surfaceDir(surface));
+      return surfacePaths(webspace, surface).storeDir;
     },
     linkPath(surface: Surface): string {
-      return join(webspace, surfaceDir(surface));
+      return surfacePaths(webspace, surface).linkPath;
     },
     vhostPaths,
   });
@@ -1359,4 +1571,51 @@ export function readWritePaths(layout: InstanceLayout): string[] {
  */
 export function isWritablePath(layout: InstanceLayout, path: string): boolean {
   return readWritePaths(layout).some(root => isWithin(root, path));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * credentialSources()
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * EVERY SECRET THIS INSTANCE'S DAEMON MUST BE HANDED, and the root-owned file each comes
+ * out of — the exact map the unit's `LoadCredential=` lines are rendered from.
+ *
+ * WHY IT IS NOT JUST `layout.secrets`. `secrets` is what the museum DECLARED, and two of
+ * the daemon's credentials are never declared:
+ *
+ *   - `SERVICE_TOKEN` is minted by the provisioner (`plan.ts`) at `secretPath(SERVICE_TOKEN)`
+ *     and quoted to the operator by the pairing fragment. Rendering `LoadCredential=` from
+ *     `secrets` alone left that file minted, named in the fragment, `cat`-ed by the operator
+ *     into the engine's env — and never handed to the daemon at all. The daemon then refuses
+ *     to boot for want of the one credential the provisioner had just created for it, which
+ *     is a fully converged provision that cannot run.
+ *   - `PUBLICATION_API_KEY` is declared as a PATH (`publication_api.key_path`) rather than
+ *     under `secrets`, and that path is a 0600 root:root file inside a 0700 directory. The
+ *     rendered env carries the path, which the service user cannot open. Naming it here is
+ *     what turns a path the daemon can read ABOUT into a value it can read.
+ *
+ * A DECLARED KEY ALWAYS WINS. If the declaration names its own `secrets.SERVICE_TOKEN`, that
+ * file is the one loaded — the same expression `plan.ts` mints into and the fragment quotes,
+ * so the three cannot name three different files. And one key can never appear twice:
+ * `LoadCredential=` takes an id, and two lines with the same id is a unit systemd refuses.
+ *
+ * Sorted, so the rendered lines are a pure function of the layout rather than of the order
+ * the declaration happened to list its secrets in.
+ */
+export function credentialSources(layout: InstanceLayout): Readonly<Record<string, string>> {
+  const sources: Record<string, string> = {};
+
+  // The bearer first, so a declared entry below overwrites it with the museum's own path
+  // rather than the other way round.
+  sources[SERVICE_TOKEN_KEY] = layout.secretPath(SERVICE_TOKEN_KEY);
+
+  const apiKeyFile = layout.envVars[PUBLICATION_API_KEY_FILE_KEY];
+  if (apiKeyFile) sources[PUBLICATION_API_KEY_KEY] = apiKeyFile;
+
+  for (const [key, path] of Object.entries(layout.secrets)) sources[key] = path;
+
+  return Object.freeze(
+    Object.fromEntries(Object.entries(sources).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+  );
 }

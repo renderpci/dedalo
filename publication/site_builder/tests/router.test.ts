@@ -1,7 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { routeRequest } from '../src/router';
 import { config } from '../src/config';
-import { resetInstance } from './fixtures/instance';
+import { writeFile } from 'node:fs/promises';
+import { markerPath, provisionSite, resetInstance, siteDomain, webspaceOf } from './fixtures/instance';
 
 const BASE = config.BASE_PATH;
 const AUTH = { authorization: `Bearer ${config.SERVICE_TOKEN}` };
@@ -62,11 +63,19 @@ describe('router auth gate', () => {
 
 describe('site CRUD over the router', () => {
   test('create → list → get → delete round-trips with the actor', async () => {
+    // The operator's half, done first: the provisioner has made this site's webspace and
+    // its two vhosts. The create names the domain that pairs the two.
+    const { domain } = await provisionSite('roundtrip');
     const created = await routeRequest(
       new Request(`http://x${BASE}/v1/sites`, {
         method: 'POST',
         headers: { ...AUTH, 'content-type': 'application/json' },
-        body: JSON.stringify({ slug: 'roundtrip', name: 'Round Trip', actor: { user_id: 1, username: 'paco' } }),
+        body: JSON.stringify({
+          slug: 'roundtrip',
+          name: 'Round Trip',
+          domain,
+          actor: { user_id: 1, username: 'paco' },
+        }),
       }),
     );
     expect(created.status).toBe(201);
@@ -79,7 +88,8 @@ describe('site CRUD over the router', () => {
     expect(detail.status).toBe(200);
     const detailBody = (await detail.json()) as { manifest: { slug: string }; preprod: { url: string } };
     expect(detailBody.manifest.slug).toBe('roundtrip');
-    expect(detailBody.preprod.url).toContain('roundtrip');
+    // The site's OWN draft host, not a shared base URL with the slug as a path segment.
+    expect(detailBody.preprod.url).toBe(`http://pre.${siteDomain('roundtrip')}/`);
 
     const del = await routeRequest(
       new Request(`http://x${BASE}/v1/sites/roundtrip`, {
@@ -92,6 +102,81 @@ describe('site CRUD over the router', () => {
 
     const gone = await get('/v1/sites/roundtrip', AUTH);
     expect(gone.status).toBe(404);
+  });
+
+  test('create without a domain is 400 — a site with nowhere to publish is not a site', async () => {
+    await provisionSite('nodomain');
+    const res = await routeRequest(
+      new Request(`http://x${BASE}/v1/sites`, {
+        method: 'POST',
+        headers: { ...AUTH, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'nodomain',
+          name: 'No Domain',
+          actor: { user_id: 1, username: 'paco' },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test('a placement refusal reaches the operator as 409 + reason, never as a bare 500', async () => {
+    // S1, and the shape of the bug: `WebspaceError` was mapped by no route, so every one of
+    // those carefully written sentences ("the provisioner never created a webspace for this
+    // site — run provision apply") arrived as `500 Internal server error` with the detail
+    // scrubbed. A refusal an operator cannot read is an outage with extra steps.
+    const res = await routeRequest(
+      new Request(`http://x${BASE}/v1/sites`, {
+        method: 'POST',
+        headers: { ...AUTH, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'undeclared',
+          name: 'Undeclared',
+          domain: siteDomain('undeclared'),
+          actor: { user_id: 1, username: 'paco' },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    expect(res.headers.get('content-type')).toContain('application/problem+json');
+    const body = (await res.json()) as { detail: string; reason: string; type: string };
+    // The machine half the engine branches on…
+    expect(body.reason).toBe('webspace_unavailable');
+    // …and the human half, intact.
+    expect(body.detail).toContain('site table');
+    expect(body.detail).toContain('provision apply');
+    expect(body.detail).not.toContain('Internal server error');
+  });
+
+  test('a delete reports the surfaces it did NOT remove', async () => {
+    // The other half of the same honesty: a delete that leaves a museum's live production in
+    // place (because the webspace stopped declaring itself ours) must not look like one that
+    // took it down.
+    const { domain } = await provisionSite('reported');
+    await routeRequest(
+      new Request(`http://x${BASE}/v1/sites`, {
+        method: 'POST',
+        headers: { ...AUTH, 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: 'reported', name: 'Reported', domain, actor: { user_id: 1, username: 'paco' } }),
+      }),
+    );
+    await writeFile(markerPath(webspaceOf('reported')), 'museum-b\n', 'utf8');
+
+    const del = await routeRequest(
+      new Request(`http://x${BASE}/v1/sites/reported`, {
+        method: 'DELETE',
+        headers: { ...AUTH, 'content-type': 'application/json' },
+        body: JSON.stringify({ actor: { user_id: 1, username: 'paco' } }),
+      }),
+    );
+    expect(del.status).toBe(200);
+    const body = (await del.json()) as {
+      removed_surfaces: string[];
+      skipped_surfaces: Array<{ surface: string; reason: string }>;
+    };
+    expect(body.removed_surfaces).toEqual([]);
+    expect(body.skipped_surfaces[0]!.surface).toBe('preprod');
+    expect(body.skipped_surfaces[0]!.reason).toContain('museum-b');
   });
 
   test('create without an actor is 400', async () => {

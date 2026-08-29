@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { resetInstance, workspacePath } from './fixtures/instance';
+import { provisionSite, resetInstance, workspacePath } from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { __setTestDriver } from '../src/drivers/registry';
 import { startSession, sendMessage, stopSession, getSessionState } from '../src/sessions/manager';
@@ -14,6 +14,12 @@ import type { AgentDriver, AgentEvent, AgentProcess, SessionStartOptions } from 
 import type { StoredEvent } from '../src/sessions/events';
 
 const ACTOR = { user_id: 9, username: 'agent-tester' };
+
+/** A site with both halves in place: a provisioned webspace and a created workspace. */
+async function makeSite(slug: string, name: string): Promise<void> {
+  const { domain } = await provisionSite(slug);
+  await createSite({ slug, name, domain, actor: ACTOR });
+}
 
 /** Polls `predicate` until true or the timeout elapses. */
 async function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void> {
@@ -94,7 +100,7 @@ async function collectStream(res: Response): Promise<StoredEvent[]> {
 
 describe('session flow', () => {
   test('a turn streams events, persists them, commits the workspace and updates meta', async () => {
-    await createSite({ slug: 'flow', name: 'Flow', actor: ACTOR });
+    await makeSite('flow', 'Flow');
     __setTestDriver(
       'claude_code',
       fakeDriver(
@@ -134,7 +140,7 @@ describe('session flow', () => {
   });
 
   test('a follow-up message runs a second turn with the resume token', async () => {
-    await createSite({ slug: 'multi', name: 'Multi', actor: ACTOR });
+    await makeSite('multi', 'Multi');
     __setTestDriver(
       'claude_code',
       fakeDriver([{ type: 'result', ok: true, resumeToken: 'r1', durationMs: 1 }]),
@@ -159,7 +165,7 @@ describe('session flow', () => {
   });
 
   test('two concurrent starts on the same site: the second is a conflict', async () => {
-    await createSite({ slug: 'lock', name: 'Lock', actor: ACTOR });
+    await makeSite('lock', 'Lock');
     __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }], { hang: true }));
 
     const first = await startSession('lock', 'go');
@@ -179,7 +185,7 @@ describe('session flow', () => {
   });
 
   test('stop interrupts a running turn and marks it done', async () => {
-    await createSite({ slug: 'stoppable', name: 'Stoppable', actor: ACTOR });
+    await makeSite('stoppable', 'Stoppable');
     __setTestDriver('claude_code', fakeDriver([{ type: 'text', text: 'working…' }], { hang: true }));
 
     const { session_id } = await startSession('stoppable', 'long task');
@@ -196,7 +202,7 @@ describe('session flow', () => {
   });
 
   test('replaying a finished session with after=0 returns history and closes', async () => {
-    await createSite({ slug: 'replay', name: 'Replay', actor: ACTOR });
+    await makeSite('replay', 'Replay');
     __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
     const { session_id } = await startSession('replay', 'quick');
     await collectStream(sessionEventStream('replay', session_id, -1));
@@ -210,7 +216,7 @@ describe('session flow', () => {
 
 describe('workspace mutual exclusion (turns vs builds)', () => {
   test('a build is refused while an agent turn is running', async () => {
-    await createSite({ slug: 'excl-a', name: 'Excl A', actor: ACTOR });
+    await makeSite('excl-a', 'Excl A');
     __setTestDriver('claude_code', fakeDriver([{ type: 'text', text: 'working…' }], { hang: true }));
 
     const { session_id } = await startSession('excl-a', 'go');
@@ -223,7 +229,7 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
   });
 
   test('an agent turn is refused while a build is running, and allowed after it settles', async () => {
-    await createSite({ slug: 'excl-b', name: 'Excl B', actor: ACTOR });
+    await makeSite('excl-b', 'Excl B');
     // A build slow enough to hold the reservation while we try to start a session.
     const manifest = await readManifest('excl-b');
     manifest.build = { install: 'sleep 1', build: 'true', output: 'src' };

@@ -21,10 +21,21 @@ Phase 0 (the test fixture and its guard, `publication/site_builder/tests/fixture
 root keys of §2, so the provisioner lands against a suite that satisfies the contract
 instead of against eleven red files.
 
-Phase 2 then landed the RENDER move and executed the retirement §4 describes: the five
-renderers (`src/provision/render/{unit,env,nginx,apache,engine_fragment}.ts` behind
+Phase 2 then landed the RENDER move and executed the retirement §4 describes: the
+renderers (`src/provision/render/{unit,env,sites,nginx,apache,engine_fragment}.ts` behind
 `renderAll()`), a gate each, and — in the same commit — the deletion of the six
-hand-written artifacts. Their text is now pure functions; the rendered output of the one
+hand-written artifacts.
+
+`sites.ts` joined them later (2026-08-29) and is the one artifact a PROGRAM reads: the SITE
+TABLE, `<config dir>/sites.json`, which publishes every site's derived placement so the
+daemon can stop deriving one of its own. It exists because the two sides HAD derived it
+independently — the provisioner honouring `sites[].webspace`, the daemon always computing
+`<WEBSPACE_BASE>/<domain>` — and disagreed for any site using the override, including the
+one in the committed reference declaration: the vhosts served one directory and the daemon
+published into another. Being JSON it is the one artifact whose stamp line is `//` rather
+than `#` (its reader strips that line before parsing); being load-bearing, it is proved at
+boot exactly like a root marker, and a table that is absent, unstamped, hand-edited or
+stamped for another instance refuses the start. Their text is now pure functions; the rendered output of the one
 committed declaration is committed beside it (`deploy/examples/rendered*`, §4.3) and
 byte-compared against a fresh render, so an example can no longer become a seventh
 hand-maintained file. **Measured 2026-08-29: 370 pass / 0 fail / 21 files**, `bunx tsc
@@ -213,13 +224,14 @@ Example values are for `instance = museum-a`, `sites[n]` = `{ slug: 'coleccion',
 | Unit file | `layout.unitPath` | `/etc/systemd/system/dedalo-site-builder@museum-a.service` |
 | Declaration dir | `layout.configDir` | `/etc/dedalo_sites/instances/museum-a` |
 | Manifest | `layout.manifestPath` | `…/museum-a/instance.json` |
+| Site table (generated) | `layout.siteTablePath` | `…/museum-a/sites.json` |
 | Secrets dir | `layout.secretsDir` | `…/museum-a/secrets` |
 | Secret file | `layout.secretPath('ANTHROPIC_API_KEY')` | `…/museum-a/secrets/ANTHROPIC_API_KEY` |
 | Declared credentials | `layout.secrets` | `{ ANTHROPIC_API_KEY: '…' }` — key → declared file |
 | Preprod htpasswd | `layout.htpasswd` | `…/museum-a/preprod.htpasswd` |
 | Preprod realm | `layout.preprodRealm` | `Dedalo preprod` |
 | Rendered env | `layout.envFile` | `…/museum-a/env` |
-| Rendered env CONTENTS | `layout.envVars` | `SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR`, `WEBSPACE_BASE`, `PUBLICATION_API_URL`, … |
+| Rendered env CONTENTS | `layout.envVars` | `SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR`, `WEBSPACE_BASE`, `SITE_TABLE_FILE`, `PUBLICATION_API_URL`, … |
 | Engine pairing fragment | `layout.engineFragment` | `…/museum-a/engine.env.fragment` |
 | State dir (root-owned) | `layout.stateDir` | `/var/lib/dedalo_sites/museum-a` |
 | Workspaces (`SITES_ROOT`) | `layout.roots.workspaces` | `…/museum-a/workspaces` |
@@ -249,11 +261,19 @@ its own. A vhost, conversely, carries one `server_name`, one document root and o
 block, so one file per site per surface is the only shape that is not a compromise.
 
 **The rendered `env` replaces the daemon's hand-written `.env`,** and the surface roots
-move with it: `SITES_ROOT` becomes instance-scoped, `PREPROD_ROOT`/`PROD_ROOT` cease to
-exist as single trees (a surface is now per-site, inside that site's webspace — §6), and
-`AGENT_HOME`, `AUDIT_DIR` and `WEBSPACE_BASE` join the census.
-`publication/site_builder/tests/seam_tripwire.test.ts` already lists all six names, so the
-suite's one root-knowing module keeps holding across the rename instead of quietly ceasing
+moved with it: `SITES_ROOT` is instance-scoped, `AGENT_HOME`, `AUDIT_DIR` and
+`WEBSPACE_BASE` joined the census, and `PREPROD_ROOT`/`PROD_ROOT` are DELETED — a surface
+is per-site, inside that site's webspace (§6). So are `PREPROD_BASE_URL`/`PROD_BASE_URL`:
+an instance-wide base URL could only ever be one site's on a host that serves each site at
+its own domain. What replaced them is two host facts the declaration owns and the daemon
+cannot derive — `PREPROD_HOST_PREFIX` (from `serving.preprod.host_prefix`) and
+`PROD_URL_SCHEME` (`http` when `serving.prod.tls.mode` is `none`, else `https`) — which a
+site's own domain completes into a URL.
+`SITE_TABLE_FILE` joined the census on 2026-08-29: the daemon is TOLD where every site of
+this instance lives (`<config dir>/sites.json`, §4) instead of computing a placement from
+`WEBSPACE_BASE`, which disagreed with the vhosts for any site using `sites[].webspace`.
+`publication/site_builder/tests/seam_tripwire.test.ts` lists the current root names, so the
+suite's one root-knowing module keeps holding across each move instead of quietly ceasing
 to mean anything.
 
 ### 2.4 Every string that reaches a rendered artifact is constrained
@@ -310,6 +330,7 @@ root:root and is the ONE hand-written file.
 | `…/<i>/secrets/` | `secretsDir` | root | root | `0700` | root | root |
 | `…/<i>/secrets/<KEY>` | `secret` | root | root | `0600` | root, and the service process per turn via `$CREDENTIALS_DIRECTORY` | root |
 | `…/<i>/env` | `envFile` | root | SG | `0640` | SG (the daemon) | provisioner (generated, secret-free) |
+| `…/<i>/sites.json` | `siteTable` | root | root | `0644` | anyone (the daemon reads it) | provisioner (generated) |
 | `…/<i>/preprod.htpasswd` | `htpasswd` | root | WG | `0640` | the web server | provisioner |
 | `…/<i>/engine.env.fragment` | `engineFragment` | root | EG | `0640` | the paired engine's operator | provisioner |
 | the unit, and the two vhosts per site | `hostConfig` | root | root | `0644` | anyone | provisioner |
@@ -377,6 +398,31 @@ one; the drivers allowlist what they forward). `publication_api.key_path` is del
 same way — the rendered env carries `PUBLICATION_API_KEY_FILE`, a PATH, never a value. The
 rendered `env` being SECRET-FREE is therefore not a courtesy: it is what makes it safe for
 that file to be group-readable by the service user at all.
+
+**The `LoadCredential=` set is `credentialSources(layout)`, not the declaration's
+`secrets`.** Two of the credentials a daemon needs are never declared: the shared bearer,
+which the provisioner MINTS at `secrets/SERVICE_TOKEN` and the pairing fragment quotes to
+the operator, and `publication_api.key_path`, which is declared as a PATH into a 0600
+root:root file inside a 0700 directory — a file the service user cannot open, so naming the
+path in the env accomplishes nothing on its own. Rendering the unit's credential block from
+`secrets` alone produced a fully converged host — every file present, every mode correct,
+`provision check` clean — whose daemon exited at boot for want of the one credential the
+same provisioner had just created for it. One map now feeds the unit's `LoadCredential=`
+lines, the plan's credential files and the fragment's `cat` instruction, so the file that is
+minted, the file that is loaded and the file an operator is told to read cannot be three
+different files.
+
+**And the daemon BUILDS its configuration rather than reading the ambient environment.**
+`src/config.ts` parses the named env file, merges a short ambient allowlist
+(`DEDALO_SITE_INSTANCE`, `NODE_ENV`, `LOG_LEVEL`), then layers `$CREDENTIALS_DIRECTORY` on
+top — the credential wins, because it is the only one of the three layers a service user
+cannot have written. An unknown key in that source is a NAMED boot refusal, not a silent
+no-op: a generated env file carrying a key nothing reads is either a renderer inventing a
+knob or a daemon that dropped one, and both take effect nowhere while every file on disk
+looks correct. The instance name is the one ambient key that may also appear in the file,
+and a DISAGREEMENT between the two is refused rather than resolved by precedence — the unit
+stating it last would otherwise win silently while the ROOTS the daemon writes to came out
+of the same stale file.
 
 
 ## 4. The generated-artifact law
@@ -520,15 +566,26 @@ newline — so the check is a string compare and not a parse, and a root naming 
 instance is exactly as refusable as a root naming none. The provisioner plants the marker
 when it creates the root; the daemon only ever reads it, at boot, before it listens.
 
-Refusal semantics, in the daemon and in the suite alike:
+Refusal semantics. The two sides are NOT symmetrical, and the asymmetry is the law:
+**the provisioner and the suite may plant a marker; the daemon may only read one.**
+
+For the provisioner (`plan.ts`, the tree phase) and the fixture (`resetInstance`):
 
 - Root missing → created and marked (provisioner) / adopted (fixture).
 - Root exists, marker names this instance → proceed.
 - Root exists, EMPTY, no marker → adopted and marked. There is nothing there to lose, and
   refusing would only punish a clean host.
-- Root exists, non-empty, marker missing or naming another instance → **refuse**. The
-  daemon does not boot, writes nothing, and the message names the root, what it found, and
-  what it expected.
+- Root exists, non-empty, marker missing or naming another instance → **refuse**. Nothing
+  is planned, nothing is written, and the message names the root, what it found and what it
+  expected.
+
+For the daemon (`src/instance/roots.ts::assertInstanceRoots`), every state of the world but
+one is a refusal: the root exists AND carries a marker naming this instance, or the process
+does not start. An empty unmarked root is refused here even though the provisioner would
+adopt it, because a daemon that planted what was missing would be asserting only that it can
+write — the marker would be one this process invented, about a directory nobody had claimed.
+On a provisioned host the marker is always there: the provisioner plants it immediately
+after each root's own `mkdir`, before the root is filled.
 
 This is the same law as the engine's `dedalo_test_marker` row and its `.dedalo_test_media`
 file, for the same reason: **a path is a claim; a marker is the directory itself saying
@@ -540,8 +597,32 @@ served tree.
 
 The suite already implements exactly this shape (`tests/fixture_guard.test.ts`), including
 the two properties worth stating: every root is checked BEFORE any root is destroyed, so a
-bad third root cannot leave the first two already wiped; and a reset leaves every root
+bad last root cannot leave the earlier ones already wiped; and a reset leaves every root
 marked, so the instance stays bootable rather than merely empty.
+
+### 5.1 The boot preflight — what the daemon proves before it writes
+
+The marker check is one of five, and they run as the FIRST STATEMENT of `src/index.ts`,
+above the top-level `await sweepOnBoot()`. That placement is load-bearing rather than tidy:
+the session sweep WRITES at module evaluation — it commits recovered work and rewrites
+session metadata — so a check that ran "before the first request" would already have let a
+misconfigured daemon touch whatever tree it was pointed at. The ordering is gated as a
+source-order assertion anchored on `sweepOnBoot`, never on `Bun.serve`, because the serve
+call is not the first write.
+
+| Check | Refuses |
+|---|---|
+| `assertNoLegacyEnv` | a credential-shaped key in the env file wherever credentials exist (the law of §3 enforced from the READER's end, not only the renderer's), and a leftover per-checkout `.env` on a provisioned host |
+| `assertInstanceRoots` | a root that is missing, unmarked, or marked for another instance |
+| `assertRunningAs` | uid 0, and a root the running uid does not own — identity proved by OWNERSHIP, because the expected user NAME is machine-specific and could never be committed to a suite |
+| `assertRootsWritable` | a root this process cannot write, by create-and-unlink — or, for the root-owned audit directory, by appending to the file the provisioner created |
+| `assertAgentBinaries` | a driver binary that is not absolute (a name resolved off `PATH`, which is what a compromised turn can influence), one that is group- or world-writable, and — on a production run — one that is not root-owned |
+
+The write probe is the one that pays for itself. Under `ProtectSystem=strict` a root the
+unit's `ReadWritePaths=` omits is mounted READ-ONLY, and that is not an install failure: it
+is EROFS the first time that museum publishes, at night, on a live site. Probing at boot
+converts it into a refusal that names the root, which systemd reports and an operator can
+act on before anyone is looking at a broken page.
 
 ## 6. The webspace, and the hard rule
 
@@ -561,6 +642,41 @@ the current `pre` release into `.releases/web/<new>` and swaps `web`. Both swaps
 temp-link-plus-`rename`, atomic on one filesystem, so no web-server reload is involved and
 a visitor never sees a half-updated site. Release ids are UTC + a monotonic counter, so
 they sort lexically and rollback is "point the link at a retained id".
+
+### 6.1 How the DAEMON finds this directory
+
+A surface is a PAIR — a release store and a served link — and every function of
+`src/build/promote.ts` takes that pair rather than a root and a slug. The pair is derived
+from the site's webspace, and the webspace from the site's DOMAIN, which lives in the
+daemon-owned `site.json` and is required when a site is created. Both ends call the same
+function (`webspaceFor(webspaceBase, domain)`, `src/provision/layout.ts`), so the directory
+the provisioner CREATES and points two vhosts at is the directory the daemon PUBLISHES
+into. Before that phase the daemon wrote to `<PREPROD_ROOT>/<slug>` and `<PROD_ROOT>/<slug>`
+— trees no generated vhost has ever served.
+
+Four properties hold the pairing together, because a path is still only a claim — a
+declared one included:
+
+- **The placement is READ, not derived** (2026-08-29). The provisioner publishes every
+  site's webspace, release stores and served links into `<config dir>/sites.json`; the
+  daemon looks the site up there by slug and computes none of them. The two sides derived it
+  independently until then, and disagreed for every site using `sites[].webspace`.
+- **The webspace must declare itself this instance's** (`.dedalo_site_instance`, §5's marker
+  law). `WEBSPACE_BASE` is shared by every museum on the host, so a domain mistyped into a
+  `site.json` can name somebody else's live site.
+- **It must be writable by this process, proved now.** The same write probe the boot
+  preflight runs over the state roots: a webspace missing from the unit's `ReadWritePaths=`
+  is read-only under `ProtectSystem=strict` and would otherwise fail as EROFS halfway
+  through a publish.
+- **A site with no row, or whose webspace is absent, is REFUSED by name** — at create, at
+  build, at publish and at delete — never published into (nor deleted from) a directory no
+  web server reads. The daemon does not create webspaces: a document root is the
+  provisioner's to make.
+
+The one shape the daemon cannot follow is a per-site `sites[].webspace` OVERRIDE: it derives
+`<webspace_base>/<domain>` and nothing else, so an overridden site is refused with a message
+that says so. The override remains for an adopted host's legacy layout, and its cost is
+stated here rather than discovered on one.
 
 **HARD RULE: the WORKSPACE root may never live inside a webspace.** `web`, `pre` and
 `.releases` are servable and may; the workspace may not, ever, under any layout.
@@ -592,8 +708,10 @@ removed, or renamed — i.e. when `instance.json` changes.
 ## 7. Why TWO release stores and not one
 
 `.releases/pre/` and `.releases/web/` are separate stores holding separate copies, and
-publish stays a COPY (`src/build/publish.ts:46` — `promoteRelease(PROD_ROOT, slug, source)`,
-where `source` is the current preprod release directory).
+publish stays a COPY (`src/build/publish.ts` — `promoteRelease(surfaces.prod, source)`,
+where `source` is the current preprod release directory). Pruning is confined to the store
+of the surface being promoted, which under this shape is a different directory from the
+other surface's, so preprod's retention cannot reach production's bytes even in principle.
 
 The tempting alternative — one store, with `pre` and `web` as two links into it — saves a
 copy and is wrong: **preprod pruning would delete the bytes production is serving.**

@@ -363,7 +363,7 @@ interface VerbSpec {
  *
  * `--help` is GENERATED from it, so the help text cannot document a verb that does not exist
  * nor omit one that does, and the gate asserts both directions against these keys. Same
- * argument `RENDERER_BY_KIND` makes about the five renderers: a hand-written second list is
+ * argument `RENDERER_BY_KIND` makes about the renderers: a hand-written second list is
  * a list that will one day be wrong, and it will be wrong exactly when someone is reading it.
  */
 export const VERBS: Readonly<Record<string, VerbSpec>> = Object.freeze({

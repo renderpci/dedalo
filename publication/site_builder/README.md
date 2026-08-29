@@ -6,9 +6,9 @@ Each site is a git-versioned workspace; an agent edits it, the daemon builds it 
 files, serves it on a **pre-production** surface, and — on an admin-gated **publish** —
 promotes the exact previewed bytes to **production**.
 
-It follows the same isolation model as `publication/server_api/v2`: its own `.env`, its
-own systemd unit, a dedicated OS user, and **no access to the engine's Postgres or
-`../private/`**. The only data a generated site reads is the read-only Publication API.
+It follows the same isolation model as `publication/server_api/v2`, one step further: one
+INSTANCE per museum — its own generated environment file, its own systemd unit, its own OS
+user and its own roots — and **no access to the engine's Postgres or `../private/`**. The only data a generated site reads is the read-only Publication API.
 
 ## Architecture
 
@@ -40,6 +40,40 @@ Engine (tool_sitebuilder)  ──HTTP + bearer──►  Site Builder daemon (th
   previewed) and flips the prod symlink. Production is a copy, so deleting a workspace
   never breaks a live site. **Rollback** re-activates any retained release.
 
+### A site's two surfaces live in that site's own webspace
+
+A site answers on its own DOMAIN, and everything served for it lives in one directory named
+after that domain — the WEBSPACE the provisioner creates and points its two vhosts at:
+
+```
+<webspace>/                      by default <WEBSPACE_BASE>/<domain>, or whatever the
+    .releases/pre/<release>/     declaration's `sites[].webspace` override states
+    .releases/web/<release>/     immutable copies of past builds and publishes
+    pre  -> .releases/pre/<release>      the draft vhost's document root
+    web  -> .releases/web/<release>      the public vhost's document root
+```
+
+**The daemon does not work out where that directory is — it is TOLD.** The provisioner
+derives every one of those paths once (`derive()`, from the declaration, including the
+`sites[].webspace` override) and publishes them as a generated artifact,
+`<config dir>/sites.json`, root-owned `0644`, stamped and drift-checked like the unit and
+the vhosts. The daemon reads that table (`SITE_TABLE_FILE`, `src/sites/site_table.ts`) and
+derives nothing: the strings it publishes into are, byte for byte, the strings the vhosts
+were rendered from.
+
+That is a correction, not a flourish. The two sides used to derive the placement
+independently — the provisioner honouring the override, the daemon always computing
+`<WEBSPACE_BASE>/<domain>` — and for a site that uses the override (the committed reference
+declaration has one) they named two different directories: the vhosts served one and the
+daemon wrote into the other, with every file on the host looking correct and the published
+page never changing.
+
+A site with no row in the table, or whose webspace does not exist, or exists and declares
+itself ANOTHER instance's, is refused by name — at create, at build, at publish and at
+delete — rather than published into (or deleted from) a directory no web server serves. The
+daemon never creates a webspace: it is a document root, and a document root is the
+provisioner's to make.
+
 ## Running it locally
 
 ```bash
@@ -50,8 +84,26 @@ bunx tsc --noEmit
 ```
 
 From the repo root the same are wired as `bun run sitebuilder:install` /
-`start:sitebuilder` / `test:sitebuilder`. A development run reads its own `.env`; on a
-provisioned host that file is generated and is not written by hand (below).
+`start:sitebuilder` / `test:sitebuilder`.
+
+**The configuration has one resolution path**, on a laptop and on a museum's host alike:
+`src/config.ts` PARSES a named environment file — `$DEDALO_SITE_ENV_FILE`, else `.env.test`
+under `NODE_ENV=test`, else this package's `.env` — merges a three-key ambient allowlist
+(`DEDALO_SITE_INSTANCE`, `NODE_ENV`, `LOG_LEVEL`), and layers `$CREDENTIALS_DIRECTORY` on
+top, where the credential always wins. It does not read the rest of `process.env`, so an
+exported `SITES_ROOT` in a shell cannot repoint a daemon, and an unknown key anywhere in
+that source is a named refusal rather than a value that quietly does nothing.
+
+Two consequences for a development run. `DEDALO_SITE_INSTANCE` is REQUIRED and its roots
+(`SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR`, `WEBSPACE_BASE`) must each carry a
+`.dedalo_site_instance` marker naming it — the daemon refuses to boot against a directory
+that has not said whose it is — and `SITE_TABLE_FILE` must name a readable site table
+stamped for the same instance, because every path the daemon publishes into comes out of
+it. (In the suite the fixture renders that table with the provisioner's own renderer; on a
+host `provision apply` writes it.) And the default listener is the per-instance UNIX SOCKET the
+provisioner renders, so a local run that wants a port sets `LISTEN_KIND=tcp` (with `PORT`)
+in its own `.env`. On a provisioned host that file is generated and is not written by hand
+(below).
 
 ## Installing it on a host — one declaration, everything else derived
 
@@ -117,7 +169,7 @@ own. A declaration names credential KEYS and PATHS; it never carries a value.
 
 ### Still to come: the provisioner's CLI
 
-**Phase 3 is not built yet.** The grammar, the derivation and all five renderers are
+**Phase 3 is not built yet.** The grammar, the derivation and all six renderers are
 landed and gated; what does not exist yet is the command that reads a host's declaration,
 creates the identities, roots, markers and credential files, writes the artifacts that
 drifted, reloads systemd and validates the vhosts — plus its read-only `check` counterpart
@@ -132,7 +184,7 @@ source of truth this phase deleted.
 |---|---|---|
 | GET | `/health` | liveness + driver availability (no auth) |
 | GET | `/v1/capabilities` | drivers, templates, limits |
-| POST/GET/DELETE | `/v1/sites[/:slug]` | site CRUD |
+| POST/GET/DELETE | `/v1/sites[/:slug]` | site CRUD (create takes `slug`, `name`, `domain`) |
 | POST/GET | `/v1/sites/:slug/sessions` | start a turn / list sessions |
 | GET | `/v1/sessions/:id/events?after=N` | SSE event stream (replay + tail) |
 | POST | `/v1/sessions/:id/messages` | follow-up turn (resumed) |

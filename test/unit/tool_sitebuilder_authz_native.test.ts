@@ -147,7 +147,11 @@ async function cleanLedger(): Promise<void> {
 const CASES: Record<string, Record<string, unknown>> = {
 	get_status: {},
 	list_sites: {},
-	create_site: { slug: SLUG, name: 'Authz demo' },
+	// The domain is part of the minimal valid call: the daemon pairs a site with the webspace
+	// the provisioner made for that hostname, so a create without one is refused before the
+	// authorization question is even reached — which would make this file's "did it reach the
+	// daemon?" assertions vacuously false for the wrong reason.
+	create_site: { slug: SLUG, name: 'Authz demo', domain: 'authz-demo.example.org' },
 	// A slug of its own: delete_site sweeps the site's ownership rows on success, and the
 	// session cases below need theirs.
 	delete_site: { slug: DOOMED_SLUG },

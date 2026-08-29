@@ -11,7 +11,7 @@
  * end (an installer, a unit and a vhost each stating the same facts, none of them able to
  * notice the others).
  *
- * ONE LINE PER RENDERER, AND NOTHING ELSE. The five modules are written independently and
+ * ONE LINE PER RENDERER, AND NOTHING ELSE. The six modules are written independently and
  * must stay that way: each is imported from its own file and named once below. There is no
  * shared base class, no per-kind branch in this file, and no second list of kinds — a
  * renderer that applies only to some hosts says so itself (`appliesTo`, which is how the
@@ -32,6 +32,7 @@ import { envRenderer } from './env';
 import { nginxRenderer } from './nginx';
 import { apacheRenderer } from './apache';
 import { engineFragmentRenderer } from './engine_fragment';
+import { sitesRenderer } from './sites';
 
 export type { Artifact, ArtifactInput, ArtifactKind, ModeKey, Renderer } from './types';
 export { ARTIFACT_KINDS, artifact } from './types';
@@ -40,6 +41,7 @@ export { ARTIFACT_KINDS, artifact } from './types';
 export const RENDERERS: readonly Renderer[] = Object.freeze([
   unitRenderer,
   envRenderer,
+  sitesRenderer,
   nginxRenderer,
   apacheRenderer,
   engineFragmentRenderer,
@@ -50,7 +52,7 @@ export const RENDERERS: readonly Renderer[] = Object.freeze([
  *
  * `check` needs it: a stamped file found on the host names its kind, and the question
  * "what would we render for this today?" has to resolve to a module. Built and not
- * declared, because a hand-written map is the second census of the same five modules — and
+ * declared, because a hand-written map is the second census of the same six modules — and
  * the one that gets a new renderer added to it a release late.
  */
 export const RENDERER_BY_KIND: ReadonlyMap<ArtifactKind, Renderer> = (() => {

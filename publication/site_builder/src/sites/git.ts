@@ -13,22 +13,82 @@
  * authenticated fact.
  */
 
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { runBinary } from '../util/spawn';
 import { config } from '../config';
 
 const GIT_TIMEOUT_MS = 30_000;
 
+/**
+ * THE DAEMON'S OWN STATE IS NEVER COMMITTED — and above all not `.builder/mcp.json`.
+ *
+ * That file is written before every agent turn (`src/drivers/claude_code.ts`) and carries
+ * the MCP server's headers, which on an instance whose Publication API is key-protected
+ * means `X-API-Key: <the museum's key>`, in cleartext. The workspace is a git repo and the
+ * daemon runs `git add -A` after each turn, so the key was being committed — into the
+ * history of the very site the museum then publishes, where no later commit can remove it.
+ *
+ * The exclusion is written to `.git/info/exclude` and NOT to a `.gitignore` in the working
+ * tree, deliberately:
+ *
+ *   - a `.gitignore` is site source. It appears in the agent's tree, is itself committed,
+ *     and an agent turn asked to "clean up the repo" may rewrite or delete it — the one file
+ *     that must not be editable by the thing it is protecting against.
+ *   - `.git/info/exclude` is repository-local, never committed, never shown to the agent,
+ *     and honoured by `git add -A` exactly like a `.gitignore` would be.
+ *
+ * Rewritten (idempotently) on every commit rather than only at init, so a repo created
+ * before this rule existed acquires it; and anything already tracked under `.builder/` is
+ * removed from the INDEX in the same breath, because ignoring a tracked path does nothing at
+ * all.
+ */
+const DAEMON_STATE_DIR = '.builder';
+const EXCLUDE_BODY = [
+  '# Written by the Dédalo site-builder daemon. Repository-local: never committed.',
+  '#',
+  '# .builder/ is the daemon\'s private state inside this workspace — build records, build',
+  '# logs, and the per-turn MCP configuration, which carries the Publication API key as a',
+  '# request header. None of it is site source, and the key must never enter the history of',
+  '# a site the museum publishes.',
+  `/${DAEMON_STATE_DIR}/`,
+  '',
+].join('\n');
+
 // A minimal, constructed environment for git: no inheritance of the daemon's secrets.
 function gitEnv(): Record<string, string> {
   return {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
-    HOME: config.SITES_ROOT,
+    // git reads ~/.gitconfig; point it at the agent home, not at the tree it is committing.
+    HOME: config.AGENT_HOME,
     GIT_AUTHOR_NAME: 'Dédalo Site Builder',
     GIT_AUTHOR_EMAIL: 'site-builder@dedalo.local',
     GIT_COMMITTER_NAME: 'Dédalo Site Builder',
     GIT_COMMITTER_EMAIL: 'site-builder@dedalo.local',
   };
+}
+
+/**
+ * Plant (or refresh) the repository-local exclusion, and untrack anything under `.builder/`
+ * that a previous version of this daemon committed.
+ *
+ * `git rm --cached` is a no-op on a clean repo and is `--ignore-unmatch`ed so a repo with
+ * nothing tracked there does not fail; when it does match, the file leaves the index and
+ * stops being re-committed. It cannot rewrite history — a key already in an old commit is
+ * already spent, and is an operator's key-rotation problem, not something a daemon may
+ * pretend to fix by rewriting a museum's repository.
+ */
+export async function excludeDaemonState(slug: string): Promise<void> {
+  const cwd = confinedPath(config.SITES_ROOT, slug);
+  const exclude = join(cwd, '.git', 'info', 'exclude');
+  await mkdir(dirname(exclude), { recursive: true });
+  await writeFile(exclude, EXCLUDE_BODY, 'utf8');
+  await runBinary(['git', 'rm', '-r', '--cached', '--quiet', '--ignore-unmatch', DAEMON_STATE_DIR], {
+    cwd,
+    env: gitEnv(),
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
 }
 
 async function git(slug: string, ...args: string[]): Promise<void> {
@@ -42,6 +102,9 @@ async function git(slug: string, ...args: string[]): Promise<void> {
 /** Initialize the repo and record the scaffolded template as the first commit. */
 export async function initRepo(slug: string): Promise<void> {
   await git(slug, 'init', '--quiet', '--initial-branch=main');
+  // Before the FIRST commit: `.git/info/exclude` only exists once `git init` has made the
+  // .git directory, and the first commit is already capable of carrying daemon state.
+  await excludeDaemonState(slug);
   await commitAll(slug, 'scaffold: initial template');
 }
 
@@ -51,6 +114,10 @@ export async function initRepo(slug: string): Promise<void> {
  * not an error.
  */
 export async function commitAll(slug: string, message: string): Promise<boolean> {
+  // Re-asserted here and not only at init: this is the one function every commit goes
+  // through, so a repo created by an older daemon — or one whose .git was restored from a
+  // backup taken before the rule existed — gets the exclusion before its next `add -A`.
+  await excludeDaemonState(slug);
   await git(slug, 'add', '-A');
   const cwd = confinedPath(config.SITES_ROOT, slug);
   // `git diff --cached --quiet` exits 1 when there IS something staged.

@@ -79,6 +79,23 @@ beforeAll(async () => {
 				return Response.json({ data: [{ manifest: { slug: 'demo' } }] });
 			}
 			if (url.pathname === '/v1/sites' && req.method === 'POST') {
+				// The daemon's PLACEMENT refusal, verbatim in shape: a 409 problem document
+				// carrying the machine `reason` the engine authors a sentence for, and the
+				// daemon's own prose in `detail` (which must never reach the browser).
+				if ((body as { slug?: string }).slug === 'undeclared') {
+					return Response.json(
+						{
+							type: 'https://dedalo.dev/site-builder/problems/conflict',
+							title: 'Conflict',
+							status: 409,
+							detail:
+								"site 'undeclared' is not in instance 'mib's site table " +
+								"('/etc/dedalo_sites/instances/mib/sites.json') … Nothing was written.",
+							reason: 'webspace_unavailable',
+						},
+						{ status: 409 },
+					);
+				}
 				return Response.json(
 					{ manifest: { slug: (body as { slug: string }).slug } },
 					{ status: 201 },
@@ -160,22 +177,64 @@ describe('tool_sitebuilder proxy', () => {
 
 	test('create_site validates the slug before proxying and sends the actor in the body', async () => {
 		const bad = await refusalOf(
-			tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'Bad Slug', name: 'x' })),
+			tool.apiActions.create_site!.handler(
+				ctx(DEV, { slug: 'Bad Slug', name: 'x', domain: 'demo.example.org' }),
+			),
 		);
 		expect(bad.code).toBe('site_builder.rejected');
 		// Engine-authored prose, so it DOES reach the wire (public disclosure).
 		expect(bad.publicMessage).toBe('Invalid site name.');
 
 		const good = await tool.apiActions.create_site!.handler(
-			ctx(DEV, { slug: 'demo', name: 'Demo' }),
+			ctx(DEV, { slug: 'demo', name: 'Demo', domain: 'demo.example.org' }),
 		);
 		expect(good.data).toEqual({ manifest: { slug: 'demo' } });
 		const req = lastRequest();
 		expect(req.body).toMatchObject({
 			slug: 'demo',
 			name: 'Demo',
+			// THE DOMAIN. The tool sent {slug, name} and no domain at all, so once the daemon
+			// made it required every create through the engine failed — and the engine is the
+			// only door a museum has to this daemon.
+			domain: 'demo.example.org',
 			actor: { user_id: 7, username: 'user_7' },
 		});
+	});
+
+	test('create_site refuses a missing or malformed domain before proxying', async () => {
+		for (const domain of [undefined, '', 'not a domain', 'nodots', '../escape.example.org']) {
+			const refusal = await refusalOf(
+				tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'demo', name: 'Demo', domain })),
+			);
+			expect(refusal.code).toBe('site_builder.rejected');
+			expect(refusal.publicMessage).toContain('domain it will answer on');
+		}
+	});
+
+	test('a domain typed with capitals or spaces is normalized, not refused', async () => {
+		// A hostname is case-insensitive and an operator types one into a form; the daemon
+		// stores and compares it lowercased, so normalizing here is agreeing with it rather
+		// than being lenient.
+		await tool.apiActions.create_site!.handler(
+			ctx(DEV, { slug: 'demo', name: 'Demo', domain: '  WWW.Example.ORG ' }),
+		);
+		expect(lastRequest().body).toMatchObject({ domain: 'www.example.org' });
+	});
+
+	test('a placement refusal reaches the user as a sentence the ENGINE wrote', async () => {
+		// The daemon's own careful prose stays log-only (the rule this file's other assertions
+		// rest on). What crosses is the engine's sentence for the machine `reason` the daemon
+		// sent — otherwise a museum sees a refusal with no explanation at all, for a condition
+		// only whoever administers the server can fix.
+		const refusal = await refusalOf(
+			tool.apiActions.create_site!.handler(
+				ctx(DEV, { slug: 'undeclared', name: 'Undeclared', domain: 'undeclared.example.org' }),
+			),
+		);
+		expect(refusal.code).toBe('site_builder.rejected');
+		expect(refusal.publicMessage).toContain('no webspace prepared for this site');
+		// And the daemon's own words are NOT what the browser is shown.
+		expect(refusal.publicMessage).not.toContain('site table');
 	});
 
 	test('publish is denied to a plain user, allowed to a developer and a global admin', async () => {

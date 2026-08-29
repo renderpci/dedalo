@@ -15,7 +15,13 @@
 
 import { config } from '../../../src/config/config.ts';
 import type { DedaloError } from '../../../src/core/errors/index.ts';
-import { capDetail, codeForProblem, type DaemonProblem, siteBuilderFailure } from './wire.ts';
+import {
+	capDetail,
+	codeForProblem,
+	type DaemonProblem,
+	refusalSentence,
+	siteBuilderFailure,
+} from './wire.ts';
 
 export interface Actor {
 	user_id: number;
@@ -138,6 +144,12 @@ async function mapError(res: Response): Promise<DedaloError> {
 		res.status >= 400 && res.status < 500 ? 'site_builder.rejected' : 'site_builder.failed';
 	const code = codeForProblem(problem, fallback);
 	const detail = capDetail(problem.detail, 'The site builder reported an error.');
+	// The daemon's own prose stays here, in the LOG, in full — it names the instance, the
+	// site table, the directory and the command to run, and it is written for whoever
+	// administers the host.
 	console.error(`[tool_sitebuilder] daemon error ${res.status} (${code}):`, problem.detail ?? '');
-	return siteBuilderFailure(code, detail, { status: res.status });
+	// What the browser gets is the sentence the ENGINE authors for this refusal's machine
+	// code, or nothing at all. A refusal the daemon can spell out and the user cannot see is
+	// half a failure; a refusal the daemon gets to WORD is a service writing our UI.
+	return siteBuilderFailure(code, detail, { status: res.status }, refusalSentence(problem));
 }

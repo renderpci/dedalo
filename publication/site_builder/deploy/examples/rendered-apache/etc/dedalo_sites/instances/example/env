@@ -1,4 +1,4 @@
-# dedalo-provision: example env 963b95869734f4113d1a322c84ba2d4a1711ce3f08295c75d76294aa4cd8668d
+# dedalo-provision: example env 4b357279cc23510368119fcb191ea07a3a1e069c438c102e2c0414598db516c2
 # GENERATED FILE — do not edit.
 #
 # The environment of the Dédalo site-builder daemon for instance 'example'.
@@ -33,9 +33,14 @@ AUDIT_DIR="/srv/dedalo_audit/example"
 CLAUDE_CODE_BIN="/usr/local/bin/claude"
 DEDALO_SITE_INSTANCE="example"
 DEPLOYMENT_MODE="apache"
+LISTEN_KIND="unix"
+LISTEN_SOCKET="/run/dedalo-sites/example/daemon.sock"
 MAX_SITES="8"
+PREPROD_HOST_PREFIX="pre"
+PROD_URL_SCHEME="https"
 PUBLICATION_API_KEY_FILE="/etc/dedalo_sites/instances/example/secrets/PUBLICATION_API_KEY"
 PUBLICATION_API_URL="http://127.0.0.1:3100/publication/server_api/v2"
 RELEASES_RETAINED="10"
 SITES_ROOT="/var/lib/dedalo_sites/example/workspaces"
+SITE_TABLE_FILE="/etc/dedalo_sites/instances/example/sites.json"
 WEBSPACE_BASE="/srv/www"

@@ -21,13 +21,21 @@ export async function handleCreateSite(req: Request): Promise<Response> {
   const input: CreateSiteInput = {
     slug: String(body.slug ?? ''),
     name: String(body.name ?? ''),
+    // The domain the operator has pointed at this site — required, because it is what pairs
+    // the site with the webspace the provisioner created for it (src/sites/webspace.ts).
+    domain: String(body.domain ?? ''),
     template: typeof body.template === 'string' ? body.template : undefined,
     driver: normalizeDriver(body.driver),
     actor,
   };
 
   const manifest = await createSite(input);
-  await audit({ actor, action: 'create_site', site: manifest.slug, detail: { template: manifest.template } });
+  await audit({
+    actor,
+    action: 'create_site',
+    site: manifest.slug,
+    detail: { template: manifest.template, domain: manifest.domain },
+  });
   const status = await siteStatus(manifest.slug);
   return json(status, 201);
 }
@@ -49,9 +57,23 @@ export async function handleDeleteSite(req: Request, params: Record<string, stri
   const actor = requireActor(body);
   const purgeProd = url.searchParams.get('purge_prod') === 'true';
 
-  await deleteSite(slug, purgeProd);
-  await audit({ actor, action: 'delete_site', site: slug, detail: { purge_prod: purgeProd } });
-  return json({ deleted: slug, purged_prod: purgeProd });
+  // The result carries what was NOT removed, and it is reported in both directions — to the
+  // caller and into the audit trail. A delete that silently left a museum's live production
+  // in place (because the webspace no longer declares itself ours, say) would look exactly
+  // like one that took it down, and the operator would learn the difference from a browser.
+  const result = await deleteSite(slug, purgeProd);
+  await audit({
+    actor,
+    action: 'delete_site',
+    site: slug,
+    detail: { purge_prod: purgeProd, removed: result.removed, skipped: result.skipped },
+  });
+  return json({
+    deleted: slug,
+    purged_prod: purgeProd,
+    removed_surfaces: result.removed,
+    skipped_surfaces: result.skipped,
+  });
 }
 
 // --- helpers ---

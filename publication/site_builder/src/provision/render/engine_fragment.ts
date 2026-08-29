@@ -38,7 +38,7 @@
 
 import { join } from 'node:path';
 import type { InstanceLayout, InstanceManifest } from '../layout';
-import { SECRET_KEY_PATTERN } from '../layout';
+import { credentialSources, SECRET_KEY_PATTERN, SERVICE_TOKEN_KEY } from '../layout';
 import type { Artifact, Renderer } from './types';
 import { artifact } from './types';
 
@@ -83,7 +83,7 @@ export const ENGINE_FRAGMENT_KEYS: readonly string[] = Object.freeze([
  * vocabularies meet: `SERVICE_TOKEN` on the daemon's side of the socket,
  * `DEDALO_SITE_BUILDER_TOKEN` on the engine's, one value.
  */
-export const SERVICE_TOKEN_KEY = 'SERVICE_TOKEN';
+export { SERVICE_TOKEN_KEY };
 
 /**
  * WHAT STANDS WHERE THE TOKEN WOULD BE, and why a placeholder rather than a path.
@@ -299,11 +299,11 @@ function fragmentBody(layout: InstanceLayout): string {
   // spelled on this side of the socket and nowhere else in this tree.
   const engineEnvFile = join(layout.enginePrivateDir, '.env');
 
-  // Where the shared bearer actually lives. The declaration may name the file itself
-  // (`secrets.SERVICE_TOKEN`, the LoadCredential source); otherwise it is the provisioner's
-  // own canonical place for that key. Derived either way — a literal here would be the
-  // second owner of a path, which is the defect this phase deletes.
-  const tokenFile = layout.secrets[SERVICE_TOKEN_KEY] ?? layout.secretPath(SERVICE_TOKEN_KEY);
+  // Where the shared bearer actually lives. Read from `credentialSources()` — the same
+  // map the unit's LoadCredential= lines come from and the same path `plan.ts` mints into,
+  // so the file this fragment tells an operator to `cat` is the file the daemon is handed.
+  // A literal here would be the second owner of a path, which is the defect this deletes.
+  const tokenFile = credentialSources(layout)[SERVICE_TOKEN_KEY] as string;
 
   const lines: string[] = [
     ...comment(

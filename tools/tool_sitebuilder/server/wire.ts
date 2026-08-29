@@ -13,6 +13,13 @@
  *  - a DAEMON-SUPPLIED `detail` is another service's prose. It is LOG-ONLY: it goes in
  *    the throw's `message` (the console line) and never into `publicMessage`, so the
  *    daemon can never write the browser's error text.
+ *
+ * THE THIRD CASE, and the reason `REFUSAL_SENTENCE` exists: a refusal the daemon can
+ * explain and the user cannot see is only half a failure. The daemon's placement refusals
+ * (no webspace provisioned for this site; that domain belongs to another site) are exactly
+ * the ones somebody has to act on. So the daemon sends a stable machine `reason` and the
+ * ENGINE writes the sentence for it — the disclosure boundary is unchanged, and the person
+ * in front of the screen is told what happened.
  */
 
 import { DedaloError, type ErrorCode } from '../../../src/core/errors/index.ts';
@@ -41,6 +48,11 @@ const DAEMON_REASON_CODES: Readonly<Record<string, ErrorCode>> = {
 	validation: 'site_builder.rejected',
 	conflict: 'site_builder.rejected',
 	quota: 'site_builder.rejected',
+	// The daemon's placement refusals (src/sites/site_table.ts → a 409 carrying `reason`).
+	// Mapped explicitly rather than left to the status-derived default, because the sentence
+	// a museum reads for them is authored below and must not depend on a fallback.
+	webspace_unavailable: 'site_builder.rejected',
+	domain_taken: 'site_builder.rejected',
 	failed: 'site_builder.failed',
 	internal: 'site_builder.failed',
 };
@@ -63,6 +75,41 @@ export function capDetail(detail: string | undefined, fallback: string): string 
 }
 
 /**
+ * WHAT A MUSEUM READS WHEN THE DAEMON REFUSES — written HERE, chosen by the daemon's
+ * machine `reason`.
+ *
+ * The rule above stands: a daemon-supplied `detail` is another service's prose and never
+ * becomes the browser's error text. But "the daemon said no" with no explanation is a
+ * refusal nobody can act on, and the daemon's placement refusals are precisely the ones an
+ * operator must be able to act on — they mean a step of the provisioning has not been done.
+ *
+ * So the daemon sends a stable CODE and the engine writes the sentence. That keeps the
+ * disclosure boundary exactly where it was (nothing the daemon writes reaches the browser)
+ * while the person in front of the screen learns what happened. The full daemon text
+ * continues to the server log, where an operator with access to the host can read it in
+ * full.
+ *
+ * Only reasons that map to `site_builder.rejected` may appear here: it is the one code of
+ * the family with public disclosure (ERRORS_SPEC §2.2).
+ */
+const REFUSAL_SENTENCE: Readonly<Record<string, string>> = {
+	webspace_unavailable:
+		'The site builder has no webspace prepared for this site. A site is declared in the ' +
+		'server\'s site-builder instance file and provisioned there (its directory, its two ' +
+		'web-server entries and its certificate) before it can be created or published here. ' +
+		'Nothing was changed — ask whoever administers the server to provision it.',
+	domain_taken:
+		'Another site already answers on that domain. One hostname belongs to one site: the two ' +
+		'would share the same published files, and publishing this one would replace the other ' +
+		'site\'s live pages. Nothing was created.',
+};
+
+/** The engine-authored sentence for a daemon problem, or undefined if we author none. */
+export function refusalSentence(problem: DaemonProblem): string | undefined {
+	return REFUSAL_SENTENCE[reasonOf(problem)];
+}
+
+/**
  * An ENGINE-AUTHORED refusal of a site-builder request: the sentence is ours, so it is
  * safe to show (site_builder.rejected has public disclosure).
  */
@@ -82,9 +129,13 @@ export function siteBuilderFailure(
 	code: ErrorCode,
 	detail: string,
 	coordinates: Record<string, string | number> = {},
+	publicMessage?: string,
 ): DedaloError {
 	return new DedaloError(code, {
 		message: detail,
+		// Present ONLY when the engine authored it (see REFUSAL_SENTENCE) and only on the
+		// one publicly-disclosing code of the family — never the daemon's own `detail`.
+		...(publicMessage && code === 'site_builder.rejected' ? { publicMessage } : {}),
 		coordinates: { tool: 'tool_sitebuilder', ...coordinates },
 	});
 }

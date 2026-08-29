@@ -4,8 +4,9 @@
  * stream in sessions/sse.ts is the one exception and constructs its Response inline).
  */
 
-import { ApiError, MethodNotAllowedError, ServiceError } from '../errors';
+import { ApiError, ConflictError, MethodNotAllowedError, ServiceError } from '../errors';
 import { isProduction } from '../config';
+import { WebspaceError } from '../sites/site_table';
 
 /**
  * A JSON response. `no-store` by default — every response here is live daemon state (site
@@ -53,6 +54,25 @@ export function problem(error: unknown): Response {
 
 function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
+
+  // A PLACEMENT REFUSAL IS A 409 WITH ITS SENTENCE INTACT, not a 500.
+  //
+  // `WebspaceError` is raised when the provisioner never declared this site, when its
+  // webspace is missing, when the directory belongs to another instance, or when it is
+  // read-only under ProtectSystem=strict. Every one of those messages was written to be read
+  // by the operator who has to fix the host — and every one of them reached that operator as
+  // `500 Internal server error`, because nothing mapped the class and a 500's detail is
+  // scrubbed in production. The refusal was careful and invisible.
+  //
+  // 409 and not 5xx: the daemon is working exactly as designed, and the request names a real
+  // site in a state that cannot accept it — the same family as 'no_build' and
+  // 'session_running'. The `reason` extension is the machine half ('webspace_unavailable'),
+  // which is what the engine's tool branches on; the prose stays server-side prose that the
+  // engine logs rather than repeats to a browser.
+  if (error instanceof WebspaceError) {
+    return new ConflictError(error.message, error.code);
+  }
+
   // Unrecognised throw: internal fault. Detail is fixed in production so nothing
   // internal (paths, CLI stderr, stack frames) leaks through the engine to a browser.
   const message = error instanceof Error ? error.message : String(error);

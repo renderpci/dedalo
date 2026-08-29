@@ -2,7 +2,7 @@
  * The fixture's own guard — the suite may only destroy a root that SAYS it is the
  * suite's.
  *
- * `resetInstance()` is an `rm -rf` over three paths that come from an ordinary file
+ * `resetInstance()` is an `rm -rf` over four paths that come from an ordinary file
  * (`.env.test`) through an ordinary string. The engine applies exactly this law to its
  * test database (`dedalo_test_marker`) and its test media root (`.dedalo_test_media`):
  * a path is a claim, a marker is the directory itself saying whose it is. Without these
@@ -44,33 +44,35 @@ describe('resetInstance refuses what it does not own', () => {
   });
 
   test('refuses a populated root marked for ANOTHER instance', async () => {
-    await rm(roots.prodRoot, { recursive: true, force: true });
-    await mkdir(roots.prodRoot, { recursive: true });
-    await writeFile(markerPath(roots.prodRoot), 'museum-b\n', 'utf8');
-    await writeFile(join(roots.prodRoot, 'live.html'), 'B LIVE SITE', 'utf8');
+    // The webspace base is the sharpest case: on a host it holds every museum's SERVED
+    // trees, so a mistyped root here is another museum's live site.
+    await rm(roots.webspaceBase, { recursive: true, force: true });
+    await mkdir(roots.webspaceBase, { recursive: true });
+    await writeFile(markerPath(roots.webspaceBase), 'museum-b\n', 'utf8');
+    await writeFile(join(roots.webspaceBase, 'live.html'), 'B LIVE SITE', 'utf8');
 
     await expect(resetInstance()).rejects.toThrow(/museum-b/);
-    expect(existsSync(join(roots.prodRoot, 'live.html'))).toBe(true);
+    expect(existsSync(join(roots.webspaceBase, 'live.html'))).toBe(true);
   });
 
   test('refuses BEFORE wiping any root, so a bad third root leaves the first two intact', async () => {
     await resetInstance();
     await writeFile(join(roots.sitesRoot, 'ours.txt'), 'ours', 'utf8');
     // Poison the LAST root walked.
-    await writeFile(markerPath(roots.prodRoot), 'someone-else\n', 'utf8');
-    await writeFile(join(roots.prodRoot, 'theirs.txt'), 'theirs', 'utf8');
+    await writeFile(markerPath(roots.webspaceBase), 'someone-else\n', 'utf8');
+    await writeFile(join(roots.webspaceBase, 'theirs.txt'), 'theirs', 'utf8');
 
     await expect(resetInstance()).rejects.toThrow(/someone-else/);
     expect(existsSync(join(roots.sitesRoot, 'ours.txt'))).toBe(true);
   });
 
   test('adopts an EMPTY unmarked root rather than punishing a clean checkout', async () => {
-    await rm(roots.preprodRoot, { recursive: true, force: true });
-    await mkdir(roots.preprodRoot, { recursive: true });
-    expect(await instanceRootIsMarked(roots.preprodRoot)).toBe(false);
+    await rm(roots.auditDir, { recursive: true, force: true });
+    await mkdir(roots.auditDir, { recursive: true });
+    expect(await instanceRootIsMarked(roots.auditDir)).toBe(false);
 
     await resetInstance();
-    expect(await instanceRootIsMarked(roots.preprodRoot)).toBe(true);
+    expect(await instanceRootIsMarked(roots.auditDir)).toBe(true);
   });
 
   test('a reset leaves every root declared, so the instance stays bootable', async () => {

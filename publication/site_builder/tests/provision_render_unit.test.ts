@@ -281,12 +281,48 @@ describe('credentials reach the process only through LoadCredential=', () => {
       },
     });
 
-  test('one LoadCredential per declared secret, key:path, sorted', () => {
+  test('one LoadCredential per credential the daemon needs, key:path, sorted', () => {
     const { layout, body } = renderFrom(withSecrets());
     expect(valuesOf(body, 'LoadCredential')).toEqual([
       `ANTHROPIC_API_KEY:${layout.secrets.ANTHROPIC_API_KEY}`,
       `OPENAI_API_KEY:${layout.secrets.OPENAI_API_KEY}`,
+      // The shared bearer is here WITHOUT being declared — see the next test.
+      `SERVICE_TOKEN:${layout.secretPath('SERVICE_TOKEN')}`,
     ]);
+  });
+
+  test('the shared bearer is loaded even when the declaration names no secret at all', () => {
+    /**
+     * THE REGRESSION THIS EXISTS FOR. This block used to be rendered from the declaration's
+     * `secrets` alone, and SERVICE_TOKEN is never declared: the provisioner MINTS it, the
+     * pairing fragment tells the operator to `cat` it into the engine's env, and nothing
+     * ever handed it to the daemon. The result was a fully converged host — every file
+     * present, every mode correct, `provision check` clean — whose daemon exited at boot
+     * for want of the one credential the same provisioner had just created for it.
+     */
+    const { layout, body } = renderFrom(baseDoc());
+    expect(valuesOf(body, 'LoadCredential')).toEqual([`SERVICE_TOKEN:${layout.secretPath('SERVICE_TOKEN')}`]);
+  });
+
+  test("a declared SERVICE_TOKEN file is loaded from THERE, and only once", () => {
+    // One LoadCredential id may appear once: two lines with the same id is a unit systemd
+    // refuses. The declared path wins over the provisioner's canonical one, and the file the
+    // fragment quotes is the file that is loaded.
+    const pinned = '/etc/creds/gate/SERVICE_TOKEN';
+    const body = bodyOf(docWith({ secrets: { SERVICE_TOKEN: pinned } }));
+    expect(valuesOf(body, 'LoadCredential')).toEqual([`SERVICE_TOKEN:${pinned}`]);
+  });
+
+  test('the Publication API key is loaded as a credential, not read from its rendered path', () => {
+    // The rendered env carries PUBLICATION_API_KEY_FILE, a PATH — and that file is 0600
+    // root:root inside a 0700 directory, which the service user cannot open. Naming it here
+    // is what turns a path the daemon can read ABOUT into a value it can read.
+    const keyPath = '/etc/dedalo_sites/instances/gate/secrets/PUBLICATION_API_KEY';
+    const { layout, body } = renderFrom(
+      docWith({ publication_api: { url: 'https://data.example.org/v2', key_path: keyPath } }),
+    );
+    expect(layout.envVars.PUBLICATION_API_KEY_FILE).toBe(keyPath);
+    expect(valuesOf(body, 'LoadCredential')).toContain(`PUBLICATION_API_KEY:${keyPath}`);
   });
 
   test('a declared key appears ONLY inside a LoadCredential directive', () => {

@@ -21,6 +21,9 @@
 .sb_create { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .sb_create input { flex: 1 1 auto; min-width: 80px; padding: 4px 6px; }
 .sb_create button { flex: 0 0 auto; padding: 4px 10px; cursor: pointer; }
+/* The domain takes its own line: a hostname is long, and truncating the field an operator
+   has to type exactly is how a site gets created against the wrong web space. */
+.sb_create .sb_domain_input { flex: 1 1 100%; }
 .sb_site_list { list-style: none; margin: 0; padding: 0; }
 .sb_site {
 	display: flex; justify-content: space-between; align-items: center;

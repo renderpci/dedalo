@@ -172,11 +172,21 @@ sitebuilder_controller.prototype.render_sites = function() {
 	name_input.type = 'text'
 	name_input.placeholder = self.label('sitebuilder_new_site', 'New site')
 	name_input.className = 'sb_name_input'
+	// THE DOMAIN. Required by the server: it is what pairs the site with the web space the
+	// administrator provisioned for that hostname, and no rule turns a slug into a domain
+	// (it needs DNS, a web-server entry and a certificate). A hint, not a picker: the
+	// hostnames a server is provisioned for are not something this tool can enumerate.
+	const domain_input = document.createElement('input')
+	domain_input.type = 'text'
+	domain_input.placeholder = 'www.example.org'
+	domain_input.className = 'sb_domain_input'
 	const create_btn = document.createElement('button')
 	create_btn.textContent = '+'
 	create_btn.title = self.label('sitebuilder_new_site', 'New site')
-	create_btn.addEventListener('click', () => self.create_site(slug_input.value, name_input.value))
-	create.append(slug_input, name_input, create_btn)
+	create_btn.addEventListener('click', () =>
+		self.create_site(slug_input.value, name_input.value, domain_input.value)
+	)
+	create.append(slug_input, name_input, domain_input, create_btn)
 	pane.appendChild(create)
 
 	// Site list.
@@ -204,14 +214,19 @@ sitebuilder_controller.prototype.render_sites = function() {
 /**
  * CREATE_SITE
  * Create a site (create_site action), then reload the list and select the new one so the
- * user lands straight in its workspace. Slug and name are both required client-side; the
- * server validates them again.
+ * user lands straight in its workspace. Slug, name and DOMAIN are all required
+ * client-side; the server validates all three again, and the domain a third time against
+ * the sites its administrator has actually provisioned.
  */
-sitebuilder_controller.prototype.create_site = async function(slug, name) {
+sitebuilder_controller.prototype.create_site = async function(slug, name, domain) {
 
 	const self = this
-	if (!slug || !name) return self.toast('A slug and a name are required.')
-	const res = await self.request('create_site', { slug: slug.trim(), name: name.trim() })
+	if (!slug || !name || !domain) return self.toast('A slug, a name and a domain are required.')
+	const res = await self.request('create_site', {
+		slug	: slug.trim(),
+		name	: name.trim(),
+		domain	: domain.trim().toLowerCase()
+	})
 	if (request_failed(res)) return self.report(res)
 	await self.refresh_sites()
 	self.select_site(slug.trim())

@@ -16,15 +16,16 @@
  * agent-controlled string in the command position.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, lstatSync } from 'node:fs';
 import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { confinedPath } from '../util/paths';
+import { confinedPath, confinedRealPath } from '../util/paths';
 import { config } from '../config';
 import { ConflictError, NotFoundError } from '../errors';
 import { runBinary } from '../util/spawn';
 import { readManifest, type BuildSpec } from '../sites/manifest';
-import { siteExists } from '../sites/workspace';
+import { assertWithinQuota, siteExists, treeSizeMb } from '../sites/workspace';
+import { siteSurface } from '../sites/webspace';
 import { busyReason, endBuild, tryBeginBuild } from '../workspace_activity';
 import { promoteRelease, newReleaseId } from './promote';
 
@@ -56,6 +57,12 @@ function logPath(slug: string, id: string): string {
 /** Kicks off a build, returning its id. The work runs detached; poll getBuild. */
 export async function startBuild(slug: string): Promise<{ build_id: string }> {
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
+
+  // WHERE THIS BUILD WILL LAND, PROVED BEFORE IT RUNS. `siteSurface` refuses a site whose
+  // webspace the provisioner never created, is another instance's, or is read-only under
+  // ProtectSystem=strict. Asking now costs one stat and one probe; asking only at promote
+  // time would mean the museum waits five minutes to be told it had nowhere to publish.
+  siteSurface(await readManifest(slug), 'preprod');
 
   // Reserve the workspace synchronously — one check-and-mark, cross-exclusive with agent
   // turns (workspace_activity.ts), so a build can never start while an agent edits the
@@ -110,7 +117,9 @@ async function executeBuild(slug: string, id: string, record: BuildStatus): Prom
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const manifest = await readManifest(slug);
   const spec = manifest.build;
-  const env = { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: config.SITES_ROOT };
+  // HOME is the agent's own root: a build step's package manager writes a cache into it,
+  // and a cache inside the workspace it is building is a build able to poison the next one.
+  const env = { PATH: process.env.PATH ?? '/usr/bin:/bin', HOME: config.AGENT_HOME };
 
   const append = (text: string) => appendLog(slug, id, text);
 
@@ -127,13 +136,35 @@ async function executeBuild(slug: string, id: string, record: BuildStatus): Prom
       return finish(slug, record, 'failed', null, build.timedOut ? 'build timed out' : 'build failed');
     }
 
-    const outputDir = confinedPath(workspace, spec.output);
-    if (!existsSync(outputDir)) {
-      return finish(slug, record, 'failed', null, `build produced no ${spec.output}/ directory`);
+    // WHAT WAS BUILT IS PROVED BEFORE IT IS COPIED — see resolveOutputDir: an agent turn
+    // owns this directory's name and its contents, and a LEXICAL path is a claim about a
+    // string, not about the tree.
+    const resolved = resolveOutputDir(workspace, spec.output);
+    if (resolved.error) {
+      await append(`\n# refused: ${resolved.error}\n`);
+      return finish(slug, record, 'failed', null, resolved.reason as string);
     }
+    const outputDir = resolved.path as string;
 
     await append(`\n# promote to preprod\n`);
-    const release = await promoteRelease(config.PREPROD_ROOT, slug, outputDir);
+    // The quota covers the workspace AND both release stores, and it is asked HERE because
+    // this is the step that grows them: a promote adds a whole immutable copy of the output.
+    // The output's OWN size is passed in, because that copy is exactly what is about to be
+    // added — a gate that weighed only what already existed let one build carry a site to
+    // nearly twice its quota. Its own catch so the record says WHY — "over disk quota" is
+    // something a museum can act on, where the catch-all's "build error" would send someone
+    // to read a log that ends in a successful build.
+    try {
+      await assertWithinQuota(
+        manifest,
+        `promoting a build of '${slug}'`,
+        await treeSizeMb(outputDir),
+      );
+    } catch (error) {
+      await append(`\n# refused: ${error instanceof Error ? error.message : String(error)}\n`);
+      return finish(slug, record, 'failed', null, 'over disk quota');
+    }
+    const release = await promoteRelease(siteSurface(manifest, 'preprod'), outputDir);
     await append(`released ${release}\n`);
     return finish(slug, record, 'success', release, null);
   } catch (error) {
@@ -157,6 +188,73 @@ function runStep(
 ): ReturnType<typeof runBinary> {
   const argv = command.trim().split(/\s+/).filter(Boolean);
   return runBinary(argv, { cwd, env, timeoutMs, onStdout: onOutput, onStderr: onOutput });
+}
+
+/**
+ * WHERE THE BUILD OUTPUT ACTUALLY IS — proved with lstat and realpath, never spelled.
+ *
+ * `confinedPath(workspace, spec.output)` answers a question about a STRING: it says the
+ * name does not climb out of the workspace. It says nothing about what stands there, and an
+ * agent turn writes this directory. `ln -s / dist` is a build that "succeeds", produces a
+ * directory the lexical check approves of, and hands the promote layer the root of the
+ * filesystem to copy into a release store a web server then serves. Verified end to end
+ * before this function existed: a file outside the workspace was read back through the
+ * served link.
+ *
+ * So two questions, both of them about the tree:
+ *
+ *   - IS THE OUTPUT DIRECTORY ITSELF A LINK? `promoteRelease` refuses a symlinked ENTRY it
+ *     walks over, but it never lstat'd the root it was handed — the one path in the whole
+ *     copy that was taken on trust.
+ *   - DOES ITS REALPATH STAY INSIDE THE WORKSPACE? That catches the same trick one level up
+ *     (`dist/` real, `dist/../..` reached through a symlinked ancestor), and it is
+ *     `confinedRealPath` — the helper that already exists for exactly this, rather than a
+ *     second implementation of it here.
+ *
+ * Returns a REASON rather than throwing, because every other way a build can fail on this
+ * path becomes a terminal record with a sentence in it, and a refusal that arrived as a
+ * generic 'build error' would send a museum to read a log that ends in a successful build.
+ */
+function resolveOutputDir(
+  workspace: string,
+  output: string,
+): { path?: string; error?: string; reason?: string } {
+  const lexical = confinedPath(workspace, output);
+  let info;
+  try {
+    info = lstatSync(lexical);
+  } catch {
+    return {
+      error: `the build produced no '${output}' directory in the workspace`,
+      reason: `build produced no ${output}/ directory`,
+    };
+  }
+  if (info.isSymbolicLink()) {
+    return {
+      error:
+        `'${output}' is a SYMBOLIC LINK, not a directory. A build output is copied into an ` +
+        `immutable release store that a web server reads; a link here would decide which ` +
+        `tree gets copied and served, and this daemon does not follow one. Have the build ` +
+        `write the directory itself.`,
+      reason: `build output '${output}' is a symbolic link`,
+    };
+  }
+  if (!info.isDirectory()) {
+    return {
+      error: `'${output}' is not a directory.`,
+      reason: `build output '${output}' is not a directory`,
+    };
+  }
+  try {
+    return { path: confinedRealPath(workspace, output) };
+  } catch (error) {
+    return {
+      error:
+        `'${output}' resolves outside the workspace (${(error as Error).message}). Only what ` +
+        `the build wrote inside its own workspace may be promoted.`,
+      reason: `build output '${output}' resolves outside the workspace`,
+    };
+  }
 }
 
 /**

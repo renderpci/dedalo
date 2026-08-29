@@ -61,6 +61,7 @@ import { SCRATCH_DIR_NAME } from './fixtures/instance';
 import { renderAll, type Artifact } from '../src/provision/render';
 import { STAMP_TOKEN, parseStamp } from '../src/provision/hash';
 import { TOKEN_PLACEHOLDER } from '../src/provision/render/engine_fragment';
+import { SITE_TABLE_COMMENT_PREFIX } from '../src/provision/render/sites';
 
 const PACKAGE_DIR = join(import.meta.dir, '..');
 const EXAMPLES_DIR = join(PACKAGE_DIR, 'deploy', 'examples');
@@ -320,6 +321,7 @@ describe('the one declaration composes into a complete host set', () => {
       'engine_fragment',
       'env',
       'nginx_vhost',
+      'sites',
       'unit',
     ]);
   });
@@ -585,7 +587,13 @@ describe('the stamp shape §4 describes is the one hash.ts renders', () => {
       for (const artifact of rendered.artifacts) {
         const committed = committedPathFor(rendered.variant, artifact.path);
         const firstLine = readFileSync(committed, 'utf8').split('\n')[0]!;
-        expect({ path: artifact.path, startsWith: firstLine.startsWith(`# ${STAMP_TOKEN} `) }).toEqual({
+        // The PREFIX is the artifact's own comment syntax and not a constant: `sites.json`
+        // is JSON, which has no comment at all, so its stamp rides on a `//` line that its
+        // reader strips before parsing (src/sites/site_table.ts). Asserting '#' everywhere
+        // would have been a gate that could only be satisfied by making the one artifact a
+        // program reads unparseable.
+        const prefix = artifact.kind === 'sites' ? SITE_TABLE_COMMENT_PREFIX : '#';
+        expect({ path: artifact.path, startsWith: firstLine.startsWith(`${prefix} ${STAMP_TOKEN} `) }).toEqual({
           path: artifact.path,
           startsWith: true,
         });

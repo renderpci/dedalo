@@ -7,13 +7,10 @@
  * so there is one place the /v1/sites shape is defined.
  */
 
-import { existsSync } from 'node:fs';
-import { readlink } from 'node:fs/promises';
-import { basename } from 'node:path';
-import { confinedPath } from '../util/paths';
-import { config } from '../config';
 import { readManifest, type SiteManifest } from './manifest';
 import { listSlugs } from './workspace';
+import { declaredSurface, siteUrl } from './webspace';
+import { currentRelease } from '../build/promote';
 import { getSessionState } from '../sessions/manager';
 import { latestBuild, type BuildStatus } from '../build/builder';
 
@@ -29,13 +26,20 @@ export async function siteStatus(slug: string): Promise<SiteStatus> {
   const manifest = await readManifest(slug);
   const session = getSessionState(slug);
   const last_build = await latestBuild(slug);
-  const release = await currentPreprodRelease(slug);
+  // DECLARED, NOT PROVED, and deliberately: this is the dashboard's read. A site whose
+  // webspace an operator has removed must show as unbuilt, not blow up the listing — the
+  // refusal belongs on the paths that WRITE (build, publish), where it can be acted on. What
+  // it is NOT any more is DERIVED: a site the provisioner never declared has no preprod
+  // surface to report on, and says so with `null` instead of reporting whatever happens to
+  // sit at a path this daemon made up.
+  const preprod = declaredSurface(manifest, 'preprod');
+  const release = preprod ? await currentRelease(preprod) : null;
 
   return {
     manifest,
     session,
     last_build,
-    preprod: { url: `${config.PREPROD_BASE_URL}/${slug}/`, release },
+    preprod: { url: siteUrl(manifest, 'preprod'), release },
     published: manifest.published,
   };
 }
@@ -49,16 +53,4 @@ export async function allSiteStatuses(): Promise<SiteStatus[]> {
   const slugs = await listSlugs();
   const statuses = await Promise.all(slugs.map(slug => siteStatus(slug).catch(() => null)));
   return statuses.filter((s): s is SiteStatus => s !== null);
-}
-
-/** The release directory the preprod symlink currently points at, or null. */
-async function currentPreprodRelease(slug: string): Promise<string | null> {
-  const link = confinedPath(config.PREPROD_ROOT, slug);
-  if (!existsSync(link)) return null;
-  try {
-    const target = await readlink(link);
-    return basename(target);
-  } catch {
-    return null;
-  }
 }

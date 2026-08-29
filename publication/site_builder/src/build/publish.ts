@@ -12,10 +12,11 @@
  */
 
 import { existsSync } from 'node:fs';
-import { config } from '../config';
+import { confinedRealPath } from '../util/paths';
 import { ConflictError, NotFoundError, ValidationError } from '../errors';
 import { readManifest, writeManifest } from '../sites/manifest';
-import { siteExists } from '../sites/workspace';
+import { assertWithinQuota, siteExists, treeSizeMb } from '../sites/workspace';
+import { declaredSurface, siteSurfaces, siteUrl } from '../sites/webspace';
 import {
   promoteRelease,
   activateRelease,
@@ -34,22 +35,37 @@ export interface PublishResult {
 export async function publishSite(slug: string, actor: Actor): Promise<PublishResult> {
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
 
-  const preprodRelease = await currentRelease(config.PREPROD_ROOT, slug);
+  // BOTH SURFACES OF ONE SITE, out of one webspace — the pair the vhosts serve. Proved
+  // before anything is read or copied: the same directory refusal a build gets.
+  const manifest = await readManifest(slug);
+  const surfaces = siteSurfaces(manifest);
+
+  const preprodRelease = await currentRelease(surfaces.preprod);
   if (!preprodRelease) {
     throw new ConflictError('Nothing to publish — build the site first', 'no_build');
   }
-  const source = releasePath(config.PREPROD_ROOT, slug, preprodRelease);
-  if (!existsSync(source)) {
+  if (!existsSync(releasePath(surfaces.preprod, preprodRelease))) {
     throw new ConflictError('The current preprod release is missing — rebuild', 'no_build');
   }
+  // REALPATH, not the lexical join. This release directory was made by this daemon (a
+  // staging copy renamed into place), so a link here would mean something had replaced it —
+  // and "it was ours when we wrote it" is not a property the copy that follows should rest
+  // on. Same helper, same law as the build output's own resolution.
+  const source = confinedRealPath(surfaces.preprod.storeDir, preprodRelease);
 
-  const prodRelease = await promoteRelease(config.PROD_ROOT, slug, source);
+  // The quota counts the INCOMING copy: a publish adds a whole second copy of the release,
+  // in the prod store, and a gate that weighed only what was already on disk would let the
+  // one operation that doubles a site's footprint through unweighed.
+  await assertWithinQuota(manifest, `publishing '${slug}'`, await treeSizeMb(source));
 
-  const manifest = await readManifest(slug);
+  // A COPY, not a re-point. Two stores is what keeps preprod's pruning away from the bytes
+  // production serves; sharing them would make a publish free and a prune fatal.
+  const prodRelease = await promoteRelease(surfaces.prod, source);
+
   manifest.published = { release: prodRelease, at: new Date().toISOString(), by: actor.username };
   await writeManifest(manifest);
 
-  return { release: prodRelease, url: `${config.PROD_BASE_URL.replace(/\/$/, '')}/${slug}/` };
+  return { release: prodRelease, url: siteUrl(manifest, 'prod') };
 }
 
 /** Rolls production back to a retained release. */
@@ -59,20 +75,26 @@ export async function rollbackSite(slug: string, release: string, actor: Actor):
     throw new ValidationError('release is required');
   }
 
-  await activateRelease(config.PROD_ROOT, slug, release);
-
   const manifest = await readManifest(slug);
+  await activateRelease(siteSurfaces(manifest).prod, release);
+
   manifest.published = { release, at: new Date().toISOString(), by: actor.username };
   await writeManifest(manifest);
 
-  return { release, url: `${config.PROD_BASE_URL.replace(/\/$/, '')}/${slug}/` };
+  return { release, url: siteUrl(manifest, 'prod') };
 }
 
 /** The production release history (newest first) plus the live one. */
 export async function productionReleases(slug: string): Promise<{ releases: string[]; current: string | null }> {
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
+  // A READ: the surface as the PROVISIONER DECLARED it, with no filesystem proving, because
+  // proving a webspace includes a WRITE probe and a listing must neither write nor fail. A
+  // site with no row in the table has no production tree at all, which lists as nothing —
+  // and is true, where the old derived-and-hope answer could have listed another site's.
+  const prod = declaredSurface(await readManifest(slug), 'prod');
+  if (!prod) return { releases: [], current: null };
   return {
-    releases: await listReleases(config.PROD_ROOT, slug),
-    current: await currentRelease(config.PROD_ROOT, slug),
+    releases: await listReleases(prod),
+    current: await currentRelease(prod),
   };
 }

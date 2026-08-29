@@ -58,8 +58,8 @@ import { stamp } from '../hash';
 
 /**
  * THE ARTIFACT KINDS — one per renderer module, spelled exactly as the module is named
- * (unit.ts, env.ts, nginx.ts, apache.ts, engine_fragment.ts), so a stamp line read off a
- * museum's host names the file in this tree that produced it.
+ * (unit.ts, env.ts, sites.ts, nginx.ts, apache.ts, engine_fragment.ts), so a stamp line read
+ * off a museum's host names the file in this tree that produced it.
  *
  * The list is closed and lives here rather than in each renderer: `renderAll()` must be
  * able to say "nothing rendered the unit" and `check` must be able to map a stamp back to a
@@ -70,7 +70,14 @@ import { stamp } from '../hash';
  * would make a stamp ambiguous on a host whose web server changed — which is precisely the
  * moment an operator needs the file to say which renderer wrote it.
  */
-export const ARTIFACT_KINDS = ['unit', 'env', 'nginx_vhost', 'apache_vhost', 'engine_fragment'] as const;
+export const ARTIFACT_KINDS = [
+  'unit',
+  'env',
+  'sites',
+  'nginx_vhost',
+  'apache_vhost',
+  'engine_fragment',
+] as const;
 
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
@@ -134,10 +141,12 @@ export interface ArtifactInput {
   /** The rendered content, UNSTAMPED — the stamp is added here so it cannot be forgotten. */
   readonly body: string;
   /**
-   * The artifact's own comment syntax. Defaulted to '#' because all five of today's
-   * artifacts happen to use it (systemd, nginx, Apache and an env file agree), which is a
-   * coincidence and not a rule — the first renderer that emits another format passes its
-   * own, rather than discovering that the stamp is a syntax error.
+   * The artifact's own comment syntax. Defaulted to '#' because systemd, nginx, Apache and
+   * an env file agree on it — which was always a coincidence and not a rule, and `sites.json`
+   * is the artifact that proves it: JSON has no comment at all, so the site table passes
+   * '//' and its reader strips the stamp line before parsing (src/sites/site_table.ts).
+   * A renderer that emits another format passes its own prefix, rather than discovering
+   * that the stamp is a syntax error on a museum's host.
    */
   readonly commentPrefix?: string;
 }
@@ -146,7 +155,7 @@ export interface ArtifactInput {
  * THE ONLY CONSTRUCTOR OF AN ARTIFACT.
  *
  * It exists so that three things are impossible to get wrong once, let alone five times in
- * five modules written in parallel: an unstamped file, a mode invented by a renderer, and a
+ * six modules written in parallel: an unstamped file, a mode invented by a renderer, and a
  * relative path. Each is checked here, at the one point every artifact passes through.
  *
  * The path is required to be ABSOLUTE and nothing more — this function cannot know whether

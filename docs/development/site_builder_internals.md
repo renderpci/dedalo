@@ -62,12 +62,14 @@ Bun/TS, loopback on port 3200 behind a reverse proxy, mounted at
 
 ### Boot and configuration
 
-`src/config.ts` parses the environment once with a Zod schema, freezes the result, and
-`process.exit(1)`s on any invalid value — the same discipline as the publication API. Nothing
-downstream reads `process.env`; every consumer imports `config`. The three filesystem roots
-are resolved to absolute paths at load. `SERVICE_TOKEN` is required (≥32 chars) and
-`PUBLICATION_API_URL`, `PREPROD_BASE_URL`, `PROD_BASE_URL` have no default. LLM provider keys
-live only here.
+`src/config.ts` BUILDS its source once — it parses a named environment file, merges a
+three-key ambient allowlist (`DEDALO_SITE_INSTANCE`, `NODE_ENV`, `LOG_LEVEL`), then layers
+`$CREDENTIALS_DIRECTORY`, where a credential always wins — validates it with a Zod schema,
+freezes the result and `process.exit(1)`s on any invalid value or unknown key. It does NOT
+read the rest of `process.env`, and nothing downstream reads it at all: every consumer
+imports `config`. `DEDALO_SITE_INSTANCE`, `SERVICE_TOKEN` (≥32 chars, delivered as a
+credential), `PUBLICATION_API_URL` and the four roots (`SITES_ROOT`, `AGENT_HOME`,
+`AUDIT_DIR`, `WEBSPACE_BASE`) are required. LLM provider keys live only here.
 
 `src/index.ts` is the `Bun.serve` boundary. Before it listens it runs
 `sweepOnBoot()` (session recovery, below). Shutdown drains in-flight work on SIGTERM.
@@ -172,13 +174,24 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
   path funnels to one terminal record so the per-slug lock always clears. A build is refused
   while a session runs (they would race on the tree).
 - **Promote** (`src/build/promote.ts`): copies the built output into
-  `<root>/.releases/<slug>/<release>/`, then flips the served symlink `<root>/<slug>` by
+  `<webspace>/.releases/pre/<release>/`, then flips the served symlink `<webspace>/pre` by
   writing a temp link and `rename`-ing it over the target — atomic on the same filesystem, so
   the web server never sees a half-updated site. The symlink target is relative (the tree
-  stays relocatable). Old releases beyond `RELEASES_RETAINED` are pruned, never the current
-  one.
+  stays relocatable). A symlink in the build output is REFUSED rather than copied into a
+  served tree. Old releases beyond `RELEASES_RETAINED` are pruned, never the current one.
+  The webspace is READ, never derived: the provisioner publishes every site's placement into
+  `<config dir>/sites.json` (a generated, stamped artifact) and the daemon looks the site up
+  there by slug (`src/sites/site_table.ts`). A site with no row, or whose webspace is missing
+  or belongs to another instance, is refused by name. The daemon computed
+  `<WEBSPACE_BASE>/<domain>` for itself until 2026-08-29, which disagreed with the vhosts for
+  any site using the declaration's `sites[].webspace` override.
+  The build output itself is proved before it is copied — the directory must not be a symlink
+  and its realpath must lie inside the workspace — because an agent turn owns that directory
+  and a lexical path check is a question about a string.
 - **Publish** (`src/build/publish.ts`): copies the **current preprod release** (the exact
-  bytes previewed) into `PROD_ROOT` and flips the prod symlink — it does not rebuild.
+  bytes previewed) into the same site's `web` release store and flips the `web` symlink — it
+  does not rebuild. Two stores, never one shared: sharing them would let preprod's pruning
+  delete the bytes production is serving.
   Production is an independent copy, so a workspace delete never takes down a live site.
   `rollbackSite` re-activates any retained prod release.
 
@@ -269,9 +282,10 @@ placed in the `publication` category (list view) and the `pub` node (System Map 
 **Daemon** (`publication/site_builder/.env`; on a provisioned host this file is rendered
 by `src/provision/render/env.ts` and its keys are derived from the host's declaration):
 `SERVICE_TOKEN` (must match the engine token — delivered by systemd `LoadCredential=`, never
-written into the file), `PUBLICATION_API_URL`, `PREPROD_BASE_URL` / `PROD_BASE_URL`,
-`SITES_ROOT` / `PREPROD_ROOT` / `PROD_ROOT`, `AGENT_DRIVER` + the driver bins and provider
-keys, and the limits (`MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
+written into the file), `DEDALO_SITE_INSTANCE`, `PUBLICATION_API_URL`, the four roots
+(`SITES_ROOT` / `AGENT_HOME` / `AUDIT_DIR` / `WEBSPACE_BASE`), the two URL facts
+(`PREPROD_HOST_PREFIX`, `PROD_URL_SCHEME` — a site's URL is otherwise built from its own
+domain), `AGENT_DRIVER` + the driver bins and provider keys, and the limits (`MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
 `INSTALL_TIMEOUT_MS` / `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`).
 
 ## Extending

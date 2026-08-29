@@ -41,7 +41,7 @@
  */
 
 import type { InstanceLayout } from '../layout';
-import { DESCRIPTION_PATTERN, SECRET_KEY_PATTERN } from '../layout';
+import { DESCRIPTION_PATTERN, SECRET_KEY_PATTERN, SECRET_LOOKING_KEY } from '../layout';
 import type { Renderer } from './types';
 import { artifact } from './types';
 
@@ -84,7 +84,7 @@ const SHELL_EXPANSION = /[$`]/;
  * a credential about to be written into a group-readable file and copied into every agent
  * child's environment — nothing is rendered.
  */
-const SECRET_LOOKING_KEY = /(TOKEN|SECRET|PASSWORD|PASSPHRASE|CREDENTIAL|_KEY)$/;
+/* The pattern itself lives in ../layout — see SECRET_LOOKING_KEY there. */
 
 /**
  * Refuse a string that cannot live on one line of a generated file.

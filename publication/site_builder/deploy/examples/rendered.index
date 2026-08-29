@@ -15,6 +15,7 @@
 [rendered]  the declaration exactly as committed
 0640  root:dedalo-example       engineFragment  engine_fragment  /etc/dedalo_sites/instances/example/engine.env.fragment
 0640  root:dedalo-site-example  envFile         env              /etc/dedalo_sites/instances/example/env
+0644  root:root                 siteTable       sites            /etc/dedalo_sites/instances/example/sites.json
 0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-archive-pre.conf
 0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-archive.conf
 0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-collection-pre.conf
@@ -28,4 +29,5 @@
 0644  root:root                 hostConfig      apache_vhost     /etc/apache2/sites-available/dedalo-site-example-collection.conf
 0640  root:dedalo-example       engineFragment  engine_fragment  /etc/dedalo_sites/instances/example/engine.env.fragment
 0640  root:dedalo-site-example  envFile         env              /etc/dedalo_sites/instances/example/env
+0644  root:root                 siteTable       sites            /etc/dedalo_sites/instances/example/sites.json
 0644  root:root                 hostConfig      unit             /etc/systemd/system/dedalo-site-builder@example.service

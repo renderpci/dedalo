@@ -23,7 +23,7 @@ import { getDriver } from '../drivers/registry';
 import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/types';
 import { readManifest } from '../sites/manifest';
 import { commitAll, changedFiles } from '../sites/git';
-import { siteExists, workspaceSizeMb } from '../sites/workspace';
+import { assertWithinQuota, siteExists } from '../sites/workspace';
 import { busyReason, endTurn, tryBeginTurn } from '../workspace_activity';
 import type { SessionEventBody, SessionMeta, StoredEvent } from './events';
 import {
@@ -224,6 +224,34 @@ export async function stopSession(sessionId: string): Promise<void> {
 }
 
 /**
+ * MARK EVERY LIVE TURN INTERRUPTED — the shutdown's counterpart to `sweepOnBoot()`.
+ *
+ * A turn that is still running when the process is going away is not going to finish, and
+ * the only wrong answer is silence: left as it is, its metadata says 'running' until the
+ * NEXT boot's sweep discovers it, so a restart shows a museum a turn that is still working
+ * when nothing is. This interrupts each live process (the driver's own interrupt, so a
+ * partial answer is committed exactly as `stopSession` commits one) and returns how many
+ * there were, for the shutdown log.
+ *
+ * Best effort by construction: it runs while the process is being torn down, so one driver
+ * that will not die must not stop the others from being marked.
+ */
+export async function interruptLiveTurns(): Promise<number> {
+  let interrupted = 0;
+  for (const live of liveByslug.values()) {
+    if (live.state !== 'running' || !live.proc) continue;
+    live.interrupted = true;
+    interrupted++;
+    try {
+      await live.proc.interrupt();
+    } catch (error) {
+      console.error(`[shutdown] could not interrupt the turn on '${live.slug}':`, error);
+    }
+  }
+  return interrupted;
+}
+
+/**
  * The shared turn runner. Persists turn_start, spawns the driver, consumes its normalized
  * events (persist → fan), then commits the workspace and writes turn_end + updated meta.
  * Always releases the global slot and clears the running state, on every exit path.
@@ -348,14 +376,14 @@ function validatePrompt(prompt: unknown): void {
   }
 }
 
+/**
+ * The quota gate before an agent turn. It measures the WHOLE site — workspace plus both
+ * release stores (`assertWithinQuota`) — because a turn that cannot be published is not a
+ * turn worth starting, and the releases are the half of a site's footprint a museum cannot
+ * see. The promote path asks the same question again, immediately before it adds a copy.
+ */
 async function enforceQuota(slug: string): Promise<void> {
-  const sizeMb = await workspaceSizeMb(slug);
-  if (sizeMb > config.SITE_DISK_QUOTA_MB) {
-    throw new LimitExceededError(
-      `Workspace over disk quota (${Math.round(sizeMb)} MB > ${config.SITE_DISK_QUOTA_MB} MB)`,
-      'disk_quota',
-    );
-  }
+  await assertWithinQuota(await readManifest(slug), `a turn on '${slug}'`);
 }
 
 function acquireGlobalSlot(): void {
@@ -382,7 +410,10 @@ function buildStartOptions(
   const workspace = confinedPath(config.SITES_ROOT, slug);
   const baseEnv: Record<string, string> = {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
-    HOME: config.SITES_ROOT,
+    // The agent's OWN home (0700, its own root), never the workspaces root: a HOME inside
+    // the tree an agent turn writes to is a site able to rewrite the agent's configuration
+    // — its credentials file, its MCP servers — for every later turn on every other site.
+    HOME: config.AGENT_HOME,
   };
   if (driver === 'claude_code' && config.ANTHROPIC_API_KEY) {
     baseEnv.ANTHROPIC_API_KEY = config.ANTHROPIC_API_KEY;

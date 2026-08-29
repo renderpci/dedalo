@@ -467,34 +467,24 @@ describe('the census against src/config.ts', () => {
     expect(keys.get('MAX_SITES')!.hasDefault).toBe(true);
   });
 
-  test('the keys this file supplies that the daemon does not yet read are the INSTANCE keys', () => {
+  test('every key this file supplies is a key the daemon reads', () => {
     const supplied = Object.keys(parseRendered(renderEnv()));
     const known = configKeys();
     const unread = supplied.filter(key => !known.has(key)).sort();
 
-    // The first four are the instance model arriving: one daemon per museum, its roots
-    // named individually, its identity carried in its own environment. `tests/fixtures/
-    // instance.ts` was built against exactly this move.
+    // EMPTY, and it has to stay empty. It held five keys while the daemon still parsed the
+    // ambient environment and knew nothing of the instance model: the roots named
+    // individually (AGENT_HOME, AUDIT_DIR, WEBSPACE_BASE), the identity the whole design
+    // turns on (DEDALO_SITE_INSTANCE), and PUBLICATION_API_KEY_FILE — a PATH the daemon was
+    // handed and could not use. All five are read now.
     //
-    // PUBLICATION_API_KEY_FILE is the fifth and is a different fact worth seeing here: the
-    // daemon today reads PUBLICATION_API_KEY, a VALUE, while a provisioned host supplies
-    // the PATH of a root-owned 0600 file. That direction is not negotiable — a value in
-    // this file is a value in every agent child's environment — so the daemon reads the
-    // file (or takes the key as a credential), and this row is the standing note that it
-    // must.
-    //
-    // Listed rather than tolerated, so that a SIXTH unread key — the shape of a renderer
-    // inventing a knob nothing reads — reddens here.
-    expect(unread).toEqual([
-      'AGENT_HOME',
-      'AUDIT_DIR',
-      'DEDALO_SITE_INSTANCE',
-      'PUBLICATION_API_KEY_FILE',
-      'WEBSPACE_BASE',
-    ]);
+    // A key appearing here again is the shape of a renderer inventing a knob nothing reads,
+    // which is a museum's declaration taking effect nowhere while every file on disk looks
+    // correct. That is why this is measured rather than trusted.
+    expect(unread).toEqual([]);
   });
 
-  test('the required keys this file does NOT supply are exactly the three named ones', () => {
+  test('the only required key this file does NOT supply is the credential, by law', () => {
     const supplied = new Set(Object.keys(parseRendered(renderEnv())));
     const missing = [...configKeys()]
       .filter(([key, meta]) => !meta.hasDefault && !supplied.has(key))
@@ -504,21 +494,24 @@ describe('the census against src/config.ts', () => {
     // A gap that is written down and ratcheted is a decision; the same gap left implicit is
     // a daemon that exits 1 at boot with nobody able to say whether that was meant.
     //
-    //   SERVICE_TOKEN     — BY LAW. It is a credential: it arrives via systemd
-    //                       LoadCredential from a root-owned 0600 file and is read at
-    //                       $CREDENTIALS_DIRECTORY/SERVICE_TOKEN. Putting it here would
-    //                       hand this daemon's authorization to every agent turn it runs.
-    //                       Reading it from a credential is the daemon's move to make.
-    //   PREPROD_BASE_URL  — single-tenant leftovers. In the instance model a URL is a
-    //   PROD_BASE_URL       property of a SITE (`site.domain`, `site.preprodDomain`), and
-    //                       there are several sites per instance; one instance-wide pair
-    //                       could only be one site's, chosen arbitrarily. The renderer
-    //                       refuses to invent them — `layout.envVars` is the sole owner of
-    //                       this census, and a value it does not carry is a gap fixed in
-    //                       `buildEnvVars()`, never patched in downstream.
+    //   SERVICE_TOKEN — BY LAW, and this is the one entry that must never leave the list.
+    //                   It is a credential: it arrives via systemd LoadCredential from the
+    //                   root-owned 0600 file the provisioner mints, and the daemon reads it
+    //                   at $CREDENTIALS_DIRECTORY/SERVICE_TOKEN (src/config.ts). Putting it
+    //                   in THIS file would hand this daemon's authorization to every agent
+    //                   turn it runs, because the whole of this file reaches every agent
+    //                   child. The unit's LoadCredential= line is rendered from
+    //                   credentialSources(layout), which carries the bearer whether or not
+    //                   the declaration names it — see tests/provision_render_unit.test.ts.
     //
-    // Shrink-only: a NEW required key appearing in config.ts unsupplied reddens here, which
-    // is the point.
-    expect(missing).toEqual(['PREPROD_BASE_URL', 'PROD_BASE_URL', 'SERVICE_TOKEN']);
+    // PREPROD_BASE_URL and PROD_BASE_URL used to be here as "single-tenant leftovers". They
+    // are gone from this list because the SCHEMA moved, not this file: in the instance model
+    // a URL is a property of a SITE (site.domain, site.preprodDomain — one vhost per site
+    // per surface), so an instance-wide pair could only ever have been one site's, chosen
+    // arbitrarily. The daemon now treats them as optional, and the renderer still refuses to
+    // invent them.
+    //
+    // Shrink-only: a NEW required key appearing in config.ts unsupplied reddens here.
+    expect(missing).toEqual(['SERVICE_TOKEN']);
   });
 });

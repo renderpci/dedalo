@@ -15,6 +15,7 @@ import { rename, writeFile, readFile } from 'node:fs/promises';
 import { z } from 'zod';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
+import { DOMAIN_PATTERN } from '../provision/layout';
 
 export const buildSpecSchema = z.object({
   install: z.string().default('bun install'),
@@ -30,8 +31,22 @@ export const manifestSchema = z.object({
   driver: z.enum(['claude_code', 'opencode', 'pi']),
   template: z.string(),
   build: buildSpecSchema,
-  /** Optional custom domain the operator has pointed at this site's prod release. */
-  custom_domain: z.string().optional(),
+  /**
+   * THE DOMAIN THIS SITE ANSWERS ON — and therefore WHERE ON DISK IT LIVES.
+   *
+   * It was `custom_domain`, optional and read by nothing: a field that recorded an
+   * operator's intention while the daemon published into `<PREPROD_ROOT>/<slug>` and the
+   * generated vhosts served `<webspace>/pre` and `<webspace>/web`. It is now the site's
+   * pairing with the host — `<WEBSPACE_BASE>/<domain>` is the webspace the provisioner
+   * created for it (`src/sites/webspace.ts`), and its two URLs are built from it.
+   *
+   * REQUIRED, and validated against the SAME grammar the provisioner validates a declared
+   * site's domain with (`DOMAIN_PATTERN`, owned by layout.ts): a site whose domain does not
+   * match cannot have a webspace, because no directory the provisioner made is named that.
+   * A manifest without one is a loud read failure, not a default — the daemon has nowhere to
+   * publish such a site and must say so where it can be fixed rather than at midnight.
+   */
+  domain: z.string().regex(DOMAIN_PATTERN, 'domain must be a lowercase dotted hostname'),
   /** The currently published release, or null if never published. */
   published: z
     .object({

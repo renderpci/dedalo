@@ -64,7 +64,16 @@ import type {
   SiteLayout,
   Surface,
 } from './layout';
-import { INSTANCE_MARKER, MODES, SURFACES, isStrictlyWithin, markerContent, readWritePaths } from './layout';
+import {
+  INSTANCE_MARKER,
+  MODES,
+  PUBLICATION_API_KEY_KEY,
+  SURFACES,
+  credentialSources,
+  isStrictlyWithin,
+  markerContent,
+  readWritePaths,
+} from './layout';
 import type { Artifact, ArtifactKind, ModeKey } from './render';
 import { renderAll } from './render';
 import { SERVICE_TOKEN_KEY } from './render/engine_fragment';
@@ -471,6 +480,10 @@ export function observedPaths(layout: InstanceLayout): string[] {
   }
   paths.add(layout.unitPath);
   paths.add(layout.envFile);
+  // The SITE TABLE. Absent from this list it would be reported missing on every run and
+  // rewritten forever — and, worse, the run would report a change on a settled host, which
+  // is how an operator stops reading the drift report at all.
+  paths.add(layout.siteTablePath);
   paths.add(layout.engineFragment);
   paths.add(layout.htpasswd);
   // The audit FILE, which is not a directory and therefore not in `treeEntries()`. Its
@@ -851,7 +864,11 @@ interface CredentialFile {
  * They are gathered in one function because they get one treatment: the file must EXIST
  * (systemd fails a unit whose `LoadCredential=` source is missing, and nginx answers 500
  * for every preprod request when its `auth_basic_user_file` is not there), and its mode
- * must be 0600 root:root WHEN THE PROVISIONER OWNS THE PLACE IT SITS. A credential the
+ * The paths come from `credentialSources(layout)` — the same map `render/unit.ts` renders
+ * `LoadCredential=` from and `render/engine_fragment.ts` quotes to the operator — so the file
+ * this plan mints is the file the daemon is handed and the file an operator is told to read.
+ *
+ * The mode must be 0600 root:root WHEN THE PROVISIONER OWNS THE PLACE IT SITS. A credential the
  * declaration puts somewhere else on the host is the operator's placement, and this tool
  * does not chown files outside the directories it derives.
  */
@@ -869,8 +886,9 @@ function credentialFiles(layout: InstanceLayout): CredentialFile[] {
   // canonical place for that key — so the file the fragment tells an operator to `cat` is
   // the file this plan mints. Two spellings of that path would be a pairing that cannot be
   // completed, with both sides looking correct.
+  const sources = credentialSources(layout);
   add(
-    layout.secrets[SERVICE_TOKEN_KEY] ?? layout.secretPath(SERVICE_TOKEN_KEY),
+    sources[SERVICE_TOKEN_KEY] as string,
     `the shared bearer '${SERVICE_TOKEN_KEY}' the engine authenticates with`,
     true,
   );
@@ -881,7 +899,7 @@ function credentialFiles(layout: InstanceLayout): CredentialFile[] {
 
   // The Publication API key: the rendered env carries its PATH (`PUBLICATION_API_KEY_FILE`),
   // never its value, so the file has to be there for the daemon to have a key at all.
-  const apiKeyFile = layout.envVars.PUBLICATION_API_KEY_FILE;
+  const apiKeyFile = sources[PUBLICATION_API_KEY_KEY];
   if (apiKeyFile) add(apiKeyFile, "the Publication API key", false);
 
   for (const user of preprodUsers(layout)) {

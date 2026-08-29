@@ -1,0 +1,38 @@
+// dedalo-provision: example sites 099d17b3ef95ec8f9c65340a138328b215952137a47f54bc7b611d940d4efa48
+{
+  "version": 1,
+  "instance": "example",
+  "webspace_base": "/srv/www",
+  "sites": [
+    {
+      "slug": "archive",
+      "domain": "archive.example.net",
+      "webspace": "/srv/legacy-www/archive-example",
+      "surfaces": {
+        "preprod": {
+          "store_dir": "/srv/legacy-www/archive-example/.releases/pre",
+          "link_path": "/srv/legacy-www/archive-example/pre"
+        },
+        "prod": {
+          "store_dir": "/srv/legacy-www/archive-example/.releases/web",
+          "link_path": "/srv/legacy-www/archive-example/web"
+        }
+      }
+    },
+    {
+      "slug": "collection",
+      "domain": "www.example.org",
+      "webspace": "/srv/www/www.example.org",
+      "surfaces": {
+        "preprod": {
+          "store_dir": "/srv/www/www.example.org/.releases/pre",
+          "link_path": "/srv/www/www.example.org/pre"
+        },
+        "prod": {
+          "store_dir": "/srv/www/www.example.org/.releases/web",
+          "link_path": "/srv/www/www.example.org/web"
+        }
+      }
+    }
+  ]
+}

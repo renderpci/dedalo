@@ -35,6 +35,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { InstanceLayout, InstanceManifest } from '../layout';
 import {
   CPU_QUOTA_PATTERN,
+  credentialSources,
   DESCRIPTION_PATTERN,
   MODES,
   SECRET_KEY_PATTERN,
@@ -386,11 +387,14 @@ export const unitRenderer: Renderer = {
       `# $CREDENTIALS_DIRECTORY for this process alone. No value appears in this unit, in the`,
       `# rendered env, or in /proc/<pid>/environ — which is what makes an Environment= line`,
       `# carrying a provider key a defect and not a shortcut.`,
+      `#`,
+      `# THE SET IS credentialSources(layout), NOT THE DECLARATION'S "secrets". Two of these`,
+      `# are never declared and both are needed to boot: the shared bearer, which the`,
+      `# provisioner MINTS, and the Publication API key, which is declared as a PATH the`,
+      `# service user cannot open. Rendering this block from "secrets" alone produced a host`,
+      `# where every file was correct and the daemon still could not start.`,
     );
-    const credentials = Object.entries(layout.secrets).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    if (credentials.length === 0) {
-      lines.push(`# (none declared — add them to instance.json's "secrets", never here)`);
-    }
+    const credentials = Object.entries(credentialSources(layout));
     for (const [key, file] of credentials) {
       matching(SECRET_KEY_PATTERN, 'secret key', key);
       const path = unitPath(`secrets.${key}`, file);

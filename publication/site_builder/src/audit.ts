@@ -3,19 +3,20 @@
  *
  * The daemon trusts the engine's authorization decisions (security/auth.ts), so the
  * audit log is the record of WHO did WHAT: it is the only place a "user X published site
- * Y" fact is durably kept. One JSON object per line under
- * SITES_ROOT/.audit/audit.jsonl; the file is created on first write. Reads (the
+ * Y" fact is durably kept. One JSON object per line at AUDIT_DIR/audit.jsonl. Reads (the
  * GET /v1/audit endpoint) tail this file — see routes/audit in P4.
  *
- * Append-only is enforced by convention here (we only ever open with append), not by the
- * filesystem; the ops guidance is to keep the .audit directory owned such that the
- * daemon can append but not truncate.
+ * Append-only is enforced by the FILESYSTEM on a provisioned host, not by convention: the
+ * audit directory is root-owned and only the file inside it belongs to this daemon, so this
+ * process can append and cannot unlink or rename. The boot preflight proves it can append
+ * (src/instance/roots.ts) rather than discovering it at the first mutation.
  */
 
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config';
+import { AUDIT_FILE_NAME } from './provision/layout';
 import type { Actor } from './security/auth';
 
 export interface AuditEntry {
@@ -30,14 +31,25 @@ export interface AuditEntry {
   detail?: Record<string, unknown>;
 }
 
+/**
+ * The trail lives in the instance's OWN audit root, not inside the workspaces root.
+ *
+ * That is the whole of the append-only story: the directory is ROOT-owned and the file is
+ * the daemon's, so this process can append and cannot unlink or rename — unlink and rename
+ * are permissions on the DIRECTORY. Under the old `SITES_ROOT/.audit` placement the daemon
+ * owned the directory too, which meant a compromised agent turn could erase the record of
+ * itself. The filename comes from the layout, which is also what the provisioner creates
+ * and chowns; two spellings would be a daemon appending to a file nobody had created.
+ */
 function auditPath(): string {
-  return join(config.SITES_ROOT, '.audit', 'audit.jsonl');
+  return join(config.AUDIT_DIR, AUDIT_FILE_NAME);
 }
 
-// Recursive mkdir is idempotent and cheap; do it every write rather than caching "exists",
-// so the log survives its directory being (re)created underneath the process.
+// Recursive mkdir on an existing directory is a no-op, which is what this is on a
+// provisioned host: the provisioner created the root-owned audit directory and the daemon
+// could not create it. It matters on a laptop and in the suite, where nothing else has.
 async function ensureAuditDir(): Promise<void> {
-  await mkdir(join(config.SITES_ROOT, '.audit'), { recursive: true });
+  await mkdir(config.AUDIT_DIR, { recursive: true });
 }
 
 /**

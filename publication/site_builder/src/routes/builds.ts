@@ -11,8 +11,9 @@ import { json } from '../util/response';
 import { requireActor } from '../security/auth';
 import { NotFoundError, ValidationError } from '../errors';
 import { audit } from '../audit';
-import { config } from '../config';
+import { readManifest } from '../sites/manifest';
 import { siteExists } from '../sites/workspace';
+import { declaredSurface, siteUrl } from '../sites/webspace';
 import { startBuild, getBuild, getBuildLog } from '../build/builder';
 import { currentRelease } from '../build/promote';
 
@@ -37,9 +38,15 @@ export async function handleGetBuild(_req: Request, params: Record<string, strin
 export async function handlePreview(_req: Request, params: Record<string, string>): Promise<Response> {
   const slug = params.slug;
   if (!siteExists(slug)) throw new NotFoundError(`No site named '${slug}'`);
-  const release = await currentRelease(config.PREPROD_ROOT, slug);
+  // The preview URL is the site's OWN draft host (`pre.<domain>`), not a shared base URL
+  // with the slug as a path: each site has its own vhost on both surfaces.
+  const manifest = await readManifest(slug);
+  // The DECLARED surface (the provisioner's row), never a derived one, and no proving: a
+  // preview is a read. A site with no row has no preview release, which is what null says.
+  const preprod = declaredSurface(manifest, 'preprod');
+  const release = preprod ? await currentRelease(preprod) : null;
   return json({
-    url: `${config.PREPROD_BASE_URL.replace(/\/$/, '')}/${slug}/`,
+    url: siteUrl(manifest, 'preprod'),
     release,
     built_at: null,
   });

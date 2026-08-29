@@ -54,6 +54,23 @@ import {
 import { siteBuilderFailure, siteBuilderRejected } from './wire.ts';
 
 const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
+
+/**
+ * THE DOMAIN A SITE ANSWERS ON — required by the daemon, and therefore required here.
+ *
+ * A site's domain is what pairs it with the webspace the provisioner created for it: the
+ * daemon looks the site up in the provisioner's site table by slug and refuses a create
+ * whose domain disagrees. This tool sent `{slug, name}` and no domain at all, so after the
+ * daemon made the field required EVERY create through the engine failed — the tool was the
+ * only door a museum has, and it could no longer create a site.
+ *
+ * The pattern is a LOCAL PRE-CHECK, like SLUG_PATTERN above and for the same reason: it
+ * keeps an obviously malformed value out of a request rather than spending a round trip on
+ * it. The daemon holds the authoritative grammar (its site.json schema and its layout
+ * both), and this is deliberately not stricter than that.
+ */
+const DOMAIN_PATTERN = /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
 const MESSAGE_MAX = 32 * 1024;
 
 /**
@@ -202,10 +219,14 @@ async function listSites(context: ToolActionContext): Promise<ToolResponse> {
 }
 
 /**
- * POST /v1/sites — create a site. Validates the slug and a bounded name here; template and
- * driver are optional and only forwarded when they are of the expected shape (the driver
- * is allow-listed to the three known agents, so an unknown value is silently dropped
- * rather than passed to the daemon).
+ * POST /v1/sites — create a site. Validates the slug, a bounded name and the DOMAIN here;
+ * template and driver are optional and only forwarded when they are of the expected shape
+ * (the driver is allow-listed to the three known agents, so an unknown value is silently
+ * dropped rather than passed to the daemon).
+ *
+ * The daemon's own refusal is surfaced by REASON, not by relaying its prose — see
+ * `wire.ts`: a daemon-supplied `detail` is another service's text and stays log-only, so
+ * the sentence a museum reads is written here, keyed on the machine code the daemon sends.
  */
 async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 	// GATED (P2-8(b)): creating a site provisions a workspace on the daemon host from a
@@ -218,7 +239,19 @@ async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 		if (name.length === 0 || name.length > 200) {
 			throw siteBuilderRejected('A site name is required.');
 		}
-		const body: Record<string, unknown> = { slug, name };
+		// THE DOMAIN, WHICH IS NOT OPTIONAL. Supplied by the operator, never invented here: a
+		// domain needs DNS, a vhost and a certificate, and the provisioner has already made a
+		// webspace for exactly this one. An engine-authored sentence, so it is safe to show.
+		const domain = String(o.domain ?? '')
+			.trim()
+			.toLowerCase();
+		if (!DOMAIN_PATTERN.test(domain)) {
+			throw siteBuilderRejected(
+				'A site needs the domain it will answer on (for example www.museum.org), and it must ' +
+					'be one the site builder has already been provisioned for.',
+			);
+		}
+		const body: Record<string, unknown> = { slug, name, domain };
 		if (typeof o.template === 'string') body.template = o.template;
 		if (o.driver === 'claude_code' || o.driver === 'opencode' || o.driver === 'pi')
 			body.driver = o.driver;

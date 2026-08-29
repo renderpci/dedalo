@@ -40,7 +40,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   DEFAULT_PATHS,
@@ -727,6 +727,32 @@ describe('nothing is spelled twice', () => {
       expect({ specifier, local }).toEqual({ specifier, local: true });
     }
     expect(imports).not.toContain('zod');
+  });
+
+  test('and so does EVERY renderer — the law in render/types.ts, over the whole directory', () => {
+    // Stated there and gated here, for the same reason layout.ts is: a repo-side tripwire
+    // renders these artifacts WITHOUT this package's node_modules, so one `zod` import (or
+    // one import of `../schema`, which pulls zod in) anywhere in the directory breaks the
+    // gate that keeps the committed examples honest. Over the whole directory rather than a
+    // named list, because the point of the law is that it holds for the renderer nobody has
+    // written yet — `sites.ts` is the one that arrived after this gate's first version and
+    // the first to import outside `provision/` at all (`../../util/slug`).
+    const dir = join(PACKAGE_DIR, 'src', 'provision', 'render');
+    const offenders: string[] = [];
+    for (const file of readdirSync(dir).sort()) {
+      if (!file.endsWith('.ts')) continue;
+      const body = readFileSync(join(dir, file), 'utf8');
+      for (const match of body.matchAll(/^import[^;]*?from '([^']+)';/gms)) {
+        const specifier = match[1]!;
+        if (!specifier.startsWith('node:') && !specifier.startsWith('.')) {
+          offenders.push(`${file} → ${specifier}`);
+        }
+        if (specifier.endsWith('/schema') || specifier.endsWith('../schema')) {
+          offenders.push(`${file} → ${specifier} (imports zod transitively)`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
 });
