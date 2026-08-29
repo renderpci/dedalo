@@ -1,0 +1,83 @@
+{
+  "instance": "example",
+  "description": "Reference instance declaration - generic, never a real museum's name (the same law as the engine's generic 'test' TLD).",
+
+  "engine": {
+    "private_dir": "/srv/dedalo/example/private",
+    "group": "dedalo-example"
+  },
+
+  "web": {
+    "server": "nginx",
+    "group": "www-data"
+  },
+
+  "publication_api": {
+    "url": "http://127.0.0.1:3100/publication/server_api/v2",
+    "key_path": "/etc/dedalo_sites/instances/example/secrets/PUBLICATION_API_KEY"
+  },
+
+  "webspace_base": "/srv/www",
+
+  "roots": {
+    "audit": "/srv/dedalo_audit/example"
+  },
+
+  "sites": [
+    {
+      "slug": "collection",
+      "domain": "www.example.org"
+    },
+    {
+      "slug": "archive",
+      "domain": "archive.example.net",
+      "webspace": "/srv/legacy-www/archive-example"
+    }
+  ],
+
+  "serving": {
+    "preprod": {
+      "enabled": true,
+      "auth": {
+        "mode": "htpasswd",
+        "realm": "Example preprod",
+        "users": [
+          {
+            "name": "preview",
+            "password_file": "/etc/dedalo_sites/instances/example/secrets/PREPROD_PASSWORD"
+          }
+        ]
+      }
+    },
+    "prod": {
+      "tls": {
+        "mode": "letsencrypt",
+        "account_email": "ops@example.org"
+      }
+    },
+    "aliases": {
+      "example.org": "collection"
+    }
+  },
+
+  "agent": {
+    "driver": "claude_code",
+    "bins": {
+      "claude_code": "/usr/local/bin/claude"
+    }
+  },
+
+  "secrets": {
+    "ANTHROPIC_API_KEY": "/etc/dedalo_sites/instances/example/secrets/ANTHROPIC_API_KEY"
+  },
+
+  "limits": {
+    "max_sites": 8,
+    "releases_retained": 10
+  },
+
+  "resources": {
+    "memory_max": "4G",
+    "cpu_quota": "150%"
+  }
+}
