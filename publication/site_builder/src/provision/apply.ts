@@ -64,7 +64,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { INSTANCE_MARKER, type InstanceLayout } from './layout';
+import { INSTANCE_MARKER, type InstanceLayout, type InstanceManifest } from './layout';
+import { renderAll } from './render';
 import {
   changesTheHost,
   observedPaths,
@@ -828,15 +829,21 @@ function systemctlSays(verb: string, unit: string): boolean {
  * every credential file, and the htpasswd — whose LOGIN NAMES are observed separately and
  * whose hashes are not needed by anything.
  */
-function contentfulPaths(layout: InstanceLayout): Set<string> {
-  const paths = new Set<string>([layout.unitPath, layout.envFile, layout.engineFragment]);
-  for (const site of layout.sites) {
-    for (const path of Object.values(site.vhostPaths)) paths.add(path);
-  }
-  // The markers — the one file whose whole content IS an instance name, and the reason §5
-  // can tell an adoptable root from another museum's. The marked set is the three state
-  // roots AND every webspace; it is spelled from the layout rather than imported because
-  // `plan.ts` keeps its own copy private, and both derive from the same four fields.
+/**
+ * THE PATHS WHOSE BYTES THIS HOST OBSERVER MUST READ.
+ *
+ * DERIVED from the renderers, never listed by hand. This was a second hand-maintained
+ * census of the rendered artifacts sitting beside `RENDERERS` — the same two-independent-
+ * derivations defect the whole subsystem exists to delete — and it had already drifted: the
+ * site table was added as a sixth artifact and never added here, so `sites.json` was written
+ * once and then never drift-checked again. A hand edit to the file that tells the daemon
+ * where every museum's webspace is would have been invisible to `check`.
+ *
+ * The markers are added separately because no renderer produces them: `plan.ts` mints them
+ * from the instance name. They are the only contentful paths that are not artifacts.
+ */
+function contentfulPaths(layout: InstanceLayout, manifest: InstanceManifest): Set<string> {
+  const paths = new Set<string>(renderAll(layout, manifest).map(artifact => artifact.path));
   for (const root of [
     layout.roots.workspaces,
     layout.roots.home,
@@ -876,8 +883,8 @@ function htpasswdNames(path: string): readonly string[] | undefined {
  * WHAT IT DELIBERATELY DOES NOT READ: the bytes of any credential file. Presence, mode,
  * owner and mtime are facts the plan needs; the value is not, in any mode, ever.
  */
-export function observeHost(layout: InstanceLayout): HostState {
-  const contentful = contentfulPaths(layout);
+export function observeHost(layout: InstanceLayout, manifest: InstanceManifest): HostState {
+  const contentful = contentfulPaths(layout, manifest);
 
   const entries: Record<string, PathObservation> = {};
   for (const path of observedPaths(layout)) {

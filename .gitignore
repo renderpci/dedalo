@@ -98,3 +98,9 @@ CHANGELOG.md
 # It must stay untracked so `git archive` can never ship one master's stamp
 # inside another install's release.
 src/core/update/install_stamp.json
+
+# Scratch media roots a test gate creates in the repo root. `.dedalo_test_media` is the
+# marker that ARMS the media-root refusal, so these appear whenever a gate builds its own
+# scratch root here; one was committed by accident, which put it in the Docker build
+# context's allowlist.
+.scratch_*/

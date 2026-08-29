@@ -777,7 +777,7 @@ describe('observeHost', () => {
   provision(instance, io);
 
   test('reads the host, and never the bytes of a credential', () => {
-    const state = observeHost(instance.layout);
+    const state = observeHost(instance.layout, instance.manifest);
 
     // It sees what is there, with the shape `plan()` consumes…
     expect(state.entries[instance.layout.unitPath]?.type).toBe('file');
@@ -800,11 +800,53 @@ describe('observeHost', () => {
   test('a path it cannot stat is OMITTED, never reported blank', () => {
     // `PathObservation` says why: a blank observation reads as drift, and "I did not look"
     // must never read as "it was correct".
-    const state = observeHost(instance.layout);
+    const state = observeHost(instance.layout, instance.manifest);
     for (const [path, observation] of Object.entries(state.entries)) {
       expect(existsSync(path) || isBrokenLink(path)).toBe(true);
       expect(observation.mode).toBeGreaterThanOrEqual(0);
       expect(typeof observation.owner).toBe('string');
     }
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * THE OBSERVER READS EVERY ARTIFACT, BECAUSE ITS LIST IS DERIVED FROM THE RENDERERS.
+ *
+ * `contentfulPaths()` was a second hand-maintained census of the rendered artifacts,
+ * sitting beside RENDERERS — the same two-independent-derivations defect this subsystem
+ * exists to delete. It had already drifted: the site table arrived as a sixth artifact and
+ * was never added, so `sites.json` — the file that tells the daemon where every museum's
+ * webspace is — was written once and then never drift-checked again.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the drift census covers every rendered artifact', () => {
+  test('every artifact the renderers produce has its bytes observed', () => {
+    const instance = makeInstance();
+    const io = makeIo(instance);
+    placeCredentials(instance, io);
+    provision(instance, io);
+
+    const state = observeHost(instance.layout, instance.manifest);
+    for (const artifact of renderAll(instance.layout, instance.manifest)) {
+      const observed = state.entries[artifact.path];
+      expect({ path: artifact.path, seen: observed?.content !== undefined }).toEqual({
+        path: artifact.path,
+        seen: true,
+      });
+    }
+  });
+
+  test('the site table specifically is drift-checked like any other artifact', () => {
+    // The one that had already slipped through. Named on its own so a future artifact
+    // cannot quietly take its place in the general assertion above.
+    const instance = makeInstance();
+    const io = makeIo(instance);
+    placeCredentials(instance, io);
+    provision(instance, io);
+
+    const table = renderAll(instance.layout, instance.manifest).find(a => a.path.endsWith('sites.json'));
+    expect(table).toBeDefined();
+    const state = observeHost(instance.layout, instance.manifest);
+    expect(state.entries[table!.path]?.content).toBe(table!.body);
   });
 });

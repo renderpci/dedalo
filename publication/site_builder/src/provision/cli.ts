@@ -128,7 +128,7 @@ export function worse(a: number, b: number): number {
 export interface ProvisionDeps {
   loadFleet(dir: string): Fleet;
   assertFleetDisjoint(fleet: FleetMembers): void;
-  observeHost(layout: InstanceLayout): HostState;
+  observeHost(layout: InstanceLayout, manifest: InstanceManifest): HostState;
   plan(layout: InstanceLayout, manifest: InstanceManifest, host: HostState): Action[];
   /** The plan's own words. One voice: a `check` line and an `apply` line are the same line. */
   describe(action: Action): string;
@@ -567,7 +567,7 @@ function planFor(context: VerbContext, member: FleetMember, verb: string): Plann
 
   let host: HostState;
   try {
-    host = deps.observeHost(member.layout);
+    host = deps.observeHost(member.layout, member.manifest);
   } catch (error) {
     err(`provision: instance '${member.instance}' could not be ${verb} — this host would not be read: ${messageOf(error)}`);
     return { ok: false, code: EXIT.FAILED };
