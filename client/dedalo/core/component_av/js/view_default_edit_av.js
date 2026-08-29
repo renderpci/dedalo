@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
-	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 
 
 
@@ -118,17 +118,23 @@ view_default_edit_av.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* Builds the content_data container and schedules per-entry content_value
-* nodes via dd_request_idle_callback so that each entry is rendered in its
-* own browser idle task, avoiding long-task jank on sections with many entries.
+* Builds the content_data container and its per-entry content_value nodes.
 *
 * Each built content_value is appended to content_data and also stored as a
 * numeric index pointer (content_data[i]) for later programmatic access by
 * refresh logic.
 *
-* The guard `if (self.status==='destroyed')` inside each callback prevents
-* stale idle tasks from touching a component that was torn down before the
-* task ran — important for fast navigation between records.
+* (!) The values are built SYNCHRONOUSLY, exactly as component_image does
+*     (view_default_edit_image.js get_content_data). They used to be deferred
+*     one-per-entry into dd_request_idle_callback, which meant the component
+*     always entered the DOM as an EMPTY .media_content_data — a ~52px shell —
+*     and grew to its reserved ~428px box one idle task later. On every render:
+*     paginating an AV section (rsc167) shifted the whole record and everything
+*     below it by ~380px about 100 ms after the page swap. The deferral bought
+*     nothing: get_content_value only CREATES DOM nodes, and the expensive part
+*     (poster + video bytes) is already deferred by when_in_viewport below.
+*     Building here keeps the height reservation (--media_min_height, and the
+*     height=392 attribute on the poster) effective from the first frame.
 *
 * (!) entries is normalised to [null] when empty so that at least one
 *     content_value slot is always rendered, giving the operator a visible
@@ -152,20 +158,10 @@ const get_content_data_edit = function(self) {
 		const inputs_value		= (entries.length>0) ? entries : [null] // force one empty input at least
 		const entries_length	= inputs_value.length
 		for (let i = 0; i < entries_length; i++) {
-			// force use new separate task
-			dd_request_idle_callback(
-				() => {
-					// status check. If instance is destroyed, return
-					if (self.status==='destroyed') return
-
-					const content_value = (self.permissions===1)
-						? get_content_value(i, inputs_value[i], self)
-						: get_content_value(i, inputs_value[i], self)
-					content_data.appendChild(content_value)
-					// set pointer
-					content_data[i] = content_value
-				}
-			)
+			const content_value = get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointer
+			content_data[i] = content_value
 		}
 
 
