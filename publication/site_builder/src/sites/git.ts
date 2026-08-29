@@ -13,6 +13,7 @@
  * authenticated fact.
  */
 
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { confinedPath } from '../util/paths';
@@ -57,8 +58,8 @@ const EXCLUDE_BODY = [
 ].join('\n');
 
 // A minimal, constructed environment for git: no inheritance of the daemon's secrets.
-function gitEnv(): Record<string, string> {
-  return {
+function gitEnv(workspace?: string): Record<string, string> {
+  const env: Record<string, string> = {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
     // git reads ~/.gitconfig; point it at the agent home, not at the tree it is committing.
     HOME: config.AGENT_HOME,
@@ -67,6 +68,37 @@ function gitEnv(): Record<string, string> {
     GIT_COMMITTER_NAME: 'Dédalo Site Builder',
     GIT_COMMITTER_EMAIL: 'site-builder@dedalo.local',
   };
+  if (workspace) {
+    // THE REPOSITORY IS PINNED, NOT INFERRED.
+    //
+    // `cwd` alone is not confinement: git DISCOVERS a repository by walking upwards, so a
+    // workspace whose own `.git` is missing — never created, half-deleted, or simply a
+    // directory that happens to sit inside a larger checkout — makes `git add -A && git
+    // commit` operate on the ENCLOSING repository instead. This is not hypothetical: it
+    // swept an entire unrelated working tree into commits authored by this daemon.
+    //
+    // GIT_DIR and GIT_WORK_TREE name the repository outright, so discovery never runs, and
+    // GIT_CEILING_DIRECTORIES stops any walk that a future subcommand might still attempt
+    // before it can leave the workspace.
+    env.GIT_DIR = join(workspace, '.git');
+    env.GIT_WORK_TREE = workspace;
+    env.GIT_CEILING_DIRECTORIES = dirname(workspace);
+  }
+  return env;
+}
+
+/**
+ * The workspace must ALREADY be a repository. Shared by every door, because the failure it
+ * prevents is not "git errors out" — it is git quietly succeeding against a repository
+ * further up the tree.
+ */
+function assertIsRepository(workspace: string, what: string): void {
+  if (existsSync(join(workspace, '.git'))) return;
+  throw new Error(
+    `${what}: '${workspace}' is not a repository (no .git). Refusing, because git ` +
+      `discovers repositories by walking UPWARDS and would otherwise operate on whatever ` +
+      `checkout encloses this directory. Nothing was run.`,
+  );
 }
 
 /**
@@ -81,19 +113,27 @@ function gitEnv(): Record<string, string> {
  */
 export async function excludeDaemonState(slug: string): Promise<void> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
+  // Refuse before the mkdir below, which would otherwise CREATE `.git/info` in a directory
+  // that holds no repository — manufacturing the very evidence the caller's guard looks
+  // for, and leaving a `.git` that is not one.
+  assertIsRepository(cwd, 'exclude daemon state');
   const exclude = join(cwd, '.git', 'info', 'exclude');
   await mkdir(dirname(exclude), { recursive: true });
   await writeFile(exclude, EXCLUDE_BODY, 'utf8');
   await runBinary(['git', 'rm', '-r', '--cached', '--quiet', '--ignore-unmatch', DAEMON_STATE_DIR], {
     cwd,
-    env: gitEnv(),
+    env: gitEnv(cwd),
     timeoutMs: GIT_TIMEOUT_MS,
   });
 }
 
 async function git(slug: string, ...args: string[]): Promise<void> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
-  const result = await runBinary(['git', ...args], { cwd, env: gitEnv(), timeoutMs: GIT_TIMEOUT_MS });
+  // Every command but `init` REQUIRES the repository to already exist here. Without this,
+  // a missing `.git` is not an error — it is a silent promotion to whatever repository
+  // encloses the workspace.
+  if (args[0] !== 'init') assertIsRepository(cwd, `git ${args[0]}`);
+  const result = await runBinary(['git', ...args], { cwd, env: gitEnv(cwd), timeoutMs: GIT_TIMEOUT_MS });
   if (result.exitCode !== 0) {
     throw new Error(`git ${args[0]} failed (exit ${result.exitCode}): ${result.stderr.trim()}`);
   }
@@ -123,7 +163,7 @@ export async function commitAll(slug: string, message: string): Promise<boolean>
   // `git diff --cached --quiet` exits 1 when there IS something staged.
   const staged = await runBinary(['git', 'diff', '--cached', '--quiet'], {
     cwd,
-    env: gitEnv(),
+    env: gitEnv(cwd),
     timeoutMs: GIT_TIMEOUT_MS,
   });
   if (staged.exitCode === 0) {
@@ -138,7 +178,7 @@ export async function changedFiles(slug: string): Promise<string[]> {
   const cwd = confinedPath(config.SITES_ROOT, slug);
   const result = await runBinary(['git', 'status', '--porcelain'], {
     cwd,
-    env: gitEnv(),
+    env: gitEnv(cwd),
     timeoutMs: GIT_TIMEOUT_MS,
   });
   if (result.exitCode !== 0) return [];

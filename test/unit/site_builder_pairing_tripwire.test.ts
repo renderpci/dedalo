@@ -473,3 +473,42 @@ describe('the pairing fragment has ONE spelling on both sides', () => {
 		expect(script).toContain('`${existingText}${separator}${block}`');
 	});
 });
+
+/**
+ * THE TOOL IS AVAILABLE ON THE TOPOLOGY THE PROVISIONER DELIVERS.
+ *
+ * `isAvailable` decided configuration for itself — `url && token` — while the provisioner's
+ * rendered engine fragment sets DEDALO_SITE_BUILDER_SOCKET and no URL at all. So a correctly
+ * provisioned, correctly paired install hid the tool from every toolbar, which is the one
+ * symptom an operator cannot debug: the feature simply is not there. It must ask the same
+ * resolver every other consumer asks.
+ */
+describe('tool availability follows the resolver, not a second opinion', () => {
+	const SOCKET_PAIRED = {
+		url: undefined,
+		socket: '/run/dedalo-sites/example/daemon.sock',
+		instance: 'example',
+		token: 'x'.repeat(32),
+		timeoutMs: 10_000,
+	} as const;
+
+	test('a socket-only pairing resolves to a transport', () => {
+		expect(resolveSiteBuilderTransport({ ...SOCKET_PAIRED })).not.toBeNull();
+	});
+
+	test('the tool source asks the resolver rather than testing url && token', () => {
+		const source = readFileSync(
+			join(import.meta.dir, '..', '..', 'tools', 'tool_sitebuilder', 'server', 'index.ts'),
+			'utf8',
+		);
+		expect(source).toContain('isAvailable: () => resolveSiteBuilderTransport(config.siteBuilder) !== null');
+		// The exact shape that hid the tool. If it comes back, so does the defect.
+		expect(source).not.toContain("typeof config.siteBuilder.url === 'string' && typeof config.siteBuilder.token === 'string'");
+	});
+
+	test('and a half-configured pairing still resolves to nothing', () => {
+		// Anti-vacuity: availability must not become "always true".
+		expect(resolveSiteBuilderTransport({ ...SOCKET_PAIRED, instance: undefined })).toBeNull();
+		expect(resolveSiteBuilderTransport({ ...SOCKET_PAIRED, token: undefined })).toBeNull();
+	});
+});

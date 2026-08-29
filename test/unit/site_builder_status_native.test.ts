@@ -22,6 +22,7 @@ import {
 	siteBuilderHost,
 	widget,
 } from '../../src/core/area_maintenance/widgets/site_builder_status.ts';
+import { instanceFingerprint } from '../../src/core/site_builder/pairing.ts';
 
 /**
  * A CONFIGURED install, as of the pairing pass (2026-08-29): a transport, a token AND the
@@ -31,6 +32,18 @@ import {
  * fail-closed reading and the one the socket cases below rely on.
  */
 const CONFIGURED = { url: 'https://sb.local:8443/', token: 'tok', instance: 'example' };
+
+/**
+ * A `/health` body from the daemon this engine is ACTUALLY paired with.
+ *
+ * The panel now proves the pairing before it spends the bearer token, so a stub without a
+ * fingerprint is an UNPAIRED daemon and reads as unreachable — which is the point. Every
+ * reachable-path fixture therefore has to publish the real fingerprint, and the one that
+ * does not is the mispairing case asserted at the bottom of this file.
+ */
+function healthOf(body: Record<string, unknown>, instance = 'example', token = 'tok') {
+	return { ...body, instance_fingerprint: instanceFingerprint(instance, token) };
+}
 
 describe('siteBuilderHost', () => {
 	test('returns host (WITH port), credentials stripped', () => {
@@ -176,7 +189,7 @@ describe('buildSiteBuilderStatus (I/O shell, stubbed — never the network)', ()
 			},
 			fetchJson: async (url, _headers, _timeout, unixSocket) => {
 				calls.push({ url, unixSocket });
-				return url.endsWith('/health') ? { drivers: ['claude_code'] } : { data: [] };
+				return url.endsWith('/health') ? healthOf({ drivers: ['claude_code'] }) : { data: [] };
 			},
 		});
 		expect(calls.map((c) => c.url)).toEqual([
@@ -198,7 +211,7 @@ describe('buildSiteBuilderStatus (I/O shell, stubbed — never the network)', ()
 			siteBuilder: CONFIGURED,
 			fetchJson: async (url, headers) => {
 				calls.push({ url, headers });
-				if (url.endsWith('/health')) return { drivers: ['ftp'] };
+				if (url.endsWith('/health')) return healthOf({ drivers: ['ftp'] });
 				return {
 					data: [
 						{ action: 'publish', id: 1 },
@@ -242,7 +255,7 @@ describe('buildSiteBuilderStatus (I/O shell, stubbed — never the network)', ()
 		const value = await buildSiteBuilderStatus({
 			siteBuilder: CONFIGURED,
 			fetchJson: async (url) => {
-				if (url.endsWith('/health')) return { drivers: ['local'] };
+				if (url.endsWith('/health')) return healthOf({ drivers: ['local'] });
 				throw new Error('HTTP 401');
 			},
 		});
@@ -271,7 +284,7 @@ describe('buildSiteBuilderStatus (I/O shell, stubbed — never the network)', ()
 	test('a non-URL daemon address still probes, with url_host null', async () => {
 		const value = await buildSiteBuilderStatus({
 			siteBuilder: { url: 'not a url', token: 't', instance: 'example' },
-			fetchJson: async () => ({ drivers: [] }),
+			fetchJson: async () => healthOf({ drivers: [] }, 'example', 't'),
 		});
 		expect(value).toMatchObject({ configured: true, reachable: true, url_host: null });
 	});
@@ -312,7 +325,69 @@ describe('rewire proof', () => {
 
 		// …and the call sites point at the extractions.
 		expect(source).toContain('const urlHost = siteBuilderHost(base);');
-		expect(source).toContain('return buildSiteBuilderPanel({ urlHost, health, audit });');
+		expect(source).toContain('buildSiteBuilderPanel({ urlHost, health: paired ? health : null, audit });');
 		expect(source).toContain('return buildSiteBuilderPanel({ urlHost, health: null });');
+	});
+});
+
+/**
+ * THE PANEL DOES NOT SPEND THE TOKEN ON AN UNPROVED DAEMON.
+ *
+ * `/health` is public: anything listening on that socket or URL answers it. The panel then
+ * sent `Authorization: Bearer <this engine's token>` to whatever replied, and rendered the
+ * answer as this museum's status — so an engine pointed at a neighbouring museum's daemon
+ * (a copy-pasted ../private/.env; a shared fleet token) leaked its credential and displayed
+ * the other museum's publish history as its own. Verified against two real daemons before
+ * the fix.
+ */
+describe('the ops panel proves the pairing before it authenticates', () => {
+	const foreignHealth = { drivers: ['claude_code'], instance_fingerprint: instanceFingerprint('museum-b', 'tok') };
+
+	test('a foreign daemon gets no bearer token, and contributes nothing to the panel', async () => {
+		const calls: Array<{ url: string; headers: Record<string, string> }> = [];
+		const value = await buildSiteBuilderStatus({
+			siteBuilder: CONFIGURED, // instance 'example'
+			fetchJson: async (url, headers) => {
+				calls.push({ url, headers });
+				if (url.endsWith('/health')) return foreignHealth;
+				return { data: [{ action: 'publish', id: 99 }] };
+			},
+		});
+
+		// Only the unauthenticated liveness question was asked.
+		expect(calls.map((c) => c.url)).toEqual(['https://sb.local:8443/health']);
+		expect(calls.every((c) => c.headers.Authorization === undefined)).toBe(true);
+
+		// And nothing of the foreign daemon reached the panel.
+		expect(value).toMatchObject({ configured: true, reachable: false, drivers: [], last_publishes: [] });
+	});
+
+	test('a health body with NO fingerprint at all is equally unproved', async () => {
+		const calls: string[] = [];
+		const value = await buildSiteBuilderStatus({
+			siteBuilder: CONFIGURED,
+			fetchJson: async (url) => {
+				calls.push(url);
+				return url.endsWith('/health') ? { drivers: ['claude_code'] } : { data: [] };
+			},
+		});
+		expect(calls).toEqual(['https://sb.local:8443/health']);
+		expect(value).toMatchObject({ reachable: false, drivers: [] });
+	});
+
+	test('the correctly paired daemon still gets the token, and IS rendered', async () => {
+		// Anti-vacuity: a gate that only ever refuses would pass with the probe deleted.
+		const calls: Array<{ url: string; headers: Record<string, string> }> = [];
+		const value = await buildSiteBuilderStatus({
+			siteBuilder: CONFIGURED,
+			fetchJson: async (url, headers) => {
+				calls.push({ url, headers });
+				if (url.endsWith('/health')) return healthOf({ drivers: ['claude_code'] });
+				return { data: [{ action: 'publish', id: 7 }] };
+			},
+		});
+		expect(calls).toHaveLength(2);
+		expect(calls[1]?.headers).toEqual({ Authorization: 'Bearer tok' });
+		expect(value).toMatchObject({ reachable: true, drivers: ['claude_code'], last_publishes: [{ action: 'publish', id: 7 }] });
 	});
 });

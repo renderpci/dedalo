@@ -68,6 +68,7 @@
 !install.sh
 !mkdocs.yml
 !package.json
+!presentation
 !publication
 !scripts
 !src

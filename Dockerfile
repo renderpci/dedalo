@@ -74,6 +74,7 @@ COPY dev ./dev
 COPY docs ./docs
 COPY engineering ./engineering
 COPY install ./install
+COPY presentation ./presentation
 COPY publication ./publication
 COPY scripts ./scripts
 COPY src ./src

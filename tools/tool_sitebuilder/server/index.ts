@@ -36,6 +36,7 @@
  */
 
 import { config } from '../../../src/config/config.ts';
+import { resolveSiteBuilderTransport } from '../../../src/core/site_builder/pairing';
 import { isErrorInDomain, ok as okEnvelope } from '../../../src/core/errors/index.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
 import {
@@ -690,7 +691,10 @@ export const tool: ToolServerModule = {
 			handler: getAudit,
 		},
 	},
-	// The tool exists only when the daemon is configured. A fast, pure, cacheable check.
-	isAvailable: () =>
-		typeof config.siteBuilder.url === 'string' && typeof config.siteBuilder.token === 'string',
+	// The tool exists only when the daemon is configured. A fast, pure, cacheable check —
+	// and it asks the ONE resolver, not its own idea of what "configured" means. It used to
+	// test `url && token` directly, which hid the tool from every toolbar on exactly the
+	// topology the provisioner now makes primary: a socket-paired install, whose rendered
+	// engine fragment sets DEDALO_SITE_BUILDER_SOCKET and no URL at all.
+	isAvailable: () => resolveSiteBuilderTransport(config.siteBuilder) !== null,
 };

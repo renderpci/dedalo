@@ -11,9 +11,10 @@
  * pairing.ts) is the one answer, shared with the tool's daemon client. It covers both the
  * unix socket a provisioned daemon actually listens on and the URL of a remote one, and it
  * treats a HALF-configured pairing (a transport with no instance name, or no token) as no
- * configuration at all. This panel does NOT verify the pairing fingerprint: it sends
- * nothing to the daemon but an unauthenticated liveness question, and the refusal that
- * matters belongs at the door that sends things (daemon_client.ts).
+ * configuration at all. The panel DOES verify the pairing fingerprint, because it does not
+ * only ask an unauthenticated liveness question: it goes on to send this engine's bearer
+ * token to /v1/audit. Handing that to whatever answered a public /health, and then printing
+ * the replies under this museum's heading, is the mispairing disaster in ops-panel form.
  *
  * Coverage note (honest): the decision logic is split out into two pure exports —
  * `siteBuilderHost` (host extraction, credentials stripped, port kept) and
@@ -27,7 +28,11 @@
  */
 
 import type { SiteBuilderConfig } from '../../../config/config.ts';
-import { resolveSiteBuilderTransport } from '../../site_builder/pairing.ts';
+import {
+	fingerprintMatches,
+	instanceFingerprint,
+	resolveSiteBuilderTransport,
+} from '../../site_builder/pairing.ts';
 import type { WidgetModule } from './support.ts';
 
 const PROBE_TIMEOUT_MS = 3000;
@@ -142,10 +147,31 @@ export async function buildSiteBuilderStatus(
 	try {
 		const health = await doFetch(`${base}/health`, {}, PROBE_TIMEOUT_MS, transport.unixSocket);
 
+		// THE PANEL PROVES THE PAIRING BEFORE IT SPENDS THE TOKEN.
+		//
+		// `/health` is public and unauthenticated: anything listening on that socket or URL
+		// can answer it. Sending `Authorization: Bearer <this engine's token>` to whatever
+		// replied hands this museum's credential to another museum's daemon — and then
+		// renders THAT museum's publish history in this museum's ops panel, which is the
+		// mispairing disaster wearing an ops-panel costume. The daemon publishes an opaque
+		// fingerprint for exactly this: it proves the instance AND the shared token while
+		// disclosing neither.
+		//
+		// A mismatch reads as UNREACHABLE, deliberately: the panel is fail-soft, and an
+		// operator who sees "not reachable" checks the pairing, whereas one who sees another
+		// museum's releases believes them.
+		const paired =
+			health !== null &&
+			health !== undefined &&
+			fingerprintMatches(
+				(health as { instance_fingerprint?: unknown }).instance_fingerprint,
+				instanceFingerprint(transport.instance, transport.token),
+			);
+
 		let audit: unknown;
 		// Quirk: pinned, not fixed — a null/undefined health body threw on `.drivers` in the
 		// pre-split code, so the audit probe was never issued in that case. Kept exactly.
-		if (health !== null && health !== undefined) {
+		if (paired) {
 			try {
 				audit = await doFetch(
 					`${base}/v1/audit?limit=10`,
@@ -159,7 +185,10 @@ export async function buildSiteBuilderStatus(
 			}
 		}
 
-		return buildSiteBuilderPanel({ urlHost, health, audit });
+		// An unpaired daemon contributes NOTHING to the panel — not its drivers, not its
+		// version, not its audit. Passing its health body through would render another
+		// museum's facts under this museum's heading.
+		return buildSiteBuilderPanel({ urlHost, health: paired ? health : null, audit });
 	} catch {
 		return buildSiteBuilderPanel({ urlHost, health: null });
 	}
