@@ -11,6 +11,11 @@ Dédalo is two connected systems:
 
 New to the vocabulary (section, component, tipo, locator, sqo, rqo, ddo)? Read the **[Introduction & core hub](core/index.md)** and the **[Glossary](core/glossary.md)** first.
 
+> **Not a developer?** **[Dédalo in plain language](understanding/index.md)** explains the
+> whole system — where it lives, how a record travels, what the APIs are, and what the AI
+> layer does — in four diagrams and one text written for curators, archivists and
+> humanities researchers. Start there, and come back here when you want the detail.
+
 > **Where the engine came from.** Dédalo v7's server was rebuilt from scratch in TypeScript on
 > the Bun runtime, replacing the engine that served the project for two decades. If you want
 > the *why, what and the new foundation* — written for developers and humanities readers alike
@@ -77,16 +82,17 @@ Pick the path that matches what you are trying to do. Each is a short, ordered l
 
 ### 5. Data curator / manager — work with the data
 
-1. [Introduction (core hub)](core/index.md) and [Glossary](core/glossary.md) — the concepts and vocabulary
-2. [Areas](core/areas/index.md) and [Sections](core/sections/index.md) — how records are organised and edited
-3. [Talk to your catalogue — the AI Assistant](core/ai/assistant/use_cases.md) — search by meaning, understand a record, and (with confirmation) propose edits in plain language
-4. [Thesaurus & ontology tree](core/ontology/ts_object.md) — managing hierarchies, descriptors and related terms
-5. [Tools user guide](tools/index.md) — the day-to-day toolbox: import, export, print, media, transcription, translation, batch edits and record history, tool by tool
-6. [Importing data](core/importing_data.md) and [Exporting data](core/exporting_data.md) — the import/export model behind those tools
-7. [Media pipeline](development/media_pipeline.md) — how uploaded files become masters, derivatives, thumbnails and published media
-8. [Diffusion data flow](diffusion/diffusion_data_flow.md) — deciding what is published and how; [the native engine](diffusion/native_engine.md) is what runs the publish
-9. [Raspa Data Quality Score](core/raspa_score.md) — assessing the quality of your catalog
-10. [Backup](management/backup.md) and [installing new hierarchies](management/install_new_hierarchies.md) — day-to-day stewardship
+1. [Dédalo in plain language](understanding/index.md) — the whole system without the jargon, and [the ideas behind it](understanding/the_ideas_behind_dedalo.md) for curators and humanities readers
+2. [Introduction (core hub)](core/index.md) and [Glossary](core/glossary.md) — the concepts and vocabulary
+3. [Areas](core/areas/index.md) and [Sections](core/sections/index.md) — how records are organised and edited
+4. [Talk to your catalogue — the AI Assistant](core/ai/assistant/use_cases.md) — search by meaning, understand a record, and (with confirmation) propose edits in plain language
+5. [Thesaurus & ontology tree](core/ontology/ts_object.md) — managing hierarchies, descriptors and related terms
+6. [Tools user guide](tools/index.md) — the day-to-day toolbox: import, export, print, media, transcription, translation, batch edits and record history, tool by tool
+7. [Importing data](core/importing_data.md) and [Exporting data](core/exporting_data.md) — the import/export model behind those tools
+8. [Media pipeline](development/media_pipeline.md) — how uploaded files become masters, derivatives, thumbnails and published media
+9. [Diffusion data flow](diffusion/diffusion_data_flow.md) — deciding what is published and how; [the native engine](diffusion/native_engine.md) is what runs the publish
+10. [Raspa Data Quality Score](core/raspa_score.md) — assessing the quality of your catalog
+11. [Backup](management/backup.md) and [installing new hierarchies](management/install_new_hierarchies.md) — day-to-day stewardship
 
 ---
 
@@ -96,6 +102,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 
 | Area | Description | Entry |
 | ---- | ----------- | ----- |
+| **In plain language** | The non-technical entry to the whole system: four diagrams (infrastructure, the journey of a record, the three APIs, the AI layer) plus the concepts written for curators and humanities researchers | [understanding/index.md](understanding/index.md) |
 | **The rewrite** | Where the v7 engine came from, and why it was rebuilt — background, not required reading | [rewrite.md](rewrite.md) |
 | **Core hub** | Introduction, nomenclature, active ontology and the index of all core documentation | [core/index.md](core/index.md) |
 | Architecture overview | How the two systems, the matrix data model and the active ontology fit together | [core/architecture_overview.md](core/architecture_overview.md) |
