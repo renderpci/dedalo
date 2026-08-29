@@ -1,0 +1,31 @@
+# The rendered examples, and the access each artifact is installed with.
+#
+# GENERATED — do not edit. Every file listed below, and this file, are byte-compared
+# against a fresh render by tests/provision_examples.test.ts. To change one, change the
+# renderer or deploy/examples/instance.example.json, then:
+#
+#     UPDATE_EXAMPLES=1 bun test ./tests/provision_examples.test.ts
+#
+# The trees mirror the HOST: deploy/examples/<tree>/etc/... is /etc/... on the museum's
+# machine. The mode and owner are what the provisioner applies; a checked-out file cannot
+# carry them, which is the only reason this listing exists.
+#
+# mode owner:group  MODES row  kind  ->  path on the host
+
+[rendered]  the declaration exactly as committed
+0640  root:dedalo-example       engineFragment  engine_fragment  /etc/dedalo_sites/instances/example/engine.env.fragment
+0640  root:dedalo-site-example  envFile         env              /etc/dedalo_sites/instances/example/env
+0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-archive-pre.conf
+0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-archive.conf
+0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-collection-pre.conf
+0644  root:root                 hostConfig      nginx_vhost      /etc/nginx/sites-available/dedalo-site-example-collection.conf
+0644  root:root                 hostConfig      unit             /etc/systemd/system/dedalo-site-builder@example.service
+
+[rendered-apache]  the same declaration with web.server = "apache"
+0644  root:root                 hostConfig      apache_vhost     /etc/apache2/sites-available/dedalo-site-example-archive-pre.conf
+0644  root:root                 hostConfig      apache_vhost     /etc/apache2/sites-available/dedalo-site-example-archive.conf
+0644  root:root                 hostConfig      apache_vhost     /etc/apache2/sites-available/dedalo-site-example-collection-pre.conf
+0644  root:root                 hostConfig      apache_vhost     /etc/apache2/sites-available/dedalo-site-example-collection.conf
+0640  root:dedalo-example       engineFragment  engine_fragment  /etc/dedalo_sites/instances/example/engine.env.fragment
+0640  root:dedalo-site-example  envFile         env              /etc/dedalo_sites/instances/example/env
+0644  root:root                 hostConfig      unit             /etc/systemd/system/dedalo-site-builder@example.service

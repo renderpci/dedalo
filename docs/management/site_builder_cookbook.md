@@ -14,8 +14,10 @@ not repeat the concepts.
 The site builder has two configuration surfaces: the daemon's own `.env` (on the host that
 runs it) and two keys the engine reads.
 
-**On the daemon host** — `publication/site_builder/.env` (the installer writes a starting
-copy from `sample.env`; fill in the blanks):
+**On the daemon host** — `publication/site_builder/.env`. On a development machine you
+write this file yourself; on a provisioned host it is *generated*, from the one declaration
+described in the service's own README, and editing it by hand is reported as drift on the
+next provisioning run. Either way the keys are the same:
 
 ```bash
 # Auth — the token the engine will present. Generate it once:

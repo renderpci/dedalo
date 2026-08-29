@@ -16,11 +16,21 @@ Phase 0 (the test fixture and its guard, `publication/site_builder/tests/fixture
 — the declaration grammar (`src/provision/schema.ts`), the derivation
 (`src/provision/layout.ts`), the reference declaration
 (`deploy/examples/instance.example.json`) and the composition gate
-(`tests/provision.test.ts`) — landed on top of it: **122 pass / 0 fail / 14 files**,
-`bunx tsc --noEmit` clean. The fixture already writes the marker of §5 (taking its name and
-its content from `layout.ts`) and already names the instance-scoped root keys of §2, so the
-provisioner lands against a suite that satisfies the contract instead of against eleven red
-files. What §9 lists as still-to-be-written arrives with the provisioner itself.
+(`tests/provision.test.ts`) — landed on top of it. The fixture already writes the marker of
+§5 (taking its name and its content from `layout.ts`) and already names the instance-scoped
+root keys of §2, so the provisioner lands against a suite that satisfies the contract
+instead of against eleven red files.
+
+Phase 2 then landed the RENDER move and executed the retirement §4 describes: the five
+renderers (`src/provision/render/{unit,env,nginx,apache,engine_fragment}.ts` behind
+`renderAll()`), a gate each, and — in the same commit — the deletion of the six
+hand-written artifacts. Their text is now pure functions; the rendered output of the one
+committed declaration is committed beside it (`deploy/examples/rendered*`, §4.3) and
+byte-compared against a fresh render, so an example can no longer become a seventh
+hand-maintained file. **Measured 2026-08-29: 370 pass / 0 fail / 21 files**, `bunx tsc
+--noEmit` clean. What remains is Phase 3, the provisioner itself — the command that APPLIES
+a rendered set to a host, its read-only `check`, and `adopt`. Nothing in this tree writes to
+a host yet.
 
 ## 1. What an instance is, and the pairing topology
 
@@ -350,9 +360,9 @@ Read the design out of five of those rows:
 
 **Which web-server user needs which group, stated plainly:** none. `www-data` (Debian) or
 `nginx` (RHEL) is added to NO instance group. It reads what it must because it is the
-group owner of the webspaces and of `preprod.htpasswd`. The current
-`usermod -aG dedalo-sites www-data` in `install.sh:52` is exactly the shape this replaces:
-it hands the web server read access to every workspace — git history, `node_modules`, the
+group owner of the webspaces and of `preprod.htpasswd`. The
+`usermod -aG dedalo-sites www-data` the retired `install.sh` performed (its §2) was exactly
+the shape this replaced: it handed the web server read access to every workspace — git history, `node_modules`, the
 agent's tree, `.builder/` — to solve a problem that group ownership on the served tree
 solves without any of that. **The paired engine's user needs no group either**, for the
 identical reason and by the identical mechanism.
@@ -378,7 +388,7 @@ that happens only on drift, and a read-only status call the operator can ask.
 
 Rendered artifacts, all of them, per instance:
 
-| Artifact | Replaces (deleted in Phase 2) |
+| Artifact | Replaced (deleted 2026-08-29, Phase 2) |
 |---|---|
 | one `/etc/systemd/system/dedalo-site-builder@<i>.service` per INSTANCE (an explicit instance unit, not a template plus a drop-in — see §2.3) | `deploy/dedalo-site-builder.service` |
 | `…/instances/<i>/env` | `sample.env` (and the hand-copied `.env`) |
@@ -388,32 +398,65 @@ Rendered artifacts, all of them, per instance:
 | users, groups, roots, modes, markers | `install.sh` §2 |
 
 `install.sh`, `deploy/dedalo-site-builder.service`, `nginx/*.conf`, `apache/*.conf` and
-`sample.env` are DELETED. Their text becomes pure functions. What that kills, concretely
-— every one of these is in the tree today:
+`sample.env` ARE DELETED — Phase 2, 2026-08-29, in the commit that landed the renderers, and
+kept deleted by a gate (`tests/provision_examples.test.ts`) rather than by anyone
+remembering. Their text is pure functions now. What that killed, concretely — every one of
+these WAS in the tree, and the line numbers are the retired files' own:
 
-1. **Identity is hardcoded TWICE with no templating.** `install.sh:13-14` sets
-   `SERVICE_USER`/`SERVICE_GROUP` and `deploy/dedalo-site-builder.service:23-24` sets
-   `User=`/`Group=`, and the installer copies the unit **verbatim** (`install -m 644`).
-   Worse, the two shell assignments use a plain `=` while the roots beside them use
-   `${VAR:-default}` — so the identity is silently NON-overridable and looks overridable.
-2. **`ReadWritePaths=` does not follow the roots.** The unit hardcodes
+1. **Identity was hardcoded TWICE with no templating.** `install.sh:13-14` set
+   `SERVICE_USER`/`SERVICE_GROUP` and `deploy/dedalo-site-builder.service:23-24` set
+   `User=`/`Group=`, and the installer copied the unit **verbatim** (`install -m 644`).
+   Worse, the two shell assignments used a plain `=` while the roots beside them used
+   `${VAR:-default}` — so the identity was silently NON-overridable and looked overridable.
+   Now: `layout.identity` is derived from the instance name, and the unit renderer reads it
+   from there.
+2. **`ReadWritePaths=` did not follow the roots.** The unit hardcoded
    `/var/lib/dedalo_sites /var/www/dedalo_sites` under `ProtectSystem=strict` while
-   `install.sh` accepts `SITES_ROOT`/`PREPROD_ROOT`/`PROD_ROOT` overrides. Override a root
-   and the install SUCCEEDS; the daemon dies later, at publish time, on a read-only
-   filesystem. Rendered from one declaration, the two cannot disagree.
-3. **`useradd --system --create-home` with no `--user-group`** leaves group creation to
-   distro policy while the unit hard-requires `Group=dedalo-sites`. The engine's own unit
+   `install.sh` accepted `SITES_ROOT`/`PREPROD_ROOT`/`PROD_ROOT` overrides. Override a root
+   and the install SUCCEEDED; the daemon died later, at publish time, on a read-only
+   filesystem. Now: the directive is `readWritePaths(layout)`, one line per entry, and a
+   hand-written list is refused by that renderer's gate.
+3. **`useradd --system --create-home` with no `--user-group`** left group creation to
+   distro policy while the unit hard-required `Group=dedalo-sites`. The engine's own unit
    documents the same trap (`deploy/dedalo-ts.service:45-51`).
 4. **One shared `/etc/dedalo_sites/preprod.htpasswd` for every museum's drafts** — one
-   password, and every museum's unpublished work behind it.
+   password, and every museum's unpublished work behind it. Now: `layout.htpasswd` is per
+   instance, and both vhost renderers read it from the layout.
+5. **The Apache preprod vhost's basic auth did not authenticate anything.**
+   `apache/dedalo_sites.conf:19-21` put `Require all granted` in the same `<Directory>` as
+   `AuthType Basic` + `Require valid-user`; httpd 2.4 wraps a section's `Require`
+   directives in an implicit `<RequireAny>`, so access was granted when EITHER succeeded.
+   Every museum's drafts were public to anyone who knew the hostname, and the file read as
+   though it protected them. Found while porting the text into `apache.ts`, which is the
+   argument for this whole move in one line: the defect was four years old, in plain sight,
+   in a file nothing could test.
 
 The mechanics:
 
-- **Every artifact carries a body-hash header** naming its generator, its instance and the
-  hash: `# GENERATED by publication/site_builder/src/provision — instance museum-a` /
-  `# body-hash: <sha256 of the rendered body>`. Deliberately a hash of the RENDERED BODY,
-  not of the inputs as in `protection.ts`: the artifact set here is heterogeneous and
-  hand-editable, and an input hash cannot see a hand edit at all.
+- **Every artifact's FIRST LINE is its stamp**, in the artifact's own comment syntax:
+
+  ```
+  # dedalo-provision: <instance> <kind> <sha256 of everything below this line>
+  # GENERATED by publication/site_builder/src/provision/render/<module>.ts — do NOT edit.
+  ```
+
+  The second line is ordinary prose inside the hashed body — it names the module so an
+  operator holding a drifted file knows where to look — and only the FIRST line is the
+  stamp.
+
+  Three fields and no more, because every one of them is load-bearing: the INSTANCE, so a
+  file belonging to another museum is refused rather than overwritten; the KIND, so a
+  stamped file found on a host names the module in `src/provision/render/` that produced it
+  (which is why the two vhost kinds are `nginx_vhost` and `apache_vhost` and not one
+  `vhost` — on a host whose web server changed, that is exactly the moment the file must
+  say who wrote it); and the HASH.
+
+  Deliberately a hash of the RENDERED BODY, not of the inputs as in `protection.ts`: the
+  artifact set here is heterogeneous and hand-editable, and an input hash cannot see a hand
+  edit at all. `src/provision/hash.ts` owns `stamp()` / `parseStamp()` / `bodyHash()`, and
+  `artifact()` in `render/types.ts` is the only constructor of an artifact, so a renderer
+  cannot forget to stamp and cannot invent a different shape. `renderAll()` re-reads the
+  stamp back off every artifact it returns, which closes the same door from the other side.
 - **A run writes only on drift.** Body hash matches → nothing is written, nothing is
   touched, and the run is a no-op that can be scheduled.
 - **A hand edit is DRIFT and is reported, never silently kept.** `--check` renders without
@@ -427,6 +470,46 @@ The mechanics:
 - **The provisioner is idempotent and orderable**: identities → roots and modes → markers
   → secrets → rendered files → `daemon-reload` → vhost validate. A failure at any step
   leaves the previous state intact and names the step.
+
+### 4.3 The rendered output is COMMITTED, and gated
+
+Deleting six hand-written files cost something real, and it is worth naming rather than
+celebrating the deletion. A hand-written config is READABLE: an operator opened
+`nginx/dedalo_sites_prod.conf` and saw, on one screen, what would land on the host. A pure
+function is not readable in that way — nobody diffs a function against the box in front of
+them.
+
+So the complete rendered output of the ONE committed declaration is committed beside it:
+
+| Path | What |
+|---|---|
+| `deploy/examples/instance.example.json` | the reference declaration — generic, never a real museum's name, the same law as the engine's generic `test` TLD |
+| `deploy/examples/rendered/` | `renderAll(derive(parseManifest(…)))` on that declaration, in a tree that MIRRORS the host: `rendered/etc/…` is `/etc/…` |
+| `deploy/examples/rendered-apache/` | the same declaration with `web.server` flipped to `apache` — the one field an httpd host changes |
+| `deploy/examples/rendered.index` | the census: artifact → host path, owner, group, mode. The one fact a checked-out file cannot carry, and here it is the isolation model |
+
+`publication/site_builder/tests/provision_examples.test.ts` re-renders the declaration and
+byte-compares every committed file, **in both directions**: an artifact with no committed
+example is a file landing on a museum's host that nobody documented, and a committed
+example no renderer produces is `sample.env` again — a file everybody trusted, that nothing
+produced and nothing checked. The same gate keeps the six retired files retired, and refuses
+any prose in the package that still tells an operator to run or copy one of them, because a
+dangling instruction is worse than the installer was: the installer at least did something.
+
+The examples are regenerated, never edited
+(`UPDATE_EXAMPLES=1 bun test ./tests/provision_examples.test.ts`, a run that writes and then
+fails on purpose so a stray environment variable cannot turn the gate green by rewriting
+what it checks).
+
+**Why a second tree rather than a second declaration.** `apache/dedalo_sites.conf` was the
+only Apache documentation this subsystem had; deleting it with nothing in its place would
+have left every httpd operator with no example and the Apache renderer's bytes undocumented.
+A second `instance.apache.json` would have been a second declaration to keep in step — the
+defect. The variant is therefore COMPUTED by the gate from the one committed declaration,
+and what the flip changes is itself asserted: the vhosts, and one line of `env`
+(`DEPLOYMENT_MODE`). The unit and the pairing fragment are byte-identical across the two
+trees, so the duplication there is three files a gate holds identical rather than three
+files a person keeps in step.
 
 ## 5. The marker law
 
@@ -579,8 +662,10 @@ designed to agree rather than discovered to disagree.
 ## 9. What a gate may assert about this document
 
 This file is prose, but parts of it are machine-checkable, and under DEC-12 the checkable
-parts must be checked. The gate is
-`publication/site_builder/tests/provision.test.ts`, and it asserts:
+parts must be checked. Two gates read it —
+`publication/site_builder/tests/provision.test.ts` (the declaration and the derivation) and
+`publication/site_builder/tests/provision_examples.test.ts` (the render and the retirement)
+— and between them they assert:
 
 - **The matrix of §3 equals `MODES`.** Every row names a `MODES` key, and that key's
   owner, group and mode equal the row's — including the SETGID bit, compared as a whole
@@ -617,20 +702,38 @@ parts must be checked. The gate is
   carrying a quote or a newline are each rejected by name.
 - **The marker constant and content of §5** are `layout.ts`'s, and the test fixture
   imports them rather than restating them (`INSTANCE_MARKER`, `markerContent`).
+- **No path UNDER `rewrite/` is named anywhere in this file** — the repo-wide law. The
+  directory is named twice, in the status block and here, only to state what does NOT
+  live there; the gate matches `rewrite/<something>`, not the bare directory name, or it
+  would redden on the sentence that documents the rule.
+
+Added by Phase 2 (`tests/provision_examples.test.ts`):
+
+- **The deleted files stay deleted** (§4): `install.sh`, `deploy/dedalo-site-builder.service`,
+  `nginx/*.conf`, `apache/*.conf` and `sample.env` do not exist in the tree, the two
+  directories that held only them are gone, and no prose in the package still instructs an
+  operator to run or copy one.
+- **Every committed example is byte-equal to a fresh render**, both directions, plus the
+  census of §4.3 — so an example cannot be hand-edited and an artifact cannot go
+  undocumented.
+- **The stamp shape of §4 is `hash.ts`'s**, quoted from this document and compared against
+  `STAMP_TOKEN` and against the first line of every committed example, so the document
+  cannot describe a header shape nothing renders. (It did: this section previously
+  specified a two-line `# GENERATED by …` / `# body-hash: …` header that no renderer ever
+  produced, and nothing could notice.)
+- **A render is STABLE and SECRET-FREE.** The same declaration is the same bytes twice
+  over — the property the write-only-on-drift design rests on — and no committed example
+  assigns a credential-shaped key any value but the pairing sentinel, nor carries a hex run
+  long enough to be a token on any line but its own stamp.
 
 Assertions still to be written, as the provisioner lands:
 
-- **The deleted files stay deleted** (§4): `install.sh`, `deploy/dedalo-site-builder.service`,
-  `nginx/*.conf`, `apache/*.conf`, `sample.env` do not exist in the tree.
-- **Every rendered artifact carries the header shape §4 describes**, and the renderers are
-  pure (no `process.env`, no clock, no filesystem read) so a check run is meaningful.
+- **The renderers are pure** — no `process.env`, no clock, no filesystem read — asserted
+  mechanically rather than by each renderer's own gate, so a `check` run is meaningful.
+  Verified per module today; not yet ratcheted across the directory.
 - **The residual list of §8 is SHRINK-ONLY**: a residual may be removed when it is closed
   and may not be added without a decision, the same ratchet the engine uses for its
   exemption lists.
-- **No path UNDER `rewrite/` is named anywhere in this file** — the repo-wide law. The
-  directory is named twice, in the status block and here, only to state what does NOT
-  live there; a gate must match `rewrite/<something>`, not the bare directory name, or it
-  reddens on the sentence that documents the rule.
 
 A gate may NOT assert, and must not pretend to:
 

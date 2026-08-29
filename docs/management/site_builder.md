@@ -29,9 +29,12 @@ bytes that were previewed, so what goes live is always what was approved.
 
 ## Enabling it
 
-1. **Install the daemon** on its host and note the service token its installer prints (see
-   the service's own README and `install.sh`). Point it at your publication API and set the
-   provider key for the coding agent you want to use.
+1. **Install the daemon** on its host, following the service's own README: you write one
+   declaration describing that host — its identity, its roots, its sites and the *paths* of
+   its credential files — and the daemon's environment, its systemd unit and its
+   web-server configuration are all generated from it. Point it at your publication API and
+   set the provider key for the coding agent you want to use. Note the service token, which
+   the engine presents on every call.
 2. **Tell the engine where the daemon is.** Add two keys to `../private/.env`:
 
    ```bash

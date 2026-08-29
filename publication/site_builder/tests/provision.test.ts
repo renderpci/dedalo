@@ -54,6 +54,8 @@ import {
   SURFACES,
   USER_PREFIX,
   derive,
+  pathsOverlap,
+  isStrictlyWithin,
   isWritablePath,
   markerContent,
   readWritePaths,
@@ -1004,5 +1006,84 @@ describe('the writable set is sane on its own terms', () => {
     const layout = derive(parseManifest(docWith({ paths: { state_base: '/srv/state' } })));
     expect(layout.runtimeDir.startsWith('/run/')).toBe(true);
     expect(layout.socketPath.startsWith(layout.runtimeDir)).toBe(true);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The filesystem root is a path like any other.
+ *
+ * `pathsOverlap` is the single predicate every containment check in this subsystem is
+ * built on. It compared `parent + '/'`, which for `/` asks whether a path begins with
+ * `//` — nothing does. So `/` overlapped NOTHING and a declaration naming it as a root or
+ * a webspace passed every guard while in fact containing all of them.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('containment holds at the filesystem root', () => {
+  test('/ overlaps everything', () => {
+    expect(pathsOverlap('/', '/home/www')).toBe(true);
+    expect(pathsOverlap('/home/www', '/')).toBe(true);
+    expect(pathsOverlap('/', '/')).toBe(true);
+  });
+
+  test('/ strictly contains any absolute path, and nothing strictly contains /', () => {
+    expect(isStrictlyWithin('/home/www', '/')).toBe(true);
+    expect(isStrictlyWithin('/', '/')).toBe(false);
+    expect(isStrictlyWithin('/', '/home')).toBe(false);
+  });
+
+  test('a sibling prefix is still not containment', () => {
+    // The other direction the naive form got right and a careless fix breaks.
+    expect(pathsOverlap('/home/www', '/home/www2')).toBe(false);
+    expect(isStrictlyWithin('/home/www2', '/home/www')).toBe(false);
+  });
+
+  test('derive() refuses / as a root, now that the predicate can see it', () => {
+    expect(() => derive({ ...baseDoc(), roots: { workspaces: '/' } } as never)).toThrow();
+  });
+
+  test('and refuses / as a site webspace', () => {
+    expect(() =>
+      derive({
+        ...baseDoc(),
+        sites: [{ slug: 'one', domain: 'a.example.org', webspace: '/' }],
+      } as never),
+    ).toThrow();
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The preprod password file is never inside a served tree.
+ *
+ * The dotfile guard only saves a file whose NAME begins with a dot, and an adopted layout
+ * may pin the htpasswd anywhere. A password file under a document root is served over HTTP.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the preprod credential is not servable', () => {
+  test('an htpasswd inside a site webspace is refused', () => {
+    expect(() =>
+      derive({
+        ...baseDoc(),
+        sites: [{ slug: 'one', domain: 'a.example.org', webspace: '/home/www/a' }],
+        serving: {
+          preprod: {
+            enabled: true,
+            auth: {
+              mode: 'htpasswd',
+              htpasswd: '/home/www/a/preprod.htpasswd',
+              users: [{ name: 'preview', password_file: '/etc/x/P' }],
+            },
+          },
+          prod: { tls: { mode: 'none' } },
+        },
+      } as never),
+    ).toThrow(/serve it over HTTP/);
+  });
+
+  test('the derived default lives under the instance config directory, outside every webspace', () => {
+    const layout = derive(parseManifest(readExample()));
+    expect(isWithin(layout.configDir, layout.htpasswd)).toBe(true);
+    for (const site of layout.sites) {
+      expect(pathsOverlap(layout.htpasswd, site.webspace)).toBe(false);
+    }
   });
 });

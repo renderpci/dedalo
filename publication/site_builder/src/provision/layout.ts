@@ -279,16 +279,36 @@ export function tidyPath(value: string): string {
   return trimmed.length > 1 ? trimmed.replace(/\/+$/, '') : trimmed;
 }
 
+/**
+ * The prefix that means "inside this directory".
+ *
+ * For every path but the filesystem root that is `<path>/`. For `/` it is `/` itself,
+ * because `tidyPath` leaves the root as a bare separator and the naive `path + sep` would
+ * ask whether a path starts with `//` — which nothing does. That made `/` overlap NOTHING,
+ * so a declaration naming `/` as a root or a webspace passed every containment check in
+ * this file while actually containing all of them. The one-character case has to be
+ * spelled out; it cannot be left to string concatenation.
+ */
+function containmentPrefix(path: string): string {
+  return path === sep ? sep : path + sep;
+}
+
 /** True when `a` and `b` are the same path, or either contains the other. */
 export function pathsOverlap(a: string, b: string): boolean {
   const left = tidyPath(a);
   const right = tidyPath(b);
-  return left === right || left.startsWith(right + sep) || right.startsWith(left + sep);
+  return (
+    left === right ||
+    left.startsWith(containmentPrefix(right)) ||
+    right.startsWith(containmentPrefix(left))
+  );
 }
 
 /** True when `child` is STRICTLY inside `parent` (not equal to it). */
 export function isStrictlyWithin(child: string, parent: string): boolean {
-  return tidyPath(child).startsWith(tidyPath(parent) + sep);
+  const inner = tidyPath(child);
+  const outer = tidyPath(parent);
+  return inner !== outer && inner.startsWith(containmentPrefix(outer));
 }
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -897,6 +917,21 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
   const htpasswd = manifest.serving?.preprod?.auth?.htpasswd
     ? absoluteRoot('serving.preprod.auth.htpasswd', manifest.serving.preprod.auth.htpasswd)
     : join(configDir, 'preprod.htpasswd');
+
+  // A basic-auth password file inside a SERVED tree is served. The dotfile guard only
+  // saves it when its name happens to begin with a dot, and an adopted layout may pin it
+  // anywhere — so the placement is refused here rather than left to a filename.
+  for (const site of sites) {
+    if (pathsOverlap(htpasswd, site.webspace)) {
+      throw new Error(
+        `layout: the preprod password file '${htpasswd}' lies inside site ` +
+          `'${site.slug}'s webspace ('${site.webspace}'), where the web server would ` +
+          `serve it over HTTP. Keep it under the instance config directory. Nothing was ` +
+          `derived.`,
+      );
+    }
+  }
+
 
   const preprodRealm = assertMatches(
     REALM_PATTERN,

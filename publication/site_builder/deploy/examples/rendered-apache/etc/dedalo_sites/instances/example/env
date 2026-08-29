@@ -1,0 +1,41 @@
+# dedalo-provision: example env 963b95869734f4113d1a322c84ba2d4a1711ce3f08295c75d76294aa4cd8668d
+# GENERATED FILE — do not edit.
+#
+# The environment of the Dédalo site-builder daemon for instance 'example'.
+# Reference instance declaration - generic, never a real museum's name (the same law as the engine's generic 'test' TLD).
+#
+# Every value below is DERIVED from the declaration at
+#   /etc/dedalo_sites/instances/example/instance.json
+# and installed by the provisioner; the generated unit (dedalo-site-builder@example.service)
+# is what puts it into the daemon's environment. A hand edit here is DRIFT: the stamp on
+# the first line is a hash of everything below it, so the next 'provision check' reports
+# this file as edited. Change the declaration and re-run the provisioner instead — an
+# edit made here is lost, and until it is lost it is a museum running a configuration
+# nothing on disk describes.
+#
+# NO SECRET APPEARS IN THIS FILE. That is not a habit, it is what makes the file safe to
+# be readable by the service user's group at all — and its whole contents reach every
+# agent child this daemon spawns.
+#
+# The credentials this instance uses arrive through systemd LoadCredential=, out of
+# root-owned 0600 files the service user cannot open, and are read by the daemon at
+# $CREDENTIALS_DIRECTORY/<KEY>:
+#
+#   ANTHROPIC_API_KEY  <-  /etc/dedalo_sites/instances/example/secrets/ANTHROPIC_API_KEY
+#
+# A limit that is absent below is absent ON PURPOSE: it means 'the daemon's own default'.
+# Writing today's default here would freeze it on this host, so that the day the daemon
+# changed the number, nothing would move. State a limit in instance.json to override it.
+
+AGENT_DRIVER="claude_code"
+AGENT_HOME="/var/lib/dedalo_sites/example/home"
+AUDIT_DIR="/srv/dedalo_audit/example"
+CLAUDE_CODE_BIN="/usr/local/bin/claude"
+DEDALO_SITE_INSTANCE="example"
+DEPLOYMENT_MODE="apache"
+MAX_SITES="8"
+PUBLICATION_API_KEY_FILE="/etc/dedalo_sites/instances/example/secrets/PUBLICATION_API_KEY"
+PUBLICATION_API_URL="http://127.0.0.1:3100/publication/server_api/v2"
+RELEASES_RETAINED="10"
+SITES_ROOT="/var/lib/dedalo_sites/example/workspaces"
+WEBSPACE_BASE="/srv/www"

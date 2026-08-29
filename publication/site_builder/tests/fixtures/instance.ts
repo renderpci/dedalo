@@ -79,6 +79,17 @@ export const roots = Object.freeze({
   prodRoot: config.PROD_ROOT,
 });
 
+/**
+ * The scratch directory the roots live under, and its bare name.
+ *
+ * Exported for the same reason the roots are: a walker that needs to SKIP the scratch tree
+ * (tests/provision_examples.test.ts walks the package looking for stale artifacts) would
+ * otherwise hardcode '.test-tmp', which is the pile this fixture exists to prevent. One
+ * spelling, derived from the roots themselves, so moving them moves this too.
+ */
+export const SCRATCH_ROOT = dirname(roots.sitesRoot);
+export const SCRATCH_DIR_NAME = SCRATCH_ROOT.split('/').filter(Boolean).pop() ?? '.test-tmp';
+
 /** The two SERVED surfaces, addressed by name rather than by root variable. */
 export type Surface = 'preprod' | 'prod';
 

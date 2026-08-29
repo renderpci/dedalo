@@ -184,12 +184,15 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
 
 ### Serving
 
-Static, repo-shipped reverse-proxy configs (`nginx/`, `apache/`): one wildcard vhost per
-surface over a directory of per-site symlinks. Create/build/publish/rollback need **zero
-web-server reloads and no root at runtime** — the daemon only ever swaps a symlink. The
-preprod vhost ships with basic auth enabled; a per-site custom domain is a small extra vhost
-pointing at `PROD_ROOT/<slug>/` (documented, manual). `install.sh` sets up the user, roots,
-unit, and htpasswd.
+Reverse-proxy configuration is **generated, not shipped**: `src/provision/render/nginx.ts`
+and `render/apache.ts` render one vhost per site per surface from the host's declaration, so
+a site's document root, its server name and its TLS block are derived rather than typed.
+Create/build/publish/rollback need **zero web-server reloads and no root at runtime** — the
+daemon only ever swaps a symlink under the served root. The pre-production vhost carries
+basic auth against a per-instance password file when the declaration asks for it. The
+complete rendered output of a reference declaration is committed, for both web servers,
+under `publication/site_builder/deploy/examples/`, so what lands on a host can be read
+without running anything.
 
 ## The engine tool
 
@@ -263,8 +266,10 @@ placed in the `publication` category (list view) and the `pub` node (System Map 
 `DEDALO_SITE_BUILDER_TIMEOUT_MS`. See the
 [settings reference](../config/config.md#sitebuilder).
 
-**Daemon** (`publication/site_builder/.env`, see `sample.env`): `SERVICE_TOKEN` (must match
-the engine token), `PUBLICATION_API_URL`, `PREPROD_BASE_URL` / `PROD_BASE_URL`,
+**Daemon** (`publication/site_builder/.env`; on a provisioned host this file is rendered
+by `src/provision/render/env.ts` and its keys are derived from the host's declaration):
+`SERVICE_TOKEN` (must match the engine token — delivered by systemd `LoadCredential=`, never
+written into the file), `PUBLICATION_API_URL`, `PREPROD_BASE_URL` / `PROD_BASE_URL`,
 `SITES_ROOT` / `PREPROD_ROOT` / `PROD_ROOT`, `AGENT_DRIVER` + the driver bins and provider
 keys, and the limits (`MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
 `INSTALL_TIMEOUT_MS` / `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`).
@@ -313,7 +318,7 @@ allowlisting proxy or per-uid rules.
 | Workspaces (manifest, git, templates, brief) | `publication/site_builder/src/sites/*`, `src/context/agents_md.ts` |
 | Sessions (turns, drivers, SSE, event log) | `publication/site_builder/src/sessions/*`, `src/drivers/*` |
 | Build / promote / publish | `publication/site_builder/src/build/*` |
-| Ops (unit, serving, installer) | `publication/site_builder/{deploy,nginx,apache,install.sh,sample.env}` |
+| Ops (the declaration, its derivation, the rendered artifacts) | `publication/site_builder/src/provision/{schema,layout,hash}.ts`, `src/provision/render/*`, `deploy/examples/*` |
 | Engine proxy + client | `tools/tool_sitebuilder/{server,js,css}/*`, `register.json` |
 | Engine config + core edit | `src/config/catalog/sitebuilder.ts`, `src/config/config.ts`, `src/core/api/handlers/dd_tools_api.ts` |
 | Maintenance widget + launcher | `src/core/area_maintenance/widgets/site_builder_status.ts`, `client/dedalo/core/area_maintenance/widgets/site_builder_status/js/*` |
