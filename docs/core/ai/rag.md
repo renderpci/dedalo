@@ -231,6 +231,11 @@ It is registered in the API dispatch as the `dd_rag_api` action class (`src/core
 
 ## Architecture at a glance
 
+[![The RAG subsystem: a save enqueues a dirty marker, the indexer resolves each embed group into a document, chunks and embeds it into the pgvector store, and retrieval fuses a dense and a lexical leg before the ACL gate, feeding the grounded ask pipeline](../../assets/images/diagrams/rag_system.svg)](../../assets/images/diagrams/rag_system.svg)
+
+*Click the diagram to open it full size.*
+
+
 ```mermaid
 flowchart TB
     save["save_event.ts save/delete hook<br/>(registerRagRecordHook)"] -->|"enqueue marker (best-effort)"| Q[("rag_index_queue<br/>(matrix DB, dedalo7_mib)")]

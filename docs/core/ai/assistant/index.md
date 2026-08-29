@@ -31,6 +31,12 @@ If you read only one paragraph: the assistant is a **thin chat client over a ser
 
 ## Architecture in one picture
 
+[![MCP and the agent loop: four surfaces consume one tool registry, every call passes through runTool for re-validation, ACL and the write-section allowlist, and write work follows the propose, validate, hash, apply protocol](../../../assets/images/diagrams/mcp_system.svg)](../../../assets/images/diagrams/mcp_system.svg)
+
+*The tool layer behind the panel — click the diagram to open it full size. The
+sketch below is the assistant's own request path through it.*
+
+
 ```text
  Browser (thin chat panel)
    │  question + conversation history + current-record context + chosen model

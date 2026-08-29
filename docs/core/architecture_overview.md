@@ -77,6 +77,38 @@ data" — diffusion is downstream. Below everything, an "Ontology (active
 schema)" node sends dotted arrows to both servers: it drives the work system
 and maps the output formats for diffusion.
 
+## Architecture diagrams
+
+These are the presentation-sized companions to the prose on this page and on the
+subsystem pages. They live once, under `docs/assets/images/diagrams/`, and each
+is embedded from the page it documents — **click any diagram to open it full
+size**.
+
+[![The three planes: the work system, diffusion, and the publication API, with the two seams between them](../assets/images/diagrams/overview_work_diffusion_publication.svg)](../assets/images/diagrams/overview_work_diffusion_publication.svg)
+
+**Prose description of the diagram above:** three columns, read left to right.
+The first, *the work system*, runs down from the client and `server.ts` through
+the five dispatch gates and the handler classes into the read and write paths,
+ending at the PostgreSQL matrix database and the envelope every answer is
+wrapped in. The second, *diffusion*, starts at `dd_diffusion_api`, passes
+through the durable job row and the scheduler that spawns one runner process,
+and down the runner's pipeline into the format writers and their targets. The
+third, *the publication API*, starts at the published MariaDB database that the
+runner wrote, and rises through the routing choke point, the read-only REST
+surface and the MCP endpoint to the websites and agents that consume it. A
+single arrow joins the first column to the second (the engine enqueues a job)
+and a single arrow joins the second to the third (the runner publishes rows and
+files) — each boundary is crossed once, in one direction, through a database.
+
+| Diagram | Documented in |
+|---|---|
+| **[From the work system to the public web](../assets/images/diagrams/overview_work_diffusion_publication.svg)** — the three planes and the two seams between them | this page |
+| **[The Work API](../assets/images/diagrams/work_api.svg)** — one RQO in, five gates, handler classes, the read and write paths, envelope v2 | [API](../api/index.md) |
+| **[The Diffusion API](../assets/images/diagrams/diffusion_api.svg)** — control plane, durable job row, runner pipeline, writers and targets | [The diffusion engine](../diffusion/native_engine.md) |
+| **[Publication API v2](../assets/images/diagrams/publication_api_v2.svg)** — the routing choke point, the route table, the services, and the isolation law | [Publication API v2](../diffusion/publication_api/v2/index.md) |
+| **[The RAG subsystem](../assets/images/diagrams/rag_system.svg)** — indexing, the two stores, hybrid retrieval and its ACL gate, the `ask` pipeline | [RAG & semantic search](ai/rag.md) |
+| **[MCP and the agent loop](../assets/images/diagrams/mcp_system.svg)** — the surfaces, the one tool registry, `runTool`, and the propose-confirm-apply protocol | [The AI Assistant](ai/assistant/index.md) |
+
 ## The matrix data model
 
 Since v4 Dédalo abandoned the classic one-table-per-entity SQL schema. Instead,

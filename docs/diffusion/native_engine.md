@@ -35,6 +35,12 @@ concept*.
 
 ## Architecture
 
+[![The diffusion API: the control plane enqueues a durable job, the scheduler spawns one runner process per job, and the runner compiles a plan and runs the selection, resolution, transform and writer stages, checkpointing after every batch](../assets/images/diagrams/diffusion_api.svg)](../assets/images/diagrams/diffusion_api.svg)
+
+*Click the diagram to open it full size; the Mermaid view below is the same
+architecture with the module names attached.*
+
+
 ```mermaid
 flowchart TB
     subgraph CLIENT ["Client (byte-identical tool_diffusion)"]

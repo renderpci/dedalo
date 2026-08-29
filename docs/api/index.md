@@ -4,6 +4,11 @@
 
 Dédalo speaks **one** HTTP endpoint. Every client call — the record form, the tree, a tool, the assistant — is a POST of a **Request Query Object** (RQO) to `/api/v1/json`, naming a `dd_api` class and an `action`. The pair is looked up in a static registry: a pair that is not registered does not exist, and is refused at the first gate. There is no dynamic method lookup and no autoloader fallback.
 
+[![The Work API: an RQO arrives, passes the allowlist, session, CSRF, idempotency and request-context gates, reaches a handler class, and flows down the read or the write path before leaving as an envelope v2 response](../assets/images/diagrams/work_api.svg)](../assets/images/diagrams/work_api.svg)
+
+*The whole endpoint on one page — click the diagram to open it full size. It is
+one of the [architecture diagrams](../core/architecture_overview.md#architecture-diagrams).*
+
 ## The pages
 
 - **[JSON API v1](dedalo_api_v1.md)** — the entry point, the RQO body, the gate chain (session, CSRF, permissions), the response envelope, and the list of API classes. Start here.

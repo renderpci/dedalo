@@ -31,6 +31,11 @@ editing back-end.
 
 ## Architecture
 
+[![Publication API v2: consumers reach a deployment behind the web server, where rate limiting and API-key auth run before an exact-arity route matcher, and the read-only routes reach the schema, query-builder, search and record services over the published MariaDB database](../../../assets/images/diagrams/publication_api_v2.svg)](../../../assets/images/diagrams/publication_api_v2.svg)
+
+*Click the diagram to open it full size.*
+
+
 ```text
 Dédalo back-end ──(diffusion process)──▶ publication MariaDB databases
                                                   │
