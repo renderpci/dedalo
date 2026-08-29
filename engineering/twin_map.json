@@ -4,11 +4,11 @@
 	"measured": {
 		"twins": 41,
 		"retired": 26,
-		"frozen_record": 8,
-		"supplement": 7,
+		"frozen_record": 7,
+		"supplement": 8,
 		"back_links": 12,
-		"unmapped_red_files": 23,
-		"unmapped_red_tests": 54
+		"unmapped_red_files": 24,
+		"unmapped_red_tests": 55
 	},
 	"twins": [
 		{
@@ -74,7 +74,7 @@
 		{
 			"file": "test/unit/engine_denied_boundary.test.ts",
 			"target": "test/parity/tools_register_differential.test.ts",
-			"status": "frozen-record"
+			"status": "supplement"
 		},
 		{
 			"file": "test/unit/get_ontologies_native.test.ts",
@@ -220,7 +220,8 @@
 	"not_a_twin": {
 		"test/unit/corpus_scope_ownership_tripwire.test.ts": "its shrink-only baseline pins the OWNING FILES of each shared ensureTestCorpus/dropTestCorpus scope, and several owners are test/parity/*_differential.test.ts files — census data about who drives a corpus scope, not a twin of any of them",
 		"test/unit/parity_baseline_tripwire.test.ts": "names the SYNTHETIC path test/parity/x.test.ts inside planted JUnit XML and in-memory drift fixtures — it is the parity ratchet, not a twin of any gate",
-		"test/unit/scratch_tld_uniqueness_tripwire.test.ts": "its shrink-only baseline pins the CARRIER FILES of each shared zz* scratch TLD, and one carrier set includes test/parity/regenerate_differential.test.ts — census data about which files touch a TLD, not a twin of that gate"
+		"test/unit/scratch_tld_uniqueness_tripwire.test.ts": "its shrink-only baseline pins the CARRIER FILES of each shared zz* scratch TLD, and one carrier set includes test/parity/regenerate_differential.test.ts — census data about which files touch a TLD, not a twin of that gate",
+		"test/unit/tier_assignment_tripwire.test.ts": "names test/parity as a DIRECTORY a CI tier claims — it censuses which tier executes each test file, so it necessarily spells every tier root including the parity one. It asserts nothing about any parity gate's contract and replaces none of them"
 	},
 	"unmapped_reds": {
 		"test/parity/area_dashboard_differential.test.ts": 2,
@@ -244,6 +245,7 @@
 		"test/parity/section_terms_differential.test.ts": 2,
 		"test/parity/sqo_differential.test.ts": 1,
 		"test/parity/start_differential.test.ts": 1,
+		"test/parity/tool_element_context_differential.test.ts": 1,
 		"test/parity/ts_node_read_differential.test.ts": 2,
 		"test/parity/ts_search_differential.test.ts": 1
 	}

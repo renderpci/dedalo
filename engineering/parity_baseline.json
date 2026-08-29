@@ -1,6 +1,6 @@
 {
 	"generated_by": "bun run scripts/parity_baseline.ts (runs `bun test test/parity --timeout=30000` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
-	"rule": "SHRINK-ONLY red baseline for the test/parity tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the permanent corpus-bound reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` is the frozen debt AND the anti-vacuity anchor: the gate asserts it exactly, so a run that measures nothing (zero failures, a tier that never executed) is red rather than green. DO NOT hand-edit. Regenerate with: bun run scripts/parity_baseline.ts Why the reds are permanent (AGENTS.md 'THE VERIFICATION STORY'): the 76 harvested gates were recorded against ONE installation's records and the PHP oracle is decommissioned, so a re-harvest is impossible. The corpus-bound gates are being replaced by generic-`test`-TLD twins — retirement map in engineering/ORACLE_HARVEST.md. Every retirement should LOWER the numbers here.",
+	"rule": "SHRINK-ONLY red baseline for the test/parity tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` is the frozen debt AND the size: this tier does not grow, so tier_files/tier_tests/tier_pass/tier_skip are all asserted exactly — which is what makes silencing a GREEN gate with `.skip` arithmetic (pass falls by one, skip rises by one) instead of invisible. DO NOT hand-edit. Regenerate with: bun run scripts/parity_baseline.ts Why the reds are permanent (AGENTS.md 'THE VERIFICATION STORY'): the 76 harvested gates were recorded against ONE installation's records and the PHP oracle is decommissioned, so a re-harvest is impossible. The corpus-bound gates are being replaced by generic-`test`-TLD twins — retirement map in engineering/ORACLE_HARVEST.md. Every retirement should LOWER the numbers here.",
 	"measured": {
 		"tier_files": 78,
 		"tier_tests": 382,
@@ -123,6 +123,9 @@
 		"test/parity/start_differential.test.ts": [
 			"start action differential > default-section context matches (tipo/model/label/matrix_table/config)"
 		],
+		"test/parity/tool_element_context_differential.test.ts": [
+			"tool element context differential (open_tool string branch) > tool_time_machine: TS tool context matches PHP get_element_context"
+		],
 		"test/parity/tool_export_breakdown_differential.test.ts": [
 			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — WC-008 single-step portal COMPACT grid_value/columns",
 			"tool_export deep-breakdown differential > test6099 §1490 (Type, 3 refs, 2-author pub) — WC-008 single-step portal COMPACT grid_value/default",
@@ -159,9 +162,6 @@
 			"tool_export multi-hop path differential > test6113 → testmint1006 rows match PHP byte-for-byte",
 			"tool_export multi-hop path differential > test6113 → testmint1014 rows match PHP byte-for-byte",
 			"tool_export ndjson_stream differential > grid_value stream lines match PHP"
-		],
-		"test/parity/tools_register_differential.test.ts": [
-			"tools_register dry-run parity (no-op vs the PHP-imported dd1324) > every seeded tool is valid, in the registry, and diff-free"
 		],
 		"test/parity/ts_node_read_differential.test.ts": [
 			"dd_ts_api.get_children_data differential (mode A) > paginated children build matches PHP",

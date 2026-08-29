@@ -26,10 +26,19 @@
 
 name: db
 
+# TRIGGERS — same reasoning as ci.yml, and the same measured consequence: a tier
+# that does not run on the branch work lands on reports NOTHING. The `master`
+# push trigger never fired here, because development happens directly on `v7`
+# and only reaches master at a merge; the DB gates therefore ran only when a PR
+# existed (P0-1 of the 2026-08-26 deep audit). This tier matters most for the
+# branch fix: it is the one that runs the 725-file unit tier and the parity
+# tier, so before this change those two executed on no CI at all.
+# workflow_dispatch stays: the tier is expensive (~15 min suite build) and is
+# occasionally worth firing by hand off any ref.
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [master, v7]
   workflow_dispatch:
 
 # Rule 7: every workflow declares its token scope at the top level. Read-only is

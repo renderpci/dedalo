@@ -29,6 +29,51 @@ import type { JobRecord } from '../../src/core/media/jobs.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
+/**
+ * THE USER IDS ARE PART OF THE FIXTURE, NOT DECORATION.
+ *
+ * `collectActivity` reads TWO sources for the media half, and only one of them
+ * is the scratch directory this file builds: `mediaJobs.jobsForUser` unions the
+ * pfile mirror with the IN-PROCESS `mediaJobs` registry, which is a module-level
+ * singleton shared by every test file in the same bun process. Repointing
+ * DEDALO_MEDIA_PROCESSES_DIR isolates the mirror; it cannot isolate the
+ * registry.
+ *
+ * A REAL HAZARD, AND NOT THE ONE THAT WAS MEASURED — both halves stated, because an
+ * earlier revision of this comment claimed the second as fact and was wrong.
+ *
+ * THE HAZARD (why the ids below changed): this file used the id 4242, which is also
+ * `OWNER` in test/unit/job_stream.test.ts. `collectActivity` unions the pfile directory
+ * with the in-process media-job registry, so a completed job submitted for the same
+ * owner elsewhere carries `finishedAtWall = Date.now()` (core/media/jobs.ts), lands
+ * inside the five-minute recency window, and answers here as a `done` row no pfile in
+ * this file ever wrote. A shared magic id across two files is a collision waiting for
+ * the run order that exposes it.
+ *
+ * WHY IT WAS NOT THE CAUSE OF THE 2026-08-29 FLAP (adversarial review, same day): bun
+ * runs a scanned directory in SORTED order, and both real invocations are sorted — the
+ * census spawns `bun test test/unit test/integration` (a directory scan) and the shard
+ * runner sorts its bins (scripts/test_shard.ts). `activity_aggregate_native` sorts
+ * BEFORE `job_stream`, and before every other file that touches the registry, so
+ * job_stream cannot have polluted this one in any run that actually happens. The
+ * reproduction that appeared to show it had been given a manufactured order.
+ *
+ * The measured flap was a foreign uncaught exception: a `setTimeout` leaked by
+ * test/unit/client_request_coalescing_tripwire.test.ts fired ~3 s after that file's
+ * `afterAll` removed the `window` global it closes over, and bun attributes an uncaught
+ * exception to whichever test is running at that instant. That is fixed at its source,
+ * in that file. The id change here stands on its own merits: it removes a real
+ * collision rather than a diagnosed one.
+ *
+ * These ids are therefore EXCLUSIVE to this file (censused across test/ + src/
+ * the same day: 4242xx was in use up to 424264, nothing in the 42427x band), one per
+ * case so the two cases cannot leak into each other either. Anything registered
+ * under another id is invisible to the filter, which is what makes the rows
+ * below exactly the rows this test built.
+ */
+const USER_RECENT_CASE = 424271;
+const USER_WINDOW_CASE = 424272;
+
 /** A media job record shaped like the ones the manager produces. */
 function mediaRecord(overrides: Partial<JobRecord> = {}): JobRecord {
 	return {
@@ -111,14 +156,14 @@ describe('collectActivity: live PLUS recently finished', () => {
 			writeFileSync(
 				join(scratch, 'av_transcode_999999_9.json'),
 				JSON.stringify({
-					...mediaRecord({ status: 'error', user_id: 4243 }),
+					...mediaRecord({ status: 'error', user_id: USER_RECENT_CASE }),
 					id: 'av_transcode_999999_9',
 					owner_pid: 999999,
 					errors: ['no encode profile'],
 					finishedAtWall: Date.now() - 1000,
 				}),
 			);
-			const rows = await collectActivity(4243);
+			const rows = await collectActivity(USER_RECENT_CASE);
 			expect(rows).toHaveLength(1);
 			expect(rows[0]?.status).toBe('error');
 			// And it must carry WHY, or the tray shows a red row with no reason.
@@ -148,7 +193,7 @@ describe('collectActivity: live PLUS recently finished', () => {
 				writeFileSync(
 					join(scratch, `${id}.json`),
 					JSON.stringify({
-						...mediaRecord({ status, user_id: 4242 }),
+						...mediaRecord({ status, user_id: USER_WINDOW_CASE }),
 						id,
 						// A live-looking pfile under a DEAD pid reconciles to 'interrupted',
 						// which is itself terminal — so this one proves the filter twice.
@@ -156,12 +201,24 @@ describe('collectActivity: live PLUS recently finished', () => {
 					}),
 				);
 			}
-			const rows = await collectActivity(4242);
+			const rows = await collectActivity(USER_WINDOW_CASE);
 			// The 'done' pfile carries no finishedAtWall, so it is far outside the
 			// window: the answer must not become a history feed (an earlier version
 			// leaked the full 30-day pfile retention and opened the tray on
 			// weeks-old news).
 			expect(rows.every((row) => row.status !== 'done')).toBe(true);
+			// State it BY ID as well, because the id above is exclusive to this case:
+			// nothing but the two pfiles written here can be in the answer, so the
+			// expected answer is EMPTY and can be asserted as such. Both are
+			// terminal-without-finishedAtWall — the 'done' one by what it says, the
+			// 'running' one because a live-looking pfile that this process's
+			// registry does not know reconciles to 'interrupted' (isStaleLiveRecord:
+			// owner_pid === process.pid on a pfile-only record means pid reuse). The
+			// filter is proved twice, and the assertion above can no longer be
+			// satisfied by rows that belong to some other test.
+			const ids = rows.map((row) => row.job_id);
+			expect(ids).not.toContain('av_transcode_999999_1');
+			expect(rows).toHaveLength(0);
 		} finally {
 			if (previous === undefined) delete process.env.DEDALO_MEDIA_PROCESSES_DIR;
 			else process.env.DEDALO_MEDIA_PROCESSES_DIR = previous;

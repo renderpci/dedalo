@@ -43,6 +43,7 @@
 // have no `test` twin.
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import {
 	existsSync,
 	mkdirSync,
@@ -63,6 +64,7 @@ import {
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
+	layAuthMarker,
 	MARKER_REAP_GRACE_MS,
 	overrideMediaProtectionPathsForTests,
 } from '../../src/core/media/protection.ts';
@@ -90,6 +92,7 @@ import {
 } from '../../src/core/security/session_media.ts';
 import {
 	ageSessionForTests,
+	createSession,
 	destroySession,
 	destroyUserSessionsDetail,
 	getSession,
@@ -1020,13 +1023,32 @@ describe('a LARGE eviction is not one oversized statement', () => {
 		// (450 sessions is a test, not a load test): what it proves is the LOOP —
 		// DELETE_CHUNK is 400, so 450 crosses the boundary and every row in BOTH chunks
 		// must be gone, with no marker left behind.
+		// THROUGH THE STORE, NOT THROUGH login(). Written first as 450 real logins, which
+		// is 450 Argon2id verifies — a hash that is EXPENSIVE ON PURPOSE, so the gate
+		// took ~150 s alone and blew a 120 s budget under any load (measured
+		// 2026-08-29). Authentication is not what this gate is about: the property is
+		// the eviction LOOP's chunking, and it needs 450 session ROWS carrying media
+		// keys, not 450 password checks. `createSession` + `layAuthMarker` are the two
+		// doors `login()` itself calls for exactly this, one line further down.
+		//
+		// Nothing is weakened by the change: the rows are real rows in the real store,
+		// the markers are real files in the real marker directory, and the assertions
+		// are the same two. The dd128 record is still created through the counter-
+		// allocating writer so the user id is a real one.
 		const username = nextUsername();
 		const userId = await insertUser({ username });
 		const markers: string[] = [];
 		for (let index = 0; index < 450; index++) {
-			const session = await loginAs(username);
-			markers.push(session.mediaKey);
+			const mediaKey = createHash('sha512')
+				.update(`${username}:${String(index)}`)
+				.digest('hex');
+			createSession(userId, username, false, mediaKey);
+			layAuthMarker(mediaKey);
+			markers.push(mediaKey);
 		}
+		// The situation is real before it is destroyed, or the assertions below are
+		// vacuous against a directory that never had the files.
+		expect(markers.filter((key) => existsSync(join(authDir, key)))).toHaveLength(450);
 
 		const removed = destroyUserSessionsDetail(userId).removed;
 

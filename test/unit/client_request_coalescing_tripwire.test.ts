@@ -54,6 +54,37 @@ type DataManager = {
 
 const globals = globalThis as unknown as Record<string, unknown>;
 const saved: Record<string, unknown> = {};
+
+/**
+ * THE PENDING-TIMER LEASH (2026-08-29, P0-1 of the deep audit).
+ *
+ * THE DEFECT IT PREVENTS. data_manager's transport-failure branch toasts and
+ * then schedules a 3000 ms `setTimeout` that clears `window.page_globals.
+ * request_message` (data_manager.js, "Transport failures get a toast HERE").
+ * Tests D and F here deliberately drop a fetch, so that timer is armed — and
+ * this file's `afterAll` then DELETES the `window` global it installed. Three
+ * seconds later the callback fires with no `window` and throws
+ * `ReferenceError: window is not defined` INSIDE WHATEVER TEST HAPPENS TO BE
+ * RUNNING, which bun attributes to that test.
+ *
+ * The victim is whatever is running at that instant, so it is ARBITRARY — which
+ * is why the unit tier's failing SET moved between full runs on 2026-08-29
+ * (ops_health_db_down, activity_aggregate_native and update_disk_space_native
+ * each appeared in some runs and not others) instead of one gate being reliably
+ * red. A long-lived test is a likelier landing site simply by occupying more of
+ * the clock.
+ *
+ * THE REPRODUCTION, which is the evidence that matters because it is
+ * deterministic: `bun test client_request_coalescing_tripwire ops_health_db_down`
+ * fails in two files, with 'server boots, /health answers 503 db:down' failing at
+ * ~2.0-2.5 s and a stack pointing at data_manager.js — while that same gate
+ * passes alone.
+ *
+ * So this file leashes every timer the code under test schedules and cuts them
+ * at teardown, BEFORE the globals they close over are taken away. A test that
+ * leaves work running is a test that fails its neighbours.
+ */
+const pending_timers: Array<ReturnType<typeof setTimeout>> = [];
 let data_manager: DataManager;
 let ApiError: new (...args: unknown[]) => Error;
 let request_failed: (api_response: unknown) => boolean;
@@ -111,7 +142,14 @@ const stub_fetch = async (url: string | URL, init?: RequestInit): Promise<Respon
 };
 
 beforeAll(async () => {
-	for (const key of ['window', 'page_globals', 'SHOW_DEBUG', 'DEDALO_API_URL', 'fetch'])
+	for (const key of [
+		'window',
+		'page_globals',
+		'SHOW_DEBUG',
+		'DEDALO_API_URL',
+		'fetch',
+		'setTimeout',
+	])
 		saved[key] = globals[key];
 
 	globals.page_globals = {
@@ -124,6 +162,19 @@ beforeAll(async () => {
 	globals.DEDALO_API_URL = '/api/v1/json/';
 	globals.window = globalThis;
 	globals.fetch = stub_fetch;
+	// The leash (see pending_timers): data_manager resolves the bare `setTimeout`
+	// identifier against globalThis at CALL time, so recording here catches every
+	// timer the client schedules — the transport toast's 3 s reset included.
+	const real_set_timeout = saved.setTimeout as typeof setTimeout;
+	globals.setTimeout = ((
+		handler: Parameters<typeof setTimeout>[0],
+		ms?: number,
+		...args: unknown[]
+	) => {
+		const handle = real_set_timeout(handler, ms, ...args);
+		pending_timers.push(handle);
+		return handle;
+	}) as unknown as typeof setTimeout;
 
 	mock.module(join(CLIENT_COMMON, 'ui.js'), () => ({
 		ui: {
@@ -143,6 +194,10 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+	// Cut the leash FIRST: a pending client timer that fires after the globals
+	// below are removed throws into a stranger's test (see pending_timers).
+	// clearTimeout on an already-fired handle is a no-op, so this is total.
+	for (const handle of pending_timers.splice(0)) clearTimeout(handle);
 	for (const key of Object.keys(saved)) {
 		if (saved[key] === undefined) delete globals[key];
 		else globals[key] = saved[key];

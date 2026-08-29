@@ -44,6 +44,10 @@ const NOT_A_TWIN: ReadonlyMap<string, string> = new Map([
 		'test/unit/corpus_scope_ownership_tripwire.test.ts',
 		'its shrink-only baseline pins the OWNING FILES of each shared ensureTestCorpus/dropTestCorpus scope, and several owners are test/parity/*_differential.test.ts files — census data about who drives a corpus scope, not a twin of any of them',
 	],
+	[
+		'test/unit/tier_assignment_tripwire.test.ts',
+		"names test/parity as a DIRECTORY a CI tier claims — it censuses which tier executes each test file, so it necessarily spells every tier root including the parity one. It asserts nothing about any parity gate's contract and replaces none of them",
+	],
 ]);
 
 export type TwinMap = {

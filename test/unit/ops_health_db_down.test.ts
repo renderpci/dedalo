@@ -9,12 +9,32 @@
  * - the server still BOOTS (fault-tolerant posture, S1-15: boot migrations log
  *   and continue on DB failure — a DB blip must not stop the process);
  * - /health answers HTTP 503 with result:'error', db:'down';
- * - the answer arrives well inside the 2 s probe race + margin (< 8000 ms) —
- *   a wedged pool must degrade the probe, never hang it.
+ * - the answer arrives well inside the 2 s probe race + margin — a wedged pool
+ *   must degrade the probe, never hang it. The budget is 4x the race, NOT a
+ *   number tuned to this desk: see PROBE_ANSWER_BUDGET_MS below.
  *
  * Isolation mirrors ops_shutdown.test.ts: scheduler off, scratch
  * media-processes dir, RAG hooks off, and the preload's scratch session DB /
  * state file inherited through the child env.
+ *
+ * WHY THIS GATE WAS ORDER-DEPENDENT — AND WHY THE DEFECT WAS NOT HERE
+ * (2026-08-29, P0-1 of the deep audit). This test failed in full-tier runs at
+ * ~2.0-2.5 s and passed alone, which reads exactly like a tight wall-clock
+ * budget under load. It was not: the failure was a
+ * `ReferenceError: window is not defined` thrown from
+ * client/dedalo/core/common/js/data_manager.js, a FOREIGN uncaught exception
+ * that bun attributes to whichever test is running when it lands.
+ * client_request_coalescing_tripwire.test.ts drops a fetch on purpose, which
+ * arms data_manager's 3000 ms transport-toast reset timer, and then deletes
+ * the `window` global its harness installed; three seconds later the callback
+ * fires into a stranger. THIS file is a likely stranger because its one test
+ * lives >5 s, so it is running when many such timers land — but the victim is
+ * ARBITRARY, which is exactly why the tier's failing SET moved between runs
+ * rather than a single gate being reliably red. Fixed at the source (that file now
+ * leashes and clears the timers the code under test schedules). Nothing here
+ * needed loosening, and NOTHING HERE SHOULD BE LOOSENED to chase a repeat: if
+ * this gate reddens again at ~2-3 s with a stack pointing outside this file,
+ * the leak is in the neighbour, not in the budget.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -39,6 +59,36 @@ const childEnv: Record<string, string | undefined> = {
 	DEDALO_RAG_ENABLED: 'false',
 	DEDALO_MEDIA_PROCESSES_DIR: join(scratch, 'processes'),
 };
+
+/**
+ * The two server-side constants this test is written AGAINST (server.ts
+ * checkDbHealth). Spelled out here rather than imported: importing server.ts
+ * into the test process would evaluate the whole boot module graph — the very
+ * thing this file spawns a CHILD to avoid. They are named so the sleep and the
+ * budget below are visibly derived from the product's own numbers instead of
+ * being magic constants that drift silently when the product's change.
+ */
+const DB_HEALTH_CACHE_MS = 5000; // server.ts: cached probe result window
+const DB_HEALTH_PROBE_RACE_MS = 2000; // server.ts: Promise.race bound on the ping
+
+/**
+ * Long enough to leave the cache window with margin, so the SECOND request
+ * provably re-probes instead of being served the first answer's cached verdict.
+ */
+const CACHE_EXPIRY_SLEEP_MS = DB_HEALTH_CACHE_MS + 100;
+
+/**
+ * THE ANSWER BUDGET — what "fast" means, relative to the thing it must beat.
+ *
+ * The property under test is that /health does NOT block on a dead database:
+ * the 2 s race must bound the answer, so a probe that hangs on the connection
+ * attempt fails LOUDLY. 4x that race is the budget: generous enough that a
+ * loaded, contended CI runner (slower than this desk by construction) cannot
+ * flap it, and still an order of magnitude below a genuine hang, which would
+ * run to the test timeout. A budget tuned tight to an idle laptop is a budget
+ * that flakes in CI forever, and a flapping gate cannot block anything.
+ */
+const PROBE_ANSWER_BUDGET_MS = DB_HEALTH_PROBE_RACE_MS * 4;
 
 let server: ReturnType<typeof Bun.spawn> | null = null;
 
@@ -97,10 +147,10 @@ describe('/health with the database DOWN (S3-48 db:down branch)', () => {
 		expect(firstBody.db).toBe('down');
 		expect(typeof firstBody.request_id).toBe('string');
 
-		// Timing bound on a request that actually PROBES (the 5 s result cache
-		// has expired by then): the 2 s Promise.race must bound the answer —
-		// assert < 8000 ms so a hung probe fails loudly without flaking.
-		await Bun.sleep(5100);
+		// Timing bound on a request that actually PROBES (the result cache has
+		// expired by then): the Promise.race must bound the answer — see
+		// PROBE_ANSWER_BUDGET_MS for what the number is relative to.
+		await Bun.sleep(CACHE_EXPIRY_SLEEP_MS);
 		const startedAt = performance.now();
 		const probed = await fetch('http://localhost/health', { unix: SOCKET });
 		const elapsedMs = performance.now() - startedAt;
@@ -108,6 +158,6 @@ describe('/health with the database DOWN (S3-48 db:down branch)', () => {
 		const probedBody = (await probed.json()) as Record<string, unknown>;
 		expect(probedBody.result).toBe('error');
 		expect(probedBody.db).toBe('down');
-		expect(elapsedMs).toBeLessThan(8000);
+		expect(elapsedMs).toBeLessThan(PROBE_ANSWER_BUDGET_MS);
 	}, 60000);
 });

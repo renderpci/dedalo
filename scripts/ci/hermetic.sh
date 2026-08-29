@@ -106,6 +106,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/update_ownership_tripwire.test.ts
 	test/unit/install_restart_supervisor_tripwire.test.ts
 	test/unit/ci_workflow_tripwire.test.ts
+	test/unit/tier_execution_tripwire.test.ts
+	test/unit/tier_assignment_tripwire.test.ts
 	test/unit/docs_current_engine_tripwire.test.ts
 	test/unit/css_build_tripwire.test.ts
 	test/unit/css_token_duplication_tripwire.test.ts

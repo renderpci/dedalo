@@ -15,8 +15,24 @@
 # Invariants in this file are enforced by test/unit/ci_workflow_tripwire.test.ts.
 name: ci
 
+# TRIGGERS — a tier that does not run on the branch work lands on is a tier that
+# reports NOTHING. Until 2026-08-29 this workflow triggered on `pull_request`
+# alone, while development happens directly on `v7` and only reaches master at a
+# merge, so every push to `v7` ran zero gates: the hermetic tier executed only if
+# someone happened to open a PR. The branch list must name every branch work
+# actually lands ON, not only the ones it is merged INTO. (P0-1 of the
+# 2026-08-26 deep audit.)
+#
+# WHAT THIS DOES NOT FIX, stated so the comment is not read as more than it is:
+# `scripts/verify.ts` — the command that sat RED for 45 commits — is still run by
+# NO executing workflow. It appears only in .github/workflows-selfhosted/, a
+# directory GitHub does not read, so the self-hosted tier is inert until it is
+# registered. Making the hermetic tier fire on `v7` is a precondition for that
+# signal, not a substitute for it.
 on:
   pull_request:
+  push:
+    branches: [master, v7]
 
 # Least privilege for GITHUB_TOKEN: without this block a workflow inherits the
 # REPOSITORY default, which on an older repo is read/WRITE on contents, packages,

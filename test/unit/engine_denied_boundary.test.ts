@@ -7,7 +7,16 @@
  * that becomes portable leaves here with its port.
  *
  * @twin-of      test/parity/tools_register_differential.test.ts
- * @twin-status  frozen-record
+ * @twin-status  supplement
+ *
+ * STATUS CHANGED 2026-08-29, frozen-record -> supplement, and the reason is a WIN:
+ * the parity gate this twins is no longer red. It was frozen as a corpus-bound failure
+ * against a suite database that had drifted from the repo; rebuilding the fixture
+ * through `bun run test:db:setup` put the tools register back in sync and the
+ * differential now PASSES. So this file no longer carries the portable half of a
+ * contract the oracle could only half-prove — it adds coverage alongside a green gate.
+ * The status is DERIVED from the tree by scripts/twin_map.ts; this header follows it,
+ * never the other way round.
  */
 
 import { describe, expect, test } from 'bun:test';

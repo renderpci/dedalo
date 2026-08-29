@@ -1,0 +1,29 @@
+{
+	"generated_by": "bun run scripts/unit_baseline.ts (runs `bun test test/unit test/integration --timeout=30000` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
+	"rule": "SHRINK-ONLY red baseline for the test/unit + test/integration tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` freezes the DEBT (failing_files/failing_tests) exactly; the SIZE counts are advisory here because this tier grows on most commits, and reddening on every added test would train the regenerate-to-green reflex the ratchet exists to prevent. The size is held by the anti-vacuity FLOORS instead, so a tier that silently stopped running is still red. DO NOT hand-edit. Regenerate with: bun run scripts/unit_baseline.ts Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent: the 8 unit reds measured 2026-08-29 fall in three classes. (1) 2 deterministic golden mismatches (ontology_parser dd1, info_widget_native component_info) — a stale expectation or a real parser/widget defect, either way fixable. (2) 3 order-dependent gates that PASS IN ISOLATION and fail only in full-suite order (ops_health_db_down, update_disk_space_native, activity_aggregate_native) — test-isolation defects (leaked module state / shared fixture), NOT product defects. (3) 3 blocked on backlog rows P1-14 / AIX-01 and P1-16 (rag_api, rag_ask, rag_pipeline): the RAG gates INHERIT the machine's embedding provider instead of pinning one, so they need a sidecar that is absent here, AND they write to the INSTALLATION's vector database because ragSql reads DEDALO_RAG_DB_NAME which the test preload never repoints — a violation of the suite-database law in its own right; retrieval.ts additionally launders `undefined` through an `as number[]` cast. EVERY entry here is expected to be FIXED. The list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
+	"measured": {
+		"tier_files": 727,
+		"tier_tests": 8800,
+		"tier_pass": 8779,
+		"tier_skip": 14,
+		"failing_files": 7,
+		"failing_tests": 7
+	},
+	"files": {
+		"test/unit/activity_aggregate_native.test.ts": [
+			"collectActivity: live PLUS recently finished > a job that finished LONG ago is not reported"
+		],
+		"test/unit/info_widget_native.test.ts": [
+			"component_info widget read-time compute (TS-native, oracle-captured goldens) > media_icons + descriptors: icon rows, tool_context, term grid"
+		],
+		"test/unit/ontology_parser.test.ts": [
+			"parseSectionRecordToOntologyNode reproduces the stored dd_ontology row > dd1"
+		],
+		"test/unit/ops_health_db_down.test.ts": [
+			"/health with the database DOWN (S3-48 db:down branch) > server boots, /health answers 503 db:down, and fast (2 s probe race)"
+		],
+		"test/unit/rag_api.test.ts": ["(unnamed)"],
+		"test/unit/rag_ask.test.ts": ["(unnamed)"],
+		"test/unit/rag_pipeline.test.ts": ["(unnamed)"]
+	}
+}
