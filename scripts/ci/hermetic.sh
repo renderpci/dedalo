@@ -205,6 +205,10 @@ HERMETIC_TRIPWIRES=(
 	test/unit/install_seed_drift_tripwire.test.ts
 	test/unit/media_alternate_versions_tripwire.test.ts
 	test/unit/mock_isolation_tripwire.test.ts
+	# --- 2026-08-29: the engine↔site-builder pairing proof. DB-free by construction: a
+	#     loopback Bun.serve plays the daemon, the config module is mock.module'd, and the
+	#     only other reads are source files (the daemon package's two modules included).
+	test/unit/site_builder_pairing_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

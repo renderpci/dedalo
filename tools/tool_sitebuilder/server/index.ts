@@ -44,7 +44,13 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
-import { type Actor, daemonJson, daemonStream, isConfigured } from './daemon_client.ts';
+import {
+	type Actor,
+	daemonJson,
+	daemonStream,
+	isConfigured,
+	PAIRING_FIELD,
+} from './daemon_client.ts';
 import {
 	assertSessionOwner,
 	forgetSiteSessions,
@@ -185,11 +191,22 @@ async function getStatus(context: ToolActionContext): Promise<ToolResponse> {
 		return ok(context, { configured: false, reachable: false, can_publish: canPublish });
 	}
 	try {
-		const health = (await daemonJson('GET', '/health', actorFor(context))) as {
-			service?: string;
-			drivers?: unknown[];
-		};
-		return ok(context, { configured: true, reachable: true, health, can_publish: canPublish });
+		const health = (await daemonJson('GET', '/health', actorFor(context))) as Record<
+			string,
+			unknown
+		>;
+		// THE PAIRING FINGERPRINT NEVER REACHES A BROWSER. It is a sha256 over the shared
+		// bearer, published on the daemon's unauthenticated /health so that THIS PROCESS can
+		// prove the pairing before it sends anything (daemon_client.ts). Relaying it onward
+		// would hand every user of this tool an offline brute-force target against the
+		// installation's site-builder token, in exchange for nothing the panel renders.
+		const { [PAIRING_FIELD]: _pairing, ...disclosableHealth } = health;
+		return ok(context, {
+			configured: true,
+			reachable: true,
+			health: disclosableHealth,
+			can_publish: canPublish,
+		});
 	} catch (error) {
 		if (isErrorInDomain(error, 'site_builder')) {
 			// Distinguish "can't reach it" from "it's off": the client shows either

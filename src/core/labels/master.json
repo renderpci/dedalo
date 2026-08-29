@@ -276,6 +276,7 @@
 	"error_security_ssrf_blocked": "The requested outbound address is refused",
 	"error_site_builder_auth": "The site builder rejected the server credentials; contact the administrator",
 	"error_site_builder_failed": "The site builder reported an error",
+	"error_site_builder_instance_mismatch": "The site builder is not the one this server is paired with; contact the administrator",
 	"error_site_builder_rejected": "The site builder rejected the request",
 	"error_site_builder_stream_lost": "The connection to the site builder was lost",
 	"error_site_builder_unconfigured": "The site builder is not configured on this server",

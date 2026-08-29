@@ -95,13 +95,13 @@ export function capDetail(detail: string | undefined, fallback: string): string 
 const REFUSAL_SENTENCE: Readonly<Record<string, string>> = {
 	webspace_unavailable:
 		'The site builder has no webspace prepared for this site. A site is declared in the ' +
-		'server\'s site-builder instance file and provisioned there (its directory, its two ' +
+		"server's site-builder instance file and provisioned there (its directory, its two " +
 		'web-server entries and its certificate) before it can be created or published here. ' +
 		'Nothing was changed — ask whoever administers the server to provision it.',
 	domain_taken:
 		'Another site already answers on that domain. One hostname belongs to one site: the two ' +
 		'would share the same published files, and publishing this one would replace the other ' +
-		'site\'s live pages. Nothing was created.',
+		"site's live pages. Nothing was created.",
 };
 
 /** The engine-authored sentence for a daemon problem, or undefined if we author none. */

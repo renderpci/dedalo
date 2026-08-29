@@ -23,7 +23,14 @@ import {
 	widget,
 } from '../../src/core/area_maintenance/widgets/site_builder_status.ts';
 
-const CONFIGURED = { url: 'https://sb.local:8443/', token: 'tok' };
+/**
+ * A CONFIGURED install, as of the pairing pass (2026-08-29): a transport, a token AND the
+ * instance the engine is paired with. The instance is not decoration here — an engine that
+ * cannot say which museum's daemon it is dialling resolves to no transport at all
+ * (core/site_builder/pairing.ts), so the panel reports it as unconfigured, which is the
+ * fail-closed reading and the one the socket cases below rely on.
+ */
+const CONFIGURED = { url: 'https://sb.local:8443/', token: 'tok', instance: 'example' };
 
 describe('siteBuilderHost', () => {
 	test('returns host (WITH port), credentials stripped', () => {
@@ -129,6 +136,62 @@ describe('buildSiteBuilderStatus (I/O shell, stubbed — never the network)', ()
 		expect(value).toMatchObject({ configured: false, url_host: null });
 	});
 
+	/**
+	 * A TRANSPORT WITHOUT AN INSTANCE NAME IS NOT A CONFIGURATION (2026-08-29).
+	 *
+	 * The engine proves the pairing before it sends anything, and it cannot prove what it
+	 * was never told — so a URL and a token with no DEDALO_SITE_BUILDER_INSTANCE is refused
+	 * rather than probed. Pinned here because the panel is where an operator would first
+	 * notice a half-finished pairing, and "not configured" is the honest report of one.
+	 */
+	test('a transport without an instance name is unconfigured and probes nothing', async () => {
+		const calls: string[] = [];
+		const value = await buildSiteBuilderStatus({
+			siteBuilder: { url: 'https://sb.local:8443/', token: 'tok' },
+			fetchJson: async (url) => {
+				calls.push(url);
+				return {};
+			},
+		});
+		expect(value).toMatchObject({ configured: false, url_host: null });
+		expect(calls).toEqual([]);
+	});
+
+	/**
+	 * THE SOCKET IS A TRANSPORT THE PANEL CAN SEE.
+	 *
+	 * A provisioned daemon publishes no port at all, so before this the ops panel reported
+	 * every correctly-installed site builder as "not configured" — the one place an
+	 * operator looks, saying the opposite of the truth. The socket path reaches the probe;
+	 * the prefix is the daemon's own default base path; `url_host` shows the synthetic
+	 * authority, because there is no network address to show.
+	 */
+	test('a socket-paired daemon is probed over the socket, under the default base path', async () => {
+		const calls: Array<{ url: string; unixSocket?: string }> = [];
+		const value = await buildSiteBuilderStatus({
+			siteBuilder: {
+				socket: '/run/dedalo-sites/example/daemon.sock',
+				token: 'tok',
+				instance: 'example',
+			},
+			fetchJson: async (url, _headers, _timeout, unixSocket) => {
+				calls.push({ url, unixSocket });
+				return url.endsWith('/health') ? { drivers: ['claude_code'] } : { data: [] };
+			},
+		});
+		expect(calls.map((c) => c.url)).toEqual([
+			'http://site-builder.invalid/publication/site_builder/health',
+			'http://site-builder.invalid/publication/site_builder/v1/audit?limit=10',
+		]);
+		expect(calls.every((c) => c.unixSocket === '/run/dedalo-sites/example/daemon.sock')).toBe(true);
+		expect(value).toMatchObject({
+			configured: true,
+			reachable: true,
+			drivers: ['claude_code'],
+			url_host: 'site-builder.invalid',
+		});
+	});
+
 	test('reachable: health + audit, trailing slash stripped, bearer token on audit only', async () => {
 		const calls: Array<{ url: string; headers: Record<string, string> }> = [];
 		const value = await buildSiteBuilderStatus({
@@ -207,7 +270,7 @@ describe('buildSiteBuilderStatus (I/O shell, stubbed — never the network)', ()
 
 	test('a non-URL daemon address still probes, with url_host null', async () => {
 		const value = await buildSiteBuilderStatus({
-			siteBuilder: { url: 'not a url', token: 't' },
+			siteBuilder: { url: 'not a url', token: 't', instance: 'example' },
 			fetchJson: async () => ({ drivers: [] }),
 		});
 		expect(value).toMatchObject({ configured: true, reachable: true, url_host: null });

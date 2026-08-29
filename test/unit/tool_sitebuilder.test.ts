@@ -15,6 +15,7 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import * as realConfigModule from '../../src/config/config.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { instanceFingerprint } from '../../src/core/site_builder/pairing.ts';
 import type { ToolActionContext, ToolServerModule } from '../../src/core/tools/module.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -36,13 +37,39 @@ interface RecordedRequest {
 const requests: RecordedRequest[] = [];
 let server: ReturnType<typeof Bun.serve>;
 // Mutable so tests can point it at a dead port / undefined.
-const siteBuilder = { url: '', token: 'test-token-abc', timeoutMs: 3000 } as {
+const INSTANCE = 'test-instance';
+const siteBuilder = {
+	url: '',
+	socket: undefined,
+	instance: INSTANCE,
+	token: 'test-token-abc',
+	timeoutMs: 3000,
+} as {
 	url: string | undefined;
+	socket: string | undefined;
+	instance: string | undefined;
 	token: string | undefined;
 	timeoutMs: number;
 };
 
+/** What the mock daemon publishes when it is the instance this engine is paired with. */
+function pairedFingerprint(): string {
+	return instanceFingerprint(INSTANCE, siteBuilder.token as string);
+}
+
 let tool: ToolServerModule;
+
+/**
+ * WHAT THE MOCK DAEMON SAYS ABOUT ITS IDENTITY, swappable per test.
+ *
+ * The default is the truth (it is the paired instance). The pairing tests below replace it
+ * with the three ways a daemon can be the WRONG one — another museum's instance, an
+ * instance this engine has never heard of, and the right instance holding a different
+ * token — and assert the engine refuses all three identically.
+ */
+let pairingAnswer: () => Record<string, unknown> = () => ({
+	instance_fingerprint: pairedFingerprint(),
+});
 
 function ctx(principal: Principal, options: Record<string, unknown>): ToolActionContext {
 	return { principal, userId: principal.userId, options, background: false };
@@ -73,7 +100,14 @@ beforeAll(async () => {
 
 			// Canned responses keyed by path.
 			if (url.pathname === '/health') {
-				return Response.json({ service: 'dedalo-site-builder', drivers: [] });
+				// The pairing fingerprint the engine recomputes and checks BEFORE it sends
+				// anything (daemon_client.ts assertPaired). `pairingAnswer` lets one test make
+				// this daemon claim to be somebody else.
+				return Response.json({
+					service: 'dedalo-site-builder',
+					drivers: [],
+					...pairingAnswer(),
+				});
 			}
 			if (url.pathname === '/v1/sites' && req.method === 'GET') {
 				return Response.json({ data: [{ manifest: { slug: 'demo' } }] });
@@ -341,6 +375,14 @@ describe('tool_sitebuilder proxy', () => {
 	test('get_status reports reachable true, and false when the daemon is down', async () => {
 		const up = await tool.apiActions.get_status!.handler(ctx(DEV, {}));
 		expect(up.data).toMatchObject({ configured: true, reachable: true, can_publish: true });
+		// THE PAIRING FINGERPRINT NEVER REACHES A BROWSER. It is a sha256 over the shared
+		// bearer, published by the daemon so THIS PROCESS can prove the pairing; relaying it
+		// in the status payload would hand every user of the tool an offline brute-force
+		// target against the installation's site-builder token.
+		const health = (up.data as { health: Record<string, unknown> }).health;
+		expect(health.service).toBe('dedalo-site-builder');
+		expect(health).not.toHaveProperty('instance_fingerprint');
+		expect(JSON.stringify(up)).not.toContain(pairedFingerprint());
 
 		const savedUrl = siteBuilder.url;
 		siteBuilder.url = 'http://127.0.0.1:1'; // nothing listening
@@ -353,6 +395,37 @@ describe('tool_sitebuilder proxy', () => {
 
 		const denied = await refusalOf(tool.apiActions.get_status!.handler(ctx(PLAIN, {})));
 		expect(denied.code).toBe('site_builder.rejected');
+	});
+
+	/**
+	 * A DAEMON THAT IS NOT THIS MUSEUM'S IS REFUSED AT THE TOOL'S DOOR.
+	 *
+	 * The mechanism and its indistinguishability are gated in
+	 * test/unit/site_builder_pairing_tripwire.test.ts; what this pins is the LAST mile —
+	 * that the refusal survives the action layer as a registered code the client can branch
+	 * on, and that a status probe reports it honestly instead of claiming a working daemon.
+	 */
+	test('a daemon that is not the paired instance refuses, and status says so', async () => {
+		// A pairing this process has never proved (the proven one is cached for the life of
+		// the module), against a daemon that answers with somebody else's identity.
+		const savedToken = siteBuilder.token;
+		siteBuilder.token = 'a-token-this-process-has-not-proved-yet';
+		pairingAnswer = () => ({ instance_fingerprint: instanceFingerprint(INSTANCE, 'elsewhere') });
+
+		const refusal = await refusalOf(tool.apiActions.list_sites!.handler(ctx(DEV, {})));
+		expect(refusal.code).toBe('site_builder.instance_mismatch');
+		// Operator disclosure: nothing the browser reads names the instance or the token.
+		expect(JSON.stringify(refusal.publicMessage ?? '')).not.toContain(INSTANCE);
+
+		const status = await tool.apiActions.get_status!.handler(ctx(DEV, {}));
+		expect(status.data).toMatchObject({
+			configured: true,
+			reachable: false,
+			error: 'site_builder.instance_mismatch',
+		});
+
+		siteBuilder.token = savedToken;
+		pairingAnswer = () => ({ instance_fingerprint: pairedFingerprint() });
 	});
 
 	test('unconfigured install: every action fails closed and isAvailable is false', async () => {

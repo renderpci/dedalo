@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 515,
-		"functions": 4583,
+		"files": 516,
+		"functions": 4588,
 		"functionsOverCap": 693,
 		"filesOverCap": 269
 	},
@@ -47,7 +47,7 @@
 		"src/core/area_maintenance/widgets/register_tools.ts": 15,
 		"src/core/area_maintenance/widgets/registry.ts": 12,
 		"src/core/area_maintenance/widgets/sequences_status.ts": 10,
-		"src/core/area_maintenance/widgets/site_builder_status.ts": 9,
+		"src/core/area_maintenance/widgets/site_builder_status.ts": 8,
 		"src/core/area_maintenance/widgets/system_info.ts": 7,
 		"src/core/area_maintenance/widgets/update_ontology.ts": 9,
 		"src/core/client_libs/serving.ts": 11,

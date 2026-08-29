@@ -35,6 +35,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import * as realConfigModule from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { instanceFingerprint } from '../../src/core/site_builder/pairing.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import type { ToolActionContext, ToolServerModule } from '../../src/core/tools/module.ts';
 import {
@@ -69,8 +70,17 @@ const PLAIN: Principal = { userId: 4104, isGlobalAdmin: false, isDeveloper: fals
 let tool: ToolServerModule;
 let server: ReturnType<typeof Bun.serve>;
 let requestCount = 0;
-const siteBuilder = { url: '', token: 'authz-token', timeoutMs: 3000 } as {
+const INSTANCE = 'authz-instance';
+const siteBuilder = {
+	url: '',
+	socket: undefined,
+	instance: INSTANCE,
+	token: 'authz-token',
+	timeoutMs: 3000,
+} as {
 	url: string | undefined;
+	socket: string | undefined;
+	instance: string | undefined;
 	token: string | undefined;
 	timeoutMs: number;
 };
@@ -86,7 +96,16 @@ beforeAll(async () => {
 			requestCount++;
 			const url = new URL(req.url);
 			const path = url.pathname;
-			if (path === '/health') return Response.json({ service: 'site-builder', drivers: [] });
+			if (path === '/health') {
+				// The mock daemon answers the pairing question the way a real one does, or
+				// nothing below it would ever be reached: the engine proves the pairing before
+				// it sends the first byte of any call (daemon_client.ts assertPaired).
+				return Response.json({
+					service: 'site-builder',
+					drivers: [],
+					instance_fingerprint: instanceFingerprint(INSTANCE, siteBuilder.token as string),
+				});
+			}
 			if (path.endsWith('/sessions') && req.method === 'POST') {
 				return Response.json({ session_id: 'authz-session-started' }, { status: 201 });
 			}

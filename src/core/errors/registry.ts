@@ -1012,6 +1012,26 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	/**
+	 * THE PAIRING PROOF FAILED (2026-08-29). The daemon at the configured address did not
+	 * publish the fingerprint this engine's DEDALO_SITE_BUILDER_INSTANCE +
+	 * DEDALO_SITE_BUILDER_TOKEN imply, so it is not the instance this install is paired
+	 * with (or does not hold the same shared bearer). Nothing was sent.
+	 *
+	 * `operator` disclosure and one undifferentiated message, on purpose: a wrong instance
+	 * name, an unknown instance and a wrong token must be indistinguishable to the caller,
+	 * or the refusal becomes an oracle enumerating a host's museums. The operator's half —
+	 * which key to look at — is in the server log.
+	 */
+	'site_builder.instance_mismatch': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_instance_mismatch',
+		message: 'The site builder daemon is not the paired instance',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
 	'site_builder.rejected': {
 		category: 'caller',
 		status: 400,

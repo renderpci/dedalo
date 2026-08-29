@@ -7,6 +7,14 @@
  * unreachable daemon yields a `reachable: false` panel, never an error. Admin-gated by the
  * area itself; no execute action.
  *
+ * WHERE IT PROBES is not decided here: `resolveSiteBuilderTransport` (core/site_builder/
+ * pairing.ts) is the one answer, shared with the tool's daemon client. It covers both the
+ * unix socket a provisioned daemon actually listens on and the URL of a remote one, and it
+ * treats a HALF-configured pairing (a transport with no instance name, or no token) as no
+ * configuration at all. This panel does NOT verify the pairing fingerprint: it sends
+ * nothing to the daemon but an unauthenticated liveness question, and the refusal that
+ * matters belongs at the door that sends things (daemon_client.ts).
+ *
  * Coverage note (honest): the decision logic is split out into two pure exports —
  * `siteBuilderHost` (host extraction, credentials stripped, port kept) and
  * `buildSiteBuilderPanel` (the panel shape: drivers guard, publish filter, reachability).
@@ -18,14 +26,24 @@
  * test/unit/site_builder_status_native.test.ts. No test here ever touches the network.
  */
 
+import type { SiteBuilderConfig } from '../../../config/config.ts';
+import { resolveSiteBuilderTransport } from '../../site_builder/pairing.ts';
 import type { WidgetModule } from './support.ts';
 
 const PROBE_TIMEOUT_MS = 3000;
 
+/**
+ * The probe's one I/O seam. `unixSocket` is threaded through rather than folded into the
+ * url because a provisioned daemon publishes NO network port at all: it answers on a
+ * per-instance unix socket, so a panel that could only speak http would report every
+ * correctly-installed daemon as "not configured" — a false statement in the one place an
+ * operator goes to find out whether it is running.
+ */
 type FetchJson = (
 	url: string,
 	headers: Record<string, string>,
 	timeoutMs: number,
+	unixSocket?: string,
 ) => Promise<unknown>;
 
 /**
@@ -89,32 +107,52 @@ export function buildSiteBuilderPanel(input: {
 }
 
 export async function buildSiteBuilderStatus(
-	deps: { fetchJson?: FetchJson; siteBuilder?: { url?: unknown; token?: unknown } } = {},
+	deps: { fetchJson?: FetchJson; siteBuilder?: Partial<SiteBuilderConfig> } = {},
 ): Promise<Record<string, unknown>> {
 	const siteBuilder =
 		deps.siteBuilder ?? (await import('../../../config/config.ts')).config.siteBuilder;
 	const doFetch = deps.fetchJson ?? fetchJson;
-	const url = siteBuilder.url;
-	const token = siteBuilder.token;
 
-	if (typeof url !== 'string' || typeof token !== 'string') {
+	// ONE spelling of "where the daemon is", shared with the tool's daemon client
+	// (core/site_builder/pairing.ts). A panel that resolved the address its own way would be
+	// a second answer to the question the tool acts on, and the day the two disagreed the
+	// panel would report a daemon nobody is talking to. A partial configuration — a
+	// transport with no instance name, or no token — resolves to null and reads as
+	// unconfigured, which is what it is.
+	const transport = resolveSiteBuilderTransport({
+		url: undefined,
+		socket: undefined,
+		instance: undefined,
+		token: undefined,
+		timeoutMs: PROBE_TIMEOUT_MS,
+		...siteBuilder,
+	});
+
+	if (transport === null) {
 		return { configured: false, reachable: false, url_host: null, drivers: [], last_publishes: [] };
 	}
 
-	const base = url.replace(/\/$/, '');
-	const authHeaders = { Authorization: `Bearer ${token}` };
+	const base = transport.base;
+	const authHeaders = { Authorization: `Bearer ${transport.token}` };
 	// Never surface the full URL (may embed structure); the host is enough for an operator.
+	// Over a socket that host is the synthetic `.invalid` authority, which says the honest
+	// thing: there is no network address to show.
 	const urlHost = siteBuilderHost(base);
 
 	try {
-		const health = await doFetch(`${base}/health`, {}, PROBE_TIMEOUT_MS);
+		const health = await doFetch(`${base}/health`, {}, PROBE_TIMEOUT_MS, transport.unixSocket);
 
 		let audit: unknown;
 		// Quirk: pinned, not fixed — a null/undefined health body threw on `.drivers` in the
 		// pre-split code, so the audit probe was never issued in that case. Kept exactly.
 		if (health !== null && health !== undefined) {
 			try {
-				audit = await doFetch(`${base}/v1/audit?limit=10`, authHeaders, PROBE_TIMEOUT_MS);
+				audit = await doFetch(
+					`${base}/v1/audit?limit=10`,
+					authHeaders,
+					PROBE_TIMEOUT_MS,
+					transport.unixSocket,
+				);
 			} catch {
 				// audit is best-effort; a reachable daemon with no audit yet is fine
 				audit = undefined;
@@ -131,8 +169,13 @@ async function fetchJson(
 	url: string,
 	headers: Record<string, string>,
 	timeoutMs: number,
+	unixSocket?: string,
 ): Promise<unknown> {
-	const res = await fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+	const res = await fetch(url, {
+		headers,
+		signal: AbortSignal.timeout(timeoutMs),
+		...(unixSocket === undefined ? {} : { unix: unixSocket }),
+	});
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 	return res.json();
 }

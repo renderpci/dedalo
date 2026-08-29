@@ -151,11 +151,25 @@ export interface ToolsConfig {
 
 /**
  * The engine's link to the standalone Site Builder daemon (publication/site_builder).
- * `url`/`token` are undefined when the feature is not configured — the tool_sitebuilder
- * tool reads that to hide itself and refuse.
+ *
+ * The pairing is 1:1 and fixed: ONE museum, ONE engine, ONE daemon instance. Four of the
+ * five fields are the whole of that address — where to dial (`socket` for a same-host
+ * daemon, else `url`), WHO is on the other end (`instance`) and the shared bearer that
+ * both proves the engine and, with the instance name, proves the pairing itself
+ * (src/core/site_builder/pairing.ts).
+ *
+ * Every one of the four is `undefined` on an install where the feature was never
+ * configured, which is the state tool_sitebuilder reads to hide itself and refuse. A
+ * PARTIAL configuration (a transport without an instance, or without a token) is treated
+ * as unconfigured too, and loudly: an engine that cannot prove which daemon it is talking
+ * to must not talk to one.
  */
 export interface SiteBuilderConfig {
 	readonly url: string | undefined;
+	/** Absolute path of the daemon's per-instance unix socket; the transport when set. */
+	readonly socket: string | undefined;
+	/** The daemon instance (museum tenancy) this engine is paired with. */
+	readonly instance: string | undefined;
 	readonly token: string | undefined;
 	readonly timeoutMs: number;
 }
@@ -1124,6 +1138,14 @@ export const config: DedaloConfig = Object.freeze({
 	}),
 	siteBuilder: Object.freeze({
 		url: readOptionalString('DEDALO_SITE_BUILDER_URL'),
+		// The unix socket a same-host daemon answers on. When set it IS the transport
+		// (src/core/site_builder/pairing.ts resolves the two into one), and the URL, if
+		// present at all, contributes only a path prefix and a host name.
+		socket: readOptionalString('DEDALO_SITE_BUILDER_SOCKET'),
+		// The tenancy this engine is paired with. Not routing — the daemon serves exactly
+		// one instance — but the identity half of the pairing fingerprint, so a transport
+		// without it is treated as UNCONFIGURED rather than trusted (see pairing.ts).
+		instance: readOptionalString('DEDALO_SITE_BUILDER_INSTANCE'),
 		token: readOptionalString('DEDALO_SITE_BUILDER_TOKEN'),
 		timeoutMs: readNumber('DEDALO_SITE_BUILDER_TIMEOUT_MS'),
 	}),

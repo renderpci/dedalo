@@ -165,6 +165,7 @@ const TRIPWIRES = [
 	'test/unit/dd128_write_census_tripwire.test.ts',
 	'test/unit/tier_execution_tripwire.test.ts',
 	'test/unit/tier_assignment_tripwire.test.ts',
+	'test/unit/site_builder_pairing_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

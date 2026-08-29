@@ -3,6 +3,7 @@ import { routeRequest } from '../src/router';
 import { config } from '../src/config';
 import { writeFile } from 'node:fs/promises';
 import { markerPath, provisionSite, resetInstance, siteDomain, webspaceOf } from './fixtures/instance';
+import { instanceFingerprint } from '../src/security/pairing';
 
 const BASE = config.BASE_PATH;
 const AUTH = { authorization: `Bearer ${config.SERVICE_TOKEN}` };
@@ -21,6 +22,35 @@ describe('router auth gate', () => {
     const body = (await res.json()) as { status: string; drivers: unknown[] };
     expect(body.status).toBe('ok');
     expect(Array.isArray(body.drivers)).toBe(true);
+  });
+
+  /**
+   * THE PAIRING FINGERPRINT, on the one route that answers without a token.
+   *
+   * The engine recomputes this from its own DEDALO_SITE_BUILDER_INSTANCE +
+   * DEDALO_SITE_BUILDER_TOKEN and refuses to send anything if it differs, so this field is
+   * the whole of the mutual-pairing proof on this side. What the assertions below pin is
+   * that it is (a) present, (b) the exact recipe both sides implement, and (c) NOT a
+   * disclosure: the body must never carry the instance name or the token in the clear,
+   * or the hash would be an oracle for the half a caller does not have.
+   */
+  test('health carries the pairing fingerprint and neither of its inputs', async () => {
+    const res = await get('/health');
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.instance_fingerprint).toBe(
+      instanceFingerprint(config.DEDALO_SITE_INSTANCE, config.SERVICE_TOKEN),
+    );
+    // A wrong instance or a wrong token must produce a DIFFERENT hex — the property the
+    // engine's refusal is built on.
+    expect(body.instance_fingerprint).not.toBe(
+      instanceFingerprint('other-museum', config.SERVICE_TOKEN),
+    );
+    expect(body.instance_fingerprint).not.toBe(
+      instanceFingerprint(config.DEDALO_SITE_INSTANCE, `${config.SERVICE_TOKEN}x`),
+    );
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain(config.SERVICE_TOKEN);
+    expect(serialized).not.toContain(`"${config.DEDALO_SITE_INSTANCE}"`);
   });
 
   test('a protected route without a token is 401 and discloses nothing', async () => {

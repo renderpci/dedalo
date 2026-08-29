@@ -213,12 +213,47 @@ without running anything.
 
 ### The proxy layer
 
-`server/daemon_client.ts` is the only place the engine talks HTTP to the daemon. It attaches
+`server/daemon_client.ts` is the only place the engine talks to the daemon. It attaches
 `Authorization: Bearer <token>` (from `config.siteBuilder.token`) and the acting user's
 identity, applies a timeout to control calls (not to the stream), and maps every transport
 failure and daemon problem into a stable `SiteBuilderError` code
-(`server/wire.ts`): `site_builder_unconfigured | unreachable | auth | rejected | failed`. The
-token and daemon URL never appear in a response the engine relays to the browser.
+(`server/wire.ts`): `site_builder_unconfigured | unreachable | auth | rejected | failed |
+instance_mismatch`. The token and the daemon's address never appear in a response the engine
+relays to the browser.
+
+### The transport, and the pairing it proves
+
+One museum is one Dédalo install paired with exactly ONE site-builder instance, so the engine
+holds one address and there is no tenant map on either side. `src/core/site_builder/pairing.ts`
+resolves that address once, for both readers (the tool and the maintenance panel):
+
+| key | meaning |
+|---|---|
+| `DEDALO_SITE_BUILDER_SOCKET` | the daemon's per-instance unix socket. When set it IS the transport, and its `0660 <daemon user>:<engine group>` ownership is the whole access decision — no port, no firewall rule, no other account on the host able to connect. |
+| `DEDALO_SITE_BUILDER_URL` | a daemon reached over the network instead. With a socket also set, it contributes only the path prefix and the host name. |
+| `DEDALO_SITE_BUILDER_INSTANCE` | the tenancy the engine is paired with. Required as soon as either transport is set. |
+
+A HALF configuration — a transport with no instance, or no token — resolves to no transport
+at all: the tool hides itself and every action refuses.
+
+Before the first byte of any call (the event stream included) the engine PROVES the pairing.
+The daemon publishes, on its one unauthenticated route, `GET /health` →
+`instance_fingerprint = sha256("dedalo-site-instance:" + instance + "\n" + SERVICE_TOKEN)`;
+the engine recomputes it from its own instance name and token and refuses on any difference
+with `site_builder.instance_mismatch`, having sent nothing — not the token, not the actor,
+not the request. Equal hex proves both the identity and the shared credential while
+disclosing neither, and a wrong instance, an unknown instance and a wrong token are
+indistinguishable to the caller, so the refusal is not an enumeration oracle. The reason it
+exists: a private environment file copied from one museum's server to another's used to point
+one engine at the other's daemon undetectably, which means one museum's staff driving an
+agent inside another's website, on that museum's budget and public domain.
+
+The pairing lines are not typed by hand. The daemon's provisioner renders them as
+`<config dir>/engine.env.fragment`, and `bun run scripts/site_builder_pair.ts <fragment>`
+appends them to this install's private environment file: documented keys only, idempotent, a
+refusal (not a duplicate line) when a key is already present with a different value, and a
+refusal to append the token placeholder — pass the daemon's root-owned credential file with
+`--token-file` instead. It never prints a token.
 
 ### apiActions and permissions
 

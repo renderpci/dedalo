@@ -31,17 +31,29 @@
  * never issues DDL, and a missing table simply means "no owner recorded", which
  * FAILS CLOSED.
  *
+ * WHOSE DAEMON, NOT JUST WHOSE SESSION (2026-08-29). Every row also carries the
+ * site-builder INSTANCE it was written against, and every read matches on it. A
+ * session id is minted by one daemon and unique only there, so without the
+ * instance an engine re-pointed at another museum's daemon would read this
+ * table's rows as answers about ITS sessions — inheriting another museum's
+ * ownership facts, with the ids that happen to collide handing one museum's
+ * users control of the other's running agents. A row whose instance differs from
+ * the configured one is therefore not "someone else's row to ignore": it is an
+ * UNKNOWN OWNER, and fails closed exactly like a missing one.
+ *
  * FAIL-CLOSED, AND THE ONE NAMED BYPASS: an unknown owner (a session started
- * before this ledger existed, or a row lost) denies every ordinary caller. A
+ * before this ledger existed, a row lost, or a row belonging to another
+ * instance) denies every ordinary caller. A
  * GLOBAL ADMIN passes regardless — deliberately, and this is the only bypass: an
  * operator must be able to stop a runaway agent that is spending tokens and
  * writing files, and a boundary that cannot be overridden by the installation's
  * administrator would simply be routed around with a daemon restart.
  */
 
+import { config } from '../../../src/config/config.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
-import { siteBuilderRejected } from './wire.ts';
+import { siteBuilderFailure, siteBuilderRejected } from './wire.ts';
 
 /**
  * The ledger table. Engine-internal machinery (the locks / diffusion-jobs /
@@ -49,6 +61,25 @@ import { siteBuilderRejected } from './wire.ts';
  * dropping it costs exactly the ownership facts, which fail closed.
  */
 export const SESSION_OWNER_TABLE = 'dedalo_ts_sitebuilder_sessions';
+
+/**
+ * WHICH DAEMON'S SESSIONS THESE ROWS ARE ABOUT — the paired instance, or null on an
+ * install whose site builder is not configured.
+ *
+ * A session id is minted by the DAEMON and is unique within THAT daemon; nothing makes it
+ * unique across two of them. So an id alone does not identify a session on this planet, it
+ * identifies one on a particular museum's daemon, and a ledger that forgets which daemon is
+ * a ledger that answers the wrong question the moment an engine is re-pointed. Every read
+ * below therefore matches on the instance as well as the id, and a row belonging to another
+ * instance is treated exactly like an unknown owner: refused.
+ *
+ * Read per call rather than captured: the config module is frozen at boot, but a gate may
+ * swap it, and a stale capture would silently keep asserting the previous pairing.
+ */
+function pairedInstance(): string | null {
+	const instance = config.siteBuilder.instance;
+	return typeof instance === 'string' && instance.length > 0 ? instance : null;
+}
 
 /**
  * The refusal every ownership denial uses — ONE sentence for "not yours" and for
@@ -71,12 +102,30 @@ export async function ensureSessionOwnerTable(): Promise<void> {
 			session_id text PRIMARY KEY,
 			slug       text        NOT NULL,
 			user_id    integer     NOT NULL,
+			instance   text,
 			created_at timestamptz NOT NULL DEFAULT now()
 		)`,
 		[],
 	);
+	// THE INSTANCE COLUMN ON A TABLE THAT PREDATES IT (2026-08-29). This store is created
+	// lazily rather than by the numbered-migration runner (the error_report / temporal
+	// precedent), so its schema change is an idempotent ALTER on the same write path — the
+	// same shape as the CREATE above, and equally safe to run on every session_start.
+	//
+	// NULLABLE, DELIBERATELY, and NOT backfilled. A row written before this column existed
+	// records that user U owns session S on *whichever* daemon this engine was paired with
+	// at the time, which is precisely the fact that cannot be recovered — and inventing it
+	// by stamping the CURRENT instance onto every old row is how a re-pointed engine would
+	// inherit another museum's sessions, the exact failure this column exists to prevent.
+	// So an un-stamped row matches no instance and FAILS CLOSED: its session becomes
+	// admin-only, which is the same state a lost row already produces and which the global
+	// admin bypass documented in this file's header can always resolve.
 	await sql.unsafe(
-		`CREATE INDEX IF NOT EXISTS "${SESSION_OWNER_TABLE}_slug_idx" ON "${SESSION_OWNER_TABLE}" (slug)`,
+		`ALTER TABLE "${SESSION_OWNER_TABLE}" ADD COLUMN IF NOT EXISTS instance text`,
+		[],
+	);
+	await sql.unsafe(
+		`CREATE INDEX IF NOT EXISTS "${SESSION_OWNER_TABLE}_slug_idx" ON "${SESSION_OWNER_TABLE}" (instance, slug)`,
 		[],
 	);
 }
@@ -97,12 +146,24 @@ export async function recordSessionOwner(
 	slug: string,
 	userId: number,
 ): Promise<void> {
+	const instance = pairedInstance();
+	if (instance === null) {
+		// Unreachable through the tool (session_start runs behind isConfigured, which is
+		// false without an instance name), and stated anyway: a row that could not say WHOSE
+		// session it is would be worse than no row, because it would read as ownership on
+		// every future pairing.
+		throw siteBuilderFailure(
+			'site_builder.unconfigured',
+			'recordSessionOwner: DEDALO_SITE_BUILDER_INSTANCE is unset, so the daemon this ' +
+				'session belongs to cannot be recorded. Nothing was written.',
+		);
+	}
 	await ensureSessionOwnerTable();
 	await sql.unsafe(
-		`INSERT INTO "${SESSION_OWNER_TABLE}" (session_id, slug, user_id)
-		 VALUES ($1, $2, $3)
+		`INSERT INTO "${SESSION_OWNER_TABLE}" (session_id, slug, user_id, instance)
+		 VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (session_id) DO NOTHING`,
-		[sessionId, slug, userId],
+		[sessionId, slug, userId, instance],
 	);
 }
 
@@ -112,10 +173,15 @@ export async function recordSessionOwner(
  * NEVER an allow: it resolves to null, which every caller treats as a denial.
  */
 export async function readSessionOwner(sessionId: string): Promise<number | null> {
+	const instance = pairedInstance();
+	// No pairing, no owner: an engine that cannot say which daemon it talks to cannot
+	// attribute that daemon's session ids either.
+	if (instance === null) return null;
 	try {
 		const rows = (await sql.unsafe(
-			`SELECT user_id FROM "${SESSION_OWNER_TABLE}" WHERE session_id = $1 LIMIT 1`,
-			[sessionId],
+			`SELECT user_id FROM "${SESSION_OWNER_TABLE}"
+			  WHERE session_id = $1 AND instance = $2 LIMIT 1`,
+			[sessionId, instance],
 		)) as { user_id: number }[];
 		return rows[0]?.user_id ?? null;
 	} catch (error) {
@@ -147,10 +213,13 @@ export async function assertSessionOwner(sessionId: string, principal: Principal
  * sessions the caller could actually open. Empty on any read failure: fail closed.
  */
 export async function ownedSessionIds(slug: string, userId: number): Promise<Set<string>> {
+	const instance = pairedInstance();
+	if (instance === null) return new Set();
 	try {
 		const rows = (await sql.unsafe(
-			`SELECT session_id FROM "${SESSION_OWNER_TABLE}" WHERE slug = $1 AND user_id = $2`,
-			[slug, userId],
+			`SELECT session_id FROM "${SESSION_OWNER_TABLE}"
+			  WHERE slug = $1 AND user_id = $2 AND instance = $3`,
+			[slug, userId, instance],
 		)) as { session_id: string }[];
 		return new Set(rows.map((row) => row.session_id));
 	} catch (error) {
@@ -165,8 +234,16 @@ export async function ownedSessionIds(slug: string, userId: number): Promise<Set
  * a loud line, never worth turning a completed delete into an error.
  */
 export async function forgetSiteSessions(slug: string): Promise<void> {
+	const instance = pairedInstance();
+	if (instance === null) return;
 	try {
-		await sql.unsafe(`DELETE FROM "${SESSION_OWNER_TABLE}" WHERE slug = $1`, [slug]);
+		// Scoped to this instance: two museums may both have a site called 'museum', and
+		// deleting one's ownership rows because the other deleted its site would silently
+		// hand that museum's live sessions to nobody.
+		await sql.unsafe(`DELETE FROM "${SESSION_OWNER_TABLE}" WHERE slug = $1 AND instance = $2`, [
+			slug,
+			instance,
+		]);
 	} catch (error) {
 		console.error('[tool_sitebuilder] could not drop session ownership rows:', error);
 	}

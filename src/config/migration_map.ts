@@ -691,6 +691,11 @@ export const NEW_IN_V7: readonly string[] = [
 	'TOOLS_REGISTRY_CACHE_TTL_MS',
 	// site builder (the standalone publication/site_builder daemon)
 	'DEDALO_SITE_BUILDER_URL',
+	// The per-instance unix socket and the tenancy name it is paired with
+	// (2026-08-29). NEW_IN_V7 by construction: v6 had no site builder at all, so
+	// neither is a rename of any legacy constant.
+	'DEDALO_SITE_BUILDER_SOCKET',
+	'DEDALO_SITE_BUILDER_INSTANCE',
 	'DEDALO_SITE_BUILDER_TOKEN',
 	'DEDALO_SITE_BUILDER_TIMEOUT_MS',
 	// external record services (the outbound side). NEW_IN_V7 rather than a rule off
