@@ -844,6 +844,31 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     manifest.engine?.group as string,
   );
 
+  // THE SERVICE GROUP MUST BE THE INSTANCE'S OWN, AND NOTHING ELSE'S.
+  //
+  // The service user is created with this group as its PRIMARY group (`useradd --gid`), and
+  // an agent turn runs as that user executing arbitrary generated code. Declaring the host's
+  // web group here would put every museum's webspace — 2750 <user>:<webGroup>, group-readable
+  // and group-writable by design so the web server can serve it — inside this instance's
+  // reach. Declaring the paired engine's group would hand it the socket and whatever else
+  // that group opens. Either one silently converts a per-museum identity into a shared one,
+  // which is the entire boundary this subsystem exists to draw.
+  if (group === webGroup) {
+    throw new Error(
+      `layout: the service group '${group}' is also web.group. The service user's PRIMARY ` +
+        `group would then be the web server's, giving this instance's agent turns access to ` +
+        `every instance's served tree (2750 <user>:<webGroup>). Give the instance its own ` +
+        `group. Nothing was derived.`,
+    );
+  }
+  if (group === engineGroup) {
+    throw new Error(
+      `layout: the service group '${group}' is also engine.group — the group that reaches ` +
+        `the engine's socket. The daemon runs as its own uid precisely so an agent turn ` +
+        `cannot become the engine. Give the instance its own group. Nothing was derived.`,
+    );
+  }
+
   const description = manifest.description ?? '';
   if (description) assertMatches(DESCRIPTION_PATTERN, 'description', description);
 

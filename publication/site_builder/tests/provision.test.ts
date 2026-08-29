@@ -1087,3 +1087,41 @@ describe('the preprod credential is not servable', () => {
     }
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The service group is the instance's own, and nobody else's.
+ *
+ * The service user gets this group as its PRIMARY group (useradd --gid), and an agent turn
+ * runs as that user executing arbitrary generated code. Declaring the host's web group here
+ * puts every museum's webspace — 2750 <user>:<webGroup>, group-readable and -writable so the
+ * web server can serve it — inside this instance's reach. Both spellings were accepted.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('the service group cannot be borrowed from the host', () => {
+  test('it may not be the web server group', () => {
+    expect(() =>
+      derive({
+        ...baseDoc(),
+        web: { server: 'nginx', group: 'www-data' },
+        identity: { user: 'usr-a', group: 'www-data' },
+      } as never),
+    ).toThrow(/also web\.group/);
+  });
+
+  test('nor the paired engine group', () => {
+    expect(() =>
+      derive({
+        ...baseDoc(),
+        engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+        identity: { user: 'usr-a', group: 'dedalo-gate' },
+      } as never),
+    ).toThrow(/also engine\.group/);
+  });
+
+  test('an instance-owned group is accepted', () => {
+    const layout = derive({ ...baseDoc(), identity: { user: 'usr-a', group: 'grp-a' } } as never);
+    expect(layout.identity.group).toBe('grp-a');
+    expect(layout.identity.group).not.toBe(layout.identity.webGroup);
+    expect(layout.identity.group).not.toBe(layout.identity.engineGroup);
+  });
+});

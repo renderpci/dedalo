@@ -228,7 +228,13 @@ describe('A. the ignore matcher behaves the way Docker does', () => {
 		// an arbitrary prefix at the level immediately below the pattern's literal
 		// part. Measured, not assumed: `publication/site_builder/**/.env` (the
 		// nested census's first spelling) dropped the tracked, lawful
-		// `publication/site_builder/sample.env` out of the image.
+		// `publication/site_builder/sample.env` out of the image. That file has since
+		// been retired (the site builder's host artifacts are rendered now, not
+		// committed by hand), so the live near-miss the census must not drop is the
+		// committed rendered example `…/instances/example/env` — asserted below with
+		// the rest of the lawful traffic. The trap itself is a property of moby's
+		// compiler, not of any one file, which is why it is exercised on generic
+		// paths here.
 		expect(new BuildContext('**/.env\n').excludes('sample.env')).toBe(true);
 		expect(new BuildContext('d/**/.env\n').excludes('d/sample.env')).toBe(true);
 		expect(new BuildContext('d/**/certs\n').excludes('d/mycerts')).toBe(true);
@@ -1210,7 +1216,8 @@ describe('J. the deny-all is deny-all AT DEPTH 1, and the residual is exactly th
 		for (const path of [
 			'src/core/security/keys.ts',
 			'client/dedalo/core/common/js/certificate_view.js',
-			'publication/site_builder/sample.env',
+			'publication/site_builder/deploy/examples/rendered/etc/dedalo_sites/instances/example/env',
+			'publication/site_builder/deploy/examples/rendered/etc/dedalo_sites/instances/example/engine.env.fragment',
 			'src/core/media/envelope.ts',
 		]) {
 			expect({ path, excluded: CONTEXT.excludes(path) }).toEqual({ path, excluded: false });

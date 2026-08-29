@@ -40,6 +40,7 @@
 		"sitebuilder:install": "cd publication/site_builder && bun install",
 		"start:sitebuilder": "cd publication/site_builder && bun run start",
 		"test:sitebuilder": "cd publication/site_builder && bunx tsc --noEmit && bun test",
+		"sitebuilder:provision": "cd publication/site_builder && bun run src/provision/cli.ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"format": "biome format --write ."
