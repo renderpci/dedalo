@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { rm, writeFile, readFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { config } from '../src/config';
+import { resetInstance, workspacePath } from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { __setTestDriver } from '../src/drivers/registry';
 import { startSession, sendMessage, stopSession, getSessionState } from '../src/sessions/manager';
@@ -24,16 +24,10 @@ async function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void
   }
 }
 
-async function wipeRoots(): Promise<void> {
-  await rm(config.SITES_ROOT, { recursive: true, force: true });
-  await rm(config.PREPROD_ROOT, { recursive: true, force: true });
-  await rm(config.PROD_ROOT, { recursive: true, force: true });
-}
-
-beforeEach(wipeRoots);
+beforeEach(resetInstance);
 afterEach(async () => {
   __setTestDriver('claude_code', null);
-  await wipeRoots();
+  await resetInstance();
 });
 
 /** A fake driver that writes a file into the workspace then emits a scripted stream. */
@@ -135,7 +129,7 @@ describe('session flow', () => {
     expect(meta?.resume_token).toBe('resume-1');
 
     // The agent's file was committed (working tree clean afterwards).
-    expect(existsSync(join(config.SITES_ROOT, 'flow', 'NEW_PAGE.txt'))).toBe(true);
+    expect(existsSync(workspacePath('flow', 'NEW_PAGE.txt'))).toBe(true);
     expect(getSessionState('flow').state).toBe('idle');
   });
 

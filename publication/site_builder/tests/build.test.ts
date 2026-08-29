@@ -1,20 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { rm, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { config } from '../src/config';
+import { resetInstance, roots, servedPath } from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { readManifest, writeManifest } from '../src/sites/manifest';
 import { startBuild, getBuild, latestBuild } from '../src/build/builder';
 import { currentRelease } from '../src/build/promote';
 
 const ACTOR = { user_id: 3, username: 'builder-tester' };
-
-async function wipe(): Promise<void> {
-  await rm(config.SITES_ROOT, { recursive: true, force: true });
-  await rm(config.PREPROD_ROOT, { recursive: true, force: true });
-  await rm(config.PROD_ROOT, { recursive: true, force: true });
-}
 
 async function waitForBuild(slug: string, id: string): Promise<void> {
   const start = Date.now();
@@ -33,8 +25,8 @@ async function useTrivialBuild(slug: string, output: string, buildOk: boolean): 
   await writeManifest(manifest);
 }
 
-beforeEach(wipe);
-afterEach(wipe);
+beforeEach(resetInstance);
+afterEach(resetInstance);
 
 describe('build runner', () => {
   test('a successful build promotes the output to preprod and records success', async () => {
@@ -51,9 +43,9 @@ describe('build runner', () => {
     expect(record?.finished_at).toBeTruthy();
 
     // The preprod symlink now serves the promoted content.
-    const release = await currentRelease(config.PREPROD_ROOT, 'buildable');
+    const release = await currentRelease(roots.preprodRoot, 'buildable');
     expect(release).toBe(record!.release);
-    expect(existsSync(join(config.PREPROD_ROOT, 'buildable', 'lib', 'dedalo.ts'))).toBe(true);
+    expect(existsSync(servedPath('preprod', 'buildable', 'lib', 'dedalo.ts'))).toBe(true);
 
     // latestBuild reflects it.
     const latest = await latestBuild('buildable');
@@ -70,7 +62,7 @@ describe('build runner', () => {
     const record = await getBuild('broken', build_id);
     expect(record?.outcome).toBe('failed');
     expect(record?.release).toBeNull();
-    expect(await currentRelease(config.PREPROD_ROOT, 'broken')).toBeNull();
+    expect(await currentRelease(roots.preprodRoot, 'broken')).toBeNull();
   });
 
   test('a build whose output dir is missing fails cleanly', async () => {

@@ -1,22 +1,17 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { rm, readFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../src/config';
+import { resetInstance, roots, workspacePath } from './fixtures/instance';
 import { createSite, deleteSite, listSlugs, siteExists } from '../src/sites/workspace';
 import { readManifest } from '../src/sites/manifest';
 import { ConflictError, ValidationError, LimitExceededError } from '../src/errors';
 
 const ACTOR = { user_id: 42, username: 'tester' };
 
-async function wipeRoots(): Promise<void> {
-  await rm(config.SITES_ROOT, { recursive: true, force: true });
-  await rm(config.PREPROD_ROOT, { recursive: true, force: true });
-  await rm(config.PROD_ROOT, { recursive: true, force: true });
-}
-
-beforeEach(wipeRoots);
-afterEach(wipeRoots);
+beforeEach(resetInstance);
+afterEach(resetInstance);
 
 describe('createSite', () => {
   test('scaffolds a workspace with a valid manifest, git repo and AGENTS.md', async () => {
@@ -29,7 +24,7 @@ describe('createSite', () => {
     expect(manifest.template).toBe('basic');
     expect(manifest.published).toBeNull();
 
-    const dir = join(config.SITES_ROOT, 'demo');
+    const dir = workspacePath('demo');
     expect(existsSync(join(dir, 'site.json'))).toBe(true);
     expect(existsSync(join(dir, '.git'))).toBe(true);
     expect(existsSync(join(dir, 'AGENTS.md'))).toBe(true);
@@ -46,19 +41,19 @@ describe('createSite', () => {
 
   test('substitutes the publication API URL placeholder into the template', async () => {
     await createSite({ slug: 'sub', name: 'Sub', actor: ACTOR });
-    const helper = await readFile(join(config.SITES_ROOT, 'sub', 'src', 'lib', 'dedalo.ts'), 'utf8');
+    const helper = await readFile(workspacePath('sub', 'src', 'lib', 'dedalo.ts'), 'utf8');
     expect(helper).toContain(config.PUBLICATION_API_URL);
     expect(helper).not.toContain('__PUBLICATION_API_URL__');
   });
 
   test('embeds the site brief in AGENTS.md and links CLAUDE.md to it', async () => {
     await createSite({ slug: 'brief', name: 'Brief Site', actor: ACTOR });
-    const agents = await readFile(join(config.SITES_ROOT, 'brief', 'AGENTS.md'), 'utf8');
+    const agents = await readFile(workspacePath('brief', 'AGENTS.md'), 'utf8');
     expect(agents).toContain('Brief Site');
     expect(agents).toContain(config.PUBLICATION_API_URL);
     expect(agents).toContain('Static output only');
     // Symlink resolves to the same content.
-    const claude = await readFile(join(config.SITES_ROOT, 'brief', 'CLAUDE.md'), 'utf8');
+    const claude = await readFile(workspacePath('brief', 'CLAUDE.md'), 'utf8');
     expect(claude).toBe(agents);
   });
 
@@ -80,7 +75,7 @@ describe('createSite', () => {
   test('a failed create leaves no wedged directory', async () => {
     await expect(createSite({ slug: 'x', name: 'x', template: 'nonexistent', actor: ACTOR })).rejects.toThrow();
     expect(siteExists('x')).toBe(false);
-    expect(existsSync(join(config.SITES_ROOT, 'x'))).toBe(false);
+    expect(existsSync(workspacePath('x'))).toBe(false);
   });
 });
 
@@ -91,11 +86,29 @@ describe('listSlugs / deleteSite', () => {
     expect(await listSlugs()).toEqual(['alpha', 'beta']);
   });
 
+  test('returns [] when the workspaces root does not exist at all', async () => {
+    // The guard at workspace.ts:42. It used to be covered only incidentally, by the
+    // hand-rolled wipes that left the root absent; resetInstance() now always recreates
+    // it, so without this test the branch is unreachable from the suite.
+    await rm(roots.sitesRoot, { recursive: true, force: true });
+    expect(existsSync(roots.sitesRoot)).toBe(false);
+    expect(await listSlugs()).toEqual([]);
+  });
+
+  test('ignores dot-directories in the workspaces root', async () => {
+    // .audit and the instance marker's neighbours: a dotdir is never a site, even when
+    // it holds a site.json. Previously asserted by a test name that created no dotdir.
+    await createSite({ slug: 'real', name: 'Real', actor: ACTOR });
+    await mkdir(workspacePath('.hidden'), { recursive: true });
+    await writeFile(workspacePath('.hidden', 'site.json'), '{}', 'utf8');
+    expect(await listSlugs()).toEqual(['real']);
+  });
+
   test('deletes the workspace but not an unrelated prod copy without purge', async () => {
     await createSite({ slug: 'gone', name: 'Gone', actor: ACTOR });
     await deleteSite('gone', false);
     expect(siteExists('gone')).toBe(false);
-    expect(existsSync(join(config.SITES_ROOT, 'gone'))).toBe(false);
+    expect(existsSync(workspacePath('gone'))).toBe(false);
   });
 
   test('deleting an unknown site throws NotFound', async () => {

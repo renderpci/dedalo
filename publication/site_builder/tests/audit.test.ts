@@ -1,14 +1,9 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { rm } from 'node:fs/promises';
-import { config } from '../src/config';
+import { resetInstance } from './fixtures/instance';
 import { audit, readAudit } from '../src/audit';
 
-async function wipe(): Promise<void> {
-  await rm(config.SITES_ROOT, { recursive: true, force: true });
-}
-
-beforeEach(wipe);
-afterEach(wipe);
+beforeEach(resetInstance);
+afterEach(resetInstance);
 
 describe('audit log', () => {
   test('appends entries and reads them back newest-first with a site filter', async () => {

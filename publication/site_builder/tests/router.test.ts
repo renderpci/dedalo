@@ -1,19 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { rm } from 'node:fs/promises';
 import { routeRequest } from '../src/router';
 import { config } from '../src/config';
+import { resetInstance } from './fixtures/instance';
 
 const BASE = config.BASE_PATH;
 const AUTH = { authorization: `Bearer ${config.SERVICE_TOKEN}` };
 
-async function wipeRoots(): Promise<void> {
-  await rm(config.SITES_ROOT, { recursive: true, force: true });
-  await rm(config.PREPROD_ROOT, { recursive: true, force: true });
-  await rm(config.PROD_ROOT, { recursive: true, force: true });
-}
-
-beforeEach(wipeRoots);
-afterEach(wipeRoots);
+beforeEach(resetInstance);
+afterEach(resetInstance);
 
 function get(path: string, headers: Record<string, string> = {}): Promise<Response> {
   return routeRequest(new Request(`http://x${BASE}${path}`, { headers }));

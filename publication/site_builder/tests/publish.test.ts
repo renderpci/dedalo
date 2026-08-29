@@ -1,8 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { existsSync } from 'node:fs';
-import { rm, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { config } from '../src/config';
+import { rm } from 'node:fs/promises';
+import {
+  makeSourceDir,
+  readServed,
+  resetInstance,
+  roots,
+  workspacePath,
+} from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { readManifest } from '../src/sites/manifest';
 import { promoteRelease, currentRelease } from '../src/build/promote';
@@ -11,22 +15,14 @@ import { ConflictError } from '../src/errors';
 
 const ACTOR = { user_id: 5, username: 'publisher' };
 
-async function wipe(): Promise<void> {
-  await rm(config.SITES_ROOT, { recursive: true, force: true });
-  await rm(config.PREPROD_ROOT, { recursive: true, force: true });
-  await rm(config.PROD_ROOT, { recursive: true, force: true });
-}
-
 /** Simulate a build having produced a preprod release with known bytes. */
 async function seedPreprod(slug: string, html: string): Promise<string> {
-  const src = join(config.SITES_ROOT, slug, 'dist');
-  await rm(src, { recursive: true, force: true });
-  await Bun.write(join(src, 'index.html'), html);
-  return promoteRelease(config.PREPROD_ROOT, slug, src);
+  const src = await makeSourceDir({ 'index.html': html }, workspacePath(slug, 'dist'));
+  return promoteRelease(roots.preprodRoot, slug, src);
 }
 
-beforeEach(wipe);
-afterEach(wipe);
+beforeEach(resetInstance);
+afterEach(resetInstance);
 
 describe('publish / rollback', () => {
   test('publish promotes the current preprod bytes to production and records it', async () => {
@@ -37,8 +33,8 @@ describe('publish / rollback', () => {
     expect(result.url).toContain('pubme');
 
     // Production serves exactly the previewed bytes.
-    expect(await readFile(join(config.PROD_ROOT, 'pubme', 'index.html'), 'utf8')).toBe('<h1>live</h1>');
-    expect(await currentRelease(config.PROD_ROOT, 'pubme')).toBe(result.release);
+    expect(await readServed('prod', 'pubme', 'index.html')).toBe('<h1>live</h1>');
+    expect(await currentRelease(roots.prodRoot, 'pubme')).toBe(result.release);
 
     // The manifest records who published what.
     const manifest = await readManifest('pubme');
@@ -57,8 +53,8 @@ describe('publish / rollback', () => {
     await publishSite('durable', ACTOR);
 
     // Remove the workspace entirely; production must still serve.
-    await rm(join(config.SITES_ROOT, 'durable'), { recursive: true, force: true });
-    expect(await readFile(join(config.PROD_ROOT, 'durable', 'index.html'), 'utf8')).toBe('<h1>durable</h1>');
+    await rm(workspacePath('durable'), { recursive: true, force: true });
+    expect(await readServed('prod', 'durable', 'index.html')).toBe('<h1>durable</h1>');
   });
 
   test('rollback re-activates a prior production release', async () => {
@@ -69,10 +65,10 @@ describe('publish / rollback', () => {
     await seedPreprod('roll', '<h1>v2</h1>');
     const second = await publishSite('roll', ACTOR);
 
-    expect(await readFile(join(config.PROD_ROOT, 'roll', 'index.html'), 'utf8')).toBe('<h1>v2</h1>');
+    expect(await readServed('prod', 'roll', 'index.html')).toBe('<h1>v2</h1>');
 
     await rollbackSite('roll', first.release, ACTOR);
-    expect(await readFile(join(config.PROD_ROOT, 'roll', 'index.html'), 'utf8')).toBe('<h1>v1</h1>');
+    expect(await readServed('prod', 'roll', 'index.html')).toBe('<h1>v1</h1>');
 
     const history = await productionReleases('roll');
     expect(history.current).toBe(first.release);

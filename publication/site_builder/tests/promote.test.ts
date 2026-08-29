@@ -1,39 +1,43 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { mkdir, rm, writeFile, readFile, readlink, readdir } from 'node:fs/promises';
+import { readlink, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../src/config';
+import {
+  makeSourceDir,
+  readServed,
+  resetInstance,
+  roots,
+  SCRATCH_SOURCE,
+  servedPath,
+} from './fixtures/instance';
 import { promoteRelease, activateRelease, listReleases, currentRelease } from '../src/build/promote';
 
-const ROOT = config.PREPROD_ROOT;
-const SRC = join(config.SITES_ROOT, '__src__');
+// This file exercises the promote machinery directly, so it names the surface it drives
+// (preprod) and a scratch source dir standing in for "whatever a build produced".
+const ROOT = roots.preprodRoot;
+const SRC = SCRATCH_SOURCE;
 
-async function wipe(): Promise<void> {
-  await rm(ROOT, { recursive: true, force: true });
-  await rm(SRC, { recursive: true, force: true });
+/** One-file source tree — the promoted bytes every assertion below reads back. */
+function makeSource(content: string): Promise<string> {
+  return makeSourceDir({ 'index.html': content });
 }
 
-async function makeSource(content: string): Promise<void> {
-  await rm(SRC, { recursive: true, force: true });
-  await mkdir(SRC, { recursive: true });
-  await writeFile(join(SRC, 'index.html'), content, 'utf8');
-}
-
-beforeEach(wipe);
-afterEach(wipe);
+beforeEach(resetInstance);
+afterEach(resetInstance);
 
 describe('promoteRelease', () => {
   test('copies the source into a release and points the served symlink at it', async () => {
     await makeSource('<h1>v1</h1>');
     const release = await promoteRelease(ROOT, 'demo', SRC);
 
-    const link = join(ROOT, 'demo');
+    const link = servedPath('preprod', 'demo');
     expect(existsSync(link)).toBe(true);
     // The symlink target is relative and inside the release store.
     const target = await readlink(link);
     expect(target).toBe(join('.releases', 'demo', release));
     // Serving through the link yields the promoted content.
-    expect(await readFile(join(link, 'index.html'), 'utf8')).toBe('<h1>v1</h1>');
+    expect(await readServed('preprod', 'demo', 'index.html')).toBe('<h1>v1</h1>');
     expect(await currentRelease(ROOT, 'demo')).toBe(release);
   });
 
@@ -44,10 +48,10 @@ describe('promoteRelease', () => {
     const r2 = await promoteRelease(ROOT, 'demo', SRC);
 
     expect(r2).not.toBe(r1);
-    expect(await readFile(join(ROOT, 'demo', 'index.html'), 'utf8')).toBe('<h1>v2</h1>');
+    expect(await readServed('preprod', 'demo', 'index.html')).toBe('<h1>v2</h1>');
     expect(await currentRelease(ROOT, 'demo')).toBe(r2);
     // The old release still exists on disk (rollback target).
-    expect(existsSync(join(ROOT, '.releases', 'demo', r1))).toBe(true);
+    expect(existsSync(servedPath('preprod', '.releases', 'demo', r1))).toBe(true);
   });
 
   test('activateRelease rolls back to a prior release', async () => {
@@ -57,7 +61,7 @@ describe('promoteRelease', () => {
     await promoteRelease(ROOT, 'demo', SRC);
 
     await activateRelease(ROOT, 'demo', r1);
-    expect(await readFile(join(ROOT, 'demo', 'index.html'), 'utf8')).toBe('<h1>v1</h1>');
+    expect(await readServed('preprod', 'demo', 'index.html')).toBe('<h1>v1</h1>');
     expect(await currentRelease(ROOT, 'demo')).toBe(r1);
   });
 
@@ -76,7 +80,7 @@ describe('promoteRelease', () => {
       // release ids are millisecond-stamped; ensure ordering/uniqueness
       await new Promise(r => setTimeout(r, 2));
     }
-    const remaining = await readdir(join(ROOT, '.releases', 'demo'));
+    const remaining = await readdir(servedPath('preprod', '.releases', 'demo'));
     expect(remaining.length).toBeLessThanOrEqual(config.RELEASES_RETAINED);
     // The most recent (current) release survived pruning.
     expect(remaining).toContain(made[made.length - 1]);
