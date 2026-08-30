@@ -566,6 +566,56 @@ async function materializeLiteralShell(
 }
 
 /**
+ * Does this time-machine snapshot belong to the record living at
+ * (sectionTipo, sectionId) NOW?
+ *
+ * The ADDRESS ALONE IS NOT IDENTITY (P0-14). Where a section_id was re-minted,
+ * a dead record's rows carry the living record's exact coordinates — so the
+ * preview pane would graft the dead record's value over the living record's
+ * fields and present it as that record's own history. The generation epoch is
+ * the second half of the identity.
+ */
+async function tmRowBelongsToRecord(
+	tmRow: { id: number; section_tipo: string; section_id: number },
+	sectionTipo: string,
+	sectionId: number,
+): Promise<boolean> {
+	if (tmRow.section_tipo !== sectionTipo || tmRow.section_id !== sectionId) return false;
+	const { recordEpoch } = await import('../db/record_generation.ts');
+	return tmRow.id >= (await recordEpoch(sectionTipo, sectionId));
+}
+
+/**
+ * The Time Machine PREVIEW override (PHP component_common::get_data
+ * data_source='tm', dd_core_api :2372-2383): the tool_time_machine preview pane
+ * loads a component's value from a SPECIFIC matrix_time_machine row, not the
+ * live record. The section context and datalist stay live — only the value
+ * changes.
+ *
+ * `served:false` means the caller must answer empty, as PHP does for an absent
+ * row — and, since P0-14, for a row belonging to a dead generation at the same
+ * address.
+ */
+async function resolveTmPreview(
+	source: { data_source?: unknown; matrix_id?: unknown },
+	model: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<{ served: true; value: unknown | null } | { served: false; value: null }> {
+	if (source.data_source !== 'tm' || source.matrix_id === null || source.matrix_id === undefined) {
+		return { served: true, value: null };
+	}
+	const { readTimeMachineRow } = await import('../db/time_machine.ts');
+	const { stripDataframeFramesFromTmMain } = await import('../tm_record/tm_record.ts');
+	const tmRow = await readTimeMachineRow(Number(source.matrix_id));
+	if (tmRow === null) return { served: false, value: null };
+	if (!(await tmRowBelongsToRecord(tmRow, sectionTipo, sectionId))) {
+		return { served: false, value: null };
+	}
+	return { served: true, value: stripDataframeFramesFromTmMain(model, tmRow.data) };
+}
+
+/**
  * The no-record SEARCH shell's item fixups (a no-op for every other read): the
  * client resolves its filter row by
  * `String(el.section_id)===String(self.section_id)`, so the SYNTHETIC id is
@@ -712,15 +762,11 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// datalist stay live (real section_tipo/section_id), only the value changes.
 	// Without this, every preview shows the live value regardless of the row the
 	// user picked (the "always the last value" bug).
-	let tmOverride: unknown | null = null;
-	if (source.data_source === 'tm' && source.matrix_id !== null && source.matrix_id !== undefined) {
-		const { readTimeMachineRow } = await import('../db/time_machine.ts');
-		const { stripDataframeFramesFromTmMain } = await import('../tm_record/tm_record.ts');
-		const tmRow = await readTimeMachineRow(Number(source.matrix_id));
-		// PHP get_data returns null (empty) when the TM row is absent.
-		if (tmRow === null) return [];
-		tmOverride = stripDataframeFramesFromTmMain(model, tmRow.data);
-	}
+	const preview = await resolveTmPreview(source, model, sectionTipo, numericSectionId);
+	// PHP get_data returns null (empty) when the snapshot is absent — or, since
+	// P0-14, when it belongs to a dead generation at the same address.
+	if (preview.served === false) return [];
+	const tmOverride: unknown | null = preview.value;
 
 	// NON-relation components: PHP dd_core_api serves get_data for ANY
 	// component (the autocomplete_hi edit-in-place widget refreshes the chosen

@@ -38,6 +38,7 @@ import { compareLocators, type StoredSectionId } from '../concepts/locator.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
+import { ensureRecordGenerationTable, withTmEpoch } from '../db/record_generation.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -338,6 +339,7 @@ interface TmRawRow {
  * the opposite end.
  */
 async function tmCount(whereSql: string, params: unknown[]): Promise<number> {
+	await ensureRecordGenerationTable();
 	const ttl = config.ops.tmCountCacheTtlMs;
 	const bare = whereSql === 'true';
 	if (bare && ttl > 0) {
@@ -345,7 +347,7 @@ async function tmCount(whereSql: string, params: unknown[]): Promise<number> {
 		if (hit !== undefined && Date.now() - hit.at < ttl) return hit.value;
 	}
 	const rows = (await sql.unsafe(
-		`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${whereSql}`,
+		`SELECT COUNT(*)::int AS c FROM matrix_time_machine WHERE ${withTmEpoch(whereSql)}`,
 		params,
 	)) as { c: number }[];
 	const value = Number(rows[0]?.c ?? 0);
@@ -364,6 +366,9 @@ async function tmCount(whereSql: string, params: unknown[]): Promise<number> {
 async function queryTmRows(
 	sqo: Record<string, unknown>,
 ): Promise<{ rows: TmRow[]; isRecordList: boolean }> {
+	// The epoch predicate below names the generation store; ensure it exists
+	// before any of the four query shapes runs (see record_generation.ts).
+	await ensureRecordGenerationTable();
 	// TWO scoping surfaces (see buildTmWhere): the per-record component HISTORY
 	// (filter_by_locators) and the section-record LIST (the tool_time_machine
 	// browse: one row per record-level snapshot, tipo = caller section_tipo — PHP
@@ -445,7 +450,7 @@ async function queryTmRows(
 			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
 			 FROM matrix_time_machine tm
 			 JOIN (SELECT id FROM (SELECT id FROM matrix_time_machine
-			                       WHERE ${whereSql}
+			                       WHERE ${withTmEpoch(whereSql)}
 			                       OFFSET 0) scoped
 			       ORDER BY id ${direction}
 			       LIMIT $${barrierParams.length - 1} OFFSET $${barrierParams.length}) page ON page.id = tm.id
@@ -476,7 +481,7 @@ async function queryTmRows(
 			`SELECT tm.id, tm.section_id, tm.section_tipo, tm.tipo, tm.lang, tm.timestamp::text AS timestamp, tm.user_id, tm.bulk_process_id, tm.data
 			 FROM matrix_time_machine tm
 			 JOIN (SELECT id FROM matrix_time_machine
-			       WHERE ${whereSql}
+			       WHERE ${withTmEpoch(whereSql)}
 			       ORDER BY id ${effDirection}
 			       LIMIT $${lateParams.length - 1} OFFSET $${lateParams.length}) page ON page.id = tm.id
 			 ORDER BY tm.id ${effDirection}`,
@@ -490,7 +495,7 @@ async function queryTmRows(
 	const rows = (await sql.unsafe(
 		`SELECT id, section_id, section_tipo, tipo, lang, timestamp::text AS timestamp, user_id, bulk_process_id, data
 		 FROM matrix_time_machine tm
-		 WHERE ${whereSql}
+		 WHERE ${withTmEpoch(whereSql, 'tm')}
 		 ORDER BY ${orderSql}
 		 LIMIT $${params.length - 1} OFFSET $${params.length}`,
 		params,

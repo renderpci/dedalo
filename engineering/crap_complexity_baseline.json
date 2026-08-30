@@ -216,7 +216,7 @@
 		"src/core/section/indexation_grid.ts": 42,
 		"src/core/section/list_definitions/section_list.ts": 8,
 		"src/core/section/locks.ts": 15,
-		"src/core/section/read.ts": 84,
+		"src/core/section/read.ts": 81,
 		"src/core/section/read_facade.ts": 61,
 		"src/core/section/read_source.ts": 11,
 		"src/core/section/record/delete_record.ts": 31,

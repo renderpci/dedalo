@@ -32,6 +32,7 @@ import { DedaloError } from '../errors/dedalo_error.ts';
 import { asRawJsonText, encodeForJsonb, type RawJsonText } from './json_codec.ts';
 import { assertMatrixTable, MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from './matrix.ts';
 import { isInTransaction, sql } from './postgres.ts';
+import { ensureRecordGenerationTable } from './record_generation.ts';
 
 /**
  * The EXPLICIT ordered column list of a standard matrix table, exactly as PHP
@@ -153,6 +154,15 @@ export async function updateMatrixRecord(
 	}
 
 	// No existing record → INSERT, same columns and parameter order as PHP.
+	//
+	// (!) P0-14 — this branch deliberately opens NO generation epoch, and that is
+	// the subtle half of the rule. It re-creates a row at coordinates the caller
+	// already named: the Time Machine SECTION RESTORE resurrecting a deleted
+	// record (tool_time_machine.ts persistRecordColumns), and the save path's
+	// lost-create race (S1-02). Both are the SAME record continuing — an
+	// undelete, not a rebirth — and opening an epoch here would cut a curator off
+	// from the very history they just asked to restore. An epoch belongs only
+	// where a NEW id is minted (insertMatrixRecordWith{Counter,ExplicitId}).
 	const insertColumns = ['section_id', 'section_tipo', ...columnNames.map((c) => `"${c}"`)].join(
 		', ',
 	);
@@ -553,6 +563,8 @@ export async function insertMatrixRecordWithCounter(
 	}
 
 	const historicalMax = counterFloorExpression(tableName);
+	// The statement below writes the generation store in the same breath.
+	await ensureRecordGenerationTable();
 
 	const rows = (await sql.unsafe(
 		`WITH calc_start AS (
@@ -569,11 +581,34 @@ export async function insertMatrixRecordWithCounter(
 			SELECT $1, next_start FROM calc_start
 			ON CONFLICT (tipo) DO UPDATE SET value = ${counterTable}.value + 1
 			RETURNING value
+		),
+		born AS (
+			INSERT INTO "${tableName}" (${columnNames.join(', ')})
+			SELECT ${selectExprs.join(', ')} FROM updated_counter
+			ON CONFLICT (section_id, section_tipo) DO NOTHING
+			RETURNING section_id
+		),
+		-- P0-14 (second half): a record born where a dead one lived must not
+		-- inherit its time-machine history. The epoch rides the SAME statement as
+		-- the birth, so the two commit together — a second statement could be lost
+		-- to a dropped connection after the row committed, leaving a reborn record
+		-- permanently fenceless with no repair path.
+		-- The join sees only PRE-EXISTING rows at the address: the record being
+		-- born has written none yet, so an address with no history yields no epoch
+		-- row at all (the store stays sparse — one row per actual rebirth).
+		opened_epoch AS (
+			INSERT INTO dedalo_ts_record_generation (section_tipo, section_id, epoch_tm_id)
+			SELECT $1, born.section_id, MAX(tm.id) + 1
+			  FROM born
+			  JOIN matrix_time_machine tm
+			    ON tm.section_tipo = $1 AND tm.section_id = born.section_id
+			 GROUP BY born.section_id
+			ON CONFLICT (section_tipo, section_id) DO UPDATE
+			   SET epoch_tm_id = GREATEST(
+			         dedalo_ts_record_generation.epoch_tm_id, EXCLUDED.epoch_tm_id),
+			       opened_at = now()
 		)
-		INSERT INTO "${tableName}" (${columnNames.join(', ')})
-		SELECT ${selectExprs.join(', ')} FROM updated_counter
-		ON CONFLICT (section_id, section_tipo) DO NOTHING
-		RETURNING section_id`,
+		SELECT section_id FROM born`,
 		params as (string | number | null)[],
 	)) as { section_id: number }[];
 	const sectionId = rows[0]?.section_id;
@@ -677,6 +712,8 @@ export async function insertMatrixRecordWithExplicitId(
 		if (tolerateConflict) {
 			// The row already exists (concurrent create won the race) — that is
 			// exactly the tolerated outcome; the caller re-reads under its lock.
+			// NO epoch is opened: nothing was born, and opening one here would cut
+			// the EXISTING record off from its own history.
 			return sectionId;
 		}
 		throw new DedaloError('internal.invariant', {
@@ -684,6 +721,14 @@ export async function insertMatrixRecordWithExplicitId(
 			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId },
 		});
 	}
+	// (!) P0-14 — NO epoch is opened here, deliberately. An EXPLICIT id is one the
+	// caller already believes belongs to this record: a fixture or import
+	// materializing a known record, the save path's lost-create race (S1-02), an
+	// ontology node provisioned at a fixed id. None of those is a rebirth, and
+	// opening an epoch would cut a record off from its own history — measured:
+	// hooking it here severed the canonical test3 playground records from theirs.
+	// A rebirth is a COUNTER allocation landing on an id that was used before,
+	// which is insertMatrixRecordWithCounter's business, not this door's.
 	return Number(inserted);
 }
 

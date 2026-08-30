@@ -56,6 +56,7 @@ import {
 	readMatrixKeyForUpdate,
 } from '../../../src/core/db/matrix_write.ts';
 import { withTransaction } from '../../../src/core/db/postgres.ts';
+import { recordEpoch } from '../../../src/core/db/record_generation.ts';
 import {
 	readTimeMachineRow,
 	recordTimeMachine,
@@ -333,7 +334,19 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	}
 	// The snapshot must belong to the requested target — a mismatched matrix_id
 	// would restore another record's history into this one.
-	if (tmRow.section_tipo !== sectionTipo || tmRow.section_id !== sectionId || tmRow.tipo !== tipo) {
+	//
+	// (!) The address is NOT enough (P0-14). Where a section_id was re-minted, a
+	// DEAD record's snapshots carry the living record's exact coordinates, so
+	// this check passed and the restore wrote the dead record's values in with
+	// ok:true. The record's generation epoch is the second half of its identity:
+	// rows below it belong to whoever held the address before.
+	const epoch = await recordEpoch(sectionTipo, sectionId);
+	if (
+		tmRow.section_tipo !== sectionTipo ||
+		tmRow.section_id !== sectionId ||
+		tmRow.tipo !== tipo ||
+		tmRow.id < epoch
+	) {
 		throw new DedaloError('request.invalid_options', {
 			publicMessage: 'matrix_id does not belong to the requested target',
 			coordinates: { tm_id: String(matrixId), section_tipo: sectionTipo, tipo },

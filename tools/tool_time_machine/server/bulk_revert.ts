@@ -49,6 +49,10 @@ import {
 	readMatrixKeyForUpdate,
 } from '../../../src/core/db/matrix_write.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
+import {
+	ensureRecordGenerationTable,
+	tmEpochPredicate,
+} from '../../../src/core/db/record_generation.ts';
 import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import {
@@ -171,9 +175,14 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 	}
 
 	// Every component write in the batch (id DESC).
+	await ensureRecordGenerationTable();
 	const batchRows = (await sql.unsafe(
+		// P0-14: a batch can span records, and a row written before the record at
+		// an address was reborn belongs to the DEAD one — reverting it would write
+		// a dead record's values into a living one.
 		`SELECT id, section_id, section_tipo, tipo, lang, bulk_process_id, data
-		 FROM matrix_time_machine WHERE bulk_process_id = $1 ORDER BY id DESC`,
+		 FROM matrix_time_machine
+		 WHERE bulk_process_id = $1 AND ${tmEpochPredicate()} ORDER BY id DESC`,
 		[bulkProcessId],
 	)) as TmRow[];
 	if (batchRows.length === 0) {
@@ -215,9 +224,13 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			}
 
 			// Full per-component history (id DESC) → the pre-batch snapshot.
+			await ensureRecordGenerationTable();
 			const history = (await sql.unsafe(
+				// P0-14: preBulkState walks this history for the pre-batch snapshot;
+				// a dead generation's row must not be eligible to become it.
 				`SELECT bulk_process_id, data FROM matrix_time_machine
-				 WHERE tipo = $1 AND section_tipo = $2 AND section_id = $3 ORDER BY id DESC`,
+				 WHERE tipo = $1 AND section_tipo = $2 AND section_id = $3
+				   AND ${tmEpochPredicate()} ORDER BY id DESC`,
 				[row.tipo, row.section_tipo, row.section_id],
 			)) as { bulk_process_id: number | null; data: unknown }[];
 			const { data: revertData, found } = preBulkState(history, bulkProcessId);

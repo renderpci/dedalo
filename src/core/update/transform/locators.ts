@@ -20,6 +20,7 @@
 import { encodeForJsonb } from '../../db/json_codec.ts';
 import { MATRIX_JSONB_COLUMNS, MATRIX_TABLE_ALLOWLIST } from '../../db/matrix.ts';
 import { sql } from '../../db/postgres.ts';
+import { ensureRecordGenerationTable } from '../../db/record_generation.ts';
 import type { TipoMoveItem } from './definitions.ts';
 import { rebaseLocatorsInValue } from './locator_rewrite.ts';
 import type { TransformRecorder } from './report.ts';
@@ -102,6 +103,17 @@ async function moveTimeMachineRows(
 		 WHERE section_tipo = $3 RETURNING id`,
 		[newTipo, base, oldTipo],
 	)) as unknown[];
+	// The GENERATION fence is keyed by the same address (P0-14): re-key it with
+	// the same transform, or a moved record whose history was fenced comes out
+	// the other side with no epoch — "no epoch means all history" — and its
+	// panel lists the dead record's snapshots again.
+	await ensureRecordGenerationTable();
+	await sql.unsafe(
+		`UPDATE dedalo_ts_record_generation
+		    SET section_tipo = $1, section_id = section_id + $2
+		  WHERE section_tipo = $3`,
+		[newTipo, base, oldTipo],
+	);
 	if (rows.length > 0)
 		recorder.record({
 			op: 'update',

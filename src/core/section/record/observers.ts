@@ -65,6 +65,7 @@
 import { incrementCounter } from '../../api/counters.ts';
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import { isInTransaction, registerCommitAction, sql } from '../../db/postgres.ts';
+import { ensureRecordGenerationTable, tmEpochPredicate } from '../../db/record_generation.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/resolver.ts';
@@ -1453,9 +1454,15 @@ export async function recomputeExternalRelation(
 
 		const { persistRecordKeys } = await import('../../section_record/index.ts');
 		const stamp = dbTimestamp(now);
+		await ensureRecordGenerationTable();
 		const history = (await sql.unsafe(
+			// P0-14: the probe asks whether THIS record already has a backfill row.
+			// Without the epoch narrowing, a DEAD generation's rows at the same
+			// address answer yes and the reborn record's own history is never
+			// written — the defect inverted: not inherited history, but suppressed.
 			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = 'lg-nolan' LIMIT 1`,
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = 'lg-nolan'
+			   AND ${tmEpochPredicate()} LIMIT 1`,
 			[targetSection, targetId, observerTipo],
 		)) as unknown[];
 		if (history.length === 0) {

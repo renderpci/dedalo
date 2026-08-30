@@ -14,6 +14,7 @@
 
 import { MATRIX_JSONB_COLUMNS, MATRIX_TABLE_ALLOWLIST } from '../../db/matrix.ts';
 import { sql } from '../../db/postgres.ts';
+import { ensureRecordGenerationTable } from '../../db/record_generation.ts';
 import { requiredOntologyTld } from '../../ontology/tld.ts';
 import type { TipoMoveItem } from './definitions.ts';
 import type { TransformRecorder } from './report.ts';
@@ -108,6 +109,12 @@ export async function executeChangesInTipos(
 			}
 			// matrix_time_machine also keys sections by section_tipo.
 			await renameColumn('matrix_time_machine', 'section_tipo', oldTipo, newTipo, recorder);
+			// ...and so does the GENERATION store, which fences a reborn record from
+			// a dead one's history at the same address (P0-14). Re-keying the TM
+			// rows without re-keying the epoch leaves the fence pointing at a tipo
+			// that no longer exists — the reborn record's panel silently lists the
+			// dead record's snapshots again, and the restore gate reads epoch 0.
+			await carryGenerationEpochs(oldTipo, newTipo, recorder);
 			// The section keeps its records — and their ids — under the new tipo,
 			// so it must keep its high-water mark too: CARRY the counter, then drop
 			// the old row (P0-14).
@@ -161,6 +168,63 @@ async function renameColumn(
 			table,
 			target: oldValue,
 			detail: `${column}→${newValue} (${rows.length})`,
+		});
+}
+
+/**
+ * CARRY the generation epochs of a renamed section to its new tipo.
+ *
+ * The epoch store fences a reborn record from the dead record's history at the
+ * same address (P0-14). The rename rewrites every `matrix_time_machine` row's
+ * `section_tipo` without changing a single `section_id`, so the fence must move
+ * with the rows — otherwise `recordEpoch` finds nothing at the new tipo,
+ * "no epoch means all history" applies, and the reborn record's panel lists the
+ * dead record's snapshots again.
+ *
+ * Not `renameColumn`: that helper does `RETURNING id`, and this store's key is
+ * composite. Merge-then-drop, GREATEST on collision (an epoch may only move
+ * FORWARD — one that moved backwards would re-admit a dead generation).
+ */
+async function carryGenerationEpochs(
+	oldTipo: string,
+	newTipo: string,
+	recorder: TransformRecorder,
+): Promise<void> {
+	if (oldTipo === newTipo) return;
+	await ensureRecordGenerationTable();
+	if (recorder.dryRun) {
+		const count = await scalarCount(
+			'SELECT count(*)::int AS count FROM dedalo_ts_record_generation WHERE section_tipo = $1',
+			[oldTipo],
+		);
+		if (count > 0)
+			recorder.record({
+				op: 'update',
+				table: 'dedalo_ts_record_generation',
+				target: oldTipo,
+				detail: `carry generation epochs→${newTipo} (${count})`,
+			});
+		return;
+	}
+	await sql.unsafe(
+		`INSERT INTO dedalo_ts_record_generation (section_tipo, section_id, epoch_tm_id)
+		 SELECT $2, section_id, epoch_tm_id
+		   FROM dedalo_ts_record_generation WHERE section_tipo = $1
+		 ON CONFLICT (section_tipo, section_id) DO UPDATE
+		    SET epoch_tm_id = GREATEST(
+		          dedalo_ts_record_generation.epoch_tm_id, EXCLUDED.epoch_tm_id)`,
+		[oldTipo, newTipo],
+	);
+	const dropped = (await sql.unsafe(
+		'DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1 RETURNING section_id',
+		[oldTipo],
+	)) as unknown[];
+	if (dropped.length > 0)
+		recorder.record({
+			op: 'update',
+			table: 'dedalo_ts_record_generation',
+			target: oldTipo,
+			detail: `carry generation epochs→${newTipo} (${dropped.length})`,
 		});
 }
 

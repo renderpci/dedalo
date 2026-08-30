@@ -143,6 +143,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// request identity. Cleared only by a process restart, which is correct —
 	// CREATE TABLE IF NOT EXISTS is idempotent and the DDL cannot un-apply.
 	'core/section/record/temporal_store.ts:tableReady',
+	// Same shape for the P0-14 record-generation epoch store: a boolean bootstrap
+	// memo, no request identity. The table's authority is
+	// install/db/migrations/0005_record_generation.sql; this memo exists because
+	// the INSTALLER mints records before any boot migration has run.
+	'core/db/record_generation.ts:tableReady',
 	'core/resolve/environment.ts:pgVersionCache',
 	'core/diffusion_bridge/diffusion_map.ts:mapCache',
 	'core/diffusion_bridge/diffusion_map.ts:targetsCache',

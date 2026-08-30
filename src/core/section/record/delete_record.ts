@@ -36,6 +36,7 @@ import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
 import { deleteMatrixRecord } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
+import { ensureRecordGenerationTable, tmEpochPredicate } from '../../db/record_generation.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
@@ -436,9 +437,15 @@ async function removeAllInverseReferences(
 		const newData = remaining.length > 0 ? remaining : null;
 		// Component save audit (relation data is nolan): backfill pair like any
 		// TS-side component write.
+		await ensureRecordGenerationTable();
 		const history = (await sql.unsafe(
+			// P0-14: the probe asks whether THIS record already has a backfill row.
+			// Without the epoch narrowing, a DEAD generation's rows at the same
+			// address answer yes and the reborn record's own history is never
+			// written — the defect inverted: not inherited history, but suppressed.
 			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = 'lg-nolan' LIMIT 1`,
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = 'lg-nolan'
+			   AND ${tmEpochPredicate()} LIMIT 1`,
 			[group.ownerSection, group.ownerId, group.component],
 		)) as unknown[];
 		if (history.length === 0) {
@@ -643,9 +650,13 @@ export async function deleteSectionData(
 				: null;
 
 		const tmLang = (await getTranslatableByTipo(component.tipo)) ? dataLang : 'lg-nolan';
+		await ensureRecordGenerationTable();
 		const history = (await sql.unsafe(
+			// P0-14: same narrowing as the sibling probe above — a dead generation's
+			// rows must not answer for this record.
 			`SELECT 1 FROM matrix_time_machine
-			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4 LIMIT 1`,
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3 AND lang = $4
+			   AND ${tmEpochPredicate()} LIMIT 1`,
 			[sectionTipo, sectionId, component.tipo, tmLang],
 		)) as unknown[];
 		if (history.length === 0) {
