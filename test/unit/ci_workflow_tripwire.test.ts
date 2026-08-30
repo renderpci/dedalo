@@ -287,6 +287,10 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/marc_identity_native.test.ts',
+		"Its whole point is behavioural: it creates real records carrying a real code component, imports a MARC file whose control number matches, and asserts the row landed on the RIGHT record — plus the destructive control, that a control number equal to another record's section_id does not write to that record. None of that exists without the suite database",
+	],
+	[
 		'test/unit/account_revocation_native.test.ts',
 		'Every assertion is about what a REAL write did to real state: it inserts dd128 records through the counter-allocating writer, logs them in, applies each of the six account transitions through a real door, and then asks the session store and the media marker directory what survived — a revocation gate that mocked either surface would prove nothing about the property it exists to hold',
 	],

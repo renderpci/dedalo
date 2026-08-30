@@ -153,10 +153,103 @@ services:
       # the official image, so the old .../data mount point refuses to start.
       - ragdata:/var/lib/postgresql
 
+  # --- Nightly backup --------------------------------------------------------
+  # THE STACK HAD NO BACKUP JOB AT ALL (P0-13, 2026-08-30). deploy/dedalo-backup.*
+  # is a systemd unit, which a compose host does not run — so every containerised
+  # install shipped with no scheduled copy of anything, while `private:` and
+  # `media:` carried the comment "back this up" and nothing did.
+  #
+  # It runs the SAME scripts the systemd unit runs (bind-mounted: deploy/ is
+  # deliberately absent from the image, see the Dockerfile's build-context
+  # allowlist), so there is one implementation of "what a backup is" and not two.
+  #
+  # THREE OF THE FIVE STORES OF engineering/PRODUCTION.md §6 EXIST HERE: the matrix
+  # DB (1), the media originals (3) and /private (4). Store 2 (RAG) lives in the
+  # `rag` profile — add a fourth step for it, like the unit's commented line, if you
+  # enable it; store 5 (site-builder instances) is not part of this stack.
+  #
+  # WHERE IT WRITES, AND WHAT THAT IS WORTH. Into the `backups` volume — i.e. onto
+  # this same host, next to the data. That is a real restore point for the failures
+  # that actually happen most (a bad import, a deleted record, a truncated dump) and
+  # NO PROTECTION AT ALL against losing the machine or the disk. Copy the volume off
+  # this host on a schedule you control; nothing in a single-host compose file can
+  # do that for you, and a backup that never leaves the machine it protects is half
+  # a backup.
+  #
+  # HOW YOU KNOW IT WORKED: `docker compose ps` marks this service UNHEALTHY while
+  # /backups/BACKUP_FAILED exists — the marker the run writes when any store fails
+  # and removes when every store succeeds. That file, and /backups/LAST_OK, are the
+  # two things to look at.
+  backup:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # The database this stack created. If you told the install wizard a DIFFERENT
+      # database or role than these, correct them here — the backup connects on its
+      # own and cannot ask the engine what it chose.
+      DB_NAME: ${POSTGRES_DB:-dedalo_main}
+      DB_USER: ${POSTGRES_USER:-dedalo_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      # Same media root the engine and the proxy use, mounted read-only below.
+      MEDIA_PATH: /srv/dedalo/media
+      DEDALO_BACKUP_STATE_DIR: /backups
+      # How many dated generations of the media originals and of /private to keep.
+      # A one-generation mirror propagates a mass deletion within a day; these are
+      # hard-linked, so a fortnight of them costs about one copy plus the changes.
+      DEDALO_BACKUP_KEEP: "14"
+    volumes:
+      - ./deploy:/opt/dedalo/master_dedalo/deploy:ro
+      - private:/private:ro
+      - media:/srv/dedalo/media:ro
+      - backups:/backups
+    # One run a day, the first one an hour after start. `sleep & wait` (not a bare
+    # sleep) is the same shape as the nginx/certbot loops above: it lets SIGTERM
+    # stop the container promptly instead of waiting out the sleep.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # NO `set -e`: a store that fails must not stop the next one, nor kill the
+        # loop. The run's verdict is /backups/BACKUP_FAILED (written by the last
+        # step, removed when every store succeeded) and the healthcheck reads it.
+        set -u
+        D=/opt/dedalo/master_dedalo/deploy
+        export DEDALO_BACKUP_STATUS_DIR=/tmp/dedalo-backup-status
+        sleep 3600 & wait $${!}
+        while :; do
+          rm -rf "$$DEDALO_BACKUP_STATUS_DIR"
+          "$$D/dedalo-backup-step.sh" run matrix_db \
+            "$$D/dedalo-db-backup.sh" --label compose --dir /backups/db \
+            --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT \
+            --user-key DB_USER --password-key DB_PASSWORD \
+            --pg-dump pg_dump --pg-restore pg_restore
+          "$$D/dedalo-backup-step.sh" run media \
+            "$$D/dedalo-tree-backup.sh" --label media --source-key MEDIA_PATH \
+            --dest /backups/media --keep "$$DEDALO_BACKUP_KEEP"
+          "$$D/dedalo-backup-step.sh" run --last private \
+            "$$D/dedalo-tree-backup.sh" --label private --source /private/ \
+            --dest /backups/private --keep "$$DEDALO_BACKUP_KEEP"
+          sleep 86400 & wait $${!}
+        done
+    healthcheck:
+      # UNHEALTHY while the last run left a failure marker. This is the whole
+      # notification mechanism a compose host gets: there is no systemd OnFailure=
+      # here, so the state has to be visible in `docker compose ps`.
+      test: ["CMD-SHELL", "test ! -e /backups/BACKUP_FAILED"]
+      interval: 300s
+      timeout: 5s
+      retries: 1
+      start_period: 60s
+
 volumes:
   pgdata:
   private:      # SECRETS — back this up
   media:        # the originals are the source of truth — back this up
   socket:
+  backups:      # the nightly copies — SEE THE backup SERVICE: copy this OFF this host
   mariadata:
   ragdata:

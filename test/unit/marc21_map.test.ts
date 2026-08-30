@@ -102,12 +102,15 @@ describe('MARC21 map application (pure)', () => {
 		expect(extractMarcValues(record, { field: '001' })).toEqual(['REC-1']);
 	});
 
-	test('applyMarcMap resolves fields + section_id', () => {
+	test('applyMarcMap resolves fields + carries the identifier verbatim', () => {
 		const map: MarcMapEntry[] = [{ component_tipo: INPUT_TEXT, field: '245', subfield: 'a' }];
 		const mapped = applyMarcMap(record, map, { field: '001' });
 		expect(mapped.fields).toEqual([{ component_tipo: INPUT_TEXT, values: ['The Title'] }]);
-		// section_id from control field '001' is non-numeric → null (create new)
-		expect(mapped.sectionId).toBeNull();
+		// DATA-08 (2026-08-30): the control field's value is an IDENTIFIER, carried
+		// as-is for the door's code lookup. It was previously read as a section_id,
+		// so this record addressed record 1 whenever the ILS number happened to
+		// start with a digit; 'REC-1' merely happened to escape that cast.
+		expect(mapped.code).toBe('REC-1');
 	});
 });
 
@@ -121,7 +124,16 @@ describe('MARC21 import drive (scratch-twin, real DB)', () => {
 			const mapped = applyMarcMap(record, [
 				{ component_tipo: INPUT_TEXT, field: '245', subfield: 'a' },
 			]);
-			const created = await importMappedRecords([mapped], SECTION, USER);
+			// No id field configured ⇒ the record names no identifier ⇒ create. The
+			// mapper hands the door `code`, and the door is what turns an identifier
+			// into an address (import_code_lookup.ts); the executor only ever sees a
+			// resolved sectionId, which here is null.
+			expect(mapped.code).toBeNull();
+			const created = await importMappedRecords(
+				[{ sectionId: null, fields: mapped.fields }],
+				SECTION,
+				USER,
+			);
 			createdIds.push(...created.createdIds);
 			expect(created.created).toBe(1);
 			const newId = created.createdIds[0]!;

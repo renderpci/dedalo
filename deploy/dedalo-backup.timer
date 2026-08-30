@@ -1,5 +1,26 @@
 # Nightly cadence for dedalo-backup.service (audit S2-35).
+#
 #   sudo systemctl enable --now dedalo-backup.timer
+#
+# THREE UNITS AND TWO SCRIPTS, not one file. Install all of them or the failure
+# alarm is silent (P0-13, 2026-08-30):
+#
+#   dedalo-backup.timer            this file — when
+#   dedalo-backup.service          the five stores — what
+#   dedalo-backup-alert@.service   OnFailure= target — who is told
+#
+# and, from the repo, deploy/dedalo-backup-step.sh, dedalo-db-backup.sh,
+# dedalo-tree-backup.sh, dedalo-site-builder-backup.sh, dedalo-backup-alert.sh.
+#
+# Persistent=true runs a missed backup after a machine that was off at 03:30 comes
+# back up — a museum's server is not a datacentre's, and "the night it was switched
+# off" must not be a night without a backup.
+#
+# THE TIMER IS NOT THE PROOF. `systemctl list-timers` says when it will run next,
+# never that the last run produced anything restorable. The two things to look at
+# are $DEDALO_BACKUP_STATE_DIR (BACKUP_FAILED must not exist; LAST_OK carries the
+# last good run's per-store summary) and, quarterly, an actual test restore
+# (engineering/PRODUCTION.md §6).
 
 [Unit]
 Description=Run the Dedalo backup set nightly

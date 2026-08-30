@@ -2856,7 +2856,25 @@ DEDALO_BACKUP_PATH="/srv/dedalo/backups/code"
 
 DEDALO_BACKUP_TIME_RANGE `int`
 
-This parameter defines the time lapse between backup copies in hours. Dédalo check in every user login if the last backup exceed this time lapse, in affirmative case, it will create new one.
+This parameter is the **freshness threshold**, in hours, applied to database backups: it
+decides when an existing backup is judged too old. It schedules NOTHING — no engine event, a
+user login included, ever starts a backup.
+
+Making the backups is the operating system's job — a nightly timer, described under
+[Backups](../management/backup.md). What this value decides, verified against the code on
+2026-08-30, is:
+
+- **Whether a code update may proceed.** Applying a code release is REFUSED when the newest
+  dump in the backup directory is older than this many hours, or when there is none at all:
+  a code swap's rollback contract leans on there being a database to come back to. The
+  operator can waive the refusal explicitly, and the update panel shows the same verdict
+  before they start.
+- **Whether the maintenance "Make backup" button would skip.** It never does today: that
+  button always forces a dump, so the throttle it belongs to is not reached.
+
+Age is judged by the newest backup file's modification time. Keep the value in step with how
+often the nightly job actually runs — set it below the real interval and the updater refuses
+on an installation that is backing up perfectly well.
 
 ```bash
 DEDALO_BACKUP_TIME_RANGE=8

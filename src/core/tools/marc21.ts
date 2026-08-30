@@ -225,107 +225,78 @@ export function extractMarcValues(record: MarcRecord, spec: MarcValueSpec): stri
 	return values.filter((v) => v !== '');
 }
 
-/** The rows a record maps to: {section_id? (from field_to_section_id), fields:[{tipo, values}]}. */
+/**
+ * The rows a record maps to: the identifier the record CARRIES, plus the
+ * per-component values.
+ */
 export interface MarcMappedRecord {
-	sectionId: number | null;
+	/**
+	 * The `field_to_section_id` value, trimmed but otherwise VERBATIM — a library
+	 * control number ('.b12345678', 'ocm12345678', '42'). It is NOT an address:
+	 * the tool door resolves it against the section's code component
+	 * (tools/tool_import_marc21/server/index.ts, `resolveImportCodes`).
+	 *
+	 * Null when the config names no id field, or this record's id field is absent
+	 * or blank — both mean "this record names no identifier", which the door
+	 * reads as "create".
+	 */
+	code: string | null;
 	fields: { component_tipo: string; values: string[] }[];
 }
 
-/**
- * The record id an id cell names, or null when it names none: A RUN OF DECIMAL
- * DIGITS, bounded by `Number.isSafeInteger`. The cell must arrive trimmed.
- *
- * SECOND IMPLEMENTATION OF ONE LAW, ON PURPOSE — the CSV door's
- * `parseRecordIdCell` (src/core/tools/import_csv.ts) is the same four lines, and
- * importing it here is the wrong trade TODAY: this module is a leaf ISO 2709
- * parser whose only dependency is the error registry, while the CSV planner
- * pulls the conform facets, the ontology resolver and through them the config
- * layer. That edge makes `parseMarc` unloadable whenever an unrelated config
- * module fails to parse — measured, not imagined, while this fix was being
- * written. The durable fix is the `src/core/db/sql_identifier.ts` precedent (and
- * `phpTrim`'s standing debt at this same door): ONE leaf module both doors
- * import. Until it exists the two copies are held equal by EXECUTION, not by
- * hope — `test/unit/csv_parser_conformance_native.test.ts` runs both over the
- * same corpus and asserts 0 divergences, and asserts the corpus distinguishes
- * the grammar from the reader it replaced.
- */
-export function parseRecordIdCell(cell: string): number | null {
-	// Grammar FIRST, arithmetic second: isSafeInteger still guards a digit run
-	// too long to be an exact JS integer.
-	const parsed = Number(cell);
-	if (/^[0-9]+$/.test(cell) && Number.isSafeInteger(parsed) && parsed > 0) return parsed;
-	return null;
-}
-
-/** `907` / `907$a` — how the refusal below names the field it read the id from. */
-function specLabel(spec: MarcValueSpec): string {
+/** `907` / `907$a` — how a refusal names the field it read the identifier from. */
+export function marcSpecLabel(spec: MarcValueSpec): string {
 	return spec.subfield === undefined ? spec.field : `${spec.field}$${spec.subfield}`;
 }
 
 /**
- * Apply a marc21_map to a parsed record → the per-component values + the matched
- * section_id (PHP process_marc21_field_mappings). Pure over the record + map.
+ * Apply a marc21_map to a parsed record → the per-component values + the
+ * identifier the record carries (PHP process_marc21_field_mappings, plus the
+ * READ half of resolve_target_section). Pure over the record + map: it reaches
+ * no database, and therefore decides NO record address.
  *
- * DATA-22 AT THE MARC DOOR (closed 2026-08-27). The id was read with
- * `Number.parseInt`, which STOPS at the first non-digit and ignores the tail: a
- * `907$a` of '12abc' resolved to record 12, and the whole record was written
- * over A RECORD THE OPERATOR NEVER NAMED — the same silent wrong-record write
- * the CSV door was fixed for, on the door beside it ('1e3' → record 1, '0x10' →
- * record 0, '-5' → record -5, each equally arbitrary). The grammar that decides
- * is the CSV door's — a run of decimal digits — held equal to it by execution
- * (`parseRecordIdCell` above).
+ * DATA-08, CLOSED HERE AND AT THE DOOR (2026-08-30): AN IMPORTED EXTERNAL
+ * IDENTIFIER IS NOT A RECORD ADDRESS. This function used to read the id cell
+ * with a record-id grammar and hand the number back as `sectionId`, which the
+ * tool passed to the shared executor as the record to write. A MARC control
+ * number of '42' therefore wrote onto record 42 of the target section —
+ * whatever curated record already lived there — and when no such row existed,
+ * `saveComponentData`'s upsert branch (save_component.ts :1064, PHP set_dato
+ * parity) MINTED one at that meaningless id. Both outcomes were reported as
+ * success. There was no existence check and no code lookup anywhere in the run.
  *
- * TWO DIFFERENT THINGS REACH THIS FIELD, and the grammar is what tells them
- * apart:
+ * The frozen tool never did this: `resolve_target_section`
+ * (class.tool_import_marc21.php :393-419) SEARCHED the value as a code
+ * (`get_section_id_from_code` :1202 — an SQO `=<code>` over the component the
+ * `id` map entry's ddo_map names) and created a record when the search found
+ * none. The identifier was an identifier at both ends; only the port turned it
+ * into an address.
  *
- *   - a DÉDALO RECORD ID — digits — which updates that record;
- *   - a FOREIGN control number ('REC-1', 'ocm12345678', a Millennium
- *     '.b12345678'). The frozen tool never used this value as a section_id at
- *     all: `resolve_target_section` SEARCHED it as a code
- *     (`get_section_id_from_code`) and created a record when the search found
- *     none. That lookup is not ported (see this tool's module header), so a
- *     value that is not a record id has always meant "create" here. Unchanged —
- *     a ledgered degraded port, not this fix's business.
+ * So the value now travels as `code` and the ADDRESS DECISION LIVES AT THE
+ * DOOR, where the database is reachable — this module stays the leaf ISO 2709
+ * parser whose only dependency is the error registry (an edge to the search
+ * layer would make `parseMarc` unloadable whenever an unrelated config module
+ * fails to parse; measured 2026-08-27).
  *
- * WHAT IS REFUSED is the dangerous middle: a value that is not a record id but
- * that the old reader TURNED INTO one (`parseInt` returned a number). It named a
- * record and we cannot tell which, so neither answer is honest — writing over
- * record 12, or quietly creating a duplicate where an update was intended. The
- * refusal names the field, the subfield and the cell, because the repair is in
- * the file or in the map.
- *
- * WHY THE REFUSAL IS A THROW: this mapper has no per-record report channel
- * (`MarcMappedRecord` is values + id, and `null` there MEANS "create"). The
- * caller maps every record of every staged file BEFORE the executor writes
- * anything, so throwing refuses the RUN with nothing written and nothing
- * half-imported — the CSV door's "a shape we cannot trust is not imported at
- * all", one file bigger.
+ * WITH THE ADDRESS GONE, SO IS THE ID GRAMMAR. `parseRecordIdCell` lived here
+ * only to decide that address, and the DATA-22 refusal beside it ('12abc' →
+ * record 12, the truncation corner) existed only because a cast happened at
+ * all: nothing here casts any more, so both are deleted rather than kept
+ * unused. The digits grammar remains at the CSV door
+ * (src/core/tools/import_csv.ts `parseRecordIdCell`), where the `section_id`
+ * COLUMN genuinely is a Dédalo address — that door is unchanged.
  */
 export function applyMarcMap(
 	record: MarcRecord,
 	map: readonly MarcMapEntry[],
 	fieldToSectionId?: MarcValueSpec,
 ): MarcMappedRecord {
-	let sectionId: number | null = null;
+	let code: string | null = null;
 	if (fieldToSectionId !== undefined) {
-		const idValues = extractMarcValues(record, fieldToSectionId);
-		// Whitespace is the transmission format's padding, never part of the id
-		// (the CSV door trims before the same grammar, with PHP's charlist).
-		const raw = (idValues[0] ?? '').trim();
-		if (raw !== '') {
-			sectionId = parseRecordIdCell(raw);
-			// Not an id, but the OLD reader made one out of it: refuse by name.
-			// `Number.parseInt` is quoted here on purpose — this line's job is to
-			// answer "would the frozen behaviour have written a record?", so it must
-			// keep asking with the frozen behaviour's own reader.
-			if (sectionId === null && Number.isFinite(Number.parseInt(raw, 10))) {
-				const sentence = `marc21 field_to_section_id ${specLabel(fieldToSectionId)} is '${raw}', which is not a record id (a record id is a run of digits). Nothing was imported — fix the file, or point field_to_section_id at the field that carries the Dédalo record id.`;
-				throw new DedaloError('request.invalid_data', {
-					message: sentence,
-					publicMessage: sentence,
-				});
-			}
-		}
+		// Whitespace is the transmission format's padding (MARC pads its fixed
+		// fields), never part of the identifier.
+		const raw = (extractMarcValues(record, fieldToSectionId)[0] ?? '').trim();
+		if (raw !== '') code = raw;
 	}
 	const fields = map
 		.map((entry) => ({
@@ -333,7 +304,7 @@ export function applyMarcMap(
 			values: extractMarcValues(record, entry),
 		}))
 		.filter((f) => f.values.length > 0);
-	return { sectionId, fields };
+	return { code, fields };
 }
 
 /** Parse a full MARC21 stream into records (skips malformed ones, collecting errors). */

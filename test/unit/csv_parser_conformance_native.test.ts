@@ -33,13 +33,16 @@
  * enclosure; the ingest door refuses both, because a shape we cannot trust cannot
  * be mapped to components without writing values into the wrong ones.
  *
- * AND THE RECORD-ID GRAMMAR, AT BOTH DOORS. DATA-22 is not a CSV defect, it is a
- * key-reading one, and the MARC21 door read its `field_to_section_id` with the
- * same `Number.parseInt`. The two doors carry two copies of the four-line reader
- * (marc21.ts is a leaf parser; importing the CSV planner would put the ontology
- * resolver and the config layer behind `parseMarc`), so this file holds the
- * differential that keeps them equal and asserts the MARC door's own refusal —
- * one law, one gate.
+ * AND THE RECORD-ID GRAMMAR — which, since 2026-08-30, has ONE door. DATA-22 was
+ * not a CSV defect but a key-reading one, and the MARC21 door read its
+ * `field_to_section_id` with the same `Number.parseInt`, so this file held a
+ * differential over the two copies of the four-line reader. DATA-08 then removed
+ * the MARC copy entirely: that door's value is a foreign control number, resolved
+ * against the section's code component, and marc21.ts reads no address at all.
+ * The differential is therefore gone, and what stands in its place — over the very
+ * same corpus — is the MARC door's own law: no cell becomes a record address.
+ * `parseRecordIdCell` is now the CSV `section_id` COLUMN's alone, and is asserted
+ * through `planCsvImport` (the door that reads it) rather than imported here.
  *
  * TIER: needs the suite DB (the planner's conform facets and the duplicate-id
  * case drive the real tool against matrix_test).
@@ -55,21 +58,15 @@ import {
 	assertCsvStructure,
 	type CsvColumn,
 	parseCsvDetailed,
-	parseRecordIdCell,
 	phpTrim,
 	planCsvImport,
 } from '../../src/core/tools/import_csv.ts';
 import type { ImportFileReport } from '../../src/core/tools/import_wire.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
-// The MARC door reads its `field_to_section_id` with the SAME record-id grammar,
-// and carries its own copy of it (marc21.ts is a leaf parser; importing the CSV
-// planner would put the conform facets and the config layer behind `parseMarc`).
-// Both readers are held equal HERE — see "one grammar, two implementations".
-import {
-	applyMarcMap,
-	type MarcRecord,
-	parseRecordIdCell as parseRecordIdCellMarc,
-} from '../../src/core/tools/marc21.ts';
+// The MARC door carries NO record-id reader any more (DATA-08): its
+// `field_to_section_id` is a foreign identifier, and this file pins that it never
+// becomes an address — see "the MARC door: an identifier is carried, never cast".
+import { applyMarcMap, type MarcRecord } from '../../src/core/tools/marc21.ts';
 // The SECOND implementation of PHP's trim(). It cannot be imported by the CSV
 // planner itself (a core -> diffusion edge that boundary_seam_tripwire refuses),
 // so the two copies are held equal HERE — see "one law, two implementations".
@@ -465,26 +462,33 @@ describe('row identity: a key we cannot read is refused, never guessed (DATA-22)
 });
 
 /**
- * THE SAME GRAMMAR AT THE MARC DOOR (DATA-22, closed there 2026-08-27).
+ * THE MARC DOOR NO LONGER READS AN ADDRESS AT ALL (DATA-08, closed 2026-08-30).
  *
- * `applyMarcMap` resolved `field_to_section_id` with `Number.parseInt` — the
- * defect above, on the door beside it: a `907$a` of '12abc' wrote the record
- * over record 12. It now reads the id with the same grammar, and this pins BOTH
- * halves of that change:
+ * THIS BLOCK USED TO ASSERT THE OPPOSITE, and the history is the point. DATA-22
+ * closed the TRUNCATION corner here on 2026-08-27: `applyMarcMap` read
+ * `field_to_section_id` with `Number.parseInt`, so a `907$a` of '12abc' wrote the
+ * record over record 12, and the fix refused every cell the old reader had
+ * invented a record out of. What it left standing was the larger defect
+ * underneath — a cell of '900743' was still USED AS A section_id, so a library
+ * control number addressed record 900743 of the section, whatever curated record
+ * lived there, and `saveComponentData`'s upsert branch minted one when it did
+ * not exist. The assertion `applyMarcMap(marcRecord('900743'), [], ID_SPEC)
+ * .sectionId === 900743` pinned that as if it were the rule.
  *
- *   - the two readers agree (they are two copies of four lines — marc21.ts is a
- *     leaf parser and importing the planner would put the ontology resolver and
- *     the config layer behind `parseMarc`, which was measured to make the parser
- *     unloadable when an unrelated config module failed to parse);
- *   - and the REFUSAL POPULATION is exactly the dangerous one. A value that
- *     names no record at all ('REC-1', 'ocm12345678', a Millennium
- *     '.b12345678') is UNCHANGED — PHP resolved those through the
- *     `get_section_id_from_code` lookup this tool never ported, so they have
- *     always meant "create" here. Only a value the old reader would have TURNED
- *     INTO a record is refused.
+ * The identifier is now carried VERBATIM as `code`, and the ADDRESS is resolved
+ * at the tool door against the section's code component (`findSectionIdByCode`,
+ * src/core/tools/import_code_lookup.ts) — which is what the frozen
+ * `resolve_target_section` / `get_section_id_from_code` always did.
+ *
+ * SO THE DIFFERENTIAL ABOVE HAS LOST ITS SECOND COPY. There is no record-id
+ * grammar left in marc21.ts to hold equal to the CSV planner's: the digits
+ * grammar belongs to the CSV `section_id` COLUMN, which genuinely is a Dédalo
+ * address, and the MARC door reads no address at all. What is pinned here
+ * instead, over the SAME corpus, is the property that replaced it: no cell —
+ * id-shaped or not — comes back as a record address.
  */
-describe('the MARC door: one record-id grammar, two implementations', () => {
-	/** One record whose 907$a carries `id`. Built, not parsed: the grammar is the subject. */
+describe('the MARC door: an identifier is carried, never cast', () => {
+	/** One record whose 907$a carries `id`. Built, not parsed: the value is the subject. */
 	function marcRecord(id: string): MarcRecord {
 		return {
 			leader: '00000nam a2200000n a4500',
@@ -541,35 +545,33 @@ describe('the MARC door: one record-id grammar, two implementations', () => {
 
 	const ID_INPUTS = idCorpus();
 
-	test('the two readers answer identically over the whole corpus', () => {
-		const divergences = ID_INPUTS.filter(
-			(input) => parseRecordIdCell(input) !== parseRecordIdCellMarc(input),
-		);
-		expect(divergences.map((input) => JSON.stringify(input))).toEqual([]);
+	test('NO cell of the corpus comes back as a record address', () => {
+		const addresses: string[] = [];
+		for (const input of ID_INPUTS) {
+			const mapped = applyMarcMap(marcRecord(input), [], ID_SPEC);
+			// The whole answer, for every input: the trimmed cell, or null when the
+			// record names none. Nothing numeric, nothing derived.
+			const expected = input.trim() === '' ? null : input.trim();
+			if (mapped.code !== expected) addresses.push(JSON.stringify(input));
+			// And the field that used to carry the address is GONE, not merely
+			// unset: a caller cannot read one back by habit.
+			if ('sectionId' in mapped) addresses.push(`sectionId on ${JSON.stringify(input)}`);
+		}
+		expect(addresses).toEqual([]);
 		// A census, quoted by the WC entry: a shrunk corpus is red, not quiet.
 		expect(ID_INPUTS.length).toBe(3025);
 	});
 
-	test('the corpus actually distinguishes the grammar from the reader it replaced', () => {
-		// Without this the agreement above could be an agreement about nothing.
-		const differs = ID_INPUTS.filter((input) => {
-			const legacy = Number.parseInt(input, 10);
-			const strict = parseRecordIdCell(input);
-			return (Number.isFinite(legacy) ? legacy : null) !== strict;
-		});
-		expect(differs.length).toBeGreaterThan(0);
-		// The named case, both readers: parseInt takes a prefix, the grammar refuses.
-		expect(Number.parseInt('12abc', 10)).toBe(12);
-		expect(parseRecordIdCell('12abc')).toBeNull();
-		expect(parseRecordIdCellMarc('12abc')).toBeNull();
-	});
-
 	/**
-	 * Each of these is a cell the OLD reader wrote a record from — `wouldHaveBeen`
-	 * is that record, asserted below, so this cannot quietly become a list of
-	 * values that were never dangerous.
+	 * Each of these is a cell the OLD readers acted on — `wouldHaveBeen` is the
+	 * record `Number.parseInt` addressed (DATA-08 for the digit runs, which the
+	 * DATA-22 fix left alone; DATA-22's own refusal population for the rest), so
+	 * this cannot quietly become a list of values that were never dangerous.
 	 */
-	const MARC_IDS_THE_OLD_READER_INVENTED: readonly { cell: string; wouldHaveBeen: number }[] = [
+	const MARC_IDS_THE_OLD_READERS_ACTED_ON: readonly { cell: string; wouldHaveBeen: number }[] = [
+		{ cell: '900743', wouldHaveBeen: 900743 },
+		{ cell: '007', wouldHaveBeen: 7 },
+		{ cell: '42', wouldHaveBeen: 42 },
 		{ cell: '12abc', wouldHaveBeen: 12 },
 		{ cell: '1e3', wouldHaveBeen: 1 },
 		{ cell: '12.5', wouldHaveBeen: 12 },
@@ -577,41 +579,26 @@ describe('the MARC door: one record-id grammar, two implementations', () => {
 		{ cell: '-5', wouldHaveBeen: -5 },
 	];
 
-	test('a cell the old reader turned into a record is REFUSED, naming field and subfield', () => {
-		for (const { cell, wouldHaveBeen } of MARC_IDS_THE_OLD_READER_INVENTED) {
-			// The premise: this cell used to become a record write.
+	test('a cell the old readers acted on is now carried verbatim, and refuses nothing', () => {
+		for (const { cell, wouldHaveBeen } of MARC_IDS_THE_OLD_READERS_ACTED_ON) {
+			// The premise: this cell used to reach a record write (or, after
+			// DATA-22, a refusal) purely because a cast happened.
 			expect(Number.parseInt(cell, 10)).toBe(wouldHaveBeen);
-
-			let refusal: Error | null = null;
-			try {
-				applyMarcMap(marcRecord(cell), [], ID_SPEC);
-			} catch (error) {
-				refusal = error as Error;
-			}
-			expect(refusal).not.toBeNull();
-			expect(refusal?.message).toContain('907$a');
-			expect(refusal?.message).toContain(`'${cell}'`);
+			// Now nothing casts, so nothing is dangerous and nothing is refused:
+			// the value travels to the code lookup exactly as the file wrote it.
+			expect(applyMarcMap(marcRecord(cell), [], ID_SPEC).code).toBe(cell);
 		}
 	});
 
-	test('a foreign control number is UNCHANGED: it names no record, so the run creates one', () => {
-		for (const cell of ['REC-1', 'ocm12345678', '.b12345678']) {
-			// The premise: the old reader read no record out of these either.
-			expect(Number.isFinite(Number.parseInt(cell, 10))).toBe(false);
-			expect(applyMarcMap(marcRecord(cell), [], ID_SPEC).sectionId).toBeNull();
-		}
-	});
-
-	test('a clean id resolves, padding included, and an absent id field is not a refusal', () => {
-		expect(applyMarcMap(marcRecord('900743'), [], ID_SPEC).sectionId).toBe(900743);
-		expect(applyMarcMap(marcRecord('007'), [], ID_SPEC).sectionId).toBe(7);
+	test('a blank, missing or unconfigured id field means the record names none', () => {
 		// MARC pads its fields; the padding is the format's, never part of the id.
-		expect(applyMarcMap(marcRecord('  900743 '), [], ID_SPEC).sectionId).toBe(900743);
-		// No id field at all, and an id field that is blank: both mean "names none".
-		expect(applyMarcMap(marcRecord('900743'), [], { field: '001' }).sectionId).toBeNull();
-		expect(applyMarcMap(marcRecord('   '), [], ID_SPEC).sectionId).toBeNull();
-		// And with no spec at all (the tool config carries no field_to_section_id).
-		expect(applyMarcMap(marcRecord('900743'), []).sectionId).toBeNull();
+		expect(applyMarcMap(marcRecord('  .b900743 '), [], ID_SPEC).code).toBe('.b900743');
+		// The spec points at a field this record does not carry.
+		expect(applyMarcMap(marcRecord('900743'), [], { field: '001' }).code).toBeNull();
+		// Present but blank.
+		expect(applyMarcMap(marcRecord('   '), [], ID_SPEC).code).toBeNull();
+		// And no spec at all (the tool config carries no field_to_section_id).
+		expect(applyMarcMap(marcRecord('900743'), []).code).toBeNull();
 	});
 });
 

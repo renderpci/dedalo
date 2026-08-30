@@ -75,7 +75,43 @@ DEDALO_BACKUP_PATH="/srv/dedalo/backups/code"
 		default: 8,
 		heading: 'Defining backup time range',
 		typeLabel: 'int',
-		doc: `This parameter defines the time lapse between backup copies in hours. Dédalo check in every user login if the last backup exceed this time lapse, in affirmative case, it will create new one.
+		// (!) This entry used to describe a LOGIN-TRIGGERED BACKUP: "Dedalo check in every
+		// user login if the last backup exceed this time lapse, in affirmative case, it will
+		// create new one." That was v6's behaviour, inherited as prose and never as code.
+		// Verified 2026-08-30 by reading the whole login path: nothing in the TS engine
+		// starts a backup, on login or on any other event. So the sentence told an operator
+		// that setting this key gave them periodic backups, when the only thing that makes a
+		// backup on a schedule is `deploy/dedalo-backup.service` + `.timer` -- an operator
+		// who trusted the manual had NO backups at all. Documenting what the key does is the
+		// fix; implementing a multi-GB pg_dump on somebody's login is not (a nightly timer is
+		// the right owner of that work, and it already exists).
+		//
+		// The two live readers, verified 2026-08-30 (kept HERE rather than in the rendered
+		// prose: config.md is the operator's manual and internal paths are noise there) —
+		// `backupFreshness` in src/core/update/preconditions.ts, which turns this into the
+		// waivable `update.refused` of a code update and into the update panel's
+		// `backup_fresh` line (src/core/update/status.ts); and the non-forced branch of
+		// `initBackupSequence` (src/core/area_maintenance/backup.ts), whose only engine
+		// caller — the make_backup widget — always forces, so it does not fire today.
+		doc: `This parameter is the **freshness threshold**, in hours, applied to database backups: it
+decides when an existing backup is judged too old. It schedules NOTHING — no engine event, a
+user login included, ever starts a backup.
+
+Making the backups is the operating system's job — a nightly timer, described under
+[Backups](../management/backup.md). What this value decides, verified against the code on
+2026-08-30, is:
+
+- **Whether a code update may proceed.** Applying a code release is REFUSED when the newest
+  dump in the backup directory is older than this many hours, or when there is none at all:
+  a code swap's rollback contract leans on there being a database to come back to. The
+  operator can waive the refusal explicitly, and the update panel shows the same verdict
+  before they start.
+- **Whether the maintenance "Make backup" button would skip.** It never does today: that
+  button always forces a dump, so the throttle it belongs to is not reached.
+
+Age is judged by the newest backup file's modification time. Keep the value in step with how
+often the nightly job actually runs — set it below the real interval and the updater refuses
+on an installation that is backing up perfectly well.
 
 \`\`\`bash
 DEDALO_BACKUP_TIME_RANGE=8

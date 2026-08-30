@@ -108,7 +108,16 @@ describe('checkUpdatePreconditions — recent-backup warning (never refuses)', (
 		const dir = join(scratch, 'fresh');
 		mkdirSync(dir, { recursive: true });
 		writeFileSync(join(dir, 'note.txt'), 'not a backup');
-		writeFileSync(join(dir, 'db.custom.backup'), 'x');
+		const artifact = join(dir, 'db.custom.backup');
+		writeFileSync(artifact, 'x');
+		// AGED PAST THE IN-PROGRESS WINDOW, deliberately. This stub is not a real
+		// archive, so on a host that cannot verify it the engine falls back to the
+		// only question left — "might a dump still be writing this?" — and a file
+		// whose mtime is THIS INSTANT is exactly what that question is about.
+		// "Fresh" here means recent, not written a millisecond ago; a minute-old
+		// backup is what an operator actually has when they click update.
+		const aged = Date.now() - 10 * 60_000;
+		utimesSync(artifact, aged / 1000, aged / 1000);
 		const out = passWithDir(dir);
 		expect(out.warnings).toEqual([]);
 	});
@@ -164,7 +173,14 @@ describe('checkUpdatePreconditions — backupRequire (the code-update REFUSAL mo
 	test('fresh backup passes with no warnings', () => {
 		const dir = join(scratch, 'fresh');
 		mkdirSync(dir, { recursive: true });
-		writeFileSync(join(dir, 'db.custom.backup'), 'x');
+		const artifact = join(dir, 'db.custom.backup');
+		writeFileSync(artifact, 'x');
+		// Aged past the in-progress window for the same reason as the WARN twin
+		// above: this stub cannot be verified, so a mtime of THIS INSTANT is the
+		// one shape the fallback question is about. THE REFUSAL MODE IS WHY IT
+		// MATTERS — here a wrong answer does not warn, it BLOCKS the update.
+		const aged = Date.now() - 10 * 60_000;
+		utimesSync(artifact, aged / 1000, aged / 1000);
 		expect(runRequired(dir)).toEqual({ warnings: [] });
 	});
 

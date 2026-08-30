@@ -13,7 +13,7 @@
  * THE LAW OF THIS MODULE: it never re-implements a refusal. Every readiness
  * line asks the SAME function the pipeline refuses on — `isSupervised`,
  * `detectDeploymentChannel`, `runtimePathsInsideTree`, `backupRootIsInsideTree`,
- * `newestBackupMtimeMs`, `planCodeBuild`, `buildCodeUpdateInfo`. A second copy
+ * `backupFreshness`, `planCodeBuild`, `buildCodeUpdateInfo`. A second copy
  * of a rule would drift, and a readiness panel that disagrees with the pipeline
  * is worse than no panel: it would earn trust it cannot keep. Where a check is
  * NOT decidable before the download (the release's own root whitelist and its
@@ -31,9 +31,10 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot } from '../../config/env.ts';
+import type { BackupVerdict } from '../area_maintenance/backup.ts';
 import { runtimePathsInsideTree } from '../install/runtime_paths.ts';
 import { getServerState } from '../resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
@@ -234,16 +235,39 @@ function operatorChecks(principal: Principal): StatusCheck[] {
  * blocked" over a run the pipeline accepts — the panel/pipeline disagreement
  * this module's header forbids. The age fact rides in `detail` unchanged, and
  * an UNWAIVED request still refuses exactly as before.
+ *
+ * P0-13 (2026-08-30): the age it reports is now the age of the newest artifact
+ * a `pg_restore` read has NOT DISPROVED — freshness is not usability, and a
+ * pg_dump killed at 60% used to make this line read `ok`. Two consequences the
+ * operator must be able to see: `none` can now mean "dumps exist but none of
+ * them verified", and a dump being WRITTEN right now no longer counts. WHICH
+ * artifact was counted (or refused, and why) rides in `scope` — otherwise the
+ * panel would say `none` over a directory visibly full of .backup files and
+ * give the operator nothing to act on. The verdict itself is still the
+ * pipeline's own, computed exactly once.
  */
 function backupFreshnessCheck(): StatusCheck {
 	return probe('backup_fresh', () => {
 		// The pipeline's OWN predicate, not a second copy of it — the panel
 		// rounded and the refusal did not, which made them disagree for the
 		// half hour after every freshness deadline (see backupFreshness).
-		const { hours, stale } = backupFreshness();
-		if (hours === null) return check('backup_fresh', 'warn', 'none');
-		return check('backup_fresh', stale ? 'warn' : 'ok', String(Math.round(hours)));
+		const { hours, stale, verdict, rejected } = backupFreshness();
+		const scope = backupScope(verdict, rejected);
+		if (hours === null) return check('backup_fresh', 'warn', 'none', scope);
+		return check('backup_fresh', stale ? 'warn' : 'ok', String(Math.round(hours)), scope);
 	});
+}
+
+/**
+ * The artifact behind the line: the one that COUNTED, else the newest one that
+ * was refused and why. FACTS only (a file name and a machine reason) — the
+ * wording stays the client's (WC-033), like every other check's scope.
+ */
+function backupScope(verdict: BackupVerdict | null, rejected: BackupVerdict[]): string | undefined {
+	const counted = verdict ?? rejected[0];
+	if (counted === undefined) return undefined;
+	const name = basename(counted.filePath);
+	return counted.usable && counted.verified ? name : `${name} (${counted.reason})`;
 }
 
 /** The runtime-path census gate: no runtime data may live inside the tree. */

@@ -56,6 +56,7 @@ import {
 	existsSync,
 	lstatSync,
 	mkdirSync,
+	readdirSync,
 	readFileSync,
 	readlinkSync,
 	rmSync,
@@ -67,6 +68,9 @@ import { EXIT, OPTIONAL_FLAGS, VERBS } from '../../publication/site_builder/src/
 import { derive } from '../../publication/site_builder/src/provision/layout.ts';
 import { parseManifest } from '../../publication/site_builder/src/provision/schema.ts';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
+// The alias rule ITSELF, not a copy of it: leg H holds the backup scripts' own
+// fallback table equal to the one the engine's readEnv applies.
+import { PHP_KEY_ALIASES } from '../../src/config/env.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -985,6 +989,408 @@ describe('the site-builder backup script actually copies what it claims to', () 
 			const run = spawnSync('sh', [SCRIPT, dest, configDir], { encoding: 'utf8' });
 			expect(run.status).not.toBe(0);
 			expect(run.stderr).toContain('NOT backed up');
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * H — the nightly backup unit: the keys it reads, the failure it reports, and
+ *     the two copiers, RUN
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * WHY (P0-13, 2026-08-30). Every link of the recovery chain failed SILENTLY, and
+ * every one of them failed in this tree, which no gate read:
+ *
+ *   - `deploy/dedalo-backup.service` read $DB_PASSWORD/$DB_HOST/$DB_USER/$DB_NAME
+ *     and $MEDIA_PATH — spellings the install wizard NEVER WRITES (it writes the
+ *     PHP-catalog names: src/core/install/config_persist.ts). On a wizard-installed
+ *     host those five expanded to empty strings.
+ *   - `Type=oneshot` with four plain ExecStart lines stops at the first failure, so
+ *     a database that was down at 03:30 meant the media originals, ../private/ and
+ *     every museum's site-builder instance were not copied either.
+ *   - There was no `OnFailure=` and no notification anywhere in deploy/.
+ *   - The dump was never read back, so a truncated artifact counted as a fresh
+ *     backup for the code updater's own refusal gate.
+ *
+ * These legs are the mechanical half of that repair. The alias table is checked
+ * against `PHP_KEY_ALIASES` ITSELF (imported, not copied), the installer's written
+ * keys are PARSED out of the persister, and the two new copiers are RUN — a backup
+ * script that has never been run is a hypothesis, not a backup.
+ */
+describe('the nightly backup unit reads keys that exist and reports the failures it has', () => {
+	const UNIT = 'deploy/dedalo-backup.service';
+	const STEP = 'deploy/dedalo-backup-step.sh';
+	const DB_SCRIPT = 'deploy/dedalo-db-backup.sh';
+	const TREE_SCRIPT = 'deploy/dedalo-tree-backup.sh';
+
+	/** Every ExecStart line of the unit that is NOT commented out. */
+	function activeExecStarts(): string[] {
+		return read(UNIT)
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line.startsWith('ExecStart='));
+	}
+
+	/** Every `--<something>-key <KEY>` pair written in the unit. */
+	function keyArguments(): { flag: string; key: string }[] {
+		return [...read(UNIT).matchAll(/--([a-z-]+)-key\s+([A-Z][A-Z0-9_]*)/g)].map((m) => ({
+			flag: m[1] as string,
+			key: m[2] as string,
+		}));
+	}
+
+	/**
+	 * The `alias_of()` case arms of one script: `KEY) echo ALIAS ;;`. It is the
+	 * script's copy of the env.ts fallback rule, and the point of parsing it is that
+	 * a copy which drifts is exactly the defect this leg exists for.
+	 */
+	function scriptAliases(relative: string): Record<string, string> {
+		const body = read(relative);
+		const from = body.indexOf('alias_of()');
+		expect(
+			from,
+			`${relative}: no alias_of() — the TS-native → PHP-alias fallback is what makes the unit work on a wizard-installed host`,
+		).toBeGreaterThan(-1);
+		const scope = body.slice(from, body.indexOf('\n}', from));
+		const table: Record<string, string> = {};
+		for (const m of scope.matchAll(/^\s*([A-Z][A-Z0-9_]*)\)\s*echo\s+([A-Z][A-Z0-9_]*)\s*;;/gm)) {
+			table[m[1] as string] = m[2] as string;
+		}
+		return table;
+	}
+
+	/**
+	 * The keys `persistConfig` WRITES into ../private/.env — parsed from the emitted
+	 * lines, never listed here. This is the census the old unit contradicted.
+	 */
+	function installerWrittenKeys(): Set<string> {
+		const source = read('src/core/install/config_persist.ts');
+		const keys = new Set<string>();
+		for (const m of source.matchAll(/`([A-Z][A-Z0-9_]*)=\$\{/g)) keys.add(m[1] as string);
+		for (const m of source.matchAll(/'([A-Z][A-Z0-9_]*)=[^']*'/g)) keys.add(m[1] as string);
+		expect(
+			keys.size,
+			'config_persist.ts: no written keys parsed — this leg went blind',
+		).toBeGreaterThan(5);
+		return keys;
+	}
+
+	test('every alias the backup scripts carry is the one src/config/env.ts resolves', () => {
+		for (const script of [DB_SCRIPT, TREE_SCRIPT]) {
+			const table = scriptAliases(script);
+			expect(
+				Object.keys(table).length,
+				`${script}: alias_of() has no entries — nothing would fall back to the installer's spelling`,
+			).toBeGreaterThan(0);
+			for (const [native, alias] of Object.entries(table)) {
+				expect(
+					{ script, native, alias },
+					`${script} maps ${native} → ${alias}; src/config/env.ts maps it to ${PHP_KEY_ALIASES[native] ?? '(nothing)'}. The backup must read the key the way the engine does, or it dumps the wrong thing or nothing at all.`,
+				).toEqual({ script, native, alias: PHP_KEY_ALIASES[native] as string });
+			}
+		}
+	});
+
+	test('every key the unit names is a real config key, and one the install can produce', () => {
+		const catalog = new Set(Object.keys(CONFIG_CATALOG));
+		const aliasNames = new Set(Object.values(PHP_KEY_ALIASES));
+		const written = installerWrittenKeys();
+		const dbAliases = scriptAliases(DB_SCRIPT);
+		const treeAliases = scriptAliases(TREE_SCRIPT);
+
+		const offenders: string[] = [];
+		for (const { flag, key } of keyArguments()) {
+			const known = catalog.has(key) || aliasNames.has(key) || key in PHP_KEY_ALIASES;
+			if (!known) {
+				offenders.push(`--${flag}-key ${key}: not a catalog key, not a PHP alias`);
+				continue;
+			}
+			// THE DEFECT THIS LEG IS NAMED AFTER. When a key HAS a PHP alias, the alias
+			// is the spelling the install wizard writes and the bare key is the one it
+			// does not — so reading the bare key alone resolves to empty on every
+			// wizard-installed host. Being a documented catalog key is NOT enough to
+			// escape this (DB_PASSWORD is one, and was exactly the key that failed):
+			// the script must carry the fallback.
+			const expectedAlias = PHP_KEY_ALIASES[key];
+			const mapped = (dbAliases[key] ?? treeAliases[key]) as string | undefined;
+			if (expectedAlias !== undefined) {
+				if (mapped !== expectedAlias) {
+					offenders.push(
+						`--${flag}-key ${key}: the install wizard writes ${expectedAlias}, not ${key}, and no backup script maps one to the other (it maps ${mapped ?? 'nothing'})`,
+					);
+				}
+				continue;
+			}
+			// No alias: the key is its own spelling everywhere, so it only has to be a
+			// key the engine documents or the installer writes.
+			if (!catalog.has(key) && !written.has(key)) {
+				offenders.push(`--${flag}-key ${key}: no catalog entry and the installer never writes it`);
+			}
+		}
+		expect(
+			offenders,
+			'A backup unit that reads a key nothing sets dumps as the wrong role, from the wrong host, into a file named after nothing — and says it worked.\n  ' +
+				offenders.join('\n  '),
+		).toEqual([]);
+	});
+
+	test('one store failing cannot silence the others, and the run still reports failure', () => {
+		const active = activeExecStarts();
+		expect(active.length).toBeGreaterThanOrEqual(2);
+		const last = active[active.length - 1] as string;
+		// The aggregator: it runs after its own store and turns "any store failed" into
+		// the unit's exit status. Without it, `-` on every line would make the unit
+		// always succeed — the papered-over failure that is worse than the outage.
+		expect(
+			last.includes('--last'),
+			`${UNIT}: the last ExecStart must carry --last, or nothing ever reports the run's verdict:\n  ${last}`,
+		).toBe(true);
+		const notTolerant = active
+			.slice(0, -1)
+			.filter((line) => !line.startsWith('ExecStart=-') && !line.startsWith('ExecStart=+-'));
+		expect(
+			notTolerant,
+			`${UNIT}: a Type=oneshot unit stops at the first failing ExecStart, so every step before the last must be '-'-prefixed or one store's failure cancels the rest.\n  ` +
+				notTolerant.join('\n  '),
+		).toEqual([]);
+		// And every step goes through the runner that records it: a step that bypasses it
+		// is a store whose outcome the aggregate verdict cannot see.
+		const unrecorded = active.filter((line) => !line.includes('dedalo-backup-step.sh'));
+		expect(
+			unrecorded,
+			`${UNIT}: these steps record no status\n  ${unrecorded.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('the unit names a failure alarm, and the alarm exists', () => {
+		const unit = read(UNIT);
+		const onFailure = unit.match(/^OnFailure=(\S+)$/m);
+		expect(
+			onFailure,
+			`${UNIT}: no OnFailure=. A backup that fails silently every night is worse than no backup, because it is believed.`,
+		).not.toBeNull();
+		// `%n` is the failed unit's name; the target is a template unit, so the file on
+		// disk is the part before the '@'.
+		const target = (onFailure?.[1] as string).replace(/@.*$/, '@.service');
+		expect(existsSync(join(REPO_ROOT, 'deploy', target))).toBe(true);
+		const alarm = read(`deploy/${target}`);
+		const script = alarm.match(/ExecStart=(\S+)/)?.[1] as string;
+		expect(existsSync(join(REPO_ROOT, 'deploy', script.split('/').pop() as string))).toBe(true);
+	});
+
+	test('the media store keeps generations and states its retention rule', () => {
+		const tree = read(TREE_SCRIPT);
+		// EXECUTABLE lines only. The header explains --link-dest at length, so a
+		// whole-file substring check stays green on a script whose CODE stopped
+		// linking generations — measured: replacing the live flag left this green.
+		const code = tree
+			.split('\n')
+			.filter((line) => !/^\s*#/.test(line))
+			.join('\n');
+		// --link-dest is what makes N generations affordable; KEEP is the rule. A
+		// single mirrored generation propagates a mass deletion into the only copy of
+		// the media originals within a day.
+		expect(code).toContain('--link-dest');
+		expect(tree).toMatch(/RETENTION RULE/);
+		expect(code).toMatch(/KEEP=\d+/);
+		// And the unit must not have gone back to mirroring the media root in place.
+		const unit = read(UNIT);
+		expect(unit).not.toMatch(/^ExecStart=[^#\n]*rsync/m);
+	});
+
+	test('a dump that cannot be read back never becomes a *.backup file', () => {
+		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-db-backup');
+		rmSync(root, { recursive: true, force: true });
+		try {
+			const bin = join(root, 'bin');
+			const dir = join(root, 'db');
+			mkdirSync(bin, { recursive: true });
+			// A pg_dump that "succeeds" and leaves a file — the truncated-dump case: the
+			// bytes are there, they are just not a whole archive.
+			writeFileSync(
+				join(bin, 'pg_dump'),
+				'#!/bin/sh\nfor a in "$@"; do case "$a" in --file=*) f=${a#--file=};; esac; done\nprintf half > "$f"\nexit 0\n',
+			);
+			writeFileSync(
+				join(bin, 'pg_restore_bad'),
+				'#!/bin/sh\necho "unexpected end of file" >&2\nexit 1\n',
+			);
+			writeFileSync(join(bin, 'pg_restore_ok'), '#!/bin/sh\nexit 0\n');
+			for (const name of ['pg_dump', 'pg_restore_bad', 'pg_restore_ok']) {
+				chmodSync(join(bin, name), 0o755);
+			}
+
+			const run = (restore: string) =>
+				spawnSync(
+					'sh',
+					[
+						join(REPO_ROOT, DB_SCRIPT),
+						'--dir',
+						dir,
+						'--db',
+						'scratch_museum',
+						'--pg-dump',
+						join(bin, 'pg_dump'),
+						'--pg-restore',
+						join(bin, restore),
+					],
+					{ encoding: 'utf8' },
+				);
+
+			const bad = run('pg_restore_bad');
+			expect(bad.status).not.toBe(0);
+			// NOTHING under the final suffix, and no leftovers either: a half dump under
+			// a backup's name is what makes the update panel say "ready to update".
+			expect(readdirSync(dir)).toEqual([]);
+
+			const good = run('pg_restore_ok');
+			expect({ status: good.status, stderr: good.stderr }).toEqual({ status: 0, stderr: '' });
+			const files = readdirSync(dir);
+			expect(files.length).toBe(1);
+			// The suffix newestBackupMtimeMs() scans (core/area_maintenance/backup.ts).
+			expect(files[0]).toMatch(/\.custom\.backup$/);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test('the step runner runs every store and still fails the run', () => {
+		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-backup-step');
+		rmSync(root, { recursive: true, force: true });
+		try {
+			mkdirSync(root, { recursive: true });
+			const env = {
+				...process.env,
+				DEDALO_BACKUP_STATUS_DIR: join(root, 'status'),
+				DEDALO_BACKUP_STATE_DIR: join(root, 'state'),
+			};
+			const step = join(REPO_ROOT, STEP);
+			const witness = join(root, 'second_store_ran');
+
+			const failing = spawnSync('sh', [step, 'run', 'store_one', 'sh', '-c', 'exit 3'], {
+				encoding: 'utf8',
+				env,
+			});
+			expect(failing.status).toBe(3);
+
+			// THE POINT: the second store runs even though the first one failed.
+			const second = spawnSync('sh', [step, 'run', 'store_two', 'sh', '-c', `: > ${witness}`], {
+				encoding: 'utf8',
+				env,
+			});
+			expect(second.status).toBe(0);
+			expect(existsSync(witness)).toBe(true);
+
+			// AND THE OTHER POINT: the run's verdict is still failure, in the exit status
+			// and on disk, so OnFailure= fires and the operator has something to find.
+			const last = spawnSync('sh', [step, 'run', '--last', 'store_three', 'true'], {
+				encoding: 'utf8',
+				env,
+			});
+			expect(last.status).not.toBe(0);
+			expect(existsSync(join(root, 'state', 'BACKUP_FAILED'))).toBe(true);
+			expect(readFileSync(join(root, 'state', 'BACKUP_FAILED'), 'utf8')).toContain('store_one');
+
+			// A clean run clears the marker: an alarm that is only ever raised is ignored
+			// exactly like a stuck one.
+			rmSync(join(root, 'status'), { recursive: true, force: true });
+			const clean = spawnSync('sh', [step, 'run', '--last', 'store_one', 'true'], {
+				encoding: 'utf8',
+				env,
+			});
+			expect(clean.status).toBe(0);
+			expect(existsSync(join(root, 'state', 'BACKUP_FAILED'))).toBe(false);
+			expect(existsSync(join(root, 'state', 'LAST_OK'))).toBe(true);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test('a deletion in the source does not reach the previous generation', () => {
+		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-tree-backup');
+		rmSync(root, { recursive: true, force: true });
+		try {
+			const source = join(root, 'media');
+			const dest = join(root, 'backup');
+			mkdirSync(source, { recursive: true });
+			writeFileSync(join(source, 'irreplaceable.tif'), 'the only copy\n');
+			writeFileSync(join(source, 'other.tif'), 'x\n');
+
+			const script = join(REPO_ROOT, TREE_SCRIPT);
+			const run = (keep: string) =>
+				spawnSync(
+					'sh',
+					[script, '--dest', dest, '--label', 'media', '--source', source, '--keep', keep],
+					{
+						encoding: 'utf8',
+					},
+				);
+
+			expect(run('2').status).toBe(0);
+			const first = readdirSync(dest).filter((name) => /^\d{4}-/.test(name));
+			expect(first.length).toBe(1);
+
+			// The mass-deletion case, in miniature.
+			rmSync(join(source, 'irreplaceable.tif'));
+			// The generation name is a per-second timestamp; without the wait the second
+			// run would land in the same second and refuse (correctly) rather than test
+			// what this is about.
+			spawnSync('sh', ['-c', 'sleep 1.1']);
+			expect(run('2').status).toBe(0);
+
+			const generations = readdirSync(dest)
+				.filter((name) => /^\d{4}-/.test(name))
+				.sort();
+			expect(generations.length).toBe(2);
+			// Yesterday still has the file today lost. This is the whole reason
+			// generations exist, and what `rsync -a --delete` into one directory removed.
+			expect(existsSync(join(dest, generations[0] as string, 'irreplaceable.tif'))).toBe(true);
+			expect(existsSync(join(dest, generations[1] as string, 'irreplaceable.tif'))).toBe(false);
+			expect(readlinkSync(join(dest, 'latest'))).toBe(generations[1] as string);
+
+			// Retention removes only beyond --keep, and only whole generations.
+			spawnSync('sh', ['-c', 'sleep 1.1']);
+			expect(run('2').status).toBe(0);
+			const kept = readdirSync(dest)
+				.filter((name) => /^\d{4}-/.test(name))
+				.sort();
+			expect(kept.length).toBe(2);
+			expect(kept).not.toContain(generations[0] as string);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test('an unresolvable media root REFUSES rather than backing up a guess', () => {
+		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-tree-refuse');
+		rmSync(root, { recursive: true, force: true });
+		try {
+			mkdirSync(root, { recursive: true });
+			// MEDIA_PATH unset and no alias: the engine's own default is one of two
+			// paths (src/config/catalog/media.ts legacyAwareDefaultDir), and guessing the
+			// wrong one backs up an empty directory while reporting success.
+			const env = { ...process.env };
+			env.MEDIA_PATH = '';
+			env.DEDALO_MEDIA_PATH = '';
+			const run = spawnSync(
+				'sh',
+				[
+					join(REPO_ROOT, TREE_SCRIPT),
+					'--dest',
+					join(root, 'backup'),
+					'--label',
+					'media',
+					'--source-key',
+					'MEDIA_PATH',
+				],
+				{ encoding: 'utf8', env },
+			);
+			expect(run.status).not.toBe(0);
+			expect(run.stderr).toContain('MEDIA_PATH');
+			expect(existsSync(join(root, 'backup'))).toBe(false);
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}

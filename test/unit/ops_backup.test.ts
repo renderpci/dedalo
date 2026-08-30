@@ -11,6 +11,26 @@
  * - PGPASSWORD reaches the child from config.db.password (asserted through
  *   the fake script echoing its environment);
  * - the default backup dir derives from privateDir, not the process cwd.
+ *
+ * P0-13 (2026-08-30) — A BACKUP COUNTS ONLY WHEN IT HAS BEEN VERIFIED:
+ * - a dump that exits non-zero is RETIRED (`*.failed`), never left as a corpse
+ *   that the widget lists and the update precondition counts;
+ * - a file that only LOOKS like an archive is refused by `verifyBackupArtifact`
+ *   and skipped by `newestUsableBackup`;
+ * - an artifact still being written (fresh mtime, no verdict) is not a restore
+ *   point;
+ * - and the degradations NEVER refuse: no pg_restore on the host, or a foreign
+ *   (non-custom-format) dump, still counts — a precondition that refuses a
+ *   legitimate update because it could not LOOK is an outage.
+ *
+ * WHAT IS NOT COVERED HERE, stated rather than implied: a REAL custom-format
+ * archive truncated mid-data. Building one needs a live pg_dump against a
+ * server, which this hermetic gate has no right to require. That case was
+ * measured by hand on 2026-08-30 and the numbers are recorded in backup.ts's
+ * verification header: `pg_restore --list` accepts the 60% copy (1121 entries,
+ * exit 0) and only the deep `pg_restore -f /dev/null` read rejects it. What IS
+ * gated below is the mechanism that makes the deep read happen: a cached TOC
+ * verdict must never satisfy a deep question.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -23,6 +43,9 @@ import {
 	getBackupDir,
 	getBackupFiles,
 	initBackupSequence,
+	newestUsableBackup,
+	resolvePgRestore,
+	verifyBackupArtifact,
 } from '../../src/core/area_maintenance/backup.ts';
 
 const scratch = mkdtempSync(join(tmpdir(), 'dedalo_backup_'));
@@ -51,6 +74,13 @@ echo "PGPASSWORD_SEEN=\${PGPASSWORD:-none}" >> "${scratch}/env_seen"
 if [ "$mode" = "fail" ]; then
   : > "$out"                       # the empty artifact a failed dump leaves
   echo "pg_dump: error: connection to server failed: fe_sendauth: no password supplied" >&2
+  exit 1
+fi
+if [ "$mode" = "fail_partial" ]; then
+  # The P0-13 shape: a dump that died PART WAY leaves a big, fresh, non-empty
+  # file — exactly what the old existsSync && size>0 check called usable.
+  printf 'PGDMPnot-a-complete-archive' > "$out"
+  echo "pg_dump: error: query failed: server closed the connection unexpectedly" >&2
   exit 1
 fi
 echo "not-really-a-dump-but-nonempty" > "$out"
@@ -149,5 +179,117 @@ describe('initBackupSequence verification (S2-35)', () => {
 			expect(typeof file.name).toBe('string');
 			expect(file.size).toMatch(/(bytes|KB|MB|GB)$/);
 		}
+	});
+});
+
+/** Far enough ahead that the in-progress window is not what decides a verdict. */
+const AFTER_THE_WRITE_WINDOW = Date.now() + 3_600_000;
+
+describe('restore-point verification (P0-13)', () => {
+	test('a dump that dies PART WAY is retired, not listed as a backup', async () => {
+		writeFileSync(join(scratch, 'mode'), 'fail_partial');
+		// Its OWN directory: the forced file name is timestamped to the SECOND,
+		// and these tests run inside one second of each other.
+		const partialDir = join(scratch, 'backups_partial');
+		const response = await initBackupSequence(-1, true, {
+			backupDir: partialDir,
+			pgDumpBin: fakePgDump,
+			fastFailWindowMs: 5000,
+		});
+		// The artifact is NON-EMPTY and fresh — `existsSync && size > 0`, the old
+		// verdict, called this a backup and the operator swapped their code tree.
+		expect(response.ok).toBe(false);
+		const names = readdirSync(partialDir);
+		expect(names.filter((name) => name.endsWith('.backup'))).toHaveLength(0);
+		expect(names.some((name) => name.endsWith('.backup.failed'))).toBe(true);
+		// …and nothing in the directory now counts as a restore point.
+		expect(newestUsableBackup(partialDir, { nowMs: AFTER_THE_WRITE_WINDOW }).mtimeMs).toBe(0);
+	});
+
+	test('a file that only LOOKS like an archive is refused (pg_restore is asked)', () => {
+		const bin = resolvePgRestore();
+		if (bin === null) return; // no pg_restore on this host: covered by the degradation test
+		const fake = join(scratch, 'looks-real.custom.backup');
+		writeFileSync(fake, `PGDMP${'\u0000'.repeat(64)}`);
+		const verdict = verifyBackupArtifact(fake, { deep: true, nowMs: AFTER_THE_WRITE_WINDOW });
+		expect(verdict.usable).toBe(false);
+		expect(verdict.reason).toBe('not_an_archive');
+		// The decisive verdict is cached beside the artifact, so the panel and the
+		// update precondition inherit it instead of re-reading the archive.
+		expect(existsSync(`${fake}.verified`)).toBe(true);
+		// A cached verdict is keyed on (size, mtime) and survives a pg_restore
+		// that no longer exists — the cache, not the binary, answers the retry.
+		const cached = verifyBackupArtifact(fake, {
+			deep: true,
+			pgRestoreBin: join(scratch, 'no-such-pg_restore'),
+			nowMs: AFTER_THE_WRITE_WINDOW,
+		});
+		expect(cached.reason).toBe('not_an_archive');
+	});
+
+	test('an artifact being written RIGHT NOW is not a restore point', () => {
+		// A running pg_dump owns the freshest mtime in the directory, which is
+		// precisely why recency cannot be the test — in EITHER direction. Recency
+		// does not make an artifact good, and it does not make one bad: a blanket
+		// "too fresh to count" window refused every finished backup for its first
+		// 90 seconds, so an operator who took a backup and immediately tried to
+		// update was told there was no restore point (2026-08-30).
+		//
+		// What is asserted is the PROPERTY — a partial write is not a restore
+		// point — and the engine reports what it PROVED. A six-byte stub is not an
+		// archive and is named as such; a genuinely truncated dump is named
+		// `truncated` (backup_restorability_native covers that one against a real
+		// pg_dump). `in_progress` remains only for the host that cannot verify.
+		const growing = join(scratch, 'still-writing.custom.backup');
+		writeFileSync(growing, 'PGDMP…');
+		const verdict = verifyBackupArtifact(growing, {});
+		expect(verdict.usable).toBe(false);
+		expect(verdict.reason).toBe('not_an_archive');
+	});
+
+	test('DEGRADATION NEVER REFUSES: no pg_restore, and foreign formats, still count', () => {
+		// A host with no pg_restore cannot judge its dumps. Refusing every update
+		// there would be an outage caused by the guard, not by a missing backup.
+		const custom = join(scratch, 'unjudgeable.custom.backup');
+		writeFileSync(custom, 'PGDMP-whatever');
+		const blind = verifyBackupArtifact(custom, {
+			deep: true,
+			pgRestoreBin: null,
+			nowMs: AFTER_THE_WRITE_WINDOW,
+		});
+		expect(blind.usable).toBe(true);
+		expect(blind.verified).toBe(false); // usable is NOT the same claim as proven
+		expect(blind.reason).toBe('unverifiable_no_pg_restore');
+		// Nor is a plain-SQL / foreign dump named *.backup refused for a format
+		// this module never claimed to verify: it behaves exactly as before P0-13.
+		const foreign = join(scratch, 'plain-sql.custom.backup');
+		writeFileSync(foreign, '-- PostgreSQL database dump\nSET statement_timeout = 0;\n');
+		const verdict = verifyBackupArtifact(foreign, { deep: true, nowMs: AFTER_THE_WRITE_WINDOW });
+		expect(verdict.usable).toBe(true);
+		expect(verdict.verified).toBe(false);
+		expect(verdict.reason).toBe('unverifiable_foreign_format');
+		// …and it IS what a "do we have a backup" question finds.
+		expect(
+			newestUsableBackup(scratch, { deep: true, nowMs: AFTER_THE_WRITE_WINDOW }).mtimeMs,
+		).toBeGreaterThan(0);
+	});
+
+	test('a cached TOC verdict does NOT answer a deep question', () => {
+		// The measured fact behind the whole finding: `pg_restore --list` accepts
+		// an archive truncated to 60%. If a cheap verdict could satisfy a deep
+		// caller, the code-update refusal would inherit that blindness.
+		const bin = resolvePgRestore();
+		if (bin === null) return;
+		const file = join(scratch, 'toc-only.custom.backup');
+		writeFileSync(file, `PGDMP${'\u0000'.repeat(32)}`);
+		verifyBackupArtifact(file, { nowMs: AFTER_THE_WRITE_WINDOW }); // cheap pass, writes the sidecar
+		const deep = verifyBackupArtifact(file, {
+			deep: true,
+			pgRestoreBin: join(scratch, 'no-such-pg_restore'),
+			nowMs: AFTER_THE_WRITE_WINDOW,
+		});
+		// It re-ran instead of trusting the cheap sidecar — with an absent binary
+		// that re-run can only answer "unverifiable", never "verified".
+		expect(deep.verified).toBe(false);
 	});
 });

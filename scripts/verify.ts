@@ -169,6 +169,10 @@ const TRIPWIRES = [
 	'test/unit/site_builder_pairing_tripwire.test.ts',
 	'test/unit/site_builder_single_source_tripwire.test.ts',
 	'test/unit/operator_commands_tripwire.test.ts',
+	'test/unit/backup_restorability_native.test.ts',
+	'test/unit/deploy_env_contract_tripwire.test.ts',
+	'test/unit/catalog_behaviour_tripwire.test.ts',
+	'test/unit/marc_identity_native.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

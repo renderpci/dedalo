@@ -1,22 +1,65 @@
-# Dédalo nightly backup — reference timer unit (audit S2-35).
+# Dédalo nightly backup — reference timer unit (audit S2-35; rebuilt for P0-13 on
+# 2026-08-30).
 #
-# Dumps the matrix Postgres DB with the SAME naming the make_backup widget
-# uses, then snapshots the other four members of the backup set (see
-# engineering/PRODUCTION.md §6, whose table names each store and the token
-# below that copies it): the RAG pgvector DB (if enabled), the media originals,
-# ../private/ (.env secrets, session store, ts_state.json), and every
-# site-builder INSTANCE on this host. PGPASSWORD comes from the environment
-# file — never on the argv.
+# It copies the FIVE stores engineering/PRODUCTION.md §6 names — the matrix
+# Postgres DB, the RAG pgvector DB (if enabled), the media originals, ../private/
+# (.env secrets, session store, ts_state.json), and every site-builder INSTANCE on
+# this host. One ExecStart per store, in the same order and with the same tokens as
+# that table; test/unit/operator_commands_tripwire.test.ts holds the two equal, so a
+# store documented there and copied by nothing is impossible.
 #
-# STORE 5 IS A SCRIPT, not a fifth rsync line, because it is the one member whose
-# sources are not known until the host is read: a host carries N museums, each
+# WHAT WAS WRONG WITH THIS FILE BEFORE (P0-13 — every claim measured):
+#
+#   1. IT READ KEYS THE INSTALLER NEVER WRITES. $DB_PASSWORD/$DB_HOST/$DB_USER/
+#      $DB_NAME/$MEDIA_PATH are the TS-native spellings; the wizard writes the
+#      PHP-catalog ones (DEDALO_PASSWORD_CONN, DEDALO_HOSTNAME_CONN,
+#      DEDALO_USERNAME_CONN, DEDALO_DATABASE_CONN — src/core/install/config_persist.ts),
+#      and MEDIA_PATH it writes only when the CLI installer was given --media-path.
+#      On a wizard-installed host those expanded to EMPTY STRINGS: a dump attempted
+#      as the wrong role against the wrong host, into a file named after nothing.
+#      The connection is now passed as the NAMES OF THE KEYS to read, and
+#      deploy/dedalo-db-backup.sh resolves each one the way the engine's readEnv
+#      does — TS-native name first, PHP alias second. It never guesses a value it
+#      cannot resolve; it refuses, loudly, naming the key.
+#
+#   2. `Type=oneshot` WITH FOUR PLAIN ExecStart LINES STOPS AT THE FIRST FAILURE.
+#      A database that was down at 03:30 meant the media originals, ../private/ and
+#      every museum's site-builder instance were not copied either. Each store now
+#      runs through deploy/dedalo-backup-step.sh, whose header explains the shape:
+#      stores 1..4 are `-`-prefixed so their exit status cannot cancel the others,
+#      the LAST store carries `--last` and aggregates every recorded status, and the
+#      unit FAILS if any store failed. Nothing is papered over: the difference
+#      between "a store failed" and "the unit succeeded" is exactly what this
+#      arrangement removes.
+#
+#   3. THERE WAS NO OnFailure= AND NO NOTIFICATION ANYWHERE IN deploy/. A backup
+#      that fails silently every night is worse than no backup, because it is
+#      believed — the maintenance panel reports a fresh artifact and the operator
+#      authorises a code update on the strength of it. See
+#      dedalo-backup-alert@.service and deploy/dedalo-backup-alert.sh.
+#
+#   4. THE MEDIA JOB WAS `rsync -a --delete` INTO ONE GENERATION. A mass deletion
+#      was propagated into the only copy of the store PRODUCTION.md §6 calls "the
+#      source of truth every derivative rebuilds from" within 24 hours.
+#      deploy/dedalo-tree-backup.sh keeps dated, hard-linked generations and states
+#      its retention rule (14 by default) in the file.
+#
+#   5. THE DUMP WAS NEVER READ BACK. deploy/dedalo-db-backup.sh dumps to a `.part`
+#      name, reads the archive back end to end with pg_restore, and only then puts
+#      it under a `*.backup` name — the suffix newestBackupMtimeMs() scans. A
+#      truncated or still-running dump can therefore no longer be the freshest
+#      "backup" on disk, which is what made the update panel say "ready".
+#
+# STORE 5 IS A SCRIPT, not a fifth inline command, because it is the one member
+# whose sources are not known until the host is read: a host carries N museums, each
 # declaring its own roots and its own sites. deploy/dedalo-site-builder-backup.sh
 # reads those paths out of the artifacts the provisioner generated for each
-# instance, so the backup cannot derive the host layout a second time and be
-# wrong about it. On a host with no site builder it prints one line and exits 0.
+# instance, so the backup cannot derive the host layout a second time and be wrong
+# about it. On a host with no site builder it prints one line and exits 0.
 #
-# Enabled by dedalo-backup.timer. VERIFY RESTORES PERIODICALLY: a backup that
-# was never restored is a hypothesis, not a backup.
+# Enabled by dedalo-backup.timer. VERIFY RESTORES PERIODICALLY: reading a dump back
+# proves the bytes are a complete archive, not that it restores into a working
+# catalogue. Nothing but an actual restore proves that (PRODUCTION.md §6: quarterly).
 #
 # Canonical host layout (engineering/PRODUCTION.md): /opt/dedalo/master_dedalo/
 # (the repo), /opt/dedalo/private/ (../private), user/group dedalo. Adjust the
@@ -24,19 +67,53 @@
 
 [Unit]
 Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private + site-builder instances)
+# %n is this unit's own name, so the alarm can quote the right journal.
+OnFailure=dedalo-backup-alert@%n.service
 
 [Service]
 Type=oneshot
 User=DEDALO_USER
 EnvironmentFile=/opt/dedalo/private/.env
-# 1. Matrix DB (custom format, blobs — restorable with pg_restore).
-ExecStart=/bin/sh -c 'PGPASSWORD="$DB_PASSWORD" pg_dump -F c -b -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -f "/opt/dedalo/private/backups/db/$(date +%%F_%%H%%M%%S).$DB_NAME.postgresql_timer.custom.backup" "$DB_NAME"'
-# 2. RAG pgvector DB (remove if DEDALO_RAG_ENABLED is off).
-#ExecStart=/bin/sh -c 'PGPASSWORD="$DEDALO_RAG_DB_PASSWORD" pg_dump -F c -h "$DEDALO_RAG_DB_HOST" -U "$DEDALO_RAG_DB_USER" -f "/opt/dedalo/private/backups/rag/$(date +%%F).rag.custom.backup" "$DEDALO_RAG_DB_NAME"'
-# 3. Media originals (incremental; MEDIA_PATH from the env file).
-ExecStart=/bin/sh -c 'rsync -a --delete "$MEDIA_PATH/" /opt/dedalo/backups/media/'
-# 4. The private dir itself (secrets, sessions, state) — small, always.
-ExecStart=/bin/sh -c 'rsync -a /opt/dedalo/private/ /opt/dedalo/backups/private/ --exclude backups'
+# Where the per-run store statuses live. systemd creates it before the first step
+# and REMOVES it when the unit stops, so one run can never read another's leftovers.
+RuntimeDirectory=dedalo-backup
+RuntimeDirectoryMode=0750
+# Where the PERSISTENT verdict lives (BACKUP_FAILED / LAST_OK). It must match
+# dedalo-backup-alert@.service's own Environment= line: both write BACKUP_FAILED and
+# only a fully successful run removes it.
+Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
+# A dump and a media mirror are a complete, unprotected copy of the collection.
+UMask=0077
+
+# 1. Matrix DB — custom format with blobs, read back with pg_restore before it is
+#    allowed to be named `*.backup`. --dir-key follows DEDALO_BACKUP_DIR when the
+#    operator moved the dumps, because that is the directory the panel lists and the
+#    updater's freshness gate scans. NO --socket-key here on purpose: the wizard
+#    writes DEDALO_SOCKET_CONN but the TS engine reads it NOWHERE (config.ts builds
+#    the pool from DB_HOST/DB_PORT; src/config/migration_map.ts classifies the key
+#    as read by nothing), and a backup that connects by a route the engine does not
+#    use is a second, disagreeing answer to "which server holds the catalogue".
+ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run matrix_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir /opt/dedalo/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --pg-dump pg_dump --pg-restore pg_restore
+# 2. RAG pgvector DB — UNCOMMENT when the semantic index is enabled. Its keys fall
+#    back to the main database's in the ENGINE, but not here on purpose: a backup
+#    that silently dumps the catalogue a second time because DEDALO_RAG_DB_NAME is
+#    unset would look like a RAG backup and be none.
+#ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run rag_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label rag --dir /opt/dedalo/private/backups/rag --db-key DEDALO_RAG_DB_NAME --host-key DEDALO_RAG_DB_HOSTNAME_CONN --port-key DEDALO_RAG_DB_PORT_CONN --user-key DEDALO_RAG_DB_USERNAME_CONN --password-key DEDALO_RAG_DB_PASSWORD_CONN --socket-key DEDALO_RAG_DB_SOCKET_CONN --pg-dump pg_dump --pg-restore pg_restore
+# 3. Media originals — dated generations, hard-linked to the previous one, 14 kept.
+#    The source is read from MEDIA_PATH (or its PHP alias); an unset key is a loud
+#    refusal, never a guess, because the engine's own default is one of two paths
+#    and the wrong guess backs up an empty directory while reporting success.
+ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run media /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label media --source-key MEDIA_PATH --dest /opt/dedalo/backups/media --keep 14
+# 4. The private dir itself (secrets, sessions, state) — small, always, and
+#    generational too: the .env is the file every other restore step reads first, so
+#    yesterday's copy is worth exactly as much as the media's. Its own backups/
+#    subtree is excluded (store 1 owns those artifacts).
+#
+#    HONEST LIMIT: the session store is a live SQLite database, so its copy can be
+#    torn — a restore may lose logged-in sessions, which cost a re-login and nothing
+#    else. The files that matter here (.env, ts_state.json) are written atomically by
+#    the engine (tmp + rename), so they copy whole or not at all.
+ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run private /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label private --source /opt/dedalo/private/ --dest /opt/dedalo/backups/private --keep 14 --exclude backups
 # 5. Every site-builder instance: its declaration + secrets, its workspaces root,
 #    each site's whole webspace (BOTH release stores and the two served symlinks),
 #    and its audit trail. Exits 0 with one line on a host that declares none.
@@ -46,9 +123,16 @@ ExecStart=/bin/sh -c 'rsync -a /opt/dedalo/private/ /opt/dedalo/backups/private/
 #    and its state roots are 0750 owned by that museum's own service user. DEDALO_USER is
 #    in none of those groups — deliberately, that separation IS the isolation — so without
 #    the '+' this step reads nothing and reports every museum as unbackuppable. The other
-#    four steps stay unprivileged.
+#    steps stay unprivileged.
+#
+#    IT IS ALSO THE LAST STEP, hence '--last': after copying its own store it
+#    aggregates every store's recorded status and exits non-zero if ANY of them
+#    failed. That is what makes the unit's verdict the truth about all five while
+#    no single store can cancel another, and it is why this line alone is not
+#    '-'-prefixed. If you comment this store out, move '--last' to the last
+#    ExecStart that remains, or nothing will ever report the run's verdict.
 #
 #    The destination therefore holds root-owned 0600 credentials. Create it 0700 root:root
 #    (`install -d -m 0700 -o root -g root /opt/dedalo/backups/site_builder`) and treat the
 #    whole backup tree as secret material — which store 4 already made true.
-ExecStart=+/opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh /opt/dedalo/backups/site_builder
+ExecStart=+/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run --last site_builder /opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh /opt/dedalo/backups/site_builder

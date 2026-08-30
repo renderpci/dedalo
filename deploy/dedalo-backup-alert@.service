@@ -1,0 +1,32 @@
+# Dédalo backup set — the failure alarm, started by systemd when the nightly backup
+# unit fails (`OnFailure=dedalo-backup-alert@%n.service` in dedalo-backup.service).
+# %i is the failed unit's name.
+#
+# WHY A TEMPLATE UNIT: `OnFailure=` starts a unit, and passing WHICH unit failed as
+# the instance name is the only way the alarm can quote the right journal. It also
+# means the same alarm serves any other unit that wants it — the site-builder
+# backup, a future restore-test timer — without a second copy of it.
+#
+# Before this there was no OnFailure= anywhere in deploy/: a backup that failed
+# every night failed in silence, and a silent backup is believed. See
+# deploy/dedalo-backup-alert.sh for what it does and why those channels.
+#
+#   sudo cp dedalo-backup-alert@.service dedalo-backup-alert.sh /etc/systemd/system/…
+#   (the script stays in the repo; the unit below names it there)
+#
+# It runs as root, unlike the backup's own unprivileged stores: it writes into the
+# backup state directory (which the site-builder store makes root-owned anyway) and
+# reads the failed unit's journal.
+
+[Unit]
+Description=Report that the Dedalo backup unit %i failed
+
+[Service]
+Type=oneshot
+# Keep this in step with dedalo-backup.service's own Environment= line: the alarm
+# clears nothing and writes BACKUP_FAILED, so both must mean the same directory.
+Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
+# Optional local mail; see the script's header. Set it with `systemctl edit`,
+# not in ../private/.env (append-only, documented keys only).
+#Environment=DEDALO_BACKUP_MAILTO=collections@museum.example
+ExecStart=/opt/dedalo/master_dedalo/deploy/dedalo-backup-alert.sh %i

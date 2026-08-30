@@ -27,6 +27,11 @@ FROM oven/bun:1.4.0-debian AS runtime
 #   poppler-utils → pdftotext / pdftohtml / pdfinfo
 #   ocrmypdf → optional automatic OCR
 #   git, unzip, gzip, file → used by the code-update subsystem and MIME sniffing
+#   rsync   → the `backup` service of both compose stacks: it is what copies the
+#             media originals and /private into dated generations
+#             (deploy/dedalo-tree-backup.sh). Without it that service refuses
+#             rather than half-copy, which would leave a containerised install
+#             with a database dump and no files (added 2026-08-30, P0-13).
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && install -d /usr/share/postgresql-common/pgdg \
@@ -38,7 +43,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       postgresql-client-18 \
       ffmpeg imagemagick poppler-utils ocrmypdf \
-      git unzip gzip file \
+      git unzip gzip file rsync \
  && rm -rf /var/lib/apt/lists/*
 
 # --- Application -------------------------------------------------------------

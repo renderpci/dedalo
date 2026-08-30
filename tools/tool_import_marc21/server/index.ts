@@ -15,12 +15,20 @@
  * client-supplied directory, and the resolved path is re-confined under the
  * user's staging dir (PHP sanitize_key_dir + safe_upload_target).
  *
+ * THE IDENTIFIER IS AN IDENTIFIER (audit DATA-08, closed 2026-08-30). The
+ * `field_to_section_id` value is a LIBRARY CONTROL NUMBER, and this door
+ * resolves it the way `resolve_target_section` did: through the section's CODE
+ * component (`findSectionIdByCode`, the `id` map entry's ddo_map), to an
+ * existing record or to none — in which case the executor creates one. It is
+ * never cast to a section_id. The header used to document the opposite against
+ * itself ("the field_to_section_id value is used here as the section_id
+ * directly"), which is exactly what it did: '42' wrote onto record 42.
+ *
  * NOT PORTED (see the tools audit report): PHP's per-entry value transforms
- * (partial_left_content / date_format / data_map / dd_action / skip_on_empty)
- * and its resolve_target_section CODE lookup (get_section_id_from_code) — the
- * field_to_section_id value is used here as the section_id directly. PHP also
- * reads main/map from the SERVER-side tool config (tool_common::get_config);
- * this module still reads them from the client-posted `tool_config`.
+ * (partial_left_content / date_format / data_map / dd_action / skip_on_empty).
+ * PHP also reads main/map from the SERVER-side tool config
+ * (tool_common::get_config); this module still reads them from the
+ * client-posted `tool_config`.
  */
 
 import { existsSync } from 'node:fs';
@@ -28,11 +36,18 @@ import { resolve, sep } from 'node:path';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import { resolveStagedName } from '../../../src/core/media/ingest/staged_files.ts';
+import type { Principal } from '../../../src/core/security/permissions.ts';
+import {
+	findSectionIdByCode,
+	type ImportCodeTarget,
+} from '../../../src/core/tools/import_code_lookup.ts';
 import { importMappedRecords, type MappedRecord } from '../../../src/core/tools/import_execute.ts';
 import {
 	applyMarcMap,
 	type MarcMapEntry,
+	type MarcMappedRecord,
 	type MarcValueSpec,
+	marcSpecLabel,
 	parseMarc,
 } from '../../../src/core/tools/marc21.ts';
 import {
@@ -58,6 +73,17 @@ interface MarcConfigMapEntry {
 	subfield?: unknown;
 	subfield_separator?: unknown;
 	marc21_conditional?: unknown;
+	/**
+	 * The entry's ROLE. Only one is meaningful to the engine: `id`, the entry
+	 * that declares which component holds the record's code (PHP
+	 * resolve_target_section reads `array_find($context->map, name === 'id')`).
+	 * It is an ordinary binding as well — its own `field`/`tipo` write the
+	 * control number INTO that component, which is what makes the NEXT import of
+	 * the same file find the record instead of duplicating it.
+	 */
+	name?: unknown;
+	/** The `id` entry's target: `[{tipo, section_tipo}]` — the code component. */
+	ddo_map?: unknown;
 }
 
 /**
@@ -70,6 +96,15 @@ interface MarcConfigMapEntry {
 export function readMarcMap(toolConfig: unknown): {
 	entries: MarcMapEntry[];
 	idSpec?: MarcValueSpec;
+	/**
+	 * WHERE the `field_to_section_id` value is looked up: the code component
+	 * named by the `id` map entry's first ddo_map row (PHP
+	 * get_section_id_from_code reads exactly `reset($id_item->ddo_map)`).
+	 * Undefined when the config declares no such entry — which, when an id field
+	 * IS configured, is a refusal at the door and never a fallback to "use the
+	 * value as an address" (audit DATA-08).
+	 */
+	idTarget?: ImportCodeTarget;
 } {
 	// SHAPE: `{config:{main,map}}` is the AUTHORING shape (register.json /
 	// sample_config.json). getToolConfig RESOLVES options FLAT — one key per
@@ -101,7 +136,19 @@ export function readMarcMap(toolConfig: unknown): {
 				: {}),
 		}));
 	const idEntry = main.find((e) => e.name === 'field_to_section_id');
-	return { entries, idSpec: idEntry?.value as MarcValueSpec | undefined };
+	const idMapEntry = map.find((e) => e?.name === 'id');
+	const ddo = Array.isArray(idMapEntry?.ddo_map)
+		? (idMapEntry.ddo_map[0] as { tipo?: unknown; section_tipo?: unknown } | undefined)
+		: undefined;
+	const idTarget =
+		typeof ddo?.tipo === 'string' && typeof ddo?.section_tipo === 'string'
+			? { sectionTipo: ddo.section_tipo, componentTipo: ddo.tipo }
+			: undefined;
+	return {
+		entries,
+		idSpec: idEntry?.value as MarcValueSpec | undefined,
+		...(idTarget === undefined ? {} : { idTarget }),
+	};
 }
 
 /**
@@ -136,6 +183,64 @@ export function resolveStagedFile(
 	return target;
 }
 
+/**
+ * Turn the identifiers the file carries into record ADDRESSES (PHP
+ * resolve_target_section, restored — audit DATA-08).
+ *
+ * Per record: no identifier ⇒ `sectionId: null`, which the shared executor
+ * reads as "create". An identifier ⇒ the record whose code component holds
+ * EXACTLY that value, or `null` again when no record does — the create half of
+ * the frozen upsert. The value is never cast to an id: it is a foreign control
+ * number, and record 42 of this section has nothing to do with control number
+ * '42'.
+ *
+ * TWO IDENTICAL IDENTIFIERS IN ONE BATCH REFUSE THE RUN. Resolution happens for
+ * the whole batch BEFORE the first write (this door maps every record of every
+ * staged file first), so a second record carrying an identifier the first one
+ * just created would resolve to `null` too and mint a duplicate; and if both
+ * resolve to the same existing record, the second silently overwrites what the
+ * first just wrote. PHP had the second outcome only, because it resolved inside
+ * the write loop. Neither is an import: the file names one record twice, that is
+ * a fault in the file, and the run stops with nothing written — the same "a
+ * shape we cannot trust is not imported at all" this door already applies.
+ */
+async function resolveImportCodes(
+	mapped: readonly MarcMappedRecord[],
+	sectionTipo: string,
+	idTarget: ImportCodeTarget | undefined,
+	principal: Principal,
+): Promise<MappedRecord[]> {
+	const records: MappedRecord[] = [];
+	const seen = new Set<string>();
+	for (const record of mapped) {
+		let sectionId: number | null = null;
+		// `idTarget` is guaranteed present whenever a record carries a code (a
+		// configured id field without a code component was refused at the door);
+		// the check is what makes that guarantee readable here rather than assumed.
+		if (record.code !== null && idTarget !== undefined) {
+			if (seen.has(record.code)) {
+				const sentence =
+					`The identifier '${record.code}' is carried by more than one record of this import, ` +
+					`so it does not identify one record. Nothing was imported — fix the file.`;
+				throw new DedaloError('request.invalid_data', {
+					message: sentence,
+					publicMessage: sentence,
+				});
+			}
+			seen.add(record.code);
+			// The section searched is the section being WRITTEN, always (the config's
+			// own declaration was checked to agree with it at the door).
+			sectionId = await findSectionIdByCode(
+				{ sectionTipo, componentTipo: idTarget.componentTipo },
+				record.code,
+				principal,
+			);
+		}
+		records.push({ sectionId, fields: record.fields });
+	}
+	return records;
+}
+
 async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const o = ctx.options;
 	const sectionTipo = String(o.section_tipo ?? '');
@@ -143,11 +248,32 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	if (sectionTipo === '' || filesData.length === 0) {
 		throw invalidRequest('Missing section_tipo or files_data');
 	}
-	const { entries, idSpec } = readMarcMap(o.tool_config);
+	const { entries, idSpec, idTarget } = readMarcMap(o.tool_config);
 	if (entries.length === 0) {
 		// Names the AUTHORING location (sample_config.json / register.json), which is
 		// where an admin actually fixes it — not the flat key getToolConfig resolves to.
 		throw invalidRequest('Missing marc21_map (tool_config.config.map)');
+	}
+	// THE CONFIG DECIDES HOW AN IDENTIFIER RESOLVES — never the value's shape
+	// (audit DATA-08). A config that says "match records by 907$a" but never says
+	// WHERE that code is stored cannot be honoured: the only two answers left are
+	// "create a duplicate for every record" and "use the control number as a
+	// section_id", and the second is the defect this refusal exists to end. So the
+	// run stops here, before a single file is read, naming what to author.
+	if (idSpec !== undefined && idTarget === undefined) {
+		throw invalidRequest(
+			`The marc21 config reads the record identifier from ${marcSpecLabel(idSpec)} ` +
+				`(main.field_to_section_id) but declares no code component to match it against: ` +
+				`add the map entry {"name":"id","ddo_map":[{"section_tipo":"${sectionTipo}","tipo":"<code component>"}]}. ` +
+				`An identifier is matched against the section's code component, never used as a record id.`,
+		);
+	}
+	if (idTarget !== undefined && idTarget.sectionTipo !== sectionTipo) {
+		throw invalidRequest(
+			`The marc21 config's id ddo_map points at section ${idTarget.sectionTipo}, but this import ` +
+				`writes into ${sectionTipo}. Resolving an identifier in one section to address a record in ` +
+				`another names an unrelated record; fix the ddo_map.`,
+		);
 	}
 
 	// key_dir is TOP-LEVEL and server-sanitized; the dir is rebuilt from the
@@ -155,7 +281,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	const dir = stagingDir(ctx.userId, String(o.key_dir ?? ''));
 
 	const errors: string[] = [];
-	const mapped: MappedRecord[] = [];
+	const mapped: MarcMappedRecord[] = [];
 	for (const file of filesData) {
 		// The client URI-encodes the display name (JSON/HTTP safety); decode
 		// defensively, since a bare '%' is not a valid escape sequence.
@@ -193,7 +319,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		for (const record of records) mapped.push(applyMarcMap(record, entries, idSpec));
 	}
 
-	const report = await importMappedRecords(mapped, sectionTipo, ctx.userId);
+	// The identifiers become addresses HERE, once, before anything is written.
+	const records = await resolveImportCodes(mapped, sectionTipo, idTarget, ctx.principal);
+	const report = await importMappedRecords(records, sectionTipo, ctx.userId);
 	// CONSUME the staging form (WC-079). This tool's client builds a
 	// service_tmp_section, so it accumulates scratch rows under its own scope —
 	// clearing here is what stops the next batch inheriting this run's values.

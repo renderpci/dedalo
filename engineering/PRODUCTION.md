@@ -432,7 +432,52 @@ cannot even be attempted before step 1:
 1. **`../private/`** (store 4). It carries the `.env` every other step reads —
    the DB credentials, `MEDIA_PATH`, and the `DEDALO_SITE_BUILDER_*` pairing
    lines. Restoring it last means restoring everything else blind.
-2. **Matrix Postgres DB** (store 1), with `pg_restore` into an empty database.
+2. **Matrix Postgres DB** (store 1). Stop the engine, prove the artifact is
+   readable, restore into an **empty** database, and **check the exit status**.
+   `pg_restore` continues past errors by default: a run that reports nothing
+   but leaves a table whose `COPY` failed keeps that table's OLD rows beside
+   restored neighbours, and the result looks exactly like a successful restore
+   from every angle an operator has. So the flags below are not decoration —
+   they are the difference between a restore and a half-restore.
+
+   ```bash
+   # The three names this procedure needs, set by hand — do not assume the
+   # environment file exports them under these spellings.
+   ARTIFACT=/opt/dedalo/private/backups/db/2026-08-29_033000.dedalo.custom.backup
+   DB_NAME=dedalo
+   DB_USER=dedalo
+
+   # 1. Nothing may write while you restore. Stop the engine AND the watchdog
+   #    timer, which would otherwise restart it under you (§2).
+   systemctl stop dedalo-ts.service dedalo-ts-watchdog.timer
+
+   # 2. Prove the file is a dump BEFORE destroying anything. --list walks the
+   #    archive's table of contents; a truncated or half-written dump fails
+   #    here, which is the cheapest moment there is to find that out.
+   pg_restore --list "$ARTIFACT" > /dev/null || { echo "NOT A USABLE DUMP"; exit 1; }
+
+   # 3. An EMPTY target. Never restore over a populated database: --clean is
+   #    best-effort per object and leaves whatever it failed to drop.
+   dropdb --if-exists "$DB_NAME"
+   createdb -T template0 -O "$DB_USER" "$DB_NAME"
+
+   # 4. One transaction, stop at the first error, say what you are doing — and
+   #    ACT on the exit status. Unchecked, a failed restore is indistinguishable
+   #    from a successful one until somebody opens a record.
+   pg_restore --dbname "$DB_NAME" --no-owner --no-privileges \
+              --single-transaction --exit-on-error --verbose "$ARTIFACT" \
+     || { echo "RESTORE FAILED - the database is NOT restored"; exit 1; }
+   echo "pg_restore exit 0 - restored"
+   ```
+
+   `--single-transaction` makes the whole restore atomic — it either lands
+   completely or leaves an empty database — and already implies
+   `--exit-on-error`; both are written so the intent survives somebody dropping
+   one of them. The price is that it cannot be combined with a parallel restore
+   (`-j`): if a dump is large enough to want parallelism, restore it into a
+   database nothing can reach, check the exit status by hand, and only then
+   point the engine at it. Start `dedalo-ts.service` again after the whole
+   order below has run and §6.2 reconciles — not between steps.
 3. **RAG pgvector DB** (store 2) if enabled; it is derived from the matrix DB
    and can also be re-embedded rather than restored.
 4. **Media originals** (store 3), then rebuild derivatives with
@@ -488,6 +533,66 @@ grep -o '"release": *"[^"]*"' "<SITES_ROOT>/<slug>/site.json"   # must name the 
 That comparison is the same one `publication/site_builder/src/provision/verify.ts`
 runs before and after an adoption. It is not yet reachable as a standalone verb;
 until it is, a restore is reconciled by the three reads above.
+
+### 6.3 Retention (documentation only — no mechanical keeper)
+
+One copy is not a retention policy, and the failure a backup set most often
+has to survive is not a dead disk but a **mistake that was faithfully copied**:
+a mass delete, a bad import, a ransomware pass. Those are only recoverable if a
+generation older than the mistake still exists when it is noticed, which is
+usually days later.
+
+The rule for an installation:
+
+- **Database dumps: keep generations, not a file.** At minimum seven dailies
+  plus one monthly kept for a year. The nightly unit's dump name carries
+  `date +%F_%H%M%S`, so generations accumulate by construction — and so does
+  the disk usage. Something must prune them, and pruning is where a policy
+  becomes real.
+- **A `--delete` mirror is ONE generation.** Measured 2026-08-30, the reference
+  unit's media step (`deploy/dedalo-backup.service`) is
+  `rsync -a --delete "$MEDIA_PATH/" …`: a deletion in the media originals is
+  propagated into the only media backup at the next nightly run. For the store
+  §6 itself calls "the source of truth every derivative rebuilds from", that is
+  not a recovery point. Give the media destination real generations —
+  filesystem snapshots (ZFS/Btrfs/LVM) or dated `rsync --link-dest` trees,
+  which cost one hardlink per unchanged file.
+- **At least one generation must be OFF this host** and, for the ransomware
+  case, not writable from it.
+- **Restore-test quarterly** (§6, already stated): a backup that has never been
+  restored is a hypothesis.
+
+**None of this is enforced.** Nothing in the repo counts generations, measures
+the age of the oldest one, or notices that a retention policy was never
+implemented — no gate, no `/health` field, no panel line. The engine's only
+automated opinion about backups is the FRESHNESS of the newest file
+(`DEDALO_BACKUP_TIME_RANGE`, read by `src/core/update/preconditions.ts`), which
+gates a code update and says nothing about how far back you can go. Treat this
+subsection as what it is: a rule an operator implements and audits by hand.
+
+### 6.4 A restore is an operator procedure the engine does not own
+
+Say it plainly, because the rest of §6 reads like a system with a recovery
+feature and there is none. Nothing in this repo restores DATA: no API action,
+no widget, no script. §6.1 is a procedure a human performs with `pg_restore`,
+`rsync` and `systemctl`. The one restore the engine does own,
+`update_code.restore_code` (`src/core/area_maintenance/widgets/update_code.ts`),
+puts back a previous CODE TREE (§12) and touches neither the database nor the
+media. And whatever the engine checks about a backup FILE, it never performs a
+restore and never verifies that one would succeed.
+
+Two consequences worth stating for anyone reading this as a backlog:
+
+- **Neither §6.3 nor this subsection can be gated as written.** A tripwire can
+  hold a document to the code (that is what
+  `test/unit/operator_commands_tripwire.test.ts` does for §6's store table); it
+  cannot hold a museum's host to a retention policy the code never sees. If we
+  want these mechanically kept, the engine has to grow something that observes
+  the backup destination — and that is a feature, not a documentation fix.
+- **The quarterly restore test is the only thing that actually proves any of
+  it.** Everything above is a hypothesis until a dump has been restored into a
+  scratch database and the record count checked
+  (`docs/install/migrating_from_v6.md` shows that shape for a v6 artifact).
 
 ## 7. Schema: migrations + provisioning (S2-39, DEC-17/DEC-19)
 
