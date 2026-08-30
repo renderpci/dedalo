@@ -46,13 +46,27 @@ const SHARED_ROW_CORRECTION_TAG = '-- SHARED-ROW SEED CORRECTION:';
 /** The shared-schema tables the TS-owned lane does not own. */
 const SHARED_TABLE = String.raw`(?:public\.)?(?:matrix_[a-z0-9_]*|matrix|dd_ontology[a-z0-9_]*)`;
 
+/**
+ * The optional words PostgreSQL allows between a DDL/DML verb and its table:
+ * `IF EXISTS`, `IF NOT EXISTS`, `ONLY`.
+ *
+ * (!) These are load-bearing, not tidiness. The first version of this gate
+ * spelled the infix only inside `CREATE TABLE`, so it matched
+ * `ALTER TABLE matrix_time_machine` but NOT `ALTER TABLE IF EXISTS
+ * matrix_time_machine`, `ALTER TABLE ONLY matrix_time_machine`, or
+ * `DROP TABLE IF EXISTS matrix_time_machine` — three spellings of the exact
+ * statements it exists to forbid, and the third DROPS a shared table. Measured
+ * 2026-08-31 by running the gate's own regex over each spelling.
+ */
+const TABLE_INFIX = String.raw`(?:\s+(?:IF\s+NOT\s+EXISTS|IF\s+EXISTS|ONLY))?`;
+
 /** Statements that are NEVER a correction on a shared table. */
 const FORBIDDEN_DML = new RegExp(
-	String.raw`\b(INSERT\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?)\s+"?${SHARED_TABLE}"?\b`,
+	String.raw`\b(INSERT\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)${TABLE_INFIX}\s+"?${SHARED_TABLE}"?\b`,
 	'gi',
 );
 /** The one admissible shape: an UPDATE, whose statement text is then inspected. */
-const SHARED_UPDATE = new RegExp(String.raw`\bUPDATE\s+"?${SHARED_TABLE}"?\b`, 'gi');
+const SHARED_UPDATE = new RegExp(String.raw`\bUPDATE${TABLE_INFIX}\s+"?${SHARED_TABLE}"?\b`, 'gi');
 
 /** Strip `--` line comments (the only comment form these files use). */
 function stripSqlComments(sql: string): string {
@@ -150,6 +164,31 @@ describe('migration shared-row tripwire — install/db/migrations/*.sql', () => 
 			'-- talks about UPDATE matrix_ontology only\nSELECT 1;',
 		);
 		expect(prose.violations).toEqual([]);
+		// THE EVADING SPELLINGS (2026-08-31). Each of these was GREEN against the
+		// first version of this gate: the optional word between the verb and the
+		// table pushed the table name out of the match. The third one DROPS a
+		// shared table.
+		for (const evasion of [
+			'ALTER TABLE IF EXISTS matrix_time_machine ADD COLUMN generation integer;',
+			'ALTER TABLE ONLY matrix_time_machine ADD COLUMN generation integer;',
+			'DROP TABLE IF EXISTS matrix_time_machine;',
+			'TRUNCATE TABLE ONLY matrix_ontology;',
+			'DELETE FROM ONLY matrix_test WHERE section_id = 1;',
+		]) {
+			const judged = judgeMigration(
+				'9999_probe.sql',
+				`${SHARED_ROW_CORRECTION_TAG} probe\n${evasion}`,
+			);
+			expect(judged.violations.length, `not refused: ${evasion}`).toBeGreaterThan(0);
+		}
+		// ...and an UPDATE spelled with the same infix is still held to the
+		// tag + `@>` pin rather than slipping past as "not a shared write".
+		const infixUpdate = judgeMigration(
+			'9999_probe.sql',
+			"UPDATE ONLY matrix_ontology SET misc = '{}' WHERE section_id = 1;",
+		);
+		expect(infixUpdate.violations.length).toBeGreaterThan(0);
+
 		// The clean shape passes.
 		const clean = judgeMigration(
 			'9999_probe.sql',
