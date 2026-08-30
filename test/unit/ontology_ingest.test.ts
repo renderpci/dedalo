@@ -537,7 +537,7 @@ describe("recovery snapshot + counter (psql :'var' interpolation)", () => {
 		expect(ok).toBe(true);
 	});
 
-	test('consolidateSectionCounter sets matrix_counter to MAX(section_id)', async () => {
+	test('consolidateSectionCounter seeds matrix_counter at the HIGH-WATER MARK', async () => {
 		if (!scratchAvailable) return;
 		await runPsql(scratch, ['-c', `DELETE FROM matrix_counter WHERE tipo = 'dd0'`]);
 		// was false pre-fix: :'tipo' with -c is not interpolated
@@ -552,5 +552,30 @@ describe("recovery snapshot + counter (psql :'var' interpolation)", () => {
 			`SELECT value FROM matrix_counter WHERE tipo = 'dd0'`,
 		]);
 		expect(counterOut.stdout.trim()).toBe(maxOut.stdout.trim());
+
+		// P0-14 — and the seed is the high-water mark, NOT MAX(live section_id).
+		// A record deleted before the re-import leaves its time-machine rows
+		// behind; seeding below them re-mints its section_id on the next create.
+		const liveMax = Number(maxOut.stdout.trim());
+		const ghostId = liveMax + 137;
+		try {
+			await runPsql(scratch, [
+				'-c',
+				`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, "timestamp", user_id, data)
+				 VALUES (${ghostId}, 'dd0', 'dd0', 'lg-nolan', '2026-08-30 12:00:00', '1', '{}'::jsonb)`,
+			]);
+			await runPsql(scratch, ['-c', `DELETE FROM matrix_counter WHERE tipo = 'dd0'`]);
+			expect(await consolidateSectionCounter('dd0', 'matrix_ontology', scratch)).toBe(true);
+			const widened = await runPsql(scratch, [
+				'-tAc',
+				`SELECT value FROM matrix_counter WHERE tipo = 'dd0'`,
+			]);
+			expect(Number(widened.stdout.trim())).toBe(ghostId);
+		} finally {
+			await runPsql(scratch, [
+				'-c',
+				`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd0' AND section_id = ${ghostId}`,
+			]);
+		}
 	}, 60000);
 });

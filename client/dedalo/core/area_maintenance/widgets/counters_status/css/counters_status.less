@@ -31,8 +31,12 @@
 		}
 	}
 
-	// counter audit table: tipo · name · counter · last id · fix · reset
+	// counter audit table: tipo · name · counter · last id · fix
+	// (FIVE tracks — the 'reset' column was removed with the destructive action
+	// it drove, P0-14. `.dd_tr { display: contents }` makes every cell a direct
+	// grid item, so a track count that disagrees with the renderer's cell count
+	// shifts every data row by one column.)
 	.dd_table {
-		grid-template-columns: minmax(5rem, 8rem) minmax(7rem, 1fr) 5rem 5.5rem 7rem 9rem;
+		grid-template-columns: minmax(5rem, 8rem) minmax(7rem, 1fr) 5rem 5.5rem 7rem;
 	}
 }

@@ -298,7 +298,26 @@ describe('4. reset semantics (DB, snapshot-protected)', () => {
 		const counterBefore = (await sql.unsafe('SELECT value FROM matrix_counter WHERE tipo = $1', [
 			CANONICAL_SECTION_TIPO,
 		])) as { value: number }[];
+		const maxCanonicalIdSeed = Math.max(...fixture.records.map((entry) => entry.section_id));
 		try {
+			// FALSIFIABILITY: raise-only is only observable from BELOW. Force the
+			// counter under the canonical max first, so the reset has somewhere to
+			// raise it TO and the exact landing value is asserted, not just a bound.
+			await sql.unsafe('UPDATE matrix_counter SET value = 1 WHERE tipo = $1', [
+				CANONICAL_SECTION_TIPO,
+			]);
+			const seeded = await resetTestSection();
+			expect(seeded.records).toBe(fixture.records.length);
+			const raised = (await sql.unsafe('SELECT value FROM matrix_counter WHERE tipo = $1', [
+				CANONICAL_SECTION_TIPO,
+			])) as { value: number }[];
+			expect(Number(raised[0]?.value)).toBe(maxCanonicalIdSeed);
+
+			// Now the raise-only half, from ABOVE.
+			await sql.unsafe('UPDATE matrix_counter SET value = $2 WHERE tipo = $1', [
+				CANONICAL_SECTION_TIPO,
+				maxCanonicalIdSeed + 777,
+			]);
 			const { records } = await resetTestSection();
 			expect(records).toBe(fixture.records.length);
 
@@ -319,7 +338,15 @@ describe('4. reset semantics (DB, snapshot-protected)', () => {
 				CANONICAL_SECTION_TIPO,
 			])) as { value: number }[];
 			const maxCanonicalId = Math.max(...fixture.records.map((entry) => entry.section_id));
-			expect(Number(counter[0]?.value)).toBe(maxCanonicalId);
+			// RAISE-ONLY (P0-14, changed 2026-08-30). This asserted equality until the
+			// section-id counter was established as a high-water mark: the TRUNCATE
+			// does not remove matrix_time_machine rows, so lowering the counter to the
+			// fixture's max re-issues section_ids that still have TM history — and this
+			// door runs on REAL databases (the installer, the unit_test widget), not
+			// only the suite DB. The reset must restore the RECORDS, never rewind the
+			// id space. Asserted EXACTLY: the counter was seeded above, so a body that
+			// lowered it would land on maxCanonicalId and fail here.
+			expect(Number(counter[0]?.value)).toBe(maxCanonicalId + 777);
 		} finally {
 			// restore the snapshot verbatim (columns + ids + sequence + counter)
 			await sql.unsafe(`TRUNCATE TABLE "${CANONICAL_TABLE}"`, []);

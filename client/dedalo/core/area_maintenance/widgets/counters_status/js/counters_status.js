@@ -23,8 +23,8 @@
 * Purpose:
 *   Displays a tabular view of every Dédalo section's auto-increment counter
 *   alongside the highest recorded section_id, so an administrator can spot and
-*   repair counters that have fallen out of sync (e.g. after a direct DB import,
-*   a failed migration, or a counter reset).
+*   repair a counter that has fallen BEHIND its data (e.g. after a direct DB
+*   import or a failed migration that bypassed the allocator).
 *
 * Lifecycle:
 *   Follows the standard Dédalo widget lifecycle:
@@ -48,17 +48,23 @@
 *       }>,
 *       errors : Array<string>      // non-fatal diagnostic messages, may be absent
 *     }
-*   When `counter_value !== last_section_id` the row is flagged "out of sync"
-*   and the "Fix counter" button becomes active.
+*   `counter_value` is the high-water mark of ids ever minted for the section,
+*   NOT a count of live records — so `counter_value > last_section_id` is the
+*   normal state after any tail delete and is not flagged. Only
+*   `counter_value < last_section_id` is flagged, and the "Fix counter" button
+*   becomes active for it.
 *
 * Maintenance operations:
-*   `modify_counter` sends an async worker request to the server with one of:
-*     - action 'fix'   — sets the counter to `last_section_id + 1`.
-*     - action 'reset' — deletes/resets the counter entirely (destructive).
+*   `modify_counter` sends an async worker request to the server with:
+*     - action 'fix'   — RAISES the counter to `last_section_id` (GREATEST
+*                        upsert; it can never lower the counter).
+*   Action 'reset' (delete the counter row) was removed and is refused by the
+*   server — it destroyed the high-water mark and made the allocator re-mint
+*   deleted records' ids (P0-14).
 *   After a successful response, `this.value.datalist` is updated in-place and
 *   the widget is refreshed via `dd_request_idle_callback`.
 *
-* Server peer:  core/area_maintenance/widgets/counters_status/class.counters_status.php
+* Server peer:  src/core/area_maintenance/widgets/counters_status.ts
 *   (API action 'modify_counter' handled by dd_area_maintenance_api)
 * Render peer:  core/area_maintenance/widgets/counters_status/js/render_counters_status.js
 *
@@ -155,18 +161,21 @@ counters_status.prototype.build = async function(autoload=false) {
 
 /**
 * MODIFY_COUNTER
-* Execute counter maintenance operations: reset|fix
+* Execute the counter maintenance operation: fix
 *
 * Sends a long-lived worker request to the server-side
 * `dd_area_maintenance_api::modify_counter` handler and handles both the
 * success and error paths in the UI.
 *
 * Supported `counter_action` values:
-*   'fix'   — Synchronises the section counter with its actual last section_id
-*             (sets counter = last_section_id + 1).  Safe to run repeatedly.
-*   'reset' — Deletes/resets the counter for the given section.  This is
-*             destructive and irreversible; the caller should present the user
-*             with two confirmation dialogs before invoking this action.
+*   'fix'   — RAISES the section counter to its actual last section_id when the
+*             counter lags the data (GREATEST upsert). It can never lower the
+*             counter. Safe to run repeatedly.
+*
+* (!) 'reset' is GONE. It deleted the counter row, and because the counter is
+* the high-water mark of ids ever minted, the allocator then re-issued deleted
+* records' ids — which inherited the dead records' Time Machine history and
+* media files (P0-14). The server refuses the action.
 *
 * On success:
 *   1. Writes `api_response.msg` to `body_response` via `textContent` (XSS-safe).
@@ -190,10 +199,92 @@ counters_status.prototype.build = async function(autoload=false) {
 *   (SEC-XSS-011: api response may contain raw DB / counter text).
 * @param {string} options.section_tipo - Ontology tipo of the target section
 *   (e.g. 'oh1').
-* @param {string} options.counter_action - Operation to perform: 'fix' | 'reset'.
+* @param {string} options.counter_action - Operation to perform: 'fix'.
 * @returns {Promise<boolean>} Always resolves to true after handling the
 *   server response; errors are surfaced via handle_api_error() and body_response text.
 */
+/**
+* REPAIR_ALL_COUNTERS
+* Raise EVERY section counter that stands below its high-water mark, in one
+* action (the bulk form of modify_counter 'fix', P0-14).
+*
+* Exists because the pre-2026-08-30 "Fix counter" button LOWERED counters to
+* MAX(section_id): an install where it was pressed sits at counter ==
+* last_section_id with dead ids above it, and the allocator re-mints them.
+* Raise-only and idempotent server-side, so pressing it twice is harmless.
+*
+* @param {Object} options
+* @param {HTMLElement} options.body_response - DOM node that receives the
+*   status/error message text (written via textContent, XSS-safe).
+* @returns {Promise<boolean>} Always resolves true; errors surface via
+*   handle_api_error() and body_response text.
+*/
+counters_status.prototype.repair_all_counters = async function(options) {
+
+	const self				= this
+	const body_response		= options.body_response
+
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source	: {
+				type	: 'widget',
+				model	: 'counters_status',
+				action	: 'repair_all_counters'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('repair_all_counters api_response:', api_response);
+	}
+
+	if (request_failed(api_response)===false && response_data(api_response)===true) {
+
+		// success
+		// SEC-XSS-011: the widget's `msg` extension key may contain DB / counter
+		// text; textContent avoids HTML parsing.
+		body_response.textContent = response_extension(api_response, 'msg')
+
+		// update datalist value
+		self.value.datalist = api_response.datalist
+
+		dd_request_idle_callback(
+			() => {
+				// refresh DOM only
+				self.refresh({
+					build_autoload	: false, // default is true
+					destroy			: true // default is true
+				})
+			}
+		)
+
+	}else{
+		// error
+		console.error('counters_status repair_all_counters failed:', api_response)
+
+		// SEC-XSS-011. A refused action is an ok:true body carrying data:false +
+		// the widget's own sentence; a real failure has the coded error instead.
+		body_response.textContent = request_failed(api_response)
+			? error_text(api_response.error)
+			: (response_extension(api_response, 'msg') || 'Unknown error')
+
+		// ONE error model: policy + renderer decide the surface
+		if (request_failed(api_response)) {
+			await handle_api_error(api_response.error, {wrapper: body_response})
+		}
+	}
+
+	return true
+}//end repair_all_counters
+
+
+
 counters_status.prototype.modify_counter = async function(options) {
 
 	// options

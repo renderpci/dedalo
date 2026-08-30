@@ -240,12 +240,16 @@ describe('changes_in_tipos EXECUTE on matrix_test (scratch tipos)', () => {
 				"DELETE FROM matrix_test WHERE section_tipo IN ($1,$2) OR relation::text LIKE '%zzttr%'",
 				[SRC, DST],
 			);
+			// The counter rows too — the rename CARRIES a counter to the destination
+			// tipo now (P0-14), so leaving them behind leaks scratch high-water marks
+			// into the suite database.
+			await sql.unsafe('DELETE FROM matrix_counter WHERE tipo IN ($1,$2)', [SRC, DST]);
 		} catch {
 			/* best effort */
 		}
 	});
 
-	test('renames section_tipo + rewrites embedded component tipo, drops counter', async () => {
+	test('renames section_tipo + rewrites embedded component tipo, CARRIES the counter', async () => {
 		if (!(await dbUp())) {
 			console.warn('[UNCOVERED] DB unreachable — changes_in_tipos execute skipped');
 			return;
@@ -266,6 +270,8 @@ describe('changes_in_tipos EXECUTE on matrix_test (scratch tipos)', () => {
 			'INSERT INTO matrix_counter (tipo, value) VALUES ($1, 9001) ON CONFLICT (tipo) DO UPDATE SET value = 9001',
 			[SRC],
 		);
+		// No counter stands at the destination yet — the carry must create it.
+		await sql.unsafe('DELETE FROM matrix_counter WHERE tipo = $1', [DST]);
 
 		const rec = new TransformRecorder(false);
 		await executeChangesInTipos(
@@ -296,7 +302,16 @@ describe('changes_in_tipos EXECUTE on matrix_test (scratch tipos)', () => {
 		expect(ref?.rel).not.toContain(`"${SRC}"`);
 		expect(ref?.rel).not.toContain(`"${REFSRC}"`);
 
-		// old counter dropped
+		// COUNTER CARRIED, not dropped (P0-14). The rename moves the records and
+		// their TM rows without changing a single section_id, so the section's
+		// high-water mark has to move with them; PHP dropped it and let the
+		// allocator rebuild from live rows, which re-minted deleted records' ids.
+		const carried = (await sql.unsafe('SELECT value FROM matrix_counter WHERE tipo = $1', [
+			DST,
+		])) as { value: number }[];
+		expect(carried.length).toBe(1);
+		expect(Number(carried[0]?.value)).toBe(9001);
+		// and the source row is gone
 		expect(
 			(await sql.unsafe('SELECT 1 FROM matrix_counter WHERE tipo = $1', [SRC])) as unknown[],
 		).toEqual([]);

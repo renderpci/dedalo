@@ -22,13 +22,17 @@
  *    index_size,indexdef}, membership anchors, pg_size_pretty format +
  *    size-DESC ordering, and the differential-pinned engine-native
  *    info.server containing 'PostgreSQL';
- *  - counters_status.modify_counter — the differential's TS-side surviving
- *    contract verbatim (the PHP path is a pinned live defect there: every
- *    well-formed request dies on 'empty mandatory section_tipo'): fix
- *    consolidates the counter to the section's real MAX(section_id) (drift
- *    injected upward first so the consolidation is observable; the counter
- *    state is restored UNCONDITIONALLY in afterAll), reset deletes the
- *    counter row (synthetic zztc2 row, removed in finally, fail-loud);
+ *  - counters_status.modify_counter — the CURRENT contract
+ *    (WC-2026-08-30-section-id-counter-is-a-high-water-mark, P0-14; the PHP
+ *    path is a pinned live defect there: every well-formed request dies on
+ *    'empty mandatory section_tipo'): `fix` RAISES a counter that lags its
+ *    data and leaves a counter ahead of its data untouched (drift is injected
+ *    DOWNWARD so the raise is observable, then UPWARD to prove the refusal to
+ *    lower; the counter state is restored UNCONDITIONALLY in afterAll), and
+ *    `reset` is REFUSED with the counter row left standing (synthetic zztc2
+ *    row, removed in finally, fail-loud). Until 2026-08-30 these asserted the
+ *    PHP semantics — consolidate-DOWN and delete — which is precisely how a
+ *    deleted record's section_id came to be re-minted;
  *  - database_info.rebuild_user_stats — the differential's exact synthetic
  *    provisioning (user 424252 here, 2 days of activity incl. a dd1223
  *    publish event and a skipped dd271 'where'). The dd1521 aggregate rows
@@ -42,9 +46,9 @@
  *    `label`) are shared MUTABLE ontology values — asserted AS the term for
  *    that tipo via termByTipo, never as literal strings;
  *  - datalist ordering (DB collation vs JS string order) is not re-asserted;
- *  - the reset success msg + the refreshed datalist modify_counter attaches
- *    come from PHP source (class.counters_status.php:150-160 — PHP's own
- *    modify_counter dies before reaching them);
+ *  - the refreshed datalist modify_counter attaches comes from PHP source
+ *    (class.counters_status.php:150-160 — PHP's own modify_counter dies
+ *    before reaching it); the reset REFUSAL is TS-only by construction;
  *  - the database_info panel envelope msg is the TS widget's (the
  *    differential only compared result.tables/indexes/info).
  *
@@ -181,8 +185,15 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 			// every item carries EXACTLY the differential-pinned key set
 			expect((result.datalist?.length ?? 0) > 0).toBe(true);
 			for (const item of result.datalist ?? []) {
+				// `floor_value` is ADDED to the differential-pinned key set
+				// (WC-2026-08-30-section-id-counter-is-a-high-water-mark): the client
+				// measures drift against the section's high-water mark, not against
+				// MAX(live section_id), which reports an already-damaged install as
+				// healthy.
 				expect(Object.keys(item).sort()).toEqual([
+					'bulk_repair_excluded',
 					'counter_value',
+					'floor_value',
 					'label',
 					'last_section_id',
 					'section_tipo',
@@ -190,6 +201,11 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 				expect(typeof item.section_tipo).toBe('string');
 				expect(typeof item.counter_value).toBe('number');
 				expect(typeof item.last_section_id).toBe('number');
+				expect(typeof item.floor_value).toBe('number');
+				expect(typeof item.bulk_repair_excluded).toBe('boolean');
+				// The floor is never below live MAX — it is live MAX widened by the
+				// time-machine witness of deleted records.
+				expect(Number(item.floor_value)).toBeGreaterThanOrEqual(Number(item.last_section_id));
 				expect(item.label === null || typeof item.label === 'string').toBe(true);
 			}
 
@@ -365,38 +381,56 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 		}
 	});
 
-	test('fix consolidates the counter to the section MAX(section_id)', async () => {
-		// inject upward drift so the consolidation is observable
-		await sql.unsafe(`UPDATE matrix_counter SET value = value + 500 WHERE tipo = 'test3'`, []);
+	test('fix RAISES a lagging counter and refuses to lower one ahead of the data', async () => {
+		const maxRows = (await sql.unsafe(
+			`SELECT section_id FROM matrix_test WHERE section_tipo = 'test3' ORDER BY section_id DESC LIMIT 1`,
+			[],
+		)) as { section_id: number }[];
+		const liveMax = Number(maxRows[0]?.section_id);
 
+		// (a) DOWNWARD drift — a counter BEHIND its data is the one genuine defect
+		// 'fix' exists to repair, so the raise is observable here.
+		await sql.unsafe(`UPDATE matrix_counter SET value = 1 WHERE tipo = 'test3'`, []);
 		const fixed = (await tsCall({
 			...WIDGET_RQO,
 			options: { section_tipo: 'test3', counter_action: 'fix' },
 			source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
 		})) as { data?: unknown; msg?: string; datalist?: Record<string, unknown>[] };
-		// TS-side surviving contract, verbatim from the differential
 		expect(fixed.data).toBe(true);
 		expect(fixed.msg).toBe('OK. fix counter successfully test3');
 
-		const maxRows = (await sql.unsafe(
-			`SELECT section_id FROM matrix_test WHERE section_tipo = 'test3' ORDER BY section_id DESC LIMIT 1`,
-			[],
-		)) as { section_id: number }[];
-		const counterRows = (await sql.unsafe(
+		const raised = (await sql.unsafe(
 			`SELECT value FROM matrix_counter WHERE tipo = 'test3'`,
 			[],
 		)) as { value: number }[];
-		expect(Number(counterRows[0]?.value)).toBe(Number(maxRows[0]?.section_id));
+		// At LEAST the live max — the floor also counts the time-machine witness,
+		// so a section whose tail was deleted lands ABOVE live max, never below.
+		expect(Number(raised[0]?.value)).toBeGreaterThanOrEqual(liveMax);
 
 		// PHP re-runs check_counters and attaches the refreshed audit datalist
 		// (PHP source class.counters_status.php:150-160; PHP's own path dies
 		// earlier, so this is source-derived, not differential-compared).
 		const audited = (fixed.datalist ?? []).find((item) => item.section_tipo === 'test3');
-		expect(audited?.counter_value).toBe(Number(maxRows[0]?.section_id));
-		expect(audited?.last_section_id).toBe(Number(maxRows[0]?.section_id));
+		expect(Number(audited?.counter_value)).toBeGreaterThanOrEqual(liveMax);
+		expect(audited?.last_section_id).toBe(liveMax);
+
+		// (b) UPWARD drift — a counter AHEAD of its data is the NORMAL state after
+		// any tail delete. 'fix' must leave it exactly where it stands; lowering it
+		// here is what re-minted deleted records' ids.
+		await sql.unsafe(`UPDATE matrix_counter SET value = $1 WHERE tipo = 'test3'`, [liveMax + 500]);
+		await tsCall({
+			...WIDGET_RQO,
+			options: { section_tipo: 'test3', counter_action: 'fix' },
+			source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
+		});
+		const kept = (await sql.unsafe(
+			`SELECT value FROM matrix_counter WHERE tipo = 'test3'`,
+			[],
+		)) as { value: number }[];
+		expect(Number(kept[0]?.value)).toBe(liveMax + 500);
 	}, 60000);
 
-	test('reset deletes the counter row (synthetic zztc2)', async () => {
+	test('reset is REFUSED and the counter row survives (synthetic zztc2)', async () => {
 		await sql.unsafe(
 			`INSERT INTO matrix_counter (tipo, value, ref) VALUES ('zztc2', 999, 'synthetic native gate row')`,
 			[],
@@ -406,16 +440,18 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 				...WIDGET_RQO,
 				options: { section_tipo: 'zztc2', counter_action: 'reset' },
 				source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
-			})) as { data?: unknown; msg?: string };
-			expect(reset.data).toBe(true);
-			// msg from the same PHP template the fix variant pinned (softened:
-			// the reset wording itself was never differential-compared)
-			expect(reset.msg).toBe('OK. reset counter successfully zztc2');
+			})) as { ok?: boolean; error?: { code?: string } };
+			// The action is refused through the normal envelope, not performed.
+			expect(reset.ok).toBe(false);
+			expect(reset.error?.code).toBe('maintenance.action_refused');
+
+			// AND — the point of the whole change — the high-water mark stands.
 			const left = (await sql.unsafe(
-				`SELECT 1 FROM matrix_counter WHERE tipo = 'zztc2'`,
+				`SELECT value FROM matrix_counter WHERE tipo = 'zztc2'`,
 				[],
-			)) as unknown[];
-			expect(left.length).toBe(0);
+			)) as { value: number }[];
+			expect(left.length).toBe(1);
+			expect(Number(left[0]?.value)).toBe(999);
 		} finally {
 			// a failed assertion must still remove the synthetic row
 			await sql.unsafe(`DELETE FROM matrix_counter WHERE tipo = 'zztc2'`, []);

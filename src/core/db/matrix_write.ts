@@ -459,6 +459,69 @@ export async function absorbComponentItemIds(
 	);
 }
 
+/**
+ * The counter table that governs a matrix table. THE ONE definition of the
+ * allocator's routing rule — the maintenance widget must agree with it, or its
+ * audit reports a counter the allocator does not read and its repair writes a
+ * row that governs nothing.
+ */
+export function counterTableFor(tableName: string | null): string {
+	return tableName !== null && tableName.endsWith('_dd') ? 'matrix_counter_dd' : 'matrix_counter';
+}
+
+/**
+ * THE COUNTER FLOOR (P0-14) — a SQL expression for the highest section_id EVER
+ * MINTED for a tipo, with `$1` bound to the section_tipo.
+ *
+ * ONE definition, shared by every door that repairs or bootstraps a counter
+ * (the allocator here, the `counters_status` maintenance widget), because a
+ * widget that computed a NARROWER floor than the allocator would hand the
+ * operator a repair button that re-mints dead ids — a button strictly worse
+ * than pressing nothing, since the allocator's own self-heal would have used
+ * the wider floor.
+ *
+ * The floor is NOT `MAX(section_id)` over live rows: a deleted record frees no
+ * id. `matrix_time_machine` survives record deletion, so its MAX witnesses ids
+ * whose rows are gone — an index-only scan on
+ * (section_tipo, section_id DESC, id DESC).
+ *
+ * HONEST LIMIT: this WIDENS the floor, it does not guarantee it. TM is
+ * conditionally written (a create appends no row, `saveTm:false` suppresses
+ * them for bulk imports, TM_EXCLUDED_SECTIONS skips dd15) and is append-only by
+ * convention, not by constraint. It is damage limitation for counters already
+ * lost; the guarantee is that no writer LOWERS the counter
+ * (`test/unit/matrix_counter_monotonic_tripwire.test.ts`).
+ *
+ * BOTH counter tables get the witness. An earlier draft excluded
+ * `matrix_counter_dd` "because TM does not track the ontology tables" — an
+ * assumption nothing enforces: `recordTimeMachine` skips only
+ * TM_EXCLUDED_SECTIONS (dd15) and non-positive ids, so a save on a `_dd`-backed
+ * section writes a TM row like any other. TM rows are keyed by `section_tipo`,
+ * which is correct whichever matrix table the section lives on, and GREATEST
+ * can only WIDEN the floor — where TM holds nothing the subquery yields 0 and
+ * changes nothing. A narrower floor resting on an unverified premise is exactly
+ * the shape of the defect this function exists to close.
+ */
+export function counterFloorExpression(tableName: string, tipoParam = '$1'): string {
+	assertMatrixTable(tableName);
+	const liveMax = `(SELECT COALESCE(MAX(section_id), 0) FROM "${tableName}" WHERE section_tipo = ${tipoParam})`;
+	const tmMax = `(SELECT COALESCE(MAX(section_id), 0) FROM matrix_time_machine WHERE section_tipo = ${tipoParam})`;
+	return `GREATEST(${liveMax}, ${tmMax})`;
+}
+
+/**
+ * Insert a NEW section record at a counter-allocated section_id — THE id
+ * allocator, and the one door that mints a record's permanent address.
+ *
+ * THE LAW (P0-14): a section_id is never re-minted. It is the address of the
+ * record's Time Machine history, its media files, its diffusion rows and its
+ * activity trail, and every one of those stores keys the bare address with no
+ * generation of its own — so a re-minted id silently adopts a dead record's
+ * data. The counter is therefore a HIGH-WATER MARK of ids ever issued, NOT a
+ * count of live rows: `counter > MAX(section_id)` is the normal, correct state
+ * after any tail delete. No writer anywhere may lower it — gated by
+ * `test/unit/matrix_counter_monotonic_tripwire.test.ts`.
+ */
 export async function insertMatrixRecordWithCounter(
 	tableName: string,
 	sectionTipo: string,
@@ -467,7 +530,7 @@ export async function insertMatrixRecordWithCounter(
 ): Promise<number> {
 	assertMatrixTable(tableName);
 	// '_dd' ontology tables use the master-managed counter (PHP DB-01).
-	const counterTable = tableName.endsWith('_dd') ? 'matrix_counter_dd' : 'matrix_counter';
+	const counterTable = counterTableFor(tableName);
 
 	// Dynamic jsonb columns: section_tipo is $1, section_id comes from the CTE,
 	// each provided column binds as $n::text::jsonb (the BUN GOTCHA — see header).
@@ -489,9 +552,17 @@ export async function insertMatrixRecordWithCounter(
 		paramIndex++;
 	}
 
+	const historicalMax = counterFloorExpression(tableName);
+
 	const rows = (await sql.unsafe(
 		`WITH calc_start AS (
-			SELECT COALESCE(MAX(section_id), 0) + 1 AS next_start FROM "${tableName}" WHERE section_tipo = $1
+			-- Only the MISSING-counter case consults the floor, and CASE does not
+			-- evaluate the branch it does not take — so the witness subqueries stay
+			-- off the hot create path, where the counter row always exists.
+			SELECT CASE
+				WHEN EXISTS (SELECT 1 FROM ${counterTable} WHERE tipo = $1) THEN 0
+				ELSE ${historicalMax}
+			END + 1 AS next_start
 		),
 		updated_counter AS (
 			INSERT INTO ${counterTable} (tipo, value)
@@ -508,19 +579,19 @@ export async function insertMatrixRecordWithCounter(
 	const sectionId = rows[0]?.section_id;
 	if (sectionId === undefined) {
 		// Counter collision: the allocated id already exists (stale counter).
-		// Realign to GREATEST(value, MAX(section_id)) and retry once (S2-01).
+		// Realign to GREATEST(value, historical max) and retry once (S2-01).
+		// The realign reuses the SAME floor as the bootstrap (P0-14): a collision
+		// proves the counter is behind the live rows, and the TM witness keeps the
+		// repair from stopping at a live MAX that a tail delete has lowered.
 		if (depth < 1) {
 			await sql.unsafe(
 				`UPDATE ${counterTable}
-				 SET value = GREATEST(
-					${counterTable}.value,
-					(SELECT COALESCE(MAX(section_id), 0) FROM "${tableName}" WHERE section_tipo = $1)
-				 )
+				 SET value = GREATEST(${counterTable}.value, ${historicalMax})
 				 WHERE tipo = $1`,
 				[sectionTipo],
 			);
 			console.error(
-				`insertMatrixRecordWithCounter: stale counter for '${sectionTipo}' on ${tableName} — realigned to MAX(section_id), retrying once (S2-01 self-heal)`,
+				`insertMatrixRecordWithCounter: stale counter for '${sectionTipo}' on ${tableName} — realigned to the historical max (live rows + time machine), retrying once (S2-01 self-heal)`,
 			);
 			return insertMatrixRecordWithCounter(tableName, sectionTipo, jsonbColumns, depth + 1);
 		}
@@ -554,7 +625,7 @@ export async function insertMatrixRecordWithExplicitId(
 	options: { onConflict?: 'throw' | 'ignore' } = {},
 ): Promise<number> {
 	assertMatrixTable(tableName);
-	const counterTable = tableName.endsWith('_dd') ? 'matrix_counter_dd' : 'matrix_counter';
+	const counterTable = counterTableFor(tableName);
 
 	// $1 = section_tipo, $2 = section_id, then each provided jsonb column.
 	const columnNames: string[] = ['"section_tipo"', '"section_id"'];
@@ -581,8 +652,17 @@ export async function insertMatrixRecordWithExplicitId(
 			SELECT pg_advisory_xact_lock(hashtext($1))
 		),
 		raise_counter AS (
+			-- A row this CREATES is seeded from the same floor as the counter-driven
+			-- allocator (P0-14). Seeding it at the explicit id alone would leave the
+			-- counter below the highest id ever minted, and the NEXT counter-driven
+			-- create would take the EXISTS branch, never consult the floor, and be
+			-- born at a deleted record's address. The CASE keeps the witness off the
+			-- path where the counter row already exists.
 			INSERT INTO ${counterTable} (tipo, value)
-			SELECT $1, $2::int FROM locked
+			SELECT $1, CASE
+				WHEN EXISTS (SELECT 1 FROM ${counterTable} WHERE tipo = $1) THEN $2::int
+				ELSE GREATEST($2::int, ${counterFloorExpression(tableName)})
+			END FROM locked
 			ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(${counterTable}.value, EXCLUDED.value)
 			RETURNING value
 		)

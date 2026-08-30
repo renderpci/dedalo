@@ -32,8 +32,9 @@ function rewritableTables(): string[] {
  * Apply one move_tld definition file. Each item is `{old,new,type,perform}`;
  * `type:'section'` entries drive the section_tipo column rename, all entries
  * drive the embedded-tipo string rewrite (component tipos live inside
- * locators/keys). Counter rows for a renamed tipo are DROPPED (PHP parity —
- * a matching `new` counter is expected to be rebuilt).
+ * locators/keys). Counter rows for a renamed tipo are CARRIED to the new tipo
+ * (P0-14 — PHP dropped them and left the allocator to rebuild from live rows,
+ * which re-minted the ids of deleted records).
  */
 export async function executeChangesInTipos(
 	rawItems: unknown,
@@ -107,8 +108,10 @@ export async function executeChangesInTipos(
 			}
 			// matrix_time_machine also keys sections by section_tipo.
 			await renameColumn('matrix_time_machine', 'section_tipo', oldTipo, newTipo, recorder);
-			// matrix_counter row for the old section tipo is dropped (PHP parity).
-			await dropCounter(oldTipo, recorder);
+			// The section keeps its records — and their ids — under the new tipo,
+			// so it must keep its high-water mark too: CARRY the counter, then drop
+			// the old row (P0-14).
+			await carryCounter(oldTipo, newTipo, recorder);
 		}
 
 		// 2. TM `tipo` column rename (both section + component tipos are TM tipos)
@@ -161,32 +164,83 @@ async function renameColumn(
 		});
 }
 
-/** DROP the matrix_counter row for a renamed tipo (PHP changes_in_tipos:997). */
-async function dropCounter(tipo: string, recorder: TransformRecorder): Promise<void> {
+/** The two counter tables a section can be governed by (see carryCounter). */
+const COUNTER_TABLES = ['matrix_counter', 'matrix_counter_dd'] as const;
+
+/** Carry one counter table's row for a renamed tipo: raise the destination, drop the source. */
+async function carryOneCounterTable(
+	counterTable: (typeof COUNTER_TABLES)[number],
+	oldTipo: string,
+	newTipo: string,
+	recorder: TransformRecorder,
+): Promise<void> {
 	if (recorder.dryRun) {
 		const count = await scalarCount(
-			'SELECT count(*)::int AS count FROM matrix_counter WHERE tipo = $1',
-			[tipo],
+			`SELECT count(*)::int AS count FROM ${counterTable} WHERE tipo = $1`,
+			[oldTipo],
 		);
 		if (count > 0)
 			recorder.record({
-				op: 'delete',
-				table: 'matrix_counter',
-				target: tipo,
-				detail: 'drop old counter',
+				op: 'update',
+				table: counterTable,
+				target: oldTipo,
+				detail: `carry counter→${newTipo}`,
 			});
 		return;
 	}
-	const rows = (await sql.unsafe('DELETE FROM matrix_counter WHERE tipo = $1 RETURNING tipo', [
-		tipo,
+	// Raise the destination to the old counter's value (GREATEST — a counter
+	// already standing at the new tipo is never lowered), then drop the source.
+	const carried = (await sql.unsafe(
+		`INSERT INTO ${counterTable} (tipo, value)
+		 SELECT $2, value FROM ${counterTable} WHERE tipo = $1
+		 ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(${counterTable}.value, EXCLUDED.value)
+		 RETURNING value`,
+		[oldTipo, newTipo],
+	)) as { value: number }[];
+	const rows = (await sql.unsafe(`DELETE FROM ${counterTable} WHERE tipo = $1 RETURNING tipo`, [
+		oldTipo,
 	])) as unknown[];
 	if (rows.length > 0)
 		recorder.record({
-			op: 'delete',
-			table: 'matrix_counter',
-			target: tipo,
-			detail: 'drop old counter',
+			op: 'update',
+			table: counterTable,
+			target: oldTipo,
+			detail: `carry counter→${newTipo} (${String(carried[0]?.value ?? 'absent')})`,
 		});
+}
+
+/**
+ * CARRY a renamed section's counter row to its new name, then drop the old one.
+ *
+ * (!) Deliberate divergence from PHP changes_in_tipos:997
+ * (WC-2026-08-30-section-id-counter-is-a-high-water-mark, P0-14).
+ * PHP dropped the old counter and left the new tipo with none, trusting the
+ * allocator to "rebuild" it — but the allocator's bootstrap derives its restart
+ * point from rows that are still ALIVE, so every id freed by a deleted record
+ * became re-mintable the moment a section was renamed. The rename moves the
+ * records and their `matrix_time_machine` rows to the new tipo without changing
+ * a single section_id, so the high-water mark must move with them.
+ *
+ * BOTH counter tables are carried: a section backed by a `_dd` matrix table is
+ * governed by `matrix_counter_dd`, and the ontology node that would say which
+ * one may already be renamed or gone by the time this transform runs. Carrying
+ * from a table that holds no row is a no-op, so carrying both is safer than
+ * resolving and guessing.
+ */
+async function carryCounter(
+	oldTipo: string,
+	newTipo: string,
+	recorder: TransformRecorder,
+): Promise<void> {
+	// A move_tld map is hand-maintained and routinely lists every tipo of a TLD,
+	// including ones that do not move. For an identity entry the "carry" upserts
+	// the row onto ITSELF (a no-op GREATEST) and the DELETE would then destroy
+	// the only counter — re-creating the exact defect this function closes.
+	if (oldTipo === newTipo) return;
+
+	for (const counterTable of COUNTER_TABLES) {
+		await carryOneCounterTable(counterTable, oldTipo, newTipo, recorder);
+	}
 }
 
 /**

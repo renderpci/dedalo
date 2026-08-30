@@ -14956,7 +14956,7 @@ dd-modal:has(.tool_header) {
   background-color: var(--bg_surface);
 }
 .wrapper_widget.counters_status .dd_table {
-  grid-template-columns: minmax(5rem, 8rem) minmax(7rem, 1fr) 5rem 5.5rem 7rem 9rem;
+  grid-template-columns: minmax(5rem, 8rem) minmax(7rem, 1fr) 5rem 5.5rem 7rem;
 }
 /**
 * database_info

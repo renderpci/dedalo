@@ -21,11 +21,13 @@
 *   - The human-readable section label
 *   - The current counter value persisted in matrix_counter
 *   - The actual highest section_id found in the live data matrix table
-*   - A "Fix counter" action button (visible only when the two values diverge —
-*     calls consolidate_counter() server-side via counter_action='fix')
-*   - A "Reset counter" action button on every data row (calls delete_counter()
-*     server-side via counter_action='reset'; requires two confirmation steps
-*     because the operation cannot be undone)
+*   - A "Fix counter" action button, visible ONLY when the counter LAGS the data
+*     (counter_value < last_section_id), which RAISES the counter server-side via
+*     counter_action='fix'
+*
+* There is no "Reset counter" button: deleting a counter row destroyed the
+* high-water mark and made the allocator re-mint deleted records' ids (P0-14).
+* The server refuses counter_action='reset'.
 *
 * Data shape consumed from self.value (populated by counters_status PHP class
 * via counter::check_counters()):
@@ -36,15 +38,22 @@
 *     counter_value:  number   — last-issued section_id stored in matrix_counter
 *     last_section_id: number  — actual maximum section_id in the data matrix table
 *                                (0 when the table is empty or unreachable)
+*     floor_value:    number   — the section's HIGH-WATER MARK: the greater of
+*                                last_section_id and the maximum section_id still
+*                                witnessed by matrix_time_machine for deleted
+*                                records. This is what drift is measured against.
 *   }>
 *   errors: Array<string>    — diagnostic messages from non-section tipo rows or
 *                              DB failures (rendered in a pre block at the top)
 * }
 *
-* A mismatch between counter_value and last_section_id means the counter has
-* drifted — typically after a bulk import that bypassed update_counter(). The
-* "Fix counter" button calls self.modify_counter() (counters_status.js) which
-* posts counter_action='fix' to the server, triggering consolidate_counter().
+* counter_value is a HIGH-WATER MARK of the ids ever minted for the section, not
+* a count of live records — so counter_value > last_section_id is the NORMAL
+* state of any section that has had a record deleted from its tail, and nothing
+* is flagged. Only counter_value < last_section_id is a defect (typically a bulk
+* import that bypassed the allocator); the "Fix counter" button calls
+* self.modify_counter() (counters_status.js) which posts counter_action='fix'
+* and raises the counter to the real maximum section_id.
 *
 * Exports:
 *   render_counters_status  — constructor (prototype used by counters_status.js)
@@ -64,6 +73,43 @@ export const render_counters_status = function() {
 
 	return true
 }//end render_counters_status
+
+
+
+/**
+* COUNTER_LAGS
+* THE ONE drift predicate, used by BOTH the per-row decoration and the bulk
+* "Repair all counters" count — they diverged once (the per-row test carried an
+* extra `last_section_id !== 'empty'` conjunct) and the page then offered to
+* repair rows it was not flagging.
+*
+* A counter is a HIGH-WATER MARK: it lags only when it stands BELOW the
+* section's floor_value (the highest id ever minted, witnessed by the live rows
+* AND by the time-machine rows of deleted ones). A counter AHEAD of the live
+* data is healthy.
+* @param {Object} item - one audit datalist row
+* @returns {boolean}
+*/
+const counter_lags = function(item) {
+	return Number(item.counter_value) < Number(item.floor_value ?? item.last_section_id ?? 0)
+}//end counter_lags
+
+
+
+/**
+* BULK_REPAIRABLE
+* A lagging row the BULK button may raise. `bulk_repair_excluded` marks a row
+* whose high-water mark sits far above its live data: the raise is correct but
+* IRREVERSIBLE (no writer may lower a counter, and 'reset' is gone), so it is a
+* per-row decision with the number in view, never a side effect of one click.
+* The button's count must equal what the server will actually repair, or it
+* promises work it will not do.
+* @param {Object} item - one audit datalist row
+* @returns {boolean}
+*/
+const bulk_repairable = function(item) {
+	return counter_lags(item) && item.bulk_repair_excluded!==true
+}//end bulk_repairable
 
 
 
@@ -116,13 +162,12 @@ render_counters_status.prototype.list = async function(options) {
 *      or DB access failures found by counter::check_counters().
 *   3. A datalist_container with one row per audited section, prepended by a header
 *      row. Each data row shows section_tipo (link), label, counter_value, and
-*      last_section_id. When counter_value !== last_section_id the last_section_id
-*      cell is decorated with the 'out_of_sync' CSS class and a "Fix counter" button
-*      appears. A "Reset counter" button is present on every data row regardless of
-*      sync state.
+*      last_section_id. When counter_value < last_section_id the last_section_id
+*      cell is decorated with the 'state_alert' CSS class and a "Fix counter"
+*      button appears.
 *
-* The body_response div is created here and passed into both fn_fix_counter and
-* fn_reset_counter closures so that API operation status messages can be written
+* The body_response div is created here and passed into the fn_fix_counter
+* closure so that API operation status messages can be written
 * into it by modify_counter() (counters_status.js). It is appended to content_data
 * at the end of this function after the datalist is fully built.
 *
@@ -170,13 +215,44 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// body_response
-	// Created early so that fn_fix_counter and fn_reset_counter closures can
+	// Created early so that the fn_fix_counter closure can
 	// reference it via closure capture. Appended to content_data at the end of
 	// this function, after the datalist is built, so it appears below the rows.
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'body_response'
 		})
+
+	// repair_all_container
+	// The BULK form of "Fix counter" (P0-14). Shown only when at least one row
+	// stands below its high-water mark — the state an install is left in when the
+	// old consolidate-down button was pressed before that button was removed.
+	// Raise-only and idempotent server-side, so it is safe to press twice.
+		const lagging_count = (self.value?.datalist ?? []).filter(bulk_repairable).length
+		if (lagging_count > 0) {
+			const repair_all_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'repair_all_container',
+				parent			: content_data
+			})
+			const button_repair_all = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_action repair_all_counters',
+				inner_html		: 'Repair all counters (' + lagging_count + ')',
+				parent			: repair_all_container
+			})
+			button_repair_all.addEventListener('click', async function(e){
+				e.stopPropagation()
+				button_repair_all.classList.add('button_spinner')
+				try {
+					await self.repair_all_counters({
+						body_response : body_response
+					})
+				} finally {
+					button_repair_all.classList.remove('button_spinner')
+				}
+			})
+		}
 
 	// datalist
 		const datalist_container = ui.create_dom_element({
@@ -206,11 +282,22 @@ const get_content_data_edit = async function(self) {
 				// matrix table is empty or could not be read (check_counters returns 0
 				// for both; the header item carries the string 'Last section_id').
 				const last_section_id	= item.last_section_id || 'empty'
-				// out_of_sync: true when the stored counter value diverges from the
-				// actual highest section_id in the data table. This drives the
-				// 'out_of_sync' CSS class on the last_section_id cell and the
-				// visibility of the "Fix counter" button.
-				const out_of_sync		= last_section_id!=='empty' && item.counter_value!==last_section_id
+				// counter_lagging: true ONLY when the stored counter is BELOW the
+				// section's HIGH-WATER MARK (floor_value: the highest id ever minted,
+				// witnessed by the live rows AND by the time-machine rows of deleted
+				// ones). The counter is a high-water mark, not a row count, so
+				// counter > last_section_id is the NORMAL state of any section that
+				// has had a record deleted from its tail — flagging that as drift is
+				// what made an operator press a button that re-minted dead ids (P0-14).
+				// Comparing against last_section_id instead of floor_value would
+				// report an ALREADY-damaged install as healthy: after the old
+				// consolidate-down button ran, counter == last_section_id exactly
+				// while the ids above it are minted and dead. And the test must NOT
+				// be conjoined with `last_section_id !== 'empty'`: a section whose
+				// records were ALL deleted has last_section_id 0 (rendered 'empty')
+				// and a floor above 0 — the most damaged row on the install — which
+				// that guard silently excluded while the bulk count still counted it.
+				const counter_lagging	= counter_lags(item)
 				const is_header = item.type==='header'
 
 				// datalist_item_container
@@ -262,13 +349,13 @@ const get_content_data_edit = async function(self) {
 					})
 
 				// last_section_id
-				// The 'out_of_sync' CSS class highlights cells where the stored counter
-				// value no longer matches the highest section_id in the data matrix.
+				// state_alert highlights only a LAGGING counter — a counter ahead of
+				// the data is healthy and is left undecorated.
 					const lsid_class = is_header
 					? 'dd_th num'
 					// state_alert, NOT alert: the bare name collides with the global
 					// .alert component in layout/general.less (see widget_kit.less).
-					: ('dd_td num' + (out_of_sync===true ? ' state_alert' : ''))
+					: ('dd_td num' + (counter_lagging===true ? ' state_alert' : ''))
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: lsid_class,
@@ -277,10 +364,10 @@ const get_content_data_edit = async function(self) {
 					})
 
 				// fix_counter_container
-				// The "Fix counter" button is shown only on out_of_sync data rows.
-				// It calls self.modify_counter() with counter_action='fix', which
-				// invokes counter::consolidate_counter() on the server to re-sync the
-				// matrix_counter row with the real maximum section_id.
+				// The "Fix counter" button is shown only on rows whose counter LAGS
+				// the data. It calls self.modify_counter() with counter_action='fix',
+				// which RAISES the matrix_counter row to the real maximum section_id
+				// (GREATEST upsert — it can never lower it).
 					const fix_counter_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: (is_header ? 'dd_th' : 'dd_td') + ' act fix_counter_container',
@@ -288,7 +375,7 @@ const get_content_data_edit = async function(self) {
 					})
 					if (item.type==='header') {
 						fix_counter_container.insertAdjacentHTML('afterbegin', 'Fix counter')
-					}else if(out_of_sync) {
+					}else if(counter_lagging) {
 						const button_fix = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'light button_action fix_counter',
@@ -318,58 +405,6 @@ const get_content_data_edit = async function(self) {
 									button_fix.classList.remove('button_spinner')
 							}
 						}//end fn_fix_counter
-					}
-
-				// reset_counter_container
-				// The "Reset counter" button is shown on every data row (regardless of
-				// sync state). It calls self.modify_counter() with counter_action='reset',
-				// which invokes counter::delete_counter() on the server — permanently
-				// removing the matrix_counter row so the sequence restarts from 1.
-				// (!) This is destructive: if existing records have section_ids above 1,
-				// the next insert will collide. Two confirmation dialogs guard this action.
-					const reset_counter_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: (is_header ? 'dd_th' : 'dd_td') + ' act reset_counter_container',
-						parent			: datalist_item_container
-					})
-					if (item.type==='header') {
-						reset_counter_container.insertAdjacentHTML('afterbegin', 'Reset counter')
-					}else{
-						const button_reset_counter = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'light warning button_action reset_counter',
-							inner_html		: 'Reset counter',
-							parent			: reset_counter_container
-						})
-						button_reset_counter.addEventListener('click', fn_reset_counter)
-						async function fn_reset_counter(e) {
-							e.stopPropagation()
-
-							// confirm action
-							// Two-step confirmation: the first dialog explains the
-							// irreversibility and names the affected tipo; the second is a
-							// generic 'Sure?' guard. Both must be accepted to proceed.
-								if (!confirm( 'Warning! \nReset counter will delete this section ['+item.section_tipo+'] counter. \nThis action cannot be undone.' )) {
-									return false;
-								}
-								if (!confirm( get_label.sure || 'Sure?' )) {
-									return false;
-								}
-
-							// button_spinner
-								button_reset_counter.classList.add('button_spinner')
-
-							try {
-								// modify_counter
-									await self.modify_counter({
-										counter_action	: 'reset',
-										section_tipo	: item.section_tipo,
-										body_response	: body_response
-									})
-							} finally {
-									button_reset_counter.classList.remove('button_spinner')
-							}
-						}//end fn_reset_counter
 					}
 
 			}//end for (let i = 0; i < full_list_length; i++)

@@ -5,7 +5,7 @@
  * Two write modes:
  *  - resetTestSection()       — the unit_test maintenance-widget semantics:
  *    TRUNCATE matrix_test, restart its id sequence, insert the canonical
- *    records, exact-set the test3 counter. Destroys EVERY row in the table
+ *    records, RAISE the test3 counter. Destroys EVERY row in the table
  *    (scratch tipos included) — maintenance/install surfaces only.
  *  - restoreCanonicalTest3()  — surgical: replaces only the test3 rows
  *    (canonical + accumulated strays), leaves other tipos, the sequence and
@@ -13,8 +13,9 @@
  *
  * matrix_time_machine rows are deliberately untouched in both modes — the PHP
  * unit_test widget never touched them either, and the surviving TM history is
- * why the surgical counter update is raise-only (GREATEST): lowering it would
- * re-issue section_ids that still have TM rows.
+ * why BOTH counter updates are raise-only (GREATEST): lowering the counter
+ * would re-issue section_ids that still have TM rows, and the reborn record
+ * would inherit the dead one's history (P0-14).
  *
  * ALS note: no request principal/lang is read here — callable from the widget
  * handler, tests, scripts and the installer alike. fireSaveEvent self-defers
@@ -98,8 +99,10 @@ async function writeCanonicalRecord(record: CanonicalRecord): Promise<void> {
 
 /**
  * Maintenance/install reset: truncate matrix_test, restart the sequence,
- * insert the canonical records (ascending — serial ids land 1..N), exact-set
- * the test3 counter to MAX(canonical section_id).
+ * insert the canonical records (ascending — serial ids land 1..N), and RAISE
+ * the test3 counter to at least MAX(canonical section_id) — raise-only, never
+ * exact-set (P0-14: the TRUNCATE leaves matrix_time_machine rows behind, so
+ * lowering the counter would re-issue ids that still have history).
  */
 export async function resetTestSection(): Promise<{ records: number }> {
 	const fixture = await loadCanonicalTest3Fixture();
@@ -114,9 +117,14 @@ export async function resetTestSection(): Promise<{ records: number }> {
 		for (const record of records) {
 			await writeCanonicalRecord(record);
 		}
+		// RAISE-ONLY, exactly as restoreCanonicalTest3 below and for the same
+		// reason this file's header already gives: the TRUNCATE does not remove
+		// matrix_time_machine rows, so lowering the counter re-issues section_ids
+		// that still have TM history — and this door runs on REAL databases (the
+		// installer and the unit_test maintenance widget), not only the suite DB.
 		await sql.unsafe(
 			`INSERT INTO matrix_counter (tipo, value) VALUES ($1, $2)
-			 ON CONFLICT (tipo) DO UPDATE SET value = EXCLUDED.value`,
+			 ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(matrix_counter.value, EXCLUDED.value)`,
 			[CANONICAL_SECTION_TIPO, maxCanonicalSectionId(fixture)],
 		);
 		// Every wiped tipo's data-derived caches must drop (post-commit).

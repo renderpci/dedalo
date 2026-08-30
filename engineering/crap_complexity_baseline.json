@@ -6,7 +6,7 @@
 	"summary": {
 		"files": 517,
 		"functions": 4617,
-		"functionsOverCap": 693,
+		"functionsOverCap": 692,
 		"filesOverCap": 269
 	},
 	"files": {
@@ -38,7 +38,7 @@
 		"src/core/area_maintenance/backup.ts": 23,
 		"src/core/area_maintenance/user_stats.ts": 33,
 		"src/core/area_maintenance/widgets/check_config.ts": 16,
-		"src/core/area_maintenance/widgets/counters_status.ts": 11,
+		"src/core/area_maintenance/widgets/counters_status.ts": 7,
 		"src/core/area_maintenance/widgets/database_info.ts": 13,
 		"src/core/area_maintenance/widgets/dataframe_control.ts": 48,
 		"src/core/area_maintenance/widgets/diffusion_server_control.ts": 8,

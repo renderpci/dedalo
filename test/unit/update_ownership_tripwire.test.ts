@@ -94,6 +94,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'counters_status.get_value': 'read-only counters panel',
 	'counters_status.modify_counter':
 		'matrix_counter repair through the TS write path (PHP-parity action)',
+	'counters_status.repair_all_counters':
+		'matrix_counter repair through the TS write path — the bulk form of modify_counter fix (P0-14); raise-only',
 	'dataframe_control.get_value': 'read-only dataframe panel',
 	'dataframe_control.run_check': 'read-only dataframe consistency check',
 	'dataframe_control.run_fix': 'dataframe repair through the TS write path',

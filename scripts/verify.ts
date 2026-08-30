@@ -75,6 +75,7 @@ const TRIPWIRES = [
 	'test/unit/mcp_write_scope_tripwire.test.ts',
 	'test/unit/agent_egress_tripwire.test.ts',
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
+	'test/unit/matrix_counter_monotonic_tripwire.test.ts',
 	'test/unit/consultation_only_sections_tripwire.test.ts',
 	'test/unit/tm_mode_retired_tripwire.test.ts',
 	'test/unit/log_section_policy_tripwire.test.ts',

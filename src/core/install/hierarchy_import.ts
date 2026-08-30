@@ -94,15 +94,24 @@ async function importCopyFile(
 
 /**
  * Realign matrix_counter after a raw COPY: for EVERY imported section_tipo of
- * this tld (e.g. es1, es2), set the counter to MAX(section_id) so the next
- * insert allocates a fresh id. `tld` is safeTld-validated before this runs, so
+ * this tld (e.g. es1, es2), raise the counter to the section's high-water mark
+ * — MAX(section_id) over live rows AND over the surviving time-machine rows of
+ * deleted ones — so the next insert allocates a genuinely fresh id. `tld` is safeTld-validated before this runs, so
  * the anchored regex literal is safe to embed.
  */
 async function consolidateHierarchyCounter(conn: DbConnDescriptor, tld: string): Promise<void> {
+	// The seeded value is the HIGH-WATER MARK, not MAX(live section_id): a row
+	// this CREATES would otherwise restart inside the ids of records deleted
+	// before the re-import, and matrix_time_machine outlives those records
+	// (P0-14; same floor as src/core/db/matrix_write.ts counterFloorExpression).
 	const sql = `INSERT INTO matrix_counter (tipo, value)
-		SELECT section_tipo, MAX(section_id)
-		  FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$'
-		  GROUP BY section_tipo
+		SELECT live.section_tipo,
+		       GREATEST(live.max_id, COALESCE((
+		         SELECT MAX(tm.section_id) FROM matrix_time_machine tm
+		          WHERE tm.section_tipo = live.section_tipo), 0))
+		  FROM (SELECT section_tipo, MAX(section_id) AS max_id
+		          FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$'
+		         GROUP BY section_tipo) live
 		ON CONFLICT (tipo) DO UPDATE
 		  SET value = GREATEST(matrix_counter.value, EXCLUDED.value);`;
 	await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', sql]).catch(() => {});

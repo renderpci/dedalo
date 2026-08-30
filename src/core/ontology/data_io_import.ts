@@ -614,8 +614,13 @@ export async function consolidateSectionCounter(
 	// psql performs NO variable interpolation with -c (only via -f or interactively),
 	// so the already-validated tipo is inlined directly rather than passed as :'tipo'
 	// (which would reach the server literally and fail with "syntax error at or near :").
+	// High-water mark, not MAX(live section_id) — see hierarchy_import and
+	// matrix_write.ts counterFloorExpression (P0-14): a counter row this CREATES
+	// must not restart inside the ids of records deleted before the import.
 	const sql = `INSERT INTO matrix_counter (tipo, value)
-SELECT section_tipo, MAX(section_id) FROM "${matrixTable}" WHERE section_tipo = '${sectionTipo}' GROUP BY section_tipo
+SELECT live.section_tipo,
+       GREATEST(live.max_id, COALESCE((SELECT MAX(tm.section_id) FROM matrix_time_machine tm WHERE tm.section_tipo = live.section_tipo), 0))
+  FROM (SELECT section_tipo, MAX(section_id) AS max_id FROM "${matrixTable}" WHERE section_tipo = '${sectionTipo}' GROUP BY section_tipo) live
 ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(matrix_counter.value, EXCLUDED.value);`;
 	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', sql]);
 	return run.exitCode === 0;
