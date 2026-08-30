@@ -21,10 +21,19 @@ import * as REAL_CONFIG_MODULE from '../../src/config/config.ts';
 
 const REAL_CONFIG = REAL_CONFIG_MODULE.config;
 
+/**
+ * THE RESTORE MUST COME FROM A SNAPSHOT, NOT THE LIVE NAMESPACE (GATE-01).
+ * `REAL_CONFIG_MODULE` is a LIVE module namespace: once `mock.module` has
+ * replaced the module, that binding reflects the MOCK, so "restoring" from it
+ * reinstalls the stub and hands it to every later file in the tier. This is a
+ * spread COPY taken at import time, before any mock runs.
+ */
+const REAL_CONFIG_EXPORTS = { ...REAL_CONFIG_MODULE, config: REAL_CONFIG };
+
 // mock.module leaks across files in this suite, and this one replaces the config
 // catalog every other module reads. Put the REAL module back when the file ends.
 afterAll(() => {
-	mock.module('../../src/config/config.ts', () => REAL_CONFIG_MODULE);
+	mock.module('../../src/config/config.ts', () => REAL_CONFIG_EXPORTS);
 });
 
 /** The real catalog with the image tier names replaced — everything else intact. */

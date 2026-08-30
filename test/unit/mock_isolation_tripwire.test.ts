@@ -450,7 +450,49 @@ function installsWithoutRestore(file: string): boolean {
 	return stripComments(raw).includes('mock.module(') && !raw.includes('mock.restore()');
 }
 
+/**
+ * RULE 3 — A RESTORE MUST COME FROM A SNAPSHOT, NOT THE LIVE NAMESPACE (GATE-01,
+ * the blind spot this file's own header named).
+ *
+ * `import * as NS from 'x'` binds the LIVE module namespace. After
+ * `mock.module('x', …)` that binding reflects the MOCK — so a teardown written
+ * as `mock.module('x', () => NS)` reinstalls the stub it was meant to remove and
+ * hands it to every later file in the tier, which is exactly how 24 media tests
+ * came to be silently skipped. The correct shape is a spread COPY captured at
+ * import time, before any mock runs:
+ *
+ *     const REAL_EXPORTS = { ...NS };            // snapshot
+ *     mock.module('x', () => REAL_EXPORTS);      // restore
+ *
+ * Commit 427501d6d4 fixed ONE instance. Two more were still live when this rule
+ * was written (media_kill_integrity_native, media_master_qualities_config) —
+ * which is the whole argument for a rule instead of a repair.
+ */
+function namespaceRestores(file: string): string[] {
+	const src = stripComments(readFileSync(join(TEST_DIR, file), 'utf8'));
+	if (!src.includes('mock.module(')) return [];
+	const namespaces = [...src.matchAll(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from/g)].map(
+		(match) => match[1] as string,
+	);
+	return namespaces.filter((name) =>
+		new RegExp(`mock\\.module\\([^;]*?\\)\\s*=>\\s*${name}\\s*\\)`, 's').test(src),
+	);
+}
+
 describe('mock isolation — one process, so a mock is everyone’s', () => {
+	test('a restore factory returns a SNAPSHOT, never a live module namespace', () => {
+		const offenders = testFiles()
+			.flatMap((file) => namespaceRestores(file).map((name) => `${file} (=> ${name})`))
+			.sort();
+		expect(
+			offenders,
+			'`import * as NS` is the LIVE namespace: after mock.module it IS the mock, so ' +
+				'restoring from it reinstalls the stub for every later file in the tier. Capture a ' +
+				'spread copy at import time — `const REAL_EXPORTS = { ...NS }` — and restore from ' +
+				`that.\n  ${offenders.join('\n  ')}`,
+		).toEqual([]);
+	});
+
 	test('NO NEW partial module mock (shrink-only)', () => {
 		const added = narrowingFiles().filter((file) => !PARTIAL_MOCK_BASELINE.includes(file));
 		expect(

@@ -59,6 +59,15 @@ const SOURCE = join(WORK, 'master.tif');
 const REAL_CONFIG = REAL_CONFIG_MODULE.config;
 
 /**
+ * THE RESTORE MUST COME FROM A SNAPSHOT, NOT THE LIVE NAMESPACE (GATE-01).
+ * `REAL_CONFIG_MODULE` is a LIVE module namespace: once `mock.module` has
+ * replaced the module, that binding reflects the MOCK, so "restoring" from it
+ * reinstalls the stub and hands it to every later file in the tier. This is a
+ * spread COPY taken at import time, before any mock runs.
+ */
+const REAL_CONFIG_EXPORTS = { ...REAL_CONFIG_MODULE, config: REAL_CONFIG };
+
+/**
  * ONE fake binary at a FIXED path, behaviour chosen by environment variables
  * (`runBinary` passes the parent env through to the child). Re-mocking config
  * per case would depend on `mock.module` live-updating an import already bound
@@ -195,7 +204,7 @@ afterAll(() => {
 	// insufficient on its own — a module that already bound `config` keeps the
 	// mocked object — which is why disarming the fixture below is what actually
 	// protects the files that run after this one.
-	mock.module('../../src/config/config.ts', () => REAL_CONFIG_MODULE);
+	mock.module('../../src/config/config.ts', () => REAL_CONFIG_EXPORTS);
 	// Disarm: from here the script is a pass-through to the real binary.
 	delete process.env.FAKE_MAGICK_ACTIVE;
 	// The fixture is deliberately NOT removed. A later file may still resolve
