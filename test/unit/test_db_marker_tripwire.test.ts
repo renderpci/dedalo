@@ -1063,3 +1063,135 @@ describe('rule 7b — the setup script refuses a shard name, before touching any
 		).toEqual([]);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// RULE 4 — EVERY SQL POOL THE PROCESS CAN OPEN (P1-16, 2026-08-30)
+// ---------------------------------------------------------------------------
+//
+// THE STRUCTURAL HOLE THIS CLOSES, and it is the reason P1-16 existed at all.
+//
+// Rule 1's inventory is derived over WRITER_ROOTS — `src/core/test_data/**` and
+// `test/helpers/**`. That is the right corpus for "which test-data writer forgot to ask
+// the marker", and it is the WRONG corpus for "which database can this process open at
+// all": production source in neither tree is structurally invisible to it. So when
+// `src/ai/rag/vector_store.ts` opened a SECOND Bun SQL pool against
+// `RAG_DB_NAME` (default `dedalo7_rag`, a live installation index measured at 5,201
+// rows), no rule here could see it, nothing in `test/preload/**` repointed it, and the
+// suite issued DELETE + INSERT, DELETE, `CREATE TABLE … PARTITION OF` and
+// `DROP TABLE IF EXISTS` against production for months. The audit's own words
+// (REMEDIATION.md P1-16): "production source in neither tree is structurally invisible
+// to it today, which is exactly how this pool escaped."
+//
+// A gate that fixed only the RAG pool would leave the blindness intact for the NEXT
+// pool. So the census is over POOL CONSTRUCTORS in `src/`, derived, total, and every
+// site must carry a verdict:
+//
+//   marker-guarded — a Dédalo store whose writers ask a marker before writing.
+//   read-only      — the pool never mutates; a SELECT cannot corrupt anything.
+//   PENDING        — it CAN write a real database and nothing stops it. Shrink-only,
+//                    pinned, and each row names the finding, so a known gap is a
+//                    counted debt rather than an omission nobody sees.
+const POOL_SCAN_ROOT = 'src';
+
+/** Every `new SQL(` site in `src/`, as `<file>:<line>`. Derived, never listed. */
+function sqlPoolSites(): string[] {
+	const sites: string[] = [];
+	for (const match of new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, POOL_SCAN_ROOT) })) {
+		if (match.endsWith('.test.ts')) continue;
+		const file = `${POOL_SCAN_ROOT}/${match}`;
+		// Comments describe the rule (core/db/postgres.ts's T1 header names `new SQL(...)`
+		// in prose); only real constructor calls are pools.
+		const source = stripComments(read(file));
+		const lines = source.split('\n');
+		for (let index = 0; index < lines.length; index++) {
+			if ((lines[index] as string).includes('new SQL(')) sites.push(`${file}:${index + 1}`);
+		}
+	}
+	return sites.sort();
+}
+
+type PoolVerdict = 'marker-guarded' | 'read-only' | 'PENDING';
+
+/** Keyed by FILE — a file's pools share a purpose and a guard. */
+const POOL_VERDICTS: Readonly<Record<string, { verdict: PoolVerdict; reason: string }>> = {
+	'src/core/db/postgres.ts': {
+		verdict: 'marker-guarded',
+		reason:
+			'THE matrix pool. Every test-data writer that reaches it calls assertTestDatabase() before its first write (rule 1 above), and the suite is repointed by test/preload/test_database.ts. This is the guard the other pools are measured against.',
+	},
+	'src/ai/rag/vector_store.ts': {
+		verdict: 'marker-guarded',
+		reason:
+			'The pgvector pool. Marker-guarded since 2026-08-30 (P1-16): its write doors ask assertTestRagDatabase() and test/preload/rag_db.ts repoints it with the one key that also arms the refusal. Before that it was the hole this rule exists to make impossible.',
+	},
+	'src/diffusion/targets/mariadb/db.ts': {
+		verdict: 'PENDING',
+		reason:
+			"The diffusion TARGET pools — an operator-configured MariaDB publication database, not a Dédalo store, so neither the matrix marker nor the RAG marker applies and no equivalent exists. getTargetPool() genuinely writes (CREATE TABLE, DML through src/diffusion/writers/mariadb_sql.ts); probeTargetDatabase() issues only SELECT 1. FINDING 2026-08-30, same class as P1-16 on a third pool: test/integration/diffusion_mariadb.test.ts:68 targets the database `web_numisdata_mib` — one INSTALLATION's publication target, named in the suite — and creates/drops scratch tables in it. It is test.if(HAVE_DB)-guarded, so it SKIPS where MariaDB is unreachable and WRITES where it is. The fix is a marked-target equivalent plus a generic target name; until then this is counted debt, not an oversight.",
+	},
+};
+
+/** PINNED. Shrink-only: a pool may leave PENDING, never join it silently. */
+const POOL_PENDING_COUNT = 1;
+
+describe('rule 4 — every SQL pool the process can open is classified', () => {
+	const sites = sqlPoolSites();
+	const files = [...new Set(sites.map((site) => site.split(':')[0] as string))].sort();
+
+	test('the scan finds the pools it is meant to see (anti-vacuity)', () => {
+		// A census over nothing proves nothing, and this one is cheap to break: a
+		// stripComments change, a Glob typo, a moved file.
+		expect(
+			sites.length,
+			'no `new SQL(` site found in src/ — the scan is broken',
+		).toBeGreaterThanOrEqual(3);
+		expect(files).toContain('src/core/db/postgres.ts');
+		expect(files).toContain('src/ai/rag/vector_store.ts');
+	});
+
+	test('every pool file carries a verdict', () => {
+		const unclassified = files.filter((file) => POOL_VERDICTS[file] === undefined);
+		expect(
+			unclassified,
+			`SQL pool(s) opened by src/ with no verdict:\n  ${unclassified.join('\n  ')}\n` +
+				'A second pool is how the suite reached the installation vector database for months. Classify it: ' +
+				'marker-guarded (its writers ask a marker), read-only (it never mutates), or PENDING with the finding named.',
+		).toEqual([]);
+	});
+
+	test('no verdict names a file that no longer opens a pool', () => {
+		// Staleness the other way: a dead row reads as coverage.
+		for (const [file, row] of Object.entries(POOL_VERDICTS)) {
+			expect(files, `${file} carries a pool verdict but opens no pool`).toContain(file);
+			expect(row.reason.length, `${file}: the reason is too short to be a reason`).toBeGreaterThan(
+				60,
+			);
+		}
+	});
+
+	test('the PENDING list is SHRINK-ONLY', () => {
+		const pending = Object.entries(POOL_VERDICTS).filter(([, row]) => row.verdict === 'PENDING');
+		expect(pending.length).toBeLessThanOrEqual(POOL_PENDING_COUNT);
+		expect(
+			pending.length,
+			`the pool PENDING list shrank to ${pending.length} — lower POOL_PENDING_COUNT so the ratchet keeps biting`,
+		).toBe(POOL_PENDING_COUNT);
+	});
+
+	test('a marker-guarded pool really names its guard', () => {
+		// The verdict is a claim about the source; check it rather than trust it.
+		const guards: Readonly<Record<string, string>> = {
+			'src/core/db/postgres.ts': 'assertTestDatabase',
+			'src/ai/rag/vector_store.ts': 'assertTestRagDatabase',
+		};
+		for (const [file, symbol] of Object.entries(guards)) {
+			if (POOL_VERDICTS[file]?.verdict !== 'marker-guarded') continue;
+			const reachable =
+				read(file).includes(symbol) || writerFiles.some((writer) => read(writer).includes(symbol));
+			expect(
+				reachable,
+				`${file} is marked marker-guarded but neither it nor any guarded writer mentions ${symbol}`,
+			).toBe(true);
+		}
+	});
+});

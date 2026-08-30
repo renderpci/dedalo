@@ -291,6 +291,13 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		exempt: [
 			'src/core/test_data/situations/situation.ts',
 			'src/core/test_data/test_tld_materialize.ts',
+			// The RAG marker guard (P1-16, 2026-08-30). It NAMES the matrix marker
+			// once, in the docblock sentence that explains what it is a twin OF —
+			// the matrix pool has a `dedalo_test_marker` row, the vector pool now
+			// has its own equivalent, and the analogy is the whole reason the file
+			// has the shape it does. It issues no SQL against the matrix table and
+			// owns a different one.
+			'src/ai/rag/test_rag_db.ts',
 		],
 	},
 	{

@@ -36,7 +36,7 @@ Meaning-based record search — the single best record per semantic hit.
 
 ### Returns
 
-`{ ok: true, msg: "ok", data: [ <hit> ] }`. A missing `query` declines with `request.invalid_options` (*"Missing query"*).
+`{ ok: true, msg: "ok", data: [ <hit> ] }`. A missing `query` declines with `request.invalid_options` (*"Missing query"*). When the embedding service does not answer the query with a usable vector, the action declines with `rag.embedding_unavailable` (503, *"The embedding service did not return a query vector"*, retryable) rather than running the dense leg blind and ranking arbitrary records.
 
 ### Example Request
 
@@ -93,7 +93,7 @@ Retrieve passages (chunks) that best match a query.
 
 ### Returns
 
-`{ ok: true, msg: "ok", data: [ <passage> ] }`.
+`{ ok: true, msg: "ok", data: [ <passage> ] }`. A missing `query` declines with `request.invalid_options`; when the embedding service does not answer the query with a usable vector, the action declines with `rag.embedding_unavailable` (503, *"The embedding service did not return a query vector"*, retryable) rather than running the dense leg blind and ranking arbitrary records.
 
 ### Example Request
 
@@ -117,7 +117,7 @@ Retrieve passages shaped as LLM context (same passage retrieval as `retrieve`, d
 
 ### Returns
 
-`{ ok: true, msg: "agent_context", data: [ <passage> ] }`.
+`{ ok: true, msg: "agent_context", data: [ <passage> ] }`. Same decline modes as `retrieve`, `rag.embedding_unavailable` included — it is the same passage retrieval.
 
 ## similar_to
 
@@ -162,7 +162,7 @@ Grounded question answering with citations — or a refusal when no context is f
 
 ### Returns
 
-`{ ok: true, msg, data: <answer object> }`. `msg` is `"ok"` for a grounded answer; a grounding miss and an egress-restricted record are both **normal** (ok:true) envelopes (no external model was called) with a distinct `msg`; an LLM transport failure declines with `rag.generation_failed` (503, *"The grounded answer could not be generated"*) — never a fabricated answer.
+`{ ok: true, msg, data: <answer object> }`. `msg` is `"ok"` for a grounded answer; a grounding miss and an egress-restricted record are both **normal** (ok:true) envelopes (no external model was called) with a distinct `msg`; an LLM transport failure declines with `rag.generation_failed` (503, *"The grounded answer could not be generated"*) — never a fabricated answer. The retrieval step in front of the model can decline first: with no usable query vector the action raises `rag.embedding_unavailable` (503, retryable), because an ungrounded retrieval would feed the model arbitrary passages.
 
 ### Example Request
 

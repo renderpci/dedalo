@@ -34,6 +34,23 @@ root = "test"
 # 4. component_registry — the model lookup production boot performs (S2-20).
 # 5. canonical_test3 — re-seeds the test3 playground FROM CODE, so a developer's edit to a
 #    playground record cannot break the gates whose goldens pin its values.
+# 6. rag_db        — sets DEDALO_TEST_RAG_DB_NAME, which repoints the pgvector store AND arms
+#    its dedalo_test_rag_marker guard (P1-16). ARMING is order-independent (the key is read
+#    live, no preload builds the rag pool, no test module has been imported yet); its
+#    PROVISIONING step is not. Provisioning dynamically imports the marker writer
+#    src/ai/rag/test_rag_db.ts, whose static graph — 42 src/ modules, re-derivable with
+#    `bun build src/ai/rag/test_rag_db.ts --target=bun` — reaches src/config/config.ts (via
+#    core/errors/index.ts -> log.ts -> core/api/counters.ts -> core/security/session_store.ts
+#    -> core/media/protection.ts), which FREEZES DB_NAME and the media root at import, and on
+#    the same edge session_store.ts itself, which OPENS the sqlite session store at module
+#    scope on a path resolved at import. That is why it sits below 1-3, and only below 1-3:
+#    above them the import would freeze the config and open the session store at the
+#    INSTALLATION's values — the three defects those files exist to prevent. It does NOT
+#    reach src/core/db/postgres.ts, so it neither builds nor connects the matrix pool; 4 and
+#    5 could equally precede or follow it. Of those two it is 4 (component_registry) that
+#    builds the matrix pool, via src/core/components/registry.ts -> ontology/resolver.ts;
+#    5 (canonical_test3) has no static imports at all. Last is simply the free position
+#    that satisfies the one real constraint.
 # The DB-touching preloads warn (never throw) when there is no Postgres — the hermetic tier
 # runs on a bare runner, and a throw here would take down all ~2000 tests.
 preload = [
@@ -42,4 +59,5 @@ preload = [
 	"./test/preload/session_db.ts",
 	"./test/preload/component_registry.ts",
 	"./test/preload/canonical_test3.ts",
+	"./test/preload/rag_db.ts",
 ]

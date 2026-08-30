@@ -154,6 +154,7 @@ const TRIPWIRES = [
 	'test/unit/test_tld_ontology_gate.test.ts',
 	'test/unit/test_db_marker_tripwire.test.ts',
 	'test/unit/test_media_root_tripwire.test.ts',
+	'test/unit/test_rag_db_tripwire.test.ts',
 	'test/unit/test_timeout_tripwire.test.ts',
 	'test/unit/test_baseline_tripwire.test.ts',
 	'test/unit/scratch_tld_uniqueness_tripwire.test.ts',

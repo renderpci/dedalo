@@ -16,7 +16,7 @@
 // install the database happens to hold. The summarizer's tipo is an opaque
 // string, rewritten through src/core/test_data/test_tld_tipo_map.json.
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type {
 	AgentAssistantTurn,
 	AgentLlmProvider,
@@ -25,6 +25,40 @@ import type {
 import { runAgent } from '../../src/ai/agent/loop.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { ensureCanonicalTest3 } from '../helpers/test_data.ts';
+
+/**
+ * PIN THE EMBEDDING PROVIDER — the header says this gate runs fully OFFLINE, and
+ * until 2026-08-30 that was true of the LLM seam only. The RAG tools it drives call
+ * `getEmbeddingProvider()`, which reads the MACHINE's config: on a host configured
+ * for a sidecar that is not running, `embed()` answers `[]` (its documented
+ * fail-closed shape) and every dense retrieval in here was running without a query
+ * vector.
+ *
+ * That used to pass. `denseSearch` bound SQL NULL into `$1::vector`, which does not
+ * error, and Reciprocal Rank Fusion scores by POSITION without ever reading the null
+ * score — so the tool returned arbitrary records with `is_error: false`, and this
+ * gate asserted exactly that. It is AIX-01, and this file was one of its witnesses.
+ * Since `assertQueryVector` (P1-14) the same situation is a typed refusal, so the
+ * gate now FAILS on a sidecar-configured machine and passes on a bare one — which is
+ * the "passes on one machine and nowhere else" shape AGENTS.md forbids.
+ *
+ * Pinning the deterministic embedder gives every host the same working vector, which
+ * is what these assertions are actually about: the tool WIRE (scope/group
+ * forwarding, dedup, chunk_index), not the embedder. Restored in afterAll — bun runs
+ * every file in one process, and deleting the key would hand the next file the
+ * machine's sidecar config instead of what it had.
+ */
+const PRIOR_EMBEDDING_PROVIDER = process.env.DEDALO_RAG_EMBEDDING_PROVIDER;
+process.env.DEDALO_RAG_EMBEDDING_PROVIDER = 'deterministic';
+
+afterAll(() => {
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets
+	if (PRIOR_EMBEDDING_PROVIDER === undefined) {
+		delete process.env.DEDALO_RAG_EMBEDDING_PROVIDER;
+	} else {
+		process.env.DEDALO_RAG_EMBEDDING_PROVIDER = PRIOR_EMBEDDING_PROVIDER;
+	}
+});
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 

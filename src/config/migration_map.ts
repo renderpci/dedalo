@@ -742,6 +742,10 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_RAG_DB_USERNAME_CONN',
 	'DEDALO_RAG_DB_PASSWORD_CONN',
 	'RAG_DB_NAME',
+	// The test-vector-database seam: repoints the RAG pool AND arms the marker
+	// guard (src/ai/rag/test_rag_db.ts). NEW_IN_V7 by construction — v6 had no
+	// vector store, no dedicated test tier and no such guard.
+	'DEDALO_TEST_RAG_DB_NAME',
 	'DEDALO_RAG_BATCH_SIZE',
 	'DEDALO_RAG_PROVIDER_TIMEOUT',
 	// DEDALO_RAG_EMBEDDABLE_MODELS retired 2026-07-22: selection moved to the

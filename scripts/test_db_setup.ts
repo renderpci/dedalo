@@ -68,6 +68,14 @@
  * every test-data writer in the tree asks before it moves a single row. This is
  * the ONLY producer of that row anywhere.
  *
+ * AND THE VECTOR DATABASE (P1-16, 2026-08-30). `ragSql` is a SEPARATE pool on a
+ * SEPARATE database, outside `assertTestDatabase()` and outside the media
+ * marker, and it resolved to the INSTALLATION's semantic index. This command
+ * now DROPS and rebuilds `<suite db>_rag` beside the matrix database and the
+ * media tree — schema from the vendored install/db/rag_embeddings.sql, stamped
+ * with its own `dedalo_test_rag_marker` row — and `bun test` is pointed at it by
+ * test/preload/rag_db.ts. Three surfaces, one fixture, one rebuild.
+ *
  * AND A READ-ONLY ROLE. Step 5b ensures `dedalo_test_ro` — a LOGIN role with
  * SELECT-only access to this database, for the shard bands that never write.
  * Created idempotently on every rebuild, ONLY behind the guards above (never
@@ -108,6 +116,7 @@ import {
 } from '../src/core/test_data/test_database_marker_constants.ts';
 import { testDatabaseName } from '../test/helpers/test_database.ts';
 import { rebuildTestMediaRoot } from '../test/helpers/test_media_root.ts';
+import { ensureSuiteRagDatabase, suiteRagDatabaseName } from '../test/helpers/test_rag_database.ts';
 import { deriveHierarchyAllowlist } from './lib/hierarchy_allowlist.ts';
 
 const REPO = join(import.meta.dir, '..');
@@ -168,10 +177,14 @@ if (/__shard\d+$/.test(testDb)) {
 }
 
 // --force is the operator's explicit "yes, I know what that database is". It
-// overrides EXACTLY ONE refusal: the provenance gate below, i.e. a target that
-// EXISTS but carries no marker this script wrote. It never overrides the app-DB
-// name guard above. Parsed before any side effect, so a mistyped flag dies here
-// rather than after the media tree has been swept.
+// overrides the TWO PROVENANCE GATES, and only those — a target that EXISTS but
+// carries no marker this script wrote: the matrix one (guard 2 below) and the
+// vector one (`ensureSuiteRagDatabase`, which is handed this same flag and
+// refuses to DROP a `<suite db>_rag` without a `dedalo_test_rag_marker` row).
+// Both are "prove it is disposable"; neither is a name guard, and --force never
+// overrides the app-DB name guard above nor the shard-clone refusal. Parsed
+// before any side effect, so a mistyped flag dies here rather than after the
+// media tree has been swept.
 const cliArgs = process.argv.slice(2);
 const force = cliArgs.includes('--force');
 {
@@ -378,6 +391,34 @@ console.log(
 	`[test-db] test media root rebuilt: ${mediaRoot} (marked '.dedalo_test_media'; the installation's media tree is never touched)`,
 );
 
+// AND THE VECTOR DATABASE, in the same breath and for the same reason (audit
+// 2026-08-26, P1-16). The matrix pool is not the only pool the suite opens:
+// `ragSql` (src/ai/rag/vector_store.ts) is a SEPARATE pool on a SEPARATE
+// database, so it sat outside `assertTestDatabase()` and outside the media
+// marker alike — and it resolved to `RAG_DB_NAME`, i.e. the INSTALLATION's
+// semantic index (`dedalo7_rag`), which every rag gate then upserted into,
+// partitioned and DELETEd from. `DEDALO_TEST_RAG_DB_NAME` repoints the pool AND
+// arms the `dedalo_test_rag_marker` refusal — one key, the media seam's rule,
+// so a run cannot be armed at the installation's index nor repointed with the
+// guard asleep.
+//
+// The name is derived `<suite db>_rag` and the SUITE DATABASE NAME is passed
+// EXPLICITLY, for the media root's reason: the derivation was just invalidated
+// by the repoint above, and the three surfaces are ONE fixture (an embedding row
+// names a matrix record by section_tipo + section_id).
+//
+// SWEPT AND REBUILT, like the media tree — a fixture is reproducible only if it
+// is. The DROP is gated by the vector database's own marker row, not by its
+// name, and `--force` is the same override it is for the matrix database. It
+// runs HERE, before the matrix DROP, so a refusal costs nothing but the media
+// sweep above (itself disposable by declaration) — never a half-built matrix.
+const ragDb = suiteRagDatabaseName(testDb);
+process.env.DEDALO_TEST_RAG_DB_NAME = ragDb;
+const ragOutcome = await ensureSuiteRagDatabase({ database: ragDb, mode: 'rebuild', force });
+console.log(
+	`[test-db] vector database rebuilt: ${ragDb} (${ragOutcome.dropped ? 'dropped and recreated' : 'created'}; schema from install/db/rag_embeddings.sql, marked 'dedalo_test_rag_marker'; the installation's semantic index is never touched)`,
+);
+
 console.log(`[test-db] rebuilding '${testDb}' (application DB '${appDb}' is never touched)`);
 
 // 1. Recreate the database.
@@ -558,5 +599,7 @@ console.log(
 // To materialize it by hand for a debugging session:
 //   bun -e "await (await import('./src/core/test_data/test_corpus/ensure.ts')).ensureTestCorpus()"
 
-console.log(`[test-db] ready — 'bun test' now uses '${testDb}' and '${mediaRoot}' automatically.`);
+console.log(
+	`[test-db] ready — 'bun test' now uses '${testDb}', '${mediaRoot}' and vector database '${ragDb}' automatically.`,
+);
 process.exit(0);

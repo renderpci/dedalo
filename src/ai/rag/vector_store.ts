@@ -16,12 +16,33 @@
  *
  * The store holds NO ACL logic — retrieval.ts gates every hit through the
  * same permission machinery as human reads (never expose the store directly).
+ *
+ * WHERE THE SUITE MAY WRITE (P1-16, 2026-08-30). This pool is SEPARATE from the
+ * matrix pool, so it is outside `assertTestDatabase()` and outside the media
+ * marker: until this change the unit suite's rag gates wrote — upserts,
+ * partition DDL, `DELETE FROM rag_embeddings` — straight into the INSTALLATION's
+ * vector database (measured: `RAG_DB_NAME` → `dedalo7_rag`, repointed by no
+ * preload). `test_rag_db.ts` now gives this database the same "it says what it
+ * is" guarantee the matrix and the media tree have, and EVERY WRITE DOOR below
+ * asks it first. Read doors are deliberately NOT gated, and the reason is the
+ * law itself rather than convenience: the marker answers "may the suite WRITE
+ * here", and a SELECT cannot corrupt the index it reads. That is the whole
+ * reason, and it is deliberately the ONLY one given.
+ *
+ * In particular do NOT reach for "armed implies repointed, so an armed process
+ * cannot reach a real index anyway". `buildRagSqlOptions` below does let the one
+ * test key outrank both operator spellings — but `ragSql` is built ONCE at module
+ * scope, so a key set AFTER that (a gate may legitimately set one mid-run) leaves
+ * the pool on the installation's index with the guard ARMED. Writes refuse there;
+ * reads do not. The reads are ungated because reads cannot corrupt, not because
+ * they cannot arrive.
  */
 
 import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { assertTestRagDatabase, testRagDatabaseName } from './test_rag_db.ts';
 import type { Candidate, EmbeddingRow, RecordLocator } from './types.ts';
 
 /**
@@ -31,7 +52,13 @@ import type { Candidate, EmbeddingRow, RecordLocator } from './types.ts';
  * override them when the pgvector database lives on a DIFFERENT server.
  */
 function buildRagSqlOptions(): ConstructorParameters<typeof SQL>[0] {
-	const database = (readEnv('DEDALO_RAG_DB_NAME') ?? readString('RAG_DB_NAME')) as string;
+	// The test seam outranks both operator spellings — ONE key that repoints the
+	// pool AND arms the marker refusal (src/ai/rag/test_rag_db.ts). It is read
+	// HERE, in the one place the vector database is decided, so a process cannot
+	// be armed at the installation's index nor repointed with the guard asleep.
+	const database = (testRagDatabaseName() ??
+		readEnv('DEDALO_RAG_DB_NAME') ??
+		readString('RAG_DB_NAME')) as string;
 	const socket = readString('DEDALO_RAG_DB_SOCKET_CONN');
 	const host = (readEnv('DEDALO_RAG_DB_HOSTNAME_CONN') ?? config.db.host) as string;
 	const portRaw = Number(readString('DEDALO_RAG_DB_PORT_CONN'));
@@ -94,6 +121,9 @@ export async function ensureModelPartition(model: string): Promise<void> {
 	if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(model)) {
 		throw new Error(`rag: refusing unsafe embedding model id '${model}' (partition DDL guard)`);
 	}
+	// WRITE DOOR (partition DDL): a CREATE TABLE is a write, and a stray partition
+	// on an installation's index is exactly the kind of debris a suite leaves.
+	await assertTestRagDatabase(ragSql, 'ensureModelPartition');
 	const partition = partitionNameFor(model);
 	await ragSql.unsafe(
 		`CREATE TABLE IF NOT EXISTS "${partition}" PARTITION OF rag_embeddings FOR VALUES IN ('${model.replace(/'/g, "''")}')`,
@@ -111,6 +141,10 @@ export async function replaceRecordChunks(
 	chunks: RagChunk[],
 ): Promise<void> {
 	if (chunks.length === 0) return;
+	// WRITE DOOR (DELETE + INSERT). Asked here as well as inside
+	// ensureModelPartition: a door refuses under its OWN name, so the refusal
+	// names the call the developer made, not the helper it happened to reach.
+	await assertTestRagDatabase(ragSql, 'replaceRecordChunks');
 	await ensureModelPartition(model);
 	const first = chunks[0] as RagChunk;
 	await ragSql.begin(async (transaction) => {
@@ -146,6 +180,8 @@ export async function replaceRecordChunks(
 
 /** Remove every chunk of one record (record deletion hook). */
 export async function deleteRecordChunks(sectionTipo: string, sectionId: number): Promise<void> {
+	// WRITE DOOR (DELETE): the whole of one record's index, in any model.
+	await assertTestRagDatabase(ragSql, 'deleteRecordChunks');
 	await ragSql.unsafe('DELETE FROM rag_embeddings WHERE section_tipo = $1 AND section_id = $2', [
 		sectionTipo,
 		sectionId,
@@ -286,6 +322,8 @@ function upsertRowParams(row: EmbeddingRow): (string | number | null)[] {
 
 /** Idempotently provision a per-model partition + its typed column & HNSW index. */
 export async function ensureModelPartitionTyped(model: string, dimension: number): Promise<void> {
+	// WRITE DOOR (partition DDL, via the stored procedure).
+	await assertTestRagDatabase(ragSql, 'ensureModelPartitionTyped');
 	await ragSql.unsafe('SELECT rag_create_model_partition($1, $2)', [model, dimension]);
 }
 
@@ -296,6 +334,10 @@ export async function ensureModelPartitionTyped(model: string, dimension: number
  */
 export async function upsertEmbeddingRows(rows: EmbeddingRow[]): Promise<void> {
 	if (rows.length === 0) return;
+	// WRITE DOOR (the indexer's flush — upserts plus partition DDL). Asked BEFORE
+	// `begin`, so a refusal costs no transaction and the "nothing was written"
+	// sentence in the message is literally true.
+	await assertTestRagDatabase(ragSql, 'upsertEmbeddingRows');
 	const ensured = new Set<string>();
 	await ragSql.begin(async (transaction) => {
 		for (const row of rows) {
@@ -366,6 +408,8 @@ export async function deleteStale(
 	modality?: string,
 ): Promise<number> {
 	// Same reasoning as diffHashes: a prune must never reach across modalities.
+	// WRITE DOOR (DELETE … RETURNING — a delete is a delete however it reports).
+	await assertTestRagDatabase(ragSql, 'deleteStale');
 	const rows = (await ragSql.unsafe(
 		`DELETE FROM rag_embeddings
 		 WHERE section_tipo = $1 AND section_id = $2 AND component_tipo = $3 AND lang = $4
@@ -390,13 +434,18 @@ export async function deleteRecordModality(
 	locator: RecordLocator,
 	modality: string,
 ): Promise<void> {
+	// WRITE DOOR (DELETE).
+	await assertTestRagDatabase(ragSql, 'deleteRecordModality');
 	await ragSql.unsafe(
 		'DELETE FROM rag_embeddings WHERE section_tipo = $1 AND section_id = $2 AND modality = $3',
 		[locator.sectionTipo, locator.sectionId, modality],
 	);
 }
 
-/** Remove every vector for a record (all models/modalities). */
+/** Remove every vector for a record (all models/modalities).
+ * WRITE DOOR, gated by the delegate: it adds no statement of its own, so the
+ * refusal correctly names `deleteRecordChunks`, the door that would have run
+ * the DELETE. */
 export async function deleteRecord(locator: RecordLocator): Promise<void> {
 	await deleteRecordChunks(locator.sectionTipo, locator.sectionId);
 }
@@ -583,7 +632,10 @@ function toCandidate(row: RawCandidateRow): Candidate {
 	return candidate;
 }
 
-/** Parse a pgvector text literal '[a,b,c]' into a number[]. */
+/** Parse a pgvector text literal '[a,b,c]' into a number[]. Lenient by design:
+ * `[]` yields [], and any coordinate `Number()` cannot read yields NaN at full
+ * width — so a caller that is about to hand the result BACK to pgvector must
+ * test usability itself (retrieval.ts `isUsableVector`), not just the length. */
 function parseVectorText(text: string): number[] {
 	const trimmed = text.trim().replace(/^\[/, '').replace(/\]$/, '');
 	if (trimmed === '') return [];

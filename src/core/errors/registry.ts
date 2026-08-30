@@ -975,6 +975,22 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// Thrown by the retrieval read path (src/ai/rag/retrieval.ts) when the
+	// embedding provider answers a query batch SHORT — the documented fail-closed
+	// answer of SidecarEmbeddingProvider.embed(), returned on every ordinary
+	// sidecar hiccup (non-ok HTTP, malformed body, non-numeric row, fetch throw,
+	// abort timeout). Without this refusal the dense leg ran with no query vector
+	// and returned arbitrary rows (AIX-01, audit 2026-08-26). `unavailable` +
+	// retryable: the sidecar coming back makes the same query succeed.
+	'rag.embedding_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_rag_embedding_unavailable',
+		message: 'The embedding service did not return a query vector',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
 	'rag.generation_failed': {
 		category: 'unavailable',
 		status: 503,

@@ -44,6 +44,25 @@
  * directory under the test-media base is removed only when it carries the
  * `.dedalo_test_media` marker.
  *
+ * THREE SURFACES PER SHARD, NOT TWO. A shard child also builds a VECTOR
+ * database: `test/preload/rag_db.ts` derives it from the child's own `DB_NAME`,
+ * so it is `<template>__shard<N>_rag`, created on the spot. The anchored
+ * `__shard<N>` grammar cannot see that name, and `test:db:setup` refuses a shard
+ * name outright, so nothing would have dropped it: every shard run WOULD have
+ * leaked one vector database for ever. Stated in the conditional deliberately —
+ * the vector preload and the sweep landed in the SAME change (2026-08-30), so no
+ * such database was ever actually left behind, and the reviewer confirmed none
+ * exists on this server. The hazard was designed out before it could happen, not
+ * observed and repaired. It is swept HERE, with the clone it
+ * belongs to, on the SAME guarded path: the twin's name is DERIVED by the same
+ * function the preload uses (`suiteRagDatabaseName`, never a re-typed `_rag`
+ * tail), the vector server is the store's own (`DEDALO_RAG_DB_*_CONN` may put it
+ * on another host), and the DROP is licensed by the twin's own
+ * `dedalo_test_rag_marker` row — `dropSuiteRagDatabase` probes it and refuses
+ * anything else. The twins land in the SAME `dropped`/`refused` report arrays as
+ * the matrix clones, so every caller that already prints or exit-codes on those
+ * reports them without a line of new plumbing.
+ *
  * WHAT THIS DOES NOT PROVE, stated plainly:
  *  - It does not verify the TEMPLATE is current — a clone of a stale suite
  *    database is faithfully stale. `bun run test:db:setup` owns freshness.
@@ -53,6 +72,11 @@
  *    loud (psql non-zero ⇒ throw), not silent.
  *  - `cp -c` (APFS clonefile) is this workstation's media copy; on a
  *    non-APFS volume it falls back to a plain copy and SAYS so.
+ *  - An explicit `DEDALO_TEST_RAG_DATABASE` pins ONE vector database name for
+ *    every process that inherits it, shards included; the name is then not
+ *    derived from the shard and this sweep will NOT drop it (it says so, loudly,
+ *    once per sweep). That configuration also means concurrent shards share one
+ *    vector index — a collision this module can report but not fix.
  */
 
 import { existsSync, readdirSync, rmSync } from 'node:fs';
@@ -71,6 +95,17 @@ import {
 	testMediaBaseDir,
 	testMediaRootPath,
 } from '../../test/helpers/test_media_root.ts';
+// The vector twin's name and its guarded DROP, from the module that owns the
+// vector-store connection rule. Safe as a STATIC import, unlike the marker
+// writer it reaches dynamically: that module's own imports stop at
+// `src/config/env.ts` and the config CATALOG (a frozen data literal), so nothing
+// here freezes the configuration before the runner has composed a child
+// environment — the ordering law the lazy `psqlBinary()` below exists for.
+import {
+	dropSuiteRagDatabase,
+	listRagDatabases,
+	suiteRagDatabaseName,
+} from '../../test/helpers/test_rag_database.ts';
 
 /** The reserved suffix grammar: `<template>__shard<N>` (double underscore). */
 export const SHARD_SUFFIX_RE = /__shard\d+$/;
@@ -357,7 +392,7 @@ export async function cloneShardMedia(template: string, shard: number): Promise<
 // ── sweep ────────────────────────────────────────────────────────────────────
 
 export interface SweepReport {
-	/** Clone databases that probed 'marked' and were dropped. */
+	/** Databases that probed 'marked' and were dropped — matrix clones AND vector twins. */
 	dropped: string[];
 	/** Candidates the sweep REFUSED to drop, with the probe state naming why. */
 	refused: { name: string; state: string }[];
@@ -372,9 +407,14 @@ function escapeLike(value: string): string {
 	return value.replace(/([\\%_])/g, '\\$1');
 }
 
+/** The same job for a RegExp: a database name is data, never a pattern. */
+function escapeRegex(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
- * Sweep every `<template>__shard<N>` clone and media twin — the guarded path
- * described in the header. Runs on ENTRY as well as exit (finally + signal
+ * Sweep every `<template>__shard<N>` clone, its VECTOR twin and its media twin —
+ * the guarded path described in the header. Runs on ENTRY as well as exit (finally + signal
  * handlers + the named `--sweep` command), because a SIGKILL defeats all
  * three in-process hooks and a stale clone of an old schema is worse than no
  * clone.
@@ -393,7 +433,7 @@ export async function sweepShardClones(template: string): Promise<SweepReport> {
 			"SELECT datname FROM pg_database WHERE datname LIKE :'pattern' ESCAPE '\\' ORDER BY datname\n",
 		)
 	).trim();
-	const grammar = new RegExp(`^${template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}__shard\\d+$`);
+	const grammar = new RegExp(`^${escapeRegex(template)}__shard\\d+$`);
 	const candidates = (listing === '' ? [] : listing.split('\n'))
 		.map((name) => name.trim())
 		.filter((name) => grammar.test(name));
@@ -413,6 +453,49 @@ export async function sweepShardClones(template: string): Promise<SweepReport> {
 					? `misrouted (marker names '${provenance.markerDatabase}')`
 					: provenance.state,
 		});
+	}
+
+	// VECTOR TWINS. Enumerated on the VECTOR server (its own connection keys; it
+	// need not be the matrix one) rather than derived from the clones above,
+	// because the twin outlives its clone: `provisionShardDatabase` drops a stale
+	// clone before every run, and a previous sweep dropped clones without ever
+	// seeing their twins — so the leaked databases this closes are precisely the
+	// ORPHANS a clone-driven derivation would miss.
+	//
+	// The `_rag` tail is NEVER re-typed here: it is read back from
+	// `suiteRagDatabaseName`, the one function `test/preload/rag_db.ts` uses to
+	// build the name in the child. If it does not answer with the shard name plus
+	// a tail, an explicit DEDALO_TEST_RAG_DATABASE has pinned one shared name for
+	// every shard — not a per-shard twin, not this sweep's to drop, and said out
+	// loud because it also means concurrent shards share one vector index.
+	const shardSample = shardDatabaseName(template, 0);
+	const twinSample = suiteRagDatabaseName(shardSample);
+	if (!twinSample.startsWith(shardSample)) {
+		console.warn(
+			`[shard-db] DEDALO_TEST_RAG_DATABASE pins the vector database to '${twinSample}' for every process that inherits it, so shards do not get their own twin and none is swept. Concurrent shards then share one vector index; unset it to get '<clone>_rag' per shard.`,
+		);
+	} else {
+		const twinGrammar = new RegExp(
+			`^${escapeRegex(template)}__shard\\d+${escapeRegex(twinSample.slice(shardSample.length))}$`,
+		);
+		for (const name of await listRagDatabases(`${template}__shard`)) {
+			if (!twinGrammar.test(name)) continue;
+			// Probed and dropped by the twin's OWN marker row — `dropSuiteRagDatabase`
+			// drops nothing it could not prove, and hands back what it found.
+			const provenance = await dropSuiteRagDatabase(name);
+			if (provenance.state === 'marked') {
+				report.dropped.push(name);
+				continue;
+			}
+			if (provenance.state === 'absent') continue; // raced away — nothing to do
+			report.refused.push({
+				name,
+				state:
+					provenance.state === 'refused'
+						? `vector marker refused (${provenance.detail})`
+						: `vector database ${provenance.state}`,
+			});
+		}
 	}
 
 	// Media twins: same grammar over the test-media base; the `.dedalo_test_media`

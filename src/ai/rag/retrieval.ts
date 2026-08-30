@@ -1,11 +1,12 @@
 /**
- * RAG indexing + ACL-GATED hybrid retrieval (spec §8; DoD: "AI tools denied
- * exactly where humans are denied").
+ * ACL-GATED hybrid retrieval (spec §8; DoD: "AI tools denied exactly where
+ * humans are denied").
  *
- * INDEX: a record's component text → chunks → embeddings → the vector store
- * (replace-per-record). Chunking is structure-aware and semantic (see
- * chunker.ts); the header-enriched embed text is embedded while the clean text
- * is stored for citation.
+ * INDEXING lives in indexer.ts (buildRagIndexer — the queue/CLI door). This
+ * module is the READ half only: it never embeds anything but the query. A
+ * second, test-only indexing door used to live here (indexComponentText); it
+ * had no production caller and its own unchecked embed() cast, and was deleted
+ * 2026-08-30 with P1-14 — index through RagIndexer, which is the gated path.
  *
  * RETRIEVE (hybrid): dense (pgvector cosine) + lexical (Postgres FTS) run in
  * parallel and merge via Reciprocal Rank Fusion; every merged hit then passes
@@ -18,10 +19,9 @@
 
 import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import { sql } from '../../core/db/postgres.ts';
-import { assertValidTipo } from '../../core/search/identifier_gate.ts';
+import { DedaloError } from '../../core/errors/dedalo_error.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getPermissions, type Principal } from '../../core/security/permissions.ts';
-import { type ChunkOpts, chunk } from './chunker.ts';
 import { RAG_GROUP_PREFIX } from './config.ts';
 import { getEmbeddingProvider } from './embedding_provider.ts';
 import { collapseToRecords, fuse } from './fusion.ts';
@@ -31,9 +31,7 @@ import {
 	getRecordVectors,
 	lexicalSearch,
 	parseChunkMeta,
-	type RagChunk,
 	type RagHit,
-	replaceRecordChunks,
 } from './vector_store.ts';
 
 /** A store hit → fusion Candidate (fills provenance the store doesn't carry). */
@@ -92,39 +90,6 @@ export function contributorComponentTipos(chunkMeta: Record<string, unknown> | n
 		if (typeof tipo === 'string' && tipo !== '') out.add(tipo);
 	}
 	return [...out];
-}
-
-/**
- * Index one component's text of one record: structure-aware chunk → embed →
- * replace in store. The header-enriched `embedText` is what gets embedded; the
- * clean `text` is stored for citation. Returns the number of chunks written.
- */
-export async function indexComponentText(input: {
-	section_tipo: string;
-	section_id: number;
-	component_tipo: string;
-	lang: string;
-	text: string;
-	chunkOpts?: ChunkOpts;
-}): Promise<number> {
-	const sectionTipo = assertValidTipo(input.section_tipo, 'rag.index.section_tipo');
-	const componentTipo = assertValidTipo(input.component_tipo, 'rag.index.component_tipo');
-	const provider = getEmbeddingProvider();
-	const pieces = chunk(input.text, input.chunkOpts);
-	if (pieces.length === 0) return 0;
-	const embeddings = await provider.embed(pieces.map((piece) => piece.embedText));
-	const chunks: RagChunk[] = pieces.map((piece, index) => ({
-		section_tipo: sectionTipo,
-		section_id: input.section_id,
-		component_tipo: componentTipo,
-		lang: input.lang,
-		chunk_index: piece.chunkIndex,
-		source_text: piece.text,
-		source_hash: piece.sourceHash,
-		embedding: embeddings[index] as number[],
-	}));
-	await replaceRecordChunks(provider.name, provider.model, provider.dimension, chunks);
-	return chunks.length;
 }
 
 export interface RagSearchHit {
@@ -269,6 +234,64 @@ function toSearchHit(candidate: Candidate): RagSearchHit {
 	};
 }
 
+/**
+ * A vector this engine may hand to pgvector: present, non-empty, and every
+ * coordinate a finite number. ONE definition, deliberately shared by the two
+ * places a vector enters a query — the freshly embedded query
+ * ({@link assertQueryVector}) and the STORED seed vectors of {@link similarTo}
+ * — because a hole is a hole whichever side it arrived from, and two spellings
+ * of "usable" is how one of them silently loses the finiteness check.
+ */
+function isUsableVector(vector: number[] | undefined): boolean {
+	return (
+		Array.isArray(vector) &&
+		vector.length > 0 &&
+		vector.every((value) => typeof value === 'number' && Number.isFinite(value))
+	);
+}
+
+/**
+ * The query vector, or a REFUSAL. This is the whole reason the function exists;
+ * do not "simplify" it back into a destructure.
+ *
+ * `EmbeddingProvider.embed()` returns EITHER exactly `texts.length` vectors OR
+ * `[]` — the documented fail-closed answer, returned by
+ * SidecarEmbeddingProvider on EVERY ordinary hiccup: a non-ok HTTP response, a
+ * body whose `embeddings` is not an array, a row that is not all numbers, a
+ * fetch throw, or an AbortController timeout. So "no sidecar today" is not an
+ * exception here — it is an empty array.
+ *
+ * Before this guard (AIX-01, audit 2026-08-26) the caller destructured that
+ * empty array, `undefined` survived an `as number[]` cast, and denseSearch's
+ * `JSON.stringify(queryEmbedding)` — `JSON.stringify(undefined)` is the JS
+ * value `undefined` — bound SQL NULL into `$1::vector`. That path DOES NOT
+ * ERROR. `1 - (embedding <=> NULL::vector)` is NULL for every row, an ORDER BY
+ * over all-NULL orders nothing, and Reciprocal Rank Fusion scores by POSITION
+ * and never reads the null score — so ARBITRARY records entered at the top
+ * dense ranks and were presented to a curator, or to an agent that then WRITES,
+ * as the answer. Silent, plausible, wrong: the worst shape a search can fail in.
+ *
+ * The second check mirrors the indexer's (indexer.ts, the embed guard there): a
+ * COUNT match is not enough, because a partially-failed provider can return a
+ * right-length batch with a hole in it. A hole here is a zero-width or
+ * non-numeric row, which pgvector rejects with an opaque dimension error deep
+ * inside the query — refuse it up front, named, instead.
+ */
+function assertQueryVector(vectors: number[][], expectedDimension: number): number[] {
+	const vector = vectors[0];
+	if (vectors.length !== 1 || !isUsableVector(vector)) {
+		// Operator-facing: the only actionable fact is that the embedding
+		// service did not answer. Coordinates are log-only (ERRORS_SPEC §2.2).
+		throw new DedaloError('rag.embedding_unavailable', {
+			coordinates: {
+				provider_returned: vectors.length,
+				expected_dimension: expectedDimension,
+			},
+		});
+	}
+	return vector as number[];
+}
+
 /** Run the hybrid (dense+lexical) legs and fuse them into ranked candidates.
  * `group` narrows both legs to one facet's chunks (`rag:<group>`); `scope` is
  * PUSHED DOWN into both store legs (2026-07-22) — as a post-filter only, a
@@ -281,10 +304,11 @@ async function hybridCandidates(
 	scope?: string[],
 ): Promise<Candidate[]> {
 	const provider = getEmbeddingProvider();
-	const [queryEmbedding] = await provider.embed([query]);
+	const embedded = await provider.embed([query]);
+	const queryEmbedding = assertQueryVector(embedded, provider.dimension);
 	const facetTipo = groupStorageTipo(group);
 	const [dense, lexical] = await Promise.all([
-		denseSearch(provider.model, queryEmbedding as number[], overFetch, facetTipo, scope),
+		denseSearch(provider.model, queryEmbedding, overFetch, facetTipo, scope),
 		lexicalSearch(query, overFetch, facetTipo, scope),
 	]);
 	return fuse([dense.map(hitToCandidate), lexical.map(hitToCandidate)]);
@@ -349,12 +373,27 @@ export async function similarTo(
 		'text',
 		facetTipo,
 	);
-	if (seedVectors.length === 0) return [];
+	// This path does NOT embed — it reuses the seed's STORED vectors, so the
+	// AIX-01 hazard (an absent query vector binding SQL NULL) cannot arise here.
+	// It has a smaller cousin though. getRecordVectors parses `embedding::text`
+	// through parseVectorText (vector_store.ts), which splits on commas and maps
+	// a plain `Number()` over the pieces: it returns [] only for an EMPTY
+	// literal; anything else it cannot read comes back at FULL WIDTH with NaN in
+	// the coordinates it could not parse. Both shapes reach pgvector as a broken
+	// literal — `'[]'::vector`, or (JSON.stringify writes NaN as null)
+	// `'[null,…]'::vector` — and reject the WHOLE Promise.all with an opaque
+	// pgvector error instead of degrading. So
+	// the seeds are filtered by the same usability test the embedded query gets,
+	// finiteness included: a length check alone passes exactly the NaN rows it is
+	// meant to stop. If that leaves nothing, there is no seed to be similar TO,
+	// which is the same answer as an unindexed record: empty.
+	const usableSeeds = seedVectors.filter((vector) => isUsableVector(vector.embedding));
+	if (usableSeeds.length === 0) return [];
 	const overFetch = Math.max(limit * 4, 20);
 	// scope pushdown (devil #5): without it the neighbours are the GLOBAL
 	// nearest and a dominant section starves the scoped ones out of the top-K.
 	const perVector = await Promise.all(
-		seedVectors.map((vector) =>
+		usableSeeds.map((vector) =>
 			denseSearch(provider.model, vector.embedding, overFetch + 1, facetTipo, scope),
 		),
 	);

@@ -267,8 +267,23 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 				: 'no_grounded_context';
 		return envelope(result, status, context);
 	} catch (error) {
-		// An LLM transport/protocol failure is `rag.generation_failed` (never a
-		// fabricated answer); the raw error is LOG-ONLY cause.
+		// A TYPED REFUSAL IS ALREADY THE RIGHT ANSWER — pass it through unwrapped.
+		//
+		// This catch exists so an LLM transport/protocol failure becomes
+		// `rag.generation_failed` rather than a fabricated answer, with the raw error
+		// as LOG-ONLY cause. It used to wrap EVERYTHING, which quietly defeated the
+		// one refusal it most needed to preserve: `rag.embedding_unavailable` (503,
+		// retryable, "the embedding sidecar did not answer") arrived at the operator
+		// as `rag.generation_failed` (500, "the answer generator failed") — the same
+		// outage reported against the wrong subsystem, on the one action where a
+		// curator is most likely to be reading. Found by adversarial review
+		// 2026-08-30, after P1-14 added that refusal and the manual documented it on
+		// an action that could never raise it.
+		//
+		// A DedaloError is already closed-registry, already carries its disclosure
+		// level, and was thrown deliberately; re-labelling it can only ever lose
+		// information.
+		if (error instanceof DedaloError) throw error;
 		throw new DedaloError('rag.generation_failed', { cause: error });
 	}
 }

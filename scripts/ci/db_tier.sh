@@ -177,6 +177,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/test3_canonical_fixture.test.ts
 	test/unit/test_db_marker_tripwire.test.ts
 	test/unit/test_media_root_tripwire.test.ts
+	test/unit/test_rag_db_tripwire.test.ts
 	test/unit/test_tld_ontology_gate.test.ts
 	test/unit/tm_lang_slice_restore_native.test.ts
 	test/unit/tm_mode_retired_tripwire.test.ts

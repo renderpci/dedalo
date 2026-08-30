@@ -403,6 +403,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'The gate’s core proof is behavioural against the live suite database (delete-marker-in-transaction, real refusals, real installer bypass), so it is DB-bound by design',
 	],
 	[
+		'test/unit/test_rag_db_tripwire.test.ts',
+		'Its core proof is behavioural against TWO live databases: the guard is refused on the real suite matrix database (unmarked for the RAG law) and accepted once the real producer marks it inside a rolled-back transaction, and rule 4 asks the RAG POOL ITSELF for `current_database()` and drives a real write door on it — a vector-store guard proved by source alone would be exactly the kind of unverified claim it exists to replace',
+	],
+	[
 		'test/unit/test_media_root_tripwire.test.ts',
 		'Most legs are fs/source scans, but the ensureMediaKit refusal door must reach the suite Postgres for the test-database marker check before its media-root refusal fires, so the gate needs the DB tier (or that one door split out)',
 	],

@@ -916,6 +916,20 @@ engine keeps the strict guard regardless.
 DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true
 \`\`\``,
 	},
+	DEDALO_TEST_RAG_DB_NAME: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: 'Test vector database',
+		typeLabel: 'string',
+		doc: `Test seam, not a setting. When it is set it REPLACES the vector database for the whole process (it outranks both \`DEDALO_RAG_DB_NAME\` and \`RAG_DB_NAME\`) and, at the same time, ARMS the test-vector-database guard: every door of the store that WRITES then refuses a database that does not carry a \`dedalo_test_rag_marker\` row, and writes nothing.
+
+One key does both on purpose, exactly as \`DEDALO_TEST_MEDIA_ROOT\` does for the media tree. A separate "arm the guard" flag could be set without repointing the database — and a separate "repoint the database" key could be set without arming the guard; either half alone is the hole this closes, which is that a test run re-partitions, re-embeds and deletes rows in the installation's semantic index. Unset — every real installation — the guard is inert and the vector database resolves exactly as before, so indexing in production is never refused.
+
+\`\`\`bash
+DEDALO_TEST_RAG_DB_NAME="dedalo7_rag_test"
+\`\`\``,
+	},
 	RAG_DB_NAME: {
 		type: 'string',
 		scope: 'operator',

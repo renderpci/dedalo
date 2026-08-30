@@ -242,6 +242,7 @@
 	"error_perm_superuser_required": "Only the Dédalo superuser can perform this action",
 	"error_php_fault_not_reproduced": "A legacy fault the current server does not reproduce",
 	"error_rag_disabled": "Semantic search (RAG) is disabled on this server",
+	"error_rag_embedding_unavailable": "Semantic search is unavailable: the embedding service did not answer",
 	"error_rag_generation_failed": "The grounded answer could not be generated",
 	"error_rag_media_disabled": "Image similarity (RAG media) is disabled on this server",
 	"error_rate_limited": "Too many requests; try again later",
