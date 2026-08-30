@@ -235,13 +235,35 @@ describe('tool_sitebuilder proxy', () => {
 		});
 	});
 
-	test('create_site refuses a missing or malformed domain before proxying', async () => {
-		for (const domain of [undefined, '', 'not a domain', 'nodots', '../escape.example.org']) {
+	test('create_site refuses a MISSING domain before proxying', async () => {
+		// PRESENCE, which is not a grammar. "You did not say which domain" deserves an
+		// engine-authored sentence rather than a relayed 400, and it costs no round trip.
+		for (const domain of [undefined, '', '   ']) {
+			const before = requests.length;
 			const refusal = await refusalOf(
 				tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'demo', name: 'Demo', domain })),
 			);
 			expect(refusal.code).toBe('site_builder.rejected');
 			expect(refusal.publicMessage).toContain('domain it will answer on');
+			expect(requests.length, 'a missing domain still cost a round trip').toBe(before);
+		}
+	});
+
+	test("the SHAPE of a domain is the daemon's to judge — this side no longer forks the grammar", async () => {
+		// This tool used to carry its own DOMAIN_PATTERN, documented as "deliberately not
+		// stricter" than the provisioner's and stricter in two ways: four characters minimum
+		// against one, and a `[a-z]{2,63}` final label against any label. So `a.b` and `x.123`
+		// were domains the provisioner builds a webspace and two vhosts for and the museum's
+		// only door refused to create a site on, with a sentence about DNS.
+		//
+		// The fork is gone (test/unit/site_builder_single_source_tripwire.test.ts, fact
+		// `layout_constants`, holds it gone), so these now REACH the owner — which is the
+		// regression this asserts, not the daemon's verdict on them.
+		for (const domain of ['a.b', 'x.123']) {
+			const before = requests.length;
+			await tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'demo', name: 'Demo', domain }));
+			expect(requests.length, `'${domain}' was refused locally again`).toBe(before + 1);
+			expect(lastRequest().body).toMatchObject({ domain });
 		}
 	});
 

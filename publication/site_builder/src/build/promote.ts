@@ -169,7 +169,17 @@ async function copyTree(from: string, to: string, sourceRoot: string): Promise<v
   }
 }
 
-/** Points the served link at an existing release (rollback). Throws if it is missing. */
+/**
+ * Points the served link at an existing release (rollback). Throws if it is missing.
+ *
+ * `confinedPath`, and the release id here arrives from the WIRE: `POST
+ * /v1/sites/:slug/rollback` hands `rollbackSite` whatever the caller sent and it reaches
+ * this line unexamined. It is DEFENCE IN DEPTH rather than the only check — measured, a
+ * climbing name downgraded to a lexical join is caught a step later by `swapSymlink`'s
+ * relative-target refusal — and it stays because the two guards answer different questions
+ * and neither should be the last one. tests/promote.test.ts holds the composite behaviour
+ * through this door and the relative-target refusal on its own.
+ */
 export async function activateRelease(surface: SurfacePaths, release: string): Promise<void> {
   const path = confinedPath(surface.storeDir, release);
   if (!existsSync(path)) {
@@ -254,15 +264,43 @@ async function swapSymlink(surface: SurfacePaths, release: string): Promise<void
  *
  * Deletions are best-effort: a failed rm is skipped, not fatal to the promotion that
  * triggered it.
+ *
+ * EXPORTED FOR ITS OWN GATE, and that is not a testing convenience. Reached only through
+ * `promoteRelease` this function runs immediately after `swapSymlink` pointed the link at
+ * the NEWEST release, and `RELEASES_RETAINED` has a floor of 1 — so `releases.slice(keep)`
+ * could never contain the served one and the exclusion below was unreachable, which is
+ * exactly why every mutation of it left the suite green. A guard that cannot be reached is
+ * a guard that cannot be held, and this subsystem does not keep those: it is a door now, so
+ * `tests/promote.test.ts` can roll a surface back to an aged release and call it directly.
  */
-async function pruneReleases(surface: SurfacePaths): Promise<void> {
+export async function pruneReleases(surface: SurfacePaths): Promise<void> {
   const releases = await listReleases(surface); // newest first
   const keep = config.RELEASES_RETAINED;
   const current = await currentRelease(surface);
   const doomed = releases.slice(keep).filter(release => release !== current);
   for (const release of doomed) {
-    // confinedPath, not join: the names come from a directory listing, and a delete is the
-    // one operation where "it was only ever going to be a release id" is not good enough.
-    await rm(confinedPath(surface.storeDir, release), { recursive: true, force: true }).catch(() => {});
+    await deleteRelease(surface, release);
   }
+}
+
+/**
+ * DELETE ONE RELEASE FROM A SURFACE'S STORE — the daemon's only recursive delete inside a
+ * tree a web server reads, and the reason it is a named door rather than two lines inside
+ * the prune loop.
+ *
+ * `confinedPath`, never `join`. Today the names come from a directory listing and cannot
+ * climb anywhere, so inside `pruneReleases` the confinement is defence in depth against a
+ * caller that does not exist yet — which is precisely why substituting `join` there left
+ * the suite green and would keep leaving it green until the day such a caller arrived. A
+ * guard whose only value is for a future caller has to be reachable BY one, so it is: this
+ * function takes the name and refuses it, and `tests/promote.test.ts` hands it the names a
+ * corrupted listing or a future caller could produce.
+ *
+ * Best-effort on the removal itself, which is the prune's contract: a failed `rm` is
+ * skipped, never fatal to the promotion that triggered it. The CONFINEMENT is not
+ * best-effort — an escaping name throws, and throws before anything is unlinked.
+ */
+export async function deleteRelease(surface: SurfacePaths, release: string): Promise<void> {
+  const path = confinedPath(surface.storeDir, release);
+  await rm(path, { recursive: true, force: true }).catch(() => {});
 }

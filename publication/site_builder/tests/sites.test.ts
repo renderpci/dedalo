@@ -218,7 +218,9 @@ describe('createSite', () => {
 });
 
 describe('listSlugs / deleteSite', () => {
-  test('lists created sites and ignores dotdirs', async () => {
+  test('lists created sites, sorted', async () => {
+    // Renamed: it used to promise "and ignores dotdirs" while creating no dotdir. The
+    // dotdir property is asserted two tests below, where one is actually created.
     await createProvisionedSite('alpha', 'A');
     await createProvisionedSite('beta', 'B');
     expect(await listSlugs()).toEqual(['alpha', 'beta']);

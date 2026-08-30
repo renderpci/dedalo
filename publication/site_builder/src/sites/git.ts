@@ -77,9 +77,13 @@ function gitEnv(workspace?: string): Record<string, string> {
     // commit` operate on the ENCLOSING repository instead. This is not hypothetical: it
     // swept an entire unrelated working tree into commits authored by this daemon.
     //
-    // GIT_DIR and GIT_WORK_TREE name the repository outright, so discovery never runs, and
-    // GIT_CEILING_DIRECTORIES stops any walk that a future subcommand might still attempt
-    // before it can leave the workspace.
+    // GIT_DIR and GIT_WORK_TREE name the repository outright, so discovery never runs.
+    // That pair is what the gate holds (tests/git_confinement.test.ts drives `changedFiles`
+    // — the one door with no `assertIsRepository` in front of it — against a `.git`-less
+    // workspace inside an enclosing checkout, and against a `.git` that is a stray FILE).
+    // GIT_CEILING_DIRECTORIES is a belt for an invocation that somehow reaches git without
+    // them; measured, removing it alone changes no behaviour while GIT_DIR is set, so it is
+    // stated as the redundancy it is rather than credited as a third defence.
     env.GIT_DIR = join(workspace, '.git');
     env.GIT_WORK_TREE = workspace;
     env.GIT_CEILING_DIRECTORIES = dirname(workspace);

@@ -777,6 +777,21 @@ inventing an engine-side instance system as a side effect would be the second so
 truth for engine deployment. Recorded so that the day the engine gets one, the two are
 designed to agree rather than discovered to disagree.
 
+**5. A build step's command comes from a file an agent turn can rewrite.** `site.json`
+lives at `<SITES_ROOT>/<slug>/site.json` — inside the workspace the driver is spawned with
+as its cwd and that `git add -A` then commits — so a turn may rewrite its `build` block and
+`readManifest` re-reads it at build time. `src/build/builder.ts` used to claim the opposite
+("an agent cannot edit site.json") and justify its whitespace argv split on that premise;
+the premise was measured false and the header now states what actually holds instead: there
+is no shell (`Bun.spawn` receives an argv ARRAY, so nothing is parsed by `sh`), and a build
+step runs at EXACTLY an agent turn's privilege — same unix user, same workspace, same
+constructed `{PATH, HOME}` environment and no provider key at all. So an agent that
+rewrites the build spec obtains nothing it did not already have while its turn was running.
+Acceptable for the same reason as residual 1, and bounded by the same gate: the child
+environment's key SET is held by `publication/site_builder/tests/agent_env_boundary.test.ts`,
+which is what must be argued with the day a build step needs a credential. Not acceptable
+was the false sentence, and it is gone.
+
 ## 9. What a gate may assert about this document
 
 This file is prose, but parts of it are machine-checkable, and under DEC-12 the checkable

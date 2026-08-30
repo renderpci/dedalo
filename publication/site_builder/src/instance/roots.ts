@@ -209,8 +209,17 @@ export function assertInstanceRoots(instance: string, roots: readonly InstanceRo
  * scripts; as uid 0 they would own the host. The unit states `User=`; a daemon that reached
  * this line as root was started by hand, and the whole isolation design is off.
  */
-export function assertRunningAs(instance: string, roots: readonly InstanceRoot[] = daemonRoots()): void {
-  const uid = typeof process.getuid === 'function' ? process.getuid() : null;
+export function assertRunningAs(
+  instance: string,
+  roots: readonly InstanceRoot[] = daemonRoots(),
+  // THE RUNNING UID, INJECTABLE — because neither refusal below could otherwise be
+  // reached by a gate. A suite does not run as root and cannot conjure a foreign-owned
+  // directory, so both branches sat unexecuted while every mutation of them stayed green.
+  // The default is the real answer; a gate passes the uid it wants to prove the refusal
+  // for, against roots it really created.
+  currentUid: number | null = typeof process.getuid === 'function' ? process.getuid() : null,
+): void {
+  const uid = currentUid;
   if (uid === null) return; // no POSIX uids here (Windows) — nothing to prove.
 
   if (uid === 0) {

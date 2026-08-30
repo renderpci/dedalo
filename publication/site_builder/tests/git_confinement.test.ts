@@ -11,9 +11,15 @@
  * into the project's own history, one of them labelled "scaffold: initial template" — the
  * daemon's first-commit message, applied to somebody else's repository.
  *
- * GIT_DIR + GIT_WORK_TREE name the repository outright so discovery never runs;
- * GIT_CEILING_DIRECTORIES stops any walk that survives; and every command but `init`
- * refuses outright when the workspace holds no `.git`.
+ * TWO MECHANISMS, HONESTLY WEIGHTED. GIT_DIR + GIT_WORK_TREE name the repository outright
+ * so discovery never runs, and every command but `init` refuses outright when the workspace
+ * holds no `.git`. (GIT_CEILING_DIRECTORIES is also set, and is a belt: measured, removing
+ * it alone changes nothing while GIT_DIR is set. It is not credited here as a third
+ * defence, because a gate that cannot tell a mechanism from its absence is not holding it.)
+ *
+ * The env pinning is held by the `.git`-less and `.git`-is-a-FILE cases below, driven
+ * through `changedFiles` — the one door that does not call `assertIsRepository`, and
+ * therefore the only place the pinning is the last thing standing.
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
@@ -75,7 +81,10 @@ describe('git never escapes the workspace', () => {
     expect(await enclosing.head()).toBe(before);
   });
 
-  test('changedFiles reports the WORKSPACE, never the enclosing tree', async () => {
+  test('changedFiles reports its own workspace while an enclosing repository exists', async () => {
+    // The POSITIVE case only. Note what it does NOT hold: this workspace has its own `.git`,
+    // so git's upward discovery stops there whether or not the environment is pinned — the
+    // test below is the one that can tell the two worlds apart.
     await makeEnclosingRepo();
     const slug = 'reported';
     await mkdir(workspacePath(slug), { recursive: true });
@@ -86,5 +95,63 @@ describe('git never escapes the workspace', () => {
     const changed = await changedFiles(slug);
     expect(changed).toContain('b.html');
     expect(changed.join('\n')).not.toContain('PRECIOUS.txt');
+  });
+
+  /**
+   * THE STATE IN WHICH THE ENV PINNING IS THE ONLY DEFENCE LEFT.
+   *
+   * The header credits three mechanisms. Two of them — GIT_DIR + GIT_WORK_TREE naming the
+   * repository outright, and GIT_CEILING_DIRECTORIES stopping any walk that survives — were
+   * held by nothing: removing all three variables left the suite green, this file included,
+   * because every case above either has a real `.git` in the workspace (so discovery finds
+   * the right repository anyway) or has none and is refused by `assertIsRepository` before
+   * git runs.
+   *
+   * `changedFiles` is the door where neither of those is true: it never calls
+   * `assertIsRepository`. Handed a `.git`-less workspace inside an enclosing checkout it
+   * runs `git status` there, and with the pinning removed git walks up and answers with the
+   * ENCLOSING tree's files — measured: `["ENCLOSING_SECRET.txt","orphan/"]`, reported to a
+   * museum as the changes an agent turn made to its site.
+   */
+  test('changedFiles on a .git-LESS workspace reports nothing, never the enclosing tree', async () => {
+    const enclosing = await makeEnclosingRepo();
+    // Something in the enclosing tree that must never be named back to a museum.
+    await writeFile(join(enclosing.dir, 'ENCLOSING_SECRET.txt'), 'not this site\'s work', 'utf8');
+
+    const slug = 'orphan';
+    await mkdir(workspacePath(slug), { recursive: true });
+    await writeFile(join(workspacePath(slug), 'index.html'), '<h1>hi</h1>', 'utf8');
+    expect(existsSync(join(workspacePath(slug), '.git'))).toBe(false);
+
+    const changed = await changedFiles(slug);
+
+    expect(changed).toEqual([]);
+    expect(changed.join('\n')).not.toContain('ENCLOSING_SECRET');
+    expect(changed.join('\n')).not.toContain('PRECIOUS.txt');
+  });
+
+  /**
+   * AND THE CEILING, on its own: a workspace whose `.git` EXISTS but is not a repository.
+   *
+   * `assertIsRepository` only asks whether the path exists, so a `.git` that is a stray file
+   * (a gitlink left by a submodule extraction, a backup artefact) passes it — and without
+   * GIT_DIR/GIT_CEILING_DIRECTORIES git would resume walking upward from there. This is the
+   * gap between the existence check and the pinning, and it is the shape a future door with
+   * no guard at all would be in.
+   */
+  test('a workspace whose .git is a FILE still cannot reach the enclosing repository', async () => {
+    const enclosing = await makeEnclosingRepo();
+    const before = await enclosing.head();
+
+    const slug = 'gitlink';
+    await mkdir(workspacePath(slug), { recursive: true });
+    await writeFile(join(workspacePath(slug), '.git'), 'gitdir: /nowhere\n', 'utf8');
+    await writeFile(join(workspacePath(slug), 'page.html'), 'x', 'utf8');
+
+    // Whatever it does, it does not commit somebody else's tree.
+    await commitAll(slug, 'a turn').catch(() => undefined);
+
+    expect(await enclosing.head()).toBe(before);
+    expect(await changedFiles(slug)).toEqual([]);
   });
 });

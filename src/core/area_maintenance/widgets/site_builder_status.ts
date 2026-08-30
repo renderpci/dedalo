@@ -111,6 +111,26 @@ export function buildSiteBuilderPanel(input: {
 	};
 }
 
+/**
+ * THE PANEL PROVES THE PAIRING BEFORE IT SPENDS THE TOKEN.
+ *
+ * `/health` is public and unauthenticated: anything listening on that socket or URL can
+ * answer it. Sending `Authorization: Bearer <this engine's token>` to whatever replied
+ * hands this museum's credential to another museum's daemon — and then renders THAT
+ * museum's publish history under this museum's heading, which is the mispairing disaster
+ * wearing an ops-panel costume. The daemon publishes an opaque fingerprint for exactly
+ * this: it proves the instance AND the shared token while disclosing neither.
+ *
+ * Extracted rather than inlined so the decision is directly testable and the I/O shell
+ * stays under the complexity ratchet — the same split `siteBuilderHost` and
+ * `buildSiteBuilderPanel` already got, for the same reason.
+ */
+export function healthProvesPairing(health: unknown, instance: string, token: string): boolean {
+	if (health === null || health === undefined) return false;
+	const published = (health as { instance_fingerprint?: unknown }).instance_fingerprint;
+	return fingerprintMatches(published, instanceFingerprint(instance, token));
+}
+
 export async function buildSiteBuilderStatus(
 	deps: { fetchJson?: FetchJson; siteBuilder?: Partial<SiteBuilderConfig> } = {},
 ): Promise<Record<string, unknown>> {
@@ -147,26 +167,7 @@ export async function buildSiteBuilderStatus(
 	try {
 		const health = await doFetch(`${base}/health`, {}, PROBE_TIMEOUT_MS, transport.unixSocket);
 
-		// THE PANEL PROVES THE PAIRING BEFORE IT SPENDS THE TOKEN.
-		//
-		// `/health` is public and unauthenticated: anything listening on that socket or URL
-		// can answer it. Sending `Authorization: Bearer <this engine's token>` to whatever
-		// replied hands this museum's credential to another museum's daemon — and then
-		// renders THAT museum's publish history in this museum's ops panel, which is the
-		// mispairing disaster wearing an ops-panel costume. The daemon publishes an opaque
-		// fingerprint for exactly this: it proves the instance AND the shared token while
-		// disclosing neither.
-		//
-		// A mismatch reads as UNREACHABLE, deliberately: the panel is fail-soft, and an
-		// operator who sees "not reachable" checks the pairing, whereas one who sees another
-		// museum's releases believes them.
-		const paired =
-			health !== null &&
-			health !== undefined &&
-			fingerprintMatches(
-				(health as { instance_fingerprint?: unknown }).instance_fingerprint,
-				instanceFingerprint(transport.instance, transport.token),
-			);
+		const paired = healthProvesPairing(health, transport.instance, transport.token);
 
 		let audit: unknown;
 		// Quirk: pinned, not fixed — a null/undefined health body threw on `.drivers` in the

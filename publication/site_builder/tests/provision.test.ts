@@ -1151,3 +1151,177 @@ describe('the service group cannot be borrowed from the host', () => {
     expect(layout.identity.group).not.toBe(layout.identity.engineGroup);
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * THE DECLARATION-LEVEL REFUSALS
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * WHAT THE SCHEMA REFUSES BEFORE `derive()` IS EVER REACHED — and why the two are not the
+ * same gate.
+ *
+ * `derive()` re-runs the containment pass over the DERIVED paths, and the two
+ * "(derive, unmediated)" tests in this file hold that copy — so the overlaps still fail
+ * today, with a different message and a different `path`. But the message an operator reads
+ * is this one, keyed to the field they wrote, and the containment refusals here could each
+ * be disarmed with the suite green.
+ *
+ * The tls/auth pairings have NO second owner at all: a declaration naming a certificate
+ * under `tls.mode: 'letsencrypt'`, or users under `auth.mode: 'none'`, was accepted
+ * silently. "A file that names a certificate nobody serves is a file that will be trusted"
+ * is the schema's own sentence, and nothing held it.
+ */
+describe('a declaration that describes a host nobody could build is refused by field', () => {
+  test('two private roots nesting is refused, naming the second field', () => {
+    // The audit trail inside the workspaces root is an append-only trail an agent turn can
+    // reach, which is not an append-only trail.
+    const message = refusal(
+      docWith({ roots: { workspaces: '/srv/state/gate/workspaces', audit: '/srv/state/gate/workspaces/audit' } }),
+    );
+    expect(message).toContain('roots.audit');
+    expect(message).toContain('overlaps');
+    expect(message).toContain('one inside another is a mode that does not hold');
+  });
+
+  test('a private root inside a SERVED tree is refused', () => {
+    const message = refusal(
+      docWith({ webspace_base: '/srv/webspaces', roots: { workspaces: '/srv/webspaces/workspaces' } }),
+    );
+    expect(message).toContain('roots.workspaces');
+    expect(message).toContain('must never be inside a SERVED tree');
+  });
+
+  test('two sites sharing a webspace is refused — one publish would rewrite the other', () => {
+    const message = refusal(
+      docWith({
+        sites: [
+          { slug: 'one', domain: 'one.example.org', webspace: '/srv/webspaces/shared' },
+          { slug: 'two', domain: 'two.example.org', webspace: '/srv/webspaces/shared' },
+        ],
+      }),
+    );
+    expect(message).toContain('sites[1].webspace');
+    expect(message).toContain('one webspace per site');
+  });
+
+  test('a webspace that IS webspace_base is refused', () => {
+    // The base holding one site's release stores would put every other site inside that
+    // site's webspace.
+    const message = refusal(
+      docWith({
+        webspace_base: '/srv/webspaces',
+        sites: [{ slug: 'one', domain: 'one.example.org', webspace: '/srv/webspaces' }],
+      }),
+    );
+    expect(message).toContain('is webspace_base itself');
+  });
+
+  test('a webspace that CONTAINS webspace_base is refused', () => {
+    const message = refusal(
+      docWith({
+        webspace_base: '/srv/webspaces/inner',
+        sites: [{ slug: 'one', domain: 'one.example.org', webspace: '/srv/webspaces' }],
+      }),
+    );
+    expect(message).toContain('contains webspace_base');
+  });
+
+  test("the engine's private directory inside a root is refused, naming what it would expose", () => {
+    const message = refusal(
+      docWith({
+        roots: { workspaces: '/srv/state/gate/workspaces' },
+        engine: { private_dir: '/srv/state/gate/workspaces/private' },
+      }),
+    );
+    expect(message).toContain('engine.private_dir');
+    expect(message).toContain("the service user (and every agent turn it runs) can read the engine's credentials");
+  });
+
+  test("auth.mode 'none' with users declared is refused — the file would describe an auth the vhost does not perform", () => {
+    const message = refusal(
+      docWith({
+        serving: {
+          preprod: { enabled: true, auth: { mode: 'none', users: [{ name: 'preview', password_file: '/etc/x/P' }] } },
+          prod: { tls: { mode: 'none' } },
+        },
+      }),
+    );
+    expect(message).toContain('serving.preprod.auth.users');
+    expect(message).toContain("auth.mode is 'none' but users are declared");
+  });
+
+  test('htpasswd auth with no users and no existing file is refused — it locks the museum out', () => {
+    const message = refusal(
+      docWith({
+        serving: {
+          preprod: { enabled: true, auth: { mode: 'htpasswd', users: [] } },
+          prod: { tls: { mode: 'none' } },
+        },
+      }),
+    );
+    expect(message).toContain('locks the museum out of its own drafts');
+  });
+
+  test.each(['none', 'letsencrypt'])(
+    "tls.mode '%s' with a certificate declared is refused — a named certificate is a trusted one",
+    mode => {
+      const tls: Record<string, unknown> = {
+        mode,
+        certificate: '/etc/ssl/certs/museum.pem',
+        key: '/etc/ssl/private/museum.key',
+      };
+      if (mode === 'letsencrypt') tls.account_email = 'ops@museum.example';
+      const message = refusal(
+        docWith({
+          serving: { preprod: baseDoc().serving.preprod, prod: { tls } },
+        }),
+      );
+      expect(message).toContain('serving.prod.tls');
+      expect(message).toContain('would be ignored');
+    },
+  );
+
+  test("tls.mode 'files' without both paths is refused", () => {
+    const message = refusal(
+      docWith({
+        serving: {
+          preprod: baseDoc().serving.preprod,
+          prod: { tls: { mode: 'files', certificate: '/etc/ssl/certs/museum.pem' } },
+        },
+      }),
+    );
+    expect(message).toContain('both certificate and key paths are required');
+  });
+
+  test("tls.mode 'letsencrypt' without an account address is refused before a certificate can lapse", () => {
+    const message = refusal(
+      docWith({
+        serving: { preprod: baseDoc().serving.preprod, prod: { tls: { mode: 'letsencrypt' } } },
+      }),
+    );
+    expect(message).toContain('serving.prod.tls.account_email');
+    expect(message).toContain('expiry warnings');
+  });
+
+  test('a lawful declaration with each of these fields SET is accepted — the refusals are specific', () => {
+    // Every refusal above must be about the disagreement and not about the field existing.
+    expect(() =>
+      layoutFrom(
+        docWith({
+          webspace_base: '/srv/webspaces',
+          sites: [{ slug: 'one', domain: 'one.example.org', webspace: '/srv/webspaces/one' }],
+          serving: {
+            preprod: baseDoc().serving.preprod,
+            prod: {
+              tls: {
+                mode: 'files',
+                certificate: '/etc/ssl/certs/museum.pem',
+                key: '/etc/ssl/private/museum.key',
+              },
+            },
+          },
+        }),
+      ),
+    ).not.toThrow();
+  });
+});

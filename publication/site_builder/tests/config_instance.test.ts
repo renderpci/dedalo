@@ -25,7 +25,7 @@ import { describe, test, expect, afterEach } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SCRATCH_ROOT } from './fixtures/instance';
-import { resolveConfig, parseEnvFile, type ConfigSources } from '../src/config';
+import { resolveConfig, parseEnvFile, readCredentials, type ConfigSources } from '../src/config';
 
 /** This gate's own scratch corner. Outside every root, so no reset walks over it. */
 const GATE_DIR = join(SCRATCH_ROOT, 'config_gate');
@@ -145,6 +145,43 @@ describe('a credential file wins over anything the environment said', () => {
     expect(resolveConfig(sources({ credentialsDir })).config.SERVICE_TOKEN).toBe('y'.repeat(40));
   });
 
+  /**
+   * THE CREDENTIAL DOOR'S OWN REFUSALS, asked of `readCredentials` DIRECTLY.
+   *
+   * The test below drives `resolveConfig`, where an unknown credential is refused twice: by
+   * this door, and — a layer later — by the schema's `strict()`. So it passed with the
+   * door's own check disarmed, which is exactly how a renamed key whose `LoadCredential=`
+   * line was not renamed with it would ship: the host converges, `provision check` is
+   * clean, every mode is right, and the provider is silently unconfigured.
+   *
+   * The refusal MUST live at this door and not only at the schema, because the two say
+   * different things. The schema says "this daemon has no such setting"; this door says
+   * "the unit declares a credential nothing consumes" — the only message that names the
+   * unit line an operator has to fix.
+   */
+  test('the credential door refuses a name the daemon does not read, on its own', () => {
+    const dir = writeCredential('OPENAI_API_KEY', 'sk-not-a-key-this-daemon-reads');
+    expect(() => readCredentials(dir)).toThrow(/not a key this daemon reads/);
+    // And it names the census, so an operator can see what the unit SHOULD have said.
+    expect(() => readCredentials(dir)).toThrow(/SERVICE_TOKEN/);
+  });
+
+  test('the credential door refuses a filename that is not a credential name at all', () => {
+    // The same string is a filename, a `LoadCredential=` id and an environment variable
+    // name (layout.ts holds all three to one grammar), so a file that cannot be all three
+    // is a declaration mistake and not a credential.
+    for (const name of ['service_token', '1SERVICE', 'SERVICE-TOKEN', 'SERVICE.TOKEN']) {
+      const dir = writeCredential(name, 'whatever');
+      expect(() => readCredentials(dir)).toThrow(/not a usable\s+credential name/);
+      rmSync(join(dir, name));
+    }
+  });
+
+  test('a lawful credential directory is read, so the refusals above are not refusing everything', () => {
+    const dir = writeCredential('SERVICE_TOKEN', 'z'.repeat(40));
+    expect(readCredentials(dir)).toEqual({ SERVICE_TOKEN: 'z'.repeat(40) });
+  });
+
   test('a key the daemon does not read is refused even as a credential', () => {
     writeEnvFile(baseEnv());
     const credentialsDir = writeCredential('OPENAI_API_KEY', 'sk-nope');
@@ -194,6 +231,49 @@ describe('the ambient environment is an allowlist, not a source', () => {
     writeEnvFile(baseEnv({ LOG_LEVEL: 'warn' }));
     const { config: resolved } = resolveConfig(sources({ ambient: { LOG_LEVEL: 'debug' } }));
     expect(resolved.LOG_LEVEL).toBe('warn');
+  });
+
+  /**
+   * THE CENSUS ITSELF — asked of every key the daemon has, one at a time.
+   *
+   * The three tests above hold the LAYERING (a root cannot be repointed, two named keys do
+   * come through, the file wins a tie). None of them holds the LIST: widening AMBIENT_KEYS
+   * to include SERVICE_TOKEN or ANTHROPIC_API_KEY left the whole suite green, and that one
+   * edit re-opens the door §3 of engineering/SITE_BUILDER_INSTANCES.md closes — a
+   * credential reaching the daemon out of `/proc/<pid>/environ`, a unit `Environment=`
+   * line, or an operator's shell, instead of only out of `$CREDENTIALS_DIRECTORY`, while
+   * every rendered file on disk still looks correct.
+   *
+   * So the census is DERIVED and TOTAL: every key of the resolved configuration is offered
+   * ambiently, alone, with the env file silent about it, and the set that actually takes
+   * effect is compared against the three. No list of keys is written in this test — the
+   * subject is which of the daemon's OWN keys the daemon honours.
+   */
+  test('exactly three keys can come from the ambient environment, and they are these', () => {
+    writeEnvFile(baseEnv());
+    const { config: baseline } = resolveConfig(sources());
+
+    const honoured: string[] = [];
+    for (const key of Object.keys(baseline).sort()) {
+      // The env file says nothing about this key, so the ambient layer is free to fill it.
+      const values = baseEnv();
+      delete values[key];
+      writeEnvFile(values);
+
+      // A value that is certain to parse: the one the daemon itself resolved.
+      const ambient = { [key]: String((baseline as Record<string, unknown>)[key]) };
+      try {
+        const { report } = resolveConfig(sources({ ambient }));
+        if (report.origin[key] === 'ambient') honoured.push(key);
+      } catch {
+        // A refusal means the ambient value was NOT used to fill a required key — the key
+        // is not on the allowlist. (An ambient value that WAS consulted and disagreed
+        // would have been a different message, and that case cannot arise here: the file
+        // is silent about the key.)
+      }
+    }
+
+    expect(honoured).toEqual(['DEDALO_SITE_INSTANCE', 'LOG_LEVEL', 'NODE_ENV']);
   });
 });
 

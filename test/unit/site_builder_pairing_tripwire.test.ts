@@ -279,6 +279,10 @@ const siteBuilder = {
 
 let server: ReturnType<typeof Bun.serve>;
 let daemonJson: typeof import('../../tools/tool_sitebuilder/server/daemon_client.ts')['daemonJson'];
+/** The tool's OWN availability decision — the thing defect 4 was about. */
+let toolIsAvailable: () => boolean;
+/** Its action handlers, by name, discovered from the module rather than typed out here. */
+let toolActions: Record<string, (ctx: unknown) => Promise<unknown>>;
 
 beforeAll(async () => {
 	server = Bun.serve({
@@ -306,6 +310,22 @@ beforeAll(async () => {
 	}));
 	// Import AFTER the mock so daemon_client binds to the mocked config.
 	({ daemonJson } = await import('../../tools/tool_sitebuilder/server/daemon_client.ts'));
+	// The tool module itself, for the same reason: `isAvailable` is asked, not read.
+	const { tool: descriptor } = (await import('../../tools/tool_sitebuilder/server/index.ts')) as {
+		tool: { isAvailable?: () => boolean };
+	};
+	if (typeof descriptor?.isAvailable !== 'function') {
+		throw new Error(
+			'tool_sitebuilder exports no isAvailable() — the availability gate below cannot run, ' +
+				'and defect 4 (the tool hiding itself on a socket-paired install) is unheld.',
+		);
+	}
+	toolIsAvailable = descriptor.isAvailable;
+	toolActions = Object.fromEntries(
+		Object.entries(
+			(descriptor as unknown as { apiActions: Record<string, { handler: unknown }> }).apiActions,
+		).map(([name, action]) => [name, action.handler as (ctx: unknown) => Promise<unknown>]),
+	);
 });
 
 afterAll(() => {
@@ -496,14 +516,112 @@ describe('tool availability follows the resolver, not a second opinion', () => {
 		expect(resolveSiteBuilderTransport({ ...SOCKET_PAIRED })).not.toBeNull();
 	});
 
-	test('the tool source asks the resolver rather than testing url && token', () => {
-		const source = readFileSync(
-			join(import.meta.dir, '..', '..', 'tools', 'tool_sitebuilder', 'server', 'index.ts'),
-			'utf8',
-		);
-		expect(source).toContain('isAvailable: () => resolveSiteBuilderTransport(config.siteBuilder) !== null');
-		// The exact shape that hid the tool. If it comes back, so does the defect.
-		expect(source).not.toContain("typeof config.siteBuilder.url === 'string' && typeof config.siteBuilder.token === 'string'");
+	/**
+	 * DEFECT 4, HELD AS BEHAVIOUR RATHER THAN AS A LITERAL.
+	 *
+	 * This test used to assert that the tool's SOURCE contained the exact string
+	 * `isAvailable: () => resolveSiteBuilderTransport(config.siteBuilder) !== null`. That is
+	 * the same shape as the dotfile gate that pinned `(?!well-known)` and missed the missing
+	 * trailing slash: it holds a spelling, not a property. Measured — moving the required
+	 * literal into a comment and restoring the old `url && token` test left this file at 28
+	 * pass / 0 fail, with the defect fully back: a socket-paired install hides the tool from
+	 * every toolbar again.
+	 *
+	 * `isAvailable` is an exported, callable function. So it is CALLED, on the topology the
+	 * provisioner now makes primary — a rendered engine fragment that sets
+	 * DEDALO_SITE_BUILDER_SOCKET and no URL at all.
+	 */
+	test('the tool is AVAILABLE on a socket-only pairing — the topology the provisioner delivers', async () => {
+		const restore = { url: siteBuilder.url, socket: siteBuilder.socket };
+		try {
+			// Exactly what the rendered fragment gives an engine on a provisioned host.
+			siteBuilder.url = undefined;
+			siteBuilder.socket = '/run/dedalo-sites/example/daemon.sock';
+			expect(toolIsAvailable()).toBe(true);
+		} finally {
+			Object.assign(siteBuilder, restore);
+		}
+	});
+
+	/**
+	 * BELT AND BRACES, HELD AS THE OUTCOME.
+	 *
+	 * `isAvailable` is the braces (the tool does not appear at all); the `isConfigured()`
+	 * pre-check inside `proxy()` and `sessionStream()` is the belt, so an action reached
+	 * DESPITE `isAvailable` still fails closed. Defect 4 was exactly those two disagreeing.
+	 *
+	 * HONEST LIMIT, stated because the rule for this phase is that a gate says what it
+	 * holds: removing the pre-check alone is NOT observable from here — `requireTransport()`
+	 * throws the same registered code one layer down, so the caller sees the same refusal.
+	 * What this holds is the outcome both guards exist for: on an unconfigured install every
+	 * action refuses with `site_builder.unconfigured` and NOTHING is sent. That reddens if
+	 * both are removed, and it is the property a museum actually has.
+	 */
+	/**
+	 * A PUBLISHER, NOT AN ADMIN — deliberately. A global admin bypasses the session
+	 * ownership check, so with an admin the session doors would answer the same whether the
+	 * unconfigured pre-check ran before that check or not. An ordinary publisher owns none
+	 * of these ids, which is what makes the ORDER observable: pre-check first is
+	 * `site_builder.unconfigured`; ownership first is `site_builder.rejected`.
+	 */
+	const PUBLISHER = { userId: 1, isGlobalAdmin: false, isDeveloper: true };
+
+	test('an unconfigured install refuses every action, and sends nothing', async () => {
+		const restore = { ...siteBuilder };
+		const before = requested.length;
+		try {
+			siteBuilder.url = undefined;
+			siteBuilder.socket = undefined;
+			// `get_status` is the ONE action that ANSWERS on an unconfigured install instead of
+			// refusing — the ops panel has to be able to render "not configured here" — and it
+			// is named as the exception rather than skipped silently.
+			const status = (await (toolActions.get_status as (ctx: unknown) => Promise<unknown>)({
+				principal: PUBLISHER,
+				userId: 1,
+				options: {},
+				background: false,
+			})) as { data: { configured: boolean; reachable: boolean } };
+			expect(status.data).toMatchObject({ configured: false, reachable: false });
+
+			// EVERY OTHER action, discovered from the module — a gate that hand-listed them
+			// would stop covering the tool the moment a fifteenth action was added.
+			const names = Object.keys(toolActions).filter((name) => name !== 'get_status');
+			expect(names.length).toBeGreaterThan(10);
+			for (const action of names) {
+				const handler = toolActions[action] as (ctx: unknown) => Promise<unknown>;
+				const refusal = await refusalOf(
+					handler({
+						principal: PUBLISHER,
+						userId: 1,
+						options: { slug: 'anything', session_id: 'anything', prompt: 'x' },
+						background: false,
+					}),
+				);
+				expect({ action, code: refusal.code }).toEqual({
+					action,
+					code: 'site_builder.unconfigured',
+				});
+			}
+			expect(requested.length, 'an unconfigured install still reached the daemon').toBe(before);
+		} finally {
+			Object.assign(siteBuilder, restore);
+		}
+	});
+
+	test('and UNAVAILABLE when the pairing is half-configured — availability is not "always true"', async () => {
+		const restore = { url: siteBuilder.url, socket: siteBuilder.socket, token: siteBuilder.token };
+		try {
+			siteBuilder.url = undefined;
+			siteBuilder.socket = undefined;
+			expect(toolIsAvailable()).toBe(false);
+
+			// An address but no credential is not a pairing either.
+			siteBuilder.socket = '/run/dedalo-sites/example/daemon.sock';
+			siteBuilder.token = undefined;
+			expect(toolIsAvailable()).toBe(false);
+		} finally {
+			Object.assign(siteBuilder, restore);
+		}
 	});
 
 	test('and a half-configured pairing still resolves to nothing', () => {

@@ -190,8 +190,12 @@ export function parseStamp(text: string): ParsedStamp | null {
   if (!match) return null;
 
   // Positions: 1 = the comment prefix (read and discarded, see above), 2 = instance,
-  // 3 = kind, 4 = hash. The pattern matched, so all four are present.
-  const [, , instance, kind, hash] = match;
+  // 3 = kind, 4 = hash. The pattern matched, so all four are present — spelled with a
+  // default rather than asserted, because the engine's own tsconfig compiles this file
+  // (test/unit/site_builder_single_source_tripwire.test.ts imports the provisioner) under
+  // `noUncheckedIndexedAccess`, and a non-null assertion here would be the one place in
+  // this module where a promise about a regex stood in for a value.
+  const [, , instance = '', kind = '', hash = ''] = match;
   if (!INSTANCE_PATTERN.test(instance)) return null;
   if (!STAMP_KIND_PATTERN.test(kind)) return null;
   if (!HASH_PATTERN.test(hash)) return null;

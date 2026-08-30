@@ -149,6 +149,56 @@ describe('the process is the identity its roots were provisioned for', () => {
     expect(message).toContain('SITES_ROOT');
     expect(message).toContain('Nothing was written.');
   });
+
+  /**
+   * THE TWO REFUSALS THIS FUNCTION IS FOR — neither of which had ever been executed.
+   *
+   * The block used to hold the positive path and one `statSync` failure, so `uid === 0` and
+   * `owner !== uid` were dead weight: disarming either left the suite green. They are the
+   * whole of the identity check, and per-instance uid/gid is where this subsystem's
+   * isolation is stated to rest.
+   *
+   * Both are reachable now because the running uid is a PARAMETER of `assertRunningAs`,
+   * defaulting to the real one — a suite does not run as root and cannot create a
+   * foreign-owned directory, so injecting the answer is the only honest way to execute the
+   * branch. The ROOTS are real: the ownership case works by telling the function it is
+   * somebody else, which is exactly the state a daemon pointed at another instance's tree is
+   * in.
+   */
+  test('ROOT is refused outright — an agent turn as uid 0 would own the host', () => {
+    const message = refusalFrom(() => assertRunningAs(INSTANCE, makeRoots(), 0));
+    expect(message).toContain('assertRunningAs');
+    expect(message).toContain('running as root (uid 0)');
+    expect(message).toContain('User=');
+    expect(message).toContain('Nothing was written.');
+  });
+
+  test('a service-owned root this uid does not own is refused, naming both uids', () => {
+    // The real roots, really owned by the uid running the suite; the process is told it is
+    // a different one. That is a daemon started as the wrong user, or pointed at another
+    // instance's provisioned tree — indistinguishable from here, and both refusable.
+    const mine = process.getuid?.() ?? 0;
+    const notMine = mine + 1;
+    const message = refusalFrom(() => assertRunningAs(INSTANCE, makeRoots(), notMine));
+    expect(message).toContain('assertRunningAs');
+    expect(message).toContain(`is owned by uid ${mine}`);
+    expect(message).toContain(`this process is uid ${notMine}`);
+    expect(message).toContain('Nothing was written.');
+  });
+
+  test('a root the provisioner does NOT chown to the service user is exempt from that check', () => {
+    // AUDIT_DIR is root-owned by design (`ownedByService: false`) — that is the whole
+    // append-only story. If the ownership loop stopped honouring the flag, every daemon on
+    // a correctly provisioned host would refuse to boot.
+    const auditOnly = makeRoots().filter(root => root.label === 'AUDIT_DIR');
+    expect(auditOnly).toHaveLength(1);
+    const mine = process.getuid?.() ?? 0;
+    expect(() => assertRunningAs(INSTANCE, auditOnly, mine + 1)).not.toThrow();
+  });
+
+  test('a platform with no POSIX uids proves nothing rather than refusing everything', () => {
+    expect(() => assertRunningAs(INSTANCE, makeRoots(), null)).not.toThrow();
+  });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────

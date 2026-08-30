@@ -3,9 +3,10 @@
  *
  * Same hand-rolled exact-arity matcher as the publication API (small enough to read in
  * one sitting, so its security properties can be argued about). The gate is different in
- * one load-bearing way: EVERY route except /health requires the bearer token, checked
- * before the path is matched — an unauthenticated probe learns nothing about which routes
- * exist. This daemon has no anonymous surface.
+ * one load-bearing way: EVERY route except `GET /health` requires the bearer token, and it
+ * is checked BEFORE the path is matched — so an unauthenticated probe learns nothing about
+ * which routes exist, not even from the difference between a 404 and a 401. This daemon has
+ * no anonymous surface, and no enumeration oracle in front of it.
  *
  * P0 registers health, capabilities and site CRUD. P1/P2/P4 add the session, build and
  * publish routes; the matcher and gate do not change.
@@ -109,6 +110,44 @@ function findRoute(method: string, pathname: string): { route: Route; params: Re
   throw new NotFoundError(`Route not found: ${pathname}`);
 }
 
+/**
+ * IS THIS REQUEST ONE OF THE PUBLIC ROUTES? — asked of the table, never of a second list.
+ *
+ * The gate below has to answer "may this caller be told anything at all" BEFORE the
+ * matcher runs, and the only public route is `GET /health`. Spelling that here as a
+ * constant would be a second census of `routes` — this file's own version of the defect
+ * the subsystem exists to delete — so it is derived: a request is public exactly when some
+ * registered route with `public: true` matches its method AND its path.
+ *
+ * METHOD INCLUDED, deliberately. `POST /health` is not the public route; it is an
+ * unauthenticated caller asking what other verbs the daemon answers, which is precisely the
+ * question the ordering below refuses.
+ */
+function isPublicRequest(method: string, pathname: string): boolean {
+  const pathSegments = pathname.split('/').filter(Boolean);
+  for (const route of routes) {
+    if (!route.public) continue;
+    if (route.method !== method) continue;
+    if (matchSegments(route.segments, pathSegments)) return true;
+  }
+  return false;
+}
+
+/**
+ * THE GATE RUNS BEFORE THE MATCHER, and that order is the property.
+ *
+ * It used to run after: `findRoute` threw first, so an unauthenticated caller who could
+ * reach the socket got THREE distinguishable answers — 404 for a path that does not exist,
+ * 401 for one that does, and 405 with an `Allow` header naming the real verbs of a route it
+ * had merely guessed. That is a complete enumeration of this daemon's surface, handed out
+ * for free, while both this file's header and `security/auth.ts` claimed the opposite.
+ *
+ * So the bearer is now checked against the request itself, and the route table is not
+ * consulted at all until it passes. Every unauthenticated request that is not the one
+ * public route gets the same 401, whatever it asked for. `tests/router.test.ts` proves it
+ * by probing an unknown path, a known path, and a wrong method with no token and requiring
+ * the three answers to be indistinguishable.
+ */
 export async function routeRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   let pathname = url.pathname;
@@ -119,11 +158,11 @@ export async function routeRequest(req: Request): Promise<Response> {
   }
 
   try {
-    const { route, params } = findRoute(req.method, pathname);
-    // Auth gate: everything but the explicitly-public /health.
-    if (!route.public) {
+    // Auth gate: everything but the explicitly-public routes, BEFORE the path is matched.
+    if (!isPublicRequest(req.method, pathname)) {
       requireBearer(req);
     }
+    const { route, params } = findRoute(req.method, pathname);
     return await route.handler(req, params, url);
   } catch (error) {
     return problem(error);

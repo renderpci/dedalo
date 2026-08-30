@@ -90,6 +90,19 @@ const EXAMPLE = join(import.meta.dir, '..', 'deploy', 'examples', 'instance.exam
 const PASSWORD_VALUE = 'zzz-provision-gate-password-zzz';
 const CREDENTIAL_VALUE = 'zzz-provision-gate-credential-zzz';
 const MINTED_TOKEN = 'zzz-provision-gate-minted-token-zzz';
+/**
+ * THE FAKE'S OWN PREFIX — and a warning that it proves nothing about bcrypt.
+ *
+ * Everything in this file runs through a fake `ProvisionIo`, deliberately: the subject is
+ * the PLAN, and a plan gate that touched a real host could not run in a suite. The cost is
+ * that the `$2y$` assertions below compare a value this file computed against a value this
+ * file's own fake returned — an htpasswd full of `$2b$` hashes (what `Bun.password` emits,
+ * and what not every crypt(3) a museum's distro ships will accept) would pass here.
+ *
+ * The REAL one is held by tests/provision_host_io.test.ts, which calls `hostIo()` itself
+ * and verifies the hash with bcrypt. Do not strengthen this constant into a claim about
+ * the real hash: the fake is the point of this file.
+ */
 const HASH_PREFIX = '$2y$fake$';
 
 const temporaryPrefixes: string[] = [];
@@ -366,7 +379,7 @@ function isBrokenLink(path: string): boolean {
  * artifacts and the markers, never a credential.
  */
 function observe(instance: Instance, io: RecordingIo): HostState {
-  const { layout } = instance;
+  const { layout, manifest } = instance;
   const contentful = new Set<string>([
     ...instance.artifacts.map(artifact => artifact.path),
     ...[
@@ -378,7 +391,7 @@ function observe(instance: Instance, io: RecordingIo): HostState {
   ]);
 
   const entries: Record<string, PathObservation> = {};
-  for (const path of observedPaths(layout)) {
+  for (const path of observedPaths(layout, manifest)) {
     const facts = io.stat(path);
     if (!facts) continue;
     const real = onHost(instance, path);

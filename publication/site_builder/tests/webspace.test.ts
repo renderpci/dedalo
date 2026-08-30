@@ -18,10 +18,11 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
+  INSTANCE,
   SCRATCH_ROOT,
   declareSite,
   makeSourceDir,
@@ -40,6 +41,7 @@ import { SURFACES, derive, type Surface } from '../src/provision/layout';
 import { parseManifest } from '../src/provision/schema';
 import { renderAll } from '../src/provision/render';
 import { readSiteTable } from '../src/sites/site_table';
+import { stamp } from '../src/provision/hash';
 import {
   WebspaceError,
   assertWebspace,
@@ -51,6 +53,8 @@ import {
   siteUrl,
 } from '../src/sites/webspace';
 import { createSite, assertWithinQuota, deleteSite, siteDiskUsageMb } from '../src/sites/workspace';
+import { readManifest, writeManifest } from '../src/sites/manifest';
+import { productionReleases } from '../src/build/publish';
 import { promoteRelease } from '../src/build/promote';
 import { LimitExceededError } from '../src/errors';
 import type { SiteManifest } from '../src/sites/manifest';
@@ -225,6 +229,41 @@ describe('the daemon derives nothing and reads the provisioner instead', () => {
       /according to its own site.json/,
     );
   });
+
+  /**
+   * THE SAME DOMAIN CHECK ON THE DOOR THAT MUST NOT THROW.
+   *
+   * `declaredSurface` is the read path — the status join, the disk measurement,
+   * `productionReleases` — so it answers `null` where `siteSurface` refuses. `null` is not
+   * a weaker check though: the row is accepted only when its domain matches the manifest's,
+   * and dropping that half was ungated (the same mutation on the PROVING path reddens).
+   * Without it a site whose `site.json` domain has drifted reports ANOTHER domain's release
+   * history and counts another domain's bytes against its quota — the derive-and-hope
+   * answer this module was rewritten to delete, reintroduced on the doors that must not
+   * throw.
+   */
+  test('a read path answers NULL for a manifest whose domain has drifted from the table', async () => {
+    await provisionSite('demo');
+    // The row exists and the slug matches; only the domain has moved on.
+    expect(declaredSurface(manifestFor('demo'), 'prod')).not.toBeNull();
+    expect(declaredSurface(manifestFor('demo', 'somewhere.else.test'), 'prod')).toBeNull();
+  });
+
+  test('a drifted domain does not report another site\'s releases as its own', async () => {
+    // The consequence, end to end: `productionReleases` reads through `declaredSurface`.
+    await provisionSite('demo');
+    await createSite({ slug: 'demo', name: 'Demo', domain: siteDomain('demo'), actor: ACTOR });
+    const source = await makeSourceDir({ 'index.html': 'live' }, workspacePath('demo', 'out'));
+    await promoteRelease(siteSurface(manifestFor('demo'), 'prod'), source);
+    expect((await productionReleases('demo')).releases.length).toBe(1);
+
+    // Now the site's own manifest says a different domain. Its answer must be "nothing",
+    // never the release history of whatever the table happens to place at that slug.
+    const manifest = await readManifest('demo');
+    manifest.domain = 'somewhere.else.test';
+    await writeManifest(manifest);
+    expect(await productionReleases('demo')).toEqual({ releases: [], current: null });
+  });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -258,6 +297,123 @@ describe('the site table is read the way `provision check` reads an artifact', (
     const text = await Bun.file(roots.siteTable).text();
     await writeFile(roots.siteTable, text.split('\n').slice(1).join('\n'), 'utf8');
     expect(() => siteTable()).toThrow(/carries no provisioner stamp/);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * …AND ITS ROWS ARE READ THE SAME WAY
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * THE STAMP IS NOT THE WHOLE PROOF.
+ *
+ * The block above holds the STAMP half — absent, unstamped, hand-edited, another instance's
+ * — and stops there, because every one of those tests works by editing the rendered file,
+ * which breaks the stamp and can therefore never reach the row checks behind it. So
+ * everything `buildTable` and `buildEntry` do was unheld: a table whose body names another
+ * museum, whose version came from a newer provisioner, or which gives one domain to two
+ * sites was accepted silently. Each of those `if`s could be disarmed with the suite green.
+ *
+ * These tests write a table that is genuinely, freshly STAMPED over a malformed body — the
+ * shape a hand-assembled file has, and the only one that gets past the stamp to the rows.
+ */
+describe('a stamped table with a bad body is still refused, row by row', () => {
+  /** A table file this instance really signed, over exactly these bytes. */
+  async function writeStampedTable(document: unknown): Promise<void> {
+    const body = `${JSON.stringify(document, null, 2)}\n`;
+    await mkdir(dirname(roots.siteTable), { recursive: true });
+    await writeFile(roots.siteTable, stamp('sites', INSTANCE, body, '//'), 'utf8');
+  }
+
+  /** The document the provisioner WOULD have written, as a mutable object to spoil. */
+  async function goodDocument(): Promise<Record<string, unknown>> {
+    await provisionSite('demo');
+    const text = await Bun.file(roots.siteTable).text();
+    return JSON.parse(text.slice(text.indexOf('\n') + 1)) as Record<string, unknown>;
+  }
+
+  test('the fixture itself is honest: a re-stamped GOOD body still reads', async () => {
+    // Without this, every refusal below could be the re-stamping rather than the defect.
+    const document = await goodDocument();
+    await writeStampedTable(document);
+    expect(siteTable().bySlug('demo')?.domain).toBe(siteDomain('demo'));
+  });
+
+  test("a body naming ANOTHER museum is refused, though the stamp says it is ours", async () => {
+    // The stamp is what `check` reads and the field is what an operator reads. A file where
+    // they disagree was assembled, not rendered — and this daemon publishes into the
+    // directories it names.
+    const document = await goodDocument();
+    document.instance = 'museum-b';
+    await writeStampedTable(document);
+    expect(() => siteTable()).toThrow(/museum-b/);
+  });
+
+  test('a table from a NEWER provisioner is refused forwards, never half-understood', async () => {
+    // An older daemon reading a newer table must say so rather than silently ignore fields
+    // it cannot see: that is a museum whose sites moved and whose daemon kept publishing to
+    // the old paths.
+    const document = await goodDocument();
+    document.version = (document.version as number) + 1;
+    await writeStampedTable(document);
+    expect(() => siteTable()).toThrow(/newer provisioner/);
+  });
+
+  test('an OLDER version is still read — the refusal is forwards only', async () => {
+    const document = await goodDocument();
+    document.version = 1;
+    await writeStampedTable(document);
+    expect(siteTable().bySlug('demo')).not.toBeNull();
+  });
+
+  test('two rows with the same SLUG are refused, not resolved', async () => {
+    const document = await goodDocument();
+    const rows = document.sites as Record<string, unknown>[];
+    rows.push({ ...(rows[0] as Record<string, unknown>), domain: 'other.test' });
+    await writeStampedTable(document);
+    expect(() => siteTable()).toThrow(/declares the slug 'demo' twice/);
+  });
+
+  test('two rows sharing one DOMAIN are refused — one hostname is one site', async () => {
+    // They would share a webspace, a release store and a served link, and publishing the
+    // second would replace the first's live pages.
+    const document = await goodDocument();
+    const rows = document.sites as Record<string, unknown>[];
+    rows.push({ ...(rows[0] as Record<string, unknown>), slug: 'twin' });
+    await writeStampedTable(document);
+    expect(() => siteTable()).toThrow(/gives the domain/);
+  });
+
+  /**
+   * THE FIFTH INSTANCE OF THE PROJECT'S RECURRING DEFECT — one law, stated on both sides.
+   *
+   * `render/sites.ts` (the WRITER) and `site_table.ts` (the READER) each assert that a
+   * row's store_dir and link_path lie strictly inside its webspace. It is the last check
+   * before a string from `sites.json` becomes the target of a `rm -rf` (delete) and of a
+   * rename-over-symlink (every publish). Both copies were ungated: disarming either left
+   * the suite green, which is precisely how the four earlier two-derivation defects
+   * shipped. The reader is held here; the writer is held in tests/provision_render_sites.
+   */
+  test.each(['store_dir', 'link_path'])(
+    'a row whose %s escapes its own webspace is refused by the reader',
+    async field => {
+      const document = await goodDocument();
+      const row = (document.sites as Record<string, unknown>[])[0] as Record<string, unknown>;
+      const surfaces = row.surfaces as Record<string, Record<string, string>>;
+      // Out of the webspace and into the tree beside it — the shape that turns a delete
+      // into somebody else's directory.
+      surfaces.prod[field] = join(row.webspace as string, '..', 'somebody-elses-tree');
+      await writeStampedTable(document);
+      expect(() => siteTable()).toThrow(/is not inside the site's webspace/);
+    },
+  );
+
+  test('a row with a relative path is refused — the daemon would resolve it against a cwd', async () => {
+    const document = await goodDocument();
+    const row = (document.sites as Record<string, unknown>[])[0] as Record<string, unknown>;
+    row.webspace = 'relative/webspace';
+    await writeStampedTable(document);
+    expect(() => siteTable()).toThrow(/not an absolute path/);
   });
 });
 
@@ -310,6 +466,57 @@ describe('a webspace must exist and say whose it is', () => {
     await mkdir(roots.webspaceBase, { recursive: true });
     await writeFile(webspaceOf('demo'), 'not a directory', 'utf8');
     expect(() => assertWebspace('demo', siteDomain('demo'))).toThrow(/not a directory/);
+  });
+
+  /**
+   * THE WEBSPACE IS PROVED WRITABLE BY THIS PROCESS, NOW.
+   *
+   * The same create-and-unlink probe the boot preflight runs over the state roots, and for
+   * the same reason: under `ProtectSystem=strict` every path the unit's `ReadWritePaths=`
+   * does not name is mounted READ-ONLY, and a webspace missing from that list does not fail
+   * at install time — it fails as EROFS halfway through copying a release, at night, on a
+   * live site. The other three halves of `proveSite` were gated; this one was not, and
+   * deleting the call left the suite green.
+   *
+   * A suite cannot mount a read-only filesystem, so the unwritable webspace is built the
+   * portable way: mode 0555. Skipped LOUDLY rather than silently when the process can write
+   * through it anyway (running as root, or a filesystem that ignores the bits).
+   */
+  test('a webspace this process cannot write to is refused BEFORE the build, not during it', async () => {
+    await provisionSite('demo');
+    const webspace = webspaceOf('demo');
+    const before = statSync(webspace).mode;
+    chmodSync(webspace, 0o555);
+    try {
+      const probe = join(webspace, '.can-this-process-write-here');
+      let reallyReadOnly = false;
+      try {
+        writeFileSync(probe, '', { flag: 'w' });
+        rmSync(probe, { force: true });
+      } catch {
+        reallyReadOnly = true;
+      }
+      if (!reallyReadOnly) {
+        console.warn(
+          '[webspace] SKIPPED the write-probe gate: this process can write through mode 0555 ' +
+            '(running as root, or a filesystem that ignores the permission bits).',
+        );
+        return;
+      }
+
+      let message = '';
+      try {
+        siteSurface(manifestFor('demo'), 'preprod');
+      } catch (error) {
+        message = (error as Error).message;
+        expect(error).toBeInstanceOf(WebspaceError);
+      }
+      expect(message).toContain('is not writable by this process');
+      expect(message).toContain('ReadWritePaths=');
+      expect(message).toContain('provision apply');
+    } finally {
+      chmodSync(webspace, before);
+    }
   });
 
   test('both surfaces are proved together', async () => {

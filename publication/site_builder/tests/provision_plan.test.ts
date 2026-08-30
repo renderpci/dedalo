@@ -39,8 +39,22 @@ import { artifact, renderAll } from '../src/provision/render';
 import type { ModeKey } from '../src/provision/render';
 import { SERVICE_TOKEN_KEY } from '../src/provision/render/engine_fragment';
 import { stamp } from '../src/provision/hash';
-import type { Action, FileAction, HostState, PathObservation } from '../src/provision/plan';
-import { PHASES, changesTheHost, describe as describeAction, observedPaths, plan } from '../src/provision/plan';
+import type {
+  Action,
+  ExecAction,
+  FileAction,
+  HostState,
+  PathObservation,
+  UserAction,
+} from '../src/provision/plan';
+import {
+  PHASES,
+  assertPlanIsCoherent,
+  changesTheHost,
+  describe as describeAction,
+  observedPaths,
+  plan,
+} from '../src/provision/plan';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * Declarations
@@ -941,7 +955,7 @@ describe('idempotence', () => {
     // therefore leave the plan empty.
     const decl = declare();
     const { host } = settle(decl);
-    const allowed = new Set(observedPaths(decl.layout));
+    const allowed = new Set(observedPaths(decl.layout, decl.manifest));
     const narrowed: Record<string, PathObservation> = {};
     for (const [path, observation] of Object.entries(host.entries)) {
       if (allowed.has(path)) narrowed[path] = observation;
@@ -1114,3 +1128,143 @@ describe('every root is claimed before anything can be put in it', () => {
     }
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * THE PLAN'S OWN SAFETY CHECK
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * `assertPlanIsCoherent` IS the enforcement of never-reuse-a-uid and of the retired
+ * installer's defect 3, and none of its refusals had ever been executed: a violating plan
+ * cannot come out of `plan()`, so nothing in the suite could reach them. Measured before
+ * this block existed — disarming the phase-order assertion, the `--gid` check, the
+ * group-before-user check, the destructive-argv loop and the re-mint refusal each left the
+ * suite at 699 pass / 0 fail. Breaking the PLAN instead does redden, which is what proves
+ * the properties currently hold and leaves open the question of what holds them.
+ *
+ * So a REAL plan is built and then perturbed one rule at a time. The unperturbed plan is
+ * asserted to pass first, so a refusal below can never be the perturbation machinery.
+ */
+describe('a plan that broke one of its own rules would be refused', () => {
+  const decl = declare();
+  /** A lawful plan of a fresh host — long enough to contain every action kind. */
+  function lawfulPlan(): Action[] {
+    return planFor(decl, bareHost());
+  }
+
+  test('the lawful plan passes — so every refusal below is the perturbation, not the fixture', () => {
+    expect(() => assertPlanIsCoherent(lawfulPlan(), decl.layout)).not.toThrow();
+  });
+
+  test('phases that go BACKWARDS are refused, naming the order', () => {
+    const actions = lawfulPlan();
+    // The last action of the plan, moved to the front: a `web` step before `identity`.
+    const last = actions[actions.length - 1] as Action;
+    expect(PHASES.indexOf(last.phase)).toBeGreaterThan(0);
+    const message = refusal(() => assertPlanIsCoherent([...actions.slice(0, -1), last, actions[0] as Action], decl.layout));
+    expect(message).toContain('after a later phase had already begun');
+    expect(message).toContain(PHASES.join(' → '));
+  });
+
+  test('an action carrying no known phase is refused rather than sorted somewhere', () => {
+    const actions = lawfulPlan();
+    const broken = { ...(actions[0] as Action), phase: 'invented' as never };
+    expect(() => assertPlanIsCoherent([broken, ...actions.slice(1)], decl.layout)).toThrow(
+      /carries no known phase/,
+    );
+  });
+
+  test('a useradd with no --gid is refused — the trap the retired install.sh fell into', () => {
+    const actions = lawfulPlan();
+    const user = actions.find((action): action is UserAction => action.kind === 'user');
+    expect(user).toBeDefined();
+    const stripped = { ...(user as UserAction), argv: (user as UserAction).argv.filter(arg => arg !== '--gid') };
+    const message = refusal(() =>
+      assertPlanIsCoherent(actions.map(action => (action === user ? stripped : action)), decl.layout),
+    );
+    expect(message).toContain('carries no --gid');
+    expect(message).toContain('Nothing was planned');
+  });
+
+  test('a user created BEFORE its primary group is refused — useradd --gid would fail', () => {
+    const actions = lawfulPlan();
+    const userIndex = actions.findIndex(action => action.kind === 'user');
+    const user = actions[userIndex] as UserAction;
+    const groupIndex = actions.findIndex(
+      action => action.kind === 'group' && action.name === user.group,
+    );
+    expect(groupIndex).toBeGreaterThanOrEqual(0);
+    expect(groupIndex).toBeLessThan(userIndex);
+
+    // Swap them: same actions, same phases, only the order of the two is wrong.
+    const swapped = [...actions];
+    swapped[groupIndex] = user;
+    swapped[userIndex] = actions[groupIndex] as Action;
+    const message = refusal(() => assertPlanIsCoherent(swapped, decl.layout));
+    expect(message).toContain('is created before its primary group');
+  });
+
+  test.each(['userdel', 'groupdel', 'deluser', 'delgroup', 'rm', 'rmdir', 'unlink', 'shred', 'mkfs'])(
+    'a plan step that would run %s is refused — NOTHING in a plan deletes',
+    binary => {
+      // A uid freed by a deletion is a uid the next instance can be handed, and it inherits
+      // every file the first one left behind.
+      const actions = lawfulPlan();
+      const exec = actions.find((action): action is ExecAction => action.kind === 'exec');
+      expect(exec).toBeDefined();
+      const destructive = { ...(exec as ExecAction), argv: [binary, '-rf', '/srv/webspaces/museum'] };
+      const message = refusal(() =>
+        assertPlanIsCoherent(actions.map(action => (action === exec ? destructive : action)), decl.layout),
+      );
+      expect(message).toContain('would delete something');
+      expect(message).toContain('a reused uid inherits');
+    },
+  );
+
+  test('a MINTED credential that would be rewritten rather than created is refused', () => {
+    // A rotation is an operator act; a plan that could roll a token would break the pairing
+    // on both sides of the socket at once.
+    const actions = lawfulPlan();
+    const minted = actions.find(
+      (action): action is FileAction => action.kind === 'file' && action.content.source === 'random',
+    );
+    expect(minted).toBeDefined();
+    expect((minted as FileAction).disposition).toBe('create');
+    const rewritten = { ...(minted as FileAction), disposition: 'rewrite' as const };
+    const message = refusal(() =>
+      assertPlanIsCoherent(actions.map(action => (action === minted ? rewritten : action)), decl.layout),
+    );
+    expect(message).toContain('fresh random bytes');
+    expect(message).toContain('minted once');
+  });
+
+  test('an AWAITING file that the provisioner could actually write is refused', () => {
+    const actions = lawfulPlan();
+    const writable = actions.find(
+      (action): action is FileAction => action.kind === 'file' && action.content.source !== 'operator',
+    );
+    expect(writable).toBeDefined();
+    const pretending = { ...(writable as FileAction), disposition: 'awaiting' as const };
+    expect(() =>
+      assertPlanIsCoherent(actions.map(action => (action === writable ? pretending : action)), decl.layout),
+    ).toThrow(/marked awaiting but carries content/);
+  });
+
+  test('every refusal names the instance, because --all refuses ONE museum and carries on', () => {
+    const actions = lawfulPlan();
+    const broken = { ...(actions[0] as Action), phase: 'invented' as never };
+    expect(refusal(() => assertPlanIsCoherent([broken, ...actions.slice(1)], decl.layout))).toContain(
+      `plan(${decl.layout.instance})`,
+    );
+  });
+});
+
+/** The message of a call that must throw. */
+function refusal(run: () => unknown): string {
+  try {
+    run();
+  } catch (error) {
+    return (error as Error).message;
+  }
+  throw new Error('expected a refusal, got none');
+}

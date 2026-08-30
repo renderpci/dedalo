@@ -12,6 +12,8 @@ import { startBuild, getBuild } from '../src/build/builder';
 import { readManifest, writeManifest } from '../src/sites/manifest';
 import type { AgentDriver, AgentEvent, AgentProcess, SessionStartOptions } from '../src/drivers/types';
 import type { StoredEvent } from '../src/sessions/events';
+import { config } from '../src/config';
+import { LimitExceededError } from '../src/errors';
 
 const ACTOR = { user_id: 9, username: 'agent-tester' };
 
@@ -250,5 +252,139 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
     const { session_id } = await startSession('excl-b', 'after build');
     expect(session_id).toBeTruthy();
     await collectStream(sessionEventStream('excl-b', session_id, -1));
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * THE FOUR THINGS THAT BOUND A TURN
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Each of these was stated in `src/sessions/manager.ts` and held by nothing — disarming any
+ * one of them left the suite green:
+ *
+ *   - the FOLLOW-UP path's reservation ("same synchronous reservation as startSession
+ *     (cross-exclusive with builds)"). The exclusion block above covers `startSession`
+ *     only, so a `sendMessage` landing during a build raced the working tree the build was
+ *     reading.
+ *   - the GLOBAL cap ("at most MAX_CONCURRENT_SESSIONS turns across all sites") — the only
+ *     thing bounding fleet-wide provider spend and process pressure.
+ *   - the 32 KiB PROMPT cap.
+ *   - the PRE-TURN QUOTA gate ("a turn that cannot be published is not a turn worth
+ *     starting").
+ */
+describe('what a turn is bounded by', () => {
+  test('a FOLLOW-UP message is refused while a build is running, exactly like a start', async () => {
+    await makeSite('followup', 'Follow Up');
+    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
+    const { session_id } = await startSession('followup', 'first turn');
+    await waitFor(() => getSessionState('followup').state !== 'running');
+
+    // A build slow enough to still hold the reservation when the follow-up arrives.
+    const manifest = await readManifest('followup');
+    manifest.build = { install: 'sleep 1', build: 'true', output: 'src' };
+    await writeManifest(manifest);
+    const { build_id } = await startBuild('followup');
+
+    await expect(sendMessage(session_id, 'a second turn, mid-build')).rejects.toThrow(
+      /build is running/,
+    );
+
+    const start = Date.now();
+    for (;;) {
+      const record = await getBuild('followup', build_id);
+      if (record && record.outcome !== 'running') break;
+      if (Date.now() - start > 8000) throw new Error('build never settled');
+      await new Promise(r => setTimeout(r, 25));
+    }
+  });
+
+  test('a follow-up is refused while THIS site already has a turn running', async () => {
+    await makeSite('followup-b', 'Follow Up B');
+    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
+    const { session_id } = await startSession('followup-b', 'first');
+    await waitFor(() => getSessionState('followup-b').state !== 'running');
+
+    __setTestDriver('claude_code', fakeDriver([{ type: 'text', text: 'working…' }], { hang: true }));
+    const second = sendMessage(session_id, 'second');
+    await waitFor(() => getSessionState('followup-b').state === 'running');
+
+    await expect(sendMessage(session_id, 'third, while the second runs')).rejects.toThrow(
+      /turn is already running/,
+    );
+
+    await stopSession(session_id);
+    await waitFor(() => getSessionState('followup-b').state !== 'running');
+    await second;
+  });
+
+  test('the global cap bounds turns ACROSS sites, not just within one', async () => {
+    // The per-site reservation cannot see this: every site here is a different one, so only
+    // the fleet-wide semaphore can refuse. The cap is read from the config rather than
+    // spelled, so the test states the rule and not a number.
+    const cap = config.MAX_CONCURRENT_SESSIONS;
+    const slugs = Array.from({ length: cap + 1 }, (_, i) => `capped-${i}`);
+    for (const slug of slugs) await makeSite(slug, slug);
+    __setTestDriver('claude_code', fakeDriver([{ type: 'text', text: 'working…' }], { hang: true }));
+
+    const started: string[] = [];
+    try {
+      for (let i = 0; i < cap; i++) {
+        const { session_id } = await startSession(slugs[i] as string, 'go');
+        started.push(session_id);
+        await waitFor(() => getSessionState(slugs[i] as string).state === 'running');
+      }
+
+      await expect(startSession(slugs[cap] as string, 'one too many')).rejects.toThrow(
+        /Too many concurrent sessions/,
+      );
+      // And the refusal did not leave the extra site reserved: it is free once a slot is.
+      expect(getSessionState(slugs[cap] as string).state).not.toBe('running');
+    } finally {
+      for (const id of started) await stopSession(id).catch(() => undefined);
+      for (const slug of slugs) {
+        await waitFor(() => getSessionState(slug).state !== 'running').catch(() => undefined);
+      }
+    }
+  });
+
+  test('a prompt over 32 KiB is refused before anything is reserved or spawned', async () => {
+    await makeSite('verbose', 'Verbose');
+    let sawTurn = false;
+    __setTestDriver('claude_code', {
+      id: 'claude_code',
+      capabilities: { resume: true, mcpHttp: true, reportsFileChanges: true },
+      async detect() {
+        return { id: 'claude_code', binPath: 'fake', version: '1.0.0' };
+      },
+      startTurn() {
+        sawTurn = true;
+        throw new Error('the driver must never be reached');
+      },
+    });
+
+    await expect(startSession('verbose', 'x'.repeat(32 * 1024 + 1))).rejects.toThrow(/32 KiB/);
+    expect(sawTurn).toBe(false);
+    // The site is not left reserved by a refusal.
+    expect(getSessionState('verbose').state).not.toBe('running');
+    // And one byte under the cap is NOT refused for its size — otherwise this test would
+    // pass against a `validatePrompt` that refused everything.
+    await startSession('verbose', 'x'.repeat(32 * 1024));
+    await waitFor(() => sawTurn);
+  });
+
+  test('a site already over its disk quota gets no turn at all', async () => {
+    // "A turn that cannot be published is not a turn worth starting" — and the releases are
+    // the half of a site's footprint a museum cannot see.
+    await makeSite('bloated', 'Bloated');
+    __setTestDriver('claude_code', fakeDriver([{ type: 'result', ok: true, durationMs: 1 }]));
+    await writeFile(
+      join(workspacePath('bloated'), 'huge.bin'),
+      'x'.repeat((config.SITE_DISK_QUOTA_MB + 2) * 1024 * 1024),
+      'utf8',
+    );
+
+    await expect(startSession('bloated', 'go')).rejects.toThrow(LimitExceededError);
+    expect(getSessionState('bloated').state).not.toBe('running');
   });
 });

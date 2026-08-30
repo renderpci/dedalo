@@ -53,6 +53,7 @@
 import { config } from '../../../src/config/config.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
+import { resolveSiteBuilderTransport } from '../../../src/core/site_builder/pairing.ts';
 import { siteBuilderFailure, siteBuilderRejected } from './wire.ts';
 
 /**
@@ -77,8 +78,14 @@ export const SESSION_OWNER_TABLE = 'dedalo_ts_sitebuilder_sessions';
  * swap it, and a stale capture would silently keep asserting the previous pairing.
  */
 function pairedInstance(): string | null {
-	const instance = config.siteBuilder.instance;
-	return typeof instance === 'string' && instance.length > 0 ? instance : null;
+	// THE RESOLVER, not the raw key. `config.siteBuilder.instance` is one of the five values
+	// that together mean "this engine has a site builder", and reading one of them here was a
+	// second opinion about the pairing — the shape of defect 4, which was exactly two places
+	// disagreeing about what "configured" means. Asking the resolver also makes this FAIL
+	// CLOSED on a half-configured install: an engine with an instance name but no credential
+	// or no address is not paired with anything, and must not be stamping ownership rows as
+	// though it were.
+	return resolveSiteBuilderTransport(config.siteBuilder)?.instance ?? null;
 }
 
 /**

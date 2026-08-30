@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { rm } from 'node:fs/promises';
+import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   makeSourceDir,
   provisionSite,
@@ -9,9 +10,9 @@ import {
   surfaceOf,
   workspacePath,
 } from './fixtures/instance';
-import { createSite } from '../src/sites/workspace';
+import { assertWithinQuota, createSite, siteDiskUsageMb } from '../src/sites/workspace';
 import { readManifest } from '../src/sites/manifest';
-import { promoteRelease, currentRelease } from '../src/build/promote';
+import { promoteRelease, currentRelease, releasePath } from '../src/build/promote';
 import { publishSite, rollbackSite, productionReleases } from '../src/build/publish';
 import { config } from '../src/config';
 import { ConflictError, LimitExceededError } from '../src/errors';
@@ -86,6 +87,88 @@ describe('publish / rollback', () => {
     // Nothing was promoted: production has no release at all.
     expect(await currentRelease(surfaceOf('fat', 'prod'))).toBeNull();
     expect((await readManifest('fat')).published).toBeNull();
+  });
+
+  /**
+   * THE QUOTA COUNTS THE INCOMING COPY — the argument, not just the call.
+   *
+   * The test above exceeds the quota with what is ALREADY on disk, so it passes whether or
+   * not `treeSizeMb(source)` is passed to `assertWithinQuota`: measured, replacing that
+   * third argument with `0` left the whole suite green. Publish is the one operation that
+   * DOUBLES a site's footprint (a whole second copy of the release, in the prod store), so
+   * the case that matters is a site comfortably within quota whose publish would not be.
+   *
+   * Built here: the site measures under the cap, and under it again after the publish is
+   * refused — so the refusal cannot be explained by the existing bytes.
+   */
+  test('a publish that would DOUBLE a site past its quota is refused, though the site fits', async () => {
+    await makeSite('doubler', 'Doubler');
+    // One preprod release of a bit over a third of the quota. Workspace + preprod store
+    // then sit under the cap; adding a second copy of the release does not.
+    const mb = Math.max(2, Math.ceil(config.SITE_DISK_QUOTA_MB / 3));
+    await seedPreprod('doubler', 'x'.repeat(mb * 1024 * 1024));
+
+    const manifest = await readManifest('doubler');
+    const before = await siteDiskUsageMb(manifest);
+    expect(before.totalMb).toBeLessThan(config.SITE_DISK_QUOTA_MB);
+    // The incoming copy is what tips it: the site fits, the site-plus-copy does not.
+    expect(before.totalMb + mb).toBeGreaterThan(config.SITE_DISK_QUOTA_MB);
+    // And the standing measurement really does pass — so the refusal below is the
+    // INCOMING copy being weighed, and nothing else.
+    await assertWithinQuota(manifest, 'a turn');
+
+    await expect(publishSite('doubler', ACTOR)).rejects.toThrow(LimitExceededError);
+    expect(await currentRelease(surfaceOf('doubler', 'prod'))).toBeNull();
+    expect((await readManifest('doubler')).published).toBeNull();
+  });
+
+  /**
+   * A PREPROD RELEASE THAT HAS BEEN REPLACED BY A SYMLINK IS NEVER PUBLISHED — and it is
+   * refused BEFORE the foreign tree is even measured.
+   *
+   * The release directory was made by this daemon (a staging copy renamed into place), so a
+   * link standing there means something replaced it, and "it was ours when we wrote it" is
+   * not a property the copy onto a PUBLIC domain should rest on. Two guards now stand in
+   * front of that: `confinedRealPath` at the publish caller, and `assertSourceRoot` inside
+   * `promoteRelease` (gated in tests/promote.test.ts). They are redundant on the OUTCOME —
+   * measured, downgrading this caller to the lexical join still refuses, because the second
+   * guard catches it — so the outcome alone cannot hold the caller's choice of helper.
+   *
+   * WHAT DISTINGUISHES THEM IS WHEN. `confinedRealPath` runs before `treeSizeMb(source)`.
+   * With the lexical join the daemon measures the LINK'S TARGET and charges a foreign tree
+   * against this museum's quota — so a large enough planted tree turns a symlink refusal
+   * into a quota refusal, and a museum is told its site is too big when nothing of its own
+   * grew. The tree here is deliberately larger than the quota, and the assertion is that
+   * the answer is still the symlink refusal.
+   */
+  test('a preprod release REPLACED by a symlink is refused as a symlink, before the target is measured', async () => {
+    await makeSite('swapped', 'Swapped');
+    const release = await seedPreprod('swapped', '<h1>ours</h1>');
+
+    // Somebody else's tree — bigger than this site's whole quota.
+    const elsewhere = join(surfaceOf('swapped', 'preprod').webspace, '..', 'not-our-tree');
+    await mkdir(elsewhere, { recursive: true });
+    await writeFile(
+      join(elsewhere, 'index.html'),
+      'x'.repeat((config.SITE_DISK_QUOTA_MB + 2) * 1024 * 1024),
+      'utf8',
+    );
+    const releaseDir = releasePath(surfaceOf('swapped', 'preprod'), release);
+    await rm(releaseDir, { recursive: true, force: true });
+    await symlink(elsewhere, releaseDir);
+
+    const failure = await publishSite('swapped', ACTOR).then(
+      () => null,
+      (error: unknown) => error as Error,
+    );
+    expect(failure).not.toBeNull();
+    // NOT a quota refusal: the foreign tree was never measured.
+    expect(failure).not.toBeInstanceOf(LimitExceededError);
+    expect((failure as Error).message).toMatch(/symlink escapes root/);
+
+    // And production serves nothing — in particular not the link's target.
+    expect(await currentRelease(surfaceOf('swapped', 'prod'))).toBeNull();
+    expect((await readManifest('swapped')).published).toBeNull();
   });
 
   test('rollback re-activates a prior production release', async () => {

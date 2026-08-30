@@ -59,11 +59,56 @@ describe('router auth gate', () => {
     expect(res.headers.get('content-type')).toContain('application/problem+json');
   });
 
-  test('an unknown route without a token is still 401 (auth runs, but note ordering)', async () => {
-    // findRoute runs before the auth gate, so a truly unknown path is 404 even without a
-    // token; a KNOWN protected path is 401. This asserts the known-path case.
-    const res = await get('/v1/capabilities');
-    expect(res.status).toBe(401);
+  /**
+   * THE ORDERING, ASSERTED AS THE INDISTINGUISHABILITY IT IS FOR.
+   *
+   * This test used to request `/v1/capabilities` — a KNOWN route — under a name that
+   * promised the unknown-route case, and its own comment conceded that `findRoute` ran
+   * first. It did: unauthenticated, this daemon answered 404 for a path that does not
+   * exist, 401 for one that does, and 405 with an `Allow` header naming the real verbs of
+   * a route the caller had only guessed at. Three answers is a complete map of the
+   * surface, handed to anyone who can reach the socket.
+   *
+   * So the property is not "an unknown path is 401" — it is that NO unauthenticated
+   * request can be told apart from any other. Status, the `Allow` header and the problem
+   * body are all compared across the four probes: an unknown path, a known protected path,
+   * a wrong method on a known path, and a wrong method on the one PUBLIC path.
+   */
+  test('no unauthenticated request can be told from any other — the gate runs before the matcher', async () => {
+    const probes = [
+      ['GET', '/v1/nope'],
+      ['GET', '/v1/capabilities'],
+      ['PUT', '/v1/sites'],
+      ['POST', '/health'],
+      ['GET', '/v1/sites/anything/publish'],
+    ] as const;
+
+    const answers = await Promise.all(
+      probes.map(async ([method, path]) => {
+        const res = await routeRequest(new Request(`http://x${BASE}${path}`, { method }));
+        return {
+          status: res.status,
+          allow: res.headers.get('allow'),
+          body: await res.text(),
+        };
+      }),
+    );
+
+    for (const [index, answer] of answers.entries()) {
+      const [method, path] = probes[index] as unknown as [string, string];
+      expect({ where: `${method} ${path}`, ...answer }).toEqual({
+        where: `${method} ${path}`,
+        status: 401,
+        // No Allow header: naming the verbs of a route is naming the route.
+        allow: null,
+        body: answers[0]!.body,
+      });
+    }
+  });
+
+  test('the one public route is still public — and only for its own method', async () => {
+    const health = await routeRequest(new Request(`http://x${BASE}/health`, { method: 'GET' }));
+    expect(health.status).toBe(200);
   });
 
   test('capabilities with a valid token returns drivers, templates and limits', async () => {

@@ -314,6 +314,14 @@ describe('dotfiles are denied, and /.well-known/ is not', () => {
       file: fileRe,
       // What Apache asks: DirectoryMatch against the walked directory path, FilesMatch
       // against the basename. Either one denying is a denial.
+      //
+      // HONEST LIMIT, STATED. The two REGEXES come from the rendered vhost — that half is
+      // real, and it is what caught the missing trailing slash the old literal assertion
+      // could not. The MODEL of how Apache combines them is this file's, so these
+      // assertions are green against a simulation of the server rather than the server.
+      // The nginx side of the same law does start a real nginx and asserts 200/403 per
+      // path (tests/provision_render_nginx.test.ts); no Apache runs anywhere in this
+      // suite. The day one can be started in CI, this helper is what it replaces.
       denies(path: string): boolean {
         const cut = path.lastIndexOf('/');
         return directory.test(path.slice(0, cut)) || fileRe.test(path.slice(cut + 1));

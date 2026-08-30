@@ -11,9 +11,36 @@
  * refused while an agent session is running for the site — they would race on the same
  * working tree.
  *
- * Commands come from the daemon-owned manifest (an agent cannot edit site.json), so
- * splitting them into an argv on whitespace is safe: there is no shell and no
- * agent-controlled string in the command position.
+ * THE BUILD COMMAND IS AGENT-CONTROLLED, AND SAYING OTHERWISE WAS THE DEFECT.
+ *
+ * This header used to read "commands come from the daemon-owned manifest (an agent cannot
+ * edit site.json), so splitting them into an argv on whitespace is safe: there is no shell
+ * and no agent-controlled string in the command position." The parenthesis is false.
+ * `site.json` sits at `<SITES_ROOT>/<slug>/site.json` — inside the very workspace the
+ * driver is spawned with as its cwd and that `git add -A` then commits. A turn may rewrite
+ * the `build` block, `readManifest` re-reads it at build time, and the daemon runs what it
+ * finds. Measured end to end: a turn that wrote a new spec had its own command executed by
+ * the next build, reported as `success`.
+ *
+ * So the argv split is NOT justified by provenance, and the two things that actually hold
+ * are stated instead — both of them mechanical, neither of them a claim about who wrote a
+ * file:
+ *
+ *   1. THERE IS NO SHELL. `runBinary` hands `Bun.spawn` an argv ARRAY; `argv[0]` is the
+ *      binary and the rest are literal arguments. Nothing is parsed by `sh`, so the split
+ *      is a tokenisation of a command, not an injection surface. A spec naming `sh` gets
+ *      a shell the same way a turn naming `sh` does — by asking for one, at its own
+ *      privilege, which is the next point.
+ *   2. A BUILD STEP RUNS AT EXACTLY AN AGENT TURN'S PRIVILEGE, NEVER WIDER. Same unix
+ *      user, same workspace, and — the part that must never drift — the same CONSTRUCTED
+ *      environment: `{ PATH, HOME }` and nothing else. Not the daemon's SERVICE_TOKEN, not
+ *      `$CREDENTIALS_DIRECTORY`, not a provider key (a turn gets its own driver's key; a
+ *      build gets none at all). An agent that rewrites the build spec therefore obtains
+ *      nothing it did not already have while the turn was running.
+ *
+ * `tests/agent_boundary.test.ts` holds (2) as the key SET of the child environment, on this
+ * path and on the driver and shared-spawn paths beside it. The day a build step needs a
+ * credential, it is that gate that must be argued with first.
  */
 
 import { existsSync, lstatSync } from 'node:fs';
@@ -174,10 +201,11 @@ async function executeBuild(slug: string, id: string, record: BuildStatus): Prom
 }
 
 /**
- * Runs one manifest command as an argv (split on whitespace — safe because the command
- * comes from the daemon-owned manifest, never the agent; see the module header). Both
- * stdout and stderr are streamed to the same sink so the build log interleaves them the
- * way a terminal would. Never throws; the caller inspects exitCode/timedOut.
+ * Runs one manifest command as an argv (split on whitespace). The split is a tokenisation,
+ * not a parse: `Bun.spawn` receives an ARRAY, so no shell ever sees the string — see the
+ * module header for why provenance is not the argument here and what is. Both stdout and
+ * stderr are streamed to the same sink so the build log interleaves them the way a terminal
+ * would. Never throws; the caller inspects exitCode/timedOut.
  */
 function runStep(
   command: string,

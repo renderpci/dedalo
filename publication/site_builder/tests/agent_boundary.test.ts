@@ -15,6 +15,14 @@
  *      daemon runs `git add -A` after every turn. A museum's key was entering the history
  *      of the very site it then publishes, where no later commit can remove it.
  *
+ * A THIRD property belongs to the same boundary and lives in its own file: the child
+ * environment is a CLOSED SET, not a filter over `process.env`. HOME is one key in it; the
+ * rest of the set is the rest of the boundary, and this file named it in prose and held
+ * only the one key. `tests/agent_env_boundary.test.ts` holds the set, behaviourally, and
+ * is a separate file because it must READ the daemon's configuration (the provider keys
+ * whose scoping it proves) — which the seam tripwire forbids to a file exempted for
+ * QUOTING root-key identifiers, as this one is.
+ *
  * The first is a SOURCE assertion, and deliberately: the three environments are built by
  * module-private functions inside detached pipelines, so the honest way to hold them is to
  * read what they construct — the same shape as the boot-ordering gate in

@@ -36,9 +36,9 @@
  */
 
 import { config } from '../../../src/config/config.ts';
-import { resolveSiteBuilderTransport } from '../../../src/core/site_builder/pairing';
 import { isErrorInDomain, ok as okEnvelope } from '../../../src/core/errors/index.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
+import { resolveSiteBuilderTransport } from '../../../src/core/site_builder/pairing';
 import {
 	type ToolActionContext,
 	type ToolResponse,
@@ -71,12 +71,29 @@ const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
  * daemon made the field required EVERY create through the engine failed — the tool was the
  * only door a museum has, and it could no longer create a site.
  *
- * The pattern is a LOCAL PRE-CHECK, like SLUG_PATTERN above and for the same reason: it
- * keeps an obviously malformed value out of a request rather than spending a round trip on
- * it. The daemon holds the authoritative grammar (its site.json schema and its layout
- * both), and this is deliberately not stricter than that.
+ * THERE IS NO DOMAIN GRAMMAR HERE, AND THAT IS THE FIX.
+ *
+ * This file used to carry one, described as "a LOCAL PRE-CHECK … deliberately not stricter
+ * than" the daemon's. It was stricter, in two ways, and nobody could have noticed: it
+ * required four characters where the owner requires one, and it required the final label to
+ * be `[a-z]{2,63}` where the owner allows any label. So `a.b` and `x.123` are domains the
+ * provisioner will happily build a webspace and two vhosts for and this tool refuses to
+ * create a site on — the museum's only door, closed against a host that is already
+ * provisioned, with a sentence about DNS.
+ *
+ * That is the subsystem's recurring defect exactly: ONE FACT — what a site domain may look
+ * like — DERIVED IN TWO PLACES, drifting apart silently. `src/provision/layout.ts` owns the
+ * grammar (`DOMAIN_PATTERN`, used by `derive()`, by the site-table renderer and by the
+ * daemon's own reader), and the two are separate DEPLOYABLES that share no module, so the
+ * only way for this side not to fork it is not to have one. A malformed domain costs one
+ * round trip and comes back named by the side that owns the answer.
+ *
+ * PRESENCE is still checked — that is not a grammar, and "you did not say which domain"
+ * deserves an engine-authored sentence rather than a relayed 400. `SLUG_PATTERN` stays for
+ * a different reason: the slug becomes a PATH SEGMENT in the request URL, so this side must
+ * constrain it whatever the daemon thinks. Gate:
+ * test/unit/site_builder_single_source_tripwire.test.ts (fact `layout_constants`).
  */
-const DOMAIN_PATTERN = /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
 const MESSAGE_MAX = 32 * 1024;
 
@@ -263,7 +280,7 @@ async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 		const domain = String(o.domain ?? '')
 			.trim()
 			.toLowerCase();
-		if (!DOMAIN_PATTERN.test(domain)) {
+		if (domain.length === 0) {
 			throw siteBuilderRejected(
 				'A site needs the domain it will answer on (for example www.museum.org), and it must ' +
 					'be one the site builder has already been provisioned for.',

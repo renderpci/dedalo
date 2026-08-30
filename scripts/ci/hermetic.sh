@@ -209,6 +209,11 @@ HERMETIC_TRIPWIRES=(
 	#     loopback Bun.serve plays the daemon, the config module is mock.module'd, and the
 	#     only other reads are source files (the daemon package's two modules included).
 	test/unit/site_builder_pairing_tripwire.test.ts
+	# --- 2026-08-30: the SECOND-CENSUS ratchet. DB-free for the same reasons: it reads
+	#     tracked source through scripts/lib/site_builder_census.ts, runs the two
+	#     fingerprint spellings against each other in-process, and drives the provisioner's
+	#     renderer + observer over a mkdtemp scratch host it removes again.
+	test/unit/site_builder_single_source_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

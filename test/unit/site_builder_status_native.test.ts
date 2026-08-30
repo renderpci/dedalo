@@ -19,6 +19,7 @@ import { describe, expect, test } from 'bun:test';
 import {
 	buildSiteBuilderPanel,
 	buildSiteBuilderStatus,
+	healthProvesPairing,
 	siteBuilderHost,
 	widget,
 } from '../../src/core/area_maintenance/widgets/site_builder_status.ts';
@@ -325,7 +326,12 @@ describe('rewire proof', () => {
 
 		// …and the call sites point at the extractions.
 		expect(source).toContain('const urlHost = siteBuilderHost(base);');
-		expect(source).toContain('buildSiteBuilderPanel({ urlHost, health: paired ? health : null, audit });');
+		expect(source).toContain(
+			'buildSiteBuilderPanel({ urlHost, health: paired ? health : null, audit });',
+		);
+		expect(source).toContain(
+			'const paired = healthProvesPairing(health, transport.instance, transport.token);',
+		);
 		expect(source).toContain('return buildSiteBuilderPanel({ urlHost, health: null });');
 	});
 });
@@ -341,7 +347,10 @@ describe('rewire proof', () => {
  * the fix.
  */
 describe('the ops panel proves the pairing before it authenticates', () => {
-	const foreignHealth = { drivers: ['claude_code'], instance_fingerprint: instanceFingerprint('museum-b', 'tok') };
+	const foreignHealth = {
+		drivers: ['claude_code'],
+		instance_fingerprint: instanceFingerprint('museum-b', 'tok'),
+	};
 
 	test('a foreign daemon gets no bearer token, and contributes nothing to the panel', async () => {
 		const calls: Array<{ url: string; headers: Record<string, string> }> = [];
@@ -359,7 +368,12 @@ describe('the ops panel proves the pairing before it authenticates', () => {
 		expect(calls.every((c) => c.headers.Authorization === undefined)).toBe(true);
 
 		// And nothing of the foreign daemon reached the panel.
-		expect(value).toMatchObject({ configured: true, reachable: false, drivers: [], last_publishes: [] });
+		expect(value).toMatchObject({
+			configured: true,
+			reachable: false,
+			drivers: [],
+			last_publishes: [],
+		});
 	});
 
 	test('a health body with NO fingerprint at all is equally unproved', async () => {
@@ -388,6 +402,44 @@ describe('the ops panel proves the pairing before it authenticates', () => {
 		});
 		expect(calls).toHaveLength(2);
 		expect(calls[1]?.headers).toEqual({ Authorization: 'Bearer tok' });
-		expect(value).toMatchObject({ reachable: true, drivers: ['claude_code'], last_publishes: [{ action: 'publish', id: 7 }] });
+		expect(value).toMatchObject({
+			reachable: true,
+			drivers: ['claude_code'],
+			last_publishes: [{ action: 'publish', id: 7 }],
+		});
+	});
+});
+
+describe('healthProvesPairing', () => {
+	test('true only for the fingerprint this engine expects', () => {
+		expect(healthProvesPairing(healthOf({}), 'example', 'tok')).toBe(true);
+		expect(
+			healthProvesPairing(
+				{ instance_fingerprint: instanceFingerprint('museum-b', 'tok') },
+				'example',
+				'tok',
+			),
+		).toBe(false);
+		expect(
+			healthProvesPairing(
+				{ instance_fingerprint: instanceFingerprint('example', 'other') },
+				'example',
+				'tok',
+			),
+		).toBe(false);
+	});
+
+	test('an absent, null or malformed fingerprint is not a proof', () => {
+		for (const body of [
+			null,
+			undefined,
+			{},
+			{ instance_fingerprint: null },
+			{ instance_fingerprint: 42 },
+			{ instance_fingerprint: '' },
+			0,
+		]) {
+			expect(healthProvesPairing(body, 'example', 'tok')).toBe(false);
+		}
 	});
 });

@@ -468,23 +468,21 @@ export function plan(
  * byte comparison); the bytes of a CREDENTIAL are never needed and must never be read into
  * a `HostState`.
  */
-export function observedPaths(layout: InstanceLayout): string[] {
+export function observedPaths(layout: InstanceLayout, manifest: InstanceManifest): string[] {
   const paths = new Set<string>();
   for (const entry of treeEntries(layout)) paths.add(entry.path);
   for (const root of markedRoots(layout)) paths.add(markerPath(root));
   for (const site of layout.sites) {
-    for (const surface of SURFACES) {
-      paths.add(site.linkPath(surface));
-      paths.add(site.vhostPaths[surface]);
-    }
+    for (const surface of SURFACES) paths.add(site.linkPath(surface));
   }
-  paths.add(layout.unitPath);
-  paths.add(layout.envFile);
-  // The SITE TABLE. Absent from this list it would be reported missing on every run and
-  // rewritten forever — and, worse, the run would report a change on a settled host, which
-  // is how an operator stops reading the drift report at all.
-  paths.add(layout.siteTablePath);
-  paths.add(layout.engineFragment);
+  // THE ARTIFACTS ARE DERIVED, NEVER LISTED. This function used to enumerate them by hand —
+  // unitPath, envFile, siteTablePath, engineFragment, htpasswd, the vhost paths — which is
+  // defect 3's exact shape, and it had already been paid for once: the comment that used to
+  // sit here recorded that the site table was missing from the list and so was reported
+  // absent on every run and rewritten forever. A hand list that is correct today is invisible
+  // to every drift comparison; it becomes the defect later, when an artifact is added and
+  // this copy is not. So it asks the renderers.
+  for (const artifact of renderAll(layout, manifest)) paths.add(artifact.path);
   paths.add(layout.htpasswd);
   // The audit FILE, which is not a directory and therefore not in `treeEntries()`. Its
   // absence from this list is the defect this function's own gate caught: an observer that
@@ -1380,7 +1378,21 @@ function contentLabel(content: FileContent): string {
  * the declaration a museum writes tomorrow — on the host, before anything runs as root.
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-function assertPlanIsCoherent(actions: readonly Action[], layout: InstanceLayout): void {
+/**
+ * THE PLAN'S OWN SAFETY CHECK — exported so it can be HELD, not merely called.
+ *
+ * `plan()` runs it on every plan it builds, which is where it belongs. But nothing in the
+ * suite could ever hand it a plan that VIOLATES one of these rules: a violating plan cannot
+ * come out of `plan()` — that is the point of the function — so every refusal below sat
+ * unexecuted, and each could be disarmed with the suite green. These are the guards for
+ * never-reuse-a-uid and for the retired installer's defect 3, and they are the only
+ * enforcement those properties have.
+ *
+ * So it is a door: `tests/provision_plan.test.ts` builds a REAL plan and perturbs it in
+ * each of the five ways, which is exactly the position this function is in the day a
+ * planning rule changes and stops producing a lawful list.
+ */
+export function assertPlanIsCoherent(actions: readonly Action[], layout: InstanceLayout): void {
   // Every refusal below opens with the instance, because `--all` refuses ONE museum and
   // carries on with the rest: a message that does not say whose plan was rejected is a
   // message an operator cannot act on.

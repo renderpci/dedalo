@@ -56,6 +56,12 @@ const SLUG = 'authzdemo';
 const DOOMED_SLUG = 'authzgone';
 
 const OWNER_SESSION = 'authz-session-owner';
+/**
+ * An id minted by ANOTHER museum's daemon that happens to collide with one this engine is
+ * asked about — the T4 case. Module-scoped because the mock daemon must be able to list it:
+ * the engine's ownership filter is only exercised on ids the daemon actually returns.
+ */
+const COLLIDING_SESSION = 'authz-session-colliding-id';
 const FOREIGN_SESSION = 'authz-session-foreign';
 
 /** Privileged, non-admin: the developer half of the publisher grant. */
@@ -116,6 +122,12 @@ beforeAll(async () => {
 					data: [
 						{ session_id: OWNER_SESSION, state: 'idle' },
 						{ session_id: FOREIGN_SESSION, state: 'idle' },
+						// A session id that also exists in the ledger under ANOTHER daemon's
+						// instance, with this caller's own user_id on it. It is in the daemon's
+						// answer so the engine's filter is actually asked about it — without it,
+						// `ownedSessionIds` dropping its instance clause changes nothing
+						// observable and the T4 listing gate is vacuous.
+						{ session_id: COLLIDING_SESSION, state: 'idle' },
 					],
 				});
 			}
@@ -304,6 +316,110 @@ describe('P2-8(b) — session ownership', () => {
 		expect(await readSessionOwner('authz-session-started')).toBe(DEV.userId);
 	});
 
+	/**
+	 * T4 — WHOSE DAEMON, NOT JUST WHOSE SESSION.
+	 *
+	 * A session id is minted by ONE daemon and is unique only there. So a row saying "user U
+	 * owns session S" is an answer about a particular museum's daemon, and an engine
+	 * re-pointed at another museum's — the copied-`../private/.env` failure the pairing
+	 * tripwire exists for — would read this table's rows as answers about ITS sessions. Ids
+	 * that collide then hand one museum's users `assertSessionOwner` over the other's running
+	 * agents: typing into them, killing them mid-write, reading the whole transcript.
+	 *
+	 * The instance column is the only thing that stops it, and until now only the INSERT was
+	 * held: dropping `AND instance = $2` from `readSessionOwner`, dropping the equivalent
+	 * from `ownedSessionIds`, or making `pairedInstance()` return a constant each left the
+	 * engine-side gates green — because every row this fixture wrote carried the one
+	 * INSTANCE constant, so no test ever presented a row from another daemon.
+	 *
+	 * These do. The rows below are written directly, with another instance's name, which is
+	 * exactly the state a re-pointed engine finds the table in.
+	 */
+	describe("a row from ANOTHER daemon is an unknown owner, not somebody else's row to trust", () => {
+		const FOREIGN_INSTANCE = 'authz-other-museum';
+
+		beforeAll(async () => {
+			await ensureSessionOwnerTable();
+			// The other museum's daemon minted this id and DEV happens to be its owner there.
+			await sql.unsafe(
+				`INSERT INTO "${SESSION_OWNER_TABLE}" (session_id, slug, user_id, instance)
+				 VALUES ($1, $2, $3, $4) ON CONFLICT (session_id) DO NOTHING`,
+				[COLLIDING_SESSION, SLUG, DEV.userId, FOREIGN_INSTANCE],
+			);
+		});
+
+		test('the row really is there — so a null answer below is the instance check, not an empty table', async () => {
+			const rows = (await sql.unsafe(
+				`SELECT user_id, instance FROM "${SESSION_OWNER_TABLE}" WHERE session_id = $1`,
+				[COLLIDING_SESSION],
+			)) as { user_id: number; instance: string }[];
+			expect(rows).toEqual([{ user_id: DEV.userId, instance: FOREIGN_INSTANCE }]);
+		});
+
+		test("readSessionOwner refuses to attribute another daemon's row", async () => {
+			expect(await readSessionOwner(COLLIDING_SESSION)).toBeNull();
+		});
+
+		test('the ordinary caller is refused, and the daemon is never contacted', async () => {
+			for (const action of SESSION_ACTIONS) {
+				const before = requestCount;
+				const refusal = await refusalOf(
+					tool.apiActions[action]!.handler(ctx(DEV, { session_id: COLLIDING_SESSION })),
+				);
+				expect(refusal.code, `${action} must refuse a foreign-instance row`).toBe(
+					'site_builder.rejected',
+				);
+				// BYTE-IDENTICAL to "not yours": the refusal may not tell a caller that the id
+				// exists somewhere else.
+				expect(refusal.publicMessage).toBe('This agent session belongs to another user.');
+				expect(requestCount, `${action} reached the daemon`).toBe(before);
+			}
+		});
+
+		test("a foreign-instance session is not listed as the caller's own either", async () => {
+			const mine = (await tool.apiActions.session_history!.handler(ctx(DEV, { slug: SLUG }))) as {
+				data: { data: { session_id: string }[] };
+			};
+			expect(mine.data.data.map((entry) => entry.session_id)).not.toContain(COLLIDING_SESSION);
+		});
+
+		test('an UNSTAMPED row (written before the column existed) fails closed the same way', async () => {
+			// Not backfilled, deliberately: stamping the CURRENT instance onto an old row is
+			// how a re-pointed engine would inherit another museum's sessions.
+			const LEGACY_SESSION = 'authz-session-pre-instance-column';
+			await sql.unsafe(
+				`INSERT INTO "${SESSION_OWNER_TABLE}" (session_id, slug, user_id, instance)
+				 VALUES ($1, $2, $3, NULL) ON CONFLICT (session_id) DO NOTHING`,
+				[LEGACY_SESSION, SLUG, DEV.userId],
+			);
+			expect(await readSessionOwner(LEGACY_SESSION)).toBeNull();
+			const refusal = await refusalOf(
+				tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: LEGACY_SESSION })),
+			);
+			expect(refusal.code).toBe('site_builder.rejected');
+		});
+
+		test('and the SAME id under THIS instance still resolves — the check is the instance, not a blanket denial', async () => {
+			// Anti-vacuity: without this, every assertion above would pass against a
+			// `readSessionOwner` that always returned null.
+			expect(await readSessionOwner(OWNER_SESSION)).toBe(DEV.userId);
+		});
+
+		test('a row is stamped with the CONFIGURED instance, not with a constant', async () => {
+			// The other half of the same defect, and the one the tests above cannot see: a
+			// `pairedInstance()` that returned a fixed string would be self-consistent —
+			// every row written and every row read would carry it — so a re-pointed engine
+			// would once again inherit whatever the table held. The stamp is therefore
+			// compared against the pairing this engine is actually configured with.
+			const rows = (await sql.unsafe(
+				`SELECT instance FROM "${SESSION_OWNER_TABLE}" WHERE session_id = $1`,
+				[OWNER_SESSION],
+			)) as { instance: string | null }[];
+			expect(rows).toEqual([{ instance: siteBuilder.instance as string }]);
+			expect(siteBuilder.instance).toBe(INSTANCE);
+		});
+	});
+
 	test('session_history lists only the sessions the caller owns; an admin sees all', async () => {
 		const mine = (await tool.apiActions.session_history!.handler(ctx(DEV, { slug: SLUG }))) as {
 			data: { data: { session_id: string }[] };
@@ -318,9 +434,13 @@ describe('P2-8(b) — session ownership', () => {
 		const all = (await tool.apiActions.session_history!.handler(ctx(ADMIN, { slug: SLUG }))) as {
 			data: { data: { session_id: string }[] };
 		};
+		// The admin bypass returns the daemon's answer UNFILTERED — including the id whose
+		// ledger row belongs to another daemon, which is right: an operator must be able to
+		// stop a runaway agent, and the daemon's list is what is running on this host.
 		expect(all.data.data.map((entry) => entry.session_id)).toEqual([
 			OWNER_SESSION,
 			FOREIGN_SESSION,
+			COLLIDING_SESSION,
 		]);
 	});
 });

@@ -887,7 +887,7 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
   const contentful = contentfulPaths(layout, manifest);
 
   const entries: Record<string, PathObservation> = {};
-  for (const path of observedPaths(layout)) {
+  for (const path of observedPaths(layout, manifest)) {
     const facts = factsOf(path);
     // AN OBSERVER THAT CANNOT STAT A PATH OMITS THE ENTRY. `PathObservation`'s header says
     // why: a blank observation is read as drift, and "I did not look" must never read as
