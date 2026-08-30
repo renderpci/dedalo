@@ -372,7 +372,7 @@ Each object is dispatched on `action` by
 ("Phase 5 uncovered scope") rather than mis-handling silently.
 
 ```text
-insert | update | remove | set_data | sort_data |
+insert | update | remove | clear | set_data | sort_data |
 sort_by_column | add_new_element | force_save
 ```
 
@@ -380,7 +380,10 @@ A change object carries:
 
 - **`action`** — one of the above.
 - **`id`** — the **stable item id** targeted. `null` on `insert` (a new id is
-  minted on save); `null` on `remove` removes all.
+  minted on save). A `remove` **must** carry one: a remove that names no id is
+  refused (`record.remove_without_id`) and writes nothing, because a missing id
+  is an unresolved target, not a request to delete everything. To empty the
+  component in every language, send `clear` — the action that says so.
 - **`value`** — the payload: a single value item, an array for `set_data`, or
   `null`.
 

@@ -94,6 +94,8 @@ const NON_PRIMITIVE_EXPORTS: Record<string, string> = {
 	buildRecordMetadata: 'assembles the new record’s metadata object; writes nothing.',
 	auditUserLocator: 'builds the dd_modified_by locator value; writes nothing.',
 	auditDateItem: 'builds the dd_modified_date item; writes nothing.',
+	unnamedRemoveRefusal:
+		'a PURE PREDICATE over a changed_data array (P0-8, 2026-08-30): it answers with a refusal message when a `remove` names no item, and writes nothing at all. It is exported so the in-memory temporal door can refuse exactly what the persisted door refuses — one law, two doors — which is the opposite of a second write path.',
 	persistModifiedStamp:
 		'DOES write the matrix, but only the modified-by/modified-date audit columns of a record a primitive is already writing. It can never carry a dd131/dd244/dd133 value, so it is not an account transition and adding it to the primitive list would widen the door set to every save path twice over.',
 };

@@ -347,6 +347,22 @@ component_common.prototype.build = async function(autoload=false) {
 * @param {boolean} autoload - Whether to fetch data from the API
 * @returns {Promise<boolean>} true on success, false when the API returns no valid context
 */
+/**
+* IS_UNRESOLVED_ID
+* The THREE spellings of "this remove names no item": null, undefined, and the empty
+* string. Module scope on purpose — `save()` (the wire door) and `change_value` (the
+* pre-flight) must refuse exactly the same set as the server predicate
+* `unnamedRemoveRefusal` (src/core/section/record/save_component.ts), and three
+* separate inline copies is how they drift apart. Before 2026-08-30 the wire door
+* listed only two of the three, so an `id:''` remove passed every client door and died
+* at the wire as a generic failed save.
+*
+* `0` and `'0'` are REAL, deletable ids: this is a value test, never a falsiness test.
+* @param {*} id
+* @returns {bool}
+*/
+const is_unresolved_id = (id) => id===null || typeof id==='undefined' || id===''
+
 const do_build = async (self, autoload) => {
 
 	// self.datum. On building, if datum is not created, creation is needed
@@ -617,11 +633,15 @@ export const init_events_subscription = function(self) {
 *
 * ChangedDataItem shape:
 *   {
-*     action : string  — 'update' | 'set_data' | 'remove'
+*     action : string  — 'update' | 'set_data' | 'remove' | 'clear'
 *     key    : number|null — array index within data.entries (null = append)
-*     id     : *|null     — stable item id (preferred over key for id-based matching)
+*     id     : *|null     — stable item id; REQUIRED by 'remove'
 *     value  : *          — the new value to persist
 *   }
+*
+* (!) A 'remove' MUST name the item it deletes. One without an id is refused
+* below and never reaches the wire (DATA-06 — see update_data_value's docblock
+* for the wildcard it used to trigger). A deliberate wipe is action:'clear'.
 *
 * (!) component_password is excluded from the db_data snapshot update after save
 * to avoid storing the hash in the client-side baseline.
@@ -654,6 +674,51 @@ component_common.prototype.save = async function(new_changed_data) {
 			const msg = "Ignored save. changed_data is undefined or empty!"
 
 			// dispatch event save (with error msg to notify observers)
+				event_manager.publish('save', {
+					instance		: self,
+					api_response	: null,
+					msg				: msg
+				})
+
+			// update save status
+			self.saving = false
+
+			return false
+		}
+
+	// remove target guard (DATA-06, 2026-08-30) — THE WIRE DOOR.
+	// update_data_value already refuses an unnamed remove, but save() is reachable
+	// without it: save_unsaved_components() and every caller that fills
+	// self.data.changed_data by hand flush straight through here. A remove whose id
+	// is null/undefined used to mean "clear every entry in every language" on the
+	// server, which then answered success — so one unresolved row id destroyed the
+	// component with no visible symptom. Refuse it here too: this is the last point
+	// where the item is still ours. A deliberate wipe uses action:'clear'.
+		// THREE SPELLINGS OF "NO ID", and this door must know all three or it is
+		// narrower than the law the comments above it state. The server predicate
+		// `unnamedRemoveRefusal` (save_component.ts) refuses null, undefined AND the
+		// empty string; `update_data_value` normalises all three. Before 2026-08-30
+		// this guard listed only two, so an `id:''` remove passed every client door
+		// and died at the wire as a generic failed save — the refusal arriving where
+		// the user could do nothing with it instead of where they made the gesture.
+		// `0` and `'0'` are REAL, deletable ids and must never be caught here.
+		const unresolved_remove = changed_data.find(el =>
+			el && el.action==='remove' && is_unresolved_id(el.id)
+		)
+		if (unresolved_remove) {
+
+			const msg = 'Ignored save. A remove without an item id was refused (use action "clear" for a deliberate wipe).'
+			console.error('[component_common] save: ' + msg, {
+				model			: self.model,
+				tipo			: self.tipo,
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				changed_data	: changed_data
+			})
+
+			// dispatch event save (with error msg to notify observers), exactly as
+			// the invalid-changed_data refusal above does — observers must not be
+			// left waiting on a save that will never land.
 				event_manager.publish('save', {
 					instance		: self,
 					api_response	: null,
@@ -1159,26 +1224,66 @@ component_common.prototype.update_datum = async function(new_datum) {
 *
 * ChangedDataItem shape:
 *   {
-*     action : string      — 'update' | 'set_data' | 'remove'
-*     id     : *|undefined — stable item id (preferred lookup key)
-*     key    : number|null — fallback array index when id is absent
+*     action : string      — 'update' | 'set_data' | 'remove' | 'clear'
+*     id     : *|undefined — stable item id; REQUIRED by 'remove' (null, undefined
+*                             and '' all read as NO ID; 0 is a real id)
+*     key    : number|null — legacy array index; NOT a delete target any more (see below)
 *     value  : *|null      — new entry value; null signals deletion
 *   }
 *
-* Mutation rules by action / key combination:
-*   set_data              → replace the entire entries array with `value` (bulk insert)
-*   remove + key=null + value=null + id resolved → wipe entries to []
-*   data_key=false + value=null (legacy path) → wipe entries to []
+* Mutation rules by action:
+*   set_data                       → replace the entire entries array with `value` (bulk insert)
+*   clear                          → wipe entries to [] — the deliberate wildcard,
+*                                    the only wipe a record-bound instance has
+*   remove + id resolved           → splice that one entry out
+*   remove + id absent, mode edit  → REFUSED, see DATA-06 below
+*   remove + id absent, mode search→ wipe entries to [] (clearing a filter — the
+*                                    search model is transient and never saved)
 *   data_key=null + value !== null → append value to entries
-*   data_key=<idx> + value=null → splice that entry out (delete by position)
-*   data_key=<idx> + value !== null → overwrite that position
+*   data_key=<idx> + value=null    → splice that entry out (delete by position)
+*   data_key=<idx> + value !== null→ overwrite that position
 *
-* id-based lookup: when `id` is present, findIndex() on entries is used to
-* resolve the array position, setting id_not_found=true when not matched
-* (avoids the 'remove all' fallback firing on a stale id).
+* DATA-06 (2026-08-30) — AN UNRESOLVED ID IS NEVER A WILDCARD.
+* Until this cure a remove carrying `id:null` meant "clear EVERY entry in EVERY
+* language": the server's remove branch (src/core/section/record/save_component.ts)
+* read `id === null` as clear-all and answered ok. The asymmetry was the defect —
+* naming a WRONG id was refused and failed the save, naming NO id wiped the
+* component and reported success. And `id:null` is exactly what ~20 client call
+* sites produce for a SINGLE-ROW delete when the row's id is missing or 0, because
+* they build it as `locator?.id || null` (component_check_box.js:168 uncheck one
+* box, component_publication.js:170 alt-click remove, component_email/input_text/
+* text_area `entries[key]?.id || null`, …): `0 || null` is null, and a locator not
+* found in `entries` is null too. So a curator deleting ONE row could silently
+* destroy the whole component in every language — irreplaceable heritage data lost
+* without a single visible symptom.
+* The cure is a contract, agreed with the server side: a deliberate wipe SAYS SO
+* (`action:'clear'`), and a `remove` without a usable id is REFUSED here, loudly,
+* before anything touches the local model or the wire. Refusing costs one failed
+* click; the wildcard cost a record.
+*
+* THE ONE CARVE-OUT, and it is not an exception to the contract: an instance in
+* `mode==='search'` holds a TRANSIENT FILTER MODEL that has no save path — it is
+* read by the search builder when the SQO is assembled and then discarded. Its
+* entries carry no id, so the ~7 search widgets that clear a field can only ever
+* produce `remove` + `id:null`; that gesture is the curator emptying a filter, and
+* it empties `entries` exactly as it always did. Refusing it there would leave the
+* cleared filter in the model and RUN THE SEARCH WITH IT. The wire is protected
+* regardless: `save()` refuses an id-less remove in every mode.
+*
+* @see component_common.prototype.save             the WIRE door, mode-independent
+* @see component_publication.prototype.change_handler   the `mode==='search'` branch
+*      that is the codebase's own local-vs-wire discriminator (also in
+*      component_filter_records.change_handler and render_edit_component_date)
+*
+* id-based lookup: when `id` is present, findIndex() on entries resolves the array
+* position. An id that does NOT match any loaded entry sets id_not_found and is
+* left alone locally (entries may be a paginated slice — the SERVER holds the whole
+* array and refuses the unknown id by itself, `remove: no item with id N`).
 *
 * @param {Object} changed_data_item - The mutation descriptor
-* @returns {boolean} Always true
+* @returns {boolean} true when applied; false when REFUSED (change_value aborts
+*   the save on false — the item never reaches the wire). A search-mode filter
+*   clear is applied, so it returns true.
 */
 component_common.prototype.update_data_value = function(changed_data_item) {
 
@@ -1187,9 +1292,19 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 	// changed_data_item
 		const action			= changed_data_item.action
 		const changed_value		= changed_data_item.value
-		const changed_id		= typeof changed_data_item.id!=='undefined'
-			? changed_data_item.id
-			: null
+		// NO ID has three spellings and they mean one thing. `undefined` is what
+		// JSON.stringify drops and what an omitted key reads as; `''` is an empty
+		// form field and the `item.id || ''` idiom. The server's predicate
+		// (unnamedRemoveRefusal, src/core/section/record/save_component.ts) refuses
+		// all three, so this door must too: a shape the browser lets through does
+		// not become safe, it becomes INVISIBLE — the delete dies at the wire as a
+		// generic failed save instead of a message naming the cause.
+		// (!) Key on the three values EXPLICITLY, never on falsiness: 0 and '0' are
+		// real item ids and must stay deletable.
+		const raw_id			= changed_data_item.id
+		const changed_id		= (typeof raw_id==='undefined' || raw_id===null || raw_id==='')
+			? null
+			: raw_id
 
 		self.data = self.data || {}
 
@@ -1199,11 +1314,27 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 			return true
 		}
 
+	// clear. THE DELIBERATE WILDCARD: wipe every entry, in every language. It is the
+	// only wipe available to a record-bound instance (the search-mode filter clear
+	// below is the other one, and it never leaves the browser).
+	// It exists so that an intentional "reset this component" button can say what
+	// it means instead of borrowing `remove` + a null id, which is also what an
+	// UNRESOLVED single-row delete looks like (DATA-06, see the docblock). The two
+	// are indistinguishable once they share an action, and one of them destroys a
+	// record — so they no longer share one.
+		if(action==='clear'){
+			self.data.entries = [];
+			return true;
+		}
+
 	// resolve data_key from id
+	// (?? -1) because `entries?.findIndex()` yields UNDEFINED when self.data.entries
+	// is missing, and `undefined !== -1` is true: without it data_key became
+	// undefined and the write branch below indexed entries[undefined].
 		let data_key = null;
 		let id_not_found = false;
 		if (changed_id !== null) {
-			const idx = self.data.entries?.findIndex(entry => entry?.id === changed_id);
+			const idx = self.data.entries?.findIndex(entry => entry?.id === changed_id) ?? -1;
 			if (idx !== -1) {
 				data_key = idx;
 			}else{
@@ -1211,12 +1342,63 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 			}
 		}
 
+	// remove target guard (DATA-06). TWO different gestures arrive here as a
+	// `remove` carrying no id, and only ONE of them is a delete:
+	//
+	//   SEARCH mode — `self.data` is a TRANSIENT FILTER MODEL, not a record. A
+	//   search instance has no save path at all: every shared handler that serves
+	//   both modes branches on `self.mode==='search'` to call update_data_value
+	//   INSTEAD of change_value (component_publication.change_handler,
+	//   component_filter_records.change_handler, render_edit_component_date's
+	//   change_handler), and the search-only renderers call it directly and then
+	//   merely publish 'change_search_element'. A search entry is {lang?, value?}
+	//   with NO id, and those call sites build `entries[i]?.id || null` — so the id
+	//   is ALWAYS null there. Emptying the filter has always meant emptying
+	//   `entries`, and it still does. Refusing it would leave the CLEARED filter
+	//   standing in the model and run the search with it: wrong results, not a
+	//   wasted click.
+	//
+	//   Any other mode — the entry IS a stored row and this call is one step from
+	//   the wire (change_value stops before save() on a falsy return). An unnamed
+	//   remove there is the pre-2026-08-30 wildcard that wiped every entry in every
+	//   language and answered success, so it is REFUSED and the user is told.
+	//
+	// The discriminator is the instance's OWN mode, never a flag the caller passes:
+	// "the caller must remember" is the shape that produced DATA-06. And the
+	// carve-out cannot reopen it, because it is local only — save() refuses an
+	// id-less remove unconditionally, in every mode, so nothing accepted here can
+	// reach the wire.
+	// `changed_id` is 0-safe: it is null only for the three no-id spellings
+	// normalised above (null, undefined, ''), so id 0 is a target like any other.
+		if (action==='remove' && changed_id===null) {
+
+			// the transient search filter: the same wipe as action:'clear' above, on
+			// a model that never leaves the browser.
+			if (self.mode==='search') {
+				self.data.entries = [];
+				return true;
+			}
+
+			console.error('[component_common] update_data_value: REFUSED a remove with no item id — a deliberate wipe must use action:"clear"', {
+				model				: self.model,
+				tipo				: self.tipo,
+				section_tipo		: self.section_tipo,
+				section_id			: self.section_id,
+				changed_data_item	: changed_data_item
+			});
+			// The curator MUST see this: they clicked delete and nothing was deleted.
+			// A silent false would leave them believing the row is gone.
+			alert('The item to remove could not be identified, so nothing was deleted.\n\nComponent: ' + (self.label || self.tipo) + '\n\nPlease reload the page and try again.');
+			return false;
+		}
+
 	// data entries
-		if (action==='remove' && data_key===null && changed_value===null && !id_not_found) {
-			self.data.entries = [];
-		}else if (data_key===false && changed_value===null) {
-			self.data.entries = [];
-		}else if (data_key === null) {
+		if (id_not_found===true && SHOW_DEBUG===true) {
+			// Not an error here: entries can be a paginated slice. The server owns
+			// the whole array and refuses an id it does not hold.
+			console.warn('[component_common] update_data_value: id not found in loaded entries, deferring to the server:', changed_id, self.id);
+		}
+		if (data_key === null) {
 			if (changed_value !== null) {
 				self.data.entries = self.data.entries || [];
 				self.data.entries.push(changed_value);
@@ -1254,11 +1436,14 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 *     current call drains the queue in its finally block. The flag — not the
 *     'changing' status string — is the authority, because the status is briefly
 *     restored around the optional refresh (step 7).
-*  2. Remove-confirmation: if any item in changed_data has action === 'remove',
-*     a confirmation dialog is shown (custom or default). Returning false cancels.
+*  2. Remove-confirmation: if any item in changed_data has action === 'remove' or
+*     action === 'clear', a confirmation dialog is shown (custom or default).
+*     Returning false cancels.
 *  3. Mark self.changing = true (and self.status = 'changing') so subsequent
 *     overlapping calls queue up.
 *  4. update_data_value() for each item — mutates self.data.entries in memory.
+*     A falsy return ABORTS the whole call before save(): that is how a remove
+*     with no item id (DATA-06) is stopped short of the wire.
 *  5. save(changed_data) — POSTs to server, updates self.data and self.db_data.
 *  6. For non-standalone components, update_datum() propagates the server result
 *     into the shared section datum.
@@ -1322,8 +1507,11 @@ component_common.prototype.change_value = async function(options) {
 		// FUNCTION, so `false` fell through to the default confirm() and produced a
 		// modal on every cleared select/radio — the exact opposite of the intent.
 		// Only an explicit `false` skips; anything else keeps the default prompt.
+		// DATA-06 (2026-08-30): 'clear' is confirmed like 'remove'. It is the more
+		// destructive of the two — it wipes every entry in every language — so it
+		// must never be the one action that slips past the confirmation.
 		const action = changed_data[0]?.action
-		if ( custom_remove_dialog!==false && changed_data.some(el => el && el.action==='remove') ) {
+		if ( custom_remove_dialog!==false && changed_data.some(el => el && (el.action==='remove' || el.action==='clear')) ) {
 
 			// generate default remove dialog to confirm the remove option is correct
 			// to overwrite this dialog use something as:
@@ -1364,11 +1552,39 @@ component_common.prototype.change_value = async function(options) {
 	try {
 
 		// update_data_value. update the component data value in the instance before to save (returns bool)
+		//
+		// PRE-FLIGHT THE WHOLE ARRAY, then apply. `update_data_value` could not fail
+		// before 2026-08-30 — it always answered true — so this loop applied each item
+		// as it went and the distinction did not exist. Now that an unresolved remove
+		// is REFUSED, an aborting loop would leave items 0..i-1 already spliced into
+		// `self.data.entries` with `save()` never reached: the local model mutated,
+		// nothing persisted, and the refusal alert telling the curator that "nothing
+		// was deleted" — false for exactly those earlier items, and the screen agreeing
+		// with the alert only until the next refresh.
+		//
+		// Reachable through any multi-item remove set: `component_portal.unlink_record`
+		// maps N locators to N removes, so one locator without an id would half-apply
+		// the batch. All-or-nothing is the same shape `save()` uses one screen up, and
+		// a partial local application is precisely the silent-divergence class this
+		// whole change set exists to remove.
 			const changed_data_length = changed_data.length
+			for (let i = 0; i < changed_data_length; i++) {
+				const candidate = changed_data[i]
+				if (candidate && candidate.action==='remove' && is_unresolved_id(candidate.id)) {
+					// Same refusal the applier would raise, raised BEFORE anything moved.
+					self.update_data_value(candidate)
+					return false
+				}
+			}
 			for (let i = 0; i < changed_data_length; i++) {
 				const changed_data_item = changed_data[i] // must be a freeze object
 				const update_data = self.update_data_value(changed_data_item)
 				if (!update_data) {
+					// Defensive: the pre-flight above catches the only known refusal, so
+					// reaching here means a NEW one was added to update_data_value without
+					// a matching pre-flight. Stop before applying more, and say so.
+					console.error('[component_common] change_value: update_data_value refused item ' + i +
+						' after the pre-flight passed — a refusal was added without extending the pre-flight.')
 					return false
 				}
 			}

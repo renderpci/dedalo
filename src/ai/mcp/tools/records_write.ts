@@ -68,9 +68,34 @@ async function assertRecordInScope(
 }
 
 /**
- * Update/insert/remove one item of a component's value, as the principal —
+ * Update/insert/remove/clear one item of a component's value, as the principal —
  * the same saveComponentData path (and TM audit) the human save action uses.
  */
+/**
+ * REMOVE NAMES ITS ITEM, ON THIS DOOR TOO (DATA-06, 2026-08-30).
+ *
+ * The schema cannot express "required only when action is remove" — zod validates one
+ * field at a time — so `item_id` stays optional there and the conditional requirement
+ * lives here, in the handler, where an agent's omission is refused before anything is
+ * written. This is the door the defect was CONFIRMED at: `item_id` was optional,
+ * omission mapped straight onto `id: null`, and an agent asked to "remove the English
+ * title" deleted every other language and was told ok.
+ */
+function assertRemoveNamesItem(
+	action: string,
+	itemId: number | string | null | undefined,
+	sectionTipo: string,
+	componentTipo: string,
+): void {
+	if (action !== 'remove') return;
+	if (itemId !== undefined && itemId !== null) return;
+	throw new DedaloError('record.remove_without_id', {
+		publicMessage:
+			"remove needs item_id: the id of the ONE item to remove (read the component first to get it). To empty the component in every language, send action 'clear' instead.",
+		coordinates: { section_tipo: sectionTipo, tipo: componentTipo },
+	});
+}
+
 export async function saveComponentValue(
 	principal: Principal,
 	input: {
@@ -78,15 +103,24 @@ export async function saveComponentValue(
 		tipo: string;
 		section_id: number;
 		lang?: string;
-		action: 'update' | 'insert' | 'remove';
-		/** The item value ({id, value, lang} literal or a locator); omit for remove. */
+		action: 'update' | 'insert' | 'remove' | 'clear';
+		/** The item value ({id, value, lang} literal or a locator); omit for remove/clear. */
 		value?: unknown;
-		/** Target item id (update/remove). */
+		/** Target item id — REQUIRED for remove (see the refusal below). */
 		item_id?: number | null;
 	},
 ): Promise<{ ok: boolean; message?: string; data: unknown }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.save.section_tipo');
 	const componentTipo = assertValidTipo(input.tipo, 'mcp.save.tipo');
+	// THE REMOVE SENTINEL AT THE AGENT DOOR (DATA-06, 2026-08-30). `item_id` is
+	// OPTIONAL in the schema — zod validates one field at a time, so the
+	// requirement is conditional and lives here — and an omitted one used to map
+	// onto id:null, which the write engine read as "empty the component in every
+	// language" and reported as a success. An agent told to "remove the English
+	// title" therefore deleted every other language and answered ok:true. The
+	// engine now refuses that shape; this refusal is the same law stated where the
+	// agent can act on it, BEFORE any permission probe or write is attempted.
+	assertRemoveNamesItem(input.action, input.item_id, sectionTipo, componentTipo);
 	await assertWritePermission(principal, sectionTipo, componentTipo, Math.floor(input.section_id));
 	await assertRecordInScope(principal, sectionTipo, Math.floor(input.section_id));
 
@@ -161,14 +195,18 @@ export const RECORDS_WRITE_SPECS: ToolSpec[] = [
 		name: 'dedalo_save_component',
 		title: 'Save a component value',
 		description:
-			'Update, insert, or remove one item of a component value on a record, ' +
+			'Update, insert, or remove one item of a component value on a record (or clear it), ' +
 			'as the configured user (write permission enforced server-side; every ' +
 			'change is audited in the Time Machine).',
 		tier: 'primitive',
 		write: true,
 		annotations: {
 			readOnlyHint: false,
-			destructiveHint: false,
+			// DESTRUCTIVE, and said so 2026-08-30 (DATA-06): 'remove' deletes an
+			// item and 'clear' empties the component in every language. The hint is
+			// what a host consults before asking a human to confirm, so a save door
+			// that can delete curated values must not advertise itself as additive.
+			destructiveHint: true,
 			idempotentHint: false,
 			openWorldHint: false,
 		},
@@ -183,12 +221,23 @@ export const RECORDS_WRITE_SPECS: ToolSpec[] = [
 					'Language of the value, e.g. "lg-eng". Default: the session\'s data language for a ' +
 						'translatable component, "lg-nolan" for every other.',
 				),
-			action: z.enum(['update', 'insert', 'remove']).describe('The item operation.'),
+			action: z
+				.enum(['update', 'insert', 'remove', 'clear'])
+				.describe(
+					"The item operation. 'remove' deletes the ONE item named by item_id; " +
+						"'clear' empties the component in EVERY language — it is the only way to do that, " +
+						'and it is never implied by an omitted item_id.',
+				),
 			value: z
 				.unknown()
 				.optional()
-				.describe('The item value ({id, value, lang} literal or a locator); omit for remove.'),
-			item_id: z.number().optional().describe('Target item id (update/remove).'),
+				.describe(
+					'The item value ({id, value, lang} literal or a locator); omit for remove and clear.',
+				),
+			item_id: z
+				.number()
+				.optional()
+				.describe('Target item id. REQUIRED for remove; ignored by clear.'),
 		},
 		handler: saveComponentValue,
 	}),

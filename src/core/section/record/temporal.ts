@@ -73,7 +73,12 @@ import {
 	mergeRelationChips,
 	resolveRelationEcho,
 } from './resolve_echo.ts';
-import { type ChangedDataItem, getIdFromKey, isLangSlicedModel } from './save_component.ts';
+import {
+	type ChangedDataItem,
+	getIdFromKey,
+	isLangSlicedModel,
+	unnamedRemoveRefusal,
+} from './save_component.ts';
 
 /**
  * The record id the client stamps on a temporal instance (component_common.js
@@ -88,6 +93,10 @@ const TEMPORAL_ACTIONS: ReadonlySet<string> = new Set([
 	'update',
 	'insert',
 	'remove',
+	// The EXPLICIT wipe (save_component.ts `clear`, 2026-08-30): a temporal
+	// instance must accept every shape the persisted engine accepts, or the same
+	// user gesture answers on a saved record and is refused on a staged one.
+	'clear',
 	'add_new_element',
 ]);
 
@@ -321,6 +330,26 @@ function stampTemporalEchoCreatedSectionId(echo: ApiResult, createdSectionId: nu
  * additionally refuses a consultation-only target. Any claim that this door
  * "never writes" must be read with that exception in mind.
  */
+/**
+ * ONE LAW, TWO DOORS: the in-memory door refuses exactly what the persisted door
+ * refuses. Extracted 2026-08-30 to keep `resolveTemporalSave` under the complexity
+ * ratchet; the predicate itself lives in save_component.ts so the two can never
+ * drift apart.
+ */
+function assertTemporalRemoveNamesItem(
+	changedData: ChangedDataItem[],
+	componentTipo: string,
+	sectionTipo: string,
+): void {
+	const refusal = unnamedRemoveRefusal(changedData);
+	if (refusal === null) return;
+	throw new DedaloError('record.remove_without_id', {
+		message: `temporal save: ${refusal}`,
+		publicMessage: refusal,
+		coordinates: { tipo: componentTipo, section_tipo: sectionTipo },
+	});
+}
+
 export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promise<ApiResult> {
 	const source = rqo.source ?? {};
 	const payload = (rqo.data ?? {}) as {
@@ -347,6 +376,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			});
 		}
 	}
+	// THE REMOVE SENTINEL (DATA-06), one predicate for both doors: an id-less
+	// remove is refused here too. It is not a no-op on this door — the client has
+	// ALREADY applied the delta to the entries it ships, so a shape the persisted
+	// engine refuses would be echoed back as a successful wipe, and on a durable
+	// instance the wiped set is what the scratch row then stores.
+	assertTemporalRemoveNamesItem(changedData, componentTipo, sectionTipo);
 
 	// RELATION family: resolve the picked set into real chips and echo it. The
 	// resolver is the same one the search_<n> door uses (./resolve_echo.ts) —

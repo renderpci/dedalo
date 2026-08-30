@@ -51,7 +51,13 @@ export function mergeRelationChips(
 			.filter((change) => change.action === 'remove' && change.id != null)
 			.map((change) => String(change.id)),
 	);
-	const merged = currentChips.filter((chip) => !removedIds.has(String(chip.id)));
+	// The EXPLICIT wipe (save_component.ts `clear`, 2026-08-30): it empties the
+	// BASE, not just the client's page. On a DURABLE temporal instance the base is
+	// the scratch row (readTemporalScratchBase), so ignoring `clear` here would
+	// resurrect every staged locator on the next save — the same silent no-op the
+	// id-less `remove` used to be on this door.
+	const base = changedData.some((change) => change.action === 'clear') ? [] : currentChips;
+	const merged = base.filter((chip) => !removedIds.has(String(chip.id)));
 	for (const change of changedData) {
 		if (change.action !== 'insert' || change.value == null) continue;
 		const locator = change.value as Record<string, unknown>;

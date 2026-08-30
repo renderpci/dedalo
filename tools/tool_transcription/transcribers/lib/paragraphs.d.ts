@@ -16,6 +16,14 @@ export interface TranscriptSegment {
 	speaker?: string | number;
 	/** Word-level timings, carried through untouched. */
 	words?: unknown[];
+	/**
+	 * The stored HTML fragment this segment was read back from, VERBATIM — set by
+	 * parse_transcript only when re-escaping `text` would not reproduce it (inline
+	 * markup, or an entity outside escape_html's four). It is what
+	 * build_paragraph_text emits, and it is why a re-grouping no longer deletes the
+	 * archivist's markup (2026-08-30, P0-12).
+	 */
+	html?: string;
 }
 
 /** How segments are grouped into paragraphs and how dense the time marks are. */

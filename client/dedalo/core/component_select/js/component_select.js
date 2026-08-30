@@ -37,7 +37,7 @@
 	import {render_edit_component_select} from './render_edit_component_select.js'
 	import {render_list_component_select} from './render_list_component_select.js'
 	import {render_search_component_select} from './render_search_component_select.js'
-	import {response_data} from '../../common/js/api_error.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 
 
 
@@ -119,18 +119,37 @@ export const component_select = function(){
 * Creates a new record in the target section and stores the returned locator
 * as the component's value. Triggered by the "Add" toolbar button.
 *
-* Because component_select is single-value, any existing entry is cleared via
-* a 'remove' save before the 'add_new_element' save is issued. The server
-* assigns the new record's section_id and returns it inside api_response.result;
-* the component is then refreshed in-place using that response as a pre-fetched
-* API reply so no extra round-trip is needed.
+* Because component_select is single-value, any existing entry is wiped by an
+* explicit `action:'clear'` save before the 'add_new_element' save is issued.
+* The server answers envelope v2 and the created record's datum arrives in
+* `data` (read through response_data); the component is then rebuilt so the new
+* value renders.
+*
+* WHY 'clear' AND NOT A REMOVE BY ID (DATA-06, 2026-08-30). Emptying the one
+* slot before creating its replacement is a deliberate wipe of everything the
+* component holds, which is exactly what `clear` means on both ends
+* (component_common.update_data_value and save_component.ts applySaveComponentData
+* both treat it as "wipe entries, every language"). A `remove` would have to name
+* an id, and the two ids available here are both wrong for this gesture: an
+* entry with NO id (an unsaved or malformed slot — null, undefined or '', not
+* `0`, which is a real and deletable id) is REFUSED by the server
+* (`record.remove_without_id`), and naming only entries[0].id would leave
+* any extra locator behind in a component that is supposed to hold at most one.
+* `clear` restores the single-value invariant unconditionally.
+*
+* NOT ATOMIC: this is two saves. When the clear succeeds and the creation save
+* fails, the component is left empty (the local model is emptied to match) and
+* the function returns false — the previous value is gone. Merging both changes
+* into ONE rqo is not done here because the save handler's echo branch keys on
+* `changed_data[0].action` (src/core/api/handlers/dd_core_api.ts) and would stop
+* seeing the add.
 *
 * Default project assignment (based on user privileges) is handled server-side.
 *
 * @param {string} target_section_tipo - Structure tipo of the section in which
 *   to create the new record, e.g. 'rsc197'.
-* @returns {Promise<boolean>} true on success; false when either the pre-removal
-*   save or the creation save fails.
+* @returns {Promise<boolean>} true on success; false when either the clear save
+*   or the creation save fails.
 */
 component_select.prototype.add_new_element = async function(target_section_tipo) {
 
@@ -141,31 +160,53 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 		const current_data	= self.data || {}
 		const entries		= current_data.entries || []
 		if (entries.length>0) {
-			// remove previous value
-			const source = create_source(self, null)
-			const data = clone(self.data)
-			data.changed_data = [{
-				action	: 'remove',
+			// wipe the previous value. 'clear' is the deliberate-wipe action; a
+			// remove with id:null is refused by BOTH ends since DATA-06 (see the
+			// docblock above).
+			const clear_changed_data_item = {
+				action	: 'clear',
 				id		: null,
 				value	: null
-			}]
+			}
+			const source = create_source(self, null)
+			const data = clone(self.data)
+			data.changed_data = [clear_changed_data_item]
 			const rqo = {
 				action	: 'save',
 				source	: source,
 				data	: data
 			}
-			// data_manager. create new record
+			// data_manager. wipe the current value
 				const api_response = await data_manager.request({
 					body : rqo
 				})
 				if(SHOW_DEBUG===true) {
-					console.log('add_new_element remove previous api_response:', api_response);
+					console.log('add_new_element clear previous api_response:', api_response);
 				}
-				if (api_response.response===false) {
-					console.error('Error removing previous value. api_response:', api_response);
+				// THE failure test on a data_manager envelope (envelope v2): the
+				// transport attaches an ApiError under `error` on every failure and
+				// nothing on success. There is no `response` key at all, so the old
+				// `api_response.response===false` read `undefined===false` and could
+				// never fire — a guard that had been dead here for as long as the
+				// envelope has been v2.
+				//
+				// It cost nothing while the clearing save always succeeded, which is
+				// why nobody noticed. It stopped being free the moment the server
+				// began REFUSING an id-less remove (DATA-06, 2026-08-30): this call
+				// hand-builds its own rqo and posts it straight through
+				// data_manager.request, bypassing both client doors, so the refusal
+				// would have fallen through the dead guard into the creation save and
+				// left a single-value component holding TWO locators plus a newly
+				// created target record, with no visible symptom. The clear spelling
+				// above and this test landed together for that reason.
+				if (request_failed(api_response)) {
+					console.error('Error clearing previous value. api_response:', api_response);
 					alert("Error on remove previous value"); // (!) alert used intentionally for user-facing blocking error
 					return false;
 				}
+			// keep the local model in step with what the server just did, so the
+			// component does not go on showing a value the database no longer has.
+				self.update_data_value(clear_changed_data_item)
 		}
 
 	// source
@@ -195,6 +236,13 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 			console.log('add_new_element api_response:', api_response);
 		}
 		// add value to current data
+		// (same envelope-v2 contract: a failure carries `error` and no payload;
+		// response_data is the accessor for a SUCCESS payload, and the refresh
+		// below feeds on it as a pre-fetched read answer)
+		if (request_failed(api_response)) {
+			console.error('Error on api_response on try to create new row:', api_response);
+			return false
+		}
 		if (response_data(api_response)) {
 
 			// save return the datum of the component

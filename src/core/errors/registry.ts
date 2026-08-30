@@ -499,6 +499,24 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		details_keys: ['not_deleted'],
 	},
+	'record.remove_without_id': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_record_remove_without_id',
+		// THE REMOVE SENTINEL (DATA-06, 2026-08-30). A `remove` change that names
+		// no item id used to empty the component in EVERY language and answer
+		// ok:true — while a remove naming a WRONG id failed the save. The null id
+		// is every caller's unknown-id sentinel (an unsaved row, `item.id || null`
+		// collapsing 0, an omitted MCP `item_id`), never "all", so the engine
+		// refuses it and the wipe is the separate `clear` action.
+		// PUBLIC: the actor holds write on the component, the answer is entirely
+		// about the request THEY sent, and a refusal nobody can read is a delete
+		// button that silently does nothing.
+		message: "A 'remove' must name the item id it removes",
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
 	'record.save_failed': {
 		category: 'internal',
 		status: 500,

@@ -30,8 +30,12 @@
 *
 * Exported symbols:
 *   - `render_search_component_portal`  — prototype host (constructor is never called).
-*   - `render_column_remove`            — standalone remove-button column renderer,
-*                                         also imported and reused by the list/edit modules.
+*   - `render_column_remove`            — standalone remove-button column renderer.
+*                                         (!) Exported, but NOT imported anywhere else on
+*                                         disk: the edit/list/mosaic views import the
+*                                         SAME NAME from render_edit_component_portal.js
+*                                         (the heavier, confirmation-modal variant).
+*                                         Its only consumer is rebuild_columns_map below.
 *
 * Private helpers (module-scoped, not exported):
 *   - `render_content_data`   — assembles the inner content_data element.
@@ -382,12 +386,15 @@ const rebuild_columns_map = async function(self) {
 * Renders the remove-button column cell for a selected portal record in search mode.
 *
 * Unlike the heavier `render_column_remove` in render_edit_component_portal.js, this
-* search-mode variant performs an immediate, silent unlink without a confirmation modal.
+* search-mode variant performs an immediate, silent clear without a confirmation modal.
 * Clicking the button:
-*   1. Builds a frozen `changed_data_item` with `action: 'remove'` and null id/value —
-*      the server identifies which locator to remove by position/context.
+*   1. Builds a frozen `changed_data_item` with `action: 'clear'` — the deliberate,
+*      explicit wipe of `self.data.entries`.
 *   2. Calls `self.update_data_value(changed_data_item)` to update the component's
-*      in-memory data (does NOT trigger a network save).
+*      in-memory SEARCH model. This is LOCAL ONLY: no change_value(), no save(),
+*      nothing reaches the wire. The selected locators are search FILTER values,
+*      not stored record data — they leave this instance later, as part of the SQO
+*      the search bar builds.
 *   3. Publishes `change_search_element` so the surrounding search bar header rerenders.
 *   4. Calls `self.refresh({ build_autoload: true })` to rebuild the component's DOM
 *      with the updated (now empty) state, restoring the fake-input trigger.
@@ -395,9 +402,22 @@ const rebuild_columns_map = async function(self) {
 * The click handler calls `e.stopPropagation()` to prevent the component activation
 * logic from firing alongside the removal.
 *
-* NOTE: this function is exported and reused by other portal modules (list/edit)
-* when a simplified remove action is appropriate.  The edit module defines its own
-* extended version with a confirmation modal for full edit mode.
+* (!) SCOPE, stated as it is (DATA-06, 2026-08-30): this button empties the WHOLE
+* selection, not just its own row — the pre-2026-08-30 spelling (`action:'remove'`
+* with a null id) hit update_data_value's wildcard branch, which set
+* `entries = []`. The port to `clear` preserves that behaviour EXACTLY and makes
+* it legible; narrowing it to the clicked row is a separate, deliberate UX change
+* (the row is addressable by `options.section_id` / `options.section_tipo`, not by
+* an entry `id`, so it needs its own mechanism and its own review).
+*
+* Do NOT re-spell this as a `remove` with a null id. On the WIRE that is refused
+* since DATA-06 — by `save()` and by the server (`record.remove_without_id`) —
+* and `clear` is the spelling that says what this gesture means. In SEARCH mode
+* `update_data_value` would in fact accept it (a search instance is a transient
+* filter with no save path, and the model door carves that case out by
+* `self.mode`), so the objection here is not that it would fail: it is that a
+* wildcard spelling in a file that also renders EDIT columns is one copy-paste
+* away from the shape that destroyed records.
 *
 * @param {Object} options        - Column renderer options (standard columns_map callback contract).
 * @param {Object} options.caller - The `component_portal` instance (`self`).
@@ -422,9 +442,12 @@ export const render_column_remove = function(options) {
 
 			const unlink_record = function() {
 				// changed_data
+				// 'clear' — THE EXPLICIT WIPE (DATA-06). Local to this instance's
+				// search model. `clear` is explicit; see the docblock for why the
+				// id-less 'remove' spelling is avoided here even though search mode
+				// would accept it.
 				const changed_data_item = Object.freeze({
-					action	: 'remove',
-					id		: null,
+					action	: 'clear',
 					value	: null
 				})
 				// update the instance data (previous to save)

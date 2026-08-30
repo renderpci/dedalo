@@ -362,9 +362,11 @@ const get_content_value_read = (i, current_value, self) => {
 *
 *   button_delete {boolean} — a bulk-reset "trash" button.  Guards against
 *     an already-empty entries array (early return true) to avoid a no-op save
-*     round-trip.  Issues a single changed_data atom of action:'remove' with
-*     id:null and value:null, which the server interprets as "remove all relations
-*     for this component"; triggers a full refresh.
+*     round-trip.  Issues a single changed_data atom of action:'clear' — the
+*     EXPLICIT wipe (DATA-06, 2026-08-30): every entry of this component, in every
+*     language, both locally and on the server.  It is NOT a 'remove' with a null
+*     id: that shape is refused now, at both doors.  change_value confirms 'clear'
+*     with the same remove dialog; then a full refresh runs.
 *
 *   tools {boolean} — appends the ontology-configured tool buttons from self.tools[]
 *     via ui.add_tools(self, fragment).  Tools are assembled server-side from the
@@ -442,9 +444,20 @@ export const get_buttons = (self) => {
 					return true
 				}
 
+				// DELIBERATE WIPE (DATA-06, 2026-08-30): uncheck EVERY box, in every
+				// language. That is `action:'clear'` — the ONE explicit wildcard, in
+				// component_common.update_data_value and in the server's
+				// save_component.ts. Do NOT spell it as a `remove` with a null id
+				// again: an id-less remove is now REFUSED, both by the client (a
+				// visible alert, nothing saved) and by the server
+				// (record.remove_without_id), because that same shape is what an
+				// UNRESOLVED single-row delete produces (component_check_box.js
+				// uncheck-one builds `locator?.id || null`) and it used to empty the
+				// whole component while reporting success.
+				// change_value still shows the remove-confirmation dialog for 'clear',
+				// so the user confirms before anything is wiped.
 				const changed_data = [Object.freeze({
-					action	: 'remove',
-					id		: null,
+					action	: 'clear',
 					value	: null
 				})]
 				self.change_value({

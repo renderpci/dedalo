@@ -34,13 +34,31 @@
 *   'segment'                     — one mark per ASR segment (the historical
 *        behaviour), for anyone who wants the cue list.
 *
+* THE ARCHIVIST'S MARKUP SURVIVES A RE-GROUPING (2026-08-30, P0-12/CLI-24).
+* The component this writes to is the RICH-TEXT one, and until this date the
+* re-grouping path was lossy in two ways, silently, on a value a curator had
+* already worked on:
+*   - `parse_transcript` dropped EVERY tag (`.replace(/<[^>]*>/g,'')`), so one
+*     press of "Rebuild paragraphs" deleted the emphasis, the foreign-word
+*     marking and the uncertain-reading formatting — scholarly apparatus, not
+*     decoration — while reporting nothing;
+*   - it decoded only escape_html's four entities, so any other one (`&#39;`,
+*     `&nbsp;`…) came back through the escaper as `&amp;#39;` and the reader saw
+*     the raw entity instead of the character.
+* The fix is the `html` field on a segment: the stored fragment VERBATIM, carried
+* through grouping and emitted instead of re-escaping the plain text. So
+*   segments_to_html( parse_transcript( x ) ) === x
+* for a well-formed x whose paragraph grouping the current options reproduce, and
+* the operation is idempotent. `text` stays PLAIN — the grouping decisions
+* (length caps, sentence ends) must never count tag characters.
+*
 * This module is pure — no DOM, no network, no imports — and is loaded BOTH by the
 * browser worker and by the TypeScript server path, so browser-produced and
 * server-produced transcripts are formatted identically (single source of truth).
 *
 * Exports:
 *   group_paragraphs   — segments → paragraph objects
-*   build_paragraph_text — paragraph → the TC-tagged text of one paragraph
+*   build_paragraph_text — paragraph → the TC-tagged HTML of one paragraph
 *   segments_to_html   — segments → the `<p>…</p>` string the text component stores
 *   parse_transcript   — stored TC-tagged HTML → segments (for re-grouping)
 *   seconds_to_tc / tc_to_seconds — the Dédalo timecode format
@@ -70,6 +88,26 @@ const SENTENCE_END_RE = /[.!?…]["'”»)\]]?$/;
 
 /** The Dédalo timecode mark. Kept in sync with src/core/resolve/tr_marks.ts TC_PATTERN. */
 const TC_MARK_RE = /\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(?:\.[0-9]{1,3})?)_TC\]/g;
+
+/**
+* The tag that carries the transcript's STRUCTURE rather than its meaning: the
+* paragraph, which is exactly what this module rebuilds, so on the way in it
+* becomes a plain boundary. Every OTHER tag — `<br>` included, because a manual
+* line break inside a paragraph is something a person typed, not a shape the
+* grouper owns — is inline markup and is kept verbatim.
+*/
+const STRUCTURAL_TAG_RE = /<\/?p(?:\s[^>]*?)?\/?>/gi;
+
+/** Any tag, capturing the slash and the name. Attribute values holding a literal
+* '>' are not supported — transcript markup does not produce them, and such a
+* value is already broken for every other consumer of the stored HTML. */
+const TAG_SCAN_RE = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)[^>]*>/g;
+
+/** Elements that never close, so they must not be pushed on the balancing stack. */
+const VOID_ELEMENTS = [
+	'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+	'link', 'meta', 'param', 'source', 'track', 'wbr'
+];
 
 
 /**
@@ -236,9 +274,12 @@ export function group_paragraphs( segments, options ) {
 			continue;
 		}
 
-		// Extend the open paragraph.
+		// Extend the open paragraph. `html` travels with the segment: it is the
+		// stored fragment VERBATIM and is what gets emitted, so dropping it here
+		// would delete the archivist's markup exactly as the old parse did.
 		current.segments.push({
 			text	: text,
+			[VERBATIM_HTML]	: segment[VERBATIM_HTML],
 			start	: segment.start,
 			end		: segment.end,
 			words	: segment.words
@@ -274,6 +315,7 @@ function new_paragraph( segment, text ) {
 		text		: text,
 		segments	: [{
 			text	: text,
+			[VERBATIM_HTML]	: segment[VERBATIM_HTML],
 			start	: segment.start,
 			end		: segment.end,
 			words	: segment.words
@@ -340,9 +382,17 @@ function should_break( current, segment, opts ) {
 * real segment boundaries instead of cutting words, and a paragraph shorter than
 * the anchor spacing gets exactly one mark.
 *
+* WHAT COMES OUT IS HTML, not plain text (changed 2026-08-30). Escaping used to
+* happen once, over the whole finished paragraph, in segments_to_html — which is
+* precisely why a segment that already carried markup could not survive: its tags
+* would have been escaped into visible text. Each segment is now emitted as either
+* its verbatim `html` fragment (re-grouping an existing transcript) or its plain
+* `text` escaped (a fresh recognition, SEC-031), so the two sources mix safely in
+* one paragraph.
+*
 * @param {Object} paragraph - as returned by group_paragraphs
 * @param {Object} [options] - see DEFAULT_OPTIONS
-* @returns {string} e.g. '[TC_00:00:05.600_TC]Text… [TC_00:00:20.100_TC]more text…'
+* @returns {string} HTML, e.g. '[TC_00:00:05.600_TC]Text… [TC_00:00:20.100_TC]more text…'
 */
 export function build_paragraph_text( paragraph, options ) {
 
@@ -357,12 +407,14 @@ export function build_paragraph_text( paragraph, options ) {
 	// construction), so it survives segments_to_html's escaping intact.
 	const tag = typeof opts.speaker_tag==='string' ? opts.speaker_tag : '';
 
+	// The speaker label is DATA (a diarization label, or a name), so it is escaped;
+	// the tag above is ready-made wire markup and is not.
 	const prefix = tag + ((opts.speaker_prefix===true && paragraph.speaker!==undefined && paragraph.speaker!=='')
-		? `${paragraph.speaker}: `
+		? `${escape_html(paragraph.speaker)}: `
 		: '');
 
 	if (segments.length===0) {
-		return `[TC_${seconds_to_tc(paragraph.start)}_TC]${prefix}${paragraph.text || ''}`;
+		return `[TC_${seconds_to_tc(paragraph.start)}_TC]${prefix}${escape_html(paragraph.text || '')}`;
 	}
 
 	let out			= `[TC_${seconds_to_tc(paragraph.start)}_TC]${prefix}`;
@@ -375,6 +427,14 @@ export function build_paragraph_text( paragraph, options ) {
 		if (text==='') {
 			continue;
 		}
+
+		// The fidelity override: a segment read back out of the stored transcript
+		// carries the fragment it came from, tags and entities intact, and that is
+		// what goes out again. Only a segment WITHOUT one is escaped text.
+		const verbatim = segment[VERBATIM_HTML];
+		const piece = (typeof verbatim==='string' && verbatim!=='')
+			? verbatim
+			: escape_html( text );
 
 		const start = typeof segment.start==='number'
 			? segment.start
@@ -393,13 +453,13 @@ export function build_paragraph_text( paragraph, options ) {
 		if (wants_mark && start!==null) {
 			out			= `${out.replace(/\s+$/, '')} [TC_${seconds_to_tc(start)}_TC]`;
 			last_anchor	= start;
-			out			= `${out}${text}`;
+			out			= `${out}${piece}`;
 			continue;
 		}
 
 		out = /[\s\]]$/.test(out)
-			? `${out}${text}`
-			: `${out} ${text}`;
+			? `${out}${piece}`
+			: `${out} ${piece}`;
 	}
 
 	return out;
@@ -411,9 +471,17 @@ export function build_paragraph_text( paragraph, options ) {
 * The end-to-end formatter: segments → the `<p>…</p>` string that
 * component_text_area stores.
 *
-* Text is escaped before it is embedded: recognised speech can contain `<`, `&`
+* Recognised speech is escaped before it is embedded — it can contain `<`, `&`
 * and quotes, and the result is assigned as HTML by the client and written to the
-* database by the server (SEC-031 — never build markup by raw concatenation).
+* database by the server (SEC-031 — never build markup by raw concatenation). The
+* escaping happens per SEGMENT, inside build_paragraph_text, so a segment read
+* back out of an existing transcript keeps its markup (see the module header).
+*
+* Inline markup is re-BALANCED across the new paragraph boundaries: a re-grouping
+* moves the boundaries, so an `<em>` opened in one paragraph and closed in another
+* would otherwise be emitted as `<p>…<em>…</p><p>…</em>…</p>` — invalid markup the
+* editor would repair by guessing. Each `<p>` closes what it left open and the
+* next one re-opens it, and a close tag with no opening anywhere is dropped.
 *
 * @param {Array<Object>} segments - cleaned segments
 * @param {Object} [options] - see DEFAULT_OPTIONS
@@ -436,6 +504,10 @@ export function segments_to_html( segments, options ) {
 		: opts;
 	let previous_speaker= undefined;
 
+	// Inline elements still open when a paragraph ends. Shared across the whole
+	// document: each `<p>` closes them and the next one re-opens them.
+	const open_stack = [];
+
 	return paragraphs
 		.map( paragraph => {
 			let tag = '';
@@ -449,7 +521,20 @@ export function segments_to_html( segments, options ) {
 				previous_speaker = paragraph.speaker;
 			}
 			const text = build_paragraph_text( paragraph, tag==='' ? base_opts : Object.assign({}, base_opts, { speaker_tag: tag }) );
-			return `<p>${escape_html( text )}</p>`;
+
+			// Re-open what the previous paragraph left open, AFTER the opening time
+			// mark (the mark is text: italicising it would be a visible change), then
+			// balance this paragraph and close whatever is still open at its end.
+			const reopen	= open_stack.map( entry => entry.tag ).join('');
+			const balanced	= balance_inline_tags( text, open_stack );
+			const body		= reopen==='' ? balanced : insert_after_opening_mark( balanced, reopen );
+
+			let tail = '';
+			for (let k = open_stack.length - 1; k >= 0; k--) {
+				tail += `</${open_stack[k].name}>`;
+			}
+
+			return `<p>${body}${tail}</p>`;
 		})
 		.join('');
 }//end segments_to_html
@@ -474,6 +559,224 @@ export function escape_html( text ) {
 
 
 /**
+* UNESCAPE_HTML
+* The exact inverse of escape_html, plus `&nbsp;` — which a rich-text editor
+* inserts on its own and which is an ordinary space as far as the spoken text is
+* concerned.
+*
+* ORDER IS LOAD-BEARING: `&amp;` is decoded LAST, mirroring escape_html, or a
+* stored `&amp;lt;` (the literal text "&lt;", written by a linguist quoting
+* markup) would decode twice and the transcript would gain a tag it never had.
+*
+* Used only to derive a segment's PLAIN text; the stored fragment is never
+* rewritten by it.
+*
+* @param {string} text
+* @returns {string}
+*/
+function unescape_html( text ) {
+
+	return String(text)
+		.replace(/&nbsp;/gi, ' ')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&amp;/g, '&');
+}//end unescape_html
+
+
+
+/**
+* COLLAPSE_SPACES_OUTSIDE_TAGS
+* Collapse runs of whitespace to a single space WITHOUT touching the inside of a
+* tag: `<span class="foo  bar">` must come out byte-identical, or a re-grouping
+* would rewrite the archivist's attributes as a side effect.
+*
+* @param {string} fragment
+* @returns {string}
+*/
+function collapse_spaces_outside_tags( fragment ) {
+
+	return String(fragment).replace(/<\/?[a-zA-Z][^>]*>|\s+/g, function( match ) {
+		return match.charAt(0)==='<' ? match : ' ';
+	});
+}//end collapse_spaces_outside_tags
+
+
+
+/**
+* PLAIN_TEXT_OF
+* The spoken words of a stored fragment: tags removed, entities decoded, spaces
+* collapsed. This — never the fragment — is what the grouping rules measure, so
+* `max_chars` counts characters a reader sees and a sentence end is still found
+* when the full stop sits inside `<em>…</em>`.
+*
+* @param {string} fragment
+* @returns {string}
+*/
+function plain_text_of( fragment ) {
+
+	return unescape_html( String(fragment).replace(/<[^>]*>/g, '') )
+		.replace(/\s+/g, ' ')
+		.trim();
+}//end plain_text_of
+
+
+
+/**
+* THE FIDELITY OVERRIDE IS A SYMBOL, AND THAT IS A SECURITY PROPERTY, not a style.
+*
+* It carries a stored fragment VERBATIM — tags and entities intact — past
+* `escape_html`, which is exactly what makes the round-trip lossless. It is also,
+* by construction, an UNESCAPED-HTML CHANNEL, so the only safe design is one where
+* nothing outside this module can put a value on it.
+*
+* It was a plain `html` STRING KEY for a few hours on 2026-08-30 and that was a
+* hole, found by adversarial review before it shipped: `TranscriptionSegment`
+* (src/core/tools/transcription_asr.ts) declares no `html` field, but TypeScript
+* strips nothing at runtime, and the ASR seam passes a REMOTE transcriber's JSON
+* `segments` array through verbatim. A hostile or compromised transcription
+* service could therefore hand back `{text:'hola', html:'<img src=x onerror=…>'}`
+* and have it stored, unescaped, in a heritage record's transcription. Measured
+* at the time: `segments_to_html([{…, html:'<img src=x onerror=alert(1)>'}])`
+* emitted the tag intact while the plain path still escaped correctly.
+*
+* A Symbol closes it structurally rather than by validation: JSON cannot carry
+* one, so a segment that crossed a wire cannot own this key no matter what it
+* claims. `make_segment` is the ONLY mint. (The seam ALSO strips unknown keys —
+* defence in depth, and the place a future non-JSON path would be caught.)
+*/
+const VERBATIM_HTML = Symbol('dedalo.transcription.verbatim_html');
+
+/**
+* MAKE_SEGMENT
+* Build a parsed segment, attaching the fidelity override only when the
+* stored fragment carries something re-escaping the plain text would not
+* reproduce: inline markup, or an entity outside escape_html's four (`&#39;`,
+* `&#8212;`…). When the fragment IS exactly the escaped plain text the override
+* would be redundant, and a segment stays the minimal {text,start,end} the
+* recogniser path produces.
+*
+* @param {string} plain
+* @param {string} fragment
+* @param {number} start
+* @param {number|null} end
+* @returns {Object} segment
+*/
+function make_segment( plain, fragment, start, end ) {
+
+	const segment = {
+		text	: plain,
+		start	: start,
+		end		: end
+	};
+
+	if (escape_html(plain)!==fragment) {
+		segment[VERBATIM_HTML] = fragment;
+	}
+
+	return segment;
+}//end make_segment
+
+
+
+/**
+* INSERT_AFTER_OPENING_MARK
+* Put `addition` right after a paragraph's opening `[TC_…_TC]` mark (or at the
+* head when there is none). Used to re-open inline elements that the previous
+* paragraph left open without wrapping the time mark itself.
+*
+* @param {string} text
+* @param {string} addition
+* @returns {string}
+*/
+function insert_after_opening_mark( text, addition ) {
+
+	const match = /^\[TC_[^\]]*_TC\]/.exec( text );
+
+	return match===null
+		? addition + text
+		: match[0] + addition + text.slice( match[0].length );
+}//end insert_after_opening_mark
+
+
+
+/**
+* BALANCE_INLINE_TAGS
+* Walk one paragraph's markup keeping a stack of the elements it leaves open.
+*
+* WHY. Re-grouping MOVES the paragraph boundaries, so an emphasis that opened in
+* the old paragraph 3 and closed in the old paragraph 4 can end up straddling a
+* new one. Emitted as-is that is `<p>…<em>…</p><p>…</em>…</p>`: invalid, and the
+* editor repairs it by guessing — which is how formatting silently spreads to
+* text it never covered. The stack survives between paragraphs (the caller closes
+* it at the end of each `<p>` and re-opens it in the next), and a close tag whose
+* element is open NOWHERE is dropped rather than emitted stray.
+*
+* Interleaving (`<em>a<strong>b</em>c</strong>`) is repaired the way a parser
+* would: the inner elements are closed before the outer one and re-opened after.
+*
+* @param {string} fragment - one paragraph's markup
+* @param {Array<Object>} open_stack - MUTATED: [{name, tag}] still open on exit
+* @returns {string} the paragraph, with only well-nested tags
+*/
+function balance_inline_tags( fragment, open_stack ) {
+
+	let out		= '';
+	let cursor	= 0;
+
+	TAG_SCAN_RE.lastIndex = 0;
+	let match = TAG_SCAN_RE.exec( fragment );
+
+	while (match!==null) {
+
+		out		+= fragment.slice( cursor, match.index );
+		cursor	= match.index + match[0].length;
+
+		const closing	= match[1]==='/';
+		const name		= match[2].toLowerCase();
+		const is_void	= VOID_ELEMENTS.indexOf(name)!==-1 || /\/>$/.test(match[0]);
+
+		if (is_void) {
+			out += match[0];
+		} else if (closing===false) {
+			open_stack.push({ name: name, tag: match[0] });
+			out += match[0];
+		} else {
+
+			// Deepest matching open element, if any.
+			let depth = -1;
+			for (let k = open_stack.length - 1; k >= 0; k--) {
+				if (open_stack[k].name===name) {
+					depth = k;
+					break;
+				}
+			}
+
+			if (depth!==-1) {
+				// Everything opened INSIDE it is closed first and re-opened after.
+				const inner = open_stack.splice( depth + 1 );
+				for (let k = inner.length - 1; k >= 0; k--) {
+					out += `</${inner[k].name}>`;
+				}
+				out += `</${name}>`;
+				open_stack.pop();
+				for (let k = 0; k < inner.length; k++) {
+					out += inner[k].tag;
+					open_stack.push( inner[k] );
+				}
+			}
+			// depth===-1: stray close tag, dropped.
+		}
+
+		match = TAG_SCAN_RE.exec( fragment );
+	}
+
+	return out + fragment.slice( cursor );
+}//end balance_inline_tags
+
+
+/**
 * PARSE_TRANSCRIPT
 * Read stored TC-tagged transcription text back into segments, so an existing
 * transcript can be RE-GROUPED (different paragraph rules, different TC density)
@@ -483,8 +786,21 @@ export function escape_html( text ) {
 * a new segment. Text before the first mark keeps the previous segment's timing —
 * or starts at 0 when there is none, which is the only honest guess available.
 *
+* WHAT IS AND IS NOT PRESERVED (2026-08-30 — this function used to delete all of
+* the first line, see the module header):
+*   - INLINE MARKUP is kept verbatim on the segment's `html` field, so it is
+*     written back unchanged;
+*   - ENTITIES are kept verbatim there too, so `&#39;` stays `&#39;` instead of
+*     being re-escaped into the visible text `&amp;#39;`;
+*   - `<p>` is consumed: it is the structure being rebuilt (`<br>` is not — it is
+*     a break a person typed, and it survives inside the fragment);
+*   - a fragment with markup but NO words (an `<img>` alone in a segment) is still
+*     dropped, as it always was — there is no text to time-code it against. That
+*     is why the caller confirms before writing (tool_transcription.js
+*     regroup_paragraphs).
+*
 * @param {string} html - the component value ('<p>[TC_…_TC]text</p>…')
-* @returns {Array<Object>} segments {text, start, end}
+* @returns {Array<Object>} segments {text, start, end, html?}
 */
 export function parse_transcript( html ) {
 
@@ -492,17 +808,9 @@ export function parse_transcript( html ) {
 		return [];
 	}
 
-	// Paragraph boundaries → newlines, then all remaining markup is dropped: the
-	// transcript's meaning lives in the TC marks and the text, not in the tags.
-	const flat = html
-		.replace(/<\/p>/gi, '\n')
-		.replace(/<br\s*\/?>/gi, '\n')
-		.replace(/<[^>]*>/g, '')
-		.replace(/&nbsp;/gi, ' ')
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&amp;/g, '&');
+	// Only the STRUCTURAL tags become boundaries. Everything else stays where it
+	// is and travels back out on the `html` field.
+	const flat = html.replace(STRUCTURAL_TAG_RE, '\n');
 
 	const segments	= [];
 	let cursor		= 0;
@@ -513,9 +821,10 @@ export function parse_transcript( html ) {
 
 	// Text preceding the first mark (rare, but it must not be lost).
 	if (match!==null && match.index>0) {
-		const head = flat.slice(0, match.index).trim();
+		const head_fragment	= collapse_spaces_outside_tags( flat.slice(0, match.index) ).trim();
+		const head			= plain_text_of( head_fragment );
 		if (head!=='') {
-			segments.push({ text: head, start: 0, end: null });
+			segments.push( make_segment( head, head_fragment, 0, null ) );
 		}
 	}
 
@@ -524,17 +833,19 @@ export function parse_transcript( html ) {
 		start	= tc_to_seconds( match[1] );
 		cursor	= match.index + match[0].length;
 
-		const next	= TC_MARK_RE.exec( flat );
-		const text	= (next===null ? flat.slice(cursor) : flat.slice(cursor, next.index))
-			.replace(/\s+/g, ' ')
-			.trim();
+		const next		= TC_MARK_RE.exec( flat );
+		const fragment	= collapse_spaces_outside_tags(
+			next===null ? flat.slice(cursor) : flat.slice(cursor, next.index)
+		).trim();
+		const text		= plain_text_of( fragment );
 
 		if (text!=='') {
-			segments.push({
-				text	: text,
-				start	: start,
-				end		: next===null ? null : tc_to_seconds( next[1] )
-			});
+			segments.push( make_segment(
+				text,
+				fragment,
+				start,
+				next===null ? null : tc_to_seconds( next[1] )
+			));
 		}
 
 		match = next;
@@ -542,9 +853,10 @@ export function parse_transcript( html ) {
 
 	// No marks at all: one untimed segment, so the caller can still re-paragraph it.
 	if (segments.length===0) {
-		const text = flat.replace(/\s+/g, ' ').trim();
+		const fragment	= collapse_spaces_outside_tags( flat ).trim();
+		const text		= plain_text_of( fragment );
 		if (text!=='') {
-			segments.push({ text: text, start: 0, end: null });
+			segments.push( make_segment( text, fragment, 0, null ) );
 		}
 	}
 

@@ -477,19 +477,31 @@ component_portal.prototype.init = async function(options) {
 				// new pick supersedes the stored one instead of being refused by the write
 				// path's cap. This belongs HERE and not in the picker: the component owns its
 				// value; the picker only reports what the operator chose.
+				//
+				// (!) THE REPLACE IS ONE SAVE NOW, AND THE ORDERING IS THE WHOLE FIX.
+				// Until 2026-08-30 this branch called `delete_locator` on every stored
+				// locator FIRST, never read the answer, and only then called `link_records`.
+				// A destructive step preceded a step that can fail: when the pick was
+				// refused (non-selectable term, target outside the caller's declared
+				// sections, unreadable target, expired session) the curated relation was
+				// ALREADY GONE from the record, the single-valued field was left EMPTY, and
+				// the alert below named only the pick refusal — never the destruction. The
+				// stored locators now travel to `link_records` as `replace_entries` and are
+				// removed inside the SAME save as the insert, so there is no window in which
+				// the component holds nothing, and `link_records` reports (and tries to undo)
+				// the one residual case it cannot prevent. See its `replace_entries` doc.
+					const replace_entries = []
 					const data_limit = self.context.properties?.data_limit
 					if (data_limit===1) {
-						// `self.data` is an OBJECT and `entries` is the locator array
-						// (see :659, :695, :1231) — NOT `data[0].value`, which is
-						// undefined on every real component and made this branch a
-						// silent no-op: the delete never ran and the server then
-						// refused the pick as over-cap, so a single-valued picker
-						// could never change its value.
+						// `self.data` is an OBJECT and `entries` is the locator
+						// array — NOT `data[0].value`, which is undefined on every
+						// real component and once made this branch a silent no-op:
+						// it superseded nothing, the server then refused the pick as
+						// over-cap, and a single-valued picker could never change
+						// its value at all.
 						const current = self.data?.entries
 						if (Array.isArray(current) && current.length>0) {
-							for (const locator of current) {
-								await self.delete_locator(locator)
-							}
+							replace_entries.push(...current)
 						}
 					}
 
@@ -500,7 +512,9 @@ component_portal.prototype.init = async function(options) {
 						// user could even select, and the write path re-resolves the cap inside
 						// its transaction. Alerting here would make the client a second, weaker
 						// authority over the same rule.
-						enforce_client_data_limit : false
+						enforce_client_data_limit : false,
+						// the stored value this pick supersedes, removed in the SAME save
+						replace_entries : replace_entries
 					})
 					if (outcome.refused.length>0) {
 						// (!) alert() kept from the single-pick path: the user committed to these
@@ -1262,7 +1276,18 @@ component_portal.prototype.link_record = async function(value) {
 *        already bounded by the server-resolved remaining capacity, and the write path
 *        re-resolves the cap inside its transaction — a client alert there would be a
 *        second, weaker authority over the same rule.
+* @param {Array<Object>} [options.replace_entries=[]] - Stored locators this save must
+*        REMOVE, addressed by their per-item `id`. They are emitted as 'remove' entries
+*        AHEAD of the inserts in the same `changed_data`, which is what makes a
+*        single-valued (`data_limit:1`) replace one transaction instead of a delete
+*        followed by a fallible insert. An entry without a usable id is refused
+*        (`replace_entry_without_id`) and nothing is written: a remove with a null id
+*        clears the whole component in every language.
 * @returns {Promise<Object>} `{linked:[locator], refused:[{locator, reason}], total}`.
+*        `reason` is one of `data_limit`, `duplicate`, `api_error`, `not_stored`,
+*        `refused_by_server`, `replace_entry_without_id`, or `replace_failed — …` (the
+*        replace removed the stored value and the server refused the new one; the note
+*        says whether the previous value could be restored).
 */
 component_portal.prototype.link_records = async function(values, options={}) {
 
@@ -1279,6 +1304,48 @@ component_portal.prototype.link_records = async function(values, options={}) {
 
 	// options
 		const enforce_client_data_limit = options.enforce_client_data_limit!==false
+
+	// replace_entries. Stored locators this save must REMOVE before it inserts — the
+	// single-valued (`data_limit:1`) picker replace. A replace is ONE operation and is
+	// therefore ONE save: when it was two (delete_locator, then link_records) the
+	// destructive half ran first and its answer was never read, so a refused pick left
+	// the curated relation deleted, the field empty and the operator told only that the
+	// pick had failed.
+		const replace_entries = Array.isArray(options.replace_entries)
+			? options.replace_entries
+			: []
+
+	// remove_changes. One 'remove' per stored locator, addressed by its per-item
+	// counter id.
+	// (!) NEVER SEND A REMOVE WITHOUT AN id. save_component.ts reads `change.id ?? null`,
+	// and a null id there does not mean "remove nothing" — it means "clear ALL entries in
+	// all languages" (its own comment: "PHP: id null = clear ALL entries in all
+	// languages"), and it answers ok. An entry whose id we do not know would therefore
+	// wipe the whole component instead of superseding one value. `0` is refused with it:
+	// it is the client's own unknown-id sentinel and collapses to null on the wire. A
+	// missing id is a bug in the caller's data, refused loudly here before anything is
+	// written rather than guessed at.
+		const remove_changes = []
+		for (let i = 0; i < replace_entries.length; i++) {
+			const entry		= replace_entries[i]
+			const entry_id	= entry ? entry.id : null
+			if (!Number.isFinite(Number(entry_id)) || Number(entry_id)<=0) {
+				console.error(
+					'(!) [component_portal.link_records] refused: replace_entries carries an entry'
+					+ ' without a usable id, and a remove without an id clears the whole component.'
+					+ ' component:', self.tipo, entry
+				);
+				for (let j = 0; j < values.length; j++) {
+					refused.push({locator: values[j], reason: 'replace_entry_without_id'})
+				}
+				return {linked: [], refused: refused, total: self.total ?? null}
+			}
+			remove_changes.push(Object.freeze({
+				action	: 'remove',
+				id		: entry_id,
+				value	: null
+			}))
+		}
 
 	// current_value. Get the current_value of the component
 		const current_entries = self.data.entries || []
@@ -1343,13 +1410,21 @@ component_portal.prototype.link_records = async function(values, options={}) {
 		}
 
 	// changed_data
-	// One 'insert' entry per accepted locator, in ONE save.
+	// The removes this save must carry FIRST, then one 'insert' entry per accepted
+	// locator — ONE save, ONE transaction, so a replace has no window in which the
+	// component holds nothing.
+	// (!) THE REMOVES MUST PRECEDE THE INSERTS, and that is not a style choice.
+	// save_component.ts applies changed_data entries in order over one mutating items
+	// array, and the selection cap (relations/save.ts refuseByPickerConstraint gate 4)
+	// judges the count the set would RESULT in: with the insert first a data_limit:1
+	// caller reaches 2 and the pick is refused outright. Removes first leaves the
+	// resulting count at 1, which the cap accepts.
 	// Frozen to prevent accidental mutation after this point.
-		const changed_data = accepted.map(value => Object.freeze({
+		const changed_data = remove_changes.concat(accepted.map(value => Object.freeze({
 			action	: 'insert',
 			id		: null,
 			value	: value
-		}))
+		})))
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -1388,6 +1463,75 @@ component_portal.prototype.link_records = async function(values, options={}) {
 	// total check (after save) — server-authoritative duplicate detection (level 2)
 		const current_data	= saved_datum.data.find(el => el.tipo===self.tipo)
 		const total			= current_data?.pagination?.total ?? 0
+		// landed. How many of the accepted locators the server actually stored.
+		// (!) THE BASELINE IS POST-REMOVE. `total_before` is what the component held when
+		// this call started, and the removes carried by THIS SAME SAVE are already gone
+		// from it, so the delta has to be measured against `total_before - removes`.
+		// Without the subtraction a data_limit:1 replace (one removed, one inserted, total
+		// still 1) computed landed = 0 and reported a SUCCESSFUL replace as a 'duplicate',
+		// returning before the refresh below: the operator got an error alert and a stale
+		// value for a change that had in fact been stored. A correct operation reported as
+		// a failure is how people learn to ignore the warnings that matter.
+		// (!) A NaN total_before (an instance built without a server total) is not a
+		// refusal: it carries no information, so the server's own count is taken as is.
+		const total_before_int	= parseInt(total_before)
+		const landed			= Number.isNaN(total_before_int)
+			? accepted.length
+			: (parseInt(total) - (total_before_int - remove_changes.length))
+
+		// THE REPLACE DESTROYED AND DID NOT CREATE — the one case this door cannot
+		// prevent, only name and try to undo.
+		// The removes and the insert travelled in ONE save, but save_component.ts applies
+		// changed_data entries in order over one mutating items array and DROPS a refused
+		// relation insert (`if (validated === null) continue;`) instead of failing the
+		// save — so the removes stand and nothing replaced them, and the component is now
+		// EMPTY. Never report this as a duplicate: what happened is that a curated
+		// relation was deleted and the pick meant to replace it was refused.
+		if (remove_changes.length>0 && landed<=0) {
+
+			// refresh FIRST. `self.data` still holds the pre-save entries, and the restore
+			// below re-enters this same door, whose level-1 duplicate check reads
+			// `self.data.entries` — against a stale one the restore would be refused as a
+			// duplicate of the value that is no longer there. The save response already
+			// carries the post-save data, so this costs no extra request.
+			await self.refresh({
+				build_autoload		: true,
+				tmp_api_response	: api_response
+			})
+
+			// BEST-EFFORT COMPENSATION, not a rollback. The previous locators are re-linked
+			// in a second save; `id` and `paginated_key` are stripped so the server mints
+			// fresh item ids instead of writing back a counter value it no longer owns.
+			// It can itself be refused — a stored locator is exempt from the picker
+			// constraints only while it IS stored, so an old target that has since become
+			// unreadable or non-selectable will not come back — and a dataframe frame that
+			// the remove cascaded away (save_component.ts removeDataframeDataById) never
+			// does. The outcome is therefore reported, never assumed.
+			// (!) No recursion risk: this call passes no `replace_entries`, so
+			// `remove_changes` is empty there and this branch cannot be re-entered.
+			const restore_locators = replace_entries.map(entry => {
+				const copy = Object.assign({}, entry)
+				delete copy.id
+				delete copy.paginated_key
+				return copy
+			})
+			const restored = await self.link_records(restore_locators, {
+				enforce_client_data_limit : false
+			})
+			const restore_note = restored.linked.length===restore_locators.length
+				? 'the previous value was restored'
+				: 'THE PREVIOUS VALUE COULD NOT BE RESTORED — re-link it by hand'
+			console.error(
+				'(!) [component_portal.link_records] the replace removed the stored value and the'
+				+ ` server refused the new one. component: ${self.tipo} — ${restore_note}`,
+				{removed: replace_entries, refused_insert: accepted, restore: restored}
+			);
+			for (let i = 0; i < accepted.length; i++) {
+				refused.push({locator: accepted[i], reason: `replace_failed — ${restore_note}`})
+			}
+			return {linked: [], refused: refused, total: restored.total ?? total}
+		}
+
 		// error on add value case
 		if (total===0) {
 			console.warn("// link_records saved data (unexpected total):", saved_datum.data);
@@ -1396,13 +1540,6 @@ component_portal.prototype.link_records = async function(values, options={}) {
 			}
 			return {linked: [], refused: refused, total: 0}
 		}
-		// landed. How many of the accepted locators the server actually stored.
-		// (!) A NaN total_before (an instance built without a server total) is not a
-		// refusal: it carries no information, so the server's own count is taken as is.
-		const total_before_int	= parseInt(total_before)
-		const landed			= Number.isNaN(total_before_int)
-			? accepted.length
-			: (parseInt(total) - total_before_int)
 		// value already exists case. Check if value already exist.
 		// (!) Note that here, the whole portal data has been compared in server
 		if (landed<=0) {

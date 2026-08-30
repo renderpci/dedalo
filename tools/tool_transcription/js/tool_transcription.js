@@ -1791,6 +1791,81 @@ tool_transcription.prototype.assign_speakers = function( options ) {
 
 
 /**
+* TRANSCRIPT_WORDS
+* The SPOKEN TEXT of a stored transcription: timecode marks, markup and
+* whitespace removed. Comparing it before and after a rebuild answers the only
+* question a curator really has — did anything I wrote disappear?
+*
+* @param {string} value
+* @returns {string}
+*/
+const transcript_words = function(value) {
+
+	return String(value)
+		.replace(/\[TC_[^\]]*_TC\]/g, ' ')
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/&nbsp;/gi, ' ')
+		.replace(/\s+/g, ' ')
+		.trim()
+}//end transcript_words
+
+
+
+/**
+* TRANSCRIPT_TAGS
+* Inventory of the INLINE markup of a stored transcription: element name → how
+* many times it opens. `<p>` is excluded because rebuilding the paragraphs is the
+* whole point of the operation; everything else is the archivist's apparatus
+* (emphasis, foreign words, uncertain readings) and losing any of it is a loss.
+*
+* @param {string} value
+* @returns {Object} { em:2, span:1, … }
+*/
+const transcript_tags = function(value) {
+
+	const found		= String(value).match(/<[a-zA-Z][a-zA-Z0-9-]*[^>]*>/g) || []
+	const inventory	= {}
+
+	for (let i = 0; i < found.length; i++) {
+		const name = found[i].replace(/^<([a-zA-Z][a-zA-Z0-9-]*)[^>]*>$/, '$1').toLowerCase()
+		if (name==='p') {
+			continue
+		}
+		inventory[name] = (inventory[name] || 0) + 1
+	}
+
+	return inventory
+}//end transcript_tags
+
+
+
+/**
+* LOST_TAGS
+* The elements `before` has and `after` does not, as printable 'em (2)' strings.
+*
+* @param {string} before
+* @param {string} after
+* @returns {Array<string>}
+*/
+const lost_tags = function(before, after) {
+
+	const from	= transcript_tags(before)
+	const to	= transcript_tags(after)
+	const lost	= []
+
+	for (const name in from) {
+		const missing = from[name] - (to[name] || 0)
+		if (missing > 0) {
+			lost.push( missing===1 ? name : `${name} (${missing})` )
+		}
+	}
+
+	return lost
+}//end lost_tags
+
+
+
+/**
 * REGROUP_PARAGRAPHS
 * Re-paragraph the transcription that is ALREADY in the component.
 *
@@ -1798,8 +1873,25 @@ tool_transcription.prototype.assign_speakers = function( options ) {
 * owner wants a different timecode density) are a wall of five-second fragments,
 * one per recogniser segment. This reads the stored text back into segments —
 * the timecode marks are the only structure needed to do that — and rebuilds it
-* with the current paragraph rules. Nothing is re-recognised, so it is instant
-* and cannot change a single word.
+* with the current paragraph rules. Nothing is re-recognised.
+*
+* WHAT IT MAY AND MAY NOT CHANGE (corrected 2026-08-30 — the docblock here used to
+* claim the operation "cannot change a single word", which was FALSE about markup
+* and about entities, and is why nobody looked). The component is the RICH-TEXT
+* one. Until that date the rebuild deleted every tag the value carried — emphasis,
+* foreign-word marking, uncertain readings — and re-escaped every entity outside
+* the four escape_html knows (`&#39;` was written back as the visible text
+* `&amp;#39;`), silently, over a value a curator had already worked on
+* (P0-12/CLI-24). `transcribers/lib/paragraphs.js` now carries each segment's
+* stored fragment verbatim, so inline markup and entities survive and the
+* operation is idempotent — but that is guaranteed for WELL-FORMED transcript
+* markup, not for every shape a stored value can take:
+*   - unbalanced markup is REPAIRED (closed at the paragraph end, re-opened in the
+*     next; a close tag with no opening is dropped);
+*   - a fragment with markup but no words (an image alone between two marks) is
+*     still dropped, as it always was.
+* So the rebuilt value is MEASURED against the current one, the operator is told
+* what would be lost, and nothing is written without a confirmation.
 *
 * The value goes back through set_value, i.e. the normal component save: the
 * previous text stays in the time machine like any other edit.
@@ -1807,7 +1899,9 @@ tool_transcription.prototype.assign_speakers = function( options ) {
 * @param {Object} [options]
 * @param {Object} [options.format_options] - paragraph/timecode options (lib/paragraphs.js)
 * @param {number} [options.key=0] - which value of the component to rebuild
-* @returns {boolean} false when there is nothing to regroup
+* @returns {boolean} false ONLY when there is nothing to rebuild (the caller shows
+*   the "no transcription" message on false). A rebuild the operator cancels, and
+*   a rebuild that would change nothing, both return true and write nothing.
 */
 tool_transcription.prototype.regroup_paragraphs = function(options) {
 
@@ -1826,9 +1920,41 @@ tool_transcription.prototype.regroup_paragraphs = function(options) {
 		return false
 	}
 
+	const new_value = segments_to_html( segments, opts.format_options || {} )
+
+	// Already in this shape. Saving would only add a time-machine entry that
+	// records nothing, so the operator is not asked and nothing is written.
+	if (new_value===current) {
+		return true
+	}
+
+	// The measured difference, not a promise: whatever the transform claims, what
+	// the operator confirms is what this comparison actually found.
+	const words_change	= transcript_words(new_value)!==transcript_words(current)
+	const tags_lost		= lost_tags(current, new_value)
+
+	let message = self.get_tool_label('regroup_paragraphs_confirm')
+		|| 'Rebuild the paragraphs of this transcription?'
+
+	if (words_change===true || tags_lost.length>0) {
+		message += '\n\n' + (self.get_tool_label('regroup_paragraphs_changes') || 'This rebuild would not be exact:')
+		if (words_change===true) {
+			message += '\n· ' + (self.get_tool_label('regroup_paragraphs_text_changes') || 'the text itself would change')
+		}
+		if (tags_lost.length>0) {
+			message += '\n· ' + (self.get_tool_label('regroup_paragraphs_format_lost') || 'formatting that would be lost') + ': ' + tags_lost.join(', ')
+		}
+	}
+
+	message += '\n\n' + (self.get_tool_label('regroup_paragraphs_time_machine') || 'The current text is kept in the time machine.')
+
+	if (!confirm( message )) {
+		return true
+	}
+
 	self.transcription_component.set_value(
 		key,
-		segments_to_html( segments, opts.format_options || {} )
+		new_value
 	)
 
 	return true

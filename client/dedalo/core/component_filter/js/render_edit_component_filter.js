@@ -504,8 +504,9 @@ export const get_input_element_read = (element, self) => {
 *   button_delete {boolean}
 *     Renders a 'reset' button that bulk-clears all project assignments for this record.
 *     Guards: (1) no-op if entries is already empty; (2) requires user confirmation via
-*     confirm(). On confirm, sends a single frozen changed_data item with action:'remove'
-*     and null id/value, which component_common::change_value interprets as a full-clear.
+*     confirm(). On confirm, sends a single frozen changed_data item with action:'clear',
+*     the EXPLICIT wipe (DATA-06, 2026-08-30) — every entry, in every language. The old
+*     spelling (action:'remove' with a null id) is refused now, client-side and server-side.
 *     (!) Uses confirm() for the confirmation prompt — a non-blocking dialog would be
 *     preferable.
 *
@@ -617,11 +618,17 @@ export const get_buttons = (self) => {
 					return
 				}
 
-				// A single changed_data item with action:'remove' and null id/value signals
-				// component_common::change_value to perform a full clear of all entries.
+				// DELIBERATE WIPE (DATA-06, 2026-08-30): drop EVERY project assignment,
+				// in every language. `action:'clear'` is the ONE explicit wildcard
+				// (component_common.update_data_value + the server's
+				// save_component.ts clear branch). The previous spelling — a `remove`
+				// carrying a null id — is now REFUSED at both doors
+				// (record.remove_without_id), because it is indistinguishable from an
+				// unresolved SINGLE-row delete (component_filter.js builds
+				// `locator?.id || null`), and that ambiguity used to empty the whole
+				// component and answer ok. Never restore it here.
 				const changed_data = [Object.freeze({
-					action	: 'remove',
-					id		: null,
+					action	: 'clear',
 					value	: null
 				})]
 				self.change_value({

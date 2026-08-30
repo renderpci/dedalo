@@ -292,7 +292,7 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		expect(meta[0]?.count).toBe(10 + CONCURRENT);
 	});
 
-	test('remove drops the id across ALL languages; unknown id fails cleanly', async () => {
+	test('remove drops the id across ALL languages; unknown id fails cleanly; id-less is refused', async () => {
 		// The seeded target has id 1 in FOUR languages (eng/fra/ita/spa) —
 		// removing id 1 must drop all four (the PHP cross-language contract).
 		const removed = await saveComponentData({
@@ -320,13 +320,31 @@ describe('component save round-trip (Phase 5d gate)', () => {
 		});
 		expect(missing.ok).toBe(false);
 
-		// id null → clear everything.
+		// id null → REFUSED, not "clear everything" (DATA-06, 2026-08-30:
+		// WC-2026-08-30-remove-requires-item-id). This assertion used to read
+		// `expect(cleared.ok).toBe(true)` against an empty component: it PINNED the
+		// defect — an id-less remove wiped every language and answered ok, while the
+		// unknown-id case above failed the save. The wipe is now the explicit
+		// `clear` action, exercised right below and owned by
+		// test/unit/remove_sentinel_native.test.ts.
+		await expect(
+			saveComponentData({
+				componentTipo: TARGET_TIPO,
+				sectionTipo: TEST_SECTION_TIPO,
+				sectionId: TEST_SECTION_ID,
+				lang: 'lg-spa',
+				changedData: [{ action: 'remove', id: null, value: null }],
+				userId: -1,
+			}),
+		).rejects.toThrow(/name the item id/);
+
+		// The explicit wipe still empties the component in every language.
 		const cleared = await saveComponentData({
 			componentTipo: TARGET_TIPO,
 			sectionTipo: TEST_SECTION_TIPO,
 			sectionId: TEST_SECTION_ID,
 			lang: 'lg-spa',
-			changedData: [{ action: 'remove', id: null, value: null }],
+			changedData: [{ action: 'clear', value: null }],
 			userId: -1,
 		});
 		expect(cleared.ok).toBe(true);

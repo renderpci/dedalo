@@ -566,7 +566,27 @@ export async function pollTranscriptionCompletion(
 		if (statusCode === 3) {
 			const data = (status as { transcription_data?: { segments?: TranscriptionSegment[] } })
 				.transcription_data;
-			const segments = Array.isArray(data?.segments) ? data.segments : [];
+			// NARROW THE REMOTE SEGMENTS TO THE DECLARED SHAPE — do not pass the
+			// transcriber's JSON through verbatim.
+			//
+			// `TranscriptionSegment` declares four fields and TypeScript strips none
+			// of them at runtime, so whatever extra keys the remote service put on a
+			// segment travelled all the way into the stored value. That mattered on
+			// 2026-08-30, when the paragraph rebuild grew an `html` FIDELITY OVERRIDE
+			// that emits its string unescaped: a hostile or compromised transcriber
+			// could answer `{text:'hola', html:'<img src=x onerror=…>'}` and have the
+			// tag stored in a heritage record. The override is a Symbol now, which
+			// JSON cannot carry, so that specific hole is closed at the other end too
+			// — this is the boundary half, and it is the one that also covers the
+			// next unescaped channel somebody adds without thinking about this seam.
+			const segments: TranscriptionSegment[] = (Array.isArray(data?.segments) ? data.segments : [])
+				.filter((segment): segment is TranscriptionSegment => typeof segment?.text === 'string')
+				.map((segment) => ({
+					text: segment.text,
+					start: typeof segment.start === 'number' ? segment.start : 0,
+					end: typeof segment.end === 'number' ? segment.end : null,
+					...(typeof segment.speaker === 'string' ? { speaker: segment.speaker } : {}),
+				}));
 			const outcome = await save({
 				lang: job.lang,
 				transcriptionDdo: job.transcriptionDdo,

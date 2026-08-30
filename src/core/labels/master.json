@@ -252,6 +252,7 @@
 	"error_record_external_write_refused": "Write refused: the component value is derived from an external service",
 	"error_record_in_use": "The record is being edited by another user",
 	"error_record_lang_not_installed": "Write refused: '{lang}' is not a language this installation declares",
+	"error_record_remove_without_id": "This delete did not name the item to remove, so nothing was removed",
 	"error_record_temporal_action_refused": "The action is not available on a temporal instance",
 	"error_relation_insert_refused": "The link into '{section_tipo}' was refused ({constraint})",
 	"error_request_invalid": "The request is invalid",

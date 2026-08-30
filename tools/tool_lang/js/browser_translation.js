@@ -27,7 +27,15 @@
 *   4. Split into ≤1000-char chunks via group_markdown_into_chunks().
 *   5. Post chunks + lang codes to the shared worker.
 *   6. Stream 'on_chunk' partial results into the target component's DOM.
-*   7. On 'end': restore placeholders, rebuild v7 entry objects, save() + refresh().
+*   7. On 'end' AND ONLY when every block translated: restore placeholders,
+*      rebuild v7 entry objects, save() + refresh().
+*   8. When any block failed (the worker posts 'on_block_error' and SKIPS the
+*      block, so its accumulated text is short), or the run produced no text at
+*      all, the run is REFUSED: nothing is saved, the target component's pre-run
+*      data is put back, the lost blocks are named in the status area and the
+*      returned Promise REJECTS. Saving what survived would overwrite the target
+*      language's existing — possibly human-made — text with a silently
+*      shortened machine translation, and report it as a success.
 *
 * Exports:
 *   get_browser_worker          — lazy-initialise the shared Worker
@@ -37,7 +45,7 @@
 */
 
 // imports
-	import {get_json_langs} from '../../../core/common/js/utils/index.js'
+	import {clone, get_json_langs} from '../../../core/common/js/utils/index.js'
 	import {tr} from '../../../core/common/js/tr.js'
 	import {html_to_markdown, markdown_to_html, group_markdown_into_chunks} from './markdown_utils.js'
 
@@ -59,6 +67,31 @@ const error_node = function(message) {
 
 	return node
 }//end error_node
+
+
+
+/**
+* STATUS_LINES_NODE
+* Builds a multi-line status node: one child div per line, each line set as a
+* TEXT node. Lines carry worker text (per-block exception messages, timeout
+* text) and must NEVER be parsed as HTML (DS-1, error_report_xss_tripwire).
+* @param {string} class_name - 'error' for a refused run, 'warning' while running.
+* @param {Array<string>} lines
+* @return HTMLElement
+*/
+const status_lines_node = function(class_name, lines) {
+
+	const node = document.createElement('div')
+	node.className = class_name
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = document.createElement('div')
+		line.textContent = String(lines[i])
+		node.appendChild(line)
+	}
+
+	return node
+}//end status_lines_node
 
 
 
@@ -143,6 +176,10 @@ export const dispose_browser_worker = function() {
 * A block already being processed by the model will run to completion first.
 * The worker is NOT terminated — call dispose_browser_worker() afterwards if
 * the user wants to fully release the model from memory.
+*
+* Nothing partial survives a cancellation: the blocks translated so far were
+* streamed into the target component's live data by 'on_chunk', and the
+* 'cancelled' handler puts the component's own value back before resolving.
 * @returns {boolean} Always true (the signal is fire-and-forget).
 */
 export const cancel_browser_translation = function() {
@@ -337,12 +374,22 @@ const get_source_text = function(source_component) {
 *                  Promise: 'init' | 'on_chunk' | 'end' | 'on_block_error' |
 *                  'cancelled' | 'error'
 *
-* Data-model update on 'end':
+* Data-model update on 'end' — ONLY for a COMPLETE run:
 *   Both `target_component.data.value[]` (legacy) and `target_component.data.entries[]`
 *   (v7) are updated before save() so the component reflects the translation
 *   regardless of which data shape the server expects. The entry `id` is
 *   preserved from the existing target entry when it exists, otherwise it falls
 *   back to the source entry id, maintaining the shared cross-language id contract.
+*
+* Refusal on an INCOMPLETE run:
+*   The worker does not abort on a block failure — it posts 'on_block_error' and
+*   SKIPS that block, so its accumulated text is short by exactly the paragraphs
+*   that failed. Every such message is counted here, and 'end' with a non-zero
+*   count (or with an empty result) saves NOTHING: the streamed partial text is
+*   removed from target_component.data, the component is re-rendered from its own
+*   untouched data and the Promise REJECTS naming the lost blocks. A partial
+*   translation is never written and never marked with a placeholder — writing
+*   either into a heritage record destroys the curator's existing text.
 *
 * @param {Object} options
 * @param {Object}        options.source_component           - Initialised component
@@ -367,8 +414,14 @@ const get_source_text = function(source_component) {
 * @param {Function}      [options.get_label]                - Tool label resolver: (key) => string.
 *                                                             Defaults to identity (key => key).
 * @returns {Promise<{result: boolean, msg: string}>}
-*   Resolves on success or user cancellation; rejects on fatal worker errors or
-*   empty source text.
+*   Resolves on a COMPLETE translation (saved) or on user cancellation (nothing
+*   saved); rejects on fatal worker errors, empty source text, and on an
+*   incomplete run — see "Refusal" above. Rejection (not a resolve carrying
+*   result:false) is load-bearing: tool_lang's click handler paints its own
+*   'Translation completed' banner in .then(), and tool_lang_multi's
+*   automatic_translation_all counts every resolved promise as ok in its
+*   (n/total) summary — so a resolve here would report success for a run that
+*   saved nothing.
 */
 export const translate_component_browser = async function(options) {
 
@@ -431,6 +484,108 @@ export const translate_component_browser = async function(options) {
 				streaming_overlay_content.innerHTML = ''
 			}
 		}
+
+		// failed_blocks. Every 'on_block_error' the worker posts for THIS run.
+		// The worker does NOT stop on a block failure: it skips the block and keeps
+		// translating (browser_transformer.js, the catch inside the block loop —
+		// "Skip this block — accumulated_text stays unchanged"), so its final
+		// accumulated text is short by exactly those paragraphs and nothing in the
+		// payload says so. This list is the only record that text is missing, and
+		// the 'end' case below refuses to save while it is non-empty.
+		// Per-run state: onmessage is reassigned on every call to this function, so
+		// this closure is never shared between two translations of the shared worker.
+			const failed_blocks = []
+
+		// target_data_snapshot. The target component's data as it was BEFORE any
+		// partial result was streamed into it: 'on_chunk' writes the in-progress
+		// translation straight into target_component.data.value[0], so a refused run
+		// must put this back or the truncated text stays on screen looking saved.
+		// has_value / has_entries keep the "key was absent" case distinct from
+		// "key was present and empty" — a component that had no value must keep
+		// having none.
+			const target_data_snapshot = {
+				has_value	: Object.hasOwn(target_component.data, 'value'),
+				value		: clone(target_component.data.value ?? null),
+				has_entries	: Object.hasOwn(target_component.data, 'entries'),
+				entries		: clone(target_component.data.entries ?? null)
+			}
+
+		/**
+		* RESTORE_TARGET_DATA
+		* Undo the streaming preview: put target_component.data back to the snapshot
+		* and re-render the component from it.
+		*
+		* Every run that does not save MUST call this. 'on_chunk' writes the partial
+		* translation into the live instance data, so leaving it there hands the next
+		* change_value/save of that component a machine-made fragment to persist —
+		* the same silent overwrite, only deferred.
+		* @return void
+		*/
+		const restore_target_data = function() {
+
+			// restore the pre-run data (delete the key when there was none)
+				if (target_data_snapshot.has_value) {
+					target_component.data.value = clone(target_data_snapshot.value)
+				}else{
+					delete target_component.data.value
+				}
+				if (target_data_snapshot.has_entries) {
+					target_component.data.entries = clone(target_data_snapshot.entries)
+				}else{
+					delete target_component.data.entries
+				}
+
+			// re-render from the restored data. build_autoload:false rebuilds the
+			// instance from its own data (common.refresh step 4) instead of
+			// re-fetching — and that data IS the stored value, because these paths
+			// never called save(). common.refresh returns false without rebuilding when
+			// the instance status is not 'rendered'; the restored data is what any later
+			// render reads either way, and the caller's outcome does not depend on it.
+				Promise.resolve()
+				.then(function(){
+					return target_component.refresh({
+						build_autoload : false
+					})
+				})
+				.catch(function(refresh_error){
+					// a failed re-render does not change the outcome: nothing was written
+					console.error('Refresh failed after a translation that saved nothing:', refresh_error)
+				})
+		}//end restore_target_data
+
+
+
+		/**
+		* REFUSE_RUN
+		* Abandon the translation WITHOUT WRITING ANYTHING: put the target
+		* component's own data back, re-render it from that data, name what went
+		* wrong in the status area and reject.
+		*
+		* Rejecting (instead of resolving with result:false) is load-bearing on both
+		* callers: tool_lang's click handler paints its own 'Translation completed'
+		* banner over this status area in .then() (render_tool_lang.js
+		* build_automatic_translation), and tool_lang_multi's
+		* automatic_translation_all counts every resolved promise as ok in its
+		* (n/total) summary. A resolve here would erase this message and report
+		* success for a run that saved nothing.
+		* @param {Array<string>} lines - operator-facing message, one line each.
+		* @return void
+		*/
+		const refuse_run = function(lines) {
+
+			if (streaming_overlay) {
+				streaming_overlay.classList.add('hide')
+			}
+
+			restore_target_data()
+
+			if (status_container) {
+				status_container.classList.remove('loading_status')
+				status_container.replaceChildren(status_lines_node('error', lines))
+			}
+
+			reject(new Error(lines.join(' ')))
+		}//end refuse_run
 
 		// handle messages sent back from the worker
 		translate_worker.onmessage = function(e) {
@@ -501,15 +656,42 @@ export const translate_component_browser = async function(options) {
 					break;
 				}
 
-				// all chunks translated; restore placeholders, save, resolve
+				// the worker has stopped. It posts 'end' whether or not every block
+				// translated, so this case decides between SAVING a complete translation
+				// and REFUSING an incomplete one. Nothing above the two refusals may
+				// report success or touch the stored value.
 				case 'end': {
 
-					if (streaming_overlay) {
-						streaming_overlay.classList.add('hide')
-					}
-					if (status_container) {
-						status_container.classList.remove('loading_status')
-						status_container.innerHTML = get_label('translation_completed') || 'Translation completed'
+					// REFUSAL 1 — blocks were lost.
+					// The accumulated text is missing those paragraphs. Saving it would
+					// overwrite the target language's existing text — which may be a
+					// human translation — with a shorter machine one, and the operator
+					// would be told it completed. Name the lost blocks (capped at MAX_LISTED,
+					// so a run that lost dozens still shows the "nothing was saved" line
+					// without scrolling) and state that the existing text is intact: that
+					// is the fact a curator needs first.
+					if (failed_blocks.length > 0) {
+
+						const MAX_LISTED	= 10
+						const total_blocks	= failed_blocks[0].total
+						const block_label	= get_label('block_error') || 'Block error'
+
+						const lines = [
+							`${get_label('translation_incomplete') || 'Translation refused: the model failed on part of the text'} (${failed_blocks.length}/${total_blocks})`
+						]
+						const listed = Math.min(failed_blocks.length, MAX_LISTED)
+						for (let i = 0; i < listed; i++) {
+							const failed = failed_blocks[i]
+							lines.push(`${block_label} ${failed.block}/${failed.total}: ${failed.message}`)
+						}
+						if (failed_blocks.length > MAX_LISTED) {
+							lines.push(`… +${failed_blocks.length - MAX_LISTED}`)
+						}
+						lines.push(get_label('nothing_saved') || 'Nothing was saved. The existing text in the target language is unchanged.')
+						lines.push(get_label('translation_retry') || 'Run the translation again to retry.')
+
+						refuse_run(lines)
+						break;
 					}
 
 					// Prefer accumulated_text (streaming model); fall back to stringifying
@@ -519,6 +701,30 @@ export const translate_component_browser = async function(options) {
 					// markdown -> HTML, then restore Dédalo tag placeholders
 					const translated_html = markdown_to_html(translated_md)
 					const restored_text = restore_placeholders(translated_html, placeholders)
+
+					// REFUSAL 2 — the run produced no text at all.
+					// The source was checked non-empty before the worker was started (the
+					// 'Empty source text' rejection above), so an empty result is a failure
+					// however the worker reached it (zero blocks, a non-streaming payload
+					// that stringified to nothing). Saving it would BLANK the target
+					// language and answer ok.
+					if (!restored_text || restored_text.trim()==='') {
+						refuse_run([
+							get_label('translation_empty_result') || 'Translation refused: the model returned no text',
+							get_label('nothing_saved') || 'Nothing was saved. The existing text in the target language is unchanged.',
+							get_label('translation_retry') || 'Run the translation again to retry.'
+						])
+						break;
+					}
+
+					// complete run: every block translated and the result is not empty
+					if (streaming_overlay) {
+						streaming_overlay.classList.add('hide')
+					}
+					if (status_container) {
+						status_container.classList.remove('loading_status')
+						status_container.innerHTML = get_label('translation_completed') || 'Translation completed'
+					}
 
 					// shared cross-language id from source entry
 					// v7 entries carry an `id` that is shared across language variants of
@@ -586,12 +792,25 @@ export const translate_component_browser = async function(options) {
 					break;
 				}
 
-				// non-fatal per-block error; show warning and continue
+				// per-block failure. Non-fatal FOR THE WORKER (it skips the block and
+				// translates the rest) but fatal for the RESULT: the text of this block
+				// is gone from the accumulated translation. Record it — 'end' refuses to
+				// save while failed_blocks is non-empty — and keep the run going so the
+				// operator sees the whole account at once instead of one block at a time.
 				case 'on_block_error': {
+					failed_blocks.push({
+						block	: data.block,
+						total	: data.total,
+						message	: data.message
+					})
 					console.warn(`Block ${data.block}/${data.total} failed: ${data.message}`)
 					if (status_container) {
 						const block_warn_label = get_label('block_error') || 'Block error'
-						status_container.innerHTML = `<div class="warning">${block_warn_label}: ${data.block}/${data.total}</div>`
+						// the RUNNING COUNT, not only the last failure: a run can lose
+						// several blocks and the earlier ones must not disappear from view
+						status_container.replaceChildren(status_lines_node('warning', [
+							`${block_warn_label}: ${data.block}/${data.total} (${failed_blocks.length})`
+						]))
 					}
 					if (data.accumulated_text && streaming_overlay_content) {
 						streaming_overlay_content.innerHTML = markdown_to_html(data.accumulated_text)
@@ -599,11 +818,15 @@ export const translate_component_browser = async function(options) {
 					break;
 				}
 
-				// translation cancelled by user
+				// translation cancelled by user. The worker stopped between blocks, so
+				// the accumulated text is a fragment; it was never saved, but 'on_chunk'
+				// left it in the live instance data — put the target's own value back
+				// before the component can carry the fragment into a later save.
 				case 'cancelled': {
 					if (streaming_overlay) {
 						streaming_overlay.classList.add('hide')
 					}
+					restore_target_data()
 					if (status_container) {
 						status_container.classList.remove('loading_status')
 						status_container.innerHTML = get_label('translation_cancelled') || 'Translation cancelled'
@@ -612,12 +835,16 @@ export const translate_component_browser = async function(options) {
 					break;
 				}
 
-				// fatal worker error; dispose worker and reject
+				// fatal worker error; dispose worker and reject. Whatever had already
+				// been streamed into the target component is a fragment of a run that
+				// died — put the target's own value back so it cannot be carried into
+				// a later save of that component.
 				case 'error': {
 					dispose_browser_worker()
 					if (streaming_overlay) {
 						streaming_overlay.classList.add('hide')
 					}
+					restore_target_data()
 					if (status_container) {
 						status_container.classList.remove('loading_status')
 					}
@@ -641,6 +868,12 @@ export const translate_component_browser = async function(options) {
 			const msg = e.message || e.filename || 'Unknown worker error'
 			console.error('Worker error [browser_transformer]:', msg, e)
 			dispose_browser_worker()
+			if (streaming_overlay) {
+				streaming_overlay.classList.add('hide')
+			}
+			// same as the fatal 'error' case: nothing was saved, so nothing partial
+			// may be left in the component's live data
+			restore_target_data()
 			if (status_container) {
 				status_container.classList.remove('loading_status')
 				// worker/engine text (exception message, file path): TEXT only (DS-1)

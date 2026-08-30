@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global  */
+/*global get_label */
 /*eslint no-undef: "error"*/
 
 // imports
@@ -18,9 +18,9 @@
 *   REORDER  — dragging a record within the same portal repositions it by calling
 *              `component_portal.prototype.sort_data`, which persists the new order
 *              via the change_value → API pipeline.
-*   COPY     — dragging a record from one portal to a compatible portal calls
-*              `link_record` on the target and `unlink_record` on the source,
-*              effectively moving the relation.
+*   MOVE     — dragging a record from one portal to a compatible portal LINKS it into
+*              the target first and unlinks it from the source ONLY when the target
+*              actually accepted it (see on_drop for why that order is load-bearing).
 *
 * Compatibility between portals is governed by `properties.draggable_to`, an
 * array of tipo strings (e.g. ['dd1234', 'dd1235']) declared on the source portal.
@@ -290,10 +290,12 @@ export const on_dragend = function(node, event, options) {
 *
 * Two branches:
 *
-*   COPY (cross-portal): when `source_tipo !== self.tipo`, the dragged record is
+*   MOVE (cross-portal): when `source_tipo !== self.tipo`, the dragged record is
 *   being moved from another portal. After verifying compatibility via
-*   `draggable_to`, calls `link_record` on this portal and `unlink_record` on
-*   the source portal instance (looked up via `get_all_instances`).
+*   `draggable_to`, it AWAITS `link_records` on this portal and unlinks the record
+*   from the source instance (looked up via `get_all_instances`) only if the target
+*   accepted it. See the (!) note in the branch: the reverse order silently
+*   destroyed curated relations.
 *
 *   REORDER (same-portal): when source and target are the same portal, computes
 *   the absolute `target_key` (accounting for the current paginator offset) and
@@ -313,9 +315,14 @@ export const on_dragend = function(node, event, options) {
 * @param {Object} options - context injected by the render layer
 *   @param {number|undefined} options.paginated_key - zero-based position of this drop target in the current page
 *   @param {Object} options.caller - the component_portal instance that owns this drop node
-* @returns {boolean} true on success; false when the drop is rejected (same position or incompatible portal)
+* @returns {Promise<boolean>} true on success; false when the drop is rejected (same
+*          position, incompatible portal, or a target that refused the record).
+*          ASYNC because the cross-portal move must read the target's answer before it
+*          touches the source. Every wiring in render_edit_component_portal.js ignores
+*          the return value (they are DOM event listeners), so the promise is nobody's
+*          contract — the branch below awaits what it needs itself.
 */
-export const on_drop = function(node, event, options) {
+export const on_drop = async function(node, event, options) {
 	event.preventDefault() // Necessary. Allows us to drop.
 	event.stopPropagation()
 
@@ -329,8 +336,8 @@ export const on_drop = function(node, event, options) {
 	// the drag element will sent the data of the original position, the source_key
 	const data_parse = JSON.parse(data)
 
-	// COPY
-		// copy data from other portal
+	// MOVE
+		// move a record in from another portal: link it here, then unlink it there
 		if( data_parse.source_tipo !== self.tipo ){
 
 			// check if the portal is compatible
@@ -341,17 +348,66 @@ export const on_drop = function(node, event, options) {
 				return false
 			}
 
-			// add new locator to the target portal
-			self.link_record(data_parse.locator)
+			// (!) LINK FIRST, UNLINK ONLY ON A CLEAN LANDING. THE ORDER IS THE FIX.
+			// Until 2026-08-30 this called link_record() WITHOUT awaiting it, discarded
+			// its answer, and then unlinked the source UNCONDITIONALLY. link_records
+			// never throws — it ANSWERS {linked, refused, total} and names every locator
+			// that did not land (data_limit, duplicate, api_error, not_stored,
+			// refused_by_server). None of that was read, so on any refusal the curated
+			// relation was gone from the source portal and had never been created in the
+			// target one, and the operator was shown nothing at all. A destructive step
+			// must never precede the step that can fail.
+			// The pristine copy is taken before the call because link_records mutates the
+			// locator it is given (it stamps from_component_tipo with the TARGET's tipo).
+				const source_locator = Object.assign({}, data_parse.locator)
 
-			// remove the locator from the source portal
-			const source_id		= data_parse.source_id
-			const ar_instances	= get_all_instances()
+				const outcome = await self.link_records([data_parse.locator])
+				if (outcome.linked.length===0) {
+					// nothing landed: the source keeps its record, untouched.
+					// alert(), like the picker's refusal path (component_portal.js
+					// link_terms handler): the operator just made a gesture that looks
+					// like a move and must not be left believing it happened.
+					const reasons = outcome.refused.map(item => item.reason).filter(Boolean)
+					alert(
+						(get_label.error || 'Error') + ':\n'
+						+ (reasons.length>0 ? reasons.join('\n') : 'refused')
+					);
+					return false
+				}
 
-			const source_instance = ar_instances.find(el => el.id === source_id)
-			if(source_instance){
-				source_instance.unlink_record(data_parse.locator)
-			}
+			// remove the locator from the source portal — the target holds it now
+				const source_id		= data_parse.source_id
+				const ar_instances	= get_all_instances()
+
+				const source_instance = ar_instances.find(el => el.id === source_id)
+				if(!source_instance){
+					// the record is linked in BOTH portals now. Say so: a silent return
+					// here leaves a duplicate the operator never asked for and cannot
+					// explain later.
+					console.error(
+						'(!) [drag_and_drop.on_drop] the record was linked into the target portal but the'
+						+ ' source instance is gone, so it could not be unlinked there. It is now linked in'
+						+ ' BOTH portals. source_id:', source_id
+					);
+					return false
+				}
+
+			// (!) NEVER UNLINK WITHOUT AN id. component_portal.unlink_record sends
+			// {action:'remove', id: locator.id}, and save_component.ts reads
+			// `change.id ?? null` where null does not mean "remove nothing" — it means
+			// "clear ALL entries in all languages", and it answers ok. An id-less locator
+			// here would empty the whole SOURCE portal instead of moving one record.
+				const source_locator_id = source_locator.id
+				if (!Number.isFinite(Number(source_locator_id)) || Number(source_locator_id)<=0) {
+					console.error(
+						'(!) [drag_and_drop.on_drop] refused to unlink from the source portal: the dragged'
+						+ ' locator carries no usable id, and a remove without an id clears the whole'
+						+ ' component. The record is now linked in BOTH portals. locator:', source_locator
+					);
+					return false
+				}
+
+				await source_instance.unlink_record(source_locator)
 
 			return true
 		}

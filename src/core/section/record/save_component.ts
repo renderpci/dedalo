@@ -11,7 +11,8 @@
  *      the CALLER (dispatch) with the request principal;
  *   2. read the component's current item array from the matrix row;
  *   3. apply each changed_data item — actions handled here: update, insert,
- *      remove, set_data, sort_data, sort_by_column, add_new_element
+ *      remove (which MUST name an item id — see unnamedRemoveRefusal), clear,
+ *      set_data, sort_data, sort_by_column, add_new_element
  *      (id-matched replace with numeric-string id normalization, PHP COMP-02;
  *      translatable lang-slice + get_id_from_key id-sync, S1-01);
  *   4. write the FULL updated array back to the component's column (the PHP
@@ -21,7 +22,7 @@
  * The RELATION-specific write hooks (sort_data, sort_by_column,
  * add_new_element, relation_search index maintenance, delete_locator) live in
  * src/core/relations/save.ts — this module keeps the generic pipeline
- * (update/insert/remove/set_data, TM audit) and calls into them.
+ * (update/insert/remove/clear/set_data, TM audit) and calls into them.
  *
  * DATAFRAME saves (relations rebuild Phase C): when the component is a
  * component_dataframe slot and the request carries source.caller_dataframe,
@@ -74,10 +75,23 @@ import type { Principal } from '../../security/permissions.ts';
 /** One change from the client (PHP changed_data item). */
 export interface ChangedDataItem {
 	action: string;
-	/** Target item id ('update'); may arrive as a numeric string. */
+	/**
+	 * Target item id ('update', 'remove'); may arrive as a numeric string.
+	 *
+	 * A 'remove' MUST carry one (`unnamedRemoveRefusal` below): absent, it used
+	 * to mean "empty the component in every language", which is now the separate
+	 * `clear` action.
+	 */
 	id?: number | string | null;
 	/** The new item value: {id, value, lang} for literals, a locator for relations. */
 	value: unknown;
+	/**
+	 * The item's POSITION in the rendered array — a client render index, not an
+	 * address the write engine resolves. Read by the lang-sliced 'insert' path
+	 * only (getIdFromKey, the shared-id lookup across sibling languages); every
+	 * other branch ignores it, which is why a 'remove' carrying a key and no id
+	 * is refused rather than silently interpreted.
+	 */
 	key?: number | null;
 }
 
@@ -502,6 +516,79 @@ export function ontologyTldRefusal(request: SaveRequest): string | null {
 }
 
 /**
+ * THE REMOVE SENTINEL (DATA-06, 2026-08-30 — closes the P0-8 audit row).
+ *
+ * A `remove` that names no item id used to CLEAR THE COMPONENT IN EVERY
+ * LANGUAGE and answer ok:true. One branch below it, a remove naming an id that
+ * is not stored fails the whole save. That asymmetry was the defect: naming the
+ * wrong item was refused, naming NO item destroyed everything and reported
+ * success. The null id is not a caller saying "all" — it is every caller's
+ * UNKNOWN-ID SENTINEL. What it cost, in the tree AS FOUND on 2026-08-30 (the
+ * client sites are being ported to `clear` in the same audit batch):
+ *   - `component_number` render_edit remove_handler passes `current_value?.id`,
+ *     and its own renderer writes `id: item.id || null`, so an unsaved slot
+ *     (and a stored id of 0) sent id:null — one row's delete button, and every
+ *     number in the component was gone;
+ *   - `component_input_text` / `component_email` `_do_remove` sent
+ *     `{id, key}` with a null id for an unsaved row — a KEY, which addresses a
+ *     position and which no branch of this engine resolves;
+ *   - `component_filter_records` build_changed_data_item left `entry_id`
+ *     null whenever the tipo was not in the entries it was handed — clearing one
+ *     section's record filter dropped the user's filters for ALL sections,
+ *     which WIDENS what that account can read;
+ *   - the MCP door (`dedalo_save_component`) took an OPTIONAL `item_id` that
+ *     mapped straight onto id:null, so an agent asked to "remove the English
+ *     title" wiped every other language and was told it succeeded.
+ *
+ * So: a remove NAMES the item it removes, and emptying the component is the
+ * separate, explicit `clear` action (applySaveComponentData below). Refused
+ * before the transaction opens — the answer depends only on the incoming
+ * changes, so there is nothing to roll back and no row to lock.
+ *
+ * Divergence from the PHP oracle, deliberately:
+ * `engineering/wire_contract/WC-2026-08-30-remove-requires-item-id.md`.
+ *
+ * Returns the refusal message, or null when every remove names an id. Pure —
+ * shared with the TEMPORAL door (./temporal.ts), which must refuse the same
+ * shape or an in-memory instance would answer where the persisted one refuses.
+ */
+/**
+ * THE THREE SPELLINGS OF "NO ID": null, undefined, and the empty string.
+ * `JSON.stringify` DROPS an undefined id, and the client's `item.id || null` idiom
+ * turns '' into null too — they all arrive here meaning "no id", and each one meant
+ * one row somebody tried to delete.
+ *
+ * A VALUE test, never a falsiness test: `0` and `'0'` are real, deletable ids, and
+ * eating them would turn this refusal into its own kind of data loss. The client
+ * mirrors this exact set in `is_unresolved_id` (component_common.js); the two are
+ * bonded by test/unit/remove_sentinel_native.test.ts.
+ */
+function namesNoItem(id: number | string | null | undefined): boolean {
+	return id === null || id === undefined || id === '';
+}
+
+/**
+ * A `key` names a POSITION in the rendered array, not an item — so a remove that
+ * named one is the near-miss worth calling out, rather than letting the caller go
+ * on believing a key is an address.
+ */
+function positionalNote(key: number | string | null | undefined): string {
+	if (key === null || key === undefined) return '';
+	return ` (this change named key ${key}, which addresses a POSITION in the rendered array, not an item)`;
+}
+
+export function unnamedRemoveRefusal(changedData: readonly ChangedDataItem[]): string | null {
+	const unnamed = changedData.find(
+		(change) => change.action === 'remove' && namesNoItem(change.id),
+	);
+	if (unnamed === undefined) return null;
+	return (
+		"a 'remove' must name the item id it removes" +
+		`${positionalNote(unnamed.key)}; to empty the component in every language send {action:'clear'} instead`
+	);
+}
+
+/**
  * PHP lang-slice gate — supports_translation && !is_relation (PHP
  * update_data_value :4110-4126/:4169-4180 conditions): only the literal
  * translation-supporting CLASSES (registry classSupportsTranslation, PHP
@@ -615,6 +702,50 @@ export function getIdFromKey(
  * every slice item, so the same object reference is never stored at two array
  * positions.
  */
+/**
+ * THE REMOVE TARGET, normalized — or a refusal.
+ *
+ * Extracted from `applySaveComponentData` (2026-08-30) both to keep that function
+ * under the complexity ratchet and because the id grammar deserves ONE home: a
+ * numeric string is the same id as its number (`'3'` and `3` name one item), and
+ * the three no-id spellings are refused together.
+ *
+ * The throw is UNREACHABLE through `saveComponentData`, which refuses the shape in
+ * `unnamedRemoveRefusal` before the transaction opens. It is kept as the applier's
+ * own last line of defence: the one thing that must never happen again is an
+ * id-less remove EMPTYING the component and answering ok (DATA-06). A deliberate
+ * wipe is `action: 'clear'`.
+ */
+function resolveRemoveTargetId(
+	change: { id?: number | string | null },
+	coordinates: { tipo: string; section_tipo: string; section_id: number },
+): number | string {
+	const raw = change.id ?? null;
+	const targetId = typeof raw === 'string' && /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : raw;
+	if (targetId === null || targetId === '') {
+		throw new DedaloError('record.remove_without_id', {
+			message: "saveComponentData: a 'remove' must name the item id it removes",
+			publicMessage: "a 'remove' must name the item id it removes",
+			coordinates,
+		});
+	}
+	return targetId;
+}
+
+/**
+ * Every item EXCEPT the one the id names. Translated items share ids, so this is
+ * the PHP cross-language removal for translatable literals: one id, every language.
+ * Numeric-string ids are compared as numbers, matching `resolveRemoveTargetId`.
+ */
+function withoutItemId(items: unknown[], targetId: number | string): unknown[] {
+	return items.filter((item) => {
+		const itemId = (item as { id?: number | string } | null)?.id;
+		const normalized =
+			typeof itemId === 'string' && /^\d+$/.test(itemId) ? Number.parseInt(itemId, 10) : itemId;
+		return normalized !== targetId;
+	});
+}
+
 export function applyUpdate(
 	items: unknown[],
 	change: ChangedDataItem,
@@ -785,6 +916,24 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	const tldRefusal = ontologyTldRefusal(effectiveRequest);
 	if (tldRefusal !== null) {
 		return { ok: false, message: tldRefusal, data: [] };
+	}
+	// THE REMOVE SENTINEL (see unnamedRemoveRefusal above). Same pre-transaction
+	// reasoning: the answer is a property of the incoming changes alone.
+	// A THROW, not `ok:false`: the dispatch save handler wraps an ok:false in
+	// `record.save_failed` (internal/500, disclosure `operator`), so the reason
+	// would never reach the curator whose delete button did nothing — and this
+	// refusal is only useful if the actor is told what to send instead.
+	const removeRefusal = unnamedRemoveRefusal(effectiveRequest.changedData);
+	if (removeRefusal !== null) {
+		throw new DedaloError('record.remove_without_id', {
+			message: `saveComponentData: ${removeRefusal}`,
+			publicMessage: removeRefusal,
+			coordinates: {
+				section_tipo: effectiveRequest.sectionTipo,
+				section_id: effectiveRequest.sectionId,
+				tipo: effectiveRequest.componentTipo,
+			},
+		});
 	}
 
 	const result = await withTransaction(() => applySaveComponentData(effectiveRequest));
@@ -1013,6 +1162,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			change.action !== 'update' &&
 			change.action !== 'insert' &&
 			change.action !== 'remove' &&
+			change.action !== 'clear' &&
 			change.action !== 'set_data' &&
 			change.action !== 'sort_data' &&
 			change.action !== 'sort_by_column' &&
@@ -1152,26 +1302,36 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			continue;
 		}
 
+		if (change.action === 'clear') {
+			// THE EXPLICIT WIPE (2026-08-30, DATA-06 — the WC entry is
+			// WC-2026-08-30-remove-requires-item-id). This is the behaviour the
+			// id-less `remove` used to have, moved behind a word that says it:
+			// EVERY item of the component in EVERY language, whatever the request
+			// lang. A caller that means one language sends the remaining items as
+			// `set_data` (lang-sliced) or removes by id.
+			//
+			// No dataframe cascade, exactly as the branch it replaces (PHP
+			// update_data_value :4235-4243 does not cascade on the clear-all path
+			// either): the paired frames of the cleared items are left in their
+			// slots. That is INHERITED, not endorsed — it is the same orphan the
+			// old path made, and it stays a known gap rather than an unreviewed
+			// extra deletion smuggled into a data-loss fix.
+			hasRemovals = true;
+			items = [];
+			continue;
+		}
+
 		if (change.action === 'remove') {
 			hasRemovals = true;
-			let targetId = change.id ?? null;
-			if (typeof targetId === 'string' && /^\d+$/.test(targetId)) {
-				targetId = Number.parseInt(targetId, 10);
-			}
-			if (targetId === null) {
-				// PHP: id null = clear ALL entries in all languages.
-				items = [];
-				continue;
-			}
+			const targetId = resolveRemoveTargetId(change, {
+				tipo: componentTipo,
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+			});
 			// Remove EVERY item with the id — translated items share ids, so this
 			// is the PHP cross-language removal for translatable literals.
 			const before = items.length;
-			items = items.filter((item) => {
-				const itemId = (item as { id?: number | string } | null)?.id;
-				const normalized =
-					typeof itemId === 'string' && /^\d+$/.test(itemId) ? Number.parseInt(itemId, 10) : itemId;
-				return normalized !== targetId;
-			});
+			items = withoutItemId(items, targetId);
 			if (items.length === before) {
 				// PHP fails the save when the id does not exist.
 				return { ok: false, message: `remove: no item with id ${targetId}` };
@@ -1182,8 +1342,8 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// translatable-literal mains PHP guards on the removed id no longer
 			// existing in any OTHER language (frames are lang-agnostic); the TS
 			// remove above strips ALL languages at once, so the unconditional
-			// cascade here is exactly that occurrences<=1 case. The id===null
-			// clear-all branch does NOT cascade — PHP doesn't either (:4235-4243).
+			// cascade here is exactly that occurrences<=1 case. The `clear`
+			// branch above does NOT cascade — PHP doesn't either (:4235-4243).
 			await removeDataframeDataById(
 				table,
 				sectionTipo,
