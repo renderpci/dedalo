@@ -82,6 +82,13 @@ services:
       # Leave it empty (the default here) when you install with the CLI recipe at the
       # top of this file, which needs no wizard at all. Drop the value once sealed.
       DEDALO_INSTALL_ALLOWED_IPS: ${DEDALO_INSTALL_ALLOWED_IPS:-}
+      # WHERE THE BACKUPS ARE. The `backup` service below writes its dumps into the
+      # `backups` volume at /backups/db, but the engine's default is
+      # <privateDir>/backups/db — a DIFFERENT directory, and an empty one. Without
+      # this the stack takes real nightly backups while the maintenance panel
+      # reports none, and `backupRequire` then REFUSES a code update on the
+      # strength of that. The two halves must name the same path.
+      DEDALO_BACKUP_DIR: /backups/db
       DEDALO_DEV_MODE: "false"
       DEDALO_DEBUG_API_ERRORS: "false"
       MEDIA_DEV_ROUTE_ENABLED: "false"
@@ -89,9 +96,13 @@ services:
       # proxy reaches the engine over the shared socket volume. If you set it for
       # debugging, do NOT add a `ports:` mapping for it.
     volumes:
-      - private:/private          # .env, sessions, ts_state.json, backups — SECRETS
+      - private:/private          # .env, sessions, ts_state.json — SECRETS
       - media:/srv/dedalo/media   # written by the engine, READ by the proxy
       - socket:/run/dedalo        # the unix socket, shared with the proxy
+      # READ so the panel and the code-updater's precondition can SEE the nightly
+      # dumps; WRITE because the make_backup widget creates them from the panel
+      # too, into the same directory. Same volume the `backup` service writes.
+      - backups:/backups
     healthcheck:
       test: ["CMD", "curl", "--fail", "--unix-socket", "/run/dedalo/dedalo_ts.sock", "http://localhost/health"]
       interval: 30s
@@ -219,6 +230,10 @@ services:
         set -u
         D=/opt/dedalo/master_dedalo/deploy
         export DEDALO_BACKUP_STATUS_DIR=/tmp/dedalo-backup-status
+        # Which stores this loop promises. Without it the aggregate can only see
+        # the stores that RECORDED a status, so a step that never ran at all is
+        # invisible and a partial run reports success (see dedalo-backup-step.sh).
+        export DEDALO_BACKUP_EXPECTED_STORES="matrix_db media private"
         sleep 3600 & wait $${!}
         while :; do
           rm -rf "$$DEDALO_BACKUP_STATUS_DIR"

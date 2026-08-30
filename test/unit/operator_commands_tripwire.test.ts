@@ -638,6 +638,43 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 		).toEqual(active);
 	});
 
+	test('the compose stack SHOWS the engine the backups it takes', () => {
+		// A backup the panel cannot see is a backup the operator does not have.
+		// The compose `backup` service writes its dumps into the `backups` volume,
+		// but the engine's default backup directory is <privateDir>/backups/db — a
+		// DIFFERENT path. Unwired, the stack took real nightly dumps while the
+		// maintenance panel reported none, and the code-updater's `backupRequire`
+		// precondition then REFUSED an update on the strength of that.
+		const compose = read('docker-compose.yml');
+
+		// Where the backup service actually writes its DB dumps.
+		const writesTo = /dedalo-db-backup\.sh[^\n]*--dir\s+(\S+)/.exec(compose)?.[1];
+		expect(writesTo, 'no compose db-backup --dir found').toBeDefined();
+
+		// Where the engine is told to look.
+		const readsFrom = /^\s*DEDALO_BACKUP_DIR:\s*(\S+)\s*$/m.exec(compose)?.[1];
+		expect(
+			readsFrom,
+			'docker-compose.yml sets no DEDALO_BACKUP_DIR for the engine, so it looks in ' +
+				'<privateDir>/backups/db while the backup service writes elsewhere — real ' +
+				'backups, and a panel that reports none.',
+		).toBeDefined();
+		expect(readsFrom).toBe(writesTo);
+
+		// ...and the engine's service must MOUNT the volume that path lives on,
+		// or the directory is simply absent inside its container.
+		const mountRoot = (readsFrom ?? '').split('/').filter(Boolean)[0];
+		const appService = compose.slice(0, compose.indexOf('  backup:'));
+		expect(
+			new RegExp(`-\\s*[a-z_]+:/${mountRoot}\\b`).test(appService),
+			`the engine service does not mount anything at /${mountRoot}, so ${readsFrom} ` +
+				'does not exist in its container.',
+		).toBe(true);
+
+		// The compose loop declares its stores too (same rule as the systemd unit).
+		expect(compose).toContain('DEDALO_BACKUP_EXPECTED_STORES=');
+	});
+
 	test('the step runner FAILS a run whose expected store never recorded', () => {
 		// The behavioural half: the declaration must actually be enforced.
 		const runner = read('deploy/dedalo-backup-step.sh');
