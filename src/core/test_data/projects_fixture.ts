@@ -50,7 +50,21 @@ const PROJECTS_ORDER_TIPO = 'dd1631';
 /** The second project this fixture owns. */
 export const SUITE_SECOND_PROJECT_ID = 930031;
 
-/** Ids below this are installed records; the sweep must never reach them. */
+/**
+ * A TYPO GUARD on the one id this fixture owns — NOT a reserved band.
+ *
+ * This module sweeps by an explicit hardcoded id, so the only way it can touch
+ * an installed record is if that constant is edited to a low value. The floor
+ * refuses that.
+ *
+ * (!) It asserts nothing about the counter and reserves nothing: there is no
+ * reserved `section_id` range in this system. Test isolation is the dedicated
+ * test DATABASE and its markers, and a real heritage section may legitimately
+ * reach any id — so an allocator CEILING at this number (the shape audit row
+ * GATE-51/P2-24 prescribes) would be a DEFECT: it would refuse a legitimate
+ * record on a large section. The counter also moves through this id, by design
+ * — `insertMatrixRecordWithExplicitId` raises it with GREATEST.
+ */
 const SCRATCH_ID_FLOOR = 900000;
 
 function assertScratchId(): void {

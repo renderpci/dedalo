@@ -88,9 +88,15 @@ The live-oracle era is over. The baselines of record are FROZEN:
     `tool_diffusion` silently disappears), asserted before Chrome starts. The
     second project the `dd153` `component_filter` needs (there is no unchecked
     box without it) is installed pre-run and swept after
-    (`src/core/test_data/projects_fixture.ts`, explicit id in the reserved
-    `>= 900000` band so the shared counter never moves). Gate:
-    `test/unit/client_situations_native.test.ts`. 
+    (`src/core/test_data/projects_fixture.ts`, at one explicit id it owns and
+    sweeps). Gate: `test/unit/client_situations_native.test.ts`.
+    (!) There is NO reserved `section_id` band. Test isolation is the dedicated
+    test DATABASE and its markers, never an id range: a real heritage section
+    may legitimately pass any id, so no range is ever "clear of genuine
+    records". An explicit id also does NOT keep the counter still — the
+    allocator raises it with GREATEST (`insertMatrixRecordWithExplicitId`),
+    which is why `test3`'s counter stands in the hundreds of thousands. That is
+    correct behaviour, not drift. 
 - `bunx tsc --noEmit` — zero-NEW-errors rule (pre-existing baseline is   ledgered in `rewrite/LEDGER.md`). 
 - `bun run test:update` — the code-updater's REAL-SCENARIO drill (opt-in, `scripts/update_drill.ts`): a scratch `git clone` gets the release commit (version bump + bun pin), a REAL master instance builds + serves the 7.0.1 release through the wire, a git-archive copy of this checkout under a supervisor loop installs it across the planned-death restart — panel probe → manifest → tampered-sha refusal → job frames → `/health` answering 7.0.1 → sentinel confirmed. Needs the suite DB (`test:db:setup`) + network for the quarantine `bun install`; ~3–5 min; never touches the app DB or the live private state. 
 - `bun run test:update:dev` — the same drill on the DEVELOPER CHANNEL: the
