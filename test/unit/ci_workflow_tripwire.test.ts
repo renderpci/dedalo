@@ -287,6 +287,10 @@ function ledgerTripwires(): string[] {
  */
 const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
+		'test/unit/remove_sentinel_native.test.ts',
+		"The refusal it gates is only meaningful against real stored data: it saves a component in several languages through the real save door, then sends an id-less `remove` and asks the DATABASE what survived — the column, the item-id counter in `meta` and the time-machine tail must all be byte-unchanged, and `action:'clear'` must empty every language AND be audited. A mocked store would prove nothing about the wipe this gate exists to prevent",
+	],
+	[
 		'test/unit/marc_identity_native.test.ts',
 		"Its whole point is behavioural: it creates real records carrying a real code component, imports a MARC file whose control number matches, and asserts the row landed on the RIGHT record — plus the destructive control, that a control number equal to another record's section_id does not write to that record. None of that exists without the suite database",
 	],

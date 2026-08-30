@@ -58,13 +58,23 @@ export interface ImportCodeTarget {
 }
 
 /**
- * How many candidate rows the narrowing search asks for. Two is enough to
- * answer the only question that matters — "is this identifier unique?" — and a
- * cap keeps a mis-pointed config (a code component that holds the same word on
- * thousands of records) from dragging a whole section back through the door.
- * The third row would not change the answer: >1 is already a refusal.
+ * How many candidate rows the narrowing search asks for.
+ *
+ * (!) It was 2, on the reasoning that ">1 is already a refusal, so a third row
+ * cannot change the answer". That is true of MATCHES and false of CANDIDATES,
+ * which is what this cap bounds. Property 2 above is the whole reason: the
+ * search compares `f_unaccent(value)` with quotes stripped, so "O'Brien-1",
+ * 'OBrien-1' and 'O Brien-1' are ONE candidate set while only one of them is the
+ * identifier. With three such look-alikes the cap could evict the byte-exact row
+ * from the window, `matches` came back empty, this function answered "no such
+ * code" — and the importer CREATED A DUPLICATE of a record that already existed.
+ *
+ * The cap still exists (a mis-pointed config naming a component that holds the
+ * same word on thousands of records must not drag a section through the door),
+ * but it is now high enough that a real look-alike cluster fits inside it, and
+ * TRUNCATION IS DETECTED rather than silently answered — see the refusal below.
  */
-const CANDIDATE_CAP = 2;
+const CANDIDATE_CAP = 50;
 
 /** The stored values of one component on one record, as comparable strings. */
 /**
@@ -127,6 +137,28 @@ async function storedValues(
 }
 
 /**
+ * Property 2 in force: the search NARROWED, the byte comparison DECIDES.
+ *
+ * Each candidate's stored value is read back and compared as bytes, because the
+ * search matched `f_unaccent(value)` with quotes stripped — a fold that makes
+ * 'Núñez-1' and 'Nunez-1' one candidate set. Only an exact (trimmed) equal is an
+ * address; resolving to a look-alike's record is the defect this module closes.
+ */
+async function byteExactMatches(
+	rows: { section_id: number }[],
+	target: ImportCodeTarget,
+	wanted: string,
+): Promise<number[]> {
+	const matches: number[] = [];
+	for (const row of rows) {
+		const sectionId = Number(row.section_id);
+		const values = await storedValues(target.sectionTipo, sectionId, target.componentTipo);
+		if (values.includes(wanted)) matches.push(sectionId);
+	}
+	return matches;
+}
+
+/**
  * The record id whose code component holds EXACTLY `code`, or null when no
  * record carries it (the caller's cue to CREATE one).
  *
@@ -173,12 +205,29 @@ export async function findSectionIdByCode(
 		section_id: number;
 	}[];
 
-	// Property 2: the search NARROWS, the byte comparison DECIDES.
-	const matches: number[] = [];
-	for (const row of rows) {
-		const sectionId = Number(row.section_id);
-		const values = await storedValues(target.sectionTipo, sectionId, target.componentTipo);
-		if (values.includes(wanted)) matches.push(sectionId);
+	const matches = await byteExactMatches(rows, target, wanted);
+
+	// TRUNCATION IS NOT AN ANSWER. A full window means the search may have had
+	// more to give, so neither "none" nor "exactly one" is provable: the missing
+	// candidates could hold the byte-exact identifier (answering null would make
+	// the caller create a duplicate of an existing record) or a SECOND copy of it
+	// (answering an address would write into one of two records that share it).
+	// Both are the defects this module exists to close, so it refuses instead.
+	if (rows.length >= CANDIDATE_CAP) {
+		const sentence =
+			`The identifier '${wanted}' matched the search cap of ${CANDIDATE_CAP} candidate records ` +
+			`in section ${target.sectionTipo}, so the result cannot be trusted either way — the ` +
+			`record that truly holds it may lie outside that window. Nothing was imported. This ` +
+			`almost always means ${target.componentTipo} is not an identifier component on this ` +
+			`section (it holds a shared word rather than a unique code); check the import map.`;
+		throw new DedaloError('resource.conflict', {
+			message: sentence,
+			publicMessage: sentence,
+			coordinates: {
+				section_tipo: target.sectionTipo,
+				component_tipo: target.componentTipo,
+			},
+		});
 	}
 
 	if (matches.length === 0) return null;

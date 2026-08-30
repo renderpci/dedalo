@@ -68,6 +68,16 @@ const TITLE_COMPONENT = 'test52';
  * a user id would let one file's teardown delete the other's staged bytes when
  * the suite runs them in the same shard.
  */
+/**
+ * Three codes that are ONE candidate set under the search's `f_unaccent` fold
+ * (and quote stripping) but three distinct identifiers by bytes. The exact one
+ * is seeded LAST so it sits behind the other two in id order — the position a
+ * candidate cap evicts.
+ */
+const ACCENT_TWIN_A = 'Évict-1';
+const ACCENT_TWIN_B = "E'vict-1";
+const EVICTED_EXACT_CODE = 'Evict-1';
+
 const SCRATCH_USER = 987658;
 const KEY_DIR = 'marc_identity_scratch';
 
@@ -536,6 +546,52 @@ describe('findSectionIdByCode (the code lookup that replaced the cast)', () => {
 			LOOKALIGN_ID,
 		);
 	});
+
+	/**
+	 * THE NARROWING CAP IS NOT THE ANSWER (2026-08-31). The search asks for at
+	 * most CANDIDATE_CAP rows and the BYTE comparison decides afterwards — so the
+	 * cap bounds CANDIDATES, not matches. The old cap of 2 was justified as ">1 is
+	 * already a refusal, so a third row cannot change the answer", which is true of
+	 * matches and false of candidates: `=` folds accents and strips quotes, so
+	 * look-alikes share one candidate set. With three of them the byte-exact record
+	 * could be evicted from the window, the lookup answered "no such code", and the
+	 * importer CREATED A DUPLICATE of a record that already existed.
+	 */
+	test('a byte-exact code still resolves from BEHIND two look-alikes', async () => {
+		// Three records whose codes are one candidate set under f_unaccent, with
+		// the exact one deliberately last by id — the position the old cap evicted.
+		// Explicit ids in this file's own scratch run, ascending so the exact one
+		// is LAST — the position a candidate cap evicts.
+		const ids = [900341, 900342, 900343];
+		try {
+			const values = [ACCENT_TWIN_A, ACCENT_TWIN_B, EVICTED_EXACT_CODE];
+			for (let index = 0; index < ids.length; index++) {
+				await createSectionRecord(SECTION, SCRATCH_USER, new Date(), ids[index] as number, {
+					conflictTolerant: true,
+				});
+				await seedValue(ids[index] as number, CODE_COMPONENT, values[index] as string);
+			}
+			const evictedId = ids[2] as number;
+			expect(await valuesOf(evictedId, CODE_COMPONENT)).toEqual([EVICTED_EXACT_CODE]);
+
+			// It must resolve to the record that carries the BYTES, not to null and
+			// not to either look-alike.
+			expect(await findSectionIdByCode(target, EVICTED_EXACT_CODE, await principal())).toBe(
+				evictedId,
+			);
+		} finally {
+			for (const id of ids) {
+				await sql.unsafe(`DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`, [
+					SECTION,
+					id,
+				]);
+				await sql.unsafe(
+					`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`,
+					[SECTION, id],
+				);
+			}
+		}
+	}, 60000);
 
 	/**
 	 * PHP took `limit 1` and wrote into whichever row the planner returned first.

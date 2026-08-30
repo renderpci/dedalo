@@ -169,6 +169,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/info_widget_registry_tripwire.test.ts
 	test/unit/ingest_encoding_tripwire.test.ts
 	test/unit/matrix_index_asset_policy_agreement.test.ts
+	test/unit/remove_sentinel_native.test.ts
 	test/unit/marc_identity_native.test.ts
 	test/unit/media_thumb_census_tripwire.test.ts
 	test/unit/root_user_hidden_tripwire.test.ts

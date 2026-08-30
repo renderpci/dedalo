@@ -104,6 +104,8 @@ HERMETIC_TRIPWIRES=(
 	test/unit/matrix_copy_columns_tripwire.test.ts
 	test/unit/matrix_counter_monotonic_tripwire.test.ts
 	test/unit/tm_epoch_tripwire.test.ts
+	test/unit/client_relation_move_native.test.ts
+	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
 	test/unit/update_ownership_tripwire.test.ts
 	test/unit/install_restart_supervisor_tripwire.test.ts
