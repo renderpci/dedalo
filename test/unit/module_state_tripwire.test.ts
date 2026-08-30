@@ -735,27 +735,11 @@ describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
 		],
 		// ── OPEN: the same defect class, outside P0-7's edit scope ───────────
 		[
-			'tools/tool_update_cache/server/index.ts',
-			{
-				count: 1,
-				reason:
-					'OPEN (DATA-01, third site). The regenerate re-save’s DEFAULT lang bucket: stored items carrying their own lang keep it, but a lang-LESS stored item is re-stamped with the install default and an empty component’s `set_data []` goes there too.',
-			},
-		],
-		[
-			'src/core/section/record/duplicate_record.ts',
-			{
-				count: 1,
-				reason:
-					'OPEN, same class, narrower blast radius: it picks the TM audit slice lang for the duplicate’s two Time Machine rows. The matrix data is copied whole, so no stored item is mis-stamped — the "save" TM row snapshots the wrong language’s slice.',
-			},
-		],
-		[
 			'tools/tool_posterframe/server/index.ts',
 			{
-				count: 2,
+				count: 1,
 				reason:
-					'One termByTipo() report label, plus OPEN: the MediaIdentity lang that becomes the language segment of a translatable media component’s file path.',
+					'One termByTipo() report LABEL only. The MediaIdentity lang — the language segment of a translatable media component’s file path — was the DATA-01 third site and is closed: it reads currentDataLang() now.',
 			},
 		],
 	]);

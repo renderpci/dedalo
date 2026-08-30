@@ -24,6 +24,7 @@
 import { isMediaModel } from '../../../src/core/concepts/media.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { getModelByTipo } from '../../../src/core/ontology/resolver.ts';
+import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSectionElementsContext } from '../../../src/core/resolve/section_elements_context.ts';
 import {
 	type ToolActionContext,
@@ -252,7 +253,13 @@ async function updateCache(ctx: ToolActionContext): Promise<ToolResponse> {
 			}
 			const items = readComponentItems(record, tipo, model) ?? [];
 			const translatable = await getTranslatableByTipo(tipo);
-			const componentLang = translatable ? config.menu.dataLang : 'lg-nolan';
+			// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the
+			// regenerate bucket RE-SAVES curated values, so it must write in the
+			// language the operator is working in. Reading the install default made
+			// every user whose data lang differs re-stamp the wrong slice. Outside a
+			// request it falls back to DEDALO_DATA_LANG_DEFAULT, which is the read
+			// fallback chain's first candidate — a job's write stays reachable.
+			const componentLang = translatable ? currentDataLang() : 'lg-nolan';
 			// The stored array carries EVERY language; set_data is lang-sliced
 			// (PHP set_data_lang), so a translatable literal must be re-saved one
 			// lang group at a time — a single flat save would re-stamp every

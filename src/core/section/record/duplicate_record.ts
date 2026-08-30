@@ -113,6 +113,7 @@ import {
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
+import { currentDataLang } from '../../resolve/request_lang.ts';
 import { fireSaveEvent } from '../../section_record/save_event.ts';
 import type { Principal } from '../../security/permissions.ts';
 import {
@@ -299,7 +300,11 @@ export async function duplicateSectionRecord(
 	const backfillTimestamp = dbTimestamp(new Date(now.getTime() - 60_000));
 	for (const component of copied) {
 		const translatable = await getTranslatableByTipo(component.tipo);
-		const sliceLang = translatable ? config.menu.dataLang : 'lg-nolan';
+		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): the slice this
+		// picks is the one the duplicate's TM rows are stamped with, so the install
+		// default silently audited the copy under a language the operator was not
+		// working in.
+		const sliceLang = translatable ? currentDataLang() : 'lg-nolan';
 		const hasLangKeys = component.items.some((item) => item.lang !== undefined);
 		const slice = hasLangKeys
 			? component.items.filter((item) => item.lang === sliceLang)

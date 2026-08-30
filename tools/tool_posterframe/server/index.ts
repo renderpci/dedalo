@@ -27,6 +27,7 @@ import {
 	getTranslatableByTipo,
 } from '../../../src/core/ontology/resolver.ts';
 import { getMainRelatedSectionTipo } from '../../../src/core/relations/request_config/implicit.ts';
+import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { findInverseReferences } from '../../../src/core/search/search_related.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
@@ -151,7 +152,10 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 		componentTipo: imageComponentTipo,
 		sectionTipo: portalTargetSectionTipo,
 		sectionId: newSectionId,
-		lang: translatable ? config.menu.dataLang : null,
+		// currentDataLang(), NOT config.menu.dataLang (P0-7/DATA-01): this is the
+		// MEDIA IDENTITY the poster frame is written under, so the install default
+		// filed the frame against a language the operator was not looking at.
+		lang: translatable ? currentDataLang() : null,
 	};
 	const imagePathOpts = await resolveMediaPathOptions(imageComponentTipo, portalTargetSectionTipo);
 
