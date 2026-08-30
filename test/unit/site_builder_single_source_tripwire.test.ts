@@ -200,7 +200,12 @@ afterAll(() => rmSync(SCRATCH, { recursive: true, force: true }));
 function scratchDoc(instance = 'census') {
 	return {
 		instance,
-		engine: { group: 'dedalo-engine', private_dir: join(SCRATCH, 'engine_private') },
+		engine: {
+			group: 'dedalo-engine',
+			private_dir: join(SCRATCH, 'engine_private'),
+			checkout_dir: join(SCRATCH, 'checkout'),
+			bun_bin: join(SCRATCH, 'bun', 'bin', 'bun'),
+		},
 		web: { server: 'nginx', group: 'www-data' },
 		publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
 		agent: { driver: 'claude_code', bins: { claude_code: '/usr/local/bin/claude' } },

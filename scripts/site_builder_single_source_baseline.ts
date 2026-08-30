@@ -76,7 +76,12 @@ const REASONS: Record<string, Record<string, string>> = {
 			"The DAEMON's half, for the same reason. The licence for this second spelling is conditional and the condition is mechanical: test/unit/site_builder_pairing_tripwire.test.ts imports BOTH and compares their output on the same inputs, so the equality is proved rather than promised.",
 	},
 	layout_constants: {},
-	rendered_artifact_census: {},
+	rendered_artifact_census: {
+		'publication/site_builder/src/provision/fleet.ts':
+			'A DIFFERENT census, deliberately. pathClaims() enumerates what one instance EXCLUSIVELY OWNS on a shared host — roots, socket, unit, htpasswd, vhosts — which is a superset of the artifacts and answers a different question (may two museums collide?). Deriving it from renderAll() would silently drop the roots and the socket, the collisions that matter most.',
+		'publication/site_builder/src/provision/plan.ts':
+			'CONSUMER, not a census. It derives the artifact set from renderAll() in observedPaths(); the two remaining named fields (unitPath, envFile) decide whether a daemon-reload is needed, and htpasswd is a plan action of its own. Naming three artifacts to make a decision is not keeping a list of them.',
+	},
 };
 
 function build(): Baseline {
@@ -178,7 +183,7 @@ if (import.meta.main) {
 	}
 	const growth = drift().filter((line) => line.startsWith('GROWTH'));
 	if (growth.length > 0 && !args.has('--allow-regression')) {
-		console.error('REFUSING to absorb a new derivation:\n' + growth.join('\n'));
+		console.error(`REFUSING to absorb a new derivation:\n${growth.join('\n')}`);
 		console.error(
 			'\nA second derivation of one fact is the defect this subsystem was rebuilt around, four ' +
 				'times over. Delete the derivation, or re-run with --allow-regression and say why in ' +

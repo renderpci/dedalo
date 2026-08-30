@@ -85,7 +85,12 @@ function readExample(): Record<string, unknown> {
 function baseDoc(): Record<string, any> {
   return {
     instance: 'gate',
-    engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+    engine: {
+      private_dir: '/srv/dedalo/gate/private',
+      group: 'dedalo-gate',
+      checkout_dir: '/srv/dedalo/gate/master_dedalo',
+      bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+    },
     web: { server: 'nginx', group: 'www-data' },
     publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
     sites: [{ slug: 'one', domain: 'one.example.org' }],
@@ -601,7 +606,15 @@ describe('the declaration refuses what it must', () => {
 
   test("the engine's private directory inside anything the service user owns", () => {
     expect(
-      refusal(docWith({ engine: { private_dir: '/srv/www/private', group: 'dedalo-gate' }, webspace_base: '/srv/www' })),
+      refusal(docWith({
+        engine: {
+          private_dir: '/srv/www/private',
+          group: 'dedalo-gate',
+          checkout_dir: '/srv/dedalo/gate/master_dedalo',
+          bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+        },
+        webspace_base: '/srv/www',
+      })),
     ).toMatch(/must lie OUTSIDE every site-builder root/);
   });
 
@@ -1138,7 +1151,12 @@ describe('the service group cannot be borrowed from the host', () => {
     expect(() =>
       derive({
         ...baseDoc(),
-        engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+        engine: {
+      private_dir: '/srv/dedalo/gate/private',
+      group: 'dedalo-gate',
+      checkout_dir: '/srv/dedalo/gate/master_dedalo',
+      bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+    },
         identity: { user: 'usr-a', group: 'dedalo-gate' },
       } as never),
     ).toThrow(/also engine\.group/);

@@ -6,10 +6,10 @@ The engine-side proxy to the standalone Site Builder daemon: every action forwar
 
 `tool_sitebuilder` is a thin, authorizing proxy. The real work — owning site workspaces, running a coding agent, building each site to static files, serving the pre-production preview, promoting an approved build to production — lives in a **separate daemon** (`publication/site_builder`), which reads data only from the read-only publication API. The tool is where **authorization** happens: the engine forwards each request to the daemon with the shared bearer token and a stamped `actor`, and the daemon trusts those decisions and records who did what.
 
-Use the tool from inside Dédalo to drive that daemon; a user builds a site and previews it, and a developer or administrator publishes it live. For the operator/end-user narrative — installing the daemon, the workflow, example prompts — see [Site builder](../../../management/site_builder.md) and the [site builder cookbook](../../../management/site_builder_cookbook.md); this page documents the **tool** (its actions, gates and wire).
+Use the tool from inside Dédalo to drive that daemon; a user builds a site and previews it, and a developer or administrator publishes it live. For the operator/end-user narrative — declaring and provisioning the instance, the workflow, example prompts — see [Site builder](../../../management/site_builder.md) and the [site builder cookbook](../../../management/site_builder_cookbook.md); this page documents the **tool** (its actions, gates and wire).
 
 !!! info "Optional, hidden until configured"
-    The tool exists only when the daemon is configured (`config.siteBuilder.url` and `config.siteBuilder.token`, from `DEDALO_SITE_BUILDER_URL` / `DEDALO_SITE_BUILDER_TOKEN`). `isAvailable` returns false otherwise, and every action fails closed with `site_builder_unconfigured` if somehow reached anyway.
+    The tool exists only when this engine is PAIRED with a site-builder instance. `isConfigured()` is the transport resolver (`src/core/site_builder/pairing.ts`): a transport — `DEDALO_SITE_BUILDER_SOCKET`, or `DEDALO_SITE_BUILDER_URL` for a daemon reached over the network — plus `DEDALO_SITE_BUILDER_INSTANCE` and `DEDALO_SITE_BUILDER_TOKEN`. A HALF configuration resolves to no transport at all. `isAvailable` returns false otherwise, and every action fails closed with `site_builder.unconfigured` if somehow reached anyway.
 
 ## How it works (server + client)
 
@@ -48,7 +48,7 @@ There is no `backgroundRunnable`; long agent turns are handled by the SSE stream
 
 `isAvailable: () => typeof config.siteBuilder.url === 'string' && typeof config.siteBuilder.token === 'string'` — a fast, pure, cacheable check that hides the whole tool when the daemon is not configured.
 
-Failure codes (from `SiteBuilderError`): `site_builder_unconfigured`, `site_builder_unreachable`, `site_builder_auth` (the daemon rejected this server's token), `site_builder_rejected` (a 4xx the user should see — bad slug, quota, conflict), `site_builder_failed`, `site_builder_stream_lost`.
+Failure codes (registered `DedaloError` codes, mapped from the daemon's `reason` by `server/wire.ts`): `site_builder.unconfigured`, `site_builder.unreachable`, `site_builder.auth` (the daemon rejected this server's token), `site_builder.rejected` (a 4xx the user should see — bad slug, quota, conflict; the one code with public disclosure), `site_builder.failed`, `site_builder.stream_lost`, and `site_builder.instance_mismatch` — raised before a single byte is sent when the daemon's `/health` fingerprint is not this engine's pairing.
 
 ## How it is registered & surfaced
 
@@ -100,7 +100,7 @@ The event stream (`session_stream`) is consumed as an SSE response, forwarded by
 
 ## Related
 
-- [Site builder](../../../management/site_builder.md) · [site builder cookbook](../../../management/site_builder_cookbook.md) — installing the daemon, the day-to-day workflow, and example prompts.
+- [Site builder](../../../management/site_builder.md) · [site builder cookbook](../../../management/site_builder_cookbook.md) — declaring and provisioning a museum's instance, the day-to-day workflow, and example prompts.
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, the `permission: null` + imperative-gate pattern, and the streaming `ToolResponse` fields this page builds on.
 - [Security](../security.md) — the framework gates and the identity-injection trust model an engine-side proxy relies on.
 - Source: `tools/tool_sitebuilder/server/{index,daemon_client,wire}.ts`, `tools/tool_sitebuilder/js/{tool_sitebuilder,sitebuilder_controller,builder_stream,render_tool_sitebuilder}.js`, `tools/tool_sitebuilder/register.json`.

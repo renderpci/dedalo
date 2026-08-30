@@ -39,7 +39,12 @@ const EXAMPLE_PATH = join(PACKAGE_DIR, 'deploy', 'examples', 'instance.example.j
 function baseDoc(): Record<string, any> {
   return {
     instance: 'gate',
-    engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+    engine: {
+      private_dir: '/srv/dedalo/gate/private',
+      group: 'dedalo-gate',
+      checkout_dir: '/srv/dedalo/gate/master_dedalo',
+      bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+    },
     web: { server: 'nginx', group: 'www-data' },
     publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
     sites: [{ slug: 'one', domain: 'one.example.org' }],
@@ -534,48 +539,55 @@ describe('WorkingDirectory= and ExecStart=', () => {
     expect(exec.split(' ')[0]).not.toBe('bun');
   });
 
-  test('a declaration that states the tree and the runtime is honoured', () => {
-    // The two fields the grammar owes this renderer. Built by hand, because the schema
-    // does not accept them yet — the day it does, this test stops being the only caller.
-    const manifest = manifestFrom(baseDoc());
-    const declared = {
-      ...manifest,
-      engine: { ...manifest.engine, checkout_dir: '/opt/museum/code', bun_bin: '/opt/museum/bun' },
-    } as unknown as InstanceManifest;
-    const body = unitRenderer.render(derive(declared), declared)[0]!.body;
+  test('BOTH ARE DECLARED — the renderer states no host placement of its own', () => {
+    // They were INFERRED from engine.private_dir by a sibling convention until 2026-08-30,
+    // and a museum whose tree is laid out otherwise got a unit that could not start,
+    // pointed at a directory nobody had created — while the file it rendered told the
+    // operator to declare `engine.checkout_dir`, which the schema then refused. Both are
+    // required fields now, and the renderer reads them off the layout like every other path.
+    const doc = docWith({
+      engine: {
+        ...baseDoc().engine,
+        checkout_dir: '/opt/museum/code',
+        bun_bin: '/opt/museum/bun',
+      },
+    });
+    const body = bodyOf(doc);
     expect(valueOf(body, 'WorkingDirectory')).toBe('/opt/museum/code/publication/site_builder');
     expect(valueOf(body, 'ExecStart')).toBe('/opt/museum/bun run src/index.ts');
     expect(valueOf(body, 'AssertFileIsExecutable')).toBe('/opt/museum/bun');
+    expect(valueOf(body, 'AssertPathIsDirectory')).toBe('/opt/museum/code/publication/site_builder');
+    // Nothing in the file announces an inference any more, because there is none.
     expect(body).not.toContain('INFERRED');
+    // …and the paths do NOT follow engine.private_dir, which is what they used to do.
+    expect(body).not.toContain('/srv/dedalo/gate/master_dedalo');
   });
 
-  test('half a declaration is refused', () => {
-    const manifest = manifestFrom(baseDoc());
-    const half = {
-      ...manifest,
-      engine: { ...manifest.engine, checkout_dir: '/opt/museum/code' },
-    } as unknown as InstanceManifest;
-    expect(() => unitRenderer.render(derive(half), half)).toThrow(/only one of/);
+  test('a declaration missing either of them is refused BY THE SCHEMA', () => {
+    for (const field of ['checkout_dir', 'bun_bin']) {
+      // Built outright rather than through docWith(), which merges one level and would put
+      // the deleted field straight back.
+      const doc = baseDoc();
+      const engine: Record<string, unknown> = { ...doc.engine };
+      delete engine[field];
+      doc.engine = engine;
+      expect(() => manifestFrom(doc)).toThrow(new RegExp(`engine\\.${field}`));
+    }
   });
 
   test('the daemon may NOT write its own code or runtime', () => {
     // Every agent turn runs as the service user with this writable set. A checkout inside
     // one of those roots means a generated build script can rewrite the daemon, and the
-    // next restart executes it.
-    const manifest = manifestFrom(baseDoc());
-    const declared = {
-      ...manifest,
-      engine: { ...manifest.engine, checkout_dir: '/opt/museum/code', bun_bin: '/opt/museum/bun' },
-    } as unknown as InstanceManifest;
-    const layout = derive(declared);
+    // next restart executes it. Refused at DERIVATION now, which is earlier than the render
+    // and covers every consumer of the layout rather than this one renderer.
     for (const bend of [
-      { roots: { ...layout.roots, workspaces: '/opt/museum/code' } },
-      { roots: { ...layout.roots, workspaces: '/opt/museum/code/publication' } },
-      { roots: { ...layout.roots, home: '/opt/museum' } },
+      { checkout_dir: '/var/lib/dedalo_sites/gate/workspaces/code', bun_bin: '/opt/museum/bun' },
+      { checkout_dir: '/var/lib/dedalo_sites/gate', bun_bin: '/opt/museum/bun' },
+      { checkout_dir: '/opt/museum/code', bun_bin: '/home/www/one.example.org/bun' },
     ]) {
-      expect(() =>
-        unitRenderer.render({ ...layout, ...bend } as unknown as InstanceLayout, declared),
-      ).toThrow(/overlaps the writable path/);
+      expect(() => derive(manifestFrom(docWith({ engine: { ...baseDoc().engine, ...bend } })))).toThrow(
+        /overlaps the writable path/,
+      );
     }
   });
 

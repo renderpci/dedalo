@@ -69,7 +69,12 @@ function baseManifest(patch: Record<string, any> = {}): InstanceManifest {
   return {
     instance: 'gate',
     description: 'The gate instance',
-    engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+    engine: {
+      private_dir: '/srv/dedalo/gate/private',
+      group: 'dedalo-gate',
+      checkout_dir: '/srv/dedalo/gate/master_dedalo',
+      bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+    },
     web: { server: 'nginx', group: 'www-data' },
     publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
     sites: [
@@ -381,6 +386,40 @@ describe('the production transport', () => {
     expect(text).not.toMatch(/^ {4}return 301/m);
   });
 
+  test('THE ACME CONTACT REACHES THE FILE — a required field may not validate and vanish', () => {
+    // `serving.prod.tls.account_email` is required with `letsencrypt` and was used by
+    // nothing at all: it installed cleanly and disappeared, which is the one defect §11
+    // names by hand ("no field validates and then vanishes"). This provisioner does not run
+    // an ACME client — obtaining a certificate needs DNS that already points here, which no
+    // declaration can assert — so what it owes the operator is the address, in the file they
+    // open when the certificate is missing.
+    const text = vhost(
+      layoutOf({
+        serving: {
+          preprod: { enabled: true, auth: { mode: 'htpasswd' } },
+          prod: { tls: { mode: 'letsencrypt', account_email: 'certs@museum.example' } },
+        },
+      }),
+      'one',
+      'prod',
+    );
+    expect(text).toContain('certs@museum.example');
+    expect(text).toContain('serving.prod.tls.account_email');
+    // …and only where it means something: a museum that terminates TLS elsewhere has no
+    // ACME contact and gets no line about one.
+    const none = vhost(
+      layoutOf({
+        serving: {
+          preprod: { enabled: true, auth: { mode: 'htpasswd' } },
+          prod: { tls: { mode: 'none' } },
+        },
+      }),
+      'one',
+      'prod',
+    );
+    expect(none).not.toContain('account_email');
+  });
+
   test('no HSTS is emitted in any mode', () => {
     // A browser-side latch outliving the declaration that set it: a museum that later
     // moves TLS upstream and declares mode none would be unreachable for the header's
@@ -666,7 +705,12 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
         for (const a of render(layout)) writeFileSync(join(confDir, `${n++}.conf`), a.body);
 
         const main = join(dir, `${name}.conf`);
-        writeFileSync(main, `events {}\nhttp {\n  include ${confDir}/*.conf;\n}\n`);
+        // THE PID FILE IS THIS RUN'S OWN. `nginx -t` opens the pid path its configuration
+        // names, and without a `pid` directive that is the COMPILED-IN default — so a suite
+        // run on a host that actually runs nginx TRUNCATES the live server's pid file, and
+        // the next `systemctl reload nginx` on that host finds nothing to signal. A gate
+        // that can break the thing it is testing is not a gate.
+        writeFileSync(main, `events {}\npid ${join(dir, `${name}.pid`)};\nhttp {\n  include ${confDir}/*.conf;\n}\n`);
         // Throws on a non-zero exit, which is the assertion: nginx -t fails the whole
         // reload, and one bad vhost takes down every site on the host.
         execFileSync(NGINX as string, ['-t', '-c', main, '-p', dir, '-e', join(dir, 'error.log')], {
@@ -729,7 +773,16 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
         );
       }
 
-      writeFileSync(main, `events {}\nhttp {\n  access_log off;\n  include ${join(dir, 'conf')}/*.conf;\n}\n`);
+      // THE PID FILE IS THIS RUN'S OWN, and it is the reason this block does not leak nginx
+      // masters. Without a `pid` directive nginx uses its COMPILED-IN default — one absolute
+      // path shared by every process on the machine — so two runs of this gate (or a run
+      // beside a real nginx) overwrite each other's, and `-s stop` then signals the wrong
+      // pid or none at all, leaving a master bound to this port until somebody notices. A
+      // pid inside the temporary directory cannot be shared with anything.
+      writeFileSync(
+        main,
+        `events {}\npid ${join(dir, 'nginx.pid')};\nhttp {\n  access_log off;\n  include ${join(dir, 'conf')}/*.conf;\n}\n`,
+      );
       execFileSync(NGINX as string, ['-c', main, '-p', dir, '-e', join(dir, 'error.log')], { stdio: 'pipe' });
       started = true;
 
@@ -741,6 +794,22 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
         return Number(out.toString().trim());
       };
 
+      /**
+       * WAIT FOR THE LISTENER, AND SAY SO IF IT NEVER COMES.
+       *
+       * `nginx -c` returns as soon as the master has forked; the workers bind a moment
+       * later. Under an otherwise-idle machine curl wins that race anyway, which is why this
+       * read as a stable test — and under a loaded one (the full suite, CI) it does not, and
+       * curl's `000` for "could not connect" arrives as a bare `expect(000).toBe(200)` that
+       * looks exactly like a vhost that stopped serving. A gate whose failure message
+       * accuses the artifact of something the artifact did not do is worse than no gate.
+       */
+      const deadline = Date.now() + 5000;
+      while (status('/index.html') === 0 && Date.now() < deadline) {
+        execFileSync('sleep', ['0.05']);
+      }
+      expect({ listening: status('/index.html') !== 0, port }).toEqual({ listening: true, port });
+
       // The publish design still works: the served link resolves through the policy.
       expect(status('/index.html')).toBe(200);
       // The dotfiles a build leaves behind do not.
@@ -751,10 +820,25 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
       // And a link out of the release is not followed.
       expect(status('/sub/leak.txt')).toBe(404);
     } finally {
+      // STOPPED TWO WAYS, because the temporary directory is about to be deleted underneath
+      // it. `-s stop` is the polite one and it reads the pid file above; if it fails for any
+      // reason the pid is read directly and signalled, so a failure ANYWHERE in this test
+      // cannot leave a master process bound to this port for the rest of the session.
       if (started) {
-        execFileSync(NGINX as string, ['-c', main, '-p', dir, '-e', join(dir, 'error.log'), '-s', 'stop'], {
-          stdio: 'pipe',
-        });
+        try {
+          execFileSync(NGINX as string, ['-c', main, '-p', dir, '-e', join(dir, 'error.log'), '-s', 'stop'], {
+            stdio: 'pipe',
+          });
+        } catch {
+          const pid = Number((readFileSync(join(dir, 'nginx.pid'), 'utf8') || '').trim());
+          if (Number.isInteger(pid) && pid > 0) {
+            try {
+              process.kill(pid, 'SIGTERM');
+            } catch {
+              // Already gone. Nothing to stop and nothing to say.
+            }
+          }
+        }
       }
       rmSync(dir, { recursive: true, force: true });
     }

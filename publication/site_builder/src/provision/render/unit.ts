@@ -50,122 +50,25 @@ import { artifact } from './types';
 /* ────────────────────────────────────────────────────────────────────────────────────
  * Where the daemon's own code and runtime are
  *
- * THIS IS THE ONE FACT THE DECLARATION DOES NOT YET CARRY, and it is stated here honestly
- * rather than hidden. `ExecStart=` and `WorkingDirectory=` need two absolute paths — the
- * checkout this package lives in, and the PINNED bun binary — and `instance.json` has no
- * field for either today, so `layout` cannot hand them over.
+ * DECLARED, AND READ OFF THE LAYOUT LIKE EVERY OTHER PATH. `ExecStart=` and
+ * `WorkingDirectory=` need two absolute paths — the checkout this package lives in and the
+ * PINNED bun binary — and `instance.json` carries both (`engine.checkout_dir`,
+ * `engine.bun_bin`), so `derive()` hands them over and this renderer states no host
+ * placement of its own.
  *
- * The resolution therefore has two steps, in this order:
- *
- *   1. THE DECLARATION, if it carries them. `engine.checkout_dir` and `engine.bun_bin` are
- *      read structurally, so the day `schema.ts`/`layout.ts` grow those two fields this
- *      renderer already honours them and step 2 can be deleted without touching a line of
- *      the rendering below. That is the fix this file is waiting for, and it belongs in
- *      the layout — a renderer that owned a host-placement convention would be the very
- *      second owner this phase exists to delete.
- *   2. THE CANONICAL TOPOLOGY, derived from `engine.private_dir` — which IS declared. The
- *      topology is 1:1 and fixed (engineering/PRODUCTION.md): one museum's engine checkout
- *      and its `../private/` are siblings, the pinned runtime sits beside them, and this
- *      daemon is a directory inside that checkout. So `/srv/dedalo/example/private` gives
- *      `/srv/dedalo/example/master_dedalo/publication/site_builder` and
- *      `/srv/dedalo/example/.bun/bin/bun`.
- *
- * Step 2 is a GUESS and is treated as one. It is confined to this block, it is announced
- * in the rendered file, and — because the alternative to a guess is a museum with no unit
- * at all — it is made to fail LOUDLY rather than plausibly: the unit carries
- * `AssertFileIsExecutable=`/`AssertPathIsDirectory=` for both paths, so a host that keeps
- * its checkout somewhere else gets a refusal naming the exact path that is missing, at
- * `systemctl start`, instead of systemd's bare `status=203/EXEC`.
+ * It used to INFER them from `engine.private_dir` by a "canonical 1:1 topology": the
+ * checkout as a sibling of `private/`, the runtime as `.bun/bin/bun` beside them. That
+ * convention is true of the hosts this project has seen and is not a fact about any other,
+ * so a museum whose tree is laid out differently got a `WorkingDirectory=` naming a
+ * directory nobody had created and an `AssertPathIsDirectory=` refusing to start it — while
+ * the generated file's own comment told the operator to declare `engine.checkout_dir`, a
+ * field the schema refused as unknown. The `Assert*` lines below are KEPT: a declared path
+ * can be wrong too, and a refusal at `systemctl start` naming the exact missing path is
+ * still better than systemd's bare `status=203/EXEC`.
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
-/** This package's place inside the engine checkout — a fact about the tree this file is in. */
-const DAEMON_SUBDIR = join('publication', 'site_builder');
-
-/** The daemon's entry point, relative to the directory above (package.json `start`). */
+/** The daemon's entry point, relative to the working directory (package.json `start`). */
 const DAEMON_ENTRY = join('src', 'index.ts');
-
-/** The engine checkout's directory name, as a sibling of `private/`. Step 2 only. */
-const ENGINE_CHECKOUT_DIRNAME = 'master_dedalo';
-
-/** The pinned runtime, as a sibling of the checkout (never a floating `bun` on PATH). */
-const PINNED_BUN_SUBPATH = join('.bun', 'bin', 'bun');
-
-/**
- * The two fields the manifest grammar owes this renderer. Read structurally because they
- * do not exist in `InstanceManifest` yet; typed as `unknown` so nothing here can assume a
- * shape an unvalidated `adopt` manifest might not have.
- */
-interface DeclaredEngineRuntime {
-  readonly checkout_dir?: unknown;
-  readonly bun_bin?: unknown;
-}
-
-interface DaemonTree {
-  /** `WorkingDirectory=` — the site-builder package inside the engine checkout. */
-  readonly workingDirectory: string;
-  /** `ExecStart=`'s binary — the pinned bun. */
-  readonly bun: string;
-  /** True when both came from the declaration; false when step 2 guessed them. */
-  readonly declared: boolean;
-}
-
-function resolveDaemonTree(layout: InstanceLayout, manifest: InstanceManifest): DaemonTree {
-  const declared = (manifest.engine ?? {}) as unknown as DeclaredEngineRuntime;
-
-  const declaredCheckout = optionalAbsolute('engine.checkout_dir', declared.checkout_dir);
-  const declaredBun = optionalAbsolute('engine.bun_bin', declared.bun_bin);
-
-  // Both or neither. Half a declaration is the worst of the two: a museum that moved its
-  // checkout and told us so, still being started by a runtime we guessed the location of.
-  if ((declaredCheckout === undefined) !== (declaredBun === undefined)) {
-    throw new Error(
-      `render(unit): instance '${layout.instance}' declares only one of engine.checkout_dir / ` +
-        `engine.bun_bin. Declare both or neither — a checkout that moved with a runtime that ` +
-        `did not is a unit that starts a museum's daemon with the wrong bun, or not at all.`,
-    );
-  }
-
-  // Step 2: the canonical sibling topology, from the one path that IS declared.
-  const engineRoot = dirname(layout.enginePrivateDir);
-  const checkout = declaredCheckout ?? join(engineRoot, ENGINE_CHECKOUT_DIRNAME);
-  const bun = declaredBun ?? join(engineRoot, PINNED_BUN_SUBPATH);
-  const workingDirectory = join(checkout, DAEMON_SUBDIR);
-
-  // THE DAEMON MAY NOT WRITE ITS OWN CODE, NOR THE RUNTIME THAT EXECUTES IT. Every agent
-  // turn runs as the service user with the unit's writable set, so a checkout (or a bun
-  // binary) that landed inside one of those roots would let a generated build script edit
-  // the daemon it is running under, and the next restart would execute it. Checked in both
-  // directions: a writable root INSIDE the checkout is the same defect upside down.
-  for (const writable of readWritePaths(layout)) {
-    for (const [label, path] of [
-      ['the daemon working directory', workingDirectory],
-      ['the pinned bun binary', bun],
-    ] as const) {
-      if (pathsOverlap(path, writable)) {
-        throw new Error(
-          `render(unit): ${label} ('${path}') overlaps the writable path '${writable}'. ` +
-            `ReadWritePaths= is what an agent turn may write, so the daemon's own code and ` +
-            `runtime must lie outside every entry of it — otherwise a generated build script ` +
-            `can rewrite the daemon and the next restart runs it. Nothing was rendered.`,
-        );
-      }
-    }
-  }
-
-  return { workingDirectory, bun, declared: declaredCheckout !== undefined };
-}
-
-/** An optional declared path: absent, or absolute and free of unit-hostile characters. */
-function optionalAbsolute(label: string, value: unknown): string | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
-  if (typeof value !== 'string') {
-    throw new Error(`render(unit): ${label} must be a string, got ${typeof value}.`);
-  }
-  if (!isAbsolute(value)) {
-    throw new Error(`render(unit): ${label} must be an absolute path, got '${value}'.`);
-  }
-  return resolve(value);
-}
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The values that are NOT tuning knobs: they come from the matrix
@@ -286,7 +189,7 @@ export const unitRenderer: Renderer = {
   kind: 'unit',
 
   render(layout: InstanceLayout, manifest: InstanceManifest) {
-    const tree = resolveDaemonTree(layout, manifest);
+    const tree = layout.daemon;
     const lines: string[] = [];
 
     /* ── Header. The file says what it is and what to edit instead of it. ───────────── */
@@ -302,18 +205,6 @@ export const unitRenderer: Renderer = {
     if (layout.description) {
       lines.push(
         `# ${unitText('description', matching(DESCRIPTION_PATTERN, 'description', layout.description))}`,
-      );
-    }
-    if (!tree.declared) {
-      // Announced, not hidden: an operator reading the unit must know which of these two
-      // paths this subsystem was TOLD and which it inferred from the engine's private dir.
-      lines.push(
-        `#`,
-        `# WorkingDirectory=/ExecStart= below were INFERRED from engine.private_dir by the`,
-        `# canonical 1:1 topology (checkout, private/ and the pinned bun as siblings). The`,
-        `# declaration carries no engine.checkout_dir / engine.bun_bin; state them there if`,
-        `# this host keeps either somewhere else. The Assert* lines make a wrong inference a`,
-        `# refusal at start, naming the path — never a silent one.`,
       );
     }
 

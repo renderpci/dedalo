@@ -43,10 +43,10 @@
 
 import { copyFile, mkdir, readdir, readlink, rename, rm, symlink } from 'node:fs/promises';
 import { existsSync, lstatSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { confinedPath } from '../util/paths';
 import { config } from '../config';
-import type { SurfacePaths } from '../provision/layout';
+import { releaseNameFromLinkTarget, type SurfacePaths } from '../provision/layout';
 
 /**
  * The staging directory's prefix. Dot-prefixed for two reasons: `listReleases` skips it, so
@@ -206,19 +206,22 @@ export async function listReleases(surface: SurfacePaths): Promise<string[]> {
  * The release the served link currently points at, or null.
  *
  * NULL COVERS THE PLACEHOLDER, and that is not a detail: the provisioner creates the link
- * pointing at the STORE ITSELF (`.releases/pre`) so the vhost has a document root before the
- * first publish. Reading the last path segment blindly would report that empty placeholder
- * as a release called 'pre' — and `publishSite` would then try to promote it. So the target
- * is resolved and accepted only when it is a direct child of this surface's own store.
+ * pointing at the store ITSELF so the vhost has a document root before the first publish,
+ * and reading the last path segment blindly would report that empty placeholder as a
+ * release — which `publishSite` would then try to promote. The rule that excludes it lives
+ * in `layout.ts` beside the pair it is the inverse of; this function is the daemon's async
+ * door onto it.
  */
 export async function currentRelease(surface: SurfacePaths): Promise<string | null> {
   if (!existsSync(surface.linkPath)) return null;
   try {
-    const target = await readlink(surface.linkPath);
-    const resolved = resolve(dirname(surface.linkPath), target);
-    if (dirname(resolved) !== resolve(surface.storeDir)) return null;
-    const name = resolved.split('/').filter(Boolean).pop() ?? null;
-    return name && !name.startsWith('.') ? name : null;
+    // THE READING IS layout.ts's, NOT THIS FILE'S. `releaseNameFromLinkTarget` is the
+    // inverse of `surfacePaths()` and lives beside it, because the provisioner's migration
+    // verifier has to ask the identical question of the identical link — through a different
+    // io seam, in a different process, about the same museum. Two spellings of it would
+    // agree until they did not, and the day they stopped agreeing is the day the daemon and
+    // the verifier disagree about which release a museum is actually serving.
+    return releaseNameFromLinkTarget(surface, await readlink(surface.linkPath));
   } catch {
     return null;
   }

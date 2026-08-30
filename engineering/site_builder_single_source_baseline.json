@@ -1,7 +1,7 @@
 {
 	"generated_by": "bun run scripts/site_builder_single_source_baseline.ts",
 	"rule": "SHRINK-ONLY. A fact's owner set may lose files, never gain them. A file deriving a fact it does not own is red; an entry naming a file that no longer derives it is red. Regenerating requires --allow-regression to absorb growth, and the reason belongs in the entry and in the commit message.",
-	"scanned_files": 93,
+	"scanned_files": 97,
 	"facts": {
 		"daemon_transport": {
 			"what": "IS THE SITE BUILDER CONFIGURED, AND WHERE IS THE DAEMON \u2014 the five DEDALO_SITE_BUILDER_* values read as an address plus a credential.",
@@ -41,12 +41,10 @@
 			"what": "WHICH ARTIFACTS THIS SUBSYSTEM WRITES \u2014 the set of files a host must hold for one museum.",
 			"why": "Defect 3. `contentfulPaths()` was a hand-kept list beside `RENDERERS` and had already drifted: the site table was added as a sixth artifact and never added there, so `sites.json` was written once and never drift-checked again \u2014 a hand edit to the file that tells the daemon where every museum's webspace is would have been invisible to `check`. The census must be DERIVED from the renderer registry; `render/index.ts` is its only owner.",
 			"owners": [
-				"publication/site_builder/src/provision/cli.ts",
 				"publication/site_builder/src/provision/fleet.ts",
 				"publication/site_builder/src/provision/plan.ts"
 			],
 			"reasons": {
-				"publication/site_builder/src/provision/cli.ts": "DISPLAY. It prints an operator-facing summary of where things went; the paths are formatted, never collected into a set anything decides from.",
 				"publication/site_builder/src/provision/fleet.ts": "A DIFFERENT census, deliberately. pathClaims() enumerates what one instance EXCLUSIVELY OWNS on a shared host \u2014 roots, socket, unit, htpasswd, vhosts \u2014 which is a superset of the artifacts and answers a different question (may two museums collide?). Deriving it from renderAll() would silently drop the roots and the socket, the collisions that matter most.",
 				"publication/site_builder/src/provision/plan.ts": "CONSUMER, not a census. It derives the artifact set from renderAll() in observedPaths(); the two remaining named fields (unitPath, envFile at :1204-1205) decide whether a daemon-reload is needed, and htpasswd is a plan action of its own. Naming three artifacts to make a decision is not keeping a list of them."
 			}

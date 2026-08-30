@@ -637,6 +637,17 @@ function pathClaims(layout: InstanceLayout): PathClaim[] {
         label: `site '${site.slug}'s ${surface} vhost file`,
         path: site.vhostPaths[surface],
       });
+      // AND THE LINK THAT ENABLES IT — the path the web server actually reads. Claimed
+      // separately because `paths.vhost_enabled_dir` is declarable: two museums pointing
+      // their enabled directory at each other's vhost directory would each be serving the
+      // other's document root, and the vhost-file claim alone cannot see that. Skipped when
+      // the two are the same path (a `conf.d` host), where it would be the same claim twice.
+      if (site.vhostEnabledPaths[surface] !== site.vhostPaths[surface]) {
+        claims.push({
+          label: `site '${site.slug}'s ${surface} vhost, as enabled`,
+          path: site.vhostEnabledPaths[surface],
+        });
+      }
     }
   }
 

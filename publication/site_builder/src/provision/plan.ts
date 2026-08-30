@@ -56,7 +56,7 @@
  * from the writer, because here the writer runs as root on a museum's host.
  */
 
-import { dirname, join, relative } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import type {
   InstanceLayout,
   InstanceManifest,
@@ -69,6 +69,7 @@ import {
   MODES,
   PUBLICATION_API_KEY_KEY,
   SURFACES,
+  USER_PREFIX,
   credentialSources,
   isStrictlyWithin,
   markerContent,
@@ -171,6 +172,16 @@ export interface HostState {
    * never happens.
    */
   readonly webServerUnit?: string;
+  /**
+   * The NAMES in each vhost directory — `layout.vhostDir` and `layout.vhostEnabledDir`.
+   *
+   * The one place this module looks at a directory's CONTENTS rather than at named paths,
+   * and it is what makes `orphanedVhosts()` possible: a site dropped from the declaration
+   * leaves files behind whose names are this instance's own, and nothing else on the host
+   * remembers that it was ever declared. Optional because a hand-built `HostState` has no
+   * business inventing a listing — an absent one yields no orphans and changes no plan.
+   */
+  readonly vhostDirEntries?: Readonly<Record<string, readonly string[]>>;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -473,7 +484,13 @@ export function observedPaths(layout: InstanceLayout, manifest: InstanceManifest
   for (const entry of treeEntries(layout)) paths.add(entry.path);
   for (const root of markedRoots(layout)) paths.add(markerPath(root));
   for (const site of layout.sites) {
-    for (const surface of SURFACES) paths.add(site.linkPath(surface));
+    for (const surface of SURFACES) {
+      paths.add(site.linkPath(surface));
+      // The ENABLING link. Absent from this list, the plan would see no enabled link on any
+      // host and plan one on every run — and, worse, could never see the one case that must
+      // stop a run dead: a real file standing where the link belongs.
+      paths.add(site.vhostEnabledPaths[surface]);
+    }
   }
   // THE ARTIFACTS ARE DERIVED, NEVER LISTED. This function used to enumerate them by hand —
   // unitPath, envFile, siteTablePath, engineFragment, htpasswd, the vhost paths — which is
@@ -492,6 +509,71 @@ export function observedPaths(layout: InstanceLayout, manifest: InstanceManifest
   paths.add(layout.auditFile);
   for (const file of credentialFiles(layout)) paths.add(file.path);
   return [...paths].sort();
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * The sites a declaration used to carry
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/** One generated vhost still on this host that no declared site would produce. */
+export interface OrphanedVhost {
+  /** The absolute path of the file, in the directory it stands in. */
+  readonly path: string;
+  /** True when it is in the ENABLED directory — the museum is still being served from it. */
+  readonly enabled: boolean;
+}
+
+/**
+ * THE VHOSTS THIS HOST STILL HOLDS THAT NO DECLARED SITE WOULD PRODUCE.
+ *
+ * Deleting a site from `sites[]` un-declares it and nothing else. Its two vhosts stay on the
+ * host, stay linked into the enabled directory, and stay pointed at a webspace that still
+ * holds every release — so the public site goes on answering, indefinitely, with nothing in
+ * the declaration saying it exists. Every signal points the other way: the row leaves
+ * `sites.json`, no artifact drifts, and `check` reports "converged". That is what makes it
+ * dangerous rather than merely incomplete — the operator has every reason to believe the
+ * site is gone.
+ *
+ * IT IS READ OFF THE DIRECTORIES, not out of the previous site table. The table is rewritten
+ * by the same run that drops the site, so a memory kept there would last exactly one run and
+ * then agree that nothing was wrong. The file names are this instance's own
+ * (`<USER_PREFIX><instance>-…`), so what is on disk is a permanent record of every site this
+ * declaration ever provisioned, and the answer is the same on the hundredth run as on the
+ * first.
+ *
+ * IT IS REPORTED AND NEVER ACTED ON. Removing one would be a deletion, and this provisioner
+ * does not delete — `provision remove` archives, and it works on a whole tenancy. So the
+ * answer is a loud, specific notice naming every file, and a non-zero run.
+ *
+ * An observer that did not list the directories (a hand-built `HostState` in a gate) yields
+ * nothing: "I did not look" must not read as "there were none", but it must not read as a
+ * refusal either — this is a notice, and the plan around it is unaffected.
+ */
+export function orphanedVhosts(layout: InstanceLayout, host: HostState): OrphanedVhost[] {
+  const listing = host.vhostDirEntries;
+  if (!listing) return [];
+
+  const prefix = `${USER_PREFIX}${layout.instance}-`;
+  const ours = new Set<string>();
+  for (const site of layout.sites) {
+    for (const surface of SURFACES) {
+      ours.add(basename(site.vhostPaths[surface]));
+      ours.add(basename(site.vhostEnabledPaths[surface]));
+    }
+  }
+
+  const found: OrphanedVhost[] = [];
+  for (const [dir, names] of Object.entries(listing)) {
+    for (const name of [...names].sort()) {
+      // OUR OWN NAMING, AND NOTHING ELSE'S. Another museum's vhosts, an operator's own, and
+      // the web server's defaults all live in these directories; a file is this instance's
+      // to speak about only when it carries this instance's generated prefix.
+      if (!name.startsWith(prefix) || !name.endsWith('.conf')) continue;
+      if (ours.has(name)) continue;
+      found.push(Object.freeze({ path: join(dir, name), enabled: dir === layout.vhostEnabledDir }));
+    }
+  }
+  return found.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
 /**
@@ -652,8 +734,14 @@ function releaseStore(site: SiteLayout): string {
  * the trees where a mistyped path in a declaration would put this instance on top of
  * somebody else's data, and exactly the trees whose destructive operations (a recursive
  * copy over a served tree, the suite's own `rm -rf`) take a root as an ordinary string.
+ *
+ * EXPORTED because `adopt.ts` stamps the same set. §5 refuses a root that is non-empty and
+ * unmarked — which is EVERY root of a pre-instance install — so the claim "this tree is
+ * instance <i>'s" has to be made by the one act that is a human saying exactly that, and
+ * `provision adopt` is that act. Two lists of which roots carry a marker would be an
+ * adopted host with an unmarked webspace: provisioned once, refused forever after.
  */
-function markedRoots(layout: InstanceLayout): string[] {
+export function markedRoots(layout: InstanceLayout): string[] {
   return [
     layout.roots.workspaces,
     layout.roots.home,
@@ -662,7 +750,7 @@ function markedRoots(layout: InstanceLayout): string[] {
   ];
 }
 
-function markerPath(root: string): string {
+export function markerPath(root: string): string {
   return join(root, INSTANCE_MARKER);
 }
 
@@ -1268,13 +1356,25 @@ function webActions(layout: InstanceLayout, host: HostState, planned: Action[]):
       vhostKinds.includes(action.artifactKind) &&
       action.disposition !== 'awaiting',
   );
-  if (!changed) return [];
+
+  // THE VHOSTS ARE ENABLED HERE, and this is why the phase is `web` and not `link`: the
+  // link must be created AFTER the file it names exists (a dangling include is a syntax
+  // error that takes down every site on the host at the next reload, ours and everyone
+  // else's) and BEFORE the configtest that gates that reload.
+  const enabled = enableActions(layout, host);
+
+  // The reload follows either cause. A host whose vhosts are settled but whose enabling
+  // links were never made is the exact state this defect left behind, and a run that
+  // planned the link and then skipped the reload would leave it unserved until something
+  // else happened to change a vhost.
+  if (!changed && enabled.length === 0) return [];
 
   const unit = host.webServerUnit ?? DEFAULT_WEB_UNITS[layout.webServer];
   const configtest: readonly string[] =
     layout.webServer === 'apache' ? ['apachectl', 'configtest'] : ['nginx', '-t'];
 
   return [
+    ...enabled,
     {
       kind: 'exec',
       phase: 'web',
@@ -1294,6 +1394,84 @@ function webActions(layout: InstanceLayout, host: HostState, planned: Action[]):
       reason: `the changed vhosts are not being served until '${unit}' re-reads them`,
     },
   ];
+}
+
+/**
+ * ONE SYMLINK PER VHOST, INTO THE DIRECTORY THE WEB SERVER ACTUALLY READS.
+ *
+ * This is `a2ensite` and `ln -s ../sites-available/x /etc/nginx/sites-enabled/x`, derived
+ * rather than typed. Without it a fully converged host — every file written, every mode
+ * correct, `provision check` reporting nothing to do — serves NOTHING for the museum,
+ * because on Debian `sites-available/` is a library and only `sites-enabled/` is the
+ * configuration. That was true of this provisioner until 2026-08-30 and no gate could see
+ * it: every artifact it knew about was in place.
+ *
+ * The target is RELATIVE (`../sites-available/<name>`) for the reason the Debian tooling
+ * uses one: the pair moves together under a chroot, a bind mount or a container image, and
+ * an absolute target inside a relocated tree points at the host's own configuration.
+ *
+ * Three answers per vhost and no fourth:
+ *   - the enabled directory IS the vhost directory (RHEL's `conf.d/`) → nothing to do, the
+ *     file is the configuration;
+ *   - a symlink is already there → left exactly as it is when it names our vhost, and the
+ *     whole instance is REFUSED when it names something else. A link at this instance's own
+ *     generated filename pointing somewhere else was placed by a person, and silently
+ *     re-pointing it is how a provisioner overwrites the repair an operator was in the
+ *     middle of;
+ *   - anything else standing there (a real file — the copy an operator made before this
+ *     verb existed) → REFUSED. Removing it would delete a configuration this subsystem did
+ *     not write, and leaving it means the museum is served by a file no run will ever
+ *     update again.
+ */
+function enableActions(layout: InstanceLayout, host: HostState): Action[] {
+  const actions: Action[] = [];
+
+  for (const site of layout.sites) {
+    for (const surface of SURFACES) {
+      const path = site.vhostEnabledPaths[surface];
+      const target = site.vhostPaths[surface];
+      if (path === target) continue;
+
+      const observed = host.entries[path];
+      if (observed?.type === 'symlink') {
+        const points = resolve(dirname(path), observed.target ?? '');
+        if (points === target) continue;
+        throw new Error(
+          `plan(${layout.instance}): '${path}' is already a symlink, and it points at ` +
+            `'${observed.target ?? '(unreadable)'}' rather than at site '${site.slug}'s ` +
+            `${surface} vhost '${target}'. That link carries this instance's own generated ` +
+            `filename, so a different target is something a person put there; re-pointing it ` +
+            `would overwrite a repair somebody is in the middle of. Nothing was planned.`,
+        );
+      }
+      if (observed) {
+        throw new Error(
+          `plan(${layout.instance}): '${path}' is a ${observed.type} on this host, where the ` +
+            `link enabling site '${site.slug}'s ${surface} vhost must be. A COPY of a vhost in ` +
+            `the enabled directory is the configuration the web server actually reads, and no ` +
+            `run of this tool would ever update it — but removing it is a deletion, which this ` +
+            `provisioner never does. Move it aside and re-run. Nothing was planned.`,
+        );
+      }
+
+      actions.push({
+        kind: 'symlink',
+        phase: 'web',
+        path,
+        target: relative(dirname(path), target),
+        // §3's hostConfig row is root:root: the vhosts and the links that enable them are
+        // the host's configuration, and the service user has no business in that directory.
+        owner: 'root',
+        group: 'root',
+        reason:
+          `site '${site.slug}'s ${surface} vhost is written but not enabled — ` +
+          `${layout.webServer} reads '${layout.vhostEnabledDir}', so until this link exists ` +
+          `the museum's domain is served by whatever the default host is`,
+      });
+    }
+  }
+
+  return actions;
 }
 
 function wroteFile(planned: readonly Action[], path: string): boolean {

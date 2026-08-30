@@ -167,16 +167,44 @@ user cannot open, and reach the process through systemd `LoadCredential=`, so th
 are absent from `/proc/<pid>/environ` and from every file the daemon could read on its
 own. A declaration names credential KEYS and PATHS; it never carries a value.
 
-### Still to come: the provisioner's CLI
+### The provisioner
 
-**Phase 3 is not built yet.** The grammar, the derivation and all six renderers are
-landed and gated; what does not exist yet is the command that reads a host's declaration,
-creates the identities, roots, markers and credential files, writes the artifacts that
-drifted, reloads systemd and validates the vhosts — plus its read-only `check` counterpart
-and the `adopt` path that builds a declaration from a host that predates all of this. Until
-it lands, this tree describes the target state completely and applies none of it. No flag
-of that CLI is documented here, because inventing one now would be exactly the second
-source of truth this phase deleted.
+One command, six verbs, and `--help` is generated from the verb table so it cannot document
+one that does not exist:
+
+```bash
+bun run provision check  --all                  # plan; write nothing; exit 1 on drift
+bun run provision apply  --instance <i>         # converge; write only what drifted
+bun run provision render --instance <i>         # print the artifacts; write nothing
+bun run provision list   --all                  # the declared instances and their sites
+bun run provision adopt  --instance <i> --from <install dir> [--declare <fragment.json>]
+bun run provision remove --instance <i> [--purge-published]
+```
+
+`plan()` is a pure function of `(layout, manifest, observed host)`, `apply` executes an
+already-decided plan and decides nothing, and `check` takes no io at all — which is what
+makes it safe on a production host at any hour. The ordering rules that matter (the group
+before the user that names it, a root's marker before its children, the vhost configtest
+before the reload) are properties of the plan ARRAY, so they are gated without a host.
+
+**`adopt`** brings a museum that predates all of this under the same mechanism, and it is
+not a second code path: it INFERS a declaration from the install on disk — the identity out
+of the installed unit, the roots out of its `.env`, the sites out of their own `site.json`,
+all verbatim so nothing moves — moves the five plaintext credentials into root-owned `0600`
+files, renames the old `.env` to `.env.pre-instance` (never deletes it), and then calls the
+same `plan()`/`apply()` as every other host. The facts a pre-instance install never recorded
+anywhere (the paired engine, the web server's group, how the public vhost terminates TLS)
+are supplied by `--declare`, a JSON fragment merged over the inference and validated by the
+ordinary schema. Before writing anything it captures what every surface of every site is
+serving and proves it agrees with what the site claims; **afterwards it proves the same
+thing again, and a run that cannot is a failure whatever else succeeded.**
+
+**`remove`** decommissions, and refuses by default while any site is still published — a
+served link pointing at a RELEASE, not merely a link existing. Even with `--purge-published`
+every tree with a museum's bytes in it is ARCHIVED, renamed beside itself as
+`<path>.retired-<utc>`; only files the provisioner can prove it wrote (by their body-hash
+stamp) are removed, and the uid is never freed — the account is locked and kept, because
+every archived byte is owned by that number.
 
 ## HTTP API (all under `BASE_PATH`, bearer auth except `/health`)
 

@@ -56,7 +56,7 @@
  * museum's.
  */
 
-import { DESCRIPTION_PATTERN, DOMAIN_PATTERN, REALM_PATTERN, SURFACES } from '../layout';
+import { DESCRIPTION_PATTERN, DOMAIN_PATTERN, EMAIL_PATTERN, REALM_PATTERN, SURFACES } from '../layout';
 import type { InstanceLayout, SiteLayout, Surface } from '../layout';
 import type { Artifact, Renderer } from './types';
 import { artifact } from './types';
@@ -89,6 +89,27 @@ const NGINX_PATH_PATTERN = /^\/[A-Za-z0-9._+@~-]+(\/[A-Za-z0-9._+@~-]+)*$/;
  * everything else in this subsystem has one owner.
  */
 const ACME_LIVE_DIR = '/etc/letsencrypt/live';
+
+/**
+ * THE ACME CONTACT, WRITTEN WHERE THE OPERATOR WILL LOOK FOR IT.
+ *
+ * `serving.prod.tls.account_email` is required with `letsencrypt` and was, until 2026-08-30,
+ * validated and then used by nothing at all — a field that installs cleanly and vanishes,
+ * which is the defect §11 forbids in as many words ("no field validates and then vanishes").
+ * This provisioner does not run an ACME client and should not: obtaining a certificate needs
+ * the DNS to already point here, and that is not a fact a declaration can assert. What it
+ * can do is put the address in the file the operator opens when a certificate is missing, in
+ * the command they are about to type.
+ */
+function acmeContact(tls: { readonly mode: string; readonly account_email?: string }): string[] {
+  if (tls.mode !== 'letsencrypt' || !tls.account_email) return [];
+  return [
+    `# The certificate is the ACME CLIENT's to obtain; this provisioner never runs one (the`,
+    `# DNS must already point here, which no declaration can assert). The declared contact`,
+    `# for it — serving.prod.tls.account_email — is:`,
+    `#     ${required('serving.prod.tls.account_email', tls.account_email, EMAIL_PATTERN)}`,
+  ];
+}
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * Refusals
@@ -369,6 +390,7 @@ function prodVhost(layout: InstanceLayout, site: SiteLayout): string[] {
 
       lines.push(
         `# TLS terminates here (serving.prod.tls.mode: ${tls.mode}). Port 80 redirects.`,
+        ...acmeContact(tls),
         ``,
         'server {',
         '    listen 80;',

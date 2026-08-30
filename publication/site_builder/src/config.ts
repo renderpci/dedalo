@@ -53,6 +53,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
+import { parseEnvFile } from './env_file';
 import {
   DRIVER_IDS,
   INSTANCE_PATTERN,
@@ -309,42 +310,19 @@ export function defaultEnvFilePath(ambient: Record<string, string | undefined>):
 }
 
 /**
- * ONE ENV FILE, PARSED HERE.
+ * THE ENV-FILE GRAMMAR LIVES IN `src/env_file.ts`, and is re-exported here.
  *
- * The grammar is the intersection of the three readers this file has (systemd's
- * EnvironmentFile, a dotenv loader, an operator's `set -a; . env`): `KEY=VALUE`, optionally
- * double- or single-quoted, `#` comments, blank lines. Exactly what `render/env.ts` emits,
- * which is the point — the renderer quotes every value and escapes only `\` and `"`, so
- * that is all this has to unescape.
+ * It moved because a THIRD party reads the same bytes: `provision adopt` parses a
+ * PRE-instance `.env` to learn what a museum's daemon was configured with, and it cannot
+ * import this module to borrow the parser — this one resolves the daemon's configuration at
+ * import time and exits the process when it cannot. A second parser of the same grammar
+ * would be free to disagree about one escape, which on the adoption path is a SERVICE_TOKEN
+ * read wrongly out of the file and an engine that can no longer reach its own site builder.
  *
- * A line that is none of those is a REFUSAL naming the file and the line number. Skipping
- * it would mean a museum's daemon running with a value nobody could see was ignored.
+ * Re-exported rather than merely imported so every existing caller (and the suite) keeps
+ * naming one function in one place.
  */
-export function parseEnvFile(text: string, path: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  const lines = text.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i] as string;
-    const line = raw.trim();
-    if (!line || line.startsWith('#')) continue;
-    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$/.exec(line);
-    if (!match) {
-      refuse(
-        `The environment file '${path}' has a line this daemon cannot read (line ${i + 1}). ` +
-          `Expected KEY=VALUE, a '#' comment, or a blank line.`,
-      );
-    }
-    const key = match[1] as string;
-    let value = (match[2] as string).trim();
-    if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
-      value = value.slice(1, -1).replace(/\\([\\"])/g, '$1');
-    } else if (value.startsWith("'") && value.endsWith("'") && value.length >= 2) {
-      value = value.slice(1, -1);
-    }
-    out[key] = value;
-  }
-  return out;
-}
+export { parseEnvFile };
 
 /**
  * THE CREDENTIALS, out of systemd's per-unit tmpfs.
@@ -406,9 +384,16 @@ export function resolveConfig(sources: ConfigSources): { config: Config; report:
   /* 1. The env file. */
   const envFilePath = sources.envFilePath;
   const envFileExists = envFilePath !== null && existsSync(envFilePath);
-  const fileValues = envFileExists
-    ? parseEnvFile(readFileSync(envFilePath as string, 'utf8'), envFilePath as string)
-    : {};
+  let fileValues: Record<string, string> = {};
+  if (envFileExists) {
+    try {
+      fileValues = parseEnvFile(readFileSync(envFilePath as string, 'utf8'), envFilePath as string);
+    } catch (error) {
+      // The parser is shared with the provisioner and therefore carries no trailer of its
+      // own; this module's voice adds one. See `src/env_file.ts` for why it moved.
+      refuse((error as Error).message);
+    }
+  }
   ENV_FILE_DIR = envFilePath ? dirname(envFilePath) : PACKAGE_DIR;
   for (const [key, value] of Object.entries(fileValues)) {
     values[key] = value;

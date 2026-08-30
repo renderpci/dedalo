@@ -379,7 +379,7 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
 
 ## 6. Backups (S2-35)
 
-The **backup set is four stores** — the matrix DB alone is not a backup:
+The **backup set is five stores** — the matrix DB alone is not a backup:
 
 1. **Matrix Postgres DB** — the make_backup widget (or `pg_dump -F c -b`).
    The TS server threads `PGPASSWORD` from `DB_PASSWORD`, verifies a
@@ -391,10 +391,103 @@ The **backup set is four stores** — the matrix DB alone is not a backup:
 3. **Media originals** (`MEDIA_PATH`) — the `original` quality is the source
    of truth every derivative rebuilds from; derivatives need no backup.
 4. **`../private/`** — `.env` secrets, session store, `ts_state.json`.
+5. **Every site-builder INSTANCE on this host** — per instance: its
+   declaration and `secrets/`, its workspaces root (`SITES_ROOT`: every site's
+   source and full git history), each site's whole webspace (**both** release
+   stores, `.releases/pre` and `.releases/web`, **and** the two served
+   symlinks), and its audit trail (`AUDIT_DIR`). Nothing GENERATED is copied:
+   the unit, the vhosts, the rendered env and `sites.json` are functions of the
+   declaration and `provision apply` rewrites them all. See
+   `engineering/SITE_BUILDER_INSTANCES.md`. A host that declares no instance
+   has an empty store 5 and that is not a failure.
 
-`deploy/dedalo-backup.service` + `.timer` is the reference nightly job.
+`deploy/dedalo-backup.service` + `.timer` is the reference nightly job. Each
+store above names the token that copies it, and `test/unit/operator_commands_tripwire.test.ts`
+asserts the two agree — a store documented here and copied by nothing is the
+failure this table exists to make impossible:
+
+| # | Store | What copies it in `deploy/dedalo-backup.service` |
+|---|---|---|
+| 1 | Matrix Postgres DB | `pg_dump` |
+| 2 | RAG pgvector DB | `DEDALO_RAG_DB_NAME` |
+| 3 | Media originals | `MEDIA_PATH` |
+| 4 | `../private/` | `/opt/dedalo/private/` |
+| 5 | Site-builder instances | `dedalo-site-builder-backup.sh` |
+
+Store 5's `ExecStart` carries systemd's `+` prefix, so that one step runs as **root** while
+the other four stay unprivileged. It has to: an instance's credentials are `0600 root:root`
+inside a `0700` directory and its state roots are `0750` owned by that museum's own service
+user, and the backup user is in none of those groups — that separation is the isolation
+itself. The destination consequently holds credentials: create it `0700 root:root` and treat
+the whole backup tree as secret material, which store 4 already made true.
+
 MariaDB **diffusion targets are derived data** — rebuildable by re-publishing;
 no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
+
+### 6.1 Restore order
+
+Restore in dependency order — each step needs the one before it, and step 5
+cannot even be attempted before step 1:
+
+1. **`../private/`** (store 4). It carries the `.env` every other step reads —
+   the DB credentials, `MEDIA_PATH`, and the `DEDALO_SITE_BUILDER_*` pairing
+   lines. Restoring it last means restoring everything else blind.
+2. **Matrix Postgres DB** (store 1), with `pg_restore` into an empty database.
+3. **RAG pgvector DB** (store 2) if enabled; it is derived from the matrix DB
+   and can also be re-embedded rather than restored.
+4. **Media originals** (store 3), then rebuild derivatives with
+   `tool_update_cache` — do not restore derivatives.
+5. **Each site-builder instance** (store 5), in this order and no other:
+   1. `config/` back to `/etc/dedalo_sites/instances/<instance>/` — the
+      declaration and its `secrets/`, root-owned, modes preserved. Everything
+      else about the instance is derived from this directory.
+   2. The BYTES: the workspaces root, each site's webspace, the audit
+      directory, back to the paths the declaration names — **including hidden
+      entries**. The backup mirrors each webspace at its own SOURCE PATH under
+      `<instance>/webspaces/` (minus the leading slash), so the tree under that
+      directory reads as the host's own and there is nothing to work out: two
+      sites whose webspaces share a basename cannot collide, which they did
+      when the destination was the basename alone. The `.dedalo_site_instance` markers and the `.releases` stores
+      are dot-prefixed, and a root that comes back non-empty and unmarked is
+      refused by the provisioner (SITE_BUILDER_INSTANCES.md §5). A restore that
+      skips dotfiles produces a host that will not converge.
+   3. `bun run provision apply --instance <instance>` in
+      `publication/site_builder/`, as root. This recreates the user and group,
+      re-asserts every ownership and mode on the restored trees, and rewrites
+      every generated artifact — the unit, the vhosts, the env, `sites.json`,
+      the pairing fragment — from the declaration, **and links each vhost into
+      the directory the web server reads** (`sites-enabled/`), which is what
+      makes the restored museum answer on its domain rather than merely exist. It creates a served symlink
+      only when one is ABSENT and never re-points an existing one, which is why
+      the bytes go back first.
+   4. `bun run provision check --instance <instance>` must exit 0.
+   5. If the engine's `DEDALO_SITE_BUILDER_TOKEN` was lost with its `.env`,
+      re-pair from the restored credential:
+      `bun run scripts/site_builder_pair.ts <config dir>/engine.env.fragment --token-file <config dir>/secrets/SERVICE_TOKEN`.
+
+### 6.2 The reconciliation rule
+
+`provision check` proves the host matches its declaration. It does NOT prove a
+museum's site still serves, and after a restore that is the only question worth
+answering. So, **after restoring store 5, for every site: the served symlink
+must resolve, its target must be a non-empty directory, and for production the
+release it names must equal that site's own `published.release`.** A link that
+resolves to a directory that is not there, or to a release the site does not
+claim, is a museum serving a blank page or last month's page — and both look
+exactly like a successful restore from every other angle.
+
+Per site, with `<webspace>` from the instance's `sites.json` and `<slug>` from
+its workspaces root:
+
+```bash
+readlink   "<webspace>/web"                       # → .releases/web/<release>
+ls -A      "<webspace>/web/" | head              # must not be empty
+grep -o '"release": *"[^"]*"' "<SITES_ROOT>/<slug>/site.json"   # must name the same <release>
+```
+
+That comparison is the same one `publication/site_builder/src/provision/verify.ts`
+runs before and after an adoption. It is not yet reachable as a standalone verb;
+until it is, a restore is reconciled by the three reads above.
 
 ## 7. Schema: migrations + provisioning (S2-39, DEC-17/DEC-19)
 

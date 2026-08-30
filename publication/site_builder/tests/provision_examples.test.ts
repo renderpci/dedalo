@@ -513,6 +513,35 @@ describe('the retired hand-written artifacts stay retired', () => {
     }
   });
 
+  /** The one directory that legitimately holds the retired bytes. See the skip below. */
+  const RECOVERED_FIXTURE_DIR = 'pre_instance';
+
+  test('the recovered installer files live ONLY in that fixture, and nowhere a run could reach', () => {
+    // The exemption below costs nothing only while this holds: the retired files exist at
+    // exactly one path, under `tests/fixtures/`, and no live path in this package is that
+    // directory. A copy anywhere else is the resurrection this section refuses.
+    const found: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir).sort()) {
+        if (entry === 'node_modules' || entry === '.git' || entry === SCRATCH_DIR_NAME) continue;
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (['install.sh', 'sample.env', 'dedalo-site-builder.service'].includes(entry)) {
+          found.push(relative(PACKAGE_DIR, full));
+        }
+      }
+    };
+    walk(PACKAGE_DIR);
+    expect(found.sort()).toEqual([
+      join('tests', 'fixtures', RECOVERED_FIXTURE_DIR, 'dedalo-site-builder.service'),
+      join('tests', 'fixtures', RECOVERED_FIXTURE_DIR, 'install.sh'),
+      join('tests', 'fixtures', RECOVERED_FIXTURE_DIR, 'sample.env'),
+    ]);
+  });
+
   test('nothing in the package still tells an operator to run or copy one of them', () => {
     // A dangling instruction is worse than the installer was: the installer at least did
     // something. This walks the package's own tracked prose and source — not the whole repo,
@@ -522,7 +551,14 @@ describe('the retired hand-written artifacts stay retired', () => {
     const instruction =
       /(?:^|[\s`'"(])(?:sudo\s+)?(?:\.\/install\.sh|cp\s+\S*sample\.env|cp\s+\S*deploy\/dedalo-site-builder\.service|copy\s+nginx\/dedalo_sites)/;
     const offenders: string[] = [];
-    const skip = new Set(['node_modules', '.git', SCRATCH_DIR_NAME]);
+    // `tests/fixtures/pre_instance/` holds the three retired files VERBATIM, recovered from
+    // b46a29418e^ and frozen by hash, because `provision adopt` is a migration FROM that
+    // install and a fixture written from memory is how adoption came to read three keys the
+    // installer never wrote. They are evidence, not instructions: nothing runs them, nothing
+    // links to them, and `tests/provision_adopt.test.ts` asserts their hashes so they cannot
+    // be edited into something history was not. The rule this exempts them from is about a
+    // LIVE instruction, and a byte-frozen artifact under `tests/fixtures/` is not one.
+    const skip = new Set(['node_modules', '.git', SCRATCH_DIR_NAME, RECOVERED_FIXTURE_DIR]);
     const visit = (dir: string): void => {
       for (const entry of readdirSync(dir).sort()) {
         if (skip.has(entry)) continue;

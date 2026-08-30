@@ -62,7 +62,12 @@ import {
 function declaration(instance: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     instance,
-    engine: { private_dir: `/srv/dedalo/${instance}/private`, group: `dedalo-${instance}` },
+    engine: {
+      private_dir: `/srv/dedalo/${instance}/private`,
+      group: `dedalo-${instance}`,
+      checkout_dir: `/srv/dedalo/${instance}/master_dedalo`,
+      bun_bin: `/srv/dedalo/${instance}/.bun/bin/bun`,
+    },
     web: { server: 'nginx', group: 'www-data' },
     publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
     webspace_base: '/srv/www',
@@ -239,8 +244,22 @@ describe('the path census', () => {
 
   test('a shared ENGINE private directory collides — the pairing is 1:1', () => {
     const fleet = fleetOf(
-      layoutOf('alpha', { engine: { private_dir: '/srv/dedalo/shared/private', group: 'dedalo-alpha' } }),
-      layoutOf('beta', { engine: { private_dir: '/srv/dedalo/shared/private', group: 'dedalo-beta' } }),
+      layoutOf('alpha', {
+        engine: {
+          private_dir: '/srv/dedalo/shared/private',
+          group: 'dedalo-alpha',
+          checkout_dir: '/srv/dedalo/alpha/master_dedalo',
+          bun_bin: '/srv/dedalo/alpha/.bun/bin/bun',
+        },
+      }),
+      layoutOf('beta', {
+        engine: {
+          private_dir: '/srv/dedalo/shared/private',
+          group: 'dedalo-beta',
+          checkout_dir: '/srv/dedalo/beta/master_dedalo',
+          bun_bin: '/srv/dedalo/beta/.bun/bin/bun',
+        },
+      }),
     );
     const found = between(fleetViolations(fleet), 'alpha', 'beta').filter(v => v.kind === 'path');
     expect(found).toHaveLength(1);
@@ -253,7 +272,15 @@ describe('the path census', () => {
     // user that can read the paired engine's ../private/ reads that museum's .env.
     const fleet = fleetOf(
       layoutOf('alpha', {
-        engine: { private_dir: '/opt/alpha/private', group: 'dedalo-alpha' },
+        engine: {
+          private_dir: '/opt/alpha/private',
+          group: 'dedalo-alpha',
+          // Outside the widened workspaces root below: `derive()` refuses a checkout inside
+          // this instance's OWN writable set, which is a different law from the fleet one
+          // being measured here.
+          checkout_dir: '/opt/alpha/master_dedalo',
+          bun_bin: '/opt/alpha/.bun/bin/bun',
+        },
         roots: { workspaces: '/srv/dedalo' },
       }),
       layoutOf('beta'), // engine.private_dir defaults to /srv/dedalo/beta/private

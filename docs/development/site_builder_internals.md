@@ -71,6 +71,10 @@ imports `config`. `DEDALO_SITE_INSTANCE`, `SERVICE_TOKEN` (≥32 chars, delivere
 credential), `PUBLICATION_API_URL` and the four roots (`SITES_ROOT`, `AGENT_HOME`,
 `AUDIT_DIR`, `WEBSPACE_BASE`) are required. LLM provider keys live only here.
 
+On a provisioned host that environment file is **generated** from the museum's declaration
+and delivered by the generated systemd unit; the daemon never reads a hand-written one. See
+*The provisioner* below.
+
 `src/index.ts` is the `Bun.serve` boundary. Before it listens it runs
 `sweepOnBoot()` (session recovery, below). Shutdown drains in-flight work on SIGTERM.
 
@@ -207,6 +211,44 @@ complete rendered output of a reference declaration is committed, for both web s
 under `publication/site_builder/deploy/examples/`, so what lands on a host can be read
 without running anything.
 
+## The provisioner
+
+`src/provision/` is the ops half of the subsystem: an **instance** — one museum's tenancy —
+is declared once, and every host artifact is a pure function of that declaration. The
+division of labour is the design, and it is what makes the whole thing testable without a
+host to provision:
+
+| Module | Responsibility |
+|---|---|
+| `schema.ts` | Validates `instance.json`. Strict objects, no unknown keys, no relative paths, and a walk over the RAW document that refuses an inlined credential anywhere in it. |
+| `layout.ts` | **Derives** everything: the grammars, the default paths, the identity prefix and its arithmetic, the mode matrix, the containment predicate, the per-surface path pair. It owns every constant; `schema.ts` imports them rather than restating them. |
+| `fleet.ts` | What is declared under the config directory, and a named refusal for a bad declaration. |
+| `render/*` | One pure renderer per artifact — `unit`, `env`, `sites`, `nginx`, `apache`, `engine_fragment` — behind `renderAll()`. Each output carries a body-hash stamp naming its instance (`hash.ts`). |
+| `plan.ts` | **Pure**: `(layout, manifest, hostState) => Action[]`. Ordering, drift detection and idempotency are properties of that array, so a gate asserts on the plan instead of on a live host. |
+| `apply.ts` | **Dumb**: executes an already-decided plan. Writes only on drift, reloads systemd only when a unit changed, never reloads a web server after a failed config test. `check()` is the same report with no io at all. |
+| `verify.ts` | The serving proof: for every slug and surface, does the served link resolve, does its target hold bytes, and is it still the release the site claims to publish. |
+| `adopt.ts` | Infers a declaration from a live pre-instance install, moves its credentials into root-owned files, retires the old ones — then calls the ordinary `plan()`/`apply()`. |
+| `remove.ts` | Decommissioning, also as a pure plan. Archives (renames) rather than deletes, unlinks only artifacts whose stamp proves this instance wrote them, and never frees a uid. |
+| `cli.ts` | `bun run provision <verb>`: arguments, targets, output, exit codes — and no rule about what a host should end up holding. |
+
+Two properties are worth carrying in your head when editing here.
+
+**Nothing is derived twice.** The recurring defect of this subsystem has been two
+independent derivations of one fact, each invisible to a green suite — the schema and the
+layout owning different bounds, the daemon computing a webspace the provisioner did not use,
+a hand-kept artifact census beside `renderAll()`. `test/unit/site_builder_single_source_tripwire.test.ts`
+in the engine repo is the ratchet: per fact, the files entitled to derive it are frozen in a
+baseline, and a new second derivation is red by default.
+
+**A credential value never enters a plan.** A plan is printed, so `FileContent` has no
+source that carries a literal secret. `apply` can mint a random token and can hash a
+password file, but the one place a credential value exists in the adoption path is
+`PreInstance.credentials`, kept in its own field so that "does this record carry a secret" is
+answerable by reading a type, and leaving it exactly once — into a `0600` file.
+
+Operator-facing procedure (declaring, provisioning, adopting, decommissioning, backups) is in
+the [site builder management page](../management/site_builder.md).
+
 ## The engine tool
 
 `tools/tool_sitebuilder/` — a standard tool package (server module + vanilla-JS client).
@@ -310,18 +352,35 @@ placed in the `publication` category (list view) and the `pub` node (System Map 
 ## Configuration keys
 
 **Engine** (`../private/.env`, read via `config.siteBuilder`, catalog
-`src/config/catalog/sitebuilder.ts`): `DEDALO_SITE_BUILDER_URL`, `DEDALO_SITE_BUILDER_TOKEN`,
+`src/config/catalog/sitebuilder.ts`): `DEDALO_SITE_BUILDER_INSTANCE`,
+`DEDALO_SITE_BUILDER_SOCKET`, `DEDALO_SITE_BUILDER_URL`, `DEDALO_SITE_BUILDER_TOKEN`,
 `DEDALO_SITE_BUILDER_TIMEOUT_MS`. See the
-[settings reference](../config/config.md#sitebuilder).
+[settings reference](../config/config.md#sitebuilder). You do not type them: the provisioner
+renders them into the instance's pairing fragment and `scripts/site_builder_pair.ts` appends
+them.
 
-**Daemon** (`publication/site_builder/.env`; on a provisioned host this file is rendered
-by `src/provision/render/env.ts` and its keys are derived from the host's declaration):
-`SERVICE_TOKEN` (must match the engine token — delivered by systemd `LoadCredential=`, never
-written into the file), `DEDALO_SITE_INSTANCE`, `PUBLICATION_API_URL`, the four roots
-(`SITES_ROOT` / `AGENT_HOME` / `AUDIT_DIR` / `WEBSPACE_BASE`), the two URL facts
-(`PREPROD_HOST_PREFIX`, `PROD_URL_SCHEME` — a site's URL is otherwise built from its own
-domain), `AGENT_DRIVER` + the driver bins and provider keys, and the limits (`MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
-`INSTALL_TIMEOUT_MS` / `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`).
+**Daemon.** On a provisioned host the daemon's environment file is a GENERATED artifact —
+`src/provision/render/env.ts` derives every key in it from the declaration, and a hand edit
+is reported as drift and lost on the next `apply`. So the keys below are documented as what
+the daemon *reads*, not as something anyone writes:
+
+- Identity and transport: `DEDALO_SITE_INSTANCE`, `LISTEN_KIND`, `LISTEN_SOCKET`,
+  `DEPLOYMENT_MODE`, `BASE_PATH`, and `PORT`/`HOST` for the standalone development case.
+- Roots: `SITES_ROOT`, `AGENT_HOME`, `AUDIT_DIR`, `WEBSPACE_BASE`, `SITE_TABLE_FILE`.
+- Data source: `PUBLICATION_API_URL`, `PUBLICATION_API_KEY_FILE`.
+- URL facts: `PREPROD_HOST_PREFIX`, `PROD_URL_SCHEME` — a site's address is otherwise built
+  from its own domain.
+- Agent: `AGENT_DRIVER` and the driver bins `CLAUDE_CODE_BIN` / `OPENCODE_BIN` / `PI_BIN`
+  (absolute paths — a bare name resolved through the shared search path is a
+  cross-instance substitution vector).
+- Limits: `MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,
+  `INSTALL_TIMEOUT_MS`, `BUILD_TIMEOUT_MS`, `SITE_DISK_QUOTA_MB`, `RELEASES_RETAINED`. A
+  limit absent from the rendered file means "the daemon's own default", never a frozen copy
+  of today's value.
+- Credentials — `SERVICE_TOKEN`, `ANTHROPIC_API_KEY`, `OPENCODE_ENV`, `PI_ENV`,
+  `PUBLICATION_API_KEY` — are **never** written into that file. They arrive through systemd
+  `LoadCredential=` out of root-owned `0600` files and are layered over the parsed
+  environment at boot, where a credential always wins.
 
 ## Extending
 
@@ -353,6 +412,14 @@ allowlisting proxy or per-uid rules.
   driver stream parsing, session flow (a fake driver injected via `__setTestDriver` exercises
   the full manager → store → SSE → git path with no real CLI), promote/rollback symlink
   semantics, path-confinement and slug fuzz, auth, and the audit log.
+- **The provisioner**: `tests/provision*.test.ts` in the same suite. Because `plan()`,
+  `removalPlan()` and the renderers are pure, most of it asserts on a value rather than on a
+  host: the composition `derive(parseManifest(…))`, the mode matrix, every refusal by name,
+  and byte-equality between the committed rendered examples and a fresh render. The
+  behavioural halves — adoption and removal — drive real writes, renames and modes inside a
+  temp prefix with `exec` and `chown` stubbed. What they therefore do **not** prove is that
+  `systemctl`, `usermod` and a real `chown` behave as expected, or that the uid boundary
+  holds in the kernel; that is the operator's `provision check` on the box.
 - **Engine**: `test/unit/tool_sitebuilder.test.ts` drives the proxy against an in-test
   mock daemon (config injected via `mock.module`), asserting the bearer + actor headers, the
   error taxonomy, the publish gate, and byte-identical SSE pass-through with the
@@ -367,7 +434,9 @@ allowlisting proxy or per-uid rules.
 | Workspaces (manifest, git, templates, brief) | `publication/site_builder/src/sites/*`, `src/context/agents_md.ts` |
 | Sessions (turns, drivers, SSE, event log) | `publication/site_builder/src/sessions/*`, `src/drivers/*` |
 | Build / promote / publish | `publication/site_builder/src/build/*` |
-| Ops (the declaration, its derivation, the rendered artifacts) | `publication/site_builder/src/provision/{schema,layout,hash}.ts`, `src/provision/render/*`, `deploy/examples/*` |
+| Ops — declaration, derivation, rendered artifacts | `publication/site_builder/src/provision/{schema,layout,hash}.ts`, `src/provision/render/*`, `deploy/examples/*` |
+| Ops — the provisioner itself | `publication/site_builder/src/provision/{fleet,plan,apply,verify,adopt,remove,cli}.ts` |
+| Ops — the backup of an instance's state | `deploy/dedalo-site-builder-backup.sh`, `deploy/dedalo-backup.service` |
 | Engine proxy + client | `tools/tool_sitebuilder/{server,js,css}/*`, `register.json` |
 | Engine config + core edit | `src/config/catalog/sitebuilder.ts`, `src/config/config.ts`, `src/core/api/handlers/dd_tools_api.ts` |
 | Maintenance widget + launcher | `src/core/area_maintenance/widgets/site_builder_status.ts`, `client/dedalo/core/area_maintenance/widgets/site_builder_status/js/*` |

@@ -187,6 +187,8 @@ publication/site_builder/*.tsbuildinfo
 publication/site_builder/**/*/*.tsbuildinfo
 publication/site_builder/.test-tmp
 publication/site_builder/**/*/.test-tmp
+publication/site_builder/.env.pre-instance
+publication/site_builder/**/*/.env.pre-instance
 
 # --- 5. Named explicitly (the OPS-01 assets). --------------------------------
 # Already covered by 1, 3 and 4. Stated anyway: these are the paths install.sh

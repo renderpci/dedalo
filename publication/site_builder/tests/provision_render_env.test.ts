@@ -68,7 +68,12 @@ function baseManifest(overrides: Partial<InstanceManifest> = {}): InstanceManife
   return {
     instance: 'gate',
     description: 'Gate instance',
-    engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+    engine: {
+      private_dir: '/srv/dedalo/gate/private',
+      group: 'dedalo-gate',
+      checkout_dir: '/srv/dedalo/gate/master_dedalo',
+      bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+    },
     web: { server: 'nginx', group: 'www-data' },
     publication_api: {
       url: 'http://127.0.0.1:3100/publication/server_api/v2',

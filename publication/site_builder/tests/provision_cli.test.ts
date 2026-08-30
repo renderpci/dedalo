@@ -41,8 +41,18 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { derive, DEFAULT_PATHS, type InstanceManifest } from '../src/provision/layout';
+import type { AdoptIo, MigrationReport, MigrationStep, PreInstance } from '../src/provision/adopt';
+import { describeMigration } from '../src/provision/adopt';
+import type { ServingReport, SurfaceExpectation } from '../src/provision/verify';
+import {
+  changesTheHost as removalChangesTheHost,
+  describeRemoval,
+  type RemovalIo,
+  type RemovalReport,
+  type RemovalStep,
+} from '../src/provision/remove';
 import { parseManifest } from '../src/provision/schema';
-import type { Action } from '../src/provision/plan';
+import type { Action, OrphanedVhost } from '../src/provision/plan';
 import type { ActionOutcome, ApplyReport, CheckReport, ProvisionIo } from '../src/provision/apply';
 import type { Fleet, FleetMember, FleetRefusal } from '../src/provision/fleet';
 import {
@@ -135,10 +145,76 @@ const IO_SENTINEL = { sentinel: 'host-io' } as unknown as ProvisionIo;
 
 interface Calls {
   loadFleet: string[];
+  /** The instance sets the fleet law was asked about, in call order. */
+  disjoint: string[][];
   observeHost: string[];
   plan: string[];
   check: number;
   apply: Array<{ actions: readonly Action[]; io: ProvisionIo }>;
+  migration: number;
+  verify: number;
+  removal: Array<readonly RemovalStep[]>;
+}
+
+/**
+ * A pre-instance install, as the CLI needs one: enough to be described, nothing that
+ * pretends to be a host. The deep adoption behaviour is `tests/provision_adopt.test.ts`'s,
+ * against a real synthetic install; here the subject is still the COMMAND.
+ */
+const PRE: PreInstance = Object.freeze({
+  from: '/srv/dedalo/example/site_builder',
+  envPath: '/srv/dedalo/example/site_builder/.env',
+  envAlreadyRetired: false,
+  settings: Object.freeze({}),
+  credentials: Object.freeze({}),
+  legacyUnitPath: '/etc/systemd/system/dedalo-site-builder.service',
+  legacyUnitPresent: true,
+  identity: Object.freeze({ user: 'dedalo-site-example', group: 'dedalo-site-example' }),
+  runtime: Object.freeze({
+    checkoutDir: '/srv/dedalo/example/master_dedalo',
+    bunBin: '/srv/dedalo/example/.bun/bin/bun',
+  }),
+  sites: Object.freeze([]),
+});
+
+const STUB_IO = { stub: 'adopt-io' } as unknown as AdoptIo;
+
+function servingReport(ok: boolean): ServingReport {
+  const verdicts = ok
+    ? []
+    : [
+        {
+          expectation: {
+            slug: 'collection',
+            surface: 'prod' as const,
+            paths: { surface: 'prod' as const, webspace: '/w', storeDir: '/w/s', linkPath: '/w/web' },
+            expected: '20260830-01',
+            mustBeServed: true,
+            source: "site.json's published.release for 'collection'",
+          },
+          ok: false,
+          failures: ['the served link dangles'],
+        },
+      ];
+  return { ok, verdicts, failed: verdicts };
+}
+
+function migrationReport(steps: readonly MigrationStep[], ok = true): MigrationReport {
+  return {
+    ok,
+    outcomes: steps.map(step => ({ step, status: ok ? ('done' as const) : ('failed' as const), detail: 'x' })),
+    changed: ok,
+    failure: ok ? null : (steps[0] ? { step: steps[0], status: 'failed', detail: 'x' } : null),
+  };
+}
+
+function removalReport(steps: readonly RemovalStep[], ok = true): RemovalReport {
+  return {
+    ok,
+    outcomes: steps.map(step => ({ step, status: ok ? ('done' as const) : ('failed' as const), detail: 'x' })),
+    archived: steps.flatMap(step => (step.kind === 'archive' ? [{ from: step.from, to: step.to }] : [])),
+    failure: ok ? null : (steps[0] ? { step: steps[0], status: 'failed', detail: 'x' } : null),
+  };
 }
 
 interface FakeOptions {
@@ -154,30 +230,67 @@ interface FakeOptions {
   readonly applyFails?: Readonly<Record<string, string>>;
   /** Make the whole fleet refuse as overlapping. */
   readonly disjointThrows?: string;
+  /** Generated vhosts on the host that no declared site would produce. */
+  readonly orphans?: readonly OrphanedVhost[];
+  /** Refuse only SOME fleets — how the candidate check is told apart from the load. */
+  readonly disjointThrowsWhen?: (instances: readonly string[]) => string | null;
   /** Extra fields for the check report — refusals, execs. */
   readonly checkExtras?: Partial<CheckReport>;
   /** Which actions touch the host. Default: all of them. */
   readonly changesTheHost?: (item: Action) => boolean;
   /** Override the plan's words — used to drive the secret guard. */
   readonly describe?: (item: Action) => string;
+
+  /* ── adoption ── */
+  readonly pre?: PreInstance;
+  readonly observePreInstanceThrows?: string;
+  readonly inferThrows?: string;
+  readonly migration?: readonly MigrationStep[];
+  readonly migrationFails?: boolean;
+  readonly expectations?: readonly SurfaceExpectation[];
+  /** One report per `verifyServing` call, in order. Missing entries read as OK. */
+  readonly serving?: readonly boolean[];
+
+  /* ── removal ── */
+  readonly published?: readonly { slug: string; domain: string; release: string }[];
+  readonly removal?: readonly RemovalStep[];
+  readonly removalFails?: boolean;
+  readonly removalPlanThrows?: string;
 }
 
 function fakeDeps(fleet: Fleet, options: FakeOptions = {}): { deps: ProvisionDeps; calls: Calls } {
-  const calls: Calls = { loadFleet: [], observeHost: [], plan: [], check: 0, apply: [] };
+  const calls: Calls = {
+    loadFleet: [],
+    observeHost: [],
+    plan: [],
+    check: 0,
+    disjoint: [],
+    apply: [],
+    migration: 0,
+    verify: 0,
+    removal: [],
+  };
 
   const deps: ProvisionDeps = {
     loadFleet(dir) {
       calls.loadFleet.push(dir);
       return fleet;
     },
-    assertFleetDisjoint() {
+    assertFleetDisjoint(fleet) {
+      const instances = fleet.layouts.map(entry => entry.instance);
+      calls.disjoint.push(instances);
       if (options.disjointThrows) throw new Error(options.disjointThrows);
+      const refusal = options.disjointThrowsWhen?.(instances);
+      if (refusal) throw new Error(refusal);
     },
     observeHost(layout) {
       calls.observeHost.push(layout.instance);
       const boom = options.observeThrows?.[layout.instance];
       if (boom) throw new Error(boom);
       return { users: [], groups: [], entries: {}, unitEnabled: false, unitActive: false };
+    },
+    orphanedVhosts() {
+      return [...(options.orphans ?? [])];
     },
     plan(layout) {
       calls.plan.push(layout.instance);
@@ -208,6 +321,58 @@ function fakeDeps(fleet: Fleet, options: FakeOptions = {}): { deps: ProvisionDep
     hostIo() {
       return IO_SENTINEL;
     },
+
+    adoptIo() {
+      return STUB_IO;
+    },
+    observePreInstance() {
+      if (options.observePreInstanceThrows) throw new Error(options.observePreInstanceThrows);
+      return options.pre ?? PRE;
+    },
+    inferManifest() {
+      if (options.inferThrows) throw new Error(options.inferThrows);
+      return EXAMPLE.manifest;
+    },
+    derive,
+    migrationSteps() {
+      return [...(options.migration ?? [])];
+    },
+    describeMigration,
+    applyMigration(steps) {
+      calls.migration += 1;
+      return migrationReport(steps, !options.migrationFails);
+    },
+    expectationsFor() {
+      return [...(options.expectations ?? [])];
+    },
+    relocateExpectations(expectations) {
+      return [...expectations];
+    },
+    verifyServing() {
+      const index = calls.verify;
+      calls.verify += 1;
+      return servingReport(options.serving?.[index] ?? true);
+    },
+
+    removalIo(base) {
+      return base as RemovalIo;
+    },
+    publishedSites() {
+      return [...(options.published ?? [])];
+    },
+    observeForRemoval() {
+      return { artifactBodies: {}, present: {}, links: {}, claims: {} };
+    },
+    removalPlan() {
+      if (options.removalPlanThrows) throw new Error(options.removalPlanThrows);
+      return [...(options.removal ?? [])];
+    },
+    describeRemoval,
+    removalChangesTheHost,
+    applyRemoval(steps) {
+      calls.removal.push(steps);
+      return removalReport(steps, !options.removalFails);
+    },
   };
 
   return { deps, calls };
@@ -215,13 +380,12 @@ function fakeDeps(fleet: Fleet, options: FakeOptions = {}): { deps: ProvisionDep
 
 function invoke(
   argv: readonly string[],
-  options: { deps?: ProvisionDeps; exists?: (path: string) => boolean } = {},
+  options: { deps?: ProvisionDeps } = {},
 ): { code: number; out: string[]; err: string[] } {
   const out: string[] = [];
   const err: string[] = [];
   const code = run(argv, {
     deps: options.deps,
-    exists: options.exists ?? (() => false),
     out: line => out.push(line),
     err: line => err.push(line),
   });
@@ -253,19 +417,22 @@ describe('--help documents exactly the verbs that exist', () => {
     expect(documentedVerbs(usageLines()).sort()).toEqual(Object.keys(VERBS).sort());
   });
 
-  test('the two PARTIAL verbs say so — in the help and in the code, as one string', () => {
-    for (const name of ['adopt', 'remove']) {
-      const spec = VERBS[name];
-      expect(spec?.deferred).toBeTruthy();
-      expect(spec?.deferred).toContain('PARTIAL');
-      expect(joined(usageLines())).toContain(spec?.deferred ?? '@@never@@');
+  test('no verb claims to be PARTIAL any more — and none may, silently', () => {
+    // `adopt` and `remove` were argument handling in front of unwritten work, and said so in
+    // one string printed by both the help and the verb. The work is written; the honesty
+    // mechanism goes with it rather than staying as a field nothing sets. If a verb is ever
+    // deferred again it needs the mechanism BACK, not a quiet exit 0.
+    expect(joined(usageLines())).not.toContain('PARTIAL');
+    for (const spec of Object.values(VERBS)) {
+      expect(Object.keys(spec)).not.toContain('deferred');
     }
   });
 
-  test('a verb that is not deferred makes no PARTIAL claim', () => {
-    for (const name of ['apply', 'check', 'render', 'list']) {
-      expect(VERBS[name]?.deferred).toBeUndefined();
-    }
+  test('a required flag is documented on the verb that requires it', () => {
+    // adopt cannot run without being told WHERE the pre-instance install is, and a verb whose
+    // requirement is only in the code is a verb an operator discovers by being refused.
+    expect(VERBS.adopt?.requires).toEqual(['from']);
+    expect(joined(usageLines())).toContain('requires --from <value>');
   });
 
   test('--help prints to stdout, documents every exit code, and exits OK', () => {
@@ -574,6 +741,50 @@ describe('check (P3)', () => {
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
+ * A site dropped from the declaration is still on the internet
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('vhosts no declared site would produce', () => {
+  const ORPHANS: OrphanedVhost[] = [
+    { path: '/etc/nginx/sites-available/dedalo-site-example-archivo.conf', enabled: false },
+    { path: '/etc/nginx/sites-enabled/dedalo-site-example-archivo.conf', enabled: true },
+  ];
+
+  test('check names every one of them, says which are ENABLED, and is DRIFT', () => {
+    // A converged host that still serves an undeclared site is the one divergence that
+    // prints "nothing to do", so it must not be a footnote under it.
+    const { deps } = fakeDeps(fleetOf([EXAMPLE]), { orphans: ORPHANS });
+    const result = invoke(['check', '--instance', 'example'], { deps });
+
+    expect(result.code).toBe(EXIT.DRIFT);
+    const text = joined(result.err);
+    expect(text).toContain('dedalo-site-example-archivo.conf');
+    expect(text).toContain('1 of them ENABLED');
+    expect(text).toContain('still on the');
+  });
+
+  test('apply reports them too, and does NOT exit 0 — it cannot repair them', () => {
+    // Removing a vhost is a deletion, and this provisioner does not delete. Exiting 0 would
+    // tell an operator the host matches its declaration while it serves a site nobody
+    // declared.
+    const { deps } = fakeDeps(fleetOf([EXAMPLE]), { orphans: ORPHANS, plans: { example: [action('write unit')] } });
+    const result = invoke(['apply', '--instance', 'example'], { deps });
+
+    expect(result.code).toBe(EXIT.REFUSED);
+    expect(joined(result.err)).toContain('dedalo-site-example-archivo.conf');
+    // …and the convergence still happened: the notice is not a refusal to work.
+    expect(joined(result.out)).toContain('applying 1 action(s)');
+  });
+
+  test('a host with none of them is silent about it', () => {
+    const { deps } = fakeDeps(fleetOf([EXAMPLE]));
+    const result = invoke(['check', '--instance', 'example'], { deps });
+    expect(result.code).toBe(EXIT.OK);
+    expect(joined(result.err)).not.toContain('no declared site');
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
  * apply — P2 and P4
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
@@ -756,47 +967,114 @@ describe('list', () => {
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 describe('remove (P6)', () => {
-  const publishedLink = EXAMPLE.layout.sites[0]?.linkPath('prod') ?? '';
-  const isPublished = (path: string): boolean => path === publishedLink;
+  const PUBLISHED = [{ slug: 'collection', domain: 'www.example.org', release: '20260830-01' }];
 
   test('refuses while a site is published, and shows no removal plan at all', () => {
-    const { deps } = fakeDeps(fleetOf([EXAMPLE]));
-    const result = invoke(['remove', '--instance', 'example'], { deps, exists: isPublished });
+    const { deps, calls } = fakeDeps(fleetOf([EXAMPLE]), { published: PUBLISHED });
+    const result = invoke(['remove', '--instance', 'example'], { deps });
 
     expect(result.code).toBe(EXIT.REFUSED);
     expect(joined(result.err)).toContain('still publishes 1 site(s)');
-    expect(joined(result.err)).toContain(publishedLink);
+    // The RELEASE is named, because "published" is a link pointing at one — not a link
+    // existing, which is true of every provisioned site from its placeholder onwards.
+    expect(joined(result.err)).toContain("serving release '20260830-01'");
     expect(joined(result.err)).toContain('--purge-published');
     // A refusal that still prints the plan reads as a dry run, and an operator who read one
     // would believe the removal had been described rather than declined.
     expect(result.out).toEqual([]);
+    expect(calls.removal).toEqual([]);
   });
 
-  test('--purge-published gets past the refusal and still executes nothing', () => {
-    const { deps } = fakeDeps(fleetOf([EXAMPLE]));
-    const result = invoke(['remove', '--instance', 'example', '--purge-published'], { deps, exists: isPublished });
+  test('--purge-published gets past the refusal and carries the removal out', () => {
+    const steps: RemovalStep[] = [
+      { kind: 'exec', what: 'stop it', argv: ['systemctl', 'stop', EXAMPLE.layout.unitName], onFailure: 'tolerate' },
+      { kind: 'archive', from: '/srv/www/www.example.org', to: '/srv/www/www.example.org.retired-20260830T000000Z', what: 'the webspace' },
+    ];
+    const { deps, calls } = fakeDeps(fleetOf([EXAMPLE]), { published: PUBLISHED, removal: steps });
+    const result = invoke(['remove', '--instance', 'example', '--purge-published'], { deps });
 
-    expect(result.code).toBe(EXIT.UNSUPPORTED);
+    expect(result.code).toBe(EXIT.OK);
+    expect(calls.removal).toEqual([steps]);
     const text = joined(result.out);
-    expect(text).toContain('what removal WOULD do');
-    expect(text).toContain('PARTIAL');
-    expect(text).toContain('Phase 8');
+    expect(text).toContain('1 published site(s) are included');
+    // ARCHIVED, and the destination spelled out: an operator has to be able to write it down.
+    expect(text).toContain('ARCHIVED');
+    expect(text).toContain('/srv/www/www.example.org.retired-20260830T000000Z');
+    expect(text).toContain('nothing deleted');
   });
 
-  test('the removal it describes archives rather than deletes, and never frees the uid', () => {
+  test('A FLEET COLLISION DOES NOT MAKE remove UNUSABLE — it reports and carries on', () => {
+    // The collision has to be escapable. Taking one of two colliding instances off the host
+    // is HOW it is resolved, so a `remove` that refused on it would be a trap with no exit,
+    // and the operator's only remaining move would be to edit /etc by hand — which is the
+    // whole class of defect this subsystem exists to end.
+    const steps: RemovalStep[] = [
+      { kind: 'exec', what: 'stop it', argv: ['systemctl', 'stop', EXAMPLE.layout.unitName], onFailure: 'tolerate' },
+    ];
+    const { deps, calls } = fakeDeps(fleetOf([EXAMPLE, member('other')]), {
+      disjointThrows: "instances 'example' and 'other' both claim /var/lib/dedalo_sites/example",
+      removal: steps,
+    });
+    const result = invoke(['remove', '--instance', 'example'], { deps });
+
+    expect(result.code).toBe(EXIT.OK);
+    expect(calls.removal).toEqual([steps]);
+    // Reported, in full and by name — it is a fact about the host the operator needs — and
+    // said to be a report rather than a refusal.
+    expect(joined(result.err)).toContain('both claim');
+    expect(joined(result.err)).toContain('This is NOT a refusal');
+    expect(joined(result.out)).toContain('decommissioned');
+  });
+
+  test('the identity is kept, and the run says why in the terms an operator can act on', () => {
     const { deps } = fakeDeps(fleetOf([EXAMPLE]));
     const result = invoke(['remove', '--instance', 'example'], { deps });
 
-    expect(result.code).toBe(EXIT.UNSUPPORTED);
+    expect(result.code).toBe(EXIT.OK);
     const text = joined(result.out);
-    expect(text).toContain('ARCHIVE, never delete');
-    expect(text).toContain('retired-<utc-timestamp>');
-    expect(text).toContain('KEEP THE IDENTITY');
     expect(text).toContain(EXAMPLE.layout.identity.user);
-    expect(text).toContain('frees its uid');
-    // The artifacts it would take away are named, so an operator can check them first.
-    expect(text).toContain(EXAMPLE.layout.unitPath);
-    expect(text).toContain(EXAMPLE.layout.sites[0]?.vhostPaths.prod ?? '@@none@@');
+    expect(text).toContain('are KEPT');
+    expect(text).toContain('freeing that uid');
+    // And the declaration itself is left behind deliberately, so the operator decides.
+    expect(text).toContain(EXAMPLE.manifestPath);
+  });
+
+  test('THE LOCK IS CLAIMED ONLY WHEN IT ACTUALLY HAPPENED', () => {
+    // The block used to be printed BEFORE the first step ran, so a run that stopped at its
+    // second one still told the operator the account had been locked and the reader had no
+    // way to tell the claim from the outcome.
+    const lock: RemovalStep = {
+      kind: 'exec',
+      what: 'lock the account',
+      argv: ['usermod', '--lock', EXAMPLE.layout.identity.user],
+      onFailure: 'tolerate',
+    };
+    const { deps } = fakeDeps(fleetOf([EXAMPLE]), { removal: [lock] });
+    expect(joined(invoke(['remove', '--instance', 'example'], { deps }).out)).toContain('is now LOCKED');
+
+    // …and a run whose plan never reaches it says so instead of claiming it.
+    const other = fakeDeps(fleetOf([EXAMPLE]), {
+      removal: [{ kind: 'exec', what: 'stop it', argv: ['systemctl', 'stop', 'x'], onFailure: 'tolerate' }],
+    });
+    const text = joined(invoke(['remove', '--instance', 'example'], { deps: other.deps }).out);
+    expect(text).toContain('was NOT locked by this run');
+    expect(text).not.toContain('is now LOCKED');
+  });
+
+  test('a plan the removal module refuses is a refusal, not a half-run', () => {
+    const { deps, calls } = fakeDeps(fleetOf([EXAMPLE]), { removalPlanThrows: 'a reload with no configtest' });
+    const result = invoke(['remove', '--instance', 'example'], { deps });
+    expect(result.code).toBe(EXIT.REFUSED);
+    expect(joined(result.err)).toContain('a reload with no configtest');
+    expect(calls.removal).toEqual([]);
+  });
+
+  test('a removal that fails part way is FAILED and names where it stopped', () => {
+    const steps: RemovalStep[] = [{ kind: 'unlink', path: EXAMPLE.layout.unitPath, what: 'the generated unit' }];
+    const { deps } = fakeDeps(fleetOf([EXAMPLE]), { removal: steps, removalFails: true });
+    const result = invoke(['remove', '--instance', 'example'], { deps });
+    expect(result.code).toBe(EXIT.FAILED);
+    expect(joined(result.err)).toContain('stopped at');
   });
 
   test('an instance that is not declared is refused, not invented', () => {
@@ -815,35 +1093,118 @@ describe('remove (P6)', () => {
 });
 
 /* ────────────────────────────────────────────────────────────────────────────────────
- * adopt
+ * adopt — the command's own arithmetic. The migration itself is provision_adopt.test.ts's.
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 describe('adopt', () => {
-  test('refuses to write over a declaration that already exists', () => {
-    const { deps } = fakeDeps(fleetOf([EXAMPLE]));
-    const result = invoke(['adopt', '--instance', 'example'], { deps });
-    expect(result.code).toBe(EXIT.REFUSED);
-    expect(joined(result.err)).toContain(EXAMPLE.manifestPath);
-    expect(joined(result.err)).toContain('will not replace one');
-  });
+  const FROM = ['--from', '/srv/dedalo/example/site_builder'];
 
-  test('refuses to adopt over a declaration that is merely broken — that file is evidence', () => {
+  test('refuses to adopt over a declaration that is broken — that file is evidence', () => {
     const { deps } = fakeDeps(fleetOf([], [{ instance: 'half', manifestPath: '/etc/x/half/instance.json', reason: 'bad json' }]));
-    const result = invoke(['adopt', '--instance', 'half'], { deps });
+    const result = invoke(['adopt', '--instance', 'half', ...FROM], { deps });
     expect(result.code).toBe(EXIT.REFUSED);
     expect(joined(result.err)).toContain('overwrite the evidence');
   });
 
-  test('otherwise it says exactly what it does not do yet, and does nothing', () => {
-    const { deps, calls } = fakeDeps(fleetOf([EXAMPLE]));
-    const result = invoke(['adopt', '--instance', 'newcomer'], { deps });
+  test('needs --from: the install to adopt is never guessed', () => {
+    const result = invoke(['adopt', '--instance', 'example']);
+    expect(result.code).toBe(EXIT.USAGE);
+    expect(joined(result.err)).toContain('--from');
+  });
 
-    expect(result.code).toBe(EXIT.UNSUPPORTED);
-    const text = joined(result.out);
-    expect(text).toContain('nothing was read from this host and nothing was written');
-    expect(text).toContain('Phase 8');
-    expect(calls.observeHost).toEqual([]);
+  test('PROVES the serving before writing anything, and refuses an install it cannot prove', () => {
+    const { deps, calls } = fakeDeps(fleetOf([]), { serving: [false] });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+
+    expect(result.code).toBe(EXIT.REFUSED);
+    expect(joined(result.err)).toContain('does not currently serve what it claims to');
+    // Nothing was written: not the declaration, not a credential, not an artifact.
+    expect(calls.migration).toBe(0);
     expect(calls.apply).toEqual([]);
+    expect(calls.verify).toBe(1);
+  });
+
+  test('infers, migrates, converges and PROVES again — in that order', () => {
+    const steps: MigrationStep[] = [
+      { kind: 'declaration', path: EXAMPLE.layout.manifestPath, body: '{}\n' },
+      { kind: 'secret', key: 'SERVICE_TOKEN', path: EXAMPLE.layout.secretPath('SERVICE_TOKEN') },
+    ];
+    const { deps, calls } = fakeDeps(fleetOf([]), { migration: steps, plans: { example: [action('write unit')] } });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+
+    expect(result.code).toBe(EXIT.OK);
+    expect(calls.migration).toBe(1);
+    expect(calls.apply.length).toBe(1);
+    // TWICE: once before the migration and once after. The second is the gate on "done".
+    expect(calls.verify).toBe(2);
+    const text = joined(result.out);
+    expect(text).toContain('verified before anything was written');
+    expect(text).toContain('still serve exactly what they served before');
+    expect(text).toContain('retired at');
+  });
+
+  test('a migration that fails never reaches the provisioning, and is FAILED', () => {
+    const steps: MigrationStep[] = [{ kind: 'retire_env', from: '/a/.env', to: '/a/.env.pre-instance' }];
+    const { deps, calls } = fakeDeps(fleetOf([]), { migration: steps, migrationFails: true });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+
+    expect(result.code).toBe(EXIT.FAILED);
+    expect(calls.apply).toEqual([]);
+    expect(joined(result.err)).toContain('stopped at');
+  });
+
+  test('a converged host whose site stopped serving is FAILED — not a successful adoption', () => {
+    const { deps, calls } = fakeDeps(fleetOf([]), { serving: [true, false] });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+
+    expect(result.code).toBe(EXIT.FAILED);
+    expect(calls.verify).toBe(2);
+    expect(joined(result.err)).toContain('CANNOT BE DECLARED DONE');
+    // And it says where the bytes still are, because nothing in adoption deletes any.
+    expect(joined(result.err)).toContain('release directories are');
+  });
+
+  test('THE FLEET IS CHECKED BEFORE ANYTHING IS WRITTEN, and the collision refuses by name', () => {
+    // Adoption is the one verb that ADDS a declaration to a host, and it was adding it
+    // unchecked: a museum inferred onto a domain, a root or an identity another museum
+    // already held was provisioned on top of it — and the collision it created then refused
+    // every subsequent verb for the WHOLE host, `remove` included.
+    const { deps, calls } = fakeDeps(fleetOf([member('neighbour')]), {
+      disjointThrowsWhen: instances =>
+        instances.includes('example')
+          ? "instances 'example' and 'neighbour' both claim /srv/www/www.example.org"
+          : null,
+    });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+
+    expect(result.code).toBe(EXIT.REFUSED);
+    expect(joined(result.err)).toContain('cannot be adopted onto this host');
+    expect(joined(result.err)).toContain('both claim /srv/www/www.example.org');
+    // BEFORE anything: not the serving proof, not the migration, not one artifact.
+    expect(calls.verify).toBe(0);
+    expect(calls.migration).toBe(0);
+    expect(calls.apply).toEqual([]);
+    // The law was asked about the CANDIDATE — the host's declarations plus this one.
+    expect(calls.disjoint.at(-1)?.sort()).toEqual(['example', 'neighbour']);
+  });
+
+  test('a second adoption is not refused for colliding with what the first one wrote', () => {
+    // The candidate fleet replaces this instance's own earlier self. Without that, adoption
+    // would be a one-shot verb: the moment its declaration is on disk it collides with
+    // itself in every dimension at once.
+    const { deps } = fakeDeps(fleetOf([EXAMPLE]), {
+      disjointThrowsWhen: instances =>
+        instances.filter(name => name === 'example').length > 1 ? 'two members declare example' : null,
+    });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+    expect(result.code).toBe(EXIT.OK);
+  });
+
+  test('an unreadable pre-instance install is a refusal that names it', () => {
+    const { deps } = fakeDeps(fleetOf([]), { observePreInstanceThrows: "holds neither '.env' nor" });
+    const result = invoke(['adopt', '--instance', 'example', ...FROM], { deps });
+    expect(result.code).toBe(EXIT.REFUSED);
+    expect(joined(result.err)).toContain("holds neither '.env' nor");
   });
 });
 
@@ -903,7 +1264,7 @@ describe('no secret leaves this process (P7)', () => {
 
 describe('exit codes', () => {
   test('are the documented, closed set', () => {
-    expect(EXIT).toEqual({ OK: 0, DRIFT: 1, USAGE: 2, REFUSED: 3, FAILED: 4, UNSUPPORTED: 5 });
+    expect(EXIT).toEqual({ OK: 0, DRIFT: 1, USAGE: 2, REFUSED: 3, FAILED: 4 });
   });
 
   test('the most serious outcome of a run is the one it returns', () => {
@@ -911,7 +1272,6 @@ describe('exit codes', () => {
     expect(worse(EXIT.DRIFT, EXIT.REFUSED)).toBe(EXIT.REFUSED);
     expect(worse(EXIT.REFUSED, EXIT.FAILED)).toBe(EXIT.FAILED);
     expect(worse(EXIT.FAILED, EXIT.OK)).toBe(EXIT.FAILED);
-    expect(worse(EXIT.UNSUPPORTED, EXIT.DRIFT)).toBe(EXIT.UNSUPPORTED);
     // An unranked code is treated as the worst thing that happened, never the best.
     expect(worse(EXIT.OK, 99)).toBe(99);
   });
@@ -920,7 +1280,14 @@ describe('exit codes', () => {
 describe('the real wiring', () => {
   test('hostDeps names every sibling the CLI calls — nothing is left undefined', () => {
     const deps = hostDeps();
-    for (const name of ['loadFleet', 'assertFleetDisjoint', 'observeHost', 'plan', 'describe', 'changesTheHost', 'apply', 'check', 'hostIo'] as const) {
+    for (const name of [
+      'loadFleet', 'assertFleetDisjoint', 'observeHost', 'plan', 'describe', 'changesTheHost',
+      'apply', 'check', 'hostIo',
+      'adoptIo', 'observePreInstance', 'inferManifest', 'derive', 'migrationSteps',
+      'describeMigration', 'applyMigration', 'expectationsFor', 'verifyServing',
+      'removalIo', 'publishedSites', 'observeForRemoval', 'removalPlan', 'describeRemoval',
+      'removalChangesTheHost', 'applyRemoval',
+    ] as const) {
       expect(typeof deps[name]).toBe('function');
     }
   });

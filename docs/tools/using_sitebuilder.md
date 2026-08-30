@@ -11,7 +11,7 @@ The site builder lets you create a public website — maps, charts, interactive 
 Concrete scenario: an oral-history archive wants a public page with a map of every interview location and a timeline. A user opens the site builder, creates a site, asks the agent to build the map and timeline, refines it over a few messages while watching the preview, and then a developer or administrator publishes it to the public address.
 
 !!! info "Optional add-on"
-    The site builder only appears when an administrator has installed its daemon and configured this server to reach it. Until then it is completely hidden.
+    The site builder only appears when an administrator has provisioned its daemon for this museum and paired this engine with it. Until then it is completely hidden — the tool is not in your toolbar and its actions refuse.
 
 ## When to use it
 
@@ -26,21 +26,22 @@ The launcher appears in **Area maintenance**, under the **Publication** subsyste
 
 ## Using it
 
-The day-to-day workflow, the configuration blocks, and a library of example prompts live in the management guides — this page is only a short orientation.
+The day-to-day workflow and a library of example prompts live in the management guides — this page is only a short orientation.
 
-- For the full workflow (create a site, chat with the agent, preview, publish), and how the pieces fit together, see **[Site builder](../management/site_builder.md)**.
-- For copy-paste configuration and a catalogue of prompts to try, see the **[Site builder cookbook](../management/site_builder_cookbook.md)**.
+- For the workflow (create a site, chat with the agent, preview, publish) and a catalogue of prompts to try, see the **[Site builder cookbook](../management/site_builder_cookbook.md)**.
+- For how the pieces fit together — and, for an administrator, how a museum's instance is declared, provisioned, adopted, decommissioned and backed up — see **[Site builder](../management/site_builder.md)**.
 
 ## Tips and gotchas
 
 !!! tip
-    Preview first. What you publish is the exact set of files you previewed on the pre-production address, so get the preview right before taking it live.
+    Preview first. What you publish is the exact set of files you previewed on the pre-production address — the site's own domain with a `pre.` prefix, behind a password your administrator gives you — so get the preview right before taking it live.
 
 !!! warning
     Publishing takes a site to its public address and needs a developer or administrator; it also requires an explicit confirmation. Removing a site can optionally purge the published copy — only do that when you truly want the live site torn down.
 
 ## Related
 
-- **[Site builder](../management/site_builder.md)** · **[Site builder cookbook](../management/site_builder_cookbook.md)** — the complete guides: installing, the workflow, and example prompts.
+- **[Site builder](../management/site_builder.md)** — the administrator's guide: declaring an instance, provisioning it, drift, adoption, decommissioning, backups.
+- **[Site builder cookbook](../management/site_builder_cookbook.md)** — the workflow and example prompts.
 - **[AI assistant](using_assistant.md)** — the in-app assistant for searching and editing your *work* data (a different surface from the public site builder).
 - **[Developer reference](../development/tools/reference/tool_sitebuilder.md)** — the tool's actions, permission gates, and how it proxies the daemon.

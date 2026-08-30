@@ -395,7 +395,12 @@ describe('a daemon that cannot read its site table does not start', () => {
   function writeTable(instance: string, sites: { slug: string; domain: string }[] = []): string {
     const layout = derive({
       instance,
-      engine: { group: 'dedalo-engine', private_dir: join(GATE_DIR, 'engine_private') },
+      engine: {
+        group: 'dedalo-engine',
+        private_dir: join(GATE_DIR, 'engine_private'),
+        checkout_dir: join(GATE_DIR, 'checkout'),
+        bun_bin: join(GATE_DIR, 'bun', 'bin', 'bun'),
+      },
       web: { group: 'www-data' },
       publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
       agent: { driver: 'claude_code' },

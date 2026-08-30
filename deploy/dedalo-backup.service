@@ -1,11 +1,19 @@
 # Dédalo nightly backup — reference timer unit (audit S2-35).
 #
 # Dumps the matrix Postgres DB with the SAME naming the make_backup widget
-# uses, then snapshots the other three members of the backup set (see
-# engineering/PRODUCTION.md §Backups): the RAG pgvector DB (if enabled), the
-# media originals, and ../private/ (.env secrets, session store,
-# ts_state.json). PGPASSWORD comes from the environment file — never on the
-# argv.
+# uses, then snapshots the other four members of the backup set (see
+# engineering/PRODUCTION.md §6, whose table names each store and the token
+# below that copies it): the RAG pgvector DB (if enabled), the media originals,
+# ../private/ (.env secrets, session store, ts_state.json), and every
+# site-builder INSTANCE on this host. PGPASSWORD comes from the environment
+# file — never on the argv.
+#
+# STORE 5 IS A SCRIPT, not a fifth rsync line, because it is the one member whose
+# sources are not known until the host is read: a host carries N museums, each
+# declaring its own roots and its own sites. deploy/dedalo-site-builder-backup.sh
+# reads those paths out of the artifacts the provisioner generated for each
+# instance, so the backup cannot derive the host layout a second time and be
+# wrong about it. On a host with no site builder it prints one line and exits 0.
 #
 # Enabled by dedalo-backup.timer. VERIFY RESTORES PERIODICALLY: a backup that
 # was never restored is a hypothesis, not a backup.
@@ -15,7 +23,7 @@
 # example /opt/dedalo/... paths below to the real host layout if different.
 
 [Unit]
-Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private)
+Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private + site-builder instances)
 
 [Service]
 Type=oneshot
@@ -29,3 +37,18 @@ ExecStart=/bin/sh -c 'PGPASSWORD="$DB_PASSWORD" pg_dump -F c -b -h "$DB_HOST" -p
 ExecStart=/bin/sh -c 'rsync -a --delete "$MEDIA_PATH/" /opt/dedalo/backups/media/'
 # 4. The private dir itself (secrets, sessions, state) — small, always.
 ExecStart=/bin/sh -c 'rsync -a /opt/dedalo/private/ /opt/dedalo/backups/private/ --exclude backups'
+# 5. Every site-builder instance: its declaration + secrets, its workspaces root,
+#    each site's whole webspace (BOTH release stores and the two served symlinks),
+#    and its audit trail. Exits 0 with one line on a host that declares none.
+#
+#    THE LEADING '+' RUNS THIS ONE STEP AS ROOT, ignoring User= above, and it is not
+#    optional: an instance's secrets are 0600 root:root inside a 0700 root:root directory,
+#    and its state roots are 0750 owned by that museum's own service user. DEDALO_USER is
+#    in none of those groups — deliberately, that separation IS the isolation — so without
+#    the '+' this step reads nothing and reports every museum as unbackuppable. The other
+#    four steps stay unprivileged.
+#
+#    The destination therefore holds root-owned 0600 credentials. Create it 0700 root:root
+#    (`install -d -m 0700 -o root -g root /opt/dedalo/backups/site_builder`) and treat the
+#    whole backup tree as secret material — which store 4 already made true.
+ExecStart=+/opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh /opt/dedalo/backups/site_builder

@@ -273,7 +273,12 @@ function instanceDeclaration(): InstanceManifest {
   return {
     instance: INSTANCE,
     web: { group: 'www-data' },
-    engine: { group: 'dedalo-engine', private_dir: join(SCRATCH_ROOT, 'engine_private') },
+    engine: {
+      group: 'dedalo-engine',
+      private_dir: join(SCRATCH_ROOT, 'engine_private'),
+      checkout_dir: join(SCRATCH_ROOT, 'checkout'),
+      bun_bin: join(SCRATCH_ROOT, 'bun', 'bin', 'bun'),
+    },
     agent: { driver: 'claude_code' },
     publication_api: { url: config.PUBLICATION_API_URL },
     serving: {

@@ -420,6 +420,12 @@ const pathsSchema = z.strictObject({
   state_base: absolutePathSchema('paths.state_base').optional(),
   unit_dir: absolutePathSchema('paths.unit_dir').optional(),
   vhost_dir: absolutePathSchema('paths.vhost_dir').optional(),
+  /**
+   * Where the web server READS its vhosts. Debian's `sites-enabled/` by default; state it
+   * EQUAL to `vhost_dir` on a host whose web server includes that directory wholesale
+   * (RHEL's `conf.d/`), which is how such a host says "writing the file enables it".
+   */
+  vhost_enabled_dir: absolutePathSchema('paths.vhost_enabled_dir').optional(),
 });
 
 /**
@@ -459,6 +465,19 @@ export const instanceManifestSchema = z.strictObject({
   engine: z.strictObject({
     private_dir: absolutePathSchema('engine.private_dir'),
     group: unixNameSchema('engine.group'),
+    /**
+     * WHERE THE DAEMON'S OWN CODE AND RUNTIME ARE — the unit's `WorkingDirectory=` and
+     * `ExecStart=`, both REQUIRED and both absolute.
+     *
+     * They were inferred, until 2026-08-30, from `private_dir` by a sibling convention:
+     * `<parent>/master_dedalo/publication/site_builder` and `<parent>/.bun/bin/bun`. A
+     * museum whose tree is laid out otherwise got a unit that could not start, pointed at
+     * a directory nobody had created — and the unit it rendered told the operator to
+     * declare `engine.checkout_dir`, which this schema then refused as an unknown field.
+     * A required field is the honest form of a fact nobody can compute.
+     */
+    checkout_dir: absolutePathSchema('engine.checkout_dir'),
+    bun_bin: absolutePathSchema('engine.bun_bin'),
   }),
 
   /**

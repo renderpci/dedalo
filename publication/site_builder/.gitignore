@@ -9,3 +9,6 @@ node_modules/
 
 # Test scratch roots (created and cleaned by the suite)
 .test-tmp/
+
+# The retired pre-instance environment `provision adopt` leaves behind.
+.env.pre-instance

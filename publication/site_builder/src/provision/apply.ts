@@ -434,6 +434,13 @@ function executeOne(action: Action, io: ProvisionIo, state: RunState): ActionOut
             'means deleting a directory a museum may have published into; refusing.',
         };
       }
+      // The parent, if the host does not have it. Same reading as a `dir` action's own
+      // `mkdir -p`: the ancestors this subsystem does not derive (the webspace base, the
+      // web server's `sites-enabled/`) are ordinary root-owned 0755 directories with no
+      // matrix row, and creating one as a side effect is the honest reading of that. It is
+      // not a decision — the plan already decided this link must exist, and failing on
+      // `ENOENT` for a directory every distro ships would name the wrong problem.
+      io.mkdir(dirname(action.path));
       io.symlink(action.path, action.target);
       // `chown -h`, never through the link: the target is a release store owned by the same
       // uid, and following the link would be setting ownership on published content.
@@ -883,6 +890,20 @@ function htpasswdNames(path: string): readonly string[] | undefined {
  * WHAT IT DELIBERATELY DOES NOT READ: the bytes of any credential file. Presence, mode,
  * owner and mtime are facts the plan needs; the value is not, in any mode, ever.
  */
+/** Directory → its entry names, for the directories that could be read. */
+function directoryListings(dirs: readonly string[]): Record<string, readonly string[]> {
+  const listings: Record<string, readonly string[]> = {};
+  for (const dir of new Set(dirs)) {
+    try {
+      listings[dir] = Object.freeze(readdirSync(dir).sort());
+    } catch {
+      // Absent or unreadable. "I did not look" must not read as "it was empty", so the
+      // directory contributes no entry at all and the plan reports no orphan for it.
+    }
+  }
+  return listings;
+}
+
 export function observeHost(layout: InstanceLayout, manifest: InstanceManifest): HostState {
   const contentful = contentfulPaths(layout, manifest);
 
@@ -942,6 +963,12 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
     htpasswdUsers: htpasswdNames(layout.htpasswd),
     nologinShell: [`/usr/sbin/nologin`, `/sbin/nologin`].find(shell => existsSync(shell)),
     webServerUnit: webServerUnitOf(layout),
+    // THE TWO VHOST DIRECTORIES, LISTED. Not a named path but a directory's contents, and
+    // the only such read in this observer: it is what lets the plan see a vhost belonging to
+    // a site the declaration used to carry (`orphanedVhosts`), which nothing else on the
+    // host remembers. A directory that cannot be read contributes no entry rather than an
+    // empty one — the same rule as every stat above.
+    vhostDirEntries: directoryListings([layout.vhostDir, layout.vhostEnabledDir]),
   });
 }
 

@@ -67,6 +67,7 @@
 import {
   DESCRIPTION_PATTERN,
   DOMAIN_PATTERN,
+  EMAIL_PATTERN,
   INSTANCE_PATTERN,
   REALM_PATTERN,
   SURFACES,
@@ -576,6 +577,7 @@ function renderVhostFile(layout: InstanceLayout, site: SiteLayout, surface: Surf
         'the HTTPS vhost. certbot writes its own companion file beside this one; that file is',
         'unstamped and is never touched here. What this file owes it is a reachable',
         '/.well-known/acme-challenge/ — see the dotfile guard, whose carve-out is exactly that.',
+        ...acmeContact(tls),
       ]),
       ...servingVhost(layout, site, surface, 80),
       ...aliasVhosts(layout, site, 'http'),
@@ -593,6 +595,24 @@ function renderVhostFile(layout: InstanceLayout, site: SiteLayout, surface: Surf
     ...aliasVhosts(layout, site, 'http'),
   );
   return `${lines.join('\n')}\n`;
+}
+
+/**
+ * THE ACME CONTACT, WRITTEN WHERE THE OPERATOR WILL LOOK FOR IT.
+ *
+ * `serving.prod.tls.account_email` is required with `letsencrypt` and was, until 2026-08-30,
+ * validated and then used by nothing at all — a field that installs cleanly and vanishes,
+ * which is the defect §11 forbids in as many words. This provisioner does not run an ACME
+ * client and should not: obtaining a certificate needs the DNS to already point here, which
+ * no declaration can assert. What it can do is put the address in the file the operator
+ * opens when a certificate is missing, in the command they are about to type.
+ */
+function acmeContact(tls: ManifestServing['prod']['tls']): string[] {
+  if (!tls.account_email) return [];
+  return [
+    'The declared contact for that certificate — serving.prod.tls.account_email — is:',
+    `    ${assertGrammar(EMAIL_PATTERN, 'serving.prod.tls.account_email', tls.account_email, 'It is written verbatim into this file’s header.')}`,
+  ];
 }
 
 /**

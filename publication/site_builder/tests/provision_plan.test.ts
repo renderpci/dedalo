@@ -31,7 +31,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import type { InstanceLayout, InstanceManifest } from '../src/provision/layout';
 import { INSTANCE_MARKER, MODES, SURFACES, derive, isStrictlyWithin, markerContent, readWritePaths } from '../src/provision/layout';
 import { parseManifest } from '../src/provision/schema';
@@ -53,6 +53,7 @@ import {
   changesTheHost,
   describe as describeAction,
   observedPaths,
+  orphanedVhosts,
   plan,
 } from '../src/provision/plan';
 
@@ -64,7 +65,12 @@ import {
 function baseDoc(): Record<string, any> {
   return {
     instance: 'gate',
-    engine: { private_dir: '/srv/dedalo/gate/private', group: 'dedalo-gate' },
+    engine: {
+      private_dir: '/srv/dedalo/gate/private',
+      group: 'dedalo-gate',
+      checkout_dir: '/srv/dedalo/gate/master_dedalo',
+      bun_bin: '/srv/dedalo/gate/.bun/bin/bun',
+    },
     web: { server: 'nginx', group: 'www-data' },
     publication_api: { url: 'http://127.0.0.1:3100/publication/server_api/v2' },
     sites: [{ slug: 'one', domain: 'one.example.org' }],
@@ -187,7 +193,10 @@ function simulate(host: HostState, actions: readonly Action[]): HostState {
     }
   }
 
-  return markNonEmpty({ users, groups, entries, unitEnabled, unitActive, htpasswdUsers });
+  // The rest of the observation is carried through unchanged — an apply does not stop the
+  // observer from having listed the vhost directories, and `vhostDirEntries` in particular
+  // must survive, or a fixture would forget the files a dropped site left behind.
+  return markNonEmpty({ ...host, users, groups, entries, unitEnabled, unitActive, htpasswdUsers });
 }
 
 /** A directory holding anything is not empty — which is what §5's refusal turns on. */
@@ -920,6 +929,229 @@ describe('systemd and the web server', () => {
     const host = { ...bareHost(), webServerUnit: 'httpd' };
     const reload = planFor(decl, host).find(a => a.kind === 'exec' && a.step === 'web_reload');
     expect(reload?.kind === 'exec' && reload.argv).toEqual(['systemctl', 'reload', 'httpd']);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * 8b. THE VHOSTS ARE ENABLED — the difference between a converged host and a served one
+ *
+ * Until 2026-08-30 this provisioner wrote every vhost into `sites-available/` and no action
+ * anywhere linked it into `sites-enabled/`. On Debian — the documented target — a fully
+ * converged, fully green provision therefore served NOTHING: nginx reads only the enabled
+ * directory, and every gate in this file was green the whole time because every artifact
+ * the subsystem knew about was in place.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('a rendered vhost is a served vhost', () => {
+  /** Two sites, so the assertion is "one enable per vhost" and not "an enable exists". */
+  function twoSites(): Declaration {
+    return declare(
+      docWith({
+        sites: [
+          { slug: 'one', domain: 'one.example.org' },
+          { slug: 'two', domain: 'two.example.org' },
+        ],
+      }),
+    );
+  }
+
+  test('a two-site instance plans one enabling link per vhost, and the configtest and reload still follow', () => {
+    const decl = twoSites();
+    const actions = planFor(decl, bareHost());
+
+    const expected = decl.layout.sites
+      .flatMap(site => SURFACES.map(surface => site.vhostEnabledPaths[surface]))
+      .sort();
+    expect(expected.length).toBe(4);
+
+    const enables = actions.filter(
+      (action): action is Extract<Action, { kind: 'symlink' }> =>
+        action.kind === 'symlink' && expected.includes(action.path),
+    );
+    expect(
+      enables.map(action => action.path).sort(),
+      'every vhost this declaration renders must be linked into the directory the web ' +
+        'server actually reads. A vhost in sites-available and nothing in sites-enabled is ' +
+        'a museum whose domain answers the default host.',
+    ).toEqual(expected);
+
+    // The link names its own vhost, RELATIVELY, so the pair survives a chroot or a bind
+    // mount — and it names the file for THIS site and surface, not just any of the four.
+    for (const site of decl.layout.sites) {
+      for (const surface of SURFACES) {
+        const action = enables.find(entry => entry.path === site.vhostEnabledPaths[surface]);
+        expect(action?.kind).toBe('symlink');
+        const target = action?.kind === 'symlink' ? action.target : '';
+        expect({ surface, absolute: target.startsWith('/') }).toEqual({ surface, absolute: false });
+        expect(resolve(dirname(site.vhostEnabledPaths[surface]), target)).toBe(site.vhostPaths[surface]);
+      }
+    }
+
+    // AND THE GATING SURVIVES: every enable stands before the configtest, which stands
+    // immediately before the reload. A link created after the test would be served without
+    // ever having been parsed.
+    const steps = execSteps(actions);
+    expect(steps.slice(-2)).toEqual(['web_configtest', 'web_reload']);
+    const configtest = actions.findIndex(a => a.kind === 'exec' && a.step === 'web_configtest');
+    for (const enable of enables) expect(actions.indexOf(enable)).toBeLessThan(configtest);
+  });
+
+  test('a host whose vhosts are settled but never enabled is repaired, and reloaded', () => {
+    // The exact state the defect left behind on every host it ever provisioned: every
+    // artifact correct, `check` reporting nothing to do, and the museum unserved.
+    const decl = twoSites();
+    const { host } = settle(decl);
+    const unenabled = {
+      ...host,
+      entries: Object.fromEntries(
+        Object.entries(host.entries).filter(
+          ([path]) => !decl.layout.sites.some(site => SURFACES.some(s => site.vhostEnabledPaths[s] === path)),
+        ),
+      ),
+    };
+
+    const actions = planFor(decl, unenabled);
+    expect(actions.filter(action => action.kind === 'symlink').length).toBe(4);
+    // No vhost drifted, so the reload is justified by the enabling alone.
+    expect(actions.some(action => action.kind === 'file' && action.artifactKind?.endsWith('vhost'))).toBe(false);
+    expect(execSteps(actions)).toEqual(['web_configtest', 'web_reload']);
+  });
+
+  test('a settled host plans no enabling link at all — the second run is still empty', () => {
+    const decl = twoSites();
+    const { host } = settle(decl);
+    expect(plan(decl.layout, decl.manifest, host)).toEqual([]);
+  });
+
+  test('a host that includes its vhost directory directly needs no enabling step', () => {
+    // RHEL's conf.d: the two directories are ONE, and writing the file IS enabling it.
+    const decl = declare(
+      docWith({ paths: { vhost_dir: '/etc/nginx/conf.d', vhost_enabled_dir: '/etc/nginx/conf.d' } }),
+    );
+    expect(decl.layout.sites[0]!.vhostEnabledPaths.prod).toBe(decl.layout.sites[0]!.vhostPaths.prod);
+    expect(planFor(decl, bareHost()).filter(action => action.kind === 'symlink' && action.phase === 'web')).toEqual([]);
+    // …and it is still tested and reloaded, because the file itself is the configuration.
+    expect(execSteps(planFor(decl, bareHost())).slice(-2)).toEqual(['web_configtest', 'web_reload']);
+  });
+
+  test('a COPY of a vhost standing where the link belongs refuses the whole instance', () => {
+    const decl = declare();
+    const path = decl.layout.sites[0]!.vhostEnabledPaths.prod;
+    const host = withEntries(bareHost(), {
+      [path]: { type: 'file', mode: 0o644, owner: 'root', group: 'root', content: '# hand-copied\n' },
+    });
+    expect(() => plan(decl.layout, decl.manifest, host)).toThrow(/is a file on this host/);
+  });
+
+  test('a link pointing at somebody else’s configuration is never re-pointed', () => {
+    const decl = declare();
+    const path = decl.layout.sites[0]!.vhostEnabledPaths.preprod;
+    const host = withEntries(bareHost(), {
+      [path]: { type: 'symlink', target: '../sites-available/somebody-else.conf', owner: 'root', group: 'root' },
+    });
+    expect(() => plan(decl.layout, decl.manifest, host)).toThrow(/points at/);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * 8c. A SITE THE DECLARATION DROPPED IS STILL BEING SERVED
+ *
+ * Deleting a site from `sites[]` un-declares it and nothing else: its two vhosts stay on the
+ * host, stay enabled, and stay pointed at a webspace holding every release. Every signal the
+ * provisioner gives says otherwise — the row leaves `sites.json`, `check` says "converged" —
+ * which is what makes it dangerous rather than merely incomplete.
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+describe('vhosts the declaration used to carry', () => {
+  /** A host settled on TWO sites, then a declaration that carries only one. */
+  function afterDropping(): { decl: Declaration; host: HostState } {
+    const two = declare(
+      docWith({
+        sites: [
+          { slug: 'one', domain: 'one.example.org' },
+          { slug: 'two', domain: 'two.example.org' },
+        ],
+      }),
+    );
+    const { host } = settle(two);
+    // What the real observer reports: the NAMES in the two vhost directories.
+    const listed = withEntries(host, {}) as HostState;
+    const names = (dir: string): string[] =>
+      Object.keys(host.entries)
+        .filter(path => dirname(path) === dir)
+        .map(path => path.slice(dir.length + 1));
+    const withListing: HostState = {
+      ...listed,
+      vhostDirEntries: {
+        [two.layout.vhostDir]: names(two.layout.vhostDir),
+        [two.layout.vhostEnabledDir]: names(two.layout.vhostEnabledDir),
+      },
+    };
+    return {
+      decl: declare(docWith({ sites: [{ slug: 'one', domain: 'one.example.org' }] })),
+      host: withListing,
+    };
+  }
+
+  test('the dropped site’s vhosts are named, and the enabled one is called out', () => {
+    const { decl, host } = afterDropping();
+    const orphans = orphanedVhosts(decl.layout, host);
+    expect(orphans.map(orphan => orphan.path.replace(/^.*\//, '')).sort()).toEqual([
+      'dedalo-site-gate-two-pre.conf',
+      'dedalo-site-gate-two-pre.conf',
+      'dedalo-site-gate-two.conf',
+      'dedalo-site-gate-two.conf',
+    ]);
+    // Two of the four are the LINKS: the museum is still being served from them.
+    expect(orphans.filter(orphan => orphan.enabled).length).toBe(2);
+  });
+
+  test('…while the plan itself reports the host as converged', () => {
+    // The whole reason this is a separate question. Once the drop has been applied, every
+    // artifact matches, nothing drifts, and `check` says there is nothing to do — with the
+    // site still on the internet.
+    const { decl, host } = afterDropping();
+    const settled = settle(decl, host).host;
+    expect(plan(decl.layout, decl.manifest, settled).filter(changesTheHost)).toEqual([]);
+    // And it is STILL reported, on that hundredth run as on the first: the answer is read
+    // off the directories, not out of a site table this run rewrote.
+    expect(orphanedVhosts(decl.layout, settled).length).toBe(4);
+  });
+
+  test('a declaration that carries every site reports nothing', () => {
+    const decl = declare();
+    const { host } = settle(decl);
+    const dir = decl.layout.vhostDir;
+    const enabled = decl.layout.vhostEnabledDir;
+    const listing: HostState = {
+      ...host,
+      vhostDirEntries: {
+        [dir]: decl.layout.sites.flatMap(site => SURFACES.map(s => basename(site.vhostPaths[s]))),
+        [enabled]: decl.layout.sites.flatMap(site => SURFACES.map(s => basename(site.vhostEnabledPaths[s]))),
+      },
+    };
+    expect(orphanedVhosts(decl.layout, listing)).toEqual([]);
+  });
+
+  test('another museum’s vhosts, and the web server’s own, are never this instance’s to speak about', () => {
+    const decl = declare();
+    const { host } = settle(decl);
+    const listing: HostState = {
+      ...host,
+      vhostDirEntries: {
+        [decl.layout.vhostDir]: [
+          'default',
+          'dedalo-site-other-museum-coleccion.conf',
+          ...decl.layout.sites.flatMap(site => SURFACES.map(s => basename(site.vhostPaths[s]))),
+        ],
+      },
+    };
+    expect(orphanedVhosts(decl.layout, listing)).toEqual([]);
+  });
+
+  test('an observer that did not list the directories reports nothing, and refuses nothing', () => {
+    const decl = declare();
+    expect(orphanedVhosts(decl.layout, bareHost())).toEqual([]);
   });
 });
 

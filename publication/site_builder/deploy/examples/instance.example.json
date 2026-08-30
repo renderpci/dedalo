@@ -4,7 +4,9 @@
 
   "engine": {
     "private_dir": "/srv/dedalo/example/private",
-    "group": "dedalo-example"
+    "group": "dedalo-example",
+    "checkout_dir": "/srv/dedalo/example/master_dedalo",
+    "bun_bin": "/srv/dedalo/example/.bun/bin/bun"
   },
 
   "web": {

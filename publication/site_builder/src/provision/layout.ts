@@ -48,7 +48,7 @@
  * builders, a body hash in the header, write only on drift.
  */
 
-import { isAbsolute, join, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { isWithin } from '../util/paths';
 import { SLUG_PATTERN } from '../util/slug';
 
@@ -421,6 +421,28 @@ export function defaultVhostDir(webServer: WebServer): string {
   return webServer === 'apache' ? '/etc/apache2/sites-available' : '/etc/nginx/sites-available';
 }
 
+/**
+ * WHERE THE WEB SERVER ACTUALLY LOOKS — the second half of the vhost placement, and the
+ * one whose absence made a fully converged host serve nothing at all.
+ *
+ * Debian's two-directory convention is not a filing habit: `sites-available/` is a library
+ * and `sites-enabled/` is the configuration, and nothing in `sites-available/` is read by
+ * nginx or httpd until a link in `sites-enabled/` names it (`a2ensite` is that `ln -s` and
+ * nothing more). A provisioner that writes only the first directory writes a museum's
+ * vhosts into a library: every file present, every mode correct, `provision check`
+ * converged, and the museum's domain answering the default host.
+ *
+ * It is a SEPARATE derived directory rather than a boolean, because the other real
+ * convention — RHEL's `conf.d/`, which the web server includes directly — is exactly the
+ * case where the two directories are ONE. A host declares
+ * `paths.vhost_dir = paths.vhost_enabled_dir = /etc/nginx/conf.d` and no enabling step is
+ * planned, because on that host writing the file IS enabling it. One vocabulary, both
+ * conventions, and no flag whose meaning has to be remembered.
+ */
+export function defaultVhostEnabledDir(webServer: WebServer): string {
+  return webServer === 'apache' ? '/etc/apache2/sites-enabled' : '/etc/nginx/sites-enabled';
+}
+
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The declaration (structural types — schema.ts validates INTO these)
  *
@@ -514,6 +536,37 @@ export function surfacePaths(webspace: string, surface: Surface): SurfacePaths {
 }
 
 /**
+ * WHICH RELEASE A SERVED LINK IS SERVING — the one reading of a `pre`/`web` symlink.
+ *
+ * It lives HERE, beside `surfacePaths()`, because it is the inverse of the pair that
+ * function spells: the store is `<webspace>/.releases/<pre|web>` and the link is
+ * `<webspace>/<pre|web>`, so "is this target a release of THIS surface" is a question only
+ * the module that owns both paths can answer. It was written twice — once in
+ * `src/build/promote.ts` for the daemon, and the migration verifier needed the same
+ * sentence — and a second spelling of it is the subsystem's recurring defect wearing a
+ * fresh coat: the two copies would agree until the day one of them stopped, and the day
+ * they stopped agreeing is the day a museum's live page is served from a directory nobody
+ * believes is live.
+ *
+ * PURE, and given the target rather than reading it: the daemon reads a link with
+ * `node:fs/promises`, the provisioner through its own io seam, and neither should have to
+ * become the other to ask this.
+ *
+ * NULL COVERS THE PLACEHOLDER, and that is the case that matters. The provisioner creates
+ * the served link pointing at the STORE ITSELF so a fresh site's vhost has a document root
+ * before the first publish; reading the last path segment blindly would report that empty
+ * placeholder as a release named `web`. So the target is resolved against the link's own
+ * directory (relative targets are the rule — that is what keeps a webspace relocatable) and
+ * accepted only when what it names is a direct, non-dotted child of this surface's store.
+ */
+export function releaseNameFromLinkTarget(surface: SurfacePaths, linkTarget: string): string | null {
+  const resolved = resolve(dirname(surface.linkPath), linkTarget);
+  if (dirname(resolved) !== resolve(surface.storeDir)) return null;
+  const name = basename(resolved);
+  return name !== '' && !name.startsWith('.') ? name : null;
+}
+
+/**
  * WHERE A SITE'S WEBSPACE IS — the one derivation the provisioner and the daemon share.
  *
  * The provisioner CREATES `<webspace_base>/<domain>` (marks it, chowns it, renders two
@@ -555,6 +608,12 @@ export interface ManifestPaths {
   readonly state_base?: string;
   readonly unit_dir?: string;
   readonly vhost_dir?: string;
+  /**
+   * Where the web server READS its vhosts from — `sites-enabled/` on Debian, and the same
+   * directory as `vhost_dir` on a host whose web server includes `conf.d/` directly. See
+   * `defaultVhostEnabledDir()`: when the two are equal, no enabling step exists.
+   */
+  readonly vhost_enabled_dir?: string;
 }
 
 /**
@@ -663,6 +722,25 @@ export interface InstanceManifest {
   readonly engine: {
     readonly private_dir: string;
     readonly group: string;
+    /**
+     * WHERE THIS MUSEUM'S ENGINE CHECKOUT IS — the directory holding `publication/`, and
+     * therefore the daemon's own code. DECLARED, never derived from anything else.
+     *
+     * It was inferred once, from `private_dir` by a "canonical 1:1 topology" (checkout and
+     * `private/` as siblings, the pinned runtime beside them). That is a convention, not a
+     * fact: a museum whose tree is laid out any other way got a unit whose
+     * `WorkingDirectory=` named a directory nobody had created, and whose
+     * `AssertPathIsDirectory=` then refused to start it — while the file it rendered told
+     * the operator to state `engine.checkout_dir`, a field the schema did not accept. A
+     * guess dressed as a derivation is worse than a required field, because it is a
+     * required field that nobody knows they have to get right.
+     */
+    readonly checkout_dir: string;
+    /**
+     * The PINNED bun binary, absolute — never a floating `bun` on PATH, because a stray
+     * `bun upgrade` must not be able to change a museum's production runtime.
+     */
+    readonly bun_bin: string;
   };
 
   /** The web server: which vhost flavour to render, and the group that reads the trees. */
@@ -730,6 +808,16 @@ export interface SiteLayout {
    * natural grains, and pretending otherwise is how a template ends up with a drop-in.
    */
   readonly vhostPaths: Readonly<Record<Surface, string>>;
+  /**
+   * WHERE THAT FILE MUST BE LINKED FROM to be served — `<vhost_enabled_dir>/<same name>`.
+   *
+   * The basename is deliberately the SAME as the vhost file's: `a2ensite` keeps it, an
+   * operator greps for it, and a link whose name differs from its target's is a link
+   * nobody can trace back. Equal to `vhostPaths[surface]` exactly when the host's enabled
+   * directory IS its vhost directory, which is how "this host needs no enabling step" is
+   * said in paths rather than in a flag.
+   */
+  readonly vhostEnabledPaths: Readonly<Record<Surface, string>>;
 }
 
 export interface InstanceLayout {
@@ -814,13 +902,44 @@ export interface InstanceLayout {
   /** 0660, group = the ENGINE's group: one engine, one daemon, one socket. */
   readonly socketPath: string;
   readonly webspaceBase: string;
+  /** Where a rendered vhost is WRITTEN. `sites-available/` by default. */
+  readonly vhostDir: string;
+  /**
+   * The directory the web server READS. `sites-enabled/` by default; equal to the vhost
+   * directory on a host that includes `conf.d/` wholesale. See `defaultVhostEnabledDir()`.
+   */
+  readonly vhostEnabledDir: string;
   readonly sites: readonly SiteLayout[];
   /** Echoed so a vhost renderer reads ONE object rather than the manifest AND the layout. */
   readonly serving: ManifestServing;
   readonly resources: ManifestResources;
   /** The engine's private directory — asserted disjoint from everything above. */
   readonly enginePrivateDir: string;
+  /**
+   * WHERE THE DAEMON'S OWN CODE AND RUNTIME ARE — the two paths the unit starts it with.
+   *
+   * Derived HERE and nowhere else, from `engine.checkout_dir` / `engine.bun_bin`, for the
+   * same reason every other path in this object is: a renderer that worked one of these out
+   * for itself would be a second owner of the host's layout, and that is the defect this
+   * module exists to delete. `workingDirectory` is the one part that IS derived rather than
+   * declared — this package's place inside the checkout is a fact about the repository, not
+   * about the host, and it moves with the repository or not at all.
+   */
+  readonly daemon: {
+    readonly checkoutDir: string;
+    /** `<checkout>/publication/site_builder` — the unit's `WorkingDirectory=`. */
+    readonly workingDirectory: string;
+    /** The unit's `ExecStart=` binary. */
+    readonly bun: string;
+  };
 }
+
+/**
+ * This package's place inside the engine checkout — a fact about the tree this file is in,
+ * which is why it is a constant here and not a field of the declaration. Exported so the
+ * unit renderer and the adopter read the same one.
+ */
+export const DAEMON_SUBDIR = join('publication', 'site_builder');
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The ownership / mode matrix
@@ -969,6 +1088,10 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
   const runtimeBase = DEFAULT_PATHS.runtimeBase;
   const unitDir = absoluteRoot('paths.unit_dir', paths.unit_dir ?? DEFAULT_PATHS.unitDir);
   const vhostDir = absoluteRoot('paths.vhost_dir', paths.vhost_dir ?? defaultVhostDir(webServer));
+  const vhostEnabledDir = absoluteRoot(
+    'paths.vhost_enabled_dir',
+    paths.vhost_enabled_dir ?? defaultVhostEnabledDir(webServer),
+  );
   const webspaceBase = absoluteRoot(
     'webspace_base',
     manifest.webspace_base ?? DEFAULT_PATHS.webspaceBase,
@@ -1089,7 +1212,7 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
 
   const sites = Object.freeze(
     (manifest.sites ?? []).map(site =>
-      buildSite(site, { webspaceBase, vhostDir, instance, hostPrefix }),
+      buildSite(site, { webspaceBase, vhostDir, vhostEnabledDir, instance, hostPrefix }),
     ),
   );
 
@@ -1100,6 +1223,12 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     'engine.private_dir',
     manifest.engine?.private_dir as string,
   );
+  const checkoutDir = absoluteRoot('engine.checkout_dir', manifest.engine?.checkout_dir as string);
+  const daemon = Object.freeze({
+    checkoutDir,
+    workingDirectory: join(checkoutDir, DAEMON_SUBDIR),
+    bun: absoluteRoot('engine.bun_bin', manifest.engine?.bun_bin as string),
+  });
   assertEnginePrivateIsDisjoint(enginePrivateDir, roots, sites, webspaceBase);
   assertWritableSetIsSane(
     { workspaces: roots.workspaces, home: roots.home, audit: roots.audit },
@@ -1108,6 +1237,28 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     webspaceBase,
     { configDir, secretsDir, unitDir },
   );
+
+  // THE DAEMON MAY NOT WRITE ITS OWN CODE, NOR THE RUNTIME THAT EXECUTES IT. Every agent
+  // turn runs as the service user with the unit's writable set, so a checkout — or a bun
+  // binary — inside one of those roots would let a generated build script edit the daemon
+  // it is running under, and the next restart would execute it. Checked in both directions,
+  // because a writable root INSIDE the checkout is the same defect upside down.
+  const writable = [roots.workspaces, roots.home, roots.audit, runtimeDir, ...sites.map(site => site.webspace)];
+  for (const [label, path] of [
+    ['engine.checkout_dir', daemon.checkoutDir],
+    ['engine.bun_bin', daemon.bun],
+  ] as const) {
+    for (const root of writable) {
+      if (pathsOverlap(path, root)) {
+        throw new Error(
+          `layout: ${label} ('${path}') overlaps the writable path '${root}'. ` +
+            `ReadWritePaths= is what an agent turn may write, so the daemon's own code and ` +
+            `runtime must lie outside every entry of it — otherwise a generated build script ` +
+            `can rewrite the daemon and the next restart runs it. Nothing was derived.`,
+        );
+      }
+    }
+  }
 
   // An adopted layout may pin the htpasswd where it already lives; otherwise it is one
   // file per instance, beside the declaration. Per INSTANCE and never per host: one
@@ -1188,10 +1339,13 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     runtimeDir,
     socketPath,
     webspaceBase,
+    vhostDir,
+    vhostEnabledDir,
     sites,
     serving: manifest.serving,
     resources: manifest.resources ?? {},
     enginePrivateDir,
+    daemon,
   };
 
   return Object.freeze(layout);
@@ -1288,7 +1442,13 @@ function buildEnvVars(
  */
 function buildSite(
   site: ManifestSite,
-  ctx: { webspaceBase: string; vhostDir: string; instance: string; hostPrefix: string },
+  ctx: {
+    webspaceBase: string;
+    vhostDir: string;
+    vhostEnabledDir: string;
+    instance: string;
+    hostPrefix: string;
+  },
 ): SiteLayout {
   const slug = assertMatches(SLUG_PATTERN, 'site slug', site.slug);
   const domain = assertMatches(DOMAIN_PATTERN, `domain for site '${slug}'`, site.domain);
@@ -1305,9 +1465,20 @@ function buildSite(
   // instance AND the slug: two museums on one host may both own the slug 'coleccion', and
   // two files of that name in /etc/nginx/sites-available would be one museum silently
   // serving the other's document root.
+  const vhostNames = Object.freeze({
+    prod: `${USER_PREFIX}${ctx.instance}-${slug}.conf`,
+    preprod: `${USER_PREFIX}${ctx.instance}-${slug}-pre.conf`,
+  });
   const vhostPaths = Object.freeze({
-    prod: join(ctx.vhostDir, `${USER_PREFIX}${ctx.instance}-${slug}.conf`),
-    preprod: join(ctx.vhostDir, `${USER_PREFIX}${ctx.instance}-${slug}-pre.conf`),
+    prod: join(ctx.vhostDir, vhostNames.prod),
+    preprod: join(ctx.vhostDir, vhostNames.preprod),
+  });
+  // THE SAME FILENAME, in the directory the web server reads. Written from the one name
+  // above rather than spelled twice: a link whose basename drifted from its target's would
+  // still serve, which is the worst way for this pair to be wrong.
+  const vhostEnabledPaths = Object.freeze({
+    prod: join(ctx.vhostEnabledDir, vhostNames.prod),
+    preprod: join(ctx.vhostEnabledDir, vhostNames.preprod),
   });
 
   return Object.freeze({
@@ -1322,6 +1493,7 @@ function buildSite(
       return surfacePaths(webspace, surface).linkPath;
     },
     vhostPaths,
+    vhostEnabledPaths,
   });
 }
 

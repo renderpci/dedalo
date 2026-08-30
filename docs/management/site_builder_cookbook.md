@@ -9,62 +9,87 @@ not repeat the concepts.
 
 ---
 
-## Recipe 1 — Configure the daemon and the engine
+## Recipe 1 — Declare the instance and pair the engine
 
-The site builder has two configuration surfaces: the daemon's own `.env` (on the host that
-runs it) and two keys the engine reads.
+Installing a site builder is **not** copying configuration files into place. You write one
+declaration for the museum and the provisioner generates everything on the host from it: the
+Linux user and group, the roots, the systemd unit, the virtual hosts, the daemon's
+environment file, the preview password file, the site table and the engine pairing fragment.
+The full procedure — every field, the credential rules, the dry run — is in
+[Site builder](site_builder.md#adding-a-museum). This recipe is the short version.
 
-**On the daemon host** — `publication/site_builder/.env`. On a development machine you
-write this file yourself; on a provisioned host it is *generated*, from the one declaration
-described in the service's own README, and editing it by hand is reported as drift on the
-next provisioning run. Either way the keys are the same:
+**1. Declare it** in `/etc/dedalo_sites/instances/<instance>/instance.json`:
 
-```bash
-# Auth — the token the engine will present. Generate it once:
-#   openssl rand -hex 32
-SERVICE_TOKEN=6f1c…the-generated-token…9a2b
-
-# Where the generated sites read their data. Point at the read-only publication API.
-PUBLICATION_API_URL=https://data.example.org/publication/server_api/v2
-
-# Public addresses the workspace links to.
-PREPROD_BASE_URL=https://preprod.example.org
-PROD_BASE_URL=https://www.example.org
-
-# The coding agent and its key. Instance-level: every user shares this agent.
-AGENT_DRIVER=claude_code
-CLAUDE_CODE_BIN=claude
-ANTHROPIC_API_KEY=sk-ant-…
-
-# Where sites live on disk (defaults shown).
-SITES_ROOT=/var/lib/dedalo_sites/workspaces
-PREPROD_ROOT=/var/lib/dedalo_sites/preprod
-PROD_ROOT=/var/www/dedalo_sites
+```json
+{
+  "instance": "museum-d",
+  "engine": {
+    "private_dir": "/srv/dedalo/museum-d/private",
+    "group": "dedalo-museum-d",
+    "checkout_dir": "/srv/dedalo/museum-d/master_dedalo",
+    "bun_bin": "/srv/dedalo/museum-d/.bun/bin/bun"
+  },
+  "web": { "server": "nginx", "group": "www-data" },
+  "publication_api": { "url": "http://127.0.0.1:3104/publication/server_api/v2" },
+  "sites": [ { "slug": "coleccion", "domain": "www.museum-d.example" } ],
+  "serving": {
+    "preprod": { "enabled": true, "auth": { "mode": "htpasswd", "users": [
+      { "name": "preview",
+        "password_file": "/etc/dedalo_sites/instances/museum-d/secrets/PREPROD_PASSWORD" } ] } },
+    "prod": { "tls": { "mode": "letsencrypt", "account_email": "ops@museum-d.example" } }
+  },
+  "agent": { "driver": "claude_code", "bins": { "claude_code": "/usr/local/bin/claude" } },
+  "secrets": {
+    "ANTHROPIC_API_KEY": "/etc/dedalo_sites/instances/museum-d/secrets/ANTHROPIC_API_KEY"
+  }
+}
 ```
 
-**On the engine host** — append to `../private/.env`:
+Note what is *not* in there: no credential values, only the paths of root-owned `0600` files
+(a pasted secret is refused by name), and no roots — they are derived unless you state them.
+
+**2. Place the credentials** those paths name, then dry-run and apply:
 
 ```bash
-DEDALO_SITE_BUILDER_URL="https://sites.example.org/publication/site_builder"
-DEDALO_SITE_BUILDER_TOKEN="6f1c…the-same-token…9a2b"
+cd /opt/dedalo/master_dedalo/publication/site_builder
+sudo bun run provision check --instance museum-d    # writes nothing; exit 1 = drift
+sudo bun run provision apply --instance museum-d
 ```
 
-The token on both sides **must match**. Every key is documented in the
-[settings reference](../config/config.md#sitebuilder). Restart the engine, then register
-the tool with the *Register tools* maintenance widget.
+`apply` mints the shared bearer into `secrets/SERVICE_TOKEN` itself. You never type it, and
+re-running the provisioner never rewrites it.
+
+**3. Pair the engine** from the rendered fragment, on the engine's host:
+
+```bash
+bun run scripts/site_builder_pair.ts \
+  /etc/dedalo_sites/instances/museum-d/engine.env.fragment \
+  --token-file /etc/dedalo_sites/instances/museum-d/secrets/SERVICE_TOKEN
+```
+
+That appends `DEDALO_SITE_BUILDER_INSTANCE`, `DEDALO_SITE_BUILDER_SOCKET` and
+`DEDALO_SITE_BUILDER_TOKEN` to `../private/.env` — documented keys only, refusing rather than
+overwriting a key that is already there with a different value, and printing no secret. Every
+key is in the [settings reference](../config/config.md#sitebuilder). Restart the engine, then
+register the tool with the *Register tools* maintenance widget.
 
 ### Using a local model instead of Claude
 
 The daemon is driver-agnostic. To drive the agent with an OpenAI-compatible endpoint (for
-example a local model) through the OpenCode driver, set these on the daemon host instead of
-the Anthropic key:
+example a local model) through the OpenCode driver, change the declaration's `agent` block
+and the credential it names, then `apply`:
 
-```bash
-AGENT_DRIVER=opencode
-OPENCODE_BIN=opencode
-# Forwarded only to the OpenCode child process:
-OPENCODE_ENV=OPENAI_API_KEY=sk-local,OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+```json
+"agent": { "driver": "opencode", "bins": { "opencode": "/usr/local/bin/opencode" } },
+"secrets": { "OPENCODE_ENV": "/etc/dedalo_sites/instances/museum-d/secrets/OPENCODE_ENV" }
 ```
+
+`OPENCODE_ENV` is a credential file, not a declared value: its contents are the variables
+forwarded to the OpenCode child, for example
+`OPENAI_API_KEY=…,OPENAI_BASE_URL=http://127.0.0.1:11434/v1`. Agent binaries are absolute
+paths, never bare command names — on a host running several museums a bare name is resolved
+through the shared search path, which is another instance's chance to choose which binary
+runs as this museum's user.
 
 Nothing else changes — the workspace, build, and publish flow are identical.
 
@@ -231,8 +256,10 @@ yet expose a visual rollback of agent turns.
 - **Build** runs the site's install and build commands and promotes the static output to the
   pre-production address. The preview iframe reloads with a cache-busting parameter, so you
   always see the fresh build.
-- **Preview** is served behind HTTP basic auth by default (the daemon's installer prints the
-  credentials). Share those with anyone reviewing a draft.
+- **Preview** is served behind HTTP basic auth by default, on the site's own domain with the
+  preview prefix (`pre.www.museum-d.example`). The reviewer name is declared in
+  `serving.preprod.auth.users[]` and its password is the root-owned file that entry names;
+  share that credential with anyone reviewing a draft.
 - **Publish** copies the exact bytes you previewed to the production address — it does not
   rebuild, so what goes live is what you approved. You are asked to confirm, and the action
   names the public URL.
@@ -241,7 +268,7 @@ A typical review-to-launch sequence:
 
 1. Build → check the preview.
 2. A couple of follow-up prompts → Build again → re-check.
-3. Publish → confirm → the site is live at `PROD_BASE_URL/<slug>/`.
+3. Publish → confirm → the site is live on its own domain (`www.museum-d.example`).
 
 ---
 
@@ -256,11 +283,26 @@ on the workspace still existing.
 
 ## Recipe 9 — Multiple sites and a custom domain
 
-- You can run several named sites on one instance (up to the daemon's `MAX_SITES`). Each is an
-  independent workspace served at `PREPROD_BASE_URL/<slug>/` and `PROD_BASE_URL/<slug>/`.
-- To give one site its own domain, point a small web-server virtual host's document root at
-  `PROD_ROOT/<slug>/` and add the DNS and TLS for that domain. The site itself needs no
-  change — it is built with relative asset paths, so it works at a subpath or a domain root.
+Every site has its own domain, and that domain is a **declared field** — there is no virtual
+host to write and no document root to point anywhere.
+
+```json
+"sites": [
+  { "slug": "coleccion", "domain": "www.museum-d.example" },
+  { "slug": "archivo",   "domain": "archive.museum-d.example" }
+],
+"serving": { "aliases": { "museum-d.example": "coleccion" } }
+```
+
+- Each entry in `sites[]` gets a production vhost and a pre-production vhost, generated.
+- `serving.aliases` maps an *extra* hostname onto a declared slug — the target must be a
+  slug you declared, and it must not already be another site's canonical domain.
+- `sites[].webspace` overrides where the site's directory lives, for a museum whose site is
+  already served from somewhere the host's convention does not cover.
+
+Then `sudo bun run provision apply --instance <instance>` and add the DNS record. TLS follows
+`serving.prod.tls.mode` — `letsencrypt`, `files` or `none` — and has no default. You can run
+as many sites as the declaration's `limits.max_sites` allows.
 
 ---
 
@@ -268,12 +310,14 @@ on the workspace still existing.
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| The **Site builder** panel shows "Not configured" | `DEDALO_SITE_BUILDER_URL`/`TOKEN` unset on the engine | Set both keys, restart the engine, register the tool. |
-| The panel shows "Configured, but not reachable" | The daemon is down, or the URL/token is wrong | Check the daemon service and that the two tokens match; the daemon's `/health` should answer. |
+| The **Site builder** panel shows "Not configured" | The engine's pairing keys are unset, or only some of them are — a transport with no instance or no token resolves to no transport at all | Append the pairing fragment with `scripts/site_builder_pair.ts`, restart the engine, register the tool. |
+| The panel shows "Configured, but not reachable" | The daemon is down, or the socket is not readable by the engine's group | `systemctl status dedalo-site-builder@<instance>`, then `sudo bun run provision check --instance <instance>` — a wrong `engine.group` in the declaration is exactly this symptom. |
+| Everything answers, but every call is refused as an instance mismatch | This engine's `.env` names a different instance or a different token than the daemon it is talking to | The two must be one pairing. Re-read the daemon's fragment; a `.env` copied from another museum's server is the case this refusal exists to catch. |
+| The host stops matching what you think you configured | Somebody edited a generated file | `sudo bun run provision check --instance <instance>` names every drifted artifact; `apply` restores them. Change the declaration, never the generated file. |
 | The launcher is missing entirely | You are not an admin/developer, or the tool is not granted | The launcher lives in Area maintenance (admin/developer). For build access, grant `tool_sitebuilder` in the user's profile. |
 | A build fails | The agent's code does not build | Read the build log in the chat; ask the agent to fix the specific error it reports. |
 | The preview is blank | The site fetched no data, or a runtime error | Ask the agent to handle empty results and check the browser console; confirm the table and column names with `get_schema`. |
-| "No agents available" | No coding-agent binary is installed/configured on the daemon | Install the CLI and set its `*_BIN`, plus the provider key, in the daemon `.env`. |
+| "No agents available" | No coding-agent binary is installed at the absolute path the declaration names | Install the CLI, correct `agent.bins` in `instance.json`, place the provider key in the `secrets/` file the declaration names, and `apply`. |
 
 ---
 

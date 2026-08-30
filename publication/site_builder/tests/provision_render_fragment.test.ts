@@ -286,7 +286,12 @@ describe('every path in the file follows the declaration', () => {
 
   test('the append target is the PAIRED ENGINE\'s private .env, wherever it was declared', () => {
     const manifest = exampleManifest({
-      engine: { private_dir: '/srv/other/private', group: 'dedalo-other' },
+      engine: {
+        private_dir: '/srv/other/private',
+        group: 'dedalo-other',
+        checkout_dir: '/srv/other/master_dedalo',
+        bun_bin: '/srv/other/.bun/bin/bun',
+      },
     });
     const fragment = renderFragment(manifest);
 

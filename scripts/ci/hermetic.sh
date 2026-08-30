@@ -214,6 +214,11 @@ HERMETIC_TRIPWIRES=(
 	#     fingerprint spellings against each other in-process, and drives the provisioner's
 	#     renderer + observer over a mkdtemp scratch host it removes again.
 	test/unit/site_builder_single_source_tripwire.test.ts
+	# --- 2026-08-30: the operator's procedures are EXECUTABLE. DB-free: it reads docs,
+	#     the CLI's verb table and the daemon's config schema, and RUNS the site-builder
+	#     backup script over a mkdtemp host it removes again. Needs rsync, which the
+	#     hermetic image already has (store 3 of the backup set uses it too).
+	test/unit/operator_commands_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

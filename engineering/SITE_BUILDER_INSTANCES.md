@@ -38,10 +38,23 @@ boot exactly like a root marker, and a table that is absent, unstamped, hand-edi
 stamped for another instance refuses the start. Their text is now pure functions; the rendered output of the one
 committed declaration is committed beside it (`deploy/examples/rendered*`, §4.3) and
 byte-compared against a fresh render, so an example can no longer become a seventh
-hand-maintained file. **Measured 2026-08-29: 370 pass / 0 fail / 21 files**, `bunx tsc
---noEmit` clean. What remains is Phase 3, the provisioner itself — the command that APPLIES
-a rendered set to a host, its read-only `check`, and `adopt`. Nothing in this tree writes to
-a host yet.
+hand-maintained file.
+
+The PROVISIONER then landed on top of that: `src/provision/{fleet,plan,apply,cli}.ts` — the
+declared fleet, the PURE `plan(layout, manifest, hostState) => Action[]`, the DUMB `apply`
+that executes an already-decided plan and writes only on drift, and the one entry point
+`bun run provision <verb>`. Its two lifecycle verbs completed the set: `adopt` (§8), which
+infers a declaration from a live pre-instance install and then calls the same
+`plan()`/`apply()`, and `remove` (§9), which decommissions by archiving rather than deleting
+and never frees a uid. `src/provision/verify.ts` is the serving proof both of them rest on.
+The operator's manual for all of it is `docs/management/site_builder.md`; the fifth member
+of the backup set is `engineering/PRODUCTION.md` §6.
+
+WHAT A GATE STILL CANNOT SAY. Every provisioning gate drives synthetic prefixes with `exec`
+and `chown` stubbed, so what is proved is the plan, the writes, the renames and the modes —
+not that `systemctl`, `usermod`, `groupadd` or a real `chown` behave as expected, and not
+that the uid boundary holds in the kernel. That is the operator's `provision check` on the
+box, and §11 states it as a standing limit rather than a temporary one.
 
 ## 1. What an instance is, and the pairing topology
 
@@ -107,12 +120,15 @@ never restates.**
 | `description` | no | One line, no control characters. Rendered into every generated artifact's header — which is why it is a constrained string and not free text. |
 | `engine.private_dir` | yes | The paired engine's `../private/`. Declared for two reasons only: so the provisioner can assert it lies OUTSIDE every root this daemon owns, and so the pairing fragment lands in the right engine. The site builder never reads it. |
 | `engine.group` | yes | The OS group the paired engine runs as. It owns the pairing fragment and the daemon socket. **Never defaulted** — see below. |
+| `engine.checkout_dir` | yes | The engine checkout this museum's daemon runs out of. The unit's `WorkingDirectory=` is `<checkout>/publication/site_builder` — that suffix is a fact about the repository, so it is derived; the checkout is a fact about the host, so it is declared. **Never inferred** — see below. |
+| `engine.bun_bin` | yes | The PINNED bun binary, absolute. The unit's `ExecStart=`. Never a bare `bun`: PATH is shared between instances and a stray `bun upgrade` must not be able to change a museum's production runtime. |
 | `web.server` | no | `nginx` or `apache`: which vhost renderer. Absent means the layout's default. |
 | `web.group` | yes | The web server's runtime group. Sole use: the GROUP OWNER of every webspace and of `preprod.htpasswd`. **Never defaulted** — see below. |
-| `publication_api.url` | yes | THIS museum's read-only Publication API v2. Per instance because each museum publishes its own data; frozen into a site at scaffold time (§8). |
+| `publication_api.url` | yes | THIS museum's read-only Publication API v2. Per instance because each museum publishes its own data; frozen into a site at scaffold time (§10, residual 3). |
 | `publication_api.key_path` | no | The ABSOLUTE PATH of a root-owned 0600 file. Never the key. |
 | `identity.user` / `identity.group` | no | An ADOPTED unix identity. Absent is the normal and safer case — see §2.2. |
 | `paths.config_base` / `state_base` / `runtime_base` / `unit_dir` / `vhost_dir` | no | The host's BASES. `state_base` moves the three state roots together. |
+| `paths.vhost_enabled_dir` | no | Where the web server READS its vhosts — Debian's `sites-enabled/` by default. State it EQUAL to `vhost_dir` on a host whose web server includes that directory wholesale (RHEL's `conf.d/`): the provisioner then plans no enabling link, because writing the file is what enables it. |
 | `roots.workspaces` / `roots.home` / `roots.audit` | no | ONE state root each, for a host that already keeps one somewhere else. |
 | `webspace_base` | no | Where webspaces live. Default is the layout's. |
 | `sites[].slug` | yes | Instance-LOCAL (§2.2), matching `SLUG_PATTERN`. |
@@ -141,6 +157,18 @@ was given (the engine's own unit refuses to guess it too — it ships a `DEDALO_
 placeholder). A guessed group is not a cosmetic default. It is a 0640 htpasswd the web
 server cannot read and a 0660 socket the engine cannot open, discovered at the first
 request instead of at provisioning time.
+
+**Why the daemon's own code and runtime are declared and never inferred.** They were
+inferred, until 2026-08-30, from `engine.private_dir` by a "canonical 1:1 topology" —
+`<parent>/master_dedalo/publication/site_builder` and `<parent>/.bun/bin/bun`, as siblings
+of `private/`. That is a convention this project has seen on its own hosts, not a fact about
+anybody else's: a museum whose tree is laid out otherwise got a unit whose
+`WorkingDirectory=` named a directory nobody had created, whose `AssertPathIsDirectory=`
+then refused to start it — and whose own header told the operator to state
+`engine.checkout_dir`, a field the schema refused as unknown. A guess dressed as a
+derivation is worse than a required field, because it is a required field nobody knows they
+have to get right. The `Assert*` lines stay: a DECLARED path can be wrong too, and a refusal
+at `systemctl start` naming the missing path beats systemd's bare `status=203/EXEC`.
 
 **Why a site's DOMAIN is declared while its CONTENT is not.** A domain is an operator
 fact — DNS, a certificate, a vhost, sometimes a contract. It cannot be conjured by an API
@@ -242,15 +270,22 @@ Example values are for `instance = museum-a`, `sites[n]` = `{ slug: 'coleccion',
 | Runtime dir | `layout.runtimeDir` | `/run/dedalo-sites/museum-a` |
 | Socket | `layout.socketPath` | `/run/dedalo-sites/museum-a/daemon.sock` |
 | Webspace base (`WEBSPACE_BASE`) | `layout.webspaceBase` | `/home/www` |
+| Vhost dir | `layout.vhostDir` | `/etc/nginx/sites-available` |
+| Enabled-vhost dir | `layout.vhostEnabledDir` | `/etc/nginx/sites-enabled` |
 | Webspace | `layout.sites[n].webspace` | `/home/www/www.museum-a.org` |
 | Preprod domain | `layout.sites[n].preprodDomain` | `pre.www.museum-a.org` |
 | Release store | `layout.sites[n].releasesDir('prod')` | `…/www.museum-a.org/.releases/web` |
 | Served link | `layout.sites[n].linkPath('preprod')` | `…/www.museum-a.org/pre` |
 | Prod vhost | `layout.sites[n].vhostPaths.prod` | `/etc/nginx/sites-available/dedalo-site-museum-a-coleccion.conf` |
 | Preprod vhost | `layout.sites[n].vhostPaths.preprod` | same directory, `-coleccion-pre.conf` |
+| Prod vhost, ENABLED | `layout.sites[n].vhostEnabledPaths.prod` | `/etc/nginx/sites-enabled/dedalo-site-museum-a-coleccion.conf` |
+| Preprod vhost, ENABLED | `layout.sites[n].vhostEnabledPaths.preprod` | same directory, `-coleccion-pre.conf` |
 | Serving declaration (echoed) | `layout.serving` | so a vhost renderer reads ONE object |
 | Resource caps (echoed) | `layout.resources` | rendered into the unit |
 | Engine private dir | `layout.enginePrivateDir` | asserted disjoint from everything above |
+| Engine checkout | `layout.daemon.checkoutDir` | the declared `engine.checkout_dir` |
+| Daemon `WorkingDirectory=` | `layout.daemon.workingDirectory` | `…/master_dedalo/publication/site_builder` |
+| Pinned bun (`ExecStart=`) | `layout.daemon.bun` | the declared `engine.bun_bin` |
 | The unit's `ReadWritePaths=` | `readWritePaths(layout)` | the three roots + the runtime dir + EVERY site webspace |
 
 **One unit per INSTANCE, two vhosts per SITE.** The two artifacts have different natural
@@ -311,7 +346,7 @@ cannot drift from the rendering.
 This table is the contract, not an illustration. The provisioner sets exactly these
 owners and modes and re-asserts them on every run; `MODES` in
 `publication/site_builder/src/provision/layout.ts` is its executable copy, and the gate
-reads both and demands they agree, row for row and in both directions (§9). `<i>` is the
+reads both and demands they agree, row for row and in both directions (§11). `<i>` is the
 instance, `SU`/`SG` the service user/group, `WG` the declared `web.group`, `EG` the
 declared `engine.group`.
 
@@ -440,7 +475,7 @@ Rendered artifacts, all of them, per instance:
 | `…/instances/<i>/env` | `sample.env` (and the hand-copied `.env`) |
 | `…/instances/<i>/engine.env.fragment` | the two lines `install.sh` prints and asks an operator to retype |
 | `…/instances/<i>/preprod.htpasswd` | `install.sh` §5 |
-| one prod vhost + one preprod vhost per SITE | `nginx/dedalo_sites_prod.conf`, `nginx/dedalo_sites_preprod.conf`, `apache/dedalo_sites.conf` |
+| one prod vhost + one preprod vhost per SITE, **and the symlink that enables each of them** | `nginx/dedalo_sites_prod.conf`, `nginx/dedalo_sites_preprod.conf`, `apache/dedalo_sites.conf`, and `install.sh`'s §8 checklist item 3 ("copy … into /etc/nginx/sites-available/ … then nginx -t && systemctl reload nginx") |
 | users, groups, roots, modes, markers | `install.sh` §2 |
 
 `install.sh`, `deploy/dedalo-site-builder.service`, `nginx/*.conf`, `apache/*.conf` and
@@ -514,8 +549,28 @@ The mechanics:
 - **An artifact with no header at all is drift too** (someone replaced the file wholesale),
   and so is a header naming another instance.
 - **The provisioner is idempotent and orderable**: identities → roots and modes → markers
-  → secrets → rendered files → `daemon-reload` → vhost validate. A failure at any step
-  leaves the previous state intact and names the step.
+  → secrets → rendered files → `daemon-reload` → **enable each vhost** → vhost validate →
+  reload. A failure at any step leaves the previous state intact and names the step.
+- **A RENDERED VHOST IS NOT A SERVED VHOST, and the difference is a symlink.** Debian's two
+  directories are not a filing habit: `sites-available/` is a library and `sites-enabled/`
+  is the configuration, and nothing in the first is read until a link in the second names it
+  (`a2ensite` is that `ln -s` and nothing more). Until 2026-08-30 this provisioner wrote the
+  first and no action anywhere made the link, so a fully converged, fully green provision
+  served NOTHING — and no gate could see it, because every artifact the subsystem knew about
+  was in place. The link is now a planned action per vhost, derived from
+  `paths.vhost_enabled_dir` (§2.1), placed in the `web` phase between the artifact writes
+  and the configtest that gates the reload, and `provision remove` unlinks it BEFORE it
+  unlinks the vhost — a dangling include is a configtest failure for every museum on the
+  host. A host whose web server reads its vhost directory directly (RHEL's `conf.d/`) says
+  so by declaring the two directories as one, and no link is planned.
+- **A VHOST WHOSE SITE HAS BEEN UNDECLARED IS REPORTED, never removed.** Dropping a site
+  from `sites[]` leaves its vhosts, its enabling links and its webspace exactly where they
+  are, so the site stays on the internet while every signal says it is gone. `plan.ts`'s
+  `orphanedVhosts()` lists the two vhost directories, matches this instance's own generated
+  prefix, and names every file no declared site would produce; `check` counts it as drift
+  and `apply` exits non-zero on it. It is read off the DIRECTORIES rather than out of the
+  previous site table, which the same run rewrites — a memory kept there would last exactly
+  one run and then agree that nothing was wrong.
 
 ### 4.3 The rendered output is COMMITTED, and gated
 
@@ -725,10 +780,184 @@ Two stores also give the property the publish contract needs anyway: what goes l
 exactly the bytes that were previewed, held independently of the workspace and of preprod,
 so deleting a workspace or wiping preprod can never take down a published site.
 
-## 8. Stated residuals
+## 8. Adopting a pre-instance install
+
+A museum that has run a site builder since before this subsystem existed is the one host
+this document could not describe: a daemon, a `.env` full of plaintext credentials, a unit
+installed under a fixed name, three roots, and LIVE SITES. `provision adopt` turns it into
+instance N=1 of the same mechanism.
+
+**It is not a second provisioner.** `src/provision/adopt.ts` INFERS a declaration from what
+is on disk and then calls the ordinary `plan()`/`apply()`. It does only the four things
+`plan()` structurally cannot, and every one of them is named here so the boundary is
+checkable rather than remembered:
+
+1. **Write the declaration.** `plan()` takes a manifest; it cannot invent one.
+2. **Claim the roots.** §5 refuses a root that is non-empty and unmarked, which is every
+   root of a pre-instance install — so `plan()` could not provision such a host at all.
+   Stamping a marker is a statement that a directory belongs to an instance, and it is a
+   statement only a human makes: `provision adopt --instance <i>` IS that statement. The
+   markers are adoption's own step, sharing `plan.ts`'s `markedRoots()` rather than a second
+   list. A root already carrying ANOTHER instance's marker stops the migration dead, and
+   there is no flag for it.
+3. **Move the credentials.** A plan is printed, so `FileContent` has no source carrying a
+   literal secret and must never grow one. `SERVICE_TOKEN`, `ANTHROPIC_API_KEY`,
+   `OPENCODE_ENV`, `PI_ENV` and `PUBLICATION_API_KEY` become root-owned `0600` files under
+   `secrets/`. The bearer is PRESERVED, never re-minted: the engine is already paired with it.
+4. **Retire the old files.** The `.env` is RENAMED to `.env.pre-instance`, never deleted —
+   and MADE `root:root 0600`. The retired installer wrote that file `chown
+   $SERVICE_USER:$SERVICE_GROUP, chmod 600` (its §4), so a rename alone leaves the daemon's
+   own uid — and every agent turn that runs as it — owning a file holding the bearer and
+   every provider key in plaintext, which undoes the whole point of moving them into
+   `LoadCredential`. A revocation that fails is a FAILED step even though the bytes moved:
+   reporting it as done would report a migration as secure when it is not. `apply` has no
+   `rm` and no `rename` at all, deliberately.
+
+Everything else is `plan()`'s, unchanged: the missing GROUP (the latent failure the retired
+installer left — `useradd --system --create-home` with no `--user-group` while the unit hard
+required a `Group=`, so on a host whose `USERGROUPS_ENAB` says no the install "succeeded" and
+the daemon never started), the unit, the vhosts, the rendered env, `sites.json`, the pairing
+fragment, and the new service enabled.
+
+**IT INFERS FROM THE SHAPE THAT ACTUALLY EXISTED.** There has only ever been ONE installer —
+`install.sh` + `sample.env` + `deploy/dedalo-site-builder.service`, deleted in b46a29418e —
+and it configured the daemon with `SITES_ROOT`, `PREPROD_ROOT` and `PROD_ROOT` and with NO
+`AGENT_HOME`, `AUDIT_DIR` or `WEBSPACE_BASE`, because the daemon of that era had no such
+keys. Adoption read the modern names and refused without them, which made it unable to adopt
+any install that has ever existed: a migration path in name only. The three retired files are
+committed verbatim as `publication/site_builder/tests/fixtures/pre_instance/` and frozen by
+sha256 in the gate that builds its host from them, so the fixture cannot drift away from what
+history was.
+
+**WHAT KEEPS ITS PLACE AND WHAT DOES NOT.** The identity is VERBATIM — it comes out of the
+installed unit's `User=`/`Group=` (a unit with no `Group=` reads as "named after the user",
+and `plan()` creates the group before the user), and every byte on the host is owned by that
+uid. So is `SITES_ROOT`, which becomes `roots.workspaces` unchanged. Three things cannot stay
+where they are, and adoption MOVES them, one rename each, never a copy:
+
+| Was | Becomes | Why it cannot stay |
+|---|---|---|
+| `PREPROD_ROOT` / `PROD_ROOT`, one pair shared by every site (`<root>/.releases/<slug>`, served through `<root>/<slug>`) | each site's own webspace (§6) | A vhost carries one document root and a site answers on its own domain. The old shape is not expressible in this grammar at all. |
+| `<SITES_ROOT>/.audit/audit.jsonl` | `roots.audit`, outside the writable set | §3: the audit directory is root-owned precisely so an agent turn cannot unlink the record of itself. Inside `SITES_ROOT` it can. |
+| the agent's HOME (`useradd --create-home`) | `roots.home`, 0700 under the state root — NOT carried over | It holds a vendor CLI's session cache, never a museum's material. |
+
+`engine.checkout_dir` and `engine.bun_bin` are read off the installed unit's own
+`WorkingDirectory=` and `ExecStart=` — this host's own statement of where its daemon lives,
+which is a better answer than any topology. Two consequences are stated in the operator page
+because an operator has to plan for them: the old vhost points at the old link, so there is a
+window between the rename and the reload in which that path resolves to nothing; and a move
+that would CROSS a filesystem is refused, loudly, having moved nothing — this command does
+not copy a museum's published bytes.
+
+**THE FLEET LAW RUNS BEFORE ANYTHING IS WRITTEN.** Adoption is the one verb that ADDS a
+declaration to a host, and it was adding it unchecked: a museum inferred onto a domain, a
+root or an identity another museum already held was provisioned on top of it — and the
+collision it created then refused every subsequent verb for the whole host, `remove`
+included, so the operator could not undo what the command had just done to them. The
+candidate fleet is the declared one with this instance's own layout in it (replacing its
+earlier self, so a resumed adoption is not refused for colliding with what the first run
+wrote), and `assertFleetDisjoint` is asked about it before the serving proof.
+
+**WHAT AN OPERATOR MUST STILL SUPPLY.** A pre-instance install records nothing about the
+engine it is paired with, the web server's group, or how the public vhost terminates TLS:
+those lived in an operator's head and in a hand-copied vhost. Adoption REFUSES and names
+`--declare <fragment.json>` — one JSON fragment merged over the inference and validated by
+the ordinary `parseManifest`, so a typo in it is refused by name instead of silently
+ignored. That is a deliberate refusal, not a gap: a guessed group is a `0640` htpasswd the
+web server cannot read and a `0660` socket the engine cannot open, discovered at the first
+request.
+
+### 8.1 The serving proof is the gate on "done"
+
+`src/provision/verify.ts` is ONE function run TWICE against the same expectations.
+
+- **BEFORE**, it decides whether this install can be proved at all. An install whose
+  production link already disagrees with its own `site.json` is refused and nothing is
+  written — afterwards there would be no way to tell a pre-existing disagreement from one
+  the migration caused, and "the migration is done" would be unsayable.
+- **AFTER**, the identical check is the gate on declaring the migration done. For every slug
+  and every surface: the served link resolves, its target directory exists and is non-empty,
+  and production serves the release the site's own manifest claims. A failure is FAILED,
+  whatever else succeeded.
+
+Production's expectation is the SITE'S OWN CLAIM (`site.json`'s `published.release`) and
+deliberately NOT read off the link being checked; preprod, which has no such record, expects
+what the link pointed at when adoption first looked, captured before anything is written. A
+site that has never been published expects NULL, and null is a real expectation rather than a
+skipped check: the provisioner creates the served link pointing at the release STORE as a
+placeholder, so "this link must still be a placeholder" is exactly as checkable.
+
+### 8.2 Resumable, therefore idempotent
+
+A migration that can only be run once is a migration nobody can recover from. Every step is a
+no-op when it has already happened, and the observation looks for `.env.pre-instance` when the
+live `.env` is gone — so a second `adopt` re-reads the same facts, infers the same
+declaration, finds the credentials already placed and the unit already disabled, and
+converges. It refuses only when the declaration on disk DIFFERS from the inference, because
+that file is what every artifact is generated from and replacing it with an inference,
+silently, is not a thing this command may do.
+
+## 9. Decommissioning
+
+`provision remove` is the one verb that takes things away, and every part of its design is a
+refusal to do the easy thing. What must not happen, under any flag, on any host, is that a
+museum's cultural material ceases to exist because an operator typed a command with the wrong
+name after it.
+
+1. **It refuses by default while a site is published**, where published means the served link
+   points at a RELEASE — not merely that a link exists, which would fire on every provisioned
+   instance forever, and a refusal that always fires is one that gets worked around with a
+   flag on the first day. `--purge-published` is how someone says they meant it.
+2. **It archives; it never deletes.** Every tree with a museum's bytes in it — each site's
+   webspace with both release stores, the workspaces root, the agent's HOME, the audit trail —
+   is RENAMED beside itself as `<path>.retired-<utc>`, one instant for the whole run. A rename
+   is atomic, keeps ownership and modes, and is undone with `mv` by a human. An archive whose
+   destination is not in the same directory, or is the original itself, is refused by the
+   plan's own coherence check rather than executed.
+3. **It disables before it deletes, and a failed configtest STOPS it.** Every vhost's
+   enabling link is unlinked first (proved ours by its TARGET, since a symlink carries no
+   stamp) and only then the vhost itself: the other order leaves a dangling include, and the
+   configtest three steps later then fails for every museum on the host. And that configtest
+   is fatal rather than "skipped" — every failing command used to be downgraded, which is
+   right for `systemctl stop` on an already-stopped unit and catastrophic here: the reload
+   was issued anyway and the run reported "decommissioned" and exited 0.
+4. **It names every credential it leaves behind.** `secrets/` lives inside the declaration's
+   directory, which this verb does not remove, so the museum's bearer and provider keys are
+   still on the host afterwards. That is the right default — they are not this command's to
+   destroy, and the engine is still paired with the same token — but leaving them silently is
+   how five live credentials stay on a decommissioned host with nothing saying so.
+5. **It deletes only what it can prove it wrote.** The stamp is a body hash naming the
+   instance. Three answers and no fourth: already gone; not ours (no readable stamp, or one
+   naming another museum) so it stays and is reported by name; or ours, and it goes. There is
+   no "it is at our path so it must be ours" — that sentence is how a decommission removes the
+   vhost an operator wrote years earlier, or the museum next door's. The artifact set is
+   `renderAll()`'s, handed in, never a list kept in `remove.ts` (§4's law, and the failure
+   direction here is a museum's vhost left serving after its tenancy ended).
+6. **It never frees a uid.** `usermod --lock`, and neither the user nor the group is deleted —
+   a plan that tried to would be refused by `assertRemovalIsCoherent`. Every archived byte is
+   owned by a NUMBER; returning it to the pool the next `useradd` draws from would give the
+   next museum on this host the last one's files by accident. The instance NAME stays retired
+   for the same reason, since the identity is derived from it.
+
+Two things it deliberately leaves: `instance.json` (the operator decides, and the run says so
+in its closing lines) and the paired engine's side of the pairing — the engine's
+`../private/.env` still carries the fragment's lines, and that file is append-only.
+
+`removalPlan()` is PURE, `(layout, artifacts, host, at) => RemovalStep[]`, for the reason
+`plan.ts` gives at length and which is sharper here: this is the destructive verb, and a
+destructive verb whose behaviour can only be observed by running it as root is a verb nobody
+can review.
+
+## 10. Stated residuals
 
 Each of these is real, is not closed by this work, and is acceptable today for the stated
 reason. They are listed so they cannot be quietly forgotten or quietly grown.
+
+**Re-checked against the code 2026-08-30**, line by line rather than carried forward: 1, 2,
+3 and 5 stand exactly as written (the spawn path is still a direct `Bun.spawn(plan.argv, …)`;
+the htpasswd is still one file per instance with one reviewer set; `src/sites/template.ts`
+still substitutes the API url once at scaffold time; `site.json` still lives inside the
+workspace a turn can rewrite). 4 has moved and its text below says how.
 
 **1. Within one instance, agent turns run as the daemon's uid.** The boundary defended
 here is BETWEEN museums, not between two sites of the same museum, and not between the
@@ -765,17 +994,30 @@ env carries — so there is one value to change and one file to change it in. Ho
 limit: nothing currently detects the divergence between that value and what an
 already-scaffolded site froze.
 
-**4. N complete Dédalo installs on one host is now a REQUIREMENT, and the engine's deploy
-surface has single-global assumptions this work does not address.** 1:1 pairing means N
-engines beside N daemons. The engine's own ops surface is written for one install per host
-in several places — the default socket path `/tmp/dedalo_ts.sock`, the `/opt/dedalo/bin/`
-out-of-tree supervisor scripts, the unit names in `deploy/`, the backup roots
-(`engineering/PRODUCTION.md` §2, §3, §6, §12). Each is overridable per install, none is
-templated by an instance the way this document templates the site builder. That is a real
-gap and it is OUT OF SCOPE here: this work owns the site-builder side of the pairing, and
-inventing an engine-side instance system as a side effect would be the second source of
-truth for engine deployment. Recorded so that the day the engine gets one, the two are
-designed to agree rather than discovered to disagree.
+**4. N complete Dédalo installs on one host is a REQUIREMENT, and the ENGINE's deploy
+surface still has single-global assumptions.** 1:1 pairing means N engines beside N daemons.
+The site-builder side of that is now templated by instance end to end, and as of 2026-08-30
+so is its BACKUP: `engineering/PRODUCTION.md` §6 store 5 is per instance, and
+`deploy/dedalo-site-builder-backup.sh` reads each instance's roots out of the artifacts the
+provisioner generated for it rather than from a list of its own. What remains single-global
+is the ENGINE's own ops surface: the default socket path `/tmp/dedalo_ts.sock`, the
+`/opt/dedalo/bin/` out-of-tree supervisor scripts, the unit names in `deploy/`, and stores
+1-4 of that same backup set (`PRODUCTION.md` §2, §3, §6, §12). Each is overridable per
+install, none is templated by an instance the way this document templates the site builder.
+That is a real gap and it is OUT OF SCOPE here: this work owns the site-builder side of the
+pairing, and inventing an engine-side instance system as a side effect would be the second
+source of truth for engine deployment. Recorded so that the day the engine gets one, the two
+are designed to agree rather than discovered to disagree.
+
+**4b. The serving proof has no verb of its own.** `src/provision/verify.ts` answers the one
+question a converged host cannot ("does this museum's site still serve what it claims to
+serve"), and it is reachable only from inside `provision adopt`. `provision check` proves the
+host matches its declaration, which is a different question. The consequence is stated where
+it bites: `PRODUCTION.md` §6.2 has to spell the reconciliation rule as three shell reads,
+because after a restore there is no command that runs it. Acceptable only because the module
+is already pure, already gated, and already takes an io seam narrow enough to expose — this
+is a wiring job, not a design question, and it is deliberately not done in the same change as
+the documentation that names it.
 
 **5. A build step's command comes from a file an agent turn can rewrite.** `site.json`
 lives at `<SITES_ROOT>/<slug>/site.json` — inside the workspace the driver is spawned with
@@ -792,7 +1034,7 @@ environment's key SET is held by `publication/site_builder/tests/agent_env_bound
 which is what must be argued with the day a build step needs a credential. Not acceptable
 was the false sentence, and it is gone.
 
-## 9. What a gate may assert about this document
+## 11. What a gate may assert about this document
 
 This file is prose, but parts of it are machine-checkable, and under DEC-12 the checkable
 parts must be checked. Two gates read it —
@@ -859,12 +1101,68 @@ Added by Phase 2 (`tests/provision_examples.test.ts`):
   assigns a credential-shaped key any value but the pairing sentinel, nor carries a hex run
   long enough to be a token on any line but its own stamp.
 
-Assertions still to be written, as the provisioner lands:
+Added by the provisioner (`tests/provision_{cli,adopt,remove,plan}.test.ts`):
+
+- **A rendered vhost is an ENABLED vhost.** A two-site declaration plans one enabling link
+  per vhost, each pointing RELATIVELY at its own file; a host whose vhosts are settled but
+  never enabled is repaired and reloaded; a settled host plans none; a host that includes its
+  vhost directory directly plans none and still tests and reloads; a COPY of a vhost or a
+  link pointing elsewhere in the enabled directory refuses the instance rather than being
+  silently replaced. And `remove` unlinks every enabling link BEFORE the configtest.
+- **Adoption is measured against the install that actually shipped.** The three retired files
+  are committed verbatim and frozen by sha256; the gate builds its synthetic host from THOSE
+  bytes, and asserts that `sample.env` really does carry `SITES_ROOT`/`PREPROD_ROOT`/
+  `PROD_ROOT` and really does not carry `AGENT_HOME`/`AUDIT_DIR`/`WEBSPACE_BASE`. The
+  published surfaces and the audit trail are proved MOVED (the old stores are gone), the six
+  surfaces are proved to serve the same releases, listings and bytes at their new address,
+  and the retired env is proved `root:root 0600` from BOTH plausible starting modes.
+- **A site that was never published is not a refusal**, and a site whose manifest claims a
+  release with no link still is.
+- **The fleet law runs before adoption writes anything**, and a second adoption is not
+  refused for colliding with what the first one wrote.
+- **A fleet collision does not make `remove` unusable** — it is reported, in full, and the
+  run carries on, because taking one of the colliding instances off the host is HOW the
+  collision is resolved.
+- **A vhost whose site has been undeclared is named**, with its path and whether it is
+  enabled, on a host the plan itself calls converged.
+- **The documented exit-code table is the CLI's own closed set**, in both directions
+  (`test/unit/operator_commands_tripwire.test.ts`).
+
+- **Adoption takes the identity VERBATIM** from the installed unit, retires the `.env` by
+  renaming it, writes each migrated credential `0600 root:root`, and lets no credential
+  VALUE reach a step description. Asserted against the MIGRATION ALONE and not after the
+  converge — `plan()`'s metadata re-assertion repairs a wrong mode on the way past, which
+  hid the window the first time this was measured.
+- **The serving proof is load-bearing in both directions**: a dangling link, an empty served
+  target and a served release that disagrees with `manifest.published` each redden it, and
+  an install whose production link ALREADY disagrees is refused before anything is written.
+  Production's expectation is read from `site.json`, never off the link being checked — a
+  mutation that read it off the link left every other gate green.
+- **Removal archives rather than unlinks**, deletes only what carries this instance's stamp,
+  refuses while a site is published, may never contain a step that deletes a user, and may
+  never place a reload without a configtest immediately before it.
+- **No verb makes a PARTIAL claim.** The `deferred` mechanism and its exit code were deleted
+  rather than kept: a documented exit code no path returns is a promise to a script that will
+  never be kept.
+
+Added by the engine repo (`test/unit/operator_commands_tripwire.test.ts`):
+
+- **An operator procedure in this repo is EXECUTABLE.** Every `provision` verb an operator
+  page names exists in the CLI, every flag is one that verb accepts, every repo script it
+  tells the operator to run is on disk, and every daemon environment key it names is one the
+  daemon actually reads. And in the other direction: every verb the CLI has appears in
+  `docs/management/site_builder.md`, so a new one cannot be shipped undocumented.
+- **The backup set named in `engineering/PRODUCTION.md` §6 is the one the nightly unit
+  copies**, in both directions, plus a behavioural leg that RUNS
+  `deploy/dedalo-site-builder-backup.sh` over a synthetic host and asserts it copied the
+  markers, the release stores and the served symlinks.
+
+Assertions still to be written:
 
 - **The renderers are pure** — no `process.env`, no clock, no filesystem read — asserted
   mechanically rather than by each renderer's own gate, so a `check` run is meaningful.
   Verified per module today; not yet ratcheted across the directory.
-- **The residual list of §8 is SHRINK-ONLY**: a residual may be removed when it is closed
+- **The residual list of §10 is SHRINK-ONLY**: a residual may be removed when it is closed
   and may not be added without a decision, the same ratchet the engine uses for its
   exemption lists.
 
@@ -875,6 +1173,6 @@ A gate may NOT assert, and must not pretend to:
   host it runs on;
 - that the uid boundary HOLDS at runtime. It can assert the modes and the identities that
   are planned; whether the kernel and the vendor CLIs behave is the operator's `--check`
-  and the residuals of §8;
+  and the residuals of §10;
 - that an operator ever ran the provisioner. An instance that was hand-built to look right
   is exactly the state §4's body hashes exist to expose on the first run.
