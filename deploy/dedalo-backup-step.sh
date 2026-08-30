@@ -32,13 +32,22 @@
 #
 # Exit status:
 #     run          the child's exit status (so the journal shows the real one)
-#     run --last   0 only if EVERY store recorded in this run succeeded
-#     report       0 only if EVERY store recorded in this run succeeded
+#     run --last   0 only if every EXPECTED store recorded, and all succeeded
+#     report       0 only if every EXPECTED store recorded, and all succeeded
 #
 # Where the per-run statuses live: $DEDALO_BACKUP_STATUS_DIR, else systemd's
 # $RUNTIME_DIRECTORY (the unit declares RuntimeDirectory=dedalo-backup, which
 # systemd creates before the first step and REMOVES when the unit stops — so one
 # run can never read another run's leftovers), else /run/dedalo-backup.
+#
+# WHICH STORES WERE SUPPOSED TO RUN: $DEDALO_BACKUP_EXPECTED_STORES, a
+# space-separated list the unit declares. Without it the aggregate can only see
+# the stores that DID record a status — so a step whose ExecStart never ran at
+# all (a typo in the unit, a missing script, a store commented out by mistake)
+# is INVISIBLE, and a run that copied three stores of five reports "every store
+# succeeded". That is the same silent success this file exists to remove, one
+# level up: the `any -eq 0` guard below only catches a run where NOTHING
+# recorded, never a partial one.
 #
 # Where the persistent verdict lives: $DEDALO_BACKUP_STATE_DIR (the unit sets it),
 # as BACKUP_FAILED / LAST_OK. That directory is what an operator reads, and it
@@ -102,6 +111,28 @@ report() {
 		[ "$code" = "0" ] || failed=1
 	done
 
+	# EXPECTED vs RECORDED. A store that recorded nothing did not run, and a
+	# store that did not run was not copied.
+	missing=''
+	if [ -n "${DEDALO_BACKUP_EXPECTED_STORES:-}" ]; then
+		for expected in $DEDALO_BACKUP_EXPECTED_STORES; do
+			if [ ! -e "$STATUS_DIR/$expected.status" ]; then
+				missing="$missing $expected"
+				failed=1
+			fi
+		done
+		if [ -n "$missing" ]; then
+			summary="$summary  MISSING (never ran):$missing
+"
+		fi
+	else
+		# Not a failure — an older unit predates this variable, and a backup that
+		# ran must not be voided by its runner being newer than its unit. But the
+		# run's COMPLETENESS is unverified, and that must be said out loud rather
+		# than inferred from a green summary.
+		echo "dedalo-backup: WARNING — \$DEDALO_BACKUP_EXPECTED_STORES is unset, so this run cannot tell a store that SUCCEEDED from one that never ran. Declare it in the unit (Environment=DEDALO_BACKUP_EXPECTED_STORES=...)." >&2
+	fi
+
 	if [ "$any" -eq 0 ]; then
 		# A run that recorded nothing is NOT a successful run. It means every step
 		# was skipped, or the status directory moved — either way nothing is known
@@ -122,6 +153,9 @@ $summary"
 		return 0
 	fi
 
+	if [ -n "$missing" ]; then
+		echo "dedalo-backup: STORE(S) NEVER RAN:$missing — expected by \$DEDALO_BACKUP_EXPECTED_STORES but no status was recorded" >&2
+	fi
 	printf 'dedalo-backup: AT LEAST ONE STORE FAILED — this run is NOT a restore point\n%s' "$summary" >&2
 	write_marker BACKUP_FAILED "$(date '+%Y-%m-%d %H:%M:%S%z') dedalo-backup: at least one store FAILED — this run is not a restore point
 $summary"

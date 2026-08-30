@@ -424,6 +424,17 @@ the whole backup tree as secret material, which store 4 already made true.
 MariaDB **diffusion targets are derived data** — rebuildable by re-publishing;
 no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
 
+**The unit declares which stores it promises.** `dedalo-backup.service` carries
+`Environment=DEDALO_BACKUP_EXPECTED_STORES=` naming every ACTIVE step, and
+`dedalo-backup-step.sh`'s aggregate fails the run when an expected store recorded
+no status. Without it the aggregate can only see the stores that DID record, so a
+step whose `ExecStart` never ran at all — a typo, a missing script, a store
+commented out by mistake — is invisible and a run that copied three stores of
+five reports "every store succeeded". **Uncommenting store 2 means adding
+`rag_db` to that list in the same edit**; the tripwire holds the declaration and
+the active steps equal, so a drift between them is a red gate rather than a
+backup nobody knows is short.
+
 ### 6.1 Restore order
 
 Restore in dependency order — each step needs the one before it, and step 5

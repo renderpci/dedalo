@@ -604,6 +604,50 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 		).toEqual([]);
 	});
 
+	test('the unit DECLARES which stores it promises, and the list equals its ACTIVE steps', () => {
+		// P0-13, second hole (2026-08-31). The step runner's aggregate iterates the
+		// status files that EXIST, so a step whose ExecStart never ran at all is
+		// invisible: a run that copied three stores of five reports "every store
+		// succeeded". The runner's `any -eq 0` guard only catches a run where
+		// NOTHING recorded, never a partial one. The fix needs the unit to say
+		// which stores it promised — and that declaration is worthless if it can
+		// drift from the ExecStart lines, so it is held equal here.
+		const unit = read(UNIT);
+		const declared = /^Environment=DEDALO_BACKUP_EXPECTED_STORES=(.*)$/m.exec(unit)?.[1];
+		expect(
+			declared,
+			`${UNIT} declares no Environment=DEDALO_BACKUP_EXPECTED_STORES. Without it the ` +
+				'aggregate cannot tell a store that SUCCEEDED from one that never ran.',
+		).toBeDefined();
+		const promised = (declared ?? '').trim().split(/\s+/).filter(Boolean).sort();
+
+		// The store name is the token right after `run` (or `run --last`).
+		const active = execStarts()
+			.filter((line) => !line.trim().startsWith('#'))
+			.map((line) => /dedalo-backup-step\.sh\s+run\s+(?:--last\s+)?([a-z0-9_]+)/.exec(line)?.[1])
+			.filter((name): name is string => name !== undefined)
+			.sort();
+		expect(active.length).toBeGreaterThan(0); // anti-vacuity
+
+		expect(
+			promised,
+			`${UNIT}: DEDALO_BACKUP_EXPECTED_STORES must name every ACTIVE step and nothing ` +
+				'else. A promised store with no step never runs and now fails the unit (correct); ' +
+				'an active step missing from the list is invisible to the aggregate (the defect). ' +
+				`declared=[${promised.join(' ')}] active=[${active.join(' ')}]`,
+		).toEqual(active);
+	});
+
+	test('the step runner FAILS a run whose expected store never recorded', () => {
+		// The behavioural half: the declaration must actually be enforced.
+		const runner = read('deploy/dedalo-backup-step.sh');
+		expect(runner).toContain('DEDALO_BACKUP_EXPECTED_STORES');
+		expect(runner).toContain('MISSING (never ran)');
+		// ...and an older unit that predates the variable is WARNED, not silently
+		// treated as complete.
+		expect(runner).toContain('cannot tell a store that SUCCEEDED from one that never ran');
+	});
+
 	test('every ExecStart in the unit is a documented store', () => {
 		const tokens = documentedStores().map((store) => store.token);
 		const offenders = execStarts().filter((line) => !tokens.some((token) => line.includes(token)));

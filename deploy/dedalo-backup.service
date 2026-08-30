@@ -82,6 +82,14 @@ RuntimeDirectoryMode=0750
 # dedalo-backup-alert@.service's own Environment= line: both write BACKUP_FAILED and
 # only a fully successful run removes it.
 Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
+# WHICH STORES THIS UNIT PROMISES. The aggregate can otherwise only see the
+# stores that recorded a status, so a step whose ExecStart never ran — a typo
+# here, a missing script, a store commented out by mistake — is invisible and
+# the run reports "every store succeeded" over the ones that did run. This list
+# must name every ACTIVE ExecStart store below, and nothing else;
+# test/unit/operator_commands_tripwire.test.ts holds the two equal.
+# UNCOMMENTING store 2 means adding rag_db here in the same edit.
+Environment=DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private site_builder
 # A dump and a media mirror are a complete, unprotected copy of the collection.
 UMask=0077
 
