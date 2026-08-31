@@ -23,8 +23,6 @@
  *      fresh-install 502 traced to a missing /run/dedalo and a /tmp-vs-/run drift.
  */
 
-import { fileURLToPath } from 'node:url';
-
 import { describe, expect, test } from 'bun:test';
 import {
 	chmodSync,
@@ -38,6 +36,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
 
 const pkg = (await Bun.file(new URL('../../package.json', import.meta.url)).json()) as {
@@ -278,9 +277,7 @@ describe('install restart supervisor contract', () => {
 
 	/** A live (non-commented) rule, so a commented-out block cannot satisfy a gate. */
 	function hasLiveRule(text: string, pattern: RegExp): boolean {
-		return text
-			.split('\n')
-			.some((line) => !line.trim().startsWith('#') && pattern.test(line));
+		return text.split('\n').some((line) => !line.trim().startsWith('#') && pattern.test(line));
 	}
 
 	test('every engine /dedalo/ route prefix is proxied in all configs and samples', async () => {
@@ -326,9 +323,7 @@ describe('install restart supervisor contract', () => {
 				const block = new RegExp(
 					`location\\s+(?:=\\s+)?${prefix}/?\\s*\\{[^}]*proxy_pass\\s+http://${upstream};`,
 				);
-				expect(block.test(text), `${path}: nginx must proxy ${prefix} to ${upstream}`).toBe(
-					true,
-				);
+				expect(block.test(text), `${path}: nginx must proxy ${prefix} to ${upstream}`).toBe(true);
 				expect(
 					hasLiveRule(text, new RegExp(`^\\s*location\\s+(?:=\\s+)?${prefix}/?\\s*\\{`)),
 					`${path}: the ${prefix} rule must not be commented out`,

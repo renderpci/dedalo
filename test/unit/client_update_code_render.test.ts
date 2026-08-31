@@ -1082,7 +1082,6 @@ describe('update_code build feedback', () => {
 	});
 });
 
-
 /**
  * THE DELETE AFFORDANCE — the client half of restore-point retention.
  *
@@ -1095,19 +1094,29 @@ describe('update_code build feedback', () => {
 describe('update_code restore-point delete', () => {
 	test('the button mirrors the server verdict, it never re-decides', () => {
 		expect(status_src).toContain('point.deletable!==true');
-		expect(status_src).toContain("get_label['update_code_delete_reason_' + point.deletable_reason]");
+		expect(status_src).toContain(
+			"get_label['update_code_delete_reason_' + point.deletable_reason]",
+		);
 		// a disabled control must say why, RENDERED and not only hovered — the
 		// same correction the restore reason already carries.
 		expect(status_src).toContain('button_delete.title');
-		expect(/class_name\s*:\s*'restore_reason',\s*\n\s*text_content\s*:\s*delete_reason/.test(status_src)).toBe(true);
+		expect(
+			/class_name\s*:\s*'restore_reason',\s*\n\s*text_content\s*:\s*delete_reason/.test(status_src),
+		).toBe(true);
 		// and no click handler is wired on a refused row
-		expect(/if \(point\.deletable!==true\) \{[\s\S]{0,900}\} else \{[\s\S]{0,200}addEventListener\('click'/.test(status_src)).toBe(true);
+		expect(
+			/if \(point\.deletable!==true\) \{[\s\S]{0,900}\} else \{[\s\S]{0,200}addEventListener\('click'/.test(
+				status_src,
+			),
+		).toBe(true);
 	});
 
 	test('a development checkout gets neither Restore nor Delete', () => {
 		// it refuses to overwrite its own tree; deleting its rollbacks would be
 		// the same reach into a tree the panel does not own.
-		expect(render_src).toContain('is_development ? null : (point) => delete_restore_point(self, point, body_response)');
+		expect(render_src).toContain(
+			'is_development ? null : (point) => delete_restore_point(self, point, body_response)',
+		);
 	});
 
 	test('the delete is synchronous and answers a VERDICT, not a job handle', () => {
@@ -1119,9 +1128,13 @@ describe('update_code restore-point delete', () => {
 		// background-job contract removed (pinned above as `no 3600 in the
 		// model`): bounded, because the DISK is the record of what happened, so
 		// a client that gives up early loses nothing the next read cannot show.
-		expect(/delete_restore_point = async function[\s\S]{0,1400}timeout : 600 \* 1000/.test(model_src)).toBe(true);
+		expect(
+			/delete_restore_point = async function[\s\S]{0,1400}timeout : 600 \* 1000/.test(model_src),
+		).toBe(true);
 		// named, never pathed — the same contract as restore_code
-		expect(/delete_restore_point = async function[\s\S]{0,900}name : options\.name/.test(model_src)).toBe(true);
+		expect(
+			/delete_restore_point = async function[\s\S]{0,900}name : options\.name/.test(model_src),
+		).toBe(true);
 	});
 
 	test('the confirm NAMES the point, and the list is re-read after', () => {
@@ -1132,7 +1145,11 @@ describe('update_code restore-point delete', () => {
 		expect(render_src).toContain('self.refresh_consumer');
 		// a partial delete arrives as an ERROR envelope — the server refuses
 		// rather than claiming a removal it could not verify
-		expect(/delete_restore_point = async function[\s\S]{0,1600}request_failed\(api_response\)/.test(render_src)).toBe(true);
+		expect(
+			/delete_restore_point = async function[\s\S]{0,1600}request_failed\(api_response\)/.test(
+				render_src,
+			),
+		).toBe(true);
 	});
 
 	test('every label the affordance renders is defined', () => {
@@ -1144,7 +1161,9 @@ describe('update_code restore-point delete', () => {
 		]) {
 			expect(master_labels[key], `${key} is defined in master.json`).toBeDefined();
 		}
-		expect(((master_labels.update_code_delete_point_confirm ?? '').match(/%s/g) ?? []).length).toBe(1);
+		expect(((master_labels.update_code_delete_point_confirm ?? '').match(/%s/g) ?? []).length).toBe(
+			1,
+		);
 		expect(css_src).toContain('button_delete_point');
 	});
 });

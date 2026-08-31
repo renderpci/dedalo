@@ -22,9 +22,9 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DedaloError } from '../../src/core/errors/index.ts';
-import { deleteRestorePoint } from '../../src/core/update/code_restore.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../../src/core/security/permissions.ts';
+import { deleteRestorePoint } from '../../src/core/update/code_restore.ts';
 
 let root = '';
 let treeRoot = '';
@@ -88,7 +88,9 @@ describe('the delete door applies its gates in the order that matters', () => {
 		}
 		expect(thrown).toBeInstanceOf(DedaloError);
 		expect((thrown as DedaloError).code).toBe('update.refused');
-		expect(String((thrown as DedaloError).publicMessage)).toContain('rollback for the code running');
+		expect(String((thrown as DedaloError).publicMessage)).toContain(
+			'rollback for the code running',
+		);
 		expect(existsSync(rollback), 'the rollback must survive its own refusal').toBe(true);
 	});
 
@@ -179,7 +181,7 @@ describe('retention on the confirmed-boot path', () => {
 	test('it prunes the SENTINEL’S root — never a root it resolved itself', async () => {
 		// five points, default keep of 3
 		const names = ['a', 'b', 'c', 'd', 'e'].map((n) => `dedalo_7.0.0_${n}`);
-		names.forEach((n) => plant(n, { bootable: true }));
+		for (const n of names) plant(n, { bootable: true });
 		await confirm(root, join(root, 'dedalo_7.0.0_e'));
 		const left = names.filter((n) => existsSync(join(root, n)));
 		expect(left.length).toBeLessThan(names.length);
@@ -190,7 +192,7 @@ describe('retention on the confirmed-boot path', () => {
 
 	test('a sentinel that does not CONFIRM prunes nothing', async () => {
 		const names = ['a', 'b', 'c', 'd', 'e'].map((n) => `dedalo_7.0.0_${n}`);
-		names.forEach((n) => plant(n, { bootable: true }));
+		for (const n of names) plant(n, { bootable: true });
 		const { confirmBootedCodeUpdate } = await import('../../src/core/update/boot_confirm.ts');
 		const sentinelPath = join(root, 'last_code_update.json');
 		writeFileSync(
@@ -223,7 +225,7 @@ describe('retention on the confirmed-boot path', () => {
 		const boot = 'dedalo_7.0.0_boot';
 		plant(boot, { bootable: true });
 		const husks = ['h1', 'h2', 'h3', 'h4'].map((n) => `dedalo_7.0.0_${n}`);
-		husks.forEach((n) => plant(n));
+		for (const n of husks) plant(n);
 		await confirm(root, join(root, 'dedalo_7.0.0_h4'));
 		expect(existsSync(join(root, boot)), 'the rollback is never pruned').toBe(true);
 	});

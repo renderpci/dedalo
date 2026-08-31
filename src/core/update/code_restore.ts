@@ -114,10 +114,7 @@ import {
 import { engineOwnsInstall } from './ownership.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
-import {
-	removeRestorePointDir,
-	resolveRestorePointOrRefuse,
-} from './restore_points.ts';
+import { removeRestorePointDir, resolveRestorePointOrRefuse } from './restore_points.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { DEDALO_VERSION_TRIPLE } from './version.ts';
 
@@ -523,7 +520,6 @@ function scheduleServerRestartReal(reason: string): void {
 		scheduleServerRestart(`code restore: ${reason}`);
 	});
 }
-
 
 /**
  * DELETE one restore point.
