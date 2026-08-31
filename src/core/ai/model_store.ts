@@ -401,6 +401,53 @@ export function modelStoreRoot(): string {
 	return resolve(privateDir, configured);
 }
 
+/**
+ * The canonical store root, or null when there is no store this route may serve
+ * from. Confinement is measured against the CANONICAL path because the store is
+ * very likely a symlink to a data volume, so comparing raw strings would confine
+ * to a path nothing actually reads.
+ */
+export function canonicalModelStoreRoot(): string | null {
+	const root = modelStoreRoot();
+	if (!existsSync(root)) return null;
+	if (!modelStoreRootIsSane(root)) return null;
+	try {
+		return realpathSync(root);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Whether a resolved store root is one this route may serve FROM.
+ *
+ * `resolve(privateDir, configured)` accepts anything, including `.` and `..`.
+ * A store of `.` resolves to the PRIVATE DIRECTORY itself, and every
+ * allowlisted-extension file under it — configuration, exports, whatever an
+ * operator has put there — becomes readable over this route. `..` reaches its
+ * parent. Neither is a traversal the confinement check can catch: the confinement
+ * is measured against the root, and the root is the thing that moved.
+ *
+ * The rule is not "inside privateDir" — an air-gapped institution legitimately
+ * rsyncs weights to a data volume at an absolute path of its own. The rule is
+ * that the store must not CONTAIN the engine's other state: a root equal to, or
+ * an ancestor of, the private directory is refused. That is decidable from the
+ * paths themselves, needs no marker file, and stays true wherever the store lives.
+ */
+export function modelStoreRootIsSane(root: string): boolean {
+	let canonicalRoot: string;
+	let canonicalPrivate: string;
+	try {
+		canonicalRoot = realpathSync(root);
+		canonicalPrivate = realpathSync(privateDir);
+	} catch {
+		return false;
+	}
+	if (canonicalRoot === canonicalPrivate) return false;
+	// an ancestor of the private directory swallows everything under it
+	return !canonicalPrivate.startsWith(canonicalRoot + sep);
+}
+
 /** True when the store directory exists — the honest answer to "can we run locally". */
 export function modelStoreAvailable(): boolean {
 	const root = modelStoreRoot();
@@ -425,17 +472,11 @@ export function modelHubAllowed(): boolean {
  * 404. Exported so a gate can assert the mapping without standing a server up.
  */
 export function resolveModelPath(subPath: string): string | null {
-	const root = modelStoreRoot();
-	if (!existsSync(root)) return null;
-
-	// Confine on the CANONICAL root: the store is very likely a symlink to a data
-	// volume, so compare realpaths, never the raw strings.
-	let canonicalRoot: string;
-	try {
-		canonicalRoot = realpathSync(root);
-	} catch {
-		return null;
-	}
+	// One call answers "is there a store, is it a legitimate one, and what is its
+	// canonical path" — the three questions that must all hold before anything is
+	// confined to it.
+	const canonicalRoot = canonicalModelStoreRoot();
+	if (canonicalRoot === null) return null;
 
 	const fullPath = resolve(canonicalRoot, subPath);
 	if (fullPath !== canonicalRoot && !fullPath.startsWith(canonicalRoot + sep)) {

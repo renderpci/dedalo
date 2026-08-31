@@ -114,6 +114,13 @@ export async function smokeBootQuarantine(codeRoot: string, stagingDir: string):
  * health_wait (deploy/deploy.sh idiom): poll /health over the unix socket
  * until the child answers, exits, or the timeout lapses; null = healthy.
  */
+/**
+ * Per-attempt bound for the health poll. Well under HEALTH_TIMEOUT_MS so a
+ * wedged attempt is abandoned and RETRIED inside the drill's own budget rather
+ * than consuming it.
+ */
+const HEALTH_POLL_TIMEOUT_MS = 5_000;
+
 async function healthWaitProblem(
 	child: Bun.Subprocess,
 	socketPath: string,
@@ -128,9 +135,15 @@ async function healthWaitProblem(
 			return `the quarantine server exited (code ${await child.exited}) before answering /health`;
 		}
 		try {
+			// Bounded per attempt, not only by the loop's deadline (CARRY-14): the
+			// loop advances on RETURN, so one socket call that never settles hangs
+			// the whole drill past HEALTH_TIMEOUT_MS with nothing to cancel it. A
+			// server that has bound the socket but wedged is exactly the failure
+			// this probe exists to detect, and it was the one it could not report.
 			const response = await fetch('http://localhost/health', {
 				unix: socketPath,
-			} as RequestInit & { unix: string });
+				signal: AbortSignal.timeout(HEALTH_POLL_TIMEOUT_MS),
+			} as RequestInit & { unix: string; signal: AbortSignal });
 			if (response.ok) return null;
 		} catch {
 			// not bound yet — keep polling

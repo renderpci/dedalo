@@ -12,11 +12,19 @@
  * the LAN for every transcription is not acceptable), and is fail-closed in every
  * other direction — traversal, non-model extensions and misses all 404 without
  * leaking whether the target exists.
+ *
+ * AND IT IS SESSION-GATED (P1-25 / MODEL-02). The route reached the store with no
+ * session read at all — the media route beside it reads one — while stamping
+ * `immutable, max-age=31536000` on GB-scale artifacts. The prior remediation asked
+ * for this gate and only the realpath half was done. Every serving assertion below
+ * therefore carries a real session cookie, and the anonymous case is asserted as a
+ * 404: a test that fetched anonymously and still got 200 was how the gap survived.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { privateDir } from '../../src/config/env.ts';
 import { recordFileComplete } from '../../src/core/ai/model_manifest.ts';
 import {
 	AI_MODEL_URL_PREFIX,
@@ -25,16 +33,29 @@ import {
 	modelInstalled,
 	modelState,
 	modelStoreAvailable,
+	modelStoreRootIsSane,
 	resolveModelPath,
 } from '../../src/core/ai/model_store.ts';
+import { createSession, SESSION_COOKIE } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
+import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
+
+registerSessionCleanup();
 
 const STORE = join(import.meta.dir, '..', '..', '..', 'private', `ai_models_test_${process.pid}`);
 const MODEL = 'onnx-community/whisper-tiny-TEST';
 
 const context = { requestId: 'test', startedAt: 0 };
 
+let cookie = '';
+
+/** An AUTHENTICATED read — what a cataloguer's browser actually does. */
 async function get(path: string): Promise<Response> {
+	return handleRequest(new Request(`http://localhost${path}`, { headers: { cookie } }), context);
+}
+
+/** The same read with no session at all. */
+async function getAnonymous(path: string): Promise<Response> {
 	return handleRequest(new Request(`http://localhost${path}`), context);
 }
 
@@ -45,6 +66,7 @@ beforeAll(() => {
 	// Something that is NOT part of what a browser needs to run the model.
 	writeFileSync(join(STORE, MODEL, 'README.md'), '# not servable');
 	process.env.DEDALO_AI_MODEL_STORE = STORE;
+	cookie = `${SESSION_COOKIE}=${createSession(-1, 'root', true)}`;
 });
 
 afterAll(() => {
@@ -74,6 +96,47 @@ describe('the model store resolves what the browser needs', () => {
 });
 
 describe('the model store is fail-closed', () => {
+	test('an anonymous request gets nothing, not even the config', async () => {
+		// Weights are for THIS install's cataloguers doing in-browser inference;
+		// there is no anonymous consumer, so there is no reason for an anonymous
+		// door. 404 rather than 401: the store must not confirm what it holds.
+		expect((await getAnonymous(`${AI_MODEL_URL_PREFIX}${MODEL}/config.json`)).status).toBe(404);
+		expect(
+			(await getAnonymous(`${AI_MODEL_URL_PREFIX}${MODEL}/onnx/encoder_model.onnx`)).status,
+		).toBe(404);
+	});
+
+	test('a store root that swallows the private directory serves nothing', async () => {
+		// `resolve(privateDir, configured)` accepts anything: a store of '.' resolves
+		// to the PRIVATE DIRECTORY itself, publishing every allowlisted-extension
+		// file under it. That is not a traversal the confinement can catch — the
+		// confinement is measured against the root, and the root is what moved.
+		// The predicate itself…
+		expect(modelStoreRootIsSane(STORE), 'a real store must stay serviceable').toBe(true);
+		expect(modelStoreRootIsSane(privateDir), 'the private directory is not a model store').toBe(
+			false,
+		);
+		expect(modelStoreRootIsSane(dirname(privateDir)), 'an ancestor swallows everything').toBe(
+			false,
+		);
+
+		// …and the exploit it exists to stop, driven end to end. This test store
+		// lives directly under the private directory, so with the store set to '.'
+		// the file below is a REAL servable path under the resolved root: without
+		// the sanity check it resolves and is served, which is the finding.
+		const escapePath = `${basename(STORE)}/${MODEL}/config.json`;
+		const previous = process.env.DEDALO_AI_MODEL_STORE;
+		try {
+			process.env.DEDALO_AI_MODEL_STORE = '.';
+			expect(
+				resolveModelPath(escapePath),
+				'a store root of "." publishes the private directory over this route',
+			).toBeNull();
+		} finally {
+			process.env.DEDALO_AI_MODEL_STORE = previous;
+		}
+	});
+
 	test('a non-model extension is not served', async () => {
 		expect((await get(`${AI_MODEL_URL_PREFIX}${MODEL}/README.md`)).status).toBe(404);
 		expect(resolveModelPath(`${MODEL}/README.md`)).toBeNull();

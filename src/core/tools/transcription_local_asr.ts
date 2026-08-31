@@ -34,7 +34,7 @@
 
 import { isIP } from 'node:net';
 import { readString } from '../../config/readers.ts';
-import { isPrivateIp } from '../security/ssrf_guard.ts';
+import { fetchBoundedText, isPrivateIp } from '../security/ssrf_guard.ts';
 import type {
 	TranscribeRequest,
 	TranscribeResult,
@@ -42,6 +42,52 @@ import type {
 	TranscriberStatusRequest,
 	TranscriptionSegment,
 } from './transcription_asr.ts';
+
+/**
+ * TRANSPORT BUDGETS for the sidecar (CARRY-14).
+ *
+ * These three calls carried no signal, no timeout and no byte ceiling: a sidecar
+ * that accepted the connection and then stalled held a BACKGROUND JOB LANE — of
+ * which the engine has three, shared by every class of background work — for as
+ * long as it liked, and one that answered without bound fed the process without
+ * bound. Neither is a write hazard (an awaited fetch blocks no event loop and
+ * holds no transaction, per Wave 5's correction), but lane occupancy is exactly
+ * how a museum's media processing stops.
+ *
+ * The submit budget is generous because it UPLOADS the recording — an hour of
+ * WAV over a LAN is minutes, and a transcription job that dies at the door is
+ * worse than one that takes a while. Poll and models are interactive and small.
+ */
+const SUBMIT_TIMEOUT_MS = 10 * 60_000;
+const POLL_TIMEOUT_MS = 30_000;
+const MODELS_TIMEOUT_MS = 15_000;
+/** A transcript of a long recording is large; a job id or a model list is not. */
+const TRANSCRIPT_MAX_BYTES = 32 * 1024 * 1024;
+const SMALL_MAX_BYTES = 1 * 1024 * 1024;
+
+/**
+ * One bounded call to the sidecar, parsed. Returns null when the peer refused,
+ * timed out, exceeded the ceiling or did not answer JSON — every caller here
+ * already has a "could not reach the transcriber" branch, and none of them can
+ * do anything more useful with the distinction.
+ *
+ * It deliberately does NOT apply an address policy: `isSafeLocalAsrUrl` is this
+ * module's policy, and it PERMITS private hosts behind the named exemption,
+ * which is the whole reason this provider exists.
+ */
+async function sidecarJson(
+	url: string,
+	init: RequestInit,
+	timeoutMs: number,
+	maxBytes: number,
+): Promise<unknown | null> {
+	const text = await fetchBoundedText(url, { init, timeoutMs, maxBytes });
+	try {
+		return JSON.parse(text);
+	} catch {
+		return null;
+	}
+}
 
 /**
  * Whether a transcriber may live on a private/loopback address.
@@ -156,14 +202,17 @@ export async function localAsrProvider(req: LocalTranscribeRequest): Promise<Tra
 		form.set('entity_name', req.entityName);
 		form.set('user_id', String(req.userId));
 
-		const res = await fetch(endpoint(req.uri, 'jobs'), {
-			method: 'POST',
-			headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
-			body: form,
-		});
-		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
-
-		const body = (await res.json()) as { id?: string | number };
+		const body = (await sidecarJson(
+			endpoint(req.uri, 'jobs'),
+			{
+				method: 'POST',
+				headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
+				body: form,
+			},
+			SUBMIT_TIMEOUT_MS,
+			SMALL_MAX_BYTES,
+		)) as { id?: string | number } | null;
+		if (body === null) return { ok: false, msg: 'the transcriber did not answer' };
 		if (body.id === undefined || body.id === null) {
 			return { ok: false, msg: 'transcriber returned no job id' };
 		}
@@ -190,17 +239,20 @@ export const localAsrStatusProvider: TranscriberStatusProvider = async (
 	if (!isSafeLocalAsrUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
 
 	try {
-		const res = await fetch(endpoint(req.uri, `jobs/${encodeURIComponent(String(req.pid))}`), {
-			method: 'GET',
-			headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
-		});
-		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
-
-		const body = (await res.json()) as {
+		const body = (await sidecarJson(
+			endpoint(req.uri, `jobs/${encodeURIComponent(String(req.pid))}`),
+			{
+				method: 'GET',
+				headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
+			},
+			POLL_TIMEOUT_MS,
+			TRANSCRIPT_MAX_BYTES,
+		)) as {
 			state?: string;
 			segments?: TranscriptionSegment[];
 			error?: string;
-		};
+		} | null;
+		if (body === null) return { ok: false, msg: 'the transcriber did not answer' };
 
 		if (body.state === 'queued' || body.state === 'running') return { status: 2 };
 		if (body.state === 'done') {
@@ -222,11 +274,13 @@ export async function localAsrModels(
 ): Promise<{ name: string; label?: string; languages?: string; notes?: string }[]> {
 	if (!isSafeLocalAsrUrl(uri)) return [];
 	try {
-		const res = await fetch(endpoint(uri, 'models'), {
-			headers: key !== '' ? { Authorization: `Bearer ${key}` } : undefined,
-		});
-		if (!res.ok) return [];
-		const body = (await res.json()) as { models?: { name?: string }[] };
+		const body = (await sidecarJson(
+			endpoint(uri, 'models'),
+			{ headers: key !== '' ? { Authorization: `Bearer ${key}` } : undefined },
+			MODELS_TIMEOUT_MS,
+			SMALL_MAX_BYTES,
+		)) as { models?: { name?: string }[] } | null;
+		if (body === null) return [];
 		return Array.isArray(body.models)
 			? (body.models.filter((model) => typeof model.name === 'string') as { name: string }[])
 			: [];

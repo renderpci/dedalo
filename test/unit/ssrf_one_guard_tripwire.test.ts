@@ -61,10 +61,6 @@ const EXEMPT: Record<string, string> = {
 		'THE external subsystem’s single door, and it already carries the fuller contract ' +
 		'(kill switches, host allowlist, SSRF guard, socket pin, byte ceiling, breaker, ' +
 		'concurrency bound). Policed by its own external_outbound_tripwire.',
-	'src/core/tools/transcription_local_asr.ts':
-		'The institution’s ON-PREMISE recognition box: a private address is the POINT here, ' +
-		'behind the named DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS exemption, so the resolving ' +
-		'public-only guard cannot serve it. It vets IP literals through the shared isPrivateIp.',
 	'tools/tool_sitebuilder/server/daemon_client.ts':
 		'Speaks to the site_builder daemon over a UNIX SOCKET on this machine — there is no ' +
 		'hostname to resolve and no network hop to guard. Operator-configured, never caller-supplied.',

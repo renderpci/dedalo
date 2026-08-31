@@ -251,12 +251,38 @@ export interface GuardedFetchOptions {
  * Fetch an outbound URL after the SSRF check, with NO redirect following, a
  * timeout, and a hard body cap (closes the gzip-bomb / unbounded-read DoS —
  * DOS-05/06). Returns the decoded text. Throws on any violation.
+ *
+ * This is the PUBLIC-DESTINATION entry: the address policy is "must be public".
+ * A caller whose destination is legitimately private — an on-premise sidecar on
+ * the institution's own LAN — must NOT copy this function to get the transport
+ * guarantees; it applies its OWN named address policy and then calls
+ * `fetchBoundedText`, which is this function minus the address check. One
+ * hardened primitive, two entry policies (CARRY-14: the second copy is how six
+ * fetch sites ended up with no timeout, no signal and no byte cap at all).
  */
 export async function fetchGuardedText(
 	uri: string,
 	options: GuardedFetchOptions = {},
 ): Promise<string> {
 	const { url } = await assertPublicUrl(uri);
+	return fetchBoundedText(url.toString(), options);
+}
+
+/**
+ * The transport half of `fetchGuardedText`, on a URL the CALLER has already
+ * judged: no redirect following (a redirect re-chooses the target, and the
+ * caller's policy was applied to the target it chose), an abort timeout, and a
+ * streamed byte ceiling so a hostile or broken peer cannot feed the process
+ * without bound.
+ *
+ * It applies NO address policy. Every caller must have applied one — see
+ * `assertPublicUrl` for the public case and `isSafeLocalAsrUrl` for the
+ * config-gated private-host exemption.
+ */
+export async function fetchBoundedText(
+	url: string,
+	options: GuardedFetchOptions = {},
+): Promise<string> {
 	const maxBytes = options.maxBytes ?? 25 * 1024 * 1024;
 	const timeoutMs = options.timeoutMs ?? 15_000;
 	const controller = new AbortController();

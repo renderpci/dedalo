@@ -119,6 +119,16 @@ export function isUsableCachedFile(target: string, expected?: number | null): bo
 const HEAD_TIMEOUT_MS = 10_000;
 
 /**
+ * How long a download may produce NOTHING before it is abandoned.
+ *
+ * Deliberately an idle bound rather than a total one: weights are gigabytes and a
+ * heritage institution's uplink is not a data centre's, so any fixed ceiling would
+ * eventually kill a healthy transfer. Silence is the thing that cannot be allowed
+ * to last, because the lane it occupies is one of three the whole engine shares.
+ */
+const DOWNLOAD_IDLE_TIMEOUT_MS = 120_000;
+
+/**
  * The hub's byte length for one file, or null when it cannot be learnt (offline,
  * blocked, a timeout, or a hub that does not answer HEAD). Null is not a
  * failure: it drops the caller back to the size-agnostic cache test.
@@ -155,6 +165,18 @@ export function curlArgv(target: string, url: string, quiet: boolean): string[] 
 		'-',
 		'--retry',
 		'3',
+		// AN IDLE BOUND, NOT A TOTAL ONE (CARRY-14). A model download is a
+		// BACKGROUND JOB, and the engine has three background lanes shared by every
+		// class of work; a hub that accepted the connection and then stalled held
+		// one indefinitely, because this argv carried no time limit of any kind.
+		// `--max-time` would be the wrong instrument: a multi-GB weights file
+		// legitimately runs for hours on a museum's uplink. What must never be
+		// unbounded is SILENCE — under 1 byte/s for this long and the transfer is
+		// not slow, it is dead.
+		'--speed-limit',
+		'1',
+		'--speed-time',
+		String(Math.floor(DOWNLOAD_IDLE_TIMEOUT_MS / 1000)),
 		quiet ? '-sS' : '--progress-bar',
 		'-o',
 		target,
@@ -271,12 +293,47 @@ async function curlFetch(target: string, url: string, quiet: boolean): Promise<b
 	return false;
 }
 
-/** Transport fallback for hosts without curl. */
+/**
+ * Transport fallback for hosts without curl.
+ *
+ * The signal is not optional here (CARRY-14). Model weights are fetched by a
+ * BACKGROUND JOB, and the engine has three background lanes shared by every
+ * class of work; a hub that accepts the connection and then stalls held one of
+ * them for as long as it liked, with nothing to cancel it. curl's own path
+ * already has `--max-time`; this one had nothing at all.
+ *
+ * It is an IDLE timeout, not a total one: a multi-GB weights file legitimately
+ * takes far longer than any fixed budget, so what must be bounded is silence.
+ */
 async function plainFetch(target: string, url: string): Promise<boolean> {
-	const response = await fetch(url);
-	if (!response.ok) return false;
-	await Bun.write(target, response);
-	return true;
+	// AbortSignal.timeout() would be a TOTAL deadline, which is the wrong bound
+	// for a gigabyte artifact. The controller is re-armed on every chunk, so the
+	// abort fires only when the peer has actually gone quiet.
+	const controller = new AbortController();
+	let idle = setTimeout(() => controller.abort(), DOWNLOAD_IDLE_TIMEOUT_MS);
+	const keepAlive = (): void => {
+		clearTimeout(idle);
+		idle = setTimeout(() => controller.abort(), DOWNLOAD_IDLE_TIMEOUT_MS);
+	};
+	try {
+		const response = await fetch(url, {
+			redirect: 'follow', // the hub redirects to its CDN; curl follows too (-L)
+			signal: controller.signal,
+		});
+		if (!response.ok || response.body === null) return false;
+		const watched = response.body.pipeThrough(
+			new TransformStream<Uint8Array, Uint8Array>({
+				transform(chunk, controllerOut) {
+					keepAlive();
+					controllerOut.enqueue(chunk);
+				},
+			}),
+		);
+		await Bun.write(target, new Response(watched));
+		return true;
+	} finally {
+		clearTimeout(idle);
+	}
 }
 
 /** The one transport door: curl when it exists, `fetch` otherwise. */

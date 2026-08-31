@@ -1158,6 +1158,17 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// the whole point of running inference locally. Same ordering reason as the
 	// lib route: the client tree has no ai_models/ subtree.
 	if (request.method === 'GET' && url.pathname.startsWith(AI_MODEL_URL_PREFIX)) {
+		// SESSION-GATED (P1-25 / MODEL-02). This route reached the model store with
+		// NO session read at all — the media route beside it reads one — while
+		// stamping `immutable, max-age=31536000` on GB-scale artifacts. The prior
+		// remediation asked for exactly this gate and only the realpath half was
+		// done. Weights are for THIS install's cataloguers doing in-browser
+		// inference; there is no anonymous consumer, so there is no reason for an
+		// anonymous door. Fail-closed 404, no existence leak.
+		const modelToken = readCookie(request.headers.get('cookie') ?? '', SESSION_COOKIE);
+		if (modelToken === undefined || getSession(modelToken) === null) {
+			return notFoundResponse(context.requestId);
+		}
 		const modelResponse = await serveModelRequest(url.pathname, request);
 		if (modelResponse !== null) return modelResponse;
 	}
