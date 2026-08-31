@@ -49,10 +49,6 @@ Single source of truth for what appears in the sidebar:
 
 Counters track **suites** (cards), not individual Mocha `it()` blocks. `frame_runner.js` aggregates Mocha results and reports once on `test_end`. Exposed as `window.global_stats` for Puppeteer.
 
-### Shared helpers (`js/test_harness.js`)
-
-Optional utilities for lifecycle tests: `build_instance_options`, `build_render_component`, `run_lifecycle_matrix`.
-
 ### Component data (`js/elements.js`, `js/data.js`)
 
 `elements.js` defines component instances (model, tipo, section, random data generators). `test_component_full.js` runs the full edit/list/search matrix; individual `test_component_*.js` files cover focused scenarios.

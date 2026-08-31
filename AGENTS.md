@@ -78,8 +78,11 @@ The live-oracle era is over. The baselines of record are FROZEN:
   - **The baseline is IN the runner**: `KNOWN_FAILING` (shrink-only, reasons
     inline — a listed suite that PASSES is red too); `--strict` ignores it.
     `KNOWN_FAILING` is currently EMPTY, so a plain run equals `--strict`. 
-  - **Last measured 2026-08-22** on the run's OWN server, on the suite
-    database, with real authentication: 131 suites, 131 pass. ALWAYS measure
+  - **Last measured 2026-08-31** on the run's OWN server, on the suite
+    database, with real authentication: 133 suites, 133 pass. (Was 131/131 on
+    2026-08-22; the count rose because `test_section_map` — 104 lines of real
+    assertions that were in no manifest and had therefore NEVER RUN — was
+    registered, P2-28/DEAD-10.) ALWAYS measure
     with the reseed on — a polluted test3 fakes ~7 failures. 
   - **The run PINS what two suites need instead of borrowing it from the
     machine**. The diffusion domain is `SUITE_DIFFUSION_DOMAIN` (`test`, the
