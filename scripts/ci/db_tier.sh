@@ -79,6 +79,25 @@ fi
 # running probes under UTC+14 and UTC-11.
 : "${DEDALO_TIMEZONE:=Europe/Madrid}"
 
+# EGRESS ALLOWLIST — because the VENDORED SEED names a host, and this tier composes the
+# whole environment itself. install/db/dedalo_install.pgsql.gz ships two sections with an
+# `api_config` (`test3` and `rsc205`, both `https://zenon.dainst.org/api/v1/...`), and
+# src/external/config.ts refuses an api_config whose api_url host is not allowlisted AT
+# PARSE TIME — `fetched` is a property of the FIELD, not of the caller, so nothing has to
+# be about to make a request for the refusal to fire.
+#
+# With the key unset every host is blocked, so `isExternalSectionTipo` THROWS, and
+# listExternalSectionTipos turns that into `update.refused` — which is on the Time Machine
+# RESTORE path (tools/tool_time_machine, via normalizeRestoredSectionIds). Net effect
+# measured 2026-08-31: 14 of the 15 red gates in this tier's first stage, none of them
+# about external services at all, and every one green on a developer box where
+# ../private/.env happens to carry the same host.
+#
+# So this is not a permission being granted for convenience: it is the tier declaring the
+# egress policy the repo's OWN fixture requires. A new api_config host in the seed belongs
+# here too, or the tier goes red the same way.
+: "${DEDALO_EXTERNAL_ALLOWED_HOSTS:=zenon.dainst.org}"
+
 # Postgres client. ubuntu-latest ships psql 16 and an OLDER CLIENT REFUSES a
 # newer server, so the workflow installs postgresql-client-18 and points here.
 # src/core/install/pg_bin.ts probes an explicit path first, then Apple-Silicon
@@ -103,6 +122,7 @@ fi
 : "${DEDALO_TS_STATE_PATH:=${TMPDIR:-/tmp}/dedalo_ci_ts_state.json}"
 
 export ENTITY DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME
+export DEDALO_EXTERNAL_ALLOWED_HOSTS
 export DEDALO_APPLICATION_LANGS DEDALO_APPLICATION_LANGS_DEFAULT DEDALO_DATA_LANG_DEFAULT
 export PROJECTS_DEFAULT_LANGS DEDALO_TIMEZONE DEDALO_PG_BIN_PATH
 export DIFFUSION_JOBS_TABLE DIFFUSION_ACTIVITY_TABLE DEDALO_SESSION_DB_PATH DEDALO_TS_STATE_PATH

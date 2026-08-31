@@ -516,6 +516,60 @@ describe('CI workflow tripwire', () => {
 		}
 	});
 
+	/**
+	 * Rule 6b — db_tier.sh ALLOWLISTS EVERY EGRESS HOST THE VENDORED SEED NAMES.
+	 *
+	 * `src/external/config.ts` refuses an `api_config` whose `api_url` host is not in
+	 * DEDALO_EXTERNAL_ALLOWED_HOSTS AT PARSE TIME — `fetched` is a property of the FIELD,
+	 * not of the caller, so nothing has to be about to make a request. And
+	 * `isExternalSectionTipo` THROWS on a refused config by design ("is this external?"
+	 * must not be where a configuration error becomes silence), which
+	 * `listExternalSectionTipos` turns into `update.refused` on the TIME MACHINE RESTORE
+	 * path.
+	 *
+	 * So an unset allowlist does not degrade the external subsystem — it reds gates that
+	 * have nothing to do with external services. MEASURED 2026-08-31: 14 of the 15 red
+	 * gates in the db tier's first stage, all of them in tm_lang_slice_restore_native,
+	 * every one green on a developer box because ../private/.env happens to carry the
+	 * host the seed uses.
+	 *
+	 * DERIVED FROM THE SEED, never a second list: the hosts come out of
+	 * install/db/dedalo_install.pgsql.gz itself, so adding an api_config to the seed
+	 * without allowlisting its host reds THIS gate rather than a dozen unrelated ones on
+	 * a runner nobody can reproduce.
+	 */
+	test('db_tier.sh allowlists every api_config host the vendored seed ships', () => {
+		const sql = new TextDecoder().decode(
+			Bun.gunzipSync(readFileSync(join(repoRoot, 'install', 'db', 'dedalo_install.pgsql.gz'))),
+		);
+		const seedHosts = [
+			...new Set(
+				[...sql.matchAll(/"api_url(?:_search)?"\s*:\s*"(https?:\/\/[^"/]+)/g)].map(
+					(match) => new URL(match[1] as string).hostname,
+				),
+			),
+		].sort();
+		// The seed is the corpus: if it stops naming any host at all the rule below would
+		// pass over nothing, which is the vacuity this repo gates everywhere else.
+		expect(
+			seedHosts.length,
+			'no api_config host found in the install seed — the extraction broke, or the seed changed shape',
+		).toBeGreaterThan(0);
+
+		const declared = read('scripts/ci/db_tier.sh').match(
+			/^\s*: "\$\{DEDALO_EXTERNAL_ALLOWED_HOSTS:=([^}]*)\}"/m,
+		)?.[1];
+		expect(
+			declared,
+			'scripts/ci/db_tier.sh must compose DEDALO_EXTERNAL_ALLOWED_HOSTS — the tier builds its whole environment, and the seed it installs names external hosts',
+		).toBeDefined();
+		const allowed = new Set((declared ?? '').split(',').map((host) => host.trim()));
+		expect(
+			seedHosts.filter((host) => !allowed.has(host)),
+			'api_config hosts the seed ships that the db tier does not allowlist. The refusal lands on the RESTORE path, not on anything external — add the host to db_tier.sh:',
+		).toEqual([]);
+	});
+
 	// The self-hosted tier must stay IN THE REPO. Gitignoring it would (a) never reach
 	// the private mirror, which is a push of this repo, and (b) make the pin/oracle
 	// rules above pass vacuously over an empty list. It carries no secrets — only
