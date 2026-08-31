@@ -193,7 +193,7 @@ interface PreparedField {
 	unsupportedHopFns: string[];
 }
 
-interface RunContext {
+export interface RunContext {
 	plan: PublicationPlan;
 	options: Required<Pick<ResolveOptions, 'sectionTipo' | 'runStartedAt'>> & ResolveOptions;
 	parserCtx: ParserContext;
@@ -411,24 +411,56 @@ async function isRecordPublishable(ctx: RunContext, record: MatrixRecord): Promi
 	);
 }
 
-/** The full gate priority chain (process_datum :1063-1120), fail-closed. */
-async function resolveGate(
+/**
+ * The synthetic field id a gate-resolution failure is reported under. Not a real
+ * field: it exists so a removal caused by an ERROR is legible in the same list
+ * the operator already reads for field failures (P2-13 / PUB-07).
+ */
+const PUBLICATION_GATE_ERROR_FIELD = '(publication gate)';
+
+/**
+ * The full gate priority chain (process_datum :1063-1120), fail-closed.
+ *
+ * A DECIDED 'unpublish' AND A FAILED ONE ARE NOT THE SAME FACT (P2-13 / PUB-07).
+ * `'unpublish'` flows to `session.removeRecords` — removal of rows from the
+ * PUBLIC heritage website. Failing closed is the right direction and stays; what
+ * was wrong is that the catch was bare, so a resolution error was
+ * indistinguishable from a curator's decision to unpublish. The operator saw
+ * rows disappear with no reason recorded anywhere.
+ *
+ * So the failure is RETURNED, and the caller puts it in the batch's error list —
+ * the job's error list is the operator's only view of a partial publication.
+ *
+ * EXPORTED for the gate that proves the catch actually runs. The audit's finding
+ * was not only that the branch was silent but that it had ZERO EXECUTIONS in a
+ * full-suite coverage run: the two tests named "publication gate (fail-closed…)"
+ * exercise the decision paths and never force a throw. A branch that decides
+ * whether heritage rows leave a public website should not be reachable only in
+ * production. Gate: test/unit/diffusion_publication_gate_native.test.ts.
+ */
+export async function resolveGate(
 	ctx: RunContext,
 	record: MatrixRecord,
-): Promise<'publish' | 'unpublish'> {
-	if (ctx.options.skipPublicationStateCheck === true) return 'publish';
+): Promise<{ status: 'publish' | 'unpublish'; failure?: string }> {
+	if (ctx.options.skipPublicationStateCheck === true) return { status: 'publish' };
 	try {
 		const override = ctx.sectionPublishableOverride.get(record.section_tipo);
-		if (override === true) return 'publish';
-		if (override === false) return 'unpublish';
+		if (override === true) return { status: 'publish' };
+		if (override === false) return { status: 'unpublish' };
 		const inherited = ctx.publishableOverrides.get(
 			RECORD_KEY(record.section_tipo, record.section_id),
 		);
-		if (inherited !== undefined) return inherited ? 'publish' : 'unpublish';
-		return (await isRecordPublishable(ctx, record)) ? 'publish' : 'unpublish';
-	} catch {
-		// Fail-closed (spec §8.5): a gate resolution error NEVER publishes.
-		return 'unpublish';
+		if (inherited !== undefined) return { status: inherited ? 'publish' : 'unpublish' };
+		return { status: (await isRecordPublishable(ctx, record)) ? 'publish' : 'unpublish' };
+	} catch (error) {
+		// Fail-closed (spec §8.5): a gate resolution error NEVER publishes — but it
+		// says so, loudly and once, naming the record it could not decide.
+		const message = error instanceof Error ? error.message : String(error);
+		console.warn(
+			`[diffusion] publication gate FAILED for ${record.section_tipo}/${record.section_id} — ` +
+				`failing closed (the record will be REMOVED from the public site): ${message}`,
+		);
+		return { status: 'unpublish', failure: message };
 	}
 }
 
@@ -1992,7 +2024,20 @@ async function processRecord(
 	level: number,
 ): Promise<ProcessedRecord> {
 	const errors: FieldResolutionError[] = [];
-	const status = await resolveGate(ctx, record);
+	const gate = await resolveGate(ctx, record);
+	const status = gate.status;
+	if (gate.failure !== undefined) {
+		// Into the SAME channel a field failure uses, so an operator reading the
+		// run report sees "this row was removed because the gate could not be
+		// resolved", never a silent disappearance.
+		errors.push({
+			sectionTipo: record.section_tipo,
+			sectionId: record.section_id,
+			fieldId: PUBLICATION_GATE_ERROR_FIELD,
+			columnName: PUBLICATION_GATE_ERROR_FIELD,
+			message: `publication gate unresolved, failing closed (record REMOVED from the public site): ${gate.failure}`,
+		});
+	}
 	const recordIr: RecordIR = {
 		sectionTipo: record.section_tipo,
 		sectionId: record.section_id,
