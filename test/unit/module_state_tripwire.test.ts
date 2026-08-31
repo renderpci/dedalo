@@ -804,6 +804,27 @@ describe('config.menu lang reads outside src/config/ (P0-7 census)', () => {
 		expect(grown).toEqual([]);
 	});
 
+	test('the three DATA-01 doors read currentDataLang(), positively', () => {
+		// The census above reddens when `config.menu.dataLang` COMES BACK. It says
+		// nothing about what replaced it — a door rewritten to read
+		// `config.lang.dataLangDefault`, or a module-level capture, reproduces the
+		// defect (a write landing in a language the operator was not editing) with
+		// the census green. Pin the positive shape at each closed door.
+		for (const [file, expected] of [
+			['tools/tool_update_cache/server/index.ts', "translatable ? currentDataLang() : 'lg-nolan'"],
+			[
+				'src/core/section/record/duplicate_record.ts',
+				"translatable ? currentDataLang() : 'lg-nolan'",
+			],
+			['tools/tool_posterframe/server/index.ts', 'translatable ? currentDataLang() : null'],
+		] as const) {
+			const src = readFileSync(join(import.meta.dir, '..', '..', file), 'utf8');
+			expect(src, `${file}: the DATA-01 door no longer reads currentDataLang()`).toContain(
+				expected,
+			);
+		}
+	});
+
 	test('the census stays honest — no stale entry, and every entry states WHY', () => {
 		const stale = [...CONFIG_LANG_READ_CENSUS.keys()].filter((path) => !measured.has(path));
 		expect(stale).toEqual([]);

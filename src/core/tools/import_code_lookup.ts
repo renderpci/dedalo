@@ -200,6 +200,13 @@ export async function findSectionIdByCode(
 		},
 		limit: CANDIDATE_CAP,
 	});
+	// THE CAP THE SEARCH WILL ACTUALLY HONOUR. `sanitizeClientSqo` clamps `limit`
+	// to DEDALO_SEARCH_CLIENT_MAX_LIMIT, a per-install key — so on an install
+	// that lowered it, the window is SMALLER than CANDIDATE_CAP and comparing the
+	// row count against the constant would never detect truncation: the exact
+	// record could be evicted, this function answers null, and the importer
+	// creates a duplicate. Read the number the sanitizer left.
+	const effectiveCap = Number(sqo.limit ?? CANDIDATE_CAP);
 	const built = await buildSearchSql(sqo, { principal, idsOnly: true });
 	const rows = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
 		section_id: number;
@@ -213,9 +220,9 @@ export async function findSectionIdByCode(
 	// the caller create a duplicate of an existing record) or a SECOND copy of it
 	// (answering an address would write into one of two records that share it).
 	// Both are the defects this module exists to close, so it refuses instead.
-	if (rows.length >= CANDIDATE_CAP) {
+	if (rows.length >= effectiveCap) {
 		const sentence =
-			`The identifier '${wanted}' matched the search cap of ${CANDIDATE_CAP} candidate records ` +
+			`The identifier '${wanted}' matched the search cap of ${effectiveCap} candidate records ` +
 			`in section ${target.sectionTipo}, so the result cannot be trusted either way — the ` +
 			`record that truly holds it may lie outside that window. Nothing was imported. This ` +
 			`almost always means ${target.componentTipo} is not an identifier component on this ` +

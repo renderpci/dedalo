@@ -305,6 +305,30 @@ async function ensureSuiteLogin(): Promise<void> {
  * run is now equivalent to `--strict`. Keep it that way: the next red suite
  * gets a fix, not a row.
  */
+/**
+ * THE INVENTORY FLOOR — what this run must OBSERVE before its verdict means
+ * anything (P0-2, the green-by-absence class).
+ *
+ * The verdict below is "no pending suite, and no failure outside KNOWN_FAILING".
+ * Every term of that is about suites the run FOUND. A run that discovers three
+ * cards instead of all of them — a renamed registry, a page that half-rendered,
+ * a selector that stopped matching — passes all three, exits 0, and reports a
+ * green client tier over almost nothing. The count is the only thing that
+ * notices.
+ *
+ * A FLOOR, not an equality: adding suites raises it (update it in the same
+ * change), and a DROP is a deliberate edit that has to say which suites went and
+ * why. Measured 2026-08-31: 132 suites. Set just under, so one legitimately
+ * deferred card does not red the tier while a discovery collapse does.
+ *
+ * (!) SUITES ONLY. `global_stats.total` is the CARD count, not a mocha-test
+ * count — the page exposes no per-suite test total, so this floor cannot see a
+ * suite that rendered and ran zero `it()`. Closing that needs a
+ * `data-test-count` on the card; until then it is stated here rather than
+ * implied by a number that does not mean what its name suggests.
+ */
+const SUITE_FLOOR = 128;
+
 const KNOWN_FAILING: ReadonlyMap<string, string> = new Map([]);
 
 /**
@@ -694,6 +718,22 @@ async function main(): Promise<void> {
 				log(`  [KNOWN  ] ${name} — ${KNOWN_FAILING.get(name)}`);
 			}
 		}
+		// THE INVENTORY FLOOR, before the pass/fail verdict — a run that observed
+		// almost nothing must not be able to report success (P0-2).
+		const observedSuites = results.suites.length;
+		const inventoryShort: string[] = [];
+		if (observedSuites < SUITE_FLOOR) {
+			inventoryShort.push(
+				`observed ${observedSuites} suites, floor is ${SUITE_FLOOR} — the page did not render the registry this run is supposed to check`,
+			);
+		}
+		// NOT COVERED, and said rather than stubbed: a card with zero `it()` renders
+		// a green dot and asserts nothing. See SUITE_FLOOR's note — it needs a
+		// per-suite test count the page does not expose.
+		for (const line of inventoryShort) {
+			error(`INVENTORY: ${line}`);
+		}
+
 		if (results.pending > 0) {
 			error(`${results.pending} test suite(s) did not complete.`);
 		}
@@ -706,7 +746,12 @@ async function main(): Promise<void> {
 			);
 		}
 		exitCode =
-			results.pending > 0 || unexpectedFailures.length > 0 || unexpectedPasses.length > 0 ? 1 : 0;
+			results.pending > 0 ||
+			unexpectedFailures.length > 0 ||
+			unexpectedPasses.length > 0 ||
+			inventoryShort.length > 0
+				? 1
+				: 0;
 	} catch (err) {
 		error(`Unexpected error: ${(err as Error).message}`);
 		if ((err as Error).stack) {

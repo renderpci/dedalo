@@ -365,3 +365,36 @@ rollback too); with no ambient transaction it still runs inline, exactly as
 before. Gated both ways in `write_lang_provenance_native`.
 
 **No parity fixture is affected by any of this.**
+
+
+---
+
+## Addendum, 2026-08-31 — the three remaining doors are CLOSED
+
+This entry recorded `tools/tool_update_cache` as out of scope ("it still buckets
+lang-less items and an empty component under `config.menu.dataLang`"), and its
+door table listed four doors. Three more have since been closed and the ledger
+must not go on describing an engine that no longer exists:
+
+| Door | Was | Now |
+|---|---|---|
+| `tool_update_cache` regenerate default bucket | `config.menu.dataLang` | `currentDataLang()` |
+| `duplicate_record` TM audit slice | `config.menu.dataLang` | `currentDataLang()` |
+| `tool_posterframe` MediaIdentity lang | `config.menu.dataLang` | `currentDataLang()` |
+
+**WIRE-VISIBLE**: the poster frame one is not only a write language. A
+translatable media component's identity carries a LANGUAGE SEGMENT in its file
+path, so a frame created for an operator working in `lg-cat` on an install whose
+`DEDALO_DATA_LANG` is `lg-spa` is now filed under `lg-cat` — a different URL from
+the one the same action produced before. Existing frames are not moved; nothing
+re-derives a path for a frame already on disk.
+
+Outside a request scope all three fall back to `DEDALO_DATA_LANG_DEFAULT` per
+Addendum 2, which is the point: `menu.dataLang` is a per-user MENU selection and
+is not in the data fallback chain, so a background job's write stamped with it
+can land in a slice no read resolves.
+
+Gated by the P0-7 census in `test/unit/module_state_tripwire.test.ts`, which now
+pins BOTH directions — `config.menu.dataLang` may not come back, AND each door
+must still read `currentDataLang()` (a rewrite to `config.lang.dataLangDefault`
+reddens it).
