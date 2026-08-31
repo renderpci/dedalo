@@ -109,3 +109,41 @@ describe('a publication decision is never silent', () => {
 		expect(source).toContain('REMOVED from the public site');
 	});
 });
+
+/**
+ * THE OTHER HALF OF P2-13 (PUB-08) — a retired directive spelling must not
+ * compile to silence.
+ *
+ * `properties.process.parser` naming an UNREGISTERED function is a hard compile
+ * ERROR, under a comment citing "nothing silent". The v6 spelling of the whole
+ * directive — `process_dato`, still carried by 18 ontology nodes — misses the
+ * `process?.parser` read entirely and yields an EMPTY transform with zero
+ * errors, zero warnings and zero degradations. The field publishes untransformed
+ * and nothing says the ontology asked for a transform at all.
+ *
+ * The louder an engine is about a mistyped function name, the more misleading
+ * its silence about a directive it no longer reads.
+ */
+describe('a retired parser spelling is reported, not silently dropped', () => {
+	test('the compiler names the retired block and the replacement', () => {
+		const source = readFileSync(join(REPO_ROOT, 'src/diffusion/plan/compile.ts'), 'utf8');
+		// Follows the established retired-property idiom
+		// (relations/request_config/build.ts::reportRetiredTargetMode): name the
+		// node, name the replacement, then resolve by the ordinary rule.
+		expect(source).toContain('RETIRED_PARSER_SPELLINGS');
+		expect(source).toContain('process_dato');
+		expect(source).toContain('retired_parser_spelling');
+		expect(source).toContain('publishes with NO transform');
+		// It must be reached from the EXACT branch that used to return silently.
+		expect(source).toMatch(
+			/if \(rawParser === undefined \|\| rawParser === null\) \{[\s\S]{0,200}reportRetiredParserSpelling\(/,
+		);
+	});
+
+	test('the degradation reason is a closed union the run report can switch on', () => {
+		// A free-text message alone would be unreportable: the run report groups by
+		// reason, so a new degradation kind has to be declared, not improvised.
+		const types = readFileSync(join(REPO_ROOT, 'src/diffusion/plan/types.ts'), 'utf8');
+		expect(types).toMatch(/reason: 'dangling_ddo_tipo' \| 'retired_parser_spelling';/);
+	});
+});

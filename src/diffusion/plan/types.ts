@@ -246,9 +246,17 @@ export interface PlanDegradation {
 	fieldId: string;
 	/** The column that will publish empty / partial. */
 	columnName: string;
-	/** Machine-readable cause (one per known degradation kind). */
-	reason: 'dangling_ddo_tipo';
-	/** The offending ddo tipo. */
+	/**
+	 * Machine-readable cause (one per known degradation kind).
+	 *
+	 * `retired_parser_spelling` (P2-13 / PUB-08): the field carries the v6
+	 * `process_dato.parser` block, which nothing reads — so it publishes with no
+	 * transform at all, where the v7 spelling naming an unknown fn would have been
+	 * a hard compile error. Silence about a directive the engine no longer reads
+	 * is worse than loudness about a misspelt one.
+	 */
+	reason: 'dangling_ddo_tipo' | 'retired_parser_spelling';
+	/** The offending ddo tipo (empty for a degradation that is not about a ddo). */
 	ddoTipo: string;
 	/**
 	 * ddos hanging UNDER the degraded one (transitively). They keep their place

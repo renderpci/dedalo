@@ -442,6 +442,56 @@ async function compileSourceChain(
 }
 
 /**
+ * The v6 spellings of the parser directive, and what each is now (P2-13 /
+ * PUB-08).
+ *
+ * `properties.process.parser` naming an UNREGISTERED function is a hard compile
+ * ERROR here, under a comment citing "nothing silent". But the v6 spelling of
+ * the whole directive — `process_dato`, still carried by 18 ontology nodes —
+ * simply misses the `process?.parser` read and yields an EMPTY transform with
+ * zero errors, zero warnings and zero degradations. The louder the engine is
+ * about a mistyped function name, the more misleading its silence is about a
+ * directive it no longer reads at all: the field publishes with no transform and
+ * nothing says the ontology asked for one.
+ *
+ * Reported the way the engine already reports a retired property
+ * (relations/request_config/build.ts::reportRetiredTargetMode): ONE loud line
+ * naming the node and the replacement, then resolve by the ordinary rule.
+ */
+const RETIRED_PARSER_SPELLINGS: Record<string, string> = {
+	process_dato: 'process',
+};
+
+function reportRetiredParserSpelling(
+	fieldProperties: Record<string, unknown> | null,
+	fieldTipo: string,
+	fieldLabel: string,
+	diagnostics: CompileDiagnostics,
+): void {
+	if (fieldProperties === null) return;
+	for (const [retired, replacement] of Object.entries(RETIRED_PARSER_SPELLINGS)) {
+		const block = fieldProperties[retired] as Record<string, unknown> | undefined;
+		if (block === undefined || block === null) continue;
+		if (block.parser === undefined || block.parser === null) continue;
+		// A DEGRADATION, not an error: the run proceeds (the field publishes
+		// untransformed, which is what already happens today) but it is now visible
+		// in the run report instead of being indistinguishable from "no parser
+		// configured".
+		diagnostics.degradations.push({
+			fieldId: fieldTipo,
+			columnName: fieldLabel,
+			reason: 'retired_parser_spelling',
+			ddoTipo: '',
+			disabledDdoTipos: [],
+			message:
+				`field '${fieldTipo}' (${fieldLabel}) carries RETIRED properties.${retired}.parser — ` +
+				'no longer read, so the field publishes with NO transform. Rename the block to ' +
+				`'${replacement}' in the ontology.`,
+		});
+	}
+}
+
+/**
  * Split the field's parser array (spec §5): runtime steps survive in order,
  * rewriters are absorbed (warning until the resolver lands their rewrites),
  * unknown fns are compile ERRORS naming the field.
@@ -455,7 +505,10 @@ function compileTransform(
 ): ParserStepConfig[] {
 	const process = fieldProperties?.process as Record<string, unknown> | undefined;
 	const rawParser = process?.parser;
-	if (rawParser === undefined || rawParser === null) return [];
+	if (rawParser === undefined || rawParser === null) {
+		reportRetiredParserSpelling(fieldProperties, fieldTipo, fieldLabel, diagnostics);
+		return [];
+	}
 	// PHP validate normalizes a single parser object to a one-item array (:531).
 	const parserSteps = Array.isArray(rawParser) ? rawParser : [rawParser];
 
