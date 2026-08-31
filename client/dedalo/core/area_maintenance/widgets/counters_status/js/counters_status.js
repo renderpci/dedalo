@@ -219,6 +219,76 @@ counters_status.prototype.build = async function(autoload=false) {
 * @returns {Promise<boolean>} Always resolves true; errors surface via
 *   handle_api_error() and body_response text.
 */
+/**
+* RECONCILE_MEDIA_COUNTERS
+* Raise every section counter the MEDIA TREE proves is too low (P0-14/LIFE-08).
+*
+* The restore-day action. A pg_restore rolls matrix_counter back WITH the data
+* while the media filesystem keeps every file written up to the disaster, so the
+* disk is the only witness of the ids in between. Re-minting them keys new
+* records straight into dead records' files.
+*
+* DRY BY DEFAULT: `apply:false` reports what it WOULD raise and writes nothing.
+*
+* @param {Object} options
+* @param {HTMLElement} options.body_response - node that receives the status text.
+* @param {boolean} [options.apply=false] - actually raise the counters.
+* @returns {Promise<boolean>}
+*/
+counters_status.prototype.reconcile_media_counters = async function(options) {
+
+	const self				= this
+	const body_response		= options.body_response
+
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source	: {
+				type	: 'widget',
+				model	: 'counters_status',
+				action	: 'reconcile_media_counters'
+			},
+			options	: { apply : options.apply===true }
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour: it walks the whole media tree
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('reconcile_media_counters api_response:', api_response);
+	}
+
+	if (request_failed(api_response)===false && response_data(api_response)===true) {
+
+		// SEC-XSS-011: the message names section tipos and file names from disk.
+		body_response.textContent = response_extension(api_response, 'msg')
+
+		if (api_response.datalist) {
+			self.value.datalist = api_response.datalist
+		}
+		dd_request_idle_callback(
+			() => {
+				self.refresh({ build_autoload : false, destroy : true })
+			}
+		)
+
+	}else{
+		console.error('counters_status reconcile_media_counters failed:', api_response)
+		body_response.textContent = request_failed(api_response)
+			? error_text(api_response.error)
+			: (response_extension(api_response, 'msg') || 'Unknown error')
+		if (request_failed(api_response)) {
+			await handle_api_error(api_response.error, {wrapper: body_response})
+		}
+	}
+
+	return true
+}//end reconcile_media_counters
+
+
+
 counters_status.prototype.repair_all_counters = async function(options) {
 
 	const self				= this

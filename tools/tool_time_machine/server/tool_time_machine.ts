@@ -89,7 +89,7 @@ import {
 	refuseFramelessWipe,
 	resolveDataframeSlotTipos,
 } from './dataframe_restore.ts';
-import { propagateRestoreToObservers, readComponentItems } from './restore_common.ts';
+import { propagateRestoreToObservers } from './restore_common.ts';
 
 /**
  * SECTION restore (PHP apply_value model==='section'): the snapshot is a full
@@ -507,46 +507,59 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		throw error;
 	}
 
-	// The frameless-wipe guard (dataframe_restore.ts): the CAPTURE half is
-	// unported, so a TS-written snapshot carries no frames and applying this
-	// plan would DELETE the live ones with no row anywhere to recover them.
-	// Refuse before a single write, never "restore most of it".
-	const framelessRefusal = await refuseFramelessWipe(writeTarget, tipo, framePlan);
-	if (framelessRefusal !== null) {
-		throw new DedaloError('engine.uncovered_scope', {
-			coordinates: { tipo, section_tipo: sectionTipo, section_id: sectionId },
-			message: framelessRefusal,
-		});
-	}
-
-	// Pre-restore main value — the observer cascade needs the locators this
-	// restore DROPS (targets whose mirror still references the record).
-	const preRestoreItems = await readComponentItems(table, sectionTipo, sectionId, column, tipo);
-
 	// What the restore WRITES. Identical to the snapshot for every non-sliced
 	// model; for a sliced one it is the snapshot merged over the languages the
 	// snapshot does not speak for, computed under the row lock below.
 	let restoredValue: unknown = data;
+	// The observer cascade needs the locators this restore DROPS (targets whose
+	// mirror still references the record). Read under the lock, with everything
+	// else this plan depends on.
+	let preRestoreItems: unknown[] = [];
 
 	await withTransaction(async () => {
-		// LANG-SLICE MERGE (DATA-03). The read is `FOR UPDATE` and lives INSIDE
-		// the transaction on purpose: this is a read-modify-write of a whole
-		// component key, so an unlocked read would silently revert whatever a
-		// concurrent save committed on the sibling languages between the read and
-		// the write — the same lost-update shape the merge exists to close, moved
-		// one layer down. The lock is taken FIRST, before the frame writes, so the
-		// whole restore holds one consistent view of the record.
+		// THE ROW LOCK, FIRST AND UNCONDITIONALLY (P1-9 / DATA-30).
+		//
+		// The frameless-wipe guard and the pre-restore read used to run BEFORE
+		// this transaction opened, so a dataframe frame saved in the
+		// check-to-commit window was deleted by a plan built from a stale read:
+		// the guard saw no frames, allowed the wipe, and the racing save's frame
+		// went with it. Recoverable — that save wrote its own TM row — but silent,
+		// which is the part that matters.
+		//
+		// Everything the plan depends on is now read INSIDE the transaction and
+		// BEHIND the lock, and the lock is taken for every model rather than only
+		// the lang-sliced one: it is the same row this restore is about to write,
+		// so holding it costs nothing a writer was entitled to.
+		const lockedItems = await readMatrixKeyForUpdate(
+			table,
+			sectionTipo,
+			sectionId,
+			column as MatrixJsonbColumn,
+			tipo,
+		);
+		preRestoreItems = Array.isArray(lockedItems) ? lockedItems : [];
+
+		// The frameless-wipe guard (dataframe_restore.ts): the CAPTURE half is
+		// unported, so a TS-written snapshot carries no frames and applying this
+		// plan would DELETE the live ones with no row anywhere to recover them.
+		// Refuse before a single write, never "restore most of it". Throwing here
+		// rolls the transaction back, so the refusal writes nothing.
+		const framelessRefusal = await refuseFramelessWipe(writeTarget, tipo, framePlan);
+		if (framelessRefusal !== null) {
+			throw new DedaloError('engine.uncovered_scope', {
+				coordinates: { tipo, section_tipo: sectionTipo, section_id: sectionId },
+				message: framelessRefusal,
+			});
+		}
+
+		// LANG-SLICE MERGE (DATA-03), over the value read under the lock above —
+		// an unlocked read would silently revert whatever a concurrent save
+		// committed on the sibling languages between the read and the write.
 		if (restoredLangs !== null) {
-			const liveItems = await readMatrixKeyForUpdate(
-				table,
-				sectionTipo,
-				sectionId,
-				column as MatrixJsonbColumn,
-				tipo,
-			);
+			// Already read FOR UPDATE above — one lock, one consistent view.
 			// null = the ROW does not exist; there is nothing to merge over and
 			// nothing this door can write either.
-			restoredValue = mergeRestoredLangSlice(liveItems ?? [], restoredItems, restoredLangs);
+			restoredValue = mergeRestoredLangSlice(lockedItems ?? [], restoredItems, restoredLangs);
 		}
 
 		// Frames FIRST (PHP restores the slots before saving the main).

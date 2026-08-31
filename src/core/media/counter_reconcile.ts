@@ -34,6 +34,7 @@
 
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isMatrixTable } from '../db/matrix.ts';
 import { counterFloorExpression, counterTableFor } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
@@ -105,6 +106,24 @@ export async function scanMediaSectionIds(
 }
 
 /**
+ * The matrix table whose counter this section owns, or null when the section is
+ * not one this action may judge.
+ *
+ * `getMatrixTableFromTipo` admits any safe identifier the ontology names, so a
+ * section can resolve to a table the write layer does not recognize (its own
+ * INJ-02 note names `matrix_structurations`). Building a floor for it throws —
+ * and this is a RESTORE-DAY action, so such a section is skipped rather than
+ * allowed to abort the run.
+ */
+async function countableTableFor(sectionTipo: string): Promise<string | null> {
+	// Only a real SECTION owns a counter; a file naming anything else is not
+	// evidence about an allocator.
+	if ((await getModelByTipo(sectionTipo)) !== 'section') return null;
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	return table !== null && isMatrixTable(table) ? table : null;
+}
+
+/**
  * Does the DATABASE already know an id at least as high as the one this file
  * names? Returns the raise to make, or null when nothing is owed.
  *
@@ -115,8 +134,7 @@ export async function scanMediaSectionIds(
 async function raiseNeededFor(witness: MediaWitness): Promise<CounterRaise | null> {
 	// Only a real SECTION owns a counter; a file naming anything else is not
 	// evidence about an allocator.
-	if ((await getModelByTipo(witness.sectionTipo)) !== 'section') return null;
-	const table = await getMatrixTableFromTipo(witness.sectionTipo);
+	const table = await countableTableFor(witness.sectionTipo);
 	if (table === null) return null;
 	const counterTable = counterTableFor(table);
 
@@ -140,7 +158,7 @@ async function raiseNeededFor(witness: MediaWitness): Promise<CounterRaise | nul
 
 /** RAISE-ONLY: the media can only ever move a counter forward. */
 async function applyRaise(witness: MediaWitness): Promise<void> {
-	const table = await getMatrixTableFromTipo(witness.sectionTipo);
+	const table = await countableTableFor(witness.sectionTipo);
 	if (table === null) return;
 	const counterTable = counterTableFor(table);
 	await sql.unsafe(
@@ -169,16 +187,33 @@ export interface CounterRaise {
  */
 export async function reconcileCountersWithMedia(
 	options: { apply: boolean; mediaRoot?: string } = { apply: false },
-): Promise<{ raises: CounterRaise[]; filesScanned: number; sectionsWithMedia: number }> {
+): Promise<{
+	raises: CounterRaise[];
+	/** Sections the run could not judge, named rather than silently dropped. */
+	skipped: string[];
+	filesScanned: number;
+	sectionsWithMedia: number;
+}> {
 	const { witnesses, filesScanned } = await scanMediaSectionIds(options.mediaRoot);
 	const raises: CounterRaise[] = [];
 
+	const skipped: string[] = [];
 	for (const witness of witnesses.values()) {
-		const raise = await raiseNeededFor(witness);
-		if (raise === null) continue;
-		raises.push(raise);
-		if (options.apply) await applyRaise(witness);
+		// ONE WITNESS CANNOT ABORT THE RUN. A restore-day action must always hand
+		// back what it did before it stopped; failing the whole call leaves the
+		// operator unable to tell which counters already moved, and re-running is
+		// then the only way to find out.
+		try {
+			const raise = await raiseNeededFor(witness);
+			if (raise === null) continue;
+			raises.push(raise);
+			if (options.apply) await applyRaise(witness);
+		} catch (error) {
+			skipped.push(
+				`${witness.sectionTipo}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
 	}
 
-	return { raises, filesScanned, sectionsWithMedia: witnesses.size };
+	return { raises, skipped, filesScanned, sectionsWithMedia: witnesses.size };
 }

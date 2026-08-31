@@ -1386,16 +1386,34 @@ export const render_relogin = async function(options={}) {
 				// A full reload is the only honest answer: this page's cached state
 				// belongs to the previous identity, and the queued action must NOT
 				// be resolved across the change.
-					const authenticated_user_id = api_response?.result_options?.user_id
+				// THE KEY IS TOP-LEVEL. Envelope v2 carries extension keys beside
+				// `ok`/`data` — the login handler answers
+				// `ok(true, {extend:{user_id, csrf_token}})`
+				// (src/core/api/handlers/dd_utils_api.ts). There is NO
+				// `result_options` object in a TS response; that spelling is the
+				// PHP-era one and survives only in the frozen oracle fixture.
+				// Reading it returned `undefined`, which made an earlier version of
+				// this very guard INERT — it compared nothing and fell through to
+				// the resume it exists to prevent.
+					const authenticated_user_id =
+						api_response?.user_id ?? api_response?.result_options?.user_id
 					const page_user_id = (typeof page_globals!=='undefined') ? page_globals?.user_id : null
-					if (
-						authenticated_user_id!==undefined && authenticated_user_id!==null &&
-						page_user_id!==undefined && page_user_id!==null &&
+
+				// FAIL CLOSED. A successful login whose identity cannot be resolved
+				// is not a verified match — it is an unknown, and resuming another
+				// user's queued save on an unknown is the defect. Reload.
+					const logged_in = response_data(api_response)===true
+					const identity_unknown = authenticated_user_id===undefined || authenticated_user_id===null
+					const identity_differs =
+						!identity_unknown && page_user_id!==undefined && page_user_id!==null &&
 						String(authenticated_user_id)!==String(page_user_id)
-					) {
+
+					if (logged_in && (identity_differs || identity_unknown)) {
 						console.warn(
-							'render_relogin: authenticated as a DIFFERENT user'
-							+ ' (page ' + page_user_id + ' -> ' + authenticated_user_id + ')'
+							'render_relogin: '
+							+ (identity_differs
+								? 'authenticated as a DIFFERENT user (page ' + page_user_id + ' -> ' + authenticated_user_id + ')'
+								: 'could not resolve the authenticated user_id from the login response')
 							+ ' — reloading instead of resuming this page\'s pending action.'
 						)
 						window.location.reload()

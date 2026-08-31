@@ -136,7 +136,7 @@ export function preBulkState(
 }
 
 /** Best-effort dd800 bulk-process record + label so this revert is itself revertible. */
-async function createRevertBulkProcess(label: string, userId: number): Promise<number | null> {
+async function createRevertBulkProcess(label: string, userId: number): Promise<number> {
 	try {
 		const bulkId = await createSectionRecord(BULK_PROCESS_SECTION_TIPO, userId);
 		try {
@@ -160,8 +160,24 @@ async function createRevertBulkProcess(label: string, userId: number): Promise<n
 			// label is cosmetic.
 		}
 		return bulkId;
-	} catch {
-		return null;
+	} catch (error) {
+		// (!) NOT `return null` (P1-9 / DATA-31). The dd800 row IS the revert's
+		// identity: every TM row this run writes is stamped with it, and that stamp
+		// is the ONLY thing that later distinguishes those rows from ordinary saves
+		// — i.e. the only thing that makes the revert itself revertible, which is
+		// the operation's stated contract.
+		//
+		// Returning null let the run proceed and stamp every row with
+		// `bulkProcessId: null`. The revert then could not be undone, and the sole
+		// signal was a null field in the response body that nothing reads.
+		//
+		// A bulk operation that cannot be undone must not START.
+		throw new DedaloError('tool.action_failed', {
+			publicMessage:
+				'Could not create the bulk-process record this revert would be undone by, so the revert was NOT started. Nothing was changed.',
+			message: `bulk_revert: createRevertBulkProcess failed: ${error instanceof Error ? error.message : String(error)}`,
+			coordinates: { section_tipo: BULK_PROCESS_SECTION_TIPO },
+		});
 	}
 }
 

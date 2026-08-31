@@ -456,7 +456,9 @@ async function countersStatusReconcileMediaCounters(
 ): Promise<WidgetResponse> {
 	const apply = options.apply === true;
 	const { reconcileCountersWithMedia } = await import('../../media/counter_reconcile.ts');
-	const { raises, filesScanned, sectionsWithMedia } = await reconcileCountersWithMedia({ apply });
+	const { raises, skipped, filesScanned, sectionsWithMedia } = await reconcileCountersWithMedia({
+		apply,
+	});
 
 	const detail = raises
 		.map(
@@ -471,10 +473,11 @@ async function countersStatusReconcileMediaCounters(
 		msg:
 			raises.length === 0
 				? `OK. ${filesScanned} media files across ${sectionsWithMedia} sections name no id above the counters — nothing to reconcile`
-				: `${apply ? 'RAISED' : 'WOULD RAISE'} ${raises.length} counter(s) from the media tree (${filesScanned} files scanned): ${detail}`,
+				: `${apply ? 'RAISED' : 'WOULD RAISE'} ${raises.length} counter(s) from the media tree (${filesScanned} files scanned): ${detail}${skipped.length > 0 ? ` — SKIPPED (could not judge): ${skipped.join('; ')}` : ''}`,
 		extend: {
 			datalist: (audit.data as { datalist?: unknown[] } | null)?.datalist ?? [],
 			raises,
+			skipped,
 			applied: apply,
 			files_scanned: filesScanned,
 		},

@@ -366,6 +366,30 @@ describe('matrix_counter monotonic tripwire', () => {
 		expect(client).not.toMatch(/counter_lagging\s*=.*'empty'/);
 	});
 
+	test('the restore-day action PRODUCTION.md names is reachable from the panel', () => {
+		// A step an operator is told to click must exist. The server action shipped
+		// before its button did — the same half-wired shape this file already
+		// gates for the compose backup, committed here by the same hand.
+		const base = 'client/dedalo/core/area_maintenance/widgets/counters_status';
+		const renderer = readFileSync(join(REPO_ROOT, base, 'js/render_counters_status.js'), 'utf8');
+		const controller = readFileSync(join(REPO_ROOT, base, 'js/counters_status.js'), 'utf8');
+		const widget = readFileSync(
+			join(REPO_ROOT, 'src/core/area_maintenance/widgets/counters_status.ts'),
+			'utf8',
+		);
+		const production = readFileSync(join(REPO_ROOT, 'engineering/PRODUCTION.md'), 'utf8');
+
+		expect(widget).toContain('reconcile_media_counters:');
+		expect(controller).toContain('counters_status.prototype.reconcile_media_counters');
+		expect(renderer).toContain('self.reconcile_media_counters(');
+		// DRY first: the destructive press is a separate, confirmed button.
+		expect(renderer).toContain('apply\t\t\t: false');
+		expect(renderer).toContain('apply\t\t\t: true');
+		expect(renderer).toContain('confirm(');
+		// ...and the procedure that sends the operator here still names it.
+		expect(production).toContain('reconcile media counters');
+	});
+
 	test('the widget grid declares exactly as many tracks as the renderer emits cells', () => {
 		// `.dd_tr { display: contents }` makes every cell a direct grid item, so a
 		// track count that disagrees with the cell count does not merely look odd —

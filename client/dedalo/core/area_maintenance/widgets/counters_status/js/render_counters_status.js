@@ -254,6 +254,60 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
+	// reconcile_media_container
+	// THE RESTORE-DAY ACTION (P0-14 / LIFE-08). A pg_restore rolls the counters
+	// back WITH the data while the media filesystem keeps every file written up
+	// to the disaster, so the disk is the only witness left of the ids in
+	// between. Always shown — the panel cannot know a restore happened, and this
+	// is the step engineering/PRODUCTION.md §6.1 tells the operator to run.
+	// DRY by default: the first press reports and writes nothing.
+		const reconcile_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'reconcile_media_container',
+			parent			: content_data
+		})
+		const button_reconcile_dry = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_action reconcile_media_counters',
+			inner_html		: 'Check counters against the media tree',
+			parent			: reconcile_container
+		})
+		button_reconcile_dry.addEventListener('click', async function(e){
+			e.stopPropagation()
+			button_reconcile_dry.classList.add('button_spinner')
+			try {
+				await self.reconcile_media_counters({
+					body_response	: body_response,
+					apply			: false
+				})
+			} finally {
+				button_reconcile_dry.classList.remove('button_spinner')
+			}
+		})
+		const button_reconcile_apply = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light warning button_action reconcile_media_counters_apply',
+			inner_html		: 'Raise counters from the media tree',
+			parent			: reconcile_container
+		})
+		button_reconcile_apply.addEventListener('click', async function(e){
+			e.stopPropagation()
+			// Raising a counter cannot be undone — and a surprising number here
+			// usually means the media root is not the one this database belongs to.
+			if (!confirm('Raise every counter the media tree proves is too low?\n\nRun the CHECK first and read the list: a raise cannot be undone, and an unexpected result usually means MEDIA_PATH points at another installation\'s tree.')) {
+				return false
+			}
+			button_reconcile_apply.classList.add('button_spinner')
+			try {
+				await self.reconcile_media_counters({
+					body_response	: body_response,
+					apply			: true
+				})
+			} finally {
+				button_reconcile_apply.classList.remove('button_spinner')
+			}
+		})
+
 	// datalist
 		const datalist_container = ui.create_dom_element({
 			element_type	: 'div',
