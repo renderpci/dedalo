@@ -319,6 +319,8 @@ const get_content_data = async function(self) {
 		const list_wrap = await build_list_view(self, widgets)
 		content_data.appendChild(list_wrap)
 		const map_ctl = build_map_view(self, widgets, { sel_key, saved_sel })
+		// hand the map's teardown to the instance, which is what actually gets destroyed
+		self.map_ctl = map_ctl
 		content_data.appendChild(map_ctl.node)
 
 	// apply + persist the active view
@@ -929,8 +931,15 @@ const build_map_view = function(self, widgets, opts={}) {
 				edges_svg.appendChild(p)
 			})
 		}
+	// Everything rooted OUTSIDE this map is stored, so destroy() can undo it.
+	// An observer built anonymously, or a listener added to window/document, has
+	// no owner: opening the maintenance area again just adds another one, each
+	// retaining a whole detached diagram (draw_edges closes over stage,
+	// edges_svg and status_by_id). Same shape as the 3D viewer's leak.
+		let stage_resize_observer = null
 		if (window.ResizeObserver) {
-			new ResizeObserver(() => draw_edges()).observe(stage)
+			stage_resize_observer = new ResizeObserver(() => draw_edges())
+			stage_resize_observer.observe(stage)
 		}
 		window.addEventListener('resize', draw_edges)
 
@@ -1328,7 +1337,7 @@ const build_map_view = function(self, widgets, opts={}) {
 		palette_input.addEventListener('input', filter_palette)
 		palette_backdrop.addEventListener('click', (e) => { if (e.target===palette_backdrop) { close_palette() } })
 		// global ⌘K / Esc — guarded so it only acts while this map is in the live DOM
-		document.addEventListener('keydown', (e) => {
+		const on_keydown = (e) => {
 			if (!document.body.contains(root)) { return }
 			if ((e.metaKey || e.ctrlKey) && (e.key==='k' || e.key==='K')) {
 				e.preventDefault()
@@ -1339,7 +1348,11 @@ const build_map_view = function(self, widgets, opts={}) {
 				const sel = palette_list.querySelector('.p_item.sel:not(.hide)')
 				if (sel) { open_tool(sel.dataset.id) }
 			}
-		})
+		}
+		// The `contains(root)` guard above stops a STALE map from acting, but a
+		// guarded listener is still a listener: document keeps it, and it keeps
+		// the map. Guarding is not removing.
+		document.addEventListener('keydown', on_keydown)
 
 	// on_show — called when the map view becomes visible; draw edges (which need
 	// layout) and kick off the idle health probes the first time.
@@ -1357,7 +1370,18 @@ const build_map_view = function(self, widgets, opts={}) {
 		select_node(init_node, init_tool)
 
 
-	return { node: root, on_show, open_palette }
+	// destroy — release everything anchored outside `root`. Idempotent: the area
+	// may be torn down more than once, and a second call must not throw.
+		const destroy = () => {
+			if (stage_resize_observer) {
+				stage_resize_observer.disconnect()
+				stage_resize_observer = null
+			}
+			window.removeEventListener('resize', draw_edges)
+			document.removeEventListener('keydown', on_keydown)
+		}
+
+	return { node: root, on_show, open_palette, destroy }
 }//end build_map_view
 
 

@@ -118,7 +118,37 @@ export const component_3d = function(){
 	component_3d.prototype.build				= component_common.prototype.build
 	component_3d.prototype.render				= common.prototype.render
 	component_3d.prototype.refresh				= common.prototype.refresh
-	component_3d.prototype.destroy				= common.prototype.destroy
+	// DESTROY IS OVERRIDDEN HERE (P2-31 / CLI-27). The generic teardown knows
+	// nothing about `self.viewer`, so closing a 3D record used to leave a live
+	// WebGLRenderer, an OrbitControls, a Stats panel, an AnimationMixer, a render
+	// loop at display refresh and an unreachable ResizeObserver — per record
+	// opened, against Chrome's ~16 live-context cap.
+	component_3d.prototype.destroy				= async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+		const self = this
+
+		// INVALIDATE any lazy build still in flight. A sticky boolean would be wrong:
+		// `refresh` destroys with delete_self=false and then re-renders, so the flag
+		// has to distinguish "this build is stale" from "this component is gone".
+		// An epoch does both — load_viewer captures it and bails if it moved.
+		self.viewer_epoch = (self.viewer_epoch || 0) + 1
+
+		// the viewer FIRST: the generic teardown removes the DOM the renderer's
+		// canvas lives in, and disposing a context whose canvas is already gone
+		// leaves the GPU resources stranded.
+		if (self.viewer && typeof self.viewer.destroy==='function') {
+			try {
+				self.viewer.destroy()
+			} catch (error) {
+				// A viewer that cannot tear down must not block the instance's own
+				// teardown — that would trade a leak for a wedge.
+				console.error('[component_3d] viewer teardown failed:', error)
+			}
+			self.viewer = null
+		}
+
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 
 	// change data
 	component_3d.prototype.save					= component_common.prototype.save

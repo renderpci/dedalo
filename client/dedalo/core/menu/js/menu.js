@@ -78,7 +78,20 @@ export const menu = function(){
 // prototypes assign
 	// lifecycle
 	menu.prototype.render				= common.prototype.render
-	menu.prototype.destroy				= common.prototype.destroy
+	// destroy — render_menu_tree anchors two listeners on `document`, which the
+	// generic teardown cannot reach. Signature MIRRORS common.prototype.destroy:
+	// an override with fewer parameters silently drops the last one.
+	menu.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+		const self = this
+		if (typeof self.release_document_events==='function') {
+			try {
+				self.release_document_events()
+			} catch (error) {
+				console.error('[menu] document event release failed:', error)
+			}
+		}
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 	// menu.prototype.refresh			= common.prototype.refresh
 
 	// render

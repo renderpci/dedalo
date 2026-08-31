@@ -139,6 +139,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/wire_field_agreement_tripwire.test.ts
 	test/unit/ratchet_integrity_tripwire.test.ts
 	test/unit/client_store_principal_key_tripwire.test.ts
+	test/unit/component_teardown_tripwire.test.ts
 	test/unit/private_state_mode_tripwire.test.ts
 	test/unit/wire_disclosure_tripwire.test.ts
 	test/unit/archive_precheck_native.test.ts

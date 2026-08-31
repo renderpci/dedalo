@@ -209,6 +209,20 @@ export const render_tree = (options) => {
 		}
 		document.addEventListener('keydown', keydown_event)
 
+	// `document` is a PERMANENT root: a listener it holds keeps `self` and the whole
+	// menu tree alive for the life of the page, and every rebuilt menu adds another
+	// one that still runs. Hand the removers to the instance, which is what gets
+	// destroyed. Re-rendering releases the previous pair first, so a rebuild
+	// replaces the listeners instead of stacking them.
+		if (typeof self.release_document_events==='function') {
+			self.release_document_events()
+		}
+		self.release_document_events = () => {
+			document.removeEventListener('mousedown', mousedown_handler)
+			document.removeEventListener('keydown', keydown_event)
+			self.release_document_events = null
+		}
+
 
 	return true
 }//end render_tree

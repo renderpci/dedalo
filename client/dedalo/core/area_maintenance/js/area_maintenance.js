@@ -115,7 +115,23 @@ export const area_maintenance = function() {
 */
 // prototypes assign
 	area_maintenance.prototype.refresh			= common.prototype.refresh
-	area_maintenance.prototype.destroy			= common.prototype.destroy
+	// destroy — the map view anchors an observer and two window/document
+	// listeners outside its own DOM, so the generic teardown cannot reach them.
+	// Release those first, then delegate. Signature MIRRORS common.prototype.destroy
+	// exactly: an override with fewer parameters silently drops the last one.
+	area_maintenance.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+		const self = this
+		if (self.map_ctl && typeof self.map_ctl.destroy==='function') {
+			// A failing teardown must not wedge the instance's own destroy.
+			try {
+				self.map_ctl.destroy()
+			} catch (error) {
+				console.error('[area_maintenance] map teardown failed:', error)
+			}
+			self.map_ctl = null
+		}
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 	area_maintenance.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	area_maintenance.prototype.edit				= render_area_maintenance.prototype.edit
 	area_maintenance.prototype.list				= render_area_maintenance.prototype.list

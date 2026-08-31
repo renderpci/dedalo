@@ -102,12 +102,23 @@ export const viewer = function () {
 *    reload from disk)
 * @param {string} [options.default_camera='[default]'] - name sentinel used to
 *   identify the built-in OrbitControls camera vs. cameras embedded in the glTF
-* @returns {Promise<Object>} resolves to `self` (the viewer namespace) so callers
-*   can chain: `const v = await viewer.init(opts)`
+* @returns {Promise<Object>} resolves to a NEW per-caller viewer inheriting the
+*   namespace's methods, so callers can chain: `const v = await viewer.init(opts)`.
+*   Never the namespace itself — see the note in the body.
 */
 viewer.init = async function (options) {
 
-	const self = this
+	// (!) ONE VIEWER PER CALLER. `viewer` is a module namespace and `init` used to
+	// return `this`, so every component_3d on the page was handed THE SAME object:
+	// each build() silently overwrote the previous renderer/scene/controls, and the
+	// adjacent caller comment claiming "each component_3d gets its own independent
+	// WebGL context" was false (`cache` is THREE.Cache, unrelated). While nothing
+	// destroyed the viewer that was merely an orphaned-context leak; the moment a
+	// real teardown exists it becomes a live regression — closing one 3D record
+	// would force-lose a SIBLING's context and remove its canvas from the DOM,
+	// blanking a viewer still on screen. Object.create keeps every method on the
+	// shared namespace and gives this caller its own state.
+	const self = Object.create( this )
 
 	// options
 		const cache = options.cache ?? true
@@ -256,11 +267,19 @@ viewer.build = async function (content_value, options) {
 	self.add_GUI();
 
 	self.animate = self.animate.bind(self);
-	requestAnimationFrame( self.animate );
+	self.destroyed = false;
+	self.raf_handle = requestAnimationFrame( self.animate );
 
 	// resize event. Add to content value instead window to allow user resize manually the component
 		// window.addEventListener('resize', self.resize.bind(self), false);
-		new ResizeObserver( self.resize.bind(self) ).observe( self.content_value )
+		// KEPT, so it can be disconnected (P2-31 / CLI-27). It was constructed
+		// anonymously and stored NOWHERE, so it was never disconnectable: measured
+		// 12 observers created against 3 disconnected over 18 navigations.
+		// (!) observe() returns undefined — assigning its result stores NOTHING and
+		// destroy() would throw on a `self.resize_observer` that is not an observer.
+		// Store first, observe second.
+		self.resize_observer = new ResizeObserver( (entries) => self.resize(entries) )
+		self.resize_observer.observe( self.content_value )
 }//end build
 
 
@@ -312,12 +331,19 @@ viewer.resize = function() {
 
 	const self = this
 
+	// disconnect() stops FUTURE notifications; it cannot cancel an idle callback
+	// already scheduled by one that fired — and teardown itself resizes, by removing
+	// the canvas. Guard both ends or this throws on a null renderer from outside any
+	// try/catch, as a bare console error on every affected navigation.
+	if (self.destroyed===true || !self.content_value) return;
+
 	const {clientHeight, clientWidth} = self.content_value
 
 	// set timeout to disengage the container new size calculation
 	// and the render making resize more fluid
 	dd_request_idle_callback(
 		() => {
+			if (self.destroyed===true || !self.renderer) return;
 			self.default_camera.aspect = clientWidth / clientHeight;
 			self.default_camera.updateProjectionMatrix();
 			self.renderer.setSize(clientWidth, clientHeight);
@@ -427,6 +453,11 @@ viewer.load = function( file_uri ) {
 viewer.set_content = function( scene, clips ) {
 
 	const self = this
+
+	// load() is fired and NOT awaited by the caller, and 3D assets are large: the
+	// loader's onLoad can land long after the record closed. Without this, teardown
+	// during a download ends in a TypeError on the nulled controls.
+	if (self.destroyed===true) return;
 
 	self.clear();
 
@@ -645,7 +676,14 @@ viewer.animate = function(time) {
 
 	const self = this
 
-	requestAnimationFrame( self.animate );
+	// THE LOOP MUST BE STOPPABLE (P2-31 / CLI-27). This re-scheduled itself
+	// UNCONDITIONALLY and nothing ever cancelled it, so every 3D record a curator
+	// opened left a render loop running at display refresh for the life of the
+	// page — along with its WebGLRenderer and GPU textures. Chrome caps live
+	// contexts at ~16, so the viewer stopped working after enough navigations.
+	if (self.destroyed===true) return;
+
+	self.raf_handle = requestAnimationFrame( self.animate );
 
 	const dt = (time - self.prev_time) / 1000;
 
@@ -1093,7 +1131,9 @@ viewer.add_GUI = function() {
 
 	const self = this
 
+	// stored on self, so destroy() can remove it (the panel outlived the record)
 	const gui_wrap = document.createElement('div');
+		self.gui_wrap = gui_wrap;
 		self.content_value.appendChild( gui_wrap );
 		gui_wrap.classList.add('gui-wrapper');
 
@@ -1316,6 +1356,129 @@ viewer.clear = function() {
 	});
 }
 
+
+
+/**
+* DESTROY
+* Stop everything this viewer started (P2-31 / CLI-27).
+*
+* `clear()` disposes the LOADED CONTENT's geometry and textures. It does not
+* stop the render loop, dispose the renderer, disconnect the ResizeObserver or
+* remove the Stats panel — so before this existed, closing a 3D record left all
+* of them live. Every record opened added a WebGLRenderer with its GPU
+* textures, an OrbitControls, a Stats panel, an AnimationMixer, a loop at
+* display refresh, and an unreachable ResizeObserver.
+*
+* That is live work, not a garbage-collection question: a rAF loop keeps
+* running whether or not anything references it, and Chrome caps live WebGL
+* contexts at ~16, after which the viewer simply stops working until the page
+* is reloaded.
+*
+* Idempotent: a second call is a no-op, because teardown paths get called twice.
+*/
+viewer.destroy = function() {
+
+	const self = this
+
+	if (self.destroyed===true) return;
+	self.destroyed = true;
+
+	// the loop first: nothing below should run again mid-teardown
+	if (self.raf_handle) {
+		cancelAnimationFrame( self.raf_handle );
+		self.raf_handle = null;
+	}
+
+	if (self.resize_observer) {
+		self.resize_observer.disconnect();
+		self.resize_observer = null;
+	}
+
+	// loaded content (geometry + textures)
+	self.clear();
+
+	// controls hold their own DOM listeners
+	if (self.controls && typeof self.controls.dispose==='function') {
+		self.controls.dispose();
+		self.controls = null;
+	}
+
+	// the Stats panel is a DOM node this viewer appended
+	if (self.stats && self.stats.dom && self.stats.dom.parentNode) {
+		self.stats.dom.parentNode.removeChild( self.stats.dom );
+	}
+	self.stats = null;
+
+	// THE GPU CONTEXT. dispose() alone leaves the context alive in some drivers;
+	// forceContextLoss() is what actually returns it, and the canvas has to go
+	// with it or the browser keeps the backing store.
+	if (self.renderer) {
+		if (typeof self.renderer.forceContextLoss==='function') {
+			self.renderer.forceContextLoss();
+		}
+		self.renderer.dispose();
+		const canvas = self.renderer.domElement;
+		if (canvas && canvas.parentNode) {
+			canvas.parentNode.removeChild( canvas );
+		}
+		self.renderer = null;
+	}
+
+	// THE SECOND GPU CONTEXT. build() takes TWO: the main renderer and the axes
+	// overlay's (add_axes_helper). Returning only one halves the leak instead of
+	// closing it — the ~16-context cap still arrives, at half the navigations.
+	if (self.axes_renderer) {
+		if (typeof self.axes_renderer.forceContextLoss==='function') {
+			self.axes_renderer.forceContextLoss();
+		}
+		self.axes_renderer.dispose();
+		const axes_canvas = self.axes_renderer.domElement;
+		if (axes_canvas && axes_canvas.parentNode) {
+			axes_canvas.parentNode.removeChild( axes_canvas );
+		}
+		self.axes_renderer = null;
+	}
+	if (self.axes_div?.parentNode) {
+		self.axes_div.parentNode.removeChild( self.axes_div );
+	}
+	self.axes_div		= null;
+	self.axes_scene		= null;
+	self.axes_camera	= null;
+	self.axes_corner	= null;
+
+	// the lil-gui panel: its own DOM plus onChange closures over `self`
+	if (typeof self.gui?.destroy==='function') {
+		self.gui.destroy();
+	}
+	if (self.gui_wrap?.parentNode) {
+		self.gui_wrap.parentNode.removeChild( self.gui_wrap );
+	}
+	self.gui		= null;
+	self.gui_wrap	= null;
+
+	// the PMREM generator and the environment it produced
+	if (typeof self.pmrem_generator?.dispose==='function') {
+		self.pmrem_generator.dispose();
+	}
+	self.pmrem_generator = null;
+	if (typeof self.neutral_environment?.dispose==='function') {
+		self.neutral_environment.dispose();
+	}
+	self.neutral_environment = null;
+
+	// THE WORKER POOLS. init() builds a DRACO and a KTX2 loader per record opened,
+	// and three.js only releases their transcoder workers through dispose().
+	for (const loader of [self.DRACO_LOADER, self.KTX2_LOADER]) {
+		if (typeof loader?.dispose==='function') {
+			loader.dispose();
+		}
+	}
+	self.DRACO_LOADER	= null;
+	self.KTX2_LOADER	= null;
+
+	self.mixer	= null;
+	self.scene	= null;
+}//end destroy
 
 
 /**

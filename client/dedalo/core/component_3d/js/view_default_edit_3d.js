@@ -284,6 +284,10 @@ export const get_content_value = (i, current_value, self) => {
 	// the element is actually visible, reducing initial page-load cost.
 	const load_viewer = async () => {
 
+		// the epoch this build belongs to; component_3d.destroy bumps it
+		const epoch = self.viewer_epoch || 0
+		const stale = () => (self.viewer_epoch || 0)!==epoch
+
 		// url
 		// Priority: external_source > files_info entry > null (no file uploaded yet).
 		const file_url = external_source
@@ -298,18 +302,37 @@ export const get_content_value = (i, current_value, self) => {
 			// when an actual 3-D file needs to be displayed.
 			const module = await import('./viewer/viewer.js');
 
+			// The build is lazy (when_in_viewport) and crosses two awaits, so the
+			// component can be destroyed inside this window — the exact
+			// fast-navigation case this whole path exists to survive. Nothing was
+			// re-checked afterwards, so build() would go on to start a render loop
+			// and attach an observer for a component that no longer exists, and then
+			// re-assign self.viewer on an instance whose destroy had already run:
+			// an orphan nobody could ever stop. Check after EVERY await.
+			if (stale()) return;
+
 			// viewer_3d
-			// cache:false prevents the viewer from reusing a cached instance; each
-			// component_3d gets its own independent WebGL context.
+			// init() returns a NEW per-caller viewer (see viewer.init): each
+			// component_3d owns its renderer and its WebGL context, and destroying
+			// one cannot touch another's. cache:false is THREE.Cache — it keeps the
+			// asset from being served from a stale XHR cache, nothing more.
 			const viewer_3d = await module.viewer.init({
 				cache : false
 			})
+			if (stale()) return;
+
 			// fix viewer
 			// Expose the viewer on self so upload_handler and create_posterframe can
 			// reference it without a separate lookup.
 			self.viewer = viewer_3d
 
 			await viewer_3d.build(content_value, {})
+			// destroyed while building: nothing else will ever call this teardown
+			if (stale()) {
+				viewer_3d.destroy()
+				self.viewer = null
+				return
+			}
 
 			viewer_3d.load(
 				file_url  // + '?t=' + (new Date()).getTime()

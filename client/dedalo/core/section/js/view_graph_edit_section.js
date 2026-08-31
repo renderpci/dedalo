@@ -1518,6 +1518,19 @@ add_children(root_node, result)
 		}
 		window.addEventListener('resize', on_resize)
 
+	// `window` never dies, so neither does `on_resize` — and it captures the live
+	// d3 force simulation. Left attached, every graph a user ever opened keeps
+	// ticking and RESTARTS on every window resize: not just retained memory but
+	// live CPU work on invisible graphs. Hand the release to the instance.
+		if (typeof self.release_graph==='function') {
+			self.release_graph()
+		}
+		self.release_graph = () => {
+			window.removeEventListener('resize', on_resize)
+			simulation.stop()
+			self.release_graph = null
+		}
+
 	// first paint
 		update()
 		graph_canvas.appendChild(svg.node())

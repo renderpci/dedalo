@@ -436,12 +436,27 @@ const get_graph = async function(options) {
 		.on("dragleave", on_dragleave) // deactivate the node
 
 		// recalculate the size of the view-box every time that window has resized.
-		window.addEventListener("resize", function(){
+		// NAMED and stored: `window` is a permanent root, so an anonymous listener
+		// here keeps this graph — and its live force simulation — alive for the whole
+		// session, and every graph the user ever opened re-runs on each resize.
+		const on_resize = () => {
 			const new_size 		= content_data.getBoundingClientRect()
 			const new_width		= new_size.width;
 			const new_height	= new_size.height;
 			svg.attr("viewBox", [-new_width / 2, -new_height / 2, new_width, new_height])
-		});
+		}
+		window.addEventListener("resize", on_resize);
+
+		// hand the release to the instance, which is what gets destroyed.
+		// Releasing the previous graph first, so a rebuild replaces it, never stacks.
+		if (typeof self.release_graph==='function') {
+			self.release_graph()
+		}
+		self.release_graph = () => {
+			window.removeEventListener("resize", on_resize)
+			simulation.stop()
+			self.release_graph = null
+		}
 
  	// Per-type markers
 	// Arrow pointer: It will store into the svg and will use in the path as "marker-end" with URL pointed to id

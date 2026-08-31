@@ -145,7 +145,21 @@ export const section = function() {
 // prototypes assign
 	// life cycle
 	// section.prototype.render			= common.prototype.render
-	section.prototype.destroy			= common.prototype.destroy
+	// destroy — the graph view anchors a window listener holding a live d3 force
+	// simulation, which the generic teardown cannot reach. Signature MIRRORS
+	// common.prototype.destroy: an override with fewer parameters silently drops
+	// the last one.
+	section.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+		const self = this
+		if (typeof self.release_graph==='function') {
+			try {
+				self.release_graph()
+			} catch (error) {
+				console.error('[section] graph release failed:', error)
+			}
+		}
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 	section.prototype.refresh			= common.prototype.refresh
 	section.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	section.prototype.build_rqo_search	= common.prototype.build_rqo_search
