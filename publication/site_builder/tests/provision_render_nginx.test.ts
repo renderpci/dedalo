@@ -710,7 +710,20 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
         // run on a host that actually runs nginx TRUNCATES the live server's pid file, and
         // the next `systemctl reload nginx` on that host finds nothing to signal. A gate
         // that can break the thing it is testing is not a gate.
-        writeFileSync(main, `events {}\npid ${join(dir, `${name}.pid`)};\nhttp {\n  include ${confDir}/*.conf;\n}\n`);
+        // AND THE ACCESS LOG IS THIS RUN'S OWN PROBLEM, not the host's. `nginx -t` OPENS
+        // the log paths the configuration names, and with no `access_log` directive that
+        // is again the COMPILED-IN default — `/var/log/nginx/access.log` on a Debian
+        // package, which is root-owned. The gate passed on a Homebrew nginx (its default
+        // lives under the user-writable prefix) and failed on every Linux runner with
+        //   nginx: [emerg] open() "/var/log/nginx/access.log" failed (13: Permission denied)
+        // reported as a syntax failure, which is the one thing it is not. `-e` already
+        // moves the error log; this moves the other one. The live-server block below has
+        // always carried `access_log off;` for the same reason -- this is that fix, in the
+        // block that was missed.
+        writeFileSync(
+          main,
+          `events {}\npid ${join(dir, `${name}.pid`)};\nhttp {\n  access_log off;\n  include ${confDir}/*.conf;\n}\n`,
+        );
         // Throws on a non-zero exit, which is the assertion: nginx -t fails the whole
         // reload, and one bad vhost takes down every site on the host.
         execFileSync(NGINX as string, ['-t', '-c', main, '-p', dir, '-e', join(dir, 'error.log')], {
