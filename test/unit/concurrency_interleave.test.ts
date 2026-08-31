@@ -30,6 +30,8 @@
 // ship with every installation.
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolveGridColumns } from '../../src/core/components/component_info/widgets/grid.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
@@ -39,8 +41,16 @@ import {
 	currentDataLang,
 	runWithRequestLangs,
 } from '../../src/core/resolve/request_lang.ts';
+import {
+	buildStructureContext,
+	clearStructureContextCache,
+} from '../../src/core/resolve/structure_context.ts';
 import { readSectionRows } from '../../src/core/section/read.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+
+/** Repo root, for the ISO-02 key-shape pin at the end of this file. */
+const REPO_ROOT_ISO = join(import.meta.dir, '..', '..');
+
 import {
 	currentPrincipal,
 	runWithRequestContext,
@@ -290,4 +300,91 @@ describe('request isolation — tools registry cache (S1-13)', () => {
 			expect(tool).toEqual(second.tools[index] as typeof tool); // same content
 		}
 	}, 30000);
+});
+
+// --- Layer 6: the structure-context CORE cache (ISO-02, P2-35) --------------
+
+/**
+ * THE REGRESSION THE 2026-07 REMEDIATION PRESCRIBED AND NOBODY WROTE.
+ *
+ * ISO-02 was accepted as "open (test-only; low risk)" with an exact
+ * prescription: "two different-level principals reading the same tipo get
+ * different `entry.tools` while cached core stays empty". No file in the tree
+ * implemented it. A remediation accepted on the strength of a test that does
+ * not exist is the failure mode this whole audit is about.
+ *
+ * AND THE RULE CHANGED UNDERNEATH IT — which is precisely what the prescribed
+ * regression existed to detect. `structure_context.ts` now states the opposite
+ * of the prescription's premise: "THE GATE IS **MODE**, NEVER PERMISSIONS ... a
+ * `permissions >= 3` gate here would mean SUPERUSER-ONLY ... and would silently
+ * empty every toolbar for every real user". Authorization is the per-user
+ * `user_tools` membership that getElementTools applies itself, not the
+ * element's level.
+ *
+ * So the regression is written against the invariant the module ACTUALLY holds,
+ * stated in its own header: `coreCache` is keyed
+ * `applicationLang_tipo_sectionTipo_mode` with NO user dimension, therefore
+ * every field on the cached core must be user-INDEPENDENT. `tools` and
+ * `buttons` are on that core. The day either becomes user-dependent, the key
+ * must gain a user dimension — and this is the test that says so.
+ */
+describe('request isolation — structure-context core cache (ISO-02)', () => {
+	const TIPO = 'test6836';
+	const SECTION_TIPO = 'test2';
+
+	test('two different-permission principals share the cached core BYTE-FOR-BYTE', async () => {
+		clearStructureContextCache();
+		// permissions 1 (read) then 2 (write): the widest real spread, since only
+		// userId -1 ever reaches 3.
+		const low = await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
+			buildStructureContext({
+				tipo: TIPO,
+				sectionTipo: SECTION_TIPO,
+				mode: 'edit',
+				lang: 'lg-eng',
+				permissions: 1,
+			}),
+		);
+		const high = await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
+			buildStructureContext({
+				tipo: TIPO,
+				sectionTipo: SECTION_TIPO,
+				mode: 'edit',
+				lang: 'lg-eng',
+				permissions: 2,
+			}),
+		);
+		expect(low, 'the fixture element did not resolve — the corpus moved').not.toBeNull();
+		expect(high).not.toBeNull();
+
+		// THE INVARIANT. The core is cached under a key with no user dimension, so
+		// the cached fields must be identical for both principals. If a future
+		// change makes `tools`/`buttons` depend on the actor, this diverges HERE —
+		// which is the whole point, because in production it would instead mean one
+		// user's toolbar served to another from a long-lived process.
+		for (const field of ['tools', 'buttons', 'label', 'model', 'properties', 'css'] as const) {
+			expect(
+				JSON.stringify((high as unknown as Record<string, unknown>)[field]),
+				`core field '${field}' differs between permission levels — coreCache has NO user ` +
+					'dimension in its key, so this field can no longer be cached there. Either make ' +
+					'it a per-call stamp (like entry.tools) or add a user dimension to the key.',
+			).toBe(JSON.stringify((low as unknown as Record<string, unknown>)[field]));
+		}
+	}, 30000);
+
+	test('the cache key still carries lang, tipo, section and mode — and no user', async () => {
+		// Anti-vacuity for the test above: it only means something while the key is
+		// user-free. If someone adds a user dimension, the equality assertion above
+		// becomes trivially true and stops guarding anything — so the key's shape is
+		// pinned here, and a change to it must be a deliberate edit in both places.
+		const source = readFileSync(
+			join(REPO_ROOT_ISO, 'src/core/resolve/structure_context.ts'),
+			'utf8',
+		);
+		expect(source).toContain(
+			'const cacheKey = `${currentApplicationLang()}_${tipo}_${sectionTipo}_${mode}`;',
+		);
+		// ...and the invariant is still written down where the next reader meets it.
+		expect(source).toContain('this key MUST gain a user dimension');
+	});
 });

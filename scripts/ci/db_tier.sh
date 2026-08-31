@@ -149,6 +149,7 @@ bun run test:db:setup
 # entries for three weeks.
 # ---------------------------------------------------------------------------
 DB_TIER_TRIPWIRES=(
+	test/unit/concurrency_interleave.test.ts
 	test/unit/account_revocation_native.test.ts
 	test/unit/bulk_process_id_tripwire.test.ts
 	test/unit/client_idempotency_tripwire.test.ts
