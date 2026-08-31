@@ -317,13 +317,42 @@ component_common.prototype.build = async function(autoload=false) {
 		}
 
 		self.status = 'building'
-		self._build_waiter = new Promise(async (resolve) => {
-			const result = await do_build(self, autoload)
-			// status update
-			self.status = 'built'
-			event_manager.publish('built_' + self.id, self)
-			resolve(result)
-		})
+		// NO ASYNC PROMISE EXECUTOR (P2-1 / CLI-05).
+		//
+		// This was `new Promise(async (resolve) => { … })` — biome names it
+		// suspicious/noAsyncPromiseExecutor. A throw inside `do_build` became an
+		// ORPHAN REJECTION: nothing rejected `_build_waiter`, so it never settled,
+		// `status` stayed 'building' FOREVER, and every later build() returned the
+		// same dead promise. The component was wedged for the life of the page,
+		// with no error surfaced anywhere a curator could see.
+		//
+		// An async function returns a promise already; the executor bought nothing
+		// and cost the rejection path. `finally` is what makes the wedge
+		// impossible: the status leaves 'building' whichever way do_build ends.
+		self._build_waiter = (async () => {
+			try {
+				const result = await do_build(self, autoload)
+				// status update
+				self.status = 'built'
+				event_manager.publish('built_' + self.id, self)
+				return result
+			} catch (error) {
+				// A FAILED BUILD IS NOT A BUILT ONE. Marking it 'built' here would
+				// trade the wedge for a lie: every later build() would return true
+				// without rebuilding, and the component would sit there empty and
+				// declared fine. So the status is RESET — a later build() may try
+				// again — and the waiter is cleared with it.
+				self.build_error = error
+				self.status = null
+				self._build_waiter = null
+				// RELEASE, NOT SUCCESS. render()'s 'building' branch waits on this
+				// event; without it a failed build leaves every waiter parked
+				// forever (CLI-06/07). They wake, find status null and build_error
+				// set, and can act — which is strictly better than never waking.
+				event_manager.publish('built_' + self.id, self)
+				throw error
+			}
+		})()
 
 	return self._build_waiter
 }//end component_common.prototype.build
