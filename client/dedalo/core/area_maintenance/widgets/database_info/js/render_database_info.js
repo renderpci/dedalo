@@ -961,11 +961,18 @@ const render_rebuild_constraints = (self, body_response) => {
 * native confirm() dialog is shown as an extra safety check because the operation
 * locks each table exclusively during REINDEX.
 *
-* (!) Uses `spinner` inside the async callback closure but `spinner` is defined in
-* handle_submit's local scope, not accessible here. The `spinner.remove()` and
-* `e.target.classList.remove('lock')` calls inside the on_submit callback will throw
-* a ReferenceError if the early-exit branches are reached (tables empty). This is a
-* pre-existing code issue; do not change it.
+* FIXED 2026-08-31 (P2-25 / DEAD-04). This block used to read: "Uses `spinner`
+* inside the async callback closure but `spinner` is defined in handle_submit's
+* local scope, not accessible here … will throw a ReferenceError if the
+* early-exit branches are reached (tables empty). This is a pre-existing code
+* issue; do not change it."
+*
+* It was a real ReferenceError on the one path a user reaches by submitting with
+* no tables selected. The binding had been deleted when handle_submit stopped
+* creating its own spinner; the two lines were simply left behind. handle_submit
+* owns the lifecycle, so the early exits now just return. A comment that
+* documents a crash and forbids fixing it is a defect with a guard rail around
+* it.
 *
 * @param {Object} self - The database_info widget instance (exposes optimize_tables())
 * @returns {HTMLElement} optimize_tables_container
@@ -1035,9 +1042,17 @@ const render_optimize_tables = (self) => {
 						.map(el => el.trim())
 
 					if (!tables || tables.length < 1) {
-						// loading  remove
-						spinner.remove()
-						e.target.classList.remove('lock')
+						// EARLY EXIT, NOTHING TO UNDO (P2-25 / DEAD-04).
+						//
+						// This called `spinner.remove()` on a binding that does not exist
+						// in this scope — a ReferenceError on the one path a user reaches
+						// by submitting with no tables selected, so the widget crashed
+						// instead of doing nothing. The binding was deleted when
+						// handle_submit stopped creating its own spinner ("build_form
+						// already puts a button_spinner on the submit button for the whole
+						// request, so both were redundant"); these two lines were left
+						// behind, and the file's own JSDoc documented the bug rather than
+						// fixing it. handle_submit owns the lifecycle: returning is enough.
 						return
 					}
 
@@ -1152,9 +1167,17 @@ const render_consolidate_table_sequences = (self) => {
 						.map(el => el.trim())
 
 					if (!tables || tables.length < 1) {
-						// loading  remove
-						spinner.remove()
-						e.target.classList.remove('lock')
+						// EARLY EXIT, NOTHING TO UNDO (P2-25 / DEAD-04).
+						//
+						// This called `spinner.remove()` on a binding that does not exist
+						// in this scope — a ReferenceError on the one path a user reaches
+						// by submitting with no tables selected, so the widget crashed
+						// instead of doing nothing. The binding was deleted when
+						// handle_submit stopped creating its own spinner ("build_form
+						// already puts a button_spinner on the submit button for the whole
+						// request, so both were redundant"); these two lines were left
+						// behind, and the file's own JSDoc documented the bug rather than
+						// fixing it. handle_submit owns the lifecycle: returning is enough.
 						return
 					}
 

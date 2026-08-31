@@ -135,12 +135,20 @@ add_hierarchy.prototype.build = async function(autoload=false) {
 	const self = this
 
 	// call generic common tool build
-		const common_build = await widget_common.prototype.build.call(this, autoload);
-
+	// THE GUARD THIS FILE'S JSDoc PROMISES (P2-25 / DEAD-03).
+	//
+	// The awaited base build sat OUTSIDE the try, leaving an EMPTY try and an
+	// UNREACHABLE catch — biome names it correctness/noUnreachable — while the
+	// comment above says the block "guards against unexpected exceptions thrown
+	// by the base build and stores any error on `self.error`". It guarded
+	// nothing: a throw took down the maintenance dashboard's build instead of
+	// surfacing an error state on this widget.
+	let common_build = false
 	try {
 
 		// data now loads on open via the unified widget load() (see render_area_maintenance)
 
+		common_build = await widget_common.prototype.build.call(this, autoload);
 	} catch (error) {
 		self.error = error
 		console.error(error)
