@@ -176,6 +176,38 @@ select / radio_button / check_box need the **full records of the target section*
 ### 5.3 ddo_map depth
 A ddo_map is a flat list made a tree by each ddo's `parent` (=`tipo` of the ddo it hangs under; `"self"` = the calling component). Relations to related sections carry further ddos resolved *in the target section*, to arbitrary depth, declaratively (`class.common.php:2295` get_children_recursive, `:2454` parent filter). Multi-hop chains (sort/search by a value two sections away) are normal, not edge cases.
 
+> **ADDENDUM 2026-08-31 (the descendant map travels DOWN, and the recursion is
+> BOUNDED).** Two rules the paragraph above implies but the engine did not
+> hold:
+>
+> 1. **The whole map, every level.** `relation_core.expandPortal` recurses with
+>    `options.descendantsMap`, and `relations/models/portal.ts` must hand it the
+>    map it was itself given (`portalDescendants ?? ddoMap`) — the FULL flat
+>    list, so a grandchild resolves by walking `parent`. Passing only the
+>    portal's direct children silently drops every level below the first
+>    whenever the children came from the CALLER's map instead of the
+>    component's own `request_config`. That was live until 2026-08-31: the
+>    `numisdata3` list chain `numisdata77 → numisdata164 → rsc29` lost its
+>    `component_image` ddo, so the server shipped `rsc29` in `context` but no
+>    `rsc29` item in `data` and every coin rendered the placeholder. The
+>    `?? childDdos` fallback inside `expandPortal` is now a last resort for
+>    callers that pass no map at all (`relation_index`'s deliberate one-level
+>    expansions), never the normal path.
+> 2. **The caller owns its map.** In list mode a caller-map child does NOT fall
+>    back to its own `request_config` (`portal.ts` `ownConfig`, false for
+>    caller-map children — PHP's substituted-config semantics). A map that
+>    declares a nested portal but not its leaf therefore resolves the portal and
+>    stops. In EDIT mode the corollary is a precedence: caller-map grandchildren
+>    win over the nested portal's own config (`class.common.php:2603-2681`).
+> 3. **"Arbitrary depth" is not unbounded.** The map is CLIENT-supplied and is a
+>    flat list, so `[{A,parent:section},{B,parent:A},{A,parent:B}]` is a cycle,
+>    and with the full map travelling down every hop with stored locators
+>    re-enters the emitter one level deeper. `relation_core`'s `depth < 4` gates
+>    the nested own-config lookup ONLY. The bound is `MAX_DDO_DEPTH` (12) in
+>    `section/read.ts emitDdoData`, the one point every hop passes through:
+>    exceeding it is a loud `request.invalid_rqo`, never a silent truncation.
+>    Gate: `test/unit/portal_caller_map_descendants_native.test.ts`.
+
 ## 6. The particular cases — same concept, specific twist
 
 ### 6.1 List-of-values (select, radio_button, check_box, select_lang) + portal/autocomplete

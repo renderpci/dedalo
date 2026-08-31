@@ -498,10 +498,19 @@ export async function expandPortal(
 			section_tipo: targetSectionTipo,
 			section_id: targetSectionId as number,
 		};
+		// The DESCENDANT map — every level below this portal, not just its own
+		// children — so a grandchild resolves by walking the parent chain. The
+		// `?? childDdos` fallback is a LAST RESORT for callers that pass no map
+		// at all (relation_index's deliberate one-level expansions): a caller
+		// that HAS a map must hand the whole thing down, or every level below
+		// the first is silently dropped (the numisdata3 list bug).
 		const descendantsMap = options.descendantsMap ?? childDdos;
 		// LIST-cell subdatum recurses into nested portals' OWN configs (PHP goes
 		// bibliography → reference → author, three levels); get_data/resolve_data
-		// stay one level (their gates pinned the PHP depth). Cycle-guarded.
+		// stay one level (their gates pinned the PHP depth). The CYCLE guard is
+		// not here — `depth < 4` below gates the own-config lookup only; the
+		// child recursion itself is bounded by MAX_DDO_DEPTH in section/read.ts
+		// emitDdoData, the one place every hop passes through.
 		const depth = options.depth ?? 0;
 		// PHP recursion is STRUCTURAL: nested portals re-enter portal_json in
 		// EVERY mode. LIST/TM keep the ownConfig gate (their effective config
@@ -509,7 +518,7 @@ export async function expandPortal(
 		// a nested portal with declared grandchildren uses the parent-map
 		// slice (childDdos filtering), otherwise its OWN config (PHP injected
 		// request_config precedence, class.common.php:2603-2681). depth<4 is
-		// the pragmatic cycle guard.
+		// the pragmatic bound on how far the own-config lookup chases.
 		const allowNestedOwnConfig =
 			depth < 4 && (portalMode === 'edit' || (portalMode === 'list' && options.ownConfig === true));
 		for (const childDdo of childDdos) {
