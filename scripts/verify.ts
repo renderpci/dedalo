@@ -96,6 +96,7 @@ const TRIPWIRES = [
 	'test/unit/alternate_preflight_native.test.ts',
 	'test/unit/concurrency_interleave.test.ts',
 	'test/unit/seed_definitions_equality_tripwire.test.ts',
+	'test/unit/wire_field_agreement_tripwire.test.ts',
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',
