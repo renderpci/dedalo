@@ -64,6 +64,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { getDatalist, resolveLocatorLabels } from '../../src/core/relations/datalist.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 import { resolveSearchData } from '../../src/core/section/read.ts';
+import { hashPasswordForStorage } from '../../src/core/security/password_hash.ts';
 import {
 	clearPermissionsCache,
 	clearPrincipalCache,
@@ -304,12 +305,53 @@ async function rootPasswordHash(): Promise<string> {
  */
 let tmWatermark = 0;
 
+/**
+ * ROOT'S CREDENTIAL IS BUILT, NOT BORROWED.
+ *
+ * Two gates below read root's stored hash — one to prove the refusals wrote
+ * nothing, one to drive the self-service rotation door end to end. Both used to
+ * assert `$argon2…` against WHATEVER THE DATABASE HAPPENED TO HOLD, and the
+ * install seed ships root PASSWORDLESS (`string->'dd133'` is `[]` on a freshly
+ * built suite database). They passed only on a developer box where
+ * `bun run test:client` had already set the suite credential
+ * (src/core/test_data/suite_login.ts) — so on the hosted DB tier, which builds
+ * its database from the vendored seed on every run, they were red from the
+ * tier's first execution. A gate that reads ambient state is not a gate.
+ *
+ * So the situation is MADE here when it is absent, through the engine's own
+ * hasher rather than a pasted literal, and the original value is put back in
+ * afterAll: a gate may not leave the suite database's root credential changed.
+ *
+ * The flag is separate from the value ON PURPOSE. A restore keyed on
+ * `value !== null` would silently skip the case where dd133 was ABSENT rather
+ * than empty — the one shape whose original value IS null — and leave the
+ * planted credential behind on exactly the database that never had one.
+ */
+let plantedRootPassword = false;
+let originalRootPassword: unknown = null;
+
 beforeAll(async () => {
 	{
 		const rows = (await sql.unsafe(
 			'SELECT COALESCE(max(id), 0) AS max_id FROM matrix_time_machine',
 		)) as { max_id: number }[];
 		tmWatermark = Number(rows[0]?.max_id ?? 0);
+	}
+	if (!(await rootPasswordHash()).startsWith('$argon2')) {
+		const rows = (await sql.unsafe(
+			`SELECT string->'dd133' AS dd133 FROM matrix_users
+			 WHERE section_tipo = $1 AND section_id = -1`,
+			[USERS],
+		)) as { dd133: unknown }[];
+		originalRootPassword = rows[0]?.dd133 ?? null;
+		plantedRootPassword = true;
+		const hash = await hashPasswordForStorage(`root-${ROOT_RUN_TAG}`);
+		await sql.unsafe(
+			`UPDATE matrix_users
+			    SET string = jsonb_set(COALESCE(string, '{}'::jsonb), '{dd133}', $2::text::jsonb, true)
+			  WHERE section_tipo = $1 AND section_id = -1`,
+			[USERS, JSON.stringify([{ id: 1, lang: 'lg-nolan', value: hash }])],
+		);
 	}
 	grantedProfileId = await insertMatrixRecordWithCounter(PROFILES_TABLE, PROFILES_SECTION, {
 		misc: {
@@ -357,6 +399,25 @@ afterAll(async () => {
 				[section, id],
 			);
 		}
+	}
+	// Put root's credential back exactly as it was found (see plantedRootPassword).
+	if (plantedRootPassword) {
+		if (originalRootPassword === null) {
+			// dd133 was not there at all: remove the key rather than write a null.
+			await sql.unsafe(
+				`UPDATE matrix_users SET string = string - 'dd133'
+				  WHERE section_tipo = $1 AND section_id = -1`,
+				[USERS],
+			);
+		} else {
+			await sql.unsafe(
+				`UPDATE matrix_users
+				    SET string = jsonb_set(COALESCE(string, '{}'::jsonb), '{dd133}', $2::text::jsonb, true)
+				  WHERE section_tipo = $1 AND section_id = -1`,
+				[USERS, JSON.stringify(originalRootPassword)],
+			);
+		}
+		plantedRootPassword = false;
 	}
 	// The root self-service save appends a TM row on dd128/-1; sweep only the rows
 	// this run created (see tmWatermark), never root's real history.
