@@ -208,6 +208,18 @@ interface dd_object {
 
 See [dd_object.md](dd_object.md) for the per-field contract. Note `parent_grouper` (used to nest a ddo under a grouper in the layout) and `css` (per-ddo style overrides, sourced from the node's `properties.css`) — both appear in cookbook examples and are real, settable fields.
 
+### Nesting — a `ddo_map` is a flat list, made a tree by `parent`
+
+A ddo whose `parent` names a *relation* component is resolved **inside that component's target section**, and its own children below it, to as many levels as the map declares. On the `monedaiberica` install the `numisdata3` list column is three levels deep: `numisdata77` (`component_portal`, targeting `numisdata4`) → `numisdata164`/`numisdata165` (`component_portal`, the obverse and reverse faces, targeting `rsc170`) → `rsc29` (`component_image`, the thumbnail actually shown in the cell).
+
+Two consequences worth knowing before you author a nested map:
+
+!!! warning "Declare every level you want resolved"
+    A nested relation component does **not** fall back to its own `request_config` in list mode — the caller's map is the whole story. Declare `numisdata164` but omit `rsc29` and you get the portal's locator item and nothing under it: the cell renders empty, with no error. In edit mode the same rule appears as a precedence — a level the caller's map declares wins over the nested component's own config.
+
+!!! note "There is a depth ceiling"
+    Because a map is a flat list, `[{A, parent: section}, {B, parent: A}, {A, parent: B}]` describes a cycle. Nesting is bounded at **12 levels** (`MAX_DDO_DEPTH`, `src/core/section/read.ts`); a map that exceeds it is refused with `request.invalid_rqo` rather than resolved part-way. Real chains are two or three levels, so the ceiling only ever catches a malformed map.
+
 ## Self-resolution and dynamic `section_tipo` sources
 
 The ontology cannot know installation-specific tipos, so configs use placeholders resolved **server-side** before the client ever sees them.
@@ -326,6 +338,8 @@ An invalid tipo, an unresolvable node, or a missing model simply produces `null`
 - **`self` not resolving** — remember it resolves to the item's SQO TARGET sections for a normal ddo, and to the CALLER's own section only for `component_dataframe` (`processSingleDdo()`); confirm which one applies.
 - **Config changes not taking effect** — there is no config-level cache (see [Caching](#caching-and-the-cache-key)), so a stale value here is almost certainly upstream (the ontology read cache) rather than a request_config cache mismatch.
 - **`component_relation_parent`/`children` throws** — these models require an explicit `request_config`; give the node one.
+- **A nested column renders empty** — the map almost certainly stops one level short. A relation ddo resolves only the children the map declares under it (see [Nesting](#nesting--a-ddo_map-is-a-flat-list-made-a-tree-by-parent)); confirm the leaf ddo is present with its `parent` set to the relation component directly above it, not to the section.
+- **`request.invalid_rqo` on a read that used to work** — check the map for a `parent` cycle; nesting is capped at 12 levels.
 - **Preset not applied** — presets only override SECTION owners (`context.ownerIsSection`); confirm the preset's `(tipo, section_tipo, mode)` triple matches and that it is marked active (`dd1566`).
 
 ## API reference

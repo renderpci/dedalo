@@ -1844,6 +1844,29 @@ export async function readSectionRows(
 }
 
 /**
+ * The hard bound on ddo recursion depth (this function re-enters itself
+ * through every relation expansion — portal children, dataframe frames,
+ * autocomplete targets).
+ *
+ * THE MAP IS CLIENT-SUPPLIED (`show.ddo_map` — the client's map wins, see the
+ * config-build note above), and a map is a parent-CHAIN, not a tree the
+ * server validated: `[{A,parent:section},{B,parent:A},{A,parent:B}]` is a
+ * cycle, and every hop with stored locators re-enters here one level deeper.
+ * Nothing else stops it — relation_core's `depth < 4` gates the nested
+ * OWN-CONFIG lookup, never this recursion — so without this bound a cyclic
+ * map blows the stack instead of answering.
+ *
+ * The value is generous on purpose: PHP's deepest observed real chain is
+ * three levels (bibliography → reference → author) and the numisdata3 list
+ * cell is three (numisdata77 → numisdata164 → rsc29), so 12 refuses only
+ * maps that are already pathological. A refusal is LOUD (a caller-category
+ * DedaloError naming the chain), never a silent truncation: a legitimately
+ * deeper map must be seen and raised here, not quietly served short one
+ * level — which is the exact failure this whole change fixes.
+ */
+const MAX_DDO_DEPTH = 12;
+
+/**
  * Resolve one ddo against one record and push its data item(s) — the single
  * per-component emission path shared by the section read and portal
  * expansion. Splits by model family (relation label/portal/media/literal)
@@ -1861,6 +1884,12 @@ export async function emitDdoData(
 	allowOwnConfigChildren = true,
 	depth = 0,
 ): Promise<void> {
+	if (depth > MAX_DDO_DEPTH) {
+		throw new DedaloError('request.invalid_rqo', {
+			message: `emitDdoData: ddo_map recursion exceeded ${MAX_DDO_DEPTH} levels at '${ddo.tipo}' (parent '${callerTipo}') — the map is cyclic or pathologically deep`,
+			coordinates: { tipo: ddo.tipo, section_tipo: row.section_tipo, section_id: row.section_id },
+		});
+	}
 	const model = await getModelByTipo(ddo.tipo);
 	if (model === null) {
 		throw new DedaloError('request.invalid_tipo', {

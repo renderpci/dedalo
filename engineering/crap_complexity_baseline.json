@@ -167,7 +167,7 @@
 		"src/core/relations/dataframe.ts": 9,
 		"src/core/relations/datalist.ts": 21,
 		"src/core/relations/filter_projects.ts": 17,
-		"src/core/relations/models/portal.ts": 27,
+		"src/core/relations/models/portal.ts": 24,
 		"src/core/relations/models/relation_index.ts": 19,
 		"src/core/relations/models/relation_related.ts": 10,
 		"src/core/relations/models/select_family.ts": 12,
