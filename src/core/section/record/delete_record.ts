@@ -314,6 +314,7 @@ async function removeAllInverseReferences(
 	const { findInverseReferenceLocators } = await import('../../search/search_related.ts');
 	const { readMatrixKeyForUpdate } = await import('../../db/matrix_write.ts');
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
+	const { maintainRelationSearchIndex } = await import('../../relations/save.ts');
 	const { getModelByTipo, getColumnNameByModel } = await import('../../ontology/resolver.ts');
 	const { dbTimestamp: stamp } = await import('./create_record.ts');
 
@@ -478,6 +479,22 @@ async function removeAllInverseReferences(
 		);
 		// Chokepoint write, no audit here: the owner's stamps refresh ONCE below
 		// (an owner may hold several affected components).
+		// THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12). Since
+		// 2026-08-09 `relation_search` is READ — conform.ts emits `direct OR
+		// ancestor` for positive operators and `NOT direct AND NOT ancestor` for
+		// the negating set — so a door that rewrites `relation` and leaves
+		// `relation_search` standing makes the two stores disagree PERMANENTLY,
+		// and search then answers wrongly in both directions. PHP called
+		// $component->Save() here, which maintained it; dropping that was an
+		// unledgered divergence, not parity. The only self-heal was an unrelated
+		// later save on the same component.
+		await maintainRelationSearchIndex(
+			group.table,
+			group.ownerSection,
+			group.ownerId,
+			group.component,
+			newData ?? [],
+		);
 		await persistRecordKeys(
 			{ table: group.table, sectionTipo: group.ownerSection, sectionId: group.ownerId },
 			[{ column: 'relation', key: group.component, value: newData }],
@@ -583,6 +600,7 @@ export async function deleteSectionData(
 		getOrderedSubtree,
 	} = await import('../../ontology/resolver.ts');
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
+	const { maintainRelationSearchIndex } = await import('../../relations/save.ts');
 	const { dbTimestamp: stamp } = await import('./create_record.ts');
 	const { config } = await import('../../../config/config.ts');
 

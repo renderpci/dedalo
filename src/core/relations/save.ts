@@ -1503,6 +1503,13 @@ export async function deletePortalLocator(
 					principal.userId,
 				);
 			}
+			// THE ANCESTOR INDEX MOVES WITH THE LOCATORS (P1-7 / DATA-12) — see the
+			// same call in delete_record.ts. `relation_search` is read by
+			// conform.ts, so writing `relation` alone leaves the two stores
+			// disagreeing permanently.
+			if (column === 'relation') {
+				await maintainRelationSearchIndex(table, sectionTipo, Number(sectionId), tipo, kept);
+			}
 			await updateMatrixKeyData(table, sectionTipo, Number(sectionId), column, tipo, kept);
 			await recordTimeMachine(
 				{
