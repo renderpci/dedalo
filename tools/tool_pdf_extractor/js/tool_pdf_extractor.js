@@ -285,16 +285,27 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 
 	const self = this
 
-	// htmlEntities
-		function htmlEntities(str) {
-			// const txt = document.createElement("textarea");
-			// txt.innerHTML = str;
-			// return txt.value;
-			const txt = new DOMParser().parseFromString(str, "text/html");
-			return txt.documentElement.textContent;
-		}
-		original_text = htmlEntities(original_text)
-		// console.log('original_text:', original_text);
+	// (!) NO DECODE HERE — deleted 2026-08-31 (P1-20 / CLI-13). The pair must be
+	// SYMMETRIC or absent, never half.
+	//
+	// PHP's get_pdf_data returned `htmlentities($result, ENT_QUOTES, 'UTF-8')`
+	// and this function un-did it: an exact identity round trip. The TS port kept
+	// the comment and dropped the ENCODE — the server returns raw pdftotext
+	// output (src/core/media/tools/pdf_extract.ts) — while this side went on
+	// decoding. Running `DOMParser().parseFromString(str,'text/html')
+	// .documentElement.textContent` over RAW text DELETES every `<…>` run as a
+	// tag and decodes every entity, so what the operator reads in the preview and
+	// copies into the record with "Select text" was silently mangled:
+	//
+	//   IMP(erator) CAES<A>R      -> IMP(erator) CAESR
+	//   a <gap/> b <illegible> c  -> a  b  c
+	//   x &amp; y                 -> x & y
+	//
+	// An epigraphic edition, a TEI-ish transcription and ordinary prose
+	// containing angle brackets all lose characters on the way into the archive.
+	// It also flattened the `html` method's markup to plain text before the
+	// branch below could parse it, which is why that method returned '' — see
+	// there.
 
 	// offset. Get the offset set by the user in component_pdf
 		const offset = self.config.offset || 1
@@ -335,9 +346,12 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 				tag_paragraph.appendChild(new_tag)
 				// replace the anchor node with the tag node
 			 	ar_pages[i].parentNode.replaceChild(tag_paragraph, ar_pages[i]);
-				// get the body content to send to component_text_area
-				final_text = body.innerHTML
 			}
+			// AFTER the loop, not inside it (P1-20). Read once, when every anchor
+			// has been replaced — and, crucially, whether or not there were any: a
+			// PDF the parser found no `a[name]` in still has a body worth
+			// returning, and assigning inside the loop returned '' for it.
+			final_text = body.innerHTML
 			break;
 		default:
 	}
