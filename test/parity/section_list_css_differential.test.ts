@@ -99,14 +99,12 @@ async function phpSectionListCss(
 describe.if(hasPhpCredentials())('section_list css swap differential (SECTION_SPEC §7.1)', () => {
 	let php: PhpApiClient;
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	});
 
 	for (const { tipo, unclonedSeam } of CASES) {
 		test(`${tipo}: list-mode css comes from the section_list child (matches PHP)`, async () => {
-			if (!hasPhpCredentials()) return;
 			clearStructureContextCache();
 			const phpCss = await phpSectionListCss(php, tipo, unclonedSeam);
 			const tsEntry = await buildStructureContext({
@@ -126,7 +124,6 @@ describe.if(hasPhpCredentials())('section_list css swap differential (SECTION_SP
 	}
 
 	test('the object section carries the section_list column-width css, not .list_body', async () => {
-		if (!hasPhpCredentials()) return;
 		clearStructureContextCache();
 		const tsEntry = await buildStructureContext({
 			tipo: OBJECT_SECTION,

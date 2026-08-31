@@ -126,7 +126,6 @@ describe.if(hasPhpCredentials())(
 
 		beforeAll(async () => {
 			await ensureTestCorpus([SECTION]);
-			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			const loggedIn = await client.login(
 				config.phpReference.username as string,
@@ -157,7 +156,6 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('sections envelope matches (typo/tipo/entries incl. paginated_key)', () => {
-			if (!hasPhpCredentials()) return;
 			const phpEnvelope = phpData[0] as Record<string, unknown>;
 			const tsEnvelope = tsData[0] as Record<string, unknown>;
 			expect(tsEnvelope.typo).toBe(phpEnvelope.typo);
@@ -183,7 +181,6 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('component data items match: identity, order, entries, fallback, stamps', () => {
-			if (!hasPhpCredentials()) return;
 			// PHP data[] may include items for components NOT in our ddo_map (e.g.
 			// injected defaults). Compare the subset for our three components, in
 			// order — a missing or extra item for OUR tipos is a failure.
@@ -220,7 +217,6 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('EDIT mode: single record, untruncated values match PHP', async () => {
-			if (!hasPhpCredentials()) return;
 			const editRqo = structuredClone(READ_RQO) as Record<string, unknown> & {
 				source: Record<string, unknown>;
 				sqo: Record<string, unknown>;
@@ -274,7 +270,6 @@ describe.if(hasPhpCredentials())(
 		}, 30000);
 
 		test('PHP-only fields are surfaced, not silently ignored (coverage ledger)', () => {
-			if (!hasPhpCredentials()) return;
 			const knownFields = new Set([
 				'tipo',
 				'section_tipo',

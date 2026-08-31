@@ -20,7 +20,6 @@ describe.if(hasPhpCredentials())(
 		let ready = false;
 
 		beforeAll(async () => {
-			if (!hasPhpCredentials()) return;
 			client = new PhpApiClient();
 			ready = await client.login(
 				config.phpReference.username as string,

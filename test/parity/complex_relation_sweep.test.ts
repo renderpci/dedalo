@@ -245,14 +245,12 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('complex relation component sweep (list mode)', () => {
 	test('the declared uncloned area token is actually exercised', () => {
-		if (!hasPhpCredentials()) return;
 		expect(unclonedAreaSeen).toBe(true);
 	});
 
 	for (const sweep of CASES) {
 		const key = `${sweep.section}.${sweep.component}`;
 		test(`${key} items match PHP`, () => {
-			if (!hasPhpCredentials()) return;
 			const phpData = phpBySweep.get(key) ?? [];
 			const tsData = tsBySweep.get(key) ?? [];
 			const tsError = (tsData[0] as { __ts_error?: string } | undefined)?.__ts_error;

@@ -86,7 +86,6 @@ describe.if(hasPhpCredentials())('structure-context subset differential (Phase 4
 
 	beforeAll(async () => {
 		await ensureTestCorpus([SECTION]);
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -110,7 +109,6 @@ describe.if(hasPhpCredentials())('structure-context subset differential (Phase 4
 	});
 
 	test('context entries for our ddos match structurally (identity + fields)', () => {
-		if (!hasPhpCredentials()) return;
 		// Compare only the entries for OUR requested tipos (PHP may add
 		// grouper/injected entries — those are Phase 4 continuation).
 		const targetTipos = new Set<string>([SECTION, ...COMPONENTS]);
@@ -146,7 +144,6 @@ describe.if(hasPhpCredentials())('structure-context subset differential (Phase 4
 	});
 
 	test('coverage ledger: PHP context fields not yet emitted by TS', () => {
-		if (!hasPhpCredentials()) return;
 		const emitted = new Set([
 			'label',
 			'tipo',

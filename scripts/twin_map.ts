@@ -45,6 +45,10 @@ const NOT_A_TWIN: ReadonlyMap<string, string> = new Map([
 		'its shrink-only baseline pins the OWNING FILES of each shared ensureTestCorpus/dropTestCorpus scope, and several owners are test/parity/*_differential.test.ts files — census data about who drives a corpus scope, not a twin of any of them',
 	],
 	[
+		'test/unit/gate_vacuity_tripwire.test.ts',
+		"names test/parity/oracle_canary.test.ts to assert that the CANARY censuses the permanently-unreachable parity gates from the tree — it gates the canary's honesty about what a run does not verify, and replaces no parity contract of its own",
+	],
+	[
 		'test/unit/tier_assignment_tripwire.test.ts',
 		"names test/parity as a DIRECTORY a CI tier claims — it censuses which tier executes each test file, so it necessarily spells every tier root including the parity one. It asserts nothing about any parity gate's contract and replaces none of them",
 	],

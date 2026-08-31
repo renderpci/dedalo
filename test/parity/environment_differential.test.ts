@@ -73,7 +73,6 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 	let tsEnv: Record<string, Record<string, unknown>>;
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -119,7 +118,6 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 	});
 
 	test('get_label: every oracle key is served, renamed, or ledger-removed (WC-033/WC-034)', () => {
-		if (!hasPhpCredentials()) return;
 		const phpLabels = phpEnv.get_label as Record<string, string>;
 		const tsLabels = tsEnv.get_label as Record<string, string>;
 		expect(Object.keys(tsLabels).length).toBeGreaterThan(400);
@@ -154,7 +152,6 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 	});
 
 	test('plain_vars: urls, flags and DD_TIPOS match exactly', () => {
-		if (!hasPhpCredentials()) return;
 		const phpVars = { ...(phpEnv.plain_vars as Record<string, unknown>) };
 		const tsVars = { ...(tsEnv.plain_vars as Record<string, unknown>) };
 		// engineering/wire_contract/ WC-003 (self-contained cutover posture): under
@@ -176,7 +173,6 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 	});
 
 	test('page_globals: same key set; same values outside engine-specific facts', () => {
-		if (!hasPhpCredentials()) return;
 		const phpGlobals = { ...(phpEnv.page_globals ?? {}) };
 		const tsGlobals = { ...(tsEnv.page_globals ?? {}) };
 		// engineering/wire_contract/ WC-031: `is_ontology_server` is a TS-ONLY page_globals key

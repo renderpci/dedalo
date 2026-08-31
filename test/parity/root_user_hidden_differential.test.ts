@@ -131,7 +131,6 @@ describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () 
 		// The users population comes from the COMMITTED corpus, never from
 		// whatever the ambient database happens to hold.
 		await ensureTestCorpus([USERS]);
-		if (!hasPhpCredentials()) return;
 		php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	});

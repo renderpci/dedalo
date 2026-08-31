@@ -54,7 +54,6 @@ describe.if(hasPhpCredentials())('default ddo_map differential (Phase 4g gate)',
 
 	beforeAll(async () => {
 		await ensureTestCorpus([SECTION]);
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -112,7 +111,6 @@ describe.if(hasPhpCredentials())('default ddo_map differential (Phase 4g gate)',
 	});
 
 	test('the section entry parent is each ontology own area (the uncloned seam)', () => {
-		if (!hasPhpCredentials()) return;
 		// The frozen body names the INSTALL area; the clone root is parented by
 		// its own TLD root. Neither is a divergence — both are asserted, so the
 		// seam cannot hide a wrong value on either side.
@@ -122,13 +120,11 @@ describe.if(hasPhpCredentials())('default ddo_map differential (Phase 4g gate)',
 	});
 
 	test('derived context component set matches PHP (identity + order)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsContextTipos.length).toBeGreaterThan(1); // section + columns
 		expect(tsContextTipos).toEqual(phpContextTipos);
 	});
 
 	test('derived data component set matches PHP', () => {
-		if (!hasPhpCredentials()) return;
 		expect(new Set(tsDataTipos)).toEqual(new Set(phpDataTipos));
 	});
 });

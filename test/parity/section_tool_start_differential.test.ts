@@ -100,7 +100,6 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 	};
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -134,7 +133,6 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 
 	for (const tipo of REROUTED_TIPOS) {
 		test(`${tipo}: reroutes to the target section (tipo/model/type/label match PHP)`, () => {
-			if (!hasPhpCredentials()) return;
 			const php = phpContextsOf(phpBodies[tipo]!)[0]!;
 			const ts = tsContextsOf(tsBodies[tipo]!)[0]!;
 			expect(php).toBeDefined();
@@ -151,7 +149,6 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 		});
 
 		test(`${tipo}: config is byte-equal (tool_context + enriched ddo_map)`, () => {
-			if (!hasPhpCredentials()) return;
 			const php = phpContextsOf(phpBodies[tipo]!)[0]!;
 			const ts = tsContextsOf(tsBodies[tipo]!)[0]!;
 			// WC-020 normalizer (the alias section_tool only, post-alias-migration):
@@ -204,14 +201,12 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 		});
 
 		test(`${tipo}: start context WITHOUT top-level request_config (PHP parity)`, () => {
-			if (!hasPhpCredentials()) return;
 			expect(phpContextsOf(phpBodies[tipo]!)[0]!.request_config).toBeUndefined();
 			expect(tsContextsOf(tsBodies[tipo]!)[0]!.request_config).toBeUndefined();
 		});
 	}
 
 	test(`${EMPTY_TIPO} (no config/tool_config): BOTH engines refuse`, () => {
-		if (!hasPhpCredentials()) return;
 		// PHP fatals building a section on the non-section tipo (set_lang on
 		// false) and answers `result:false`; TS refuses loudly in envelope v2
 		// (`ok:false` — the failure is the contract, the message text is TS's

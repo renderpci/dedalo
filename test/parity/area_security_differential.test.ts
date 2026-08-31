@@ -66,14 +66,12 @@ beforeAll(async () => {
 
 describe.if(hasPhpCredentials())('model-vs-tipo quirk divergence (dd917 as area_ontology)', () => {
 	test('PHP ACCEPTS the mismatch and returns boot data', () => {
-		if (!hasPhpCredentials()) return;
 		// PHP has no model-vs-tipo validation — it returns the ontology projection.
 		expect(Array.isArray(phpBody?.result?.data)).toBe(true);
 		expect(phpBody?.result?.data?.length ?? 0).toBeGreaterThan(0);
 	});
 
 	test('TS REFUSES the mismatch (400)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsStatus).toBe(400);
 		expect(tsOk).toBe(false);
 		expect(tsErrorCode).toBe('request.invalid_source');

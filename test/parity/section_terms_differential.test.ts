@@ -71,7 +71,6 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 
 	beforeAll(async () => {
 		await ensureTestCorpus([TERM_SECTION, OTHER_SECTION]);
-		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -107,7 +106,6 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 	}
 
 	test('mixed batch resolves the SAME term map as PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const locators: unknown[] = [
 			...TERM_IDS.map((id) => ({ section_tipo: TERM_SECTION, section_id: id })),
 			// duplicate — first occurrence wins, no double entry
@@ -131,7 +129,6 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 	});
 
 	test('lang is honored identically', async () => {
-		if (!hasPhpCredentials()) return;
 		const locators = TERM_IDS.map((id) => ({ section_tipo: TERM_SECTION, section_id: id }));
 		const ts = await tsTerms({ locators, lang: 'lg-eng' });
 		const php = adoptFrozen(await phpTerms({ locators, lang: 'lg-eng' }));
@@ -139,7 +136,6 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 	});
 
 	test('bad locators → the SAME refusal, restated as envelope v2 (section.bad_locators, 400)', async () => {
-		if (!hasPhpCredentials()) return;
 		const ts = await tsTerms({ locators: [] });
 		const php = await phpTerms({ locators: [] });
 		// The frozen PHP body is projected through the parity reconciler

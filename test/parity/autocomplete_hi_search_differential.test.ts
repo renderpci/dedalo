@@ -102,7 +102,6 @@ describe.if(hasPhpCredentials())(
 	'autocomplete_hi search differential (relation_search wrap parity)',
 	() => {
 		test('DIRECT locator: counts match on a large real fixture', async () => {
-			if (!hasPhpCredentials()) return;
 			const phpCount = await phpTotal(countRqo('2'));
 			const tsCount = await tsTotal(countRqo('2'));
 			expect(phpCount).toBeGreaterThan(0);
@@ -112,7 +111,6 @@ describe.if(hasPhpCredentials())(
 		}, 60000);
 
 		test('ANCESTOR-only locator: both engines return 0 (the live PHP wrap defect)', async () => {
-			if (!hasPhpCredentials()) return;
 			const phpCount = await phpTotal(countRqo('1'));
 			const tsCount = await tsTotal(countRqo('1'));
 			// If this starts failing with phpCount > 0, PHP fixed add_relation_search —

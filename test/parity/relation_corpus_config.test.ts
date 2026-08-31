@@ -269,7 +269,6 @@ describe.if(hasPhpCredentials())(
 		>();
 
 		beforeAll(async () => {
-			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			await client.login(
 				config.phpReference.username as string,
@@ -325,7 +324,6 @@ describe.if(hasPhpCredentials())(
 
 		for (const testCase of CASES) {
 			test(`${testCase.tipo} (${testCase.family}): request_config projection matches PHP`, () => {
-				if (!hasPhpCredentials()) return;
 				const pair = results.get(testCase.tipo);
 				expect(pair).toBeDefined();
 				// VACUITY CLOSED 2026-08-23. The external-mode row's frozen body is
@@ -439,7 +437,6 @@ describe.if(hasPhpCredentials())(
 
 		for (const mode of ['edit', 'list'] as const) {
 			test(`hierarchy27 in ${RELATION_MODEL_OWNER} (${mode}): explicit-but-empty sqo resolves the model twin ${RELATION_MODEL_TWIN}`, async () => {
-				if (!hasPhpCredentials()) return;
 				const token = createSession(-1, 'root', true);
 				const session = getSession(token);
 				const principal = await resolvePrincipal(-1);
@@ -477,7 +474,6 @@ describe.if(hasPhpCredentials())(
 		}
 
 		test('implicit branch (scratch node, NO source.request_config): model default beats the relation-walk pick — resolves the model twin, NOT hierarchy20', async () => {
-			if (!hasPhpCredentials()) return;
 			// Premise pin: the stored graph really does name hierarchy20, so the
 			// implicit walk WOULD pick it — without this the NOT-hierarchy20 claim
 			// below could go vacuous under a scratch-shape edit.

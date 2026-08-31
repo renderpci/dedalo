@@ -132,7 +132,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 
 	beforeAll(async () => {
 		await ensureTestCorpus([...CORPUS_SCOPE]);
-		if (!hasPhpCredentials()) return;
 		// The override is a FROZEN fixture (the pre-migration inline ddo_map
 		// coins properties, byte-copied 2026-07-10): after the WC-020 alias
 		// migration the live ddo_map points at numisdata203 with NO inline copy,
@@ -217,7 +216,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 	});
 
 	test('override: pages by the ddo-declared limit (1), like PHP', () => {
-		if (!hasPhpCredentials()) return;
 		const { php, ts } = cases.override!;
 		const phpMain = mainOf(php);
 		const tsMain = mainOf(ts);
@@ -239,7 +237,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 	});
 
 	test('override: context request_config carries the runtime limit + override sqo_config', () => {
-		if (!hasPhpCredentials()) return;
 		const { php, ts } = cases.override!;
 		const phpRc = rcOf(mainOf(php).ctx);
 		const tsRc = rcOf(mainOf(ts).ctx);
@@ -252,7 +249,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 	});
 
 	test('override: main entry properties echo + css follow the override (byte-equal)', () => {
-		if (!hasPhpCredentials()) return;
 		const { php, ts } = cases.override!;
 		const phpCtx = mainOf(php).ctx;
 		const tsCtx = mainOf(ts).ctx;
@@ -264,7 +260,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 	});
 
 	test('no override: pages by the component OWN configured limit, like PHP (not the mode default)', () => {
-		if (!hasPhpCredentials()) return;
 		const { php, ts } = cases.ontology_default!;
 		const phpMain = mainOf(php);
 		const tsMain = mainOf(ts);
@@ -278,7 +273,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 	});
 
 	test('sqo.limit null = "server decides" → the effective config limit, like PHP (NOT show-all)', () => {
-		if (!hasPhpCredentials()) return;
 		const { php, ts } = cases.null_limit!;
 		const phpMain = mainOf(php);
 		const tsMain = mainOf(ts);
@@ -294,7 +288,6 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 	});
 
 	test('client-sent sqo.limit wins over the override, like PHP', () => {
-		if (!hasPhpCredentials()) return;
 		const { php, ts } = cases.client_paged!;
 		const phpMain = mainOf(php);
 		const tsMain = mainOf(ts);

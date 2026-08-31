@@ -294,7 +294,6 @@ describe.if(hasPhpCredentials())('SQO differential: TS engine vs live PHP (Phase
 	// (residue-checked) after — never whatever the ambient database holds.
 	beforeAll(async () => {
 		await ensureTestCorpus([...CORPUS_SECTIONS]);
-		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		const loggedIn = await client.login(
 			config.phpReference.username as string,

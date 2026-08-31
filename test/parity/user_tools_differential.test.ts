@@ -78,7 +78,6 @@ describe.if(hasPhpCredentials())('user_tools differential (Phase 6 gate)', () =>
 	let tsTools: ToolDdo[];
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -90,7 +89,6 @@ describe.if(hasPhpCredentials())('user_tools differential (Phase 6 gate)', () =>
 	});
 
 	test('the same set of active tools is returned', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsTools.length).toBeGreaterThan(0);
 		const phpNames = [...byName(phpTools).keys()].sort();
 		const tsNames = [...byName(tsTools).keys()].sort();
@@ -101,7 +99,6 @@ describe.if(hasPhpCredentials())('user_tools differential (Phase 6 gate)', () =>
 		// The recovery half of the POST_HARVEST_TS_TOOLS filter: a filtered
 		// name that stopped being served would otherwise vanish from parity
 		// coverage entirely.
-		if (!hasPhpCredentials()) return;
 		const tsNames = new Set(tsTools.map((tool) => tool.name));
 		for (const [name, wc] of POST_HARVEST_TS_TOOLS) {
 			expect(
@@ -112,7 +109,6 @@ describe.if(hasPhpCredentials())('user_tools differential (Phase 6 gate)', () =>
 	});
 
 	test('every tool DDO matches PHP field-for-field', () => {
-		if (!hasPhpCredentials()) return;
 		const phpByName = byName(phpTools);
 		const tsByName = byName(tsTools);
 		// Adopt the ledgered post-harvest field flips onto the ORACLE side —

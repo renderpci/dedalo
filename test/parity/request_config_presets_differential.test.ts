@@ -210,7 +210,6 @@ describe.if(hasPhpCredentials())(
 			// invalidation events, so drop them explicitly.
 			clearRequestConfigPresetsCache();
 			clearStructureContextCache();
-			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			await client.login(
 				config.phpReference.username as string,
@@ -240,14 +239,12 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('the TS reader hydrates the active edit preset for test3 (fixture present)', () => {
-			if (!hasPhpCredentials()) return;
 			expect(editPreset).toBeDefined();
 			expect(editPreset?.public).toBe(true);
 			expect(presetTipos).toEqual([PRESET_DDO]);
 		});
 
 		test('the TS edit context collapses to exactly the preset ddos, and equals PHP', () => {
-			if (!hasPhpCredentials()) return;
 			// The preset overrides the full edit-form tree down to its own ddo list.
 			// The tree it replaced was MUCH bigger: an engine that ignored the
 			// preset would answer that tree, and reds here rather than passing a
@@ -259,7 +256,6 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('LIST mode does not inherit the edit-mode preset (mode-keyed match)', () => {
-			if (!hasPhpCredentials()) return;
 			// The edit preset must not leak into list; both engines keep the default
 			// section_list columns, which are more than the single edit-preset ddo.
 			expect(tsListTipos).toEqual(phpListTipos);

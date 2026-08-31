@@ -142,7 +142,6 @@ async function compareGetData(rqo: Record<string, unknown>): Promise<{
 
 describe.if(hasPhpCredentials())('inverse/indexation family differential (spec gate 4)', () => {
 	test('children get_data: relation_children on the seed bibliography §19575 — computed page + full count + subdatum', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = getDataRqo(
 			'component_relation_children',
 			seed('rsc', 680),
@@ -156,7 +155,6 @@ describe.if(hasPhpCredentials())('inverse/indexation family differential (spec g
 	});
 
 	test('children get_data on a DATA-DRIVEN tipo (§503): EMPTY on both engines (pinned)', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = getDataRqo('component_relation_children', 'hierarchy49', TREE_SECTION, '503', 5);
 		const { php: phpItems, ts: tsItems } = await compareGetData(rqo);
 		// The section has no ontology node for it: the generic path resolves no table/children
@@ -166,7 +164,6 @@ describe.if(hasPhpCredentials())('inverse/indexation family differential (spec g
 	});
 
 	test('indexation get_data: relation_index on the cloned tree §1024 — tag-carrying dd96 inverse page', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = getDataRqo('component_relation_index', 'hierarchy40', TREE_SECTION, '1024', 5);
 		const { php: phpItems, ts: tsItems } = await compareGetData(rqo);
 		expect(tsItems.length).toBeGreaterThan(0);
@@ -181,7 +178,6 @@ describe.if(hasPhpCredentials())('inverse/indexation family differential (spec g
 	});
 
 	test('relation_related MULTIDIRECTIONAL: §61683 computed references on the edit item', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = {
 			action: 'read',
 			dd_api: 'dd_core_api',

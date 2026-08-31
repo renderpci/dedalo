@@ -62,7 +62,6 @@ describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
 
 	beforeAll(async () => {
 		await ensureTestCorpus([...CORPUS_SECTIONS]);
-		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -86,13 +85,11 @@ describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
 	}
 
 	test('plain section count matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const sqo = { section_tipo: ['testmint1'], limit: 10, offset: 0 };
 		expect(await tsCount(structuredClone(sqo))).toBe(await phpCount(sqo));
 	});
 
 	test('filtered count matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const sqo = {
 			section_tipo: ['testmint1'],
 			limit: 10,

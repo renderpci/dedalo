@@ -65,7 +65,6 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('dd_ts_api.update_parent_data — cycle rejection', () => {
 	test('self-target is rejected with error.code tree.cycle (envelope v2)', async () => {
-		if (!hasPhpCredentials()) return;
 		const body = await ts({
 			dd_api: 'dd_ts_api',
 			action: 'update_parent_data',
@@ -92,7 +91,6 @@ describe.if(hasPhpCredentials())(
 	'dd_ts_api.add_child — defaults + parent link, then revert',
 	() => {
 		test('creates a child with dd64/1 is_descriptor and a dd47 parent locator', async () => {
-			if (!hasPhpCredentials()) return;
 			const created = await ts({
 				dd_api: 'dd_ts_api',
 				action: 'add_child',

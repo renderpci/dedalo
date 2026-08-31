@@ -304,7 +304,6 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 		for (const combo of COMBOS) {
 			const tag = `${corpus.name} — ${combo.format}/${combo.breakdown}${combo.fill ? '' : ' fill_the_gaps=false'}`;
 			test(tag, async () => {
-				if (!hasPhpCredentials()) return;
 				const rqo = buildRqo(corpus, combo.format, combo.breakdown, combo.fill);
 
 				const phpGrid = ((
@@ -360,7 +359,6 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 	for (const corpus of CORPUS) {
 		for (const breakdown of ['default', 'rows', 'columns']) {
 			test(`${corpus.name} — WC-008 single-step portal COMPACT grid_value/${breakdown}`, async () => {
-				if (!hasPhpCredentials()) return;
 				const rqo = buildRqo(corpus, 'grid_value', breakdown, true, true);
 				const phpGrid = ((
 					adoptFrozen((await php.call(structuredClone(rqo) as Record<string, unknown>)).body) as {
@@ -415,7 +413,6 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 	}
 
 	test('value format dedupes same-top-component ddos into ONE column (PHP register-by-key)', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = buildRqo(CORPUS[1], 'value', 'default', true);
 		const tsResult = await dispatchRqo(
 			structuredClone(rqo) as never,

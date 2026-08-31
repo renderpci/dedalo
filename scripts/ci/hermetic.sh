@@ -109,6 +109,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/ssrf_one_guard_tripwire.test.ts
 	test/unit/lint_scope_tripwire.test.ts
 	test/unit/compose_invocation_tripwire.test.ts
+	test/unit/gate_vacuity_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts

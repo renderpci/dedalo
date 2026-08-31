@@ -86,7 +86,6 @@ describe.if(hasPhpCredentials())('component_image differential (edit read)', () 
 		// one: `.dedalo_test_media`). ensureMediaKit plants every identity
 		// files_info.json names, at the engine's own path grammar.
 		await ensureMediaKit();
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -137,7 +136,6 @@ describe.if(hasPhpCredentials())('component_image differential (edit read)', () 
 	});
 
 	test('media features match the oracle (install-config extensions included)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(phpContext).toBeDefined();
 		expect(tsContext).toBeDefined();
 		// The whole features object is the contract — allowed_extensions and
@@ -147,12 +145,10 @@ describe.if(hasPhpCredentials())('component_image differential (edit read)', () 
 	});
 
 	test('legacy_model is the raw stored model name (emitted unconditionally)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsContext?.legacy_model).toBe(phpContext?.legacy_model as string);
 	});
 
 	test('tool_transcription tool_config is enriched on the TOOL context', () => {
-		if (!hasPhpCredentials()) return;
 		const findTool = (entry: Record<string, unknown> | undefined) =>
 			((entry?.tools ?? []) as Record<string, unknown>[]).find(
 				(tool) => tool.name === 'tool_transcription',
@@ -167,7 +163,6 @@ describe.if(hasPhpCredentials())('component_image differential (edit read)', () 
 	});
 
 	test('properties.tool_config mirrors the enrichment (PHP shared-object mutation)', () => {
-		if (!hasPhpCredentials()) return;
 		const configOf = (entry: Record<string, unknown> | undefined) =>
 			((entry?.properties ?? {}) as { tool_config?: Record<string, unknown> }).tool_config
 				?.tool_transcription;
@@ -175,7 +170,6 @@ describe.if(hasPhpCredentials())('component_image differential (edit read)', () 
 	});
 
 	test('data entry projection matches (identity + files_info + names)', () => {
-		if (!hasPhpCredentials()) return;
 		const project = (item: Record<string, unknown> | undefined) => {
 			const entries = (item?.entries ?? []) as Record<string, unknown>[];
 			return {

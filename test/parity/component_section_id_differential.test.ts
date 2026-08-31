@@ -54,7 +54,6 @@ describe.if(hasPhpCredentials())(
 
 		beforeAll(async () => {
 			await ensureTestCorpus([SECTION]);
-			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			await client.login(
 				config.phpReference.username as string,
@@ -101,13 +100,11 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('entries carry the record own section_id, not null', () => {
-			if (!hasPhpCredentials()) return;
 			expect(phpItem?.entries).toEqual([SECTION_ID]);
 			expect(tsItem?.entries).toEqual([SECTION_ID]);
 		});
 
 		test('identity/envelope fields match PHP exactly', () => {
-			if (!hasPhpCredentials()) return;
 			expect(tsItem).toBeDefined();
 			expect(tsItem?.section_id).toEqual(phpItem?.section_id);
 			expect(tsItem?.section_tipo).toEqual(phpItem?.section_tipo);

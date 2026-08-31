@@ -83,7 +83,6 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('dd_ts_api.get_node_data differential', () => {
 	test('descriptor node payload matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = {
 			dd_api: 'dd_ts_api',
 			action: 'get_node_data',
@@ -106,7 +105,6 @@ describe.if(hasPhpCredentials())('dd_ts_api.get_node_data differential', () => {
 
 describe.if(hasPhpCredentials())('dd_ts_api.get_children_data differential (mode A)', () => {
 	test('paginated children build matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = {
 			dd_api: 'dd_ts_api',
 			action: 'get_children_data',

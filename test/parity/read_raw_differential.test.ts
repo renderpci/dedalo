@@ -172,7 +172,6 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 
 	beforeAll(async () => {
 		await ensureTestCorpus(CORPUS_SCOPE);
-		if (!hasPhpCredentials()) return;
 		component = await callBoth(COMPONENT_RQO);
 		section = await callBoth(SECTION_RQO, true);
 		targetSection = await callBoth(TARGET_SECTION_RQO);
@@ -183,7 +182,6 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 	});
 
 	test('component read_raw returns the same raw value + table as PHP', () => {
-		if (!hasPhpCredentials()) return;
 		expect(component.ts.data).toEqual(component.php.result);
 		// THE CLONE-ROOT TABLE FACT, asserted instead of compared. Every generic
 		// `test`-TLD section stores in `matrix_test` (the whole point: no test
@@ -196,7 +194,6 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 	});
 
 	test('section read_raw returns the same matched-row columns as PHP', () => {
-		if (!hasPhpCredentials()) return;
 		// PHP fetch_all rows carry the jsonb columns; compare the columns TS emits
 		// against PHP for the matched record (section_id + each jsonb column).
 		const tsRow = (section.ts.data as Record<string, unknown>[])[0];
@@ -233,7 +230,6 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 	});
 
 	test('target_section read_raw harvests the same locators as PHP', () => {
-		if (!hasPhpCredentials()) return;
 		const phpLocators = targetSection.php.result as Record<string, unknown>[];
 		const tsLocators = targetSection.ts.data as Record<string, unknown>[];
 		expect(phpLocators.length).toBeGreaterThan(0);

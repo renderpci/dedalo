@@ -16,7 +16,6 @@ describe.if(hasPhpCredentials())('start action differential', () => {
 	let tsSection: Record<string, unknown>;
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -57,7 +56,6 @@ describe.if(hasPhpCredentials())('start action differential', () => {
 	});
 
 	test('default-section context matches (tipo/model/label/matrix_table/config)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsSection.tipo).toBe(phpSection.tipo);
 		expect(tsSection.model).toBe(phpSection.model);
 		expect(tsSection.label).toBe(phpSection.label);
@@ -68,7 +66,6 @@ describe.if(hasPhpCredentials())('start action differential', () => {
 	});
 
 	test('start builds context WITHOUT the top-level request_config stamp (PHP parity)', () => {
-		if (!hasPhpCredentials()) return;
 		// PHP start uses add_request_config=false — no top-level request_config
 		// on the entry (the config is only echoed into properties.source, which
 		// PHP DERIVES from the section_list config; that properties.source

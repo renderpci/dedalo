@@ -90,7 +90,6 @@ describe.if(hasPhpCredentials())('section buttons context differential (Phase 6c
 			let tsParentGrouper: unknown;
 
 			beforeAll(async () => {
-				if (!hasPhpCredentials()) return;
 				const client = new PhpApiClient();
 				await client.login(
 					config.phpReference.username as string,
@@ -125,7 +124,6 @@ describe.if(hasPhpCredentials())('section buttons context differential (Phase 6c
 			});
 
 			test('buttons match PHP (typo/type/tipo/model/label, in order)', () => {
-				if (!hasPhpCredentials()) return;
 				// What this gate compares carries no install token on either side.
 				expect(installTokensIn(phpButtons)).toEqual([]);
 				expect(installTokensIn(tsButtons)).toEqual([]);
@@ -135,7 +133,6 @@ describe.if(hasPhpCredentials())('section buttons context differential (Phase 6c
 			});
 
 			test('the section entry parent is each ontology own parent (the uncloned seam)', () => {
-				if (!hasPhpCredentials()) return;
 				if (unclonedSeam) {
 					// The frozen body names the INSTALL area; the clone root is
 					// parented by its own TLD root. Both are asserted, so the seam

@@ -119,7 +119,6 @@ beforeAll(async () => {
 describe.if(hasPhpCredentials())('area dashboard differential', () => {
 	for (const testCase of CASES) {
 		test(`${testCase.model} (${testCase.tipo}) dashboard byte-equal`, () => {
-			if (!hasPhpCredentials()) return;
 			const pair = results.get(testCase.tipo);
 			expect(pair).toBeDefined();
 			if (pair === undefined) return;

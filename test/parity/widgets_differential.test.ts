@@ -93,7 +93,6 @@ beforeAll(async () => {
 
 describe.if(hasPhpCredentials())('maintenance widget catalog differential', () => {
 	test('the widget catalog METADATA matches PHP byte-for-byte (all 30, WC-030 merge normalized)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(phpItem).not.toBeNull();
 		expect(tsItem).not.toBeNull();
 		// php_runtime (WC-030) is PHP-ONLY now: it was merged into runtime_info
@@ -209,7 +208,6 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 	});
 
 	test('the read returns a non-empty context matching PHP (client render contract)', () => {
-		if (!hasPhpCredentials()) return;
 		// The client (area_maintenance.js) renders the dashboard BLANK when
 		// result.context is empty — the TS read used to return []. Pin the
 		// non-empty context + its client-load-bearing fields against PHP.
@@ -256,7 +254,6 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 	});
 
 	test('the data item envelope matches PHP', () => {
-		if (!hasPhpCredentials()) return;
 		const strip = (item: Record<string, unknown>): Record<string, unknown> => {
 			const { datalist: _datalist, ...rest } = item;
 			return rest;

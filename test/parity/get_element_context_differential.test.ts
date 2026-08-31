@@ -109,7 +109,6 @@ describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate
 	let rewrittenTipos = 0;
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -160,7 +159,6 @@ describe.if(hasPhpCredentials())('get_element_context differential (Phase 6 gate
 	});
 
 	test('section + component element contexts match PHP (subset + tools + buttons)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(results.length).toBe(CASES.length);
 		expect(rewrittenTipos).toBeGreaterThan(CASES.length);
 		/** Declarations that actually fired — a stale one must not shrink the diff. */

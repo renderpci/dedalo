@@ -177,7 +177,6 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('tool_export grid differential', () => {
 	test('meta total + row VALUES match PHP exactly', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsGrid.meta?.total).toBe(phpGrid.meta?.total as number);
 		expect(phpGrid.rows?.length ?? 0).toBeGreaterThan(0);
 		// Rows: rec/sub/c must be byte-equal (the flat values are the contract).
@@ -190,7 +189,6 @@ describe.if(hasPhpCredentials())('tool_export grid differential', () => {
 	});
 
 	test('columns match on the stable identity fields', () => {
-		if (!hasPhpCredentials()) return;
 		const stable = (column: Record<string, unknown>): Record<string, unknown> => ({
 			t: column.t,
 			i: column.i,
@@ -251,7 +249,6 @@ const GRID_VALUE_RQO = (breakdown: string): Record<string, unknown> => ({
 describe.if(hasPhpCredentials())('tool_export grid_value breakdown differential', () => {
 	for (const breakdown of ['default', 'rows', 'columns']) {
 		test(`breakdown '${breakdown}' rows + columns match PHP`, async () => {
-			if (!hasPhpCredentials()) return;
 			const php = new PhpApiClient();
 			await php.login(
 				config.phpReference.username as string,
@@ -308,7 +305,6 @@ describe.if(hasPhpCredentials())('tool_export grid_value breakdown differential'
 // fields (line ORDER pins the col-before-first-use interleaving).
 describe.if(hasPhpCredentials())('tool_export ndjson_stream differential', () => {
 	test('grid_value stream lines match PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = GRID_VALUE_RQO('default');
 		(rqo.options as Record<string, unknown>).ndjson_stream = true;
 
@@ -386,7 +382,6 @@ describe.if(hasPhpCredentials())('tool_export dedalo_raw differential', () => {
 	];
 	for (const testCase of cases) {
 		test(`${testCase.section} raw cells match PHP byte-for-byte`, async () => {
-			if (!hasPhpCredentials()) return;
 			const rqo = {
 				action: 'tool_request',
 				dd_api: 'dd_tools_api',
@@ -472,7 +467,6 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 	];
 	for (const leaf of leaves) {
 		test(`test6113 → ${leaf.component_tipo} rows match PHP byte-for-byte`, async () => {
-			if (!hasPhpCredentials()) return;
 			const rqo = {
 				action: 'tool_request',
 				dd_api: 'dd_tools_api',
@@ -555,7 +549,6 @@ describe.if(hasPhpCredentials())('tool_export multi-hop path differential', () =
 describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential', () => {
 	for (const breakdown of ['default', 'rows', 'columns']) {
 		test(`multi-hop breakdown '${breakdown}' matches PHP`, async () => {
-			if (!hasPhpCredentials()) return;
 			const rqo = {
 				action: 'tool_request',
 				dd_api: 'dd_tools_api',
@@ -657,7 +650,6 @@ describe.if(hasPhpCredentials())('tool_export grid_value multi-hop differential'
 // media base); the column carries cell_type 'img'.
 describe.if(hasPhpCredentials())('tool_export media cell differential', () => {
 	test('image cells are the 1.5MB quality URLs, byte-equal vs PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = {
 			action: 'tool_request',
 			dd_api: 'dd_tools_api',

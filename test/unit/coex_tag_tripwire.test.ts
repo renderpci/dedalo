@@ -35,10 +35,15 @@ const REPO_ROOT = join(import.meta.dir, '..', '..');
 /** Bare-word COEX tag (never matches COEXISTENCE/COEXIST). */
 const COEX_TAG = /\bCOEX\b/;
 
+/** Files scanned, so the verdict below can prove it read something. */
+let scannedCount = 0;
+
 function coexTaggedSourceFiles(): string[] {
 	const files: string[] = [];
 	const glob = new Glob('{src,tools}/**/*.ts');
+	scannedCount = 0;
 	for (const file of glob.scanSync({ cwd: REPO_ROOT })) {
+		scannedCount += 1;
 		const text = readFileSync(join(REPO_ROOT, file), 'utf8');
 		if (COEX_TAG.test(text)) files.push(file);
 	}
@@ -46,6 +51,23 @@ function coexTaggedSourceFiles(): string[] {
 }
 
 describe('COEX tag lint (DEC-19 tripwire, post-cutover form)', () => {
+	// A CORPUS FLOOR AND A POSITIVE CONTROL (P2-19 / GATE-29). "This list is
+	// empty" is a verdict that passes perfectly when the scan read NOTHING:
+	// rename src/ or break the glob and this gate went green having opened zero
+	// files. The floor proves it looked; the control proves it can still see.
+	test('the scan actually reads the tree, and the matcher still fires', () => {
+		coexTaggedSourceFiles();
+		expect(
+			scannedCount,
+			'the {src,tools} glob matched almost nothing — the scan is blind',
+		).toBeGreaterThan(500);
+		// Planted offender: the matcher must catch the shape it exists to catch,
+		// and must not catch the words it deliberately excludes.
+		expect(COEX_TAG.test('// COEX: temporary PHP hedge')).toBe(true);
+		expect(COEX_TAG.test('see rewrite/COEXISTENCE.md')).toBe(false);
+		expect(COEX_TAG.test('COEXIST')).toBe(false);
+	});
+
 	test('the live COEX inventory is EMPTY (cutover 2026-07-11 — no new hedges, ever)', () => {
 		expect(
 			coexTaggedSourceFiles(),

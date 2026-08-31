@@ -102,7 +102,6 @@ function sectionEntry(context: Record<string, unknown>[], tipo: string): Record<
 describe.if(hasPhpCredentials())('section context extras differential (SECTION_SPEC §6)', () => {
 	for (const sectionTipo of SECTIONS) {
 		test(`${sectionTipo}: section_map + matrix_table + relation_list_tipo match PHP`, async () => {
-			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			await client.login(
 				config.phpReference.username as string,

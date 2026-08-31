@@ -69,7 +69,6 @@ describe.if(hasPhpCredentials())('component get_data differential (Phase 4h gate
 
 	beforeAll(async () => {
 		await ensureTestCorpus(CORPUS_SCOPE);
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -104,7 +103,6 @@ describe.if(hasPhpCredentials())('component get_data differential (Phase 4h gate
 	});
 
 	test('portal own item: paged locators match PHP; the total is corpus scale', () => {
-		if (!hasPhpCredentials()) return;
 		const phpPortal = phpData.find((item) => item.tipo === PORTAL) as Record<string, unknown>;
 		const tsPortal = tsData.find((item) => item.tipo === PORTAL) as Record<string, unknown>;
 		expect(tsPortal).toBeDefined();
@@ -132,7 +130,6 @@ describe.if(hasPhpCredentials())('component get_data differential (Phase 4h gate
 	});
 
 	test('expanded child records match PHP (per-target component set + values)', () => {
-		if (!hasPhpCredentials()) return;
 		// Compare the child items of the paged targets: same (tipo, section_id,
 		// entries) set. PHP may carry extra children we ledger; assert OUR
 		// emitted children are a subset that matches PHP.

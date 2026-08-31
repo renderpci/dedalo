@@ -149,7 +149,6 @@ describe.if(hasPhpCredentials())(
 	'activity listing differential (dd542 over matrix_activity)',
 	() => {
 		test('envelope entries match PHP exactly', () => {
-			if (!hasPhpCredentials()) return;
 			const phpEnvelope = phpData[0] as { entries?: unknown[] };
 			const tsEnvelope = tsData[0] as { entries?: unknown[] };
 			expect(phpEnvelope?.entries?.length ?? 0).toBeGreaterThan(0);
@@ -157,7 +156,6 @@ describe.if(hasPhpCredentials())(
 		});
 
 		test('every activity item matches PHP on the normalized fields', () => {
-			if (!hasPhpCredentials()) return;
 			const keyOf = (item: Record<string, unknown>): string =>
 				`${item.row_section_id}|${item.tipo}|${item.section_id}`;
 			const phpByKey = new Map(phpData.slice(1).map((item) => [keyOf(item), comparableItem(item)]));

@@ -43,7 +43,6 @@ const CHECK_BOX = seed('rsc', 156);
 describe.if(hasPhpCredentials())('component edit-context extras differential', () => {
 	let php: PhpApiClient;
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	});
@@ -58,7 +57,6 @@ describe.if(hasPhpCredentials())('component edit-context extras differential', (
 	}
 
 	test(`media component features: quality ladder matches PHP (${IMAGE} image)`, async () => {
-		if (!hasPhpCredentials()) return;
 		const php_ = (await phpCtx('component_image', IMAGE, SECTION)).features as Record<
 			string,
 			unknown
@@ -84,7 +82,6 @@ describe.if(hasPhpCredentials())('component edit-context extras differential', (
 	});
 
 	test(`relation component target_sections match PHP (${CHECK_BOX} check_box)`, async () => {
-		if (!hasPhpCredentials()) return;
 		const php_ = (await phpCtx('component_check_box', CHECK_BOX, SECTION)).target_sections;
 		clearStructureContextCache();
 		const ts = (

@@ -102,7 +102,6 @@ async function phpCount(rqo: Record<string, unknown>): Promise<Record<string, un
 
 describe.if(hasPhpCredentials())('related count differential (relation_list totals)', () => {
 	test('the plain total matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const phpResult = await phpCount(countRqo());
 		const tsResult = await tsCount(countRqo());
 		expect(Number(phpResult.total)).toBeGreaterThan(0);
@@ -110,7 +109,6 @@ describe.if(hasPhpCredentials())('related count differential (relation_list tota
 	});
 
 	test('group_by section_tipo yields the same per-group totals', async () => {
-		if (!hasPhpCredentials()) return;
 		const phpResult = await phpCount(countRqo(['section_tipo']));
 		const tsResult = await tsCount(countRqo(['section_tipo']));
 		expect(tsResult.total).toEqual(phpResult.total);

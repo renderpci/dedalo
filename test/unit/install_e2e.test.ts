@@ -100,21 +100,41 @@ function runCli(extraArgs: string[] = []): { exitCode: number; out: string } {
 	};
 }
 
-describe('TS-native install e2e (P5)', () => {
-	test('the CLI installs a fresh DB and verifies the root login', () => {
-		if (!available) {
-			console.warn('[UNCOVERED] no admin Postgres connection — e2e install skipped');
-			return;
-		}
-		const { exitCode, out } = runCli();
-		expect(out).toContain('root login verified');
-		expect(exitCode).toBe(0);
-	}, 120000);
+/**
+ * THE REASON GOES IN THE NAME (P2-19 / GATE-25).
+ *
+ * These two tests used to `return` when no admin connection was available —
+ * the first after a console.warn, the second in silence. Bun counts a returning
+ * body as a PASS, so the ENTIRE PHP-free install path reported two green ticks
+ * having spawned nothing whenever the developer's role lacked CREATEDB. The
+ * header above says this file "Skips loudly"; it did not.
+ *
+ * `test.if` reports a real SKIP, and the name carries why, so an unrunnable
+ * gate is legible in the runner's own output instead of indistinguishable from
+ * a verified one.
+ */
+const WHY_SKIPPED =
+	'SKIPPED: no admin Postgres connection (DB_ADMIN_* unset, or the role lacks CREATEDB)';
+const named = (what: string): string => (available ? what : `${what} — ${WHY_SKIPPED}`);
 
-	test('re-running the CLI on the now-populated DB refuses the restore', () => {
-		if (!available) return;
-		const { exitCode, out } = runCli();
-		expect(exitCode).not.toBe(0);
-		expect(out).toContain('not empty');
-	}, 60000);
+describe('TS-native install e2e (P5)', () => {
+	test.if(available)(
+		named('the CLI installs a fresh DB and verifies the root login'),
+		() => {
+			const { exitCode, out } = runCli();
+			expect(out).toContain('root login verified');
+			expect(exitCode).toBe(0);
+		},
+		120000,
+	);
+
+	test.if(available)(
+		named('re-running the CLI on the now-populated DB refuses the restore'),
+		() => {
+			const { exitCode, out } = runCli();
+			expect(exitCode).not.toBe(0);
+			expect(out).toContain('not empty');
+		},
+		60000,
+	);
 });

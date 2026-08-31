@@ -105,7 +105,6 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('multi-hop search differential (relation joins)', () => {
 	test('the 2-hop count matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const phpBody = (await (php as PhpApiClient).call(rqoFor('count'))).body as {
 			result?: { total?: number };
 		};
@@ -115,7 +114,6 @@ describe.if(hasPhpCredentials())('multi-hop search differential (relation joins)
 	});
 
 	test('the 2-hop paged record set matches PHP', async () => {
-		if (!hasPhpCredentials()) return;
 		const phpBody = (await (php as PhpApiClient).call(rqoFor('search'))).body as {
 			result?: { data?: { entries?: { section_id: unknown }[] }[] };
 		};

@@ -232,7 +232,6 @@ function ddoValueMap(result: ReadResult): Map<string, string> {
 
 describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0)', () => {
 	test('membership+values: small q returns the SAME record set and ddo values', async () => {
-		if (!hasPhpCredentials()) return;
 		const tsResult = await tsCall(autocompleteRqo(SMALL_Q));
 		const phpResult = await phpCall(autocompleteRqo(SMALL_Q));
 
@@ -252,7 +251,6 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 	}, 60000);
 
 	test('scale: large q fills the page on both engines and count totals agree', async () => {
-		if (!hasPhpCredentials()) return;
 		const tsResult = await tsCall(autocompleteRqo(LARGE_Q));
 		const phpResult = await phpCall(autocompleteRqo(LARGE_Q));
 		expect(entryKeySet(tsResult).size).toBe(LIMIT);
@@ -267,7 +265,6 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 	}, 60000);
 
 	test('real portal shape: $and over [text, date] lang-less fields (Ceca test6113)', async () => {
-		if (!hasPhpCredentials()) return;
 		// Browser-captured shape (2026-07-09): the Ceca picker sends the typed q
 		// to EVERY search field under $and — a translatable input_text
 		// (testmint1002, NO clause lang) AND a component_date (testmint1033).
@@ -355,7 +352,6 @@ describe.if(hasPhpCredentials())('autocomplete picker search differential (BUG-0
 	}, 60000);
 
 	test('multilingual thesaurus picker: fallback_value + ddinfo breadcrumb byte-equal (seed portal → test2830)', async () => {
-		if (!hasPhpCredentials()) return;
 		// The rsc92 "Municipio de residencia" shape (2026-07-09): translatable
 		// terms stored only in lg-fra must arrive as fallback_value (the fallback
 		// chain iterates PROJECTS_DEFAULT_LANGS — config, never hardcoded), and

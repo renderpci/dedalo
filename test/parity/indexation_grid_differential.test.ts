@@ -101,7 +101,6 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 
 	beforeAll(async () => {
 		await ensureTestCorpus([...CORPUS_SECTIONS]);
-		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -147,7 +146,6 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 
 	for (const [termTipo, termId, target, limit, offset] of CASES) {
 		test(`grid for ${termTipo}_${termId} (${target.join('+')}${limit !== undefined ? `, limit ${limit} offset ${offset}` : ''}) is DEEP-EQUAL to PHP`, async () => {
-			if (!hasPhpCredentials()) return;
 			const rqo = gridRqo(termTipo, termId, target, limit ?? 200, offset ?? 0);
 			const [ts, php] = [await tsGrid(rqo), await client.call(rqo)];
 			expect(ts.status).toBe(200);
@@ -173,7 +171,6 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 	}
 
 	test('the gate is not vacuous: the rich case resolves real values', async () => {
-		if (!hasPhpCredentials()) return;
 		const ts = await tsGrid(gridRqo('testcont1', '10', [seed('rsc', 205)]));
 		const json = JSON.stringify(ts.body.data);
 		// real record values, not just structure
@@ -184,7 +181,6 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 	});
 
 	test('empty/invalid source → the SAME refusal, restated as envelope v2 (request.invalid_source, 400)', async () => {
-		if (!hasPhpCredentials()) return;
 		const rqo = {
 			action: 'get_indexation_grid',
 			dd_api: 'dd_core_api',

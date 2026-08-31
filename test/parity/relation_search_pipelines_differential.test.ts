@@ -159,19 +159,16 @@ async function diffCase(
 
 describe.if(hasPhpCredentials())('relation search pipelines differential (testtema1)', () => {
 	test("children '*' (has children) matches PHP", async () => {
-		if (!hasPhpCredentials()) return;
 		await diffCase(CHILDREN_TIPO, 'component_relation_children', 'only_operator', '*', true);
 	}, 30000);
 
 	test("children '!*' (no children) matches PHP", async () => {
-		if (!hasPhpCredentials()) return;
 		// On the harvested corpus every term had children (245/245) — both engines
 		// legitimately return the EMPTY set; the assertion is the set equality.
 		await diffCase(CHILDREN_TIPO, 'component_relation_children', 'only_operator', '!*', false);
 	}, 30000);
 
 	test("children contain / '!=' / '!==' on a real child locator match PHP", async () => {
-		if (!hasPhpCredentials()) return;
 		if (childLocator === null) throw new Error(`fixture missing: no ${SECTION} child rows`);
 		const q = { section_tipo: childLocator.section_tipo, section_id: childLocator.section_id };
 		await diffCase(CHILDREN_TIPO, 'component_relation_children', q, null, true);
@@ -180,7 +177,6 @@ describe.if(hasPhpCredentials())('relation search pipelines differential (testte
 	}, 60000);
 
 	test("index '*' (indexed terms) and '!*' (orphans) match PHP", async () => {
-		if (!hasPhpCredentials()) return;
 		await diffCase(INDEX_TIPO, 'component_relation_index', 'only_operator', '*', true);
 		await diffCase(INDEX_TIPO, 'component_relation_index', 'only_operator', '!*', true);
 	}, 60000);

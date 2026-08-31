@@ -97,7 +97,6 @@ describe.if(hasPhpCredentials())('menu tree_datalist differential (Phase 6 gate)
 	let tsSkipped: { tipo: string; reason: string }[];
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -116,12 +115,10 @@ describe.if(hasPhpCredentials())('menu tree_datalist differential (Phase 6 gate)
 	});
 
 	test('the walk produces the full plain node set (hundreds of nodes)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(phpPlain.length).toBeGreaterThan(400);
 	});
 
 	test('TS plain nodes match PHP exactly on {tipo, model, parent, label}', () => {
-		if (!hasPhpCredentials()) return;
 		const phpKeys = new Set(phpPlain.map(itemKey));
 		const tsKeys = new Set(tsItems.filter((item) => item.config === undefined).map(itemKey));
 
@@ -134,7 +131,6 @@ describe.if(hasPhpCredentials())('menu tree_datalist differential (Phase 6 gate)
 	});
 
 	test('rewritten nodes (section_tool + thesaurus virtuals) match PHP byte-for-byte', () => {
-		if (!hasPhpCredentials()) return;
 		const tsConfig = tsItems.filter((item) => item.config !== undefined);
 		expect(tsConfig.length).toBe(phpConfig.length);
 		// WC-020 ADOPTED divergence (COEXISTENCE "component_alias is TS-resolved

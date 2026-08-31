@@ -39,7 +39,6 @@ describe.if(hasPhpCredentials())('section EDIT ddo_map differential (edit form b
 	let tsParentGrouper: unknown;
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -95,7 +94,6 @@ describe.if(hasPhpCredentials())('section EDIT ddo_map differential (edit form b
 	});
 
 	test('the section entry parent is each ontology own area (the uncloned seam)', () => {
-		if (!hasPhpCredentials()) return;
 		// The frozen body names the INSTALL area; the clone root is parented by
 		// its own TLD root. Both are asserted, so the seam cannot hide a wrong
 		// value on either side.
@@ -105,7 +103,6 @@ describe.if(hasPhpCredentials())('section EDIT ddo_map differential (edit form b
 	});
 
 	test('the edit form tree matches PHP exactly (ddos, order, view)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsKeys.length).toBeGreaterThan(20); // the full section edit form
 		expect(tsKeys).toEqual(phpKeys);
 	});

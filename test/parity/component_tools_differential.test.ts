@@ -68,7 +68,6 @@ describe.if(hasPhpCredentials())('component tools differential (Phase 6 gate)', 
 
 	beforeAll(async () => {
 		await ensureTestCorpus([SECTION]);
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -113,14 +112,12 @@ describe.if(hasPhpCredentials())('component tools differential (Phase 6 gate)', 
 	});
 
 	test('the section entry parent is each ontology own area (the uncloned seam)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(frozenParentGrouper).toBe(frozenUnclonedToken);
 		expect(typeof tsParentGrouper).toBe('string');
 		expect(String(tsParentGrouper).startsWith('test')).toBe(true);
 	});
 
 	test('each component context resolves the same tool set as PHP', () => {
-		if (!hasPhpCredentials()) return;
 		expect(phpEntries.length).toBeGreaterThan(0);
 		expect(installTokensIn(phpEntries.map((entry) => entry.tipo))).toEqual([]);
 		const tsByTipo = new Map(tsEntries.map((entry) => [entry.tipo, entry]));
@@ -134,7 +131,6 @@ describe.if(hasPhpCredentials())('component tools differential (Phase 6 gate)', 
 	});
 
 	test('the translatable gate distinguishes the two components', () => {
-		if (!hasPhpCredentials()) return;
 		// input_text (translatable) shows the lang tools; section_id (non-translatable)
 		// must not — proving requirement_translatable is honoured, whatever the
 		// exact tool names are on this install.

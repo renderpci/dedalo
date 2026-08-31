@@ -100,7 +100,6 @@ describe.if(hasPhpCredentials())(
 	'multi-hop order differential (sort by a related section value)',
 	() => {
 		test('the ordered paged id sequence matches PHP', () => {
-			if (!hasPhpCredentials()) return;
 			expect(phpIds.length).toBeGreaterThan(0);
 			expect(tsIds).toEqual(phpIds);
 		});

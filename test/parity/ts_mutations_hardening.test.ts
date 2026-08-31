@@ -119,7 +119,6 @@ describe.if(hasPhpCredentials())('dd_ts_api mutation hardening', () => {
 	});
 
 	test('two concurrent add_child get distinct ids and distinct sibling orders', async () => {
-		if (!hasPhpCredentials()) return;
 		// Fire both adds concurrently — they contend on the parent node lock.
 		const [idA, idB] = await Promise.all([addChild(), addChild()]);
 		created.push(idA, idB);

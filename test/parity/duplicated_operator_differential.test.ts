@@ -95,7 +95,6 @@ describe.if(hasPhpCredentials())("duplicated operator '!!' differential", () => 
 		const tsTotal = Number((tsResult.body as { data?: { total?: unknown } }).data?.total);
 		expect(tsTotal).toBe(2);
 
-		if (!hasPhpCredentials()) return;
 		const php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 		const phpBody = (await php.call(structuredClone(COUNT_RQO) as Record<string, unknown>))

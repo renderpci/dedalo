@@ -50,7 +50,6 @@ describe.if(hasPhpCredentials())('select datalist differential (Phase 6d gate)',
 
 	beforeAll(async () => {
 		await ensureTestCorpus([SECTION]);
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -100,7 +99,6 @@ describe.if(hasPhpCredentials())('select datalist differential (Phase 6d gate)',
 	});
 
 	test('datalist options match PHP (value/label/section_id/hide, label-sorted)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsDatalist.length).toBe(phpDatalist.length);
 		expect(tsDatalist.length).toBeGreaterThan(0);
 		// Compare as sets keyed by section_id (order is label-sorted on both).

@@ -177,14 +177,12 @@ async function tsListContext(tipo: string): Promise<Ctx[]> {
 describe.if(hasPhpCredentials())('list-column sortable + order path differential', () => {
 	let php: PhpApiClient;
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		php = new PhpApiClient();
 		await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	});
 
 	for (const { tipo, minTipoRewrites } of SECTIONS) {
 		test(`${tipo}: every top-level list column's sortable + path matches PHP`, async () => {
-			if (!hasPhpCredentials()) return;
 			const columns = await phpListColumns(php, tipo, minTipoRewrites);
 			const tsCtx = await tsListContext(tipo);
 			const tsBy = new Map(tsCtx.map((e) => [`${e.tipo}|${e.section_tipo}|${e.mode}`, e]));
@@ -208,7 +206,6 @@ describe.if(hasPhpCredentials())('list-column sortable + order path differential
 	}
 
 	test('a scalar column is sortable with a single-step path; media/info are not (test6099/test6813)', async () => {
-		if (!hasPhpCredentials()) return;
 		const coins = await tsListContext('test6099');
 		const oral = await tsListContext('test6813');
 		const byTipo = (ctx: Ctx[], t: string) => ctx.find((e) => e.tipo === t);

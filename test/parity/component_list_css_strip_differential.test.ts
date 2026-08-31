@@ -165,7 +165,6 @@ describe.if(hasPhpCredentials())(
 	() => {
 		let php: PhpApiClient;
 		beforeAll(async () => {
-			if (!hasPhpCredentials()) return;
 			php = new PhpApiClient();
 			await php.login(
 				config.phpReference.username as string,
@@ -175,7 +174,6 @@ describe.if(hasPhpCredentials())(
 
 		for (const fixture of COMPONENTS) {
 			test(`${fixture.tipo}: edit css matches PHP and is NON-null (fixture floor)`, async () => {
-				if (!hasPhpCredentials()) return;
 				const phpCss = await phpElementCss(php, fixture, 'edit');
 				// Non-triviality floor: the fixture must still carry authored css,
 				// or the list rows below pass vacuously (null == null).
@@ -184,7 +182,6 @@ describe.if(hasPhpCredentials())(
 			});
 
 			test(`${fixture.tipo}: list css is STRIPPED on both engines`, async () => {
-				if (!hasPhpCredentials()) return;
 				const phpCss = await phpElementCss(php, fixture, 'list');
 				expect(phpCss).toBeNull();
 				expect(await tsElementCss(fixture, 'list')).toBeNull();
@@ -193,7 +190,6 @@ describe.if(hasPhpCredentials())(
 
 		for (const fixture of PORTALS_WITH_CHILD) {
 			test(`${fixture.tipo}: portal list css = section_list child's (swap), edit css own`, async () => {
-				if (!hasPhpCredentials()) return;
 				const phpEdit = await phpElementCss(php, fixture, 'edit');
 				expect(phpEdit).not.toBeNull();
 				expect(await tsElementCss(fixture, 'edit')).toEqual(phpEdit);
@@ -207,7 +203,6 @@ describe.if(hasPhpCredentials())(
 
 		for (const fixture of PORTALS_WITHOUT_CHILD) {
 			test(`${fixture.tipo}: child-less portal strips to null in list, keeps edit css`, async () => {
-				if (!hasPhpCredentials()) return;
 				const phpEdit = await phpElementCss(php, fixture, 'edit');
 				expect(phpEdit).not.toBeNull();
 				expect(await tsElementCss(fixture, 'edit')).toEqual(phpEdit);
@@ -218,7 +213,6 @@ describe.if(hasPhpCredentials())(
 
 		for (const fixture of VIEW_EDGE_PORTALS) {
 			test(`${fixture.tipo}: list-mode view falls back to the portal's OWN '${fixture.view}'`, async () => {
-				if (!hasPhpCredentials()) return;
 				const phpEntry = await phpElementEntry(php, fixture, 'list');
 				const tsEntry = await tsElementEntry(fixture, 'list');
 				expect(tsEntry?.view ?? null).toEqual(phpEntry.view ?? null);
@@ -228,7 +222,6 @@ describe.if(hasPhpCredentials())(
 		}
 
 		test('the type section in tm mode emits its OWN css (swap/strip is list-only)', async () => {
-			if (!hasPhpCredentials()) return;
 			const fixture = { tipo: 'test6099', model: 'section', section: 'test6099' };
 			const phpCss = await phpElementCss(php, fixture, 'tm');
 			expect(await tsElementCss(fixture, 'tm')).toEqual(phpCss ?? null);

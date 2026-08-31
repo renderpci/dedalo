@@ -263,7 +263,6 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	let tsStatus = 0;
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -299,7 +298,6 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	});
 
 	test('envelope: success signalled, dedalo_version present on both', () => {
-		if (!hasPhpCredentials()) return;
 		// v2 restatement of the old `msg` byte-equality: PHP carried its success
 		// prose in `msg`; envelope v2 signals success with `ok:true` + 200 and
 		// carries no prose (WC-2026-08-16-error-envelope-compat-removal). The
@@ -315,13 +313,11 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	});
 
 	test('main.css is pinned first on both sides (the one contractual order)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsBody.data[0]).toEqual({ type: 'css', url: '/dedalo/core/page/css/main.css' });
 		expect(phpBody.result[0]).toEqual({ type: 'css', url: '/dedalo/core/page/css/main.css' });
 	});
 
 	test('entry shape: exactly {type,url}, type js|css, root-relative url', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsBody.data.length).toBeGreaterThan(100);
 		for (const entry of tsBody.data) {
 			expect(Object.keys(entry).sort()).toEqual(['type', 'url']);
@@ -331,7 +327,6 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	});
 
 	test('file set matches the oracle exactly (order + tool_common + WC-013 normalized)', () => {
-		if (!hasPhpCredentials()) return;
 		const keep = (entry: ManifestEntry) =>
 			!isToolAssistantEntry(entry) &&
 			!isTsOnlyEntry(entry) &&
@@ -388,7 +383,6 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	});
 
 	test('WC-013: the TS tool_assistant census is the server-driven file set', () => {
-		if (!hasPhpCredentials()) return;
 		const tsAssistant = tsBody.data
 			.filter(isToolAssistantEntry)
 			.map((entry) => entry.url.split('/').pop())
@@ -412,7 +406,6 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 	});
 
 	test('every TS url resolves through the static surfaces the server serves', () => {
-		if (!hasPhpCredentials()) return;
 		for (const entry of tsBody.data) {
 			let servedPath: string | null = null;
 			// tools_common needs no arm of its own since WC-006's 2026-08-16

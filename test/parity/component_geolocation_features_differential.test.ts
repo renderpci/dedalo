@@ -50,7 +50,6 @@ describe.if(hasPhpCredentials())('component_geolocation features (edit context)'
 	let tsFeatures: unknown;
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -70,7 +69,6 @@ describe.if(hasPhpCredentials())('component_geolocation features (edit context)'
 	}, 60000);
 
 	test('geolocation edit context carries features.geo_provider matching PHP', () => {
-		if (!hasPhpCredentials()) return;
 		expect(phpFeatures).toBeDefined(); // PHP always appends it (full context)
 		// Lift ONLY the ledgered divergence off the TS side, by name; everything
 		// else stays a strict byte comparison against PHP.

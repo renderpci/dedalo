@@ -62,7 +62,6 @@ afterAll(async () => {
 describe.if(hasPhpCredentials())('area_thesaurus ts_search injection differential', () => {
 	// Two live round-trips (PHP + TS) exceed the default 5s per-test budget.
 	test('keyword search embeds a matching ts_search tree', async () => {
-		if (!hasPhpCredentials()) return;
 		// A read RQO carrying a search SQO (the client's search_action flow).
 		const rqo = {
 			action: 'read',

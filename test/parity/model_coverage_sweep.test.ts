@@ -138,7 +138,6 @@ describe.if(hasPhpCredentials())('model coverage sweep (pre-Phase-6 measurement)
 
 	beforeAll(async () => {
 		await ensureTestCorpus(CORPUS_SCOPE);
-		if (!hasPhpCredentials()) return;
 		client = new PhpApiClient();
 		const loggedIn = await client.login(
 			config.phpReference.username as string,
@@ -152,7 +151,6 @@ describe.if(hasPhpCredentials())('model coverage sweep (pre-Phase-6 measurement)
 	});
 
 	test('sweep all models; lock the known-good set; ledger divergences', async () => {
-		if (!hasPhpCredentials()) return;
 		const divergent: string[] = [];
 		const matched: string[] = [];
 		/** Anti-vacuity accumulator for the clone-map walk (asserted below). */

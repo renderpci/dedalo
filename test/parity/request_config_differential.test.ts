@@ -186,7 +186,6 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 
 	beforeAll(async () => {
 		await ensureTestCorpus([SECTION]);
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -208,7 +207,6 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	});
 
 	test('item count, api_engine, type and sqo target sections match', () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsConfig.length).toBe(phpConfig.length);
 		expect(tsConfig.length).toBeGreaterThan(0);
 		for (let index = 0; index < phpConfig.length; index++) {
@@ -223,7 +221,6 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	});
 
 	test('case A (no rqo children): list-mode implicit fallback narrows to the section_list columns', async () => {
-		if (!hasPhpCredentials()) return;
 		const caseARqo = structuredClone(READ_RQO) as typeof READ_RQO;
 		caseARqo.show.ddo_map = [{ tipo: PORTAL, section_tipo: 'self', parent: 'self', mode: 'list' }];
 
@@ -275,7 +272,6 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	test.if(EXTERNAL_ONTOLOGY_PRESENT)(
 		'external engine item: api_config + hydrated fields_map match PHP',
 		async () => {
-			if (!hasPhpCredentials()) return;
 			const caseARqo = structuredClone(READ_RQO) as typeof READ_RQO;
 			caseARqo.show.ddo_map = [
 				{ tipo: PORTAL, section_tipo: 'self', parent: 'self', mode: 'list' },
@@ -315,7 +311,6 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 	);
 
 	test('show ddo_map resolves identically (tipo/parent/section_tipo/mode, in order)', () => {
-		if (!hasPhpCredentials()) return;
 		for (let index = 0; index < phpConfig.length; index++) {
 			const phpShow = (phpConfig[index] as { show?: { ddo_map?: RawDdo[] } }).show;
 			const tsShow = (tsConfig[index] as { show?: { ddo_map?: RawDdo[] } }).show;

@@ -79,7 +79,6 @@ beforeAll(async () => {
 
 describe.if(hasPhpCredentials())('get_ontologies differential', () => {
 	test('same ontology descriptor set (tld + target_section_tipo + typology_id)', () => {
-		if (!hasPhpCredentials()) return;
 		const php = sortByTld(captured.php ?? []).map((d) => ({
 			target_section_tipo: d.target_section_tipo,
 			tld: d.tld,
@@ -94,7 +93,6 @@ describe.if(hasPhpCredentials())('get_ontologies differential', () => {
 	});
 
 	test('names match per tld', () => {
-		if (!hasPhpCredentials()) return;
 		const phpNames = new Map(sortByTld(captured.php ?? []).map((d) => [d.tld, d.name]));
 		const tsNames = new Map(sortByTld(captured.ts ?? []).map((d) => [d.tld, d.name]));
 		expect([...tsNames.entries()].sort()).toEqual([...phpNames.entries()].sort());
@@ -103,7 +101,6 @@ describe.if(hasPhpCredentials())('get_ontologies differential', () => {
 
 describe.if(hasPhpCredentials())('developer security gates', () => {
 	test('non-developer principal is refused', async () => {
-		if (!hasPhpCredentials()) return;
 		const nonDev = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 		// Envelope v2: the tool dispatch gates REFUSE BY THROWING (tools_dispatch.test.ts).
 		const thrown = await dispatchToolRequest(nonDev, 999999, GET_ONTOLOGIES_RQO.source, {}).catch(
@@ -113,7 +110,6 @@ describe.if(hasPhpCredentials())('developer security gates', () => {
 	});
 
 	test('export_ontologies is REGISTERED and developer-gated (refuses a non-developer)', async () => {
-		if (!hasPhpCredentials()) return;
 		// The action landed 2026-07-09 (tools prod-readiness pass) — the old
 		// "unregistered → unauthorized_method" pin went stale and, worse, its
 		// superuser call actually RAN a full dd export (5s+ → timeout red). Pin
@@ -133,7 +129,6 @@ describe.if(hasPhpCredentials())('developer security gates', () => {
 	});
 
 	test('empty options passes the developer gate', async () => {
-		if (!hasPhpCredentials()) return;
 		const principal = await resolvePrincipal(-1);
 		const response = await dispatchToolRequest(principal, -1, GET_ONTOLOGIES_RQO.source, {});
 		// Envelope v2: `data` IS the flat list (the census notes ride beside it as

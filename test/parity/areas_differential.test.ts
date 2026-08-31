@@ -61,7 +61,6 @@ describe.if(hasPhpCredentials())('areas differential (Phase 6 gate — every are
 		[];
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -99,7 +98,6 @@ describe.if(hasPhpCredentials())('areas differential (Phase 6 gate — every are
 	});
 
 	test('every area model context matches PHP (subset + tools + buttons)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(results.length).toBe(AREA_CASES.length);
 		for (const { model, php, ts } of results) {
 			// Per-model comparison so a failure names the exact area model.

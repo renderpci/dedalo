@@ -86,7 +86,6 @@ beforeAll(async () => {
 describe.if(hasPhpCredentials())('tree-area boot data differential (thesaurus + ontology)', () => {
 	for (const testCase of CASES) {
 		test(`${testCase.model} value + typologies match PHP byte-for-byte`, () => {
-			if (!hasPhpCredentials()) return;
 			const pair = results.get(testCase.model);
 			expect(pair).toBeDefined();
 			const phpValue = pair?.php.value as unknown[];
@@ -102,7 +101,6 @@ describe.if(hasPhpCredentials())('tree-area boot data differential (thesaurus + 
 		// the data matched. Pin the non-empty context + its client-load-bearing
 		// fields against PHP so the regression cannot recur.
 		test(`${testCase.model} returns a non-empty context matching PHP (client render contract)`, () => {
-			if (!hasPhpCredentials()) return;
 			const pair = results.get(testCase.model);
 			expect(pair).toBeDefined();
 			expect(pair?.tsContext.length).toBe(1);

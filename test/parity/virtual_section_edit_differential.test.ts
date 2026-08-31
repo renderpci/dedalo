@@ -40,7 +40,6 @@ describe.if(hasPhpCredentials())('virtual section edit differential (SECTION_SPE
 	let tsKeys: string[];
 
 	beforeAll(async () => {
-		if (!hasPhpCredentials()) return;
 		const client = new PhpApiClient();
 		await client.login(
 			config.phpReference.username as string,
@@ -80,7 +79,6 @@ describe.if(hasPhpCredentials())('virtual section edit differential (SECTION_SPE
 	});
 
 	test(`${VIRTUAL_SECTION} (virtual of ${REAL_SECTION}) resolves the real section edit tree minus excludes`, () => {
-		if (!hasPhpCredentials()) return;
 		expect(tsKeys.length).toBeGreaterThan(50); // was 0 before the virtual fix
 		expect(tsKeys).toEqual(phpKeys);
 	});

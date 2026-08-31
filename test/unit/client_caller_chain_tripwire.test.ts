@@ -59,8 +59,15 @@ function walk(dir: string, out: string[] = []): string[] {
 	let entries: string[];
 	try {
 		entries = readdirSync(dir);
-	} catch {
-		return out;
+	} catch (error) {
+		// A SWALLOWED READ IS A BLIND GATE (P2-19 / GATE-29). This used to
+		// `return out` silently, so renaming a directory made every "this list is
+		// empty" verdict below pass having read zero bytes. An unreadable
+		// directory is a broken scan, not an empty one — say so.
+		throw new Error(
+			`client_caller_chain_tripwire could not read ${dir}: ${(error as Error).message}. ` +
+				'A scan that cannot read its corpus must FAIL, not report an empty list.',
+		);
 	}
 	for (const entry of entries) {
 		if (entry === 'node_modules' || entry.startsWith('.')) continue;
@@ -81,6 +88,27 @@ const FIXED_DEPTH = /\.caller\s*\??\.\s*caller/;
 const REACHING_FOR_SECTION = [/\bsection\b/i, /\.\s*rqo\b/, /\.\s*sqo\b/, /\.\s*get_total\s*\(/];
 
 describe('client caller chain — an ancestor is found by model, never by depth', () => {
+	// A CORPUS FLOOR AND A POSITIVE CONTROL (P2-19 / GATE-29): the verdicts below
+	// are "this list is empty", which passes perfectly over a walk that yielded
+	// nothing.
+	test('the walk actually reads the client tree, and the matcher still fires', () => {
+		const scanned = SCAN_ROOTS.flatMap((root) => walk(join(ROOT, root)));
+		expect(
+			scanned.length,
+			'the client walk found almost no .js — the scan is blind',
+		).toBeGreaterThan(200);
+		// Planted offender: the exact shape the rule exists to catch.
+		const offender = 'const s = self.caller.caller.caller.sqo;';
+		expect(FIXED_DEPTH.test(offender)).toBe(true);
+		expect(REACHING_FOR_SECTION.some((pattern) => pattern.test(offender))).toBe(true);
+		// AND A KNOWN BLIND SPOT, recorded rather than silently widened: `\bsection\b`
+		// does not match `section_tipo`, because `_` is a word character. So a
+		// fixed-depth walk ending in `.section_tipo` is NOT caught today. Widening
+		// the pattern is a change to the rule's scope and belongs in its own
+		// change with its own measurement, not smuggled in beside a corpus floor.
+		expect(REACHING_FOR_SECTION.some((p) => p.test('a.caller.caller.section_tipo'))).toBe(false);
+	});
+
 	test('no NEW fixed-depth caller walk reaches for a section', () => {
 		const violations: string[] = [];
 		for (const root of SCAN_ROOTS) {

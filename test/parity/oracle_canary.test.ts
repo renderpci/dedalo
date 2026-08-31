@@ -14,9 +14,38 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { Glob } from 'bun';
 import { config } from '../../src/config/config.ts';
 import { FIXTURE_EXEMPT_GATES, fixtureStoreStats, oracleMode } from './oracle_fixtures.ts';
 import { hasPhpCredentials, oracleOptional, PhpApiClient } from './php_client.ts';
+
+/**
+ * Parity gates that can NEVER run again (GATE-32).
+ *
+ * `hasLivePhpOracle()` is `oracleMode() !== 'fixtures' && hasRawPhpCredentials()`,
+ * ORACLE_MODE defaults to `fixtures`, and a re-harvest is impossible BY
+ * DEFINITION since the PHP engine was decommissioned. So every block guarded by
+ * it is dead — not skipped-for-now, dead.
+ *
+ * DERIVED FROM THE TREE, never a hand-kept list: the canary's whole job is to
+ * say out loud what a run does NOT verify, and it used to announce "the 0
+ * live-only gates are SKIPPED" because the only list it consulted
+ * (FIXTURE_EXEMPT_GATES) is legitimately empty — those 23 gates RETIRED with the
+ * oracle. These are different: they are still in the tree, still counted as
+ * passing files, and still verify nothing.
+ */
+function permanentlyUnreachableParityGates(): string[] {
+	const dir = import.meta.dir;
+	const found: string[] = [];
+	for (const match of new Glob('*.test.ts').scanSync({ cwd: dir })) {
+		const source = readFileSync(join(dir, match), 'utf8');
+		const blocks = source.match(/\b(?:describe|test)\.if\(hasLivePhpOracle\(\)\)/g);
+		if (blocks !== null) found.push(`${match} (${blocks.length})`);
+	}
+	return found.sort();
+}
 
 // NOT gated on hasPhpCredentials() — the whole point is to run (and fail)
 // when the oracle is absent. Do not add describe.if here.
@@ -40,6 +69,18 @@ describe('PHP oracle canary', () => {
 					`from ${stats.files} harvested gate files. Read-path parity is verified against the FROZEN ` +
 					`PHP capture; the ${FIXTURE_EXEMPT_GATES.length} live-only (fixture-exempt) gates are SKIPPED.`,
 			);
+			// ...and the ones that can never run again, which the sentence above
+			// could not see: FIXTURE_EXEMPT_GATES is empty because those gates were
+			// RETIRED, while these are still in the tree reporting green.
+			const dead = permanentlyUnreachableParityGates();
+			if (dead.length > 0) {
+				console.warn(
+					`[oracle_canary] PERMANENTLY UNREACHABLE: ${dead.length} parity file(s) still hold ` +
+						'blocks gated on hasLivePhpOracle(), which is false forever since the cutover. ' +
+						`They verify NOTHING and never will: ${dead.join(', ')}. ` +
+						'Retire them, or port their contract to a TS-native twin (engineering/ORACLE_HARVEST.md).',
+				);
+			}
 		},
 	);
 

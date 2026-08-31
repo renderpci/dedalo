@@ -125,7 +125,6 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('resolve_data differential (portal search chips)', () => {
 	test('the main item carries the injected id-stamped entries in search mode', () => {
-		if (!hasPhpCredentials()) return;
 		const phpMain = phpData.find((item) => item.tipo === AUTOCOMPLETE);
 		const tsMain = tsData.find((item) => item.tipo === AUTOCOMPLETE);
 		expect(phpMain).toBeDefined();
@@ -135,7 +134,6 @@ describe.if(hasPhpCredentials())('resolve_data differential (portal search chips
 	});
 
 	test('every locator-target child item matches PHP on the normalized fields', () => {
-		if (!hasPhpCredentials()) return;
 		const keyOf = (item: Record<string, unknown>): string =>
 			`${item.tipo}|${item.section_tipo}|${item.section_id}`;
 		const phpByKey = new Map(

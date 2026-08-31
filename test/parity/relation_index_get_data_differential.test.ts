@@ -136,7 +136,6 @@ describe.if(hasPhpCredentials())(
 	() => {
 		for (const testCase of CASES) {
 			test(`${testCase.name}: item sequence matches PHP`, () => {
-				if (!hasPhpCredentials()) return;
 				const pair = results.get(testCase.name);
 				expect(pair).toBeDefined();
 				// The unfiltered `pagination.total` counts every record in the

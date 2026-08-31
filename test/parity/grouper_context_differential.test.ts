@@ -69,7 +69,6 @@ function grouperKey(entry: Record<string, unknown>): string {
 describe.if(hasPhpCredentials())('grouper context differential (SECTION_SPEC §8)', () => {
 	for (const { tipo: section, leftovers: expectedLeftovers } of SECTIONS) {
 		test(`${section}: every PHP grouper context entry is emitted by TS with matching fields`, async () => {
-			if (!hasPhpCredentials()) return;
 			const client = new PhpApiClient();
 			await client.login(
 				config.phpReference.username as string,

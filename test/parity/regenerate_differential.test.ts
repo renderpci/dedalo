@@ -125,18 +125,15 @@ afterAll(async () => {
 
 describe.if(hasPhpCredentials())('rebuildOntology (transactional wipe-and-rebuild)', () => {
 	test('the tld nodes are rebuilt identically after rebuild', () => {
-		if (!hasPhpCredentials()) return;
 		expect(captured.after).toEqual(captured.before);
 		expect(captured.after.length).toBeGreaterThan(0);
 	});
 
 	test('NO dd_ontology_bk table is left behind (transactional, not the backup protocol)', () => {
-		if (!hasPhpCredentials()) return;
 		expect(captured.bkLeft).toBe(false);
 	});
 
 	test('an unsafe tld is refused', () => {
-		if (!hasPhpCredentials()) return;
 		expect(captured.emptyRefused).toBe(true);
 	});
 });
