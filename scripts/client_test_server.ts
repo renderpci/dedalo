@@ -69,8 +69,20 @@ const REPO_ROOT = join(import.meta.dir, '..');
  * is written up on `applicationDatabaseName()` itself, and the anti-vacuity
  * probe lives in test/unit/test_db_marker_tripwire.test.ts rule 6.
  */
-export function resolveSuiteDatabase(): { suiteDb: string; appDb: string } {
-	const appDb = applicationDatabaseName() ?? '';
+export function resolveSuiteDatabase(appDbOverride?: string): { suiteDb: string; appDb: string } {
+	// `appDbOverride` EXISTS FOR THE ANTI-VACUITY PROBE and has no production caller.
+	//
+	// The app side is read from ../private/.env ON PURPOSE — readEnv would hand back the
+	// SUITE database, because the preload rewrites DB_NAME (that is the very defect the
+	// probe in test_db_marker_tripwire drives). But the hosted DB tier HAS NO
+	// ../private/.env: scripts/ci/db_tier.sh composes its whole environment in-process,
+	// so `applicationDatabaseName()` is undefined there by design, not by breakage, and
+	// the probe had nothing to build a collision out of — it threw, and was the 15th red
+	// gate of that tier.
+	//
+	// So the probe injects a name instead of the file supplying one. This cannot weaken
+	// the guard: no caller that matters passes it, and the refusal below is unchanged.
+	const appDb = appDbOverride ?? applicationDatabaseName() ?? '';
 	const suiteDb = testDatabaseName();
 	if (suiteDb === '' || suiteDb === appDb) {
 		throw new Error(

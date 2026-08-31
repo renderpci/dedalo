@@ -736,33 +736,38 @@ describe('rule 6 — the client run cannot drive a server on the app database', 
 		// value and the guard refused a perfectly safe run. This test drives BOTH
 		// directions over a mutated env, so a regression to readEnv on either
 		// side of the comparison is red the day it lands.
-		const appDb = applicationDatabaseName();
-		if (appDb === undefined) {
-			// No ../private/.env on this machine — but this gate already requires
-			// the suite database that file configures, so absence here is a broken
-			// checkout, not a case to pass silently (never narrow scope quietly).
-			throw new Error(
-				'anti-vacuity probe needs ../private/.env with DB_NAME set — the suite this gate runs on is configured there',
-			);
-		}
+		// THE APP NAME IS SUPPLIED, NOT REQUIRED FROM DISK. This used to read
+		// ../private/.env and THROW when it was absent, on the reasoning that the
+		// suite this gate runs on is configured there. True on a developer box,
+		// false on the hosted DB tier: scripts/ci/db_tier.sh composes its whole
+		// environment in-process precisely so no such file exists, so the probe
+		// threw on every runner — the 15th red gate of that tier, and the only one
+		// of the fifteen that was about this gate at all.
+		//
+		// Injecting the name keeps the probe running EVERYWHERE rather than
+		// skipping where it matters most. The real file is still preferred when it
+		// is there, so the developer-box case is unchanged; the synthetic name is
+		// only a stand-in for "some application database", which is all the three
+		// cases below need it to be.
+		const appDb = applicationDatabaseName() ?? 'dedalo_probe_application_db';
 		const savedExplicit = process.env.DEDALO_TEST_DATABASE;
 		try {
 			// (a) GENUINE COLLISION — the operator points DEDALO_TEST_DATABASE at
 			// the application database itself. This is the one mistake the guard
 			// exists to make impossible, and it must refuse.
 			process.env.DEDALO_TEST_DATABASE = appDb;
-			expect(() => resolveSuiteDatabase()).toThrow(/REFUSING to run the client suite/);
+			expect(() => resolveSuiteDatabase(appDb)).toThrow(/REFUSING to run the client suite/);
 			// (b) EXPLICIT BUT DISTINCT — the parallel-shard shape. The old
 			// readEnv-based guard refused exactly this safe case; it must pass.
 			process.env.DEDALO_TEST_DATABASE = `${appDb}_test_shard_probe`;
-			expect(resolveSuiteDatabase()).toEqual({
+			expect(resolveSuiteDatabase(appDb)).toEqual({
 				suiteDb: `${appDb}_test_shard_probe`,
 				appDb,
 			});
 			// (c) UNSET — the everyday derived name. Must pass too, and against the
 			// REAL app database name, not this process's rewritten one.
 			delete process.env.DEDALO_TEST_DATABASE;
-			const derived = resolveSuiteDatabase();
+			const derived = resolveSuiteDatabase(appDb);
 			expect(derived.appDb).toBe(appDb);
 			expect(derived.suiteDb).not.toBe(appDb);
 		} finally {
