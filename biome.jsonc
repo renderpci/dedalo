@@ -56,6 +56,23 @@
 	},
 	"overrides": [
 		{
+			// SVG IMAGE ASSETS ARE NOT A STYLESHEET (2026-08-31, biome 2.5.11).
+			// 2.5.11 began reading the `style="…"` ATTRIBUTE inside .svg files as CSS
+			// and applying `noUnknownProperty` to it. That found 114 new errors across
+			// the logo and icon set — every one of them `enable-background`, which is
+			// a deprecated SVG 1.1 filter property that Adobe Illustrator writes into
+			// every file it exports. It is an artifact of the drawing tool, in an image,
+			// and nothing in this repo authors or reads it.
+			//
+			// ONLY THIS RULE, and only here. Excluding `**/*.svg` outright would have
+			// been a SCOPE NARROWING — svg already carried 159 real errors under 2.5.6
+			// (a11y/noSvgWithoutTitle and friends), and dropping those to make a number
+			// fall is exactly what the browser budget's shrink-only ratchet exists to
+			// prevent. Every other rule still measures these files.
+			"includes": ["**/*.svg"],
+			"linter": { "rules": { "correctness": { "noUnknownProperty": "off" } } }
+		},
+		{
 			// Tests assert presence with expect(...).not.toBeNull()/toBeDefined() before
 			// using `!`; duplicating runtime guards at ~200 gate sites adds noise without
 			// safety. Production code (src/, tools/*/server) must still narrow properly.
