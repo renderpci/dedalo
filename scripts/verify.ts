@@ -6,6 +6,7 @@
  *
  *   1. typecheck    — bunx tsc --noEmit (whole tree; zero-error rule)
  *   2. lint         — bunx biome check . (biome.jsonc; zero-error rule)
+ *   2b. lint:browser — the shrink-only budget over the trees biome.jsonc excludes
  *   3. tripwires    — the invariant-enforcement tests (always, they are the
  *                     backbone: SQL confinement, no cross-request state, config
  *                     env, json_codec/locator, SCC, descriptor completeness,
@@ -80,6 +81,7 @@ const TRIPWIRES = [
 	'test/unit/relogin_identity_tripwire.test.ts',
 	'test/unit/pdf_extract_symmetry_tripwire.test.ts',
 	'test/unit/ssrf_one_guard_tripwire.test.ts',
+	'test/unit/lint_scope_tripwire.test.ts',
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',
@@ -244,6 +246,24 @@ async function lint(): Promise<void> {
 }
 
 /**
+ * The BROWSER trees biome.jsonc excludes (P1-17). `biome check .` cannot see
+ * them, so a green lint above says nothing about ~315k lines of client code;
+ * this measures them with the same rules against a shrink-only budget.
+ */
+async function lintBrowserBudget(): Promise<void> {
+	banner('lint budget (browser trees)');
+	const r = await $`bun run scripts/lint_browser_budget.ts`.nothrow().quiet();
+	const ok = r.exitCode === 0;
+	const out = (r.stdout.toString() + r.stderr.toString()).trim();
+	console.log(out.split('\n').slice(-4).join('\n'));
+	results.push({
+		name: 'lint:browser',
+		ok,
+		detail: ok ? (out.split('\n').pop() ?? 'at budget') : 'budget exceeded (see above)',
+	});
+}
+
+/**
  * Failing test names this run is allowed to see WITHOUT going red — the parity
  * tier's frozen corpus-bound reds (engineering/parity_baseline.json).
  *
@@ -340,12 +360,12 @@ console.log(`\x1b[1mVERIFY\x1b[0m — ${changed.length} changed file(s) vs ${bas
 // verdicts are always recorded, so a red lint cannot mask a red typecheck.
 // Their console output is buffered inside each stage and printed on completion,
 // so a concurrent run still reads top-to-bottom rather than interleaving.
-await Promise.all([typecheck(), lint()]);
+await Promise.all([typecheck(), lint(), lintBrowserBudget()]);
 // Concurrency made the PUSH order a race, which made the summary's row order
 // vary between runs — a verdict table that reshuffles is a verdict table people
 // stop reading. Pin the two static stages to their declared order; the test
 // stages below append after them, as they always did.
-const STATIC_STAGE_ORDER = ['typecheck', 'lint'];
+const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser'];
 results.sort((a, b) => STATIC_STAGE_ORDER.indexOf(a.name) - STATIC_STAGE_ORDER.indexOf(b.name));
 
 if (runTests) {

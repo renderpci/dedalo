@@ -78,29 +78,70 @@
 	"files": {
 		"includes": [
 			"**",
+
+			// EVERY "!" ENTRY BELOW CARRIES ITS REASON. The linter only sees what this
+			// list lets it see, so an unexplained exclusion silently retires a whole
+			// subsystem from static analysis while `bun run lint` stays green. Gate:
+			// test/unit/lint_scope_tripwire.test.ts.
+
+			// NOT OURS, NOT EDITED HERE: installed dependencies and vendored
+			// third-party libraries. Linting them reports findings nobody in this
+			// repo can act on, and formatting them would fight their upstream.
 			"!**/node_modules",
-			"!**/.agents",
-			"!**/.claude",
-			"!**/.vscode",
-			"!**/.venv",
-			"!**/client",
 			"!**/vendor",
-			"!**/docs_site",
-			"!**/test/parity/fixtures/**/*.response.json",
-			"!**/src/core/components/**/*/samples/**/*.json",
-			"!**/install/import",
-			"!**/tools/**/*/js",
-			"!**/tools/**/*/css",
-			"!**/tools/**/*/img",
-			"!**/tools/**/*/register.json",
 			"!**/tools/tool_qr/lib",
 			"!**/tools/tool_lang/translators/browser_transformer",
 			"!**/tools/tool_transcription/transcribers/browser_whisper",
 			"!**/tools/**/*/transcribers/lib/**/*.js",
+
+			// TOOLING AND EDITOR STATE, not source: agent config (.agents, with
+			// .claude its committed symlink alias), editor settings, the local
+			// python venv.
+			"!**/.agents",
+			"!**/.claude",
+			"!**/.vscode",
+			"!**/.venv",
+
+			// GENERATED OUTPUT, never hand-edited: the built mkdocs site (untracked).
+			"!**/docs_site",
+
+			// HAND-AUTHORED PROSE — the manual (mkdocs sources, the style guide, the
+			// docs_current_engine_tripwire gate read it), tracked and edited
+			// constantly, so NOT "generated" in the sense above. It is 395 files of
+			// markdown plus exactly three mkdocs THEME assets
+			// (additional_javascript.js and two .css) that belong to the doc site's
+			// presentation, not to the engine.
 			"!**/docs",
+
+			// FROZEN FIXTURE BYTES. These files ARE the contract — the replayed
+			// oracle store and the per-component sample payloads. Reformatting one is
+			// a wire-contract edit, and biome must never make it as a side effect.
+			"!**/test/parity/fixtures/**/*.response.json",
 			"!**/test/parity/fixtures/oracle_harvest",
-			"!**/publication",
+			"!**/src/core/components/**/*/samples/**/*.json",
 			"!**/.claude_migration_component_alias_preimage.json",
+
+			// INSTALL SEED DATA (gzipped pg dumps + generated registries), machine
+			// written and machine read.
+			"!**/install/import",
+			"!**/tools/**/*/register.json",
+
+			// STATIC ASSETS with no JS/TS in them.
+			"!**/tools/**/*/css",
+			"!**/tools/**/*/img",
+
+			// AN ISOLATED SUBSYSTEM WITH ITS OWN TOOLCHAIN: publication/ is read-only
+			// and gated separately (`bun run test:publication` runs its own tsc + suite).
+			"!**/publication",
+
+			// THE BROWSER TREES — excluded from `biome check .`, but NOT unmeasured.
+			// Deleting these two would turn verify red for the whole length of the
+			// burn-down (1765 errors on client/ alone, measured 2026-08-31), which is
+			// how a gate gets switched off. Instead they carry a SHRINK-ONLY error
+			// budget with the SAME rule set, derived from this file rather than copied:
+			// scripts/lint_browser_budget.ts + engineering/lint_browser_budget.json.
+			"!**/client",
+			"!**/tools/**/*/js",
 			// GENERATED data, not source: the `test` TLD ontology export (6.5 MiB) and the
 			// corpus derived from it. Biome refuses files over its 1 MiB cap anyway, and
 			// formatting a machine-written export would only fight its writer.

@@ -982,7 +982,9 @@ describe('CI workflow tripwire', () => {
 
 		// hermetic.sh: the concurrent typecheck+lint keeps the flag that makes
 		// both verdicts survive.
-		expect(hermeticRaw).toContain('bun run --parallel --no-exit-on-error typecheck lint');
+		expect(hermeticRaw).toContain(
+			'bun run --parallel --no-exit-on-error typecheck lint lint:browser',
+		);
 		expect(
 			parallelWithoutFlag(hermetic),
 			"scripts/ci/hermetic.sh runs `bun run --parallel` without --no-exit-on-error: one red stage will pre-empt the other stage's verdict",
@@ -994,7 +996,7 @@ describe('CI workflow tripwire', () => {
 		const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
 			scripts: Record<string, string>;
 		};
-		for (const name of ['typecheck', 'lint']) {
+		for (const name of ['typecheck', 'lint', 'lint:browser']) {
 			expect(
 				pkg.scripts[name],
 				`package.json must define the "${name}" script that hermetic.sh runs in parallel`,
@@ -1017,7 +1019,15 @@ describe('CI workflow tripwire', () => {
 
 		// verify.ts: the concurrent static stages have a PINNED report order, so
 		// the summary table cannot reshuffle between runs.
-		expect(verify).toContain('await Promise.all([typecheck(), lint()]);');
+		// The browser-lint budget (P1-17) joined the concurrent static block: `biome
+		// check .` cannot see the trees biome.jsonc excludes, so a green lint says
+		// nothing about them and the budget is a SEPARATE verdict that must survive
+		// alongside the other two.
+		expect(verify).toContain('await Promise.all([typecheck(), lint(), lintBrowserBudget()]);');
+		expect(
+			verify,
+			'every concurrently-run static stage must appear in STATIC_STAGE_ORDER, or the summary reshuffles',
+		).toContain("const STATIC_STAGE_ORDER = ['typecheck', 'lint', 'lint:browser'];");
 		expect(
 			verify,
 			'verify.ts runs its static stages concurrently, so it must pin their summary order — a verdict table that reshuffles is one people stop reading',

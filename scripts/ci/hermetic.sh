@@ -107,6 +107,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/relogin_identity_tripwire.test.ts
 	test/unit/pdf_extract_symmetry_tripwire.test.ts
 	test/unit/ssrf_one_guard_tripwire.test.ts
+	test/unit/lint_scope_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
@@ -255,9 +256,9 @@ bun install --frozen-lockfile
 # Both are package.json scripts because `bun run --parallel` runs SCRIPTS, not
 # arbitrary commands (it is the script runner; the test runner's own worker
 # parallelism is the unrelated `bun test --parallel=N`).
-echo "== hermetic: typecheck + lint (bun run --parallel)"
+echo "== hermetic: typecheck + lint + browser-lint budget (bun run --parallel)"
 tier_status=0
-bun run --parallel --no-exit-on-error typecheck lint || {
+bun run --parallel --no-exit-on-error typecheck lint lint:browser || {
 	tier_status=$?
 	echo "== hermetic: RED in typecheck/lint (exit $tier_status) — continuing so the tripwire tier still reports"
 }

@@ -75,7 +75,11 @@ cache would need `pg_restore --disable-triggers` (superuser) and `--no-owner
 --no-acl`.
 
 - **Hermetic** (any bare runner, no secrets): `bun install` + `bunx tsc
-  --noEmit` + `bun run lint` + the **76** DB-less/sibling-less tripwires + the
+  --noEmit` + `bun run lint` + `bun run lint:browser` (the shrink-only error
+  budget over the browser trees `biome.jsonc` excludes — a green `bun run lint`
+  says nothing about them; P1-17) + the **100** DB-less/sibling-less tripwires
+  (measured 2026-08-31 from the script itself; the previous figure of 76 had
+  drifted) + the
   dependency-audit ratchet + the two isolated publication packages
   (`site_builder`, `server_api/v2` — each `bun install` + `tsc` + `bun test`).
   One source of truth: `scripts/ci/hermetic.sh` — GitHub and GitLab both call
