@@ -354,6 +354,17 @@ Two distinct mechanisms — do not conflate:
 
 ## 12. Verified real-world corpus (mandatory fixtures)
 
+> **ADDENDUM 2026-08-31 (P3-2 / GATE-47).** "Mandatory fixtures" is HISTORY.
+> `dedalo_mib_v7` is the live APPLICATION database — never a fixture source, never
+> a gate target; the suite writes only where the `dedalo_test_marker` row says it
+> may. A gate naming an install-specific TLD (`rsc*`, `oh*`, `numisdata*`, …) is
+> REFUSED by `generic_tld_tripwire`, shrink-only, so a new one cannot land. And
+> the differentials these rows were written for are retired: the oracle is a
+> FROZEN fixture store and a re-harvest is impossible by definition
+> (`engineering/ORACLE_HARVEST.md`). Read the rows for WHAT the family does;
+> build the situation through the engine's own write path on a `test` TLD
+> (`src/core/test_data/`) and assert against that.
+
 Resolved against the live ontology (`dd_ontology`, database `dedalo_mib_v7`). Every row is a required differential-parity fixture.
 
 | Section | section_list | relation_list | time_machine_list | section_list_thesaurus | indexation_list | section_map | Groupers | Buttons |

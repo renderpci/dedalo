@@ -8,12 +8,12 @@
  * - area: JS module name under test/client/js/ (without .js)
  * - model: optional query param for parameterized suites (e.g. test_component_full)
  *
- * ── TS-rewrite migration tiering (see docs/client_tests.md) ─────────────────
+ * ── TS-rewrite migration tiering (see scripts/client_test_runner.ts (KNOWN_FAILING)) ─────────────────
  * These suites were ported verbatim from the PHP client. Against the TS server
  * they are enabled in WAVES as the corresponding server models/tools land
  * (Phase 6). Only migrated groups are pushed into `test_groups` below, so the
  * `run all` gate stays meaningful. The full inventory of every suite — migrated
- * AND deferred (with the reason) — lives in the coverage ledger docs/client_tests.md;
+ * AND deferred (with the reason) — lives in the coverage ledger scripts/client_test_runner.ts (KNOWN_FAILING);
  * nothing is silently dropped. To enable a wave, add its group to `test_groups`.
  *   Wave 1 (ACTIVE): generic infra + pure-unit suites
  *   Wave 2 (deferred): per-component life-cycle suites  → as models port
@@ -25,7 +25,7 @@ import {elements} from './elements.js'
 /**
  * Generic integration / infrastructure suites that pass against the TS server
  * today — the Wave 1 gate. (Split from the breadth-sweeping generic suites below,
- * which depend on Phase 6 component/model breadth; see docs/client_tests.md.)
+ * which depend on Phase 6 component/model breadth; see scripts/client_test_runner.ts (KNOWN_FAILING).)
  */
 export const generic_suites_green = [
 	'test_key_instances',
@@ -77,7 +77,7 @@ export const generic_suites = [...generic_suites_green, ...generic_suites_deferr
  * Per-component life-cycle suites (one Mocha file per component type) that pass
  * against the TS server today — Wave 2 gate. Each drives the full mode/view
  * matrix + data ops for a single model. (Stable set: passed in two independent
- * runs; see docs/client_tests.md.)
+ * runs; see scripts/client_test_runner.ts (KNOWN_FAILING).)
  */
 export const lifecycle_suites_green = [
 	'test_component_3d',
@@ -187,7 +187,7 @@ export const tool_suites = [...tool_suites_green, ...tool_suites_deferred]
 // Each group renders BOTH its gated (green) suites and its deferred suites so the
 // whole inventory is visible in the sidebar. Deferred suites carry `deferred:true`;
 // the list marks them and the `run all` gate + stats skip them (they are not green
-// yet — see docs/client_tests.md), so the gate stays meaningful while nothing is
+// yet — see scripts/client_test_runner.ts (KNOWN_FAILING)), so the gate stays meaningful while nothing is
 // hidden from view.
 const withDeferred = (green, deferred) => [
 	...green.map(name => ({ id: name, area: name })),
@@ -230,7 +230,7 @@ const component_group = {
  * TS-rewrite tiering: only the currently-migrated wave(s) are listed here. The
  * deferred groups below are kept defined (and exported) for the ledger and for
  * one-line re-activation as Phase 6 breadth lands — move a group into this array
- * to enable its wave. See docs/client_tests.md for per-suite status + reasons.
+ * to enable its wave. See scripts/client_test_runner.ts (KNOWN_FAILING) for per-suite status + reasons.
  */
 export const test_groups = [
 	generic_group,   // Wave 1 — generic infra

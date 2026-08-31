@@ -111,6 +111,10 @@ HERMETIC_TRIPWIRES=(
 	test/unit/compose_invocation_tripwire.test.ts
 	test/unit/gate_vacuity_tripwire.test.ts
 	test/unit/batch_scope_tripwire.test.ts
+	test/unit/agent_alias_tripwire.test.ts
+	test/unit/css_source_tripwire.test.ts
+	test/unit/engineering_currency_tripwire.test.ts
+	test/unit/comment_doc_path_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts

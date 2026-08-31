@@ -1,7 +1,7 @@
 /**
  * CLIENT COMPAT-READ CENSUS — the ONE counting implementation behind the
  * client_error_contract_tripwire (test/unit/client_error_contract_tripwire.test.ts)
- * and its baseline generator (scripts/client_compat_baseline.ts). Neither
+ * and its baseline generator (scripts/client_compat_census.ts). Neither
  * computes anything on its own: the number the gate enforces must be, by
  * construction, the number the generator wrote (the throw_census.ts law).
  *
@@ -32,7 +32,10 @@
  * artefacts are excluded (their source twin is counted).
  *
  * ── THE TWO REGIMES ─────────────────────────────────────────────────────────
- * total > 0  → shrink-only ratchet against engineering/client_compat_read_baseline.json;
+ * total > 0  → shrink-only ratchet against a baseline JSON in engineering/
+ *              (`client_compat_read_baseline.json`). NOT PRESENT TODAY, and that is
+ *              the point: total = 0, so the P4 exit below already fired and the
+ *              file was removed with the regime it governed;
  * total = 0  → the compat block must be GONE (`ERROR_ENVELOPE_COMPAT` absent from
  *              convert.ts, `compatFields` absent from schema.ts) — the gate flips
  *              on the baseline's `summary.total`, no edit needed (P4 exit).

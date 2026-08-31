@@ -214,7 +214,13 @@ Enforced by `test/unit/thesaurus_picker_tripwire.test.ts`.
   - **Menu** (`class.menu.php:216-258`): same rewrite on the datalist item; the entry is **dropped** (`continue 2`) when the user lacks the tool (`:231-242`).
 - **Naming**: source = `properties.tool_config` (single key = tool name) + `properties.config.target_section_tipo`; produced = `config.tool_context`. Don't conflate.
 - **Client contract**: menu forwards `config` verbatim (`render_menu_tree.js:540-548`); the page uses `config.source_section_tipo` as `id_variant` (`page.js:1259-1267`); the section instance detects `config.source_model==='section_tool'` (`section.js:547`), takes label/css from `config.tool_context` (`:470-471,:1236-1243`), and gates the open-tool button on permissions > 1 (`render_list_section.js:433-468`).
-- **Live exemplars** (mandatory fixtures): `oh81` under grouper `oh80` — `config:{source_model:'section_tool', source_section_tipo:'oh81', target_section_tipo:'rsc167'}`, `tool_config.tool_transcription.ddo_map` with roles `media_component`→rsc35 / `transcription_component`→rsc36 (section_id 'self'); siblings oh83/oh85/oh98; plus `numisdata201/625/670` under grouper `numisdata200` (dd35 subtree).
+> **ADDENDUM 2026-08-31 (P3-2 / GATE-47).** The exemplars below are RECORDED
+> OBSERVATIONS from one install, not fixtures to pin: `generic_tld_tripwire`
+> refuses a gate naming `oh*`/`numisdata*`/`rsc*`, and the differential they
+> were written for is retired with the live oracle. Build the situation on a
+> `test` TLD through `src/core/test_data/`.
+
+- **Live exemplars** (observed, not pinned): `oh81` under grouper `oh80` — `config:{source_model:'section_tool', source_section_tipo:'oh81', target_section_tipo:'rsc167'}`, `tool_config.tool_transcription.ddo_map` with roles `media_component`→rsc35 / `transcription_component`→rsc36 (section_id 'self'); siblings oh83/oh85/oh98; plus `numisdata201/625/670` under grouper `numisdata200` (dd35 subtree).
 - **TS status**: the MENU rewrite is done and gated (`menu.ts:276-286,:331-382`, incl. the drop-if-unauthorized ledger). The PAGE-CONTEXT reroute **landed 2026-07-10** in the `start` handler (dd_core_api.ts) — on a direct URL the client fires ONLY `start` (`page.js:513-527`); PHP's `get_element_context` has NO section_tool branch (default `new $model()` fatals), so `start` is the one reroute site. Shared enrichment: `tools/section_tool_context.ts` (also used by the menu rewrite). Gate: `section_tool_start_differential` (config byte-pin oh81 + numisdata201/670; result:false pin for config-less numisdata625). `area_tool` itself is a dashboard area (§4) whose child walk *excludes* section_tool from the stats (`class.area_common.php:231`) — its dashboard shows the plain sections in its subtree, and the section_tool entries surface via the menu.
 
 ## 7. Menu & placement
@@ -260,6 +266,18 @@ Already ported and differential-gated (`menu_differential`, `menu_nonadmin`) —
 - `show_ontology` menu shortcut is dead code (`view_default_edit_menu.js:397-411`) — do not wire it.
 
 ## 11. Verified real-world corpus (mandatory fixtures)
+
+> **ADDENDUM 2026-08-31 (P3-2 / GATE-47).** "Mandatory fixtures" is HISTORY, not
+> instruction. `dedalo_mib_v7` is the live APPLICATION database and is never a
+> fixture source or a gate target: the suite writes only to a database carrying
+> the `dedalo_test_marker` row. A gate naming an install-specific TLD is refused
+> by `generic_tld_tripwire` (shrink-only).
+>
+> The `dd*` nodes below are different from the `rsc*`/`oh*` case, and the
+> distinction matters: `dd` is the CORE ontology every install ships, so these
+> nodes exist everywhere rather than being one museum's records. Read the table
+> for what the area family DOES; build the situation through the engine's own
+> write path (`src/core/test_data/`) and assert against that.
 
 Live ontology (`dd_ontology`, `dedalo_mib_v7`), verified 2026-07-03:
 

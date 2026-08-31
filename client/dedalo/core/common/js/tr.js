@@ -272,7 +272,7 @@ export const tr = {
 	*/
 	add_tag_img_on_the_fly : (text) => {
 
-		if (!text || text.lenght<1) {
+		if (!text || text.length < 1) {
 			return text
 		}
 

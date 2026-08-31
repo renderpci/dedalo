@@ -774,7 +774,32 @@ Also carry over: never reveal media existence to the unauthorized (fail-closed 4
 
 ## 11. Verified real-world corpus (fixtures)
 
-Pin the live corpus for the gates (this install, `dedalo_mib_v7`):
+> **ADDENDUM 2026-08-31 (P3-2 / GATE-47) — READ THIS BEFORE THE TABLE BELOW.**
+> **This section is HISTORY, not instruction.** It records the corpus these
+> behaviours were originally *observed* against; it is no longer how a gate is
+> written, and following it literally produces a gate the ratchet rejects.
+>
+> Two laws have overtaken it, both mechanical:
+>
+> - **Tests use the generic `test` TLD and BUILD the situation they test**
+>   (AGENTS.md). A gate naming `rsc*`, `numisdata*`, `oh*` or any other
+>   install-specific TLD passes on one machine and nowhere else.
+>   `generic_tld_tripwire` REFUSES such a gate — shrink-only, so the ratchet
+>   will reject a new one outright.
+> - **The suite writes only to a database that says it is one** (the
+>   `dedalo_test_marker` row) and to a media root that says it is one
+>   (`.dedalo_test_media`). `dedalo_mib_v7` is the live APPLICATION database:
+>   never a fixture source, never a gate target.
+>
+> So: read the table for WHAT the media family does (bucketed paths, the lang
+> suffix, the pdf web+cover+text triple). Build the fixture through the engine's
+> own write path on a `test` TLD — `src/core/test_data/` situations — and assert
+> against that. The AV row's advice still stands in spirit and is now the rule
+> everywhere: seed a scratch chain, never lean on whatever the ambient install
+> happens to hold.
+
+Pinned against the live corpus at the time of writing (this install,
+`dedalo_mib_v7`) — see the addendum above before using any of it:
 
 | Node | Model | Notes |
 |---|---|---|

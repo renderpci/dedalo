@@ -48,7 +48,7 @@
 *    is_admin  : boolean
 *  }
 *
-* Server peer:  src/core/resolve/widget_request.ts (diffusion_server_control handlers)
+* Server peer:  src/core/area_maintenance/widgets/diffusion_server_control.ts
 * Render peer:  core/area_maintenance/widgets/diffusion_server_control/js/render_diffusion_server_control.js
 * API route:    dd_area_maintenance_api::widget_request → diffusion_server_control::<action>
 */

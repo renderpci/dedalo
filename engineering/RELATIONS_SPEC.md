@@ -248,6 +248,17 @@ Gates: `test/unit/model_section_native.test.ts`, `test/unit/datalist_cache_key_n
 
 ## 7. Verified real-world corpus (mandatory fixtures)
 
+> **ADDENDUM 2026-08-31 (P3-2 / GATE-47).** "Mandatory fixtures" is HISTORY.
+> `dedalo_mib_v7` is the live APPLICATION database — never a fixture source, never
+> a gate target; the suite writes only where the `dedalo_test_marker` row says it
+> may. A gate naming an install-specific TLD (`rsc*`, `oh*`, `numisdata*`, …) is
+> REFUSED by `generic_tld_tripwire`, shrink-only, so a new one cannot land. And
+> the differentials these rows were written for are retired: the oracle is a
+> FROZEN fixture store and a re-harvest is impossible by definition
+> (`engineering/ORACLE_HARVEST.md`). Read the rows for WHAT the family does;
+> build the situation through the engine's own write path on a `test` TLD
+> (`src/core/test_data/`) and assert against that.
+
 Every row below was resolved against the live ontology (`dd_ontology`, database `dedalo_mib_v7`) and is a **required differential-parity fixture** for the rebuild. Legacy model names appear as stored in the ontology; remember the §2 alias map.
 
 Sections: numisdata3 = Type, numisdata4 = Numismatic object, numisdata6 = Mint, rsc167 = Audiovisual, rsc197 = People, cult1/tema1 = thesaurus sections (Cultura/Tema).
