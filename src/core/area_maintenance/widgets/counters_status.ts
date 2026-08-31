@@ -435,6 +435,52 @@ async function countersStatusRepairAllCounters(): Promise<WidgetResponse> {
 	};
 }
 
+/**
+ * counters_status.reconcile_media_counters — raise counters to the ids the
+ * MEDIA TREE proves were minted (P0-14 / LIFE-01).
+ *
+ * The restore-day action. A `pg_restore` rolls the database back WITH its
+ * counters while the disk keeps every file written up to the disaster, so the
+ * media tree is the only witness left of the ids in between. Re-minting them
+ * keys new records straight into dead records' files
+ * (`{component_tipo}_{section_tipo}_{section_id}`), and `component_av`
+ * then plays the dead object's derivatives.
+ *
+ * DRY BY DEFAULT: it reports what it would raise and writes nothing unless
+ * `apply:true`. An operator should read that list — a surprising number usually
+ * means the media root is not the one this database belongs to, and raising a
+ * counter cannot be undone.
+ */
+async function countersStatusReconcileMediaCounters(
+	options: Record<string, unknown>,
+): Promise<WidgetResponse> {
+	const apply = options.apply === true;
+	const { reconcileCountersWithMedia } = await import('../../media/counter_reconcile.ts');
+	const { raises, filesScanned, sectionsWithMedia } = await reconcileCountersWithMedia({ apply });
+
+	const detail = raises
+		.map(
+			(raise) =>
+				`${raise.sectionTipo}: ${raise.before ?? 'no counter'} → ${raise.after} (witness ${raise.witness})`,
+		)
+		.join('; ');
+	const audit = await countersStatusGetValue();
+
+	return {
+		data: true,
+		msg:
+			raises.length === 0
+				? `OK. ${filesScanned} media files across ${sectionsWithMedia} sections name no id above the counters — nothing to reconcile`
+				: `${apply ? 'RAISED' : 'WOULD RAISE'} ${raises.length} counter(s) from the media tree (${filesScanned} files scanned): ${detail}`,
+		extend: {
+			datalist: (audit.data as { datalist?: unknown[] } | null)?.datalist ?? [],
+			raises,
+			applied: apply,
+			files_scanned: filesScanned,
+		},
+	};
+}
+
 export const widget: WidgetModule = {
 	spec: {
 		id: 'counters_status',
@@ -446,6 +492,7 @@ export const widget: WidgetModule = {
 		get_value: countersStatusGetValue,
 		modify_counter: countersStatusModifyCounter,
 		repair_all_counters: countersStatusRepairAllCounters,
+		reconcile_media_counters: countersStatusReconcileMediaCounters,
 	},
 	getValue: countersStatusGetValue,
 };

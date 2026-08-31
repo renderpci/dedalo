@@ -462,10 +462,16 @@ cannot even be attempted before step 1:
    #    timer, which would otherwise restart it under you (§2).
    systemctl stop dedalo-ts.service dedalo-ts-watchdog.timer
 
-   # 2. Prove the file is a dump BEFORE destroying anything. --list walks the
-   #    archive's table of contents; a truncated or half-written dump fails
-   #    here, which is the cheapest moment there is to find that out.
-   pg_restore --list "$ARTIFACT" > /dev/null || { echo "NOT A USABLE DUMP"; exit 1; }
+   # 2. Prove the file is a dump BEFORE destroying anything — with a FULL READ.
+   #    NOT `--list`: the table of contents sits at the FRONT of a custom
+   #    archive, so a dump cut in half lists perfectly and exits 0. Measured
+   #    2026-08-30 on a real 7.6 MB dump truncated to 60%:
+   #      pg_restore --list        -> exit 0        (says nothing is wrong)
+   #      pg_restore -f /dev/null  -> exit 1        ("could not read from input
+   #                                                 file: end of file")
+   #    Reading the archive end to end is the only check that detects it, and
+   #    this is the cheapest moment there is to find out. ~7.4 s/GB.
+   pg_restore -f /dev/null "$ARTIFACT" || { echo "NOT A USABLE DUMP"; exit 1; }
 
    # 3. An EMPTY target. Never restore over a populated database: --clean is
    #    best-effort per object and leaves whatever it failed to drop.
@@ -493,7 +499,26 @@ cannot even be attempted before step 1:
    and can also be re-embedded rather than restored.
 4. **Media originals** (store 3), then rebuild derivatives with
    `tool_update_cache` — do not restore derivatives.
-5. **Each site-builder instance** (store 5), in this order and no other:
+5. **RECONCILE THE ID COUNTERS AGAINST THE MEDIA TREE** — maintenance area →
+   *Dédalo counters status* → **reconcile media counters**. Run it DRY first and
+   read the list.
+
+   A restore rolls `matrix_counter` back WITH the data. The media filesystem was
+   not rolled back: it still holds the files of every record created between the
+   backup and the disaster. Media identity is exactly
+   `{component_tipo}_{section_tipo}_{section_id}`, so if the allocator re-mints
+   those ids each new record keys straight into a dead record's files —
+   `component_av` re-derives `files_info` from disk and plays the dead object's
+   derivatives, and `tool_update_cache` (step 4, which you just ran) PERSISTS the
+   wrong attachment. Nothing else notices: no collision fires, because the rows
+   are gone.
+
+   The allocator's own floor cannot see this either — it reads the live rows and
+   the time machine, and a restore rolls both back together. **Only the disk
+   remembers.** The action is raise-only and idempotent; a surprising number
+   usually means the media root is not the one this database belongs to, which is
+   why it is dry by default.
+6. **Each site-builder instance** (store 5), in this order and no other:
    1. `config/` back to `/etc/dedalo_sites/instances/<instance>/` — the
       declaration and its `secrets/`, root-owned, modes preserved. Everything
       else about the instance is derived from this directory.
