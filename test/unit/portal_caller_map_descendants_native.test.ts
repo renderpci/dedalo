@@ -81,7 +81,13 @@ const TAIL_VALUE = 'the great-grandchild value';
 
 /** One locator, the only shape any hop in this situation needs. */
 const locator = (tipo: string, sectionTipo: string, sectionId: number) => [
-	{ id: 1, type: 'dd151', section_id: sectionId, section_tipo: sectionTipo, from_component_tipo: tipo },
+	{
+		id: 1,
+		type: 'dd151',
+		section_id: sectionId,
+		section_tipo: sectionTipo,
+		from_component_tipo: tipo,
+	},
 ];
 
 const S = situation({
@@ -203,7 +209,12 @@ async function readWithMap(ddoMap: Record<string, unknown>[]): Promise<{
 const portalDdo = { tipo: PORTAL, section_tipo: HOST, parent: HOST, mode: 'list' };
 const nestedDdo = { tipo: NESTED_PORTAL, section_tipo: MID, parent: PORTAL, mode: 'list' };
 const leafDdo = { tipo: LEAF_TEXT, section_tipo: LEAF, parent: NESTED_PORTAL, mode: 'list' };
-const tailPortalDdo = { tipo: TAIL_PORTAL, section_tipo: LEAF, parent: NESTED_PORTAL, mode: 'list' };
+const tailPortalDdo = {
+	tipo: TAIL_PORTAL,
+	section_tipo: LEAF,
+	parent: NESTED_PORTAL,
+	mode: 'list',
+};
 const tailDdo = { tipo: TAIL_TEXT, section_tipo: TAIL, parent: TAIL_PORTAL, mode: 'list' };
 
 const itemFor = (items: Item[], tipo: string): Item | undefined =>
