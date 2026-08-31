@@ -69,7 +69,14 @@ const UNGOVERNED_SEED_INDEXES: readonly string[] = [
 ];
 
 async function seedIndexNames(): Promise<Set<string>> {
-	const text = await Bun.$`gzcat ${SEED}`.cwd(REPO_ROOT).text();
+	// DECOMPRESSED IN-PROCESS, not through a shell (2026-08-31). This read used
+	// `Bun.$\`gzcat ${SEED}\`` — and `gzcat` is a BSD/macOS spelling that the
+	// Linux CI runner does not have (there it is `zcat`), so all three tests
+	// below died with `command not found: gzcat` on every GitHub run while
+	// staying green on every developer Mac. Swapping the spelling would only
+	// move the assumption; the gate wants the SEED'S BYTES, and Bun decompresses
+	// them itself with no PATH, no subprocess and no platform to be wrong about.
+	const text = new TextDecoder().decode(Bun.gunzipSync(await Bun.file(SEED).bytes()));
 	const names = new Set<string>();
 	for (const match of text.matchAll(INDEX_NAME)) names.add((match[1] as string).toLowerCase());
 	return names;
