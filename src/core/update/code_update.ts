@@ -350,8 +350,22 @@ export async function preValidateArchive(zipPath: string): Promise<string | null
 }
 
 /**
- * Verbose zipinfo shows the unix mode in the first column; 'l' = symlink.
- * Returns null when no symlink entry exists, else the refusal reason.
+ * Verbose zipinfo shows the unix mode in the first column ('l' = symlink) AND
+ * the DECLARED UNCOMPRESSED SIZE in the fourth. Returns null when the archive is
+ * safe, else the refusal reason.
+ *
+ * THE SIZE BOUND HAS TO BE HERE (P2-7 / DOS-07). `extractArchive` spawned
+ * `unzip -o -q` and let it run to completion; the only uncompressed-size bound
+ * was summed inside `walk(destDir)` AFTER unzip had written every byte. So the
+ * cap described a disk that was already full: `renameSwap`'s same-device
+ * requirement guarantees the staging directory shares the install's volume, so
+ * a zip bomb fills the LIVE volume and the refusal arrives too late to matter.
+ *
+ * The declared sizes were already in this command's output — the check cost one
+ * more pass over text we had, not another spawn. A declared size can of course
+ * lie; the post-extraction sum stays exactly where it was as the belt to this
+ * brace, because the two catch different things (a lying header vs. a bomb that
+ * announces itself).
  */
 async function scanArchiveModesForSymlinks(zipPath: string): Promise<string | null> {
 	const verbose = Bun.spawn(['zipinfo', zipPath], { stdout: 'pipe', stderr: 'pipe' });
@@ -360,9 +374,17 @@ async function scanArchiveModesForSymlinks(zipPath: string): Promise<string | nu
 		verbose.exited,
 	]);
 	if (exitVerbose !== 0) return 'zipinfo could not read the archive modes';
+	let declaredTotal = 0;
 	for (const line of modeText.split('\n')) {
 		// entry lines start with the 10-char permission block, e.g. '-rw-r--r--' / 'lrwxrwxrwx'
 		if (/^l[rwxsStT-]{9}\s/.test(line)) return 'archive contains a symlink entry';
+		// `-rw-r--r--  3.0 unx      1234 tx stor …` — mode, version, os, SIZE.
+		const entry = /^[-dl][rwxsStT-]{9}\s+\S+\s+\S+\s+(\d+)\s/.exec(line);
+		if (entry === null) continue;
+		declaredTotal += Number(entry[1]);
+		if (declaredTotal > MAX_EXTRACTED_TOTAL_BYTES) {
+			return `archive declares more than ${MAX_EXTRACTED_TOTAL_BYTES} uncompressed bytes`;
+		}
 	}
 	return null;
 }
