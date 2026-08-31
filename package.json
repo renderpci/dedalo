@@ -54,7 +54,7 @@
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.30.0",
 		"@svgedit/svgcanvas": "7.4.2",
-		"@turf/turf": "7.3.5",
+		"@turf/turf": "7.4.0",
 		"codex-tooltip": "1.0.6",
 		"d3": "7.9.0",
 		"flatpickr": "4.6.13",
