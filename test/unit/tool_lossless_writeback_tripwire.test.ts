@@ -246,7 +246,18 @@ Bun.plugin({
 				'export const tr = { get_mark_pattern: () => /(?!)/g };\n',
 			loader: 'js',
 		}));
-		build.onResolve({ filter: /^\.\/markdown_utils\.js$/ }, (args) =>
+		// SUFFIX-matched, not `^\.\/…` (2026-08-31). A plugin `filter` is tested against
+		// the specifier as the resolver hands it over, and anchoring on the leading
+		// `./` asserted it arrives VERBATIM from the source. On the Linux CI runner it
+		// does not, so this hook alone stopped firing and the REAL module loaded:
+		//   ReferenceError: DOMParser is not defined
+		//     at html_to_markdown (tools/tool_lang/js/markdown_utils.js:67)
+		// The gate was green on macOS and red on every GitHub run — one of the two
+		// reasons the hermetic tier stayed red after its lint and tripwire debt was
+		// paid. The client-stub hook above never had the problem because it was
+		// already suffix-matched; this is the same shape, and the importer guard (not
+		// the anchor) is what keeps the hook confined to tools/tool_lang/js.
+		build.onResolve({ filter: /markdown_utils\.js$/ }, (args) =>
 			importerIsToolLang(args.importer)
 				? { path: 'markdown-stub', namespace: 'tool-lang-md-stub' }
 				: undefined,

@@ -62,10 +62,26 @@ jobs:
 
     services:
       postgres:
-        # DIGEST-pinned, not `postgres:18`: a tag is mutable, and this container
-        # holds the database every assertion below is made against. Same reason
-        # security.yml digest-pins gitleaks. Mirrors docker-compose.yml's major.
-        image: postgres@sha256:1957b2ff3137e4ef7f3bc813e74fff50b1e1ffddc85c8b9d6f14ade972be8687
+        # DIGEST-pinned, not a tag: a tag is mutable, and this container holds the
+        # database every assertion below is made against. Same reason security.yml
+        # digest-pins gitleaks. Mirrors docker-compose.yml's major (pg18).
+        #
+        # pgvector/pgvector, NOT library/postgres (2026-08-31). The engine's RAG
+        # store is a pgvector database, and scripts/test_db_setup.ts builds it
+        # ON THIS CONNECTION -- `install/db/rag_embeddings.sql` opens with
+        # `CREATE EXTENSION IF NOT EXISTS vector`. Stock postgres:18 does not ship
+        # the extension, so the tier died at the SUITE BUILD, before a single gate:
+        #   PostgresError: extension "vector" is not available
+        # That is why the db job had never once passed. It is invisible on a
+        # developer box, where one Postgres carries pgvector and serves both
+        # databases -- exactly the shape this image restores here.
+        #
+        # In PRODUCTION the two are separate services (docker-compose.yml: the app
+        # on postgres:18, the RAG store on pgvector/pgvector:pg18). Collapsing them
+        # onto one server is a property of the TEST fixture, not of the deployment:
+        # the suite derives `<suite db>_rag` from its own connection, and giving CI
+        # a second service would have to change that derivation to prove nothing.
+        image: pgvector/pgvector@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a # pgvector/pgvector:pg18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
