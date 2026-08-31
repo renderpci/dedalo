@@ -1368,7 +1368,39 @@ export const render_relogin = async function(options={}) {
 			tipo					: 'dd229',
 			mode					: 'edit',
 			add_select_lang			: false,
-			custom_action_dispatch	: function() {
+			custom_action_dispatch	: function(api_response) {
+
+				// IDENTITY FIRST — the account that just authenticated must be the
+				// account this page belongs to (CLI-09).
+				//
+				// This overlay appears when a session dies MID-USE, on a page that
+				// may be holding a queued save. Resolving `on_success` without
+				// checking who logged in commits A's edit under B's session: A's
+				// text lands on the record with B as the author in the Time Machine
+				// audit and the `modified_by` stamp, while the page keeps A's menu,
+				// A's `is_developer` and A's cached structure contexts until the
+				// next full load. Server-side authorization is intact throughout —
+				// what is lost is PROVENANCE, which in a heritage archive is part of
+				// the record.
+				//
+				// A full reload is the only honest answer: this page's cached state
+				// belongs to the previous identity, and the queued action must NOT
+				// be resolved across the change.
+					const authenticated_user_id = api_response?.result_options?.user_id
+					const page_user_id = (typeof page_globals!=='undefined') ? page_globals?.user_id : null
+					if (
+						authenticated_user_id!==undefined && authenticated_user_id!==null &&
+						page_user_id!==undefined && page_user_id!==null &&
+						String(authenticated_user_id)!==String(page_user_id)
+					) {
+						console.warn(
+							'render_relogin: authenticated as a DIFFERENT user'
+							+ ' (page ' + page_user_id + ' -> ' + authenticated_user_id + ')'
+							+ ' — reloading instead of resuming this page\'s pending action.'
+						)
+						window.location.reload()
+						return
+					}
 
 				// work done! Destroy this login instance and DOM
 				login_instance.destroy(true, true, true)
