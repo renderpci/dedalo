@@ -140,6 +140,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/ratchet_integrity_tripwire.test.ts
 	test/unit/client_store_principal_key_tripwire.test.ts
 	test/unit/private_state_mode_tripwire.test.ts
+	test/unit/wire_disclosure_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts

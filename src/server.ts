@@ -1440,6 +1440,29 @@ function echoRuntimeVersion(): void {
 			`[runtime] Bun ${Bun.version} does NOT match the verified pin ${pinned} (.bun-version). Bun.sql/Bun.serve behavior is version-coupled (audit S2-36) — verify before relying on this runtime.`,
 		);
 	}
+	// DEDALO_DEBUG_API_ERRORS COLLAPSES THE ENTIRE DISCLOSURE LADDER (P2-8 / SEC-19).
+	//
+	// With it on, `{exception, stack, coordinates, cause_chain}` is attached to
+	// EVERY failure body — the PRE-AUTH ones included, where an unauthenticated
+	// caller reads stack frames, absolute paths and Postgres error text. And
+	// `toFailureRecord` shares the builder, so those blocks are PERSISTED into job
+	// rows and SURVIVE turning the switch back off: the artefacts outlive the
+	// setting that produced them.
+	//
+	// The directly comparable switch one block below (MEDIA_DEV_ROUTE_ENABLED)
+	// has had a loud [security] line for a year. This one had no tripwire, no boot
+	// warning and no dashboard row — the most powerful disclosure control in the
+	// engine, and nothing said it was on.
+	if ((readEnv('DEDALO_DEBUG_API_ERRORS') ?? '') === 'true') {
+		console.warn(
+			'[security] DEDALO_DEBUG_API_ERRORS=true — every API failure now carries its ' +
+				'exception, stack, coordinates and cause chain, INCLUDING pre-authentication ' +
+				'failures an anonymous caller can trigger. Job failure records share the same ' +
+				'builder, so these blocks are PERSISTED and survive turning this back off. ' +
+				'Development only; never on a shared or production install.',
+		);
+	}
+
 	// MEDIA-04: the engine media fallback applies NO per-record ACL — any authenticated
 	// session reads any file under the media root by path. Never be quiet about it.
 	// (MEDIA-01 is CLOSED: media protection is now native — see core/media/protection.ts

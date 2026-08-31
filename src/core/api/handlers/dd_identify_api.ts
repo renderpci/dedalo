@@ -133,6 +133,24 @@ import { scopeRecordHits } from '../../security/record_scope.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
 
+/**
+ * What a FAILED identify source may say on the wire (P2-8 / SEC-17).
+ *
+ * These two sites emitted `error.message` inside an `ok:true` payload — where
+ * the disclosure ladder in `toErrorBody` does not reach, because nothing here
+ * is an error envelope. The text is whatever threw: Postgres error output, a
+ * filesystem message with an absolute path, an embedding-service URL.
+ *
+ * A DedaloError is the engine SPEAKING DELIBERATELY — its message was written to
+ * be read. Anything else merely happened, so the caller is told the source
+ * failed and the detail goes to the log, which is where a diagnosis belongs.
+ */
+function declineDetail(error: unknown): string {
+	if (error instanceof DedaloError) return error.message;
+	console.warn('[identify] source failed:', error);
+	return 'the source failed; the server log records why';
+}
+
 /** Most results a curator can ask for in one call. */
 export const MAX_LIMIT = 50;
 /** Results returned when the request names no limit. */
@@ -1386,7 +1404,7 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 					ran: false,
 					declined: {
 						reason: 'source_failed',
-						detail: error instanceof Error ? error.message : String(error),
+						detail: declineDetail(error),
 					},
 					skipped: [],
 				});
@@ -1461,7 +1479,7 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 					ran: false,
 					declined: {
 						reason: 'source_failed',
-						detail: error instanceof Error ? error.message : String(error),
+						detail: declineDetail(error),
 					},
 					model: null,
 					image: null,

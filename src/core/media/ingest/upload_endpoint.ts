@@ -140,8 +140,23 @@ export async function handleMediaUpload(
  * wire field; the original travels as `cause` for the log.
  */
 function rejectedUpload(error: unknown): DedaloError {
+	// ONLY A TYPED REFUSAL'S OWN SENTENCE REACHES THE WIRE (P2-8 / SEC-16).
+	//
+	// `publicMessage` IS a wire field, and this assigned `error.message` to it
+	// unconditionally — exactly what the header above says it must never do. The
+	// try it serves wraps untried mkdirSync / writeFileSync / renameSync, whose
+	// messages embed ABSOLUTE PATHS ("EACCES: permission denied, mkdir
+	// '/srv/dedalo/media/…'"), and authorization at this door is session-only, so
+	// a consultation-only account reaches it.
+	//
+	// A DedaloError is the validator SPEAKING DELIBERATELY: its message was
+	// written to be read by a curator. Anything else is an exception that merely
+	// happened, and it travels as `cause` — into the log, never onto the wire.
+	const deliberate = error instanceof DedaloError ? error.message : null;
 	return new DedaloError('media.upload_rejected', {
-		publicMessage: error instanceof Error ? error.message : String(error),
+		publicMessage:
+			deliberate ??
+			'The upload could not be staged. The server log records why (search the request id).',
 		cause: error,
 	});
 }

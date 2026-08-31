@@ -477,7 +477,21 @@ describe('get_proposals — the clean declines', () => {
 			(source) => source.source === 'vision_model',
 		);
 		expect((vision?.declined as { reason: string }).reason).toBe('source_failed');
-		expect((vision?.declined as { detail: string }).detail).toContain('refused the connection');
+		// THE FAILURE TRAVELS; THE EXCEPTION TEXT DOES NOT (P2-8 / SEC-17).
+		//
+		// This asserted `toContain('refused the connection')` — the raw message of
+		// whatever threw, echoed inside an `ok:true` payload where the disclosure
+		// ladder does not reach. The same path carries Postgres error output and
+		// filesystem messages with absolute paths, so the field cannot be a
+		// passthrough for one caller's convenience.
+		//
+		// The test's INTENT is unchanged and still asserted above: the source's
+		// failure is reported as its own decline instead of deleting a valid half
+		// of the answer. What the curator now gets is that it failed and where to
+		// look; the provider's sentence goes to the log.
+		const detail = (vision?.declined as { detail: string }).detail;
+		expect(detail).not.toContain('refused the connection');
+		expect(detail).toContain('the server log records why');
 	});
 
 	test("a vision source that declined itself reports its OWN reason, not 'failed'", async () => {
