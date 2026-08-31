@@ -34,7 +34,7 @@
 
 import { isIP } from 'node:net';
 import { readString } from '../../config/readers.ts';
-import { fetchBoundedText, isPrivateIp } from '../security/ssrf_guard.ts';
+import { fetchBoundedText, isPrivateIp, mappedIpv4 } from '../security/ssrf_guard.ts';
 import type {
 	TranscribeRequest,
 	TranscribeResult,
@@ -66,10 +66,26 @@ const TRANSCRIPT_MAX_BYTES = 32 * 1024 * 1024;
 const SMALL_MAX_BYTES = 1 * 1024 * 1024;
 
 /**
- * One bounded call to the sidecar, parsed. Returns null when the peer refused,
- * timed out, exceeded the ceiling or did not answer JSON — every caller here
- * already has a "could not reach the transcriber" branch, and none of them can
- * do anything more useful with the distinction.
+ * ONE BOUNDED CALL to the sidecar, as a TAGGED union: either the parsed `body`,
+ * or the reason it failed reduced to an `httpStatus` (null when there was no
+ * HTTP answer at all).
+ *
+ * The distinction is NOT decoration. The status poll's caller treats any reply
+ * without a numeric `status` field as TERMINAL, so collapsing every failure into
+ * one "did not answer" abandoned a transcription the sidecar was still working
+ * on the first time the network hiccuped for 30 seconds. A missing job is
+ * terminal; a blip is not, and only the status can tell them apart.
+ *
+ * TAGGED (`kind`) rather than probed (`'body' in answer`): all three callers
+ * below decide on that tag, so the failure branch is a case the compiler knows
+ * about instead of something a happy-path edit can quietly leave out.
+ */
+type SidecarAnswer =
+	| { kind: 'body'; body: unknown }
+	| { kind: 'failed'; httpStatus: number | null };
+
+/**
+ * The call itself.
  *
  * It deliberately does NOT apply an address policy: `isSafeLocalAsrUrl` is this
  * module's policy, and it PERMITS private hosts behind the named exemption,
@@ -80,13 +96,27 @@ async function sidecarJson(
 	init: RequestInit,
 	timeoutMs: number,
 	maxBytes: number,
-): Promise<unknown | null> {
-	const text = await fetchBoundedText(url, { init, timeoutMs, maxBytes });
+): Promise<SidecarAnswer> {
 	try {
-		return JSON.parse(text);
-	} catch {
-		return null;
+		const text = await fetchBoundedText(url, { init, timeoutMs, maxBytes });
+		return { kind: 'body', body: JSON.parse(text) };
+	} catch (error) {
+		// The HTTP status when there was one, so a caller can tell "this job is
+		// GONE" (terminal) from "the box hiccuped" (retry). Anything else — a
+		// timeout, a refused connection, an unparseable body — has no status.
+		const coordinates = (error as { coordinates?: { status?: unknown } }).coordinates;
+		const status = typeof coordinates?.status === 'number' ? coordinates.status : null;
+		return { kind: 'failed', httpStatus: status };
 	}
+}
+
+/**
+ * The sidecar's bearer header, or none at all. An unconfigured key must not
+ * travel as an empty `Bearer ` — a sidecar that checks the header would refuse
+ * the job outright rather than run it unauthenticated.
+ */
+function authHeaders(key: string): Record<string, string> | undefined {
+	return key !== '' ? { Authorization: `Bearer ${key}` } : undefined;
 }
 
 /**
@@ -102,51 +132,69 @@ export function privateTranscriberHostsAllowed(): boolean {
 }
 
 /**
- * URL guard for the on-premise engine. http(s) only; private/reserved ranges
- * only when the exemption above is on.
+ * The host a transcriber URI addresses — lowercased, unbracketed and
+ * NORMALISED — or null when the URI is not a usable http(s) address at all.
  *
- * SSRF-02 (2026-07-28 audit): the old string blocklist missed 0.0.0.0,
- * 127.0.0.0/8 (only .1), ::, ::ffff:, decimal/octal IPs, 100.64/10 and the rest
- * of 169.254/16 — so with the exemption OFF it still reached the engine's own
- * network through any of those IP-literal forms. It now vets IP-literal hosts
- * through the shared isPrivateIp (comprehensive v4+v6 range set) and treats the
- * localhost NAME family as private. Kept synchronous (no DNS) so it stays
- * hermetic; a NAME that resolves to an internal IP is a documented residual —
- * the attacker-supplied-URL path (RDF import) uses the resolving assertPublicUrl
- * guard instead.
+ * NORMALISE FIRST. An IPv4-mapped IPv6 address is the same address wearing a
+ * different spelling, and the WHATWG parser rewrites the dotted form into hex
+ * on the way in — so `[::ffff:169.254.169.254]` arrives as `::ffff:a9fe:a9fe`
+ * and matched no literal in the refusals its caller applies. With the
+ * private-host exemption ON (which is this provider's whole purpose) that made
+ * the metadata-endpoint refusal reachable.
  */
-export function isSafeLocalAsrUrl(uri: string): boolean {
+function asrUrlHost(uri: string): string | null {
 	let url: URL;
 	try {
 		url = new URL(uri);
 	} catch {
-		return false;
+		return null;
 	}
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-	const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+	if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+	const rawHost = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+	return mappedIpv4(rawHost) ?? rawHost;
+}
 
-	// The cloud metadata endpoint is never a transcriber, exemption or not.
-	if (host === '169.254.169.254') return false;
-
-	// Is the target private/internal? For IP LITERALS this is now comprehensive
-	// via the shared isPrivateIp (SSRF-02 closed the old bypasses: 0.0.0.0,
-	// 127.0.0.0/8, ::ffff:a.b.c.d, decimal/octal IPs, 100.64/10, all of
-	// 169.254/16). For NAMES, the localhost family is treated as private; any
-	// other name is treated as public here (a name that RESOLVES to an internal
-	// IP is a documented residual — the attacker-supplied-URL path uses the
-	// resolving assertPublicUrl guard instead).
+/**
+ * Is the target inside the engine's own network?
+ *
+ * For IP LITERALS this is comprehensive via the shared isPrivateIp (SSRF-02
+ * closed the old bypasses: 0.0.0.0, 127.0.0.0/8, ::ffff:a.b.c.d, decimal/octal
+ * IPs, 100.64/10, all of 169.254/16). For NAMES, the localhost family is
+ * treated as private; any other name is treated as public here — a name that
+ * RESOLVES to an internal IP is a documented residual, and the
+ * attacker-supplied-URL path uses the resolving assertPublicUrl guard instead.
+ */
+function isInternalAsrHost(host: string): boolean {
+	if (isIP(host) !== 0) return isPrivateIp(host);
 	const localNames = new Set([
 		'localhost',
 		'localhost.localdomain',
 		'ip6-localhost',
 		'ip6-loopback',
 	]);
-	const isPrivate =
-		isIP(host) !== 0
-			? isPrivateIp(host)
-			: localNames.has(host) || host.endsWith('.local') || host.endsWith('.localhost');
+	return localNames.has(host) || host.endsWith('.local') || host.endsWith('.localhost');
+}
 
-	return isPrivate ? privateTranscriberHostsAllowed() : true;
+/**
+ * URL guard for the on-premise engine. http(s) only; private/reserved ranges
+ * only when the exemption is on. Kept synchronous (no DNS) so it stays hermetic.
+ *
+ * SSRF-02 (2026-07-28 audit): the old string blocklist missed 0.0.0.0,
+ * 127.0.0.0/8 (only .1), ::, ::ffff:, decimal/octal IPs, 100.64/10 and the rest
+ * of 169.254/16 — so with the exemption OFF it still reached the engine's own
+ * network through any of those IP-literal forms. The two helpers above carry
+ * that vetting now; what is left here is the POLICY, in three sentences.
+ */
+export function isSafeLocalAsrUrl(uri: string): boolean {
+	const host = asrUrlHost(uri);
+	if (host === null) return false;
+
+	// The cloud metadata endpoints are never a transcriber, exemption or not:
+	// they hand out the instance's credentials to anything that can address them.
+	const METADATA_HOSTS = new Set(['169.254.169.254', '169.254.170.2', 'metadata.google.internal']);
+	if (METADATA_HOSTS.has(host)) return false;
+
+	return isInternalAsrHost(host) ? privateTranscriberHostsAllowed() : true;
 }
 
 /** Join a base URI and a path without doubling or dropping the separator. */
@@ -160,6 +208,70 @@ export interface LocalTranscribeRequest extends TranscribeRequest {
 	audioPath?: string;
 	/** Injectable reader (tests); defaults to Bun.file. */
 	readFile?: (path: string) => Promise<Blob>;
+}
+
+/**
+ * THIS REQUEST'S OWN PRECONDITIONS, decided before anything leaves the machine:
+ * either the audio path to post, or the message the operator has to act on.
+ *
+ * A union rather than a boolean because the ready case CARRIES the value the
+ * caller needs — which is what stops `localAsrProvider` re-checking a path that
+ * has already been checked (and re-checking it with a `??` that would quietly
+ * accept the very emptiness this refuses).
+ */
+type SubmitPrecondition = { kind: 'ready'; audioPath: string } | { kind: 'refused'; msg: string };
+
+function submitPrecondition(req: LocalTranscribeRequest): SubmitPrecondition {
+	if (!isSafeLocalAsrUrl(req.uri)) {
+		return {
+			kind: 'refused',
+			// Naming the key is the difference between a dead end and a fix: with the
+			// exemption OFF, a private/loopback sidecar is the expected mistake.
+			msg: privateTranscriberHostsAllowed()
+				? 'invalid transcriber URL'
+				: 'invalid transcriber URL (a private/loopback address needs DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true)',
+		};
+	}
+	if (req.audioPath === undefined || req.audioPath === '') {
+		return { kind: 'refused', msg: 'the on-premise transcriber needs the audio file path' };
+	}
+	return { kind: 'ready', audioPath: req.audioPath };
+}
+
+/**
+ * The multipart body one submission carries: the audio bytes off the engine's
+ * own disk, plus what the sidecar needs to transcribe them.
+ */
+async function submitForm(req: LocalTranscribeRequest, audioPath: string): Promise<FormData> {
+	const read = req.readFile ?? (async (path: string) => Bun.file(path) as unknown as Blob);
+	const form = new FormData();
+	form.set('audio', await read(audioPath), 'audio_tr.wav');
+	form.set('language', req.langTld2);
+	form.set('model', req.quality);
+	// Identity travels for the sidecar's own logging, never for authorisation:
+	// the engine has already gated the request before reaching here.
+	form.set('entity_name', req.entityName);
+	form.set('user_id', String(req.userId));
+	return form;
+}
+
+/**
+ * Why a submission that produced no parsed body failed, in one line for the
+ * operator.
+ *
+ * The SUBMIT side only ever needs the message: a submit that failed IS terminal
+ * — nothing was started, so there is no job to keep waiting for. That is the
+ * whole difference from `pollTransportStatus`, which must decide between "gone"
+ * and "hiccup" because on the poll side a job may well still be running.
+ */
+function submitFailureMessage(httpStatus: number | null): string {
+	return httpStatus === null ? 'the transcriber did not answer' : `transcriber HTTP ${httpStatus}`;
+}
+
+/** The job id the sidecar answered with, or null when it named none. */
+function submittedJobId(body: unknown): string | number | null {
+	const id = (body as { id?: string | number }).id;
+	return id === undefined || id === null ? null : id;
 }
 
 /**
@@ -177,54 +289,81 @@ export interface LocalTranscribeRequest extends TranscribeRequest {
  * ARE gateable and are not covered by this exemption.
  */
 export async function localAsrProvider(req: LocalTranscribeRequest): Promise<TranscribeResult> {
-	if (!isSafeLocalAsrUrl(req.uri)) {
-		return {
-			ok: false,
-			msg: privateTranscriberHostsAllowed()
-				? 'invalid transcriber URL'
-				: 'invalid transcriber URL (a private/loopback address needs DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true)',
-		};
-	}
-	if (req.audioPath === undefined || req.audioPath === '') {
-		return { ok: false, msg: 'the on-premise transcriber needs the audio file path' };
-	}
+	const precondition = submitPrecondition(req);
+	if (precondition.kind === 'refused') return { ok: false, msg: precondition.msg };
 
 	try {
-		const read = req.readFile ?? (async (path: string) => Bun.file(path) as unknown as Blob);
-		const audio = await read(req.audioPath);
-
-		const form = new FormData();
-		form.set('audio', audio, 'audio_tr.wav');
-		form.set('language', req.langTld2);
-		form.set('model', req.quality);
-		// Identity travels for the sidecar's own logging, never for authorisation:
-		// the engine has already gated the request before reaching here.
-		form.set('entity_name', req.entityName);
-		form.set('user_id', String(req.userId));
-
-		const body = (await sidecarJson(
+		const answer = await sidecarJson(
 			endpoint(req.uri, 'jobs'),
 			{
 				method: 'POST',
-				headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
-				body: form,
+				headers: authHeaders(req.key),
+				body: await submitForm(req, precondition.audioPath),
 			},
 			SUBMIT_TIMEOUT_MS,
 			SMALL_MAX_BYTES,
-		)) as { id?: string | number } | null;
-		if (body === null) return { ok: false, msg: 'the transcriber did not answer' };
-		if (body.id === undefined || body.id === null) {
-			return { ok: false, msg: 'transcriber returned no job id' };
+		);
+		if (answer.kind === 'failed') {
+			return { ok: false, msg: submitFailureMessage(answer.httpStatus) };
 		}
-		return { ok: true, pid: body.id, msg: 'ok' };
+		const pid = submittedJobId(answer.body);
+		if (pid === null) return { ok: false, msg: 'transcriber returned no job id' };
+		return { ok: true, pid, msg: 'ok' };
 	} catch (error) {
 		return { ok: false, msg: (error as Error).message };
 	}
 }
 
 /**
- * Poll a sidecar job and translate its answer into the status shape the shared
- * completion poll consumes:
+ * WHAT THE SHARED COMPLETION POLL READS BACK (transcription_asr.ts): a NUMERIC
+ * `status` — 1 nothing / 2 working / 3 done — plus what belongs to it. A reply
+ * WITHOUT one is read as terminal (`Number(undefined)` is NaN), which is why
+ * every branch of the poll below returns this shape and none returns a bare
+ * failure.
+ *
+ * `unreachable` is carried SEPARATELY from the status because the two consumers
+ * need opposite things from the same fact. The background completion loop must
+ * keep waiting — the sidecar may still be working — while the CLIENT poll must
+ * be able to say so: it fails only on `ok === false`, so a bare `{status:2}`
+ * left a curator watching 'Processing' every four seconds, forever, against an
+ * unplugged box, with nothing anywhere reporting the outage.
+ */
+interface PollStatus {
+	status: 1 | 2 | 3;
+	msg?: string;
+	/** The poll never reached the sidecar (as opposed to it saying "still working"). */
+	unreachable?: true;
+	transcription_data?: { segments: TranscriptionSegment[] };
+}
+
+/**
+ * THE JOB IS GONE vs THE BOX HICCUPED — a poll that got no parsed body,
+ * translated into a status.
+ *
+ * The caller's loop reads any reply with no numeric `status` as terminal, so
+ * returning a flat failure here abandoned a transcription still running on the
+ * sidecar — a curator's hour of audio, dropped by one 30-second stall. Only
+ * 404/410 actually says the job is not there; everything else is 'keep
+ * waiting', and the loop's own attempt ceiling is what stops it going on
+ * forever.
+ */
+function pollTransportStatus(httpStatus: number | null, pid: string): PollStatus {
+	if (httpStatus === 404 || httpStatus === 410) {
+		return { status: 1, msg: `the transcriber no longer has job ${pid}` };
+	}
+	return {
+		status: 2,
+		unreachable: true,
+		msg:
+			httpStatus === null
+				? 'the transcriber did not answer this poll — still waiting'
+				: `transcriber HTTP ${httpStatus} on poll — still waiting`,
+	};
+}
+
+/**
+ * The sidecar's own job states, mapped onto the status codes the shared
+ * completion poll understands:
  *   queued/running → 2 (keep waiting)
  *   done           → 3 + the segments
  *   error/unknown  → 1 (terminal, nothing to save)
@@ -233,35 +372,43 @@ export async function localAsrProvider(req: LocalTranscribeRequest): Promise<Tra
  * paragraph grouper uses both, and dropping them here would silently cost the
  * transcript its structure.
  */
+function pollStateStatus(body: {
+	state?: string;
+	segments?: TranscriptionSegment[];
+	error?: string;
+}): PollStatus {
+	if (body.state === 'queued' || body.state === 'running') return { status: 2 };
+	if (body.state === 'done') {
+		return {
+			status: 3,
+			transcription_data: { segments: Array.isArray(body.segments) ? body.segments : [] },
+		};
+	}
+	return { status: 1, msg: body.error ?? `unknown transcriber state: ${String(body.state)}` };
+}
+
+/**
+ * Poll a sidecar job. The two translations it needs — a transport failure into
+ * "gone or hiccup", and a job state into a status code — are the two functions
+ * above, so what is left here is the one call and the two arms of SidecarAnswer.
+ */
 export const localAsrStatusProvider: TranscriberStatusProvider = async (
 	req: TranscriberStatusRequest,
 ) => {
 	if (!isSafeLocalAsrUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
 
 	try {
-		const body = (await sidecarJson(
+		const answer = await sidecarJson(
 			endpoint(req.uri, `jobs/${encodeURIComponent(String(req.pid))}`),
-			{
-				method: 'GET',
-				headers: req.key !== '' ? { Authorization: `Bearer ${req.key}` } : undefined,
-			},
+			{ method: 'GET', headers: authHeaders(req.key) },
 			POLL_TIMEOUT_MS,
 			TRANSCRIPT_MAX_BYTES,
-		)) as {
-			state?: string;
-			segments?: TranscriptionSegment[];
-			error?: string;
-		} | null;
-		if (body === null) return { ok: false, msg: 'the transcriber did not answer' };
-
-		if (body.state === 'queued' || body.state === 'running') return { status: 2 };
-		if (body.state === 'done') {
-			return {
-				status: 3,
-				transcription_data: { segments: Array.isArray(body.segments) ? body.segments : [] },
-			};
-		}
-		return { status: 1, msg: body.error ?? `unknown transcriber state: ${String(body.state)}` };
+		);
+		return answer.kind === 'failed'
+			? pollTransportStatus(answer.httpStatus, String(req.pid))
+			: pollStateStatus(
+					answer.body as { state?: string; segments?: TranscriptionSegment[]; error?: string },
+				);
 	} catch (error) {
 		return { ok: false, msg: (error as Error).message };
 	}
@@ -274,13 +421,14 @@ export async function localAsrModels(
 ): Promise<{ name: string; label?: string; languages?: string; notes?: string }[]> {
 	if (!isSafeLocalAsrUrl(uri)) return [];
 	try {
-		const body = (await sidecarJson(
+		const answer = await sidecarJson(
 			endpoint(uri, 'models'),
-			{ headers: key !== '' ? { Authorization: `Bearer ${key}` } : undefined },
+			{ headers: authHeaders(key) },
 			MODELS_TIMEOUT_MS,
 			SMALL_MAX_BYTES,
-		)) as { models?: { name?: string }[] } | null;
-		if (body === null) return [];
+		);
+		if (answer.kind === 'failed') return [];
+		const body = answer.body as { models?: { name?: string }[] };
 		return Array.isArray(body.models)
 			? (body.models.filter((model) => typeof model.name === 'string') as { name: string }[])
 			: [];

@@ -55,6 +55,16 @@ describe('the private-host exemption', () => {
 	test('NEVER allows the cloud metadata endpoint, exemption or not', () => {
 		setExemption('true');
 		expect(isSafeLocalAsrUrl('http://169.254.169.254/latest/meta-data/')).toBe(false);
+		// …INCLUDING WEARING AN IPv6 SPELLING. The refusal was a literal string
+		// match, and `[::ffff:169.254.169.254]` is the same address — which the
+		// WHATWG parser then rewrites to `::ffff:a9fe:a9fe`, so neither form
+		// matched. It read as merely 'private', which the exemption ALLOWS, and
+		// the exemption being on is this provider's entire purpose.
+		expect(isSafeLocalAsrUrl('http://[::ffff:169.254.169.254]/latest/meta-data/')).toBe(false);
+		expect(isSafeLocalAsrUrl('http://[::ffff:a9fe:a9fe]/latest/meta-data/')).toBe(false);
+		// the other two endpoints that hand out credentials
+		expect(isSafeLocalAsrUrl('http://169.254.170.2/v2/credentials/')).toBe(false);
+		expect(isSafeLocalAsrUrl('http://metadata.google.internal/computeMetadata/v1/')).toBe(false);
 	});
 
 	test('non-http protocols and malformed URLs are refused', () => {
@@ -161,6 +171,46 @@ describe('localAsrStatusProvider', () => {
 			globalThis.fetch = originalFetch;
 		};
 	}
+
+	/** Fail the next status GET the way a stalled or erroring box would. */
+	function stubFailure(mode: 'network' | number): () => void {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async () => {
+			if (mode === 'network') throw new Error('connect ETIMEDOUT');
+			return new Response('{}', { status: mode });
+		}) as unknown as typeof fetch;
+		return () => {
+			globalThis.fetch = originalFetch;
+		};
+	}
+
+	test('a transport blip is NOT terminal — the running job keeps being polled', async () => {
+		// The caller's loop reads any reply WITHOUT a numeric `status` as terminal
+		// (transcription_asr.ts: NaN falls through to "status not valid"). So a flat
+		// failure here abandoned a transcription still running on the sidecar: a
+		// curator's hour of audio, dropped by one 30-second stall. The loop has its
+		// own attempt ceiling, so 'keep waiting' cannot spin forever.
+		setExemption('true');
+
+		let restore = stubFailure('network');
+		expect(await localAsrStatusProvider(request)).toMatchObject({ status: 2 });
+		restore();
+
+		restore = stubFailure(503);
+		expect(await localAsrStatusProvider(request)).toMatchObject({ status: 2 });
+		restore();
+	});
+
+	test('a job the sidecar no longer has IS terminal', async () => {
+		// The converse, or 'keep waiting' becomes a way to poll a dead job until the
+		// ceiling. 404/410 is the box SAYING the job is gone; nothing else does.
+		setExemption('true');
+		for (const status of [404, 410]) {
+			const restore = stubFailure(status);
+			expect(await localAsrStatusProvider(request)).toMatchObject({ status: 1 });
+			restore();
+		}
+	});
 
 	test('maps the sidecar states onto the shared poll codes', async () => {
 		setExemption('true');

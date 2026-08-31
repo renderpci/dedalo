@@ -24,7 +24,8 @@
  * `isUsableCachedFile` (cache freshness) — gated by
  * `test/unit/ai_model_fetch_native.test.ts`. What remains is byte plumbing,
  * split one concern per function (`acceptCached` / `recordIfComplete` for the
- * manifest bookkeeping, `curlFetch` / `plainFetch` / `transport` for the wire),
+ * manifest bookkeeping, `curlFetch` / `plainFetch` — over `idleAbort` /
+ * `streamToFile` / `pumpToWriter` — and `transport` for the wire),
  * so `fetchOneFile` reads as the six-line sequence it is. That plumbing is NOT
  * gated: it needs the network. The orchestration in `downloadModel` is drivable
  * through the injectable `options.fetchFile`.
@@ -32,6 +33,7 @@
 
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
+import type { FileSink } from 'bun';
 
 /** A model id / file segment: word chars, dot, slash, hyphen — and NEVER `..`. */
 const SAFE_MODEL_SEGMENT = /^[A-Za-z0-9._/-]+$/;
@@ -240,10 +242,20 @@ export interface DownloadReport {
 let curlChecked: boolean | null = null;
 function haveCurl(): boolean {
 	if (curlChecked === null) {
-		curlChecked = Bun.spawnSync(['curl', '--version'], {
-			stdout: 'ignore',
-			stderr: 'ignore',
-		}).success;
+		try {
+			curlChecked = Bun.spawnSync(['curl', '--version'], {
+				stdout: 'ignore',
+				stderr: 'ignore',
+			}).success;
+		} catch {
+			// (!) A MISSING BINARY THROWS, it does not return `{success:false}`.
+			// Measured: on a PATH without curl, `Bun.spawnSync(['curl','--version'])`
+			// raises `Executable not found in $PATH: "curl"`. Unguarded, that escaped
+			// `transport` → `fetchOneFile` → `downloadModel`, so the seed died before
+			// a single byte — on exactly the curl-less host `plainFetch` exists to
+			// serve. The fallback was correct and unreachable.
+			curlChecked = false;
+		}
 	}
 	return curlChecked;
 }
@@ -294,50 +306,164 @@ async function curlFetch(target: string, url: string, quiet: boolean): Promise<b
 }
 
 /**
- * Transport fallback for hosts without curl.
- *
- * The signal is not optional here (CARRY-14). Model weights are fetched by a
- * BACKGROUND JOB, and the engine has three background lanes shared by every
- * class of work; a hub that accepts the connection and then stalls held one of
- * them for as long as it liked, with nothing to cancel it. curl's own path
- * already has `--max-time`; this one had nothing at all.
- *
- * It is an IDLE timeout, not a total one: a multi-GB weights file legitimately
- * takes far longer than any fixed budget, so what must be bounded is silence.
+ * WHAT ONE `fetch` ATTEMPT PRODUCED — four outcomes that are NOT
+ * interchangeable. Only an ABORTED body can have left bytes on disk; a refusal
+ * never opened the sink, and `unreachable` never got an answer at all.
+ * Modelling this as a union instead of a boolean is what lets the decision be
+ * taken ONCE, in `plainFetch`'s switch, rather than at every early return.
  */
-async function plainFetch(target: string, url: string): Promise<boolean> {
-	// AbortSignal.timeout() would be a TOTAL deadline, which is the wrong bound
-	// for a gigabyte artifact. The controller is re-armed on every chunk, so the
-	// abort fires only when the peer has actually gone quiet.
+type PlainFetchOutcome = 'complete' | 'refused' | 'aborted' | 'unreachable';
+
+/**
+ * An abort that fires after `ms` of SILENCE. `keepAlive()` restarts the clock —
+ * a received byte is proof the transfer is alive — and `cancel()` stops it for
+ * good, so a finished download leaves no timer behind.
+ */
+function idleAbort(ms: number): {
+	signal: AbortSignal;
+	keepAlive: () => void;
+	cancel: () => void;
+} {
 	const controller = new AbortController();
-	let idle = setTimeout(() => controller.abort(), DOWNLOAD_IDLE_TIMEOUT_MS);
-	const keepAlive = (): void => {
-		clearTimeout(idle);
-		idle = setTimeout(() => controller.abort(), DOWNLOAD_IDLE_TIMEOUT_MS);
+	let timer = setTimeout(() => controller.abort(), ms);
+	return {
+		signal: controller.signal,
+		keepAlive: (): void => {
+			clearTimeout(timer);
+			timer = setTimeout(() => controller.abort(), ms);
+		},
+		cancel: (): void => clearTimeout(timer),
 	};
-	try {
-		const response = await fetch(url, {
-			redirect: 'follow', // the hub redirects to its CDN; curl follows too (-L)
-			signal: controller.signal,
-		});
-		if (!response.ok || response.body === null) return false;
-		const watched = response.body.pipeThrough(
-			new TransformStream<Uint8Array, Uint8Array>({
-				transform(chunk, controllerOut) {
-					keepAlive();
-					controllerOut.enqueue(chunk);
-				},
-			}),
-		);
-		await Bun.write(target, new Response(watched));
-		return true;
-	} finally {
-		clearTimeout(idle);
+}
+
+/**
+ * Drain the body into the sink, one chunk at a time.
+ *
+ * (!) THE LOOP MUST BE ONE WE OWN, not `Bun.write(target, response)`.
+ *
+ * Measured (Bun 1.4.0, against a peer that sends headers plus one chunk and
+ * then goes quiet): `controller.abort()` errors the response body, but a
+ * `Bun.write` already awaiting that stream NEVER SETTLES — it hung >8s after a
+ * 400ms abort. So the first version of this fix cancelled nothing and held the
+ * lane exactly as long as before, with a timer for company. Reading the same
+ * aborted body through a reader we drive ourselves rejects on schedule.
+ */
+async function pumpToWriter(
+	reader: ReadableStreamDefaultReader<Uint8Array>,
+	writer: FileSink,
+	keepAlive: () => void,
+): Promise<void> {
+	for (;;) {
+		// rejects with the abort reason when the idle timer has fired
+		const { done, value } = await reader.read();
+		if (done) return;
+		keepAlive();
+		if (value) writer.write(value);
 	}
 }
 
-/** The one transport door: curl when it exists, `fetch` otherwise. */
-function transport(target: string, url: string, quiet: boolean): Promise<boolean> {
+/**
+ * One attempt: fetch, then stream the body into `target`.
+ *
+ * (!) `fetch` ITSELF CAN REJECT, and that is the commonest stall shape, not an
+ * exotic one. Measured (Bun 1.4.0): Bun resolves `fetch` on the FIRST BODY
+ * BYTE, not on the headers — a peer that sends headers and then goes silent
+ * without a single byte rejects at the `await fetch` line, OUTSIDE any reader
+ * loop. That is precisely the hub-accepts-then-stalls case this whole fix
+ * exists for, and leaving it to propagate broke `FetchFile`'s contract
+ * (`false = not obtained`, never a throw): the seed died mid-run instead of
+ * reporting one file missing. Connection refused and DNS failure — the ordinary
+ * air-gapped and firewalled cases — arrive the same way.
+ */
+async function streamToFile(
+	target: string,
+	url: string,
+	idle: { signal: AbortSignal; keepAlive: () => void },
+): Promise<PlainFetchOutcome> {
+	let response: Response;
+	try {
+		response = await fetch(url, {
+			redirect: 'follow', // the hub redirects to its CDN; curl follows too (-L)
+			signal: idle.signal,
+		});
+	} catch {
+		return 'unreachable';
+	}
+	if (!response.ok || response.body === null) {
+		// Release the connection rather than leaving an unread body pinned open.
+		await response.body?.cancel().catch(() => undefined);
+		return 'refused';
+	}
+
+	const writer = Bun.file(target).writer();
+	try {
+		await pumpToWriter(response.body.getReader(), writer, idle.keepAlive);
+		await writer.end();
+		return 'complete';
+	} catch {
+		await writer.end();
+		return 'aborted';
+	}
+}
+
+/**
+ * Transport fallback for hosts without curl.
+ *
+ * The bound is not optional here (CARRY-14). Model weights are fetched by a
+ * BACKGROUND JOB, and the engine has three background lanes shared by every
+ * class of work; a hub that accepts the connection and then stalls held one of
+ * them for as long as it liked, with nothing to cancel it.
+ *
+ * It is an IDLE bound, not a total one: a multi-GB weights file legitimately
+ * takes far longer than any fixed budget on a museum's uplink, so what must
+ * never be unbounded is SILENCE.
+ *
+ * EXPORTED, with the bound as a defaulted parameter, for its gate. The invariant
+ * here is behavioural — "a stalled peer stops holding the lane, and leaves
+ * nothing on disk" — and a source-shape assertion was measured to be defeated by
+ * renaming one local. Driving the real function against a LOOPBACK peer is
+ * hermetic: it is the third-party hub that may not be reached from a test, not a
+ * socket on this machine. The parameter exists because two minutes of silence is
+ * the right production bound and an impossible test.
+ */
+export async function plainFetch(
+	target: string,
+	url: string,
+	idleTimeoutMs: number = DOWNLOAD_IDLE_TIMEOUT_MS,
+): Promise<boolean> {
+	const idle = idleAbort(idleTimeoutMs);
+	try {
+		// Exhaustive over PlainFetchOutcome, in ONE place: a fourth outcome stops
+		// compiling rather than falling through to an accidental `true`.
+		switch (await streamToFile(target, url, idle)) {
+			case 'complete':
+				return true;
+			case 'aborted':
+				// A half-written file must not survive: `isUsableCachedFile` compares
+				// against the manifest's expected size, but an ABANDONED download of a
+				// file whose size was never learnt would otherwise sit there looking
+				// complete, and the next run would accept it.
+				if (existsSync(target)) rmSync(target);
+				return false;
+			case 'refused':
+			case 'unreachable':
+				// No usable response: the sink was never opened, so there is nothing
+				// on disk to remove.
+				return false;
+		}
+	} finally {
+		idle.cancel();
+	}
+}
+
+/**
+ * The one transport door: curl when it exists, `fetch` otherwise.
+ *
+ * EXPORTED for its gate: `haveCurl()` is what decides here, and it is memoized
+ * for the life of the process, so the only honest way to test the curl-less host
+ * is a subprocess that reaches this door with curl absent from PATH.
+ */
+export function transport(target: string, url: string, quiet: boolean): Promise<boolean> {
 	return haveCurl() ? curlFetch(target, url, quiet) : plainFetch(target, url);
 }
 

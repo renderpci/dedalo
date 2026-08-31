@@ -607,6 +607,20 @@ export async function checkServerTranscriberStatus(
 			message: String((result as { msg?: unknown }).msg ?? 'transcriber request failed'),
 		});
 	}
+	// …AND SO DOES A POLL THAT NEVER REACHED THE BOX. The background completion
+	// loop treats that as "keep waiting" on purpose — the sidecar may still be
+	// working, and one 30-second stall must not abandon an hour of audio. THIS
+	// poll is the opposite case: it answers a person, once. Without this branch a
+	// `{status:2}` from an unplugged transcriber returned a SUCCESS envelope, and
+	// the client (render_tool_transcription.js `case 2:`) re-armed a 4-second
+	// timer with no ceiling and painted 'Processing' for the rest of the session,
+	// while nothing anywhere said the transcriber was unreachable.
+	if (typeof result === 'object' && (result as { unreachable?: unknown }).unreachable === true) {
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { engine },
+			message: String((result as { msg?: unknown }).msg ?? 'the transcriber did not answer'),
+		});
+	}
 
 	// WC-007: the legacy body's success msg is dropped — `ok` IS the success.
 	return ok(result, { requestId: toolRequestId(ctx) });

@@ -5,9 +5,9 @@
 	"root": "src/core",
 	"summary": {
 		"files": 520,
-		"functions": 4703,
-		"functionsOverCap": 691,
-		"filesOverCap": 269
+		"functions": 4716,
+		"functionsOverCap": 688,
+		"filesOverCap": 268
 	},
 	"files": {
 		"src/core/ai/model_store.ts": 10,
@@ -260,7 +260,6 @@
 		"src/core/tools/security.ts": 35,
 		"src/core/tools/serving.ts": 8,
 		"src/core/tools/transcription_asr.ts": 18,
-		"src/core/tools/transcription_local_asr.ts": 11,
 		"src/core/tools/translation.ts": 15,
 		"src/core/ts_object/node_repository.ts": 40,
 		"src/core/ts_object/search.ts": 8,

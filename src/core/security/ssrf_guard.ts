@@ -96,8 +96,12 @@ function isPrivateIpv4(ip: string): boolean {
  * that only understood the DOTTED tail was therefore dead for every address that
  * arrived as a URL — which is all of them — and `::ffff:127.0.0.1` (loopback) and
  * `::ffff:a00:1` (10.0.0.1) both read as PUBLIC. Measured 2026-08-31.
+ *
+ * EXPORTED because it is the same trap in every address check, and a second
+ * copy is how the first one survived: `transcription_local_asr` refused the
+ * cloud metadata endpoint by literal string and let the mapped spelling past.
  */
-function mappedIpv4(addr: string): string | null {
+export function mappedIpv4(addr: string): string | null {
 	const dotted = addr.match(/(?:::ffff:|::)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)?.[1];
 	if (dotted !== undefined) return dotted;
 	// ::ffff:7f00:1 — the same address, hex, as the URL parser emits it.

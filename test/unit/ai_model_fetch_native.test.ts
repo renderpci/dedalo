@@ -9,7 +9,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
 import {
@@ -20,6 +20,7 @@ import {
 	HUB_BASE,
 	isUsableCachedFile,
 	OPTIONAL_FILES,
+	plainFetch,
 	resolveFetchTarget,
 } from '../../src/core/ai/model_fetch.ts';
 import { expectedSize } from '../../src/core/ai/model_manifest.ts';
@@ -345,4 +346,156 @@ describe('downloadModel — an explicit file list is the whole plan', () => {
 		expect(report.errors).toEqual([]);
 		expect(report.ok).toBe(true);
 	});
+});
+
+/**
+ * THE FALLBACK TRANSPORT, DRIVEN — not read (P1-26 / CARRY-14).
+ *
+ * The invariant is behavioural: a hub that accepts the connection and then goes
+ * quiet must stop holding one of the engine's three background lanes, and must
+ * leave nothing on disk that a later run would mistake for a complete download.
+ *
+ * It was first asserted by reading the source, and that was measured to be
+ * theatre: replacing the reader loop with `const sink = target; await
+ * Bun.write(sink, new Response(response.body))` — the EXACT defect, the one that
+ * hung >8s after a 400ms abort on Bun 1.4.0 — left the gate green, because the
+ * assertion pinned the spellings `target` and `response`. A gate measures the
+ * outcome or it measures nothing.
+ *
+ * Hermetic: the peer is a loopback server this test starts and stops. The
+ * COVERAGE-EXEMPT reasoning around model downloads is about the third-party HUB,
+ * which a gate may never depend on — not about a socket on this machine.
+ */
+describe('the fallback transport is bounded by silence, not by hope', () => {
+	const IDLE_MS = 400;
+
+	/** A peer whose body behaviour the test chooses. */
+	function peer(mode: 'stall_after_chunk' | 'stall_before_body' | 'complete' | 'missing') {
+		return Bun.serve({
+			port: 0,
+			fetch() {
+				if (mode === 'missing') return new Response('nope', { status: 404 });
+				if (mode === 'complete') return new Response('WEIGHTS');
+				return new Response(
+					new ReadableStream({
+						start(controller) {
+							// one chunk, then silence forever — or no bytes at all
+							if (mode === 'stall_after_chunk') controller.enqueue(new Uint8Array([1, 2, 3]));
+						},
+					}),
+				);
+			},
+		});
+	}
+
+	async function download(mode: Parameters<typeof peer>[0]): Promise<{
+		ok: boolean;
+		ms: number;
+		left: boolean;
+	}> {
+		const server = peer(mode);
+		const target = join(tmpdir(), `dedalo_plainfetch_${mode}_${process.pid}`);
+		if (existsSync(target)) rmSync(target);
+		const started = Date.now();
+		try {
+			const ok = await plainFetch(target, `http://localhost:${server.port}/w`, IDLE_MS);
+			return { ok, ms: Date.now() - started, left: existsSync(target) };
+		} finally {
+			server.stop(true);
+			if (existsSync(target)) rmSync(target);
+		}
+	}
+
+	test('a peer that stalls MID-BODY is abandoned, and leaves no partial file', async () => {
+		const result = await download('stall_after_chunk');
+		expect(result.ok).toBe(false);
+		// The lane is released on the idle bound, not held indefinitely. Generous
+		// upper bound so a loaded CI box does not flake; the defect hung forever.
+		expect(result.ms, `held the lane for ${result.ms}ms against a ${IDLE_MS}ms bound`).toBeLessThan(
+			IDLE_MS * 10,
+		);
+		// An abandoned partial whose expected size was never learnt would sit there
+		// looking complete, and the next run would accept it.
+		expect(result.left, 'a partial download survived').toBe(false);
+	});
+
+	test('a peer that never sends a body byte is abandoned too', async () => {
+		// Measured: Bun resolves `fetch` on the FIRST BODY BYTE, not on the headers,
+		// so this stall lands on the `await fetch` itself — outside any reader loop.
+		// It is the commonest shape of the very failure this bound exists for, and
+		// it was the one branch that threw instead of returning false.
+		const result = await download('stall_before_body');
+		expect(result.ok).toBe(false);
+		expect(result.ms).toBeLessThan(IDLE_MS * 10);
+		expect(result.left).toBe(false);
+	});
+
+	test('an unreachable peer returns false rather than throwing', async () => {
+		// FetchFile's contract is `false = not obtained`, never a throw: a refused
+		// connection is the ordinary air-gapped case, and it must cost one file,
+		// not the whole seed.
+		const target = join(tmpdir(), `dedalo_plainfetch_refused_${process.pid}`);
+		// port 1 is reserved and nothing listens on it
+		expect(await plainFetch(target, 'http://127.0.0.1:1/w', IDLE_MS)).toBe(false);
+		expect(existsSync(target)).toBe(false);
+	});
+
+	test('a 404 returns false and writes nothing', async () => {
+		const result = await download('missing');
+		expect(result.ok).toBe(false);
+		expect(result.left).toBe(false);
+	});
+
+	test('a healthy peer still downloads the bytes', async () => {
+		// The converse: a bound that also breaks the working case is not a fix.
+		const server = peer('complete');
+		const target = join(tmpdir(), `dedalo_plainfetch_ok_${process.pid}`);
+		try {
+			expect(await plainFetch(target, `http://localhost:${server.port}/w`, IDLE_MS)).toBe(true);
+			expect(readFileSync(target, 'utf8')).toBe('WEIGHTS');
+		} finally {
+			server.stop(true);
+			if (existsSync(target)) rmSync(target);
+		}
+	});
+});
+
+/**
+ * THE FALLBACK MUST BE REACHABLE (P1-26). `haveCurl()` decides which transport
+ * runs, and `Bun.spawnSync(['curl','--version'])` does NOT return
+ * `{success:false}` for a missing binary — it THROWS
+ * `Executable not found in $PATH: "curl"`. Unguarded, that escaped `transport`
+ * → `fetchOneFile` → `downloadModel`, so on a curl-less host — the ONLY host
+ * the fallback exists to serve — the whole model seed died before a byte. The
+ * bounded fallback was correct and unreachable.
+ *
+ * A SUBPROCESS, because the probe is memoized for the life of the process: the
+ * answer cannot be re-asked in-process, so the environment has to be chosen
+ * before the module loads. No network: the URL is a closed port.
+ */
+describe('the transport door survives a host without curl', () => {
+	test('a curl-less PATH falls back instead of throwing', async () => {
+		const probe = `
+			const { transport } = await import(${JSON.stringify(join(import.meta.dir, '..', '..', 'src/core/ai/model_fetch.ts'))});
+			// THE DOOR ITSELF — transport() is where haveCurl() decides, and a closed
+			// port answers instantly, so this needs no network and no clock.
+			const ok = await transport('/dev/null', 'http://127.0.0.1:1/w', true);
+			console.log(JSON.stringify({ ok }));
+		`;
+		// The interpreter is addressed absolutely, so PATH can be emptied of
+		// everything — including curl — without also hiding bun from ourselves.
+		const child = Bun.spawn([process.execPath, '-e', probe], {
+			env: { PATH: '/nonexistent', HOME: process.env.HOME ?? '/tmp' },
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		const [out, err, code] = await Promise.all([
+			new Response(child.stdout).text(),
+			new Response(child.stderr).text(),
+			child.exited,
+		]);
+		expect(code, `the curl probe killed the process:\n${err}`).toBe(0);
+		expect(err).not.toContain('Executable not found');
+		expect(JSON.parse(out.trim())).toEqual({ ok: false });
+	}, 30_000);
 });

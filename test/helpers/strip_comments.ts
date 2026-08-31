@@ -78,10 +78,32 @@ function regexMayStart(emitted: string): boolean {
 export interface StripCommentsOptions {
 	/** Also blank the CONTENT of string/template literals (quotes and newlines kept). */
 	blankStrings?: boolean;
+	/**
+	 * Also blank the BODY of a regex literal, keeping the slashes.
+	 *
+	 * A regex body is copied verbatim by default, which is right for a scanner
+	 * looking for a banned token. It is WRONG for one that counts brackets: an
+	 * escaped or character-class paren (`/^\(*​/`, `/[()]/`) adds depth that never
+	 * closes, so a "matching close paren" is found later than the real one and the
+	 * window runs into the following statements. Measured 2026-08-31 — it let a
+	 * signal-less `fetch` pass `outbound_fetch_tripwire` by swallowing a decoy.
+	 */
+	blankRegexBodies?: boolean;
+	/**
+	 * Keep `${…}` substitutions as CODE when `blankStrings` is on.
+	 *
+	 * A substitution is not string content — it is an expression, and blanking it
+	 * hides real calls from a census (`` await fetch(`${base}/x`) `` is fine, but
+	 * `` `${await fetch(u)}` `` disappears entirely). The literal parts around it
+	 * are still blanked.
+	 */
+	keepTemplateSubstitutions?: boolean;
 }
 
 export function stripComments(source: string, options: StripCommentsOptions = {}): string {
 	const blankStrings = options.blankStrings === true;
+	const blankRegexBodies = options.blankRegexBodies === true;
+	const keepSubstitutions = options.keepTemplateSubstitutions === true;
 	let output = '';
 	let index = 0;
 	while (index < source.length) {
@@ -122,6 +144,23 @@ export function stripComments(source: string, options: StripCommentsOptions = {}
 					output += inner;
 					break;
 				}
+				// `${` inside a template opens CODE again. Recursing keeps one
+				// definition of what a literal is — a second walker that only knew
+				// substitutions would disagree with this one about regexes.
+				if (keepSubstitutions && quote === '`' && inner === '$' && source[index] === '{') {
+					const start = index + 1;
+					let depth = 1;
+					let cursor = start;
+					while (cursor < source.length && depth > 0) {
+						const brace = source[cursor];
+						if (brace === '{') depth++;
+						else if (brace === '}') depth--;
+						cursor++;
+					}
+					output += `\${${stripComments(source.slice(start, cursor - 1), options)}}`;
+					index = cursor;
+					continue;
+				}
 				output += blankStrings && inner !== '\n' ? ' ' : inner;
 				// A non-template literal never spans a raw newline; bail out rather
 				// than swallowing the file when the source is not what we assumed.
@@ -152,7 +191,8 @@ export function stripComments(source: string, options: StripCommentsOptions = {}
 				cursor++;
 			}
 			if (closed) {
-				output += source.slice(index, cursor);
+				const literal = source.slice(index, cursor);
+				output += blankRegexBodies ? `/${literal.slice(1, -1).replace(/[^\n]/g, ' ')}/` : literal;
 				index = cursor;
 				continue;
 			}
