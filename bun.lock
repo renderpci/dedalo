@@ -7,7 +7,7 @@
       "dependencies": {
         "@anthropic-ai/sdk": "^0.115.0",
         "@geoman-io/leaflet-geoman-free": "2.20.0",
-        "@highlightjs/cdn-assets": "11.11.1",
+        "@highlightjs/cdn-assets": "11.12.0",
         "@huggingface/transformers": "4.2.0",
         "@jaames/iro": "5.5.2",
         "@modelcontextprotocol/sdk": "^1.30.0",
@@ -106,7 +106,7 @@
 
     "@geoman-io/leaflet-geoman-free": ["@geoman-io/leaflet-geoman-free@2.20.0", "", { "dependencies": { "@turf/boolean-contains": "^7.3.5", "@turf/kinks": "^7.3.5", "@turf/line-intersect": "^7.3.5", "@turf/line-split": "^7.3.5", "lodash": "4.18.1", "polyclip-ts": "^0.16.8" }, "peerDependencies": { "leaflet": "^1.2.0" } }, "sha512-n9ytYdNWbX6YcUDNdOR6XtdiKDnZVJD8jWkErk1yL8magFNn9e0nbdQc0YBDa173AxGAYWVrGzUpOdkYuTAsqQ=="],
 
-    "@highlightjs/cdn-assets": ["@highlightjs/cdn-assets@11.11.1", "", {}, "sha512-VEPdHzwelZ12hEX18BHduqxMZGolcUsrbeokHYxOUIm8X2+M7nx5QPtPeQgRxR9XjhdLv4/7DD5BWOlSrJ3k7Q=="],
+    "@highlightjs/cdn-assets": ["@highlightjs/cdn-assets@11.12.0", "", {}, "sha512-KvOKXODaiFmId9xaq3xc5xCL66wVLUuOngDbO9B/kewbFTqdGbn2nJxNhN3H5R1cgDTVj6R8vH0zgiNDEGjpDw=="],
 
     "@hono/node-server": ["@hono/node-server@2.1.1", "", { "peerDependencies": { "hono": "^4" } }, "sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg=="],
 

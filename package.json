@@ -49,7 +49,7 @@
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.115.0",
 		"@geoman-io/leaflet-geoman-free": "2.20.0",
-		"@highlightjs/cdn-assets": "11.11.1",
+		"@highlightjs/cdn-assets": "11.12.0",
 		"@huggingface/transformers": "4.2.0",
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.30.0",
