@@ -68,6 +68,8 @@ import {
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import { resolvePrincipal } from '../../src/core/security/permissions.ts';
+import { toolTimeMachineApplyValue } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -855,6 +857,66 @@ describe('the delete and save DOORS reach the media lifecycle', () => {
 		expect(existsSync(moved), 'the file was not moved into deleted/').toBe(true);
 		// A MOVE, never a hard delete: the bytes are recoverable.
 		expect(readFileSync(moved, 'utf8')).toBe('a-scratch-image');
+	}, 60000);
+
+	test('the UNDELETE brings the files back — the delete/restore round trip through both doors', async () => {
+		// P1-11 / LIFE-08. `restoreDeletedSectionMediaFiles` was written as "the
+		// exact inverse" of the delete's media move, was unit-tested, and had ZERO
+		// production callers — while delete_record.ts's own comment asserted the
+		// undelete called it. So a Time-Machine section restore put the ROW back,
+		// answered ok:true, and left the record's media column pointing at live
+		// paths holding no files. Only opening the record showed it.
+		if (image === null) throw new Error('image spec unavailable');
+		const { sectionId, identity, opts } = await scratchRecord();
+		await sql.unsafe(
+			`UPDATE ${LIVE_TABLE}
+			 SET media = COALESCE(media, '{}'::jsonb) || jsonb_build_object($2::text, $3::text::jsonb)
+			 WHERE section_tipo = $1 AND section_id = $4`,
+			[LIVE_SECTION, IMAGE_TIPO, JSON.stringify([{ id: 1 }]), sectionId],
+		);
+		const live = buildMediaLocation(
+			image,
+			identity,
+			image.defaultQuality,
+			image.defaultExtension,
+			opts,
+		).absolutePath;
+		plant(live, 'the-original-bytes');
+		plantedPaths.push(live);
+
+		const now = new Date(2026, 6, 3, 9, 15, 0);
+		expect((await deleteSectionRecord(LIVE_SECTION, sectionId, USER_ID, now)).removed).toBe(true);
+		const moved = `${dirname(live)}/deleted/${IMAGE_TIPO}_${LIVE_SECTION}_${String(sectionId)}_deleted_2026-07-03_0915.jpg`;
+		plantedPaths.push(moved);
+		expect(existsSync(live)).toBe(false);
+		expect(existsSync(moved)).toBe(true);
+
+		// The delete's own marker row IS the section snapshot the undelete restores
+		// from (tipo = section_tipo — "mark every section delete point in the time").
+		const marker = (await sql.unsafe(
+			`SELECT id FROM matrix_time_machine
+			  WHERE section_tipo = $1 AND section_id = $2 AND tipo = $1
+			  ORDER BY id DESC LIMIT 1`,
+			[LIVE_SECTION, sectionId],
+		)) as { id: number }[];
+		expect(marker[0]?.id, 'the delete wrote no section marker to restore from').toBeDefined();
+
+		await toolTimeMachineApplyValue({
+			principal: await resolvePrincipal(USER_ID),
+			userId: USER_ID,
+			options: {
+				section_tipo: LIVE_SECTION,
+				section_id: sectionId,
+				tipo: LIVE_SECTION,
+				lang: 'lg-nolan',
+				matrix_id: Number(marker[0]?.id),
+			},
+			background: false,
+		} as never);
+
+		// THE ROW IS BACK — and so are the BYTES, at the live path.
+		expect(existsSync(live), 'the restore put the row back but not the file').toBe(true);
+		expect(readFileSync(live, 'utf8')).toBe('the-original-bytes');
 	}, 60000);
 
 	test('saveComponentData persists an image item’s svg_file_data as the envelope', async () => {

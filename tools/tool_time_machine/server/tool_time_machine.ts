@@ -63,6 +63,7 @@ import {
 	type TimeMachineRow,
 } from '../../../src/core/db/time_machine.ts';
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
+import { restoreDeletedSectionMediaFiles } from '../../../src/core/media/file_ops.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -130,8 +131,36 @@ async function restoreSection(
 	// restores CONVERGE on the canonical form instead of undoing the sweep.
 	await normalizeRestoredSectionIds(columns);
 	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
-	// LEDGERED (no TS twin / no fixture): deleted-media relink, session-SQO
-	// reset, and consuming (deleting) the restored TM row.
+
+	// THE FILES, TOO (P1-11 / LIFE-08). The delete moved every managed file of
+	// every media component into its quality dir's `deleted/` sub-folder — a
+	// move, never a hard delete, precisely so this step can undo it. Without it
+	// the restored record's media column points at live paths holding NO FILES
+	// and the restore still answers ok:true: the row is back, the objects are
+	// not, and only opening the record shows it.
+	//
+	// POST-PERSIST and unwrapped, matching the delete's own post-commit half: the
+	// row must be back before the files are, and a media failure must not undo a
+	// restore that landed. `restoreDeletedSectionMediaFiles` never overwrites a
+	// live file — an operator may have re-uploaded since, and silently replacing
+	// the newer file with the pre-delete one is the one outcome nothing can undo.
+	try {
+		const mediaColumn = columns.media as Record<string, unknown[]> | null | undefined;
+		const outcome = await restoreDeletedSectionMediaFiles(sectionTipo, sectionId, mediaColumn);
+		if (outcome.errors.length > 0) {
+			console.error(
+				`[tool_time_machine] media restore for ${sectionTipo}/${sectionId} reported: ${outcome.errors.join('; ')}`,
+			);
+		}
+	} catch (error) {
+		// Never fail a landed restore on the file half — say it loudly instead.
+		console.error(
+			`[tool_time_machine] media restore for ${sectionTipo}/${sectionId} FAILED: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+
+	// LEDGERED (no TS twin / no fixture): session-SQO reset, and consuming
+	// (deleting) the restored TM row.
 }
 
 /**

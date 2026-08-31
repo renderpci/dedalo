@@ -159,7 +159,11 @@ export async function deleteSectionRecord(
 	//    which likewise runs in step 3, after the row is already gone).
 	//
 	//    ONE implementation, in media/file_ops.ts, written against the RESTORE it
-	//    is the inverse of (the tool_time_machine undelete calls that half). This
+	//    is the inverse of — `restoreDeletedSectionMediaFiles`, which the
+	//    tool_time_machine section undelete calls after it puts the row back
+	//    (P1-11; that call did NOT exist until 2026-08-31, and this comment
+	//    asserted it did, so a maintainer reading the delete path believed the
+	//    round trip was complete when the files never came back). This
 	//    door used to carry a private copy that walked files_info and resolved the
 	//    media root from a bare `MEDIA_PATH` env read — a key that is normally
 	//    UNSET, because the root is a DERIVED default — so on an ordinary install
