@@ -49,6 +49,7 @@ import {
   type SurfacePaths,
 } from '../../src/provision/layout';
 import { sitesRenderer } from '../../src/provision/render/sites';
+import { getSessionState, interruptLiveTurns } from '../../src/sessions/manager';
 
 /**
  * The instance these scratch roots belong to. Generic on purpose — the same law as the
@@ -201,7 +202,40 @@ async function assertDestroyable(root: string): Promise<void> {
  *     it, so the reset plants it again. A fixture that resets into an undeclared
  *     instance would fail the boot check the moment it exists.
  */
+/**
+ * SETTLE ANY TURN STILL IN FLIGHT before the roots go.
+ *
+ * A turn is DETACHED: `startSession` returns as soon as the driver has been handed its
+ * environment, while `runTurn` goes on to commit the workspace and write the session
+ * meta. Wiping the roots under one produced ENOENT storms in the log —
+ *   [sessions] failed to persist turn end for '<slug>' — state may be stale on disk
+ * — on tests that PASS, which is noise while it stays in its own file and an arbitrary
+ * failure the moment an orphan lands during another one. That is the shape
+ * scripts/ci/db_tier.sh already blames for the unit tier's moving red set: bun attributes
+ * an uncaught exception to whichever test is running, so the victim is never the culprit.
+ *
+ * `live.state` is cleared AFTER `writeMeta` in runTurn's finally, so polling it waits for
+ * the write, not merely for the driver to stop. Bounded, and it SAYS when the bound is
+ * hit rather than wiping anyway in silence.
+ */
+async function settleLiveTurns(): Promise<void> {
+  await interruptLiveTurns();
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const running = [...declaredSites.keys()].filter(
+      (slug) => getSessionState(slug).state === 'running',
+    );
+    if (running.length === 0) return;
+    await Bun.sleep(10);
+  }
+  console.warn(
+    '[fixture] resetInstance: a turn was still running after 5s — wiping anyway, expect ' +
+      'ENOENT noise from the orphan',
+  );
+}
+
 export async function resetInstance(): Promise<void> {
+  await settleLiveTurns();
   // Check every root BEFORE destroying any, so a bad LAST root cannot leave the earlier
   // ones already wiped.
   for (const root of allRoots()) await assertDestroyable(root);
