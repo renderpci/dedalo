@@ -269,10 +269,21 @@ describe('shard env — the discriminator is total or absent, never partial', ()
 		// junit comparison, and the only one that was the gate's own fault.
 		//
 		// The claim being made is about the FUNCTION ("given no shard, it adds no
-		// suffix"), never about the ambient environment, so the four keys are
+		// suffix"), never about the ambient environment, so the keys are
 		// cleared for the duration and restored afterwards.
+		//
+		// THE ADDRESSING KEYS ARE CLEARED TOO (2026-08-31). Clearing
+		// DEDALO_TEST_DATABASE alone stopped being sufficient once childEnv() began
+		// RESOLVING the suite database instead of leaving the child to re-derive it
+		// (scripts/lib/parity_census.ts): with the explicit key gone, the derivation
+		// falls to DB_NAME, which in a shard child is `<template>__shardN` — so the
+		// composed name would be `<template>__shardN_test` and this gate would once
+		// more report the runner for what is its own inherited context. Same defect
+		// the block above describes, one key further down the chain.
 		const SHARD_KEYS = [
 			'DEDALO_TEST_DATABASE',
+			'DB_NAME',
+			'DEDALO_DATABASE_CONN',
 			'DIFFUSION_JOBS_TABLE',
 			'DIFFUSION_ACTIVITY_TABLE',
 			'DEDALO_TEST_MEDIA_ROOT',

@@ -98,6 +98,50 @@ fi
 # here too, or the tier goes red the same way.
 : "${DEDALO_EXTERNAL_ALLOWED_HOSTS:=zenon.dainst.org}"
 
+# THE CONFIG THE FROZEN FIXTURES WERE HARVESTED UNDER (2026-08-31).
+#
+# The parity tier replays PHP bodies recorded on ONE installation and compares them
+# byte-for-byte. Several of those bodies embed CONFIGURATION — not records — and this tier
+# composes its whole environment in-process, so a key the developer's ../private/.env
+# happens to supply is simply absent here and the comparison diverges. That is not a
+# regression and does not belong in engineering/parity_baseline.json: it is this tier
+# failing to declare the configuration the repo's own fixtures require, exactly like the
+# egress allowlist above.
+#
+# MEASURED 2026-08-31: with the census addressing fixed but these eight unset, the tier
+# reports 5 unlisted regressions (382/264/105/13). With them it reports 382/269/100/13 and
+# ZERO drift — necessary and sufficient, none of the five is corpus-bound.
+#
+#   environment_differential plain_vars .... DEDALO_DEV_MODE (DEVELOPMENT_SERVER, SHOW_DEBUG,
+#                                            SHOW_DEVELOPER — read at module load, so it must
+#                                            be exported before the process starts),
+#                                            DEDALO_DIFFUSION_NATIVE (the WC-003 branch),
+#                                            DEDALO_UPLOAD_SERVICE_CHUNK_FILES (5, not the
+#                                            catalog default 4)
+#   environment_differential page_globals .. DEDALO_ENTITY_ID — compared EXACTLY; ENTITY is a
+#                                            different key and does not feed it
+#   component_image_context_differential ... the two DEDALO_IMAGE_* lists, which the gate's own
+#                                            comment names as install-config overrides
+#   tool_export_differential ............... DEDALO_MEDIA_EXPORT_BASE — unset yields no URL at
+#                                            all (config.ts refuses to guess a host); the value
+#                                            is only string-compared, so it is a fixture constant
+#   section_tools_differential ............. DEDALO_DIFFUSION_DOMAIN — a hard THROW, not a diff
+#                                            (test/helpers/zzd_diffusion_fixture.ts
+#                                            requireDomainName). The engine matches a domain BY
+#                                            TERM and the fixture is provisioned with whatever
+#                                            name is configured, so `test` — the repo-owned
+#                                            generic domain the client suite already pins — is
+#                                            correct here. NEVER an installation's (`mht`): that
+#                                            would bind this tier to one machine's ontology.
+: "${DEDALO_DEV_MODE:=true}"
+: "${DEDALO_DIFFUSION_NATIVE:=true}"
+: "${DEDALO_DIFFUSION_DOMAIN:=test}"
+: "${DEDALO_ENTITY_ID:=10}"
+: "${DEDALO_UPLOAD_SERVICE_CHUNK_FILES:=5}"
+: "${DEDALO_IMAGE_EXTENSIONS_SUPPORTED:=jpg,jpeg,png,tif,tiff,bmp,psd,raw,heic}"
+: "${DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS:=avif}"
+: "${DEDALO_MEDIA_EXPORT_BASE:=http://localhost:8080/dedalo/media}"
+
 # Postgres client. ubuntu-latest ships psql 16 and an OLDER CLIENT REFUSES a
 # newer server, so the workflow installs postgresql-client-18 and points here.
 # src/core/install/pg_bin.ts probes an explicit path first, then Apple-Silicon
@@ -123,6 +167,9 @@ fi
 
 export ENTITY DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME
 export DEDALO_EXTERNAL_ALLOWED_HOSTS
+export DEDALO_DEV_MODE DEDALO_DIFFUSION_NATIVE DEDALO_DIFFUSION_DOMAIN DEDALO_ENTITY_ID
+export DEDALO_UPLOAD_SERVICE_CHUNK_FILES DEDALO_MEDIA_EXPORT_BASE
+export DEDALO_IMAGE_EXTENSIONS_SUPPORTED DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS
 export DEDALO_APPLICATION_LANGS DEDALO_APPLICATION_LANGS_DEFAULT DEDALO_DATA_LANG_DEFAULT
 export PROJECTS_DEFAULT_LANGS DEDALO_TIMEZONE DEDALO_PG_BIN_PATH
 export DIFFUSION_JOBS_TABLE DIFFUSION_ACTIVITY_TABLE DEDALO_SESSION_DB_PATH DEDALO_TS_STATE_PATH

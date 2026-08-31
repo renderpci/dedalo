@@ -54,6 +54,31 @@ const EXTERNAL_HOST = seed('rsc', 368);
  * scratch external section and always runs.
  */
 const EXTERNAL_ONTOLOGY_PRESENT = await (async (): Promise<boolean> => {
+	try {
+		return await externalOntologyPresent();
+	} catch (error) {
+		// A COLLECTION-TIME PROBE MAY NOT KILL THE FILE (2026-08-31).
+		//
+		// This read decides a `test.if`, so it has to resolve BEFORE the cases are
+		// collected — it cannot move into a `beforeAll` without changing what the gate
+		// asserts. What it must not do is throw: an unhandled rejection at module scope
+		// makes bun report the whole file as ONE error with ZERO cases, and in a
+		// single-process run it can be attributed to whichever test is running.
+		//
+		// That is exactly how the db tier's real defect read: the census was addressing a
+		// database that did not exist, and this file's 4 cases vanished into a bare
+		// `1 error` while 40 other files degraded into `(unnamed)` placeholders. The
+		// database being wrong is a REAL failure — it is reported, loudly, by every other
+		// gate in this tier — but it must be reported as itself, not as this file
+		// disappearing.
+		console.warn(
+			`[request_config_differential] external-ontology probe failed; the external-engine case will SKIP (not silently pass). Cause: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return false;
+	}
+})();
+
+async function externalOntologyPresent(): Promise<boolean> {
 	const rows = (await sql`
 		SELECT properties FROM dd_ontology WHERE tipo = ${EXTERNAL_HOST} LIMIT 1
 	`) as { properties?: { source?: { request_config?: Record<string, unknown>[] } } }[];
@@ -66,7 +91,7 @@ const EXTERNAL_ONTOLOGY_PRESENT = await (async (): Promise<boolean> => {
 		SELECT tipo FROM dd_ontology WHERE tipo = ${target} LIMIT 1
 	`) as unknown[];
 	return hit.length > 0;
-})();
+}
 
 const READ_RQO = {
 	action: 'read',

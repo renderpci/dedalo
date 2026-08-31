@@ -86,6 +86,13 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 		if (exists) {
 			// DB_NAME is the key config reads (its alias is DEDALO_DATABASE_CONN); set BOTH so
 			// no lookup path can resolve back to the application database.
+			// AND PIN THE RESOLVED NAME (2026-08-31). `testDatabaseName()` checks
+			// DEDALO_TEST_DATABASE FIRST, so recording the answer here makes the derivation
+			// IDEMPOTENT under nesting: a child `bun test` re-deriving from the rewritten
+			// DB_NAME would otherwise produce `<app>_test_test`. That is the bug
+			// PER_RUN_SEAMS was added to strip around; pinning kills it at the source
+			// instead, which is what lets the census hand the child an explicit address.
+			process.env.DEDALO_TEST_DATABASE = testDb;
 			process.env.DB_NAME = testDb;
 			process.env.DEDALO_DATABASE_CONN = testDb;
 			console.log(`[test-preload] suite database: ${testDb} (the app DB is untouched)`);
@@ -94,6 +101,9 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 			// ANYWAY: the app database is never the fallback. A DB-backed gate then fails
 			// with `database "<testDb>" does not exist` instead of silently reading and
 			// WRITING the application's records.
+			// Pinned here too (see the branch above): the name a nested run must reuse is
+			// the one this process RESOLVED, whether or not the database exists yet.
+			process.env.DEDALO_TEST_DATABASE = testDb;
 			process.env.DB_NAME = testDb;
 			process.env.DEDALO_DATABASE_CONN = testDb;
 			console.warn(

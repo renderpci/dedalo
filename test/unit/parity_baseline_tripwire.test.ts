@@ -69,7 +69,13 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { parseJunit, runParityTier, TIER_COMMAND } from '../../scripts/lib/parity_census.ts';
+import { basename } from 'node:path';
+import {
+	childEnv,
+	parseJunit,
+	runParityTier,
+	TIER_COMMAND,
+} from '../../scripts/lib/parity_census.ts';
 import {
 	BASELINE_PATH,
 	computeDrift,
@@ -79,6 +85,9 @@ import {
 	TIER_FILE_FLOOR,
 	TIER_TEST_FLOOR,
 } from '../../scripts/parity_baseline.ts';
+import { readEnv } from '../../src/config/env.ts';
+import { testDatabaseName } from '../helpers/test_database.ts';
+import { testMediaRootPath } from '../helpers/test_media_root.ts';
 
 /**
  * THE LIVE DRIFT CHECK RUNS FROM HERE AGAIN (2026-08-24, second pass).
@@ -282,5 +291,106 @@ describe('parity baseline ratchet — anti-vacuity', () => {
 			),
 		};
 		expect(computeDrift(withSkipped, BASELINE).stale.length).toBe(1);
+	});
+});
+
+/**
+ * CENSUS ADDRESSING — the child must measure the database the parent built.
+ *
+ * THE DEFECT THIS FREEZES (2026-08-31). `childEnv()` strips DB_NAME and
+ * DEDALO_DATABASE_CONN so a nested `bun test` cannot re-derive `<app>_test_test`. It
+ * left the child nothing to address with, so the child fell through
+ * `testDatabaseName()` to `readEnv('DB_NAME')` — whose last resort is
+ * ../private/.env. A developer HAS that file, so the child re-derived the suite
+ * database and everything worked. The hosted db tier has no such file by design, so
+ * the same code reached the literal fallback `dedalo_ts_test`, a database nothing
+ * creates: MEASURED 254 of 382 cases, 60 pass, with the tier's size floor the only
+ * thing that noticed. One file crashed at collection and ~40 more degraded into
+ * `(unnamed)` placeholders, so it read as a corpus problem rather than an address.
+ *
+ * The fix has two halves and BOTH are asserted here, because either alone is wrong:
+ * the preload pins the resolved name (making the derivation idempotent under
+ * nesting), and childEnv passes it explicitly (so no re-derivation is needed).
+ *
+ * HONEST LIMIT: this proves the child is handed the name THIS process resolves. It
+ * does not prove such a database exists — `privateDir` freezes at module load
+ * (src/config/env.ts), so the absent-file case cannot be simulated in-process. The
+ * end-to-end proof is the CI-shaped run in engineering/CI.md.
+ */
+describe('census addressing — the child measures the database the parent built', () => {
+	test('childEnv hands the child an EXPLICIT database, never a derivation', () => {
+		const composed = childEnv();
+		expect(typeof composed.DEDALO_TEST_DATABASE, 'the census must name the database').toBe(
+			'string',
+		);
+		expect((composed.DEDALO_TEST_DATABASE ?? '').length).toBeGreaterThan(0);
+		expect(composed.DEDALO_TEST_DATABASE).toBe(testDatabaseName());
+	});
+
+	test('the addressing keys are STILL stripped — the fix is not a restored seam', () => {
+		const composed = childEnv();
+		expect(composed.DB_NAME, 'DB_NAME must stay stripped').toBeUndefined();
+		expect(composed.DEDALO_DATABASE_CONN, 'the alias must stay stripped').toBeUndefined();
+	});
+
+	test('the derivation is IDEMPOTENT — no `_test_test`, whatever the parent carries', () => {
+		// Driven over a SYNTHETIC env rather than this process's, so the claim is about
+		// the function and not about how this file happened to be launched. Same
+		// save/clear/restore shape shard_partition_tripwire uses for the same reason.
+		const KEYS = ['DEDALO_TEST_DATABASE', 'DB_NAME', 'DEDALO_DATABASE_CONN'] as const;
+		const saved = new Map<string, string | undefined>();
+		for (const key of KEYS) {
+			saved.set(key, process.env[key]);
+			delete process.env[key];
+		}
+		try {
+			// A parent that has ALREADY been repointed (the nested `bun test` case): the
+			// pinned name is reused verbatim, never suffixed again.
+			process.env.DEDALO_TEST_DATABASE = 'zzsuite_test';
+			process.env.DB_NAME = 'zzsuite_test';
+			const nested = childEnv().DEDALO_TEST_DATABASE;
+			expect(nested, 'a pinned suite name must survive a nested compose').toBe('zzsuite_test');
+			expect(nested).not.toMatch(/_test_test$/);
+
+			// A shard child: the suffix its runner added must not leak into the address.
+			process.env.DEDALO_TEST_DATABASE = 'zzsuite_test__shard2';
+			expect(childEnv().DEDALO_TEST_DATABASE).not.toMatch(/__shard\d+.*_test$/);
+
+			// THE STANDALONE PARENT — the one the db tier actually uses, and the only
+			// context that can catch a missing composition. `bun run scripts/parity_baseline.ts`
+			// has no preload, so nothing has pinned the key; childEnv must DERIVE it here or
+			// the child falls through to the literal `dedalo_ts_test`. Asserting it in this
+			// process would be vacuous: the preload has already pinned the real value, so the
+			// copy of process.env carries it whether childEnv composes anything or not.
+			delete process.env.DEDALO_TEST_DATABASE;
+			process.env.DB_NAME = 'zzsuite';
+			expect(
+				childEnv().DEDALO_TEST_DATABASE,
+				'with no pin inherited, the census must resolve the suite database itself',
+			).toBe('zzsuite_test');
+		} finally {
+			for (const [key, value] of saved) {
+				if (value === undefined) delete process.env[key];
+				else process.env[key] = value;
+			}
+		}
+	});
+
+	test('the PRELOAD half: this bun test process pinned the name it resolved', () => {
+		// Behavioural, not textual: this process IS a `bun test` process, so the preload
+		// has run. Deleting the pin in test/preload/test_database.ts reds this.
+		const pinned = readEnv('DEDALO_TEST_DATABASE');
+		expect(pinned, 'the preload must pin the resolved suite database').toBeDefined();
+		expect(pinned).toBe(testDatabaseName());
+		// The derived surfaces follow the same name rather than diverging from it.
+		expect(basename(testMediaRootPath())).toBe(testDatabaseName());
+	});
+
+	test('anti-vacuity: the composed name is a real suite database, not the literal fallback', () => {
+		// `dedalo_ts_test` is what testDatabaseName() returns when it knows NOTHING. If the
+		// census ever composes it again on a configured machine, the address is being
+		// guessed and this whole describe is measuring a fiction.
+		expect(childEnv().DEDALO_TEST_DATABASE).not.toBe('dedalo_ts_test');
+		expect(testDatabaseName()).toMatch(/_test$/);
 	});
 });

@@ -20,6 +20,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { testDatabaseName } from '../../test/helpers/test_database.ts';
 import { TEST_TIMEOUT_FLAG } from './test_flags.ts';
 
 export const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -223,8 +224,10 @@ export const PER_RUN_SEAMS = [
 	'DIFFUSION_ACTIVITY_TABLE',
 	'DIFFUSION_JOBS_TABLE',
 	'DEDALO_TS_STATE_PATH',
-	// The addressing keys: inherited from a parent `bun test` these are ALREADY
-	// the suite's, and re-deriving on top of them doubles the `_test` suffix.
+	// The addressing keys. Stripped because the child is handed an EXPLICIT name
+	// (DEDALO_TEST_DATABASE, set in childEnv below) rather than left to re-derive:
+	// inherited from a parent `bun test` these are already the suite's, and
+	// re-deriving on top of them doubles the `_test` suffix.
 	'DB_NAME',
 	'DEDALO_DATABASE_CONN',
 	'DEDALO_TEST_MEDIA_ROOT',
@@ -233,6 +236,22 @@ export const PER_RUN_SEAMS = [
 export function childEnv(): Record<string, string | undefined> {
 	const env: Record<string, string | undefined> = { ...process.env };
 	for (const key of PER_RUN_SEAMS) delete env[key];
+	// THE CHILD MAY NOT RE-DERIVE ITS DATABASE (2026-08-31).
+	//
+	// With the addressing keys stripped, the child's `testDatabaseName()` falls back to
+	// `readEnv('DB_NAME')`, and readEnv's last resort is ../private/.env. A developer has
+	// that file, so the child re-derived `<app>_test` and everything worked. The hosted db
+	// tier has no such file BY DESIGN (scripts/ci/db_tier.sh composes its whole environment
+	// in-process), so the same code reached the literal fallback `dedalo_ts_test` — a
+	// database nothing creates. Every DB-backed parity gate then ran against a database
+	// that does not exist: MEASURED 254 of 382 cases, 60 pass, and the tier's own size
+	// floor was the only thing that noticed.
+	//
+	// So the address is resolved HERE, where the parent still knows which database it is
+	// measuring, and passed explicitly. Safe in a `bun test` parent because the preload
+	// pins the same key (test/preload/test_database.ts), so this reads the suite name back
+	// instead of re-suffixing it — the double-suffix the seams exist to prevent.
+	env.DEDALO_TEST_DATABASE = testDatabaseName();
 	env.ORACLE_MODE = 'fixtures';
 	// The marker the recursion guard in `runTier` reads. Set on the CHILD, so a census
 	// that spawns a tier containing its own caller is refused one level down instead of
