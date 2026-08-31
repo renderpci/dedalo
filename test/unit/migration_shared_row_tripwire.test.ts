@@ -60,9 +60,19 @@ const SHARED_TABLE = String.raw`(?:public\.)?(?:matrix_[a-z0-9_]*|matrix|dd_onto
  */
 const TABLE_INFIX = String.raw`(?:\s+(?:IF\s+NOT\s+EXISTS|IF\s+EXISTS|ONLY))?`;
 
-/** Statements that are NEVER a correction on a shared table. */
+/**
+ * Statements that are NEVER a correction on a shared table.
+ *
+ * MERGE AND COPY ADDED 2026-08-31 (P2-21 / GATE-33). Postgres MERGE both
+ * inserts and updates shared rows, and in MERGE syntax `UPDATE SET` is never
+ * followed by a table name — so BOTH matchers here scored zero on a MERGE
+ * statement, verified by replaying them verbatim. The runner executes raw file
+ * text through `sql.unsafe` inside a transaction, so a MERGE migration would
+ * run at boot OUTSIDE matrix_write, ontology_write, the TM audit and every tag
+ * constraint. COPY is the same shape: a bulk load straight into a shared table.
+ */
 const FORBIDDEN_DML = new RegExp(
-	String.raw`\b(INSERT\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)${TABLE_INFIX}\s+"?${SHARED_TABLE}"?\b`,
+	String.raw`\b(INSERT\s+INTO|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE|MERGE\s+INTO|COPY)${TABLE_INFIX}\s+"?${SHARED_TABLE}"?\b`,
 	'gi',
 );
 /** The one admissible shape: an UPDATE, whose statement text is then inspected. */
@@ -158,6 +168,30 @@ describe('migration shared-row tripwire — install/db/migrations/*.sql', () => 
 			`${SHARED_ROW_CORRECTION_TAG} probe\nDELETE FROM matrix_test WHERE section_id = 1;\nINSERT INTO dd_ontology (tipo) VALUES ('x');`,
 		);
 		expect(forbidden.violations.length).toBe(2);
+
+		// THE SHAPE THAT SCORED ZERO ON BOTH MATCHERS (P2-21 / GATE-33). A MERGE
+		// inserts AND updates shared rows, and its `UPDATE SET` carries no table
+		// name — so neither FORBIDDEN_DML nor SHARED_UPDATE saw it, and the
+		// migration would have run at boot outside every write guard.
+		const merged = judgeMigration(
+			'9999_probe.sql',
+			`${SHARED_ROW_CORRECTION_TAG} probe\nMERGE INTO dd_ontology t USING (SELECT 'x' AS tipo) s\n` +
+				"ON t.tipo = s.tipo WHEN MATCHED THEN UPDATE SET properties = '{}'\n" +
+				'WHEN NOT MATCHED THEN INSERT (tipo) VALUES (s.tipo);',
+		);
+		expect(
+			merged.violations.length,
+			'a MERGE into a shared table must be refused — it both inserts and updates',
+		).toBeGreaterThan(0);
+
+		// COPY: a bulk load straight into a shared table, equally inert before.
+		const copied = judgeMigration(
+			'9999_probe.sql',
+			`${SHARED_ROW_CORRECTION_TAG} probe\nCOPY dd_ontology (tipo) FROM STDIN;`,
+		);
+		expect(copied.violations.length, 'a COPY into a shared table must be refused').toBeGreaterThan(
+			0,
+		);
 		// A comment naming a table is not DML.
 		const prose = judgeMigration(
 			'9999_probe.sql',

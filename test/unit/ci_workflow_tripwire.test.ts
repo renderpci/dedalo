@@ -544,6 +544,69 @@ describe('CI workflow tripwire', () => {
 		).toEqual([]);
 	});
 
+	// Rule 7b — the VALUE, not the presence (P2-21 / GATE-45). The rule above is
+	// `!/^permissions:/m`, which is satisfied by `permissions: write-all` — the
+	// single most permissive token GitHub offers, and the exact opposite of what
+	// the rule exists to require. A matcher must match the invariant.
+	test('no workflow grants itself blanket write', () => {
+		const offenders: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			const block = src.match(/^permissions:([^\n]*)((?:\n[ \t]+[^\n]*)*)/m);
+			const inline = (block?.[1] ?? '').trim();
+			const nested = block?.[2] ?? '';
+			if (/write-all/.test(inline) || /write-all/.test(nested)) {
+				offenders.push(`${rel}: permissions grants write-all`);
+				continue;
+			}
+			// `contents: write` is push rights. codeql.yml's security-events:write is
+			// its actual output and is the one documented exception.
+			if (/^\s*contents:\s*write\s*$/m.test(nested)) {
+				offenders.push(`${rel}: contents: write — push rights for a job that reads`);
+			}
+		}
+		expect(
+			offenders,
+			'A workflow token wider than the job needs is ambient push rights handed to every ' +
+				`step, third-party actions included.\n  ${offenders.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	// Rule 7c — the TRIGGERS the neighbouring rule's own comment names as the
+	// threat it cannot reach (P2-21 / GATE-45). `pull_request_target` runs with a
+	// WRITE token and the base repo's secrets while checking out the FORK's code;
+	// `workflow_run` does the same after another workflow completes. Either one
+	// turns "least privilege" into a formality.
+	test('no workflow uses pull_request_target or workflow_run', () => {
+		const offenders: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			for (const trigger of ['pull_request_target', 'workflow_run'] as const) {
+				if (new RegExp(`^\\s{2,}${trigger}:`, 'm').test(src)) {
+					offenders.push(`${rel}: ${trigger}`);
+				}
+			}
+		}
+		expect(
+			offenders,
+			"`pull_request_target` and `workflow_run` run with a WRITE token and this repo's " +
+				'secrets while executing code from a fork. Neither is needed by any job here.\n  ' +
+				offenders.join('\n  '),
+		).toEqual([]);
+	});
+
+	test('anti-vacuity: the permissions matchers fire on the shapes they forbid', () => {
+		// Without these controls the two rules above are "this list is empty" over
+		// a corpus that happens to be clean today.
+		const blanket = 'permissions: write-all\n';
+		expect(/write-all/.test(blanket)).toBe(true);
+		const pushRights = 'permissions:\n  contents: write\n';
+		expect(/^\s*contents:\s*write\s*$/m.test(pushRights)).toBe(true);
+		expect(/^\s*contents:\s*write\s*$/m.test('permissions:\n  contents: read\n')).toBe(false);
+		expect(/^\s{2,}pull_request_target:/m.test('on:\n  pull_request_target:\n')).toBe(true);
+		expect(/^\s{2,}workflow_run:/m.test('on:\n  workflow_run:\n')).toBe(true);
+		// ...and the ordinary trigger is not mistaken for the dangerous one.
+		expect(/^\s{2,}pull_request_target:/m.test('on:\n  pull_request:\n')).toBe(false);
+	});
+
 	// Rule 8 — supply chain. A tag is mutable; a SHA is the thing we reviewed.
 	test('every action is pinned to a commit SHA, never a moving tag', () => {
 		const USES = /^\s*(?:-\s*)?uses:\s*(\S+)/gm;

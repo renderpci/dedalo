@@ -42,7 +42,16 @@ const PROVISIONER = 'src/core/ontology/hierarchy_provision.ts';
  * ontology_write seeds the 'dd' ONTOLOGY registry's root children — the ontology tree,
  * not a thesaurus hierarchy (no <tld>1 terms exist to resolve a root from).
  */
-const ROOT_TERM_WRITER_EXEMPT = new Set([OWNER, 'src/core/ontology/ontology_write.ts']);
+const ROOT_TERM_WRITER_EXEMPT = new Set([
+	OWNER,
+	'src/core/ontology/ontology_write.ts',
+	// The SUITE's own corpus builder: it composes a hierarchy record's relation
+	// payload (including hierarchy45, which the tree refuses to render without)
+	// for the disposable test database. It writes a fixture, never an
+	// installation's hierarchy. Surfaced 2026-08-31 by hardening the matcher
+	// below — it was invisible to the three-shape version.
+	'src/core/test_data/test_corpus/ensure.ts',
+]);
 
 function sourceFiles(): string[] {
 	const found: string[] = [];
@@ -88,22 +97,49 @@ describe('hierarchy consistency has one writer', () => {
 			const rel = relative(REPO_ROOT, file);
 			if (ROOT_TERM_WRITER_EXEMPT.has(rel)) continue;
 			const body = code(readFileSync(file, 'utf8'));
-			// A WRITE is a persist call whose key is the general-term tipo. Reads (the tree,
-			// the request_config resolver, the inspector) are free.
+			// THE CONSTANT NAME PLUS A WRITE VERB (P2-21 / GATE-36), which is how
+			// this file's FIRST assertion was already written — with a comment
+			// saying so. This one kept three SYNTACTIC shapes requiring the tipo to
+			// appear inside the call, so ordinary ES shorthand walked through:
 			//
-			// THREE shapes, because the raw-matrix one is not the likely one: a new
-			// writer reaches for saveComponentData (THE component write path), and
-			// the original updateMatrixKeyData-only regex never saw it.
-			const writesRootTerm =
-				/updateMatrixKeyData\([^)]*?(HIERARCHY_GENERAL_TERM|HIERARCHY_GENERAL_TERM_MODEL|'hierarchy45'|'hierarchy59')/s.test(
+			//   const componentTipo = HIERARCHY_GENERAL_TERM;
+			//   await saveComponentData({ …, componentTipo, … });
+			//
+			// matches none of the three. The invariant that produced the
+			// dangling-root-term incident was held by a matcher one refactor weaker
+			// than its sibling in the same file.
+			const namesRootTerm =
+				/\b(HIERARCHY_GENERAL_TERM|HIERARCHY_GENERAL_TERM_MODEL)\b|'hierarchy45'|'hierarchy59'/.test(
 					body,
-				) ||
-				/componentTipo:\s*(HIERARCHY_GENERAL_TERM|HIERARCHY_GENERAL_TERM_MODEL|'hierarchy45'|'hierarchy59')/.test(
+				);
+			const persists =
+				/\b(saveComponentData|updateMatrixKeyData|insertMatrixRecord\w*|upsertDdOntologyNode)\s*\(/.test(
 					body,
-				) ||
-				/\bwrite\(\s*'relation',\s*HIERARCHY_GENERAL_TERM/.test(body);
-			if (writesRootTerm) offenders.push(rel);
+				);
+			if (namesRootTerm && persists) offenders.push(rel);
 		}
-		expect(offenders).toEqual([]);
+		expect(
+			offenders,
+			'Only hierarchy_state.ts may write a root-term locator. A file that NAMES the ' +
+				`general-term tipo and calls a persist verb is a writer.\n  ${offenders.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('anti-vacuity: the shorthand shape that used to walk through is caught', () => {
+		// The mutation control the audit asks for: the evading shape must red the
+		// matcher, and an ordinary READ must still be free.
+		const shorthand =
+			'const componentTipo = HIERARCHY_GENERAL_TERM;\nawait saveComponentData({ componentTipo });';
+		const names =
+			/\b(HIERARCHY_GENERAL_TERM|HIERARCHY_GENERAL_TERM_MODEL)\b|'hierarchy45'|'hierarchy59'/;
+		const persists =
+			/\b(saveComponentData|updateMatrixKeyData|insertMatrixRecord\w*|upsertDdOntologyNode)\s*\(/;
+		expect(names.test(shorthand) && persists.test(shorthand)).toBe(true);
+		// The three OLD shapes all scored zero on it — that is the defect.
+		expect(/componentTipo:\s*HIERARCHY_GENERAL_TERM/.test(shorthand)).toBe(false);
+		expect(/updateMatrixKeyData\([^)]*?HIERARCHY_GENERAL_TERM/s.test(shorthand)).toBe(false);
+		// A pure READ of the tree is still free.
+		const reader = 'const tree = await readHierarchy(HIERARCHY_GENERAL_TERM);';
+		expect(names.test(reader) && persists.test(reader)).toBe(false);
 	});
 });
