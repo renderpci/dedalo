@@ -20,8 +20,9 @@
  * worthless.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { type ParityRun, REPO_ROOT, runTier } from './parity_census.ts';
 
 /** Everything that differs between one ratcheted tier and another. */
@@ -233,7 +234,42 @@ export function computeDrift(spec: TierSpec, run: ParityRun, baseline: RedBaseli
 			`only ${run.totals.tests} ${spec.id} CASES reported (< ${spec.testFloor}) — the tier did not really run. Fix the runner, never the floor.`,
 		);
 	}
+	// A TIER THAT UNDER-RAN MUST SAY WHY, not only that it did. "Fix the runner" is
+	// the right instruction and useless on its own: the operator reading it is on a
+	// machine that reproduces nothing, and the two facts that identify the cause —
+	// which files never reported, and what the child runner said — were both already
+	// in hand and thrown away. Measured cost of not printing them: several CI cycles
+	// spent guessing at a 254-of-382 parity collapse (2026-08-31).
+	if (drift.vacuity.length > 0) {
+		const reported = new Set(run.files);
+		const missing = onDiskTestFiles(spec).filter((file) => !reported.has(file));
+		if (missing.length > 0) {
+			drift.vacuity.push(
+				`FILES THAT REPORTED NO CASE AT ALL (${missing.length}): ${missing.join(', ')}`,
+			);
+		}
+		if (run.stderrTail !== undefined && run.stderrTail.trim().length > 0) {
+			drift.vacuity.push(`--- runner stderr (tail) ---\n${run.stderrTail}`);
+		}
+	}
 	return drift;
+}
+
+/**
+ * Every `*.test.ts` under the tier's OWN paths. Derived from `spec.paths` — the
+ * same strings handed to `bun test` — so the "did not report" list cannot drift
+ * from what the tier actually runs.
+ */
+function onDiskTestFiles(spec: TierSpec): string[] {
+	const found: string[] = [];
+	for (const path of spec.paths) {
+		const root = join(REPO_ROOT, path);
+		if (!existsSync(root)) continue;
+		for (const match of new Glob('**/*.test.ts').scanSync({ cwd: root })) {
+			found.push(`${path}/${match}`);
+		}
+	}
+	return found.sort();
 }
 
 export function formatDrift(d: TierDrift): string {

@@ -56,6 +56,18 @@ export interface ParityRun {
 	/** Distinct files that reported at least one case. */
 	files: string[];
 	totals: { tests: number; pass: number; fail: number; skip: number };
+	/**
+	 * The tail of what the child RUNNER said, kept for the vacuity path only.
+	 *
+	 * A tier that reports FEWER cases than it should has already thrown away the
+	 * only thing that explains it: bun's own stderr, where an import-time throw,
+	 * a collection-time `describe.if` and a crashed file all announce themselves.
+	 * The census used to surface this ONLY when zero cases came back, so a run
+	 * that half-ran — 254 of 382 on the hosted db tier, 2026-08-31 — printed a
+	 * count and nothing else, and diagnosing it cost a CI cycle per guess.
+	 * Undefined when the census was handed a report rather than running one.
+	 */
+	stderrTail?: string;
 }
 
 // ── JUnit parsing ────────────────────────────────────────────────────────────
@@ -277,6 +289,7 @@ export function runTier(paths: string[]): ParityRun {
 			);
 		}
 		const run = parseJunit(xml);
+		run.stderrTail = proc.stderr.toString().split('\n').slice(-40).join('\n');
 		if (run.totals.tests === 0) {
 			throw new Error(
 				`tier_census: \`bun test ${paths.join(' ')} ${TEST_TIMEOUT_FLAG}\` reported ZERO test cases (exit ${proc.exitCode}) — the tier is not being measured. Fix the runner, never the floor.`,
