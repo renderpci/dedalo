@@ -150,6 +150,11 @@ const SAME_KEYS: readonly string[] = [
 	'DEDALO_CODE_SERVER_GIT_DIR',
 	'DEDALO_CODE_SERVER_DEV_CHANNEL',
 	'DEDALO_SOURCE_VERSION_LOCAL_DIR',
+	// How many code restore points survive retention. NEW_IN_V7 by construction:
+	// v6's updater overwrote the tree in place and kept nothing to roll back to,
+	// so there is no v6 constant to classify — the whole notion of a restore point
+	// arrives with the TS updater (src/core/update/restore_points.ts).
+	'DEDALO_CODE_RESTORE_POINTS_KEEP',
 	// diffusion
 	'DEDALO_DIFFUSION_DOMAIN',
 	// Same name, same shape — but v7 DERIVES it from the project languages when it

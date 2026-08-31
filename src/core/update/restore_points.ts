@@ -104,6 +104,36 @@ export function deletabilityOf(
  * through one would delete whatever it points at, which is the one mistake this
  * function exists to make impossible.
  */
+/**
+ * The refusals, IN ORDER — and the order is part of the contract, not a
+ * detail: a name is judged before it is joined to anything, and existence is
+ * proved before a stat can follow a dangling entry. A table rather than a
+ * ladder of ifs, so the door reads as the list of what it refuses.
+ */
+const NAME_REFUSALS: readonly (readonly [string, (name: string) => boolean])[] = [
+	[
+		'name does not carry the restore-point prefix',
+		(name) => name === '' || !name.startsWith(RESTORE_POINT_PREFIX),
+	],
+	[
+		'name carries a path separator',
+		(name) => name.includes('/') || name.includes('\\') || name.includes('\0'),
+	],
+];
+
+const PATH_REFUSALS: readonly (readonly [string, (target: string, root: string) => boolean])[] = [
+	// startsWith on the root alone would accept a sibling whose name merely
+	// begins with it (`/backups/code_evil`); the separator is what makes it
+	// containment. And the target must be a CHILD, never the root itself.
+	[
+		'resolved outside the backup root',
+		(target, root) => !target.startsWith(root + sep) || target === root,
+	],
+	['no such restore point', (target) => !existsSync(target)],
+	['restore point is a symbolic link', (target) => lstatSync(target).isSymbolicLink()],
+	['restore point is not a directory', (target) => !statSync(target).isDirectory()],
+];
+
 export function resolveRestorePointOrRefuse(backupRoot: string, name: unknown): string {
 	const requested = typeof name === 'string' ? name : '';
 	const refuse = (detail: string): never => {
@@ -113,28 +143,13 @@ export function resolveRestorePointOrRefuse(backupRoot: string, name: unknown): 
 			publicMessage: sentence,
 		});
 	};
-	if (requested === '' || !requested.startsWith(RESTORE_POINT_PREFIX)) {
-		refuse('name does not carry the restore-point prefix');
-	}
-	if (requested.includes('/') || requested.includes('\\') || requested.includes('\0')) {
-		refuse('name carries a path separator');
+	for (const [detail, rejected] of NAME_REFUSALS) {
+		if (rejected(requested)) refuse(detail);
 	}
 	const root = resolve(backupRoot);
 	const target = resolve(join(root, requested));
-	// startsWith on the root alone would accept a sibling whose name merely
-	// begins with it (`/backups/code_evil`); the separator is what makes it
-	// containment. And the target must be a CHILD, never the root itself.
-	if (!target.startsWith(root + sep) || target === root) {
-		refuse('resolved outside the backup root');
-	}
-	if (!existsSync(target)) {
-		refuse('no such restore point');
-	}
-	if (lstatSync(target).isSymbolicLink()) {
-		refuse('restore point is a symbolic link');
-	}
-	if (!statSync(target).isDirectory()) {
-		refuse('restore point is not a directory');
+	for (const [detail, rejected] of PATH_REFUSALS) {
+		if (rejected(target, root)) refuse(detail);
 	}
 	return target;
 }
@@ -185,6 +200,23 @@ function partialSentence(name: string, survivors: string[]): string {
 }
 
 /**
+ * May retention remove this point? Two reasons it may not: it is the sentinel's
+ * own backupDir (`protectedName` — the evidence of the swap that just
+ * happened), or it is the live rollback the deletability rules already guard.
+ *
+ * `protectedName` is normalised to null by the caller, and a point's name is
+ * always a string, so the sentinel needs no separate undefined/null check.
+ */
+function prunable(
+	point: DeletableFacts,
+	all: readonly DeletableFacts[],
+	protectedName: string | null,
+): boolean {
+	if (point.name === protectedName) return false;
+	return deletabilityOf(point, all).deletable === true;
+}
+
+/**
  * RETENTION. Keep the `keep` newest points, delete the rest — but never the
  * live rollback, and never `protect` (the sentinel's own backupDir, which is
  * the evidence of the swap that just happened).
@@ -205,13 +237,11 @@ export function pruneRestorePoints(options: {
 }): { deleted: string[]; kept: number; failed: string[] } {
 	const keep = Math.max(1, Math.floor(options.keep));
 	const newestFirst = [...options.points].sort((a, b) => b.stamp - a.stamp);
+	const protectedName = options.protect ?? null;
 	const deleted: string[] = [];
 	const failed: string[] = [];
 	for (const point of newestFirst.slice(keep)) {
-		if (options.protect !== undefined && options.protect !== null && point.name === options.protect) {
-			continue;
-		}
-		if (deletabilityOf(point, options.points).deletable !== true) continue;
+		if (!prunable(point, options.points, protectedName)) continue;
 		try {
 			removeRestorePointDir(join(options.backupRoot, point.name), point.name);
 			deleted.push(point.name);

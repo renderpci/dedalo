@@ -500,6 +500,21 @@ export function resolveModelPath(subPath: string): string | null {
 }
 
 /**
+ * The absolute path this URL names inside the store, or null when it names
+ * none — an undecodable escape sequence included, which is a refusal like any
+ * other rather than a throw the route would have to catch.
+ */
+function storePathFor(pathname: string): string | null {
+	let decoded: string;
+	try {
+		decoded = decodeURIComponent(pathname);
+	} catch {
+		return null;
+	}
+	return resolveModelPath(decoded.slice(AI_MODEL_URL_PREFIX.length));
+}
+
+/**
  * Serve a `/dedalo/ai_models/*` request, or return null when the pathname is not
  * one (the caller falls through to the next handler).
  *
@@ -531,14 +546,7 @@ export async function serveModelRequest(
 	// store's existence or contents.
 	if (hasSession !== true) return notFound();
 
-	let decoded: string;
-	try {
-		decoded = decodeURIComponent(pathname);
-	} catch {
-		return notFound();
-	}
-
-	const fullPath = resolveModelPath(decoded.slice(AI_MODEL_URL_PREFIX.length));
+	const fullPath = storePathFor(pathname);
 	if (fullPath === null) return notFound();
 
 	const response = await staticAssetResponse(fullPath, request);

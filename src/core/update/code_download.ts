@@ -22,6 +22,65 @@ export interface CodeDownloadResponse {
 }
 
 /**
+ * The release URL, parsed and PROVED to be on the configured code server.
+ * Origin equality is the whole point: a manifest is remote input, so the only
+ * host this engine will download code from is the one its own config names.
+ */
+function releaseUrlOrRefuse(url: string, configuredOrigin: string): URL {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch (error) {
+		refuseUpdate('request.invalid_options', 'Error. Invalid release URL', error);
+	}
+	if (parsed.origin !== configuredOrigin) {
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Release URL is not on the configured code server',
+		);
+	}
+	return parsed;
+}
+
+/**
+ * Everything that must hold before a single byte is read, and the body itself
+ * once it does. Split out so the download reads as "gate, then stream" — and so
+ * the null-body refusal is what NARROWS the type, rather than a check the
+ * caller has to be trusted to have made.
+ */
+function servableBodyOrRefuse(remote: Response, url: string): ReadableStream<Uint8Array> {
+	if (!remote.ok) {
+		// A 404 here is almost never "the museum did something wrong": the
+		// manifest that named this URL was written by the MASTER, and every
+		// gate before this one passed. The usual cause is that the master's
+		// reverse proxy does not route /dedalo/install/code/ to its socket —
+		// the path has no client subtree, so the master's static alias answers
+		// 404 and the request never reaches its engine. Saying only
+		// "bad server response code: 404" sent the operator to audit their own
+		// install, which is the one place the fault cannot be. The master's own
+		// panel now self-probes this (status.ts advertisedUrlReachableCheck);
+		// this message is what the person on the other end reads.
+		if (remote.status === 404) {
+			refuseUpdate(
+				'update.failed',
+				`Error. The code server does not serve the release it offered (404): ${url}. ` +
+					'Ask its administrator to check the code-update panel — a master whose reverse ' +
+					'proxy does not route /dedalo/install/code/ advertises releases it cannot deliver.',
+			);
+		}
+		refuseUpdate('update.failed', `Error. bad server response code: ${remote.status}`);
+	}
+	const declared = Number(remote.headers.get('content-length') ?? '0');
+	if (declared > MAX_CODE_ARCHIVE_BYTES) {
+		refuseUpdate('update.refused', 'Error. Release archive exceeds the size cap');
+	}
+	if (remote.body === null) {
+		refuseUpdate('update.failed', 'Error. empty response body');
+	}
+	return remote.body;
+}
+
+/**
  * Stream a release archive from `url` (must sit on `configuredOrigin`) to
  * `targetPath`. Refuses redirects, caps bytes, and guards against a stalled
  * socket. The destination is assumed already confined by the caller.
@@ -40,53 +99,14 @@ export async function downloadReleaseArchive(options: {
 }): Promise<CodeDownloadResponse> {
 	assertTlsVerificationOn();
 
-	let parsed: URL;
-	try {
-		parsed = new URL(options.url);
-	} catch (error) {
-		refuseUpdate('request.invalid_options', 'Error. Invalid release URL', error);
-	}
-	if (parsed.origin !== options.configuredOrigin) {
-		refuseUpdate(
-			'request.invalid_options',
-			'Error. Release URL is not on the configured code server',
-		);
-	}
+	const parsed = releaseUrlOrRefuse(options.url, options.configuredOrigin);
 
 	try {
 		const remote = await fetch(parsed, {
 			redirect: 'error',
 			signal: AbortSignal.timeout(CODE_DOWNLOAD_TIMEOUT_MS),
 		});
-		if (!remote.ok) {
-			// A 404 here is almost never "the museum did something wrong": the
-			// manifest that named this URL was written by the MASTER, and every
-			// gate before this one passed. The usual cause is that the master's
-			// reverse proxy does not route /dedalo/install/code/ to its socket —
-			// the path has no client subtree, so the master's static alias answers
-			// 404 and the request never reaches its engine. Saying only
-			// "bad server response code: 404" sent the operator to audit their own
-			// install, which is the one place the fault cannot be. The master's own
-			// panel now self-probes this (status.ts advertisedUrlReachableCheck);
-			// this message is what the person on the other end reads.
-			if (remote.status === 404) {
-				refuseUpdate(
-					'update.failed',
-					`Error. The code server does not serve the release it offered (404): ${options.url}. ` +
-						'Ask its administrator to check the code-update panel — a master whose reverse ' +
-						'proxy does not route /dedalo/install/code/ advertises releases it cannot deliver.',
-				);
-			}
-			refuseUpdate('update.failed', `Error. bad server response code: ${remote.status}`);
-		}
-		const declared = Number(remote.headers.get('content-length') ?? '0');
-		if (declared > MAX_CODE_ARCHIVE_BYTES) {
-			refuseUpdate('update.refused', 'Error. Release archive exceeds the size cap');
-		}
-		if (remote.body === null) {
-			refuseUpdate('update.failed', 'Error. empty response body');
-		}
-		const reader = remote.body.getReader();
+		const reader = servableBodyOrRefuse(remote, options.url).getReader();
 		const sink = createWriteStream(options.targetPath);
 		let total = 0;
 		try {

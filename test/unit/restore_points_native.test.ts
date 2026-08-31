@@ -31,10 +31,19 @@ import {
 	deletabilityOf,
 	liveRollbackName,
 	pruneRestorePoints,
-	removeRestorePointDir,
 	RESTORE_POINT_PREFIX,
+	removeRestorePointDir,
 	resolveRestorePointOrRefuse,
 } from '../../src/core/update/restore_points.ts';
+
+/**
+ * Both permission-cage tests below are defeated by root, which ignores the mode
+ * bits and unlinks the entry anyway. Reported as SKIPPED (test.skipIf, the
+ * repo's idiom) rather than an early `return`: a body that returns before
+ * asserting is counted by Bun as a PASS, which is the exact shape
+ * gate_vacuity_tripwire exists to stop.
+ */
+const AS_ROOT = typeof process.getuid === 'function' && process.getuid() === 0;
 
 let root = '';
 
@@ -165,17 +174,13 @@ describe('a removal is verified, never assumed', () => {
 		expect(existsSync(dir)).toBe(false);
 	});
 
-	test('a directory that survives is a FAILURE that names what is left', () => {
+	test.skipIf(AS_ROOT)('a directory that survives is a FAILURE that names what is left', () => {
 		// THE MUSEUM'S HUSKS, reproduced honestly: a directory the process may
 		// not remove. There it was a Docker Desktop mount the host still held;
 		// here it is a read-only PARENT, which is the same thing from rmSync's
 		// point of view — the entry cannot be unlinked. What is asserted is the
 		// contract, not the errno: success REQUIRES the directory to be gone,
 		// and a survivor becomes an operator sentence naming what is left.
-		if (typeof process.getuid === 'function' && process.getuid() === 0) {
-			// root ignores the permission bits and would delete it anyway
-			return;
-		}
 		const cage = join(root, 'cage');
 		mkdirSync(cage, { recursive: true });
 		const dir = join(cage, `${RESTORE_POINT_PREFIX}husk`);
@@ -209,8 +214,7 @@ describe('a removal is verified, never assumed', () => {
 		}
 	});
 
-	test('what survived INSIDE is named, so the operator knows where to look', () => {
-		if (typeof process.getuid === 'function' && process.getuid() === 0) return;
+	test.skipIf(AS_ROOT)('what survived INSIDE is named, so the operator knows where to look', () => {
 		// this time the point itself is removable but one child is not: rm walks
 		// in, fails on the locked entry, and the directory remains WITH content.
 		const dir = plant(`${RESTORE_POINT_PREFIX}locked`);
@@ -256,7 +260,7 @@ describe('retention keeps the newest and never the rollback', () => {
 
 	test('keep < 1 is treated as 1 — a policy that deletes the last rollback is not one', () => {
 		const names = ['a', 'b'].map((n) => `${RESTORE_POINT_PREFIX}${n}`);
-		names.forEach((n) => plant(n, { bootable: true }));
+		for (const n of names) plant(n, { bootable: true });
 		const points = [facts(names[0] as string, 200, true), facts(names[1] as string, 100, true)];
 		const report = pruneRestorePoints({ points, backupRoot: root, keep: 0 });
 		// the newest survives BOTH as the kept one and as the live rollback
@@ -270,7 +274,7 @@ describe('retention keeps the newest and never the rollback', () => {
 		const husk1 = `${RESTORE_POINT_PREFIX}h1`;
 		const husk2 = `${RESTORE_POINT_PREFIX}h2`;
 		const boot = `${RESTORE_POINT_PREFIX}boot`;
-		[husk1, husk2].forEach((n) => plant(n));
+		for (const n of [husk1, husk2]) plant(n);
 		plant(boot, { bootable: true });
 		const points = [facts(husk1, 300, false), facts(husk2, 200, false), facts(boot, 100, true)];
 		const report = pruneRestorePoints({ points, backupRoot: root, keep: 1 });
@@ -282,7 +286,7 @@ describe('retention keeps the newest and never the rollback', () => {
 		// it is the tree the update that just confirmed replaced — the evidence
 		// of the swap, and the one step back from what is now running.
 		const names = ['n1', 'n2', 'n3'].map((n) => `${RESTORE_POINT_PREFIX}${n}`);
-		names.forEach((n) => plant(n));
+		for (const n of names) plant(n);
 		const points = names.map((n, i) => facts(n, (3 - i) * 100, false));
 		const report = pruneRestorePoints({
 			points,
@@ -302,7 +306,7 @@ describe('retention keeps the newest and never the rollback', () => {
 		const boot = `${RESTORE_POINT_PREFIX}boot`;
 		const guarded = `${RESTORE_POINT_PREFIX}guarded`;
 		const rest = ['n1', 'n2', 'n3'].map((n) => `${RESTORE_POINT_PREFIX}${n}`);
-		[boot, guarded, ...rest].forEach((n) => plant(n, { bootable: n === boot }));
+		for (const n of [boot, guarded, ...rest]) plant(n, { bootable: n === boot });
 		const points = [
 			facts(rest[0] as string, 500, false),
 			facts(rest[1] as string, 400, false),
@@ -315,6 +319,9 @@ describe('retention keeps the newest and never the rollback', () => {
 		// tail is [guarded, boot], both skipped, so nothing past keep goes.
 		expect(report.deleted).toEqual([]);
 		const onDisk = [boot, guarded, ...rest].filter((n) => existsSync(join(root, n)));
+		// FLOOR (P2-19): "nothing was deleted" asserts nothing unless there was
+		// something to delete. Five points were planted and none may have gone.
+		expect(onDisk.length).toBeGreaterThanOrEqual(5);
 		expect(report.kept).toBe(onDisk.length);
 	});
 

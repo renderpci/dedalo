@@ -116,6 +116,7 @@ const EXPECTED_GATED: Readonly<Record<string, { stub: boolean }>> = {
 	'update_code.update_code': { stub: false }, // phase 4 — LANDED
 	'update_code.build_version_from_git_master': { stub: false }, // phase 4 — LANDED
 	'update_code.restore_code': { stub: false }, // phase 4 — the swap in reverse
+	'update_code.delete_restore_point': { stub: false }, // phase 4 — retention's guarded manual delete
 	'move_tld.move_tld': { stub: false }, // phase 5 — LANDED
 	'move_locator.move_locator': { stub: false }, // phase 5 — LANDED
 	'move_to_portal.move_to_portal': { stub: false }, // phase 5 — LANDED

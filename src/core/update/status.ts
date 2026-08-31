@@ -43,7 +43,6 @@ import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { detectDeploymentChannel } from './channel.ts';
-import { deletabilityOf, type DeleteBlockReason, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { parseDeclaredTriple, planCodeBuild, VERSION_TS_PATH } from './code_build_plan.ts';
 import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
 import {
@@ -67,6 +66,7 @@ import {
 import { availableBytesAt } from './disk_space.ts';
 import { INSTALLED_CHANNEL, INSTALLED_DIGEST, type InstallChannel } from './install_stamp.ts';
 import { backupFreshness } from './preconditions.ts';
+import { type DeleteBlockReason, deletabilityOf, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
 
 // ---------------------------------------------------------------------------
@@ -987,6 +987,30 @@ function releasesReadableCheck(unreadable: string[]): StatusCheck {
 const REACHABILITY_TIMEOUT_MS = 4000;
 
 /**
+ * WHAT to ask for. A sidecar release is probed through its `.sha256` companion —
+ * a few bytes that prove the same routing without pulling a release archive;
+ * anything else is asked for its first byte only (`Range`). Split out so the
+ * probe reads as one decision rather than two parallel ternaries.
+ */
+function probeRequest(target: PublishedRelease): { url: string; headers: Record<string, string> } {
+	if (target.sidecar) return { url: `${target.url}.sha256`, headers: {} };
+	return { url: target.url, headers: { Range: 'bytes=0-0' } };
+}
+
+/**
+ * The first 2 KiB of a refusal body, or '' when it cannot be read. A body we
+ * failed to read must not become a failure of its own: the status alone still
+ * names a layer.
+ */
+async function bodySnippet(response: Response): Promise<string> {
+	try {
+		return (await response.text()).slice(0, 2048);
+	} catch {
+		return '';
+	}
+}
+
+/**
  * `advertised_url_reachable`: does the master's OWN advertised release URL
  * actually answer? Depends on NOTHING but its arguments — the caller decides
  * whether a code server is being looked at, and `fetch` is injectable, so the
@@ -1042,8 +1066,7 @@ export async function advertisedUrlReachableCheck(
 	const target = releases.find((release) => release.channel === 'master');
 	if (target === undefined) return check(id, 'unknown', 'nothing published yet');
 
-	const url = target.sidecar ? `${target.url}.sha256` : target.url;
-	const headers: Record<string, string> = target.sidecar ? {} : { Range: 'bytes=0-0' };
+	const { url, headers } = probeRequest(target);
 
 	let response: Response;
 	try {
@@ -1062,13 +1085,12 @@ export async function advertisedUrlReachableCheck(
 	if (response.ok || response.status === 206) return check(id, 'ok', undefined, url);
 
 	// The body says WHICH layer answered.
-	let body = '';
-	try {
-		body = (await response.text()).slice(0, 2048);
-	} catch {
-		body = '';
-	}
-	return check(id, 'blocked', reachabilityDetail(response.status, body), url);
+	return check(
+		id,
+		'blocked',
+		reachabilityDetail(response.status, await bodySnippet(response)),
+		url,
+	);
 }
 
 /** Turn one non-200 into the sentence that names the layer at fault. */
@@ -1085,19 +1107,23 @@ function reachabilityDetail(status: number, body: string): string {
 /** Did the ENGINE write this body? Its refusals are always the error envelope. */
 function isEngineEnvelope(body: string): boolean {
 	try {
-		const parsed: unknown = JSON.parse(body);
-		if (typeof parsed !== 'object' || parsed === null) return false;
-		const record = parsed as Record<string, unknown>;
-		const error = record.error;
-		return (
-			record.ok === false &&
-			typeof error === 'object' &&
-			error !== null &&
-			typeof (error as Record<string, unknown>).code === 'string'
-		);
+		return isErrorEnvelope(JSON.parse(body));
 	} catch {
 		return false;
 	}
+}
+
+/** Envelope v2's refusal shape: `{ ok: false, error: { code: <string> } }`. */
+function isErrorEnvelope(parsed: unknown): boolean {
+	if (typeof parsed !== 'object' || parsed === null) return false;
+	const { ok, error } = parsed as { ok?: unknown; error?: unknown };
+	return ok === false && hasErrorCode(error);
+}
+
+/** The `error` member carries a code — what tells an envelope from any JSON. */
+function hasErrorCode(error: unknown): boolean {
+	if (typeof error !== 'object' || error === null) return false;
+	return typeof (error as Record<string, unknown>).code === 'string';
 }
 
 export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {

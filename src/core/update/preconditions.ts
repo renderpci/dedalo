@@ -115,6 +115,27 @@ function staleBackupFinding(backupDir?: string): string | null {
 }
 
 /**
+ * The BACKUP precondition on its own. A stale-or-absent backup either REFUSES
+ * the update (`backupRequire`, the door the operator waives with waive_backup)
+ * or becomes a warning they are shown. Returns the warnings to carry forward —
+ * empty when the check is switched off or the backup is fresh.
+ */
+function backupWarnings(options: {
+	backupWarn?: boolean;
+	backupDir?: string;
+	backupRequire?: boolean;
+}): string[] {
+	if (options.backupWarn === false) return [];
+	const finding = staleBackupFinding(options.backupDir);
+	if (finding === null) return [];
+	if (options.backupRequire === true) {
+		const sentence = `Error. ${finding} (or pass waive_backup to proceed without one)`;
+		throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
+	}
+	return [`Warning. ${finding}`];
+}
+
+/**
  * Run the required checks in PHP order (superuser first, then maintenance
  * mode) and compute the backup warning. A REQUIRED check that fails THROWS
  * (engineering/ERRORS_SPEC.md §4 — a refusal is a typed throw, never a body):
@@ -157,16 +178,5 @@ export function checkUpdatePreconditions(
 		throw new DedaloError('maintenance.mode_required');
 	}
 
-	const warnings: string[] = [];
-	if (options.backupWarn !== false) {
-		const finding = staleBackupFinding(options.backupDir);
-		if (finding !== null) {
-			if (options.backupRequire === true) {
-				const sentence = `Error. ${finding} (or pass waive_backup to proceed without one)`;
-				throw new DedaloError('update.refused', { message: sentence, publicMessage: sentence });
-			}
-			warnings.push(`Warning. ${finding}`);
-		}
-	}
-	return { warnings };
+	return { warnings: backupWarnings(options) };
 }
