@@ -180,11 +180,15 @@ if [ -f "$CA_CRT" ]; then chmod 644 "$CA_CRT"; fi
 # rotating a COMPROMISED key needs it now, and needs to be told if it did not
 # happen.
 if [ "$RELOAD" = 'true' ]; then
-	if docker compose -f "$REPO_ROOT/$COMPOSE_FILE" exec -T nginx nginx -s reload >/dev/null 2>&1; then
+	# --env-file: the simple stack's TLS decision lives in .dedalo.env, and a
+	# compose command without it resolves the plain-HTTP defaults (P1-6/OPS-02).
+	ENV_FILE_ARGS=()
+	[ -f "$REPO_ROOT/.dedalo.env" ] && ENV_FILE_ARGS=(--env-file "$REPO_ROOT/.dedalo.env")
+	if docker compose -f "$REPO_ROOT/$COMPOSE_FILE" "${ENV_FILE_ARGS[@]}" exec -T nginx nginx -s reload >/dev/null 2>&1; then
 		say 'nginx reloaded — the new certificate is being served.'
 	else
 		say 'Could not reload nginx from here. Run it yourself when the stack is up:'
-		say "    docker compose -f $COMPOSE_FILE exec nginx nginx -s reload"
+		say "    docker compose -f $COMPOSE_FILE --env-file .dedalo.env exec nginx nginx -s reload"
 	fi
 fi
 

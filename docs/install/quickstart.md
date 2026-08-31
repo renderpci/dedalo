@@ -99,7 +99,7 @@ When it finishes, open the `https://…` address it prints and log in as **root*
     That authority's **private key** is the most powerful secret this install creates: whoever holds it can mint a certificate any of those computers will trust, for any hostname. It stays in `deploy/certs/` — never committed, and never inside a container image. If it may have escaped, replace it: [rotating TLS material](docker.md#rotating-tls-material).
 
 !!! note "It refuses to run twice"
-    Installing again would mean restoring the seed into a database that is no longer empty, which the engine refuses — a second install is never a repair. To start over you must destroy the data first: `docker compose -f docker-compose.simple.yml down -v`.
+    Installing again would mean restoring the seed into a database that is no longer empty, which the engine refuses — a second install is never a repair. To start over you must destroy the data first: `docker compose -f docker-compose.simple.yml --env-file .dedalo.env down -v`.
 
 ## Path 2 — browser wizard
 
@@ -127,7 +127,7 @@ You never need that password again after the wizard: the database port is not pu
 At **Save config** the engine writes its configuration and restarts itself — that is deliberate, configuration is read once at boot. Leave the tab open: the **Verify** button retries, and even a reload resumes the wizard. Work through to **Finish**, which is refused unless the root account really exists.
 
 ??? tip "The no-certificate variant"
-    Running the compose file directly still works and needs no certificate — plain HTTP, for a quick look on a laptop:
+    Running the compose file directly still works and needs no certificate — plain HTTP, for a quick look on a laptop. This is the one place the `--env-file` flag is deliberately absent: there is no install to lose, and the compose defaults are plain HTTP with a non-`Secure` cookie, which is a working combination.
 
     ```shell
     docker compose -f docker-compose.simple.yml up -d
@@ -154,14 +154,16 @@ At **Save config** the engine writes its configuration and restarts itself — t
 
 ## Everyday commands
 
+**If you installed with `install.sh`, carry `--env-file .dedalo.env` in every one of them.** (If you took the no-certificate variant above, `install.sh` never ran, that file does not exist, and you drop the flag — compose would refuse a file that is not there.) It is where `install.sh` recorded your TLS choice — which nginx configuration to mount and whether the session cookie is `Secure` — along with the database password. Compose does not read it on its own, because it is deliberately not named `.env` (the engine's own loader would pick that up from the working directory). Omit the flag and compose silently resolves the built-in defaults instead: plain HTTP on port 80, no `listen 443` at all, and the certbot renewal profile empty. On a server that means HTTPS disappears, traffic is in clear text, and the certificate expires unrenewed within 90 days.
+
 ```shell
-docker compose -f docker-compose.simple.yml ps          # is it running?
-docker compose -f docker-compose.simple.yml logs -f dedalo
-docker compose -f docker-compose.simple.yml stop        # stop, keep everything
-docker compose -f docker-compose.simple.yml up -d       # start again
+docker compose -f docker-compose.simple.yml --env-file .dedalo.env ps          # is it running?
+docker compose -f docker-compose.simple.yml --env-file .dedalo.env logs -f dedalo
+docker compose -f docker-compose.simple.yml --env-file .dedalo.env stop        # stop, keep everything
+docker compose -f docker-compose.simple.yml --env-file .dedalo.env up -d       # start again
 ```
 
-To back up, and to update to a newer Dédalo, the container procedures are the same as the full stack's: [backups](docker.md#backups-from-a-container) and [upgrading](docker.md#upgrading) — substituting `-f docker-compose.simple.yml` in each command.
+To back up, and to update to a newer Dédalo, the container procedures are the same as the full stack's: [backups](docker.md#backups-from-a-container) and [upgrading](docker.md#upgrading) — substituting `-f docker-compose.simple.yml --env-file .dedalo.env` in each command.
 
 ## What exactly is missing, and how to add it later
 

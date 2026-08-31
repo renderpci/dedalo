@@ -82,6 +82,7 @@ const TRIPWIRES = [
 	'test/unit/pdf_extract_symmetry_tripwire.test.ts',
 	'test/unit/ssrf_one_guard_tripwire.test.ts',
 	'test/unit/lint_scope_tripwire.test.ts',
+	'test/unit/compose_invocation_tripwire.test.ts',
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',

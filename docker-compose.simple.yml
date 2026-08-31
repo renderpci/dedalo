@@ -84,11 +84,21 @@ services:
       # per-record media access control wants the full stack
       # (docker-compose.yml), whose nginx includes both files.
       #
-      # TRUE whenever there is TLS — which install.sh makes the default. It is
-      # flipped to "false" only by the no-HTTPS mode, because a browser silently
-      # discards a Secure cookie over http:// and every login would appear to
-      # succeed and then do nothing.
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      # TRUE whenever there is TLS — install.sh writes it into .dedalo.env
+      # PAIRED with DEDALO_NGINX_CONF below, because a browser silently discards
+      # a Secure cookie over http:// and every login appears to succeed and then
+      # does nothing.
+      #
+      # THE DEFAULT FOLLOWS THE PROXY DEFAULT (OPS-04, fixed 2026-08-31). It used
+      # to be `true` while DEDALO_NGINX_CONF defaulted to the PLAIN-HTTP
+      # nginx.simple.conf — so this file's own header, 78 lines above, said "no
+      # TLS — plain HTTP, so SESSION_COOKIE_SECURE must be false" and the file
+      # then shipped the opposite. An operator who completed the wizard, chose a
+      # root password and never passed --env-file could not log in, ever, with
+      # nothing on screen to say why. The two defaults are one decision and must
+      # move together; the gate that holds them together is
+      # test/unit/compose_invocation_tripwire.test.ts.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       DEDALO_ACCESS_LOG: "true"
       TRUSTED_PROXY_HOPS: "1"
       DEDALO_DEV_MODE: "false"

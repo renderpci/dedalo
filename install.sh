@@ -391,7 +391,7 @@ if docker volume inspect "$PRIVATE_VOLUME" >/dev/null 2>&1; then
 	warn "This machine already has a Dédalo instance (docker volume '$PRIVATE_VOLUME')."
 	warn 'Installing again is refused: the seed restore requires an empty database, so a'
 	warn 'second install cannot repair a broken one. To start over, destroy the data first:'
-	warn "    docker compose -f $COMPOSE_FILE down -v"
+	warn "    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE down -v"
 	exit 1
 fi
 
@@ -488,7 +488,7 @@ for _ in $(seq 1 60); do
 	sleep 2
 done
 compose exec -T postgres pg_isready -U dedalo -d dedalo >/dev/null 2>&1 \
-	|| fail 'PostgreSQL did not become ready. Inspect it with: docker compose -f '"$COMPOSE_FILE"' logs postgres'
+	|| fail 'PostgreSQL did not become ready. Inspect it with: docker compose -f '"$COMPOSE_FILE"' --env-file '"$ENV_FILE"' logs postgres'
 
 if [ "$WIZARD_MODE" = 'true' ]; then
 	bold 'Starting Dédalo for the browser wizard…'
@@ -545,7 +545,7 @@ export DEDALO_INSTALL_ROOT_PASSWORD="$ROOT_PASSWORD"
 compose run --rm -e DEDALO_INSTALL_ROOT_PASSWORD \
 	dedalo bun run scripts/install.ts "${install_args[@]}" \
 	|| fail 'The installer failed. Nothing was sealed; read the output above, then destroy the half-built instance with:
-    docker compose -f '"$COMPOSE_FILE"' down -v'
+    docker compose -f '"$COMPOSE_FILE"' --env-file '"$ENV_FILE"' down -v'
 unset DEDALO_INSTALL_ROOT_PASSWORD
 
 # --- 6. Serve ----------------------------------------------------------------
@@ -593,6 +593,6 @@ esac
 echo '  First things to do: create a normal administrator user and keep root for'
 echo '  emergencies, then set up backups — docs/management/backup.md.'
 echo
-echo "  Logs:  docker compose -f $COMPOSE_FILE logs -f dedalo"
-echo "  Stop:  docker compose -f $COMPOSE_FILE stop"
+echo "  Logs:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f dedalo"
+echo "  Stop:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE stop"
 echo

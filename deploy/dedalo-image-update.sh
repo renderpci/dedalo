@@ -61,7 +61,17 @@ case "$MODE" in
 	*) echo "ERROR: --mode must be 'pull' or 'build'" >&2; exit 2 ;;
 esac
 
-COMPOSE=(docker compose -f "$COMPOSE_FILE")
+# THE ENV FILE THE SIMPLE STACK'S TLS DECISION LIVES IN (P1-6 / OPS-02).
+# `up -d dedalo` recreates ONLY the engine: nginx keeps running with whatever
+# configuration it already has. Without this flag compose resolves the built-in
+# defaults, so a TLS install's engine comes back with SESSION_COOKIE_SECURE
+# unset-to-false while nginx is still serving HTTPS — the session cookie loses
+# its Secure flag on a live TLS site, and nothing says so. Absent for the full
+# stack (docker-compose.yml), which carries no such file and needs none.
+ENV_FILE="${ENV_FILE:-.dedalo.env}"
+ENV_FILE_ARGS=()
+[ -f "$ENV_FILE" ] && ENV_FILE_ARGS=(--env-file "$ENV_FILE")
+COMPOSE=(docker compose -f "$COMPOSE_FILE" "${ENV_FILE_ARGS[@]}")
 
 health_wait() { # up to 60s for the compose healthcheck to report healthy
 	for _ in $(seq 1 60); do
