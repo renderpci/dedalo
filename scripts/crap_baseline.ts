@@ -442,6 +442,31 @@ export function raisedEntries(previous: ComplexityBaseline, next: ComplexityBase
 			raised.push(`${file}: ${before} -> ${value}`);
 		}
 	}
+
+	// THE SUMMARY COUNTERS ARE PART OF THE GUARD (P2-18 / GATE-07).
+	//
+	// The loop above compares each file's MAXIMUM complexity plus "new over-cap
+	// file". It cannot see the case the census exists for: a NEW over-cap
+	// function appearing UNDER a file that is already listed, whose max does not
+	// move. That is why the frozen debt grew — measured across this ratchet's
+	// life, functionsOverCap went 672 -> 701 -> 697 -> 702 -> 691, a net +19
+	// over-cap functions and +1 over-cap file since the day it was created.
+	//
+	// Worse, the census leg's failure message named the FLAGLESS regeneration as
+	// the remedy, so the reflex path WAS the laundering path. These counters are
+	// asserted here, where `--update` has to clear them too.
+	for (const counter of ['functionsOverCap', 'filesOverCap'] as const) {
+		const before = previous.summary[counter];
+		const after = next.summary[counter];
+		if (typeof before === 'number' && typeof after === 'number' && after > before) {
+			raised.push(
+				`summary.${counter}: ${before} -> ${after} — a new over-cap ${
+					counter === 'functionsOverCap' ? 'FUNCTION' : 'FILE'
+				} appeared. If it hides under a file already at its frozen max, no per-file ` +
+					'entry moves and only this counter says so.',
+			);
+		}
+	}
 	return raised;
 }
 

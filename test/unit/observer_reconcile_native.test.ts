@@ -519,6 +519,34 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			droppedLocators: limits.maxDroppedLocators,
 			degradedSeedRecords: 0,
 		};
+		// THE CEILING MUST BE A CEILING (P2-18 / GATE-21).
+		//
+		// Everything below builds `base` FROM `limits`, so it asserts a property of
+		// the `>` operator and nothing about the committed numbers: `{1e12, 1e12}`
+		// passes it byte-identically. This budget is the bound on how many observer
+		// locators an ops sweep may delete over HERITAGE RELATION DATA, so a
+		// ceiling nothing bounds is the whole guard gone.
+		//
+		// SHRINK-ONLY, frozen at the values committed 2026-08-31. They may go DOWN
+		// freely; raising either one is a deliberate act that edits this line too,
+		// and the file's own `_` demands a --json census proving every additional
+		// drop is genuine.
+		const FROZEN_CEILING = { maxDroppedLocators: 2000, maxDroppedRecords: 40 };
+		expect(
+			limits.maxDroppedLocators,
+			'the locator ceiling ROSE. This bounds deletions over heritage relation data: raise ' +
+				'it only with a --json census proving every additional drop is genuine, and lower ' +
+				'FROZEN_CEILING here in the same commit.',
+		).toBeLessThanOrEqual(FROZEN_CEILING.maxDroppedLocators);
+		expect(limits.maxDroppedRecords, 'the record ceiling ROSE — same rule').toBeLessThanOrEqual(
+			FROZEN_CEILING.maxDroppedRecords,
+		);
+		// ...and it must still be tethered to the measurement its own `_` cites
+		// (22 records / 1673 locators, 2026-08-06): headroom is deliberate, but a
+		// ceiling orders of magnitude above what was ever observed is not a budget.
+		expect(limits.maxDroppedLocators).toBeLessThan(1673 * 4);
+		expect(limits.maxDroppedRecords).toBeLessThan(22 * 4);
+
 		// Exactly AT the committed ceiling is within budget…
 		expect(exceedsShrinkBudget(base, limits)).toEqual([]);
 		// …one locator / one record over it is not.

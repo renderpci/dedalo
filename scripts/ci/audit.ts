@@ -143,6 +143,20 @@ type Baseline = {
 	accepted: Record<string, BaselineEntry[]>;
 };
 
+/**
+ * How many advisories the CURRENT baseline accepts, or null when there is none
+ * yet. Read separately from the main flow because `--update` runs BEFORE the
+ * baseline is otherwise loaded (P2-18).
+ */
+async function readBaselineCount(): Promise<number | null> {
+	try {
+		const baseline = (await Bun.file(BASELINE_PATH).json()) as Baseline;
+		return Object.values(baseline.accepted).reduce((total, list) => total + list.length, 0);
+	} catch {
+		return null;
+	}
+}
+
 /** `<package dir>::<npm package>::<advisory id>` — the identity a ratchet compares on. */
 function keyOf(dir: string, pkg: string, advisory: Advisory): string {
 	return `${dir}::${pkg}::${advisory.id}`;
@@ -489,9 +503,30 @@ async function main(): Promise<void> {
 	}
 
 	if (update) {
+		// ANTI-LAUNDERING (P2-18 / GATE-19). `--update` used to overwrite `accepted`
+		// with whatever `bun audit` reported this minute, unconditionally — and the
+		// RED message hands the developer that exact command. So the reflex path was
+		// the laundering path: a NEW advisory could be accepted by running the thing
+		// the failure told you to run, with no decision recorded anywhere.
+		//
+		// A ratchet that records whatever it measured is not a ratchet, it is a
+		// diary. Accepting MORE advisories than the baseline holds now takes
+		// --allow-regression, which is a deliberate act a reviewer can see in the
+		// diff of the command, not only in the artefact.
+		const before = await readBaselineCount();
+		const after = Object.values(current).reduce((total, list) => total + list.length, 0);
+		if (before !== null && after > before && !process.argv.includes('--allow-regression')) {
+			console.error(
+				`== audit: REFUSED — this would accept ${after} advisories, up from ${before}.\n` +
+					'   An advisory is accepted because someone TRIAGED it, never because the\n' +
+					'   regeneration command was the easiest way past a red build. Fix it, or\n' +
+					'   re-run with --allow-regression and say WHY in the commit message.\n',
+			);
+			process.exit(1);
+		}
 		const next: Baseline = {
 			generated: new Date().toISOString().slice(0, 10),
-			note: 'Accepted (known, triaged) dependency advisories. Regenerate with `bun run scripts/ci/audit.ts --update` and explain the delta in the commit message. A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts).',
+			note: 'Accepted (known, triaged) dependency advisories. Regenerate with `bun run scripts/ci/audit.ts --update` and explain the delta in the commit message. A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts). Accepting MORE than the current count REFUSES without --allow-regression.',
 			accepted: current,
 		};
 		await Bun.write(BASELINE_PATH, `${JSON.stringify(next, null, '\t')}\n`);

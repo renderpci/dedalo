@@ -157,6 +157,19 @@ const METRIC_NOTE =
 // 1. SHRINK-ONLY — the forward gate.
 // ---------------------------------------------------------------------------
 
+/**
+ * Words that are not a reason. A reason names the IRREDUCIBLE structure.
+ *
+ * SHARED BY BOTH REASON VALIDATORS (P2-18 / GATE-23). This lived inside the
+ * coverage-exempt describe block while the NEW-FILE exemption check 180 lines
+ * above validated by WORD COUNT ALONE — and its failure message promised
+ * exactly this blacklist ("temporary", "TODO", "hard to split" are not
+ * reasons). So "This is temporary and we will refactor it later on" was
+ * ACCEPTED by the rule whose own message named it as rejected. A message that
+ * describes a stricter rule than the code enforces is worse than no message.
+ */
+const THIN_REASONS = /\b(todo|temporar|later|hard to test|no time|refactor soon)\b/i;
+
 describe('crap ratchet — src/core/ complexity may only shrink', () => {
 	test('no file exceeds its frozen baseline max', () => {
 		expect(
@@ -271,7 +284,11 @@ describe('crap ratchet — a NEW src/core/ file may not be born over the cap', (
 		const stale: string[] = [];
 		const measured = new Map(RESULTS.map((result) => [result.file, result]));
 		for (const [file, reason] of Object.entries(NEW_FILE_COMPLEXITY_EXEMPTIONS)) {
-			if (typeof reason !== 'string' || reason.trim().split(/\s+/).length < 8) {
+			if (
+				typeof reason !== 'string' ||
+				reason.trim().split(/\s+/).length < 8 ||
+				THIN_REASONS.test(reason)
+			) {
 				thin.push(`${file}: ${JSON.stringify(reason)}`);
 			}
 			const result = measured.get(file);
@@ -453,8 +470,6 @@ describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked a
 	const EXEMPT = loadCoverageExempt();
 	/** Anti-vacuity: a truncated list would make every check below trivially green. */
 	const MIN_ENTRIES = 20;
-	/** Words that are not a reason. A reason names the irreducible structure. */
-	const THIN_REASONS = /\b(todo|temporar|later|hard to test|no time|refactor soon)\b/i;
 
 	test('the list is a plausible corpus (a truncated list checks nothing)', () => {
 		expect(
