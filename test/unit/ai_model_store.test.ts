@@ -47,14 +47,22 @@ const MODEL = 'onnx-community/whisper-tiny-TEST';
 
 const context = { requestId: 'test', startedAt: 0 };
 
-let cookie = '';
+/**
+ * The store is SESSION-GATED (2026-08-28), so the browser's own request is the
+ * authenticated one — `get` mints a session, and `getAnonymous` is what an
+ * outsider sends. The gate exists because the weights are unbounded in size and
+ * served `immutable`: once the reverse proxy started routing /dedalo/ai_models/,
+ * an ungated store was the only anonymous gigabyte download on the vhost.
+ */
+let sessionCookie = '';
 
-/** An AUTHENTICATED read — what a cataloguer's browser actually does. */
 async function get(path: string): Promise<Response> {
-	return handleRequest(new Request(`http://localhost${path}`, { headers: { cookie } }), context);
+	return handleRequest(
+		new Request(`http://localhost${path}`, { headers: { cookie: sessionCookie } }),
+		context,
+	);
 }
 
-/** The same read with no session at all. */
 async function getAnonymous(path: string): Promise<Response> {
 	return handleRequest(new Request(`http://localhost${path}`), context);
 }
@@ -66,7 +74,7 @@ beforeAll(() => {
 	// Something that is NOT part of what a browser needs to run the model.
 	writeFileSync(join(STORE, MODEL, 'README.md'), '# not servable');
 	process.env.DEDALO_AI_MODEL_STORE = STORE;
-	cookie = `${SESSION_COOKIE}=${createSession(-1, 'root', true)}`;
+	sessionCookie = `${SESSION_COOKIE}=${createSession(-1, 'root', true)}`;
 });
 
 afterAll(() => {
@@ -96,16 +104,6 @@ describe('the model store resolves what the browser needs', () => {
 });
 
 describe('the model store is fail-closed', () => {
-	test('an anonymous request gets nothing, not even the config', async () => {
-		// Weights are for THIS install's cataloguers doing in-browser inference;
-		// there is no anonymous consumer, so there is no reason for an anonymous
-		// door. 404 rather than 401: the store must not confirm what it holds.
-		expect((await getAnonymous(`${AI_MODEL_URL_PREFIX}${MODEL}/config.json`)).status).toBe(404);
-		expect(
-			(await getAnonymous(`${AI_MODEL_URL_PREFIX}${MODEL}/onnx/encoder_model.onnx`)).status,
-		).toBe(404);
-	});
-
 	test('a store root that swallows the private directory serves nothing', async () => {
 		// `resolve(privateDir, configured)` accepts anything: a store of '.' resolves
 		// to the PRIVATE DIRECTORY itself, publishing every allowlisted-extension
@@ -151,6 +149,54 @@ describe('the model store is fail-closed', () => {
 		const response = await get(`${AI_MODEL_URL_PREFIX}does-not-exist/onnx/model.onnx`);
 		expect(response.status).toBe(404);
 		expect(await response.text()).not.toContain('does-not-exist');
+	});
+
+	// SESSION GATE (2026-08-28). A model file reaches the gigabyte and is served
+	// `immutable` with no rate limit. While NO proxy config routed this path the
+	// anonymity cost nothing; routing it (deploy/*.conf + the documented samples)
+	// made an unauthenticated unbounded download the only one on the vhost. The
+	// sole consumer is a same-origin worker inside the logged-in app
+	// (remove_background.js → transformers.js env.remoteHost), which always
+	// carries the cookie, so nothing legitimate asks anonymously.
+	test('an anonymous request is refused, with the SAME 404 as a missing file', async () => {
+		const anonymous = await getAnonymous(`${AI_MODEL_URL_PREFIX}${MODEL}/config.json`);
+		expect(anonymous.status).toBe(404);
+		// The weights themselves, not just the small metadata file beside them.
+		expect(
+			(await getAnonymous(`${AI_MODEL_URL_PREFIX}${MODEL}/onnx/encoder_model.onnx`)).status,
+		).toBe(404);
+		// Indistinguishable from "no such model": an outsider learns neither that
+		// the store exists nor what is in it.
+		const missing = await getAnonymous(`${AI_MODEL_URL_PREFIX}nope/config.json`);
+		// Compare what an OUTSIDER actually receives. Two keys are excluded and
+		// neither weakens the assertion: `request_id` is a fresh correlation id by
+		// design, and `error.debug` exists only under DEDALO_DEBUG_API_ERRORS — it
+		// carries a stack trace that names the CALLING LINE, so comparing it makes
+		// two calls from different lines differ forever while telling us nothing
+		// about disclosure. Everything that reaches a real outsider is compared.
+		const disclosed = (body: string): unknown => {
+			const parsed = JSON.parse(body) as Record<string, unknown> & {
+				error?: Record<string, unknown>;
+			};
+			const { request_id: _id, ...rest } = parsed;
+			if (rest.error !== undefined) {
+				const { debug: _debug, ...error } = rest.error;
+				rest.error = error;
+			}
+			return rest;
+		};
+		expect(disclosed(await anonymous.text())).toEqual(disclosed(await missing.text()));
+		expect(anonymous.headers.get('Cache-Control') ?? '').not.toContain('immutable');
+	});
+
+	test('a garbage session token is refused like no session at all', async () => {
+		const response = await handleRequest(
+			new Request(`http://localhost${AI_MODEL_URL_PREFIX}${MODEL}/config.json`, {
+				headers: { cookie: `${SESSION_COOKIE}=not-a-real-token` },
+			}),
+			context,
+		);
+		expect(response.status).toBe(404);
 	});
 });
 

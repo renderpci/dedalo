@@ -26,6 +26,7 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | nginx will not start | [Serving](#serving) |
 | A big export dies after about a minute | [Serving](#serving) |
 | Uploads fail with `413` | [Serving](#serving) |
+| The maintenance widget says the engine is down, but the socket probe is green | [Serving](#serving) |
 | Nobody can log in, and there is no error | [Using it](#using-it) |
 | Media `404`s | [Media](#media) |
 | Media is served to everyone | [Media](#media) |
@@ -555,6 +556,27 @@ watchdog recycles the process rather than serving identical failures forever.
 
 **Fix.** The watchdog restarts it within 30 seconds. It is a code defect —
 capture the log and report it.
+
+### The maintenance widget reports the engine down while the socket probe is green
+
+**Symptom.** `curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health`
+answers `200`, but **maintenance → system info** shows the engine unhealthy, and
+after a code update the restart poll never confirms the new version.
+
+**Cause.** The vhost does not route `/health`. The engine serves it at the
+**origin root**, and the browser client probes it there — so the proxy has to
+carry the route. Without it Apache resolves the path against the `DocumentRoot`
+and logs an `AH01630` denial for `…/health`, while nginx hands the request to the
+vhost's catch-all and returns `404`. Nothing is wrong with the engine; only the
+browser-facing checks can see it.
+
+**Fix.** Add the rule for your server from
+[Reverse proxy and TLS](reverse_proxy.md), reload, and re-run the probe through
+the domain:
+
+```shell
+curl --fail https://dedalo.example.org/health
+```
 
 ## Using it
 

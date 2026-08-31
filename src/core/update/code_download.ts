@@ -59,6 +59,24 @@ export async function downloadReleaseArchive(options: {
 			signal: AbortSignal.timeout(CODE_DOWNLOAD_TIMEOUT_MS),
 		});
 		if (!remote.ok) {
+			// A 404 here is almost never "the museum did something wrong": the
+			// manifest that named this URL was written by the MASTER, and every
+			// gate before this one passed. The usual cause is that the master's
+			// reverse proxy does not route /dedalo/install/code/ to its socket —
+			// the path has no client subtree, so the master's static alias answers
+			// 404 and the request never reaches its engine. Saying only
+			// "bad server response code: 404" sent the operator to audit their own
+			// install, which is the one place the fault cannot be. The master's own
+			// panel now self-probes this (status.ts advertisedUrlReachableCheck);
+			// this message is what the person on the other end reads.
+			if (remote.status === 404) {
+				refuseUpdate(
+					'update.failed',
+					`Error. The code server does not serve the release it offered (404): ${options.url}. ` +
+						'Ask its administrator to check the code-update panel — a master whose reverse ' +
+						'proxy does not route /dedalo/install/code/ advertises releases it cannot deliver.',
+				);
+			}
 			refuseUpdate('update.failed', `Error. bad server response code: ${remote.status}`);
 		}
 		const declared = Number(remote.headers.get('content-length') ?? '0');

@@ -247,3 +247,74 @@ describe('update_data_version EXECUTE through the widget dispatch (typed refusal
 		}
 	});
 });
+
+/**
+ * THE MAINTENANCE-MODE CARVE-OUT IS A CENSUS, not a convention.
+ *
+ * `maintenance: false` was added for ONE caller (deleteRestorePoint: removing a
+ * backup directory never touches the live tree, and an install that ran out of
+ * disk must not have to close itself to the public before it may reclaim it).
+ * Nothing stopped the next caller from reaching for it — the tests above only
+ * assert the DEFAULT path refuses, so a code swap or a tree restore could
+ * acquire the flag and run on an install open to the public with every gate
+ * green (review finding 2026-08-28, tripwire-integrity).
+ *
+ * SHRINK-ONLY: an entry may be removed (by deleting the bypass), never added
+ * without moving this list and saying why. Same shape as the exact-file
+ * allowlists config_env_tripwire uses.
+ */
+describe('who may skip the maintenance gate', () => {
+	/** file → the ONE function that may pass the flag, and the reason it may. */
+	const ALLOWED: Readonly<Record<string, string>> = Object.freeze({
+		'src/core/update/code_restore.ts':
+			'deleteRestorePoint — removes a BACKUP directory; touches no live tree, serves no request differently',
+	});
+
+	test('only the registered callers pass `maintenance: false`', async () => {
+		const { readdirSync, readFileSync, statSync } = await import('node:fs');
+		const { join, relative, resolve } = await import('node:path');
+		const SRC = resolve(import.meta.dir, '../../src');
+		const found: string[] = [];
+		const walk = (dir: string): void => {
+			for (const entry of readdirSync(dir)) {
+				const full = join(dir, entry);
+				if (statSync(full).isDirectory()) {
+					walk(full);
+					continue;
+				}
+				if (!entry.endsWith('.ts')) continue;
+				// CODE, never prose: preconditions.ts DOCUMENTS the option in its
+				// own header, and a census that counts the definition as a caller
+				// can never be satisfied. Strip comments, then look for the
+				// option as an OBJECT KEY in any whitespace/ordering shape.
+				const code = readFileSync(full, 'utf8')
+					.replace(/\/\*[\s\S]*?\*\//g, '')
+					.replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+				if (/maintenance\s*:\s*false/.test(code)) {
+					found.push(relative(resolve(import.meta.dir, '../..'), full));
+				}
+			}
+		};
+		walk(SRC);
+		expect(
+			found.sort(),
+			'a NEW caller may not bypass maintenance mode silently — add it to ALLOWED with its reason, or do not pass the flag',
+		).toEqual(Object.keys(ALLOWED).sort());
+	});
+
+	test('every allowlist entry is still real (shrink-only, no stale entries)', async () => {
+		const { readFileSync } = await import('node:fs');
+		const { resolve } = await import('node:path');
+		for (const [file, reason] of Object.entries(ALLOWED)) {
+			const source = readFileSync(resolve(import.meta.dir, '../..', file), 'utf8')
+				.replace(/\/\*[\s\S]*?\*\//g, '')
+				.replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+			expect(/maintenance\s*:\s*false/.test(source), `${file} no longer bypasses — drop it`).toBe(
+				true,
+			);
+			// the reason names the function, so a reader can find it
+			const fn = String(reason).split(' ')[0] as string;
+			expect(source).toContain(fn);
+		}
+	});
+});

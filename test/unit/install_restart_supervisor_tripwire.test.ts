@@ -23,6 +23,8 @@
  *      fresh-install 502 traced to a missing /run/dedalo and a /tmp-vs-/run drift.
  */
 
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, test } from 'bun:test';
 import {
 	chmodSync,
@@ -177,13 +179,228 @@ describe('install restart supervisor contract', () => {
 	// A proxy config that does not route it does not fail loudly: the engine stays
 	// healthy while the widget reports it down and the post-update restart poll
 	// can never confirm the new version — observed as Apache AH01630 denying
-	// /var/www/html/health. Both shipped proxy configs must carry the route.
-	test('both shipped proxy configs route /health to the engine', async () => {
-		const nginx = await Bun.file(new URL('../../deploy/nginx.conf', import.meta.url)).text();
+	// /var/www/html/health. Every shipped proxy config must carry the route — AND
+	// so must every proxy sample in the manual: an operator copy-pastes the
+	// documented vhost, so a hole there reaches production exactly like a hole in
+	// deploy/. Three samples were found empty on 2026-08-28 (the docs nginx block
+	// and both multi_instance blocks), which is what this list prevents recurring.
+	test('every shipped proxy config and documented sample routes /health', async () => {
+		// deploy/: the configs an operator installs verbatim.
+		for (const path of ['deploy/nginx.conf', 'deploy/nginx.simple.conf']) {
+			const conf = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+			expect(conf, `${path} must route /health`).toMatch(/location\s*=\s*\/health\s*\{/);
+		}
 		const apache = await Bun.file(new URL('../../deploy/apache.conf', import.meta.url)).text();
-
-		expect(nginx).toMatch(/location\s*=\s*\/health\s*\{/);
 		expect(apache).toMatch(/^\s*ProxyPass\s+\/health\s+unix:/m);
+
+		// docs/: each page ships BOTH flavours, so each must carry both rules.
+		for (const path of ['docs/install/reverse_proxy.md', 'docs/install/multi_instance.md']) {
+			const page = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+			expect(page, `${path}: the nginx sample must route /health`).toMatch(
+				/location\s*=\s*\/health\s*\{/,
+			);
+			expect(page, `${path}: the Apache sample must route /health`).toMatch(
+				/^\s*ProxyPass\s+\/health\s+unix:/m,
+			);
+		}
+	});
+
+	// EVERY ENGINE ROUTE UNDER /dedalo/ MUST BE PROXIED (2026-08-28). /health was
+	// not the only hole: `/dedalo/install/code/`, `/dedalo/ai_models/`,
+	// `/dedalo/install/import/hierarchy/` and `/dedalo/upload_tmp/` were routed in
+	// NO config and NO documented sample, while their siblings (lib/, tools/,
+	// install/import/ontology/) were routed in all six. These paths have no client
+	// subtree, so an omitted rule does not fall through to the engine: the
+	// `/dedalo/` static alias answers 404 and the request never reaches the
+	// socket. The code one is the sharp case — it is the URL the update manifest
+	// ADVERTISES to remote installs, and serving a 404 there is exactly the defect
+	// core/update/code_serving.ts was written to end.
+	//
+	// The list is DERIVED from src/, never hand-maintained here, so adding a route
+	// and forgetting the proxy layer fails HERE rather than in an operator's
+	// install. Two derivations, because the engine declares routes two ways:
+	// exported constants, and inline literals in the server.ts routing branches.
+	// The second test below is what keeps the FIRST one honest — a route added in
+	// either shape has to be classified before this file goes green.
+
+	/** Route prefixes served from disk by the web server, never proxied. */
+	const NEVER_PROXIED: ReadonlyMap<string, string> = new Map([
+		[
+			'/dedalo/media/',
+			'media is served FROM DISK by the web server (engineering/PRODUCTION.md): ' +
+				'putting the engine in the byte path breaks sendfile, Range and streaming',
+		],
+	]);
+
+	/**
+	 * Engine routes declared as an INLINE literal in a server.ts branch rather
+	 * than an exported constant. Each needs a reason, and each is asserted below
+	 * with its own matcher because two of them are not plain prefix rules.
+	 */
+	const LITERAL_ROUTES: ReadonlyMap<string, string> = new Map([
+		[
+			'/dedalo/install/import/ontology/',
+			'ontology-master snapshots (server.ts serveOntologyIoFile); plain prefix rule',
+		],
+		[
+			'/dedalo/core/api/',
+			'the JSON API + raw/environment/counters twins; nginx serves it with a ' +
+				'REGEX location, so it is asserted separately from the prefix rules',
+		],
+		[
+			'/dedalo/core/component_text_area/tag/',
+			'the inline-tag image factory; an EXACT (=) location, not a prefix',
+		],
+	]);
+
+	/** Read a repo file by path, without percent-encoding surprises. */
+	async function repoText(rel: string): Promise<string> {
+		return await Bun.file(fileURLToPath(new URL(`../../${rel}`, import.meta.url))).text();
+	}
+
+	/** Every `/dedalo/…` route prefix the engine exports as a constant. */
+	async function derivedRoutePrefixes(): Promise<Set<string>> {
+		const prefixes = new Set<string>();
+		const glob = new Bun.Glob('**/*.ts');
+		const srcDir = fileURLToPath(new URL('../../src/', import.meta.url));
+		for await (const rel of glob.scan({ cwd: srcDir })) {
+			const text = await Bun.file(`${srcDir}${rel}`).text();
+			// Both shapes the engine uses today: _URL_PREFIX and _URL_BASE. Naming
+			// alone is not trusted — the completeness test below cross-checks the
+			// result against the routing branches themselves.
+			for (const m of text.matchAll(/_URL_(?:PREFIX|BASE)\s*=\s*'(\/dedalo\/[^']*)'/g)) {
+				const prefix = (m[1] as string).replace(/\/$/, '');
+				if (!NEVER_PROXIED.has(`${prefix}/`)) prefixes.add(prefix);
+			}
+		}
+		return prefixes;
+	}
+
+	/** A live (non-commented) rule, so a commented-out block cannot satisfy a gate. */
+	function hasLiveRule(text: string, pattern: RegExp): boolean {
+		return text
+			.split('\n')
+			.some((line) => !line.trim().startsWith('#') && pattern.test(line));
+	}
+
+	test('every engine /dedalo/ route prefix is proxied in all configs and samples', async () => {
+		const prefixes = await derivedRoutePrefixes();
+
+		// Guard the derivation: a regex that silently stopped matching would make
+		// this whole gate vacuous. Pinned to today's set, shrink-only by hand.
+		expect([...prefixes].sort()).toEqual([
+			'/dedalo/ai_models',
+			'/dedalo/install/code',
+			'/dedalo/install/import/hierarchy',
+			'/dedalo/lib',
+			'/dedalo/tools',
+			'/dedalo/upload_tmp',
+		]);
+
+		// Each file, with the upstream its own samples use. A rule that names the
+		// WRONG upstream (dedalo_site2 in the site1 vhost) must not pass, so the
+		// upstream is part of the assertion, not just the location line.
+		const nginxFiles: ReadonlyArray<readonly [string, string]> = [
+			['deploy/nginx.conf', 'dedalo_ts'],
+			['deploy/nginx.simple.conf', 'dedalo_ts'],
+			['deploy/nginx.simple-tls.conf.tpl', 'dedalo_ts'],
+			['docs/install/reverse_proxy.md', 'dedalo_ts'],
+			['docs/install/multi_instance.md', 'dedalo_site1'],
+		];
+		const apacheFiles: ReadonlyArray<readonly [string, string]> = [
+			['deploy/apache.conf', '/run/dedalo/dedalo_ts.sock'],
+			['docs/install/reverse_proxy.md', '/run/dedalo/dedalo_ts.sock'],
+			['docs/install/multi_instance.md', '/run/dedalo-site1/dedalo_ts.sock'],
+		];
+		const all = [...prefixes, ...LITERAL_ROUTES.keys()]
+			.map((p) => p.replace(/\/$/, ''))
+			// The API prefix is served by a regex location in nginx; asserted below.
+			.filter((p) => p !== '/dedalo/core/api');
+
+		for (const [path, upstream] of nginxFiles) {
+			const text = await repoText(path);
+			for (const prefix of all) {
+				// `location [=] <prefix>[/] { … proxy_pass http://<upstream>; }` —
+				// the body is part of the match, so a rule with no proxy_pass, or one
+				// aimed at another instance, fails.
+				const block = new RegExp(
+					`location\\s+(?:=\\s+)?${prefix}/?\\s*\\{[^}]*proxy_pass\\s+http://${upstream};`,
+				);
+				expect(block.test(text), `${path}: nginx must proxy ${prefix} to ${upstream}`).toBe(
+					true,
+				);
+				expect(
+					hasLiveRule(text, new RegExp(`^\\s*location\\s+(?:=\\s+)?${prefix}/?\\s*\\{`)),
+					`${path}: the ${prefix} rule must not be commented out`,
+				).toBe(true);
+			}
+		}
+		for (const [path, socket] of apacheFiles) {
+			const text = await repoText(path);
+			for (const prefix of all) {
+				expect(
+					hasLiveRule(text, new RegExp(`^\\s*ProxyPass\\s+${prefix}/?\\s+unix:${socket}\\|`)),
+					`${path}: Apache must proxy ${prefix} to ${socket}`,
+				).toBe(true);
+			}
+		}
+
+		// The API twin, whose nginx form is a regex location.
+		for (const [path] of nginxFiles) {
+			const text = await repoText(path);
+			expect(text, `${path}: nginx must route the /dedalo/core/api/ twin`).toContain(
+				'dedalo/core/api/',
+			);
+		}
+	});
+
+	// COMPLETENESS: the derivation above trusts a NAMING CONVENTION, and four of
+	// the engine's routes do not follow it (they are inline literals in a
+	// server.ts branch). Without this test the gate would silently cover a subset
+	// and still read as exhaustive — which is how the four holes survived. Every
+	// `/dedalo/…` literal the ROUTER compares against must be classified: proxied,
+	// literal-routed, never-proxied, or the client static tree itself.
+	test('no engine /dedalo/ route escapes classification', async () => {
+		const server = await repoText('src/server.ts');
+		const prefixes = await derivedRoutePrefixes();
+
+		// Everything server.ts routes on: startsWith/endsWith tests and the path Sets.
+		const routed = new Set<string>();
+		for (const m of server.matchAll(/(?:startsWith|endsWith)\('(\/dedalo\/[^']*)'\)/g)) {
+			routed.add(m[1] as string);
+		}
+		for (const m of server.matchAll(/'(\/dedalo\/[^']*)'/g)) {
+			routed.add(m[1] as string);
+		}
+
+		// Served from disk by the proxy (or answered by its own `location =` rule),
+		// so they need no socket route. Each is here with its reason, not matched by
+		// a catch-all regex — an unrecognised path must fail, not be absorbed.
+		const CLIENT_STATIC: ReadonlyMap<string, string> = new Map([
+			['/dedalo', 'entry-point redirect; nginx answers it with `location = /dedalo`'],
+			['/dedalo/', 'entry-point redirect twin'],
+			['/dedalo/core', 'entry-point redirect'],
+			['/dedalo/core/', 'entry-point redirect'],
+			['/dedalo/core/page/', 'the redirect TARGET — a real directory in the client tree'],
+			['/dedalo/<mediaDir>/', 'a placeholder in a doc comment, not a routed path'],
+		]);
+
+		const classified = (path: string): boolean => {
+			const bare = path.replace(/\/$/, '');
+			if (prefixes.has(bare)) return true;
+			if (CLIENT_STATIC.has(path)) return true;
+			const startsWithKnown = (keys: Iterable<string>): boolean =>
+				[...keys].some((p) => bare.startsWith(p.replace(/\/$/, '')));
+			return startsWithKnown(NEVER_PROXIED.keys()) || startsWithKnown(LITERAL_ROUTES.keys());
+		};
+
+		const unclassified = [...routed].filter((path) => !classified(path));
+		expect(
+			unclassified,
+			'A /dedalo/ path reached the router with no proxy classification. Add it to ' +
+				'the six proxy configs and let it be derived, or record it in ' +
+				'LITERAL_ROUTES / NEVER_PROXIED with a written reason.',
+		).toEqual([]);
 	});
 
 	// -----------------------------------------------------------------------

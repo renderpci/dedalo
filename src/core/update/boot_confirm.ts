@@ -27,9 +27,11 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { config } from '../../config/config.ts';
 import { RUNTIME_PATH_CENSUS } from '../install/runtime_paths.ts';
 import { INSTALLED_DIGEST } from './install_stamp.ts';
+import { pruneRestorePoints } from './restore_points.ts';
 import { DEDALO_VERSION } from './version.ts';
 
 /** The one sentinel shape (flat, machine-written; the rollback script greps it). */
@@ -101,6 +103,22 @@ export async function confirmBootedCodeUpdate(
 		}
 		await Bun.write(sentinelPath, JSON.stringify({ ...sentinel, status: 'confirmed' }, null, '\t'));
 		reportBootConfirmed(runningVersion, runningDigest);
+		// RETENTION RUNS HERE AND NOWHERE ELSE. Not when the swap happens — until
+		// this flip the new tree is unproven and the points behind it are the way
+		// back; pruning them at swap time would delete the rollbacks for an update
+		// that has not yet shown it can boot. One confirmed boot later, the tree
+		// has proven itself and the older copies are just disk.
+		// THE SENTINEL'S OWN DIRECTORY IS THE BACKUP ROOT, and passing it is what
+		// makes the seam honest. `sentinelPath` is a test seam; retention used to
+		// resolve the root itself through resolveCodeBackupRoot(), so a suite
+		// pointing this function at a scratch sentinel still pruned the REAL
+		// installation's restore points — `bun test` deleting disaster-recovery
+		// trees on a developer box (review 2026-08-28, S1). Deriving the root
+		// from the path we were handed removes the class of bug rather than
+		// asking every caller to remember a second seam: the two can no longer
+		// name different disks. codeUpdateSentinelPath() builds it as
+		// <backupRoot>/last_code_update.json, so dirname IS the root.
+		await pruneConfirmedRestorePoints(sentinel, dirname(sentinelPath));
 	} catch (error) {
 		console.error('[code update] boot confirmation failed (sentinel unreadable?):', error);
 	}
@@ -126,4 +144,44 @@ function reportBootMismatch(
 	console.error(
 		`[code update] LOUD: a PENDING code-update sentinel names version ${sentinel.version} / digest ${sentinel.installDigest ?? 'none'} but this process runs ${runningVersion} / digest ${runningDigest ?? 'none'} — a rollback happened, or the swap half-applied. The sentinel at ${sentinelPath} is left untouched; inspect it and the backup at ${sentinel.backupDir}.`,
 	);
+}
+
+/**
+ * Prune the restore points behind a CONFIRMED update to `restorePointsKeep`.
+ *
+ * Best-effort and loud: this runs on the boot path, and a disk that will not
+ * give a directory back is not a reason to fail a boot that is otherwise
+ * healthy. The sentinel's own `backupDir` is protected on top of the
+ * live-rollback rule — it is the tree this very update replaced, and the
+ * evidence of the swap.
+ *
+ * `backupRoot` is PASSED, never resolved here — see the call site: it is the
+ * directory the sentinel we just confirmed lives in, so a caller that redirects
+ * the sentinel redirects the pruning with it.
+ */
+async function pruneConfirmedRestorePoints(
+	sentinel: CodeUpdateSentinel,
+	backupRoot: string,
+): Promise<void> {
+	try {
+		// CONVENTIONS §2 rationale 1, CYCLE-BREAKING, and only for this one:
+		// status.ts imports THIS module (codeUpdateSentinelPath), so a static
+		// edge back would make the two one import component. `config` and
+		// `restore_points` are static above — neither closes a cycle, and a
+		// dynamic import that is not doing work is an edge the SCC tripwire
+		// cannot see (review finding 2026-08-28).
+		const { readRestorePoints } = await import('./status.ts');
+		const points = readRestorePoints(backupRoot);
+		const keep = config.update.restorePointsKeep;
+		if (points.length <= keep) return;
+		const protectName = sentinel.backupDir.split('/').filter(Boolean).pop() ?? null;
+		const report = pruneRestorePoints({ points, backupRoot, keep, protect: protectName });
+		if (report.deleted.length > 0) {
+			console.log(
+				`[code update] retention: kept the ${report.kept} newest restore points, deleted ${report.deleted.length} (${report.deleted.join(', ')}). Set DEDALO_CODE_RESTORE_POINTS_KEEP to change this.`,
+			);
+		}
+	} catch (error) {
+		console.error('[code update] restore-point retention failed (nothing was deleted):', error);
+	}
 }

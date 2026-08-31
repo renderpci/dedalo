@@ -79,11 +79,34 @@ async function updateCodeGetValue(
 			// displays it. The config-catalog key is a retirement candidate.
 			is_a_code_server: config.update.isCodeServer,
 			consumer: consumerStatus(principal),
+			// The self-probe is composed HERE, not inside codeServerStatus: that
+			// function is synchronous filesystem work and stays that way, while
+			// this one check has to go out over the network. It is appended to
+			// the same list so the panel renders it like any other, and it can
+			// only ever ADD a row — a probe that throws is impossible (the check
+			// catches its own failures), and `ready` still follows the same
+			// blocked-if-any rule.
 			code_server: config.update.isCodeServer
-				? codeServerStatus(`${publicOrigin()}/dedalo/install/code`)
+				? await withReachability(codeServerStatus(`${publicOrigin()}/dedalo/install/code`))
 				: null,
 		},
 	};
+}
+
+/**
+ * Append the advertised-URL self-probe to a code-server readout.
+ *
+ * Kept out of `codeServerStatus` so that function stays sync and pure — the
+ * network is the only asynchronous thing in the whole readout, and folding it
+ * in would make every caller await a fetch to read a directory listing.
+ */
+async function withReachability(
+	status: Awaited<ReturnType<typeof import('../../update/status.ts').codeServerStatus>>,
+): Promise<typeof status> {
+	const { advertisedUrlReachableCheck } = await import('../../update/status.ts');
+	const reachable = await advertisedUrlReachableCheck(status.releases);
+	const checks = [...status.checks, reachable];
+	return { ...status, checks, ready: !checks.some((entry) => entry.state === 'blocked') };
 }
 
 /**
@@ -146,6 +169,26 @@ async function updateCodeOwned(
  * `core/update/code_restore.ts`, gated in its own suite. EXECUTING it replaces
  * the code tree on disk and restarts the process.
  */
+/**
+ * The OPEN (owned) restore-point DELETE — synchronous, unlike its two
+ * neighbours, and deliberately.
+ *
+ * `update_code` and `restore_code` submit background jobs because they end in a
+ * server restart that kills the caller. A delete ends in a directory being gone
+ * (or not), and that answer IS the product: `deleteRestorePoint` re-checks the
+ * path after removing it and refuses when anything survives, so the operator
+ * gets a verdict instead of a submission receipt. Measured 2026-08-28 on a
+ * Docker Desktop bind mount: an `rm` that reports success and leaves the
+ * directory behind is exactly the case a job handle would have hidden.
+ */
+async function deleteRestorePointOwned(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	const { deleteRestorePoint } = await import('../../update/code_restore.ts');
+	return fromEnvelope(await deleteRestorePoint(options, principal));
+}
+
 async function restoreCodeOwned(
 	options: Record<string, unknown>,
 	principal: Principal,
@@ -214,6 +257,11 @@ export const widget: WidgetModule = {
 			'update_code.restore_code',
 			engineDenied('update_code.restore_code', 'it REPLACES the live code tree with a backup copy'),
 			restoreCodeOwned,
+		),
+		delete_restore_point: gated(
+			'update_code.delete_restore_point',
+			engineDenied('update_code.delete_restore_point', 'it DELETES a code backup copy'),
+			deleteRestorePointOwned,
 		),
 		build_version_from_git_master: gated(
 			'update_code.build_version_from_git_master',

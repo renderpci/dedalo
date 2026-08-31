@@ -350,4 +350,63 @@ update_code.prototype.restore_code = async function ( options ) {
 
 
 
+/**
+* DELETE_RESTORE_POINT
+* Removes ONE restore point from disk. Irreversible.
+*
+* SYNCHRONOUS, unlike its two neighbours: update_code and restore_code submit
+* background jobs because they end in a server restart that kills the caller.
+* This ends in a directory being gone, and that answer IS the product — the
+* server re-checks the path after removing it and refuses when anything
+* survives, so the envelope carries a verdict rather than a job handle.
+*
+* TEN MINUTES, not the hour the pre-job contract used. A restore point is a
+* whole code tree with its node_modules (~10^5 inodes), which is seconds on a
+* local SSD and minutes on a bind-mounted or network disk — but an hour-long
+* pending request is the pattern the background-job contract exists to remove,
+* and it would hold a connection open on a panel nobody is watching. If the
+* removal outlives the timeout the CLIENT gives up while the SERVER finishes:
+* the next panel read shows the truth (the row gone, or still there with the
+* partial-delete sentence), which is the honest degradation for an operation
+* whose result is written on the disk rather than held in the response.
+*
+* THE POINT IS NAMED, NEVER PATHED — the same contract as restore_code: the
+* server matches `name` against its own listing of the backup root and joins it
+* itself, so a client can never choose which directory is removed.
+*
+* @param {Object} options
+* @param {string} options.name - Restore-point directory name exactly as the
+*   panel received it in `value.consumer.restore_points[].name`.
+* @returns {Promise<Object>} api_response — envelope whose `msg` names the point
+*   deleted, or `error` (including the PARTIAL-delete refusal, which names what
+*   could not be removed).
+*/
+update_code.prototype.delete_restore_point = async function ( options ) {
+
+	const api_response = await data_manager.request({
+		body		: {
+			dd_api		: 'dd_area_maintenance_api',
+			action		: 'widget_request',
+			prevent_lock	: true,
+			source		: {
+				type	: 'widget',
+				model	: 'update_code',
+				action	: 'delete_restore_point'
+			},
+			options	: {
+				name : options.name
+			}
+		},
+		retries : 1, // one try only
+		timeout : 600 * 1000 // see the note above: bounded, and the disk is the record
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) delete_restore_point update_code api_response:', api_response);
+	}
+
+	return api_response
+}//end delete_restore_point
+
+
+
 // @license-end

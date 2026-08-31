@@ -154,6 +154,23 @@ const MAX_EXTRACTED_TOTAL_BYTES = 1024 * 1024 * 1024;
 export const PRESERVE_ROOT_ENTRIES: ReadonlySet<string> = new Set(['.git']);
 
 /**
+ * OS METADATA the whitelist ignores — never operator data, never shipped by a
+ * release (all three are in `.gitignore`). macOS plants `.DS_Store` in EVERY
+ * directory Finder browses, so a bind-mounted install tree on a Mac host grows
+ * one spontaneously: treating it as an unaccounted operator drop-in refused
+ * real updates for a file with no content (measured 2026-08-28, the docker
+ * museum stack — `Error. Unknown entries at the code-tree root … .DS_Store`).
+ * NOT preserved: it rides into the backup with the old tree, which is where
+ * junk belongs. `status.ts` filters the panel readout with the same set —
+ * the report and the verdict must not disagree.
+ */
+export const IGNORED_ROOT_ENTRIES: ReadonlySet<string> = new Set([
+	'.DS_Store',
+	'Thumbs.db',
+	'desktop.ini',
+]);
+
+/**
  * The pipeline's answer IS the wire body (the update_code widget's job payload
  * carries it verbatim), so it is ENVELOPE v2 — `data` is the installed release,
  * `msg` an extension key. Every gate REFUSES BY THROWING a registered
@@ -1202,7 +1219,11 @@ export function refuseUntrackedSecrets(codeRoot: string, targetRoot: string): vo
 export function refuseUnaccountedLiveEntries(codeRoot: string, targetRoot: string): void {
 	const shipped = new Set(readdirSync(codeRoot));
 	const unknown = readdirSync(targetRoot).filter(
-		(name) => !shipped.has(name) && !PRESERVE_ROOT_ENTRIES.has(name) && name !== 'node_modules',
+		(name) =>
+			!shipped.has(name) &&
+			!PRESERVE_ROOT_ENTRIES.has(name) &&
+			!IGNORED_ROOT_ENTRIES.has(name) &&
+			name !== 'node_modules',
 	);
 	if (unknown.length > 0) {
 		refuseArchive(

@@ -638,6 +638,7 @@ Walk the whole path once, in order. Each line is a real failure mode if it does
 not pass.
 
 - [ ] `curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health` → `200` with `"db":"ok"`.
+- [ ] `curl --fail https://your-domain/health` → the same `200`, **through the proxy**. A `404`/`403` here with the socket probe green means the vhost is missing its `/health` rule — see [Reverse proxy and TLS](reverse_proxy.md).
 - [ ] `https://your-domain/dedalo/core/page/` serves the login form over TLS.
 - [ ] Log in as the admin user. The menu renders.
 - [ ] Create a record in a section, save it, reload — the value persists.

@@ -283,6 +283,11 @@ server {
     include /srv/dedalo/site1/media/dedalo_media_protection.nginx.conf;
     open_file_cache off;
 
+    # Liveness probe at the origin root — one per domain, each to its OWN
+    # instance. See [Reverse proxy](reverse_proxy.md) for why omitting it makes a
+    # healthy engine look down.
+    location = /health { proxy_pass http://dedalo_site1; }
+
     location ~ ^/(api/v1/|dedalo/core/api/) {
         proxy_pass http://dedalo_site1;
         proxy_buffering off;
@@ -295,6 +300,10 @@ server {
     location /dedalo/core/tools_common/              { proxy_pass http://dedalo_site1; }
     location = /dedalo/core/component_text_area/tag/ { proxy_pass http://dedalo_site1; }
     location /dedalo/install/import/ontology/        { proxy_pass http://dedalo_site1; }
+    location /dedalo/install/code/                   { proxy_pass http://dedalo_site1; }
+    location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_site1; }
+    location /dedalo/ai_models/                      { proxy_pass http://dedalo_site1; }
+    location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_site1; }
 
     location /dedalo/ {
         alias /home/ded_site1/dedalo/client/dedalo/;
@@ -326,6 +335,13 @@ first match wins. Every path points at **this instance's** socket, media and clo
     ProxyPreserveHost On
     ProxyTimeout 300                # >= SERVER_IDLE_TIMEOUT_S (255)
 
+    # --- Liveness probe → THIS instance's socket -------------------------------
+    # At the ORIGIN ROOT, one per domain. See [Reverse proxy](reverse_proxy.md):
+    # without it Apache resolves /health against the DocumentRoot and the
+    # maintenance widget reports a healthy engine as down.
+    ProxyPass        /health unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/health
+    ProxyPassReverse /health unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/health
+
     # --- API + dynamic routes → THIS instance's socket -------------------------
     ProxyPass /api/v1/                              unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/api/v1/
     ProxyPass /dedalo/core/api/                     unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/api/
@@ -334,6 +350,10 @@ first match wins. Every path points at **this instance's** socket, media and clo
     ProxyPass /dedalo/core/tools_common/            unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/tools_common/
     ProxyPass /dedalo/core/component_text_area/tag/ unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/component_text_area/tag/
     ProxyPass /dedalo/install/import/ontology/      unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/ontology/
+    ProxyPass /dedalo/install/code/                 unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/code/
+    ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
+    ProxyPass /dedalo/ai_models/                    unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/ai_models/
+    ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
 
     # --- Media: the generated .htaccess lives inside THIS instance's MEDIA_PATH -
     Alias /dedalo/media /srv/dedalo/site1/media
@@ -405,6 +425,9 @@ Run this per instance after enabling it:
 
 - [ ] `curl --fail --unix-socket /run/dedalo-site1/dedalo_ts.sock http://localhost/health`
       → `200` with `"db":"ok"`.
+- [ ] `curl --fail https://site1.example.org/health` → the same `200`, through the
+      proxy. A `404`/`403` here with the socket probe green means this vhost is
+      missing its `/health` rule.
 - [ ] `https://site1.example.org/dedalo/core/page/` serves the login form over TLS.
 - [ ] Log in, create + save + reload a record; upload an image — the derivative and
       thumbnail appear.

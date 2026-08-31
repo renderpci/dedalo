@@ -28,6 +28,10 @@ flowchart LR
 | `/dedalo/tools/…`, `/dedalo/core/tools_common/…` | **proxy → socket** | tool assets live in the repo's tool trees, outside `client/` |
 | `/dedalo/core/component_text_area/tag/` | **proxy → socket** | the inline-tag image factory |
 | `/dedalo/install/import/ontology/…` | **proxy → socket** | only when this instance is an ontology master |
+| `/dedalo/install/code/…` | **proxy → socket** | the release archives a code master serves; this is the URL the update manifest advertises |
+| `/dedalo/install/import/hierarchy/…` | **proxy → socket** | hierarchy export downloads (admin-session-gated) |
+| `/dedalo/ai_models/…` | **proxy → socket** | the local AI model store, fetched by the browser from the page origin; **session-gated** — an anonymous request gets a `404` |
+| `/dedalo/upload_tmp/…` | **proxy → socket** | staged-upload previews, before the record is saved |
 | `/dedalo/media/…` | **proxy, from `MEDIA_PATH`** | gated by the generated rules — see below |
 | everything else under `/dedalo/…` | **proxy, from `client/dedalo/`** | static files |
 
@@ -201,6 +205,17 @@ server {
 	# include /srv/dedalo/media/dedalo_media_protection.nginx.conf;
 	open_file_cache off;            # a stat() cache delays an unpublish
 
+	# Liveness probe. The engine serves its health check at the ORIGIN ROOT
+	# `/health`. The watchdog hits it over the unix socket, but the browser-facing
+	# system_info maintenance widget probes it over HTTP too, so it must be
+	# reachable here — otherwise the catch-all `location / { 404 }` below swallows
+	# it and the widget reports a healthy engine as down.
+	location = /health {
+		proxy_pass http://dedalo_ts;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+	}
+
 	# API + dynamic routes. A regex location outranks every prefix location, so
 	# this keeps precedence over the /dedalo/ static alias below.
 	location ~ ^/(api/v1/|dedalo/core/api/) {
@@ -214,12 +229,20 @@ server {
 		proxy_buffering off;        # SSE + NDJSON streaming
 	}
 
-	# Dynamic routes that live under /dedalo/ but are NOT static files.
+	# Dynamic routes that live under /dedalo/ but are NOT static files. No client
+	# subtree answers any of them, so an omitted line does not fall back to the
+	# engine — the alias below serves a 404 and the request never reaches the
+	# socket. The last three are conditional on what this install does (code
+	# master, hierarchy export, in-browser AI) and 404 harmlessly otherwise.
 	location /dedalo/lib/                            { proxy_pass http://dedalo_ts; }
 	location /dedalo/tools/                          { proxy_pass http://dedalo_ts; }
 	location /dedalo/core/tools_common/              { proxy_pass http://dedalo_ts; }
 	location = /dedalo/core/component_text_area/tag/ { proxy_pass http://dedalo_ts; }
 	location /dedalo/install/import/ontology/        { proxy_pass http://dedalo_ts; }
+	location /dedalo/install/code/                   { proxy_pass http://dedalo_ts; }
+	location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_ts; }
+	location /dedalo/ai_models/                      { proxy_pass http://dedalo_ts; }
+	location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_ts; }
 
 	# Client static files. Served IN PLACE (not content-hashed) — they must
 	# revalidate, so they are NEVER immutable.
@@ -314,6 +337,10 @@ a2enmod ssl headers http2 rewrite proxy proxy_http
     ProxyPass /dedalo/core/tools_common/            unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/core/tools_common/
     ProxyPass /dedalo/core/component_text_area/tag/ unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/core/component_text_area/tag/
     ProxyPass /dedalo/install/import/ontology/      unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/import/ontology/
+    ProxyPass /dedalo/install/code/                 unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/code/
+    ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
+    ProxyPass /dedalo/ai_models/                    unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/ai_models/
+    ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
 
     # --- Entry points: the client tree has no index.html above core/page/ --
     RedirectMatch 302 "^/dedalo/?$"      /dedalo/core/page/
@@ -379,6 +406,9 @@ certbot renew --dry-run                    # the snap installs the renewal timer
 # The engine answers over the socket, and Postgres is reachable.
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 
+# The same probe THROUGH the proxy — the surface the browser client uses.
+curl --fail https://dedalo.example.org/health
+
 # The proxy serves the client over TLS.
 curl -I https://dedalo.example.org/dedalo/core/page/
 
@@ -388,6 +418,11 @@ curl -I -H 'Range: bytes=0-99' https://dedalo.example.org/dedalo/media/image/thu
 # The marker store is never served (404).
 curl -I https://dedalo.example.org/dedalo/media/.publication/auth/
 ```
+
+A `/health` that is green over the socket but `404`s or `403`s over the domain
+means the `/health` rule above is missing: the engine is fine, and only the
+browser-facing checks — the maintenance widget and the post-update restart poll —
+can see the difference.
 
 A `Range` request that answers `200` with a full body — instead of `206` — means
 something has been put in the media byte path. Find it and take it out.

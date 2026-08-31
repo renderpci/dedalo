@@ -47,6 +47,7 @@ import {
 	codeRunLockPath,
 	extractArchive,
 	preValidateArchive,
+	refuseUnaccountedLiveEntries,
 	type UpdatePhaseFrame,
 	updateCode,
 } from '../../src/core/update/code_update.ts';
@@ -1418,5 +1419,35 @@ describe('full swap chain on the DEV CHANNEL (same version)', () => {
 			),
 		);
 		expect(refusal.message).toContain('same-version install');
+	});
+});
+
+describe('the root whitelist', () => {
+	/** A live tree + the release about to land, as two dirs of empty files. */
+	function trees(live: string[], shipped: string[]): [string, string] {
+		const base = mkdtempSync(join(tmpdir(), 'dedalo_root_whitelist_'));
+		const codeRoot = join(base, 'code');
+		const targetRoot = join(base, 'live');
+		for (const [dir, names] of [
+			[codeRoot, shipped],
+			[targetRoot, live],
+		] as const) {
+			mkdirSync(dir, { recursive: true });
+			for (const name of names) writeFileSync(join(dir, name), '');
+		}
+		return [codeRoot, targetRoot];
+	}
+
+	test('an operator drop-in at the root REFUSES the swap', () => {
+		const [codeRoot, targetRoot] = trees(['README.md', 'my_notes.txt'], ['README.md']);
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toContain('my_notes.txt');
+	});
+
+	test('OS metadata does NOT — macOS plants .DS_Store in every browsed dir', () => {
+		// A bind-mounted install tree on a Mac host grows one by itself; refusing
+		// it blocked real updates for a file with no content (2026-08-28).
+		const [codeRoot, targetRoot] = trees(['README.md', '.DS_Store'], ['README.md']);
+		expect(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot)).not.toThrow();
 	});
 });
