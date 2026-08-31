@@ -28,6 +28,18 @@
  *
  * Scope: the policy-governed tables only (matrix_activity, matrix_time_machine).
  * The indexes are created IF NOT EXISTS on the test database — tiny there.
+ *
+ * WHAT THIS GATE DOES NOT COVER (P2-34 / UPD-01, stated because it was mistaken
+ * for coverage). It compares two SOURCE files — `ar_index` against the prune
+ * policy — and never the ARTEFACT an install actually receives. It also
+ * MATERIALIZES the declared indexes before inspecting, which it must (a policy
+ * signature is `pg_get_indexdef` output and cannot be hand-written), and that
+ * makes it structurally incapable of noticing an index the shipped seed lacks:
+ * it creates the thing whose absence would be the finding. Four declared
+ * indexes were missing from the seed for five weeks underneath this gate.
+ *
+ * Seed-vs-definitions equality is a different question with no side effects,
+ * and lives in test/unit/seed_definitions_equality_tripwire.test.ts.
  */
 
 import { describe, expect, test } from 'bun:test';

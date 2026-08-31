@@ -120,6 +120,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/update_waiver_trace_native.test.ts
 	test/unit/diffusion_publication_gate_native.test.ts
 	test/unit/alternate_preflight_native.test.ts
+	test/unit/seed_definitions_equality_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
