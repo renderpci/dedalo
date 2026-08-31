@@ -62,6 +62,13 @@ const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
  * it here WITH justification that it carries no request identity.
  */
 const ALLOWLISTED_MODULE_LET = new Set<string>([
+	// FOUND 2026-08-31 by widening this census to tools/ (P2-20 / GATE-34) — tool
+	// SERVER code runs in the same process and handles requests.
+	//
+	// Keyed on the CONFIGURATION fingerprint, never on request identity: a config
+	// module swapped under the process re-proves the pairing rather than
+	// inheriting the previous verdict. Cleared by that key changing.
+	'tools/tool_sitebuilder/server/daemon_client.ts:provenPairing',
 	// The periodic expired-session sweeper's timer handle (SEC-09, 2026-08-28). A
 	// process-lifecycle latch of the same family as `shuttingDown` below: it holds a
 	// Timeout, is set once at boot and cleared once at shutdown, and no user, session
@@ -261,6 +268,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
  * list.
  */
 const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
+	// FOUND 2026-08-31 by widening this census to tools/ (P2-20 / GATE-34).
+	// PROCESS-level job liveness, not request state: it maps a model name to the
+	// download/repair claim currently running, so a second request refuses instead
+	// of racing. Cleared in the `finally` of the job it guards.
+	'tools/tool_transcription/server/index.ts:modelJobsInFlight',
 	// --- invalidation/registration infrastructure (the channels the factory
 	// registers into; registration-only, grow with module loads, never cleared
 	// by design) --------------------------------------------------------------
@@ -469,22 +481,36 @@ function scanSrc(): {
 	// Mutated-const gate: column-0 const OBJECT/ARRAY literal (type annotation
 	// tolerated, incl. `=>` inside it). Flagged only if the file mutates it.
 	const constObjRe = /^(?:export )?const (\w+)(?::\s*(?:[^=\n]|=>)+?)?\s*= [{[]/;
-	for (const rel of glob.scanSync(SRC_DIR)) {
-		const content = readFileSync(join(SRC_DIR, rel), 'utf8');
-		const lines = content.split('\n');
-		for (const line of lines) {
-			const m = line.match(letRe);
-			if (m) moduleLet.push(`${rel}:${m[1]}`);
-			if (captureRe.test(line)) accessorCapture.push(rel);
-			if (configLangRe.test(line)) configLangCapture.push(rel);
-			const ms = line.match(mapSetRe);
-			if (ms && !(ms[2] ?? '').includes('Readonly')) moduleMapSet.push(`${rel}:${ms[1]}`);
-			const co = line.match(constObjRe);
-			if (co && mutationPatterns(co[1] as string).some((re) => re.test(content))) {
-				moduleConstMutated.push(`${rel}:${co[1]}`);
+	// BOTH TREES (P2-20 / GATE-34). These five detectors globbed `src/` only,
+	// while tool SERVER code runs in the SAME PROCESS and handles requests — so
+	// module-level state there bleeds across requests exactly as it would in
+	// src/. This file's own `runDetachedFromTransaction` census already scanned
+	// ['src','tools'], with a comment explaining why; the five above never got
+	// the same treatment.
+	// src/ keeps its BARE keys (the allowlists below are written that way);
+	// tools/ entries are prefixed so the two trees stay distinguishable.
+	const roots: [string, string][] = [
+		[SRC_DIR, ''],
+		[join(SRC_DIR, '..', 'tools'), 'tools/'],
+	];
+	for (const [root, prefix] of roots)
+		for (const relRaw of glob.scanSync(root)) {
+			const rel = `${prefix}${relRaw}`;
+			const content = readFileSync(join(root, relRaw), 'utf8');
+			const lines = content.split('\n');
+			for (const line of lines) {
+				const m = line.match(letRe);
+				if (m) moduleLet.push(`${rel}:${m[1]}`);
+				if (captureRe.test(line)) accessorCapture.push(rel);
+				if (configLangRe.test(line)) configLangCapture.push(rel);
+				const ms = line.match(mapSetRe);
+				if (ms && !(ms[2] ?? '').includes('Readonly')) moduleMapSet.push(`${rel}:${ms[1]}`);
+				const co = line.match(constObjRe);
+				if (co && mutationPatterns(co[1] as string).some((re) => re.test(content))) {
+					moduleConstMutated.push(`${rel}:${co[1]}`);
+				}
 			}
 		}
-	}
 	return { moduleLet, accessorCapture, configLangCapture, moduleMapSet, moduleConstMutated };
 }
 

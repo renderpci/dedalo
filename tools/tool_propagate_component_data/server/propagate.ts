@@ -33,7 +33,10 @@ export type PropagateAction = 'replace' | 'delete' | 'add';
  * Membership vs the PHP 18-name list is pinned by
  * test/unit/descriptor_completeness_tripwire.test.ts.
  */
-const PHP_LIST_EXCLUSIONS = new Set(['component_external', 'component_security_tools']);
+const PHP_LIST_EXCLUSIONS: ReadonlySet<string> = new Set([
+	'component_external',
+	'component_security_tools',
+]);
 export const COMPONENTS_WITH_RELATIONS: ReadonlySet<string> = new Set([
 	...relationDataModels().filter((model) => !PHP_LIST_EXCLUSIONS.has(model)),
 	'component_relation_struct',

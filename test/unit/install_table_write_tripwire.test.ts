@@ -36,10 +36,13 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 
 const UNIT_DIR = import.meta.dir;
+/** The WHOLE suite, not one directory of it — see unitFiles() below. */
+const TEST_ROOT = join(import.meta.dir, '..');
 /** This file NAMES the pattern it hunts; it never runs a query. */
 const SELF = 'install_table_write_tripwire.test.ts';
 
@@ -48,18 +51,37 @@ const SELF = 'install_table_write_tripwire.test.ts';
  * Shrink-only.
  */
 const INSTALL_TABLE_WRITERS: Record<string, string> = {
-	'external_multi_source_native.test.ts':
+	// FOUND 2026-08-31 BY WIDENING THIS CENSUS (P2-20 / GATE-35). It was always
+	// here; the scan was `test/unit` non-recursively, so `test/parity` — half the
+	// suite — sat outside a rule whose header opens "NO TEST WRITES INTO THE
+	// INSTALLATION'S TABLE".
+	'parity/publication_toggle_doubling_differential.test.ts':
+		"NOT legitimate, on two counts. It writes a scratch twin straight into `matrix` through `sql.unsafe`, which bypasses assertTestDatabase entirely (that guard sits in the test-data writers, not in raw SQL), and its section is `seed('rsc', 170)` — an INSTALL-SPECIFIC TLD, which the generic-test-TLD law forbids because such a gate passes on one machine and nowhere else. It creates and sweeps its own id in beforeAll/afterAll, so the blast radius is one row on the suite DB; the shape is still the one this gate exists to forbid. Fixing it is a fixture rebuild onto a test TLD, not a table swap.",
+	'unit/external_multi_source_native.test.ts':
 		'NOT legitimate, and NOT a one-line fix: its fixture section `test970` has no dd_ontology node at all, so the ENGINE resolves it to `matrix` too (unknown tipo → default). Moving only the fixture reddens four cases — verified 2026-08-21. Fixing it means giving that section a node with the test24 relation, which is a fixture build, not a table swap.',
-	'test_db_marker_tripwire.test.ts':
+	'unit/test_db_marker_tripwire.test.ts':
 		"NOT a query: the string appears inside that gate's own matcher self-test (it asserts its write-seam detector fires on a sample and not on a comment). A source-text scan cannot tell a sample from a statement, so it is named here rather than pretended away.",
-	'observer_reconcile_sweep_native.test.ts':
+	'unit/observer_reconcile_sweep_native.test.ts':
 		'sweeps rows a crashed earlier run may have left in `matrix` under the OLD install-anchored fixture — a cleanup of history, not a write of new test data.',
 };
 
+/**
+ * EVERY test file, derived from the tree (P2-20 / GATE-35).
+ *
+ * This censused `test/unit` NON-RECURSIVELY while the header above opens with
+ * the absolute "NO TEST WRITES INTO THE INSTALLATION'S TABLE". `test/parity`,
+ * `test/integration` and every nested directory were outside it — and
+ * `assertTestDatabase` does not backstop this: a raw `sql.unsafe` bypasses the
+ * test-data-writer guard entirely. A rule stated absolutely must be censused
+ * absolutely.
+ */
 function unitFiles(): string[] {
-	return readdirSync(UNIT_DIR)
-		.filter((name) => name.endsWith('.test.ts') && name !== SELF)
-		.sort();
+	const found: string[] = [];
+	for (const rel of new Glob('**/*.test.ts').scanSync({ cwd: TEST_ROOT })) {
+		if (rel.endsWith(SELF)) continue;
+		found.push(rel);
+	}
+	return found.sort();
 }
 
 /** Raw writes naming `matrix` exactly — never `matrix_test`, `matrix_hierarchy`, … */
@@ -67,7 +89,7 @@ const WRITE_TO_MATRIX = /\b(?:INSERT\s+INTO|DELETE\s+FROM|UPDATE)\s+matrix\b(?!_
 
 function writersOfInstallTable(): string[] {
 	return unitFiles().filter((file) =>
-		WRITE_TO_MATRIX.test(readFileSync(join(UNIT_DIR, file), 'utf8')),
+		WRITE_TO_MATRIX.test(readFileSync(join(TEST_ROOT, file), 'utf8')),
 	);
 }
 

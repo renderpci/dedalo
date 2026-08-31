@@ -46,6 +46,7 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { duplicateSectionRecord } from '../../src/core/section/record/duplicate_record.ts';
@@ -65,7 +66,8 @@ import {
 import { getRoots } from '../../src/core/tools/paths.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
-const src = (rel: string): string => readFileSync(join(import.meta.dir, '..', '..', rel), 'utf8');
+const REPO_ROOT = join(import.meta.dir, '..', '..');
+const src = (rel: string): string => readFileSync(join(REPO_ROOT, rel), 'utf8');
 
 /**
  * A memoized-cache identity probe: prime both caches and hand back a checker that
@@ -270,12 +272,49 @@ describe('invalidateAllToolCaches is total', () => {
 	 */
 	test('every cache-owning module reset is called from the one entry point', () => {
 		const body = src('src/core/tools/cache.ts');
-		const owners = {
-			'src/core/tools/registry.ts': 'resetRegistryCache',
-			'src/core/tools/config.ts': 'resetConfigCache',
-			'src/core/tools/paths.ts': 'resetPathsCache',
-			'src/core/tools/loader.ts': 'resetLoadedTools',
-		} as const;
+		// DERIVED FROM THE TREE (P2-20 / GATE-37). This was a hardcoded four-module
+		// map while the header above promises the gate "fails the day the reset is
+		// added". It could not: a fifth cache with a fifth reset was invisible, and
+		// since the registry TTL was deleted at the cutover a missed hop is
+		// UNBOUNDED staleness, not a slow refresh. Now every `reset*` exported from
+		// src/core/tools/ is the census, so the promise is true.
+		//
+		// NOT every `reset*` is a CACHE reset — the derivation surfaced one that is
+		// not, which is the point of deriving: it had to be judged rather than
+		// silently omitted.
+		const NOT_A_CACHE_RESET: Record<string, string> = {
+			resetBackgroundJobs:
+				'clears the in-flight background JOB TABLE, not a cache. Its own comment says ' +
+				'"(tests)". Calling it from invalidateAllToolCaches would destroy running jobs ' +
+				'every time a tool was imported — losing work, not stale reads.',
+		};
+		const owners: Record<string, string> = {};
+		for (const rel of new Glob('*.ts').scanSync({ cwd: join(REPO_ROOT, 'src/core/tools') })) {
+			const module = `src/core/tools/${rel}`;
+			for (const match of src(module).matchAll(/export function (reset[A-Z]\w*)\(/g)) {
+				const name = match[1] as string;
+				if (NOT_A_CACHE_RESET[name] !== undefined) continue;
+				owners[module] = name;
+			}
+		}
+		// Every exclusion must still exist, or it is hiding nothing and lying about it.
+		for (const [name, reason] of Object.entries(NOT_A_CACHE_RESET)) {
+			expect(reason.length).toBeGreaterThan(80);
+			const stillThere = [...new Glob('*.ts').scanSync({ cwd: join(REPO_ROOT, 'src/core/tools') })]
+				.map((rel) => src(`src/core/tools/${rel}`))
+				.some((body) => body.includes(`export function ${name}(`));
+			expect(stillThere, `${name} is gone — DELETE its NOT_A_CACHE_RESET entry`).toBe(true);
+		}
+		// Anti-vacuity: the four known owners must still be found by the derivation.
+		expect(Object.keys(owners).length).toBeGreaterThanOrEqual(4);
+		for (const known of [
+			'src/core/tools/registry.ts',
+			'src/core/tools/config.ts',
+			'src/core/tools/paths.ts',
+			'src/core/tools/loader.ts',
+		]) {
+			expect(Object.keys(owners), `${known} must be discovered by the derivation`).toContain(known);
+		}
 		for (const [module, reset] of Object.entries(owners)) {
 			// The reset exists where we think it does…
 			expect({ module, exported: src(module).includes(`export function ${reset}(`) }).toEqual({

@@ -53,6 +53,43 @@ const SRC_ROOT = resolve(import.meta.dir, '../../src');
  * intended string per key, add it to master.json, delete the entry here.
  */
 const UNCATALOGED_CLIENT_KEYS: ReadonlySet<string> = new Set([
+	// THE tools/**/js HALF OF THE CORPUS (P2-20 / GATE-30), visible from
+	// 2026-08-31 when this gate stopped walking `client/dedalo` alone. These 30
+	// keys are referenced by tool browser code and defined NOWHERE — each resolves
+	// through its call-site `|| '<English literal>'`, exactly like the entries
+	// below. They are not new debt; they are debt that was outside the census.
+	// Same burn-down: pick the intended string, add it to master.json, delete the
+	// entry here.
+	'alternative_extensions',
+	'annotations',
+	'bun_engine',
+	'characters_per_line',
+	'columns',
+	'components',
+	'connection_status',
+	'default',
+	'destructive',
+	'diffusion_unavailable',
+	'download_media',
+	'drag_component_column',
+	'languages',
+	'layout',
+	'left',
+	'link',
+	'margins',
+	'parents',
+	'properties',
+	'quality',
+	'retry',
+	'right',
+	'rows',
+	'select',
+	'select_an_element',
+	'show',
+	'style',
+	'tool_print_confirm_n',
+	'tool_print_rendering',
+	'tool_print_too_many',
 	'check_directories',
 	'db_name',
 	'enable_diffusion',
@@ -101,9 +138,20 @@ function* walkFiles(root: string, extension: string): Generator<string> {
 	}
 }
 
+/**
+ * EVERY tree that ships browser JS (P2-20 / GATE-30).
+ *
+ * This walked `client/dedalo` only. `tools/**​/js` is client code served to the
+ * same browser and references 90 distinct `get_label` keys — 60 defined in the
+ * master and 30 defined NOWHERE, each resolving through a call-site
+ * `|| '<English literal>'`: precisely the shape this ratchet freezes for
+ * client/, invisible because the corpus was one hardcoded root.
+ */
+const BROWSER_JS_ROOTS = [CLIENT_ROOT, resolve(import.meta.dir, '../../tools')];
+
 function clientReferencedKeys(): Set<string> {
 	const keys = new Set<string>();
-	for (const path of walkFiles(CLIENT_ROOT, '.js')) {
+	for (const path of BROWSER_JS_ROOTS.flatMap((root) => [...walkFiles(root, '.js')])) {
 		const text = readFileSync(path, 'utf8');
 		for (const match of text.matchAll(/get_label\.([A-Za-z0-9_]+)/g)) {
 			keys.add(match[1] as string);
