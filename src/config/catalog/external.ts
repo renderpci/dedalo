@@ -241,6 +241,16 @@ DEDALO_EXTERNAL_MAX_ENTRIES=50
 	DEDALO_EXTERNAL_ZENON_API_KEY: {
 		type: 'string',
 		scope: 'secret',
+		// ONE READER, and it is not the typed config object. The credential is
+		// fetched BY NAME at the single outbound door —
+		// src/external/transport.ts::attachCredential, via the service model's
+		// `credentialCatalogKey` — which also asserts this entry's scope is
+		// 'secret' before attaching it. Until 2026-08-31 a `config.external
+		// .zenonApiKey` field ALSO existed and was read by nothing: a
+		// security-relevant value with two readers, of which the one an auditor
+		// finds first (the typed catalog this project reads config through) was
+		// the DEAD one. Deleted (P2-27 / DEAD-09).
+		consumer: 'src/external/transport.ts::attachCredential, by name via credentialCatalogKey',
 		default: undefined,
 		heading: 'Defining the Zenon credential',
 		typeLabel: 'string',

@@ -67,6 +67,13 @@ TOOLS_ENABLE_REGISTRY_IMPORT=false
 	TOOLS_REGISTRY_CACHE_TTL_MS: {
 		type: 'number',
 		scope: 'operator',
+		// NOTHING reads it, and that is the documented state: the registry TTL was
+		// deleted at the cutover, so the key is recognized only so an existing
+		// configuration carrying it still starts. Until 2026-08-31 a typed field
+		// `config.tools.registryCacheTtlMs` was materialized from it and read by
+		// nothing — a value the catalog itself calls inert, given a place in the
+		// object the engine is configured through (P2-27 / DEAD-09).
+		consumer: 'nothing — retained ONLY for backward compatibility; see typeSuffix',
 		default: 60000,
 		heading: 'Tools registry cache expiry',
 		typeLabel: 'int',

@@ -29,6 +29,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 import { NEW_IN_V7, V6_MIGRATION } from '../../src/config/migration_map.ts';
 import { extractDefines } from '../../src/config/php_defines.ts';
 import { envKeysReadInSrc } from '../helpers/env_key_scan.ts';
@@ -62,12 +63,35 @@ describe('config census: the engine, the migration map, and v6 agree', () => {
 	test('migration_map.ts never targets a key the engine does NOT read', () => {
 		const read = envKeysReadInSrc();
 		const known = keysTheMapKnows();
-		const phantom = [...known].filter((k) => !read.has(k)).sort();
+		const phantom = [...known]
+			.filter((k) => !read.has(k))
+			// ...unless the catalog SAYS who reads it. Same named-exemption mechanism
+			// config_docs_tripwire already honours, and for the same reason: a key can
+			// be read dynamically (the external transport fetches its credential BY
+			// NAME through `credentialCatalogKey`, so `readOptionalString(key)` is
+			// invisible to a static scan), or kept only for backward compatibility.
+			// A `consumer` string is a declaration with a reason, never a silent pass.
+			.filter((k) => CONFIG_CATALOG[k]?.consumer === undefined)
+			.sort();
 
 		// A target nothing reads = the migration writes a dead line and the docs
 		// promise a setting that does nothing (this is how DEDALO_DIFFUSION_DB_NAME
 		// was caught).
 		expect(phantom).toEqual([]);
+	});
+
+	test('every declared consumer names something, and the key is really unscanned', () => {
+		// The exemption must not become a way to silence the rule: a `consumer` on a
+		// key the scanner CAN see is either a stale note or a lie about where the
+		// value is read.
+		const read = envKeysReadInSrc();
+		const problems: string[] = [];
+		for (const [key, entry] of Object.entries(CONFIG_CATALOG)) {
+			if (entry.consumer === undefined) continue;
+			if (entry.consumer.trim().length < 20) problems.push(`${key}: consumer says too little`);
+			if (read.has(key)) problems.push(`${key}: declares a consumer but src/ DOES read it`);
+		}
+		expect(problems, problems.join('\n  ')).toEqual([]);
 	});
 
 	test('every constant a real v6 install can set is CLASSIFIED', () => {

@@ -141,12 +141,6 @@ export interface ToolsConfig {
 	 * the registration parity gate is green (see engineering/TOOLS_SPEC.md).
 	 */
 	readonly enableRegistryImport: boolean;
-	/**
-	 * TTL (ms) for the registry reader cache. The PHP engine writes dd1324/dd996/
-	 * dd234 without notifying us, so the reader cache expires on its own; the TS
-	 * write paths still call invalidateAllToolCaches() for immediate freshness.
-	 */
-	readonly registryCacheTtlMs: number;
 }
 
 /**
@@ -202,7 +196,6 @@ export interface ExternalServicesConfig {
 	readonly maxEntryChars: number;
 	readonly maxEntries: number;
 	/** Undefined = the Zenon request carries no authorization header (its public API needs none). */
-	readonly zenonApiKey: string | undefined;
 }
 
 /** One configured code master (PHP CODE_SERVERS entry). */
@@ -1134,7 +1127,6 @@ export const config: DedaloConfig = Object.freeze({
 	tools: Object.freeze({
 		additionalRoots: Object.freeze(readToolRoots('DEDALO_ADDITIONAL_TOOLS')),
 		enableRegistryImport: readString('TOOLS_ENABLE_REGISTRY_IMPORT') === 'true',
-		registryCacheTtlMs: Number(readString('TOOLS_REGISTRY_CACHE_TTL_MS')),
 	}),
 	siteBuilder: Object.freeze({
 		url: readOptionalString('DEDALO_SITE_BUILDER_URL'),
@@ -1163,7 +1155,6 @@ export const config: DedaloConfig = Object.freeze({
 		breakerCooldownMs: readNumber('DEDALO_EXTERNAL_BREAKER_COOLDOWN_MS'),
 		maxEntryChars: readNumber('DEDALO_EXTERNAL_MAX_ENTRY_CHARS'),
 		maxEntries: readNumber('DEDALO_EXTERNAL_MAX_ENTRIES'),
-		zenonApiKey: readOptionalString('DEDALO_EXTERNAL_ZENON_API_KEY'),
 	}),
 	update: Object.freeze({
 		codeServers: readServerList('CODE_SERVERS'),
