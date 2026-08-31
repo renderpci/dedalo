@@ -155,8 +155,23 @@ install_docker() {
 	command -v curl >/dev/null 2>&1 || fail 'curl is needed to fetch the Docker installer.'
 	# Downloaded to a file and then run, rather than piped into a shell: a
 	# truncated download cannot half-execute, and you can read it first.
-	local script='/tmp/dedalo_get-docker.sh'
+	#
+	# mktemp, NOT A FIXED /tmp PATH (P2-15 / OPS-06, CWE-377). This was
+	# `/tmp/dedalo_get-docker.sh` — a name any unprivileged local user can predict
+	# and pre-create on sticky /tmp. They cannot make `curl -o` fail, but they own
+	# the window between the download and `run_as_root sh "$script"`, and what
+	# runs there runs AS ROOT. mktemp gives an unpredictable name created 0600 by
+	# the caller, so there is nothing to pre-create and nothing to swap.
+	local script
+	script="$(mktemp "${TMPDIR:-/tmp}/dedalo_get-docker.XXXXXXXX")" \
+		|| fail 'Could not create a temporary file for the Docker installer.'
+	# Remove it even if the installer fails or the operator interrupts.
+	trap 'rm -f "$script"' RETURN
 	curl -fsSL https://get.docker.com -o "$script" || fail 'Could not download the Docker installer.'
+	# The file we are about to run as root must still be the one WE made: a
+	# regular file, owned by us, not a symlink somebody swapped in.
+	[ -f "$script" ] && [ ! -L "$script" ] && [ -O "$script" ] \
+		|| fail 'The downloaded Docker installer is not the file this script created. Aborting.'
 	run_as_root sh "$script" || fail 'The Docker installer failed — see its output above.'
 	rm -f "$script"
 	run_as_root systemctl enable --now docker >/dev/null 2>&1 || true

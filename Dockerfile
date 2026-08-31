@@ -106,12 +106,24 @@ USER bun
 
 EXPOSE 3600
 
-# umask 0000 so the unix socket is created world-writable inside the private
-# socket volume. Connecting to a unix socket requires WRITE permission on it, and
-# the proxy container runs as a different user — with the default umask every
-# request is a 502. The volume is shared with the proxy only; nothing else can
-# see it.
-ENTRYPOINT ["/bin/sh", "-c", "umask 0000; exec \"$@\"", "--"]
+# umask 0027 — NARROW (P2-15 / OPS-05, corrected 2026-08-31).
+#
+# This was `umask 0000`, bought for one correct reason: connecting to a unix
+# socket needs WRITE permission on it and the proxy container runs as a different
+# user, so with a default umask every request is a 502. But the scope was the
+# whole engine process for its whole life, so EVERY file created without an
+# explicit mode landed 0666 — the session store and its -wal/-shm, process and
+# job records, media derivatives, and ts_state.json, which is not inert: it
+# carries media_access_mode (which WINS over .env) and install_status, so writing
+# `configured` back into it flips installInProgress() true and RE-OPENS the
+# pre-auth install surface, whose actions rewrite ../private/.env and restart the
+# process. Named volumes bound that in the shipped stacks; a bind-mounted
+# /private — which the comments in this file contemplate — is where it bites.
+#
+# The socket now gets its 0666 explicitly, from the one place that knows which
+# file it is (src/server.ts, right after Bun.serve). Everything else inherits a
+# umask that does not hand the world a writable private directory.
+ENTRYPOINT ["/bin/sh", "-c", "umask 0027; exec \"$@\"", "--"]
 CMD ["bun", "run", "src/server.ts"]
 
 # --- Build targets -----------------------------------------------------------

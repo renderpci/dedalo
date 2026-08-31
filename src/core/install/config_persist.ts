@@ -270,6 +270,13 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			renameSync(target, backup);
 		}
 		renameSync(tmp, target);
+		// EXPLICIT ON THE TARGET, not inherited from the staged file (P2-15 /
+		// OPS-14). The rename carries .tmp's 0600 today, so this is belt and
+		// braces for THIS path — but it is also the one line that repairs an
+		// install predating the 0600 change, whose .env keeps whatever mode it was
+		// created with until something re-chmods it. This file holds the database
+		// password and the session secret.
+		chmodSync(target, 0o600);
 	} catch (error) {
 		refuseInstall(
 			'install.step_failed',

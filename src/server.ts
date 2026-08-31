@@ -23,7 +23,7 @@
  *   (ENTRY_REDIRECT_PATHS; the PHP index.php shims).
  */
 
-import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { chmodSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { Glob } from 'bun';
@@ -2144,6 +2144,33 @@ export async function startServer() {
 		},
 	});
 	servers.push(server);
+
+	// THE SOCKET IS THE ONE THING THAT NEEDS TO BE WORLD-WRITABLE (P2-15/OPS-05).
+	//
+	// Connecting to a unix socket requires WRITE permission on it, and the proxy
+	// container runs as a different user — without this, every request is a 502.
+	// The Dockerfile used to buy that by setting `umask 0000` for the whole engine
+	// process for its whole life: correct reason, wrong scope. EVERY file created
+	// without an explicit mode then landed 0666 — the session store and its
+	// -wal/-shm, process and job records, media derivatives, and `ts_state.json`,
+	// which is not inert: it carries `media_access_mode` (which WINS over .env)
+	// and `install_status`, so writing `configured` back into it flips
+	// installInProgress() true and RE-OPENS the pre-auth install surface, whose
+	// actions rewrite ../private/.env and restart the process.
+	//
+	// Named volumes bound that in the shipped stacks; an operator bind-mounting
+	// /private — which the Dockerfile's own comments contemplate — is where it
+	// bites. So the umask is narrow now and the permission is granted HERE, to
+	// this file and nothing else.
+	try {
+		chmodSync(socketPath, 0o666);
+	} catch (error) {
+		// Never fatal: a platform that refuses chmod on a socket still serves, and
+		// a 502 with this line in the log is far easier to diagnose than a silent
+		// world-writable private directory.
+		console.warn(`[server] could not set the socket mode on ${socketPath}:`, error);
+	}
+
 	console.log(`Dédalo TS server listening on unix socket ${socketPath} (entity: ${config.entity})`);
 
 	// CODE-UPDATE BOOT CONFIRMATION (core/update/boot_confirm.ts): once the
