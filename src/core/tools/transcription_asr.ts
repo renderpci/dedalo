@@ -17,10 +17,11 @@
  * the job payload — nothing here reads the ALS stores (isolation Rule 6).
  */
 
-// The ONE transcript formatter, shared verbatim with the browser engine (plain
-// ESM, no build step — see segmentsToTcText).
 import { segments_to_html as segmentsToHtml } from '../../../tools/tool_transcription/transcribers/lib/paragraphs.js';
 import { DedaloError } from '../errors/index.ts';
+// The ONE transcript formatter, shared verbatim with the browser engine (plain
+// ESM, no build step — see segmentsToTcText).
+import { fetchGuardedText, isSsrfRefusal } from '../security/ssrf_guard.ts';
 import { localAsrProvider, localAsrStatusProvider } from './transcription_local_asr.ts';
 
 /**
@@ -33,35 +34,6 @@ export const LOCAL_ASR_ENGINE = 'local_whisper';
 // ---------------------------------------------------------------------------
 // SSRF guard
 // ---------------------------------------------------------------------------
-
-/**
- * Minimal SSRF guard for the outbound transcriber URL (PHP is_safe_remote_url,
- * SEC-076). Local twin of translation.ts::isSafeTranslatorUrl (that helper is
- * file-private; duplicated here rather than widening another module's surface).
- * PHP allows custom ports (babel often runs on non-standard ports) — so do we;
- * we block non-http(s), loopback, link-local metadata and private ranges.
- */
-function isSafeTranscriberUrl(uri: string): boolean {
-	let url: URL;
-	try {
-		url = new URL(uri);
-	} catch {
-		return false;
-	}
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-	const host = url.hostname.toLowerCase();
-	if (
-		host === 'localhost' ||
-		host === '127.0.0.1' ||
-		host === '::1' ||
-		host === '[::1]' ||
-		host === '169.254.169.254'
-	) {
-		return false;
-	}
-	if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return false;
-	return true;
-}
 
 // ---------------------------------------------------------------------------
 // Submit (PHP babel_transcriber::transcribe)
@@ -105,32 +77,44 @@ export type TranscriberProvider = (req: TranscribeRequest) => Promise<Transcribe
  * babel answers { result: { pid } } (PHP reads $transcriber_response->result->pid).
  */
 export const babelTranscriberProvider: TranscriberProvider = async (req) => {
-	if (!isSafeTranscriberUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
 	try {
-		const res = await fetch(req.uri, {
-			method: 'POST',
-			body: new URLSearchParams({
-				key: req.key,
-				engine: req.engine,
-				quality: req.quality,
-				user_id: String(req.userId),
-				entity_name: req.entityName,
-				lang_tld2: req.langTld2,
-				av_url: req.audioUrl,
-				method_name: 'transcribe',
-			}),
+		// ONE GUARD, ONE TRANSPORT (CARRY-10 / CARRY-14). This carried a private
+		// COPY of the translator's four-string blocklist — the file said so — and
+		// the fetch had no signal, no timeout and no byte cap. `fetchGuardedText`
+		// resolves the host and vets the addresses, refuses redirects, and bounds
+		// both the wait and the read.
+		const rawBody = await fetchGuardedText(req.uri, {
+			maxBytes: 8 * 1024 * 1024,
+			init: {
+				method: 'POST',
+				body: new URLSearchParams({
+					key: req.key,
+					engine: req.engine,
+					quality: req.quality,
+					user_id: String(req.userId),
+					entity_name: req.entityName,
+					lang_tld2: req.langTld2,
+					av_url: req.audioUrl,
+					method_name: 'transcribe',
+				}),
+			},
 		});
-		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
+		// No status branch here any more: fetchGuardedText THROWS on a non-2xx
+		// (`HTTP <status>`), so a transcriber error lands in the catch below
+		// instead of being tested for a second time on a hand-made response.
 		// `body.result` here is BABEL'S OWN wire shape (an external service's
 		// contract), not a Dédalo envelope — it is read, never produced.
-		const body = (await res.json()) as { result?: { pid?: string | number } | false };
+		const body = JSON.parse(rawBody) as { result?: { pid?: string | number } | false };
 		const pid = body.result !== false && body.result !== undefined ? body.result.pid : undefined;
 		if (pid === undefined || pid === null) {
 			return { ok: false, msg: 'transcriber returned no pid' };
 		}
 		return { ok: true, pid, msg: 'ok' };
 	} catch (error) {
-		return { ok: false, msg: (error as Error).message };
+		// The guard's own text names the address it refused — an oracle on the
+		// wire, and not the `msg` this door has always published.
+		const msg = isSsrfRefusal(error) ? 'invalid transcriber URL' : (error as Error).message;
+		return { ok: false, msg };
 	}
 };
 
@@ -308,7 +292,6 @@ export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSe
 
 /** Real babel status poll — POSTs check_status, returns the decoded inner result. */
 export const babelTranscriberStatusProvider: TranscriberStatusProvider = async (req) => {
-	if (!isSafeTranscriberUrl(req.uri)) return { ok: false, msg: 'invalid transcriber URL' };
 	// The body is built OUTSIDE the try on purpose. `{ok:false, msg}` is the
 	// vocabulary for "the transcriber said no / is unreachable"; a caller that
 	// did not supply the av_url the job is keyed by is a PROGRAMMING error, and
@@ -316,13 +299,19 @@ export const babelTranscriberStatusProvider: TranscriberStatusProvider = async (
 	// generic "status not valid" report.
 	const requestBody = buildTranscriberStatusBody(req);
 	try {
-		const res = await fetch(req.uri, { method: 'POST', body: requestBody });
-		if (!res.ok) return { ok: false, msg: `transcriber HTTP ${res.status}` };
+		// Same one guard, same one transport (CARRY-10 / CARRY-14).
+		const rawBody = await fetchGuardedText(req.uri, {
+			maxBytes: 8 * 1024 * 1024,
+			init: { method: 'POST', body: requestBody },
+		});
 		// Babel's own envelope again — decoded, never produced.
-		const body = (await res.json()) as { result?: unknown };
+		const body = JSON.parse(rawBody) as { result?: unknown };
 		return body.result ?? null;
 	} catch (error) {
-		return { ok: false, msg: (error as Error).message };
+		// The guard's own text names the address it refused — an oracle on the
+		// wire, and not the `msg` this door has always published.
+		const msg = isSsrfRefusal(error) ? 'invalid transcriber URL' : (error as Error).message;
+		return { ok: false, msg };
 	}
 };
 

@@ -38,6 +38,7 @@ import type { BackupVerdict } from '../area_maintenance/backup.ts';
 import { runtimePathsInsideTree } from '../install/runtime_paths.ts';
 import { getServerState } from '../resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
+import { isLoopbackHost } from '../security/ssrf_guard.ts';
 import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.ts';
 import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
@@ -1062,7 +1063,9 @@ function advertisedOriginCheck(publicBaseUrl: string): StatusCheck {
 	} catch {
 		return check('advertised_origin', 'blocked', publicBaseUrl);
 	}
-	const local = host === '' || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+	// Loopback, NOT isPrivateIp: a LAN origin is private but perfectly fetchable,
+	// and the docker museum install advertises exactly such an address.
+	const local = isLoopbackHost(host);
 	return local
 		? check('advertised_origin', 'blocked', host)
 		: check('advertised_origin', 'ok', host);

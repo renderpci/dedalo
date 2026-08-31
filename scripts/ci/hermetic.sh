@@ -106,6 +106,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/tm_epoch_tripwire.test.ts
 	test/unit/relogin_identity_tripwire.test.ts
 	test/unit/pdf_extract_symmetry_tripwire.test.ts
+	test/unit/ssrf_one_guard_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts

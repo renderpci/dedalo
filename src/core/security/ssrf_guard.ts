@@ -35,6 +35,20 @@ function ssrfRefusal(message: string, coordinates: Record<string, string | numbe
 	return new DedaloError('security.ssrf_blocked', { message, coordinates });
 }
 
+/**
+ * True when an error came from THIS guard's refusal, so a caller can answer with
+ * its own stable, non-disclosing message.
+ *
+ * The guard's own text names the address it refused (`… refused private/reserved
+ * address 127.0.0.1`). That is right for the log and wrong for the wire: it hands
+ * an unauthenticated caller a probe oracle, and it silently rewrote the `msg` two
+ * doors had published for years. Callers catch, ask this, and answer in their own
+ * words — the detail stays in the DedaloError for the operator.
+ */
+export function isSsrfRefusal(error: unknown): boolean {
+	return error instanceof DedaloError && error.code === 'security.ssrf_blocked';
+}
+
 /** Parse an IPv4 dotted string to its 32-bit value, or null if malformed. */
 function ipv4ToInt(ip: string): number | null {
 	const parts = ip.split('.');
@@ -74,13 +88,33 @@ function isPrivateIpv4(ip: string): boolean {
 	);
 }
 
+/**
+ * The embedded IPv4 of an IPv4-mapped/-compatible IPv6 address, dotted, or null.
+ *
+ * BOTH spellings, because the WHATWG URL parser rewrites one into the other:
+ * `new URL('http://[::ffff:127.0.0.1]/').hostname` is `[::ffff:7f00:1]`. A check
+ * that only understood the DOTTED tail was therefore dead for every address that
+ * arrived as a URL — which is all of them — and `::ffff:127.0.0.1` (loopback) and
+ * `::ffff:a00:1` (10.0.0.1) both read as PUBLIC. Measured 2026-08-31.
+ */
+function mappedIpv4(addr: string): string | null {
+	const dotted = addr.match(/(?:::ffff:|::)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)?.[1];
+	if (dotted !== undefined) return dotted;
+	// ::ffff:7f00:1 — the same address, hex, as the URL parser emits it.
+	const hex = addr.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+	if (hex?.[1] === undefined || hex[2] === undefined) return null;
+	const high = Number.parseInt(hex[1], 16);
+	const low = Number.parseInt(hex[2], 16);
+	return `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`;
+}
+
 /** True when an IPv6 address is loopback / link-local / ULA / mapped-private. */
 function isPrivateIpv6(ip: string): boolean {
 	const addr = ip.toLowerCase().split('%')[0] ?? ip; // drop any zone id
 	if (addr === '::1' || addr === '::' || addr === '::0') return true;
-	// IPv4-mapped / -compatible (::ffff:a.b.c.d, ::a.b.c.d): vet the embedded v4.
-	const mapped = addr.match(/(?:::ffff:|::)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
-	if (mapped?.[1]) return isPrivateIpv4(mapped[1]);
+	// IPv4-mapped / -compatible: vet the embedded v4, in EITHER spelling.
+	const mapped = mappedIpv4(addr);
+	if (mapped !== null) return isPrivateIpv4(mapped);
 	// fc00::/7 unique-local, fe80::/10 link-local.
 	const head = addr.split(':')[0] ?? '';
 	if (/^f[cd][0-9a-f]{0,2}$/.test(head)) return true; // fc.. / fd..
@@ -94,6 +128,49 @@ export function isPrivateIp(ip: string): boolean {
 	if (kind === 4) return isPrivateIpv4(ip);
 	if (kind === 6) return isPrivateIpv6(ip);
 	return true; // not an IP ⇒ refuse
+}
+
+/**
+ * True when a URL HOSTNAME names this machine's own loopback — the "nobody else
+ * can reach this" question, which is NOT the same question as isPrivateIp.
+ *
+ * A LAN address (192.168.x, 10.x) is private but perfectly reachable, and it is
+ * a LEGITIMATE advertised origin: the docker museum install fetches its releases
+ * from the master over exactly such an address. So callers asking "would this
+ * URL be unfetchable from anywhere but here?" must ask THIS, not isPrivateIp.
+ *
+ * Takes a `URL.hostname`, so it strips the brackets IPv6 literals arrive in —
+ * `new URL('http://[::1]/').hostname` is `[::1]`, and every hand-rolled copy of
+ * this check so far compared against a bare `'::1'` and so never matched.
+ */
+/** The loopback NAME family, including the RFC 6761 `.localhost` TLD. */
+function isLoopbackName(host: string): boolean {
+	// A trailing dot is the FULLY-QUALIFIED spelling of the same name: `localhost.`
+	// resolves exactly where `localhost` does, and the URL parser keeps the dot.
+	const name = host.endsWith('.') ? host.slice(0, -1) : host;
+	if (name === '' || name === 'localhost' || name.endsWith('.localhost')) return true;
+	return name === 'localhost.localdomain' || name === 'ip6-localhost' || name === 'ip6-loopback';
+}
+
+/** All of 127/8 (not merely .1), plus the unspecified address. */
+function isLoopbackIpv4(host: string): boolean {
+	return host === '0.0.0.0' || host.startsWith('127.');
+}
+
+/** `::1`/`::`, and loopback wearing a v6 coat (`::ffff:127.0.0.1`). */
+function isLoopbackIpv6(host: string): boolean {
+	const addr = host.split('%')[0] ?? host; // drop any zone id
+	if (addr === '::1' || addr === '::' || addr === '::0') return true;
+	const mapped = mappedIpv4(addr);
+	return mapped !== null && isLoopbackIpv4(mapped);
+}
+
+export function isLoopbackHost(hostname: string): boolean {
+	const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+	const kind = isIP(host);
+	if (kind === 4) return isLoopbackIpv4(host);
+	if (kind === 6) return isLoopbackIpv6(host);
+	return isLoopbackName(host);
 }
 
 export interface SafeUrlResult {

@@ -73,7 +73,14 @@ import {
 } from '../../src/core/tools/translation.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
-const URI = 'https://babel.example.org/translate';
+// A PUBLIC IP LITERAL, deliberately. The provider now goes through
+// `fetchGuardedText`, which RESOLVES a DNS name before fetching — so a
+// `.example.org` stub URI would make this suite depend on a DNS answer (and
+// fail closed offline). A literal takes the guard's no-lookup path, so the run
+// stays hermetic while exercising the real guard instead of stepping around it.
+// 93.184.216.34 is IANA's example-address; nothing is ever dialled, since the
+// fetch itself is stubbed below.
+const URI = 'https://93.184.216.34/translate';
 const TEST_TABLE = 'matrix_test';
 const SECTION_TIPO = 'test2';
 /** input_text, translatable → 'string' column, one item per language. */

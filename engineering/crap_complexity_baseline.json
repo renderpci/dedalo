@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 517,
-		"functions": 4617,
-		"functionsOverCap": 692,
+		"files": 519,
+		"functions": 4658,
+		"functionsOverCap": 691,
 		"filesOverCap": 269
 	},
 	"files": {

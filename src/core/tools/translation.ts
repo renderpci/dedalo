@@ -18,6 +18,7 @@ import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
+import { fetchGuardedText, isSsrfRefusal } from '../security/ssrf_guard.ts';
 import { addBabelNotransTags, processBabelResponse } from './babel.ts';
 
 export interface TranslateRequest {
@@ -158,30 +159,6 @@ export function babelDirection(sourceLang: string, targetLang: string): string {
 	return `${source}-${target}`;
 }
 
-/** Minimal SSRF guard for the outbound translator URL (PHP is_safe_remote_url). */
-function isSafeTranslatorUrl(uri: string): boolean {
-	let url: URL;
-	try {
-		url = new URL(uri);
-	} catch {
-		return false;
-	}
-	if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-	const host = url.hostname.toLowerCase();
-	// Block loopback / link-local / cloud-metadata; private ranges are a
-	// defense-in-depth block (translators are external services).
-	if (
-		host === 'localhost' ||
-		host === '127.0.0.1' ||
-		host === '::1' ||
-		host === '169.254.169.254'
-	) {
-		return false;
-	}
-	if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return false;
-	return true;
-}
-
 /**
  * Real Babel provider — the IO shell of PHP `babel::translate`. Everything that
  * is not the HTTP call lives in `babel.ts` (pure, unit-tested): mark protection
@@ -195,7 +172,6 @@ function isSafeTranslatorUrl(uri: string): boolean {
  * PHP's — HTTP 200 is not proof of a translation.
  */
 export const babelProvider: TranslationProvider = async (req) => {
-	if (!isSafeTranslatorUrl(req.uri)) return { ok: false, msg: 'invalid translator URL (SSRF)' };
 	const body = new URLSearchParams({
 		key: req.key,
 		// PHP: trim(TR::addBabelTagsOnTheFly($text)) — the timecode/index/person/
@@ -205,15 +181,35 @@ export const babelProvider: TranslationProvider = async (req) => {
 		direction: babelDirection(req.sourceLang, req.targetLang),
 	});
 	try {
-		const res = await fetch(req.uri, { method: 'POST', body });
-		if (!res.ok) return { ok: false, msg: `translate HTTP ${res.status}` };
-		const rawResult = await res.text();
+		// ONE GUARD, NOT TWO (CARRY-10 / SSRF-02). This used to carry its own
+		// four-string blocklist — `localhost`, `127.0.0.1`, `::1`,
+		// `169.254.169.254`, plus a private-range regex — while the RDF door beside
+		// it had already been migrated to the resolving guarded fetcher. One twin
+		// hardened, one not.
+		//
+		// The blocklist could not do the job and its `::1` arm was DEAD CODE:
+		// `new URL('http://[::1]/').hostname` is `[::1]` WITH the brackets, so the
+		// bare comparison never matched. It also missed `127.0.0.2`, `0.0.0.0`,
+		// decimal-integer IPv4, `anything.localhost`, every DNS NAME resolving to a
+		// private address, and the redirect hop.
+		//
+		// `fetchGuardedText` RESOLVES the host and vets the addresses, refuses
+		// redirects (a 3xx re-chooses the target), and carries a timeout and a body
+		// cap — the last two also close this call's unbounded-read and
+		// lane-occupancy exposure (CARRY-14's shape at this site).
+		const rawResult = await fetchGuardedText(req.uri, {
+			maxBytes: 8 * 1024 * 1024,
+			init: { method: 'POST', body },
+		});
 		const processed = processBabelResponse(rawResult);
 		return processed.ok
 			? { ok: true, text: processed.value, msg: 'ok', rawResult }
 			: { ok: false, msg: processed.msg };
 	} catch (error) {
-		return { ok: false, msg: (error as Error).message };
+		// Keep this door's long-published refusal text: the guard's own message
+		// names the address it refused, which is a probe oracle on the wire.
+		const msg = isSsrfRefusal(error) ? 'invalid translator URL (SSRF)' : (error as Error).message;
+		return { ok: false, msg };
 	}
 };
 
