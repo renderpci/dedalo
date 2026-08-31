@@ -1164,8 +1164,10 @@ ts_object.prototype.get_children_recursive = function( options ) {
 * @param {string|number} options.new_parent_section_id - New parent's section_id.
 * @param {string} options.new_parent_section_tipo - New parent's section_tipo.
 * @returns {Promise<Object>} The raw api_response Promise from data_manager.request.
-*   (!) Note: the await is intentionally omitted here; the caller (swap_parent)
-*   attaches a .then() handler to process the result asynchronously.
+*   The caller AWAITS this and commits the local re-parent only on success
+*   (P2-2 / CLI-04). It previously said "the await is intentionally omitted …
+*   the caller attaches a .then()" — and that caller's .then() reverted nothing,
+*   so a server failure left the tree showing a move the database never took.
 */
 ts_object.prototype.update_parent_data = async function(options) {
 	if(SHOW_DEBUG) {
@@ -1201,8 +1203,8 @@ ts_object.prototype.update_parent_data = async function(options) {
 				new_parent_section_tipo	: new_parent_section_tipo
 			}
 		}
-		// (!) await is intentionally omitted: the caller (swap_parent) attaches .then()
-		// to handle the response asynchronously while the UI updates immediately.
+		// The caller AWAITS this result before committing anything locally
+		// (P2-2 / CLI-04): the UI no longer updates ahead of the server.
 		const api_response = data_manager.request({
 			body : rqo
 		})
@@ -1614,29 +1616,39 @@ ts_object.prototype.swap_parent = async function (options) {
 		new_parent_section_id	: target_instance.section_id,
 		new_parent_section_tipo	: target_instance.section_tipo
 	}
-	self.update_parent_data(update_parent_data_options)
-	.then(function(api_response){
-		if(SHOW_DEBUG===true) {
-			console.log('update_parent_data. Response:', api_response);
-		}
-		if (!response_data(api_response)) {
-			console.error('Error on update_parent_data. Unable to continue.');
-			// bubbles notifications
-			const msg = request_failed(api_response)
-				? error_text(api_response.error)
-				: 'Error on update parent data.'
-			event_manager.publish('notification', {
-				msg			: msg,
-				type		: 'error',
-				remove_time	: 10000
-			})
-		}else{
-			event_manager.publish('notification', {
-				msg			: get_label.saved || 'OK',
-				type		: 'success',
-				remove_time	: 1200
-			})
-		}
+	// AWAIT THE SERVER BEFORE COMMITTING THE MOVE (P2-2 / CLI-04).
+	//
+	// This fired update_parent_data WITHOUT awaiting and then committed the
+	// re-parent locally regardless — instance reassignment, rekey, destroy-cascade
+	// move, appendChild, virtual_order recompute — while the `.then()` showed an
+	// error notification and REVERTED NOTHING.
+	//
+	// So on a server failure the curator saw an error toast AND a tree showing the
+	// term under its new parent: the client and the server disagreeing about where
+	// a heritage record sits, with the screen asserting the version that did not
+	// happen. The next reload silently undoes it, which is the worst way to find
+	// out. The server side is atomic and correct; the divergence was entirely the
+	// client's refusal to wait.
+	const api_response = await self.update_parent_data(update_parent_data_options)
+	if (!response_data(api_response)) {
+		console.error('Error on update_parent_data. Unable to continue.');
+		const msg = request_failed(api_response)
+			? error_text(api_response.error)
+			: 'Error on update parent data.'
+		event_manager.publish('notification', {
+			msg			: msg,
+			type		: 'error',
+			remove_time	: 10000
+		})
+		// NOTHING LOCAL HAS CHANGED YET, which is the whole point of moving this
+		// above the commit: refusing here leaves the tree exactly as the server
+		// still has it, so the screen and the database agree.
+		return false
+	}
+	event_manager.publish('notification', {
+		msg			: get_label.saved || 'OK',
+		type		: 'success',
+		remove_time	: 1200
 	})
 
 	// update moving instance caller.
