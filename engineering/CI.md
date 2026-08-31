@@ -12,6 +12,40 @@ commit — the workflows had never actually executed: a `biome` format error in
 `src/core/test_data/seed.ts` (typed-number fixture identity, not a locator —
 ratcheted with a reason).
 
+## Running CI's environment locally — `bun run ci:local`
+
+`scripts/verify.ts` proves the code works **on your machine**: ../private/.env loaded, your
+Postgres, your libc. The hosted tiers have none of that — `scripts/ci/db_tier.sh` composes
+its whole environment in-process precisely so nothing is inherited, and a runner has no
+../private/.env at all. Nothing ran the tiers that way locally, so the RUNNER was the first
+place the code ever met the runner's environment, and CI became the debugger: ~10 minutes
+and a pasted log per iteration.
+
+    bun run ci:local              # both tiers, as CI runs them
+    bun run ci:local --hermetic   # typecheck + lint + static tripwires + daemon packages
+    bun run ci:local --db         # suite build + DB tripwires + unit tier + parity
+    bun run ci:local --keep       # leave the scratch private dir for inspection
+
+It runs `scripts/ci/hermetic.sh` and `scripts/ci/db_tier.sh` unchanged, with
+`DEDALO_PRIVATE_DIR` pointed at an EMPTY directory — the runner's condition, since
+db_tier.sh creates `../private` itself and it is the FILE's absence that matters. The one
+thing it takes from your machine is the Postgres **connection** (host, port, user,
+password); every `DEDALO_*` key the tiers need they compose themselves, which is the
+property under test. Its db tier drops and rebuilds its own `dedalo_ci_test`, so the suite
+database `bun run test:db:setup` builds for you is untouched.
+
+WHAT IT CATCHES, and what it does not. It catches the class where the developer environment
+supplies something the runner does not — measured 2026-08-31, that was four of twelve
+defects found in one day (an unset egress allowlist, a probe that required the private file,
+the parity census addressing a database nobody builds, eight config keys the tier never
+composed). It does NOT catch the platform-bound class on a Mac — a BSD-only `gzcat`, nginx's
+Debian log path, `nginx -t` binding :80, a missing pgvector extension — because those need
+Linux. For those, run the same script inside the runner's images. Both remain cheaper than a
+push.
+
+`verify` is not replaced by this and stays: it is the developer-environment gate. These are
+two different environments and both matter.
+
 ## Pipeline map
 
 **Two repos, by trust level.** GitHub is public and gets the hermetic tier only;

@@ -25,6 +25,7 @@
 		"dedalo:migrate-passwords": "bun run scripts/migrate_v6_passwords.ts",
 		"test": "bun test --timeout=30000",
 		"lint:browser": "bun run scripts/lint_browser_budget.ts",
+		"ci:local": "bun run scripts/ci_local.ts",
 		"test:db:setup": "bun run scripts/test_db_setup.ts",
 		"test:baseline": "bun run scripts/test_baseline.ts",
 		"test:timings": "bun run scripts/test_baseline.ts --timings",

@@ -816,7 +816,17 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
    */
   test('a released site serves, its dotfiles do not, and a smuggled symlink is refused', () => {
     const dir = mkdtempSync(join(tmpdir(), 'dedalo-nginx-serve-'));
-    const port = 8000 + (process.pid % 900);
+    // A PORT THIS HOST SAYS IS FREE, not one derived from the pid (2026-08-31).
+    // `8000 + (process.pid % 900)` collides with anything already on that number — a
+    // concurrent run, an unrelated service, or a leftover master from an earlier run
+    // whose `-s stop` did not land — and nginx then dies with
+    //   bind() to 0.0.0.0:<n> failed (48: Address already in use)
+    // reported as this gate failing. Caught on the first `bun run ci:local` run. Same
+    // freePort() the `-t` block above uses; the residual race (the port is released
+    // before nginx claims it) is unavoidable and vastly smaller than a fixed number.
+    const chosen = freePort('0.0.0.0');
+    if (chosen === null) throw new Error('no bindable port for the nginx serving gate');
+    const port = chosen;
     const main = join(dir, 'nginx.conf');
     let started = false;
     try {
