@@ -91,6 +91,7 @@ const TRIPWIRES = [
 	'test/unit/comment_doc_path_tripwire.test.ts',
 	'test/unit/client_suite_registration_tripwire.test.ts',
 	'test/unit/config_dead_field_tripwire.test.ts',
+	'test/unit/update_waiver_trace_native.test.ts',
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',

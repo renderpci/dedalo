@@ -417,6 +417,12 @@ describe('full swap chain against a synthetic release (mocked gate, temp tree)',
 				installDigest: sha,
 				status: 'pending',
 				rollback_attempted: false,
+				// This fixture drives the swap with `waive_backup: true`, so the
+				// sentinel must SAY the tree was installed with no verified restore
+				// point behind it (P2-16 / LIFE-06). Before 2026-08-31 the waiver's
+				// only record was a console.warn that journald eventually rotated
+				// away — and this test, which waives on every run, could not tell.
+				backup_waived: true,
 			});
 			// A release install stamps the tree too, on the master channel — so a
 			// published tree keeps its release posture and its plain version string.

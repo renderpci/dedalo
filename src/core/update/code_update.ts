@@ -195,6 +195,12 @@ export interface UpdatePhaseFrame {
 	expected_version?: string;
 	message?: string;
 	rollback?: { performed: boolean; to: string };
+	/**
+	 * TRUE when this run proceeded with NO verified restore point (P2-16). The
+	 * operator watching the panel should see it while it happens, not only in a
+	 * log line that rotates away.
+	 */
+	backup_waived?: boolean;
 }
 
 export interface PhaseTracker {
@@ -207,6 +213,13 @@ export interface PhaseTracker {
 export function createPhaseTracker(
 	version: string,
 	onPhase: ((frame: UpdatePhaseFrame) => void) | undefined,
+	/**
+	 * Stamped on EVERY frame when the run proceeded with no verified restore
+	 * point (P2-16 / LIFE-06). On every frame rather than one, because the panel
+	 * shows the current frame: a flag that appeared once, early, would have
+	 * scrolled away by the time anything went wrong.
+	 */
+	backupWaived = false,
 ): PhaseTracker {
 	const statuses = new Map<UpdatePhaseId, UpdatePhaseStatus>(
 		UPDATE_PHASES.map((id) => [id, 'pending']),
@@ -217,6 +230,7 @@ export function createPhaseTracker(
 			phase,
 			phases: UPDATE_PHASES.map((id) => ({ id, status: statuses.get(id) ?? 'pending' })),
 			version,
+			...(backupWaived ? { backup_waived: true } : {}),
 			...extra,
 		});
 	};
@@ -749,6 +763,8 @@ export interface UpdateSentinel {
 	installDigest?: string;
 	status: 'pending';
 	rollback_attempted: false;
+	/** The tree was swapped with NO verified restore point (P2-16 / LIFE-06). */
+	backup_waived?: boolean;
 }
 
 /**
@@ -809,6 +825,12 @@ interface UpdateRequest {
 	declaredSha: string;
 	/** The channel the manifest advertised this archive on ('master' unless 'dev'). */
 	channel: InstallChannel;
+	/**
+	 * The operator explicitly proceeded without a verified restore point. Carried
+	 * so it can be RECORDED (sentinel + progress frames), not just warned about
+	 * once into a log that rotates — P2-16 / LIFE-06.
+	 */
+	backupWaived: boolean;
 }
 
 /**
@@ -865,13 +887,13 @@ function parseUpdateRequest(rawOptions: unknown, principal: Principal): UpdateRe
 		waiveBackup ? { backupWarn: false } : { backupRequire: true },
 	);
 	warnBackupWaiver(waiveBackup, principal);
-	const request = readReleaseFields(options);
+	const request: UpdateRequest = { ...readReleaseFields(options), backupWaived: waiveBackup };
 	assertReleaseShape(request);
 	return request;
 }
 
 /** The `file.*` strings, shape-untrusted (assertReleaseShape gates them next). */
-function readReleaseFields(options: UpdateCodeOptions): UpdateRequest {
+function readReleaseFields(options: UpdateCodeOptions): Omit<UpdateRequest, 'backupWaived'> {
 	const file = options.file ?? {};
 	return {
 		url: typeof file.url === 'string' ? file.url : '',
@@ -1445,7 +1467,7 @@ export async function updateCode(
 	// image channel, a runtime path inside the tree, an unknown root entry — the
 	// likeliest first-run outcomes) still reach the operator's phase track.
 	// Built after parseUpdateRequest because the frames carry the version.
-	const phases = createPhaseTracker(version, seams.onPhase);
+	const phases = createPhaseTracker(version, seams.onPhase, request.backupWaived);
 	const backupRoot = swapPreconditionsWithFrame(targetRoot, seams, phases);
 	const stagingDir = codeStagingDir(backupRoot);
 	const restart = seams.restart ?? scheduleServerRestartReal;
@@ -1496,6 +1518,7 @@ export async function updateCode(
 				installDigest: request.declaredSha,
 				status: 'pending',
 				rollback_attempted: false,
+				backup_waived: request.backupWaived,
 			},
 			seams,
 		);

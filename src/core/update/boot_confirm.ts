@@ -43,6 +43,18 @@ export interface CodeUpdateSentinel {
 	installDigest?: string;
 	status: 'pending' | 'confirmed' | 'rolled_back';
 	rollback_attempted: boolean;
+	/**
+	 * TRUE when this tree was swapped WITHOUT a verified restore point
+	 * (`waive_backup`) — P2-16 / LIFE-06.
+	 *
+	 * The waiver was already well gated (superuser + maintenance mode, and the
+	 * shipped client exposes no control for it). What it had was no MEMORY: the
+	 * only record was one `console.warn`, so once journald rotated there was no
+	 * durable evidence that an update had proceeded with no backup behind it.
+	 * That is the first question an incident asks. Absent on sentinels written
+	 * before 2026-08-31, which is why it is optional.
+	 */
+	backup_waived?: boolean;
 }
 
 /**
