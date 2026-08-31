@@ -8,7 +8,8 @@
 	import {
 		strip_tags,
 		prevent_open_new_window,
-		same_section_id
+		same_section_id,
+		safe_url
 	} from '../../common/js/utils/index.js'
 	import {when_in_dom,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -1872,13 +1873,30 @@ export const ui = {
 		// element_type. A element. Set href only when explicitly provided.
 		// SEC-CSP-001: 'javascript:' URLs are blocked by script-src without
 		// 'unsafe-hashes'; omitting href entirely is the CSP-safe default.
+		//
+		// AND AN EXPLICIT SCHEME ALLOWLIST (P2-6 / XSS-04). The CSP note above is
+		// true and is not enough: it is one header away from being the only
+		// control, and it does not reach every navigation this DOM builder can
+		// produce. `href` and `src` receive RECORD-AUTHORED values, so the scheme
+		// is checked here — once, at the sink every caller shares — rather than at
+		// each of the callers, which is how the third and fourth sinks were missed.
 			if(element_type==='a' && options.href) {
-				element.href = options.href
+				const href = safe_url(options.href)
+				if (href===null) {
+					console.warn('[ui] refused a non-http(s) href:', options.href)
+				} else {
+					element.href = href
+				}
 			}
 
 		// src. Source for images etc.
 			if(options.src) {
-				element.src = options.src
+				const src = safe_url(options.src)
+				if (src===null) {
+					console.warn('[ui] refused a non-http(s) src:', options.src)
+				} else {
+					element.src = src
+				}
 			}
 
 		// class_name. Add CSS classes property to element

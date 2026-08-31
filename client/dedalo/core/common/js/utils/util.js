@@ -1585,4 +1585,50 @@ export function append_text_lines(node, lines) {
 
 
 
+/**
+* SAFE_URL
+* The ONE scheme allowlist for record-authored URLs (P2-6 / XSS-04).
+*
+* A record's value reaches `href`, `src` and `window.open` — and a
+* `javascript:` URL in any of them EXECUTES. The app CSP makes injected
+* <script> non-executing in-app, which is why this class is S3 rather than S2
+* today, but a CSP is one header away from being the only control, and
+* `window.open('javascript:…')` navigates a window this page opened: defence in
+* depth is the whole point of having a second control at all.
+*
+* ALLOWLIST, never a blocklist. `javascript:` has too many spellings to deny —
+* leading control characters and whitespace are stripped by the parser
+* (`java\tscript:`), the scheme is case-insensitive, and HTML entities decode
+* before the URL is read. Naming what is PERMITTED needs none of that: anything
+* the URL parser does not resolve to one of these schemes is refused.
+*
+* Relative URLs are permitted: they cannot carry a scheme, and they are how
+* every internal link in the application is written.
+*
+* @param {string} value - the candidate URL, as authored in the record
+* @returns {string|null} the value when safe to navigate to, else null
+*/
+export const safe_url = function(value) {
+
+	if (typeof value !== 'string') return null
+
+	const trimmed = value.trim()
+	if (trimmed === '') return null
+
+	// A relative URL has no scheme to abuse. `new URL` throws on these, which is
+	// how we tell them apart without parsing by hand.
+	let parsed
+	try {
+		parsed = new URL(trimmed, window.location.origin)
+	} catch (_error) {
+		return null
+	}
+
+	// The parser has already lower-cased the scheme and stripped the control
+	// characters and entities that make a blocklist unworkable.
+	const allowed = ['http:', 'https:', 'mailto:', 'ftp:', 'ftps:']
+	return allowed.includes(parsed.protocol) ? trimmed : null
+}//end safe_url
+
+
 // @license-end

@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {strip_tags} from '../../../core/common/js/utils/index.js'
+	import {strip_tags, safe_url} from '../../../core/common/js/utils/index.js'
 	import {view_default_edit_iri} from './view_default_edit_iri.js'
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
@@ -514,7 +514,17 @@ const get_content_value = (i, current_value, self) => {
 					e.preventDefault()
 
 					// open a new window
-					const url				= input_iri.value
+					//
+					// THE SCHEME ALLOWLIST (P2-6 / XSS-04). `input_iri.value` is a
+					// RECORD-AUTHORED value, and `window.open('javascript:…')` executes in
+					// the window this page opens — the app CSP does not reach it. A
+					// contributor who can write an IRI could therefore run script in a
+					// curator's session by having them click the link button.
+					const url = safe_url(input_iri.value)
+					if (url===null) {
+						console.warn('[component_iri] refused to open a non-http(s) URL:', input_iri.value)
+						return
+					}
 					const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
 					// Ensure no reverse tabnabbing
 					if (current_window) {
