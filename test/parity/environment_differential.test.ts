@@ -43,6 +43,14 @@ import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
  * oracle's value is the name of ONE install's database.
  */
 const ENGINE_SPECIFIC_KEYS = new Set([
+	// The installation's own NAME. Same class as `dedalo_db_name` and missed for
+	// the same reason it was caught: the frozen oracle recorded `monedaiberica`,
+	// the install the 2026-07-11 harvest ran against, so comparing it exactly
+	// asserted "this runner IS that installation". It passed on the developer's
+	// box (../private/.env sets that ENTITY) and could never pass anywhere else —
+	// scripts/ci/db_tier.sh exports ENTITY=ci_db_tier, so the hosted DB tier was
+	// red on this from its first run. Presence-only, and still non-empty below.
+	'dedalo_entity',
 	'pg_version',
 	'php_version',
 	'php_memory',
@@ -59,7 +67,7 @@ const ENGINE_SPECIFIC_KEYS = new Set([
  * there, a pre-existing shape divergence this gate has always ledgered as
  * engine-specific and which is not this migration's subject.)
  */
-const NON_EMPTY_STRING_KEYS = ['dedalo_db_name'] as const;
+const NON_EMPTY_STRING_KEYS = ['dedalo_db_name', 'dedalo_entity'] as const;
 
 /**
  * The one page_globals key whose ORDER is a deliberate divergence
