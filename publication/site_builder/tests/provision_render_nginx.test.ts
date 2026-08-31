@@ -678,6 +678,57 @@ describe('every path in the output follows the declaration', () => {
 const NGINX = Bun.which('nginx');
 const OPENSSL = Bun.which('openssl');
 
+/**
+ * `nginx -t` DOES NOT ONLY PARSE — IT OPENS THE LISTENING SOCKETS (2026-08-31).
+ *
+ * The rendered vhosts listen on 80 and 443, which are privileged, so on the
+ * Linux CI runner the check died as
+ *   nginx: [emerg] bind() to 0.0.0.0:80 failed (13: Permission denied)
+ *   nginx: configuration file … test failed
+ * reported as a configuration failure, which is not what it is. It passed here
+ * for a build reason, not a code reason: the Homebrew nginx 1.31.2 this was
+ * written against returns "test is successful" for `listen 80;` as an ordinary
+ * user (MEASURED both ways), the Debian package binds and refuses.
+ *
+ * So the fixture is served on ports this process can actually bind. The PORT is
+ * the only thing rewritten — `ssl`, the http2 spelling, every server_name,
+ * root, location and auth line reaches nginx verbatim, which is what the gate
+ * is about. The live-server block below has always rewritten its port for the
+ * same reason; this is that idea, moved to the check that runs first.
+ */
+function freePort(hostname: string): number | null {
+  try {
+    const socket = Bun.listen({ hostname, port: 0, socket: { data() {} } });
+    const port = socket.port;
+    socket.stop();
+    return port;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * IPv6 is not a given on a hosted runner, so the v6 lines are rewritten when the
+ * stack is there and DROPPED when it is not — never silently either way: a run
+ * that cannot bind `[::]` says so, so nobody reads a green tier as proof that
+ * the v6 lines were exercised. Their TEXT is asserted elsewhere in this file;
+ * what is skipped here is only nginx's acceptance of them.
+ */
+function unprivileged(body: string, http: number, https: number, ipv6: boolean): string {
+  // replaceAll, NOT replace: one rendered file carries SEVERAL server blocks
+  // (preprod, prod, the redirect), so `.replace` rewrote the first `listen 80;`
+  // and left the rest privileged — which the byte assertion below caught on the
+  // first run, on a host whose `nginx -t` would never have complained.
+  const v4 = body
+    .replaceAll('    listen 80;', `    listen ${http};`)
+    .replaceAll('    listen 443 ssl;', `    listen ${https} ssl;`);
+  return ipv6
+    ? v4
+        .replaceAll('    listen [::]:80;', `    listen [::]:${http};`)
+        .replaceAll('    listen [::]:443 ssl;', `    listen [::]:${https} ssl;`)
+    : v4.replaceAll('    listen [::]:80;\n', '').replaceAll('    listen [::]:443 ssl;\n', '');
+}
+
 describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered vhosts', () => {
   test('nginx -t is successful for every TLS mode', () => {
     const dir = mkdtempSync(join(tmpdir(), 'dedalo-nginx-'));
@@ -701,8 +752,24 @@ describe.if(NGINX !== null && OPENSSL !== null)('real nginx accepts the rendered
             aliases: { 'example.org': 'one' },
           },
         });
+        const http = freePort('0.0.0.0');
+        const https = freePort('0.0.0.0');
+        if (http === null || https === null) throw new Error('no bindable port for the nginx gate');
+        const ipv6 = freePort('::') !== null;
+        if (!ipv6) console.warn('[nginx gate] no IPv6 on this host — the `listen [::]` lines are not exercised');
         let n = 0;
-        for (const a of render(layout)) writeFileSync(join(confDir, `${n++}.conf`), a.body);
+        for (const a of render(layout)) {
+          const served = unprivileged(a.body, http, https, ipv6);
+          // SELF-CHECKING, because the host this runs on cannot show the bug. A
+          // privileged port here is a permission failure dressed as a syntax
+          // failure — and on a build whose `-t` does not bind (Homebrew) it would
+          // pass anyway, which is exactly how the regression reached CI unseen.
+          // Asserting on the BYTES makes the fixture right on every host.
+          expect(served, 'the -t fixture must name no privileged port').not.toMatch(
+            /listen (\[::\]:)?(80|443)\b/,
+          );
+          writeFileSync(join(confDir, `${n++}.conf`), served);
+        }
 
         const main = join(dir, `${name}.conf`);
         // THE PID FILE IS THIS RUN'S OWN. `nginx -t` opens the pid path its configuration
