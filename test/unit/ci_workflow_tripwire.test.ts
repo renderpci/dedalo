@@ -736,6 +736,35 @@ describe('CI workflow tripwire', () => {
 		}
 	});
 
+	// Rule 12 — A TIER'S PROMISES ARE KEPT BY CODE, NOT BY COMMENTS
+	// (P2-22 / GATE-06). hermetic.sh's tripwire list said
+	// "parity_baseline_tripwire skips 5 legs behind DEDALO_PARITY_DRIFT" while
+	// nothing in the repository ever set that key — so the legs RAN, on a runner
+	// whose DB_PORT is deliberately closed, and every DB-backed parity gate died
+	// at module scope for the ratchet to report as NEW PARITY REDS. A red nobody
+	// can attribute is a gate that has stopped reporting. It was masked only
+	// because lint was red and ran first.
+	test('every env key hermetic.sh CLAIMS to set is actually exported', () => {
+		const script = readFileSync(join(repoRoot, 'scripts/ci/hermetic.sh'), 'utf8');
+		// Keys the script's own prose names as gating a skip or a mode.
+		const promised = ['DEDALO_PARITY_DRIFT'];
+		for (const key of promised) {
+			expect(script, `hermetic.sh names ${key} but never sets it`).toMatch(
+				new RegExp(`^\\s*(?:export\\s+)?${key}=`, 'm'),
+			);
+		}
+	});
+
+	test('a key that gates a skip is READ where the gate claims', () => {
+		// Anti-vacuity for the rule above: setting a key nothing reads would satisfy
+		// it while changing nothing.
+		const gate = readFileSync(join(repoRoot, 'test/unit/parity_baseline_tripwire.test.ts'), 'utf8');
+		expect(gate).toContain('DEDALO_PARITY_DRIFT');
+		expect(gate, 'the skip must be driven by the key, not by a constant').toMatch(
+			/process\.env\.DEDALO_PARITY_DRIFT/,
+		);
+	});
+
 	test('anti-vacuity: the permissions matchers fire on the shapes they forbid', () => {
 		// Without these controls the two rules above are "this list is empty" over
 		// a corpus that happens to be clean today.

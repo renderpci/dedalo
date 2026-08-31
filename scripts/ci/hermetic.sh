@@ -64,6 +64,21 @@ cd "$REPO_ROOT"
 # download Chrome on a hermetic runner.
 export PUPPETEER_SKIP_DOWNLOAD=1
 
+# THE KEY THE COMMENT BELOW ALREADY PROMISED (P2-22 / GATE-06). The tripwire
+# list further down says "parity_baseline_tripwire skips 5 legs behind
+# DEDALO_PARITY_DRIFT" — and nothing in this repository ever set that key, so
+# `LIVE_DRIFT = process.env.DEDALO_PARITY_DRIFT !== '0'` was TRUE and the drift
+# legs ran here, on a runner whose DB_PORT is deliberately closed. Every
+# DB-backed parity gate then dies at module scope and the ratchet reports the
+# flood as NEW PARITY REDS — a red nobody can attribute, which is a gate that
+# has stopped reporting.
+#
+# It was masked only because lint was red and runs first. Lint is green now, so
+# the mask is gone: this line is what the comment was always describing.
+# Enforcement of the drift ratchet itself stays where that comment says it does
+# — `bun run scripts/parity_baseline.ts --check`, on a tier that has a database.
+export DEDALO_PARITY_DRIFT=0
+
 # Stub the required-no-default config keys so the config catalog loads.
 # Externally provided values always win (: "${VAR:=default}" keeps them).
 # This list must cover EVERY require*() key in src/config/config.ts — pinned by

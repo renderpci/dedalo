@@ -34,15 +34,28 @@ import { Glob } from 'bun';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
-/** A generator: a script that rewrites a committed baseline on `--update`. */
+/**
+ * A generator: a script that rewrites a committed baseline.
+ *
+ * NOT "writes a file in its own body". The first draft of this census required
+ * BOTH a `--update` literal AND a direct `Bun.write`/`writeFileSync` in the same
+ * file, and so MISSED `unit_baseline.ts` and `parity_baseline.ts` — which
+ * rewrite by DEFAULT (no flag) and delegate the write to
+ * `scripts/lib/red_baseline.ts`. They are correctly guarded there; the point is
+ * that my census could not see them, which is the same "the list is not the
+ * corpus" defect this whole row is about. A generator is now anything that
+ * writes a baseline directly OR through the shared writer.
+ */
 function generators(): { file: string; source: string }[] {
 	const found: { file: string; source: string }[] = [];
 	for (const dir of ['scripts', 'scripts/ci'] as const) {
 		for (const rel of new Glob('*.ts').scanSync({ cwd: join(REPO_ROOT, dir) })) {
 			const file = `${dir}/${rel}`;
 			const source = readFileSync(join(REPO_ROOT, file), 'utf8');
-			if (!/['"]--update['"]/.test(source)) continue;
-			if (!/Bun\.write|writeFileSync/.test(source)) continue;
+			const writesDirectly =
+				/['"]--update['"]/.test(source) && /Bun\.write|writeFileSync/.test(source);
+			const writesViaSharedWriter = /red_baseline\.ts/.test(source);
+			if (!writesDirectly && !writesViaSharedWriter) continue;
 			found.push({ file, source });
 		}
 	}
@@ -50,7 +63,8 @@ function generators(): { file: string; source: string }[] {
 }
 
 /** The refusal a generator must be able to make, in any of its spellings. */
-const REFUSES = /--allow-regression|REFUSED|only shrinks|refuses to raise|ABOVE the recorded/;
+const REFUSES =
+	/--allow-regression|REFUSED|REFUSING|only shrinks|refuses to raise|ABOVE the recorded/;
 
 describe('every ratchet refuses its own laundering', () => {
 	const all = generators();
@@ -58,14 +72,30 @@ describe('every ratchet refuses its own laundering', () => {
 	test('the census finds the generators (anti-vacuity)', () => {
 		// Derived, not listed: a glob that matched nothing would make the rule
 		// below police zero scripts.
-		expect(all.length).toBeGreaterThanOrEqual(4);
+		expect(all.length).toBeGreaterThanOrEqual(6);
 		const files = all.map((entry) => entry.file);
 		expect(files).toContain('scripts/ci/audit.ts');
 		expect(files).toContain('scripts/crap_baseline.ts');
+		// The two that delegate their write — the ones the first draft could not see.
+		expect(files).toContain('scripts/unit_baseline.ts');
+		expect(files).toContain('scripts/parity_baseline.ts');
 	});
 
 	test('a generator that rewrites a baseline can REFUSE to raise it', () => {
-		const permissive = all.filter((entry) => !REFUSES.test(entry.source)).map((e) => e.file);
+		// A DELEGATING generator is judged by its WRITER, not by its own prose.
+		// Measured: neutering the shared writer's guard left this green, because
+		// parity_baseline.ts and unit_baseline.ts both DESCRIBE --allow-regression
+		// in their headers. Matching prose instead of the guard is the same defect
+		// this row is about, one level up.
+		const sharedWriter = readFileSync(join(REPO_ROOT, 'scripts/lib/red_baseline.ts'), 'utf8');
+		const sharedWriterRefuses =
+			/!args\.has\('--allow-regression'\)/.test(sharedWriter) && /REFUSING/.test(sharedWriter);
+		const permissive = all
+			.filter((entry) => {
+				if (/red_baseline\.ts/.test(entry.source)) return !sharedWriterRefuses;
+				return !REFUSES.test(entry.source);
+			})
+			.map((e) => e.file);
 		expect(
 			permissive,
 			'These scripts rewrite a committed baseline on --update with no way to refuse a ' +
