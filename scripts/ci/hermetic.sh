@@ -142,6 +142,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/private_state_mode_tripwire.test.ts
 	test/unit/wire_disclosure_tripwire.test.ts
 	test/unit/archive_precheck_native.test.ts
+	test/unit/export_download_safety_tripwire.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts

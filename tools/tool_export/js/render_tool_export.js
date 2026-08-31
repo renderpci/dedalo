@@ -839,7 +839,9 @@ const get_content_data_edit = async function(self) {
 
 					html.appendChild(head);
 					head.appendChild(meta);
-					head.appendChild(body);
+					// BODY IS A SIBLING OF HEAD, not its child (P2-4 / CLI-25). It was
+					// appended INSIDE <head>, which every parser then has to recover from.
+					html.appendChild(body);
 					// Clone (not move) the live preview node so it stays mounted in the
 					// tool DOM after the download; appendChild would detach the live node.
 					body.appendChild(export_data_container.cloneNode(true));
@@ -848,7 +850,15 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data:text/text;charset=utf-8,' + html.outerHTML);
+					// ENCODED, like the CSV and TSV siblings 100 lines above (P2-4 / CLI-25).
+					//
+					// This was raw `html.outerHTML` in a data: URL. A '#' ANYWHERE in the
+					// markup begins the URL fragment, so the browser stops reading there —
+					// and the file still arrives with the expected name, no error and no
+					// truncation marker. '#' is ordinary in heritage text ('Inv. #1234'),
+					// so a curator could export a catalogue and receive a silently
+					// truncated one. text/html, not the invented 'text/text'.
+					link.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent('<!doctype html>' + html.outerHTML));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();

@@ -335,11 +335,26 @@ flat_table.prototype.to_delimited = function(column_separator=';', quote=true) {
 
 	const row_separator = '\n'
 
+	// SPREADSHEET FORMULA NEUTRALIZATION (P2-4 / CLI-31, DIFF-E).
+	//
+	// A cell beginning =, +, -, @, TAB or CR is EXECUTED AS A FORMULA by Excel,
+	// Sheets and LibreOffice (=HYPERLINK(...), the =cmd|... DDE form). Quoting
+	// the field does NOT stop it: RFC-4180 quotes delimit the field, they do not
+	// make its content literal. So a curator's export of a catalogue whose values
+	// a contributor authored was a spreadsheet that could execute on open.
+	//
+	// This is the ENGINE'S OWN RULE, mirrored verbatim from
+	// src/diffusion/writers/csv.ts::csvField — which was fixed for DIFF-E on
+	// 2026-07-28 and never carried across to this client writer. One rule, both
+	// sides: the divergence recurs the next time only one side is fixed.
+	const neutralize = v => (/^[=+\-@\t\r]/.test(v) ? "'" + v : v)
+
 	// format function varies by output type: RFC-4180 double-quoting for CSV,
-	// whitespace collapsing for TSV
+	// whitespace collapsing for TSV. Neutralization runs FIRST in both, because
+	// the leading character is what the spreadsheet reads.
 	const format = quote
-		? v => '"' + String(v).replace(/"/g, '""') + '"'
-		: v => String(v).replace(/[\t\n\r]+/g, ' ')
+		? v => '"' + neutralize(String(v)).replace(/"/g, '""') + '"'
+		: v => neutralize(String(v)).replace(/[\t\n\r]+/g, ' ')
 
 	const lines = []
 
