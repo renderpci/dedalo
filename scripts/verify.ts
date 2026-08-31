@@ -106,6 +106,7 @@ const TRIPWIRES = [
 	'test/unit/url_sink_allowlist_tripwire.test.ts',
 	'test/unit/client_action_outcome_tripwire.test.ts',
 	'test/unit/component_build_wedge_tripwire.test.ts',
+	'test/unit/stack_ops_policy_tripwire.test.ts',
 	'test/unit/remove_sentinel_native.test.ts',
 	'test/unit/client_relation_move_native.test.ts',
 	'test/unit/tool_lossless_writeback_tripwire.test.ts',

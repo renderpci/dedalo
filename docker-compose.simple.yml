@@ -62,6 +62,38 @@ services:
     # wizard's "Save config" step work at all: the process exits after writing
     # .env so that it can be restarted into the real configuration.
     restart: unless-stopped
+    # THE SUPERVISOR MUST OUTLAST THE DRAIN (P2-33 / OPS-10).
+    #
+    # SERVER_SHUTDOWN_GRACE_MS defaults to 10000, and the config catalog states
+    # the relation as a RULE: "Keep it below the stop timeout of whatever
+    # supervises the process, or the supervisor will kill the server before the
+    # drain has finished — which defeats the purpose."
+    #
+    # Docker's default stop_grace_period is 10s. EXACTLY EQUAL is not below: a
+    # restart that genuinely needs the drain is SIGKILLed at the boundary,
+    # before interruptLive() and closeDatabasePool() run — so a curator
+    # mid-save is cut off by a routine `compose up -d`, which is the one thing
+    # the drain exists to prevent.
+    #
+    # 30s leaves a 20s margin over the default drain. An operator who RAISES
+    # SERVER_SHUTDOWN_GRACE_MS must raise this too; the rule is the catalog's,
+    # and this line is the shipped stack keeping it.
+    stop_grace_period: 30s
+    # LOG ROTATION (P2-33 / OPS-12). Both stacks set DEDALO_ACCESS_LOG=true, and
+    # Docker's default json-file driver has NO SIZE LIMIT: an access-logged
+    # install fills the host disk with container logs and takes the database
+    # down with it — on the same volume, since json-file writes under
+    # /var/lib/docker. A heritage install that stops serving because its own
+    # request log ate the disk is the avoidable kind of outage.
+    #
+    # 3 x 10 MB keeps roughly the last week of a small institution's traffic and
+    # is bounded whatever happens. An operator wanting more should raise
+    # max-file, not remove the cap.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,6 +132,21 @@ services:
       # test/unit/compose_invocation_tripwire.test.ts.
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       DEDALO_ACCESS_LOG: "true"
+      # THE DB OPS KEYS THE REFERENCE STACK ALREADY SETS (P2-33 / OPS-11).
+      #
+      # This stack omitted all three, landing museum operators on the unsafe side
+      # of a decision the project had already made in docker-compose.yml. The
+      # values are that stack's, verbatim, because there is no reason for the
+      # museum install to be configured worse than the reference one:
+      #   - DB_POOL_MAX bounds connections so a slow page cannot exhaust
+      #     Postgres and lock everyone out;
+      #   - DB_POOL_ACQUIRE_TIMEOUT_MS makes waiting for a connection FAIL rather
+      #     than hang, so a saturated pool surfaces as an error, not a frozen UI;
+      #   - DB_STATEMENT_TIMEOUT_MS stops one runaway query holding a table while
+      #     a curator waits.
+      DB_POOL_MAX: "10"
+      DB_POOL_ACQUIRE_TIMEOUT_MS: "30000"
+      DB_STATEMENT_TIMEOUT_MS: "60000"
       TRUSTED_PROXY_HOPS: "1"
       DEDALO_DEV_MODE: "false"
       DEDALO_DEBUG_API_ERRORS: "false"
