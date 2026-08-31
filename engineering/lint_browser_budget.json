@@ -3,5 +3,6 @@
 	"files": 1121,
 	"errors": 2107,
 	"warnings": 6915,
-	"measured": "2026-08-31"
+	"measured": "2026-08-31",
+	"_dead_07": "DEAD-07 IS BLOCKED ON THIS BURN-DOWN, measured 2026-08-31 and recorded here rather than left as a silent non-fix. Eleven browser modules call event_manager.publish with NO import, resolving through the window.event_manager global that event_manager.js assigns as a SIDE EFFECT for cross-iframe reach — so they work only while some other module happens to have loaded first; in isolation, or after an import-graph change, the bare identifier is a ReferenceError. Adding the explicit import is one line and COSTS +2 here: these files' existing import order is unsorted, so assist/source/organizeImports fires wherever the new line goes, and satisfying it means letting biome reformat the whole import block — which strips the tab indentation this codebase uses on imports and adds semicolons. Reformatting eight files' import blocks to remove a latent ReferenceError that has never fired is the wrong trade, and raising a shrink-only ratchet to accommodate it is worse. The two tool files in that set are NOT part of this: tools run in iframes, declare event_manager in their /*global*/ header, and reach it deliberately across the frame boundary. Fix DEAD-07 with the import-style pass, where the reformat is the point rather than a side effect."
 }
