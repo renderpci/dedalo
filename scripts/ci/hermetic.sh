@@ -119,6 +119,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/config_dead_field_tripwire.test.ts
 	test/unit/update_waiver_trace_native.test.ts
 	test/unit/diffusion_publication_gate_native.test.ts
+	test/unit/alternate_preflight_native.test.ts
 	test/unit/client_relation_move_native.test.ts
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
@@ -310,11 +311,14 @@ fi
 #
 # NO --timeout HERE, DELIBERATELY. The root suite gets it because it LOST a number it had
 # chosen: bunfig.toml declared `[test] timeout = 30000` and Bun 1.4.0 silently ignored it.
-# These packages never made that claim — publication/site_builder has NO bunfig.toml at all
-# (measured 2026-08-25: the file does not exist, so no timeout was ever declared) and
-# publication/server_api/v2/bunfig.toml declares only coverage/coverageThreshold — so their
-# green baselines were measured under bun's built-in 5000 ms cap and stay comparable run to
-# run. Widening them on no evidence would be silently loosening a gate, not restoring one.
+# These packages never made that claim: BOTH bunfig.toml files declare only
+# coverage/coverageThreshold and no timeout, so their green baselines were measured under
+# bun's built-in 5000 ms cap and stay comparable run to run.
+# (Corrected 2026-08-31, P2-23/GATE-43: this said publication/site_builder had NO
+# bunfig.toml at all, while eleven lines below the same file said "Both daemons set
+# coverageThreshold in their bunfig.toml" and the diagnostic below greps that file. One of
+# the two had to be false; it was this one, and the package's coverage was measured by
+# nothing. It now has the bunfig its sibling has, at the same 0.8 floor.) Widening them on no evidence would be silently loosening a gate, not restoring one.
 # Same reasoning, same wording, at the other exempt site: the site_builder stage in
 # scripts/verify.ts.
 #

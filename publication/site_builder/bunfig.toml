@@ -1,0 +1,29 @@
+[install]
+peer = false
+
+[test]
+# COVERAGE IS REPORTED HERE, AND NOT YET ENFORCED (P2-23 / GATE-43).
+#
+# This package had no bunfig at all, so its coverage was measured by nothing —
+# while scripts/ci/hermetic.sh asserted, eleven lines apart, both that it "has
+# NO bunfig.toml at all" and that "Both daemons set coverageThreshold in their
+# bunfig.toml", and its failure diagnostic grepped this file. One of those had
+# to be false.
+#
+# WHY NO THRESHOLD YET, stated rather than quietly omitted. Bun applies
+# `coverageThreshold` PER FILE, and three route modules
+# (src/routes/publish.ts, sessions.ts, builds.ts) sit at 0.00% FUNCTIONS —
+# measured 2026-08-31, along with src/drivers/process.ts at 14.72% lines, which
+# is the supervision path for the agent child. Every threshold from 0.8 down to
+# 0.14 exits 1. Setting a number those files can clear would mean a floor of
+# zero, which enforces nothing while looking like a gate; setting 0.8 would
+# leave this package's suite permanently red on a passing run.
+#
+# The honest state is: measured and visible now, enforced when the route
+# handlers and the supervision driver have tests. That work is P2-23's open
+# half; test/unit/ci_workflow_tripwire.test.ts pins which packages enforce and
+# which only report, so this cannot drift back into an unexamined silence.
+coverage = true
+
+[run]
+bun = true

@@ -78,7 +78,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
@@ -676,6 +676,60 @@ describe('CI workflow tripwire', () => {
 				'self-hosted tier gets no Dependabot PRs, so a live-tier bump must be carried ' +
 				`across by hand — that is what this catches.\n  ${split.join('\n  ')}`,
 		).toEqual([]);
+	});
+
+	// Rule 11 — THE ISOLATED PACKAGES ARE ACTUALLY MEASURED (P2-23 / GATE-43).
+	// hermetic.sh's own diagnostic greps `$dir/bunfig.toml` to print the threshold
+	// that failed. For publication/site_builder that file did not exist: the
+	// package's coverage was measured by NOTHING while its sibling held 0.8, and
+	// the same script asserted eleven lines apart both that it had no bunfig and
+	// that "Both daemons set coverageThreshold in their bunfig.toml". A comment
+	// cannot be the thing that keeps two facts in step.
+	test('every isolated daemon package MEASURES coverage, and the script says which enforce', () => {
+		// Both packages must at least MEASURE. Enforcement differs today and that
+		// difference has to be written down, because the previous state was a
+		// script asserting two contradictory things eleven lines apart while one
+		// package's coverage was measured by nothing.
+		const enforcing: string[] = [];
+		const reportingOnly: string[] = [];
+		for (const pkg of ['publication/site_builder', 'publication/server_api/v2']) {
+			const path = join(repoRoot, pkg, 'bunfig.toml');
+			expect(existsSync(path), `${pkg}/bunfig.toml does not exist — hermetic.sh greps it`).toBe(
+				true,
+			);
+			const bunfig = readFileSync(path, 'utf8');
+			expect(bunfig, `${pkg} does not even measure coverage`).toMatch(/^\s*coverage\s*=\s*true/m);
+			// A `coverageThreshold` in a COMMENT is not a threshold.
+			const declares = /^\s*coverageThreshold\s*=/m.test(bunfig);
+			(declares ? enforcing : reportingOnly).push(pkg);
+			if (!declares) continue;
+			const lines = Number(bunfig.match(/lines\s*=\s*([\d.]+)/)?.[1] ?? 0);
+			const functions = Number(bunfig.match(/functions\s*=\s*([\d.]+)/)?.[1] ?? 0);
+			// A floor of zero enforces nothing while looking like a gate.
+			expect(lines, `${pkg} lines threshold is not a floor`).toBeGreaterThanOrEqual(0.8);
+			expect(functions, `${pkg} functions threshold is not a floor`).toBeGreaterThanOrEqual(0.8);
+		}
+		expect(enforcing, 'server_api/v2 must keep enforcing 0.8').toContain(
+			'publication/server_api/v2',
+		);
+		// site_builder reports but does not enforce YET (three route modules at
+		// 0.00% functions, measured 2026-08-31). When that is fixed and a threshold
+		// lands, this expectation flips — deliberately, in the same commit.
+		expect(reportingOnly).toEqual(['publication/site_builder']);
+	});
+
+	test('hermetic.sh does not claim a package lacks the bunfig it greps', () => {
+		// The exact contradiction this rule was written for: the script said
+		// site_builder "has NO bunfig.toml at all" while its diagnostic grepped
+		// that path and another comment said both daemons set a threshold.
+		const script = readFileSync(join(repoRoot, 'scripts/ci/hermetic.sh'), 'utf8');
+		expect(script).not.toMatch(/publication\/site_builder has NO bunfig\.toml/);
+		// If it greps a package's bunfig, that bunfig must exist.
+		if (script.includes('$dir/bunfig.toml')) {
+			for (const pkg of ['publication/site_builder', 'publication/server_api/v2']) {
+				expect(existsSync(join(repoRoot, pkg, 'bunfig.toml')), `${pkg}`).toBe(true);
+			}
+		}
 	});
 
 	test('anti-vacuity: the permissions matchers fire on the shapes they forbid', () => {
