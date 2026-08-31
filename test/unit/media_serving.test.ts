@@ -6,7 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { readdirSync, statSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
@@ -43,15 +43,35 @@ afterAll(() => {
 	setServerState({ media_access_mode: null });
 });
 
-/** Find one real media file (relative path) to serve in the test. */
+/**
+ * The media TYPE folders — the only first segments the dev listener serves
+ * (CARRY-11). Everything else under the root is refused BY DEFAULT.
+ */
+const TYPE_FOLDERS = ['image', 'av', 'pdf', 'svg', '3d'];
+
+/**
+ * Find one real media file to serve, INSIDE a type folder.
+ *
+ * (!) This used to take the first file it met anywhere under the root, and on
+ * the suite tree that was `dedalo_media_protection_map.nginx.conf` — so the gate
+ * proved the listener could serve an nginx CONFIG FILE and called that success.
+ * The root also holds `import/` (staged, un-ingested source CSVs), `export/`,
+ * `kit/` and `html_files/`, all of which the old denylist served too.
+ */
 function findSampleFile(): string | null {
 	if (mediaRoot === undefined) return null;
-	const queue = [''];
+	const queue = [...TYPE_FOLDERS];
 	let scanned = 0;
-	while (queue.length > 0 && scanned < 200) {
+	while (queue.length > 0 && scanned < 400) {
 		const dir = queue.shift() as string;
-		for (const name of readdirSync(join(mediaRoot, dir))) {
-			const rel = dir === '' ? name : `${dir}/${name}`;
+		let names: string[];
+		try {
+			names = readdirSync(join(mediaRoot, dir));
+		} catch {
+			continue; // a type folder this install does not have
+		}
+		for (const name of names) {
+			const rel = `${dir}/${name}`;
 			const stats = statSync(join(mediaRoot, rel));
 			scanned++;
 			if (stats.isFile() && stats.size > 0 && stats.size < 5_000_000) return rel;
@@ -61,10 +81,27 @@ function findSampleFile(): string | null {
 	return null;
 }
 
+/** A real file under the root that is NOT in a type folder, if one exists. */
+function findNonMediaFile(): string | null {
+	if (mediaRoot === undefined) return null;
+	for (const name of readdirSync(mediaRoot)) {
+		if (TYPE_FOLDERS.includes(name) || name.startsWith('.')) continue;
+		const rel = name;
+		try {
+			const stats = statSync(join(mediaRoot, rel));
+			if (stats.isFile() && stats.size > 0) return rel;
+		} catch {
+			// unreadable — not a sample
+		}
+	}
+	return null;
+}
+
 // Computed synchronously at module load so test.if() can consume it: machines
 // without media REPORT the sample-dependent tests as skipped instead of
 // passing them vacuously.
 const sample = findSampleFile();
+const nonMediaSample = findNonMediaFile();
 
 function mediaRequest(path: string, sessionToken?: string, range?: string): Request {
 	const headers: Record<string, string> = {};
@@ -186,7 +223,65 @@ const imageFolder = config.media.image.folder.replace(/^\//, '');
 const envelopeSample = findSvgFile(
 	(rel) => rel.startsWith(`${imageFolder}/`) && rel.split('/').includes('svg'),
 );
-const rawSvgSample = findSvgFile((rel) => !rel.startsWith(`${imageFolder}/`));
+/**
+ * A RAW uploaded SVG — a `component_svg` file, which lives under the SVG TYPE
+ * folder, not under the image envelope folder.
+ *
+ * (!) This used to be "any .svg outside the image folder", and on the suite tree
+ * that resolved to `kit/svg.svg` — a file of the suite's own media KIT
+ * (`ensureMediaKit`), sitting at the media root outside every type folder. The
+ * dev listener served it only because the route's old DENYLIST let everything
+ * unnamed through; under the allowlist (CARRY-11) it is refused, correctly, and
+ * the gate was asserting MEDIA-03 over a fixture asset rather than over an
+ * uploaded record's SVG. Planted below when the tree has none.
+ */
+const svgFolder = config.media.svg.folder.replace(/^\//, '');
+const plantedRawSvg = (() => {
+	if (mediaRoot === undefined) return null;
+	const existing = findSvgFile((rel) => rel.startsWith(`${svgFolder}/`));
+	if (existing !== null) return { rel: existing, planted: false };
+	const dir = join(mediaRoot, svgFolder, 'original', '0');
+	try {
+		mkdirSync(dir, { recursive: true });
+		const rel = `${svgFolder}/original/0/zz_media_serving_raw.svg`;
+		writeFileSync(join(mediaRoot, rel), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+		return { rel, planted: true };
+	} catch {
+		return null;
+	}
+})();
+const rawSvgSample = plantedRawSvg?.rel ?? null;
+
+describe('media serving — the root is an ALLOWLIST of type folders (CARRY-11)', () => {
+	test('a file outside every media type folder is REFUSED, session or not', async () => {
+		// The route used to carry a DENYLIST of two subtrees (`upload/`,
+		// `.publication`), and a denylist only excludes what someone thought of.
+		// The suite's own media root also holds `import/` — staged, un-ingested
+		// source CSVs, i.e. another curator's raw data — plus `export/`, `kit/`,
+		// `html_files/` and the generated nginx config files. All were served.
+		// (Measured: the first file this gate's own sampler met at the root was
+		// `dedalo_media_protection_map.nginx.conf`, and it asserted a 200 on it.)
+		if (nonMediaSample === null) return; // nothing at the root to try
+		const token = createSession(-1, 'root', true);
+		const response = await handleRequest(
+			mediaRequest(`/dedalo/${config.mediaDir}/${nonMediaSample}`, token),
+			context,
+		);
+		expect(
+			response.status,
+			`the dev listener served '${nonMediaSample}', which is not under a media type folder`,
+		).toBe(404);
+	});
+
+	test('the allowlist is derived from config, not hardcoded', () => {
+		// A renamed DEDALO_*_FOLDER must stay servable; a hardcoded list would
+		// silently deny an install's entire media tree.
+		const server = readFileSync(join(import.meta.dir, '..', '..', 'src/server.ts'), 'utf8');
+		expect(server).toContain('MEDIA_TYPE_FOLDERS()');
+		expect(server).toContain('mediaTypeOf(model)');
+		expect(server).not.toMatch(/\[\s*'image',\s*'av',\s*'pdf',\s*'svg',\s*'3d'\s*\]/);
+	});
+});
 
 // MEDIA-03 refined (SECURITY_DECISIONS.md DECISION 2): the two SVG populations
 // under the media root carry DIFFERENT safety headers, and collapsing the two
@@ -194,6 +289,12 @@ const rawSvgSample = findSvgFile((rel) => !rel.startsWith(`${imageFolder}/`));
 // component_image renders blank) or the hardening (raw upload served inline →
 // stored XSS). This gate locks both scopes.
 describe('media serving — SVG safety-header scopes (MEDIA-03)', () => {
+	afterAll(() => {
+		if (plantedRawSvg?.planted === true && mediaRoot !== undefined) {
+			rmSync(join(mediaRoot, plantedRawSvg.rel), { force: true });
+		}
+	});
+
 	// UNCONDITIONAL half. The two route cases below need a real .svg on disk and
 	// SKIP silently without one (fresh install, hermetic CI tier) — so the
 	// selection itself is asserted here on synthetic paths, with no corpus. This

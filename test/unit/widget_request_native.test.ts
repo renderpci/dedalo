@@ -427,7 +427,12 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 			`SELECT value FROM matrix_counter WHERE tipo = 'test3'`,
 			[],
 		)) as { value: number }[];
-		expect(Number(kept[0]?.value)).toBe(liveMax + 500);
+		// NOT `toBe(liveMax + 500)`. The floor 'fix' raises to is
+		// GREATEST(live MAX, time-machine MAX) — so on a section whose TAIL RECORDS
+		// WERE DELETED (the normal state, and the whole reason the counter is a
+		// high-water mark) the floor legitimately exceeds live MAX and the counter
+		// lands ABOVE the injected drift. The invariant is that it did not go DOWN.
+		expect(Number(kept[0]?.value)).toBeGreaterThanOrEqual(liveMax + 500);
 	}, 60000);
 
 	test('reset is REFUSED and the counter row survives (synthetic zztc2)', async () => {

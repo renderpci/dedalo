@@ -41,6 +41,7 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { MIN_GZIP_BYTES, SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
+import { mediaTypeOf } from './core/concepts/media.ts';
 import { provisionMediaTreeAtBoot } from './core/install/media_tree.ts';
 import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
 import {
@@ -115,6 +116,27 @@ const CLIENT_ROOT_CANONICAL = safeRealpath(CLIENT_ROOT) ?? CLIENT_ROOT;
  * production is socket-only and lets the reverse proxy + marker store serve media).
  */
 const MEDIA_ROOT = config.media.rootPath !== null ? resolve(config.media.rootPath) : null;
+/**
+ * The media TYPE folders, as this install names them — the only first segments
+ * the dev media listener may serve (CARRY-11). Derived from the media specs so a
+ * renamed DEDALO_*_FOLDER stays servable and a NEW sibling directory does not.
+ */
+const MEDIA_MODELS = [
+	'component_image',
+	'component_av',
+	'component_pdf',
+	'component_svg',
+	'component_3d',
+] as const;
+
+function MEDIA_TYPE_FOLDERS(): Set<string> {
+	return new Set(
+		MEDIA_MODELS.map((model) => mediaTypeOf(model)?.folder.replace(/^\//, '')).filter(
+			(folder): folder is string => folder !== undefined,
+		),
+	);
+}
+
 const MEDIA_URL_PREFIX = `/dedalo/${config.mediaDir}/`;
 
 /**
@@ -989,12 +1011,27 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		if (!fullMediaPath.startsWith(MEDIA_ROOT + sep)) {
 			return notFoundResponse(context.requestId); // traversal
 		}
-		// MEDIA-04: the dev listener must NEVER serve staged uploads (other users'
-		// in-flight files under upload/) or the marker store (.publication/auth
-		// filenames ARE valid media-auth cookie values). Restrict it to published /
-		// original media only.
+		// MEDIA-04 / CARRY-11: AN ALLOWLIST, NOT A DENYLIST.
+		//
+		// This was a denylist of two subtrees — `upload/` and `.publication` — and
+		// a denylist only excludes what someone thought of. It did not exclude the
+		// import STAGING tree, so the dev listener served another user's
+		// un-ingested source CSVs: a curator's raw data, readable across accounts.
+		// The class is only closed by inverting it: everything that is not a
+		// MEDIA TYPE FOLDER is refused, which makes a new sibling directory
+		// (staging, exports, a cache) unreachable by default instead of reachable
+		// until someone remembers to name it.
+		//
+		// The folder labels come from config (DEDALO_*_FOLDER), never hardcoded —
+		// an install may rename them, and a hardcoded list would silently deny
+		// everything there.
 		const relSegments = fullMediaPath.slice((MEDIA_ROOT + sep).length).split(sep);
-		if (relSegments[0] === 'upload' || relSegments.includes('.publication')) {
+		if (!MEDIA_TYPE_FOLDERS().has(relSegments[0] ?? '')) {
+			return notFoundResponse(context.requestId);
+		}
+		// ...and the marker store never, wherever it sits (its filenames ARE valid
+		// media-auth cookie values).
+		if (relSegments.includes('.publication')) {
 			return notFoundResponse(context.requestId);
 		}
 		const mediaFile = Bun.file(fullMediaPath);

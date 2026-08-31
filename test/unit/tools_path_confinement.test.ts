@@ -109,6 +109,34 @@ describe('serving: the server/ subtree is never public', () => {
 		expect(resolveToolAssetPath('tool_export', 'server/index.ts')).toBeNull();
 		expect(resolveToolAssetPath('tool_export', '/server/index.ts')).toBeNull();
 	});
+
+	/**
+	 * CARRY-09. The denial used to read the RAW FIRST SEGMENT
+	 * (`restPath.split('/')[0] === 'server'`), so `server/x` was refused while
+	 * `js/../server/x` RESOLVED — its first segment is `js`, and the confinement
+	 * step then legitimately placed it inside the package. A path is only what it
+	 * RESOLVES to, so the test belongs after resolution.
+	 *
+	 * HONEST SEVERITY, measured 2026-08-31: end-to-end this was NOT readable,
+	 * because the serving layer's extension filter refuses `.ts` and no `server/`
+	 * directory currently ships a servable extension. It is a resolver-level hole
+	 * that becomes a live read the day a tool adds `server/config.json` — `.json`
+	 * is servable. Gated at the resolver, where the rule belongs.
+	 */
+	test.each([
+		'js/../server/index.ts',
+		'js/./../server/index.ts',
+		'css/../server/index.ts',
+		'js/../../tool_export/server/index.ts',
+		'js/../server/config.json',
+	])('resolver refuses the traversal spelling %p', (rest) => {
+		expect(resolveToolAssetPath('tool_export', rest)).toBeNull();
+	});
+
+	test('legitimate assets are still resolved (the fix denies nothing real)', () => {
+		// A denial that also denies the tool's own JS is not a fix.
+		expect(resolveToolAssetPath('tool_export', 'js/tool_export.js')).not.toBeNull();
+	});
 });
 
 describe('serving: non-asset extensions are refused', () => {

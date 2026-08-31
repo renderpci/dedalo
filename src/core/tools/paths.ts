@@ -209,6 +209,20 @@ function confineUnder(baseDir: string, restPath: string): string | null {
 }
 
 /**
+ * Is this CANONICAL path inside the package's `server/` subtree?
+ *
+ * Compared against the CANONICAL base, because `confined` is canonical too — a
+ * symlinked package would otherwise compare two different spellings of the same
+ * directory and let the subtree through.
+ */
+function isUnderServerSubtree(packageDir: string, canonicalPath: string): boolean {
+	const canonicalBase = safeRealpath(packageDir);
+	if (canonicalBase === null) return true; // cannot prove it is outside — refuse
+	const serverDir = resolve(canonicalBase, 'server');
+	return canonicalPath === serverDir || canonicalPath.startsWith(serverDir + sep);
+}
+
+/**
  * Resolve a request path `/dedalo/tools/<name>/<rest>` (or an additional-root
  * URL) to a confined absolute asset path, or null when it must 404. Fail-closed:
  * denies the `server/` subtree, path traversal, symlink escapes, and anything
@@ -218,8 +232,22 @@ export function resolveToolAssetPath(name: string, restPath: string): string | n
 	if (!/^tool_[a-z0-9_]+$/.test(name)) return null;
 	const root = resolveToolRoot(name);
 	if (root === null) return null;
-	// Deny the server/ subtree outright (never serve TS server code).
-	const firstSegment = restPath.split('/').filter(Boolean)[0];
-	if (firstSegment === 'server') return null;
-	return confineUnder(resolve(root.path, name), restPath);
+
+	// CONFINE FIRST, THEN JUDGE THE CANONICAL PATH (CARRY-09).
+	//
+	// This denial used to read the RAW first segment: `restPath.split('/')[0] ===
+	// 'server'`. `server/x` was refused and `js/../server/x` was SERVED — its
+	// first segment is `js`, and `confineUnder` then resolved it to
+	// `<package>/server/x`, which is legitimately inside the package, so nothing
+	// downstream objected. The tool servers' TypeScript source was readable over
+	// the asset route. (Proven by execution 2026-08-31:
+	// `js/../server/tool_time_machine.ts` resolved.)
+	//
+	// A path is only what it RESOLVES to, so the test belongs after resolution.
+	const packageDir = resolve(root.path, name);
+	const confined = confineUnder(packageDir, restPath);
+	if (confined === null) return null;
+
+	// Never serve TS server code, however the request spelled its way there.
+	return isUnderServerSubtree(packageDir, confined) ? null : confined;
 }
