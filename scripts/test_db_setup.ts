@@ -121,6 +121,13 @@ import { deriveHierarchyAllowlist } from './lib/hierarchy_allowlist.ts';
 
 const REPO = join(import.meta.dir, '..');
 const SEED = join(REPO, 'install', 'db', 'dedalo_install.pgsql.gz');
+
+/**
+ * The suite database's collation, as an ICU identifier. `en-US` is the ordering the frozen
+ * parity fixtures were harvested under; changing it moves every `ORDER BY` the tier
+ * compares, so it is a contract, not a preference.
+ */
+const SUITE_ICU_LOCALE = 'en-US';
 const HIERARCHY_DIR = join(REPO, 'install', 'import', 'hierarchy');
 
 const appDb = readEnv('DB_NAME') ?? readEnv('DEDALO_DATABASE_CONN') ?? '';
@@ -422,8 +429,31 @@ console.log(
 console.log(`[test-db] rebuilding '${testDb}' (application DB '${appDb}' is never touched)`);
 
 // 1. Recreate the database.
+//
+// THE COLLATION IS DECLARED, NOT INHERITED (2026-08-31).
+//
+// A bare CREATE DATABASE takes the CLUSTER's locale, so the suite's sort order became a
+// property of whoever ran initdb. `ORDER BY` over text then answers differently per host,
+// and a parity gate that compares a frozen ordering byte-for-byte is right on one machine
+// and wrong on the next. MEASURED: `sqo_differential > order by string component` passes
+// under libc en_US.UTF-8 and FAILS under C — and Postgres 18's initdb defaults to the
+// builtin C.UTF-8 provider, which is exactly what the hosted db tier's container gets. The
+// same gate was green on every developer box and red on every runner.
+//
+// ICU, not a libc locale name, because the NAME is not portable: macOS spells it
+// `en_US.UTF-8` and Debian `en_US.utf8`, and the two libc implementations do not even sort
+// that locale the same way. ICU gives one collation for one identifier on every host.
+// LC_COLLATE/LC_CTYPE are pinned to `C` — the one locale guaranteed to exist everywhere —
+// because with the ICU provider they no longer decide ordering.
+//
+// This is the generic-TLD law applied to the DATABASE: the suite builds the situation it
+// tests instead of borrowing the host's.
 await psql('postgres', ['-c', `DROP DATABASE IF EXISTS "${testDb}"`]);
-await psql('postgres', ['-c', `CREATE DATABASE "${testDb}"`]);
+await psql('postgres', [
+	'-c',
+	`CREATE DATABASE "${testDb}" TEMPLATE template0 ENCODING 'UTF8' ` +
+		`LOCALE_PROVIDER icu ICU_LOCALE '${SUITE_ICU_LOCALE}' LC_COLLATE 'C' LC_CTYPE 'C'`,
+]);
 
 // 2. The install seed — the schema + data a real install ships with.
 if (!existsSync(SEED)) throw new Error(`install seed not found: ${SEED}`);
