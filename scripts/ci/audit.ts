@@ -90,7 +90,9 @@
  *        --require-network turns a DEGRADED advisory lookup into a failure.
  */
 
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { Glob } from 'bun';
 import {
 	checkVendorAdvisories,
 	readManifest,
@@ -104,13 +106,33 @@ const BASELINE_PATH = join(REPO_ROOT, 'engineering', 'dependency_audit_baseline.
 /**
  * Every package with its own lockfile — one `bun audit` each.
  *
+ * DERIVED FROM THE TREE (P2-5 / GATE-52), not enumerated. It was a literal
+ * three-element array while FOUR manifests are tracked, each with its own
+ * lockfile. The missing one —
+ * `publication/site_builder/templates/basic` — is the build toolchain the site
+ * scaffolder COPIES INTO EVERY GENERATED PUBLIC MUSEUM SITE, so it was neither
+ * audited here nor guarded by the integrity gate nor updated by Dependabot. The
+ * gate that should have caught it floored at `>= 3`: a floor set BELOW the
+ * corpus can never notice a missing member.
+ *
  * EXPORTED because it is the census of lockfiles, not a detail of this script:
- * `test/unit/dependency_integrity_tripwire.test.ts` walks the same three roots to
- * assert no dependency escapes lockfile integrity. Two lists would drift, and the
- * one that drifted would be the gate's — a new sub-package would then be audited
- * here and unguarded there.
+ * `test/unit/dependency_integrity_tripwire.test.ts` reads the SAME list, so the
+ * two cannot drift into "audited here, unguarded there".
  */
-export const PACKAGES = ['.', 'publication/server_api/v2', 'publication/site_builder'];
+function discoverPackages(): string[] {
+	const found: string[] = [];
+	for (const rel of new Glob('**/package.json').scanSync({ cwd: REPO_ROOT })) {
+		if (rel.includes('node_modules/')) continue;
+		const dir = dirname(rel);
+		// A package is a package when it LOCKS: a manifest with no lockfile has no
+		// resolved dependency set to audit or to verify integrity against.
+		if (!existsSync(join(REPO_ROOT, dir, 'bun.lock'))) continue;
+		found.push(dir === '.' ? '.' : dir);
+	}
+	return found.sort();
+}
+
+export const PACKAGES: readonly string[] = discoverPackages();
 
 type Advisory = { id: number; url?: string; title?: string; severity?: string };
 type AuditReport = Record<string, Advisory[]>;

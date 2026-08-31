@@ -43,7 +43,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { PACKAGES } from '../../scripts/ci/audit.ts';
 import {
 	listVendorDirs,
@@ -138,11 +138,41 @@ describe('dependency integrity — installed', () => {
 	test('the root census is the one scripts/ci/audit.ts declares (guards a silently empty scan)', () => {
 		// Imported, never re-listed. If the import ever yields nothing, this gate would
 		// pass by checking zero packages — the failure mode it exists to prevent.
-		expect(PACKAGES.length).toBeGreaterThanOrEqual(3);
+		expect(PACKAGES.length).toBeGreaterThanOrEqual(4);
 		for (const root of PACKAGES) {
 			expect(existsSync(join(REPO_ROOT, root, 'package.json')), `${root}/package.json`).toBe(true);
 			expect(existsSync(join(REPO_ROOT, root, 'bun.lock')), `${root}/bun.lock`).toBe(true);
 		}
+	});
+
+	test('the census is EVERY locked package in the tree, not a list someone kept', () => {
+		// P2-5 / GATE-52. PACKAGES was a literal three-element array while FOUR
+		// manifests are tracked, each with its own lockfile. The missing one was
+		// `publication/site_builder/templates/basic` — the build toolchain the site
+		// scaffolder COPIES INTO EVERY GENERATED PUBLIC MUSEUM SITE — so it was
+		// neither audited, nor guarded here, nor updated by Dependabot. And the
+		// floor above was `>= 3`: BELOW the corpus, so the absent fourth could
+		// never trip it. A floor must sit AT the corpus to notice a missing member.
+		const tracked = Bun.spawnSync(['git', 'ls-files', '*package.json', 'package.json'], {
+			cwd: REPO_ROOT,
+			stdout: 'pipe',
+		})
+			.stdout.toString()
+			.split('\n')
+			.filter((line) => line.trim() !== '' && !line.includes('node_modules/'))
+			.map((line) => dirname(line))
+			.filter((dir) => existsSync(join(REPO_ROOT, dir, 'bun.lock')))
+			.map((dir) => (dir === '' ? '.' : dir))
+			.sort();
+
+		expect(tracked.length, 'git found no tracked manifests — the census is blind').toBeGreaterThan(
+			3,
+		);
+		expect(
+			[...PACKAGES].sort(),
+			'A tracked package with its own lockfile that is NOT in PACKAGES is audited by ' +
+				'nothing and guarded by nothing. Derive the list; never keep one.',
+		).toEqual(tracked);
 	});
 
 	test('no dependency specifier points outside the registry', () => {
