@@ -1274,7 +1274,25 @@ export const resume_seconds_of = function( segments ) {
 */
 export const partial_id = function( self ) {
 
+	// THE PRINCIPAL IS PART OF THE KEY (P2-3 / CLI-08).
+	//
+	// What this store holds is the raw ASR output: recognised speech, speaker
+	// turns and timecodes — exactly the personal-data and embargoed material a
+	// heritage archive exists to protect. It was keyed by RECORD and COMPONENT
+	// only, so on a shared reading-room workstation the NEXT user could read a
+	// colleague's interview transcript out of DevTools from the login page, or
+	// open the tool and be offered `action_resume` on someone else's work.
+	//
+	// `menu.build_cache_id` applies exactly this rule one directory away, and
+	// reads the same global. An empty user id yields 'anon', which is a DIFFERENT
+	// namespace from any logged user rather than a shared one — a key that
+	// collapses to the record when the id is missing is the original defect
+	// wearing a suffix.
+	const globals = window.page_globals || {}
+	const user_id = globals.user_id || 'anon'
+
 	return 'transcription_partial_'
+		+ user_id + '_'
 		+ self.media_component.section_tipo + '_'
 		+ self.media_component.section_id + '_'
 		+ self.transcription_component.tipo

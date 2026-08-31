@@ -1653,6 +1653,21 @@ page.prototype.delete_cache = async function () {
 
 	// Get all local DB data
 	await data_manager.delete_local_db_data_by_prefix('data', 'page_cache_')
+
+	// CONTENT-BEARING STORES GO TOO, ON LOGOUT (P2-3 / CLI-08).
+	//
+	// `quit` cleared four unrelated keys and three `data` prefixes, and left the
+	// transcription partials sitting in the `status` table. Those hold raw ASR
+	// output — recognised speech, speaker turns, timecodes: the personal-data and
+	// embargoed material a heritage archive exists to protect — retained 14 days
+	// and enforced lazily only when the same tool rewrote the same key.
+	//
+	// On a shared reading-room workstation that means the NEXT user could read a
+	// colleague's interview transcript out of DevTools from the login page, or
+	// open the tool and be offered `action_resume` on someone else's work. The
+	// key now carries the principal (tool_transcription.js::partial_id), which
+	// stops the OFFER; this stops the DATA outliving the session at all.
+	await data_manager.delete_local_db_data_by_prefix('status', 'transcription_partial_')
 }//end delete_cache
 
 

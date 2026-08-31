@@ -2462,7 +2462,21 @@ common.prototype.get_section_elements_context = async function(options) {
 			: 'default')
 			+ (use_real_sections===true ? '_real' : '')
 			+ (skip_permissions===true ? '_skipperm' : '')
-		const cache_key = 'section_cache_elements_context_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang + '_' + options_fingerprint
+	// THE PRINCIPAL IS PART OF THE FINGERPRINT (P2-3 / CLI-15).
+	//
+	// This envelope is PERMISSION-FILTERED: the server returns the components
+	// THIS user may see. The key carried section, lang and options and no user
+	// id, and `execute_request` short-circuits on a localdb hit with no session
+	// check — so a second user on the same browser profile could be served the
+	// first user's filtered component list, and see components their own
+	// permissions exclude. `menu.build_cache_id` applies exactly this rule one
+	// directory away, reading the same global.
+	//
+	// 'anon' when absent, deliberately: a DIFFERENT namespace from any logged
+	// user, never a shared one. A key that collapses to the old shape when the id
+	// is missing is the defect with a suffix.
+		const cache_user_id = window.page_globals?.user_id || 'anon'
+		const cache_key = 'section_cache_elements_context_' + cache_user_id + '_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang + '_' + options_fingerprint
 
 	// shared cache hit. Concurrent callers arriving before the first request
 	// resolves join its promise (it is stored below BEFORE any await); later
