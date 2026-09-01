@@ -30,12 +30,21 @@
  *   5. non-string members of the array are dropped rather than handed on as a
  *      section tipo.
  *
- * DB-FREE by construction: the resolution is a pure function of the ddo and the
- * emitted data items, which is the whole reason it was extracted.
+ * The unit half is DB-FREE by construction — the resolution is a pure function
+ * of the ddo and the emitted data items, which is the whole reason it was
+ * extracted. The END-TO-END half at the bottom is NOT optional: the fix is the
+ * consuming LOOP in readSectionScoped, and a mutation that keeps the helper and
+ * takes only its first answer (`ddoSectionTipos.slice(0, 1)`) is EXACTLY the
+ * pre-fix behaviour — it left every unit assertion here green.
  */
 
-import { expect, test } from 'bun:test';
-import { resolveDdoContextSections } from '../../src/core/section/read.ts';
+import { afterAll, beforeAll, expect, test } from 'bun:test';
+import { readSection, resolveDdoContextSections } from '../../src/core/section/read.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
 /** The live shape: one component tipo declared over eight thesaurus sections. */
 const TARGETS = ['zzmtca1', 'zzmtcb1', 'zzmtcc1'];
@@ -116,4 +125,113 @@ test('a row whose section_tipo is not a string cannot match a target', () => {
 	const data = [{ typo: 'sections', tipo: TIPO, section_tipo: [] }];
 
 	expect(resolveDdoContextSections(ddo(TARGETS), 'zzmtcown1', data)).toEqual(['zzmtca1']);
+});
+
+// ---------------------------------------------------------------------------
+// END-TO-END: the LOOP, not just the helper.
+// ---------------------------------------------------------------------------
+
+/**
+ * The live shape in miniature: ONE component tipo declared over TWO sections,
+ * with rows in both — a picker's show map, the way `render_grid_choose` sends
+ * it (`show.ddo_map` with an ARRAY `section_tipo`).
+ */
+const SECTION_A = 'zzmt1';
+const SECTION_B = 'zzmt2';
+const SHARED = 'zzmt3';
+const ROW_A = 1;
+const ROW_B = 1;
+
+const S = situation({
+	name: 'multi-target ddo context',
+	tld: 'zzmt',
+	nodes: [
+		{ tipo: SECTION_A, parent: 'test1', model: 'section', relations: [{ tipo: 'test24' }] },
+		{ tipo: SECTION_B, parent: 'test1', model: 'section', relations: [{ tipo: 'test24' }] },
+		// Declared under A, USED by both — which is exactly how a hierarchy
+		// component (hierarchy95) is shared across every thesaurus section.
+		{ tipo: SHARED, parent: SECTION_A, model: 'component_input_text' },
+	],
+	records: [
+		{
+			section_tipo: SECTION_A,
+			section_id: ROW_A,
+			columns: { string: { [SHARED]: [{ id: 1, lang: 'lg-nolan', value: 'in A' }] } },
+		},
+		{
+			section_tipo: SECTION_B,
+			section_id: ROW_B,
+			columns: { string: { [SHARED]: [{ id: 1, lang: 'lg-nolan', value: 'in B' }] } },
+		},
+	],
+});
+
+beforeAll(async () => {
+	await ensureSituation(S);
+}, 60000);
+
+afterAll(async () => {
+	expect(await dropSituation(S)).toBe(0);
+}, 60000);
+
+/** The read a picker makes: both target sections, one multi-target column. */
+async function readBothSections(): Promise<{ context: unknown[]; data: unknown[] }> {
+	return await readSection({
+		action: 'read',
+		source: {
+			action: null,
+			model: 'section',
+			tipo: SECTION_A,
+			section_tipo: SECTION_A,
+			mode: 'list',
+		},
+		show: {
+			ddo_map: [
+				{
+					tipo: SHARED,
+					parent: 'self',
+					section_tipo: [SECTION_A, SECTION_B],
+					mode: 'list',
+				},
+			],
+		},
+		sqo: { section_tipo: [SECTION_A, SECTION_B], limit: 10, offset: 0 },
+	} as never);
+}
+
+test('the read EMITS one context entry per answering section', async () => {
+	const { context, data } = await readBothSections();
+	const entries = (context as { tipo?: string; section_tipo?: string }[]).filter(
+		(entry) => entry.tipo === SHARED,
+	);
+
+	// Both sections answered…
+	const rowSections = new Set(
+		(data as { typo?: string; tipo?: string; section_tipo?: string }[])
+			.filter((item) => item.typo !== 'sections' && item.tipo === SHARED)
+			.map((item) => String(item.section_tipo)),
+	);
+	expect([...rowSections].sort()).toEqual([SECTION_A, SECTION_B]);
+
+	// …so both sections get a context. ONE entry here is the pre-fix behaviour
+	// and the empty glyph grid: the client resolves a row's context by tipo AND
+	// section_tipo, so a row from the section without an entry renders nothing.
+	expect(entries.length).toBe(2);
+	expect(entries.map((entry) => entry.section_tipo).sort()).toEqual([SECTION_A, SECTION_B]);
+});
+
+test('every emitted row can find a context by (tipo, section_tipo)', async () => {
+	// The client's own lookup, run server-side: not one row may miss.
+	const { context, data } = await readBothSections();
+	const rows = (data as { typo?: string; tipo?: string; section_tipo?: string }[]).filter(
+		(item) => item.typo !== 'sections' && item.tipo === SHARED,
+	);
+
+	expect(rows.length).toBeGreaterThan(0);
+	for (const row of rows) {
+		const match = (context as { tipo?: string; section_tipo?: string }[]).find(
+			(entry) => entry.tipo === row.tipo && entry.section_tipo === row.section_tipo,
+		);
+		expect(match).toBeDefined();
+	}
 });

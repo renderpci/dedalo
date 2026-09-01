@@ -45,6 +45,7 @@
  */
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
+import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getChildrenRecursiveBatch } from '../../src/core/relations/children.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
@@ -272,4 +273,19 @@ test('a diamond node is EXPANDED once, however many parents list it', async () =
 
 	expect(count(D)).toBe(2); // listed by A and by B
 	expect(count(D1)).toBe(1); // but expanded exactly once
+});
+
+test('the flag survives the CLIENT sanitizer — the door it actually arrives through', async () => {
+	// The historical bug was not a wrong expansion, it was an INERT flag: the
+	// schema accepted it, the session merged it, nothing read it. Asserting the
+	// assembler alone leaves the delivery path unpinned — drop
+	// 'children_recursive' from the sanitizer's allowlist (a plausible
+	// tightening slip) and every client search loses the expansion while the
+	// assembler tests stay green.
+	const client = sanitizeClientSqo(
+		structuredClone(rootSqo(R, { children_recursive: true })) as Record<string, unknown>,
+	);
+
+	expect(client.children_recursive).toBe(true);
+	expect(await searchIds(client)).toEqual([R, ...SUBTREE].sort((a, b) => a - b));
 });

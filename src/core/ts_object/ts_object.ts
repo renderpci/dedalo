@@ -17,9 +17,13 @@
  *   portal/autocomplete_hi (locators → term strings, cached), the 'M' icon's
  *   model_value badge (get_value via the component's request_config ddo_map).
  *   DEFERRED (ledgered): component_relation_related inverse-reference merge (tree
- *   term rarely a related component), component_svg URL/file-exists resolution
- *   (needs media machinery), get_indexation_grid (tag-indexation grid — counts
- *   only, per plan scope decision 3), the legacy component_relation_struct skip.
+ *   term rarely a related component) and the legacy component_relation_struct
+ *   skip (PHP drops a relation_index tagged legacy component_relation_struct;
+ *   TS emits it, so a v6-legacy install renders one extra count badge).
+ *   CLOSED SINCE: component_svg URL/file-exists resolution (2026-09-01,
+ *   WC-2026-09-01-ts-object-svg-url) and get_indexation_grid, which is served
+ *   by src/core/section/indexation_grid.ts and differential-gated — the line
+ *   claiming otherwise was stale.
  *
  * PHP anchors: get_ar_elements (:212), parse_child_data (:329), get_data (:488),
  * get_children_data (:594), has_children_of_type (:714), is_indexable (:827),
@@ -654,10 +658,42 @@ export async function buildNodeData(
 			sectionId,
 			options,
 		);
-		if (valid) data.ar_elements.push(elementObj);
+		if (valid) {
+			assertImgElementIsRenderable(elementObj, sectionTipo);
+			data.ar_elements.push(elementObj);
+		}
 	}
 
 	return data;
+}
+
+/**
+ * An `img` element's value is a URL STRING or nothing — the CHOKEPOINT for the
+ * class of bug that made this element ship an array (see
+ * WC-2026-09-01-ts-object-svg-url).
+ *
+ * The client assigns the value straight to an `<img>` src
+ * (render_ts_line.js), where the scheme allowlist refuses anything that is not
+ * an http(s) URL — silently, one console warning per node. Only
+ * `component_svg` resolves to a URL here (PHP's format_component_data converts
+ * that model and no other), so an ontology that declares `type:'img'` over
+ * ANY other media model — `component_image` is the live case, `test213`'s
+ * `test99` — hands the client the raw stored items.
+ *
+ * So the engine says so, once, where an operator can act on it: a
+ * configuration failure gets `console.error` (engineering/CONVENTIONS.md), and
+ * the value is emptied so the client renders NOTHING rather than an empty
+ * `<img>` shell. Never a throw: a mis-declared column must not take down the
+ * whole tree of a heritage install.
+ */
+function assertImgElementIsRenderable(element: TsElement, sectionTipo: string): void {
+	if (element.type !== 'img' || typeof element.value === 'string') return;
+	console.error(
+		`[ts_object] ddo_map declares type:'img' over '${element.tipo}' (section '${sectionTipo}'), ` +
+			`whose model resolves to no URL — only component_svg does. The client cannot render it; ` +
+			'emitting nothing. Fix the section_list_thesaurus ddo_map or the component model.',
+	);
+	element.value = '';
 }
 
 /** PHP process_element_details (:1320): resolve each tipo, populate elementObj. */

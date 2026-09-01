@@ -43,6 +43,12 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { currentDataLang } from '../../src/core/resolve/request_lang.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { buildNodeData } from '../../src/core/ts_object/ts_object.ts';
 
 const SECTION = 'testscxibm1';
@@ -155,4 +161,187 @@ test('the term element beside it is untouched by the widened value type', async 
 
 	expect(typeof term?.value).toBe('string');
 	expect(String(term?.value)).toContain(`glyph ${WITH_FILE}`);
+});
+
+// ---------------------------------------------------------------------------
+// THE TWO PATH INPUTS THE FIXTURE ABOVE CANNOT EXERCISE.
+//
+// `testscxibm1038` declares no `additional_path` and is not translatable, so
+// the record-scoped resolver call and the node-translatable lang both resolve
+// to the SAME path as the section-scoped/lang-null forms — i.e. reverting
+// either one leaves every assertion above green. Both are load-bearing: each
+// wrong answer stats a path nothing was ever written to and the thumbnail is
+// gone for good, silently. So they get their own situation.
+// ---------------------------------------------------------------------------
+
+const P_SECTION = 'zzsvp1';
+const P_LIST = 'zzsvp2';
+const P_BUCKET_SVG = 'zzsvp3'; // declares additional_path
+const P_SIBLING = 'zzsvp4'; // the sibling whose VALUE names the bucket
+const P_LANG_SVG = 'zzsvp5'; // translatable
+const P_ID = 1;
+const BUCKET = 'cession_files';
+
+const P = situation({
+	name: 'ts_object svg path inputs',
+	tld: 'zzsvp',
+	nodes: [
+		{ tipo: P_SECTION, parent: 'test1', model: 'section', relations: [{ tipo: 'test24' }] },
+		{
+			tipo: P_LIST,
+			parent: P_SECTION,
+			model: 'section_list_thesaurus',
+			properties: {
+				show: {
+					ddo_map: [
+						{ tipo: P_BUCKET_SVG, type: 'img' },
+						{ tipo: P_LANG_SVG, type: 'img' },
+					],
+				},
+			},
+		},
+		{
+			tipo: P_BUCKET_SVG,
+			parent: P_SECTION,
+			model: 'component_svg',
+			properties: { additional_path: P_SIBLING },
+		},
+		{ tipo: P_SIBLING, parent: P_SECTION, model: 'component_input_text' },
+		{ tipo: P_LANG_SVG, parent: P_SECTION, model: 'component_svg', is_translatable: true },
+	],
+	records: [
+		{
+			section_tipo: P_SECTION,
+			section_id: P_ID,
+			columns: {
+				string: {
+					[P_SIBLING]: [
+						{ id: 1, lang: 'lg-nolan', value: BUCKET },
+						{ id: 2, lang: 'lg-spa', value: BUCKET },
+						{ id: 3, lang: 'lg-eng', value: BUCKET },
+					],
+				},
+			},
+		},
+	],
+});
+
+/** Write the file exactly where the RIGHT answer says it lives, and only there. */
+async function writeAt(componentTipo: string, lang: string | null): Promise<string> {
+	const spec = mediaTypeOf('component_svg');
+	if (spec === null) throw new Error('component_svg has no media spec');
+	const options = await resolveMediaPathOptions(componentTipo, P_SECTION, P_ID);
+	const location = buildMediaLocation(
+		spec,
+		{ componentTipo, sectionTipo: P_SECTION, sectionId: P_ID, lang },
+		spec.defaultQuality,
+		spec.defaultExtension,
+		options,
+	);
+	mkdirSync(location.absolutePath.replace(/\/[^/]+$/, ''), { recursive: true });
+	writeFileSync(location.absolutePath, '<svg xmlns="http://www.w3.org/2000/svg"/>');
+	return location.absolutePath;
+}
+
+const written: string[] = [];
+
+beforeAll(async () => {
+	await ensureSituation(P);
+	written.push(await writeAt(P_BUCKET_SVG, null));
+	written.push(await writeAt(P_LANG_SVG, currentDataLang()));
+}, 60000);
+
+afterAll(async () => {
+	for (const file of written) rmSync(file, { force: true });
+	expect(await dropSituation(P)).toBe(0);
+}, 60000);
+
+async function imgValueOf(tipo: string): Promise<unknown> {
+	const node = await buildNodeData(P_SECTION, P_ID, {}, null, ADMIN);
+	return node.ar_elements.find((element) => element.tipo === tipo)?.value;
+}
+
+test('the bucket comes from the RECORD: properties.additional_path is resolved', async () => {
+	const value = String(await imgValueOf(P_BUCKET_SVG));
+
+	// The section-scoped resolver leaves additional_path undefined and the
+	// numeric max_items_folder bucket wins — the file would not be found.
+	expect(value).toContain(`/${BUCKET}/`);
+	expect(value).not.toBe('');
+});
+
+test("a TRANSLATABLE node's identifier carries the lang", async () => {
+	const value = String(await imgValueOf(P_LANG_SVG));
+	const lang = currentDataLang();
+
+	// `lang: null` here reads `<id>.svg` while the writer stored `<id>_<lang>.svg`.
+	expect(value).toContain(`${P_LANG_SVG}_${P_SECTION}_${P_ID}_${lang}.svg`);
+});
+
+// ---------------------------------------------------------------------------
+// THE CHOKEPOINT: only component_svg resolves to a URL here, so an `img`
+// element over any OTHER media model must be emptied and REPORTED, never
+// handed to the client as an array (which is how this whole class stayed
+// invisible: the client refuses it with a console warning nobody reads).
+// ---------------------------------------------------------------------------
+
+const I_SECTION = 'zzimg1';
+const I_LIST = 'zzimg2';
+const I_IMAGE = 'zzimg3'; // component_IMAGE declared as an img element
+
+const I = situation({
+	name: 'img element over a non-svg media model',
+	tld: 'zzimg',
+	nodes: [
+		{ tipo: I_SECTION, parent: 'test1', model: 'section', relations: [{ tipo: 'test24' }] },
+		{
+			tipo: I_LIST,
+			parent: I_SECTION,
+			model: 'section_list_thesaurus',
+			properties: { show: { ddo_map: [{ tipo: I_IMAGE, type: 'img' }] } },
+		},
+		{ tipo: I_IMAGE, parent: I_SECTION, model: 'component_image' },
+	],
+	records: [
+		{
+			section_tipo: I_SECTION,
+			section_id: 1,
+			columns: {
+				media: {
+					[I_IMAGE]: [{ id: 1, files_info: [], original_normalized_name: 'x.jpg' }],
+				},
+			},
+		},
+	],
+});
+
+beforeAll(async () => {
+	await ensureSituation(I);
+}, 60000);
+
+afterAll(async () => {
+	expect(await dropSituation(I)).toBe(0);
+}, 60000);
+
+test('an img element over a non-svg model is emptied and REPORTED, never an array', async () => {
+	const reported: string[] = [];
+	const realError = console.error;
+	console.error = (...args: unknown[]) => {
+		reported.push(args.map(String).join(' '));
+	};
+	let value: unknown;
+	try {
+		const node = await buildNodeData(I_SECTION, 1, {}, null, ADMIN);
+		value = node.ar_elements.find((element) => element.tipo === I_IMAGE)?.value;
+	} finally {
+		console.error = realError;
+	}
+
+	// The client assigns this to an <img> src: an array is refused there,
+	// silently, and renders an empty shell.
+	expect(typeof value).toBe('string');
+	expect(value).toBe('');
+	// And the mis-declaration is something an OPERATOR can act on, so it is
+	// said once, loudly, naming the element.
+	expect(reported.some((line) => line.includes(I_IMAGE) && line.includes(I_SECTION))).toBe(true);
 });

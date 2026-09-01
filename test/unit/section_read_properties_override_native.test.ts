@@ -36,11 +36,18 @@
  * component `test52` — no install's records, no install's TLD.
  */
 
-import { expect, test } from 'bun:test';
-import { readSection } from '../../src/core/section/read.ts';
+import { afterAll, beforeAll, expect, test } from 'bun:test';
+import { deriveSectionListSqoDefaults, readSection } from '../../src/core/section/read.ts';
+import {
+	dropSituation,
+	ensureSituation,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 
 const SECTION = 'test3';
 const OVERRIDE_COLUMN = 'test52';
+/** A column the ontology default carries and the override does NOT. */
+const REPLACED_COLUMN = 'test17';
 
 type Ddo = { tipo?: string; in_mosaic?: unknown };
 
@@ -104,6 +111,10 @@ test('WITHOUT an override the section serves its ontology default columns', asyn
 	// what makes the replacement assertion meaningful.
 	expect(tipos.length).toBeGreaterThan(1);
 	expect(tipos).toContain(OVERRIDE_COLUMN);
+	// ANCHORED: the last test's anti-assertion is "test17 is gone under the
+	// override". If an ontology edit dropped test17 from test3's section_list,
+	// that assertion would pass vacuously — so pin its presence here.
+	expect(tipos).toContain(REPLACED_COLUMN);
 	expect(emittedTipos(data).size).toBeGreaterThan(1);
 });
 
@@ -129,7 +140,7 @@ test('the DATA half follows the same override as the context half', async () => 
 	expect(tipos.has(OVERRIDE_COLUMN)).toBe(true);
 	// A column the ONTOLOGY default carries but the override does not must be
 	// gone from the rows too — else the client renders cells with no context.
-	expect(tipos.has('test17')).toBe(false);
+	expect(tipos.has(REPLACED_COLUMN)).toBe(false);
 });
 
 test('the override also supplies the default page size', async () => {
@@ -154,7 +165,6 @@ test('the override also supplies the default page size', async () => {
 });
 
 test('a page size declared by the CLIENT is clamped like any client limit', async () => {
-	const { deriveSectionListSqoDefaults } = await import('../../src/core/section/read.ts');
 	const { CLIENT_MAX_LIMIT } = await import('../../src/core/concepts/sqo.ts');
 	const greedy = structuredClone(TOOL_PROPERTIES) as typeof TOOL_PROPERTIES & {
 		source: { request_config: { sqo: { limit: number } }[] };
@@ -168,9 +178,60 @@ test('a page size declared by the CLIENT is clamped like any client limit', asyn
 	expect((await deriveSectionListSqoDefaults(SECTION, SECTION, 'list', greedy)).limit).toBe(
 		CLIENT_MAX_LIMIT,
 	);
-	// …and the ONTOLOGY's own configured size is never clamped: it is not client
-	// input, and an install may legitimately configure a large list page.
-	expect(
-		(await deriveSectionListSqoDefaults(SECTION, SECTION, 'list', TOOL_PROPERTIES)).limit,
-	).toBe(TOOL_PAGE_SIZE);
+});
+
+// ---------------------------------------------------------------------------
+// The OTHER side of the clamp, which needs an ontology of its own: the clamp
+// must apply ONLY to the client's override. An install may legitimately
+// configure a list page larger than the client ceiling, and clamping THAT would
+// silently shorten its lists — a mutation that clamps unconditionally is
+// invisible to any fixture whose configured limit is already below the ceiling.
+// ---------------------------------------------------------------------------
+
+const BIG_SECTION = 'zzlim1';
+const BIG_LIST = 'zzlim2';
+const BIG_LIMIT = 5000; // deliberately above CLIENT_MAX_LIMIT (1000 by default)
+
+const BIG = situation({
+	name: 'section list page size above the client ceiling',
+	tld: 'zzlim',
+	nodes: [
+		{ tipo: BIG_SECTION, parent: 'test1', model: 'section', relations: [{ tipo: 'test24' }] },
+		{
+			tipo: BIG_LIST,
+			parent: BIG_SECTION,
+			model: 'section_list',
+			properties: {
+				source: {
+					request_config: [
+						{
+							sqo: {
+								section_tipo: [{ value: [BIG_SECTION], source: 'section' }],
+								limit: BIG_LIMIT,
+							},
+							show: { ddo_map: [] },
+						},
+					],
+				},
+			},
+		},
+	],
+});
+
+beforeAll(async () => {
+	await ensureSituation(BIG);
+}, 60000);
+
+afterAll(async () => {
+	expect(await dropSituation(BIG)).toBe(0);
+}, 60000);
+
+test("the ONTOLOGY's own configured page size is never clamped", async () => {
+	const { CLIENT_MAX_LIMIT } = await import('../../src/core/concepts/sqo.ts');
+	expect(BIG_LIMIT).toBeGreaterThan(CLIENT_MAX_LIMIT);
+
+	// No override → not client input → the install's configured size stands.
+	expect((await deriveSectionListSqoDefaults(BIG_SECTION, BIG_SECTION, 'list')).limit).toBe(
+		BIG_LIMIT,
+	);
 });
