@@ -81,6 +81,20 @@ abstract class DBi {
 			return false;
 		}
 
+		// Optional per-session statement timeout (milliseconds). Applied to both cached
+		// and uncached connections so runaway queries are cancelled by the server.
+		// Guarded with defined() because existing installs may not have the constant.
+		if (defined('DEDALO_DB_STATEMENT_TIMEOUT') && (int)DEDALO_DB_STATEMENT_TIMEOUT > 0) {
+			$statement_timeout = (int)DEDALO_DB_STATEMENT_TIMEOUT;
+			$timeout_result = pg_query($pg_conn_real, 'SET statement_timeout = ' . $statement_timeout);
+			if ($timeout_result === false) {
+				debug_log(
+					__METHOD__ . ' Warning. Unable to set statement_timeout = ' . $statement_timeout . ' ms. Details: ' . (pg_last_error($pg_conn_real) ?: 'unknown'),
+					logger::WARNING
+				);
+			}
+		}
+
 		// If caching is not requested, return the fresh connection immediately
 		if (!$cache) {
 			return $pg_conn_real;

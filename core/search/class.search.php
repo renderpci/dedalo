@@ -95,8 +95,16 @@ class search {
 
 		// join_counter. Monotonic per-query counter used to give each multi-step filter clause
 		// a unique join alias namespace, so two clauses sharing the same path get INDEPENDENT
-		// joins (cross-record AND/OR) instead of collapsing onto one joined record.
+		// joins (cross-record AND) instead of collapsing onto one joined record.
+		// NOTE: inside an $or group, operands sharing the same path signature REUSE one join_id
+		// (see filter_parser). Independent traversal is only meaningful under $and; under $or it
+		// changes nothing semantically and multiplies rows (cartesian product of N identical
+		// LEFT JOIN pairs), which produced 30+ stuck Postgres backends on a remote install.
 		public $join_counter = 0;
+
+		// MAX_SQL_JOINS_WARN. Above this number of relation joins in one search SQL,
+		// get_sql_joins() logs a warning (log only, no behaviour change).
+		const MAX_SQL_JOINS_WARN = 24;
 
 		// control for duplicated operator to include itself in the where ( operator !! )
 		public $skip_duplicated = false;
@@ -2241,14 +2249,26 @@ class search {
 	* FILTER_PARSER
 	* @param string $op
 	* @param array $ar_value
+	* @param array|null $or_join_ids = null
+	*  Path signature => join_id map shared by the operands of an $or group. Passed by
+	*  reference so a $or nested directly inside a $or (e.g. the per-language expansion
+	*  that component_common::search_query_conform wraps around every translatable operand)
+	*  inherits the namespace of its parent group. Any non-$or group starts a new one.
 	* @return string $string_query
 	*/
-	public function filter_parser(string $op, array $ar_value) : string {
+	public function filter_parser(string $op, array $ar_value, ?array &$or_join_ids=null) : string {
 
 		$string_query = '';
 
 		$total		= count($ar_value);
 		$operator	= strtoupper( substr($op, 1) );
+
+		// or_join_ids. Path signature => join_id shared by the operands of THIS $or group
+		// and of every $or nested directly inside it. A fresh map is created here when the
+		// caller did not hand one down (top level, or a $or under a non-$or group).
+		if ($op!=='$or' || $or_join_ids===null) {
+			$or_join_ids = [];
+		}
 
 		// Portal various values case
 			/*
@@ -2295,8 +2315,14 @@ class search {
 				// 	$string_query .= ' '.$operator2.'** ';
 				// }
 
-				// recursion filter_parser
-				$parsed_string = $this->filter_parser($op2, $ar_value2);
+				// recursion filter_parser. A $or directly inside a $or shares the parent's
+				// join namespace; anything else opens its own.
+				if ($op==='$or' && $op2==='$or') {
+					$parsed_string = $this->filter_parser($op2, $ar_value2, $or_join_ids);
+				}else{
+					$child_join_ids = null;
+					$parsed_string = $this->filter_parser($op2, $ar_value2, $child_join_ids);
+				}
 				if (!empty($parsed_string)) {
 					$string_query .= ' (' . $parsed_string . ' )';
 
@@ -2312,10 +2338,26 @@ class search {
 				#if (!empty($search_object->q)) {
 					$n_levels = count($search_object->path);
 					// Multi-step paths (value lives inside a related record reached through a
-					// relation/portal) get a unique join_id so each clause traverses the relation
+					// relation/portal) get a join_id so each clause traverses the relation
 					// INDEPENDENTLY. This makes "value A AND value B" match across different linked
 					// records, not within a single one. Single-step paths keep join_id null (legacy).
-					$join_id = ($n_levels>1) ? ++$this->join_counter : null;
+					// Under $or, operands with the same path signature SHARE one join_id: independent
+					// traversal adds nothing to an OR (any linked record matching any value already
+					// matches) but each extra join_id adds an identical LEFT JOIN relations/matrix pair,
+					// and the autocomplete pushes one operand per leaf field (10+ fields -> 10+ identical
+					// join pairs -> cartesian explosion, 30+ stuck Postgres backends).
+					$join_id = null;
+					if ($n_levels>1) {
+						if ($op==='$or') {
+							$signature = $this->get_table_alias_from_path($search_object->path);
+							if (!isset($or_join_ids[$signature])) {
+								$or_join_ids[$signature] = ++$this->join_counter;
+							}
+							$join_id = $or_join_ids[$signature];
+						}else{
+							$join_id = ++$this->join_counter;
+						}
+					}
 					$search_object->join_id = $join_id;
 					if ($n_levels>1) {
 						// $this->join_group[] = $this->build_sql_join($search_object->path);
@@ -2983,6 +3025,17 @@ class search {
 
 		if (isset($this->ar_sql_joins)) {
 			$sql_joins = implode(' ', $this->ar_sql_joins);
+
+			// Guard: too many relation joins usually means a ddo_map / filter that
+			// traverses the same relation many times (cartesian product). Log only.
+			$n_joins = count($this->ar_sql_joins);
+			if ($n_joins > self::MAX_SQL_JOINS_WARN) {
+				debug_log(__METHOD__
+					. ' WARNING: excessive relation joins (' . $n_joins . ') in search sql. Check the ddo_map / filter of the sqo: '
+					. json_encode($this->search_query_object, JSON_PARTIAL_OUTPUT_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE)
+					, logger::ERROR
+				);
+			}
 		}
 
 		return $sql_joins;

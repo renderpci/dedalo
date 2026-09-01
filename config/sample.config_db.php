@@ -30,6 +30,8 @@ define('DEDALO_INFORMATION',			'Dédalo install version');
 define('DEDALO_INFO_KEY',				DEDALO_ENTITY);
 // SLOW_QUERY_MS: int 6000
 define('SLOW_QUERY_MS',					6000);
+// DEDALO_DB_STATEMENT_TIMEOUT: int milliseconds . 0 = disabled (default). When >0, every Dédalo PostgreSQL session runs 'SET statement_timeout' with this value so runaway queries are cancelled by the server instead of blocking the pool. Long maintenance tasks (diffusion, exports) may need it disabled or high.
+define('DEDALO_DB_STATEMENT_TIMEOUT',	0);
 // DEDALO_DB_MANAGEMENT: bool . Used to activate or not the management of the DDBB by Dédalo. If false, all administration tasks will need to be done manually.
 define('DEDALO_DB_MANAGEMENT',			true);
 
