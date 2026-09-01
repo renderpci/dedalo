@@ -27,6 +27,7 @@
  * process_element_details/format_component_data/resolve_element_value (:1320-1604).
  */
 
+import { statSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
@@ -390,7 +391,7 @@ async function getComponentDataLang(
 	tipo: string,
 	model: string,
 	lang: string,
-): Promise<unknown[]> {
+): Promise<unknown[] | string> {
 	if (model === 'component_relation_index') return [];
 	if (model === 'component_relation_children') {
 		return getChildren(sectionId, sectionTipo, tipo);
@@ -420,6 +421,18 @@ async function getComponentDataLang(
 		items = items.filter((item) => (item.lang ?? 'lg-nolan') === elementLang);
 	}
 
+	// format_component_data: component_svg → the URL of the file ON DISK, as a
+	// STRING, replacing the stored media-item array outright (PHP :1349). The
+	// client renders the tree's `img` element straight from this value
+	// (render_ts_line.js `src: current_element.value`), so an array reaches its
+	// DOM builder as a non-URL and is refused — the thesaurus term thumbnails
+	// (tool_cataloging's glyph illustrations) simply never appeared. '' when
+	// there is no file: the client's own `if(current_element.value)` is then the
+	// suppression, exactly as in PHP.
+	if (model === 'component_svg') {
+		return await svgElementUrl(tipo, sectionTipo, sectionId);
+	}
+
 	// format_component_data: portal/autocomplete_hi → resolve locators to strings.
 	if (model === 'component_portal' || model === 'component_autocomplete_hi') {
 		const values: unknown[] = [];
@@ -429,6 +442,64 @@ async function getComponentDataLang(
 		return values;
 	}
 	return items;
+}
+
+/**
+ * The web URL of a component_svg's default-quality file, or '' when nothing is
+ * on disk (PHP format_component_data's component_svg case: get_media_filepath →
+ * file_exists → get_url, else '').
+ *
+ * WIRE (WC-2026-09-01-ts-object-svg-url): PHP appended the REQUEST's start time
+ * as the cache-buster (`?<start_time()>`), a value that changes on every read
+ * and therefore re-downloads every thumbnail of every tree paint. The bust here
+ * is the file's own mtime, so a browser re-fetches exactly when the file
+ * changed — which is what a cache-buster is for. The path itself is byte-identical.
+ *
+ * Fail-soft, like every other media URL emitter here: an unresolvable path
+ * (an id that is not a record address, a component whose ontology path cannot be
+ * built) yields '' rather than failing the whole tree node.
+ */
+async function svgElementUrl(
+	tipo: string,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<string> {
+	try {
+		const { mediaTypeOf } = await import('../concepts/media.ts');
+		const spec = mediaTypeOf('component_svg');
+		if (spec === null) return '';
+		// Namespace form on purpose: a destructured binding reads as a BARE
+		// reference to the section-scoped seam, and the shrink-only census that
+		// guards it (media_ingest_properties_native) counts such a binding as one.
+		// This call is the RECORD-scoped three-argument form.
+		const ontologyPath = await import('../media/ontology_path.ts');
+		const { buildMediaLocation } = await import('../media/path.ts');
+		// RECORD-scoped, not section-scoped: only this form resolves
+		// `properties.additional_path` — the sibling component's value on THIS
+		// record, which is the folder the WRITER used. Asking the two-argument
+		// form leaves it undefined and the numeric max_items_folder bucket wins,
+		// so on an install that names its buckets the thumbnail is stat-ed at a
+		// path nothing was ever written to and disappears for good.
+		const pathOptions = await ontologyPath.resolveMediaPathOptions(tipo, sectionTipo, sectionId);
+		// The identifier's lang follows the NODE's translatable flag, exactly as
+		// the writer's own resolver does (media/tool_support.ts) and as PHP's
+		// get_id does — `component_svg` is not class-translatable, but the flag
+		// lives on the dd_ontology node, and a node that carries it stores
+		// `<id>_<lang>.svg`.
+		const lang = (await getTranslatableByTipo(tipo)) ? currentDataLang() : null;
+		const location = buildMediaLocation(
+			spec,
+			{ componentTipo: tipo, sectionTipo, sectionId, lang },
+			spec.defaultQuality,
+			spec.defaultExtension,
+			pathOptions,
+		);
+		const stats = statSync(location.absolutePath, { throwIfNoEntry: false });
+		if (stats === undefined) return '';
+		return `${config.media.webBase}${location.relativePath}?${Math.trunc(stats.mtimeMs)}`;
+	} catch {
+		return '';
+	}
 }
 
 /** get_component_data_fallback: main-lang → nolan → any non-empty (PHP :310). */
@@ -793,7 +864,9 @@ async function resolveElementValue(
 	elementObj: TsElement,
 	elementTipo: string,
 	model: string,
-	componentData: unknown[],
+	// `mixed` in PHP: format_component_data replaces a component_svg's data with
+	// its URL STRING, everything else stays an item array.
+	componentData: unknown[] | string,
 	data: TsNodeData,
 	record: MatrixRecord | null,
 	sectionTipo: string,
