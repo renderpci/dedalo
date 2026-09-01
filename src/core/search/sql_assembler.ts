@@ -978,7 +978,142 @@ function buildPathScope(
 	};
 }
 
+/**
+ * `sqo.children_recursive` — the descendant-expanding search (PHP
+ * search::search + search_children_recursive + generate_children_recursive_search,
+ * core/search/class.search.php:445-711).
+ *
+ * A picker that hands the user a THESAURUS BRANCH means the branch's whole
+ * subtree, not the branch node: the epigraphy autocomplete's glyph grid
+ * (tool_numisdata_epigraphy) picks "Síl·labes" and must list every glyph under
+ * it. Without this the search answers with the single picked node — a grid with
+ * one empty cell, which is how the missing port surfaced.
+ *
+ * Two passes, exactly as PHP:
+ *  1. the SAME sqo with `children_recursive:false` and NO pagination — the
+ *     parent roots (pagination applies to the expanded set, never to the roots).
+ *  2. every descendant of every root (getChildrenRecursive), then a rebuilt SQO
+ *     whose filter is `(fixed_children_filter) AND (section_id IN parents+children)`,
+ *     with `filter_by_locators` dropped (the roots are already resolved) so the
+ *     locator pin cannot re-narrow the result back to the roots.
+ *
+ * WIRE: WC-2026-09-01-children-recursive-search — two deliberate divergences
+ * from PHP, both in the caller's favour —
+ * (a) the no-descendants case keeps the caller's limit/offset instead of
+ * returning PHP's unbounded parents result, and (b) `full_count` is preserved
+ * instead of forced false, so the count path counts the expanded set through
+ * the normal assembler rather than PHP's out-of-band `sqo->total`.
+ */
+/** The roots of a descendant-expanding search: the SAME query, unpaginated. */
+async function searchChildrenRecursiveRoots(
+	base: Record<string, unknown>,
+	options: SearchOptions,
+): Promise<{ section_id: number; section_tipo: string }[]> {
+	const rootsSqo = {
+		...base,
+		children_recursive: false,
+		limit: 'all',
+		offset: 0,
+		full_count: false,
+	} as unknown as Sqo;
+	const query = await buildSearchSql(rootsSqo, { ...options, idsOnly: true });
+	return (await sql.unsafe(query.sql, query.params as (string | number | null)[])) as {
+		section_id: number;
+		section_tipo: string;
+	}[];
+}
+
+/**
+ * Every descendant of every root, deduplicated by locator. The walk is the
+ * SHARED-visited batch (PHP search_children_recursive :604 calls
+ * get_children_recursive_batch, never the by-value get_children_recursive):
+ * the root set here comes straight from an unpaginated client search, so a node
+ * reachable from several roots — or from several parents, which a Dédalo
+ * polyhierarchy allows — must be expanded once per request, not once per path.
+ */
+async function collectRecursiveDescendants(
+	roots: readonly { section_id: number; section_tipo: string }[],
+): Promise<Map<string, { section_id: number; section_tipo: string }>> {
+	const { getChildrenRecursiveBatch } = await import('../relations/children.ts');
+	const byLocator = new Map<string, { section_id: number; section_tipo: string }>();
+	for (const child of await getChildrenRecursiveBatch(roots)) {
+		const id = Number(child.section_id);
+		if (Number.isInteger(id)) {
+			byLocator.set(`${child.section_tipo}_${id}`, {
+				section_id: id,
+				section_tipo: child.section_tipo,
+			});
+		}
+	}
+	return byLocator;
+}
+
+/**
+ * `(fixed_children_filter) AND (section_id IN roots+descendants)` — PHP
+ * generate_children_recursive_search:663-707 builds exactly one
+ * component_section_id filter over the merged id list, whose path[0] carries the
+ * first merged row's section (descendants first).
+ */
+function childrenRecursiveFilter(
+	rows: readonly { section_id: number; section_tipo: string }[],
+	fixedChildrenFilter: unknown,
+): Record<string, unknown> {
+	const idFilter = [
+		{
+			q: rows.map((row) => row.section_id).join(','),
+			q_operator: null,
+			path: [
+				{
+					section_tipo: rows[0]?.section_tipo ?? '',
+					component_tipo: 'section_id',
+					model: 'component_section_id',
+					name: 'Id',
+				},
+			],
+		},
+	];
+	return fixedChildrenFilter === undefined || fixedChildrenFilter === null
+		? { $or: idFilter }
+		: { $and: [fixedChildrenFilter, { $or: idFilter }] };
+}
+
+async function buildChildrenRecursiveSql(sqo: Sqo, options: SearchOptions): Promise<BuiltQuery> {
+	const base = sqo as unknown as Record<string, unknown>;
+	const roots = await searchChildrenRecursiveRoots(base, options);
+	const byLocator = await collectRecursiveDescendants(roots);
+
+	// No descendants: the roots ARE the answer — run the plain search so the
+	// caller's own limit/offset and full_count still apply.
+	if (byLocator.size === 0) {
+		return await buildSearchSql({ ...base, children_recursive: false } as unknown as Sqo, options);
+	}
+
+	// Descendants first, then the roots (PHP's [...children, ...parents] merge).
+	for (const root of roots) {
+		byLocator.set(`${root.section_tipo}_${root.section_id}`, root);
+	}
+	const { filter_by_locators: _droppedLocators, ...withoutLocators } = base;
+	const combinedSqo = {
+		...withoutLocators,
+		children_recursive: false,
+		filter: childrenRecursiveFilter([...byLocator.values()], base.fixed_children_filter),
+	} as unknown as Sqo;
+
+	return await buildSearchSql(combinedSqo, options);
+}
+
 export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Promise<BuiltQuery> {
+	// WHICH search, separately from HOW it is assembled (PHP search::search's
+	// dedicated children_recursive path, taken before parse_sql_query): the
+	// descendant-expanding search is a PRE-PASS that re-enters this same door
+	// with a rewritten SQO.
+	return (sqo as unknown as { children_recursive?: unknown }).children_recursive === true
+		? await buildChildrenRecursiveSql(sqo, options)
+		: await buildPlainSearchSql(sqo, options);
+}
+
+/** The SQO→SQL assembler proper: one section (or a UNION of them), no pre-pass. */
+async function buildPlainSearchSql(sqo: Sqo, options: SearchOptions): Promise<BuiltQuery> {
 	const sectionTipos = getSectionTipos(sqo).map((tipo) =>
 		assertValidTipo(tipo, 'sqo.section_tipo'),
 	);

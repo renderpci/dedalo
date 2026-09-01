@@ -423,3 +423,69 @@ export async function getChildrenRecursive(
 	}
 	return all;
 }
+
+/**
+ * ALL descendants of MANY roots, flat, with ONE visited set shared across the
+ * whole batch (PHP get_children_recursive_batch :?? → get_children_recursive_shared,
+ * class.component_relation_children.php — the `&$visited` by-REFERENCE twin of
+ * {@link getChildrenRecursive}).
+ *
+ * The distinction is not cosmetic. By-value visited prunes only along the path
+ * currently being walked, so a node reachable from several roots — or, in a
+ * POLYHIERARCHY, from several parents, which Dédalo supports by design — is
+ * expanded once per path: O(N·depth) at best and exponential on a diamond
+ * lattice, each expansion paying getChildren's index query plus the per-child
+ * record reads that resolve child ORDER. Sharing the set expands every node at
+ * most once per call, which is what a whole-subtree search must do — the
+ * descendant-expanding search (`sqo.children_recursive`) hands this an
+ * unbounded root set straight from a client SQO.
+ *
+ * Roots are walked in order and the result is already deduplicated by locator
+ * (a node visited under an earlier root is not re-emitted under a later one).
+ */
+export async function getChildrenRecursiveBatch(
+	// int by contract (WC-2026-08-10-section-id-int-canonical): roots come from
+	// the search assembler's own section_id column.
+	roots: readonly { section_id: number; section_tipo: string }[],
+	componentTipo?: string | null,
+): Promise<ChildLocator[]> {
+	const visited: Record<string, boolean> = {};
+	const all: ChildLocator[] = [];
+	for (const root of roots) {
+		all.push(
+			...(await collectDescendantsShared(
+				root.section_id,
+				root.section_tipo,
+				componentTipo,
+				visited,
+			)),
+		);
+	}
+	return all;
+}
+
+/** One root's descendants, marking the SHARED visited set as it walks. */
+async function collectDescendantsShared(
+	sectionId: number | string,
+	sectionTipo: string,
+	componentTipo: string | null | undefined,
+	visited: Record<string, boolean>,
+): Promise<ChildLocator[]> {
+	const key = `${sectionTipo}_${sectionId}`;
+	if (visited[key] === true) return [];
+	visited[key] = true;
+
+	const direct = await getChildren(sectionId, sectionTipo, componentTipo);
+	const all: ChildLocator[] = [...direct];
+	for (const child of direct) {
+		all.push(
+			...(await collectDescendantsShared(
+				child.section_id,
+				child.section_tipo,
+				componentTipo,
+				visited,
+			)),
+		);
+	}
+	return all;
+}
