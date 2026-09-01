@@ -261,85 +261,88 @@ async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadR
 		mode,
 	);
 	for (const ddo of rqoDdoMap) {
-		const ddoSectionTipo =
-			ddo.section_tipo === undefined || ddo.section_tipo === 'self'
-				? (source.section_tipo ?? callerTipo)
-				: // multi-target client ddos contextualize against the FIRST target
-					// (structure context is per-element, not per-target)
-					Array.isArray(ddo.section_tipo)
-					? (ddo.section_tipo[0] ?? source.section_tipo ?? callerTipo)
-					: ddo.section_tipo;
-		// Per-component READ gate (PHP check_ddo_permissions / STEP 5
-		// filter_authorized_related): a denied component contributes NO context
-		// entry. This is the confidentiality boundary for CLIENT-SENT maps —
-		// the client can name any tipo in show.ddo_map, and the config-build
-		// gates only shape the server-derived default.
-		if (!(await ddoIsAuthorized(principal, ddoSectionTipo, ddo.tipo))) continue;
-		// The element's descendants in the caller's map narrow its show config
-		// (PHP get_subdatum children-injection).
-		const rqoChildren = collectCallerDescendants(rqoDdoMap, ddo.tipo);
-		const resolvedParent = ddo.parent === 'self' ? callerTipo : (ddo.parent ?? null);
-		// A NESTED ddo (parent is a component, not the section) is a subdatum: its
-		// sort join must start at the LISTED section, so hand its parent-portal to
-		// buildOrderPath for the prepend (PHP get_order_path from_component/from_section).
-		const orderPathFrom =
-			resolvedParent !== null && resolvedParent !== callerTipo
-				? {
-						componentTipo: resolvedParent,
-						sectionTipo:
-							context.find((existing) => existing.tipo === resolvedParent)?.section_tipo ??
-							source.section_tipo ??
-							callerTipo,
-					}
-				: undefined;
-		const entry = await buildStructureContext({
-			tipo: ddo.tipo,
-			sectionTipo: ddoSectionTipo,
-			mode: ddo.mode ?? mode,
-			lang: ddo.lang ?? lang,
-			// Per-element matrix level (the ddoIsAuthorized drop above guarantees
-			// ≥ 1 for defined principals — the client renders 1 read-only, ≥2 edit).
-			permissions: await elementPermissions(ddoSectionTipo, ddo.tipo),
-			parent: resolvedParent,
-			view: ddo.view ?? null,
-			childrenView: (ddo as { children_view?: string | null }).children_view ?? null,
-			rqoChildrenDdos: rqoChildren as unknown as Record<string, unknown>[],
-			orderPathFrom,
-			// WC-079: a temporal clone ships no component toolbar.
-			isTemporal: isTemporalSource(source),
-		});
-		if (entry !== null && !seen.has(contextKey(entry))) {
-			seen.add(contextKey(entry));
+		// A multi-target ddo (a picker whose show map names N target sections, e.g.
+		// the epigraphy autocomplete's hierarchy95 over the eight glyph thesauri)
+		// is a DIFFERENT ontology element in each of those sections. The client
+		// looks its context up by (tipo, section_tipo) of the row it is rendering
+		// (view_default_autocomplete.render_grid_choose), so one entry built against
+		// the first target silently drops every row from the other seven. Emit one
+		// entry per section the read ACTUALLY returned rows from; with no rows to
+		// go on (an empty result still ships structure) fall back to the first target.
+		const ddoSectionTipos = resolveDdoContextSections(ddo, source.section_tipo ?? callerTipo, data);
+		for (const ddoSectionTipo of ddoSectionTipos) {
+			// Per-component READ gate (PHP check_ddo_permissions / STEP 5
+			// filter_authorized_related): a denied component contributes NO context
+			// entry. This is the confidentiality boundary for CLIENT-SENT maps —
+			// the client can name any tipo in show.ddo_map, and the config-build
+			// gates only shape the server-derived default.
+			if (!(await ddoIsAuthorized(principal, ddoSectionTipo, ddo.tipo))) continue;
+			// The element's descendants in the caller's map narrow its show config
+			// (PHP get_subdatum children-injection).
+			const rqoChildren = collectCallerDescendants(rqoDdoMap, ddo.tipo);
+			const resolvedParent = ddo.parent === 'self' ? callerTipo : (ddo.parent ?? null);
+			// A NESTED ddo (parent is a component, not the section) is a subdatum: its
+			// sort join must start at the LISTED section, so hand its parent-portal to
+			// buildOrderPath for the prepend (PHP get_order_path from_component/from_section).
+			const orderPathFrom =
+				resolvedParent !== null && resolvedParent !== callerTipo
+					? {
+							componentTipo: resolvedParent,
+							sectionTipo:
+								context.find((existing) => existing.tipo === resolvedParent)?.section_tipo ??
+								source.section_tipo ??
+								callerTipo,
+						}
+					: undefined;
+			const entry = await buildStructureContext({
+				tipo: ddo.tipo,
+				sectionTipo: ddoSectionTipo,
+				mode: ddo.mode ?? mode,
+				lang: ddo.lang ?? lang,
+				// Per-element matrix level (the ddoIsAuthorized drop above guarantees
+				// ≥ 1 for defined principals — the client renders 1 read-only, ≥2 edit).
+				permissions: await elementPermissions(ddoSectionTipo, ddo.tipo),
+				parent: resolvedParent,
+				view: ddo.view ?? null,
+				childrenView: (ddo as { children_view?: string | null }).children_view ?? null,
+				rqoChildrenDdos: rqoChildren as unknown as Record<string, unknown>[],
+				orderPathFrom,
+				// WC-079: a temporal clone ships no component toolbar.
+				isTemporal: isTemporalSource(source),
+			});
+			if (entry !== null && !seen.has(contextKey(entry))) {
+				seen.add(contextKey(entry));
 
-			// PER-RECORD context options for section EDIT views (the same
-			// resolveContextOptions facet buildGetDataContext dispatches on the
-			// tool/get_data route — see there for the full why; registry dispatch,
-			// never a model conditional, S2-24). The context is deduped by
-			// contextKey across the read's rows, so this is first-record-wins —
-			// exactly PHP merge_unique_context, which kept the first component
-			// context it built.
-			if ((entry.mode ?? mode) === 'edit') {
-				const ddoModel = await getModelByTipo(ddo.tipo);
-				const contextHook = ddoModel === null ? undefined : getEmitHook(ddoModel);
-				if (contextHook?.resolveContextOptions !== undefined) {
-					const firstRow = data.find((item) => (item as { typo?: string }).typo === 'sections') as
-						| { section_id?: unknown }
-						| undefined;
-					const rowId = Number(firstRow?.section_id ?? Number.NaN);
-					if (Number.isInteger(rowId) && rowId > 0) {
-						const options = await contextHook.resolveContextOptions({
-							tipo: ddo.tipo,
-							sectionTipo: ddoSectionTipo,
-							sectionId: rowId,
-						});
-						if (options !== null) {
-							entry.options = { ...(entry.options ?? {}), ...options };
+				// PER-RECORD context options for section EDIT views (the same
+				// resolveContextOptions facet buildGetDataContext dispatches on the
+				// tool/get_data route — see there for the full why; registry dispatch,
+				// never a model conditional, S2-24). The context is deduped by
+				// contextKey across the read's rows, so this is first-record-wins —
+				// exactly PHP merge_unique_context, which kept the first component
+				// context it built.
+				if ((entry.mode ?? mode) === 'edit') {
+					const ddoModel = await getModelByTipo(ddo.tipo);
+					const contextHook = ddoModel === null ? undefined : getEmitHook(ddoModel);
+					if (contextHook?.resolveContextOptions !== undefined) {
+						const firstRow = data.find((item) => (item as { typo?: string }).typo === 'sections') as
+							| { section_id?: unknown }
+							| undefined;
+						const rowId = Number(firstRow?.section_id ?? Number.NaN);
+						if (Number.isInteger(rowId) && rowId > 0) {
+							const options = await contextHook.resolveContextOptions({
+								tipo: ddo.tipo,
+								sectionTipo: ddoSectionTipo,
+								sectionId: rowId,
+							});
+							if (options !== null) {
+								entry.options = { ...(entry.options ?? {}), ...options };
+							}
 						}
 					}
 				}
-			}
 
-			context.push(entry);
+				context.push(entry);
+			}
 		}
 	}
 
@@ -390,6 +393,58 @@ export function attachSectionTabChildren(context: StructureContextEntry[]): void
  * malformed self-/cyclic-parent map (PHP would recurse forever there too — the
  * ontology never declares one, but a client-sent map could).
  */
+/**
+ * The section(s) a ddo_map entry's structure context must be built for.
+ *
+ * A single-target ddo has exactly one ('self' resolving to the read's own
+ * section). A MULTI-target ddo — a picker whose show map names N target
+ * sections, e.g. the epigraphy autocomplete's `hierarchy95` over the eight glyph
+ * thesauri (scell1, scxpu1, scxibo1, scxibm1, sctxr1, sclat1, scsym1, sccmk1) —
+ * is a distinct ontology element in each one: different label, features and ACL.
+ * The client resolves a row's component context by BOTH tipo and section_tipo
+ * (view_default_autocomplete.render_grid_choose:
+ * `context.find(item => item.tipo===ddo_item.tipo && item.section_tipo===data.section_tipo)`),
+ * so a single entry built against the first target makes every row from the
+ * other targets fail that lookup and render nothing — the empty glyph grid of
+ * tool_numisdata_epigraphy.
+ *
+ * Narrow to the sections the read ACTUALLY returned rows for, so the common
+ * single-section search still ships exactly one entry. With no rows to go on
+ * (an empty result still ships structure) fall back to the first declared
+ * target — the pre-existing behaviour.
+ */
+export function resolveDdoContextSections(
+	ddo: Ddo,
+	ownSectionTipo: string,
+	data: readonly unknown[],
+): string[] {
+	const declared = declaredDdoTargets(ddo, ownSectionTipo);
+	if (declared.length < 2) return declared;
+
+	const present = sectionTiposPresentFor(data, ddo.tipo);
+	const matched = declared.filter((tipo) => present.has(tipo));
+
+	return matched.length > 0 ? matched : [declared[0] as string];
+}
+
+/** The sections a ddo_map entry NAMES, 'self' resolved, non-string members dropped. */
+function declaredDdoTargets(ddo: Ddo, ownSectionTipo: string): string[] {
+	if (ddo.section_tipo === undefined || ddo.section_tipo === 'self') return [ownSectionTipo];
+	if (!Array.isArray(ddo.section_tipo)) return [ddo.section_tipo];
+	const declared = ddo.section_tipo.filter((tipo): tipo is string => typeof tipo === 'string');
+	return declared.length > 0 ? declared : [ownSectionTipo];
+}
+
+/** The sections this read ACTUALLY emitted rows of `tipo` for. */
+function sectionTiposPresentFor(data: readonly unknown[], tipo: string): Set<string> {
+	const present = new Set<string>();
+	for (const item of data) {
+		const row = item as { tipo?: unknown; section_tipo?: unknown };
+		if (row.tipo === tipo && typeof row.section_tipo === 'string') present.add(row.section_tipo);
+	}
+	return present;
+}
+
 export function collectCallerDescendants(callerDdoMap: Ddo[], elementTipo: string): Ddo[] {
 	const collect = (parentTipo: string, seenTipos: Set<string>): Ddo[] => {
 		const descendants: Ddo[] = [];
