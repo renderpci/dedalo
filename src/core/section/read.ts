@@ -249,6 +249,16 @@ async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadR
 		// Thread the principal so the section button context uses the real
 		// per-button ACL (SECTION_SPEC §9) instead of the caller-permission cap.
 		principal,
+		// An rqo source.properties OVERRIDE replaces the section's ontology
+		// properties (PHP dd_core_api read :2305-2308 — `$element->set_properties`
+		// runs for the SECTION branch too, before the context build). A TOOL opens
+		// a section with its OWN declared layout: tool_cataloging's
+		// `section_to_cataloging` ddo ships a source.request_config whose columns
+		// carry `in_mosaic` / `hover`, and the mosaic view renders exactly those.
+		// Ignoring the override served the section's plain section_list instead —
+		// different columns, none of them flagged, so the view filtered every one
+		// out and each record rendered as a bare drag handle.
+		propertiesOverride: (source.properties ?? undefined) as Record<string, unknown> | undefined,
 	});
 	if (sectionEntry !== null) {
 		context.push(sectionEntry);
@@ -1491,16 +1501,27 @@ export async function deriveSectionDdoMap(
 	sectionTipo: string,
 	ownerSectionTipo: string,
 	mode: string,
+	/**
+	 * The rqo `source.properties` override, when the caller sent one — it
+	 * REPLACES the section's ontology properties as the config feed, exactly as
+	 * in the context half (PHP set_properties runs before the config build). The
+	 * two halves MUST agree: the client binds each rendered cell to its context
+	 * by an exact (tipo, mode, section_tipo) match and silently drops the rest.
+	 */
+	propertiesOverride?: unknown,
 ): Promise<Ddo[]> {
 	const { getNode } = await import('../ontology/resolver.ts');
 	const { buildRequestConfigForElement } = await import('../relations/request_config/build.ts');
-	const node = await getNode(sectionTipo);
-	const config = await buildRequestConfigForElement(node?.properties ?? null, {
-		ownerTipo: sectionTipo,
-		ownerSectionTipo,
-		mode,
-		ownerIsSection: true,
-	});
+	const node = propertiesOverride !== undefined ? null : await getNode(sectionTipo);
+	const config = await buildRequestConfigForElement(
+		propertiesOverride ?? node?.properties ?? null,
+		{
+			ownerTipo: sectionTipo,
+			ownerSectionTipo,
+			mode,
+			ownerIsSection: true,
+		},
+	);
 	const showDdos = config[0]?.show?.ddo_map ?? [];
 	return showDdos.map(
 		(ddo) =>
@@ -1585,7 +1606,12 @@ async function resolveSectionColumnDdoMap(
 			);
 		}
 	}
-	return deriveSectionDdoMap(callerTipo, sectionTipo, mode);
+	return deriveSectionDdoMap(
+		callerTipo,
+		sectionTipo,
+		mode,
+		(rqo.source ?? {}).properties ?? undefined,
+	);
 }
 
 /**
@@ -1603,18 +1629,40 @@ export async function deriveSectionListSqoDefaults(
 	sectionTipo: string,
 	ownerSectionTipo: string,
 	mode: string,
+	/**
+	 * The rqo `source.properties` override, when the caller sent one — the SAME
+	 * feed the columns derive from, so a tool that declares its own page size or
+	 * sort gets it (PHP resolves calculate_default_limit and the config
+	 * `sqo.order` from the REPLACED properties too).
+	 *
+	 * It is CLIENT input, so the limit it yields is clamped at CLIENT_MAX_LIMIT
+	 * — these defaults are applied AFTER sanitizeClientSqo, and without the
+	 * clamp a declared `limit` would be the one number on the read that never
+	 * met the sanitizer.
+	 */
+	propertiesOverride?: unknown,
 ): Promise<{ limit?: number; order?: unknown }> {
 	const { getNode } = await import('../ontology/resolver.ts');
 	const { buildRequestConfigForElement } = await import('../relations/request_config/build.ts');
-	const node = await getNode(sectionTipo);
-	const config = await buildRequestConfigForElement(node?.properties ?? null, {
-		ownerTipo: sectionTipo,
-		ownerSectionTipo,
-		mode,
-		ownerIsSection: true,
-	});
+	const node = propertiesOverride !== undefined ? null : await getNode(sectionTipo);
+	const config = await buildRequestConfigForElement(
+		propertiesOverride ?? node?.properties ?? null,
+		{
+			ownerTipo: sectionTipo,
+			ownerSectionTipo,
+			mode,
+			ownerIsSection: true,
+		},
+	);
 	const sqo = config[0]?.sqo as { limit?: unknown; order?: unknown } | undefined;
-	const limit = typeof sqo?.limit === 'number' && sqo.limit > 0 ? sqo.limit : undefined;
+	const rawLimit = typeof sqo?.limit === 'number' && sqo.limit > 0 ? sqo.limit : undefined;
+	const { CLIENT_MAX_LIMIT } = await import('../concepts/sqo.ts');
+	const limit =
+		rawLimit === undefined
+			? undefined
+			: propertiesOverride === undefined
+				? rawLimit
+				: Math.min(rawLimit, CLIENT_MAX_LIMIT);
 	// `order` may be authored as an array OR a single {path,direction} object
 	// (PHP tolerates both); pass either through — buildOrderClauses normalizes it.
 	const rawOrder = sqo?.order;
@@ -1744,7 +1792,12 @@ export async function readSectionRows(
 	// it. Only fetched when a default is actually needed.
 	const needsSqoDefaults = mode !== 'edit' && (clientLimitMissing || clientOrderMissing);
 	const sqoDefaults = needsSqoDefaults
-		? await deriveSectionListSqoDefaults(callerTipo, source.section_tipo ?? callerTipo, mode)
+		? await deriveSectionListSqoDefaults(
+				callerTipo,
+				source.section_tipo ?? callerTipo,
+				mode,
+				source.properties ?? undefined,
+			)
 		: {};
 	const sqo = sanitizeClientSqo(structuredClone(rqo.sqo) as Record<string, unknown>);
 	if (mode === 'edit') {
