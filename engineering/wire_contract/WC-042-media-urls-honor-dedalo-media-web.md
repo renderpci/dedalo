@@ -41,3 +41,112 @@
 `test/unit/media_web_base.test.ts` (default shape, builder rooting, fresh-import
 override + trailing-slash strip) + the pinned relative shape across the existing
 media gates and parity fixtures.
+
+## Addendum 2026-09-01 — the served cell and the published cell are two audiences, not one
+
+`svgUrlFromTagLocator` was one function feeding two consumers with opposite
+requirements. The entry above resolved it for one of them and did not see the
+other.
+
+**The two shapes.** A `component_text_area` value carries `[svg-…]` marks that
+`addTagImgOnTheFly` renders to `<img src>`. That same rendered cell reaches two
+places:
+
+- **Published** (diffusion/publication output, `diffusion/resolve/ddo_fns.ts`):
+  base stays the root-relative `/dedalo/<mediaDir>`. The URL is PERSISTED into
+  data that leaves this application and is fetched by a browser pointed at the
+  publication site — it must resolve against that site's origin, and must never
+  freeze this engine's origin (on a dev machine, a localhost port) into
+  published bytes. Unchanged, byte for byte.
+- **App-served** (the list value this engine hands its OWN client,
+  `component_text_area/emit.ts` → `renderListString`): base is
+  `config.media.webBase`, like every other media URL the client receives
+  (`media/path.ts`, `tag_endpoint.ts`, the `DEDALO_MEDIA_URL` client global).
+  This URL is not persisted; it is consumed immediately by the browser that
+  just loaded the app, whose origin need not be the media origin.
+
+Mechanically: `svgTagRelativePath()` now carries the media-root-relative tail,
+and the two exported builders differ ONLY in what they prefix to it —
+`svgUrlFromTagLocator` (publication, unchanged output) and
+`appServedSvgUrlFromTagLocator` (webBase). One tail, so "same file, two
+audiences" holds by construction rather than by two copies staying in step.
+`addTagImgOnTheFly`'s default resolver is still the publication one: a caller
+that does not state its audience gets the shape that is safe to persist.
+
+**The original bullet was right; its scope was not.** "Deliberately NOT on it:
+… `svgUrlFromTagLocator`" was and remains correct for the audience it was
+decided for. Published data must not embed this origin — that reasoning is
+untouched. The defect was that a second audience existed and went unenumerated:
+the app-serving list read path called the same builder, and the entry's emitter
+list (which does enumerate `tag_endpoint.ts`, the OTHER text_area media door)
+never noticed the pair had been split apart. So this is not an error in the
+line; it is a missing row in the emitters list, which this addendum adds:
+
+> Emitters on `webBase`, also: the `component_text_area` LIST cell served to the
+> client (`component_text_area/emit.ts` via `appServedSvgUrlFromTagLocator`).
+
+**Measured symptom** (install with app on `:3500`, Apache media on `:8080`,
+`DEDALO_MEDIA_WEB_BASE` set). Same path, same session cookie, from the
+logged-in browser:
+
+    http://localhost:3500/dedalo/media/svg/web/hierarchy95_scxibo1_59.svg -> 404
+    http://localhost:8080/dedalo/media/svg/web/hierarchy95_scxibo1_59.svg -> 200 image/svg+xml
+
+Every glyph in every text_area list cell 404'd — silently, a broken-image
+placeholder, nothing in the log, because the app origin serves no media at all
+under the generated protection rules.
+
+**Not a PHP regression — a capability-scope correction.** Verified in the frozen
+tree: `shared/class.TR.php:367` calls
+`component_svg::get_url_from_locator` (`class.component_svg.php:426`) which
+instantiates the component and returns `get_url()` (`:233`), whose base is the
+constant `DEDALO_MEDIA_URL = DEDALO_ROOT_WEB . '/media'`
+(`config/sample.config.php:411`), and `DEDALO_ROOT_WEB` is
+`'/' . explode('/', $_SERVER["REQUEST_URI"])[1]` (`:39-42`) — derived from the
+inbound request path, always root-relative, with no media-origin concept
+anywhere in the chain (`get_url`'s `$absolute` flag prepends
+`DEDALO_PROTOCOL . DEDALO_HOST`, the APP host, never a media host). The oracle
+therefore emitted the identical relative shape, and a split-origin install was
+simply not expressible in PHP. **No regression entry.** The pre-fix TS behaviour
+matched the oracle exactly; what changed is that a configuration the oracle
+could not express now reaches the emitter that had been left out of WC-042.
+
+**Gate.** `test/unit/text_area_svg_split_origin.test.ts` — the assertion MUST
+inject an absolute `DEDALO_MEDIA_WEB_BASE` into a FRESH process
+(`Bun.spawnSync` + `bun -e`, the `test/unit/media_web_base.test.ts:33-46`
+pattern), because config freezes at first import AND
+`test/preload/test_database.ts:38` pins the key to `''` suite-wide. Under that
+pin `webBase` is byte-identical to the hardcoded literal, so any assertion
+phrased in terms of `webBase` — including the obvious one — passes with the
+defect fully intact. The gate pins both halves in the split-origin child: the
+served list cell rooted on the absolute base, and `svgUrlFromTagLocator` (the
+publication resolver, `test/unit/diffusion_ddo_fns.test.ts:133`) still emitting
+`/dedalo/<mediaDir>/…` in the same process.
+
+**Re-harvest: NO.** With the key unset or `''`, `config.media.webBase` computes
+to exactly `/dedalo/<mediaDir>` (`src/config/config.ts` ~745-749), so the
+app-served cell is byte-identical to the harvest-era shape. No fixture pins an
+absolute base and none may; the frozen store keeps the relative shape for both
+audiences, and the divergence is reachable only through a configuration the
+suite pins shut.
+
+### Left open — publication on a split origin
+
+WC-042's reasoning settles what the published URL must NOT be (this app's
+origin). It does not settle what it should be when the publication site itself
+serves media from a different origin than its pages: there the relative form
+breaks for the published consumer exactly as it broke for ours, and this
+addendum does not fix that — it only stops the two cases sharing one builder.
+
+The naive answer ("reuse `webBase`") is wrong: `webBase` is THIS app's client
+origin, which is the thing published data must not carry. The instructive
+comparison is `config.media.exportBase` (`DEDALO_MEDIA_EXPORT_BASE`), the base
+for cells that LEAVE the application: it has **no default**, and unset means
+*unresolved*, never guessed — a travelling cell may not carry a relative URL,
+because nothing here knows where it will be read. Published tag URLs are
+travelling cells by the same argument, yet today they do carry a relative one.
+Either that relative form is defensible (the published site serves its own
+media, and the tail is correct by construction), or publication needs a third,
+target-scoped base with `exportBase`'s never-guess semantics. Not decided here;
+no key invented. Whoever hits a split-origin publication site should settle it
+in its own entry and cite this paragraph.

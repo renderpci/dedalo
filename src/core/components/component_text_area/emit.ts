@@ -18,7 +18,7 @@ import { equivalentLangsOf } from '../../resolve/lang_alias.ts';
 import { truncateHtml } from '../../resolve/truncate_html.ts';
 import type { ComponentEmitHook, EmitHookContext } from '../emit_hooks.ts';
 import { getOriginalLang } from './original_lang.ts';
-import { addTagImgOnTheFly } from './tag_html.ts';
+import { addTagImgOnTheFly, appServedSvgUrlFromTagLocator } from './tag_html.ts';
 
 /** text_area list values are HTML-truncated (PHP get_list_value max_chars=130). */
 const TEXT_AREA_LIST_MAX_CHARS = 130;
@@ -33,7 +33,18 @@ function renderListString(value: string): string {
 	// on adversarial CKEditor markup (a 200 KB value froze the loop ~19 s). This
 	// is a ≤130-char preview, so capping a large prefix loses no preview content.
 	const capped = value.length > LIST_SOURCE_CAP ? value.slice(0, LIST_SOURCE_CAP) : value;
-	return truncateHtml(TEXT_AREA_LIST_MAX_CHARS, addTagImgOnTheFly(capped));
+	// THE AUDIENCE. addTagImgOnTheFly's default svg resolver emits the PUBLICATION
+	// shape (a root-relative /dedalo/<mediaDir>/… url — WC-042: published data must
+	// not embed this application's origin). This path is the other audience: the
+	// list value the engine serves to ITS OWN client. On a split-origin install
+	// (DEDALO_MEDIA_WEB_BASE — app on one port, media web server on another) the
+	// relative url resolves against the APP origin, which in `publication` access
+	// mode serves no media at all, so every glyph in the cell 404s in silence.
+	// Byte-identical when the two coincide; see appServedSvgUrlFromTagLocator.
+	return truncateHtml(
+		TEXT_AREA_LIST_MAX_CHARS,
+		addTagImgOnTheFly(capped, { svgUrl: appServedSvgUrlFromTagLocator }),
+	);
 }
 
 /** True when a lang slice holds at least one item with real text. */
